@@ -44,7 +44,19 @@ class SalesReportService
         // resulting per_type rows ourselves so we can apply the period +
         // status + date-column constraints upstream.
         foreach ($events as $event) {
-            $breakdown = $this->breakdown->build($event, Carbon::parse($from), Carbon::parse($to), excludePos: false);
+            // Pass dateColumn so the per-type breakdown uses the same
+            // bounds as extendedQuery — without it, compact filtered by
+            // orders.created_at (the SalesBreakdownService default for
+            // payout snapshots) and extended filtered by paid_at, leaving
+            // the two views with different qty/gross numbers for the same
+            // user-selected period.
+            $breakdown = $this->breakdown->build(
+                $event,
+                Carbon::parse($from),
+                Carbon::parse($to),
+                excludePos: false,
+                dateColumn: $dateColumn
+            );
 
             $eventTitle = $this->resolveTitle($event);
             // POS = ticket types whose only sales for this event are

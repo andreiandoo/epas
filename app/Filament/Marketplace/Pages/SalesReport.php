@@ -83,6 +83,7 @@ class SalesReport extends Page implements HasForms
                                 'this_year'  => 'Anul curent',
                                 'custom'     => 'Personalizat',
                             ])
+                            ->helperText('Restrânge raportul la comenzile cu data (plată sau creare, după "Bază dată") în acest interval. Pentru toate vânzările unui eveniment, alege "Anul curent" sau "Personalizat".')
                             ->inline()
                             ->columnSpanFull()
                             ->live()

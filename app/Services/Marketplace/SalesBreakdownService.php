@@ -58,13 +58,20 @@ class SalesBreakdownService
      *   }>
      * }
      */
-    public function build(Event $event, ?Carbon $periodStart = null, ?Carbon $periodEnd = null, bool $excludePos = false): array
+    public function build(Event $event, ?Carbon $periodStart = null, ?Carbon $periodEnd = null, bool $excludePos = false, string $dateColumn = 'created_at'): array
     {
         $eventId = $event->id;
 
+        // dateColumn is the order column the period bounds apply to.
+        // 'created_at' (default) keeps the historical payout behaviour;
+        // sales-report passes 'paid_at' so its compact view matches the
+        // extended view, which queries Order directly on paid_at.
+        $allowedColumns = ['created_at', 'paid_at'];
+        $dateColumn = in_array($dateColumn, $allowedColumns, true) ? $dateColumn : 'created_at';
+
         $tickets = Ticket::where(fn ($q) => $q->where('event_id', $eventId)->orWhere('marketplace_event_id', $eventId))
             ->whereIn('status', ['valid', 'used'])
-            ->whereHas('order', function ($q) use ($periodStart, $periodEnd, $excludePos) {
+            ->whereHas('order', function ($q) use ($periodStart, $periodEnd, $excludePos, $dateColumn) {
                 $q->whereIn('status', ['paid', 'confirmed', 'completed'])
                     ->where('source', '!=', 'external_import');
                 if ($excludePos) {
@@ -72,10 +79,10 @@ class SalesBreakdownService
                       ->where('source', '!=', 'test_order');
                 }
                 if ($periodStart) {
-                    $q->where('created_at', '>=', $periodStart->copy()->startOfDay());
+                    $q->where($dateColumn, '>=', $periodStart->copy()->startOfDay());
                 }
                 if ($periodEnd) {
-                    $q->where('created_at', '<=', $periodEnd->copy()->endOfDay());
+                    $q->where($dateColumn, '<=', $periodEnd->copy()->endOfDay());
                 }
             })
             ->with(['ticketType'])
