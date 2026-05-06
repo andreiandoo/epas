@@ -202,7 +202,26 @@ class Order extends Model
             try {
                 if (in_array($newStatus, ['paid', 'confirmed', 'completed'])) {
                     $order->tickets()->update(['status' => 'valid']);
-                } elseif (in_array($newStatus, ['cancelled', 'refunded', 'expired'])) {
+                } elseif ($newStatus === 'refunded') {
+                    // PaymentRefundService has already stamped each ticket with
+                    // status='refunded' + refund_status='refunded' before the
+                    // order itself transitioned. The previous bulk update here
+                    // overwrote 'refunded' with 'cancelled', erasing the
+                    // refund history (cards showed 0 rambursate, deconturi
+                    // ignored these tickets, ticket 279679 case in point).
+                    // Now we only nudge stragglers — tickets that somehow
+                    // missed the refund path get the 'refunded' status, the
+                    // already-refunded ones are left alone.
+                    $order->tickets()
+                        ->whereNotIn('status', ['refunded'])
+                        ->update(['status' => 'refunded']);
+                    $order->releaseSeatsAndRestoreStock();
+                } elseif ($newStatus === 'partially_refunded') {
+                    // Don't bulk-touch tickets — PaymentRefundService sets
+                    // per-ticket status (some refunded, the rest still valid).
+                    // Releasing seats / stock is also already handled
+                    // per-ticket in the refund flow.
+                } elseif (in_array($newStatus, ['cancelled', 'expired'])) {
                     $order->tickets()->update(['status' => 'cancelled']);
                     $order->releaseSeatsAndRestoreStock();
                 } elseif ($newStatus === 'pending') {

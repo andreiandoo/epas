@@ -165,3 +165,114 @@
 @else
     <p class="text-sm text-gray-500 dark:text-gray-400">Nu sunt detalii bilete disponibile.</p>
 @endif
+
+@php
+    // Refunds attached to orders for this event. Pulled live from
+    // marketplace_refund_items so the section reflects the current state
+    // even if the payout snapshot was generated before a refund happened.
+    // Grouped per ticket type with totals; commission-refunded marker
+    // tells the operator whether the platform returned the on-top
+    // commission too (relevant for accounting).
+    $eventId = $record->event_id ?? null;
+    $refundRows = [];
+    $refundTotals = ['qty' => 0, 'face' => 0.0, 'commission' => 0.0, 'net' => 0.0];
+    if ($eventId) {
+        $refundItems = \App\Models\MarketplaceRefundItem::query()
+            ->whereHas('refundRequest', function ($q) use ($eventId) {
+                $q->whereIn('status', ['refunded', 'partially_refunded'])
+                    ->whereHas('order', function ($q2) use ($eventId) {
+                        $q2->where(fn ($q3) => $q3->where('event_id', $eventId)
+                                                  ->orWhere('marketplace_event_id', $eventId));
+                    });
+            })
+            ->where('status', 'refunded')
+            ->with('ticketType:id,name')
+            ->get();
+
+        $grouped = $refundItems->groupBy('ticket_type_id');
+        foreach ($grouped as $ttId => $items) {
+            $first = $items->first();
+            $name = $first?->ticketType?->name ?? 'Tip bilet';
+            $qty = $items->count();
+            $face = (float) $items->sum('face_value');
+            $commission = (float) $items->sum('commission_amount');
+            $refunded = (float) $items->sum('refund_amount');
+            $commissionReturned = $items->where('commission_refunded', true)->count();
+
+            // Net offset on organizer balance: face that was paid out is now
+            // pulled back. Commission may or may not have been returned —
+            // when commission_refunded=true we offset that too.
+            $netOffset = -$face + $items->where('commission_refunded', true)->sum('commission_amount');
+
+            $refundRows[] = [
+                'ticket_type_name' => $name,
+                'qty' => $qty,
+                'face' => $face,
+                'commission' => $commission,
+                'commission_returned_qty' => $commissionReturned,
+                'refunded' => $refunded,
+                'net_offset' => round($netOffset, 2),
+            ];
+
+            $refundTotals['qty']        += $qty;
+            $refundTotals['face']       += $face;
+            $refundTotals['commission'] += $commission;
+            $refundTotals['net']        += $netOffset;
+        }
+    }
+@endphp
+
+@if(!empty($refundRows))
+<div class="overflow-x-auto mt-4 border-t border-gray-200 dark:border-gray-700 pt-4">
+    <div class="px-3 mb-2 flex items-center gap-2">
+        <x-heroicon-o-arrow-uturn-left class="w-4 h-4 text-amber-500" />
+        <h4 class="text-sm font-semibold text-gray-900 dark:text-white">Bilete rambursate</h4>
+        <span class="text-xs text-gray-500">{{ $refundTotals['qty'] }} {{ $refundTotals['qty'] === 1 ? 'bilet' : 'bilete' }}</span>
+    </div>
+    <table class="w-full text-sm">
+        <thead>
+            <tr class="border-b border-gray-200 dark:border-gray-700">
+                <th class="text-left py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Tip bilet</th>
+                <th class="text-right py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Qty</th>
+                <th class="text-right py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Valoare nominală</th>
+                <th class="text-right py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Comision</th>
+                <th class="text-right py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Comision returnat</th>
+                <th class="text-right py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Sumă rambursată</th>
+                <th class="text-right py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase" title="Impact pe net-ul organizatorului">Impact net</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+            @foreach($refundRows as $r)
+                <tr>
+                    <td class="py-2 px-3 text-gray-900 dark:text-white">{{ $r['ticket_type_name'] }}</td>
+                    <td class="py-2 px-3 text-right text-amber-500 font-semibold">-{{ $r['qty'] }}</td>
+                    <td class="py-2 px-3 text-right font-mono text-amber-500">-{{ number_format($r['face'], 2) }} {{ $currency }}</td>
+                    <td class="py-2 px-3 text-right font-mono text-gray-600 dark:text-gray-300">{{ number_format($r['commission'], 2) }} {{ $currency }}</td>
+                    <td class="py-2 px-3 text-right text-xs text-gray-500">
+                        @if($r['commission_returned_qty'] === $r['qty'])
+                            <span class="text-emerald-600 dark:text-emerald-400">da ({{ $r['commission_returned_qty'] }}/{{ $r['qty'] }})</span>
+                        @elseif($r['commission_returned_qty'] === 0)
+                            <span class="text-gray-400">nu</span>
+                        @else
+                            parțial ({{ $r['commission_returned_qty'] }}/{{ $r['qty'] }})
+                        @endif
+                    </td>
+                    <td class="py-2 px-3 text-right font-mono text-amber-500">-{{ number_format($r['refunded'], 2) }} {{ $currency }}</td>
+                    <td class="py-2 px-3 text-right font-mono font-semibold text-amber-600 dark:text-amber-400">{{ number_format($r['net_offset'], 2) }} {{ $currency }}</td>
+                </tr>
+            @endforeach
+        </tbody>
+        <tfoot>
+            <tr class="border-t-2 border-gray-300 dark:border-gray-600 font-semibold">
+                <td class="py-2 px-3 text-gray-900 dark:text-white">Total rambursări</td>
+                <td class="py-2 px-3 text-right text-amber-500">-{{ $refundTotals['qty'] }}</td>
+                <td class="py-2 px-3 text-right font-mono text-amber-500">-{{ number_format($refundTotals['face'], 2) }} {{ $currency }}</td>
+                <td class="py-2 px-3 text-right font-mono text-gray-700 dark:text-gray-300">{{ number_format($refundTotals['commission'], 2) }} {{ $currency }}</td>
+                <td class="py-2 px-3"></td>
+                <td class="py-2 px-3"></td>
+                <td class="py-2 px-3 text-right font-mono text-amber-600 dark:text-amber-400">{{ number_format($refundTotals['net'], 2) }} {{ $currency }}</td>
+            </tr>
+        </tfoot>
+    </table>
+</div>
+@endif
