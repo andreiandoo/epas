@@ -15,7 +15,7 @@
         Modifică filtrele
     </button>
 
-    <div class="mt-6 space-y-6">
+    <div class="mt-6 space-y-6 pb-16">
         @if($summary)
             <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
                 @php
@@ -74,12 +74,12 @@
                                     </td>
                                     <td class="py-2 px-3 text-gray-900 dark:text-white">{{ $p['event_title'] }}</td>
                                     <td class="py-2 px-3">
-                                        <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] ring-1
-                                            @if($p['status'] === 'completed') bg-green-600 text-white ring-green-700
-                                            @elseif($p['status'] === 'approved') bg-blue-50 text-blue-700 ring-blue-200 dark:bg-blue-500/10 dark:text-blue-400 dark:ring-blue-500/20
-                                            @elseif($p['status'] === 'processing') bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:ring-amber-500/20
-                                            @elseif(in_array($p['status'], ['rejected','cancelled'])) bg-red-50 text-red-700 ring-red-200 dark:bg-red-500/10 dark:text-red-400 dark:ring-red-500/20
-                                            @else bg-gray-50 text-gray-700 ring-gray-200 dark:bg-gray-500/10 dark:text-gray-400 dark:ring-gray-500/20 @endif
+                                        <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] text-white ring-1
+                                            @if($p['status'] === 'completed') bg-green-600 ring-green-700
+                                            @elseif($p['status'] === 'approved') bg-blue-600 ring-blue-700
+                                            @elseif($p['status'] === 'processing') bg-amber-600 ring-amber-700
+                                            @elseif(in_array($p['status'], ['rejected','cancelled'])) bg-red-600 ring-red-700
+                                            @else bg-gray-600 ring-gray-700 @endif
                                         ">{{ $p['status'] }}</span>
                                     </td>
                                     <td class="py-2 px-3 text-xs text-gray-500">
@@ -216,12 +216,11 @@
                                     <td class="py-2 px-3">
                                         <a href="{{ url('/marketplace/orders/' . $r['order_id']) }}" target="_blank" class="text-primary-600 hover:underline font-mono text-xs">{{ $r['order_number'] }}</a>
                                         <div class="mt-1">
-                                            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] ring-1
-                                                @if($r['status'] === 'confirmed') bg-green-600 text-white ring-green-700
-                                                @elseif(in_array($r['status'], ['paid','completed'])) bg-green-50 text-green-700 ring-green-200 dark:bg-green-500/10 dark:text-green-400 dark:ring-green-500/20
-                                                @elseif(in_array($r['status'], ['failed','cancelled','expired'])) bg-red-50 text-red-700 ring-red-200 dark:bg-red-500/10 dark:text-red-400 dark:ring-red-500/20
-                                                @elseif(in_array($r['status'], ['refunded','partially_refunded'])) bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:ring-amber-500/20
-                                                @else bg-gray-50 text-gray-700 ring-gray-200 dark:bg-gray-500/10 dark:text-gray-400 dark:ring-gray-500/20 @endif
+                                            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] text-white ring-1
+                                                @if(in_array($r['status'], ['paid','confirmed','completed'])) bg-green-600 ring-green-700
+                                                @elseif(in_array($r['status'], ['failed','cancelled','expired'])) bg-red-600 ring-red-700
+                                                @elseif(in_array($r['status'], ['refunded','partially_refunded'])) bg-amber-600 ring-amber-700
+                                                @else bg-gray-600 ring-gray-700 @endif
                                             ">{{ $r['status'] }}</span>
                                         </div>
                                     </td>
@@ -231,7 +230,16 @@
                                         <div class="font-medium">{{ $r['customer_name'] ?: '—' }}</div>
                                         <div class="text-xs text-gray-500">{{ $r['customer_email'] }}</div>
                                     </td>
-                                    <td class="py-2 px-3 text-gray-700 dark:text-gray-300 text-xs">{{ $r['ticket_types'] ?: '—' }}</td>
+                                    <td class="py-2 px-3 text-gray-700 dark:text-gray-300 text-xs">
+                                        @if(($r['source'] ?? null) === 'pos_app')
+                                            <span class="inline-flex items-center gap-1" title="Vândut prin aplicație POS">
+                                                <x-heroicon-o-device-phone-mobile class="w-3.5 h-3.5 text-gray-500 flex-shrink-0" />
+                                                {{ $r['ticket_types'] ?: '—' }}
+                                            </span>
+                                        @else
+                                            {{ $r['ticket_types'] ?: '—' }}
+                                        @endif
+                                    </td>
                                     <td class="py-2 px-3 text-right font-semibold text-gray-900 dark:text-white">{{ $r['tickets'] }}</td>
                                     <td class="py-2 px-3 text-right font-mono text-gray-900 dark:text-white">{{ number_format($r['gross'], 2) }}</td>
                                     <td class="py-2 px-3 text-right font-mono text-red-500">-{{ number_format($r['commission'], 2) }}</td>
