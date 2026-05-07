@@ -47,6 +47,8 @@ class TourOptimizerController extends BaseController
             'cities.*.from_start' => 'nullable|boolean',
             'cities.*.manual_capacity' => 'nullable|integer|min:0|max:200000',
             'cities.*.manual_prediction' => 'nullable|integer|min:0|max:200000',
+            'cities.*.extra_cost' => 'nullable|numeric|min:0|max:1000000',
+            'cities.*.extra_cost_description' => 'nullable|string|max:300',
             'constraints' => 'nullable|array',
             'constraints.max_distance_km' => 'nullable|integer|min:50|max:3000',
             'constraints.min_days_between' => 'nullable|integer|min:1|max:14',

@@ -182,6 +182,8 @@ class TourOptimizerService
             $fromStart = is_array($c) ? (bool) ($c['from_start'] ?? false) : false;
             $manualCapacity = is_array($c) ? ($c['manual_capacity'] ?? null) : null;
             $manualPrediction = is_array($c) ? ($c['manual_prediction'] ?? null) : null;
+            $extraCost = is_array($c) ? ($c['extra_cost'] ?? null) : null;
+            $extraCostDescription = is_array($c) ? ($c['extra_cost_description'] ?? null) : null;
             if ($name === '') continue;
             $geo = $this->resolveCityGeo($name, $citiesGeo);
             if (!$geo) continue;
@@ -202,6 +204,8 @@ class TourOptimizerService
                 'from_start' => $fromStart,
                 'manual_capacity' => $manualCapacity ? (int) $manualCapacity : null,
                 'manual_prediction' => $manualPrediction !== null && $manualPrediction !== '' ? (int) $manualPrediction : null,
+                'extra_cost' => $extraCost !== null && $extraCost !== '' ? (float) $extraCost : 0.0,
+                'extra_cost_description' => $extraCostDescription ? (string) $extraCostDescription : null,
             ];
         }
 
@@ -337,6 +341,8 @@ class TourOptimizerService
                 'effective_capacity' => $effectiveCapacity > 0 ? (int) $effectiveCapacity : null,
                 'manual_capacity' => $stop['manual_capacity'],
                 'manual_prediction' => $stop['manual_prediction'],
+                'extra_cost' => (int) round($stop['extra_cost'] ?? 0),
+                'extra_cost_description' => $stop['extra_cost_description'] ?? null,
                 'venue_size' => $venueSize,
                 'from_start' => !empty($stop['from_start']),
                 'is_home' => $isHome,
@@ -484,7 +490,8 @@ class TourOptimizerService
             }
             $stopAccommodation = (int) ($finalRoute[$i]['accommodation_cost'] ?? 0);
             $stopMeal = (int) ($finalRoute[$i]['meal_cost'] ?? 0);
-            $stopCost = $stopFuel + $stopAccommodation + $stopMeal;
+            $stopExtra = (int) ($finalRoute[$i]['extra_cost'] ?? 0);
+            $stopCost = $stopFuel + $stopAccommodation + $stopMeal + $stopExtra;
             $stopRevenue = (int) round($finalRoute[$i]['prediction'] * $avgTicketPrice);
             $stopProfit = $stopRevenue - $stopCost;
             $stopMargin = $stopRevenue > 0 ? round(($stopProfit / $stopRevenue) * 100, 1) : 0;
@@ -499,7 +506,8 @@ class TourOptimizerService
             + (int) collect($finalRoute)->sum(fn ($r) => (int) ($r['return_fuel_cost'] ?? 0));
         $totalAccommodation = (int) collect($finalRoute)->sum('accommodation_cost');
         $totalMealCost = (int) collect($finalRoute)->sum('meal_cost');
-        $totalCost = $totalFuelCost + $totalAccommodation + $totalMealCost;
+        $totalExtraCost = (int) collect($finalRoute)->sum('extra_cost');
+        $totalCost = $totalFuelCost + $totalAccommodation + $totalMealCost + $totalExtraCost;
 
         $totalTickets = (int) collect($finalRoute)->sum('prediction');
         $revenue = $totalTickets * $avgTicketPrice;
@@ -524,6 +532,7 @@ class TourOptimizerService
                 'fuel_cost_ron' => $totalFuelCost,
                 'accommodation_cost_ron' => $totalAccommodation,
                 'meal_cost_ron' => (int) round($totalMealCost),
+                'extra_cost_ron' => $totalExtraCost,
                 'predicted_tickets' => $totalTickets,
                 'predicted_revenue_ron' => (int) round($revenue),
                 'profit_ron' => (int) round($profit),
@@ -540,6 +549,8 @@ class TourOptimizerService
                 'from_start' => !empty($r['from_start']),
                 'manual_capacity' => $r['manual_capacity'],
                 'manual_prediction' => $r['manual_prediction'],
+                'extra_cost' => (float) ($r['extra_cost'] ?? 0),
+                'extra_cost_description' => $r['extra_cost_description'] ?? null,
             ], $resolved),
             'tour_config' => $config,
         ];
