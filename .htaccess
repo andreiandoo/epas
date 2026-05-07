@@ -169,6 +169,11 @@ RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^booking/conversation/([A-Za-z0-9]+)/?$ booking/conversation.php?token=$1 [L,QSA]
 
+# Booking — iCal feed pentru Google Calendar / Apple Calendar / Outlook
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^booking/ical/([A-Za-z0-9]+)\.ics$ booking/ical.php?token=$1 [L,QSA]
+
 # Smart EPK public pages — reverse proxy to core.tixello.com Laravel backend
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d

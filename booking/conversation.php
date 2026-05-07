@@ -80,7 +80,7 @@ require_once __DIR__ . '/../includes/header.php';
                         <p id="convEventAudience" class="mt-1 text-sm font-semibold text-secondary"></p>
                     </div>
                     <div>
-                        <p class="text-[11px] font-semibold tracking-wider uppercase text-muted">Cachet propus</p>
+                        <p class="text-[11px] font-semibold tracking-wider uppercase text-muted">Buget propus</p>
                         <p id="convEventFee" class="mt-1 text-sm font-bold text-primary"></p>
                     </div>
                     <div>
@@ -97,7 +97,7 @@ require_once __DIR__ . '/../includes/header.php';
                             <p id="convFinalDate" class="font-semibold text-emerald-900"></p>
                         </div>
                         <div>
-                            <p class="text-xs text-emerald-700">Cachet final</p>
+                            <p class="text-xs text-emerald-700">Buget final</p>
                             <p id="convFinalFee" class="font-semibold text-emerald-900"></p>
                         </div>
                         <div>
@@ -133,7 +133,7 @@ require_once __DIR__ . '/../includes/header.php';
                 <div data-mode-pane="counter" class="hidden space-y-3">
                     <div class="grid grid-cols-1 gap-3 lg:grid-cols-3">
                         <div>
-                            <label class="block mb-1 text-xs font-semibold text-muted">Cachet propus (RON)</label>
+                            <label class="block mb-1 text-xs font-semibold text-muted">Buget propus (RON)</label>
                             <input type="number" id="convCounterFee" min="0" step="100" class="bk-input">
                         </div>
                         <div>
@@ -317,7 +317,7 @@ require_once __DIR__ . '/../includes/header.php';
         let counterBlock = '';
         if (m.type === 'counter' && m.counter_terms) {
             counterBlock = '<div class="grid grid-cols-3 gap-3 p-3 mt-3 rounded-lg bg-white/60">' +
-                (m.counter_terms.fee_ron ? '<div><p class="text-[10px] tracking-wider uppercase text-muted">Cachet</p><p class="text-sm font-bold text-secondary">' + fmtNumber(m.counter_terms.fee_ron) + ' RON</p></div>' : '') +
+                (m.counter_terms.fee_ron ? '<div><p class="text-[10px] tracking-wider uppercase text-muted">Buget</p><p class="text-sm font-bold text-secondary">' + fmtNumber(m.counter_terms.fee_ron) + ' RON</p></div>' : '') +
                 (m.counter_terms.set_length_min ? '<div><p class="text-[10px] tracking-wider uppercase text-muted">Set</p><p class="text-sm font-bold text-secondary">' + m.counter_terms.set_length_min + ' min</p></div>' : '') +
                 (m.counter_terms.event_date ? '<div><p class="text-[10px] tracking-wider uppercase text-muted">Dată</p><p class="text-sm font-bold text-secondary">' + escapeHtml(m.counter_terms.event_date) + '</p></div>' : '') +
                 '</div>';
@@ -391,7 +391,7 @@ require_once __DIR__ . '/../includes/header.php';
             const date = document.getElementById('convCounterDate').value;
             const body = document.getElementById('convCounterBody').value.trim();
             if (!fee) {
-                els.panelError.textContent = 'Cachetul propus trebuie să fie mai mare decât 0.';
+                els.panelError.textContent = 'Bugetul propus trebuie să fie mai mare decât 0.';
                 els.panelError.classList.remove('hidden');
                 return;
             }

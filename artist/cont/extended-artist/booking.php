@@ -30,13 +30,22 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
     .bk-textarea { width: 100%; padding: 0.5rem 0.75rem; border: 1px solid #E2E8F0; border-radius: 0.5rem; font-size: 0.875rem; background: white; resize: vertical; min-height: 80px; }
     .pro-badge { background: linear-gradient(135deg, #E67E22, #A51C30); color: white; font-size: 0.625rem; font-weight: 700; padding: 0.1rem 0.4rem; border-radius: 0.25rem; letter-spacing: 0.5px; }
     .status-dot { display: inline-block; width: 0.5rem; height: 0.5rem; border-radius: 9999px; }
-    .calendar-cell { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; border-radius: 0.5rem; cursor: pointer; font-size: 0.8125rem; font-weight: 500; transition: background-color 0.1s; user-select: none; }
+    .calendar-cell { position: relative; aspect-ratio: 1; display: flex; align-items: center; justify-content: center; border-radius: 0.5rem; cursor: pointer; font-size: 0.8125rem; font-weight: 500; transition: background-color 0.1s; user-select: none; }
     .calendar-cell:hover:not(.cal-empty) { background: #F1F5F9; }
     .calendar-cell.cal-empty { cursor: default; opacity: 0; pointer-events: none; }
     .calendar-cell.cal-blocked { background: #FEE2E2; color: #991B1B; }
     .calendar-cell.cal-blocked:hover { background: #FECACA; }
+    .calendar-cell.cal-booking { background: #D1FAE5; color: #064E3B; }
+    .calendar-cell.cal-booking:hover { background: #A7F3D0; }
+    .calendar-cell.cal-pending { background: #FEF3C7; color: #78350F; }
+    .calendar-cell.cal-pending:hover { background: #FDE68A; }
     .calendar-cell.cal-today { outline: 2px solid #A51C30; outline-offset: -2px; }
     .calendar-cell.cal-past { color: #94A3B8; }
+    .cal-dots { position: absolute; bottom: 3px; left: 50%; transform: translateX(-50%); display: flex; gap: 2px; }
+    .cal-dot { width: 4px; height: 4px; border-radius: 9999px; }
+    .cal-dot-booking { background: #059669; }
+    .cal-dot-pending { background: #D97706; }
+    .cal-dot-blocked { background: #DC2626; }
     .thread-msg-artist { background: #FEF2F2; border-color: #FECACA; }
     .thread-msg-guest { background: #F1F5F9; border-color: #E2E8F0; }
 </style>
@@ -234,14 +243,14 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                         <p class="text-xs text-muted" x-show="currentRequest && currentRequest.event && currentRequest.event.audience" x-text="currentRequest && currentRequest.event ? (formatNumber(currentRequest.event.audience) + ' audiență') : ''"></p>
                                     </div>
                                     <div>
-                                        <p class="text-[11px] font-semibold tracking-wider uppercase text-muted">Cachet propus</p>
+                                        <p class="text-[11px] font-semibold tracking-wider uppercase text-muted">Buget propus</p>
                                         <p class="mt-1 text-sm font-bold text-primary" x-text="currentRequest && currentRequest.event ? (formatNumber(currentRequest.event.fee_ron) + ' RON') : ''"></p>
                                         <p class="text-xs text-muted" x-show="currentRequest && currentRequest.event && currentRequest.event.set_length_min" x-text="currentRequest && currentRequest.event ? (currentRequest.event.set_length_min + ' min set') : ''"></p>
                                     </div>
                                 </div>
 
                                 <div class="mt-4" x-show="currentRequest && currentRequest.event && (currentRequest.event.conditions || []).length">
-                                    <p class="text-[11px] font-semibold tracking-wider uppercase text-muted">Condiții cerute</p>
+                                    <p class="text-[11px] font-semibold tracking-wider uppercase text-muted">Condiții oferite</p>
                                     <div class="flex flex-wrap gap-1.5 mt-2">
                                         <template x-for="c in (currentRequest && currentRequest.event ? (currentRequest.event.conditions || []) : [])" :key="c">
                                             <span class="px-2 py-0.5 text-[11px] rounded-full bg-blue-50 text-blue-700 border border-blue-200" x-text="conditionLabel(c)"></span>
@@ -258,7 +267,7 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                             <p class="font-semibold text-emerald-900" x-text="currentRequest && currentRequest.final_terms ? (currentRequest.final_terms.event_date || '') : ''"></p>
                                         </div>
                                         <div>
-                                            <p class="text-xs text-emerald-700">Cachet</p>
+                                            <p class="text-xs text-emerald-700">Buget</p>
                                             <p class="font-semibold text-emerald-900" x-text="currentRequest && currentRequest.final_terms ? (formatNumber(currentRequest.final_terms.fee_ron) + ' RON') : ''"></p>
                                         </div>
                                         <div>
@@ -295,7 +304,7 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                         <p x-show="m.body" class="text-sm whitespace-pre-line text-secondary" x-text="m.body"></p>
                                         <div x-show="m.type === 'counter' && m.counter_terms" class="grid grid-cols-3 gap-3 p-3 mt-3 rounded-lg bg-white/60">
                                             <div x-show="m.counter_terms && m.counter_terms.fee_ron">
-                                                <p class="text-[10px] tracking-wider uppercase text-muted">Cachet</p>
+                                                <p class="text-[10px] tracking-wider uppercase text-muted">Buget</p>
                                                 <p class="text-sm font-bold text-secondary" x-text="(m.counter_terms ? formatNumber(m.counter_terms.fee_ron) : 0) + ' RON'"></p>
                                             </div>
                                             <div x-show="m.counter_terms && m.counter_terms.set_length_min">
@@ -335,7 +344,7 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                 <div x-show="replyMode === 'counter'" class="space-y-3">
                                     <div class="grid grid-cols-1 gap-3 lg:grid-cols-3">
                                         <div>
-                                            <label class="block mb-1 text-xs font-semibold text-muted">Cachet propus (RON)</label>
+                                            <label class="block mb-1 text-xs font-semibold text-muted">Buget propus (RON)</label>
                                             <input type="number" x-model.number="counterFee" min="0" step="100" class="bk-input">
                                         </div>
                                         <div>
@@ -364,7 +373,7 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                     </div>
                                     <div class="grid grid-cols-1 gap-3 lg:grid-cols-3">
                                         <div>
-                                            <label class="block mb-1 text-xs font-semibold text-muted">Cachet final (RON)</label>
+                                            <label class="block mb-1 text-xs font-semibold text-muted">Buget final (RON)</label>
                                             <input type="number" x-model.number="acceptFee" min="0" step="100" class="bk-input">
                                         </div>
                                         <div>
@@ -412,7 +421,7 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                     <div class="flex flex-col gap-3 mb-5 lg:flex-row lg:items-center lg:justify-between">
                         <div>
                             <h2 class="text-lg font-bold text-secondary">Listingul meu public</h2>
-                            <p class="text-sm text-muted">Setează cachetul, condițiile tehnice și tipurile de evenimente pe care le accepți.</p>
+                            <p class="text-sm text-muted">Setează bugetul, condițiile tehnice și tipurile de evenimente pe care le accepți.</p>
                         </div>
                         <label class="flex items-center gap-2 cursor-pointer">
                             <span class="text-sm font-medium text-secondary" x-text="listing.status === 'active' ? 'Listing activ' : 'Listing pe pauză'"></span>
@@ -422,9 +431,9 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                     </div>
 
                     <div class="grid grid-cols-1 gap-5 lg:grid-cols-2">
-                        <!-- Cachet -->
+                        <!-- Buget -->
                         <div>
-                            <label class="block mb-2 text-sm font-semibold text-secondary">Cachet (RON)</label>
+                            <label class="block mb-2 text-sm font-semibold text-secondary">Buget (RON)</label>
                             <div class="grid grid-cols-2 gap-2">
                                 <div>
                                     <label class="block mb-1 text-xs text-muted">Minim</label>
@@ -553,24 +562,112 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                         </div>
                         <div class="grid grid-cols-7 gap-1">
                             <template x-for="(c, idx) in calCells" :key="idx">
-                                <div :class="calCellClass(c)" @click="onCalCellClick(c)">
+                                <div :class="calCellClass(c)" @click="onCalCellClick(c)" :title="calCellTitle(c)">
                                     <span x-show="c.day" x-text="c.day"></span>
+                                    <div x-show="c.day" class="cal-dots">
+                                        <span x-show="hasBooking(c.iso)" class="cal-dot cal-dot-booking"></span>
+                                        <span x-show="hasPending(c.iso)" class="cal-dot cal-dot-pending"></span>
+                                        <span x-show="isDateBlocked(c.iso)" class="cal-dot cal-dot-blocked"></span>
+                                    </div>
                                 </div>
                             </template>
                         </div>
 
-                        <p class="mt-4 text-xs text-muted">💡 Click pe o zi pentru a o marca ca indisponibilă (sau pentru a o debloca dacă e deja blocată).</p>
+                        <!-- Legend -->
+                        <div class="flex flex-wrap gap-3 mt-4 text-xs text-muted">
+                            <span class="inline-flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-emerald-200"></span> Booking confirmat</span>
+                            <span class="inline-flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-amber-200"></span> Cerere în negociere</span>
+                            <span class="inline-flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-rose-200"></span> Zi blocată manual</span>
+                        </div>
+
+                        <p class="mt-3 text-xs text-muted">💡 Click pe o zi liberă pentru a o marca ca indisponibilă. Zilele cu booking sau cerere te duc direct la conversație.</p>
                     </div>
                 </div>
 
-                <!-- Block list -->
-                <div class="lg:col-span-4">
+                <!-- Side panel: upcoming events + blocked days -->
+                <div class="space-y-4 lg:col-span-4">
                     <div class="p-5 bg-white border rounded-2xl border-border">
-                        <h3 class="mb-3 text-base font-bold text-secondary">Zile blocate</h3>
+                        <h3 class="mb-3 text-base font-bold text-secondary">Evenimente luna asta</h3>
+                        <div x-show="!calendarOverlay.length" class="p-3 text-sm text-center rounded-lg bg-surface text-muted">
+                            Nicio cerere/booking în luna afișată.
+                        </div>
+                        <div x-show="calendarOverlay.length" class="space-y-2 max-h-[260px] overflow-y-auto">
+                            <template x-for="ev in calendarOverlay" :key="ev.request_id">
+                                <button @click="setTab('inbox'); openRequest(ev.request_id)" class="block w-full p-3 text-left transition-colors border rounded-lg border-border hover:bg-surface">
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <span :class="ev.kind === 'booking' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'" class="px-2 py-0.5 text-[10px] font-bold tracking-wider uppercase rounded-full">
+                                            <span x-text="ev.kind === 'booking' ? 'Confirmat' : 'În negociere'"></span>
+                                        </span>
+                                        <span class="ml-auto text-[11px] font-semibold text-secondary" x-text="formatDate(ev.date)"></span>
+                                    </div>
+                                    <p class="text-sm font-semibold text-secondary truncate" x-text="ev.guest_name"></p>
+                                    <p class="text-xs text-muted truncate">
+                                        <span x-text="ev.event_city || '—'"></span>
+                                        <span x-show="ev.event_venue"> · <span x-text="ev.event_venue"></span></span>
+                                    </p>
+                                    <p class="mt-1 text-xs font-bold text-primary" x-text="formatNumber(ev.fee_ron) + ' RON'"></p>
+                                </button>
+                            </template>
+                        </div>
+                    </div>
+
+                    <!-- iCal sync card -->
+                    <div class="p-5 border rounded-2xl border-blue-200 bg-blue-50">
+                        <div class="flex items-start gap-2 mb-3">
+                            <svg class="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                            <div class="flex-1 min-w-0">
+                                <h3 class="text-base font-bold text-secondary">Sync cu Google Calendar</h3>
+                                <p class="text-xs text-muted">Vezi cererile și booking-urile direct în calendarul tău preferat. Read-only, refresh la 12-24h.</p>
+                            </div>
+                        </div>
+
+                        <div x-show="!icalToken" class="p-3 text-sm text-center rounded-lg bg-white text-muted">
+                            <span class="inline-block w-4 h-4 border-2 rounded-full border-blue-500 border-t-transparent animate-spin"></span>
+                            <span class="ml-1">Se generează URL...</span>
+                        </div>
+
+                        <div x-show="icalToken" class="space-y-3">
+                            <div>
+                                <label class="block mb-1 text-[11px] font-bold tracking-wider uppercase text-muted">URL feed iCal</label>
+                                <div class="flex gap-1">
+                                    <input type="text" :value="icalUrl" readonly @click="$el.select()" class="flex-1 px-3 py-2 text-xs font-mono bg-white border rounded-lg border-border text-secondary">
+                                    <button @click="copyIcalUrl()" class="bk-btn bk-btn-secondary bk-btn-sm" :title="icalCopied ? 'Copiat!' : 'Copiază'">
+                                        <span x-show="!icalCopied">📋</span>
+                                        <span x-show="icalCopied">✓</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <details class="text-xs">
+                                <summary class="font-semibold cursor-pointer text-secondary">Cum adaug în Google Calendar?</summary>
+                                <ol class="pl-4 mt-2 space-y-1 list-decimal text-muted">
+                                    <li>Deschide <a href="https://calendar.google.com/calendar/u/0/r/settings/addbyurl" target="_blank" class="text-primary hover:underline">Google Calendar → Setări → Adaugă din URL</a></li>
+                                    <li>Lipește URL-ul de mai sus și apasă <strong>Adaugă calendar</strong></li>
+                                    <li>După ~1 minut, evenimentele apar în calendarul tău (categoria "Booking")</li>
+                                </ol>
+                            </details>
+
+                            <details class="text-xs">
+                                <summary class="font-semibold cursor-pointer text-secondary">Apple Calendar / Outlook?</summary>
+                                <div class="pl-4 mt-2 space-y-1 text-muted">
+                                    <p><strong>Apple:</strong> File → New Calendar Subscription → lipește URL-ul.</p>
+                                    <p><strong>Outlook:</strong> Calendar → Add → Subscribe from web → URL-ul.</p>
+                                </div>
+                            </details>
+
+                            <button @click="regenerateIcalToken()" :disabled="regeneratingToken" class="bk-btn bk-btn-secondary bk-btn-sm w-full">
+                                <span x-show="!regeneratingToken">🔄 Regenerează URL (invalidează linkul curent)</span>
+                                <span x-show="regeneratingToken">Se regenerează...</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="p-5 bg-white border rounded-2xl border-border">
+                        <h3 class="mb-3 text-base font-bold text-secondary">Zile blocate manual</h3>
                         <div x-show="!unavailableDates.length" class="p-3 text-sm text-center rounded-lg bg-surface text-muted">
                             Nicio zi blocată momentan.
                         </div>
-                        <div x-show="unavailableDates.length" class="space-y-2 max-h-[420px] overflow-y-auto">
+                        <div x-show="unavailableDates.length" class="space-y-2 max-h-[260px] overflow-y-auto">
                             <template x-for="d in unavailableDates" :key="d.id">
                                 <div class="flex items-start gap-2 p-3 border rounded-lg border-border">
                                     <div class="flex-shrink-0 w-1 h-10 rounded-full" :style="`background:${d.color || '#94A3B8'}`"></div>
@@ -609,7 +706,7 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                     <th class="pb-3 text-xs font-semibold tracking-wider uppercase text-muted">Eveniment</th>
                                     <th class="pb-3 text-xs font-semibold tracking-wider uppercase text-muted">Organizator</th>
                                     <th class="pb-3 text-xs font-semibold tracking-wider uppercase text-muted">Locație</th>
-                                    <th class="pb-3 text-xs font-semibold tracking-wider uppercase text-muted">Cachet</th>
+                                    <th class="pb-3 text-xs font-semibold tracking-wider uppercase text-muted">Buget</th>
                                     <th class="pb-3 text-xs font-semibold tracking-wider uppercase text-muted">Set</th>
                                     <th class="pb-3 text-xs font-semibold tracking-wider uppercase text-muted text-right">Acțiuni</th>
                                 </tr>
@@ -658,7 +755,7 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                     <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/></svg>
                 </div>
                 <h2 class="mb-2 text-xl font-bold text-secondary">Statistici avansate — În curând</h2>
-                <p class="max-w-md mx-auto text-sm text-muted">Funnel cereri → acceptate, distribuție pe orașe, evoluție cachet, top organizatori — vine la sprintul următor.</p>
+                <p class="max-w-md mx-auto text-sm text-muted">Funnel cereri → acceptate, distribuție pe orașe, evoluție buget, top organizatori — vine la sprintul următor.</p>
             </div>
         </div>
 
@@ -741,6 +838,11 @@ function bookingApp() {
         calMonth: 0,
         calCells: [],
         unavailableDates: [],
+        calendarOverlay: [],
+        icalToken: null,
+        icalUrl: '',
+        icalCopied: false,
+        regeneratingToken: false,
 
         // Contracts
         contracts: [],
@@ -763,6 +865,7 @@ function bookingApp() {
                 this.loadInbox(),
                 this.loadCalendar(),
                 this.loadContracts(),
+                this.loadIcalToken(),
             ]);
 
             const reqId = url.searchParams.get('request');
@@ -937,7 +1040,7 @@ function bookingApp() {
         async sendCounter() {
             if (!this.currentRequest) return;
             if (!this.counterFee || this.counterFee <= 0) {
-                this.showToast('Cachetul propus trebuie să fie mai mare decât 0.', 'error');
+                this.showToast('Bugetul propus trebuie să fie mai mare decât 0.', 'error');
                 return;
             }
             this.sending = true;
@@ -1033,9 +1136,40 @@ function bookingApp() {
                 const to = new Date(this.calYear, this.calMonth + 2, 0).toISOString().slice(0, 10);
                 const d = await this.api('artist.booking.calendar', { query: 'from=' + from + '&to=' + to });
                 this.unavailableDates = d.data?.dates || [];
+                this.calendarOverlay = d.data?.overlay || [];
             } catch (e) {
                 console.warn('calendar', e);
             }
+        },
+
+        hasBooking(iso) {
+            if (!iso) return false;
+            return this.calendarOverlay.some(ev => ev.kind === 'booking' && ev.date === iso);
+        },
+
+        hasPending(iso) {
+            if (!iso) return false;
+            return this.calendarOverlay.some(ev => ev.kind === 'pending' && ev.date === iso);
+        },
+
+        overlayItemForDate(iso) {
+            if (!iso) return null;
+            // Prioritize confirmed booking over pending
+            return this.calendarOverlay.find(ev => ev.kind === 'booking' && ev.date === iso)
+                || this.calendarOverlay.find(ev => ev.kind === 'pending' && ev.date === iso)
+                || null;
+        },
+
+        calCellTitle(c) {
+            if (!c || !c.iso) return '';
+            const item = this.overlayItemForDate(c.iso);
+            if (item) {
+                const lbl = item.kind === 'booking' ? 'Booking confirmat' : 'Cerere în negociere';
+                return lbl + ' · ' + (item.guest_name || '') + (item.event_city ? ' · ' + item.event_city : '');
+            }
+            const blocked = this.isDateBlocked(c.iso);
+            if (blocked) return blocked.reason || 'Indisponibil';
+            return '';
         },
 
         buildCalendar() {
@@ -1083,22 +1217,35 @@ function bookingApp() {
 
         calCellClass(c) {
             if (c.empty) return 'calendar-cell cal-empty';
-            const blocked = this.isDateBlocked(c.iso);
             const classes = ['calendar-cell'];
-            if (blocked) classes.push('cal-blocked');
+            if (this.hasBooking(c.iso)) classes.push('cal-booking');
+            else if (this.hasPending(c.iso)) classes.push('cal-pending');
+            else if (this.isDateBlocked(c.iso)) classes.push('cal-blocked');
             if (c.isToday) classes.push('cal-today');
-            if (c.isPast && !blocked) classes.push('cal-past');
+            if (c.isPast && !this.hasBooking(c.iso) && !this.hasPending(c.iso) && !this.isDateBlocked(c.iso)) classes.push('cal-past');
             return classes.join(' ');
         },
 
         async onCalCellClick(c) {
             if (c.empty) return;
+
+            // 1) Click pe o zi cu booking/cerere → deschide cererea în Inbox
+            const overlay = this.overlayItemForDate(c.iso);
+            if (overlay) {
+                this.setTab('inbox');
+                this.openRequest(overlay.request_id);
+                return;
+            }
+
+            // 2) Click pe o zi blocată manual → confirm deblocare
             const blocked = this.isDateBlocked(c.iso);
             if (blocked) {
                 if (!confirm('Vrei să deblochezi data ' + this.formatDate(c.iso) + '?')) return;
                 await this.removeUnavailable(blocked.id);
                 return;
             }
+
+            // 3) Click pe o zi liberă → blochează manual
             const reason = prompt('Marchează această zi ca indisponibilă. Motiv (opțional):', '');
             if (reason === null) return;
             try {
@@ -1110,6 +1257,46 @@ function bookingApp() {
                 await this.loadCalendar();
             } catch (e) {
                 this.showToast(e.message, 'error');
+            }
+        },
+
+        async loadIcalToken() {
+            try {
+                const d = await this.api('artist.booking.ical-token');
+                if (d.data?.token) {
+                    this.icalToken = d.data.token;
+                    this.icalUrl = window.location.origin + d.data.feed_path;
+                }
+            } catch (e) {
+                console.warn('ical token', e);
+            }
+        },
+
+        async copyIcalUrl() {
+            if (!this.icalUrl) return;
+            try {
+                await navigator.clipboard.writeText(this.icalUrl);
+                this.icalCopied = true;
+                setTimeout(() => { this.icalCopied = false; }, 2000);
+            } catch (e) {
+                this.showToast('Selectează manual și copiază.', 'error');
+            }
+        },
+
+        async regenerateIcalToken() {
+            if (!confirm('Regenerez URL-ul iCal? URL-ul curent va deveni invalid și va trebui să te reabonezi în Google/Apple/Outlook.')) return;
+            this.regeneratingToken = true;
+            try {
+                const d = await this.api('artist.booking.ical-token.regenerate', { method: 'POST', body: {} });
+                if (d.data?.token) {
+                    this.icalToken = d.data.token;
+                    this.icalUrl = window.location.origin + d.data.feed_path;
+                    this.showToast(d.message || 'URL regenerat.', 'success');
+                }
+            } catch (e) {
+                this.showToast(e.message, 'error');
+            } finally {
+                this.regeneratingToken = false;
             }
         },
 
