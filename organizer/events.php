@@ -86,6 +86,26 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     <input type="hidden" id="selected-event-type-ids" value="">
                     <input type="hidden" id="selected-venue-id" value="">
 
+                    <!-- ============ REJECTION BANNER (rejected events only) ============ -->
+                    <div id="rejection-banner" class="hidden p-4 border rounded-2xl bg-red-50 border-red-200">
+                        <div class="flex items-start gap-3">
+                            <svg class="flex-shrink-0 w-5 h-5 mt-0.5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            <div class="flex-1">
+                                <h4 class="text-sm font-semibold text-red-700">Evenimentul a fost respins</h4>
+                                <p class="mt-1 text-sm text-red-700">Motiv: <span id="rejection-reason-text"></span></p>
+                                <p class="mt-2 text-xs text-red-600">Editează evenimentul după indicații și apasă "Salvează și trimite spre aprobare" pentru o nouă revizuire.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ============ EDIT MODE HEADER (delete button) ============ -->
+                    <div class="flex items-center justify-end" id="edit-mode-header">
+                        <button type="button" id="edit-delete-btn" class="hidden btn btn-sm btn-error">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                            Șterge evenimentul
+                        </button>
+                    </div>
+
                     <!-- ============ EVENT STATUS ACTIONS (Edit mode only) ============ -->
                     <div id="event-status-actions" class="hidden p-5 bg-white border rounded-2xl border-border">
                         <h3 class="mb-4 font-semibold text-secondary">Acțiuni eveniment</h3>
@@ -900,6 +920,10 @@ function resetFormState() {
     renderGenreTags();
     renderArtistTags();
 
+    // Reset edit-only UI bits
+    document.getElementById('rejection-banner')?.classList.add('hidden');
+    document.getElementById('edit-delete-btn')?.classList.add('hidden');
+
     // Reset image previews
     const posterPreview = document.getElementById('poster-preview');
     const posterUploadArea = document.getElementById('poster-upload-area');
@@ -968,9 +992,43 @@ async function loadEventForEdit(eventId) {
         // Set the event ID so subsequent saves update instead of create
         document.getElementById('saved-event-id').value = eventId;
 
-        // Show status actions section (only in edit mode)
+        // Show status actions section ONLY for published events. While the
+        // event is in draft / pending_review / rejected, sold-out / postponed /
+        // cancelled / door-sales toggles aren't meaningful yet.
         const statusActions = document.getElementById('event-status-actions');
-        if (statusActions) statusActions.classList.remove('hidden');
+        const isAwaitingApprovalState = ['draft', 'pending_review', 'rejected'].includes(event.status);
+        if (statusActions) {
+            if (isAwaitingApprovalState) {
+                statusActions.classList.add('hidden');
+            } else {
+                statusActions.classList.remove('hidden');
+            }
+        }
+
+        // Toggle delete button in edit-mode header. Only available while the
+        // event is still in draft / pending / rejected; once published, deletion
+        // happens via dedicated cancel/refund flows.
+        const editDeleteBtn = document.getElementById('edit-delete-btn');
+        if (editDeleteBtn) {
+            if (isAwaitingApprovalState) {
+                editDeleteBtn.classList.remove('hidden');
+                editDeleteBtn.onclick = () => deleteEvent(event.id, event.name || event.title || '');
+            } else {
+                editDeleteBtn.classList.add('hidden');
+            }
+        }
+
+        // Rejection banner — show the reason so the organizer knows what to fix
+        const rejectionBanner = document.getElementById('rejection-banner');
+        const rejectionReason = document.getElementById('rejection-reason-text');
+        if (rejectionBanner) {
+            if (event.status === 'rejected' && event.rejection_reason) {
+                if (rejectionReason) rejectionReason.textContent = event.rejection_reason;
+                rejectionBanner.classList.remove('hidden');
+            } else {
+                rejectionBanner.classList.add('hidden');
+            }
+        }
 
         // Load current status flags
         currentEventStatus = {

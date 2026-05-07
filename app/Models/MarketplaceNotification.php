@@ -39,6 +39,8 @@ class MarketplaceNotification extends Model
     public const TYPE_ORGANIZER_REGISTRATION = 'organizer_registration';
     public const TYPE_EVENT_CREATED = 'event_created';
     public const TYPE_EVENT_UPDATED = 'event_updated';
+    public const TYPE_EVENT_APPROVED = 'event_approved';
+    public const TYPE_EVENT_REJECTED = 'event_rejected';
     public const TYPE_PAYOUT_REQUEST = 'payout_request';
     public const TYPE_PAYOUT_APPROVED = 'payout_approved';
     public const TYPE_PAYOUT_PROCESSING = 'payout_processing';

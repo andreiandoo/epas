@@ -2871,11 +2871,11 @@ class EventResource extends Resource
                 SC\Group::make()
                     ->columnSpan(1)
                     ->schema([
-                        // Approve button — surfaces only for events that an
+                        // Approve / Reject — surface only for events that an
                         // organizer submitted for approval (submitted_at set,
-                        // not yet published). Clicking publishes the event in
-                        // one step so admins don't have to flip the toggle +
-                        // save.
+                        // not yet published). Approving publishes the event;
+                        // rejecting collects a reason, clears submitted_at-as-
+                        // pending, and lets the organizer edit + resubmit.
                         SC\Actions::make([
                             \Filament\Actions\Action::make('approveEvent')
                                 ->label($t('Aprobă evenimentul', 'Approve event'))
@@ -2884,23 +2884,68 @@ class EventResource extends Resource
                                 ->size('lg')
                                 ->requiresConfirmation()
                                 ->modalHeading($t('Aprobă evenimentul?', 'Approve event?'))
-                                ->modalDescription($t('Evenimentul va deveni vizibil pe site-ul marketplace.', 'The event will become visible on the marketplace.'))
+                                ->modalDescription($t('Evenimentul va deveni vizibil pe site-ul marketplace și organizatorul va fi notificat.', 'The event will go live on the marketplace and the organizer will be notified.'))
                                 ->modalSubmitActionLabel($t('Da, aprobă', 'Yes, approve'))
-                                ->visible(fn (?Event $record) => $record && $record->exists && !$record->is_published && $record->submitted_at)
+                                ->visible(fn (?Event $record) => $record && $record->exists && !$record->is_published && $record->submitted_at && !$record->rejected_at)
                                 ->action(function (?Event $record) use ($t) {
                                     if (!$record) {
                                         return;
                                     }
                                     $record->forceFill([
                                         'is_published' => true,
+                                        'rejected_at' => null,
+                                        'rejection_reason' => null,
                                     ])->save();
+
+                                    self::notifyOrganizerEventDecision($record, 'approved');
+
                                     \Filament\Notifications\Notification::make()
                                         ->title($t('Eveniment aprobat și publicat.', 'Event approved and published.'))
                                         ->success()
                                         ->send();
                                 }),
+
+                            \Filament\Actions\Action::make('rejectEvent')
+                                ->label($t('Respinge', 'Reject'))
+                                ->icon('heroicon-m-x-circle')
+                                ->color('danger')
+                                ->size('lg')
+                                ->visible(fn (?Event $record) => $record && $record->exists && !$record->is_published && $record->submitted_at && !$record->rejected_at)
+                                ->form([
+                                    Forms\Components\Textarea::make('rejection_reason')
+                                        ->label($t('Motivul respingerii', 'Rejection reason'))
+                                        ->required()
+                                        ->minLength(5)
+                                        ->maxLength(2000)
+                                        ->rows(4)
+                                        ->placeholder($t('Ex: Lipsește o imagine de poster, descrierea trebuie reformulată, etc.', 'e.g. Missing poster image, description needs rewording, etc.'))
+                                        ->helperText($t('Va fi trimis organizatorului prin email și ca notificare în cont. Organizatorul poate edita evenimentul și retrimite.', 'Sent to the organizer by email + in-app notification. They can edit and resubmit.')),
+                                ])
+                                ->modalHeading($t('Respinge evenimentul', 'Reject event'))
+                                ->modalSubmitActionLabel($t('Trimite respingerea', 'Send rejection'))
+                                ->action(function (?Event $record, array $data) use ($t) {
+                                    if (!$record) {
+                                        return;
+                                    }
+                                    $reason = trim((string) ($data['rejection_reason'] ?? ''));
+                                    if ($reason === '') {
+                                        return;
+                                    }
+
+                                    $record->forceFill([
+                                        'rejected_at' => now(),
+                                        'rejection_reason' => $reason,
+                                    ])->save();
+
+                                    self::notifyOrganizerEventDecision($record, 'rejected', $reason);
+
+                                    \Filament\Notifications\Notification::make()
+                                        ->title($t('Eveniment respins. Organizatorul a fost notificat.', 'Event rejected. Organizer notified.'))
+                                        ->warning()
+                                        ->send();
+                                }),
                         ])
-                            ->visible(fn (?Event $record) => $record && $record->exists && !$record->is_published && $record->submitted_at),
+                            ->visible(fn (?Event $record) => $record && $record->exists && !$record->is_published && $record->submitted_at && !$record->rejected_at),
 
                         SC\Grid::make(2)->schema([
                             Forms\Components\Toggle::make('is_published')
@@ -3819,6 +3864,94 @@ class EventResource extends Resource
      * Check if an event has already ended (date is in the past).
      * Used to disable minDate constraints on past events so they can still be edited.
      */
+    /**
+     * Send approval / rejection notifications to the organizer who submitted
+     * the event: an in-app MarketplaceNotification row + a marketplace-routed
+     * email. Called from the Approve / Reject Filament actions.
+     */
+    protected static function notifyOrganizerEventDecision(Event $event, string $decision, ?string $reason = null): void
+    {
+        $organizer = $event->marketplaceOrganizer;
+        if (!$organizer) {
+            return;
+        }
+        $client = $organizer->marketplaceClient ?? $event->marketplaceClient;
+
+        $eventTitle = $event->getTranslation('title') ?? 'Eveniment';
+
+        try {
+            if ($decision === 'approved') {
+                $title = 'Evenimentul "' . $eventTitle . '" a fost aprobat';
+                $message = 'Evenimentul tău a fost aprobat și este acum publicat pe ' . ($client?->name ?? 'marketplace') . '.';
+                $type = \App\Models\MarketplaceNotification::TYPE_EVENT_APPROVED;
+                $emailSubject = 'Eveniment aprobat: ' . $eventTitle;
+                $emailHtml = '<p>Salut,</p>'
+                    . '<p>Evenimentul tău <strong>' . e($eventTitle) . '</strong> a fost <strong style="color:#16a34a">aprobat</strong> și este acum publicat pe site.</p>'
+                    . '<p>Îl poți gestiona din contul tău de organizator.</p>';
+            } else {
+                $title = 'Evenimentul "' . $eventTitle . '" a fost respins';
+                $message = 'Motiv: ' . ($reason ?: '—') . ' — poți edita și retrimite spre aprobare.';
+                $type = \App\Models\MarketplaceNotification::TYPE_EVENT_REJECTED;
+                $emailSubject = 'Eveniment respins: ' . $eventTitle;
+                $emailHtml = '<p>Salut,</p>'
+                    . '<p>Evenimentul tău <strong>' . e($eventTitle) . '</strong> a fost <strong style="color:#dc2626">respins</strong>. Motivul indicat de echipa marketplace este:</p>'
+                    . '<blockquote style="border-left:4px solid #dc2626;padding:8px 12px;margin:12px 0;background:#fef2f2;color:#7f1d1d">' . nl2br(e((string) $reason)) . '</blockquote>'
+                    . '<p>Poți edita evenimentul în contul tău și retrimite spre aprobare după ce ai făcut modificările.</p>';
+            }
+
+            $notificationData = [
+                'event_id' => $event->id,
+                'event_title' => $eventTitle,
+                'decision' => $decision,
+            ];
+            if ($decision === 'rejected' && $reason) {
+                $notificationData['rejection_reason'] = $reason;
+            }
+
+            \App\Models\MarketplaceNotification::create([
+                'marketplace_client_id' => $client?->id ?? $event->marketplace_client_id,
+                'marketplace_organizer_id' => $organizer->id,
+                'type' => $type,
+                'title' => $title,
+                'message' => $message,
+                'data' => $notificationData,
+                'actionable_type' => Event::class,
+                'actionable_id' => $event->id,
+                'action_url' => '/organizator/event/' . $event->id . '?action=edit',
+            ]);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::channel('marketplace')->error('Failed to create event decision notification', [
+                'event_id' => $event->id,
+                'decision' => $decision,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        if ($organizer->email && $client) {
+            try {
+                \App\Http\Controllers\Api\MarketplaceClient\BaseController::sendViaMarketplace(
+                    $client,
+                    $organizer->email,
+                    $organizer->name ?? '',
+                    $emailSubject,
+                    $emailHtml,
+                    [
+                        'organizer_id' => $organizer->id,
+                        'related_id' => $event->id,
+                        'template_slug' => 'event_' . $decision,
+                    ]
+                );
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::channel('marketplace')->error('Failed to email organizer about event decision', [
+                    'event_id' => $event->id,
+                    'decision' => $decision,
+                    'organizer_id' => $organizer->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+    }
+
     protected static function isEventEnded(?Event $record): bool
     {
         if (!$record || !$record->exists) {

@@ -479,7 +479,9 @@ class EventsController extends BaseController
             return $this->error('Evenimentul este deja publicat', 400);
         }
 
-        if ($event->submitted_at) {
+        // After a rejection, the organizer can edit and resubmit. Only block
+        // re-submit when there's a pending review without a prior rejection.
+        if ($event->submitted_at && !$event->rejected_at) {
             return $this->error('Evenimentul a fost deja trimis spre aprobare', 400);
         }
 
@@ -488,7 +490,11 @@ class EventsController extends BaseController
             return $this->error('Event must have at least one ticket type', 400);
         }
 
-        $event->update(['submitted_at' => now()]);
+        $event->update([
+            'submitted_at' => now(),
+            'rejected_at' => null,
+            'rejection_reason' => null,
+        ]);
 
         return $this->success([
             'event' => $this->formatEventDetailed($event->fresh()->load(['ticketTypes', 'venue'])),
@@ -2919,10 +2925,15 @@ class EventsController extends BaseController
             return 'postponed';
         }
         if (!$event->is_published) {
-            // Distinguish "submitted, waiting for approval" from a plain draft
-            // so the organizer's events list can show the right label and
-            // disable operational actions until the event is approved.
-            return $event->submitted_at ? 'pending_review' : 'draft';
+            // Rejected by admin — organizer can edit and resubmit.
+            if ($event->rejected_at) {
+                return 'rejected';
+            }
+            // Submitted, waiting for approval.
+            if ($event->submitted_at) {
+                return 'pending_review';
+            }
+            return 'draft';
         }
         return 'published';
     }
@@ -3364,7 +3375,8 @@ class EventsController extends BaseController
             'max_tickets_per_order' => 10,
             'sales_start_at' => null,
             'sales_end_at' => null,
-            'rejection_reason' => null,
+            'rejection_reason' => $event->rejection_reason,
+            'rejected_at' => $event->rejected_at?->toIso8601String(),
             'tickets_sold' => $event->total_tickets_sold,
             'revenue' => (float) $event->total_revenue,
             'views' => $event->views_count ?? 0,
