@@ -43,23 +43,27 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+<!-- flatpickr pentru date picker DD/MM/YYYY (locale ro) -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css">
+<script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/l10n/ro.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 
 <?php require dirname(__DIR__) . '/_partials/sidebar.php'; ?>
 
-<main class="lg:ml-64 pt-16 lg:pt-0 min-h-screen" x-data="tourOptimizer()" x-init="init()" x-cloak>
+<main class="min-h-screen pt-16 lg:ml-64 lg:pt-0" x-data="tourOptimizer()" x-init="init()" x-cloak>
     <div class="p-4 lg:p-8">
 
         <!-- Page Header -->
         <div class="mb-6">
             <div class="flex items-center gap-2 mb-2">
                 <span class="pro-badge">PRO</span>
-                <span class="text-xs text-muted uppercase tracking-wider font-semibold">Extended Artist · Tour Optimizer</span>
+                <span class="text-xs font-semibold tracking-wider uppercase text-muted">Extended Artist · Tour Optimizer</span>
             </div>
-            <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+            <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                 <div>
-                    <h1 class="text-2xl lg:text-3xl font-bold text-secondary">Tour Optimizer</h1>
-                    <p class="text-muted mt-1">Planifică turnee strategice pe baza datelor reale despre fanii tăi.</p>
+                    <h1 class="text-2xl font-bold lg:text-3xl text-secondary">Tour Optimizer</h1>
+                    <p class="mt-1 text-muted">Planifică turnee strategice pe baza datelor reale despre fanii tăi.</p>
                 </div>
                 <div class="flex items-center gap-2">
                     <button @click="setTab('planner')" class="to-btn to-btn-primary to-btn-sm">+ Tour nou</button>
@@ -68,54 +72,54 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
         </div>
 
         <!-- KPI strip -->
-        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <div class="bg-white border border-border rounded-2xl p-5">
-                <p class="text-xs text-muted uppercase tracking-wider font-semibold mb-2">Orașe oportunitate</p>
+        <div class="grid grid-cols-2 gap-4 mb-6 lg:grid-cols-4">
+            <div class="p-5 bg-white border border-border rounded-2xl">
+                <p class="mb-2 text-xs font-semibold tracking-wider uppercase text-muted">Orașe oportunitate</p>
                 <p class="text-2xl font-bold text-secondary" x-text="opportunities.kpis?.opportunity_cities ?? 0"></p>
-                <p class="text-xs text-success mt-1">cu fani neexploatați</p>
+                <p class="mt-1 text-xs text-success">cu fani neexploatați</p>
             </div>
-            <div class="bg-white border border-border rounded-2xl p-5">
-                <p class="text-xs text-muted uppercase tracking-wider font-semibold mb-2">Fani „dormiți"</p>
+            <div class="p-5 bg-white border border-border rounded-2xl">
+                <p class="mb-2 text-xs font-semibold tracking-wider uppercase text-muted">Fani „dormiți"</p>
                 <p class="text-2xl font-bold text-secondary" x-text="formatNumber(opportunities.kpis?.dormant_fans ?? 0)"></p>
-                <p class="text-xs text-warning mt-1">nu au mai venit &gt;12 luni</p>
+                <p class="mt-1 text-xs text-warning">nu au mai venit &gt;12 luni</p>
             </div>
-            <div class="bg-white border border-border rounded-2xl p-5">
-                <p class="text-xs text-muted uppercase tracking-wider font-semibold mb-2">Bilete predictibile</p>
+            <div class="p-5 bg-white border border-border rounded-2xl">
+                <p class="mb-2 text-xs font-semibold tracking-wider uppercase text-muted">Bilete predictibile</p>
                 <p class="text-2xl font-bold text-secondary" x-text="'~' + formatNumber(opportunities.kpis?.predicted_tickets ?? 0)"></p>
-                <p class="text-xs text-muted mt-1">tour 5 orașe optimizat</p>
+                <p class="mt-1 text-xs text-muted">tour 5 orașe optimizat</p>
             </div>
-            <div class="bg-white border border-border rounded-2xl p-5">
-                <p class="text-xs text-muted uppercase tracking-wider font-semibold mb-2">Scenarii salvate</p>
+            <div class="p-5 bg-white border border-border rounded-2xl">
+                <p class="mb-2 text-xs font-semibold tracking-wider uppercase text-muted">Scenarii salvate</p>
                 <p class="text-2xl font-bold text-secondary" x-text="opportunities.kpis?.saved_scenarios ?? 0"></p>
-                <p class="text-xs text-muted mt-1">draft + active</p>
+                <p class="mt-1 text-xs text-muted">draft + active</p>
             </div>
         </div>
 
         <!-- Loading -->
-        <div x-show="loading" class="bg-white rounded-2xl border border-border p-12 text-center text-muted">
+        <div x-show="loading" class="p-12 text-center bg-white border rounded-2xl border-border text-muted">
             <div class="inline-flex items-center gap-3">
-                <span class="inline-block w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin"></span>
+                <span class="inline-block w-5 h-5 border-2 rounded-full border-primary border-t-transparent animate-spin"></span>
                 <span>Se încarcă datele...</span>
             </div>
         </div>
 
         <div x-show="!loading" class="relative">
             <!-- Per-tab loader overlay -->
-            <div x-show="tabLoading" x-cloak class="absolute inset-0 z-10 bg-white/70 backdrop-blur-sm flex items-center justify-center rounded-2xl">
-                <div class="inline-flex items-center gap-3 bg-white shadow-lg border border-border rounded-xl px-5 py-3">
-                    <span class="inline-block w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin"></span>
-                    <span class="text-sm text-secondary font-medium">Se încarcă...</span>
+            <div x-show="tabLoading" x-cloak class="absolute inset-0 z-10 flex items-center justify-center bg-white/70 backdrop-blur-sm rounded-2xl">
+                <div class="inline-flex items-center gap-3 px-5 py-3 bg-white border shadow-lg border-border rounded-xl">
+                    <span class="inline-block w-5 h-5 border-2 rounded-full border-primary border-t-transparent animate-spin"></span>
+                    <span class="text-sm font-medium text-secondary">Se încarcă...</span>
                 </div>
             </div>
 
-            <!-- Tabs -->
-            <div class="bg-white rounded-2xl border border-border overflow-hidden">
-                <div class="border-b border-border overflow-x-auto">
+            <!-- Tabs (NU adăuga overflow-hidden aici — strică sticky toolbar din itinerar) -->
+            <div class="bg-white border rounded-2xl border-border">
+                <div class="overflow-x-auto border-b border-border rounded-t-2xl">
                     <div class="flex gap-1 p-2 min-w-max">
                         <template x-for="t in tabs" :key="t.id">
                             <button @click="setTab(t.id)"
                                     :class="tab === t.id ? 'bg-primary text-white' : 'text-muted hover:bg-surface hover:text-secondary'"
-                                    class="px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors">
+                                    class="px-4 py-2 text-sm font-medium transition-colors rounded-lg whitespace-nowrap">
                                 <span x-text="t.label"></span>
                             </button>
                         </template>
@@ -124,12 +128,12 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
 
                 <!-- ============ TAB: OPPORTUNITIES ============ -->
                 <div x-show="tab === 'opportunities'" class="p-6">
-                    <div class="grid lg:grid-cols-3 gap-6">
+                    <div class="grid gap-6 lg:grid-cols-3">
                         <div class="lg:col-span-2">
-                            <h2 class="text-lg font-bold text-secondary mb-1">Hartă oportunități</h2>
-                            <p class="text-sm text-muted mb-4">Densitate fani vs concerte. Verde = activ, galben = revenire necesară, roșu = dormit, burgund = neexplorat.</p>
+                            <h2 class="mb-1 text-lg font-bold text-secondary">Hartă oportunități</h2>
+                            <p class="mb-4 text-sm text-muted">Densitate fani vs concerte. Verde = activ, galben = revenire necesară, roșu = dormit, burgund = neexplorat.</p>
                             <div id="opportunityMap" style="height: 480px;"></div>
-                            <div class="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+                            <div class="grid grid-cols-2 gap-3 mt-4 text-sm sm:grid-cols-4">
                                 <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-success"></span><span class="text-muted">Activ recent</span></div>
                                 <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-warning"></span><span class="text-muted">Revenire necesară</span></div>
                                 <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-error"></span><span class="text-muted">Dormit</span></div>
@@ -138,31 +142,31 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                         </div>
 
                         <div>
-                            <h3 class="font-bold text-secondary mb-1">Top recomandări</h3>
-                            <p class="text-xs text-muted mb-4">Orașe cu cel mai mare potențial nemonetizat</p>
+                            <h3 class="mb-1 font-bold text-secondary">Top recomandări</h3>
+                            <p class="mb-4 text-xs text-muted">Orașe cu cel mai mare potențial nemonetizat</p>
 
                             <div class="space-y-3">
                                 <template x-for="(rec, idx) in opportunities.recommendations || []" :key="rec.city">
-                                    <div class="border border-border rounded-xl p-4 hover:border-primary/30 hover:shadow-sm transition-all">
+                                    <div class="p-4 transition-all border border-border rounded-xl hover:border-primary/30 hover:shadow-sm">
                                         <div class="flex items-start justify-between mb-2">
                                             <div class="flex items-center gap-2">
-                                                <span class="w-6 h-6 rounded-md bg-primary/10 text-primary text-xs font-bold flex items-center justify-center" x-text="idx + 1"></span>
+                                                <span class="flex items-center justify-center w-6 h-6 text-xs font-bold rounded-md bg-primary/10 text-primary" x-text="idx + 1"></span>
                                                 <h4 class="font-bold text-secondary" x-text="rec.city"></h4>
                                             </div>
                                             <span class="to-badge" :class="statusBadgeClass(rec.status)" x-text="rec.status_label"></span>
                                         </div>
-                                        <p class="text-xs text-muted mb-3" x-text="rec.reason"></p>
-                                        <div class="grid grid-cols-2 gap-2 text-xs mb-3">
-                                            <div class="bg-surface rounded-lg p-2">
+                                        <p class="mb-3 text-xs text-muted" x-text="rec.reason"></p>
+                                        <div class="grid grid-cols-2 gap-2 mb-3 text-xs">
+                                            <div class="p-2 rounded-lg bg-surface">
                                                 <p class="text-muted">Fani locali</p>
                                                 <p class="font-bold text-secondary" x-text="formatNumber(rec.fans)"></p>
                                             </div>
-                                            <div class="bg-surface rounded-lg p-2">
+                                            <div class="p-2 rounded-lg bg-surface">
                                                 <p class="text-muted">Predicție</p>
                                                 <p class="font-bold text-secondary" x-text="rec.prediction"></p>
                                             </div>
                                         </div>
-                                        <button @click="addCityToPlanner(rec.city)" class="to-btn to-btn-secondary to-btn-sm w-full">+ Adaugă în planner</button>
+                                        <button @click="addCityToPlanner(rec.city)" class="w-full to-btn to-btn-secondary to-btn-sm">+ Adaugă în planner</button>
                                     </div>
                                 </template>
                                 <p x-show="!(opportunities.recommendations || []).length" class="text-sm text-muted">Date insuficiente — revino după 3+ concerte.</p>
@@ -170,14 +174,14 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                         </div>
                     </div>
 
-                    <div class="mt-8 grid lg:grid-cols-2 gap-6" x-show="(opportunities.dormant_alerts || []).length">
+                    <div class="grid gap-6 mt-8 lg:grid-cols-2" x-show="(opportunities.dormant_alerts || []).length">
                         <template x-for="alert in opportunities.dormant_alerts || []" :key="alert.city">
-                            <div class="border-2 border-warning/30 bg-warning/5 rounded-2xl p-5">
+                            <div class="p-5 border-2 border-warning/30 bg-warning/5 rounded-2xl">
                                 <div class="flex items-start gap-3">
-                                    <div class="w-10 h-10 bg-warning/20 rounded-xl flex items-center justify-center flex-shrink-0">⚠️</div>
+                                    <div class="flex items-center justify-center flex-shrink-0 w-10 h-10 bg-warning/20 rounded-xl">⚠️</div>
                                     <div class="flex-1">
-                                        <p class="font-bold text-secondary mb-1" x-text="'⚠️ ' + alert.message"></p>
-                                        <p class="text-sm text-muted mb-3">Risc churn ridicat. O dată pe an ar putea recupera 60-70% din audiență.</p>
+                                        <p class="mb-1 font-bold text-secondary" x-text="'⚠️ ' + alert.message"></p>
+                                        <p class="mb-3 text-sm text-muted">Risc churn ridicat. O dată pe an ar putea recupera 60-70% din audiență.</p>
                                         <button @click="addCityToPlanner(alert.city); setTab('planner')" class="to-btn to-btn-primary to-btn-sm">Planifică <span x-text="alert.city"></span></button>
                                     </div>
                                 </div>
@@ -188,51 +192,51 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
 
                 <!-- ============ TAB: PLANNER ============ -->
                 <div x-show="tab === 'planner'" class="p-6">
-                    <div class="grid lg:grid-cols-12 gap-6">
+                    <div class="grid gap-6 lg:grid-cols-12">
                         <div class="lg:col-span-4">
-                            <div class="space-y-5 sticky top-6">
-                                <div class="bg-white border border-border rounded-2xl p-5">
-                                    <label class="block text-xs uppercase tracking-wider font-bold text-muted mb-2">Nume turneu</label>
-                                    <input type="text" x-model="planner.name" class="to-input mb-3" placeholder="Tour Vară 2026">
-                                    <label class="block text-xs uppercase tracking-wider font-bold text-muted mb-2">Perioadă</label>
+                            <div class="sticky space-y-5 top-6">
+                                <div class="p-5 bg-white border border-border rounded-2xl">
+                                    <label class="block mb-2 text-xs font-bold tracking-wider uppercase text-muted">Nume turneu</label>
+                                    <input type="text" x-model="planner.name" class="mb-3 to-input" placeholder="Tour Vară 2026">
+                                    <label class="block mb-2 text-xs font-bold tracking-wider uppercase text-muted">Perioadă</label>
                                     <div class="grid grid-cols-2 gap-2">
-                                        <input type="date" x-model="planner.startDate" class="to-input text-sm">
-                                        <input type="date" x-model="planner.endDate" class="to-input text-sm">
+                                        <input type="date" x-model="planner.startDate" class="text-sm to-input">
+                                        <input type="date" x-model="planner.endDate" class="text-sm to-input">
                                     </div>
                                 </div>
 
-                                <div class="bg-white border border-border rounded-2xl p-5">
+                                <div class="p-5 bg-white border border-border rounded-2xl">
                                     <div class="flex items-center justify-between mb-3">
-                                        <label class="text-xs uppercase tracking-wider font-bold text-muted">Orașe în turneu</label>
+                                        <label class="text-xs font-bold tracking-wider uppercase text-muted">Orașe în turneu</label>
                                         <span class="text-xs text-muted"><span x-text="planner.cities.length"></span> orașe</span>
                                     </div>
 
                                     <p class="text-[11px] text-muted mb-3">Adaugă orașele aici, apoi setează data + venue + ordine direct în <strong>Itinerar</strong> după ce optimizezi.</p>
 
-                                    <div class="space-y-2 mb-3">
+                                    <div class="mb-3 space-y-2">
                                         <template x-for="(city, idx) in planner.cities" :key="city.uid">
-                                            <div class="flex items-center gap-2 p-2 bg-surface rounded-lg">
-                                                <span class="w-6 h-6 rounded bg-primary/10 text-primary text-xs font-bold flex items-center justify-center flex-shrink-0" x-text="idx + 1"></span>
-                                                <span class="flex-1 text-sm font-medium text-secondary truncate" x-text="city.name"></span>
+                                            <div class="flex items-center gap-2 p-2 rounded-lg bg-surface">
+                                                <span class="flex items-center justify-center flex-shrink-0 w-6 h-6 text-xs font-bold rounded bg-primary/10 text-primary" x-text="idx + 1"></span>
+                                                <span class="flex-1 text-sm font-medium truncate text-secondary" x-text="city.name"></span>
                                                 <button @click="removeCity(idx)" class="p-1 text-muted hover:text-error" title="Șterge">✕</button>
                                             </div>
                                         </template>
-                                        <p x-show="!planner.cities.length" class="text-xs text-muted text-center py-2">Adaugă cel puțin 2 orașe.</p>
+                                        <p x-show="!planner.cities.length" class="py-2 text-xs text-center text-muted">Adaugă cel puțin 2 orașe.</p>
                                     </div>
 
-                                    <input type="text" x-model="cityInput" @keydown.enter.prevent="addCityFromInput()" placeholder="Adaugă oraș (Enter)" class="to-input text-sm">
+                                    <input type="text" x-model="cityInput" @keydown.enter.prevent="addCityFromInput()" placeholder="Adaugă oraș (Enter)" class="text-sm to-input">
                                     <div class="flex flex-wrap gap-1 mt-3">
                                         <template x-for="quick in quickCities">
-                                            <button @click="addCity(quick)" class="text-xs px-2 py-1 bg-surface text-muted rounded hover:bg-primary/10 hover:text-primary transition-colors">+ <span x-text="quick"></span></button>
+                                            <button @click="addCity(quick)" class="px-2 py-1 text-xs transition-colors rounded bg-surface text-muted hover:bg-primary/10 hover:text-primary">+ <span x-text="quick"></span></button>
                                         </template>
                                     </div>
                                 </div>
 
                                 <!-- Setări tour: organizate pe secțiuni clare -->
-                                <div class="bg-white border border-border rounded-2xl p-5">
+                                <div class="p-5 bg-white border border-border rounded-2xl">
                                     <button @click="planner.configOpen = !planner.configOpen" class="flex items-center justify-between w-full">
-                                        <span class="text-xs uppercase tracking-wider font-bold text-muted">⚙️ Setări tour</span>
-                                        <svg class="w-4 h-4 text-muted transition-transform" :class="planner.configOpen ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                                        <span class="text-xs font-bold tracking-wider uppercase text-muted">⚙️ Setări tour</span>
+                                        <svg class="w-4 h-4 transition-transform text-muted" :class="planner.configOpen ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                                     </button>
 
                                     <div x-show="planner.configOpen" x-transition class="mt-4 space-y-5">
@@ -249,19 +253,19 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                                     @input="query = $event.target.value; open = true"
                                                     @keydown.escape="open = false"
                                                     placeholder="Caută oraș..."
-                                                    class="to-input text-sm">
-                                                <div x-show="open" x-cloak class="absolute z-50 mt-1 left-0 right-0 bg-white border border-border rounded-lg shadow-lg max-h-72 overflow-y-auto">
+                                                    class="text-sm to-input">
+                                                <div x-show="open" x-cloak class="absolute left-0 right-0 z-50 mt-1 overflow-y-auto bg-white border rounded-lg shadow-lg border-border max-h-72">
                                                     <template x-for="city in filterHomeBaseOptions(query)" :key="city.name">
                                                         <button type="button"
                                                             @click="planner.config.start_location = city.name; open = false; query = ''; markDirty()"
-                                                            class="w-full text-left px-3 py-2 hover:bg-surface border-b border-border/40 last:border-0 transition-colors"
+                                                            class="w-full px-3 py-2 text-left transition-colors border-b hover:bg-surface border-border/40 last:border-0"
                                                             :class="planner.config.start_location === city.name ? 'bg-primary/5' : ''">
                                                             <p class="text-xs font-semibold text-secondary" x-text="city.name"></p>
-                                                            <p class="text-[10px] text-muted" x-text="(city.state ? city.state + ', ' : '') + (city.country || '')"></p>
+                                                            <p class="text-xs text-muted" x-text="(city.state ? city.state + ', ' : '') + (city.country || '')"></p>
                                                         </button>
                                                     </template>
                                                     <template x-if="filterHomeBaseOptions(query).length === 0">
-                                                        <p class="text-xs text-muted p-3 text-center">Niciun rezultat pentru „<span x-text="query"></span>"</p>
+                                                        <p class="p-3 text-xs text-center text-muted">Niciun rezultat pentru „<span x-text="query"></span>"</p>
                                                     </template>
                                                 </div>
                                             </div>
@@ -272,7 +276,7 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                             <p class="to-section-title"><span class="icon">🚐</span> Vehicule transport
                                                 <span class="to-tip" data-tip="Toate vehiculele cu care călătorește echipa. Combustibilul total = suma per vehicul × distanța × consum / 100 × preț/L. Adaugă o linie nouă pentru fiecare tip de vehicul (poate avea mai multe bucăți).">ⓘ</span>
                                             </p>
-                                            <div class="grid grid-cols-12 gap-1 text-[10px] text-muted font-semibold mb-1 px-1">
+                                            <div class="grid grid-cols-12 gap-1 px-1 mb-1 text-xs font-semibold text-muted">
                                                 <div class="col-span-4">Tip</div>
                                                 <div class="col-span-2 text-center">Buc</div>
                                                 <div class="col-span-2 text-center">Locuri</div>
@@ -281,22 +285,22 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                             </div>
                                             <div class="space-y-2">
                                                 <template x-for="(v, vi) in planner.config.vehicles" :key="vi">
-                                                    <div class="grid grid-cols-12 gap-1 items-center">
-                                                        <select x-model="v.type" class="to-input text-xs col-span-4">
+                                                    <div class="grid items-center grid-cols-12 gap-1">
+                                                        <select x-model="v.type" class="col-span-4 text-xs to-input">
                                                             <option value="van">Dubă</option>
                                                             <option value="microbus">Microbus</option>
                                                             <option value="truck">Camion</option>
                                                             <option value="suv">SUV</option>
                                                             <option value="bus">Autocar</option>
                                                         </select>
-                                                        <input type="number" min="1" max="10" x-model.number="v.count" class="to-input text-xs col-span-2 text-center">
-                                                        <input type="number" min="1" max="60" x-model.number="v.capacity_seats" class="to-input text-xs col-span-2 text-center">
-                                                        <input type="number" step="0.1" min="1" max="50" x-model.number="v.consumption_l_100km" class="to-input text-xs col-span-3 text-center">
-                                                        <button @click="planner.config.vehicles.splice(vi, 1)" :disabled="planner.config.vehicles.length === 1" class="text-muted hover:text-error col-span-1 disabled:opacity-30">✕</button>
+                                                        <input type="number" min="1" max="10" x-model.number="v.count" class="col-span-2 text-xs text-center to-input">
+                                                        <input type="number" min="1" max="60" x-model.number="v.capacity_seats" class="col-span-2 text-xs text-center to-input">
+                                                        <input type="number" step="0.1" min="1" max="50" x-model.number="v.consumption_l_100km" class="col-span-3 text-xs text-center to-input">
+                                                        <button @click="planner.config.vehicles.splice(vi, 1)" :disabled="planner.config.vehicles.length === 1" class="col-span-1 text-muted hover:text-error disabled:opacity-30">✕</button>
                                                     </div>
                                                 </template>
                                             </div>
-                                            <button @click="planner.config.vehicles.push({type:'van',count:1,capacity_seats:8,consumption_l_100km:9.5})" class="text-xs text-primary hover:underline mt-2">+ Adaugă vehicul</button>
+                                            <button @click="planner.config.vehicles.push({type:'van',count:1,capacity_seats:8,consumption_l_100km:9.5})" class="mt-2 text-xs text-primary hover:underline">+ Adaugă vehicul</button>
                                         </div>
 
                                         <!-- ⛽ Combustibil -->
@@ -306,16 +310,16 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                             </p>
                                             <div class="grid grid-cols-2 gap-2">
                                                 <div>
-                                                    <label class="block text-[10px] text-muted mb-1">Tip</label>
-                                                    <select x-model="planner.config.fuel_type" class="to-input text-xs">
+                                                    <label class="block mb-1 text-xs text-muted">Tip</label>
+                                                    <select x-model="planner.config.fuel_type" class="text-xs to-input">
                                                         <option value="diesel">Motorină</option>
                                                         <option value="gasoline">Benzină</option>
                                                         <option value="electric">Electric</option>
                                                     </select>
                                                 </div>
                                                 <div>
-                                                    <label class="block text-[10px] text-muted mb-1">Preț RON / litru</label>
-                                                    <input type="number" step="0.01" min="0" x-model.number="planner.config.fuel_price_ron_l" class="to-input text-xs">
+                                                    <label class="block mb-1 text-xs text-muted">Preț RON / litru</label>
+                                                    <input type="number" step="0.01" min="0" x-model.number="planner.config.fuel_price_ron_l" class="text-xs to-input">
                                                 </div>
                                             </div>
                                         </div>
@@ -325,27 +329,27 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                             <p class="to-section-title"><span class="icon">👥</span> Echipă & cazare
                                                 <span class="to-tip" data-tip="Persoanele care călătoresc + împărțirea pe camere (single, double = 2 pers, apartament = 4 pers). Capacitatea trebuie să acopere persoanele.">ⓘ</span>
                                             </p>
-                                            <label class="block text-[10px] text-muted mb-1">Persoane în turneu</label>
-                                            <input type="number" min="1" max="50" x-model.number="planner.config.people_count" class="to-input text-xs mb-3">
+                                            <label class="block mb-1 text-xs text-muted">Persoane în turneu</label>
+                                            <input type="number" min="1" max="50" x-model.number="planner.config.people_count" class="mb-3 text-xs to-input">
 
                                             <div class="grid grid-cols-3 gap-2">
                                                 <div>
-                                                    <label class="block text-[10px] text-muted mb-1">Single</label>
-                                                    <input type="number" min="0" x-model.number="planner.config.rooms.single" placeholder="buc" class="to-input text-xs">
-                                                    <input type="number" min="0" x-model.number="planner.config.room_prices.single" placeholder="RON/n" class="to-input text-xs mt-1">
+                                                    <label class="block mb-1 text-xs text-muted">Single</label>
+                                                    <input type="number" min="0" x-model.number="planner.config.rooms.single" placeholder="buc" class="text-xs to-input">
+                                                    <input type="number" min="0" x-model.number="planner.config.room_prices.single" placeholder="RON/n" class="mt-1 text-xs to-input">
                                                 </div>
                                                 <div>
-                                                    <label class="block text-[10px] text-muted mb-1">Double</label>
-                                                    <input type="number" min="0" x-model.number="planner.config.rooms.double" placeholder="buc" class="to-input text-xs">
-                                                    <input type="number" min="0" x-model.number="planner.config.room_prices.double" placeholder="RON/n" class="to-input text-xs mt-1">
+                                                    <label class="block mb-1 text-xs text-muted">Double</label>
+                                                    <input type="number" min="0" x-model.number="planner.config.rooms.double" placeholder="buc" class="text-xs to-input">
+                                                    <input type="number" min="0" x-model.number="planner.config.room_prices.double" placeholder="RON/n" class="mt-1 text-xs to-input">
                                                 </div>
                                                 <div>
-                                                    <label class="block text-[10px] text-muted mb-1">Apartament</label>
-                                                    <input type="number" min="0" x-model.number="planner.config.rooms.apartment" placeholder="buc" class="to-input text-xs">
-                                                    <input type="number" min="0" x-model.number="planner.config.room_prices.apartment" placeholder="RON/n" class="to-input text-xs mt-1">
+                                                    <label class="block mb-1 text-xs text-muted">Apartament</label>
+                                                    <input type="number" min="0" x-model.number="planner.config.rooms.apartment" placeholder="buc" class="text-xs to-input">
+                                                    <input type="number" min="0" x-model.number="planner.config.room_prices.apartment" placeholder="RON/n" class="mt-1 text-xs to-input">
                                                 </div>
                                             </div>
-                                            <p class="text-[10px] mt-2" :class="roomCapacityValid ? 'text-success' : 'text-warning'">
+                                            <p class="mt-2 text-xs" :class="roomCapacityValid ? 'text-success' : 'text-warning'">
                                                 Capacitate: <span x-text="totalRoomCapacity"></span> persoane &middot; configurat pentru <span x-text="planner.config.people_count"></span>
                                                 <span x-show="!roomCapacityValid"> &middot; ⚠️ camere insuficiente</span>
                                             </p>
@@ -356,8 +360,8 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                             <p class="to-section-title"><span class="icon">🍽️</span> Diurnă
                                                 <span class="to-tip" data-tip="Mâncare RON/persoană/zi. Total = persoane × preț/zi × durata totală a tour-ului, distribuit egal per concert.">ⓘ</span>
                                             </p>
-                                            <label class="block text-[10px] text-muted mb-1">Preț RON / persoană / zi</label>
-                                            <input type="number" min="0" x-model.number="planner.config.meal_price_per_day" class="to-input text-xs">
+                                            <label class="block mb-1 text-xs text-muted">Preț RON / persoană / zi</label>
+                                            <input type="number" min="0" x-model.number="planner.config.meal_price_per_day" class="text-xs to-input">
                                         </div>
 
                                         <!-- 🎟️ Venit -->
@@ -365,19 +369,19 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                             <p class="to-section-title"><span class="icon">🎟️</span> Venit estimat
                                                 <span class="to-tip" data-tip="Preț mediu de bilet (RON). Folosit pentru a calcula venitul prognozat per concert și per tour total. Influențează profit + ROI.">ⓘ</span>
                                             </p>
-                                            <label class="block text-[10px] text-muted mb-1">Preț mediu bilet (RON)</label>
-                                            <input type="number" min="0" x-model.number="planner.config.avg_ticket_price" class="to-input text-xs">
+                                            <label class="block mb-1 text-xs text-muted">Preț mediu bilet (RON)</label>
+                                            <input type="number" min="0" x-model.number="planner.config.avg_ticket_price" class="text-xs to-input">
                                         </div>
                                     </div>
                                 </div>
 
-                                <div class="bg-white border border-border rounded-2xl p-5">
-                                    <label class="block text-xs uppercase tracking-wider font-bold text-muted mb-3">Constrângeri rută</label>
+                                <div class="p-5 bg-white border border-border rounded-2xl">
+                                    <label class="block mb-3 text-xs font-bold tracking-wider uppercase text-muted">Constrângeri rută</label>
                                     <div class="space-y-3">
                                         <div>
-                                            <label class="block text-xs text-muted mb-1">Zile minime între concerte (auto-schedule)</label>
+                                            <label class="block mb-1 text-xs text-muted">Zile minime între concerte (auto-schedule)</label>
                                             <input type="range" x-model.number="planner.minDaysBetween" min="1" max="7" class="w-full">
-                                            <p class="text-xs text-secondary font-bold mt-1" x-text="planner.minDaysBetween + ' zile'"></p>
+                                            <p class="mt-1 text-xs font-bold text-secondary" x-text="planner.minDaysBetween + ' zile'"></p>
                                         </div>
                                         <label class="flex items-center gap-2 cursor-pointer">
                                             <input type="checkbox" x-model="planner.includeBorder" class="w-4 h-4 rounded text-primary">
@@ -386,7 +390,7 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                     </div>
                                 </div>
 
-                                <button @click="optimizeRoute()" :disabled="planner.cities.length < 2 || tabLoading" class="to-btn to-btn-primary w-full">
+                                <button @click="optimizeRoute()" :disabled="planner.cities.length < 2 || tabLoading" class="w-full to-btn to-btn-primary">
                                     ⚡ Optimizează rută
                                 </button>
                             </div>
@@ -394,63 +398,67 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
 
                         <div class="lg:col-span-8">
                             <div x-show="!planner.optimized">
-                                <div class="bg-surface border border-dashed border-border rounded-2xl p-12 text-center">
-                                    <div class="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4">🎯</div>
+                                <div class="p-12 text-center border border-dashed bg-surface border-border rounded-2xl">
+                                    <div class="flex items-center justify-center w-16 h-16 mx-auto mb-4 bg-white rounded-full">🎯</div>
                                     <p class="font-medium text-secondary">Adaugă orașe și apasă „Optimizează rută"</p>
-                                    <p class="text-sm text-muted mt-1">Algoritm-ul calculează ordinea optimă, distanțe și predicții bilete.</p>
+                                    <p class="mt-1 text-sm text-muted">Algoritm-ul calculează ordinea optimă, distanțe și predicții bilete.</p>
                                 </div>
                             </div>
 
                             <div x-show="planner.optimized">
-                                <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
-                                    <div class="bg-white border border-border rounded-xl p-4">
-                                        <p class="text-xs text-muted uppercase tracking-wider font-semibold flex items-center gap-1">
+                                <div class="grid grid-cols-2 gap-3 mb-4 lg:grid-cols-4">
+                                    <div class="p-4 bg-white border border-border rounded-xl">
+                                        <p class="flex items-center gap-1 text-xs font-semibold tracking-wider uppercase text-muted">
                                             Distanță rută
                                             <span class="to-tip" :data-tip="planner.summary?.routing_has_fallback ? 'Unele segmente folosesc aproximare (Haversine × 1.35) pentru că OSRM era indisponibil. Dă Recalculează mai târziu pentru valori exacte.' : 'Distanță reală pe ruta auto, calculată cu OpenStreetMap (OSRM). Cache 30 zile per rută.'">ⓘ</span>
                                         </p>
-                                        <p class="text-xl font-bold text-secondary mt-1">~<span x-text="formatNumber(planner.summary?.total_road_distance_km ?? 0)"></span> km</p>
-                                        <p class="text-[10px] text-muted mt-0.5"><span x-text="formatDuration(planner.summary?.total_drive_time_min ?? 0)"></span> de condus</p>
+                                        <p class="mt-1 text-xl font-bold text-secondary">~<span x-text="formatNumber(planner.summary?.total_road_distance_km ?? 0)"></span> km</p>
+                                        <p class="text-xs text-muted mt-0.5"><span x-text="formatDuration(planner.summary?.total_drive_time_min ?? 0)"></span> de condus</p>
                                     </div>
-                                    <div class="bg-white border border-border rounded-xl p-4">
-                                        <p class="text-xs text-muted uppercase tracking-wider font-semibold">Durată tour</p>
-                                        <p class="text-xl font-bold text-secondary mt-1"><span x-text="planner.summary?.duration_days ?? 0"></span> zile</p>
+                                    <div class="p-4 bg-white border border-border rounded-xl">
+                                        <p class="text-xs font-semibold tracking-wider uppercase text-muted">Durată tour</p>
+                                        <p class="mt-1 text-xl font-bold text-secondary"><span x-text="planner.summary?.duration_days ?? 0"></span> zile</p>
                                     </div>
-                                    <div class="bg-white border border-border rounded-xl p-4">
-                                        <p class="text-xs text-muted uppercase tracking-wider font-semibold">Cost total*</p>
-                                        <p class="text-xl font-bold text-secondary mt-1">~<span x-text="formatNumber(planner.summary?.total_cost_ron ?? 0)"></span> RON</p>
+                                    <div class="p-4 bg-white border border-border rounded-xl">
+                                        <p class="text-xs font-semibold tracking-wider uppercase text-muted">Cost total*</p>
+                                        <p class="mt-1 text-xl font-bold text-secondary">~<span x-text="formatNumber(planner.summary?.total_cost_ron ?? 0)"></span> RON</p>
                                     </div>
-                                    <div class="bg-white border border-border rounded-xl p-4">
-                                        <p class="text-xs text-muted uppercase tracking-wider font-semibold">Bilete prog.</p>
-                                        <p class="text-xl font-bold text-success mt-1">~<span x-text="formatNumber(planner.summary?.predicted_tickets ?? 0)"></span></p>
+                                    <div class="p-4 bg-white border border-border rounded-xl">
+                                        <p class="text-xs font-semibold tracking-wider uppercase text-muted">Bilete prog.</p>
+                                        <p class="mt-1 text-xl font-bold text-success">~<span x-text="formatNumber(planner.summary?.predicted_tickets ?? 0)"></span></p>
                                     </div>
                                 </div>
 
-                                <div class="grid grid-cols-3 gap-3 mb-4">
-                                    <div class="bg-surface rounded-xl p-3 text-center">
-                                        <p class="text-[10px] text-muted uppercase">⛽ Combustibil</p>
+                                <div class="grid gap-3 mb-4 grid-cols-2 sm:grid-cols-4">
+                                    <div class="p-3 text-center bg-surface rounded-xl">
+                                        <p class="text-xs font-semibold uppercase text-muted">⛽ Combustibil</p>
                                         <p class="text-sm font-bold text-secondary"><span x-text="formatNumber(planner.summary?.fuel_cost_ron ?? 0)"></span> RON</p>
                                     </div>
-                                    <div class="bg-surface rounded-xl p-3 text-center">
-                                        <p class="text-[10px] text-muted uppercase">🛏️ Cazare</p>
+                                    <div class="p-3 text-center bg-surface rounded-xl">
+                                        <p class="text-xs font-semibold uppercase text-muted">🛏️ Cazare</p>
                                         <p class="text-sm font-bold text-secondary"><span x-text="formatNumber(planner.summary?.accommodation_cost_ron ?? 0)"></span> RON</p>
                                     </div>
-                                    <div class="bg-surface rounded-xl p-3 text-center">
-                                        <p class="text-[10px] text-muted uppercase">🍽️ Mâncare</p>
+                                    <div class="p-3 text-center bg-surface rounded-xl">
+                                        <p class="text-xs font-semibold uppercase text-muted">🍽️ Mâncare</p>
                                         <p class="text-sm font-bold text-secondary"><span x-text="formatNumber(planner.summary?.meal_cost_ron ?? 0)"></span> RON</p>
+                                    </div>
+                                    <div class="p-3 text-center rounded-xl" :class="(planner.summary?.extra_cost_ron ?? 0) > 0 ? 'bg-warning/5 border border-warning/20' : 'bg-surface'">
+                                        <p class="text-xs font-semibold uppercase text-muted">➕ Extra</p>
+                                        <p class="text-sm font-bold text-secondary"><span x-text="formatNumber(planner.summary?.extra_cost_ron ?? 0)"></span> RON</p>
                                     </div>
                                 </div>
 
                                 <div class="grid grid-cols-3 gap-3 mb-4">
-                                    <div class="bg-success/5 border border-success/20 rounded-xl p-3 text-center">
-                                        <p class="text-[10px] text-success uppercase font-bold">💰 Venit estimat</p>
+                                    <div class="p-3 text-center border bg-success/5 border-success/20 rounded-xl">
+                                        <p class="text-xs font-semibold uppercase text-success">💰 Venit estimat</p>
                                         <p class="text-base font-bold text-success">~<span x-text="formatNumber(planner.summary?.predicted_revenue_ron ?? 0)"></span> RON</p>
                                     </div>
-                                    <div class="rounded-xl p-3 text-center border" :class="(planner.summary?.profit_ron ?? 0) >= 0 ? 'bg-success/10 border-success/30' : 'bg-error/10 border-error/30'">
-                                        <p class="text-[10px] uppercase font-bold" :class="(planner.summary?.profit_ron ?? 0) >= 0 ? 'text-success' : 'text-error'">📈 Profit estimat</p>
+                                    <div class="p-3 text-center border rounded-xl" :class="(planner.summary?.profit_ron ?? 0) >= 0 ? 'bg-success/10 border-success/30' : 'bg-error/10 border-error/30'">
+                                        <p class="text-xs font-semibold uppercase" :class="(planner.summary?.profit_ron ?? 0) >= 0 ? 'text-success' : 'text-error'">📈 Profit estimat</p>
                                         <p class="text-base font-bold" :class="(planner.summary?.profit_ron ?? 0) >= 0 ? 'text-success' : 'text-error'">~<span x-text="formatNumber(planner.summary?.profit_ron ?? 0)"></span> RON</p>
                                     </div>
-                                    <div class="rounded-xl p-3 text-center border" :class="(planner.summary?.margin_pct ?? 0) >= 0 ? 'bg-success/10 border-success/30' : 'bg-error/10 border-error/30'">
-                                        <p class="text-[10px] uppercase font-bold" :class="(planner.summary?.margin_pct ?? 0) >= 0 ? 'text-success' : 'text-error'">% Marjă</p>
+                                    <div class="p-3 text-center border rounded-xl" :class="(planner.summary?.margin_pct ?? 0) >= 0 ? 'bg-success/10 border-success/30' : 'bg-error/10 border-error/30'">
+                                        <p class="text-xs font-semibold uppercase" :class="(planner.summary?.margin_pct ?? 0) >= 0 ? 'text-success' : 'text-error'">% Marjă</p>
                                         <p class="text-base font-bold" :class="(planner.summary?.margin_pct ?? 0) >= 0 ? 'text-success' : 'text-error'"><span x-text="planner.summary?.margin_pct ?? 0"></span>%</p>
                                     </div>
                                 </div>
@@ -458,17 +466,19 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                 <div id="plannerMap" style="height: 320px; margin-bottom: 16px;"></div>
 
                                 <div class="bg-white border border-border rounded-2xl">
-                                    <!-- Sticky toolbar — rămâne vizibilă cât scroll-uiești prin orașe -->
-                                    <div class="sticky top-2 z-30 bg-white border-b border-border rounded-t-2xl px-5 py-3 shadow-sm">
-                                        <div class="flex items-center justify-between flex-wrap gap-2">
+                                    <!-- Sticky toolbar — rămâne vizibilă cât scroll-uiești prin orașe.
+                                         Auto-recalc rulează la 1s după orice editare → nu mai e nevoie de buton manual. -->
+                                    <div class="sticky z-30 px-5 py-3 bg-white border-b shadow-sm top-2 border-border rounded-t-2xl">
+                                        <div class="flex flex-wrap items-center justify-between gap-2">
                                             <h3 class="font-bold text-secondary">Itinerar optim</h3>
-                                            <div class="flex gap-2 flex-wrap items-center">
-                                                <span x-show="planner.dirty" class="text-xs text-warning font-semibold">⚠️ modificări nesalvate</span>
-                                                <button @click="recalcRoute()" :disabled="tabLoading"
-                                                    :class="planner.dirty ? 'to-pulse text-white' : 'to-btn-secondary'"
-                                                    class="to-btn to-btn-sm">🔄 Recalculează</button>
-                                                <button @click="saveScenario()" :disabled="planner.saving || planner.dirty"
-                                                    :title="planner.dirty ? 'Apasă Recalculează întâi ca să salvezi cu noile valori' : ''"
+                                            <div class="flex flex-wrap items-center gap-2">
+                                                <span x-show="tabLoading" class="inline-flex items-center gap-2 text-xs font-semibold text-primary">
+                                                    <span class="inline-block w-3 h-3 border-2 rounded-full border-primary border-t-transparent animate-spin"></span>
+                                                    Se recalculează...
+                                                </span>
+                                                <span x-show="!tabLoading && planner.dirty" class="text-xs font-semibold text-warning">⏳ recalcul în curând...</span>
+                                                <span x-show="!tabLoading && !planner.dirty && planner.optimized" class="text-xs font-semibold text-success">✓ actualizat</span>
+                                                <button @click="saveScenario()" :disabled="planner.saving || tabLoading"
                                                     class="to-btn to-btn-primary to-btn-sm">
                                                     <span x-text="planner.saving ? 'Se salvează...' : '💾 Salvează'"></span>
                                                 </button>
@@ -477,32 +487,32 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                     </div>
 
                                     <div class="p-5">
-                                        <p class="text-[11px] text-muted mb-3">Trage cardurile pentru a reordona. Editează data, venue-ul sau bifează „pleacă din <span x-text="planner.config.start_location"></span>" apoi click <strong>🔄 Recalculează</strong>.</p>
+                                        <p class="mb-3 text-xs text-muted">Trage cardurile pentru a reordona. Editează data, venue-ul, costuri etc — totul se recalculează automat după ~1 secundă de inactivitate.</p>
 
                                     <div x-ref="routeList" class="space-y-3">
                                         <template x-for="(stop, idx) in planner.route || []" :key="stop.city + '-' + idx">
-                                            <div class="rounded-xl p-4 transition-colors" :data-idx="idx"
+                                            <div class="p-4 transition-colors rounded-xl" :data-idx="idx"
                                                 :class="stop.fixed ? 'border-2 border-success bg-success/5' : (stop.is_home ? 'border border-accent/40 bg-accent/5' : 'border border-border hover:bg-surface/50')">
                                                 <div class="flex items-start gap-3 mb-3">
-                                                    <span x-show="!stop.fixed" class="cursor-grab text-muted route-handle text-xl leading-none select-none flex-shrink-0 pt-1" title="Trage pentru reordonare">⋮⋮</span>
-                                                    <span x-show="stop.fixed" class="text-success text-xl leading-none flex-shrink-0 pt-1" title="Concert confirmat — drag dezactivat">🔒</span>
-                                                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary-dark text-white font-bold flex items-center justify-center flex-shrink-0" x-text="idx + 1"></div>
+                                                    <span x-show="!stop.fixed" class="flex-shrink-0 pt-1 text-xl leading-none select-none cursor-grab text-muted route-handle" title="Trage pentru reordonare">⋮⋮</span>
+                                                    <span x-show="stop.fixed" class="flex-shrink-0 pt-1 text-xl leading-none text-success" title="Concert confirmat — drag dezactivat">🔒</span>
+                                                    <div class="flex items-center justify-center flex-shrink-0 w-10 h-10 font-bold text-white rounded-xl bg-gradient-to-br from-primary to-primary-dark" x-text="idx + 1"></div>
                                                     <div class="flex-1 min-w-0">
-                                                        <div class="flex items-center gap-2 flex-wrap mb-1">
+                                                        <div class="flex flex-wrap items-center gap-2 mb-1">
                                                             <p class="font-bold text-secondary" x-text="stop.city"></p>
-                                                            <span x-show="stop.is_home" class="to-badge bg-accent/15 text-accent text-[10px]">🏠 acasă</span>
-                                                            <span x-show="stop.fixed" class="to-badge bg-success/15 text-success text-[10px]">✓ confirmat</span>
-                                                            <span x-show="stop.from_start && !stop.is_home" class="to-badge bg-accent/10 text-accent text-[10px]">↩ din <span x-text="planner.config.start_location"></span></span>
-                                                            <span x-show="stop.venue_name" class="text-xs text-secondary font-medium" x-text="'· ' + stop.venue_name"></span>
-                                                            <span x-show="stop.effective_capacity" class="to-badge bg-primary/10 text-primary text-[10px]"><span x-text="formatNumber(stop.effective_capacity)"></span> loc</span>
+                                                            <span x-show="stop.is_home" class="text-xs to-badge bg-accent/15 text-accent">🏠 acasă</span>
+                                                            <span x-show="stop.fixed" class="text-xs to-badge bg-success/15 text-success">✓ confirmat</span>
+                                                            <span x-show="stop.from_start && !stop.is_home" class="text-xs to-badge bg-accent/10 text-accent">↩ din <span x-text="planner.config.start_location"></span></span>
+                                                            <span x-show="stop.venue_name" class="text-xs font-medium text-secondary" x-text="'· ' + stop.venue_name"></span>
+                                                            <span x-show="stop.effective_capacity" class="text-xs to-badge bg-primary/10 text-primary"><span x-text="formatNumber(stop.effective_capacity)"></span> loc</span>
                                                             <span x-show="stop.manual_capacity && !stop.venue_capacity" class="to-badge bg-warning/10 text-warning text-[9px]" title="Capacitate setată manual">manual</span>
                                                         </div>
                                                         <p class="text-xs text-muted"><span x-text="stop.date"></span> · <span x-text="stop.day"></span><span x-show="stop.arrival_road_km > 0"> · sosire ~<span x-text="formatNumber(stop.arrival_road_km)"></span> km (<span x-text="formatDuration(stop.arrival_drive_time_min)"></span>)</span><span x-show="stop.is_home"> · 🏠 nu e drum (concertul e acasă)</span></p>
                                                     </div>
-                                                    <div class="text-right flex-shrink-0">
+                                                    <div class="flex-shrink-0 text-right">
                                                         <p class="text-xs text-muted">Predicție</p>
                                                         <p class="text-sm font-bold text-success"><span x-text="formatNumber(stop.prediction)"></span> bilete</p>
-                                                        <p class="text-[10px] text-muted">
+                                                        <p class="text-xs text-muted">
                                                             <span x-show="stop.manual_prediction !== null">manual ·</span>
                                                             <span x-text="stop.confidence"></span>% confidence
                                                             <span class="to-tip" :data-tip="confidenceText(stop)">ⓘ</span>
@@ -511,23 +521,23 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                                 </div>
 
                                                 <!-- Buton Confirmă concert -->
-                                                <div class="ml-7 sm:ml-12 mb-3">
+                                                <div class="mb-3 ml-7 sm:ml-12">
                                                     <button @click="toggleStopFixed(idx)"
                                                         :class="stop.fixed ? 'bg-success/10 text-success border-success/30' : 'bg-surface text-muted border-border hover:bg-success/5 hover:text-success hover:border-success/30'"
                                                         class="text-xs font-semibold px-3 py-1.5 rounded-lg border transition-colors">
                                                         <span x-text="stop.fixed ? '🔓 Anulează confirmarea' : '🔒 Confirmă concert'"></span>
                                                     </button>
-                                                    <span class="text-[10px] text-muted ml-2" x-show="stop.fixed">Concertul e blocat — data și venue-ul nu mai pot fi modificate.</span>
+                                                    <span class="ml-2 text-xs text-muted" x-show="stop.fixed">Concertul e blocat — data și venue-ul nu mai pot fi modificate.</span>
                                                 </div>
 
                                                 <!-- Inline edit row: data + venue -->
-                                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3 ml-7 sm:ml-12">
+                                                <div class="grid grid-cols-1 gap-2 mb-3 sm:grid-cols-2 ml-7 sm:ml-12">
                                                     <div>
-                                                        <label class="block text-[10px] text-muted mb-1">📅 Data eveniment</label>
-                                                        <input type="date" :value="stop.date_iso" @change="updateStopDate(idx, $event.target.value)" class="to-input text-xs disabled:bg-surface disabled:cursor-not-allowed" :min="planner.startDate" :max="planner.endDate" :disabled="stop.fixed">
+                                                        <label class="block mb-1 text-xs text-muted">📅 Data eveniment</label>
+                                                        <input type="date" :value="stop.date_iso" @change="updateStopDate(idx, $event.target.value)" class="text-xs to-input disabled:bg-surface disabled:cursor-not-allowed" :min="planner.startDate" :max="planner.endDate" :disabled="stop.fixed">
                                                     </div>
                                                     <div x-data="{ open: false, query: '' }" @click.outside="open = false">
-                                                        <label class="block text-[10px] text-muted mb-1">🏟️ Venue (caută & alege)</label>
+                                                        <label class="block mb-1 text-xs text-muted">🏟️ Locație (caută & alege)</label>
                                                         <div class="relative">
                                                             <input type="text"
                                                                 :value="open ? query : (stop.venue_name || '')"
@@ -536,11 +546,11 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                                                 @keydown.escape="open = false"
                                                                 placeholder="Click pentru a vedea toate venues, sau caută..."
                                                                 :disabled="stop.fixed"
-                                                                class="to-input text-xs pr-7 disabled:bg-surface disabled:cursor-not-allowed">
-                                                            <button type="button" x-show="stop.venue_id && !stop.fixed" @click.stop="selectVenueForStop(idx, null); query = ''" class="absolute right-2 top-1/2 -translate-y-1/2 text-muted hover:text-error text-xs" title="Șterge selecția">✕</button>
-                                                            <div x-show="open && !stop.fixed" x-cloak class="absolute z-50 mt-1 left-0 right-0 bg-white border border-border rounded-lg shadow-lg max-h-72 overflow-y-auto">
+                                                                class="text-xs to-input pr-7 disabled:bg-surface disabled:cursor-not-allowed">
+                                                            <button type="button" x-show="stop.venue_id && !stop.fixed" @click.stop="selectVenueForStop(idx, null); query = ''" class="absolute text-xs -translate-y-1/2 right-2 top-1/2 text-muted hover:text-error" title="Șterge selecția">✕</button>
+                                                            <div x-show="open && !stop.fixed" x-cloak class="absolute left-0 right-0 z-50 mt-1 overflow-y-auto bg-white border rounded-lg shadow-lg border-border max-h-72">
                                                                 <template x-if="!venuesByCity[stop.city] || venuesByCity[stop.city].length === 0">
-                                                                    <p class="text-xs text-muted p-3 text-center">
+                                                                    <p class="p-3 text-xs text-center text-muted">
                                                                         <template x-if="!venuesByCity[stop.city]"><span>Se caută venues în <span x-text="stop.city"></span>…</span></template>
                                                                         <template x-if="venuesByCity[stop.city] && !venuesByCity[stop.city].length"><span>Niciun venue înregistrat în <span x-text="stop.city"></span>.</span></template>
                                                                     </p>
@@ -548,17 +558,17 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                                                 <template x-for="v in filterVenues(venuesByCity[stop.city] || [], query)" :key="v.id">
                                                                     <button type="button"
                                                                         @click="selectVenueForStop(idx, v); open = false; query = ''"
-                                                                        class="w-full text-left px-3 py-2 hover:bg-surface border-b border-border/40 last:border-0 transition-colors"
+                                                                        class="w-full px-3 py-2 text-left transition-colors border-b hover:bg-surface border-border/40 last:border-0"
                                                                         :class="stop.venue_id === v.id ? 'bg-primary/5' : ''">
                                                                         <p class="text-xs font-semibold text-secondary" x-text="v.name"></p>
                                                                         <div class="flex items-center justify-between mt-0.5">
-                                                                            <p class="text-[10px] text-muted truncate flex-1" x-text="v.address || '—'"></p>
-                                                                            <span x-show="v.capacity_total" class="text-[10px] font-bold text-primary ml-2 flex-shrink-0"><span x-text="formatNumber(v.capacity_total)"></span> loc</span>
+                                                                            <p class="flex-1 text-xs truncate text-muted" x-text="v.address || '—'"></p>
+                                                                            <span x-show="v.capacity_total" class="flex-shrink-0 ml-2 text-xs font-bold text-primary"><span x-text="formatNumber(v.capacity_total)"></span> loc</span>
                                                                         </div>
                                                                     </button>
                                                                 </template>
                                                                 <template x-if="venuesByCity[stop.city]?.length && filterVenues(venuesByCity[stop.city] || [], query).length === 0">
-                                                                    <p class="text-xs text-muted p-3 text-center">Niciun rezultat pentru „<span x-text="query"></span>"</p>
+                                                                    <p class="p-3 text-xs text-center text-muted">Niciun rezultat pentru „<span x-text="query"></span>"</p>
                                                                 </template>
                                                             </div>
                                                         </div>
@@ -566,20 +576,20 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                                 </div>
 
                                                 <!-- Manual overrides: capacitate + estimat vânzări -->
-                                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3 ml-7 sm:ml-12">
+                                                <div class="grid grid-cols-1 gap-2 mb-3 sm:grid-cols-2 ml-7 sm:ml-12">
                                                     <div>
-                                                        <label class="block text-[10px] text-muted mb-1">
-                                                            🎟️ Capacitate venue
+                                                        <label class="block mb-1 text-xs text-muted">
+                                                            🎟️ Capacitate locație
                                                             <span class="to-tip" data-tip="Dacă venue-ul nu are capacitatea înregistrată sau vrei să o suprascrii pentru această ocazie. Lasă gol pentru a folosi capacitatea din DB.">ⓘ</span>
                                                         </label>
                                                         <input type="number" min="0" max="200000"
                                                             :value="stop.manual_capacity || ''"
                                                             @input.debounce.500ms="updateStopManualCapacity(idx, $event.target.value)"
                                                             :placeholder="stop.venue_capacity ? ('din DB: ' + stop.venue_capacity) : 'ex: 1500'"
-                                                            class="to-input text-xs">
+                                                            class="text-xs to-input">
                                                     </div>
                                                     <div>
-                                                        <label class="block text-[10px] text-muted mb-1">
+                                                        <label class="block mb-1 text-xs text-muted">
                                                             📊 Estimat vânzări (manual)
                                                             <span class="to-tip" data-tip="Dacă ai propria estimare pentru numărul de bilete vândute, scrie-o aici. Va suprascrie predicția automată. Lasă gol pentru predicția algoritmului.">ⓘ</span>
                                                         </label>
@@ -587,11 +597,37 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                                             :value="stop.manual_prediction || ''"
                                                             @input.debounce.500ms="updateStopManualPrediction(idx, $event.target.value)"
                                                             :placeholder="'algoritm: ~' + (stop.prediction || 0) + ' bilete'"
-                                                            class="to-input text-xs">
+                                                            class="text-xs to-input">
                                                     </div>
                                                 </div>
 
-                                                <label x-show="!stop.is_home" class="flex items-center gap-2 cursor-pointer ml-7 sm:ml-12 mb-3">
+                                                <!-- Costuri suplimentare opționale -->
+                                                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-3 ml-7 sm:ml-12">
+                                                    <div>
+                                                        <label class="block mb-1 text-xs text-muted">
+                                                            ➕ Costuri suplimentare (RON)
+                                                            <span class="to-tip" data-tip="Costuri ad-hoc pentru acest stop care nu intră în combustibil/cazare/diurnă: tehnică, securitate, transport echipament local, etc. Se adaugă la totalul stop-ului. Lasă gol = 0.">ⓘ</span>
+                                                        </label>
+                                                        <input type="number" min="0" max="1000000" step="0.01"
+                                                            :value="stop.extra_cost || ''"
+                                                            @input.debounce.500ms="updateStopExtraCost(idx, $event.target.value)"
+                                                            placeholder="ex: 1500"
+                                                            class="text-xs to-input">
+                                                    </div>
+                                                    <div class="sm:col-span-2">
+                                                        <label class="block mb-1 text-xs text-muted">
+                                                            📝 Descriere costuri suplimentare
+                                                            <span class="to-tip" data-tip="Ce reprezintă cei X RON. Doar pentru evidență — nu afectează calculele.">ⓘ</span>
+                                                        </label>
+                                                        <input type="text" maxlength="300"
+                                                            :value="stop.extra_cost_description || ''"
+                                                            @input.debounce.700ms="updateStopExtraCostDescription(idx, $event.target.value)"
+                                                            placeholder="ex: Sunet & lumini local, taxă publicitate"
+                                                            class="text-xs to-input">
+                                                    </div>
+                                                </div>
+
+                                                <label x-show="!stop.is_home" class="flex items-center gap-2 mb-3 cursor-pointer ml-7 sm:ml-12">
                                                     <input type="checkbox"
                                                         :checked="idx === 0 ? true : stop.from_start"
                                                         @change="updateStopFromStart(idx, $event.target.checked)"
@@ -607,65 +643,73 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                                     </span>
                                                 </label>
 
-                                                <p class="text-[10px] text-muted ml-7 sm:ml-12 mb-2">* Toate costurile sunt <strong>estimative</strong>, calculate din setările tale (vehicule, cazare, diurnă).</p>
+                                                <p class="mb-2 text-xs text-muted ml-7 sm:ml-12">* Toate costurile sunt <strong>estimative</strong>, calculate din setările tale (vehicule, cazare, diurnă).</p>
 
                                                 <!-- Cost breakdown extended cu tooltip cu formula -->
-                                                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3 text-xs">
-                                                    <div class="bg-surface rounded p-2">
-                                                        <p class="text-muted text-[10px] flex items-center gap-1">⛽ Combustibil
+                                                <div class="grid grid-cols-2 gap-2 mb-3 text-xs sm:grid-cols-5">
+                                                    <div class="p-2 rounded bg-surface">
+                                                        <p class="flex items-center gap-1 text-xs text-muted">⛽ Combustibil
                                                             <span class="to-tip" :data-tip="fuelFormulaText(stop)">ⓘ</span>
                                                         </p>
                                                         <p class="font-semibold text-secondary"><span x-text="formatNumber(stop.fuel_cost ?? 0)"></span> RON</p>
-                                                        <p class="text-[10px] text-muted mt-0.5" x-show="(stop.fuel_arrival_cost ?? 0) > 0 && (stop.fuel_return_leg_cost ?? 0) > 0">
+                                                        <p class="text-xs text-muted mt-0.5" x-show="(stop.fuel_arrival_cost ?? 0) > 0 && (stop.fuel_return_leg_cost ?? 0) > 0">
                                                             sosire <span x-text="formatNumber(stop.fuel_arrival_cost ?? 0)"></span> + retur <span x-text="formatNumber(stop.fuel_return_leg_cost ?? 0)"></span>
                                                         </p>
-                                                        <p class="text-[10px] text-muted mt-0.5" x-show="(stop.fuel_arrival_cost ?? 0) > 0 && (stop.fuel_return_leg_cost ?? 0) === 0">
+                                                        <p class="text-xs text-muted mt-0.5" x-show="(stop.fuel_arrival_cost ?? 0) > 0 && (stop.fuel_return_leg_cost ?? 0) === 0">
                                                             <span x-text="formatNumber(stop.fuel_arrival_km ?? 0)"></span> km
                                                         </p>
                                                     </div>
-                                                    <div class="bg-surface rounded p-2">
-                                                        <p class="text-muted text-[10px] flex items-center gap-1">🛏️ Cazare (<span x-text="stop.nights ?? 1"></span>n)
+                                                    <div class="p-2 rounded bg-surface">
+                                                        <p class="flex items-center gap-1 text-xs text-muted">🛏️ Cazare (<span x-text="stop.nights ?? 1"></span>n)
                                                             <span class="to-tip" :data-tip="accommodationFormulaText(stop)">ⓘ</span>
                                                         </p>
                                                         <p class="font-semibold text-secondary"><span x-text="formatNumber(stop.accommodation_cost ?? 0)"></span> RON</p>
                                                     </div>
-                                                    <div class="bg-surface rounded p-2">
-                                                        <p class="text-muted text-[10px] flex items-center gap-1">🍽️ Diurnă
+                                                    <div class="p-2 rounded bg-surface">
+                                                        <p class="flex items-center gap-1 text-xs text-muted">🍽️ Diurnă
                                                             <span class="to-tip" :data-tip="mealFormulaText(stop)">ⓘ</span>
                                                         </p>
                                                         <p class="font-semibold text-secondary"><span x-text="formatNumber(stop.meal_cost ?? 0)"></span> RON</p>
                                                     </div>
-                                                    <div class="bg-error/5 border border-error/20 rounded p-2">
-                                                        <p class="text-error text-[10px] font-bold">💸 Total cost*</p>
+                                                    <div class="p-2 rounded bg-surface" :class="(stop.extra_cost ?? 0) > 0 ? 'bg-warning/5 border border-warning/20' : ''">
+                                                        <p class="flex items-center gap-1 text-xs text-muted">➕ Extra
+                                                            <span class="to-tip" :data-tip="(stop.extra_cost_description || 'Costuri suplimentare introduse manual de tine pentru acest stop.')">ⓘ</span>
+                                                        </p>
+                                                        <p class="font-semibold text-secondary"><span x-text="formatNumber(stop.extra_cost ?? 0)"></span> RON</p>
+                                                    </div>
+                                                    <div class="p-2 border rounded bg-error/5 border-error/20">
+                                                        <p class="text-xs font-bold text-error">💸 Cost total*</p>
                                                         <p class="font-bold text-error"><span x-text="formatNumber(stop.stop_total_cost ?? 0)"></span> RON</p>
                                                     </div>
                                                 </div>
 
                                                 <!-- Revenue + profit row -->
                                                 <div class="grid grid-cols-3 gap-2 mb-3 text-xs">
-                                                    <div class="bg-success/5 border border-success/20 rounded p-2">
-                                                        <p class="text-success text-[10px] font-bold">💰 Venit estimat</p>
+                                                    <div class="p-2 border rounded bg-success/5 border-success/20">
+                                                        <p class="text-xs font-bold text-success">💰 Venit estimat</p>
                                                         <p class="font-bold text-success"><span x-text="formatNumber(stop.revenue_estimate ?? 0)"></span> RON</p>
                                                     </div>
-                                                    <div class="rounded p-2 border" :class="(stop.profit_estimate ?? 0) >= 0 ? 'bg-success/10 border-success/30' : 'bg-error/10 border-error/30'">
-                                                        <p class="text-[10px] font-bold" :class="(stop.profit_estimate ?? 0) >= 0 ? 'text-success' : 'text-error'">📈 Profit</p>
+                                                    <div class="p-2 border rounded" :class="(stop.profit_estimate ?? 0) >= 0 ? 'bg-success/10 border-success/30' : 'bg-error/10 border-error/30'">
+                                                        <p class="text-xs font-bold" :class="(stop.profit_estimate ?? 0) >= 0 ? 'text-success' : 'text-error'">📈 Profit</p>
                                                         <p class="font-bold" :class="(stop.profit_estimate ?? 0) >= 0 ? 'text-success' : 'text-error'"><span x-text="formatNumber(stop.profit_estimate ?? 0)"></span> RON</p>
                                                     </div>
-                                                    <div class="rounded p-2 border" :class="(stop.margin_pct ?? 0) >= 0 ? 'bg-success/10 border-success/30' : 'bg-error/10 border-error/30'">
-                                                        <p class="text-[10px] font-bold" :class="(stop.margin_pct ?? 0) >= 0 ? 'text-success' : 'text-error'">% Marjă</p>
+                                                    <div class="p-2 border rounded" :class="(stop.margin_pct ?? 0) >= 0 ? 'bg-success/10 border-success/30' : 'bg-error/10 border-error/30'">
+                                                        <p class="text-xs font-bold" :class="(stop.margin_pct ?? 0) >= 0 ? 'text-success' : 'text-error'">% Marjă profit</p>
                                                         <p class="font-bold" :class="(stop.margin_pct ?? 0) >= 0 ? 'text-success' : 'text-error'"><span x-text="stop.margin_pct ?? 0"></span>%</p>
                                                     </div>
                                                 </div>
 
                                                 <!-- Cazare embed -->
-                                                <div class="border-t border-border pt-3" x-data="{ stayOpen: false }">
-                                                    <button @click="stayOpen = !stayOpen; $nextTick(() => stayOpen && loadStay22(idx))" class="text-xs text-primary hover:underline flex items-center gap-1">
-                                                        🛏️ <span x-text="stayOpen ? 'Ascunde cazări' : 'Vezi cazări în zonă'"></span>
-                                                    </button>
-                                                    <p class="text-[10px] text-muted mt-1" x-show="!stayOpen">Recomandări lângă <span x-text="stop.venue_name || stop.city"></span> filtrate cu setările tale (<span x-text="planner.config.people_count"></span> persoane · <span x-text="totalRoomsCount()"></span> camere · max <span x-text="formatNumber(maxRoomPrice())"></span> RON/noapte).</p>
+                                                <div class="pt-3 border-t border-border" x-data="{ stayOpen: false }">
+                                                    <div class="flex items-center justify-between gap-x-4">
+                                                        <button @click="stayOpen = !stayOpen; $nextTick(() => stayOpen && loadStay22(idx))" class="flex items-center gap-1 text-xs text-primary hover:underline">
+                                                            🛏️ <span x-text="stayOpen ? 'Ascunde cazări' : 'Vezi cazări în zonă'"></span>
+                                                        </button>
+                                                        <p class="mt-1 text-xs text-muted" x-show="!stayOpen">Recomandări lângă <span x-text="stop.venue_name || stop.city"></span> filtrate cu setările tale (<span x-text="planner.config.people_count"></span> persoane · <span x-text="totalRoomsCount()"></span> camere · max <span x-text="formatNumber(maxRoomPrice())"></span> RON/noapte).</p>
+                                                    </div>
                                                     <div x-show="stayOpen" x-transition class="mt-3">
                                                         <iframe :id="'stay22-frame-' + idx" :src="stay22Url(stop)" class="to-stay22-iframe" loading="lazy" referrerpolicy="origin"></iframe>
-                                                        <p class="text-[10px] text-muted mt-2">
+                                                        <p class="mt-2 text-xs text-muted">
                                                             🛏️ <strong x-text="totalRoomsCount()"></strong> camere &middot;
                                                             👥 <strong x-text="planner.config.people_count"></strong> persoane &middot;
                                                             💰 max <strong><span x-text="formatNumber(maxRoomPrice())"></span> RON</strong>/cameră &middot;
@@ -698,73 +742,73 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                         <p class="text-sm text-muted">Estimat per oraș în 3 scenarii de venue, pe baza fanilor locali, retenției istorice și sezonalității.</p>
                     </div>
 
-                    <div class="bg-surface rounded-xl p-4 mb-6">
-                        <div class="flex flex-wrap gap-2 items-center">
-                            <span class="text-xs text-muted uppercase tracking-wider font-bold">Filtrează:</span>
+                    <div class="p-4 mb-6 bg-surface rounded-xl">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <span class="text-xs font-bold tracking-wider uppercase text-muted">Filtrează:</span>
                             <template x-for="f in [['all','Toate'],['warm','Recomandare'],['sleeping','Dormit'],['new','Neexplorat']]" :key="f[0]">
                                 <button @click="predictionFilter = f[0]" :class="predictionFilter === f[0] ? 'bg-primary text-white' : 'bg-white text-muted'" class="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors" x-text="f[1]"></button>
                             </template>
                         </div>
                     </div>
 
-                    <div class="overflow-x-auto -mx-6 px-6">
+                    <div class="px-6 -mx-6 overflow-x-auto">
                         <table class="w-full">
                             <thead>
                                 <tr class="border-b border-border">
-                                    <th class="text-left text-xs uppercase tracking-wider font-bold text-muted py-3 px-2">Oraș</th>
-                                    <th class="text-right text-xs uppercase tracking-wider font-bold text-muted py-3 px-2">Fani</th>
-                                    <th class="text-center text-xs uppercase tracking-wider font-bold text-muted py-3 px-2">Mic<br><span class="font-normal lowercase text-[10px]">300-500</span></th>
-                                    <th class="text-center text-xs uppercase tracking-wider font-bold text-muted py-3 px-2">Mediu<br><span class="font-normal lowercase text-[10px]">800-1500</span></th>
-                                    <th class="text-center text-xs uppercase tracking-wider font-bold text-muted py-3 px-2">Mare<br><span class="font-normal lowercase text-[10px]">2500+</span></th>
-                                    <th class="text-left text-xs uppercase tracking-wider font-bold text-muted py-3 px-2">Status</th>
-                                    <th class="text-right text-xs uppercase tracking-wider font-bold text-muted py-3 px-2"></th>
+                                    <th class="px-2 py-3 text-xs font-bold tracking-wider text-left uppercase text-muted">Oraș</th>
+                                    <th class="px-2 py-3 text-xs font-bold tracking-wider text-right uppercase text-muted">Fani</th>
+                                    <th class="px-2 py-3 text-xs font-bold tracking-wider text-center uppercase text-muted">Mic<br><span class="text-xs font-normal lowercase">300-500</span></th>
+                                    <th class="px-2 py-3 text-xs font-bold tracking-wider text-center uppercase text-muted">Mediu<br><span class="text-xs font-normal lowercase">800-1500</span></th>
+                                    <th class="px-2 py-3 text-xs font-bold tracking-wider text-center uppercase text-muted">Mare<br><span class="text-xs font-normal lowercase">2500+</span></th>
+                                    <th class="px-2 py-3 text-xs font-bold tracking-wider text-left uppercase text-muted">Status</th>
+                                    <th class="px-2 py-3 text-xs font-bold tracking-wider text-right uppercase text-muted"></th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <template x-for="p in filteredPredictions" :key="p.city">
-                                    <tr class="border-b border-border hover:bg-surface transition-colors">
-                                        <td class="py-3 px-2">
+                                    <tr class="transition-colors border-b border-border hover:bg-surface">
+                                        <td class="px-2 py-3">
                                             <p class="font-medium text-secondary" x-text="p.city"></p>
                                             <p class="text-xs text-muted" x-text="p.note"></p>
                                         </td>
-                                        <td class="py-3 px-2 text-right font-bold text-secondary" x-text="formatNumber(p.fans)"></td>
-                                        <td class="py-3 px-2 text-center">
+                                        <td class="px-2 py-3 font-bold text-right text-secondary" x-text="formatNumber(p.fans)"></td>
+                                        <td class="px-2 py-3 text-center">
                                             <p class="text-sm font-bold text-secondary" x-text="p.small.estimate"></p>
-                                            <p class="text-xs text-muted" x-text="p.small.confidence + '%'"></p>
+                                            <p class="text-xs text-muted" x-text="p.small.încredere + '%'"></p>
                                         </td>
-                                        <td class="py-3 px-2 text-center">
+                                        <td class="px-2 py-3 text-center">
                                             <p class="text-sm font-bold text-secondary" x-text="p.medium.estimate"></p>
-                                            <p class="text-xs text-muted" x-text="p.medium.confidence + '%'"></p>
+                                            <p class="text-xs text-muted" x-text="p.medium.încredere+ '%'"></p>
                                         </td>
-                                        <td class="py-3 px-2 text-center">
+                                        <td class="px-2 py-3 text-center">
                                             <p class="text-sm font-bold text-secondary" x-text="p.large.estimate"></p>
-                                            <p class="text-xs text-muted" x-text="p.large.confidence + '%'"></p>
+                                            <p class="text-xs text-muted" x-text="p.large.încredere+ '%'"></p>
                                         </td>
-                                        <td class="py-3 px-2"><span class="to-badge text-xs" :class="statusBadgeClass(p.status)" x-text="p.status_label"></span></td>
-                                        <td class="py-3 px-2 text-right">
-                                            <button @click="addCityToPlanner(p.city)" class="text-primary text-sm font-medium hover:underline whitespace-nowrap">+ Planner</button>
+                                        <td class="px-2 py-3"><span class="text-xs to-badge" :class="statusBadgeClass(p.status)" x-text="p.status_label"></span></td>
+                                        <td class="px-2 py-3 text-right">
+                                            <button @click="addCityToPlanner(p.city)" class="text-sm font-medium text-primary hover:underline whitespace-nowrap">+ Planner</button>
                                         </td>
                                     </tr>
                                 </template>
                             </tbody>
                         </table>
-                        <p x-show="!filteredPredictions.length" class="text-sm text-muted text-center py-8">Date insuficiente.</p>
+                        <p x-show="!filteredPredictions.length" class="py-8 text-sm text-center text-muted">Date insuficiente.</p>
                     </div>
 
-                    <div class="grid lg:grid-cols-2 gap-6 mt-8">
-                        <div class="bg-white border border-border rounded-2xl p-5">
-                            <h3 class="font-bold text-secondary mb-1">Performanță pe ziua săptămânii</h3>
-                            <p class="text-sm text-muted mb-4">Vânzări medii pe eveniment, agregat din evenimentele tale</p>
+                    <div class="grid gap-6 mt-8 lg:grid-cols-2">
+                        <div class="p-5 bg-white border border-border rounded-2xl">
+                            <h3 class="mb-1 font-bold text-secondary">Performanță pe ziua săptămânii</h3>
+                            <p class="mb-4 text-sm text-muted">Vânzări medii pe eveniment, agregat din evenimentele tale</p>
                             <div class="relative h-[260px]"><canvas id="weekdayChart"></canvas></div>
                         </div>
-                        <div class="bg-white border border-border rounded-2xl p-5">
-                            <h3 class="font-bold text-secondary mb-1">Sezonalitate</h3>
-                            <p class="text-sm text-muted mb-4">Vânzări lunare medii pe evenimentele tale</p>
+                        <div class="p-5 bg-white border border-border rounded-2xl">
+                            <h3 class="mb-1 font-bold text-secondary">Sezonalitate</h3>
+                            <p class="mb-4 text-sm text-muted">Vânzări lunare medii pe evenimentele tale</p>
                             <div class="relative h-[260px]"><canvas id="seasonChart"></canvas></div>
                         </div>
                     </div>
 
-                    <div class="mt-6 bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-start gap-3">
+                    <div class="flex items-start gap-3 p-4 mt-6 border border-blue-200 bg-blue-50 rounded-xl">
                         <span class="flex-shrink-0">ℹ️</span>
                         <p class="text-sm text-blue-900">Predicțiile combină fani locali, retenție istorică, ziua săptămânii și sezonalitatea. Confidence-ul reflectă cât de bine sunt calibrate de date reale (vs inferențe).</p>
                     </div>
@@ -780,17 +824,17 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                         <button @click="setTab('planner')" class="to-btn to-btn-primary to-btn-sm">+ Scenariu nou</button>
                     </div>
 
-                    <div class="grid lg:grid-cols-3 gap-4 mb-8">
+                    <div class="grid gap-4 mb-8 lg:grid-cols-3">
                         <template x-for="s in scenariosData.scenarios || []" :key="s.id">
-                            <div class="border-2 rounded-2xl overflow-hidden transition-all hover:shadow-md" :class="s.status === 'active' ? 'border-primary' : 'border-border'">
-                                <div class="aspect-video relative bg-gradient-to-br from-primary to-secondary p-4 flex flex-col justify-end">
-                                    <span x-show="s.status === 'active'" class="absolute top-2 left-2 to-badge bg-primary text-white">Activ</span>
-                                    <span x-show="s.status === 'draft'" class="absolute top-2 left-2 to-badge bg-muted/50 text-white">Draft</span>
-                                    <p class="text-white font-extrabold text-lg leading-tight" x-text="s.name"></p>
+                            <div class="overflow-hidden transition-all border-2 rounded-2xl hover:shadow-md" :class="s.status === 'active' ? 'border-primary' : 'border-border'">
+                                <div class="relative flex flex-col justify-end p-4 aspect-video bg-gradient-to-br from-primary to-secondary">
+                                    <span x-show="s.status === 'active'" class="absolute text-white top-2 left-2 to-badge bg-primary">Activ</span>
+                                    <span x-show="s.status === 'draft'" class="absolute text-white top-2 left-2 to-badge bg-muted/50">Draft</span>
+                                    <p class="text-lg font-extrabold leading-tight text-white" x-text="s.name"></p>
                                     <p class="text-xs text-white/80" x-text="s.cities_count + ' orașe · ' + s.date_range"></p>
                                 </div>
                                 <div class="p-4">
-                                    <div class="grid grid-cols-3 gap-2 text-center mb-3">
+                                    <div class="grid grid-cols-3 gap-2 mb-3 text-center">
                                         <div>
                                             <p class="text-xs text-muted">Distanță</p>
                                             <p class="text-sm font-bold text-secondary"><span x-text="formatNumber(s.summary?.total_distance_km ?? 0)"></span> km</p>
@@ -805,7 +849,7 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                         </div>
                                     </div>
                                     <div class="flex gap-1">
-                                        <button @click="loadScenarioToPlanner(s)" class="to-btn to-btn-secondary to-btn-sm flex-1">Deschide</button>
+                                        <button @click="loadScenarioToPlanner(s)" class="flex-1 to-btn to-btn-secondary to-btn-sm">Deschide</button>
                                         <button @click="toggleActive(s)" class="to-btn to-btn-secondary to-btn-sm" :title="s.status === 'active' ? 'Marcheză draft' : 'Marcheză activ'">
                                             <span x-text="s.status === 'active' ? '⭐' : '☆'"></span>
                                         </button>
@@ -814,11 +858,11 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                 </div>
                             </div>
                         </template>
-                        <p x-show="!(scenariosData.scenarios || []).length" class="col-span-full text-sm text-muted text-center py-8">Niciun scenariu salvat încă.</p>
+                        <p x-show="!(scenariosData.scenarios || []).length" class="py-8 text-sm text-center col-span-full text-muted">Niciun scenariu salvat încă.</p>
                     </div>
 
-                    <div x-show="(scenariosData.scenarios || []).length >= 2" class="bg-white border border-border rounded-2xl p-5">
-                        <h3 class="font-bold text-secondary mb-4">Comparație side-by-side</h3>
+                    <div x-show="(scenariosData.scenarios || []).length >= 2" class="p-5 bg-white border border-border rounded-2xl">
+                        <h3 class="mb-4 font-bold text-secondary">Comparație side-by-side</h3>
                         <div class="flex flex-wrap items-center gap-3 mb-4">
                             <select x-model.number="compare.aId" class="to-input" style="width:auto">
                                 <option value="0">— alege A —</option>
@@ -832,9 +876,9 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                             <button @click="loadCompare()" :disabled="!compare.aId || !compare.bId || compare.aId === compare.bId" class="to-btn to-btn-primary to-btn-sm">Compară</button>
                         </div>
 
-                        <div x-show="compare.data?.a" class="grid lg:grid-cols-2 gap-4">
-                            <div class="border-2 border-primary rounded-xl p-5">
-                                <h4 class="font-bold text-secondary mb-4" x-text="'A · ' + (compare.data?.a?.name ?? '—')"></h4>
+                        <div x-show="compare.data?.a" class="grid gap-4 lg:grid-cols-2">
+                            <div class="p-5 border-2 border-primary rounded-xl">
+                                <h4 class="mb-4 font-bold text-secondary" x-text="'A · ' + (compare.data?.a?.name ?? '—')"></h4>
                                 <div class="space-y-2 text-sm">
                                     <div class="flex justify-between"><span class="text-muted">Orașe</span><span class="font-bold" x-text="compare.data?.a?.cities_count"></span></div>
                                     <div class="flex justify-between"><span class="text-muted">Durată</span><span class="font-bold" x-text="(compare.data?.a?.summary?.duration_days ?? 0) + ' zile'"></span></div>
@@ -844,15 +888,15 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                     <div class="flex justify-between"><span class="text-muted">Venit estimat</span><span class="font-bold text-success" x-text="'~' + formatNumber(compare.data?.a?.summary?.predicted_revenue_ron ?? 0) + ' RON'"></span></div>
                                 </div>
                             </div>
-                            <div class="border-2 border-border rounded-xl p-5">
-                                <h4 class="font-bold text-secondary mb-4" x-text="'B · ' + (compare.data?.b?.name ?? '—')"></h4>
+                            <div class="p-5 border-2 border-border rounded-xl">
+                                <h4 class="mb-4 font-bold text-secondary" x-text="'B · ' + (compare.data?.b?.name ?? '—')"></h4>
                                 <div class="space-y-2 text-sm">
-                                    <div class="flex justify-between items-center"><span class="text-muted">Orașe</span><span><span class="font-bold" x-text="compare.data?.b?.cities_count"></span> <span class="to-badge text-xs ml-2" :class="(compare.data?.delta?.cities ?? 0) >= 0 ? 'bg-success/10 text-success' : 'bg-error/10 text-error'" x-text="signed(compare.data?.delta?.cities ?? 0)"></span></span></div>
-                                    <div class="flex justify-between items-center"><span class="text-muted">Durată</span><span><span class="font-bold" x-text="(compare.data?.b?.summary?.duration_days ?? 0) + ' zile'"></span> <span class="to-badge text-xs ml-2" :class="(compare.data?.delta?.duration_days ?? 0) <= 0 ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning'" x-text="signed(compare.data?.delta?.duration_days ?? 0) + 'z'"></span></span></div>
-                                    <div class="flex justify-between items-center"><span class="text-muted">Distanță</span><span><span class="font-bold" x-text="formatNumber(compare.data?.b?.summary?.total_distance_km ?? 0) + ' km'"></span> <span class="to-badge text-xs ml-2" :class="(compare.data?.delta?.total_distance_km ?? 0) <= 0 ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning'" x-text="signed(compare.data?.delta?.total_distance_km ?? 0) + 'km'"></span></span></div>
-                                    <div class="flex justify-between items-center"><span class="text-muted">Cost</span><span><span class="font-bold" x-text="formatNumber(compare.data?.b?.summary?.total_cost_ron ?? 0) + ' RON'"></span> <span class="to-badge text-xs ml-2" :class="(compare.data?.delta?.total_cost_ron ?? 0) <= 0 ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning'" x-text="signed(compare.data?.delta?.cost_pct ?? 0) + '%'"></span></span></div>
-                                    <div class="flex justify-between items-center"><span class="text-muted">Bilete</span><span><span class="font-bold" x-text="formatNumber(compare.data?.b?.summary?.predicted_tickets ?? 0)"></span> <span class="to-badge text-xs ml-2" :class="(compare.data?.delta?.predicted_tickets ?? 0) >= 0 ? 'bg-success/10 text-success' : 'bg-error/10 text-error'" x-text="signed(compare.data?.delta?.tickets_pct ?? 0) + '%'"></span></span></div>
-                                    <div class="flex justify-between items-center"><span class="text-muted">Venit estimat</span><span><span class="font-bold" x-text="'~' + formatNumber(compare.data?.b?.summary?.predicted_revenue_ron ?? 0) + ' RON'"></span> <span class="to-badge text-xs ml-2" :class="(compare.data?.delta?.predicted_revenue_ron ?? 0) >= 0 ? 'bg-success/10 text-success' : 'bg-error/10 text-error'" x-text="signed(compare.data?.delta?.revenue_pct ?? 0) + '%'"></span></span></div>
+                                    <div class="flex items-center justify-between"><span class="text-muted">Orașe</span><span><span class="font-bold" x-text="compare.data?.b?.cities_count"></span> <span class="ml-2 text-xs to-badge" :class="(compare.data?.delta?.cities ?? 0) >= 0 ? 'bg-success/10 text-success' : 'bg-error/10 text-error'" x-text="signed(compare.data?.delta?.cities ?? 0)"></span></span></div>
+                                    <div class="flex items-center justify-between"><span class="text-muted">Durată</span><span><span class="font-bold" x-text="(compare.data?.b?.summary?.duration_days ?? 0) + ' zile'"></span> <span class="ml-2 text-xs to-badge" :class="(compare.data?.delta?.duration_days ?? 0) <= 0 ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning'" x-text="signed(compare.data?.delta?.duration_days ?? 0) + 'z'"></span></span></div>
+                                    <div class="flex items-center justify-between"><span class="text-muted">Distanță</span><span><span class="font-bold" x-text="formatNumber(compare.data?.b?.summary?.total_distance_km ?? 0) + ' km'"></span> <span class="ml-2 text-xs to-badge" :class="(compare.data?.delta?.total_distance_km ?? 0) <= 0 ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning'" x-text="signed(compare.data?.delta?.total_distance_km ?? 0) + 'km'"></span></span></div>
+                                    <div class="flex items-center justify-between"><span class="text-muted">Cost</span><span><span class="font-bold" x-text="formatNumber(compare.data?.b?.summary?.total_cost_ron ?? 0) + ' RON'"></span> <span class="ml-2 text-xs to-badge" :class="(compare.data?.delta?.total_cost_ron ?? 0) <= 0 ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning'" x-text="signed(compare.data?.delta?.cost_pct ?? 0) + '%'"></span></span></div>
+                                    <div class="flex items-center justify-between"><span class="text-muted">Bilete</span><span><span class="font-bold" x-text="formatNumber(compare.data?.b?.summary?.predicted_tickets ?? 0)"></span> <span class="ml-2 text-xs to-badge" :class="(compare.data?.delta?.predicted_tickets ?? 0) >= 0 ? 'bg-success/10 text-success' : 'bg-error/10 text-error'" x-text="signed(compare.data?.delta?.tickets_pct ?? 0) + '%'"></span></span></div>
+                                    <div class="flex items-center justify-between"><span class="text-muted">Venit estimat</span><span><span class="font-bold" x-text="'~' + formatNumber(compare.data?.b?.summary?.predicted_revenue_ron ?? 0) + ' RON'"></span> <span class="ml-2 text-xs to-badge" :class="(compare.data?.delta?.predicted_revenue_ron ?? 0) >= 0 ? 'bg-success/10 text-success' : 'bg-error/10 text-error'" x-text="signed(compare.data?.delta?.revenue_pct ?? 0) + '%'"></span></span></div>
                                 </div>
                             </div>
                         </div>
@@ -1079,6 +1123,8 @@ function tourOptimizer() {
             } else {
                 this.$nextTick(() => this.renderTab('opportunities'));
             }
+            // Init flatpickr pe toate input[type=date] (sidebar planner + alt locuri)
+            this.$nextTick(() => this.setupDatepickers());
         },
 
         async setTab(t) {
@@ -1173,6 +1219,8 @@ function tourOptimizer() {
                 from_start: !!c.from_start,
                 manual_capacity: c.manual_capacity != null ? Number(c.manual_capacity) : null,
                 manual_prediction: c.manual_prediction != null ? Number(c.manual_prediction) : null,
+                extra_cost: c.extra_cost != null ? Number(c.extra_cost) : null,
+                extra_cost_description: c.extra_cost_description ?? null,
             }));
         },
 
@@ -1274,6 +1322,8 @@ function tourOptimizer() {
                 from_start: !!c.from_start,
                 manual_capacity: c.manual_capacity ?? null,
                 manual_prediction: c.manual_prediction ?? null,
+                extra_cost: c.extra_cost ?? null,
+                extra_cost_description: c.extra_cost_description ?? null,
             }));
             this.planner.cities = restoredCities;
             restoredCities.forEach(c => {
@@ -1347,9 +1397,11 @@ function tourOptimizer() {
         },
 
         markDirty() {
-            // Marks state as needing recalc; only relevant if route was already optimized
+            // Marks state as needing recalc; only relevant if route was already optimized.
+            // Auto-recalc: declanșăm un debounce → backend re-rulează automat după 1s de liniște.
             if (this.planner.optimized) {
                 this.planner.dirty = true;
+                this.scheduleAutoRecalc();
             }
         },
 
@@ -1408,6 +1460,22 @@ function tourOptimizer() {
             this.markDirty();
         },
 
+        updateStopExtraCost(idx, value) {
+            const stop = this.planner.route?.[idx];
+            if (!stop) return;
+            stop.extra_cost = value === '' ? null : Number(value);
+            this._syncCitiesFromRoute();
+            this.markDirty();
+        },
+
+        updateStopExtraCostDescription(idx, value) {
+            const stop = this.planner.route?.[idx];
+            if (!stop) return;
+            stop.extra_cost_description = value || null;
+            this._syncCitiesFromRoute();
+            // NU markDirty pe descriere — text inutil să recalculeze
+        },
+
         _syncCitiesFromRoute() {
             this.planner.cities = (this.planner.route || []).map((s, i) => ({
                 uid: this.planner.cities[i]?.uid || ('c' + (this.cityUidCounter++)),
@@ -1418,6 +1486,8 @@ function tourOptimizer() {
                 from_start: !!s.from_start,
                 manual_capacity: s.manual_capacity ?? null,
                 manual_prediction: s.manual_prediction ?? null,
+                extra_cost: s.extra_cost ?? null,
+                extra_cost_description: s.extra_cost_description ?? null,
             }));
         },
 
@@ -1425,6 +1495,18 @@ function tourOptimizer() {
             this._syncCitiesFromRoute();
             // Recalcul după drag/edit — păstrăm ordinea curentă, recomputăm doar costurile/predicțiile
             await this.optimizeRoute(true);
+        },
+
+        // Auto-recalc cu debounce: orice modificare relevantă invocă asta. Backend recompute după 1s
+        // de inactivitate. Pe rapid-typing, doar ultima cerere pleacă.
+        _autoRecalcTimer: null,
+        scheduleAutoRecalc() {
+            if (!this.planner.optimized) return;
+            if (this._autoRecalcTimer) clearTimeout(this._autoRecalcTimer);
+            this._autoRecalcTimer = setTimeout(() => {
+                this._autoRecalcTimer = null;
+                this.recalcRoute();
+            }, 1000);
         },
 
         setupSortable() {
@@ -1446,6 +1528,24 @@ function tourOptimizer() {
                     this._syncCitiesFromRoute();
                     this.markDirty();
                 },
+            });
+            this.setupDatepickers();
+        },
+
+        // Init flatpickr pe toate input[type=date] din planner — afișează DD/MM/YYYY (locale ro)
+        // dar trimite Y-m-d către backend (compatibil cu logica de date_iso existentă).
+        setupDatepickers() {
+            if (typeof flatpickr === 'undefined') return;
+            const inputs = document.querySelectorAll('main input[type="date"]:not([data-fp-init])');
+            inputs.forEach(el => {
+                el.dataset.fpInit = '1';
+                flatpickr(el, {
+                    dateFormat: 'Y-m-d',
+                    altInput: true,
+                    altFormat: 'd/m/Y',
+                    locale: (window.flatpickr?.l10ns?.ro) || 'default',
+                    allowInput: true,
+                });
             });
         },
 
@@ -1607,7 +1707,7 @@ function tourOptimizer() {
 
         confidenceText(stop) {
             const factors = stop?.confidence_factors || [];
-            const lines = ['Confidence = încrederea în predicția de bilete (25-95%).', 'Calculat din 4 factori:'];
+            const lines = ['încredere= încrederea în predicția de bilete (25-95%).', 'Calculat din 4 factori:'];
             if (factors.length) {
                 factors.forEach(f => lines.push('  • ' + f));
             } else {
@@ -1617,7 +1717,7 @@ function tourOptimizer() {
                 lines.push('  • -5/-10 pentru ultimul concert vechi (>12/18 luni)');
             }
             lines.push('---');
-            lines.push('Total: ' + (stop?.confidence ?? 0) + '%');
+            lines.push('Total: ' + (stop?.încredere?? 0) + '%');
             return lines.join('\n');
         },
 
