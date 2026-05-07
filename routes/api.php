@@ -2703,16 +2703,20 @@ Route::prefix('marketplace-client/artist')->middleware(['throttle:120,1', 'marke
 // Public Booking endpoints — form submission + guest reply via signed token.
 // Foloseste marketplace.auth pentru X-API-Key (consistent cu EPK rider-request).
 // Apelate din ambilet via proxy.php (action public.booking.*).
-Route::prefix('marketplace-client/public/artist/{slug}')->middleware(['throttle:30,1', 'marketplace.auth'])->group(function () {
-    Route::get('/booking-status', [BookingPublicController::class, 'listingStatus'])
+//
+// IMPORTANT: throttle e 600/1 pentru status (e hit pe orice vizualizare /artist/{slug})
+// și 30/1 pentru submit/reply (cere actiune deliberata). Toate cererile pleaca de pe
+// IP-ul serverului ambilet (proxy.php), deci limita e shared global, nu per-vizitator.
+Route::middleware(['throttle:600,1', 'marketplace.auth'])->group(function () {
+    Route::get('/marketplace-client/public/artist/{slug}/booking-status', [BookingPublicController::class, 'listingStatus'])
         ->name('api.public.artist.booking-status');
-    Route::post('/booking-request', [BookingPublicController::class, 'submitRequest'])
-        ->name('api.public.artist.booking-request');
-});
-Route::prefix('marketplace-client/public/booking/conversation/{token}')->middleware(['throttle:30,1', 'marketplace.auth'])->group(function () {
-    Route::get('/', [BookingPublicController::class, 'viewConversation'])
+    Route::get('/marketplace-client/public/booking/conversation/{token}', [BookingPublicController::class, 'viewConversation'])
         ->name('api.public.booking.conversation.view');
-    Route::post('/messages', [BookingPublicController::class, 'postGuestMessage'])
+});
+Route::middleware(['throttle:30,1', 'marketplace.auth'])->group(function () {
+    Route::post('/marketplace-client/public/artist/{slug}/booking-request', [BookingPublicController::class, 'submitRequest'])
+        ->name('api.public.artist.booking-request');
+    Route::post('/marketplace-client/public/booking/conversation/{token}/messages', [BookingPublicController::class, 'postGuestMessage'])
         ->name('api.public.booking.conversation.post');
 });
 
