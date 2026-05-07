@@ -2871,6 +2871,38 @@ class EventResource extends Resource
                 SC\Group::make()
                     ->columnSpan(1)
                     ->schema([
+                        // Approve button — surfaces only for events that an
+                        // organizer submitted for approval (submitted_at set,
+                        // not yet published). Clicking publishes the event in
+                        // one step so admins don't have to flip the toggle +
+                        // save.
+                        Forms\Components\Actions::make([
+                            Forms\Components\Actions\Action::make('approveEvent')
+                                ->label($t('Aprobă evenimentul', 'Approve event'))
+                                ->icon('heroicon-m-check-circle')
+                                ->color('success')
+                                ->size('lg')
+                                ->requiresConfirmation()
+                                ->modalHeading($t('Aprobă evenimentul?', 'Approve event?'))
+                                ->modalDescription($t('Evenimentul va deveni vizibil pe site-ul marketplace.', 'The event will become visible on the marketplace.'))
+                                ->modalSubmitActionLabel($t('Da, aprobă', 'Yes, approve'))
+                                ->visible(fn (?Event $record) => $record && $record->exists && !$record->is_published && $record->submitted_at)
+                                ->action(function (?Event $record) use ($t) {
+                                    if (!$record) {
+                                        return;
+                                    }
+                                    $record->forceFill([
+                                        'is_published' => true,
+                                    ])->save();
+                                    \Filament\Notifications\Notification::make()
+                                        ->title($t('Eveniment aprobat și publicat.', 'Event approved and published.'))
+                                        ->success()
+                                        ->send();
+                                }),
+                        ])
+                            ->visible(fn (?Event $record) => $record && $record->exists && !$record->is_published && $record->submitted_at)
+                            ->fullWidth(),
+
                         SC\Grid::make(2)->schema([
                             Forms\Components\Toggle::make('is_published')
                                 ->label($t('Publicat', 'Published'))

@@ -129,7 +129,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                                     <label class="label">Numele evenimentului <span class="text-red-500">*</span></label>
                                     <input type="text" name="name" required class="input" placeholder="ex: Concert Rock in Parc">
                                 </div>
-                                <div class="grid gap-4 md:grid-cols-2">
+                                <div class="grid gap-4 md:grid-cols-3">
                                     <div>
                                         <label class="label">Categorie</label>
                                         <select name="marketplace_event_category_id" class="input" id="category-select" onchange="onCategoryChange(this.value)">
@@ -145,16 +145,16 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                                         </div>
                                         <p class="mt-1 text-xs text-muted">Selecteaza genurile aplicabile</p>
                                     </div>
-                                </div>
-                                <!-- Artist Selection -->
-                                <div>
-                                    <label class="label">Artisti</label>
-                                    <div class="multiselect-wrapper" id="artists-multiselect">
-                                        <div class="multiselect-tags" id="artists-selected"></div>
-                                        <input type="text" class="multiselect-input" placeholder="Cauta artisti..." id="artists-search-input" autocomplete="off">
-                                        <div class="hidden multiselect-dropdown" id="artists-dropdown"></div>
+                                    <!-- Artist Selection -->
+                                    <div>
+                                        <label class="label">Artisti</label>
+                                        <div class="multiselect-wrapper" id="artists-multiselect">
+                                            <div class="multiselect-tags" id="artists-selected"></div>
+                                            <input type="text" class="multiselect-input" placeholder="Cauta artisti..." id="artists-search-input" autocomplete="off">
+                                            <div class="hidden multiselect-dropdown" id="artists-dropdown"></div>
+                                        </div>
+                                        <p class="mt-1 text-xs text-muted">Cauta in biblioteca sau scrie un nume nou</p>
                                     </div>
-                                    <p class="mt-1 text-xs text-muted">Cauta in biblioteca sau scrie un nume nou pentru a-l adauga</p>
                                 </div>
                                 <div>
                                     <label class="label">Descriere scurta</label>
@@ -214,7 +214,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                                         </div>
                                         <div>
                                             <label class="label">Ora incepere <span class="text-red-500">*</span></label>
-                                            <input type="time" name="start_time" required class="input">
+                                            <input type="time" name="start_time" required class="input" onclick="this.showPicker?.()" onfocus="this.showPicker?.()">
                                         </div>
                                     </div>
                                     <div id="end-date-fields" class="hidden">
@@ -225,7 +225,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                                             </div>
                                             <div>
                                                 <label class="label">Ora sfarsit</label>
-                                                <input type="time" name="end_time" class="input">
+                                                <input type="time" name="end_time" class="input" onclick="this.showPicker?.()" onfocus="this.showPicker?.()">
                                             </div>
                                         </div>
                                     </div>
@@ -233,11 +233,11 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                                         <div class="grid gap-4 md:grid-cols-2">
                                             <div>
                                                 <label class="label">Ora sfarsit</label>
-                                                <input type="time" name="end_time_single" class="input">
+                                                <input type="time" name="end_time_single" class="input" onclick="this.showPicker?.()" onfocus="this.showPicker?.()">
                                             </div>
                                             <div>
                                                 <label class="label">Ora deschidere usi</label>
-                                                <input type="time" name="door_time" class="input">
+                                                <input type="time" name="door_time" class="input" onclick="this.showPicker?.()" onfocus="this.showPicker?.()">
                                                 <p class="mt-1 text-xs text-muted">Ora la care se deschid usile</p>
                                             </div>
                                         </div>
@@ -246,7 +246,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                                         <div class="grid gap-4 md:grid-cols-2">
                                             <div>
                                                 <label class="label">Ora deschidere usi</label>
-                                                <input type="time" name="door_time_range" class="input">
+                                                <input type="time" name="door_time_range" class="input" onclick="this.showPicker?.()" onfocus="this.showPicker?.()">
                                                 <p class="mt-1 text-xs text-muted">Ora la care se deschid usile</p>
                                             </div>
                                         </div>
@@ -738,7 +738,7 @@ document.addEventListener('DOMContentLoaded', function() {
 function renderEvents(events) {
     const container = document.getElementById('events-list');
     const statusColors = { published: 'success', draft: 'warning', ended: 'muted', pending_review: 'info', cancelled: 'error', postponed: 'warning', sold_out: 'info' };
-    const statusLabels = { published: 'Publicat', draft: 'Ciornă', ended: 'Încheiat', pending_review: 'În așteptare', cancelled: 'Anulat', postponed: 'Amânat', sold_out: 'Sold Out' };
+    const statusLabels = { published: 'Publicat', draft: 'Ciornă', ended: 'Încheiat', pending_review: 'În revizie - așteaptă aprobare', cancelled: 'Anulat', postponed: 'Amânat', sold_out: 'Sold Out' };
 
     container.innerHTML = events.map(event => {
         // Determine if event has ended
@@ -768,10 +768,16 @@ function renderEvents(events) {
             else if (daysUntil > 0) daysText = `${daysUntil} zile`;
         }
 
+        // Drafts and pending_review events shouldn't expose action buttons
+        // (Documente / Vanzari / Analiza / Invitatii / Participanti) since the
+        // event hasn't been approved yet and there's nothing operational to
+        // manage. Only Edit, Preview, and (for drafts) Delete remain.
+        const isAwaitingApproval = event.status === 'draft' || event.status === 'pending_review';
+
         // Generate Analytics/Report button
-        const analyticsButton = isEnded
+        const analyticsButton = isAwaitingApproval ? '' : (isEnded
             ? `<a href="/organizator/report/${event.id}" class="btn btn-sm btn-secondary" title="Raport"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg></a>`
-            : `<a href="/organizator/analytics/${event.id}" class="btn btn-sm btn-secondary" title="Analytics"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg></a>`;
+            : `<a href="/organizator/analytics/${event.id}" class="btn btn-sm btn-secondary" title="Analytics"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg></a>`);
 
         // Promote button (only for ongoing events)
         const promoteButton = isOngoing
@@ -779,10 +785,10 @@ function renderEvents(events) {
             : '';
 
         // Documents button
-        const documentsButton = `<a href="/organizator/documente?event=${event.id}" class="btn btn-sm btn-secondary" title="Documente"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg></a>`;
+        const documentsButton = isAwaitingApproval ? '' : `<a href="/organizator/documente?event=${event.id}" class="btn btn-sm btn-secondary" title="Documente"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg></a>`;
 
         // Finance button
-        const financeButton = `<a href="/organizator/sold?event=${event.id}" class="btn btn-sm btn-secondary" title="Finanțe"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></a>`;
+        const financeButton = isAwaitingApproval ? '' : `<a href="/organizator/sold?event=${event.id}" class="btn btn-sm btn-secondary" title="Finanțe"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></a>`;
 
         // View/Preview button - use /bilete/{slug} for published, add ?preview=1 for drafts
         const isPublishedEvent = event.status === 'published' || event.is_public;
@@ -911,7 +917,17 @@ function resetFormState() {
     if (posterInput) posterInput.value = '';
     if (coverInput) coverInput.value = '';
 
-    // Reset form
+    // Reset form — but FIRST detach TinyMCE editors, otherwise their internal
+    // 'reset' handler fires on the form's reset event and crashes when the
+    // editor instance got out of sync with the DOM (the
+    // "Cannot read properties of undefined (reading 'reset')" error).
+    if (window.tinymce) {
+        try { tinymce.get('description-editor')?.remove(); } catch (e) {}
+        try { tinymce.get('ticket-terms-editor')?.remove(); } catch (e) {}
+    }
+    descriptionEditor = null;
+    ticketTermsEditor = null;
+
     const form = document.getElementById('create-event-form');
     if (form) form.reset();
 
@@ -1008,16 +1024,24 @@ async function loadEventForEdit(eventId) {
             form.querySelector('[name="tags"]').value = tagsStr;
         }
 
-        // Category
+        // Category — poll until the option exists (categories load async; a
+        // single setTimeout was racing with slow networks and the value just
+        // silently failed to apply).
         if (event.marketplace_event_category_id) {
-            // Wait for categories to load then set value
-            setTimeout(() => {
-                const catSelect = form.querySelector('[name="marketplace_event_category_id"]');
-                if (catSelect) {
-                    catSelect.value = event.marketplace_event_category_id;
-                    onCategoryChange(event.marketplace_event_category_id);
+            const targetId = String(event.marketplace_event_category_id);
+            const catSelect = form.querySelector('[name="marketplace_event_category_id"]');
+            let attempts = 0;
+            const tryApply = () => {
+                if (!catSelect) return;
+                const hasOption = Array.from(catSelect.options).some(o => o.value === targetId);
+                if (hasOption) {
+                    catSelect.value = targetId;
+                    onCategoryChange(targetId);
+                    return;
                 }
-            }, 500);
+                if (attempts++ < 30) setTimeout(tryApply, 200);
+            };
+            tryApply();
         }
 
         // Step 2: Schedule - parse starts_at/ends_at/doors_open_at
@@ -1539,6 +1563,16 @@ function initEditors() {
         selector: '#description-editor',
         height: 250,
         placeholder: 'Scrie descrierea evenimentului aici...',
+        // Allow embedded video iframes (YouTube, Vimeo, Facebook, etc.) in the
+        // event description. TinyMCE strips iframes by default; whitelist the
+        // tag with the attributes typically needed for responsive embeds.
+        plugins: 'lists link autolink media',
+        toolbar: 'bold italic underline | bullist numlist | link media | hr | undo redo | removeformat',
+        extended_valid_elements: 'iframe[src|frameborder|style|scrolling|class|width|height|name|align|allow|allowfullscreen|loading|referrerpolicy|title]',
+        valid_children: '+body[iframe],+div[iframe]',
+        media_live_embeds: true,
+        media_alt_source: false,
+        media_poster: false,
         setup: function(editor) {
             editor.on('Change KeyUp', function() { updateSummaries(); });
             editor.on('init', function() { descriptionEditor = editor; });

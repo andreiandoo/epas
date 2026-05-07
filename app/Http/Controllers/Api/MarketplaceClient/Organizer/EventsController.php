@@ -197,18 +197,34 @@ class EventsController extends BaseController
                 'is_published' => false,
             ], $dateFields));
 
-            // Create ticket types using TicketType model
+            // Create ticket types using TicketType model.
+            // NB: price_cents / quota_total are real DB columns but NOT in
+            // TicketType::$fillable — assignments via mass-create go nowhere.
+            // Route through the virtual price_max / capacity attributes whose
+            // mutators correctly write to those underlying columns.
             foreach ($validated['ticket_types'] ?? [] as $index => $ticketTypeData) {
                 TicketType::create([
                     'event_id' => $event->id,
                     'name' => $ticketTypeData['name'],
                     'description' => $ticketTypeData['description'] ?? null,
-                    'price_cents' => (int) ($ticketTypeData['price'] * 100),
                     'currency' => 'RON',
-                    'quota_total' => isset($ticketTypeData['quantity']) ? (int) $ticketTypeData['quantity'] : -1,
+                    'price_max' => $ticketTypeData['price'],
+                    'capacity' => $ticketTypeData['quantity'] ?? null, // null becomes -1 = unlimited
+                    'min_per_order' => $ticketTypeData['min_per_order'] ?? null,
+                    'max_per_order' => $ticketTypeData['max_per_order'] ?? null,
                     'quota_sold' => 0,
                     'status' => 'active',
                 ]);
+            }
+
+            // Auto-fill eventTypes from the chosen category — this matches the
+            // Filament admin behavior so Genuri eveniment isn't blank when the
+            // operator opens the event in core admin.
+            if (!empty($validated['marketplace_event_category_id'])) {
+                $category = \App\Models\MarketplaceEventCategory::find($validated['marketplace_event_category_id']);
+                if ($category && !empty($category->event_type_ids)) {
+                    $event->eventTypes()->sync($category->event_type_ids);
+                }
             }
 
             // Sync genres if provided
@@ -393,17 +409,31 @@ class EventsController extends BaseController
                 // Delete existing ticket types and recreate
                 $event->ticketTypes()->delete();
 
+                // Use virtual price_max / capacity (mass-assignable) so the
+                // mutators populate price_cents / quota_total correctly.
                 foreach ($ticketTypesData as $index => $ticketTypeData) {
                     TicketType::create([
                         'event_id' => $event->id,
                         'name' => $ticketTypeData['name'],
                         'description' => $ticketTypeData['description'] ?? null,
-                        'price_cents' => (int) ($ticketTypeData['price'] * 100),
                         'currency' => 'RON',
-                        'quota_total' => isset($ticketTypeData['quantity']) ? (int) $ticketTypeData['quantity'] : -1,
+                        'price_max' => $ticketTypeData['price'],
+                        'capacity' => $ticketTypeData['quantity'] ?? null,
+                        'min_per_order' => $ticketTypeData['min_per_order'] ?? null,
+                        'max_per_order' => $ticketTypeData['max_per_order'] ?? null,
                         'quota_sold' => 0,
                         'status' => 'active',
                     ]);
+                }
+            }
+
+            // Auto-fill eventTypes from the chosen category — keeps the Filament
+            // admin's conditional Tipuri/Genuri chain consistent with what the
+            // organizer selected.
+            if (isset($validated['marketplace_event_category_id'])) {
+                $category = \App\Models\MarketplaceEventCategory::find($validated['marketplace_event_category_id']);
+                if ($category && !empty($category->event_type_ids)) {
+                    $event->eventTypes()->sync($category->event_type_ids);
                 }
             }
 
@@ -2353,7 +2383,11 @@ class EventsController extends BaseController
                 $q->whereNull('marketplace_client_id')
                     ->orWhere('marketplace_client_id', $organizer->marketplace_client_id);
             })
-            ->where('is_active', true);
+            // is_active is true for active artists, but legacy/imported rows
+            // often have NULL — accept either so they're searchable.
+            ->where(function ($q) {
+                $q->where('is_active', true)->orWhereNull('is_active');
+            });
 
         if (strlen($search) >= 2) {
             // PostgreSQL LIKE is case-sensitive and accent-sensitive; use the
@@ -2364,7 +2398,7 @@ class EventsController extends BaseController
         }
 
         $artists = $query->orderBy('name')
-            ->limit(50)
+            ->limit(100)
             ->get()
             ->map(function ($artist) {
                 return [
@@ -2885,7 +2919,10 @@ class EventsController extends BaseController
             return 'postponed';
         }
         if (!$event->is_published) {
-            return 'draft';
+            // Distinguish "submitted, waiting for approval" from a plain draft
+            // so the organizer's events list can show the right label and
+            // disable operational actions until the event is approved.
+            return $event->submitted_at ? 'pending_review' : 'draft';
         }
         return 'published';
     }
