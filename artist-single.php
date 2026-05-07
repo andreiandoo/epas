@@ -118,32 +118,6 @@ require_once __DIR__ . '/includes/header.php';
                 </button>
             </div>
 
-            <!-- Booking CTA — afișat doar dacă artistul are listing activ. Wired up în artist-booking-modal.js. -->
-            <div id="bookingCtaContainer" class="hidden mb-5">
-                <button id="bookingCtaBtn" type="button" class="flex items-center justify-center gap-2 w-full py-3.5 px-5 rounded-xl border-2 border-emerald-500 bg-emerald-50 text-emerald-700 font-semibold text-sm transition-all hover:bg-emerald-100">
-                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
-                    <span>Cere booking</span>
-                </button>
-                <p id="bookingCtaSubtitle" class="mt-2 text-xs text-center text-gray-500"></p>
-
-                <!-- Detaliile publice ale listing-ului — populated by BookingRequestModal.populateDetails -->
-                <div id="bookingDetailsBlock" class="hidden mt-4 p-4 border border-gray-200 rounded-xl bg-white">
-                    <p id="bookingDescriptionEl" class="hidden mb-3 text-sm leading-relaxed text-gray-600 whitespace-pre-line"></p>
-
-                    <div id="bookingEventTypesRow" class="hidden mb-3">
-                        <p class="mb-1.5 text-[10px] font-bold tracking-wider uppercase text-gray-500">Tipuri evenimente acceptate</p>
-                        <div id="bookingEventTypesList" class="flex flex-wrap gap-1.5"></div>
-                    </div>
-
-                    <dl id="bookingFactsList" class="space-y-1.5 text-xs"></dl>
-
-                    <div id="bookingConditionsRow" class="hidden mt-3 pt-3 border-t border-gray-100">
-                        <p class="mb-1.5 text-[10px] font-bold tracking-wider uppercase text-gray-500">Condiții oferite</p>
-                        <ul id="bookingConditionsList" class="space-y-1 text-xs text-gray-700"></ul>
-                    </div>
-                </div>
-            </div>
-
             <!--
               Claim CTA — populated by ArtistClaim.init() in artist-claim.js.
               Shows one of: "Revendică profilul" / "Profil verificat" badge /
@@ -252,6 +226,43 @@ require_once __DIR__ . '/includes/header.php';
                     </div>
                     <div id="bookingAgencyContent" class="flex flex-col items-start">
                         <!-- Content will be loaded dynamically -->
+                    </div>
+                </div>
+
+                <!--
+                  Booking direct artist — afișat doar dacă artistul are listing
+                  activ. Wired up de BookingRequestModal.init() / populateDetails.
+                -->
+                <div id="bookingCtaContainer" class="hidden mt-10">
+                    <div class="flex items-center justify-between mb-5">
+                        <h2 class="text-[22px] font-bold text-gray-900 flex items-center gap-2.5">
+                            <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
+                            </svg>
+                            Cere booking
+                        </h2>
+                    </div>
+
+                    <div class="p-6 border border-emerald-200 rounded-2xl bg-white shadow-sm">
+                        <p id="bookingDescriptionEl" class="hidden mb-4 text-sm leading-relaxed text-gray-700 whitespace-pre-line"></p>
+
+                        <div id="bookingEventTypesRow" class="hidden mb-4">
+                            <p class="mb-1.5 text-[10px] font-bold tracking-wider uppercase text-gray-500">Tipuri evenimente acceptate</p>
+                            <div id="bookingEventTypesList" class="flex flex-wrap gap-1.5"></div>
+                        </div>
+
+                        <dl id="bookingFactsList" class="space-y-1.5 text-xs mb-4"></dl>
+
+                        <div id="bookingConditionsRow" class="hidden mb-5 pt-3 border-t border-gray-100">
+                            <p class="mb-1.5 text-[10px] font-bold tracking-wider uppercase text-gray-500">Condiții oferite</p>
+                            <ul id="bookingConditionsList" class="space-y-1 text-xs text-gray-700"></ul>
+                        </div>
+
+                        <button id="bookingCtaBtn" type="button" class="flex items-center justify-center gap-2 w-full py-3.5 px-5 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-semibold text-sm transition-all hover:-translate-y-0.5 hover:shadow-lg hover:shadow-emerald-500/30">
+                            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10H3M21 6H3M21 14H3M21 18H3"/><path d="M16 12l4 4-4 4"/></svg>
+                            <span>Trimite cerere de booking</span>
+                        </button>
+                        <p id="bookingCtaSubtitle" class="mt-2 text-xs text-center text-gray-500"></p>
                     </div>
                 </div>
             </div>
