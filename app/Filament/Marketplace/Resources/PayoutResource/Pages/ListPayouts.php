@@ -1013,9 +1013,12 @@ class ListPayouts extends ListRecords
             'adjustments_amount' => 0,
             // Triggered by an admin clicking "Generează decont" in the
             // Evenimente încheiate modal — treat it as admin-approved on
-            // creation so it doesn't sit in pending waiting for a second click.
+            // creation so it doesn't sit in pending waiting for a second
+            // click. Source is 'manual' (not 'automated') because a human
+            // clicks the button — there is no cron creating payouts here;
+            // the auto-decont schedule is disabled in routes/console.php.
             'status' => 'approved',
-            'source' => 'automated',
+            'source' => 'manual',
             'approved_by' => $marketplaceAdmin->id,
             'approved_at' => now(),
             'payout_method' => $payoutMethod,

@@ -513,26 +513,30 @@ class PayoutResource extends Resource
                                     })
                                     ->dateTime('d.m.Y H:i'),
                                 // Show the actual user (admin) or organizer who
-                                // created the payout. For manual payouts the
-                                // creator is recorded in approved_by (set at
-                                // creation time); for organizer-requested ones,
-                                // it's the organizer; automated has no user
-                                // (cron) so we show "Sistem".
+                                // created the payout. Prefer the approving
+                                // admin recorded in approved_by — that field
+                                // is populated whenever a human (admin or
+                                // automation acting on their behalf) creates
+                                // the record, regardless of the legacy source
+                                // value. Fall back to organizer for organizer-
+                                // requested payouts, then to "Sistem (cron)"
+                                // only when there's truly no human attached.
                                 Infolists\Components\TextEntry::make('creator_label')
                                     ->label('Creat de')
                                     ->state(function ($record) {
-                                        return match ($record->source) {
-                                            'manual' => $record->approvedByUser?->name
-                                                ? $record->approvedByUser->name . ' (' . $record->approvedByUser->email . ')'
-                                                : '—',
-                                            'organizer' => $record->organizer?->name
-                                                ? $record->organizer->name . (
-                                                    $record->organizer->email ? ' (' . $record->organizer->email . ')' : ''
-                                                )
-                                                : '—',
-                                            'automated' => 'Sistem (cron)',
-                                            default => '—',
-                                        };
+                                        if ($record->approvedByUser) {
+                                            $admin = $record->approvedByUser;
+                                            return trim($admin->name . ' (' . $admin->email . ')');
+                                        }
+                                        if ($record->source === 'organizer' && $record->organizer) {
+                                            $org = $record->organizer;
+                                            $email = $org->email ? ' (' . $org->email . ')' : '';
+                                            return $org->name . $email;
+                                        }
+                                        if ($record->source === 'automated') {
+                                            return 'Sistem (cron)';
+                                        }
+                                        return '—';
                                     }),
                                 Infolists\Components\TextEntry::make('source')
                                     ->label('Tip')
