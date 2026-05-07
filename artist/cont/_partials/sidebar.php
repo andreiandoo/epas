@@ -113,7 +113,7 @@ $extendedArtistNav = [
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/>
             </svg>
-            <span>Extended Artist</span>
+            <span>Premium</span>
             <span data-extended-artist-badge class="hidden ml-auto rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-bold text-emerald-300">ACTIV</span>
         </div>
         <?php foreach ($extendedArtistNav as $item): $active = $isActive($item['url']); ?>

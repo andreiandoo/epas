@@ -19,7 +19,7 @@
  */
 require_once dirname(__DIR__, 3) . '/includes/config.php';
 
-$pageTitle = 'Extended Artist — Smart EPK';
+$pageTitle = 'Premium — Smart EPK';
 $bodyClass = 'min-h-screen bg-surface font-sans';
 $cssBundle = 'account';
 require_once dirname(__DIR__, 3) . '/includes/head.php';
@@ -52,23 +52,23 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
 
 <?php require dirname(__DIR__) . '/_partials/sidebar.php'; ?>
 
-<main class="lg:ml-64 pt-16 lg:pt-0 min-h-screen" x-data="smartEpk()" x-init="init()" x-cloak>
+<main class="min-h-screen pt-16 lg:ml-64 lg:pt-0" x-data="smartEpk()" x-init="init()" x-cloak>
     <div class="p-4 lg:p-8">
 
         <!-- Page Header -->
         <div class="mb-6">
             <div class="flex items-center gap-2 mb-2">
                 <span class="epk-pro-badge">PRO</span>
-                <span class="text-xs text-muted uppercase tracking-wider font-semibold">Extended Artist · Smart Electronic Press Kit</span>
+                <span class="text-xs font-semibold tracking-wider uppercase text-muted">Extended Artist · Smart Electronic Press Kit</span>
             </div>
-            <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+            <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                 <div>
-                    <h1 class="text-2xl lg:text-3xl font-bold text-secondary">Smart EPK</h1>
-                    <p class="text-muted mt-1">Press kit dinamic, share-uibil, cu stats verificate din platformă</p>
+                    <h1 class="text-2xl font-bold lg:text-3xl text-secondary">Smart EPK</h1>
+                    <p class="mt-1 text-muted">Press kit dinamic, share-uibil, cu stats verificate din platformă</p>
                 </div>
-                <div class="flex items-center gap-2 flex-wrap">
-                    <span x-show="dirty && !saving" class="text-xs text-amber-600 font-medium">Modificări nesalvate</span>
-                    <span x-show="saving" class="text-xs text-blue-600 font-medium">Se salvează...</span>
+                <div class="flex flex-wrap items-center gap-2">
+                    <span x-show="dirty && !saving" class="text-xs font-medium text-amber-600">Modificări nesalvate</span>
+                    <span x-show="saving" class="text-xs font-medium text-blue-600">Se salvează...</span>
                     <button type="button" @click="saveActive()" :disabled="!dirty || saving" class="epk-btn epk-btn-primary epk-btn-sm">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
                         Salvează
@@ -86,17 +86,17 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
         </div>
 
         <!-- Loading state -->
-        <div x-show="loading" class="bg-white rounded-2xl border border-border p-12 text-center text-muted">
+        <div x-show="loading" class="p-12 text-center bg-white border rounded-2xl border-border text-muted">
             Se încarcă EPK-ul...
         </div>
 
         <div x-show="!loading">
 
             <!-- URL bar -->
-            <div class="bg-white border border-border rounded-2xl p-4 mb-6 flex items-center gap-3 flex-wrap">
-                <div class="flex items-center gap-2 px-3 py-2 bg-surface rounded-lg flex-1 min-w-0">
-                    <svg class="w-4 h-4 text-muted flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
-                    <span class="font-mono text-sm text-secondary truncate" x-text="publicUrlDisplay()"></span>
+            <div class="flex flex-wrap items-center gap-3 p-4 mb-6 bg-white border border-border rounded-2xl">
+                <div class="flex items-center flex-1 min-w-0 gap-2 px-3 py-2 rounded-lg bg-surface">
+                    <svg class="flex-shrink-0 w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+                    <span class="font-mono text-sm truncate text-secondary" x-text="publicUrlDisplay()"></span>
                 </div>
                 <div class="flex gap-2">
                     <a :href="qrUrl()" target="_blank" class="epk-btn epk-btn-secondary epk-btn-sm" title="QR code">
@@ -107,13 +107,13 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
             </div>
 
             <!-- Tabs -->
-            <div class="bg-white rounded-2xl border border-border overflow-hidden">
-                <div class="border-b border-border overflow-x-auto">
+            <div class="overflow-hidden bg-white border rounded-2xl border-border">
+                <div class="overflow-x-auto border-b border-border">
                     <div class="flex gap-1 p-2 min-w-max">
                         <template x-for="t in tabs" :key="t.id">
                             <button @click="setTab(t.id)"
                                     :class="tab === t.id ? 'bg-primary text-white' : 'text-muted hover:bg-surface hover:text-secondary'"
-                                    class="px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors flex items-center gap-2">
+                                    class="flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors rounded-lg whitespace-nowrap">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" x-html="t.icon"></svg>
                                 <span x-text="t.label"></span>
                             </button>
@@ -123,7 +123,7 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
 
                 <!-- ============ TAB: EDITOR ============ -->
                 <div x-show="tab === 'editor'" class="p-6">
-                    <div class="grid lg:grid-cols-12 gap-6">
+                    <div class="grid gap-6 lg:grid-cols-12">
                         <!-- Left: section list + branding -->
                         <div class="lg:col-span-4">
                             <div class="sticky top-6">
@@ -131,7 +131,7 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                     <h3 class="font-bold text-secondary">Secțiuni</h3>
                                     <span class="text-xs text-muted"><span x-text="enabledSections.length"></span>/<span x-text="sections.length"></span> active</span>
                                 </div>
-                                <p class="text-xs text-muted mb-4">Activează/dezactivează secțiunile pe care le afișezi în EPK.</p>
+                                <p class="mb-4 text-xs text-muted">Activează/dezactivează secțiunile pe care le afișezi în EPK.</p>
 
                                 <div class="space-y-2">
                                     <template x-for="(section, idx) in sections" :key="section.id">
@@ -140,16 +140,16 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                                  selectedSection === section.id ? 'border-primary bg-primary/5' : 'border-border bg-white',
                                                  !section.enabled ? 'opacity-50' : ''
                                              ]"
-                                             class="epk-section-card border rounded-xl p-3 cursor-pointer hover:border-primary/30 transition-colors flex items-center gap-3">
-                                            <svg class="epk-drag-handle w-4 h-4 text-muted flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
-                                            <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" :class="section.enabled ? 'bg-primary/10' : 'bg-surface'">
+                                             class="flex items-center gap-3 p-3 transition-colors border cursor-pointer epk-section-card rounded-xl hover:border-primary/30">
+                                            <svg class="flex-shrink-0 w-4 h-4 epk-drag-handle text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+                                            <div class="flex items-center justify-center flex-shrink-0 w-8 h-8 rounded-lg" :class="section.enabled ? 'bg-primary/10' : 'bg-surface'">
                                                 <svg class="w-4 h-4" :class="section.enabled ? 'text-primary' : 'text-muted'" fill="none" stroke="currentColor" viewBox="0 0 24 24" x-html="section.icon"></svg>
                                             </div>
                                             <div class="flex-1 min-w-0">
-                                                <p class="font-semibold text-sm text-secondary truncate" x-text="section.label"></p>
-                                                <p class="text-xs text-muted truncate" x-text="section.summary"></p>
+                                                <p class="text-sm font-semibold truncate text-secondary" x-text="section.label"></p>
+                                                <p class="text-xs truncate text-muted" x-text="section.summary"></p>
                                             </div>
-                                            <label class="relative inline-flex items-center cursor-pointer flex-shrink-0" @click.stop>
+                                            <label class="relative inline-flex items-center flex-shrink-0 cursor-pointer" @click.stop>
                                                 <input type="checkbox" x-model="section.enabled" @change="markDirty()" class="sr-only peer">
                                                 <div class="w-9 h-5 bg-surface peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-border after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-success"></div>
                                             </label>
@@ -158,20 +158,20 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                 </div>
 
                                 <!-- Branding -->
-                                <div class="mt-6 p-4 bg-surface rounded-xl">
-                                    <h4 class="font-bold text-secondary text-sm mb-3">Branding</h4>
+                                <div class="p-4 mt-6 bg-surface rounded-xl">
+                                    <h4 class="mb-3 text-sm font-bold text-secondary">Branding</h4>
                                     <div class="space-y-3">
                                         <div>
-                                            <label class="block text-xs text-muted mb-1">Culoare accent</label>
-                                            <div class="flex gap-2 flex-wrap">
+                                            <label class="block mb-1 text-xs text-muted">Culoare accent</label>
+                                            <div class="flex flex-wrap gap-2">
                                                 <template x-for="c in accentColors" :key="c">
-                                                    <button @click="branding.accent = c; markDirty()" :style="`background: ${c}`" :class="branding.accent === c ? 'ring-2 ring-offset-2 ring-secondary' : ''" class="w-8 h-8 rounded-lg transition-all"></button>
+                                                    <button @click="branding.accent = c; markDirty()" :style="`background: ${c}`" :class="branding.accent === c ? 'ring-2 ring-offset-2 ring-secondary' : ''" class="w-8 h-8 transition-all rounded-lg"></button>
                                                 </template>
                                             </div>
                                         </div>
                                         <div>
-                                            <label class="block text-xs text-muted mb-1">Template</label>
-                                            <select x-model="branding.template" @change="markDirty()" class="epk-input text-sm">
+                                            <label class="block mb-1 text-xs text-muted">Template</label>
+                                            <select x-model="branding.template" @change="markDirty()" class="text-sm epk-input">
                                                 <option value="modern">Modern (default)</option>
                                                 <option value="classic">Clasic</option>
                                                 <option value="minimal">Minimalist</option>
@@ -181,22 +181,22 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                 </div>
 
                                 <!-- Variant meta inputs -->
-                                <div class="mt-4 p-4 bg-surface rounded-xl">
-                                    <h4 class="font-bold text-secondary text-sm mb-3">Identificare variantă</h4>
+                                <div class="p-4 mt-4 bg-surface rounded-xl">
+                                    <h4 class="mb-3 text-sm font-bold text-secondary">Identificare variantă</h4>
                                     <div class="space-y-3">
                                         <div>
-                                            <label class="block text-xs text-muted mb-1">Nume variantă</label>
-                                            <input type="text" x-model="active.name" @input="markDirty()" maxlength="100" placeholder="Default" class="epk-input text-sm">
+                                            <label class="block mb-1 text-xs text-muted">Nume variantă</label>
+                                            <input type="text" x-model="active.name" @input="markDirty()" maxlength="100" placeholder="Default" class="text-sm epk-input">
                                             <p class="text-[11px] text-muted mt-1">Numele intern al variantei (vizibil doar de tine în Variante).</p>
                                         </div>
                                         <div>
-                                            <label class="block text-xs text-muted mb-1">Audiență țintă</label>
-                                            <input type="text" x-model="active.target" @input="markDirty()" maxlength="100" placeholder="Universal / Festival-uri / Cluburi & bars" class="epk-input text-sm">
+                                            <label class="block mb-1 text-xs text-muted">Audiență țintă</label>
+                                            <input type="text" x-model="active.target" @input="markDirty()" maxlength="100" placeholder="Universal / Festival-uri / Cluburi & bars" class="text-sm epk-input">
                                             <p class="text-[11px] text-muted mt-1">Pentru cine e gândită această variantă. Apare în Hero pe pagina publică.</p>
                                         </div>
                                         <div x-show="active.id !== state.active_variant_id">
-                                            <label class="block text-xs text-muted mb-1">Slug URL (suffix)</label>
-                                            <input type="text" x-model="active.slug" @input="markDirty()" maxlength="100" class="epk-input text-sm font-mono">
+                                            <label class="block mb-1 text-xs text-muted">Slug URL (suffix)</label>
+                                            <input type="text" x-model="active.slug" @input="markDirty()" maxlength="100" class="font-mono text-sm epk-input">
                                             <p class="text-[11px] text-muted mt-1">Apare în URL pentru variantele non-active: <span class="font-mono" x-text="`/epk/${state.artist.slug}/${active.slug}`"></span></p>
                                         </div>
                                         <div x-show="active.id === state.active_variant_id" class="text-[11px] text-muted bg-blue-50 border border-blue-200 rounded-lg p-2">
@@ -211,10 +211,10 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                         <div class="lg:col-span-8">
                             <template x-for="section in sections" :key="section.id + '-edit'">
                                 <div x-show="selectedSection === section.id">
-                                    <div class="bg-white border border-border rounded-2xl p-6">
-                                        <div class="flex items-center justify-between mb-6 pb-4 border-b border-border">
+                                    <div class="p-6 bg-white border border-border rounded-2xl">
+                                        <div class="flex items-center justify-between pb-4 mb-6 border-b border-border">
                                             <div>
-                                                <h3 class="font-bold text-secondary text-lg" x-text="section.label"></h3>
+                                                <h3 class="text-lg font-bold text-secondary" x-text="section.label"></h3>
                                                 <p class="text-sm text-muted" x-text="section.description"></p>
                                             </div>
                                             <span class="epk-badge" :class="section.enabled ? 'bg-success/10 text-success' : 'bg-muted/10 text-muted'">
@@ -226,21 +226,21 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                         <template x-if="section.id === 'hero'">
                                             <div class="space-y-4">
                                                 <div>
-                                                    <label class="block text-sm font-medium text-secondary mb-2">Nume artist</label>
+                                                    <label class="block mb-2 text-sm font-medium text-secondary">Nume artist</label>
                                                     <input type="text" x-model="data.stage_name" @input="markDirty()" class="epk-input">
                                                 </div>
                                                 <div>
-                                                    <label class="block text-sm font-medium text-secondary mb-2">Tagline</label>
+                                                    <label class="block mb-2 text-sm font-medium text-secondary">Tagline</label>
                                                     <input type="text" x-model="data.tagline" @input="markDirty()" maxlength="120" class="epk-input">
-                                                    <p class="text-xs text-muted mt-1"><span x-text="(data.tagline || '').length"></span>/120</p>
+                                                    <p class="mt-1 text-xs text-muted"><span x-text="(data.tagline || '').length"></span>/120</p>
                                                 </div>
                                                 <div>
-                                                    <label class="block text-sm font-medium text-secondary mb-2">Cover image</label>
-                                                    <div @click="uploadImage('hero')" class="aspect-video rounded-xl flex items-center justify-center text-white/70 cursor-pointer hover:opacity-80 transition-opacity overflow-hidden bg-cover bg-center"
+                                                    <label class="block mb-2 text-sm font-medium text-secondary">Cover image</label>
+                                                    <div @click="uploadImage('hero')" class="flex items-center justify-center overflow-hidden transition-opacity bg-center bg-cover cursor-pointer aspect-video rounded-xl text-white/70 hover:opacity-80"
                                                          :style="data.cover_image ? `background-image: url(${data.cover_image})` : 'background: linear-gradient(135deg, #1E293B, #8B1728)'">
-                                                        <span class="text-sm bg-black/30 px-3 py-1 rounded" x-text="data.cover_image ? '+ Schimbă cover' : '+ Adaugă cover'"></span>
+                                                        <span class="px-3 py-1 text-sm rounded bg-black/30" x-text="data.cover_image ? '+ Schimbă cover' : '+ Adaugă cover'"></span>
                                                     </div>
-                                                    <button x-show="data.cover_image" @click.prevent="data.cover_image = null; markDirty()" type="button" class="text-xs text-error mt-2 hover:underline">Elimină cover</button>
+                                                    <button x-show="data.cover_image" @click.prevent="data.cover_image = null; markDirty()" type="button" class="mt-2 text-xs text-error hover:underline">Elimină cover</button>
                                                 </div>
                                             </div>
                                         </template>
@@ -248,20 +248,20 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                         <!-- STATS -->
                                         <template x-if="section.id === 'stats'">
                                             <div class="space-y-6">
-                                                <div class="bg-blue-50 border border-blue-200 rounded-xl p-3 flex items-start gap-2">
+                                                <div class="flex items-start gap-2 p-3 border border-blue-200 bg-blue-50 rounded-xl">
                                                     <svg class="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
                                                     <p class="text-xs text-blue-900">Cifrele vin <strong>direct din platformă</strong>. Sunt verificate. Activează-le pe cele relevante pentru tine.</p>
                                                 </div>
 
                                                 <!-- Live stats from platform -->
                                                 <div>
-                                                    <h4 class="text-sm font-bold text-secondary mb-3">Stats live (din platformă)</h4>
-                                                    <div class="grid sm:grid-cols-2 gap-3">
+                                                    <h4 class="mb-3 text-sm font-bold text-secondary">Stats live (din platformă)</h4>
+                                                    <div class="grid gap-3 sm:grid-cols-2">
                                                         <template x-for="stat in liveStats()" :key="stat.key">
-                                                            <div class="border border-border rounded-xl p-4 flex items-center justify-between">
+                                                            <div class="flex items-center justify-between p-4 border border-border rounded-xl">
                                                                 <div>
-                                                                    <p class="text-xs text-muted uppercase tracking-wider font-semibold" x-text="stat.label"></p>
-                                                                    <p class="text-2xl font-bold text-secondary mt-1" x-text="stat.value"></p>
+                                                                    <p class="text-xs font-semibold tracking-wider uppercase text-muted" x-text="stat.label"></p>
+                                                                    <p class="mt-1 text-2xl font-bold text-secondary" x-text="stat.value"></p>
                                                                 </div>
                                                                 <label class="relative inline-flex items-center cursor-pointer">
                                                                     <input type="checkbox" x-model="stat.show" @change="markDirty()" class="sr-only peer">
@@ -274,14 +274,14 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
 
                                                 <!-- Social stats -->
                                                 <div>
-                                                    <h4 class="text-sm font-bold text-secondary mb-3">Stats sociale</h4>
-                                                    <p class="text-xs text-muted mb-3">Followers de pe social media (din profilul tău).</p>
-                                                    <div class="grid sm:grid-cols-2 gap-3">
+                                                    <h4 class="mb-3 text-sm font-bold text-secondary">Stats sociale</h4>
+                                                    <p class="mb-3 text-xs text-muted">Followers de pe social media (din profilul tău).</p>
+                                                    <div class="grid gap-3 sm:grid-cols-2">
                                                         <template x-for="stat in socialStats()" :key="stat.key">
-                                                            <div class="border border-border rounded-xl p-4 flex items-center justify-between">
+                                                            <div class="flex items-center justify-between p-4 border border-border rounded-xl">
                                                                 <div>
-                                                                    <p class="text-xs text-muted uppercase tracking-wider font-semibold" x-text="stat.label"></p>
-                                                                    <p class="text-2xl font-bold text-secondary mt-1" x-text="stat.value"></p>
+                                                                    <p class="text-xs font-semibold tracking-wider uppercase text-muted" x-text="stat.label"></p>
+                                                                    <p class="mt-1 text-2xl font-bold text-secondary" x-text="stat.value"></p>
                                                                 </div>
                                                                 <label class="relative inline-flex items-center cursor-pointer">
                                                                     <input type="checkbox" x-model="stat.show" @change="markDirty()" class="sr-only peer">
@@ -294,20 +294,20 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
 
                                                 <!-- Custom stats — artist-defined -->
                                                 <div>
-                                                    <h4 class="text-sm font-bold text-secondary mb-3">Stats personalizate</h4>
-                                                    <p class="text-xs text-muted mb-3">Adaugă orice cifră vrei tu (ex: „Premii câștigate: 7" sau „Țări vizitate: 12"). Max 6.</p>
+                                                    <h4 class="mb-3 text-sm font-bold text-secondary">Stats personalizate</h4>
+                                                    <p class="mb-3 text-xs text-muted">Adaugă orice cifră vrei tu (ex: „Premii câștigate: 7" sau „Țări vizitate: 12"). Max 6.</p>
                                                     <div class="space-y-2">
                                                         <template x-for="(cs, i) in data.custom_stats" :key="i">
-                                                            <div class="flex gap-2 items-center">
+                                                            <div class="flex items-center gap-2">
                                                                 <input type="text" x-model="cs.label" @input="markDirty()" maxlength="40" placeholder="Etichetă (ex: Ani de carieră)" class="epk-input" style="flex:1 1 auto; min-width:0">
                                                                 <input type="text" x-model="cs.value" @input="markDirty()" maxlength="20" placeholder="Valoare (ex: 12)" class="epk-input" style="width:8rem; flex:0 0 8rem">
-                                                                <button @click="data.custom_stats.splice(i, 1); markDirty()" class="p-2 text-muted hover:text-error rounded-lg flex-shrink-0">
+                                                                <button @click="data.custom_stats.splice(i, 1); markDirty()" class="flex-shrink-0 p-2 rounded-lg text-muted hover:text-error">
                                                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                                                                 </button>
                                                             </div>
                                                         </template>
                                                     </div>
-                                                    <button x-show="(data.custom_stats || []).length < 6" @click="data.custom_stats.push({ label: '', value: '' }); markDirty()" class="mt-2 text-sm text-primary font-medium hover:underline">+ Adaugă stat personalizat</button>
+                                                    <button x-show="(data.custom_stats || []).length < 6" @click="data.custom_stats.push({ label: '', value: '' }); markDirty()" class="mt-2 text-sm font-medium text-primary hover:underline">+ Adaugă stat personalizat</button>
                                                 </div>
                                             </div>
                                         </template>
@@ -316,12 +316,12 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                         <template x-if="section.id === 'bio'">
                                             <div class="space-y-4">
                                                 <div>
-                                                    <label class="block text-sm font-medium text-secondary mb-2">Bio scurt (pentru carduri)</label>
+                                                    <label class="block mb-2 text-sm font-medium text-secondary">Bio scurt (pentru carduri)</label>
                                                     <textarea x-model="data.bio_short" @input="markDirty()" rows="3" maxlength="280" class="epk-input"></textarea>
-                                                    <p class="text-xs text-muted mt-1"><span x-text="(data.bio_short || '').length"></span>/280</p>
+                                                    <p class="mt-1 text-xs text-muted"><span x-text="(data.bio_short || '').length"></span>/280</p>
                                                 </div>
                                                 <div>
-                                                    <label class="block text-sm font-medium text-secondary mb-2">Bio extins</label>
+                                                    <label class="block mb-2 text-sm font-medium text-secondary">Bio extins</label>
                                                     <textarea x-model="data.bio_long" @input="markDirty()" rows="8" data-rich-editor data-bio-long-editor class="epk-input"></textarea>
                                                 </div>
                                             </div>
@@ -330,17 +330,17 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                         <!-- GALLERY -->
                                         <template x-if="section.id === 'gallery'">
                                             <div>
-                                                <p class="text-sm text-muted mb-3">Maxim 12 imagini. Prima e marcată „PRINCIPAL" pe pagina publică.</p>
-                                                <div class="grid grid-cols-3 sm:grid-cols-4 gap-3">
+                                                <p class="mb-3 text-sm text-muted">Maxim 12 imagini. Prima e marcată „PRINCIPAL" pe pagina publică.</p>
+                                                <div class="grid grid-cols-3 gap-3 sm:grid-cols-4">
                                                     <template x-for="(img, i) in nonEmptyGallery()" :key="i + '-' + img">
-                                                        <div class="relative aspect-square bg-cover bg-center rounded-lg overflow-hidden group bg-surface" :style="`background-image: url(${img})`">
+                                                        <div class="relative overflow-hidden bg-center bg-cover rounded-lg aspect-square group bg-surface" :style="`background-image: url(${img})`">
                                                             <span x-show="i === 0" class="absolute top-1 left-1 text-[10px] bg-primary text-white px-1.5 py-0.5 rounded font-bold">PRINCIPAL</span>
-                                                            <button @click="removeGalleryImage(i); markDirty()" class="absolute top-1 right-1 w-6 h-6 bg-error text-white rounded-full opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                                                            <button @click="removeGalleryImage(i); markDirty()" class="absolute flex items-center justify-center w-6 h-6 text-white transition-opacity rounded-full opacity-0 top-1 right-1 bg-error group-hover:opacity-100">
                                                                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                                                             </button>
                                                         </div>
                                                     </template>
-                                                    <button x-show="nonEmptyGallery().length < 12" @click="uploadImage('gallery')" class="aspect-square border-2 border-dashed border-border rounded-lg flex items-center justify-center text-muted hover:border-primary/30 hover:text-primary transition-colors">
+                                                    <button x-show="nonEmptyGallery().length < 12" @click="uploadImage('gallery')" class="flex items-center justify-center transition-colors border-2 border-dashed rounded-lg aspect-square border-border text-muted hover:border-primary/30 hover:text-primary">
                                                         <span class="text-2xl">+</span>
                                                     </button>
                                                 </div>
@@ -350,26 +350,26 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                         <!-- SPOTIFY -->
                                         <template x-if="section.id === 'spotify'">
                                             <div>
-                                                <label class="block text-sm font-medium text-secondary mb-2">Link Spotify</label>
+                                                <label class="block mb-2 text-sm font-medium text-secondary">Link Spotify</label>
                                                 <input type="url" x-model="data.spotify_url" @input="markDirty()" class="epk-input" placeholder="https://open.spotify.com/artist/...">
-                                                <p class="text-xs text-muted mt-2">Acceptă: artist, album sau playlist. Se afișează card cu link direct.</p>
+                                                <p class="mt-2 text-xs text-muted">Acceptă: artist, album sau playlist. Se afișează card cu link direct.</p>
                                             </div>
                                         </template>
 
                                         <!-- YOUTUBE -->
                                         <template x-if="section.id === 'youtube'">
                                             <div>
-                                                <label class="block text-sm font-medium text-secondary mb-2">Videoclipuri YouTube (max 4)</label>
+                                                <label class="block mb-2 text-sm font-medium text-secondary">Videoclipuri YouTube (max 4)</label>
                                                 <div class="space-y-2">
                                                     <template x-for="(v, i) in data.youtube_videos" :key="i">
                                                         <div class="flex gap-2">
-                                                            <input type="url" x-model="data.youtube_videos[i].url" @input="markDirty()" class="epk-input flex-1" placeholder="https://youtube.com/watch?v=...">
+                                                            <input type="url" x-model="data.youtube_videos[i].url" @input="markDirty()" class="flex-1 epk-input" placeholder="https://youtube.com/watch?v=...">
                                                             <button @click="data.youtube_videos.splice(i, 1); markDirty()" class="p-2.5 text-muted hover:text-error rounded-lg hover:bg-error/5">
                                                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                                                             </button>
                                                         </div>
                                                     </template>
-                                                    <button x-show="data.youtube_videos.length < 4" @click="data.youtube_videos.push({ url: '' }); markDirty()" class="text-sm text-primary font-medium hover:underline">+ Adaugă video</button>
+                                                    <button x-show="data.youtube_videos.length < 4" @click="data.youtube_videos.push({ url: '' }); markDirty()" class="text-sm font-medium text-primary hover:underline">+ Adaugă video</button>
                                                 </div>
                                             </div>
                                         </template>
@@ -377,30 +377,30 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                         <!-- ACHIEVEMENTS -->
                                         <template x-if="section.id === 'achievements'">
                                             <div>
-                                                <p class="text-sm text-muted mb-3">Realizări notabile, cronologic descrescător.</p>
+                                                <p class="mb-3 text-sm text-muted">Realizări notabile, cronologic descrescător.</p>
                                                 <div class="space-y-2">
                                                     <template x-for="(a, i) in data.achievements" :key="i">
-                                                        <div class="flex gap-2 items-center">
+                                                        <div class="flex items-center gap-2">
                                                             <input type="number" x-model.number="a.year" @input="markDirty()" placeholder="An" class="epk-input" style="width:6rem; flex:0 0 6rem">
                                                             <input type="text" x-model="a.text" @input="markDirty()" placeholder="Realizare (ex: Cap de afiș Untold)" class="epk-input" style="flex:1 1 auto; min-width:0">
-                                                            <button @click="data.achievements.splice(i, 1); markDirty()" class="p-2 text-muted hover:text-error rounded-lg flex-shrink-0">
+                                                            <button @click="data.achievements.splice(i, 1); markDirty()" class="flex-shrink-0 p-2 rounded-lg text-muted hover:text-error">
                                                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                                                             </button>
                                                         </div>
                                                     </template>
                                                 </div>
-                                                <button @click="data.achievements.push({ year: new Date().getFullYear(), text: '' }); markDirty()" class="text-sm text-primary font-medium hover:underline mt-2">+ Adaugă realizare</button>
+                                                <button @click="data.achievements.push({ year: new Date().getFullYear(), text: '' }); markDirty()" class="mt-2 text-sm font-medium text-primary hover:underline">+ Adaugă realizare</button>
                                             </div>
                                         </template>
 
                                         <!-- PRESS QUOTES -->
                                         <template x-if="section.id === 'press_quotes'">
                                             <div>
-                                                <p class="text-sm text-muted mb-3">Citate din presă cu sursă și link.</p>
+                                                <p class="mb-3 text-sm text-muted">Citate din presă cu sursă și link.</p>
                                                 <div class="space-y-3">
                                                     <template x-for="(q, i) in data.press_quotes" :key="i">
-                                                        <div class="border border-border rounded-xl p-3">
-                                                            <textarea x-model="q.text" @input="markDirty()" rows="2" class="epk-input mb-2" placeholder="Citat..."></textarea>
+                                                        <div class="p-3 border border-border rounded-xl">
+                                                            <textarea x-model="q.text" @input="markDirty()" rows="2" class="mb-2 epk-input" placeholder="Citat..."></textarea>
                                                             <div class="grid grid-cols-2 gap-2 mb-2">
                                                                 <input type="text" x-model="q.source" @input="markDirty()" class="epk-input" placeholder="Sursă (ex: Adevărul)">
                                                                 <input type="url" x-model="q.url" @input="markDirty()" class="epk-input" placeholder="Link">
@@ -409,24 +409,24 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                                         </div>
                                                     </template>
                                                 </div>
-                                                <button @click="data.press_quotes.push({ text: '', source: '', url: '' }); markDirty()" class="text-sm text-primary font-medium hover:underline mt-2">+ Adaugă citat</button>
+                                                <button @click="data.press_quotes.push({ text: '', source: '', url: '' }); markDirty()" class="mt-2 text-sm font-medium text-primary hover:underline">+ Adaugă citat</button>
                                             </div>
                                         </template>
 
                                         <!-- PAST EVENTS -->
                                         <template x-if="section.id === 'past_events'">
                                             <div>
-                                                <p class="text-sm text-muted mb-3">Evenimente trecute (auto din platformă). Bifează „Ascunde" pentru cele pe care nu vrei să apară.</p>
-                                                <div class="space-y-2 max-h-96 overflow-y-auto">
+                                                <p class="mb-3 text-sm text-muted">Evenimente trecute (auto din platformă). Bifează „Ascunde" pentru cele pe care nu vrei să apară.</p>
+                                                <div class="space-y-2 overflow-y-auto max-h-96">
                                                     <template x-for="ev in state.past_events" :key="ev.id">
                                                         <div class="flex items-center gap-3 p-3 border border-border rounded-xl">
-                                                            <div class="w-10 h-10 rounded-lg bg-surface flex flex-col items-center justify-center flex-shrink-0">
-                                                                <span class="text-xs font-bold text-primary leading-none" x-text="ev.day"></span>
+                                                            <div class="flex flex-col items-center justify-center flex-shrink-0 w-10 h-10 rounded-lg bg-surface">
+                                                                <span class="text-xs font-bold leading-none text-primary" x-text="ev.day"></span>
                                                                 <span class="text-[10px] text-muted uppercase" x-text="ev.month"></span>
                                                             </div>
                                                             <div class="flex-1 min-w-0">
-                                                                <p class="font-medium text-sm text-secondary truncate" x-text="ev.title"></p>
-                                                                <p class="text-xs text-muted truncate" x-text="ev.venue"></p>
+                                                                <p class="text-sm font-medium truncate text-secondary" x-text="ev.title"></p>
+                                                                <p class="text-xs truncate text-muted" x-text="ev.venue"></p>
                                                             </div>
                                                             <label class="flex items-center gap-2">
                                                                 <input type="checkbox" :checked="(data.past_events_hidden || []).includes(ev.id)" @change="togglePastEventHidden(ev.id)" class="w-4 h-4 rounded">
@@ -434,7 +434,7 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                                             </label>
                                                         </div>
                                                     </template>
-                                                    <p x-show="!state.past_events?.length" class="text-sm text-muted p-3">Nu ai evenimente trecute încă.</p>
+                                                    <p x-show="!state.past_events?.length" class="p-3 text-sm text-muted">Nu ai evenimente trecute încă.</p>
                                                 </div>
                                             </div>
                                         </template>
@@ -443,10 +443,10 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                         <template x-if="section.id === 'rider'">
                                             <div class="space-y-4">
                                                 <div class="flex items-center gap-3 p-4 border border-border rounded-xl">
-                                                    <svg class="w-8 h-8 text-accent flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                                                    <svg class="flex-shrink-0 w-8 h-8 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                                                     <div class="flex-1 min-w-0">
                                                         <p class="font-medium text-secondary">Rider tehnic</p>
-                                                        <p class="text-xs text-muted truncate">
+                                                        <p class="text-xs truncate text-muted">
                                                             <a x-show="data.rider_pdf_url" :href="data.rider_pdf_url" target="_blank" class="text-primary hover:underline" x-text="data.rider_pdf_url"></a>
                                                             <span x-show="!data.rider_pdf_url" class="italic">Niciun PDF încărcat</span>
                                                         </p>
@@ -455,7 +455,7 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                                         <span x-text="data.rider_pdf_url ? 'Înlocuiește' : 'Încarcă PDF'"></span>
                                                     </button>
                                                 </div>
-                                                <label class="flex items-center gap-2 cursor-pointer pt-2">
+                                                <label class="flex items-center gap-2 pt-2 cursor-pointer">
                                                     <input type="checkbox" x-model="data.rider_gated" @change="markDirty()" class="w-4 h-4 rounded text-primary">
                                                     <span class="text-sm text-secondary">Cere email înainte de descărcare (generează lead)</span>
                                                 </label>
@@ -467,7 +467,7 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                             <div class="space-y-3">
                                                 <template x-for="s in socialPlatforms" :key="s.key">
                                                     <div>
-                                                        <label class="block text-sm font-medium text-secondary mb-1" x-text="s.label"></label>
+                                                        <label class="block mb-1 text-sm font-medium text-secondary" x-text="s.label"></label>
                                                         <input type="url" x-model="data.social[s.key]" @input="markDirty()" :placeholder="s.placeholder" class="epk-input">
                                                     </div>
                                                 </template>
@@ -478,37 +478,37 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                         <template x-if="section.id === 'contact'">
                                             <div class="space-y-4">
                                                 <div>
-                                                    <label class="block text-sm font-medium text-secondary mb-1">Email contact</label>
+                                                    <label class="block mb-1 text-sm font-medium text-secondary">Email contact</label>
                                                     <input type="email" x-model="data.contact_email" @input="markDirty()" class="epk-input">
                                                 </div>
                                                 <div>
-                                                    <label class="block text-sm font-medium text-secondary mb-1">Telefon</label>
+                                                    <label class="block mb-1 text-sm font-medium text-secondary">Telefon</label>
                                                     <input type="tel" x-model="data.contact_phone" @input="markDirty()" class="epk-input">
                                                 </div>
-                                                <label class="flex items-center gap-2 cursor-pointer pt-2">
+                                                <label class="flex items-center gap-2 pt-2 cursor-pointer">
                                                     <input type="checkbox" x-model="data.show_booking_cta" @change="markDirty()" class="w-4 h-4 rounded text-primary">
                                                     <span class="text-sm text-secondary">Afișează buton „Cere booking"</span>
                                                 </label>
 
                                                 <div x-show="data.show_booking_cta" class="pt-2">
-                                                    <label class="block text-sm font-medium text-secondary mb-1">Tipuri de evenimente pentru booking</label>
-                                                    <p class="text-xs text-muted mb-2">Apar sub butonul „Booking" pe pagina publică (ex: „Concerte · Festivaluri · Corporate"). Lasă gol ca să ascunzi rândul.</p>
+                                                    <label class="block mb-1 text-sm font-medium text-secondary">Tipuri de evenimente pentru booking</label>
+                                                    <p class="mb-2 text-xs text-muted">Apar sub butonul „Booking" pe pagina publică (ex: „Concerte · Festivaluri · Corporate"). Lasă gol ca să ascunzi rândul.</p>
                                                     <div class="space-y-2">
                                                         <template x-for="(t, i) in data.event_types" :key="i">
-                                                            <div class="flex gap-2 items-center">
+                                                            <div class="flex items-center gap-2">
                                                                 <input type="text" x-model="data.event_types[i]" @input="markDirty()" maxlength="40" class="epk-input" style="flex:1 1 auto; min-width:0">
-                                                                <button @click="data.event_types.splice(i, 1); markDirty()" class="p-2 text-muted hover:text-error rounded-lg flex-shrink-0">
+                                                                <button @click="data.event_types.splice(i, 1); markDirty()" class="flex-shrink-0 p-2 rounded-lg text-muted hover:text-error">
                                                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                                                                 </button>
                                                             </div>
                                                         </template>
                                                     </div>
-                                                    <button x-show="(data.event_types || []).length < 8" @click="data.event_types.push(''); markDirty()" class="mt-2 text-sm text-primary font-medium hover:underline">+ Adaugă tip eveniment</button>
+                                                    <button x-show="(data.event_types || []).length < 8" @click="data.event_types.push(''); markDirty()" class="mt-2 text-sm font-medium text-primary hover:underline">+ Adaugă tip eveniment</button>
                                                 </div>
                                             </div>
                                         </template>
 
-                                        <div class="mt-6 pt-6 border-t border-border flex justify-end gap-2">
+                                        <div class="flex justify-end gap-2 pt-6 mt-6 border-t border-border">
                                             <button @click="loadActiveVariant()" :disabled="!dirty" class="epk-btn epk-btn-secondary epk-btn-sm">Anulează</button>
                                             <button @click="saveActive()" :disabled="!dirty || saving" class="epk-btn epk-btn-primary epk-btn-sm">Salvează</button>
                                         </div>
@@ -521,66 +521,66 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
 
                 <!-- ============ TAB: ANALYTICS (mock data — Faza B) ============ -->
                 <div x-show="tab === 'analytics'" class="p-6">
-                    <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-6 flex items-start gap-2">
+                    <div class="flex items-start gap-2 p-3 mb-6 border bg-amber-50 border-amber-200 rounded-xl">
                         <svg class="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
                         <p class="text-sm text-amber-900"><strong>Date demo</strong> — tracking-ul real va fi activat în Faza B (sprintul următor). Layout-ul de mai jos arată ce vei vedea după lansare.</p>
                     </div>
 
-                    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                        <div class="bg-white border border-border rounded-2xl p-5">
-                            <p class="text-xs text-muted uppercase tracking-wider font-semibold mb-2">Vizualizări (30 zile)</p>
+                    <div class="grid grid-cols-2 gap-4 mb-6 lg:grid-cols-4">
+                        <div class="p-5 bg-white border border-border rounded-2xl">
+                            <p class="mb-2 text-xs font-semibold tracking-wider uppercase text-muted">Vizualizări (30 zile)</p>
                             <p class="text-2xl font-bold text-secondary">2.847</p>
-                            <p class="text-xs text-success mt-1">+34% vs perioada anterioară</p>
+                            <p class="mt-1 text-xs text-success">+34% vs perioada anterioară</p>
                         </div>
-                        <div class="bg-white border border-border rounded-2xl p-5">
-                            <p class="text-xs text-muted uppercase tracking-wider font-semibold mb-2">Vizitatori unici</p>
+                        <div class="p-5 bg-white border border-border rounded-2xl">
+                            <p class="mb-2 text-xs font-semibold tracking-wider uppercase text-muted">Vizitatori unici</p>
                             <p class="text-2xl font-bold text-secondary">1.923</p>
-                            <p class="text-xs text-success mt-1">+28%</p>
+                            <p class="mt-1 text-xs text-success">+28%</p>
                         </div>
-                        <div class="bg-white border border-border rounded-2xl p-5">
-                            <p class="text-xs text-muted uppercase tracking-wider font-semibold mb-2">Timp mediu pe pagină</p>
+                        <div class="p-5 bg-white border border-border rounded-2xl">
+                            <p class="mb-2 text-xs font-semibold tracking-wider uppercase text-muted">Timp mediu pe pagină</p>
                             <p class="text-2xl font-bold text-secondary">3:42</p>
-                            <p class="text-xs text-muted mt-1">Bun (>2 min)</p>
+                            <p class="mt-1 text-xs text-muted">Bun (>2 min)</p>
                         </div>
-                        <div class="bg-white border border-border rounded-2xl p-5">
-                            <p class="text-xs text-muted uppercase tracking-wider font-semibold mb-2">CTA „Cere booking"</p>
+                        <div class="p-5 bg-white border border-border rounded-2xl">
+                            <p class="mb-2 text-xs font-semibold tracking-wider uppercase text-muted">CTA „Cere booking"</p>
                             <p class="text-2xl font-bold text-secondary">47</p>
-                            <p class="text-xs text-success mt-1">2.4% conversion rate</p>
+                            <p class="mt-1 text-xs text-success">2.4% conversion rate</p>
                         </div>
                     </div>
 
-                    <div class="grid lg:grid-cols-2 gap-6 mb-6">
-                        <div class="bg-white border border-border rounded-2xl p-5">
-                            <h3 class="font-bold text-secondary mb-1">Trafic zilnic</h3>
-                            <p class="text-sm text-muted mb-4">Vizualizări în ultimele 30 de zile</p>
+                    <div class="grid gap-6 mb-6 lg:grid-cols-2">
+                        <div class="p-5 bg-white border border-border rounded-2xl">
+                            <h3 class="mb-1 font-bold text-secondary">Trafic zilnic</h3>
+                            <p class="mb-4 text-sm text-muted">Vizualizări în ultimele 30 de zile</p>
                             <div class="relative h-[260px]"><canvas id="trafficChart"></canvas></div>
                         </div>
-                        <div class="bg-white border border-border rounded-2xl p-5">
-                            <h3 class="font-bold text-secondary mb-1">Surse de trafic</h3>
-                            <p class="text-sm text-muted mb-4">De unde vin vizitatorii</p>
+                        <div class="p-5 bg-white border border-border rounded-2xl">
+                            <h3 class="mb-1 font-bold text-secondary">Surse de trafic</h3>
+                            <p class="mb-4 text-sm text-muted">De unde vin vizitatorii</p>
                             <div class="relative h-[260px]"><canvas id="sourcesChart"></canvas></div>
                         </div>
                     </div>
 
-                    <div class="bg-white border border-border rounded-2xl p-5 mb-6">
+                    <div class="p-5 mb-6 bg-white border border-border rounded-2xl">
                         <div class="flex items-center justify-between mb-4">
                             <div>
-                                <h3 class="font-bold text-secondary flex items-center gap-2">🔥 Hot Leads</h3>
+                                <h3 class="flex items-center gap-2 font-bold text-secondary">🔥 Hot Leads</h3>
                                 <p class="text-sm text-muted">Vizitatori care au revenit de mai multe ori — semnal puternic de interes</p>
                             </div>
                             <span class="epk-badge bg-error/10 text-error">3 active</span>
                         </div>
                         <div class="space-y-3">
                             <template x-for="lead in hotLeads" :key="lead.id">
-                                <div class="flex items-center gap-4 p-4 bg-error/5 border border-error/20 rounded-xl">
-                                    <div class="w-10 h-10 rounded-full bg-gradient-to-br from-error to-primary flex items-center justify-center text-white font-bold flex-shrink-0" x-text="lead.initials"></div>
+                                <div class="flex items-center gap-4 p-4 border bg-error/5 border-error/20 rounded-xl">
+                                    <div class="flex items-center justify-center flex-shrink-0 w-10 h-10 font-bold text-white rounded-full bg-gradient-to-br from-error to-primary" x-text="lead.initials"></div>
                                     <div class="flex-1 min-w-0">
                                         <p class="font-bold text-secondary" x-text="lead.name"></p>
                                         <p class="text-xs text-muted">
                                             <span x-text="lead.type"></span> · <span x-text="lead.city"></span> · ultima vizită <span x-text="lead.lastVisit"></span>
                                         </p>
                                     </div>
-                                    <div class="text-right hidden sm:block">
+                                    <div class="hidden text-right sm:block">
                                         <p class="text-lg font-bold text-error" x-text="lead.visits + ' vizite'"></p>
                                         <p class="text-xs text-muted" x-text="lead.timeSpent + ' total'"></p>
                                     </div>
@@ -589,32 +589,32 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                         </div>
                     </div>
 
-                    <div class="grid lg:grid-cols-2 gap-6">
-                        <div class="bg-white border border-border rounded-2xl p-5">
-                            <h3 class="font-bold text-secondary mb-4">Engagement pe secțiuni</h3>
-                            <p class="text-sm text-muted mb-4">Cât % din vizitatori ajung la fiecare secțiune</p>
+                    <div class="grid gap-6 lg:grid-cols-2">
+                        <div class="p-5 bg-white border border-border rounded-2xl">
+                            <h3 class="mb-4 font-bold text-secondary">Engagement pe secțiuni</h3>
+                            <p class="mb-4 text-sm text-muted">Cât % din vizitatori ajung la fiecare secțiune</p>
                             <div class="space-y-3">
                                 <template x-for="se in sectionEngagement" :key="se.name">
                                     <div>
-                                        <div class="flex items-center justify-between text-sm mb-1">
+                                        <div class="flex items-center justify-between mb-1 text-sm">
                                             <span class="font-medium text-secondary" x-text="se.name"></span>
                                             <span class="text-muted"><span x-text="se.pct"></span>%</span>
                                         </div>
-                                        <div class="h-2 bg-surface rounded-full overflow-hidden">
-                                            <div class="h-full bg-primary rounded-full" :style="`width: ${se.pct}%`"></div>
+                                        <div class="h-2 overflow-hidden rounded-full bg-surface">
+                                            <div class="h-full rounded-full bg-primary" :style="`width: ${se.pct}%`"></div>
                                         </div>
                                     </div>
                                 </template>
                             </div>
                         </div>
-                        <div class="bg-white border border-border rounded-2xl p-5">
-                            <h3 class="font-bold text-secondary mb-4">Acțiuni cele mai frecvente</h3>
+                        <div class="p-5 bg-white border border-border rounded-2xl">
+                            <h3 class="mb-4 font-bold text-secondary">Acțiuni cele mai frecvente</h3>
                             <div class="space-y-3">
                                 <template x-for="a in topActions" :key="a.label">
                                     <div class="flex items-center justify-between p-3 bg-surface rounded-xl">
                                         <div class="flex items-center gap-3">
                                             <span class="text-2xl" x-text="a.icon"></span>
-                                            <span class="font-medium text-secondary text-sm" x-text="a.label"></span>
+                                            <span class="text-sm font-medium text-secondary" x-text="a.label"></span>
                                         </div>
                                         <span class="font-bold text-secondary" x-text="a.count.toLocaleString('ro-RO')"></span>
                                     </div>
@@ -637,16 +637,16 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                         </button>
                     </div>
 
-                    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                         <template x-for="v in versions" :key="v.id">
-                            <div class="border-2 rounded-2xl overflow-hidden transition-all hover:shadow-md"
+                            <div class="overflow-hidden transition-all border-2 rounded-2xl hover:shadow-md"
                                  :class="v.id === state.active_variant_id ? 'border-primary' : 'border-border'">
-                                <div class="aspect-video relative bg-cover bg-center" :style="variantPreviewStyle(v)">
+                                <div class="relative bg-center bg-cover aspect-video" :style="variantPreviewStyle(v)">
                                     <!-- Overlay pentru lizibilitate când e cover image -->
                                     <div x-show="variantHasCover(v)" class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20"></div>
-                                    <span x-show="v.id === state.active_variant_id" class="absolute top-2 left-2 epk-badge bg-primary text-white z-10">Activă</span>
-                                    <div class="absolute bottom-2 right-2 flex gap-1 z-10">
-                                        <a :href="variantPublicUrl(v)" target="_blank" class="w-7 h-7 bg-white/90 backdrop-blur rounded-lg flex items-center justify-center text-secondary hover:bg-white transition-colors" title="Vezi public">
+                                    <span x-show="v.id === state.active_variant_id" class="absolute z-10 text-white top-2 left-2 epk-badge bg-primary">Activă</span>
+                                    <div class="absolute z-10 flex gap-1 bottom-2 right-2">
+                                        <a :href="variantPublicUrl(v)" target="_blank" class="flex items-center justify-center transition-colors rounded-lg w-7 h-7 bg-white/90 backdrop-blur text-secondary hover:bg-white" title="Vezi public">
                                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
                                         </a>
                                     </div>
@@ -656,9 +656,9 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                         <h4 class="font-bold text-secondary" x-text="v.name"></h4>
                                         <span class="text-xs text-muted" x-text="v.target || 'Universal'"></span>
                                     </div>
-                                    <p class="text-xs text-muted font-mono mb-3">/<span x-text="v.slug"></span></p>
+                                    <p class="mb-3 font-mono text-xs text-muted">/<span x-text="v.slug"></span></p>
 
-                                    <div class="grid grid-cols-3 gap-2 text-center mb-3">
+                                    <div class="grid grid-cols-3 gap-2 mb-3 text-center">
                                         <div>
                                             <p class="text-xs text-muted">Vizite</p>
                                             <p class="text-sm font-bold text-secondary" x-text="(v.views_count || 0).toLocaleString('ro-RO')"></p>
@@ -674,7 +674,7 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                     </div>
 
                                     <div class="flex gap-1">
-                                        <button @click="activateVariant(v.id)" :disabled="v.id === state.active_variant_id" class="epk-btn epk-btn-secondary epk-btn-sm flex-1">
+                                        <button @click="activateVariant(v.id)" :disabled="v.id === state.active_variant_id" class="flex-1 epk-btn epk-btn-secondary epk-btn-sm">
                                             <span x-text="v.id === state.active_variant_id ? 'Activă' : 'Setează activă'"></span>
                                         </button>
                                         <button @click="cloneVariant(v.id)" class="epk-btn epk-btn-secondary epk-btn-sm" title="Duplică">
@@ -689,32 +689,32 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                         </template>
 
                         <button x-show="versions.length < state.limits?.max_variants" @click="newVariant()" class="border-2 border-dashed border-border rounded-2xl flex flex-col items-center justify-center p-8 text-center hover:border-primary/30 hover:bg-primary/5 cursor-pointer transition-all min-h-[280px]">
-                            <div class="w-12 h-12 bg-surface rounded-full flex items-center justify-center mb-3">
+                            <div class="flex items-center justify-center w-12 h-12 mb-3 rounded-full bg-surface">
                                 <svg class="w-6 h-6 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
                             </div>
                             <p class="font-semibold text-secondary">Variantă nouă</p>
-                            <p class="text-xs text-muted mt-1">Pornește de la zero sau duplică una existentă</p>
+                            <p class="mt-1 text-xs text-muted">Pornește de la zero sau duplică una existentă</p>
                         </button>
                     </div>
                 </div>
 
                 <!-- ============ TAB: PUBLIC PREVIEW ============ -->
                 <div x-show="tab === 'preview'" class="bg-secondary">
-                    <div class="bg-secondary border-b border-white/10 p-4 flex items-center justify-between flex-wrap gap-3">
+                    <div class="flex flex-wrap items-center justify-between gap-3 p-4 border-b bg-secondary border-white/10">
                         <div class="flex items-center gap-3">
-                            <span class="text-white/60 text-sm">Previzualizare:</span>
-                            <div class="inline-flex bg-white/5 rounded-lg p-1">
-                                <button @click="previewDevice = 'desktop'" :class="previewDevice === 'desktop' ? 'bg-white/15 text-white' : 'text-white/50 hover:text-white'" class="px-3 py-1 rounded text-sm font-medium transition-colors">Desktop</button>
-                                <button @click="previewDevice = 'mobile'" :class="previewDevice === 'mobile' ? 'bg-white/15 text-white' : 'text-white/50 hover:text-white'" class="px-3 py-1 rounded text-sm font-medium transition-colors">Mobil</button>
+                            <span class="text-sm text-white/60">Previzualizare:</span>
+                            <div class="inline-flex p-1 rounded-lg bg-white/5">
+                                <button @click="previewDevice = 'desktop'" :class="previewDevice === 'desktop' ? 'bg-white/15 text-white' : 'text-white/50 hover:text-white'" class="px-3 py-1 text-sm font-medium transition-colors rounded">Desktop</button>
+                                <button @click="previewDevice = 'mobile'" :class="previewDevice === 'mobile' ? 'bg-white/15 text-white' : 'text-white/50 hover:text-white'" class="px-3 py-1 text-sm font-medium transition-colors rounded">Mobil</button>
                             </div>
                         </div>
                         <div class="flex items-center gap-3">
-                            <a :href="publicUrl()" target="_blank" rel="noopener" class="text-sm text-white/60 hover:text-white underline">Deschide URL real →</a>
+                            <a :href="publicUrl()" target="_blank" rel="noopener" class="text-sm underline text-white/60 hover:text-white">Deschide URL real →</a>
                         </div>
                     </div>
-                    <div class="bg-surface p-4">
+                    <div class="p-4 bg-surface">
                         <iframe :src="publicUrl() + '?_t=' + previewBust" :class="previewDevice === 'mobile' ? 'mx-auto max-w-md' : 'w-full'" class="w-full bg-black rounded-xl" style="height: 80vh; border: 0"></iframe>
-                        <p class="text-center text-xs text-muted mt-3">Preview-ul folosește pagina publică reală — modificările se reflectă după <strong>Salvează</strong>.</p>
+                        <p class="mt-3 text-xs text-center text-muted">Preview-ul folosește pagina publică reală — modificările se reflectă după <strong>Salvează</strong>.</p>
                     </div>
                 </div>
 

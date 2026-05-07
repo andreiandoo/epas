@@ -164,6 +164,11 @@ RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^artist/cont/extended-artist/tour/?$ artist/cont/extended-artist/tour.php [L,QSA]
 
+# Booking — pagina publică de conversație guest (signed token)
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^booking/conversation/([A-Za-z0-9]+)/?$ booking/conversation.php?token=$1 [L,QSA]
+
 # Smart EPK public pages — reverse proxy to core.tixello.com Laravel backend
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d

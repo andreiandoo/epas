@@ -2277,6 +2277,102 @@ switch ($action) {
         $requiresAuth = true;
         break;
 
+    // Booking Marketplace (Modulul 4 din Extended Artist) — 12 acțiuni
+    case 'artist.booking.listing':
+        $method = 'GET';
+        $endpoint = '/artist/booking/listing';
+        $requiresAuth = true;
+        break;
+
+    case 'artist.booking.listing.update':
+        $method = 'PATCH';
+        $body = file_get_contents('php://input') ?: '{}';
+        $endpoint = '/artist/booking/listing';
+        $requiresAuth = true;
+        break;
+
+    case 'artist.booking.inbox':
+        $method = 'GET';
+        $params = [];
+        foreach (['status', 'search', 'page'] as $k) {
+            if (isset($_GET[$k]) && $_GET[$k] !== '') $params[$k] = $_GET[$k];
+        }
+        $endpoint = '/artist/booking/inbox' . (!empty($params) ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    case 'artist.booking.request.show':
+        $method = 'GET';
+        $bid = (int) ($_GET['id'] ?? 0);
+        if ($bid <= 0) { http_response_code(400); echo json_encode(['error' => 'Missing request id']); exit; }
+        $endpoint = '/artist/booking/requests/' . $bid;
+        $requiresAuth = true;
+        break;
+
+    case 'artist.booking.request.message':
+        $method = 'POST';
+        $body = file_get_contents('php://input') ?: '{}';
+        $bid = (int) ($_GET['id'] ?? 0);
+        if ($bid <= 0) { http_response_code(400); echo json_encode(['error' => 'Missing request id']); exit; }
+        $endpoint = '/artist/booking/requests/' . $bid . '/messages';
+        $requiresAuth = true;
+        break;
+
+    case 'artist.booking.request.accept':
+        $method = 'POST';
+        $body = file_get_contents('php://input') ?: '{}';
+        $bid = (int) ($_GET['id'] ?? 0);
+        if ($bid <= 0) { http_response_code(400); echo json_encode(['error' => 'Missing request id']); exit; }
+        $endpoint = '/artist/booking/requests/' . $bid . '/accept';
+        $requiresAuth = true;
+        break;
+
+    case 'artist.booking.request.reject':
+        $method = 'POST';
+        $body = file_get_contents('php://input') ?: '{}';
+        $bid = (int) ($_GET['id'] ?? 0);
+        if ($bid <= 0) { http_response_code(400); echo json_encode(['error' => 'Missing request id']); exit; }
+        $endpoint = '/artist/booking/requests/' . $bid . '/reject';
+        $requiresAuth = true;
+        break;
+
+    case 'artist.booking.contracts':
+        $method = 'GET';
+        $endpoint = '/artist/booking/contracts';
+        $requiresAuth = true;
+        break;
+
+    case 'artist.booking.calendar':
+        $method = 'GET';
+        $params = [];
+        foreach (['from', 'to'] as $k) {
+            if (isset($_GET[$k]) && $_GET[$k] !== '') $params[$k] = $_GET[$k];
+        }
+        $endpoint = '/artist/booking/calendar' . (!empty($params) ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    case 'artist.booking.calendar.add':
+        $method = 'POST';
+        $body = file_get_contents('php://input') ?: '{}';
+        $endpoint = '/artist/booking/calendar';
+        $requiresAuth = true;
+        break;
+
+    case 'artist.booking.calendar.remove':
+        $method = 'DELETE';
+        $cid = (int) ($_GET['id'] ?? 0);
+        if ($cid <= 0) { http_response_code(400); echo json_encode(['error' => 'Missing calendar id']); exit; }
+        $endpoint = '/artist/booking/calendar/' . $cid;
+        $requiresAuth = true;
+        break;
+
+    case 'artist.booking.kpis':
+        $method = 'GET';
+        $endpoint = '/artist/booking/kpis';
+        $requiresAuth = true;
+        break;
+
     case 'organizer.payout-details':
         $method = 'PUT';
         $body = file_get_contents('php://input');

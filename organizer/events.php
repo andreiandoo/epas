@@ -46,7 +46,53 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     .status-pill.active .pill-count { background: rgba(255,255,255,0.25); color: white; }
                 </style>
 
-                <div id="events-list" class="space-y-4"><div class="p-6 bg-white border animate-pulse rounded-2xl border-border"><div class="flex gap-6"><div class="w-32 h-24 rounded-lg bg-surface"></div><div class="flex-1 space-y-3"><div class="w-1/3 h-5 rounded bg-surface"></div><div class="w-1/4 h-4 rounded bg-surface"></div></div></div></div></div>
+                <div id="events-list" class="space-y-4">
+                    <!-- Skeleton: 3 detailed event cards -->
+                    <div class="p-4 lg:p-6 bg-white border rounded-2xl border-border">
+                        <div class="flex gap-4 lg:gap-6">
+                            <div class="w-28 h-28 lg:w-32 lg:h-28 rounded-xl edit-skeleton flex-shrink-0"></div>
+                            <div class="flex-1 min-w-0 space-y-3">
+                                <div class="flex items-center justify-between gap-3">
+                                    <div class="edit-skeleton h-5 w-1/2"></div>
+                                    <div class="edit-skeleton h-5 w-16 rounded-full"></div>
+                                </div>
+                                <div class="edit-skeleton h-3.5 w-1/3"></div>
+                                <div class="flex flex-wrap gap-2 pt-1">
+                                    <div class="edit-skeleton h-6 w-16 rounded-full"></div>
+                                    <div class="edit-skeleton h-6 w-20 rounded-full"></div>
+                                    <div class="edit-skeleton h-6 w-14 rounded-full"></div>
+                                </div>
+                                <div class="grid grid-cols-3 gap-3 pt-2">
+                                    <div class="space-y-1.5"><div class="edit-skeleton h-3 w-16"></div><div class="edit-skeleton h-5 w-12"></div></div>
+                                    <div class="space-y-1.5"><div class="edit-skeleton h-3 w-16"></div><div class="edit-skeleton h-5 w-12"></div></div>
+                                    <div class="space-y-1.5 mobile:hidden"><div class="edit-skeleton h-3 w-16"></div><div class="edit-skeleton h-5 w-12"></div></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="p-4 lg:p-6 bg-white border rounded-2xl border-border opacity-80">
+                        <div class="flex gap-4 lg:gap-6">
+                            <div class="w-28 h-28 lg:w-32 lg:h-28 rounded-xl edit-skeleton flex-shrink-0"></div>
+                            <div class="flex-1 min-w-0 space-y-3">
+                                <div class="edit-skeleton h-5 w-2/5"></div>
+                                <div class="edit-skeleton h-3.5 w-1/4"></div>
+                                <div class="flex flex-wrap gap-2 pt-1">
+                                    <div class="edit-skeleton h-6 w-20 rounded-full"></div>
+                                    <div class="edit-skeleton h-6 w-16 rounded-full"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="p-4 lg:p-6 bg-white border rounded-2xl border-border opacity-60 mobile:hidden">
+                        <div class="flex gap-4 lg:gap-6">
+                            <div class="w-28 h-28 lg:w-32 lg:h-28 rounded-xl edit-skeleton flex-shrink-0"></div>
+                            <div class="flex-1 min-w-0 space-y-3">
+                                <div class="edit-skeleton h-5 w-1/3"></div>
+                                <div class="edit-skeleton h-3.5 w-1/5"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
                 <div id="no-events" class="hidden py-16 text-center bg-white border rounded-2xl border-border">
                     <div class="flex items-center justify-center w-24 h-24 mx-auto mb-6 rounded-full bg-muted/10"><svg class="w-12 h-12 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg></div>
@@ -60,29 +106,109 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             <!-- CREATE EVENT ACCORDION FORM -->
             <!-- ============================================================ -->
             <div id="create-event-view" class="hidden">
-                <!-- Header -->
-                <div class="flex items-center justify-between mb-6">
-                    <div class="flex items-center gap-4">
-                        <button onclick="hideCreateForm()" class="p-2 transition-colors rounded-lg hover:bg-white text-muted hover:text-secondary">
+                <!-- ============================================================ -->
+                <!-- STICKY EVENT HEADER (redesign 2026-05) -->
+                <!-- ============================================================ -->
+                <div id="event-edit-header" class="sticky top-0 z-30 -mx-4 lg:-mx-8 mb-6 bg-slate-100/85 backdrop-blur-md border-b border-slate-200 px-4 lg:px-8 py-4">
+                    <div class="flex items-start gap-3 lg:gap-4">
+                        <button onclick="hideCreateForm()" class="flex-shrink-0 p-2 -ml-1 rounded-lg hover:bg-white/70 text-muted hover:text-secondary transition-colors" title="Înapoi la evenimente">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
                         </button>
-                        <div>
-                            <h1 class="text-2xl font-bold text-secondary">Eveniment nou</h1>
-                            <p class="text-sm text-muted">Completeaza informatiile pas cu pas</p>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2 text-xs text-muted mb-0.5">
+                                <a href="/organizator/events" class="hover:text-secondary transition-colors">Evenimentele mele</a>
+                                <span class="text-slate-400">/</span>
+                                <span id="header-event-id-chip" class="hidden font-mono text-[11px] px-1.5 py-0.5 rounded bg-white border border-border text-slate-500"></span>
+                            </div>
+                            <h1 class="text-xl lg:text-2xl font-bold text-secondary truncate">Eveniment nou</h1>
+                            <div class="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5 text-sm text-muted">
+                                <span id="header-event-date" class="hidden inline-flex items-center gap-1.5">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                    <span></span>
+                                </span>
+                                <span id="header-event-venue" class="hidden inline-flex items-center gap-1.5">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a2 2 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                                    <span></span>
+                                </span>
+                                <span id="header-event-status" class="hidden inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-semibold">
+                                    <span class="status-dot w-1.5 h-1.5 rounded-full"></span>
+                                    <span class="status-label"></span>
+                                </span>
+                            </div>
                         </div>
-                    </div>
-                    <div class="flex items-center gap-3">
-                        <span id="save-status" class="hidden text-sm text-muted"></span>
-                        <button onclick="saveEventDraft()" class="btn btn-primary bg-primary" id="save-draft-btn">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                            <span id="save-btn-text">Salveaza ciorna</span>
-                            <div id="save-btn-spinner" class="hidden spinner"></div>
-                        </button>
+                        <div class="flex items-center gap-2 flex-shrink-0">
+                            <span id="save-status" class="hidden text-xs px-2.5 py-1 rounded-md bg-white border border-border text-muted whitespace-nowrap"></span>
+                            <button id="header-preview-btn" type="button" class="hidden btn btn-sm btn-secondary mobile:!hidden" onclick="openLivePreview()" title="Live preview">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                                <span class="hidden lg:inline">Preview</span>
+                            </button>
+                            <button onclick="saveEventDraft()" class="btn btn-sm btn-primary bg-primary" id="save-draft-btn">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                                <span id="save-btn-text" class="mobile:hidden">Salvează ciornă</span>
+                                <div id="save-btn-spinner" class="hidden spinner"></div>
+                            </button>
+                            <button type="button" onclick="saveAndSubmitEvent()" id="header-submit-btn" class="hidden btn btn-sm btn-success">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                <span class="mobile:hidden">Trimite spre aprobare</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
 
+                <!-- ============================================================ -->
+                <!-- TWO-COLUMN LAYOUT: outline sidebar + form -->
+                <!-- ============================================================ -->
+                <div class="grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-6">
+                    <!-- ============================================================ -->
+                    <!-- OUTLINE SIDEBAR (desktop) — scroll-spy navigation -->
+                    <!-- ============================================================ -->
+                    <aside id="edit-outline" class="hidden lg:block">
+                        <div class="sticky top-[140px] bg-white rounded-2xl border border-border p-3 space-y-0.5">
+                            <p class="px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted">Cuprins</p>
+                            <a href="#step-1" data-outline="1" class="outline-item">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                                <span class="flex-1">Detalii eveniment</span>
+                                <span class="outline-status"></span>
+                            </a>
+                            <a href="#step-2" data-outline="2" class="outline-item">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                <span class="flex-1">Program</span>
+                                <span class="outline-status"></span>
+                            </a>
+                            <a href="#step-3" data-outline="3" class="outline-item">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a2 2 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                                <span class="flex-1">Locație</span>
+                                <span class="outline-status"></span>
+                            </a>
+                            <a href="#step-4" data-outline="4" class="outline-item">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                                <span class="flex-1">Conținut</span>
+                                <span class="outline-status"></span>
+                            </a>
+                            <a href="#step-5" data-outline="5" class="outline-item">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                <span class="flex-1">Media</span>
+                                <span class="outline-status"></span>
+                            </a>
+                            <a href="#step-6" data-outline="6" class="outline-item">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/></svg>
+                                <span class="flex-1">Bilete</span>
+                                <span class="outline-status"></span>
+                            </a>
+                            <a href="#step-7" data-outline="7" class="outline-item">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                                <span class="flex-1">Setări vânzări</span>
+                                <span class="outline-status"></span>
+                            </a>
+                            <div id="outline-issues" class="hidden mt-2 pt-2 border-t border-border px-2 py-1 text-xs text-amber-700 bg-amber-50 rounded-lg flex items-start gap-1.5">
+                                <svg class="w-3.5 h-3.5 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                                <span><span id="outline-issues-count">0</span> probleme rămase</span>
+                            </div>
+                        </div>
+                    </aside>
+
                 <!-- Accordion Form -->
-                <form id="create-event-form" class="space-y-3">
+                <form id="create-event-form" class="space-y-3 lg:space-y-4 min-w-0">
                     <!-- Hidden fields -->
                     <input type="hidden" id="saved-event-id" value="">
                     <input type="hidden" id="selected-event-type-ids" value="">
@@ -134,7 +260,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     </div>
 
                     <!-- ============ STEP 1: Detalii Eveniment ============ -->
-                    <div class="overflow-hidden bg-white border accordion-section rounded-2xl border-border" data-step="1">
+                    <div id="step-1" class="overflow-hidden bg-white border accordion-section rounded-2xl border-border" data-step="1">
                         <button type="button" class="flex items-center justify-between w-full p-5 text-left transition-colors accordion-header hover:bg-gray-50" onclick="toggleAccordion(1)">
                             <div class="flex items-center gap-3">
                                 <div class="flex items-center justify-center w-8 h-8 text-sm font-bold text-white rounded-full step-indicator bg-primary">1</div>
@@ -193,7 +319,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     </div>
 
                     <!-- ============ STEP 2: Program ============ -->
-                    <div class="overflow-hidden bg-white border accordion-section rounded-2xl border-border" data-step="2">
+                    <div id="step-2" class="overflow-hidden bg-white border accordion-section rounded-2xl border-border" data-step="2">
                         <button type="button" class="flex items-center justify-between w-full p-5 text-left transition-colors accordion-header hover:bg-gray-50" onclick="toggleAccordion(2)">
                             <div class="flex items-center gap-3">
                                 <div class="flex items-center justify-center w-8 h-8 text-sm font-bold text-gray-600 bg-gray-200 rounded-full step-indicator">2</div>
@@ -283,7 +409,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     </div>
 
                     <!-- ============ STEP 3: Locatie ============ -->
-                    <div class="overflow-hidden bg-white border accordion-section rounded-2xl border-border" data-step="3">
+                    <div id="step-3" class="overflow-hidden bg-white border accordion-section rounded-2xl border-border" data-step="3">
                         <button type="button" class="flex items-center justify-between w-full p-5 text-left transition-colors accordion-header hover:bg-gray-50" onclick="toggleAccordion(3)">
                             <div class="flex items-center gap-3">
                                 <div class="flex items-center justify-center w-8 h-8 text-sm font-bold text-gray-600 bg-gray-200 rounded-full step-indicator">3</div>
@@ -337,7 +463,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     </div>
 
                     <!-- ============ STEP 4: Continut ============ -->
-                    <div class="overflow-hidden bg-white border accordion-section rounded-2xl border-border" data-step="4">
+                    <div id="step-4" class="overflow-hidden bg-white border accordion-section rounded-2xl border-border" data-step="4">
                         <button type="button" class="flex items-center justify-between w-full p-5 text-left transition-colors accordion-header hover:bg-gray-50" onclick="toggleAccordion(4)">
                             <div class="flex items-center gap-3">
                                 <div class="flex items-center justify-center w-8 h-8 text-sm font-bold text-gray-600 bg-gray-200 rounded-full step-indicator">4</div>
@@ -365,7 +491,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     </div>
 
                     <!-- ============ STEP 5: Media ============ -->
-                    <div class="overflow-hidden bg-white border accordion-section rounded-2xl border-border" data-step="5">
+                    <div id="step-5" class="overflow-hidden bg-white border accordion-section rounded-2xl border-border" data-step="5">
                         <button type="button" class="flex items-center justify-between w-full p-5 text-left transition-colors accordion-header hover:bg-gray-50" onclick="toggleAccordion(5)">
                             <div class="flex items-center gap-3">
                                 <div class="flex items-center justify-center w-8 h-8 text-sm font-bold text-gray-600 bg-gray-200 rounded-full step-indicator">5</div>
@@ -419,7 +545,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     </div>
 
                     <!-- ============ STEP 6: Bilete ============ -->
-                    <div class="overflow-hidden bg-white border accordion-section rounded-2xl border-border" data-step="6">
+                    <div id="step-6" class="overflow-hidden bg-white border accordion-section rounded-2xl border-border" data-step="6">
                         <button type="button" class="flex items-center justify-between w-full p-5 text-left transition-colors accordion-header hover:bg-gray-50" onclick="toggleAccordion(6)">
                             <div class="flex items-center gap-3">
                                 <div class="flex items-center justify-center w-8 h-8 text-sm font-bold text-gray-600 bg-gray-200 rounded-full step-indicator">6</div>
@@ -483,7 +609,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     </div>
 
                     <!-- ============ STEP 7: Setari vanzari ============ -->
-                    <div class="overflow-hidden bg-white border accordion-section rounded-2xl border-border" data-step="7">
+                    <div id="step-7" class="overflow-hidden bg-white border accordion-section rounded-2xl border-border" data-step="7">
                         <button type="button" class="flex items-center justify-between w-full p-5 text-left transition-colors accordion-header hover:bg-gray-50" onclick="toggleAccordion(7)">
                             <div class="flex items-center gap-3">
                                 <div class="flex items-center justify-center w-8 h-8 text-sm font-bold text-gray-600 bg-gray-200 rounded-full step-indicator">7</div>
@@ -542,6 +668,49 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                         </div>
                     </div>
                 </form>
+                </div><!-- /grid lg:grid-cols-[260px_1fr] -->
+
+                <!-- ============================================================ -->
+                <!-- LIVE PREVIEW DRAWER (right side) -->
+                <!-- ============================================================ -->
+                <div id="live-preview-backdrop" class="hidden fixed inset-0 z-40 bg-black/40 transition-opacity" onclick="closeLivePreview()"></div>
+                <aside id="live-preview-drawer" class="hidden fixed inset-y-0 right-0 z-50 w-full sm:max-w-md bg-white shadow-2xl border-l border-border flex flex-col" aria-hidden="true">
+                    <div class="flex items-center justify-between px-5 py-4 border-b border-border bg-gradient-to-br from-rose-50 to-white">
+                        <div>
+                            <h3 class="font-semibold text-secondary">Live preview</h3>
+                            <p class="text-xs text-muted mt-0.5">Cum va apărea evenimentul publicului</p>
+                        </div>
+                        <button type="button" onclick="closeLivePreview()" class="p-1.5 rounded-lg hover:bg-white text-muted hover:text-secondary transition-colors">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                        </button>
+                    </div>
+                    <div id="live-preview-body" class="flex-1 overflow-y-auto p-5 space-y-4">
+                        <!-- Filled by renderLivePreview() -->
+                    </div>
+                    <div class="border-t border-border px-5 py-3 bg-slate-50">
+                        <a id="live-preview-public-link" href="#" target="_blank" class="hidden inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                            Deschide pagina publică
+                        </a>
+                    </div>
+                </aside>
+
+                <!-- ============================================================ -->
+                <!-- MOBILE STICKY ACTION BAR -->
+                <!-- ============================================================ -->
+                <div id="mobile-action-bar" class="lg:hidden sticky bottom-0 left-0 right-0 -mx-4 mt-6 px-4 py-3 bg-white border-t border-border z-30 flex items-center gap-2 shadow-lg">
+                    <button type="button" onclick="hideCreateForm()" class="btn btn-sm btn-secondary flex-shrink-0" title="Înapoi">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+                    </button>
+                    <button type="button" onclick="saveEventDraft()" class="flex-1 btn btn-sm btn-primary bg-primary justify-center">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                        Salvează ciornă
+                    </button>
+                    <button type="button" onclick="saveAndSubmitEvent()" id="mobile-submit-btn" class="hidden flex-1 btn btn-sm btn-success justify-center">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        Trimite
+                    </button>
+                </div>
             </div>
         </main>
     </div>
@@ -627,6 +796,86 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         .venue-option:last-child { border-bottom: none; }
         .tox-tinymce { border-radius: 0.75rem !important; border-color: #e5e7eb !important; }
         .tox .tox-edit-area__iframe { min-height: 160px; }
+
+        /* ============================================================ */
+        /* EVENT EDIT REDESIGN (2026-05-07)                              */
+        /* ============================================================ */
+
+        /* Sticky header: stand-out card-like surface; subtle shadow when scrolled */
+        #event-edit-header { transition: box-shadow 0.2s; }
+        #event-edit-header.is-scrolled { box-shadow: 0 4px 16px -4px rgba(15, 23, 42, 0.1); }
+
+        /* Status badge variants */
+        #header-event-status.status-published   { background: #dcfce7; color: #166534; } #header-event-status.status-published   .status-dot { background: #16a34a; }
+        #header-event-status.status-draft       { background: #f1f5f9; color: #475569; } #header-event-status.status-draft       .status-dot { background: #64748b; }
+        #header-event-status.status-pending     { background: #fef3c7; color: #92400e; } #header-event-status.status-pending     .status-dot { background: #d97706; }
+        #header-event-status.status-rejected    { background: #fee2e2; color: #991b1b; } #header-event-status.status-rejected    .status-dot { background: #dc2626; }
+        #header-event-status.status-cancelled   { background: #fee2e2; color: #991b1b; } #header-event-status.status-cancelled   .status-dot { background: #dc2626; }
+        #header-event-status.status-postponed   { background: #ffedd5; color: #9a3412; } #header-event-status.status-postponed   .status-dot { background: #ea580c; }
+        #header-event-status.status-soldout     { background: #e0e7ff; color: #3730a3; } #header-event-status.status-soldout     .status-dot { background: #4f46e5; }
+        #header-event-status.status-ended       { background: #e2e8f0; color: #475569; } #header-event-status.status-ended       .status-dot { background: #64748b; }
+
+        /* Outline sidebar items */
+        .outline-item {
+            display: flex; align-items: center; gap: 0.625rem;
+            padding: 0.5rem 0.625rem; border-radius: 0.5rem;
+            font-size: 0.8125rem; font-weight: 500; color: #475569;
+            transition: background 0.12s, color 0.12s;
+            text-decoration: none;
+        }
+        .outline-item:hover { background: #f8fafc; color: #0f172a; }
+        .outline-item.is-active { background: rgba(165, 28, 48, 0.08); color: #a51c30; font-weight: 600; }
+        .outline-item.is-active svg { color: #a51c30; }
+        .outline-item svg { color: #94a3b8; flex-shrink: 0; }
+        .outline-item.is-active svg,
+        .outline-item:hover svg { color: inherit; }
+        .outline-status {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 1rem; height: 1rem; border-radius: 9999px; flex-shrink: 0;
+            font-size: 9px;
+        }
+        .outline-item .outline-status.complete { background: #16a34a; color: white; }
+        .outline-item .outline-status.complete::before { content: '✓'; font-weight: 700; }
+        .outline-item .outline-status.partial  { background: #cbd5e1; }
+        .outline-item .outline-status.partial::before  { content: ''; width: 5px; height: 5px; background: #64748b; border-radius: 50%; display: block; }
+        .outline-item .outline-status.required { background: #fee2e2; color: #b91c1c; }
+        .outline-item .outline-status.required::before { content: '!'; font-weight: 700; }
+
+        /* Desktop: cards look polished, accordion always open */
+        @media (min-width: 1024px) {
+            .accordion-section {
+                box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+                transition: box-shadow 0.15s, border-color 0.15s;
+                scroll-margin-top: 140px; /* sticky header offset for anchor jumps */
+            }
+            .accordion-section:hover { box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06); }
+            .accordion-section.is-active-section { border-color: rgba(165, 28, 48, 0.3); box-shadow: 0 4px 16px -4px rgba(165, 28, 48, 0.18); }
+            .accordion-body { display: block !important; }
+            .accordion-section .accordion-header { cursor: default; }
+            .accordion-section .accordion-chevron { display: none; }
+            .accordion-section .accordion-header:hover { background: transparent !important; }
+        }
+
+        /* Card section header polish */
+        .accordion-section .accordion-header { padding: 1.25rem 1.5rem; }
+        .accordion-section .accordion-header h3 { font-size: 1rem; line-height: 1.4; color: #0f172a; }
+        .accordion-section .accordion-body { padding-left: 1.5rem; padding-right: 1.5rem; padding-bottom: 1.5rem; }
+
+        /* Step indicator pill — slightly bolder with shadow */
+        .step-indicator { box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06); transition: background 0.15s, color 0.15s; }
+
+        /* Live preview drawer animation */
+        #live-preview-drawer { transform: translateX(100%); transition: transform 0.25s ease-out; }
+        #live-preview-drawer.is-open { transform: translateX(0); }
+        #live-preview-backdrop { opacity: 0; transition: opacity 0.2s; }
+        #live-preview-backdrop.is-open { opacity: 1; }
+
+        /* Skeleton shimmer for the edit-form initial load */
+        .edit-skeleton { background: linear-gradient(90deg, #f1f5f9 0%, #e2e8f0 50%, #f1f5f9 100%); background-size: 200% 100%; animation: shimmer 1.4s infinite; border-radius: 0.5rem; }
+        @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+        /* Mobile bar lifts above any leftover content */
+        #mobile-action-bar { box-shadow: 0 -4px 12px -4px rgba(15, 23, 42, 0.08); }
     </style>
 
 <?php
@@ -1027,9 +1276,18 @@ async function loadEventForEdit(eventId) {
         // Fix URL for edit mode (showCreateForm sets it to action=create)
         history.replaceState({}, '', `/organizator/event/${eventId}?action=edit`);
 
-        // Update page title for edit mode
+        // Update page title for edit mode — prefer the actual event name
+        // so the new sticky header reads "Concert X" instead of the generic
+        // "Editare eveniment" placeholder.
         const titleEl = document.querySelector('#create-event-view h1');
-        if (titleEl) titleEl.textContent = 'Editare eveniment';
+        if (titleEl) titleEl.textContent = event.name || event.title || 'Editare eveniment';
+
+        // Hydrate the redesigned sticky header (status pill, date, venue,
+        // event id chip + reveals Preview / Submit buttons). No-op if the
+        // helper isn't loaded.
+        if (typeof window.hydrateEventHeader === 'function') {
+            try { window.hydrateEventHeader(event); } catch (e) {}
+        }
 
         // Set the event ID so subsequent saves update instead of create
         document.getElementById('saved-event-id').value = eventId;
@@ -2635,6 +2893,350 @@ saveAndSubmitEvent = async function() {
     }
     return _originalSaveAndSubmitEvent();
 };
+
+// =============================================================
+// EVENT EDIT REDESIGN (2026-05-07)
+// Sticky header shadow / scroll-spy / live preview / hydrate header
+// =============================================================
+(function () {
+    let scrollSpyObserver = null;
+    let outlineEls = null;
+
+    // ---- Sticky header shadow on scroll ----
+    function initStickyHeaderShadow() {
+        const header = document.getElementById('event-edit-header');
+        if (!header) return;
+        const onScroll = () => {
+            if (window.scrollY > 8) header.classList.add('is-scrolled');
+            else header.classList.remove('is-scrolled');
+        };
+        document.addEventListener('scroll', onScroll, { passive: true });
+        onScroll();
+    }
+
+    // ---- Scroll-spy: highlight outline item matching current section ----
+    function initScrollSpy() {
+        if (scrollSpyObserver) scrollSpyObserver.disconnect();
+        outlineEls = document.querySelectorAll('#edit-outline [data-outline]');
+        if (!outlineEls.length) return;
+        const sections = [];
+        for (let i = 1; i <= 7; i++) {
+            const sec = document.getElementById('step-' + i);
+            if (sec) sections.push(sec);
+        }
+        if (!sections.length) return;
+
+        // The sticky header eats ~150px at top, so we trigger when a section
+        // crosses that line. rootMargin shifts the viewport top down 150px.
+        scrollSpyObserver = new IntersectionObserver((entries) => {
+            // Pick the entry highest on the page that's currently intersecting
+            const visible = entries
+                .filter(e => e.isIntersecting)
+                .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+            if (!visible.length) return;
+            const step = visible[0].target.getAttribute('data-step');
+            outlineEls.forEach(el => {
+                if (el.getAttribute('data-outline') === step) el.classList.add('is-active');
+                else el.classList.remove('is-active');
+            });
+            // Also flag the active section card
+            sections.forEach(sec => {
+                if (sec.getAttribute('data-step') === step) sec.classList.add('is-active-section');
+                else sec.classList.remove('is-active-section');
+            });
+        }, { rootMargin: '-150px 0px -50% 0px', threshold: 0 });
+
+        sections.forEach(sec => scrollSpyObserver.observe(sec));
+
+        // Smooth scroll for outline anchors. On mobile, also force the
+        // accordion section open before scrolling so the user lands on
+        // an expanded panel.
+        outlineEls.forEach(el => {
+            el.addEventListener('click', (e) => {
+                e.preventDefault();
+                const step = el.getAttribute('data-outline');
+                const sec = document.getElementById('step-' + step);
+                if (!sec) return;
+                if (window.innerWidth < 1024) {
+                    const isOpen = sec.getAttribute('data-open') === 'true';
+                    if (!isOpen && typeof toggleAccordion === 'function') {
+                        toggleAccordion(parseInt(step, 10));
+                    }
+                }
+                sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            });
+        });
+    }
+
+    // Sync outline-item completion icons with step-indicator state.
+    // updateStepIndicators (existing) toggles a .completed class on each
+    // step's circle; we mirror that into the sidebar as ✓/•/!.
+    function syncOutlineStatuses() {
+        const required = { 1: 'name', 2: ['start_date','start_time'], 3: ['venue_name','venue_city'] };
+        const form = document.getElementById('create-event-form');
+        if (!form) return;
+        const isFilled = (n) => {
+            const f = form.querySelector('[name="' + n + '"]');
+            return f && (f.value || '').trim() !== '';
+        };
+        document.querySelectorAll('#edit-outline [data-outline]').forEach(item => {
+            const step = parseInt(item.getAttribute('data-outline'), 10);
+            const indicator = document.querySelector('.accordion-section[data-step="' + step + '"] .step-indicator');
+            const status = item.querySelector('.outline-status');
+            if (!status) return;
+            status.className = 'outline-status';
+            if (indicator && indicator.classList.contains('completed')) {
+                status.classList.add('complete');
+            } else {
+                // Required-but-empty → red dot for steps 1/2/3
+                const req = required[step];
+                let missing = false;
+                if (req) {
+                    const fields = Array.isArray(req) ? req : [req];
+                    missing = fields.some(f => !isFilled(f));
+                }
+                if (missing) status.classList.add('required');
+                else status.classList.add('partial');
+            }
+        });
+
+        // Outline footer issue counter
+        const issuesNode = document.getElementById('outline-issues');
+        const countNode = document.getElementById('outline-issues-count');
+        if (issuesNode && countNode) {
+            const required = document.querySelectorAll('#edit-outline .outline-status.required').length;
+            if (required > 0) {
+                issuesNode.classList.remove('hidden');
+                countNode.textContent = required;
+            } else {
+                issuesNode.classList.add('hidden');
+            }
+        }
+    }
+
+    // Hook into the existing updateStepIndicators so the outline stays in
+    // sync without us polling. The existing function is global; wrap it.
+    function hookOutlineSync() {
+        if (typeof window.updateStepIndicators !== 'function') return;
+        if (window.__outlineSyncWrapped) return;
+        const original = window.updateStepIndicators;
+        window.updateStepIndicators = function () {
+            const r = original.apply(this, arguments);
+            try { syncOutlineStatuses(); } catch (e) {}
+            return r;
+        };
+        window.__outlineSyncWrapped = true;
+    }
+
+    // ---- Live preview drawer ----
+    window.openLivePreview = function () {
+        renderLivePreview();
+        const drawer = document.getElementById('live-preview-drawer');
+        const backdrop = document.getElementById('live-preview-backdrop');
+        if (!drawer || !backdrop) return;
+        backdrop.classList.remove('hidden');
+        drawer.classList.remove('hidden');
+        drawer.setAttribute('aria-hidden', 'false');
+        // Allow CSS transition to fire after the element becomes visible
+        requestAnimationFrame(() => {
+            backdrop.classList.add('is-open');
+            drawer.classList.add('is-open');
+        });
+    };
+    window.closeLivePreview = function () {
+        const drawer = document.getElementById('live-preview-drawer');
+        const backdrop = document.getElementById('live-preview-backdrop');
+        if (!drawer || !backdrop) return;
+        backdrop.classList.remove('is-open');
+        drawer.classList.remove('is-open');
+        drawer.setAttribute('aria-hidden', 'true');
+        setTimeout(() => {
+            backdrop.classList.add('hidden');
+            drawer.classList.add('hidden');
+        }, 250);
+    };
+
+    function renderLivePreview() {
+        const body = document.getElementById('live-preview-body');
+        if (!body) return;
+        const form = document.getElementById('create-event-form');
+        const f = (n) => form.querySelector('[name="' + n + '"]')?.value || '';
+
+        const name = f('name') || 'Eveniment fără nume';
+        const shortDesc = f('short_description');
+        const date = f('start_date');
+        const time = f('start_time');
+        const venueName = f('venue_name');
+        const venueCity = f('venue_city');
+        const cat = form.querySelector('[name="marketplace_event_category_id"]');
+        const catText = cat?.selectedOptions[0]?.text;
+
+        // Poster preview: pick whichever is currently visible
+        const posterImg = document.getElementById('poster-preview-img');
+        const coverImg = document.getElementById('cover-preview-img');
+        const heroSrc = (coverImg && coverImg.getAttribute('src')) || (posterImg && posterImg.getAttribute('src')) || '';
+
+        // Tickets summary
+        const ticketRows = [];
+        document.querySelectorAll('.ticket-type-item').forEach((item, i) => {
+            const tn = item.querySelector(`[name="ticket_name_${i}"]`)?.value;
+            const tp = item.querySelector(`[name="ticket_price_${i}"]`)?.value;
+            if (tn) ticketRows.push({ name: tn, price: tp ? `${tp} RON` : '—' });
+        });
+
+        const dateStr = date ? new Date(date).toLocaleDateString('ro-RO', { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' }) : '';
+        const esc = (s) => { const d = document.createElement('div'); d.textContent = s ?? ''; return d.innerHTML; };
+
+        const heroHtml = heroSrc
+            ? `<img src="${esc(heroSrc)}" alt="" class="w-full h-44 object-cover rounded-xl border border-border" />`
+            : `<div class="w-full h-44 rounded-xl bg-gradient-to-br from-rose-100 to-rose-50 border border-rose-100 flex items-center justify-center text-rose-300 text-xs font-semibold">FĂRĂ IMAGINE</div>`;
+
+        const catBadge = catText && catText !== 'Selecteaza categoria'
+            ? `<span class="inline-block px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 text-[11px] font-semibold uppercase tracking-wide">${esc(catText)}</span>`
+            : '';
+
+        const ticketsHtml = ticketRows.length
+            ? `<div class="space-y-1.5">${ticketRows.map(t => `
+                <div class="flex items-center justify-between px-3 py-2 rounded-lg bg-slate-50 border border-slate-100">
+                    <span class="text-sm text-secondary">${esc(t.name)}</span>
+                    <span class="text-sm font-semibold text-primary">${esc(t.price)}</span>
+                </div>`).join('')}</div>`
+            : `<p class="text-xs text-muted">Fără tipuri de bilet definite încă.</p>`;
+
+        body.innerHTML = `
+            ${heroHtml}
+            <div class="space-y-1">
+                ${catBadge}
+                <h2 class="text-xl font-bold text-secondary leading-tight">${esc(name)}</h2>
+                ${dateStr ? `<p class="text-sm text-muted flex items-center gap-1.5">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                    ${esc(dateStr)}${time ? ', ora ' + esc(time) : ''}
+                </p>` : ''}
+                ${(venueName || venueCity) ? `<p class="text-sm text-muted flex items-center gap-1.5">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a2 2 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>
+                    ${esc([venueName, venueCity].filter(Boolean).join(', '))}
+                </p>` : ''}
+            </div>
+            ${shortDesc ? `<p class="text-sm text-secondary leading-relaxed pt-2 border-t border-border">${esc(shortDesc)}</p>` : ''}
+            <div class="pt-2 border-t border-border">
+                <h4 class="text-xs font-semibold uppercase tracking-wider text-muted mb-2">Bilete disponibile</h4>
+                ${ticketsHtml}
+            </div>
+        `;
+
+        // Public link, when the event has an id and slug
+        const eventId = document.getElementById('saved-event-id')?.value;
+        const publicLink = document.getElementById('live-preview-public-link');
+        if (publicLink && eventId && window.__currentEventSlug) {
+            publicLink.href = '/bilete/' + window.__currentEventSlug;
+            publicLink.classList.remove('hidden');
+        } else if (publicLink) {
+            publicLink.classList.add('hidden');
+        }
+    }
+
+    // ---- Hydrate sticky header from the loaded event ----
+    window.hydrateEventHeader = function (event) {
+        if (!event) return;
+        try {
+            const idChip = document.getElementById('header-event-id-chip');
+            if (idChip && event.id) { idChip.textContent = '#' + event.id; idChip.classList.remove('hidden'); }
+
+            const dateEl = document.getElementById('header-event-date');
+            if (dateEl) {
+                const dateRaw = event.starts_at || event.event_date || event.range_start_date;
+                const dateSpan = dateEl.querySelector('span');
+                if (dateRaw && dateSpan) {
+                    const d = new Date(dateRaw);
+                    dateSpan.textContent = d.toLocaleDateString('ro-RO', { day: 'numeric', month: 'short', year: 'numeric' }) +
+                        (event.start_time ? ', ' + event.start_time : '');
+                    dateEl.classList.remove('hidden');
+                }
+            }
+
+            const venueEl = document.getElementById('header-event-venue');
+            if (venueEl) {
+                const venueSpan = venueEl.querySelector('span');
+                const parts = [event.venue_name || (event.venue && event.venue.name), event.venue_city || event.city].filter(Boolean);
+                if (parts.length && venueSpan) {
+                    venueSpan.textContent = parts.join(', ');
+                    venueEl.classList.remove('hidden');
+                }
+            }
+
+            const statusEl = document.getElementById('header-event-status');
+            if (statusEl) {
+                const statusMap = {
+                    published: { c: 'status-published', l: 'Publicat' },
+                    active:    { c: 'status-published', l: 'Activ' },
+                    draft:     { c: 'status-draft',     l: 'Ciornă' },
+                    pending_review: { c: 'status-pending', l: 'În revizuire' },
+                    rejected:  { c: 'status-rejected',  l: 'Respins' },
+                    cancelled: { c: 'status-cancelled', l: 'Anulat' },
+                    postponed: { c: 'status-postponed', l: 'Amânat' },
+                    sold_out:  { c: 'status-soldout',   l: 'Sold Out' },
+                    ended:     { c: 'status-ended',     l: 'Încheiat' },
+                };
+                const m = statusMap[event.status] || statusMap.draft;
+                statusEl.classList.remove('status-published','status-draft','status-pending','status-rejected','status-cancelled','status-postponed','status-soldout','status-ended');
+                statusEl.classList.add(m.c);
+                const lbl = statusEl.querySelector('.status-label');
+                if (lbl) lbl.textContent = m.l;
+                statusEl.classList.remove('hidden');
+            }
+
+            // Show preview button + submit button only on edit mode
+            document.getElementById('header-preview-btn')?.classList.remove('hidden');
+            document.getElementById('header-submit-btn')?.classList.remove('hidden');
+            document.getElementById('mobile-submit-btn')?.classList.remove('hidden');
+            window.__currentEventSlug = event.slug || null;
+        } catch (e) { console.warn('hydrateEventHeader failed', e); }
+    };
+
+    // Skeleton loader injected during loadEventForEdit -> showCreateForm path.
+    window.showEditSkeleton = function () {
+        const form = document.getElementById('create-event-form');
+        if (!form) return;
+        const cards = Array.from(form.querySelectorAll('.accordion-section'));
+        if (!cards.length) return;
+        cards.forEach((c, i) => {
+            const body = c.querySelector('.accordion-body');
+            if (!body) return;
+            // Skip if we've already injected
+            if (body.querySelector('.edit-skeleton')) return;
+            const overlay = document.createElement('div');
+            overlay.className = 'edit-skeleton-wrap absolute inset-0 px-5 pb-5 bg-white/70 backdrop-blur-[1px] flex flex-col gap-2 pt-2 pointer-events-none';
+            overlay.innerHTML = `
+                <div class="edit-skeleton h-3 w-1/3"></div>
+                <div class="edit-skeleton h-9 w-full mt-1"></div>
+                ${i % 2 === 0 ? '<div class="edit-skeleton h-9 w-2/3 mt-1"></div>' : ''}
+            `;
+            c.style.position = 'relative';
+            c.appendChild(overlay);
+        });
+    };
+    window.hideEditSkeleton = function () {
+        document.querySelectorAll('.edit-skeleton-wrap').forEach(el => el.remove());
+    };
+
+    // ---- Init when create-event-view becomes visible ----
+    // Use a MutationObserver because showCreateForm() toggles the .hidden
+    // class — we re-init scroll-spy + outline sync once the form is in DOM.
+    document.addEventListener('DOMContentLoaded', function () {
+        initStickyHeaderShadow();
+
+        const view = document.getElementById('create-event-view');
+        if (!view) return;
+        const tryInit = () => {
+            if (view.classList.contains('hidden')) return;
+            initScrollSpy();
+            hookOutlineSync();
+            try { syncOutlineStatuses(); } catch (e) {}
+        };
+        new MutationObserver(tryInit).observe(view, { attributes: true, attributeFilter: ['class'] });
+        tryInit();
+    });
+})();
 </script>
 JS;
 require_once dirname(__DIR__) . '/includes/scripts.php';
