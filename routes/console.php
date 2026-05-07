@@ -873,6 +873,12 @@ Schedule::command('extended-artist:expire-trials')
     ->timezone('Europe/Bucharest')
     ->withoutOverlapping();
 
+// Booking: expire stale requests (>14 zile fără răspuns) — daily la 03:30
+Schedule::command('bookings:expire-stale')
+    ->dailyAt('03:30')
+    ->timezone('Europe/Bucharest')
+    ->withoutOverlapping();
+
 // Expire/rebill self-purchase subscriptions whose paid period ended (daily at 02:35)
 Schedule::command('extended-artist:rebill-expired')
     ->dailyAt('02:35')

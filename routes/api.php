@@ -2492,6 +2492,8 @@ use App\Http\Controllers\Api\MarketplaceClient\Artist\ExtendedArtistController a
 use App\Http\Controllers\Api\MarketplaceClient\Artist\EpkController as ArtistEpkController;
 use App\Http\Controllers\Api\MarketplaceClient\Artist\FanCrmController as ArtistFanCrmController;
 use App\Http\Controllers\Api\MarketplaceClient\Artist\TourOptimizerController as ArtistTourController;
+use App\Http\Controllers\Api\MarketplaceClient\Artist\BookingController as ArtistBookingController;
+use App\Http\Controllers\Public\BookingPublicController;
 
 Route::prefix('marketplace-client/artist')->middleware(['throttle:120,1', 'marketplace.auth'])->group(function () {
     // Public — no artist auth required
@@ -2657,7 +2659,61 @@ Route::prefix('marketplace-client/artist')->middleware(['throttle:120,1', 'marke
             Route::get('/scenarios/compare', [ArtistTourController::class, 'compareScenarios'])
                 ->name('api.marketplace-client.artist.tour.scenarios.compare');
         });
+
+        // Booking Marketplace (Modulul 4 din Extended Artist)
+        Route::middleware('extended.artist')->prefix('booking')->group(function () {
+            Route::get('/listing', [ArtistBookingController::class, 'listing'])
+                ->name('api.marketplace-client.artist.booking.listing');
+            Route::patch('/listing', [ArtistBookingController::class, 'updateListing'])
+                ->name('api.marketplace-client.artist.booking.listing.update');
+
+            Route::get('/inbox', [ArtistBookingController::class, 'inbox'])
+                ->name('api.marketplace-client.artist.booking.inbox');
+            Route::get('/requests/{id}', [ArtistBookingController::class, 'showRequest'])
+                ->whereNumber('id')
+                ->name('api.marketplace-client.artist.booking.request.show');
+            Route::post('/requests/{id}/messages', [ArtistBookingController::class, 'postMessage'])
+                ->whereNumber('id')
+                ->middleware('throttle:60,1')
+                ->name('api.marketplace-client.artist.booking.request.message');
+            Route::post('/requests/{id}/accept', [ArtistBookingController::class, 'acceptRequest'])
+                ->whereNumber('id')
+                ->name('api.marketplace-client.artist.booking.request.accept');
+            Route::post('/requests/{id}/reject', [ArtistBookingController::class, 'rejectRequest'])
+                ->whereNumber('id')
+                ->name('api.marketplace-client.artist.booking.request.reject');
+
+            Route::get('/contracts', [ArtistBookingController::class, 'contracts'])
+                ->name('api.marketplace-client.artist.booking.contracts');
+
+            Route::get('/calendar', [ArtistBookingController::class, 'calendar'])
+                ->name('api.marketplace-client.artist.booking.calendar');
+            Route::post('/calendar', [ArtistBookingController::class, 'blockDate'])
+                ->name('api.marketplace-client.artist.booking.calendar.block');
+            Route::delete('/calendar/{id}', [ArtistBookingController::class, 'unblockDate'])
+                ->whereNumber('id')
+                ->name('api.marketplace-client.artist.booking.calendar.unblock');
+
+            Route::get('/kpis', [ArtistBookingController::class, 'kpis'])
+                ->name('api.marketplace-client.artist.booking.kpis');
+        });
     });
+});
+
+// Public Booking endpoints — form submission + guest reply via signed token.
+// Foloseste marketplace.auth pentru X-API-Key (consistent cu EPK rider-request).
+// Apelate din ambilet via proxy.php (action public.booking.*).
+Route::prefix('marketplace-client/public/artist/{slug}')->middleware(['throttle:30,1', 'marketplace.auth'])->group(function () {
+    Route::get('/booking-status', [BookingPublicController::class, 'listingStatus'])
+        ->name('api.public.artist.booking-status');
+    Route::post('/booking-request', [BookingPublicController::class, 'submitRequest'])
+        ->name('api.public.artist.booking-request');
+});
+Route::prefix('marketplace-client/public/booking/conversation/{token}')->middleware(['throttle:30,1', 'marketplace.auth'])->group(function () {
+    Route::get('/', [BookingPublicController::class, 'viewConversation'])
+        ->name('api.public.booking.conversation.view');
+    Route::post('/messages', [BookingPublicController::class, 'postGuestMessage'])
+        ->name('api.public.booking.conversation.post');
 });
 
 // Public EPK rider lead capture (no auth — vizitator anonim al pagini publice).
