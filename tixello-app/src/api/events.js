@@ -5,6 +5,9 @@ export async function getEvents(params = {}) {
     per_page: 50,
     sort: 'event_date',
     order: 'desc',
+    // Hide drafts / pending_review / rejected / cancelled — the mobile app
+    // can only operate on approved live events.
+    published_only: true,
     ...params,
   });
 }

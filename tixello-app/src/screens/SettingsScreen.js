@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useCallback } from 'react';
+import React, { useRef, useEffect, useCallback, useState } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import { colors } from '../theme/colors';
 import { useAuth } from '../context/AuthContext';
 import { useEvent } from '../context/EventContext';
 import { useApp } from '../context/AppContext';
+import { getVenueGates } from '../api/gates';
 
 function Toggle({ value, onPress }) {
   const translateX = useRef(new Animated.Value(value ? 22 : 2)).current;
@@ -152,6 +153,27 @@ export default function SettingsScreen({ onShowGateManager, onShowStaffAssignmen
     }
   }, [selectedEvent?.id, offlineMode]);
 
+  // Live gate count for the "Administrare Porți" badge
+  const [gateCount, setGateCount] = useState(null);
+  useEffect(() => {
+    let cancelled = false;
+    const venueId = selectedEvent?.venue_id;
+    if (!venueId) {
+      setGateCount(null);
+      return;
+    }
+    (async () => {
+      try {
+        const response = await getVenueGates(venueId);
+        const gates = response?.data?.gates || response?.gates || [];
+        if (!cancelled) setGateCount(Array.isArray(gates) ? gates.length : 0);
+      } catch (e) {
+        if (!cancelled) setGateCount(null);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [selectedEvent?.venue_id]);
+
   const staffName = isVenueOwner
     ? (venueOwner?.name || venueOwner?.tenant?.public_name || 'Venue owner')
     : (isTeamMember ? (user?.team_member?.name || 'Membru Echipă') : (user?.name || user?.public_name || 'Organizator'));
@@ -275,13 +297,12 @@ export default function SettingsScreen({ onShowGateManager, onShowStaffAssignmen
             <View style={styles.divider} />
             <AdminRow
               label="Administrare Porți"
-              badgeCount={4}
+              badgeCount={gateCount}
               onPress={() => onShowGateManager?.()}
             />
             <View style={styles.divider} />
             <AdminRow
               label="Asignare Personal"
-              badgeCount={8}
               onPress={() => onShowStaffAssignment?.()}
             />
           </View>

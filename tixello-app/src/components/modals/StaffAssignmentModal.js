@@ -321,9 +321,13 @@ export default function StaffAssignmentModal({ visible, onClose }) {
   const [inviting, setInviting] = useState(false);
   const [expandedMemberId, setExpandedMemberId] = useState(null);
 
-  // Invite form state
-  const [inviteName, setInviteName] = useState('');
+  // Add-staff form state. The flow is direct-add now (not invite-by-email):
+  // organizer fills first/last name + email + password + role + optional gate;
+  // backend creates the member as active and emails them their credentials.
+  const [inviteFirstName, setInviteFirstName] = useState('');
+  const [inviteLastName, setInviteLastName] = useState('');
   const [inviteEmail, setInviteEmail] = useState('');
+  const [invitePassword, setInvitePassword] = useState('');
   const [inviteRole, setInviteRole] = useState('staff');
   const [inviteGate, setInviteGate] = useState(null);
 
@@ -367,35 +371,51 @@ export default function StaffAssignmentModal({ visible, onClose }) {
   };
 
   const handleInvite = async () => {
-    if (!inviteName.trim() || !inviteEmail.trim()) return;
+    const fullName = `${inviteFirstName.trim()} ${inviteLastName.trim()}`.trim();
+    if (!fullName || !inviteEmail.trim()) return;
+    if (!invitePassword || invitePassword.length < 8) {
+      Alert.alert('Eroare', 'Parola trebuie să aibă cel puțin 8 caractere.');
+      return;
+    }
 
     setInviting(true);
     try {
       const payload = {
-        name: inviteName.trim(),
+        name: fullName,
         email: inviteEmail.trim(),
+        password: invitePassword,
         role: inviteRole,
-        permissions: ['checkin'],
+        permissions: inviteRole === 'staff' ? ['checkin'] : undefined,
+        gate_id: inviteGate ?? null,
       };
 
       const response = await inviteTeamMember(payload);
       const newMember = response.data?.member || response.data || response.member || {
         id: String(Date.now()),
-        name: inviteName.trim(),
+        name: fullName,
         email: inviteEmail.trim(),
         role: inviteRole,
-        status: 'pending',
-        permissions: ['checkin'],
+        status: 'active',
+        gate_id: inviteGate ?? null,
+        permissions: inviteRole === 'staff' ? ['checkin'] : ['events', 'orders', 'reports', 'team', 'checkin'],
       };
       setMembers(prev => [...prev, newMember]);
-      setInviteName('');
+      setInviteFirstName('');
+      setInviteLastName('');
       setInviteEmail('');
+      setInvitePassword('');
       setInviteRole('staff');
       setInviteGate(null);
-      Alert.alert('Succes', 'Invitația a fost trimisă.');
+      const emailSent = response.data?.email_sent ?? response.email_sent;
+      Alert.alert(
+        'Succes',
+        emailSent === false
+          ? 'Membrul a fost adăugat. Email-ul de bun venit nu a putut fi trimis — comunică-i credențialele direct.'
+          : 'Membrul a fost adăugat și a primit credențialele pe email.'
+      );
     } catch (e) {
-      console.error('Failed to invite member:', e);
-      Alert.alert('Eroare', e.message || 'Nu s-a putut trimite invitația.');
+      console.error('Failed to add member:', e);
+      Alert.alert('Eroare', e.message || 'Nu s-a putut adăuga membrul.');
     }
     setInviting(false);
   };
@@ -565,18 +585,28 @@ export default function StaffAssignmentModal({ visible, onClose }) {
               {/* Divider */}
               <View style={styles.divider} />
 
-              {/* Invite New Staff Form */}
+              {/* Add New Staff Form (direct add — no invite token) */}
               <View style={styles.addForm}>
-                <Text style={styles.sectionTitle}>Invită Personal Nou</Text>
+                <Text style={styles.sectionTitle}>Adaugă Personal Nou</Text>
 
-                {/* Name */}
+                {/* First name */}
                 <Text style={styles.formLabel}>Nume</Text>
                 <TextInput
                   style={styles.formInput}
-                  placeholder="Numele complet"
+                  placeholder="Nume"
                   placeholderTextColor={colors.textQuaternary}
-                  value={inviteName}
-                  onChangeText={setInviteName}
+                  value={inviteFirstName}
+                  onChangeText={setInviteFirstName}
+                />
+
+                {/* Last name */}
+                <Text style={styles.formLabel}>Prenume</Text>
+                <TextInput
+                  style={styles.formInput}
+                  placeholder="Prenume"
+                  placeholderTextColor={colors.textQuaternary}
+                  value={inviteLastName}
+                  onChangeText={setInviteLastName}
                 />
 
                 {/* Email */}
@@ -588,6 +618,18 @@ export default function StaffAssignmentModal({ visible, onClose }) {
                   value={inviteEmail}
                   onChangeText={setInviteEmail}
                   keyboardType="email-address"
+                  autoCapitalize="none"
+                />
+
+                {/* Password */}
+                <Text style={styles.formLabel}>Parolă (minim 8 caractere)</Text>
+                <TextInput
+                  style={styles.formInput}
+                  placeholder="Parola"
+                  placeholderTextColor={colors.textQuaternary}
+                  value={invitePassword}
+                  onChangeText={setInvitePassword}
+                  secureTextEntry
                   autoCapitalize="none"
                 />
 
@@ -658,12 +700,12 @@ export default function StaffAssignmentModal({ visible, onClose }) {
                   </>
                 )}
 
-                {/* Invite Button */}
+                {/* Add Button */}
                 <TouchableOpacity
-                  style={[styles.addButton, (!inviteName.trim() || !inviteEmail.trim() || inviting) && styles.addButtonDisabled]}
+                  style={[styles.addButton, ((!inviteFirstName.trim() && !inviteLastName.trim()) || !inviteEmail.trim() || !invitePassword || invitePassword.length < 8 || inviting) && styles.addButtonDisabled]}
                   onPress={handleInvite}
                   activeOpacity={0.8}
-                  disabled={!inviteName.trim() || !inviteEmail.trim() || inviting}
+                  disabled={(!inviteFirstName.trim() && !inviteLastName.trim()) || !inviteEmail.trim() || !invitePassword || invitePassword.length < 8 || inviting}
                 >
                   {inviting ? (
                     <ActivityIndicator size="small" color={colors.white} />
@@ -678,7 +720,7 @@ export default function StaffAssignmentModal({ visible, onClose }) {
                       />
                     </Svg>
                   )}
-                  <Text style={styles.addButtonText}>Trimite Invitație</Text>
+                  <Text style={styles.addButtonText}>Adaugă în echipă</Text>
                 </TouchableOpacity>
               </View>
             </ScrollView>

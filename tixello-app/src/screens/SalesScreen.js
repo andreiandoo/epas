@@ -12,6 +12,7 @@ import {
   Modal,
   Keyboard,
   Alert,
+  Linking,
 } from 'react-native';
 import Svg, { Path, Circle, Rect, Defs, LinearGradient, Stop } from 'react-native-svg';
 import QRCode from 'react-native-qrcode-svg';
@@ -380,7 +381,7 @@ function CartItemRow({ item, onUpdateQuantity, hideControls }) {
 // ─── Main SalesScreen Component ───────────────────────────────────────────────
 
 export default function SalesScreen({ navigation }) {
-  const { ticketTypes, isReportsOnlyMode, selectedEvent, refreshStats, refreshTicketTypes, eventCommission } = useEvent();
+  const { ticketTypes, allTicketTypes, isReportsOnlyMode, selectedEvent, refreshStats, refreshTicketTypes, eventCommission } = useEvent();
   const { user } = useAuth();
   const { recentSales, addSale, addScan, loadSaleHistory, autoConfirmValid } = useApp();
 
@@ -1034,9 +1035,30 @@ export default function SalesScreen({ navigation }) {
           ))}
           {ticketTypes.length === 0 && (
             <View style={styles.emptyState}>
-              <Text style={styles.emptyStateText}>
-                Niciun tip de bilet disponibil
+              <Text style={styles.emptyStateTitle}>
+                Acest eveniment nu are bilete configurate pentru vânzare prin aplicație
               </Text>
+              <Text style={styles.emptyStateText}>
+                {(allTicketTypes && allTicketTypes.length > 0)
+                  ? 'Există tipuri de bilete pentru acest eveniment, dar niciunul nu este marcat ca bilet de intrare (POS). Pentru a permite vânzarea la intrare, cere echipei AmBilet să configureze tipurile de bilete corespunzătoare.'
+                  : 'Pentru a vinde bilete la intrare prin aplicație, cere echipei AmBilet să adauge tipuri de bilete pentru POS.'}
+              </Text>
+              <View style={styles.emptyStateButtons}>
+                <TouchableOpacity
+                  style={[styles.emptyStateBtn, styles.emptyStateBtnPrimary]}
+                  onPress={() => Linking.openURL('https://ambilet.ro/organizator/login')}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.emptyStateBtnPrimaryText}>Login cont organizator</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.emptyStateBtn, styles.emptyStateBtnSecondary]}
+                  onPress={() => Linking.openURL('https://ambilet.ro/contact')}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.emptyStateBtnSecondaryText}>Contact AmBilet</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           )}
         </View>
@@ -1373,12 +1395,55 @@ const styles = StyleSheet.create({
 
   // ── Empty State ───────────────────────────────────────────────────────────
   emptyState: {
-    paddingVertical: 40,
+    paddingVertical: 32,
+    paddingHorizontal: 20,
     alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  emptyStateTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: colors.textPrimary,
+    textAlign: 'center',
+    marginBottom: 10,
   },
   emptyStateText: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 19,
+  },
+  emptyStateButtons: {
+    width: '100%',
+    gap: 10,
+    marginTop: 18,
+  },
+  emptyStateBtn: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  emptyStateBtnPrimary: {
+    backgroundColor: colors.purple,
+  },
+  emptyStateBtnPrimaryText: {
+    color: '#fff',
+    fontWeight: '700',
     fontSize: 14,
-    color: colors.textTertiary,
+  },
+  emptyStateBtnSecondary: {
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  emptyStateBtnSecondaryText: {
+    color: colors.textPrimary,
+    fontWeight: '600',
+    fontSize: 14,
   },
 
   // ── Today's Sales ─────────────────────────────────────────────────────────
