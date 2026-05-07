@@ -19,7 +19,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             <!-- ============================================================ -->
             <!-- EVENTS LIST VIEW -->
             <!-- ============================================================ -->
-            <div id="events-view">
+            <div id="events-view" class="py-4 lg:py-8">
                 <!-- Page Header -->
                 <div class="flex items-center justify-between mb-6">
                     <div>
@@ -210,7 +210,13 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     </aside>
 
                 <!-- Accordion Form -->
-                <form id="create-event-form" class="min-w-0 pb-16 space-y-3 lg:space-y-4">
+                <!-- autocomplete="off" + name="search" trick disables Chrome's
+                     form data autofill for the event name/venue/date/ticket
+                     fields. Chrome remembers values per (origin, field name)
+                     and was re-injecting Machines / 25 sep 2026 / 4 ticket
+                     types from a previous session whenever the page loaded
+                     in create mode. -->
+                <form id="create-event-form" autocomplete="off" name="event-create-no-autofill" class="min-w-0 pb-16 space-y-3 lg:space-y-4">
                     <!-- Hidden fields -->
                     <input type="hidden" id="saved-event-id" value="">
                     <input type="hidden" id="selected-event-type-ids" value="">
@@ -1246,11 +1252,54 @@ function resetFormState() {
     ticketTermsEditor = null;
 
     const form = document.getElementById('create-event-form');
-    if (form) form.reset();
+    if (form) {
+        form.reset();
+        // form.reset() restores HTML defaults — but loadEventForEdit injects
+        // ticket-type-item rows with value="..." attributes, which become
+        // the new defaults. Reset would leave Machines / 25 sep / 4 ticket
+        // types stuck across an edit→create transition. Force-clear every
+        // input and radio in the form, then rebuild the ticket-types
+        // container to its initial single-empty-row state. Chrome autofill
+        // is also defeated here by overwriting whatever it injects on load.
+        form.querySelectorAll('input, textarea, select').forEach(el => {
+            if (el.type === 'hidden') return; // saved-event-id handled below
+            if (el.type === 'checkbox' || el.type === 'radio') {
+                el.checked = el.defaultChecked;
+            } else if (el.type === 'file') {
+                el.value = '';
+            } else {
+                el.value = '';
+                el.setAttribute('value', ''); // clear inline default too
+            }
+        });
+        // Rebuild ticket-types-container: keep a single empty row, drop
+        // anything that was added by addTicketType() during a prior edit.
+        const ttContainer = document.getElementById('ticket-types-container');
+        if (ttContainer) {
+            ttContainer.innerHTML = '';
+            ticketTypeCount = 0;
+            if (typeof addTicketType === 'function') addTicketType();
+            // Hide the remove button on the first (only) row to match
+            // the server-rendered default state.
+            const firstRemove = ttContainer.querySelector('.remove-ticket-btn');
+            if (firstRemove) firstRemove.classList.add('hidden');
+        }
+        // Clear performances list (multi-day mode) if it exists
+        const perfList = document.getElementById('performances-list');
+        if (perfList) perfList.innerHTML = '';
+    }
 
     // Reset saved event ID
     const savedIdEl = document.getElementById('saved-event-id');
     if (savedIdEl) savedIdEl.value = '';
+
+    // Reset duration mode to default (single_day) so date pickers don't
+    // carry over a "range" or "multi_day" UI state from edit mode.
+    const singleDayRadio = document.querySelector('[name="duration_mode"][value="single_day"]');
+    if (singleDayRadio) {
+        singleDayRadio.checked = true;
+        if (typeof onDurationModeChange === 'function') onDurationModeChange('single_day');
+    }
 }
 
 async function loadEventForEdit(eventId) {
