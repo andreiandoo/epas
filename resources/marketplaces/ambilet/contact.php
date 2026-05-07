@@ -354,6 +354,33 @@ const ContactPage = {
         this.initForm();
     },
 
+    /**
+     * Lightweight toast helper. AmbiletUtils.showToast doesn't exist on
+     * this codebase — the legacy form silently swallowed every call, but
+     * once we made the form actually post, the missing function started
+     * throwing in the success/error path. This helper renders a fixed-
+     * position toast tied to the contact form's lifecycle.
+     */
+    showToast(msg, kind) {
+        kind = kind || 'info';
+        const colors = {
+            success: { bg: '#10b981', icon: '✓' },
+            error:   { bg: '#ef4444', icon: '✕' },
+            info:    { bg: '#374151', icon: 'ℹ' },
+        };
+        const c = colors[kind] || colors.info;
+        const el = document.createElement('div');
+        el.style.cssText = 'position:fixed;top:24px;right:24px;z-index:9999;background:'+c.bg+';color:#fff;padding:14px 20px;border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,0.18);font-size:14px;font-weight:500;max-width:360px;display:flex;align-items:center;gap:10px;opacity:0;transform:translateY(-8px);transition:opacity 0.2s, transform 0.2s;';
+        el.innerHTML = '<span style="font-size:18px;line-height:1;">'+c.icon+'</span><span>'+msg.replace(/[<>&]/g, s=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[s]))+'</span>';
+        document.body.appendChild(el);
+        requestAnimationFrame(() => { el.style.opacity = '1'; el.style.transform = 'translateY(0)'; });
+        setTimeout(() => {
+            el.style.opacity = '0';
+            el.style.transform = 'translateY(-8px)';
+            setTimeout(() => el.remove(), 250);
+        }, 4500);
+    },
+
     initForm() {
         const form = document.getElementById('contactForm');
         if (!form) return;
@@ -366,12 +393,12 @@ const ContactPage = {
 
             // Validate
             if (!data.lastName || !data.firstName || !data.email || !data.subject || !data.message) {
-                AmbiletUtils.showToast('Te rugăm să completezi toate câmpurile obligatorii', 'error');
+                ContactPage.showToast('Te rugăm să completezi toate câmpurile obligatorii', 'error');
                 return;
             }
 
             if (!form.querySelector('[name="privacy"]').checked) {
-                AmbiletUtils.showToast('Te rugăm să accepți politica de confidențialitate', 'error');
+                ContactPage.showToast('Te rugăm să accepți politica de confidențialitate', 'error');
                 return;
             }
 
@@ -404,7 +431,7 @@ const ContactPage = {
                     throw new Error((res && res.message) || 'Trimiterea a eșuat');
                 }
 
-                AmbiletUtils.showToast('Mesajul a fost trimis cu succes! Te vom contacta în curând.', 'success');
+                ContactPage.showToast('Mesajul a fost trimis cu succes! Te vom contacta în curând.', 'success');
 
                 // CAPI Lead — contact form submission
                 try {
@@ -418,7 +445,7 @@ const ContactPage = {
 
                 form.reset();
             } catch (err) {
-                AmbiletUtils.showToast(
+                ContactPage.showToast(
                     (err && err.message) || 'Trimiterea a eșuat. Te rugăm să încerci din nou sau să ne scrii direct pe email.',
                     'error'
                 );
