@@ -202,6 +202,10 @@ class EventsController extends BaseController
             // TicketType::$fillable — assignments via mass-create go nowhere.
             // Route through the virtual price_max / capacity attributes whose
             // mutators correctly write to those underlying columns.
+            // min_per_order / max_per_order are NOT NULL in the DB; default
+            // them to 1 and the event-level max_tickets_per_order (or 10) so
+            // organizers don't have to fill those fields per ticket type.
+            $defaultMaxPerOrder = (int) ($validated['max_tickets_per_order'] ?? 10);
             foreach ($validated['ticket_types'] ?? [] as $index => $ticketTypeData) {
                 TicketType::create([
                     'event_id' => $event->id,
@@ -210,8 +214,8 @@ class EventsController extends BaseController
                     'currency' => 'RON',
                     'price_max' => $ticketTypeData['price'],
                     'capacity' => $ticketTypeData['quantity'] ?? null, // null becomes -1 = unlimited
-                    'min_per_order' => $ticketTypeData['min_per_order'] ?? null,
-                    'max_per_order' => $ticketTypeData['max_per_order'] ?? null,
+                    'min_per_order' => $ticketTypeData['min_per_order'] ?? 1,
+                    'max_per_order' => $ticketTypeData['max_per_order'] ?? $defaultMaxPerOrder,
                     'quota_sold' => 0,
                     'status' => 'active',
                 ]);
@@ -411,6 +415,10 @@ class EventsController extends BaseController
 
                 // Use virtual price_max / capacity (mass-assignable) so the
                 // mutators populate price_cents / quota_total correctly.
+                // Default min_per_order=1 and max_per_order=event.max_tickets_per_order
+                // (or 10) so the NOT-NULL constraint is satisfied without making
+                // those fields required in the form.
+                $defaultMaxPerOrderUpdate = (int) ($validated['max_tickets_per_order'] ?? $event->max_tickets_per_order ?? 10);
                 foreach ($ticketTypesData as $index => $ticketTypeData) {
                     TicketType::create([
                         'event_id' => $event->id,
@@ -419,8 +427,8 @@ class EventsController extends BaseController
                         'currency' => 'RON',
                         'price_max' => $ticketTypeData['price'],
                         'capacity' => $ticketTypeData['quantity'] ?? null,
-                        'min_per_order' => $ticketTypeData['min_per_order'] ?? null,
-                        'max_per_order' => $ticketTypeData['max_per_order'] ?? null,
+                        'min_per_order' => $ticketTypeData['min_per_order'] ?? 1,
+                        'max_per_order' => $ticketTypeData['max_per_order'] ?? $defaultMaxPerOrderUpdate,
                         'quota_sold' => 0,
                         'status' => 'active',
                     ]);
