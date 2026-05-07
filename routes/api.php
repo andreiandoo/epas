@@ -2704,16 +2704,17 @@ Route::prefix('marketplace-client/artist')->middleware(['throttle:120,1', 'marke
 // Foloseste marketplace.auth pentru X-API-Key (consistent cu EPK rider-request).
 // Apelate din ambilet via proxy.php (action public.booking.*).
 //
-// IMPORTANT: throttle e 600/1 pentru status (e hit pe orice vizualizare /artist/{slug})
-// și 30/1 pentru submit/reply (cere actiune deliberata). Toate cererile pleaca de pe
-// IP-ul serverului ambilet (proxy.php), deci limita e shared global, nu per-vizitator.
+// IMPORTANT: toate cererile pleaca de pe IP-ul serverului ambilet (proxy.php),
+// deci throttle-ul Laravel ar fi shared global. Bumped la valori mari pentru ca
+// un singur burst de vizitatori sa nu blocheze toate. Anti-spam real ar trebui
+// facut la nivel de Cloudflare Turnstile / hCaptcha la submit (v2).
 Route::middleware(['throttle:600,1', 'marketplace.auth'])->group(function () {
     Route::get('/marketplace-client/public/artist/{slug}/booking-status', [BookingPublicController::class, 'listingStatus'])
         ->name('api.public.artist.booking-status');
     Route::get('/marketplace-client/public/booking/conversation/{token}', [BookingPublicController::class, 'viewConversation'])
         ->name('api.public.booking.conversation.view');
 });
-Route::middleware(['throttle:30,1', 'marketplace.auth'])->group(function () {
+Route::middleware(['throttle:200,1', 'marketplace.auth'])->group(function () {
     Route::post('/marketplace-client/public/artist/{slug}/booking-request', [BookingPublicController::class, 'submitRequest'])
         ->name('api.public.artist.booking-request');
     Route::post('/marketplace-client/public/booking/conversation/{token}/messages', [BookingPublicController::class, 'postGuestMessage'])
