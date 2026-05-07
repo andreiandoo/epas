@@ -2876,8 +2876,8 @@ class EventResource extends Resource
                         // not yet published). Clicking publishes the event in
                         // one step so admins don't have to flip the toggle +
                         // save.
-                        Forms\Components\Actions::make([
-                            Forms\Components\Actions\Action::make('approveEvent')
+                        SC\Actions::make([
+                            \Filament\Actions\Action::make('approveEvent')
                                 ->label($t('Aprobă evenimentul', 'Approve event'))
                                 ->icon('heroicon-m-check-circle')
                                 ->color('success')
@@ -2900,8 +2900,7 @@ class EventResource extends Resource
                                         ->send();
                                 }),
                         ])
-                            ->visible(fn (?Event $record) => $record && $record->exists && !$record->is_published && $record->submitted_at)
-                            ->fullWidth(),
+                            ->visible(fn (?Event $record) => $record && $record->exists && !$record->is_published && $record->submitted_at),
 
                         SC\Grid::make(2)->schema([
                             Forms\Components\Toggle::make('is_published')
