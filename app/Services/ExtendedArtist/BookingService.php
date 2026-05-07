@@ -342,6 +342,44 @@ class BookingService
         ])->all();
     }
 
+    /**
+     * Calendar overlay items (booking-uri + cereri) intre [from, to].
+     *  - status=accepted → kind='booking' (verde)
+     *  - status in [new, viewed, negotiating] → kind='pending' (amber)
+     */
+    public function calendarOverlay(Artist $artist, ?string $from = null, ?string $to = null): array
+    {
+        $q = ArtistBookingRequest::where('artist_id', $artist->id);
+        if ($from) $q->where('event_date', '>=', $from);
+        if ($to) $q->where('event_date', '<=', $to);
+
+        return $q->orderBy('event_date')->get()->map(function ($r) {
+            $isAccepted = $r->status === ArtistBookingRequest::STATUS_ACCEPTED;
+            $isPending = in_array($r->status, [
+                ArtistBookingRequest::STATUS_NEW,
+                ArtistBookingRequest::STATUS_VIEWED,
+                ArtistBookingRequest::STATUS_NEGOTIATING,
+            ], true);
+            if (!$isAccepted && !$isPending) return null;
+
+            $eventDate = $r->event_date?->toDateString();
+            $finalDate = $r->final_terms['event_date'] ?? null;
+            $date = $finalDate ?: $eventDate;
+            return [
+                'request_id' => $r->id,
+                'kind' => $isAccepted ? 'booking' : 'pending',
+                'status' => $r->status,
+                'date' => $date,
+                'guest_name' => $r->guest_name,
+                'guest_company' => $r->guest_company,
+                'event_city' => $r->event_city,
+                'event_venue' => $r->event_venue_name,
+                'event_type' => $r->event_type,
+                'fee_ron' => (int) ($r->final_terms['fee_ron'] ?? $r->proposed_fee_ron),
+            ];
+        })->filter()->values()->all();
+    }
+
     public function setUnavailableDate(Artist $artist, string $start, string $end, ?string $reason = null, ?string $color = null): ArtistBookingUnavailableDate
     {
         return ArtistBookingUnavailableDate::create([

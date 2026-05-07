@@ -47,6 +47,7 @@
                 if (data && data.active) {
                     this.ctaContainer.classList.remove('hidden');
                     this.populateSubtitle(data);
+                    this.populateDetails(data);
                 }
             } catch (e) {
                 console.warn('booking status fetch failed', e);
@@ -60,9 +61,115 @@
             }
             if (data.min_fee_ron && data.max_fee_ron) {
                 const fmt = new Intl.NumberFormat('ro-RO');
-                parts.push('Cachet ' + fmt.format(data.min_fee_ron) + '–' + fmt.format(data.max_fee_ron) + ' RON');
+                parts.push('Buget ' + fmt.format(data.min_fee_ron) + '–' + fmt.format(data.max_fee_ron) + ' RON');
             }
             if (this.subtitleEl) this.subtitleEl.textContent = parts.join(' · ');
+        },
+
+        populateDetails(data) {
+            const block = document.getElementById('bookingDetailsBlock');
+            if (!block) return;
+
+            const EVENT_TYPE_LABELS = {
+                concert: 'Concert', festival: 'Festival', private: 'Eveniment privat',
+                corporate: 'Corporate', wedding: 'Nuntă', club: 'Club / lounge',
+                show: 'Show TV / online', charity: 'Caritate',
+            };
+            const fmt = new Intl.NumberFormat('ro-RO');
+            let hasContent = false;
+
+            // Description
+            const descEl = document.getElementById('bookingDescriptionEl');
+            if (descEl) {
+                if (data.description && String(data.description).trim()) {
+                    descEl.textContent = data.description;
+                    descEl.classList.remove('hidden');
+                    hasContent = true;
+                } else {
+                    descEl.classList.add('hidden');
+                }
+            }
+
+            // Event types
+            const typesRow = document.getElementById('bookingEventTypesRow');
+            const typesList = document.getElementById('bookingEventTypesList');
+            if (typesRow && typesList) {
+                const types = Array.isArray(data.event_types) ? data.event_types : [];
+                if (types.length) {
+                    typesList.innerHTML = types.map(t => {
+                        const label = EVENT_TYPE_LABELS[t] || t;
+                        return '<span class="px-2 py-0.5 text-[11px] font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full">' + this.escapeHtml(label) + '</span>';
+                    }).join('');
+                    typesRow.classList.remove('hidden');
+                    hasContent = true;
+                } else {
+                    typesRow.classList.add('hidden');
+                }
+            }
+
+            // Facts list
+            const facts = [];
+            if (data.standard_set_length_min) {
+                facts.push({ label: 'Set standard', value: data.standard_set_length_min + ' min' });
+            }
+            if (data.standard_min_audience || data.standard_max_audience) {
+                const audience = [data.standard_min_audience, data.standard_max_audience].filter(Boolean);
+                if (audience.length === 2) {
+                    facts.push({ label: 'Audiență', value: fmt.format(audience[0]) + '–' + fmt.format(audience[1]) });
+                } else if (audience.length === 1) {
+                    facts.push({ label: 'Audiență', value: fmt.format(audience[0]) + '+' });
+                }
+            }
+            if (data.max_distance_km) {
+                facts.push({ label: 'Distanță maximă', value: fmt.format(data.max_distance_km) + ' km' });
+            }
+            if (data.show_fee_publicly && data.min_fee_ron && data.max_fee_ron) {
+                facts.push({ label: 'Buget acceptat', value: fmt.format(data.min_fee_ron) + '–' + fmt.format(data.max_fee_ron) + ' RON' });
+            }
+            const factsEl = document.getElementById('bookingFactsList');
+            if (factsEl) {
+                factsEl.innerHTML = facts.map(f =>
+                    '<div class="flex items-center justify-between gap-3 py-1 border-b border-gray-100 last:border-0">' +
+                        '<dt class="text-gray-500">' + this.escapeHtml(f.label) + '</dt>' +
+                        '<dd class="font-semibold text-gray-900">' + this.escapeHtml(f.value) + '</dd>' +
+                    '</div>'
+                ).join('');
+                if (facts.length) hasContent = true;
+            }
+
+            // Conditions
+            const condRow = document.getElementById('bookingConditionsRow');
+            const condList = document.getElementById('bookingConditionsList');
+            if (condRow && condList) {
+                const conditions = [];
+                if (data.requires_soundcheck) {
+                    conditions.push('Soundcheck' + (data.soundcheck_min_minutes ? ' (min ' + data.soundcheck_min_minutes + ' min)' : ''));
+                }
+                if (data.requires_backline) conditions.push('Backline asigurat de organizator');
+                if (data.requires_catering) conditions.push('Catering / masă');
+                if (data.requires_accommodation) conditions.push('Cazare');
+                if (data.requires_transport) conditions.push('Transport');
+
+                if (conditions.length) {
+                    condList.innerHTML = conditions.map(c =>
+                        '<li class="flex items-start gap-1.5">' +
+                            '<svg class="w-3.5 h-3.5 text-emerald-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>' +
+                            '<span>' + this.escapeHtml(c) + '</span>' +
+                        '</li>'
+                    ).join('');
+                    condRow.classList.remove('hidden');
+                    hasContent = true;
+                } else {
+                    condRow.classList.add('hidden');
+                }
+            }
+
+            if (hasContent) block.classList.remove('hidden');
+        },
+
+        escapeHtml(s) {
+            if (s === null || s === undefined) return '';
+            return String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
         },
 
         bindEvents() {

@@ -118,13 +118,30 @@ require_once __DIR__ . '/includes/header.php';
                 </button>
             </div>
 
-            <!-- Booking CTA — afișat doar dacă artistul are listing activ. Wired up în booking-request-modal.js. -->
+            <!-- Booking CTA — afișat doar dacă artistul are listing activ. Wired up în artist-booking-modal.js. -->
             <div id="bookingCtaContainer" class="hidden mb-5">
                 <button id="bookingCtaBtn" type="button" class="flex items-center justify-center gap-2 w-full py-3.5 px-5 rounded-xl border-2 border-emerald-500 bg-emerald-50 text-emerald-700 font-semibold text-sm transition-all hover:bg-emerald-100">
                     <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
                     <span>Cere booking</span>
                 </button>
                 <p id="bookingCtaSubtitle" class="mt-2 text-xs text-center text-gray-500"></p>
+
+                <!-- Detaliile publice ale listing-ului — populated by BookingRequestModal.populateDetails -->
+                <div id="bookingDetailsBlock" class="hidden mt-4 p-4 border border-gray-200 rounded-xl bg-white">
+                    <p id="bookingDescriptionEl" class="hidden mb-3 text-sm leading-relaxed text-gray-600 whitespace-pre-line"></p>
+
+                    <div id="bookingEventTypesRow" class="hidden mb-3">
+                        <p class="mb-1.5 text-[10px] font-bold tracking-wider uppercase text-gray-500">Tipuri evenimente acceptate</p>
+                        <div id="bookingEventTypesList" class="flex flex-wrap gap-1.5"></div>
+                    </div>
+
+                    <dl id="bookingFactsList" class="space-y-1.5 text-xs"></dl>
+
+                    <div id="bookingConditionsRow" class="hidden mt-3 pt-3 border-t border-gray-100">
+                        <p class="mb-1.5 text-[10px] font-bold tracking-wider uppercase text-gray-500">Condiții oferite</p>
+                        <ul id="bookingConditionsList" class="space-y-1 text-xs text-gray-700"></ul>
+                    </div>
+                </div>
             </div>
 
             <!--

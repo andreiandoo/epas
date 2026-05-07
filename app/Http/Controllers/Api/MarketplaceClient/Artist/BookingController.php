@@ -132,7 +132,10 @@ class BookingController extends BaseController
         $artist = $this->requireArtist($request);
         $from = $request->query('from');
         $to = $request->query('to');
-        return $this->success(['dates' => $this->booking->unavailableDates($artist, $from, $to)]);
+        return $this->success([
+            'dates' => $this->booking->unavailableDates($artist, $from, $to),
+            'overlay' => $this->booking->calendarOverlay($artist, $from, $to),
+        ]);
     }
 
     public function blockDate(Request $request): JsonResponse

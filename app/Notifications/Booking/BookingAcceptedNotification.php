@@ -48,7 +48,7 @@ class BookingAcceptedNotification extends Notification implements ShouldQueue
             ->line('**Termeni finali:**')
             ->line('· Data: **' . $r->event_date->translatedFormat('j M Y') . ($r->event_time ? ', ' . $r->event_time : '') . '**')
             ->line('· Locație: **' . e($r->event_venue_name ?: $r->event_city) . '**')
-            ->line('· Cachet: **' . number_format((int) ($terms['fee_ron'] ?? $r->proposed_fee_ron), 0, ',', '.') . ' RON**')
+            ->line('· Buget: **' . number_format((int) ($terms['fee_ron'] ?? $r->proposed_fee_ron), 0, ',', '.') . ' RON**')
             ->line('· Lungime set: **' . ($terms['set_length_min'] ?? $r->proposed_set_length_min) . ' min**')
             ->line('Plata se face în afara platformei conform contractului dintre părți. Tixello servește doar ca intermediar pentru organizare.')
             ->action('Vezi detaliile', $url);

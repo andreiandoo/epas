@@ -62,7 +62,7 @@ class BookingMessageReceivedNotification extends Notification implements ShouldQ
         if ($isCounter && is_array($m->counter_terms)) {
             $msg->line('**Termeni propuși:**');
             if (!empty($m->counter_terms['fee_ron'])) {
-                $msg->line('· Cachet: **' . number_format($m->counter_terms['fee_ron'], 0, ',', '.') . ' RON**');
+                $msg->line('· Buget: **' . number_format($m->counter_terms['fee_ron'], 0, ',', '.') . ' RON**');
             }
             if (!empty($m->counter_terms['set_length_min'])) {
                 $msg->line('· Lungime set: **' . $m->counter_terms['set_length_min'] . ' min**');

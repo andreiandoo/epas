@@ -35,12 +35,34 @@ class BookingPublicController extends Controller
         }
         $listing = ArtistBookingListing::where('artist_id', $artist->id)->first();
         $isActive = $listing && $listing->status === 'active';
+
+        if (!$isActive) {
+            return response()->json(['active' => false]);
+        }
+
+        $description = $listing->description;
+        if (is_array($description)) {
+            $description = $description['ro'] ?? $description['en'] ?? reset($description) ?: null;
+        }
+
         return response()->json([
-            'active' => $isActive,
-            'response_target_hours' => $isActive ? $listing->response_target_hours : null,
-            'min_fee_ron' => ($isActive && $listing->show_fee_publicly) ? $listing->min_fee_ron : null,
-            'max_fee_ron' => ($isActive && $listing->show_fee_publicly) ? $listing->max_fee_ron : null,
-            'event_types' => $isActive ? ($listing->event_types ?? []) : [],
+            'active' => true,
+            'response_target_hours' => $listing->response_target_hours,
+            'min_fee_ron' => $listing->show_fee_publicly ? $listing->min_fee_ron : null,
+            'max_fee_ron' => $listing->show_fee_publicly ? $listing->max_fee_ron : null,
+            'show_fee_publicly' => (bool) $listing->show_fee_publicly,
+            'event_types' => $listing->event_types ?? [],
+            'standard_set_length_min' => $listing->standard_set_length_min,
+            'standard_min_audience' => $listing->standard_min_audience,
+            'standard_max_audience' => $listing->standard_max_audience,
+            'requires_soundcheck' => (bool) $listing->requires_soundcheck,
+            'soundcheck_min_minutes' => $listing->soundcheck_min_minutes,
+            'requires_backline' => (bool) $listing->requires_backline,
+            'requires_catering' => (bool) $listing->requires_catering,
+            'requires_accommodation' => (bool) $listing->requires_accommodation,
+            'requires_transport' => (bool) $listing->requires_transport,
+            'max_distance_km' => $listing->max_distance_km,
+            'description' => $description,
         ]);
     }
 
