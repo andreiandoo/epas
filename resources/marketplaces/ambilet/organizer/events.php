@@ -89,6 +89,26 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     <input type="hidden" id="selected-venue-id" value="">
 
                     <!-- ============ EVENT STATUS ACTIONS (Edit mode only) ============ -->
+                    <!-- ============ REJECTION BANNER (rejected events only) ============ -->
+                    <div id="rejection-banner" class="hidden p-4 border rounded-2xl bg-red-50 border-red-200">
+                        <div class="flex items-start gap-3">
+                            <svg class="flex-shrink-0 w-5 h-5 mt-0.5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            <div class="flex-1">
+                                <h4 class="text-sm font-semibold text-red-700">Evenimentul a fost respins</h4>
+                                <p class="mt-1 text-sm text-red-700">Motiv: <span id="rejection-reason-text"></span></p>
+                                <p class="mt-2 text-xs text-red-600">Editează evenimentul după indicații și apasă "Salvează și trimite spre aprobare" pentru o nouă revizuire.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ============ EDIT MODE HEADER (delete button) ============ -->
+                    <div class="flex items-center justify-end" id="edit-mode-header">
+                        <button type="button" id="edit-delete-btn" class="hidden btn btn-sm btn-error">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                            Șterge evenimentul
+                        </button>
+                    </div>
+
                     <div id="event-status-actions" class="hidden p-5 bg-white border rounded-2xl border-border">
                         <h3 class="mb-4 font-semibold text-secondary">Acțiuni eveniment</h3>
                         <div class="flex flex-wrap items-center gap-3">
@@ -131,7 +151,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                                     <label class="label">Numele evenimentului <span class="text-red-500">*</span></label>
                                     <input type="text" name="name" required class="input" placeholder="ex: Concert Rock in Parc">
                                 </div>
-                                <div class="grid gap-4 md:grid-cols-2">
+                                <div class="grid gap-4 md:grid-cols-3">
                                     <div>
                                         <label class="label">Categorie</label>
                                         <select name="marketplace_event_category_id" class="input" id="category-select" onchange="onCategoryChange(this.value)">
@@ -147,16 +167,16 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                                         </div>
                                         <p class="mt-1 text-xs text-muted">Selecteaza genurile aplicabile</p>
                                     </div>
-                                </div>
-                                <!-- Artist Selection -->
-                                <div>
-                                    <label class="label">Artisti</label>
-                                    <div class="multiselect-wrapper" id="artists-multiselect">
-                                        <div class="multiselect-tags" id="artists-selected"></div>
-                                        <input type="text" class="multiselect-input" placeholder="Cauta artisti..." id="artists-search-input" autocomplete="off">
-                                        <div class="hidden multiselect-dropdown" id="artists-dropdown"></div>
+                                    <!-- Artist Selection -->
+                                    <div>
+                                        <label class="label">Artisti</label>
+                                        <div class="multiselect-wrapper" id="artists-multiselect">
+                                            <div class="multiselect-tags" id="artists-selected"></div>
+                                            <input type="text" class="multiselect-input" placeholder="Cauta artisti..." id="artists-search-input" autocomplete="off">
+                                            <div class="hidden multiselect-dropdown" id="artists-dropdown"></div>
+                                        </div>
+                                        <p class="mt-1 text-xs text-muted">Cauta in biblioteca sau scrie un nume nou</p>
                                     </div>
-                                    <p class="mt-1 text-xs text-muted">Cauta in biblioteca sau scrie un nume nou pentru a-l adauga</p>
                                 </div>
                                 <div>
                                     <label class="label">Descriere scurta</label>
@@ -216,7 +236,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                                         </div>
                                         <div>
                                             <label class="label">Ora incepere <span class="text-red-500">*</span></label>
-                                            <input type="time" name="start_time" required class="input">
+                                            <input type="time" name="start_time" required class="input" onclick="this.showPicker?.()" onfocus="this.showPicker?.()">
                                         </div>
                                     </div>
                                     <div id="end-date-fields" class="hidden">
@@ -227,7 +247,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                                             </div>
                                             <div>
                                                 <label class="label">Ora sfarsit</label>
-                                                <input type="time" name="end_time" class="input">
+                                                <input type="time" name="end_time" class="input" onclick="this.showPicker?.()" onfocus="this.showPicker?.()">
                                             </div>
                                         </div>
                                     </div>
@@ -235,11 +255,11 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                                         <div class="grid gap-4 md:grid-cols-2">
                                             <div>
                                                 <label class="label">Ora sfarsit</label>
-                                                <input type="time" name="end_time_single" class="input">
+                                                <input type="time" name="end_time_single" class="input" onclick="this.showPicker?.()" onfocus="this.showPicker?.()">
                                             </div>
                                             <div>
                                                 <label class="label">Ora deschidere usi</label>
-                                                <input type="time" name="door_time" class="input">
+                                                <input type="time" name="door_time" class="input" onclick="this.showPicker?.()" onfocus="this.showPicker?.()">
                                                 <p class="mt-1 text-xs text-muted">Ora la care se deschid usile</p>
                                             </div>
                                         </div>
@@ -248,7 +268,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                                         <div class="grid gap-4 md:grid-cols-2">
                                             <div>
                                                 <label class="label">Ora deschidere usi</label>
-                                                <input type="time" name="door_time_range" class="input">
+                                                <input type="time" name="door_time_range" class="input" onclick="this.showPicker?.()" onfocus="this.showPicker?.()">
                                                 <p class="mt-1 text-xs text-muted">Ora la care se deschid usile</p>
                                             </div>
                                         </div>
@@ -769,7 +789,7 @@ document.addEventListener('DOMContentLoaded', function() {
 function renderEvents(events) {
     const container = document.getElementById('events-list');
     const statusColors = { published: 'success', draft: 'warning', ended: 'muted', pending_review: 'info', cancelled: 'error', postponed: 'warning', sold_out: 'info' };
-    const statusLabels = { published: 'Publicat', draft: 'Ciornă', ended: 'Eveniment încheiat', pending_review: 'În așteptare', cancelled: 'Anulat', postponed: 'Amânat', sold_out: 'Sold Out' };
+    const statusLabels = { published: 'Publicat', draft: 'Ciornă', ended: 'Eveniment încheiat', pending_review: 'În revizie - așteaptă aprobare', rejected: 'Respins', cancelled: 'Anulat', postponed: 'Amânat', sold_out: 'Sold Out' };
 
     // Sort: ongoing events by closest date first, ended by most recent first
     events = [...events].sort((a, b) => {
@@ -811,11 +831,17 @@ function renderEvents(events) {
             else if (daysUntil > 0) daysText = `${daysUntil}`;
         }
 
+        // While the event is awaiting approval (draft / pending_review /
+        // rejected), the operational buttons aren't useful — there's no
+        // public ticket sales, nothing to invite people to, no analytics.
+        // Only Edit, View, Delete remain.
+        const isAwaitingApproval = ['draft', 'pending_review', 'rejected'].includes(event.status);
+
         // Generate Analytics/Report button (violet — data/reports)
         const analyticsBtnCls = 'btn btn-sm bg-violet-50 text-violet-700 border border-solid border-violet-200 hover:bg-violet-100 hover:border-violet-300 hover:text-violet-800';
-        const analyticsButton = isEnded
+        const analyticsButton = isAwaitingApproval ? '' : (isEnded
             ? `<a href="/organizator/report/${event.id}" class="${analyticsBtnCls}" title="Raport"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg> Raport</a>`
-            : `<a href="/organizator/analytics/${event.id}" class="${analyticsBtnCls}" title="Analiză"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg> Analiză</a>`;
+            : `<a href="/organizator/analytics/${event.id}" class="${analyticsBtnCls}" title="Analiză"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg> Analiză</a>`);
 
         // Promote button (only for ongoing events)
         const promoteButton = isOngoing
@@ -823,18 +849,16 @@ function renderEvents(events) {
             : '';
 
         // Documents button (indigo — paperwork)
-        const documentsButton = `<a href="/organizator/documente?event=${event.id}" class="text-indigo-700 border border-indigo-200 border-solid btn btn-sm bg-indigo-50 hover:bg-indigo-100 hover:border-indigo-300 hover:text-indigo-800" title="Documente"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg> Documente</a>`;
+        const documentsButton = isAwaitingApproval ? '' : `<a href="/organizator/documente?event=${event.id}" class="text-indigo-700 border border-indigo-200 border-solid btn btn-sm bg-indigo-50 hover:bg-indigo-100 hover:border-indigo-300 hover:text-indigo-800" title="Documente"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg> Documente</a>`;
 
         // Finance button (emerald — money/sales)
-        const financeButton = `<a href="/organizator/sold?event=${event.id}" class="border border-solid btn btn-sm bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100 hover:border-emerald-300 hover:text-emerald-800" title="Finanțe"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg> Vânzări</a>`;
+        const financeButton = isAwaitingApproval ? '' : `<a href="/organizator/sold?event=${event.id}" class="border border-solid btn btn-sm bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100 hover:border-emerald-300 hover:text-emerald-800" title="Finanțe"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg> Vânzări</a>`;
 
         // Participants button (cyan — attendees / check-in list)
-        const participantsButton = `<a href="/organizator/participanti?event=${event.id}" class="border border-solid btn btn-sm bg-cyan-50 text-cyan-700 border-cyan-200 hover:bg-cyan-100 hover:border-cyan-300 hover:text-cyan-800" title="Participanți"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>Participanți</a>`;
+        const participantsButton = isAwaitingApproval ? '' : `<a href="/organizator/participanti?event=${event.id}" class="border border-solid btn btn-sm bg-cyan-50 text-cyan-700 border-cyan-200 hover:bg-cyan-100 hover:border-cyan-300 hover:text-cyan-800" title="Participanți"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>Participanți</a>`;
 
-        // Invitations button (rose — only while the event is upcoming / ongoing)
-        const invitationsButton = !isEnded
-            ? `<a href="/organizator/invitatii?event=${event.id}" class="border border-solid text-rose-700 border-rose-200 btn btn-sm bg-rose-50 hover:bg-rose-100 hover:border-rose-300 hover:text-rose-800" title="Generează invitații"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg> Invitații</a>`
-            : '';
+        // Invitations button (rose — only while the event is upcoming / ongoing AND already approved)
+        const invitationsButton = (isAwaitingApproval || isEnded) ? '' : `<a href="/organizator/invitatii?event=${event.id}" class="border border-solid text-rose-700 border-rose-200 btn btn-sm bg-rose-50 hover:bg-rose-100 hover:border-rose-300 hover:text-rose-800" title="Generează invitații"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg> Invitații</a>`;
 
         // View/Preview button - hidden for ended events; use /bilete/{slug} for published, add ?preview=1 for drafts
         const isPublishedEvent = event.status === 'published' || event.is_public;
@@ -882,7 +906,7 @@ function renderEvents(events) {
                             ${analyticsButton}
                             ${promoteButton}
                             ${viewButton}
-                            ${['draft', 'rejected'].includes(event.status) ? `<button onclick="deleteEvent(${event.id}, '${(event.name || event.title).replace(/'/g, "\\'")}');" class="btn btn-sm btn-error" title="Șterge evenimentul"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>` : ''}
+                            ${['draft', 'pending_review', 'rejected'].includes(event.status) ? `<button onclick="deleteEvent(${event.id}, '${(event.name || event.title).replace(/'/g, "\\'")}');" class="btn btn-sm btn-error" title="Șterge evenimentul"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>` : ''}
                         </div>
                     </div>
                 </div>
@@ -938,6 +962,10 @@ function resetFormState() {
     renderGenreTags();
     renderArtistTags();
 
+    // Reset edit-only UI bits (rejection banner + delete button stay hidden until edit mode re-shows them)
+    document.getElementById('rejection-banner')?.classList.add('hidden');
+    document.getElementById('edit-delete-btn')?.classList.add('hidden');
+
     // Reset image previews
     const posterPreview = document.getElementById('poster-preview');
     const posterUploadArea = document.getElementById('poster-upload-area');
@@ -955,7 +983,17 @@ function resetFormState() {
     if (posterInput) posterInput.value = '';
     if (coverInput) coverInput.value = '';
 
-    // Reset form
+    // Reset form — but FIRST detach TinyMCE editors, otherwise their internal
+    // 'reset' handler fires on the form's reset event and crashes when the
+    // editor instance got out of sync with the DOM (the
+    // "Cannot read properties of undefined (reading 'reset')" error).
+    if (window.tinymce) {
+        try { tinymce.get('description-editor')?.remove(); } catch (e) {}
+        try { tinymce.get('ticket-terms-editor')?.remove(); } catch (e) {}
+    }
+    descriptionEditor = null;
+    ticketTermsEditor = null;
+
     const form = document.getElementById('create-event-form');
     if (form) form.reset();
 
@@ -996,9 +1034,43 @@ async function loadEventForEdit(eventId) {
         // Set the event ID so subsequent saves update instead of create
         document.getElementById('saved-event-id').value = eventId;
 
-        // Show status actions section (only in edit mode)
+        // Show status actions section ONLY for published events. While the
+        // event is in draft / pending_review / rejected, sold-out / postponed /
+        // cancelled / door-sales toggles aren't meaningful yet.
         const statusActions = document.getElementById('event-status-actions');
-        if (statusActions) statusActions.classList.remove('hidden');
+        const isAwaitingApprovalState = ['draft', 'pending_review', 'rejected'].includes(event.status);
+        if (statusActions) {
+            if (isAwaitingApprovalState) {
+                statusActions.classList.add('hidden');
+            } else {
+                statusActions.classList.remove('hidden');
+            }
+        }
+
+        // Toggle delete button in edit-mode header. Only available while the
+        // event is still in draft / pending / rejected; once published, deletion
+        // happens via dedicated cancel/refund flows.
+        const editDeleteBtn = document.getElementById('edit-delete-btn');
+        if (editDeleteBtn) {
+            if (isAwaitingApprovalState) {
+                editDeleteBtn.classList.remove('hidden');
+                editDeleteBtn.onclick = () => deleteEvent(event.id, event.name || event.title || '');
+            } else {
+                editDeleteBtn.classList.add('hidden');
+            }
+        }
+
+        // Rejection banner — show the reason so the organizer knows what to fix
+        const rejectionBanner = document.getElementById('rejection-banner');
+        const rejectionReason = document.getElementById('rejection-reason-text');
+        if (rejectionBanner) {
+            if (event.status === 'rejected' && event.rejection_reason) {
+                if (rejectionReason) rejectionReason.textContent = event.rejection_reason;
+                rejectionBanner.classList.remove('hidden');
+            } else {
+                rejectionBanner.classList.add('hidden');
+            }
+        }
 
         // Load current status flags
         currentEventStatus = {
@@ -1607,6 +1679,16 @@ function initEditors() {
         selector: '#description-editor',
         height: 250,
         placeholder: 'Scrie descrierea evenimentului aici...',
+        // Allow embedded video iframes (YouTube, Vimeo, Facebook, etc.). TinyMCE
+        // strips iframes by default; whitelist them with the attributes typical
+        // responsive embeds use, and add the media plugin's button to the toolbar.
+        plugins: 'lists link autolink media',
+        toolbar: 'bold italic underline | bullist numlist | link media | hr | undo redo | removeformat',
+        extended_valid_elements: 'iframe[src|frameborder|style|scrolling|class|width|height|name|align|allow|allowfullscreen|loading|referrerpolicy|title]',
+        valid_children: '+body[iframe],+div[iframe]',
+        media_live_embeds: true,
+        media_alt_source: false,
+        media_poster: false,
         setup: function(editor) {
             editor.on('Change KeyUp', function() { updateSummaries(); });
             editor.on('init', function() {
