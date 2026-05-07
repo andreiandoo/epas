@@ -362,6 +362,314 @@ class EventResource extends Resource
                             ])->columns(1),
                                     ]), // End Tab 1: Detalii
 
+                                // ========== TAB 2: VANZARI ==========
+                                SC\Tabs\Tab::make($t('Vânzări', 'Sales'))
+                                    ->key('vanzari')
+                                    ->icon('heroicon-o-chart-bar')
+                                    ->lazy()
+                                    ->schema([
+                        // 1. Quick Stats Card - Vânzări LIVE
+                        SC\Section::make(fn () => new HtmlString($t('Vânzări', 'Sales') . ' <span class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-500/20 text-green-400 ring-1 ring-inset ring-green-500/30">LIVE</span>'))
+                            ->icon('heroicon-o-chart-bar')
+                            ->compact()
+                            ->extraAttributes(['class' => 'fi-section-sales-live'])
+                            ->headerActions([
+                                Action::make('edit_views_count')
+                                    ->label($t('Vizualizări', 'Views'))
+                                    ->icon('heroicon-o-eye')
+                                    ->tooltip($t('Editează numărul de vizualizări', 'Edit view count'))
+                                    ->color('gray')
+                                    ->visible(fn (?Event $record) => $record && $record->exists)
+                                    ->fillForm(fn (?Event $record) => [
+                                        'views_count' => (int) ($record->views_count ?? 0),
+                                    ])
+                                    ->schema([
+                                        Forms\Components\TextInput::make('views_count')
+                                            ->label($t('Vizualizări', 'Views'))
+                                            ->numeric()
+                                            ->minValue(0)
+                                            ->required()
+                                            ->helperText($t(
+                                                'Modifică manual numărul afișat. Se folosește pentru a corecta date sau a echivala traficul migrat de pe alte platforme.',
+                                                'Override the displayed count. Used to correct data or match traffic migrated from other platforms.'
+                                            )),
+                                    ])
+                                    ->modalHeading($t('Editează vizualizări', 'Edit views'))
+                                    ->modalSubmitActionLabel($t('Salvează', 'Save'))
+                                    ->action(function (array $data, ?Event $record) use ($t): void {
+                                        if (!$record) return;
+                                        $record->update(['views_count' => (int) $data['views_count']]);
+                                        \Filament\Notifications\Notification::make()
+                                            ->title($t('Vizualizări actualizate', 'Views updated'))
+                                            ->success()
+                                            ->send();
+                                    }),
+                            ])
+                            ->schema([
+                                Forms\Components\Placeholder::make('stats_overview')
+                                    ->hiddenLabel()
+                                    ->content(function (?Event $record) use ($t) {
+                                        if (!$record || !$record->exists) {
+                                            return new HtmlString('<div class="text-sm text-gray-500">' . $t('Salvează evenimentul pentru a vedea statisticile.', 'Save the event to see statistics.') . '</div>');
+                                        }
+
+                                        // Revenue now comes from the "valid tickets only" breakdown below.
+                                        $eventId = $record->id;
+
+                                        // Count valid tickets — EXCLUDE external imports
+                                        // Use the same status filter as the "Bilete" button below so both numbers match.
+                                        $ticketsSold = \App\Models\Ticket::where(fn($q) => $q->where('event_id', $eventId)->orWhere('marketplace_event_id', $eventId))
+                                            ->whereIn('status', ['valid', 'used'])
+                                            ->whereHas('order', fn($q) => $q->where('source', '!=', 'external_import'))
+                                            ->count();
+
+                                        $totalCapacity = $record->general_quota ?? $record->capacity ?? $record->ticketTypes->sum(fn ($tt) => $tt->capacity ?? 0) ?? 0;
+                                        $views = $record->views ?? $record->views_count ?? 0;
+
+                                        $percentSold = $totalCapacity > 0 ? round(($ticketsSold / $totalCapacity) * 100) : 0;
+                                        $conversion = $views > 0 ? round(($ticketsSold / $views) * 100, 1) : 0;
+
+                                        $ticketsLabel = $t('Bilete', 'Tickets');
+                                        $revenueLabel = $t('Venituri (RON)', 'Revenue (RON)');
+                                        $capacityLabel = $t('Capacitate totală', 'Total capacity');
+                                        $conversionLabel = $t('Conversie', 'Conversion');
+                                        $viewsLabel = $t('Vizualizări', 'Views');
+
+                                        $statisticsUrl = static::getUrl('statistics', ['record' => $record]);
+                                        $analyticsUrl = static::getUrl('analytics', ['record' => $record]);
+                                        $statisticsLabel = $t('Statistici', 'Statistics');
+                                        $analyticsLabel = $t('Analiză', 'Analytics');
+
+                                        // Tickets & Orders counts and URLs — EXCLUDE external imports
+                                        $eventId = $record->id;
+                                        $ticketsQuery = \App\Models\Ticket::where(fn ($q) => $q->where('event_id', $eventId)->orWhere('marketplace_event_id', $eventId))
+                                            ->whereHas('order', fn($q) => $q->where('source', '!=', 'external_import'));
+                                        $ticketCountValid = (clone $ticketsQuery)->whereIn('status', ['valid', 'used'])->count();
+                                        $ticketCountCancelled = (clone $ticketsQuery)->where('status', 'cancelled')->count();
+                                        $ticketCountRefunded = (clone $ticketsQuery)->whereIn('status', ['refunded', 'void'])->count();
+                                        $ordersQuery = \App\Models\Order::where(fn ($q) => $q
+                                            ->where('event_id', $eventId)
+                                            ->orWhereHas('tickets', fn ($tq) => $tq->where('event_id', $eventId)->orWhere('marketplace_event_id', $eventId))
+                                        )->where('source', '!=', 'external_import');
+                                        $orderCountCompleted = (clone $ordersQuery)->whereIn('status', ['completed', 'confirmed'])->count();
+                                        $ticketsUrl = \App\Filament\Marketplace\Resources\TicketResource::getUrl('index') . '?event_id=' . $eventId;
+                                        $ordersUrl = \App\Filament\Marketplace\Resources\OrderResource::getUrl('index') . '?event_id=' . $eventId;
+                                        $ticketsBtnLabel = $t('Bilete', 'Tickets') . ($ticketCountValid > 0 ? " ({$ticketCountValid})" : '');
+                                        $ordersBtnLabel = $t('Comenzi', 'Orders') . ($orderCountCompleted > 0 ? " ({$orderCountCompleted})" : '');
+
+                                        $btnClass = 'inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-sm font-semibold rounded-lg transition-colors no-underline';
+
+                                        $cancelledLabel = $t('Anulate', 'Cancelled');
+                                        $refundedLabel = $t('Rambursate', 'Refunded');
+
+                                        // Shared helper: Revenue/Net/Commission/Extras/Discount all derived from
+                                        // the same breakdown. Revenue reflects money customers paid for CURRENTLY
+                                        // VALID tickets (excludes later-cancelled portion). See getSalesBreakdown.
+                                        $breakdown = self::getSalesBreakdown($record);
+                                        $totalRevenue = $breakdown['total_revenue'];
+                                        $totalNet = $breakdown['total_net'];
+                                        $totalCommission = $breakdown['total_commission'];
+                                        $totalExtras = $breakdown['total_extras'];
+                                        $totalDiscount = $breakdown['total_discount'];
+                                        $revenueFormatted = number_format($totalRevenue, 2, ',', '.');
+                                        $netLabel = $t('Net (RON)', 'Net (RON)');
+                                        $commissionLabel = $t('Comisioane (RON)', 'Commissions (RON)');
+                                        $extrasLabel = $t('Taxe / Asigurări (RON)', 'Fees / Insurance (RON)');
+                                        $discountLabel = $t('Discounturi (RON)', 'Discounts (RON)');
+                                        $netFormatted = number_format($totalNet, 2, ',', '.');
+                                        $commissionFormatted = number_format($totalCommission, 2, ',', '.');
+                                        $extrasFormatted = number_format($totalExtras, 2, ',', '.');
+                                        $discountFormatted = number_format($totalDiscount, 2, ',', '.');
+
+                                        return new HtmlString("
+                                            <div class='grid grid-cols-2 gap-3'>
+                                                <div class='p-3 text-center bg-gray-800 rounded-lg'>
+                                                    <div class='text-2xl font-bold text-white'>" . number_format($ticketsSold) . "</div>
+                                                    <div class='text-xs text-gray-400'>{$ticketsLabel}</div>
+                                                </div>
+                                                <div class='p-3 text-center bg-gray-800 rounded-lg'>
+                                                    <div class='text-2xl font-bold text-emerald-400'>{$revenueFormatted}</div>
+                                                    <div class='text-xs text-gray-400'>{$revenueLabel}</div>
+                                                </div>
+                                                <div class='p-3 text-center bg-gray-800 rounded-lg'>
+                                                    <div class='text-2xl font-bold text-red-400'>" . number_format($ticketCountCancelled) . "</div>
+                                                    <div class='text-xs text-gray-400'>{$cancelledLabel}</div>
+                                                </div>
+                                                <div class='p-3 text-center bg-gray-800 rounded-lg'>
+                                                    <div class='text-2xl font-bold text-amber-400'>" . number_format($ticketCountRefunded) . "</div>
+                                                    <div class='text-xs text-gray-400'>{$refundedLabel}</div>
+                                                </div>
+                                                <div class='p-3 text-center bg-gray-800 rounded-lg'>
+                                                    <div class='text-2xl font-bold text-emerald-300'>{$netFormatted}</div>
+                                                    <div class='text-xs text-gray-400'>{$netLabel}</div>
+                                                </div>
+                                                <div class='p-3 text-center bg-gray-800 rounded-lg'>
+                                                    <div class='text-2xl font-bold text-sky-400'>{$commissionFormatted}</div>
+                                                    <div class='text-xs text-gray-400'>{$commissionLabel}</div>
+                                                </div>
+                                            </div>
+                                            <div class='grid grid-cols-2 gap-3 mt-3'>
+                                                <div class='p-3 text-center bg-gray-800 rounded-lg'>
+                                                    <div class='text-2xl font-bold text-purple-400'>{$extrasFormatted}</div>
+                                                    <div class='text-xs text-gray-400'>{$extrasLabel}</div>
+                                                </div>
+                                                <div class='p-3 text-center bg-gray-800 rounded-lg'>
+                                                    <div class='text-2xl font-bold text-orange-400'>{$discountFormatted}</div>
+                                                    <div class='text-xs text-gray-400'>{$discountLabel}</div>
+                                                </div>
+                                            </div>
+                                            <div class='mt-3'>
+                                                <div class='flex justify-between mb-1 text-xs text-gray-400'>
+                                                    <span>{$capacityLabel}</span>
+                                                    <span>" . number_format($ticketsSold) . " / " . number_format($totalCapacity) . " ({$percentSold}%)</span>
+                                                </div>
+                                                <div class='h-2 overflow-hidden bg-gray-700 rounded-full'>
+                                                    <div class='h-full transition-all rounded-full' style='width: {$percentSold}%; background: linear-gradient(to right, #10b981, #34d399);'></div>
+                                                </div>
+                                            </div>
+                                            <div class='flex justify-between mt-3 text-xs'>
+                                                <span class='text-gray-400'>{$conversionLabel}</span>
+                                                <span class='font-semibold text-primary-400'>{$conversion}%</span>
+                                            </div>
+                                            <div class='flex justify-between mt-1 text-xs'>
+                                                <span class='text-gray-400'>{$viewsLabel}</span>
+                                                <span class='text-white'>" . number_format($views) . "</span>
+                                            </div>
+                                            <div class='grid grid-cols-2 gap-2 pt-3 mt-4 border-t border-gray-700'>
+                                                <a href='{$ticketsUrl}' class='{$btnClass} text-gray-200 bg-gray-700 hover:bg-gray-600'>
+                                                    <svg class='w-3.5 h-3.5' fill='none' stroke='currentColor' viewBox='0 0 24 24'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z'/></svg>
+                                                    {$ticketsBtnLabel}
+                                                </a>
+                                                <a href='{$ordersUrl}' class='{$btnClass} text-gray-200 bg-gray-700 hover:bg-gray-600'>
+                                                    <svg class='w-3.5 h-3.5' fill='none' stroke='currentColor' viewBox='0 0 24 24'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z'/></svg>
+                                                    {$ordersBtnLabel}
+                                                </a>
+                                            </div>
+                                            <div class='grid grid-cols-2 gap-2 mt-2'>
+                                                <a href='{$statisticsUrl}' class='{$btnClass} text-white bg-blue-600 hover:bg-blue-800'>
+                                                    <svg class='w-3.5 h-3.5' fill='none' stroke='currentColor' viewBox='0 0 24 24'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z'/></svg>
+                                                    {$statisticsLabel}
+                                                </a>
+                                                <a href='{$analyticsUrl}' class='{$btnClass} text-white bg-emerald-600 hover:bg-emerald-800'>
+                                                    <svg class='w-3.5 h-3.5' fill='none' stroke='currentColor' viewBox='0 0 24 24'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z'/></svg>
+                                                    {$analyticsLabel}
+                                                </a>
+                                            </div>
+                                        ");
+                                    }),
+
+                                Forms\Components\Placeholder::make('ticket_type_breakdown')
+                                    ->hiddenLabel()
+                                    ->content(function (?Event $record) use ($t) {
+                                        if (!$record || !$record->exists) return '';
+
+                                        $eventId = $record->id;
+                                        $totals = ['online' => 0, 'app' => 0, 'invitations' => 0];
+
+                                        // Pull per-type Net from the same breakdown used by the top metric so
+                                        // the table rows sum to the headline Net (discounts allocated, commission
+                                        // inheritance resolved, invitations excluded from Net).
+                                        $breakdown = self::getSalesBreakdown($record);
+                                        $perType = $breakdown['per_type']; // keyed by tt_id
+
+                                        $rows = $record->ticketTypes->map(function ($tt) use (&$totals, $perType) {
+                                            // Valid/cancelled counts include all non-external-import tickets
+                                            // (including invitations without an order) — displayed for inventory.
+                                            $base = \App\Models\Ticket::where('ticket_type_id', $tt->id)
+                                                ->where(function ($q) {
+                                                    $q->whereDoesntHave('order')
+                                                      ->orWhereHas('order', fn ($qq) => $qq->where('source', '!=', 'external_import'));
+                                                });
+                                            $valid = (clone $base)->whereIn('status', ['valid', 'used'])->count();
+                                            $cancelled = (clone $base)->where('status', 'cancelled')->count();
+                                            $stock = $tt->quota_total ?? $tt->capacity ?? 0;
+
+                                            // Net comes from the authoritative breakdown (paid orders only).
+                                            $netTotal = $perType[$tt->id]['net'] ?? 0.0;
+
+                                            $isInvitation = ($tt->name === 'Invitatie') || ($tt->meta['is_invitation'] ?? false);
+                                            if ($isInvitation) {
+                                                $totals['invitations'] += $valid;
+                                            } elseif ($tt->is_entry_ticket) {
+                                                $totals['app'] += $valid;
+                                            } else {
+                                                $totals['online'] += $valid;
+                                            }
+
+                                            return [
+                                                'name' => $tt->name,
+                                                'valid' => $valid,
+                                                'cancelled' => $cancelled,
+                                                'stock' => $stock,
+                                                'net' => $netTotal,
+                                            ];
+                                        });
+
+                                        $nameLabel = $t('Tip bilet', 'Ticket type');
+                                        $validLabel = $t('Valide', 'Valid');
+                                        $cancelledLabel = $t('Anulate', 'Cancelled');
+                                        $stockLabel = $t('Stoc', 'Stock');
+                                        $netLabel = $t('Net', 'Net');
+
+                                        $rowsHtml = '';
+                                        foreach ($rows as $r) {
+                                            $name = e($r['name'] ?? '—');
+                                            $netFmt = number_format($r['net'] ?? 0, 2, ',', '.');
+                                            $rowsHtml .= "
+                                                <tr class='border-t border-gray-700'>
+                                                    <td class='py-2 pr-2 text-gray-200'>{$name}</td>
+                                                    <td class='py-2 px-2 text-right text-emerald-400 font-semibold'>{$r['valid']}</td>
+                                                    <td class='py-2 px-2 text-right text-red-400 font-semibold'>{$r['cancelled']}</td>
+                                                    <td class='py-2 px-2 text-right text-gray-300'>{$r['stock']}</td>
+                                                    <td class='py-2 pl-2 text-right text-emerald-300 font-semibold'>{$netFmt}</td>
+                                                </tr>";
+                                        }
+
+                                        $exportUrl = url('/marketplace/tickets-export-csv?event_id=' . $eventId);
+                                        $exportLabel = $t('Export date', 'Export data');
+
+                                        $onlineLabel = $t('Online', 'Online');
+                                        $appLabel = $t('Aplicație', 'App');
+                                        $invitationsLabel = $t('Invitații', 'Invitations');
+
+                                        return new HtmlString("
+                                            <div class='pt-3 mt-3 border-t border-gray-700'>
+                                                <table class='w-full text-xs'>
+                                                    <thead>
+                                                        <tr class='text-gray-400 uppercase tracking-wide'>
+                                                            <th class='py-1 pr-2 text-left'>{$nameLabel}</th>
+                                                            <th class='py-1 px-2 text-right'>{$validLabel}</th>
+                                                            <th class='py-1 px-2 text-right'>{$cancelledLabel}</th>
+                                                            <th class='py-1 px-2 text-right'>{$stockLabel}</th>
+                                                            <th class='py-1 pl-2 text-right'>{$netLabel}</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>{$rowsHtml}</tbody>
+                                                </table>
+                                                <div class='grid grid-cols-3 gap-2 mt-3'>
+                                                    <div class='p-2 text-center bg-gray-800 rounded-lg'>
+                                                        <div class='text-lg font-bold text-emerald-400'>" . number_format($totals['online']) . "</div>
+                                                        <div class='text-[10px] text-gray-400 leading-tight'>{$onlineLabel}</div>
+                                                    </div>
+                                                    <div class='p-2 text-center bg-gray-800 rounded-lg'>
+                                                        <div class='text-lg font-bold text-sky-400'>" . number_format($totals['app']) . "</div>
+                                                        <div class='text-[10px] text-gray-400 leading-tight'>{$appLabel}</div>
+                                                    </div>
+                                                    <div class='p-2 text-center bg-gray-800 rounded-lg'>
+                                                        <div class='text-lg font-bold text-purple-400'>" . number_format($totals['invitations']) . "</div>
+                                                        <div class='text-[10px] text-gray-400 leading-tight'>{$invitationsLabel}</div>
+                                                    </div>
+                                                </div>
+                                                <a href='{$exportUrl}' class='inline-flex items-center justify-center w-full gap-1.5 px-3 py-2 mt-3 text-sm font-semibold text-white transition-colors rounded-lg bg-indigo-600 hover:bg-indigo-700 no-underline'>
+                                                    <svg class='w-4 h-4' fill='none' stroke='currentColor' viewBox='0 0 24 24'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3'/></svg>
+                                                    {$exportLabel}
+                                                </a>
+                                            </div>
+                                        ");
+                                    }),
+                            ]),
+                                    ]), // End Tab 2: Vanzari
+
                                 // ========== TAB 2: PROGRAM ==========
                                 SC\Tabs\Tab::make($t('Program', 'Schedule'))
                                     ->key('program')
@@ -3078,306 +3386,6 @@ class EventResource extends Resource
                                 ->columnSpanFull(),
                         ]),
 
-                        // 1. Quick Stats Card - Vânzări LIVE
-                        SC\Section::make(fn () => new HtmlString($t('Vânzări', 'Sales') . ' <span class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-500/20 text-green-400 ring-1 ring-inset ring-green-500/30">LIVE</span>'))
-                            ->icon('heroicon-o-chart-bar')
-                            ->compact()
-                            ->extraAttributes(['class' => 'fi-section-sales-live'])
-                            ->headerActions([
-                                Action::make('edit_views_count')
-                                    ->label($t('Vizualizări', 'Views'))
-                                    ->icon('heroicon-o-eye')
-                                    ->tooltip($t('Editează numărul de vizualizări', 'Edit view count'))
-                                    ->color('gray')
-                                    ->visible(fn (?Event $record) => $record && $record->exists)
-                                    ->fillForm(fn (?Event $record) => [
-                                        'views_count' => (int) ($record->views_count ?? 0),
-                                    ])
-                                    ->schema([
-                                        Forms\Components\TextInput::make('views_count')
-                                            ->label($t('Vizualizări', 'Views'))
-                                            ->numeric()
-                                            ->minValue(0)
-                                            ->required()
-                                            ->helperText($t(
-                                                'Modifică manual numărul afișat. Se folosește pentru a corecta date sau a echivala traficul migrat de pe alte platforme.',
-                                                'Override the displayed count. Used to correct data or match traffic migrated from other platforms.'
-                                            )),
-                                    ])
-                                    ->modalHeading($t('Editează vizualizări', 'Edit views'))
-                                    ->modalSubmitActionLabel($t('Salvează', 'Save'))
-                                    ->action(function (array $data, ?Event $record) use ($t): void {
-                                        if (!$record) return;
-                                        $record->update(['views_count' => (int) $data['views_count']]);
-                                        \Filament\Notifications\Notification::make()
-                                            ->title($t('Vizualizări actualizate', 'Views updated'))
-                                            ->success()
-                                            ->send();
-                                    }),
-                            ])
-                            ->schema([
-                                Forms\Components\Placeholder::make('stats_overview')
-                                    ->hiddenLabel()
-                                    ->content(function (?Event $record) use ($t) {
-                                        if (!$record || !$record->exists) {
-                                            return new HtmlString('<div class="text-sm text-gray-500">' . $t('Salvează evenimentul pentru a vedea statisticile.', 'Save the event to see statistics.') . '</div>');
-                                        }
-
-                                        // Revenue now comes from the "valid tickets only" breakdown below.
-                                        $eventId = $record->id;
-
-                                        // Count valid tickets — EXCLUDE external imports
-                                        // Use the same status filter as the "Bilete" button below so both numbers match.
-                                        $ticketsSold = \App\Models\Ticket::where(fn($q) => $q->where('event_id', $eventId)->orWhere('marketplace_event_id', $eventId))
-                                            ->whereIn('status', ['valid', 'used'])
-                                            ->whereHas('order', fn($q) => $q->where('source', '!=', 'external_import'))
-                                            ->count();
-
-                                        $totalCapacity = $record->general_quota ?? $record->capacity ?? $record->ticketTypes->sum(fn ($tt) => $tt->capacity ?? 0) ?? 0;
-                                        $views = $record->views ?? $record->views_count ?? 0;
-
-                                        $percentSold = $totalCapacity > 0 ? round(($ticketsSold / $totalCapacity) * 100) : 0;
-                                        $conversion = $views > 0 ? round(($ticketsSold / $views) * 100, 1) : 0;
-
-                                        $ticketsLabel = $t('Bilete', 'Tickets');
-                                        $revenueLabel = $t('Venituri (RON)', 'Revenue (RON)');
-                                        $capacityLabel = $t('Capacitate totală', 'Total capacity');
-                                        $conversionLabel = $t('Conversie', 'Conversion');
-                                        $viewsLabel = $t('Vizualizări', 'Views');
-
-                                        $statisticsUrl = static::getUrl('statistics', ['record' => $record]);
-                                        $analyticsUrl = static::getUrl('analytics', ['record' => $record]);
-                                        $statisticsLabel = $t('Statistici', 'Statistics');
-                                        $analyticsLabel = $t('Analiză', 'Analytics');
-
-                                        // Tickets & Orders counts and URLs — EXCLUDE external imports
-                                        $eventId = $record->id;
-                                        $ticketsQuery = \App\Models\Ticket::where(fn ($q) => $q->where('event_id', $eventId)->orWhere('marketplace_event_id', $eventId))
-                                            ->whereHas('order', fn($q) => $q->where('source', '!=', 'external_import'));
-                                        $ticketCountValid = (clone $ticketsQuery)->whereIn('status', ['valid', 'used'])->count();
-                                        $ticketCountCancelled = (clone $ticketsQuery)->where('status', 'cancelled')->count();
-                                        $ticketCountRefunded = (clone $ticketsQuery)->whereIn('status', ['refunded', 'void'])->count();
-                                        $ordersQuery = \App\Models\Order::where(fn ($q) => $q
-                                            ->where('event_id', $eventId)
-                                            ->orWhereHas('tickets', fn ($tq) => $tq->where('event_id', $eventId)->orWhere('marketplace_event_id', $eventId))
-                                        )->where('source', '!=', 'external_import');
-                                        $orderCountCompleted = (clone $ordersQuery)->whereIn('status', ['completed', 'confirmed'])->count();
-                                        $ticketsUrl = \App\Filament\Marketplace\Resources\TicketResource::getUrl('index') . '?event_id=' . $eventId;
-                                        $ordersUrl = \App\Filament\Marketplace\Resources\OrderResource::getUrl('index') . '?event_id=' . $eventId;
-                                        $ticketsBtnLabel = $t('Bilete', 'Tickets') . ($ticketCountValid > 0 ? " ({$ticketCountValid})" : '');
-                                        $ordersBtnLabel = $t('Comenzi', 'Orders') . ($orderCountCompleted > 0 ? " ({$orderCountCompleted})" : '');
-
-                                        $btnClass = 'inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-sm font-semibold rounded-lg transition-colors no-underline';
-
-                                        $cancelledLabel = $t('Anulate', 'Cancelled');
-                                        $refundedLabel = $t('Rambursate', 'Refunded');
-
-                                        // Shared helper: Revenue/Net/Commission/Extras/Discount all derived from
-                                        // the same breakdown. Revenue reflects money customers paid for CURRENTLY
-                                        // VALID tickets (excludes later-cancelled portion). See getSalesBreakdown.
-                                        $breakdown = self::getSalesBreakdown($record);
-                                        $totalRevenue = $breakdown['total_revenue'];
-                                        $totalNet = $breakdown['total_net'];
-                                        $totalCommission = $breakdown['total_commission'];
-                                        $totalExtras = $breakdown['total_extras'];
-                                        $totalDiscount = $breakdown['total_discount'];
-                                        $revenueFormatted = number_format($totalRevenue, 2, ',', '.');
-                                        $netLabel = $t('Net (RON)', 'Net (RON)');
-                                        $commissionLabel = $t('Comisioane (RON)', 'Commissions (RON)');
-                                        $extrasLabel = $t('Taxe / Asigurări (RON)', 'Fees / Insurance (RON)');
-                                        $discountLabel = $t('Discounturi (RON)', 'Discounts (RON)');
-                                        $netFormatted = number_format($totalNet, 2, ',', '.');
-                                        $commissionFormatted = number_format($totalCommission, 2, ',', '.');
-                                        $extrasFormatted = number_format($totalExtras, 2, ',', '.');
-                                        $discountFormatted = number_format($totalDiscount, 2, ',', '.');
-
-                                        return new HtmlString("
-                                            <div class='grid grid-cols-2 gap-3'>
-                                                <div class='p-3 text-center bg-gray-800 rounded-lg'>
-                                                    <div class='text-2xl font-bold text-white'>" . number_format($ticketsSold) . "</div>
-                                                    <div class='text-xs text-gray-400'>{$ticketsLabel}</div>
-                                                </div>
-                                                <div class='p-3 text-center bg-gray-800 rounded-lg'>
-                                                    <div class='text-2xl font-bold text-emerald-400'>{$revenueFormatted}</div>
-                                                    <div class='text-xs text-gray-400'>{$revenueLabel}</div>
-                                                </div>
-                                                <div class='p-3 text-center bg-gray-800 rounded-lg'>
-                                                    <div class='text-2xl font-bold text-red-400'>" . number_format($ticketCountCancelled) . "</div>
-                                                    <div class='text-xs text-gray-400'>{$cancelledLabel}</div>
-                                                </div>
-                                                <div class='p-3 text-center bg-gray-800 rounded-lg'>
-                                                    <div class='text-2xl font-bold text-amber-400'>" . number_format($ticketCountRefunded) . "</div>
-                                                    <div class='text-xs text-gray-400'>{$refundedLabel}</div>
-                                                </div>
-                                                <div class='p-3 text-center bg-gray-800 rounded-lg'>
-                                                    <div class='text-2xl font-bold text-emerald-300'>{$netFormatted}</div>
-                                                    <div class='text-xs text-gray-400'>{$netLabel}</div>
-                                                </div>
-                                                <div class='p-3 text-center bg-gray-800 rounded-lg'>
-                                                    <div class='text-2xl font-bold text-sky-400'>{$commissionFormatted}</div>
-                                                    <div class='text-xs text-gray-400'>{$commissionLabel}</div>
-                                                </div>
-                                            </div>
-                                            <div class='grid grid-cols-2 gap-3 mt-3'>
-                                                <div class='p-3 text-center bg-gray-800 rounded-lg'>
-                                                    <div class='text-2xl font-bold text-purple-400'>{$extrasFormatted}</div>
-                                                    <div class='text-xs text-gray-400'>{$extrasLabel}</div>
-                                                </div>
-                                                <div class='p-3 text-center bg-gray-800 rounded-lg'>
-                                                    <div class='text-2xl font-bold text-orange-400'>{$discountFormatted}</div>
-                                                    <div class='text-xs text-gray-400'>{$discountLabel}</div>
-                                                </div>
-                                            </div>
-                                            <div class='mt-3'>
-                                                <div class='flex justify-between mb-1 text-xs text-gray-400'>
-                                                    <span>{$capacityLabel}</span>
-                                                    <span>" . number_format($ticketsSold) . " / " . number_format($totalCapacity) . " ({$percentSold}%)</span>
-                                                </div>
-                                                <div class='h-2 overflow-hidden bg-gray-700 rounded-full'>
-                                                    <div class='h-full transition-all rounded-full' style='width: {$percentSold}%; background: linear-gradient(to right, #10b981, #34d399);'></div>
-                                                </div>
-                                            </div>
-                                            <div class='flex justify-between mt-3 text-xs'>
-                                                <span class='text-gray-400'>{$conversionLabel}</span>
-                                                <span class='font-semibold text-primary-400'>{$conversion}%</span>
-                                            </div>
-                                            <div class='flex justify-between mt-1 text-xs'>
-                                                <span class='text-gray-400'>{$viewsLabel}</span>
-                                                <span class='text-white'>" . number_format($views) . "</span>
-                                            </div>
-                                            <div class='grid grid-cols-2 gap-2 pt-3 mt-4 border-t border-gray-700'>
-                                                <a href='{$ticketsUrl}' class='{$btnClass} text-gray-200 bg-gray-700 hover:bg-gray-600'>
-                                                    <svg class='w-3.5 h-3.5' fill='none' stroke='currentColor' viewBox='0 0 24 24'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z'/></svg>
-                                                    {$ticketsBtnLabel}
-                                                </a>
-                                                <a href='{$ordersUrl}' class='{$btnClass} text-gray-200 bg-gray-700 hover:bg-gray-600'>
-                                                    <svg class='w-3.5 h-3.5' fill='none' stroke='currentColor' viewBox='0 0 24 24'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z'/></svg>
-                                                    {$ordersBtnLabel}
-                                                </a>
-                                            </div>
-                                            <div class='grid grid-cols-2 gap-2 mt-2'>
-                                                <a href='{$statisticsUrl}' class='{$btnClass} text-white bg-blue-600 hover:bg-blue-800'>
-                                                    <svg class='w-3.5 h-3.5' fill='none' stroke='currentColor' viewBox='0 0 24 24'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z'/></svg>
-                                                    {$statisticsLabel}
-                                                </a>
-                                                <a href='{$analyticsUrl}' class='{$btnClass} text-white bg-emerald-600 hover:bg-emerald-800'>
-                                                    <svg class='w-3.5 h-3.5' fill='none' stroke='currentColor' viewBox='0 0 24 24'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z'/></svg>
-                                                    {$analyticsLabel}
-                                                </a>
-                                            </div>
-                                        ");
-                                    }),
-
-                                Forms\Components\Placeholder::make('ticket_type_breakdown')
-                                    ->hiddenLabel()
-                                    ->content(function (?Event $record) use ($t) {
-                                        if (!$record || !$record->exists) return '';
-
-                                        $eventId = $record->id;
-                                        $totals = ['online' => 0, 'app' => 0, 'invitations' => 0];
-
-                                        // Pull per-type Net from the same breakdown used by the top metric so
-                                        // the table rows sum to the headline Net (discounts allocated, commission
-                                        // inheritance resolved, invitations excluded from Net).
-                                        $breakdown = self::getSalesBreakdown($record);
-                                        $perType = $breakdown['per_type']; // keyed by tt_id
-
-                                        $rows = $record->ticketTypes->map(function ($tt) use (&$totals, $perType) {
-                                            // Valid/cancelled counts include all non-external-import tickets
-                                            // (including invitations without an order) — displayed for inventory.
-                                            $base = \App\Models\Ticket::where('ticket_type_id', $tt->id)
-                                                ->where(function ($q) {
-                                                    $q->whereDoesntHave('order')
-                                                      ->orWhereHas('order', fn ($qq) => $qq->where('source', '!=', 'external_import'));
-                                                });
-                                            $valid = (clone $base)->whereIn('status', ['valid', 'used'])->count();
-                                            $cancelled = (clone $base)->where('status', 'cancelled')->count();
-                                            $stock = $tt->quota_total ?? $tt->capacity ?? 0;
-
-                                            // Net comes from the authoritative breakdown (paid orders only).
-                                            $netTotal = $perType[$tt->id]['net'] ?? 0.0;
-
-                                            $isInvitation = ($tt->name === 'Invitatie') || ($tt->meta['is_invitation'] ?? false);
-                                            if ($isInvitation) {
-                                                $totals['invitations'] += $valid;
-                                            } elseif ($tt->is_entry_ticket) {
-                                                $totals['app'] += $valid;
-                                            } else {
-                                                $totals['online'] += $valid;
-                                            }
-
-                                            return [
-                                                'name' => $tt->name,
-                                                'valid' => $valid,
-                                                'cancelled' => $cancelled,
-                                                'stock' => $stock,
-                                                'net' => $netTotal,
-                                            ];
-                                        });
-
-                                        $nameLabel = $t('Tip bilet', 'Ticket type');
-                                        $validLabel = $t('Valide', 'Valid');
-                                        $cancelledLabel = $t('Anulate', 'Cancelled');
-                                        $stockLabel = $t('Stoc', 'Stock');
-                                        $netLabel = $t('Net', 'Net');
-
-                                        $rowsHtml = '';
-                                        foreach ($rows as $r) {
-                                            $name = e($r['name'] ?? '—');
-                                            $netFmt = number_format($r['net'] ?? 0, 2, ',', '.');
-                                            $rowsHtml .= "
-                                                <tr class='border-t border-gray-700'>
-                                                    <td class='py-2 pr-2 text-gray-200'>{$name}</td>
-                                                    <td class='py-2 px-2 text-right text-emerald-400 font-semibold'>{$r['valid']}</td>
-                                                    <td class='py-2 px-2 text-right text-red-400 font-semibold'>{$r['cancelled']}</td>
-                                                    <td class='py-2 px-2 text-right text-gray-300'>{$r['stock']}</td>
-                                                    <td class='py-2 pl-2 text-right text-emerald-300 font-semibold'>{$netFmt}</td>
-                                                </tr>";
-                                        }
-
-                                        $exportUrl = url('/marketplace/tickets-export-csv?event_id=' . $eventId);
-                                        $exportLabel = $t('Export date', 'Export data');
-
-                                        $onlineLabel = $t('Online', 'Online');
-                                        $appLabel = $t('Aplicație', 'App');
-                                        $invitationsLabel = $t('Invitații', 'Invitations');
-
-                                        return new HtmlString("
-                                            <div class='pt-3 mt-3 border-t border-gray-700'>
-                                                <table class='w-full text-xs'>
-                                                    <thead>
-                                                        <tr class='text-gray-400 uppercase tracking-wide'>
-                                                            <th class='py-1 pr-2 text-left'>{$nameLabel}</th>
-                                                            <th class='py-1 px-2 text-right'>{$validLabel}</th>
-                                                            <th class='py-1 px-2 text-right'>{$cancelledLabel}</th>
-                                                            <th class='py-1 px-2 text-right'>{$stockLabel}</th>
-                                                            <th class='py-1 pl-2 text-right'>{$netLabel}</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>{$rowsHtml}</tbody>
-                                                </table>
-                                                <div class='grid grid-cols-3 gap-2 mt-3'>
-                                                    <div class='p-2 text-center bg-gray-800 rounded-lg'>
-                                                        <div class='text-lg font-bold text-emerald-400'>" . number_format($totals['online']) . "</div>
-                                                        <div class='text-[10px] text-gray-400 leading-tight'>{$onlineLabel}</div>
-                                                    </div>
-                                                    <div class='p-2 text-center bg-gray-800 rounded-lg'>
-                                                        <div class='text-lg font-bold text-sky-400'>" . number_format($totals['app']) . "</div>
-                                                        <div class='text-[10px] text-gray-400 leading-tight'>{$appLabel}</div>
-                                                    </div>
-                                                    <div class='p-2 text-center bg-gray-800 rounded-lg'>
-                                                        <div class='text-lg font-bold text-purple-400'>" . number_format($totals['invitations']) . "</div>
-                                                        <div class='text-[10px] text-gray-400 leading-tight'>{$invitationsLabel}</div>
-                                                    </div>
-                                                </div>
-                                                <a href='{$exportUrl}' class='inline-flex items-center justify-center w-full gap-1.5 px-3 py-2 mt-3 text-sm font-semibold text-white transition-colors rounded-lg bg-indigo-600 hover:bg-indigo-700 no-underline'>
-                                                    <svg class='w-4 h-4' fill='none' stroke='currentColor' viewBox='0 0 24 24'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3'/></svg>
-                                                    {$exportLabel}
-                                                </a>
-                                            </div>
-                                        ");
-                                    }),
-                            ]),
 
                         // External Sales Section (only if external imports exist)
                         SC\Section::make(fn () => new HtmlString($t('Vânzări terți', 'Third-party Sales') . ' <span class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-indigo-500/20 text-indigo-400 ring-1 ring-inset ring-indigo-500/30">EXTERN</span>'))
