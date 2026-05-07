@@ -1190,15 +1190,20 @@ function showCreateForm() {
     history.pushState({}, '', '/organizator/events?action=create');
     toggleAccordion(1);
     loadCategories();
+
+    // Order matters: resetFormState() calls tinymce.get(...).remove() to
+    // tear down any lingering editor instances from a previous edit
+    // session. We must run that BEFORE initEditors() — on browsers where
+    // TinyMCE 6 attaches synchronously (modern Chrome / Edge), the
+    // earlier order destroyed the editor right after creating it, leaving
+    // both Descriere completă and Condiții eveniment as bare textareas.
+    resetFormState();
     initEditors();
     initVenueSearch();
     initArtistSearch();
     initGenreSearch();
     initDragDrop();
     initShortDescWordCount();
-
-    // Reset form state for new event
-    resetFormState();
 }
 
 function resetFormState() {
