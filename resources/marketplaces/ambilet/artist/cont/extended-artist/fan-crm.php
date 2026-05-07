@@ -10,7 +10,7 @@
  */
 require_once dirname(__DIR__, 3) . '/includes/config.php';
 
-$pageTitle = 'Extended Artist — Fan CRM';
+$pageTitle = 'Premium — Fan CRM';
 $bodyClass = 'min-h-screen bg-surface font-sans';
 $cssBundle = 'account';
 require_once dirname(__DIR__, 3) . '/includes/head.php';
@@ -39,53 +39,53 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
 
 <?php require dirname(__DIR__) . '/_partials/sidebar.php'; ?>
 
-<main class="lg:ml-64 pt-16 lg:pt-0 min-h-screen" x-data="fanCrm()" x-init="init()" x-cloak>
+<main class="min-h-screen pt-16 lg:ml-64 lg:pt-0" x-data="fanCrm()" x-init="init()" x-cloak>
     <div class="p-4 lg:p-8">
 
         <!-- Page Header -->
         <div class="mb-6">
             <div class="flex items-center gap-2 mb-2">
                 <span class="pro-badge">PRO</span>
-                <span class="text-xs text-muted uppercase tracking-wider font-semibold">Extended Artist · Audience Analytics</span>
+                <span class="text-xs font-semibold tracking-wider uppercase text-muted">Extended Artist · Audience Analytics</span>
             </div>
-            <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+            <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                 <div>
-                    <h1 class="text-2xl lg:text-3xl font-bold text-secondary">Fan CRM</h1>
-                    <p class="text-muted mt-1">Înțelegere profundă a publicului tău — cine sunt, unde locuiesc, ce iubesc</p>
+                    <h1 class="text-2xl font-bold lg:text-3xl text-secondary">Fan CRM</h1>
+                    <p class="mt-1 text-muted">Înțelegere profundă a publicului tău — cine sunt, unde locuiesc, ce iubesc</p>
                 </div>
             </div>
         </div>
 
         <!-- GDPR notice -->
-        <div class="mb-6 bg-blue-50 border border-blue-200 rounded-xl p-3 flex items-start gap-2">
+        <div class="flex items-start gap-2 p-3 mb-6 border border-blue-200 bg-blue-50 rounded-xl">
             <svg class="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
             <p class="text-xs text-blue-900">Date conforme GDPR — toate cifrele și hărțile sunt agregate. Datele individuale (Listă fani, VIP) folosesc doar fanii care au consimțit la partajare în ToS.</p>
         </div>
 
         <!-- Loading -->
-        <div x-show="loading" class="bg-white rounded-2xl border border-border p-12 text-center text-muted">
+        <div x-show="loading" class="p-12 text-center bg-white border rounded-2xl border-border text-muted">
             <div class="inline-flex items-center gap-3">
-                <span class="inline-block w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin"></span>
+                <span class="inline-block w-5 h-5 border-2 rounded-full border-primary border-t-transparent animate-spin"></span>
                 <span>Se încarcă datele...</span>
             </div>
         </div>
 
         <div x-show="!loading" class="relative">
             <!-- Per-tab loader overlay -->
-            <div x-show="tabLoading" x-cloak class="absolute inset-0 z-10 bg-white/70 backdrop-blur-sm flex items-center justify-center rounded-2xl">
-                <div class="inline-flex items-center gap-3 bg-white shadow-lg border border-border rounded-xl px-5 py-3">
-                    <span class="inline-block w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin"></span>
-                    <span class="text-sm text-secondary font-medium">Se încarcă...</span>
+            <div x-show="tabLoading" x-cloak class="absolute inset-0 z-10 flex items-center justify-center bg-white/70 backdrop-blur-sm rounded-2xl">
+                <div class="inline-flex items-center gap-3 px-5 py-3 bg-white border shadow-lg border-border rounded-xl">
+                    <span class="inline-block w-5 h-5 border-2 rounded-full border-primary border-t-transparent animate-spin"></span>
+                    <span class="text-sm font-medium text-secondary">Se încarcă...</span>
                 </div>
             </div>
             <!-- Tabs -->
-            <div class="bg-white rounded-2xl border border-border overflow-hidden mb-6">
-                <div class="border-b border-border overflow-x-auto">
+            <div class="mb-6 overflow-hidden bg-white border rounded-2xl border-border">
+                <div class="overflow-x-auto border-b border-border">
                     <div class="flex gap-1 p-2 min-w-max">
                         <template x-for="t in tabs" :key="t.id">
                             <button @click="setTab(t.id)"
                                     :class="tab === t.id ? 'bg-primary text-white' : 'text-muted hover:bg-surface hover:text-secondary'"
-                                    class="px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors">
+                                    class="px-4 py-2 text-sm font-medium transition-colors rounded-lg whitespace-nowrap">
                                 <span x-text="t.label"></span>
                             </button>
                         </template>
@@ -96,56 +96,56 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
             <!-- ============ TAB: OVERVIEW ============ -->
             <div x-show="tab === 'overview'" class="space-y-6">
                 <!-- KPIs -->
-                <div class="grid grid-cols-2 lg:grid-cols-5 gap-4">
-                    <div class="bg-white border border-border rounded-2xl p-5">
-                        <p class="text-xs text-muted uppercase tracking-wider font-semibold mb-2">Total fani</p>
+                <div class="grid grid-cols-2 gap-4 lg:grid-cols-5">
+                    <div class="p-5 bg-white border border-border rounded-2xl">
+                        <p class="mb-2 text-xs font-semibold tracking-wider uppercase text-muted">Total fani</p>
                         <p class="text-2xl font-bold text-secondary" x-text="formatNumber(overview.kpis?.total_fans)"></p>
                     </div>
-                    <div class="bg-white border border-border rounded-2xl p-5">
-                        <p class="text-xs text-muted uppercase tracking-wider font-semibold mb-2">Fani noi (6L)</p>
+                    <div class="p-5 bg-white border border-border rounded-2xl">
+                        <p class="mb-2 text-xs font-semibold tracking-wider uppercase text-muted">Fani noi (6L)</p>
                         <p class="text-2xl font-bold text-secondary" x-text="formatNumber(overview.kpis?.new_fans)"></p>
-                        <p class="text-xs mt-1" :class="overview.kpis?.new_fans_trend >= 0 ? 'text-success' : 'text-error'">
+                        <p class="mt-1 text-xs" :class="overview.kpis?.new_fans_trend >= 0 ? 'text-success' : 'text-error'">
                             <span x-text="(overview.kpis?.new_fans_trend >= 0 ? '+' : '') + (overview.kpis?.new_fans_trend ?? 0) + '%'"></span> vs perioada anterioară
                         </p>
                     </div>
-                    <div class="bg-white border border-border rounded-2xl p-5">
-                        <p class="text-xs text-muted uppercase tracking-wider font-semibold mb-2">Retenție</p>
+                    <div class="p-5 bg-white border border-border rounded-2xl">
+                        <p class="mb-2 text-xs font-semibold tracking-wider uppercase text-muted">Retenție</p>
                         <p class="text-2xl font-bold text-secondary" x-text="(overview.kpis?.retention_rate ?? 0) + '%'"></p>
-                        <p class="text-xs text-muted mt-1">2+ evenimente</p>
+                        <p class="mt-1 text-xs text-muted">2+ evenimente</p>
                     </div>
-                    <div class="bg-white border border-border rounded-2xl p-5">
-                        <p class="text-xs text-muted uppercase tracking-wider font-semibold mb-2">LTV mediu</p>
+                    <div class="p-5 bg-white border border-border rounded-2xl">
+                        <p class="mb-2 text-xs font-semibold tracking-wider uppercase text-muted">LTV mediu</p>
                         <p class="text-2xl font-bold text-secondary" x-text="formatNumber(overview.kpis?.avg_ltv) + ' RON'"></p>
                     </div>
-                    <div class="bg-white border border-border rounded-2xl p-5">
-                        <p class="text-xs text-muted uppercase tracking-wider font-semibold mb-2">Orașe</p>
+                    <div class="p-5 bg-white border border-border rounded-2xl">
+                        <p class="mb-2 text-xs font-semibold tracking-wider uppercase text-muted">Orașe</p>
                         <p class="text-2xl font-bold text-secondary" x-text="formatNumber(overview.kpis?.cities_covered)"></p>
                     </div>
                 </div>
 
                 <!-- Growth + Fan Type Charts -->
-                <div class="grid lg:grid-cols-2 gap-4">
-                    <div class="bg-white border border-border rounded-2xl p-5">
-                        <h3 class="font-bold text-secondary mb-1">Creștere fani (12 luni)</h3>
-                        <p class="text-sm text-muted mb-4">Fani noi vs revenire</p>
+                <div class="grid gap-4 lg:grid-cols-2">
+                    <div class="p-5 bg-white border border-border rounded-2xl">
+                        <h3 class="mb-1 font-bold text-secondary">Creștere fani (12 luni)</h3>
+                        <p class="mb-4 text-sm text-muted">Fani noi vs revenire</p>
                         <div class="relative h-[260px]"><canvas id="growthChart"></canvas></div>
                     </div>
-                    <div class="bg-white border border-border rounded-2xl p-5">
-                        <h3 class="font-bold text-secondary mb-1">Distribuție tipuri</h3>
-                        <p class="text-sm text-muted mb-4">VIP / Loiali / Noi / Dormiți</p>
+                    <div class="p-5 bg-white border border-border rounded-2xl">
+                        <h3 class="mb-1 font-bold text-secondary">Distribuție tipuri</h3>
+                        <p class="mb-4 text-sm text-muted">VIP / Loiali / Noi / Dormiți</p>
                         <div class="relative h-[260px]"><canvas id="fanTypeChart"></canvas></div>
                     </div>
                 </div>
 
                 <!-- Top Cities + Countries + Dormant -->
-                <div class="grid lg:grid-cols-3 gap-4">
-                    <div class="bg-white border border-border rounded-2xl p-5">
-                        <h3 class="font-bold text-secondary mb-3">Top orașe</h3>
+                <div class="grid gap-4 lg:grid-cols-3">
+                    <div class="p-5 bg-white border border-border rounded-2xl">
+                        <h3 class="mb-3 font-bold text-secondary">Top orașe</h3>
                         <div class="space-y-2">
                             <template x-for="(city, idx) in overview.top_cities || []" :key="idx">
-                                <div class="flex items-center justify-between p-2 bg-surface rounded-lg">
+                                <div class="flex items-center justify-between p-2 rounded-lg bg-surface">
                                     <div>
-                                        <p class="font-semibold text-sm text-secondary" x-text="city.name"></p>
+                                        <p class="text-sm font-semibold text-secondary" x-text="city.name"></p>
                                         <p class="text-xs text-muted" x-text="city.events + ' evenimente'"></p>
                                     </div>
                                     <span class="text-sm font-bold text-primary" x-text="formatNumber(city.fans)"></span>
@@ -154,31 +154,31 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                             <p x-show="!(overview.top_cities || []).length" class="text-sm text-muted">Niciun oraș încă.</p>
                         </div>
                     </div>
-                    <div class="bg-white border border-border rounded-2xl p-5">
-                        <h3 class="font-bold text-secondary mb-3">Țări</h3>
+                    <div class="p-5 bg-white border border-border rounded-2xl">
+                        <h3 class="mb-3 font-bold text-secondary">Țări</h3>
                         <div class="space-y-2">
                             <template x-for="(country, idx) in overview.countries || []" :key="idx">
                                 <div>
-                                    <div class="flex items-center justify-between text-sm mb-1">
+                                    <div class="flex items-center justify-between mb-1 text-sm">
                                         <span class="font-medium text-secondary"><span x-text="country.flag"></span> <span x-text="country.name"></span></span>
                                         <span class="text-muted"><span x-text="country.pct"></span>%</span>
                                     </div>
-                                    <div class="h-2 bg-surface rounded-full overflow-hidden">
-                                        <div class="h-full bg-primary rounded-full" :style="`width: ${country.pct}%`"></div>
+                                    <div class="h-2 overflow-hidden rounded-full bg-surface">
+                                        <div class="h-full rounded-full bg-primary" :style="`width: ${country.pct}%`"></div>
                                     </div>
                                 </div>
                             </template>
                             <p x-show="!(overview.countries || []).length" class="text-sm text-muted">Date insuficiente.</p>
                         </div>
                     </div>
-                    <div class="bg-white border border-border rounded-2xl p-5">
-                        <h3 class="font-bold text-secondary mb-3">🌙 Orașe „dormite"</h3>
-                        <p class="text-xs text-muted mb-3">Fani locali, dar nu ai mai cântat de mult</p>
+                    <div class="p-5 bg-white border border-border rounded-2xl">
+                        <h3 class="mb-3 font-bold text-secondary">🌙 Orașe „dormite"</h3>
+                        <p class="mb-3 text-xs text-muted">Fani locali, dar nu ai mai cântat de mult</p>
                         <div class="space-y-2">
                             <template x-for="(c, idx) in overview.dormant_cities || []" :key="idx">
-                                <div class="flex items-center justify-between p-2 bg-warning/5 border border-warning/20 rounded-lg">
+                                <div class="flex items-center justify-between p-2 border rounded-lg bg-warning/5 border-warning/20">
                                     <div>
-                                        <p class="font-semibold text-sm text-secondary" x-text="c.name"></p>
+                                        <p class="text-sm font-semibold text-secondary" x-text="c.name"></p>
                                         <p class="text-xs text-muted" x-text="c.fans + ' fani · ultimul concert ' + (c.lastEvent || '?')"></p>
                                     </div>
                                 </div>
@@ -189,12 +189,12 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                 </div>
 
                 <!-- Insights -->
-                <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4" x-show="(overview.insights || []).length">
+                <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" x-show="(overview.insights || []).length">
                     <template x-for="(insight, idx) in overview.insights || []" :key="idx">
-                        <div class="bg-gradient-to-br from-accent/5 to-primary/5 border border-accent/20 rounded-2xl p-5 flex items-start gap-3">
-                            <span class="text-2xl flex-shrink-0" x-text="insight.icon"></span>
+                        <div class="flex items-start gap-3 p-5 border bg-gradient-to-br from-accent/5 to-primary/5 border-accent/20 rounded-2xl">
+                            <span class="flex-shrink-0 text-2xl" x-text="insight.icon"></span>
                             <div>
-                                <p class="font-bold text-secondary mb-1" x-text="insight.title"></p>
+                                <p class="mb-1 font-bold text-secondary" x-text="insight.title"></p>
                                 <p class="text-sm text-secondary" x-text="insight.text"></p>
                             </div>
                         </div>
@@ -204,16 +204,16 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
 
             <!-- ============ TAB: MAP ============ -->
             <div x-show="tab === 'map'" class="space-y-4">
-                <div class="bg-white border border-border rounded-2xl p-5">
+                <div class="p-5 bg-white border border-border rounded-2xl">
                     <div class="flex items-center justify-between mb-4">
                         <h3 class="font-bold text-secondary">Hartă fani</h3>
-                        <div class="inline-flex bg-surface rounded-lg p-1">
-                            <button @click="mapView='heat'; renderMap()" :class="mapView==='heat' ? 'bg-white shadow-sm text-secondary' : 'text-muted'" class="px-3 py-1 rounded text-sm font-medium">Heatmap</button>
-                            <button @click="mapView='pins'; renderMap()" :class="mapView==='pins' ? 'bg-white shadow-sm text-secondary' : 'text-muted'" class="px-3 py-1 rounded text-sm font-medium">Pin-uri</button>
+                        <div class="inline-flex p-1 rounded-lg bg-surface">
+                            <button @click="mapView='heat'; renderMap()" :class="mapView==='heat' ? 'bg-white shadow-sm text-secondary' : 'text-muted'" class="px-3 py-1 text-sm font-medium rounded">Heatmap</button>
+                            <button @click="mapView='pins'; renderMap()" :class="mapView==='pins' ? 'bg-white shadow-sm text-secondary' : 'text-muted'" class="px-3 py-1 text-sm font-medium rounded">Pin-uri</button>
                         </div>
                     </div>
                     <div id="fanMap"></div>
-                    <p class="text-xs text-muted mt-3">Date din top <span x-text="(mapData.points || []).length"></span> orașe cu fani identificați</p>
+                    <p class="mt-3 text-xs text-muted">Date din top <span x-text="(mapData.points || []).length"></span> orașe cu fani identificați</p>
                 </div>
             </div>
 
@@ -224,14 +224,14 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                         <h3 class="font-bold text-secondary">Segmente predefinite</h3>
                         <span class="text-xs text-muted">Calcul automat live</span>
                     </div>
-                    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                         <template x-for="seg in segmentsData.predefined || []" :key="seg.id">
-                            <div class="bg-white border border-border rounded-2xl p-4">
+                            <div class="p-4 bg-white border border-border rounded-2xl">
                                 <div class="flex items-start justify-between mb-2">
                                     <span class="fc-badge" :style="`background: ${seg.color}20; color: ${seg.color}`" x-text="seg.name"></span>
                                 </div>
                                 <p class="text-2xl font-bold text-secondary" x-text="formatNumber(segmentsData.counts?.[seg.id] ?? 0)"></p>
-                                <p class="text-xs text-muted mt-1" x-text="seg.description"></p>
+                                <p class="mt-1 text-xs text-muted" x-text="seg.description"></p>
                             </div>
                         </template>
                     </div>
@@ -242,9 +242,9 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                         <h3 class="font-bold text-secondary">Segmente personalizate</h3>
                         <button @click="openSegmentModal()" class="fc-btn fc-btn-primary fc-btn-sm">+ Segment nou</button>
                     </div>
-                    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-3" x-show="(segmentsData.custom || []).length">
+                    <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3" x-show="(segmentsData.custom || []).length">
                         <template x-for="seg in segmentsData.custom || []" :key="seg.id">
-                            <div class="bg-white border border-border rounded-2xl p-4">
+                            <div class="p-4 bg-white border border-border rounded-2xl">
                                 <div class="flex items-start justify-between mb-2">
                                     <span class="fc-badge" :style="`background: ${seg.color}20; color: ${seg.color}`" x-text="seg.name"></span>
                                     <button @click="deleteSegment(seg.id)" class="text-muted hover:text-error">
@@ -252,7 +252,7 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                     </button>
                                 </div>
                                 <p class="text-sm text-secondary" x-text="seg.description || '—'"></p>
-                                <button @click="setTab('fans'); fansFilters.custom_segment_id = seg.id; loadFans()" class="mt-3 text-sm text-primary font-medium hover:underline">Vezi fani →</button>
+                                <button @click="setTab('fans'); fansFilters.custom_segment_id = seg.id; loadFans()" class="mt-3 text-sm font-medium text-primary hover:underline">Vezi fani →</button>
                             </div>
                         </template>
                     </div>
@@ -262,7 +262,7 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
 
             <!-- ============ TAB: FANS LIST ============ -->
             <div x-show="tab === 'fans'" class="space-y-4">
-                <div class="bg-white border border-border rounded-2xl p-5">
+                <div class="p-5 bg-white border border-border rounded-2xl">
                     <div class="flex flex-wrap items-center gap-3 mb-4">
                         <input type="text" x-model="fansFilters.search" @input.debounce.500ms="loadFans()" placeholder="Caută nume/email/oraș..." class="fc-input" style="flex:1 1 200px; min-width:0">
                         <select x-model="fansFilters.segment" @change="loadFans()" class="fc-input" style="width:200px; flex:0 0 200px">
@@ -276,41 +276,41 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
 
                     <div class="overflow-x-auto">
                         <table class="w-full text-sm">
-                            <thead class="text-xs text-muted uppercase border-b border-border">
+                            <thead class="text-xs uppercase border-b text-muted border-border">
                                 <tr>
-                                    <th class="text-left py-2 px-3">Fan</th>
-                                    <th class="text-left py-2 px-3">Oraș</th>
-                                    <th class="text-left py-2 px-3">Segment</th>
-                                    <th class="text-right py-2 px-3 whitespace-nowrap">Evenimente</th>
-                                    <th class="text-right py-2 px-3 whitespace-nowrap">LTV</th>
-                                    <th class="text-left py-2 px-3 whitespace-nowrap">Ultim eveniment</th>
+                                    <th class="px-3 py-2 text-left">Fan</th>
+                                    <th class="px-3 py-2 text-left">Oraș</th>
+                                    <th class="px-3 py-2 text-left">Segment</th>
+                                    <th class="px-3 py-2 text-right whitespace-nowrap">Evenimente</th>
+                                    <th class="px-3 py-2 text-right whitespace-nowrap">LTV</th>
+                                    <th class="px-3 py-2 text-left whitespace-nowrap">Ultim eveniment</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <template x-for="fan in fansData.fans || []" :key="fan.id">
                                     <tr class="border-b border-border/50">
-                                        <td class="py-3 px-3">
+                                        <td class="px-3 py-3">
                                             <div class="flex items-center gap-2">
-                                                <div class="w-8 h-8 rounded-full bg-primary text-white text-xs font-bold flex items-center justify-center shrink-0" x-text="fan.initials"></div>
+                                                <div class="flex items-center justify-center w-8 h-8 text-xs font-bold text-white rounded-full bg-primary shrink-0" x-text="fan.initials"></div>
                                                 <div class="min-w-0">
-                                                    <p class="font-semibold text-secondary truncate" x-text="fan.name"></p>
-                                                    <p class="text-xs text-muted truncate" x-text="fan.email"></p>
+                                                    <p class="font-semibold truncate text-secondary" x-text="fan.name"></p>
+                                                    <p class="text-xs truncate text-muted" x-text="fan.email"></p>
                                                 </div>
                                             </div>
                                         </td>
                                         <td class="px-3" x-text="fan.city"></td>
                                         <td class="px-3"><span class="fc-badge bg-surface" x-text="fan.segment"></span></td>
-                                        <td class="text-right font-semibold px-3 whitespace-nowrap" x-text="fan.events"></td>
-                                        <td class="text-right font-semibold px-3 whitespace-nowrap" x-text="formatNumber(fan.ltv) + ' RON'"></td>
-                                        <td class="text-muted text-xs px-3 whitespace-nowrap" x-text="fan.last_event"></td>
+                                        <td class="px-3 font-semibold text-right whitespace-nowrap" x-text="fan.events"></td>
+                                        <td class="px-3 font-semibold text-right whitespace-nowrap" x-text="formatNumber(fan.ltv) + ' RON'"></td>
+                                        <td class="px-3 text-xs text-muted whitespace-nowrap" x-text="fan.last_event"></td>
                                     </tr>
                                 </template>
                             </tbody>
                         </table>
-                        <p x-show="!(fansData.fans || []).length" class="text-center text-muted py-8">Niciun fan găsit cu filtrele curente.</p>
+                        <p x-show="!(fansData.fans || []).length" class="py-8 text-center text-muted">Niciun fan găsit cu filtrele curente.</p>
                     </div>
 
-                    <div class="flex items-center justify-between mt-4 pt-4 border-t border-border" x-show="(fansData.fans || []).length">
+                    <div class="flex items-center justify-between pt-4 mt-4 border-t border-border" x-show="(fansData.fans || []).length">
                         <p class="text-xs text-muted">
                             Pagina <span x-text="fansData.page"></span> din <span x-text="fansData.pages"></span> · <span x-text="fansData.total"></span> fani total
                         </p>
@@ -325,28 +325,28 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
             <!-- ============ TAB: COHORT ============ -->
             <div x-show="tab === 'cohort'" class="space-y-4">
                 <div class="grid grid-cols-3 gap-3">
-                    <div class="bg-white border border-border rounded-2xl p-4">
-                        <p class="text-xs text-muted uppercase">Retenție medie M+3</p>
-                        <p class="text-2xl font-bold text-secondary mt-1" x-text="(cohortData.avg_m3 ?? 0) + '%'"></p>
+                    <div class="p-4 bg-white border border-border rounded-2xl">
+                        <p class="text-xs uppercase text-muted">Retenție medie M+3</p>
+                        <p class="mt-1 text-2xl font-bold text-secondary" x-text="(cohortData.avg_m3 ?? 0) + '%'"></p>
                     </div>
-                    <div class="bg-white border border-border rounded-2xl p-4">
-                        <p class="text-xs text-muted uppercase">Retenție medie M+12</p>
-                        <p class="text-2xl font-bold text-secondary mt-1" x-text="(cohortData.avg_m12 ?? 0) + '%'"></p>
+                    <div class="p-4 bg-white border border-border rounded-2xl">
+                        <p class="text-xs uppercase text-muted">Retenție medie M+12</p>
+                        <p class="mt-1 text-2xl font-bold text-secondary" x-text="(cohortData.avg_m12 ?? 0) + '%'"></p>
                     </div>
-                    <div class="bg-white border border-border rounded-2xl p-4">
-                        <p class="text-xs text-muted uppercase">Cel mai bun cohort</p>
-                        <p class="text-lg font-bold text-secondary mt-1" x-text="cohortData.best_cohort || '—'"></p>
+                    <div class="p-4 bg-white border border-border rounded-2xl">
+                        <p class="text-xs uppercase text-muted">Cel mai bun cohort</p>
+                        <p class="mt-1 text-lg font-bold text-secondary" x-text="cohortData.best_cohort || '—'"></p>
                     </div>
                 </div>
 
-                <div class="bg-white border border-border rounded-2xl p-5 overflow-x-auto">
-                    <h3 class="font-bold text-secondary mb-3">Retenție pe cohorte</h3>
-                    <p class="text-xs text-muted mb-4">Procent fani revenitori per lună de achiziție</p>
+                <div class="p-5 overflow-x-auto bg-white border border-border rounded-2xl">
+                    <h3 class="mb-3 font-bold text-secondary">Retenție pe cohorte</h3>
+                    <p class="mb-4 text-xs text-muted">Procent fani revenitori per lună de achiziție</p>
                     <table class="w-full text-sm">
-                        <thead class="text-xs text-muted uppercase border-b border-border">
+                        <thead class="text-xs uppercase border-b text-muted border-border">
                             <tr>
-                                <th class="text-left py-2 px-2">Cohort</th>
-                                <th class="text-right py-2 px-2">Fani</th>
+                                <th class="px-2 py-2 text-left">Cohort</th>
+                                <th class="px-2 py-2 text-right">Fani</th>
                                 <th class="cohort-cell">M+1</th>
                                 <th class="cohort-cell">M+3</th>
                                 <th class="cohort-cell">M+6</th>
@@ -357,8 +357,8 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                         <tbody>
                             <template x-for="(row, idx) in cohortData.matrix || []" :key="idx">
                                 <tr class="border-b border-border/50">
-                                    <td class="py-2 px-2 font-semibold text-secondary" x-text="row.month"></td>
-                                    <td class="py-2 px-2 text-right" x-text="row.size"></td>
+                                    <td class="px-2 py-2 font-semibold text-secondary" x-text="row.month"></td>
+                                    <td class="px-2 py-2 text-right" x-text="row.size"></td>
                                     <template x-for="(val, vi) in row.values || []" :key="vi">
                                         <td class="cohort-cell" :style="cohortStyle(val)" x-text="val !== null ? val + '%' : '—'"></td>
                                     </template>
@@ -366,37 +366,37 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                             </template>
                         </tbody>
                     </table>
-                    <p x-show="!(cohortData.matrix || []).length" class="text-sm text-muted py-4">Date insuficiente — revino după 3+ luni de activitate.</p>
+                    <p x-show="!(cohortData.matrix || []).length" class="py-4 text-sm text-muted">Date insuficiente — revino după 3+ luni de activitate.</p>
                 </div>
             </div>
 
             <!-- ============ TAB: DEMOGRAPHICS ============ -->
             <div x-show="tab === 'demographics'" class="space-y-6">
-                <div class="grid lg:grid-cols-2 gap-4">
-                    <div class="bg-white border border-border rounded-2xl p-5">
-                        <h3 class="font-bold text-secondary mb-1">Distribuție vârstă</h3>
-                        <p class="text-sm text-muted mb-4">Pe baza datei nașterii din profil</p>
+                <div class="grid gap-4 lg:grid-cols-2">
+                    <div class="p-5 bg-white border border-border rounded-2xl">
+                        <h3 class="mb-1 font-bold text-secondary">Distribuție vârstă</h3>
+                        <p class="mb-4 text-sm text-muted">Pe baza datei nașterii din profil</p>
                         <div x-show="demographicsData.has_age_data" class="relative h-[260px]"><canvas id="ageChart"></canvas></div>
-                        <p x-show="!demographicsData.has_age_data" class="text-sm text-muted py-8 text-center">Niciun fan nu și-a completat data nașterii încă.</p>
+                        <p x-show="!demographicsData.has_age_data" class="py-8 text-sm text-center text-muted">Niciun fan nu și-a completat data nașterii încă.</p>
                     </div>
-                    <div class="bg-white border border-border rounded-2xl p-5">
-                        <h3 class="font-bold text-secondary mb-1">Gen</h3>
-                        <p class="text-sm text-muted mb-4">Distribuția fanilor</p>
+                    <div class="p-5 bg-white border border-border rounded-2xl">
+                        <h3 class="mb-1 font-bold text-secondary">Gen</h3>
+                        <p class="mb-4 text-sm text-muted">Distribuția fanilor</p>
                         <div x-show="demographicsData.has_gender_data" class="relative h-[260px]"><canvas id="genderChart"></canvas></div>
-                        <p x-show="!demographicsData.has_gender_data" class="text-sm text-muted py-8 text-center">Niciun fan nu și-a completat genul încă.</p>
+                        <p x-show="!demographicsData.has_gender_data" class="py-8 text-sm text-center text-muted">Niciun fan nu și-a completat genul încă.</p>
                     </div>
                 </div>
             </div>
 
             <!-- ============ TAB: COMPARE ============ -->
             <div x-show="tab === 'compare'" class="space-y-4">
-                <div class="bg-white border border-border rounded-2xl p-5">
-                    <h3 class="font-bold text-secondary mb-4">Comparație An vs An</h3>
+                <div class="p-5 bg-white border border-border rounded-2xl">
+                    <h3 class="mb-4 font-bold text-secondary">Comparație An vs An</h3>
                     <div class="flex flex-wrap items-center gap-3 mb-6">
                         <select x-model.number="compareA" class="fc-input" style="width:140px">
                             <template x-for="y in compareYears" :key="y"><option :value="y" x-text="y"></option></template>
                         </select>
-                        <span class="text-muted text-sm">vs</span>
+                        <span class="text-sm text-muted">vs</span>
                         <select x-model.number="compareB" class="fc-input" style="width:140px">
                             <template x-for="y in compareYears" :key="y"><option :value="y" x-text="y"></option></template>
                         </select>
@@ -406,11 +406,11 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                         </button>
                     </div>
 
-                    <p x-show="!compareData.a_kpis?.length && !tabLoading" class="text-sm text-muted py-4">Selectează cei doi ani și apasă „Afișează" pentru a calcula comparația.</p>
+                    <p x-show="!compareData.a_kpis?.length && !tabLoading" class="py-4 text-sm text-muted">Selectează cei doi ani și apasă „Afișează" pentru a calcula comparația.</p>
 
-                    <div class="grid sm:grid-cols-2 gap-4 mb-6" x-show="compareData.supported">
-                        <div class="border border-border rounded-xl p-4">
-                            <p class="text-xs text-muted uppercase mb-3" x-text="compareData.a_label || 'Anul A'"></p>
+                    <div class="grid gap-4 mb-6 sm:grid-cols-2" x-show="compareData.supported">
+                        <div class="p-4 border border-border rounded-xl">
+                            <p class="mb-3 text-xs uppercase text-muted" x-text="compareData.a_label || 'Anul A'"></p>
                             <template x-for="(kpi, idx) in compareData.a_kpis || []" :key="idx">
                                 <div class="flex justify-between py-2 border-b border-border/30 last:border-0">
                                     <span class="text-sm text-muted" x-text="kpi.label"></span>
@@ -418,8 +418,8 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                 </div>
                             </template>
                         </div>
-                        <div class="border border-border rounded-xl p-4">
-                            <p class="text-xs text-muted uppercase mb-3" x-text="compareData.b_label || 'Anul B'"></p>
+                        <div class="p-4 border border-border rounded-xl">
+                            <p class="mb-3 text-xs uppercase text-muted" x-text="compareData.b_label || 'Anul B'"></p>
                             <template x-for="(kpi, idx) in compareData.b_kpis || []" :key="idx">
                                 <div class="flex justify-between py-2 border-b border-border/30 last:border-0">
                                     <span class="text-sm text-muted" x-text="kpi.label"></span>
@@ -435,13 +435,13 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
 
             <!-- ============ TAB: VIP ============ -->
             <div x-show="tab === 'vip'" class="space-y-4">
-                <div class="bg-white border border-border rounded-2xl p-5">
-                    <h3 class="font-bold text-secondary mb-4">🏆 Top 10 fani VIP</h3>
+                <div class="p-5 bg-white border border-border rounded-2xl">
+                    <h3 class="mb-4 font-bold text-secondary">🏆 Top 10 fani VIP</h3>
                     <div class="space-y-3">
                         <template x-for="(vip, idx) in vipData || []" :key="vip.id">
                             <div class="flex items-center gap-4 p-3 bg-surface rounded-xl">
-                                <span class="text-2xl font-bold text-primary w-10 text-center" x-text="'#' + (idx + 1)"></span>
-                                <div class="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white font-bold" x-text="vip.initials"></div>
+                                <span class="w-10 text-2xl font-bold text-center text-primary" x-text="'#' + (idx + 1)"></span>
+                                <div class="flex items-center justify-center w-12 h-12 font-bold text-white rounded-full bg-gradient-to-br from-primary to-accent" x-text="vip.initials"></div>
                                 <div class="flex-1 min-w-0">
                                     <p class="font-bold text-secondary" x-text="vip.name"></p>
                                     <p class="text-xs text-muted">
@@ -455,7 +455,7 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                 </div>
                             </div>
                         </template>
-                        <p x-show="!(vipData || []).length" class="text-sm text-muted text-center py-4">Niciun VIP încă (necesită minim 3 evenimente).</p>
+                        <p x-show="!(vipData || []).length" class="py-4 text-sm text-center text-muted">Niciun VIP încă (necesită minim 3 evenimente).</p>
                     </div>
                 </div>
             </div>
@@ -464,26 +464,26 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
 
     <!-- ============ SEGMENT BUILDER MODAL ============ -->
     <div x-show="segmentModal.open" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4" style="background: rgba(0,0,0,0.5)">
-        <div class="bg-white rounded-2xl max-w-md w-full p-6">
+        <div class="w-full max-w-md p-6 bg-white rounded-2xl">
             <div class="flex items-start justify-between mb-4">
                 <div>
                     <h3 class="text-lg font-bold text-secondary">Segment nou</h3>
-                    <p class="text-sm text-muted mt-1">Definește criteriile pentru a vedea exact subgrupul de fani vizat.</p>
+                    <p class="mt-1 text-sm text-muted">Definește criteriile pentru a vedea exact subgrupul de fani vizat.</p>
                 </div>
                 <button @click="segmentModal.open = false" class="text-muted hover:text-secondary">✕</button>
             </div>
             <form @submit.prevent="saveSegment()" class="space-y-3">
                 <div>
-                    <label class="text-xs text-muted uppercase">Nume *</label>
-                    <input type="text" x-model="segmentModal.name" required maxlength="80" placeholder="Ex: Fani VIP din București" class="fc-input mt-1">
+                    <label class="text-xs uppercase text-muted">Nume *</label>
+                    <input type="text" x-model="segmentModal.name" required maxlength="80" placeholder="Ex: Fani VIP din București" class="mt-1 fc-input">
                 </div>
                 <div>
-                    <label class="text-xs text-muted uppercase">Descriere (opțional)</label>
-                    <textarea x-model="segmentModal.description" maxlength="500" rows="2" class="fc-input mt-1"></textarea>
+                    <label class="text-xs uppercase text-muted">Descriere (opțional)</label>
+                    <textarea x-model="segmentModal.description" maxlength="500" rows="2" class="mt-1 fc-input"></textarea>
                 </div>
 
-                <div class="border-t border-border pt-3">
-                    <p class="text-xs text-muted uppercase mb-2">Criterii</p>
+                <div class="pt-3 border-t border-border">
+                    <p class="mb-2 text-xs uppercase text-muted">Criterii</p>
                     <div class="grid grid-cols-2 gap-2 mb-2">
                         <input type="number" x-model.number="segmentModal.criteria.events_min" placeholder="Min evenimente" class="fc-input">
                         <input type="number" x-model.number="segmentModal.criteria.events_max" placeholder="Max evenimente" class="fc-input">

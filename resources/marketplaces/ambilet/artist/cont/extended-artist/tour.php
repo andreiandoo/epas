@@ -8,7 +8,7 @@
  */
 require_once dirname(__DIR__, 3) . '/includes/config.php';
 
-$pageTitle = 'Extended Artist — Tour Optimizer';
+$pageTitle = 'Premium — Tour Optimizer';
 $bodyClass = 'min-h-screen bg-surface font-sans';
 $cssBundle = 'account';
 require_once dirname(__DIR__, 3) . '/includes/head.php';
@@ -508,7 +508,7 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                         <template x-for="(stop, idx) in planner.route || []" :key="stop.city + '-' + idx">
                                             <div x-data="{ expanded: !stop.fixed }" class="p-4 transition-colors rounded-xl" :data-idx="idx"
                                                 :class="isStopOutOfOrder(idx) ? 'border-2 border-error bg-error/5' : (stop.fixed ? 'border-2 border-success bg-success/5' : (stop.is_home ? 'border border-accent/40 bg-accent/5' : 'border border-border hover:bg-surface/50'))">
-                                                <div class="flex items-start gap-3 mb-3">
+                                                <div class="flex items-start gap-3">
                                                     <span x-show="!stop.fixed" class="flex-shrink-0 pt-1 text-xl leading-none select-none cursor-grab text-muted route-handle" title="Trage pentru reordonare">⋮⋮</span>
                                                     <span x-show="stop.fixed" class="flex-shrink-0 pt-1 text-xl leading-none text-success" title="Concert confirmat — drag dezactivat">🔒</span>
                                                     <button @click="expanded = !expanded" type="button"
@@ -552,7 +552,7 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                                 <div x-show="expanded" x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100">
 
                                                 <!-- Inline edit row: data + venue -->
-                                                <div class="grid grid-cols-1 gap-2 mb-3 sm:grid-cols-2 ml-7 sm:ml-12">
+                                                <div class="grid grid-cols-1 gap-2 my-3 sm:grid-cols-2 ml-7 sm:ml-12">
                                                     <div>
                                                         <label class="block mb-1 text-xs text-muted">📅 Data eveniment</label>
                                                         <input type="date" :value="stop.date_iso" @change="updateStopDate(idx, $event.target.value)" class="text-xs to-input disabled:bg-surface disabled:cursor-not-allowed" :min="planner.startDate" :max="planner.endDate" :disabled="stop.fixed">

@@ -67,16 +67,12 @@
         },
 
         populateDetails(data) {
-            const block = document.getElementById('bookingDetailsBlock');
-            if (!block) return;
-
             const EVENT_TYPE_LABELS = {
                 concert: 'Concert', festival: 'Festival', private: 'Eveniment privat',
                 corporate: 'Corporate', wedding: 'Nuntă', club: 'Club / lounge',
                 show: 'Show TV / online', charity: 'Caritate',
             };
             const fmt = new Intl.NumberFormat('ro-RO');
-            let hasContent = false;
 
             // Description
             const descEl = document.getElementById('bookingDescriptionEl');
@@ -84,7 +80,6 @@
                 if (data.description && String(data.description).trim()) {
                     descEl.textContent = data.description;
                     descEl.classList.remove('hidden');
-                    hasContent = true;
                 } else {
                     descEl.classList.add('hidden');
                 }
@@ -98,10 +93,9 @@
                 if (types.length) {
                     typesList.innerHTML = types.map(t => {
                         const label = EVENT_TYPE_LABELS[t] || t;
-                        return '<span class="px-2 py-0.5 text-[11px] font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full">' + this.escapeHtml(label) + '</span>';
+                        return '<span class="px-2.5 py-1 text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full">' + this.escapeHtml(label) + '</span>';
                     }).join('');
                     typesRow.classList.remove('hidden');
-                    hasContent = true;
                 } else {
                     typesRow.classList.add('hidden');
                 }
@@ -129,12 +123,11 @@
             const factsEl = document.getElementById('bookingFactsList');
             if (factsEl) {
                 factsEl.innerHTML = facts.map(f =>
-                    '<div class="flex items-center justify-between gap-3 py-1 border-b border-gray-100 last:border-0">' +
+                    '<div class="flex items-center justify-between gap-3 py-1.5 border-b border-gray-100 last:border-0">' +
                         '<dt class="text-gray-500">' + this.escapeHtml(f.label) + '</dt>' +
                         '<dd class="font-semibold text-gray-900">' + this.escapeHtml(f.value) + '</dd>' +
                     '</div>'
                 ).join('');
-                if (facts.length) hasContent = true;
             }
 
             // Conditions
@@ -158,13 +151,10 @@
                         '</li>'
                     ).join('');
                     condRow.classList.remove('hidden');
-                    hasContent = true;
                 } else {
                     condRow.classList.add('hidden');
                 }
             }
-
-            if (hasContent) block.classList.remove('hidden');
         },
 
         escapeHtml(s) {

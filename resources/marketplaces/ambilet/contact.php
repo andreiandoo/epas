@@ -255,31 +255,6 @@ require_once __DIR__ . '/includes/header.php';
                     În zilele de eveniment, suportul este disponibil până la terminarea evenimentului.
                 </div>
             </div>
-
-            <!-- Map -->
-            <div class="overflow-hidden bg-white border border-gray-200 rounded-2xl">
-                <div class="h-[180px] bg-gray-50 flex flex-col items-center justify-center gap-2.5 text-gray-400">
-                    <svg class="w-10 h-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
-                        <circle cx="12" cy="10" r="3"/>
-                    </svg>
-                    <p class="text-[13px]">Hartă interactivă</p>
-                </div>
-                <div class="p-5">
-                    <p class="mb-4 text-sm leading-relaxed text-gray-600">
-                        <strong>AMBILET SRL</strong><br>
-                        Str. Exemplu nr. 123, Etaj 4<br>
-                        Sector 1, București 010101<br>
-                        România
-                    </p>
-                    <a href="https://maps.google.com" target="_blank" class="flex items-center justify-center w-full gap-2 py-3 text-sm font-semibold text-gray-600 transition-all border border-gray-200 rounded-lg bg-gray-50 hover:bg-primary hover:border-primary hover:text-white">
-                        <svg class="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <polygon points="3 11 22 2 13 21 11 13 3 11"/>
-                        </svg>
-                        Deschide în Google Maps
-                    </a>
-                </div>
-            </div>
         </div>
     </div>
 
