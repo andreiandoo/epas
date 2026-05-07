@@ -387,23 +387,45 @@ const ContactPage = {
             `;
             submitBtn.disabled = true;
 
-            // Simulate API call
-            await new Promise(resolve => setTimeout(resolve, 1500));
-
-            // Success
-            AmbiletUtils.showToast('Mesajul a fost trimis cu succes! Te vom contacta în curând.', 'success');
-            // CAPI Lead — contact form submission
             try {
-                if (window.EPASTracking && typeof EPASTracking.trackLead === 'function') {
-                    EPASTracking.trackLead('contact', {
-                        email: data.email,
-                        event_label: 'contact:' + (data.subject || ''),
-                    });
+                // Backend keys are snake_case to match the Laravel validator;
+                // the visible form keeps camelCase names for legacy reasons.
+                const res = await AmbiletAPI.post('/contact', {
+                    first_name: data.firstName,
+                    last_name: data.lastName,
+                    email: data.email,
+                    phone: data.phone || '',
+                    subject: data.subject,
+                    order_id: data.orderId || '',
+                    message: data.message,
+                });
+
+                if (!res || !res.success) {
+                    throw new Error((res && res.message) || 'Trimiterea a eșuat');
                 }
-            } catch (e) { /* never break contact UI */ }
-            form.reset();
-            submitBtn.innerHTML = originalText;
-            submitBtn.disabled = false;
+
+                AmbiletUtils.showToast('Mesajul a fost trimis cu succes! Te vom contacta în curând.', 'success');
+
+                // CAPI Lead — contact form submission
+                try {
+                    if (window.EPASTracking && typeof EPASTracking.trackLead === 'function') {
+                        EPASTracking.trackLead('contact', {
+                            email: data.email,
+                            event_label: 'contact:' + (data.subject || ''),
+                        });
+                    }
+                } catch (e) { /* never break contact UI */ }
+
+                form.reset();
+            } catch (err) {
+                AmbiletUtils.showToast(
+                    (err && err.message) || 'Trimiterea a eșuat. Te rugăm să încerci din nou sau să ne scrii direct pe email.',
+                    'error'
+                );
+            } finally {
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = false;
+            }
         });
     }
 };

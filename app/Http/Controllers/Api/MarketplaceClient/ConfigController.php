@@ -40,6 +40,81 @@ class ConfigController extends BaseController
     }
 
     /**
+     * Contact form submission — relays the visitor's message to the
+     * marketplace's configured contact_email. Routed through the marketplace's
+     * own SMTP transport via sendMarketplaceEmail() so the From header carries
+     * the marketplace's domain (no localhost / Tixello leakage). The visitor's
+     * email is set as Reply-To so a one-click reply lands in their inbox.
+     *
+     * Subject options on the form (bilete/plati/rambursare/cont/organizator/
+     * parteneriat/altele) are mapped to a human-readable Romanian label.
+     */
+    public function contact(Request $request): JsonResponse
+    {
+        $client = $this->requireClient($request);
+
+        if (empty($client->contact_email) || !filter_var($client->contact_email, FILTER_VALIDATE_EMAIL)) {
+            return $this->error(
+                'Adresa de contact a marketplace-ului nu este configurată. Contactează administratorul.',
+                422
+            );
+        }
+
+        $data = $request->validate([
+            'first_name' => 'required|string|max:100',
+            'last_name'  => 'required|string|max:100',
+            'email'      => 'required|email|max:180',
+            'phone'      => 'nullable|string|max:50',
+            'subject'    => 'required|string|max:50',
+            'order_id'   => 'nullable|string|max:80',
+            'message'    => 'required|string|max:5000',
+        ]);
+
+        $subjectLabels = [
+            'bilete'       => 'Întrebări despre bilete',
+            'plati'        => 'Probleme cu plata',
+            'rambursare'   => 'Solicitare rambursare',
+            'cont'         => 'Probleme cu contul',
+            'organizator'  => 'Devino organizator',
+            'parteneriat'  => 'Propunere parteneriat',
+            'altele'       => 'Altele',
+        ];
+        $subjectLabel = $subjectLabels[$data['subject']] ?? $data['subject'];
+
+        $siteName = $client->public_name ?? $client->name ?? 'Marketplace';
+        $fullName = trim($data['first_name'] . ' ' . $data['last_name']);
+
+        $body = '<div style="font-family:sans-serif;max-width:600px;margin:0 auto;color:#1a1a1a;">'
+            . '<h2 style="color:#A51C30;margin:0 0 16px;">Mesaj nou prin formularul de contact</h2>'
+            . '<table style="width:100%;border-collapse:collapse;margin:0 0 16px;">'
+            . '<tr><td style="padding:6px 0;color:#6b7280;width:140px;">De la</td><td style="padding:6px 0;font-weight:600;">' . e($fullName) . ' &lt;' . e($data['email']) . '&gt;</td></tr>'
+            . (!empty($data['phone']) ? '<tr><td style="padding:6px 0;color:#6b7280;">Telefon</td><td style="padding:6px 0;">' . e($data['phone']) . '</td></tr>' : '')
+            . '<tr><td style="padding:6px 0;color:#6b7280;">Subiect</td><td style="padding:6px 0;font-weight:600;">' . e($subjectLabel) . '</td></tr>'
+            . (!empty($data['order_id']) ? '<tr><td style="padding:6px 0;color:#6b7280;">Comandă</td><td style="padding:6px 0;font-family:monospace;">' . e($data['order_id']) . '</td></tr>' : '')
+            . '</table>'
+            . '<hr style="border:none;border-top:1px solid #e5e7eb;margin:16px 0;">'
+            . '<div style="white-space:pre-line;color:#374151;font-size:15px;line-height:1.6;">' . e($data['message']) . '</div>'
+            . '<hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0 12px;">'
+            . '<p style="color:#9ca3af;font-size:12px;margin:0;">Trimis prin formularul de contact al ' . e($siteName) . '. Apasă "Reply" pentru a răspunde direct vizitatorului.</p>'
+            . '</div>';
+
+        $this->sendMarketplaceEmail(
+            $client,
+            $client->contact_email,
+            $siteName,
+            '[' . $siteName . '] ' . $subjectLabel . ' — ' . $fullName,
+            $body,
+            [
+                'template_slug' => 'public_contact_form',
+                'reply_to_email' => $data['email'],
+                'reply_to_name' => $fullName,
+            ]
+        );
+
+        return $this->success(['message' => 'Mesajul a fost trimis cu succes.']);
+    }
+
+    /**
      * Get list of tenants this client can sell for
      */
     public function tenants(Request $request): JsonResponse

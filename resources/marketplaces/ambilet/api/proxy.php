@@ -658,6 +658,15 @@ $requiresAuth = false;
 $customTimeout = null;
 
 switch ($action) {
+    case 'public.contact':
+        // Visitor contact form on /contact. POST-only — relays the message
+        // to the marketplace's contact_email via Tixello's marketplace
+        // transport.
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/contact';
+        break;
+
     case 'search':
         $query = $_GET['q'] ?? '';
         $limit = min((int)($_GET['limit'] ?? 10), 50);

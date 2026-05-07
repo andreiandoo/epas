@@ -218,6 +218,7 @@ const AmbiletAPI = {
         if (endpoint.includes('/marketplace-events/organizers')) return 'organizers';
 
         // Public endpoints
+        if (endpoint === '/contact') return 'public.contact';
         if (endpoint.includes('/search')) return 'search';
         if (endpoint.includes('/marketplace-events/categories')) return 'categories';
         if (endpoint.includes('/marketplace-events/cities')) return 'cities';

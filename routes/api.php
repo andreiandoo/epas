@@ -1370,6 +1370,8 @@ Route::prefix('marketplace-client')->middleware(['throttle:120,1', 'marketplace.
     // Configuration & Authentication
     Route::get('/config', [MarketplaceConfigController::class, 'index'])
         ->name('api.marketplace-client.config');
+    Route::post('/contact', [MarketplaceConfigController::class, 'contact'])
+        ->name('api.marketplace-client.contact');
     Route::get('/tenants', [MarketplaceConfigController::class, 'tenants'])
         ->name('api.marketplace-client.tenants');
     Route::get('/checkout/features', [MarketplaceConfigController::class, 'checkoutFeatures'])
