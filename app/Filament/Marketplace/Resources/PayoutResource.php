@@ -512,6 +512,28 @@ class PayoutResource extends Resource
                                         default => 'Solicitat',
                                     })
                                     ->dateTime('d.m.Y H:i'),
+                                // Show the actual user (admin) or organizer who
+                                // created the payout. For manual payouts the
+                                // creator is recorded in approved_by (set at
+                                // creation time); for organizer-requested ones,
+                                // it's the organizer; automated has no user
+                                // (cron) so we show "Sistem".
+                                Infolists\Components\TextEntry::make('creator_label')
+                                    ->label('Creat de')
+                                    ->state(function ($record) {
+                                        return match ($record->source) {
+                                            'manual' => $record->approvedByUser?->name
+                                                ? $record->approvedByUser->name . ' (' . $record->approvedByUser->email . ')'
+                                                : '—',
+                                            'organizer' => $record->organizer?->name
+                                                ? $record->organizer->name . (
+                                                    $record->organizer->email ? ' (' . $record->organizer->email . ')' : ''
+                                                )
+                                                : '—',
+                                            'automated' => 'Sistem (cron)',
+                                            default => '—',
+                                        };
+                                    }),
                                 Infolists\Components\TextEntry::make('source')
                                     ->label('Tip')
                                     ->badge()
