@@ -15,7 +15,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
     <div class="flex flex-col flex-1 min-h-screen lg:ml-0">
         <?php require_once dirname(__DIR__) . '/includes/organizer-topbar.php'; ?>
         <!-- Page Content -->
-        <main class="flex-1 p-4 lg:p-8">
+        <main class="flex-1 px-4 lg:px-8">
             <!-- ============================================================ -->
             <!-- EVENTS LIST VIEW -->
             <!-- ============================================================ -->
@@ -48,46 +48,46 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 
                 <div id="events-list" class="space-y-4">
                     <!-- Skeleton: 3 detailed event cards -->
-                    <div class="p-4 lg:p-6 bg-white border rounded-2xl border-border">
+                    <div class="p-4 bg-white border lg:p-6 rounded-2xl border-border">
                         <div class="flex gap-4 lg:gap-6">
-                            <div class="w-28 h-28 lg:w-32 lg:h-28 rounded-xl edit-skeleton flex-shrink-0"></div>
+                            <div class="flex-shrink-0 w-28 h-28 lg:w-32 lg:h-28 rounded-xl edit-skeleton"></div>
                             <div class="flex-1 min-w-0 space-y-3">
                                 <div class="flex items-center justify-between gap-3">
-                                    <div class="edit-skeleton h-5 w-1/2"></div>
-                                    <div class="edit-skeleton h-5 w-16 rounded-full"></div>
+                                    <div class="w-1/2 h-5 edit-skeleton"></div>
+                                    <div class="w-16 h-5 rounded-full edit-skeleton"></div>
                                 </div>
                                 <div class="edit-skeleton h-3.5 w-1/3"></div>
                                 <div class="flex flex-wrap gap-2 pt-1">
-                                    <div class="edit-skeleton h-6 w-16 rounded-full"></div>
-                                    <div class="edit-skeleton h-6 w-20 rounded-full"></div>
-                                    <div class="edit-skeleton h-6 w-14 rounded-full"></div>
+                                    <div class="w-16 h-6 rounded-full edit-skeleton"></div>
+                                    <div class="w-20 h-6 rounded-full edit-skeleton"></div>
+                                    <div class="h-6 rounded-full edit-skeleton w-14"></div>
                                 </div>
                                 <div class="grid grid-cols-3 gap-3 pt-2">
-                                    <div class="space-y-1.5"><div class="edit-skeleton h-3 w-16"></div><div class="edit-skeleton h-5 w-12"></div></div>
-                                    <div class="space-y-1.5"><div class="edit-skeleton h-3 w-16"></div><div class="edit-skeleton h-5 w-12"></div></div>
-                                    <div class="space-y-1.5 mobile:hidden"><div class="edit-skeleton h-3 w-16"></div><div class="edit-skeleton h-5 w-12"></div></div>
+                                    <div class="space-y-1.5"><div class="w-16 h-3 edit-skeleton"></div><div class="w-12 h-5 edit-skeleton"></div></div>
+                                    <div class="space-y-1.5"><div class="w-16 h-3 edit-skeleton"></div><div class="w-12 h-5 edit-skeleton"></div></div>
+                                    <div class="space-y-1.5 mobile:hidden"><div class="w-16 h-3 edit-skeleton"></div><div class="w-12 h-5 edit-skeleton"></div></div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    <div class="p-4 lg:p-6 bg-white border rounded-2xl border-border opacity-80">
+                    <div class="p-4 bg-white border lg:p-6 rounded-2xl border-border opacity-80">
                         <div class="flex gap-4 lg:gap-6">
-                            <div class="w-28 h-28 lg:w-32 lg:h-28 rounded-xl edit-skeleton flex-shrink-0"></div>
+                            <div class="flex-shrink-0 w-28 h-28 lg:w-32 lg:h-28 rounded-xl edit-skeleton"></div>
                             <div class="flex-1 min-w-0 space-y-3">
-                                <div class="edit-skeleton h-5 w-2/5"></div>
+                                <div class="w-2/5 h-5 edit-skeleton"></div>
                                 <div class="edit-skeleton h-3.5 w-1/4"></div>
                                 <div class="flex flex-wrap gap-2 pt-1">
-                                    <div class="edit-skeleton h-6 w-20 rounded-full"></div>
-                                    <div class="edit-skeleton h-6 w-16 rounded-full"></div>
+                                    <div class="w-20 h-6 rounded-full edit-skeleton"></div>
+                                    <div class="w-16 h-6 rounded-full edit-skeleton"></div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    <div class="p-4 lg:p-6 bg-white border rounded-2xl border-border opacity-60 mobile:hidden">
+                    <div class="p-4 bg-white border lg:p-6 rounded-2xl border-border opacity-60 mobile:hidden">
                         <div class="flex gap-4 lg:gap-6">
-                            <div class="w-28 h-28 lg:w-32 lg:h-28 rounded-xl edit-skeleton flex-shrink-0"></div>
+                            <div class="flex-shrink-0 w-28 h-28 lg:w-32 lg:h-28 rounded-xl edit-skeleton"></div>
                             <div class="flex-1 min-w-0 space-y-3">
-                                <div class="edit-skeleton h-5 w-1/3"></div>
+                                <div class="w-1/3 h-5 edit-skeleton"></div>
                                 <div class="edit-skeleton h-3.5 w-1/5"></div>
                             </div>
                         </div>
@@ -109,18 +109,13 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 <!-- ============================================================ -->
                 <!-- STICKY EVENT HEADER (redesign 2026-05) -->
                 <!-- ============================================================ -->
-                <div id="event-edit-header" class="sticky top-16 z-30 -mx-4 lg:-mx-8 mb-6 bg-slate-100/85 backdrop-blur-md border-b border-slate-200 px-4 lg:px-8 py-4">
+                <div id="event-edit-header" class="sticky z-30 px-4 py-4 -mx-4 border-b top-16 lg:-mx-8 bg-slate-100/85 backdrop-blur-md border-slate-200 lg:px-8">
                     <div class="flex items-start gap-3 lg:gap-4">
-                        <button onclick="hideCreateForm()" class="flex-shrink-0 p-2 -ml-1 rounded-lg hover:bg-white/70 text-muted hover:text-secondary transition-colors" title="Înapoi la evenimente">
+                        <button onclick="hideCreateForm()" class="flex-shrink-0 p-2 -ml-1 transition-colors rounded-lg hover:bg-white/70 text-muted hover:text-secondary" title="Înapoi la evenimente">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
                         </button>
                         <div class="flex-1 min-w-0">
-                            <div class="flex items-center gap-2 text-xs text-muted mb-0.5">
-                                <a href="/organizator/events" class="hover:text-secondary transition-colors">Evenimentele mele</a>
-                                <span class="text-slate-400">/</span>
-                                <span id="header-event-id-chip" class="hidden font-mono text-[11px] px-1.5 py-0.5 rounded bg-white border border-border text-slate-500"></span>
-                            </div>
-                            <h1 class="text-xl lg:text-2xl font-bold text-secondary truncate">Eveniment nou</h1>
+                            <h1 class="text-xl font-bold truncate lg:text-2xl text-secondary">Eveniment nou</h1>
                             <div class="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5 text-sm text-muted">
                                 <span id="header-event-date" class="hidden inline-flex items-center gap-1.5">
                                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
@@ -136,7 +131,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                                 </span>
                             </div>
                         </div>
-                        <div class="flex items-center gap-2 flex-shrink-0">
+                        <div class="flex items-center flex-shrink-0 gap-2">
                             <span id="save-status" class="hidden text-xs px-2.5 py-1 rounded-md bg-white border border-border text-muted whitespace-nowrap"></span>
                             <button id="header-preview-btn" type="button" class="hidden btn btn-sm btn-secondary mobile:!hidden" onclick="openLivePreview()" title="Live preview">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
@@ -215,7 +210,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     </aside>
 
                 <!-- Accordion Form -->
-                <form id="create-event-form" class="space-y-3 lg:space-y-4 min-w-0">
+                <form id="create-event-form" class="min-w-0 pb-16 space-y-3 lg:space-y-4">
                     <!-- Hidden fields -->
                     <input type="hidden" id="saved-event-id" value="">
                     <input type="hidden" id="selected-event-type-ids" value="">
@@ -223,7 +218,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 
                     <!-- ============ EVENT STATUS ACTIONS (Edit mode only) ============ -->
                     <!-- ============ REJECTION BANNER (rejected events only) ============ -->
-                    <div id="rejection-banner" class="hidden p-4 border rounded-2xl bg-red-50 border-red-200">
+                    <div id="rejection-banner" class="hidden p-4 border border-red-200 rounded-2xl bg-red-50">
                         <div class="flex items-start gap-3">
                             <svg class="flex-shrink-0 w-5 h-5 mt-0.5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                             <div class="flex-1">
@@ -675,8 +670,8 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 <!-- ============================================================ -->
                 <!-- LIVE PREVIEW DRAWER (right side) -->
                 <!-- ============================================================ -->
-                <div id="live-preview-backdrop" class="hidden fixed inset-0 z-40 bg-black/40 transition-opacity" onclick="closeLivePreview()"></div>
-                <aside id="live-preview-drawer" class="hidden fixed inset-y-0 right-0 z-50 w-full sm:max-w-md bg-white shadow-2xl border-l border-border flex flex-col" aria-hidden="true">
+                <div id="live-preview-backdrop" class="fixed inset-0 z-40 hidden transition-opacity bg-black/40" onclick="closeLivePreview()"></div>
+                <aside id="live-preview-drawer" class="fixed inset-y-0 right-0 z-50 flex flex-col hidden w-full bg-white border-l shadow-2xl sm:max-w-md border-border" aria-hidden="true">
                     <div class="flex items-center justify-between px-5 py-4 border-b border-border bg-gradient-to-br from-rose-50 to-white">
                         <div>
                             <h3 class="font-semibold text-secondary">Live preview</h3>
@@ -686,10 +681,10 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                         </button>
                     </div>
-                    <div id="live-preview-body" class="flex-1 overflow-y-auto p-5 space-y-4">
+                    <div id="live-preview-body" class="flex-1 p-5 space-y-4 overflow-y-auto">
                         <!-- Filled by renderLivePreview() -->
                     </div>
-                    <div class="border-t border-border px-5 py-3 bg-slate-50">
+                    <div class="px-5 py-3 border-t border-border bg-slate-50">
                         <a id="live-preview-public-link" href="#" target="_blank" class="hidden inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline">
                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
                             Deschide pagina publică
@@ -700,15 +695,15 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 <!-- ============================================================ -->
                 <!-- MOBILE STICKY ACTION BAR -->
                 <!-- ============================================================ -->
-                <div id="mobile-action-bar" class="lg:hidden sticky bottom-0 left-0 right-0 -mx-4 mt-6 px-4 py-3 bg-white border-t border-border z-30 flex items-center gap-2 shadow-lg">
-                    <button type="button" onclick="hideCreateForm()" class="btn btn-sm btn-secondary flex-shrink-0" title="Înapoi">
+                <div id="mobile-action-bar" class="sticky bottom-0 left-0 right-0 z-30 flex items-center gap-2 px-4 py-3 mt-6 -mx-4 bg-white border-t shadow-lg lg:hidden border-border">
+                    <button type="button" onclick="hideCreateForm()" class="flex-shrink-0 btn btn-sm btn-secondary" title="Înapoi">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
                     </button>
-                    <button type="button" onclick="saveEventDraft()" class="flex-1 btn btn-sm btn-primary bg-primary justify-center">
+                    <button type="button" onclick="saveEventDraft()" class="justify-center flex-1 btn btn-sm btn-primary bg-primary">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
                         Salvează ciornă
                     </button>
-                    <button type="button" onclick="saveAndSubmitEvent()" id="mobile-submit-btn" class="hidden flex-1 btn btn-sm btn-success justify-center">
+                    <button type="button" onclick="saveAndSubmitEvent()" id="mobile-submit-btn" class="justify-center flex-1 hidden btn btn-sm btn-success">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                         Trimite
                     </button>
@@ -1195,15 +1190,20 @@ function showCreateForm() {
     history.pushState({}, '', '/organizator/events?action=create');
     toggleAccordion(1);
     loadCategories();
+
+    // Order matters: resetFormState() calls tinymce.get(...).remove() to
+    // tear down any lingering editor instances from a previous edit
+    // session. We must run that BEFORE initEditors() — on browsers where
+    // TinyMCE 6 attaches synchronously (modern Chrome / Edge), the
+    // earlier order destroyed the editor right after creating it, leaving
+    // both Descriere completă and Condiții eveniment as bare textareas.
+    resetFormState();
     initEditors();
     initVenueSearch();
     initArtistSearch();
     initGenreSearch();
     initDragDrop();
     initShortDescWordCount();
-
-    // Reset form state for new event
-    resetFormState();
 }
 
 function resetFormState() {
@@ -3090,8 +3090,8 @@ saveAndSubmitEvent = async function() {
         const esc = (s) => { const d = document.createElement('div'); d.textContent = s ?? ''; return d.innerHTML; };
 
         const heroHtml = heroSrc
-            ? `<img src="${esc(heroSrc)}" alt="" class="w-full h-44 object-cover rounded-xl border border-border" />`
-            : `<div class="w-full h-44 rounded-xl bg-gradient-to-br from-rose-100 to-rose-50 border border-rose-100 flex items-center justify-center text-rose-300 text-xs font-semibold">FĂRĂ IMAGINE</div>`;
+            ? `<img src="${esc(heroSrc)}" alt="" class="object-cover w-full border h-44 rounded-xl border-border" />`
+            : `<div class="flex items-center justify-center w-full text-xs font-semibold border h-44 rounded-xl bg-gradient-to-br from-rose-100 to-rose-50 border-rose-100 text-rose-300">FĂRĂ IMAGINE</div>`;
 
         const catBadge = catText && catText !== 'Selecteaza categoria'
             ? `<span class="inline-block px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 text-[11px] font-semibold uppercase tracking-wide">${esc(catText)}</span>`
@@ -3099,7 +3099,7 @@ saveAndSubmitEvent = async function() {
 
         const ticketsHtml = ticketRows.length
             ? `<div class="space-y-1.5">${ticketRows.map(t => `
-                <div class="flex items-center justify-between px-3 py-2 rounded-lg bg-slate-50 border border-slate-100">
+                <div class="flex items-center justify-between px-3 py-2 border rounded-lg bg-slate-50 border-slate-100">
                     <span class="text-sm text-secondary">${esc(t.name)}</span>
                     <span class="text-sm font-semibold text-primary">${esc(t.price)}</span>
                 </div>`).join('')}</div>`
@@ -3109,7 +3109,7 @@ saveAndSubmitEvent = async function() {
             ${heroHtml}
             <div class="space-y-1">
                 ${catBadge}
-                <h2 class="text-xl font-bold text-secondary leading-tight">${esc(name)}</h2>
+                <h2 class="text-xl font-bold leading-tight text-secondary">${esc(name)}</h2>
                 ${dateStr ? `<p class="text-sm text-muted flex items-center gap-1.5">
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                     ${esc(dateStr)}${time ? ', ora ' + esc(time) : ''}
@@ -3119,9 +3119,9 @@ saveAndSubmitEvent = async function() {
                     ${esc([venueName, venueCity].filter(Boolean).join(', '))}
                 </p>` : ''}
             </div>
-            ${shortDesc ? `<p class="text-sm text-secondary leading-relaxed pt-2 border-t border-border">${esc(shortDesc)}</p>` : ''}
+            ${shortDesc ? `<p class="pt-2 text-sm leading-relaxed border-t text-secondary border-border">${esc(shortDesc)}</p>` : ''}
             <div class="pt-2 border-t border-border">
-                <h4 class="text-xs font-semibold uppercase tracking-wider text-muted mb-2">Bilete disponibile</h4>
+                <h4 class="mb-2 text-xs font-semibold tracking-wider uppercase text-muted">Bilete disponibile</h4>
                 ${ticketsHtml}
             </div>
         `;
@@ -3209,9 +3209,9 @@ saveAndSubmitEvent = async function() {
             const overlay = document.createElement('div');
             overlay.className = 'edit-skeleton-wrap absolute inset-0 px-5 pb-5 bg-white/70 backdrop-blur-[1px] flex flex-col gap-2 pt-2 pointer-events-none';
             overlay.innerHTML = `
-                <div class="edit-skeleton h-3 w-1/3"></div>
-                <div class="edit-skeleton h-9 w-full mt-1"></div>
-                ${i % 2 === 0 ? '<div class="edit-skeleton h-9 w-2/3 mt-1"></div>' : ''}
+                <div class="w-1/3 h-3 edit-skeleton"></div>
+                <div class="w-full mt-1 edit-skeleton h-9"></div>
+                ${i % 2 === 0 ? '<div class="w-2/3 mt-1 edit-skeleton h-9"></div>' : ''}
             `;
             c.style.position = 'relative';
             c.appendChild(overlay);
