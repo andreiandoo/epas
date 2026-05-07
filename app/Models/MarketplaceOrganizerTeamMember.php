@@ -15,6 +15,7 @@ class MarketplaceOrganizerTeamMember extends Model
         'password',
         'role',
         'permissions',
+        'gate_id',
         'status',
         'invite_token',
         'invite_expires_at',

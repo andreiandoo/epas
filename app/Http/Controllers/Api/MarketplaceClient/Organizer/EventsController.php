@@ -31,6 +31,14 @@ class EventsController extends BaseController
             ->where('marketplace_client_id', $organizer->marketplace_client_id)
             ->with(['ticketTypes', 'venue', 'marketplaceCity']);
 
+        // Mobile-only flag: hide events that aren't approved yet (drafts,
+        // pending review, rejected). The mobile scanner / POS app has nothing
+        // operational to do with those, and they confused organizers.
+        if ($request->boolean('published_only')) {
+            $query->where('is_published', true)
+                  ->where('is_cancelled', false);
+        }
+
         // Filters - map 'status' to Event fields
         if ($request->has('status')) {
             $status = $request->status;

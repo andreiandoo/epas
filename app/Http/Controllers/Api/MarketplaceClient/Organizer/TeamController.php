@@ -59,6 +59,7 @@ class TeamController extends BaseController
                 'email' => $member->email,
                 'role' => $member->role,
                 'permissions' => $member->getEffectivePermissions(),
+                'gate_id' => $member->gate_id,
                 'status' => $member->status,
                 'is_current_user' => false,
                 'invite_sent_at' => $member->invite_sent_at?->toIso8601String(),
@@ -83,7 +84,11 @@ class TeamController extends BaseController
     }
 
     /**
-     * Invite a new team member
+     * Add a new team member directly. The endpoint kept the legacy /team/invite
+     * URL for compatibility, but the flow is now: organizer fills name + email
+     * + password + role + (optional) gate, the member is created as active,
+     * and we send a welcome email with their credentials + the app download
+     * link instead of a tokenised invite.
      */
     public function invite(Request $request): JsonResponse
     {
@@ -96,14 +101,16 @@ class TeamController extends BaseController
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|email|max:255',
+            'password' => 'required|string|min:8|max:100',
             'role' => 'required|in:admin,manager,staff',
             'permissions' => 'nullable|array',
             'permissions.*' => 'in:events,orders,reports,team,checkin',
+            'gate_id' => 'nullable|integer',
         ]);
 
         // Check if email already exists for this organizer
         if ($organizer->email === $validated['email']) {
-            return $this->error('Nu poti invita adresa ta de email', 422);
+            return $this->error('Nu poti adauga adresa ta de email', 422);
         }
 
         if ($organizer->teamMembers()->where('email', $validated['email'])->exists()) {
@@ -128,18 +135,19 @@ class TeamController extends BaseController
             'marketplace_organizer_id' => $organizer->id,
             'name' => $validated['name'],
             'email' => $validated['email'],
+            'password' => bcrypt($validated['password']),
             'role' => $validated['role'],
             'permissions' => $permissions,
-            'status' => 'pending',
+            'gate_id' => $validated['gate_id'] ?? null,
+            'status' => 'active',
+            'accepted_at' => now(),
         ]);
 
-        // Generate invite token and send email
-        $token = $member->generateInviteToken();
-        $emailSent = $this->sendInviteEmail($member, $organizer, $token);
+        $emailSent = $this->sendWelcomeEmail($member, $organizer, $validated['password']);
 
         $message = $emailSent
-            ? 'Invitatie trimisa cu succes'
-            : 'Membru adaugat, dar emailul nu a putut fi trimis. Verificati configurarea serviciului de email.';
+            ? 'Membru adaugat. Email-ul cu credențialele a fost trimis.'
+            : 'Membru adaugat, dar emailul nu a putut fi trimis. Comunica-i credentialele direct.';
 
         return $this->success([
             'member' => [
@@ -148,6 +156,7 @@ class TeamController extends BaseController
                 'email' => $member->email,
                 'role' => $member->role,
                 'permissions' => $member->getEffectivePermissions(),
+                'gate_id' => $member->gate_id,
                 'status' => $member->status,
             ],
             'email_sent' => $emailSent,
@@ -167,9 +176,10 @@ class TeamController extends BaseController
 
         $validated = $request->validate([
             'member_id' => 'required|string',
-            'role' => 'required|in:admin,manager,staff',
+            'role' => 'sometimes|in:admin,manager,staff',
             'permissions' => 'nullable|array',
             'permissions.*' => 'in:events,orders,reports,team,checkin',
+            'gate_id' => 'nullable|integer',
         ]);
 
         // Can't update owner
@@ -183,16 +193,26 @@ class TeamController extends BaseController
             return $this->error('Membrul nu a fost gasit', 404);
         }
 
-        // Set permissions based on role
-        $permissions = $validated['permissions'] ?? [];
-        if ($validated['role'] === 'admin') {
-            $permissions = ['events', 'orders', 'reports', 'team', 'checkin'];
+        // Build only the fields that were actually sent — the gate-picker
+        // submits gate_id only, the role-picker submits role+permissions only.
+        $updates = [];
+
+        if (array_key_exists('role', $validated)) {
+            $permissions = $validated['permissions'] ?? [];
+            if ($validated['role'] === 'admin') {
+                $permissions = ['events', 'orders', 'reports', 'team', 'checkin'];
+            }
+            $updates['role'] = $validated['role'];
+            $updates['permissions'] = $permissions;
         }
 
-        $member->update([
-            'role' => $validated['role'],
-            'permissions' => $permissions,
-        ]);
+        if (array_key_exists('gate_id', $validated)) {
+            $updates['gate_id'] = $validated['gate_id'];
+        }
+
+        if (!empty($updates)) {
+            $member->update($updates);
+        }
 
         return $this->success([
             'member' => [
@@ -201,6 +221,7 @@ class TeamController extends BaseController
                 'email' => $member->email,
                 'role' => $member->role,
                 'permissions' => $member->getEffectivePermissions(),
+                'gate_id' => $member->gate_id,
                 'status' => $member->status,
             ],
         ], 'Membru actualizat cu succes');
@@ -444,6 +465,76 @@ class TeamController extends BaseController
             ]);
             return false;
         }
+    }
+
+    /**
+     * Send a welcome email with the team member's login credentials and the
+     * mobile app download link. Used by the new direct-add flow (admin sets
+     * password directly instead of issuing an invite token).
+     */
+    protected function sendWelcomeEmail(MarketplaceOrganizerTeamMember $member, MarketplaceOrganizer $organizer, string $plainPassword): bool
+    {
+        $client = $organizer->marketplaceClient;
+
+        try {
+            $transport = $client?->getMailTransport();
+            if (!$transport) {
+                \Log::warning('No mail transport configured for marketplace welcome email', [
+                    'marketplace_id' => $client?->id,
+                    'member_id' => $member->id,
+                ]);
+                return false;
+            }
+
+            $fromEmail = $client->getEmailFromAddress();
+            $fromName = $client->getEmailFromName() ?: $client->name;
+            if (empty($fromEmail)) {
+                return false;
+            }
+
+            $email = (new Email())
+                ->from(new Address($fromEmail, $fromName))
+                ->to(new Address($member->email, $member->name))
+                ->subject('Bine ai venit in echipa ' . $organizer->name)
+                ->html($this->getWelcomeEmailHtml($member, $organizer, $client, $plainPassword));
+
+            $transport->send($email);
+            return true;
+        } catch (\Exception $e) {
+            \Log::error('Failed to send welcome email', [
+                'member_id' => $member->id,
+                'error' => $e->getMessage(),
+            ]);
+            return false;
+        }
+    }
+
+    protected function getWelcomeEmailHtml(MarketplaceOrganizerTeamMember $member, MarketplaceOrganizer $organizer, $marketplace, string $plainPassword): string
+    {
+        $appDownloadUrl = $marketplace?->mobile_app_download_url
+            ?? rtrim((string) ($marketplace?->domain ?? 'https://ambilet.ro'), '/') . '/android';
+        $marketplaceName = $marketplace?->name ?? 'AmBilet';
+        $roleLabel = match ($member->role) {
+            'admin' => 'Administrator',
+            'manager' => 'Manager',
+            default => 'Staff',
+        };
+
+        return '<!doctype html><html><body style="font-family: Arial, sans-serif; background:#f3f4f6; margin:0; padding:24px;">'
+            . '<div style="max-width:560px; margin:0 auto; background:#ffffff; border-radius:12px; padding:32px; box-shadow:0 1px 3px rgba(0,0,0,0.06);">'
+            . '<h2 style="color:#111827; margin:0 0 16px;">Bun venit, ' . htmlspecialchars($member->name) . '!</h2>'
+            . '<p style="color:#374151; line-height:1.6; margin:0 0 16px;">Ai fost adăugat în echipa <strong>' . htmlspecialchars($organizer->name) . '</strong> pe ' . htmlspecialchars($marketplaceName) . ' ca <strong>' . $roleLabel . '</strong>.</p>'
+            . '<p style="color:#374151; line-height:1.6; margin:0 0 8px;">Te poți autentifica în aplicația mobilă cu următoarele date:</p>'
+            . '<div style="background:#f9fafb; border:1px solid #e5e7eb; border-radius:8px; padding:16px; margin:16px 0;">'
+            . '<p style="margin:0 0 6px; color:#6b7280; font-size:13px;">Email</p>'
+            . '<p style="margin:0 0 12px; color:#111827; font-weight:600;">' . htmlspecialchars($member->email) . '</p>'
+            . '<p style="margin:0 0 6px; color:#6b7280; font-size:13px;">Parolă</p>'
+            . '<p style="margin:0; color:#111827; font-weight:600; font-family: Menlo, monospace;">' . htmlspecialchars($plainPassword) . '</p>'
+            . '</div>'
+            . '<p style="color:#374151; line-height:1.6; margin:0 0 20px;">După prima autentificare, poți schimba parola din ecranul Setări.</p>'
+            . '<a href="' . htmlspecialchars($appDownloadUrl) . '" style="display:inline-block; background:#7c3aed; color:#ffffff; text-decoration:none; padding:12px 24px; border-radius:8px; font-weight:600;">Descarcă aplicația</a>'
+            . '<p style="color:#9ca3af; font-size:12px; margin:24px 0 0;">Dacă nu te-ai așteptat la acest email, poți să-l ignori — contul nu va fi activ fără autentificarea ta.</p>'
+            . '</div></body></html>';
     }
 
     /**
