@@ -447,13 +447,13 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                         <p class="text-xs font-semibold uppercase text-muted">🍽️ Mâncare</p>
                                         <p class="text-sm font-bold text-secondary"><span x-text="formatNumber(planner.summary?.meal_cost_ron ?? 0)"></span> RON</p>
                                     </div>
-                                    <div class="p-3 text-center rounded-xl" :class="(planner.summary?.extra_cost_ron ?? 0) > 0 ? 'bg-warning/5 border border-warning/20' : 'bg-surface'">
+                                    <div class="p-3 text-center rounded-xl" :class="(planner.summary?.extra_cost_ron ?? 0) > 0 ? 'bg-warning/5 border border-warning/20' : 'bg-surface border border-border'">
                                         <p class="text-xs font-semibold uppercase text-muted">➕ Extra</p>
                                         <p class="text-sm font-bold text-secondary"><span x-text="formatNumber(planner.summary?.extra_cost_ron ?? 0)"></span> RON</p>
                                     </div>
                                 </div>
 
-                                <p class="mb-2 text-xs text-muted ml-7 sm:ml-12">* Toate costurile sunt <strong>estimative</strong>, calculate din setările tale (vehicule, cazare, diurnă).</p>
+                                <p class="mb-4 text-xs text-center text-muted">* Toate costurile sunt <strong>estimative</strong>, calculate din setările tale (vehicule, cazare, diurnă).</p>
 
                                 <div class="grid grid-cols-3 gap-3 mb-4">
                                     <div class="p-3 text-center border bg-success/5 border-success/20 rounded-xl">
@@ -475,7 +475,7 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                 <div class="bg-white border border-border rounded-2xl">
                                     <!-- Sticky toolbar — rămâne vizibilă cât scroll-uiești prin orașe.
                                          Auto-recalc rulează la 1s după orice editare → nu mai e nevoie de buton manual. -->
-                                    <div class="sticky z-30 px-5 py-3 bg-white border-b shadow-sm top-2 border-border rounded-t-2xl">
+                                    <div class="sticky top-0 z-30 px-5 py-3 bg-white border-b shadow-sm border-border rounded-t-2xl">
                                         <div class="flex flex-wrap items-center justify-between gap-2">
                                             <h3 class="font-bold text-secondary">Itinerar optim</h3>
                                             <div class="flex flex-wrap items-center gap-2">
@@ -485,6 +485,12 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                                 </span>
                                                 <span x-show="!tabLoading && planner.dirty" class="text-xs font-semibold text-warning">⏳ recalcul în curând...</span>
                                                 <span x-show="!tabLoading && !planner.dirty && planner.optimized" class="text-xs font-semibold text-success">✓ actualizat</span>
+                                                <!-- Buton Sortează cronologic — apare DOAR când există inconsistențe cronologice -->
+                                                <button x-show="outOfOrderStops.length > 0" @click="sortChronologically()" :disabled="tabLoading"
+                                                    class="text-xs font-semibold px-3 py-1.5 rounded-lg border bg-error/5 text-error border-error/30 hover:bg-error/10 transition-colors"
+                                                    :title="outOfOrderStops.length + ' stop-uri în afara ordinii cronologice'">
+                                                    🕒 Sortează cronologic (<span x-text="outOfOrderStops.length"></span>)
+                                                </button>
                                                 <button @click="saveScenario()" :disabled="planner.saving || tabLoading"
                                                     class="to-btn to-btn-primary to-btn-sm">
                                                     <span x-text="planner.saving ? 'Se salvează...' : '💾 Salvează'"></span>
@@ -499,14 +505,19 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                     <div x-ref="routeList" class="space-y-3">
                                         <template x-for="(stop, idx) in planner.route || []" :key="stop.city + '-' + idx">
                                             <div x-data="{ expanded: !stop.fixed }" class="p-4 transition-colors rounded-xl" :data-idx="idx"
-                                                :class="stop.fixed ? 'border-2 border-success bg-success/5' : (stop.is_home ? 'border border-accent/40 bg-accent/5' : 'border border-border hover:bg-surface/50')">
+                                                :class="isStopOutOfOrder(idx) ? 'border-2 border-error bg-error/5' : (stop.fixed ? 'border-2 border-success bg-success/5' : (stop.is_home ? 'border border-accent/40 bg-accent/5' : 'border border-border hover:bg-surface/50'))">
                                                 <div class="flex items-start gap-3 mb-3">
                                                     <span x-show="!stop.fixed" class="flex-shrink-0 pt-1 text-xl leading-none select-none cursor-grab text-muted route-handle" title="Trage pentru reordonare">⋮⋮</span>
                                                     <span x-show="stop.fixed" class="flex-shrink-0 pt-1 text-xl leading-none text-success" title="Concert confirmat — drag dezactivat">🔒</span>
+                                                    <button @click="expanded = !expanded" type="button"
+                                                        class="text-xs font-semibold px-3 py-1.5 rounded-lg border transition-colors bg-surface text-muted border-border hover:bg-primary/5 hover:text-primary hover:border-primary/30">
+                                                        <span x-text="expanded ? '▲ Restrânge detaliile' : '▼ Vezi detaliile'"></span>
+                                                    </button>
                                                     <div class="flex items-center justify-center flex-shrink-0 w-10 h-10 font-bold text-white rounded-xl bg-gradient-to-br from-primary to-primary-dark" x-text="idx + 1"></div>
                                                     <div class="flex-1 min-w-0">
                                                         <div class="flex flex-wrap items-center gap-2 mb-1">
                                                             <p class="font-bold text-secondary" x-text="stop.city"></p>
+                                                            <span x-show="isStopOutOfOrder(idx)" class="text-xs to-badge bg-error/15 text-error" :title="'Data ' + stop.date + ' e mai veche decât concertul precedent'">⚠️ dată în afara ordinii</span>
                                                             <span x-show="stop.is_home" class="text-xs to-badge bg-accent/15 text-accent">🏠 acasă</span>
                                                             <span x-show="stop.fixed" class="text-xs to-badge bg-success/15 text-success">✓ confirmat</span>
                                                             <span x-show="stop.from_start && !stop.is_home" class="text-xs to-badge bg-accent/10 text-accent">↩ din <span x-text="planner.config.start_location"></span></span>
@@ -515,6 +526,14 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                                             <span x-show="stop.manual_capacity && !stop.venue_capacity" class="to-badge bg-warning/10 text-warning text-[9px]" title="Capacitate setată manual">manual</span>
                                                         </div>
                                                         <p class="text-xs text-muted"><span x-text="stop.date"></span> · <span x-text="stop.day"></span><span x-show="stop.arrival_road_km > 0"> · sosire ~<span x-text="formatNumber(stop.arrival_road_km)"></span> km (<span x-text="formatDuration(stop.arrival_drive_time_min)"></span>)</span><span x-show="stop.is_home"> · 🏠 nu e drum (concertul e acasă)</span></p>
+                                                    </div>
+                                                    <div class="flex flex-wrap items-center gap-2">
+                                                        <button @click="toggleStopFixed(idx); expanded = !stop.fixed"
+                                                            :class="stop.fixed ? 'bg-success/10 text-success border-success/30' : 'bg-surface text-muted border-border hover:bg-success/5 hover:text-success hover:border-success/30'"
+                                                            class="text-xs font-semibold px-3 py-1.5 rounded-lg border transition-colors">
+                                                            <span x-text="stop.fixed ? '🔓 Anulează confirmarea' : '🔒 Confirmă concert'"></span>
+                                                        </button>
+                                                        <span class="text-xs text-muted" x-show="stop.fixed">Concertul e blocat — data și venue-ul nu mai pot fi modificate.</span>
                                                     </div>
                                                     <div class="flex-shrink-0 text-right">
                                                         <p class="text-xs text-muted">Predicție</p>
@@ -525,20 +544,6 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                                             <span class="to-tip" :data-tip="confidenceText(stop)">ⓘ</span>
                                                         </p>
                                                     </div>
-                                                </div>
-
-                                                <!-- Buton Confirmă concert + toggle expand/collapse -->
-                                                <div class="flex flex-wrap items-center gap-2 mb-3 ml-7 sm:ml-12">
-                                                    <button @click="toggleStopFixed(idx); expanded = !stop.fixed"
-                                                        :class="stop.fixed ? 'bg-success/10 text-success border-success/30' : 'bg-surface text-muted border-border hover:bg-success/5 hover:text-success hover:border-success/30'"
-                                                        class="text-xs font-semibold px-3 py-1.5 rounded-lg border transition-colors">
-                                                        <span x-text="stop.fixed ? '🔓 Anulează confirmarea' : '🔒 Confirmă concert'"></span>
-                                                    </button>
-                                                    <button @click="expanded = !expanded" type="button"
-                                                        class="text-xs font-semibold px-3 py-1.5 rounded-lg border transition-colors bg-surface text-muted border-border hover:bg-primary/5 hover:text-primary hover:border-primary/30">
-                                                        <span x-text="expanded ? '▲ Restrânge detaliile' : '▼ Vezi detaliile'"></span>
-                                                    </button>
-                                                    <span class="text-xs text-muted" x-show="stop.fixed">Concertul e blocat — data și venue-ul nu mai pot fi modificate.</span>
                                                 </div>
 
                                                 <!-- Tot conținutul de mai jos e collapsible -->
@@ -739,7 +744,7 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                                 </div><!-- end x-show=expanded -->
 
                                                 <!-- Mini-summary când cardul e collapsed: arată cifrele importante o singură linie -->
-                                                <div x-show="!expanded" class="grid grid-cols-3 gap-2 ml-7 sm:ml-12 text-xs">
+                                                <div x-show="!expanded" class="grid grid-cols-3 gap-2 text-xs ml-7 sm:ml-12">
                                                     <div class="text-muted">📅 <span x-text="stop.date"></span></div>
                                                     <div class="text-muted">💸 <span x-text="formatNumber(stop.stop_total_cost ?? 0)"></span> RON</div>
                                                     <div class="text-success">🎟️ <span x-text="formatNumber(stop.prediction)"></span> bilete</div>
@@ -844,20 +849,20 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                         <button @click="setTab('planner')" class="to-btn to-btn-primary to-btn-sm">+ Scenariu nou</button>
                     </div>
 
-                    <div class="space-y-3 mb-8">
+                    <div class="mb-8 space-y-3">
                         <template x-for="s in scenariosData.scenarios || []" :key="s.id">
-                            <div class="flex flex-col sm:flex-row sm:items-center gap-3 p-4 transition-all border-2 rounded-xl hover:shadow-sm" :class="s.status === 'active' ? 'border-primary bg-primary/5' : 'border-border bg-white'">
+                            <div class="flex flex-col gap-3 p-4 transition-all border-2 sm:flex-row sm:items-center rounded-xl hover:shadow-sm" :class="s.status === 'active' ? 'border-primary bg-primary/5' : 'border-border bg-white'">
                                 <!-- Status indicator + name + meta -->
                                 <div class="flex-1 min-w-0">
-                                    <div class="flex items-center flex-wrap gap-2 mb-1">
+                                    <div class="flex flex-wrap items-center gap-2 mb-1">
                                         <span x-show="s.status === 'active'" class="text-white to-badge bg-primary">Activ</span>
                                         <span x-show="s.status === 'draft'" class="text-white to-badge bg-muted/50">Draft</span>
-                                        <p class="text-base font-bold text-secondary truncate" x-text="s.name"></p>
+                                        <p class="text-base font-bold truncate text-secondary" x-text="s.name"></p>
                                     </div>
                                     <p class="text-xs text-muted"><span x-text="s.cities_count"></span> orașe · <span x-text="s.date_range"></span></p>
                                 </div>
                                 <!-- Stats inline -->
-                                <div class="flex flex-wrap items-center gap-4 sm:gap-6 px-2">
+                                <div class="flex flex-wrap items-center gap-4 px-2 sm:gap-6">
                                     <div class="text-center">
                                         <p class="text-[10px] text-muted uppercase">Distanță</p>
                                         <p class="text-sm font-bold text-secondary"><span x-text="formatNumber(s.summary?.total_distance_km ?? 0)"></span> km</p>
@@ -876,7 +881,7 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                     </div>
                                 </div>
                                 <!-- Actions -->
-                                <div class="flex gap-1 flex-shrink-0">
+                                <div class="flex flex-shrink-0 gap-1">
                                     <button @click="loadScenarioToPlanner(s)" class="to-btn to-btn-primary to-btn-sm">Deschide</button>
                                     <button @click="toggleActive(s)" class="to-btn to-btn-secondary to-btn-sm" :title="s.status === 'active' ? 'Marchează draft' : 'Marchează activ'">
                                         <span x-text="s.status === 'active' ? '⭐' : '☆'"></span>
@@ -1051,6 +1056,42 @@ function tourOptimizer() {
                 const hay = this.normalizeKey((v.name || '') + ' ' + (v.address || ''));
                 return hay.indexOf(q) !== -1;
             }).slice(0, 50);
+        },
+
+        // Returnează true dacă stop[idx].date_iso < stop[idx-1].date_iso → în afara ordinii cronologice
+        isStopOutOfOrder(idx) {
+            if (idx <= 0) return false;
+            const route = this.planner.route || [];
+            const cur = route[idx]?.date_iso;
+            const prev = route[idx - 1]?.date_iso;
+            if (!cur || !prev) return false;
+            return cur < prev; // string comparison pe Y-m-d ISO funcționează cronologic
+        },
+
+        // Lista de indici cu probleme cronologice (pentru afișaj count în toolbar)
+        get outOfOrderStops() {
+            const out = [];
+            const route = this.planner.route || [];
+            for (let i = 0; i < route.length; i++) {
+                if (this.isStopOutOfOrder(i)) out.push(i);
+            }
+            return out;
+        },
+
+        // Sortează planner.route după date_iso ascendent. Stop-urile fără dată merg la final.
+        // După sortare: _syncCitiesFromRoute + auto-recalc.
+        sortChronologically() {
+            const route = (this.planner.route || []).slice();
+            route.sort((a, b) => {
+                const ad = a.date_iso || '9999-12-31';
+                const bd = b.date_iso || '9999-12-31';
+                if (ad < bd) return -1;
+                if (ad > bd) return 1;
+                return 0;
+            });
+            this.planner.route = route;
+            this._syncCitiesFromRoute();
+            this.markDirty();
         },
 
         // Returnează prețul maxim per cameră bazat pe camerele REAL configurate (cu count > 0).

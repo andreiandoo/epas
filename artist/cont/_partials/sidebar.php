@@ -41,7 +41,7 @@ $navItems = [
 $extendedArtistNav = [
     [
         'url'    => '/artist/cont/extended-artist',
-        'label'  => 'Vizualizare generala',
+        'label'  => 'Extended Artist',
         'icon'   => 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z',
         'module' => null,
     ],
@@ -71,46 +71,46 @@ $extendedArtistNav = [
     ],
 ];
 ?>
-<aside class="fixed left-0 top-0 z-30 hidden h-full w-64 overflow-y-auto bg-secondary text-white lg:block">
-    <div class="border-b border-white/10 p-6">
+<aside class="fixed top-0 left-0 z-30 hidden w-64 h-full overflow-y-auto text-white bg-secondary lg:block">
+    <div class="p-6 border-b border-white/10">
         <a href="/" class="flex items-center gap-3">
-            <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-primary">
-                <svg class="h-5 w-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div class="flex items-center justify-center w-10 h-10 rounded-xl bg-primary">
+                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/>
                 </svg>
             </div>
             <div>
                 <span class="block text-xl font-extrabold leading-none"><?= strtoupper(SITE_NAME) ?></span>
-                <span class="mt-1 block text-xs text-white/50">Portal Artist</span>
+                <span class="block mt-1 text-xs text-white/50">Portal Artist</span>
             </div>
         </a>
     </div>
 
     <!-- Account card (filled by artist-cont-shared.js) -->
-    <div id="artist-account-card" class="mx-4 mt-4 rounded-xl border border-white/10 bg-white/5 p-3">
+    <div id="artist-account-card" class="p-3 mx-4 mt-4 border rounded-xl border-white/10 bg-white/5">
         <div class="flex items-center gap-3">
-            <div id="artist-avatar" class="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-sm font-semibold text-white">
+            <div id="artist-avatar" class="flex items-center justify-center w-10 h-10 text-sm font-semibold text-white rounded-full bg-primary">
                 <span id="artist-avatar-initials">…</span>
             </div>
-            <div class="min-w-0 flex-1">
-                <p id="artist-account-name" class="truncate text-sm font-semibold text-white">Se încarcă…</p>
-                <p id="artist-linked-name" class="truncate text-xs text-white/50"></p>
+            <div class="flex-1 min-w-0">
+                <p id="artist-account-name" class="text-sm font-semibold text-white truncate">Se încarcă…</p>
+                <p id="artist-linked-name" class="text-xs truncate text-white/50"></p>
             </div>
         </div>
     </div>
 
-    <nav class="space-y-1 p-4">
+    <nav class="p-4 space-y-1">
         <?php foreach ($navItems as $item): $active = $isActive($item['url']); ?>
             <a href="<?= $item['url'] ?>" class="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-colors <?= $active ? 'bg-white/10 text-white' : 'text-white/70 hover:bg-white/10 hover:text-white' ?>">
-                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="<?= $item['icon'] ?>"/>
                 </svg>
                 <?= $item['label'] ?>
             </a>
         <?php endforeach; ?>
 
-        <div class="mt-6 mb-2 flex items-center gap-2 px-4 text-xs font-semibold uppercase tracking-wider text-white/40">
-            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div class="flex items-center gap-2 px-4 mt-6 mb-2 text-xs font-semibold tracking-wider uppercase text-white/40">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/>
             </svg>
             <span>Extended Artist</span>
@@ -121,12 +121,12 @@ $extendedArtistNav = [
                data-extended-artist-link
                <?= $item['module'] !== null ? 'data-extended-artist-module="' . htmlspecialchars($item['module']) . '"' : '' ?>
                class="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-colors <?= $active ? 'bg-white/10 text-white' : 'text-white/70 hover:bg-white/10 hover:text-white' ?>">
-                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="<?= $item['icon'] ?>"/>
                 </svg>
                 <span class="flex-1"><?= $item['label'] ?></span>
                 <?php if ($item['module'] !== null): ?>
-                    <svg data-extended-artist-lock class="h-4 w-4 text-white/30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg data-extended-artist-lock class="w-4 h-4 text-white/30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
                     </svg>
                 <?php endif; ?>
@@ -134,9 +134,9 @@ $extendedArtistNav = [
         <?php endforeach; ?>
     </nav>
 
-    <div class="absolute bottom-0 left-0 right-0 border-t border-white/10 p-4">
-        <button id="artist-logout-btn" class="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-white/70 transition-colors hover:bg-red-500/20 hover:text-red-300">
-            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <div class="absolute bottom-0 left-0 right-0 p-4 border-t border-white/10">
+        <button id="artist-logout-btn" class="flex items-center w-full gap-3 px-4 py-3 text-sm font-medium transition-colors rounded-xl text-white/70 hover:bg-red-500/20 hover:text-red-300">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
             </svg>
             Deconectare
@@ -145,16 +145,16 @@ $extendedArtistNav = [
 </aside>
 
 <!-- Mobile header -->
-<header class="fixed left-0 right-0 top-0 z-40 border-b border-border bg-white lg:hidden">
+<header class="fixed top-0 left-0 right-0 z-40 bg-white border-b border-border lg:hidden">
     <div class="flex items-center justify-between px-4 py-3">
-        <button id="mobile-menu-btn" class="rounded-lg p-2 hover:bg-surface" aria-label="Meniu">
-            <svg class="h-6 w-6 text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <button id="mobile-menu-btn" class="p-2 rounded-lg hover:bg-surface" aria-label="Meniu">
+            <svg class="w-6 h-6 text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
             </svg>
         </button>
         <a href="/" class="flex items-center gap-2">
-            <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-                <svg class="h-4 w-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div class="flex items-center justify-center w-8 h-8 rounded-lg bg-primary">
+                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/>
                 </svg>
             </div>
@@ -166,35 +166,35 @@ $extendedArtistNav = [
 
 <!-- Mobile slide-out -->
 <div id="mobile-menu-overlay" class="fixed inset-0 z-40 hidden bg-black/50 lg:hidden"></div>
-<aside id="mobile-menu" class="fixed left-0 top-0 z-50 h-full w-72 -translate-x-full overflow-y-auto bg-secondary text-white shadow-xl transition-transform lg:hidden">
-    <div class="flex items-center justify-between border-b border-white/10 p-6">
+<aside id="mobile-menu" class="fixed top-0 left-0 z-50 h-full overflow-y-auto text-white transition-transform -translate-x-full shadow-xl w-72 bg-secondary lg:hidden">
+    <div class="flex items-center justify-between p-6 border-b border-white/10">
         <a href="/" class="flex items-center gap-3">
-            <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-primary">
-                <svg class="h-5 w-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div class="flex items-center justify-center w-10 h-10 rounded-xl bg-primary">
+                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/>
                 </svg>
             </div>
             <span class="text-xl font-extrabold"><?= strtoupper(SITE_NAME) ?></span>
         </a>
         <button id="mobile-menu-close" class="p-2 text-white/70" aria-label="Închide">
-            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
         </button>
     </div>
-    <nav class="space-y-1 p-4">
+    <nav class="p-4 space-y-1">
         <?php foreach ($navItems as $item): $active = $isActive($item['url']); ?>
             <a href="<?= $item['url'] ?>" class="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium <?= $active ? 'bg-white/10 text-white' : 'text-white/70 hover:bg-white/10' ?>">
-                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="<?= $item['icon'] ?>"/>
                 </svg>
                 <?= $item['label'] ?>
             </a>
         <?php endforeach; ?>
 
-        <div class="mt-6 mb-2 flex items-center gap-2 px-4 text-xs font-semibold uppercase tracking-wider text-white/40">
-            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div class="flex items-center gap-2 px-4 mt-6 mb-2 text-xs font-semibold tracking-wider uppercase text-white/40">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/>
             </svg>
-            <span>Extended Artist</span>
+            <span>Premium</span>
             <span data-extended-artist-badge class="hidden ml-auto rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-bold text-emerald-300">ACTIV</span>
         </div>
         <?php foreach ($extendedArtistNav as $item): $active = $isActive($item['url']); ?>
@@ -202,21 +202,21 @@ $extendedArtistNav = [
                data-extended-artist-link
                <?= $item['module'] !== null ? 'data-extended-artist-module="' . htmlspecialchars($item['module']) . '"' : '' ?>
                class="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium <?= $active ? 'bg-white/10 text-white' : 'text-white/70 hover:bg-white/10' ?>">
-                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="<?= $item['icon'] ?>"/>
                 </svg>
                 <span class="flex-1"><?= $item['label'] ?></span>
                 <?php if ($item['module'] !== null): ?>
-                    <svg data-extended-artist-lock class="h-4 w-4 text-white/30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg data-extended-artist-lock class="w-4 h-4 text-white/30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
                     </svg>
                 <?php endif; ?>
             </a>
         <?php endforeach; ?>
     </nav>
-    <div class="absolute bottom-0 left-0 right-0 border-t border-white/10 p-4">
-        <button class="artist-mobile-logout flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-white/70 hover:bg-red-500/20 hover:text-red-300">
-            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <div class="absolute bottom-0 left-0 right-0 p-4 border-t border-white/10">
+        <button class="flex items-center w-full gap-3 px-4 py-3 text-sm font-medium artist-mobile-logout rounded-xl text-white/70 hover:bg-red-500/20 hover:text-red-300">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
             </svg>
             Deconectare
