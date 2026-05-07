@@ -118,6 +118,15 @@ require_once __DIR__ . '/includes/header.php';
                 </button>
             </div>
 
+            <!-- Booking CTA — afișat doar dacă artistul are listing activ. Wired up în booking-request-modal.js. -->
+            <div id="bookingCtaContainer" class="hidden mb-5">
+                <button id="bookingCtaBtn" type="button" class="flex items-center justify-center gap-2 w-full py-3.5 px-5 rounded-xl border-2 border-emerald-500 bg-emerald-50 text-emerald-700 font-semibold text-sm transition-all hover:bg-emerald-100">
+                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+                    <span>Cere booking</span>
+                </button>
+                <p id="bookingCtaSubtitle" class="mt-2 text-xs text-center text-gray-500"></p>
+            </div>
+
             <!--
               Claim CTA — populated by ArtistClaim.init() in artist-claim.js.
               Shows one of: "Revendică profilul" / "Profil verificat" badge /
@@ -335,6 +344,153 @@ require_once __DIR__ . '/includes/header.php';
     </section>
 </div>
 
+<!-- Booking Request Modal — wired up by BookingRequestModal in artist-booking-modal.js -->
+<div id="bookingRequestModal" class="fixed inset-0 z-[9998] hidden items-center justify-center px-4 py-6 bg-black/60 backdrop-blur-sm overflow-y-auto">
+    <div class="w-full max-w-2xl bg-white rounded-2xl shadow-2xl my-auto" onclick="event.stopPropagation()">
+        <div class="flex items-start justify-between gap-3 p-6 border-b border-gray-100">
+            <div class="min-w-0">
+                <h2 class="text-xl font-bold text-gray-900">Cere booking</h2>
+                <p class="mt-1 text-sm text-gray-500">Completează formularul. Artistul va primi cererea pe email și îți va răspunde direct.</p>
+            </div>
+            <button id="bookingModalClose" type="button" class="p-2 text-gray-400 rounded-lg hover:bg-gray-100 hover:text-gray-700" aria-label="Închide">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+        </div>
+
+        <form id="bookingRequestForm" class="p-6 space-y-4">
+            <!-- Contact -->
+            <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+                <div>
+                    <label class="block mb-1 text-xs font-semibold text-gray-700">Nume complet *</label>
+                    <input type="text" name="guest_name" required maxlength="120" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10">
+                </div>
+                <div>
+                    <label class="block mb-1 text-xs font-semibold text-gray-700">Email *</label>
+                    <input type="email" name="guest_email" required maxlength="180" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10">
+                </div>
+                <div>
+                    <label class="block mb-1 text-xs font-semibold text-gray-700">Telefon</label>
+                    <input type="tel" name="guest_phone" maxlength="40" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10">
+                </div>
+                <div>
+                    <label class="block mb-1 text-xs font-semibold text-gray-700">Companie / venue</label>
+                    <input type="text" name="guest_company" maxlength="180" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10">
+                </div>
+                <div class="md:col-span-2">
+                    <label class="block mb-1 text-xs font-semibold text-gray-700">Tip organizator</label>
+                    <select name="guest_company_type" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10">
+                        <option value="">— Alege —</option>
+                        <option value="organizator">Organizator de evenimente</option>
+                        <option value="agentie">Agenție de booking</option>
+                        <option value="venue">Venue / club / sală</option>
+                        <option value="persoana">Persoană fizică</option>
+                    </select>
+                </div>
+            </div>
+
+            <hr class="border-gray-100">
+
+            <!-- Event details -->
+            <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+                <div>
+                    <label class="block mb-1 text-xs font-semibold text-gray-700">Dată eveniment *</label>
+                    <input type="date" name="event_date" required class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10">
+                </div>
+                <div>
+                    <label class="block mb-1 text-xs font-semibold text-gray-700">Oră (opțional)</label>
+                    <input type="time" name="event_time" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10">
+                </div>
+                <div>
+                    <label class="block mb-1 text-xs font-semibold text-gray-700">Oraș *</label>
+                    <input type="text" name="event_city" required maxlength="120" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10">
+                </div>
+                <div>
+                    <label class="block mb-1 text-xs font-semibold text-gray-700">Țară</label>
+                    <input type="text" name="event_country" maxlength="60" value="RO" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10">
+                </div>
+                <div class="md:col-span-2">
+                    <label class="block mb-1 text-xs font-semibold text-gray-700">Venue / locație</label>
+                    <input type="text" name="event_venue_name" maxlength="180" placeholder="Ex: Sala Palatului, Beraria H..." class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10">
+                </div>
+                <div>
+                    <label class="block mb-1 text-xs font-semibold text-gray-700">Tip eveniment *</label>
+                    <select name="event_type" required class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10">
+                        <option value="">— Alege —</option>
+                        <option value="concert">Concert</option>
+                        <option value="festival">Festival</option>
+                        <option value="private">Eveniment privat</option>
+                        <option value="corporate">Corporate</option>
+                        <option value="wedding">Nuntă</option>
+                        <option value="club">Club / lounge</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block mb-1 text-xs font-semibold text-gray-700">Audiență estimată</label>
+                    <input type="number" name="audience_size" min="1" max="200000" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10">
+                </div>
+            </div>
+
+            <hr class="border-gray-100">
+
+            <!-- Offer -->
+            <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+                <div>
+                    <label class="block mb-1 text-xs font-semibold text-gray-700">Buget propus (RON) *</label>
+                    <input type="number" name="proposed_fee_ron" required min="0" max="10000000" step="500" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10">
+                </div>
+                <div>
+                    <label class="block mb-1 text-xs font-semibold text-gray-700">Set length (min)</label>
+                    <input type="number" name="proposed_set_length_min" min="15" max="600" step="5" value="60" class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10">
+                </div>
+            </div>
+
+            <div>
+                <label class="block mb-2 text-xs font-semibold text-gray-700">Condiții asigurate</label>
+                <div class="grid grid-cols-2 gap-2 md:grid-cols-3">
+                    <label class="flex items-center gap-2 p-2 text-sm border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
+                        <input type="checkbox" name="conditions[]" value="soundcheck" class="rounded">
+                        <span>Soundcheck</span>
+                    </label>
+                    <label class="flex items-center gap-2 p-2 text-sm border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
+                        <input type="checkbox" name="conditions[]" value="backline" class="rounded">
+                        <span>Backline</span>
+                    </label>
+                    <label class="flex items-center gap-2 p-2 text-sm border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
+                        <input type="checkbox" name="conditions[]" value="catering" class="rounded">
+                        <span>Catering</span>
+                    </label>
+                    <label class="flex items-center gap-2 p-2 text-sm border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
+                        <input type="checkbox" name="conditions[]" value="accommodation" class="rounded">
+                        <span>Cazare</span>
+                    </label>
+                    <label class="flex items-center gap-2 p-2 text-sm border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
+                        <input type="checkbox" name="conditions[]" value="transport" class="rounded">
+                        <span>Transport</span>
+                    </label>
+                </div>
+            </div>
+
+            <div>
+                <label class="block mb-1 text-xs font-semibold text-gray-700">Mesaj pentru artist *</label>
+                <textarea name="initial_message" required minlength="10" maxlength="5000" rows="4" placeholder="Spune-i artistului despre eveniment, atmosferă, ce te-a făcut să te gândești la el/ea..." class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"></textarea>
+            </div>
+
+            <label class="flex items-start gap-2 p-3 text-sm bg-gray-50 rounded-lg cursor-pointer">
+                <input type="checkbox" name="consent" required class="mt-0.5 rounded">
+                <span class="text-xs text-gray-700">Sunt de acord cu prelucrarea datelor mele personale conform <a href="/termeni-conditii" target="_blank" class="text-primary hover:underline">termenilor și condițiilor</a> și cu transmiterea cererii către artist. *</span>
+            </label>
+
+            <div id="bookingFormError" class="hidden p-3 text-sm font-medium text-red-700 border border-red-200 bg-red-50 rounded-lg"></div>
+            <div id="bookingFormSuccess" class="hidden p-3 text-sm font-medium text-emerald-700 border border-emerald-200 bg-emerald-50 rounded-lg"></div>
+
+            <div class="flex justify-end gap-2 pt-2">
+                <button type="button" id="bookingFormCancel" class="px-5 py-2.5 text-sm font-semibold text-gray-700 bg-gray-100 rounded-xl hover:bg-gray-200">Anulează</button>
+                <button type="submit" id="bookingFormSubmit" class="px-5 py-2.5 text-sm font-semibold text-white rounded-xl bg-gradient-to-r from-primary to-primary-light hover:-translate-y-0.5 transition-all">Trimite cerere</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <?php
 // Include footer
 require_once __DIR__ . '/includes/footer.php';
@@ -351,6 +507,7 @@ echo '</script>';
 $scriptsExtra = '<script src="' . asset('assets/js/pages/artist-single-theater.js') . '"></script>
 <script src="' . asset('assets/js/pages/artist-single.js') . '"></script>
 <script src="' . asset('assets/js/pages/artist-claim.js') . '"></script>
-<script>document.addEventListener(\'DOMContentLoaded\', () => { ArtistPage.init(); ArtistClaim.init(); });</script>';
+<script src="' . asset('assets/js/pages/artist-booking-modal.js') . '"></script>
+<script>document.addEventListener(\'DOMContentLoaded\', () => { ArtistPage.init(); ArtistClaim.init(); BookingRequestModal.init(); });</script>';
 
 require_once __DIR__ . '/includes/scripts.php';

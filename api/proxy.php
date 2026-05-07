@@ -2373,6 +2373,41 @@ switch ($action) {
         $requiresAuth = true;
         break;
 
+    // Public Booking — form submit + guest conversation (no artist auth, doar X-API-Key)
+    case 'public.booking.status':
+        $method = 'GET';
+        $slug = preg_replace('/[^a-z0-9-]/i', '', $_GET['slug'] ?? '');
+        if (!$slug) { http_response_code(400); echo json_encode(['error' => 'Missing slug']); exit; }
+        $endpoint = '/public/artist/' . $slug . '/booking-status';
+        $requiresAuth = false;
+        break;
+
+    case 'public.booking.submit':
+        $method = 'POST';
+        $body = file_get_contents('php://input') ?: '{}';
+        $slug = preg_replace('/[^a-z0-9-]/i', '', $_GET['slug'] ?? '');
+        if (!$slug) { http_response_code(400); echo json_encode(['error' => 'Missing slug']); exit; }
+        $endpoint = '/public/artist/' . $slug . '/booking-request';
+        $requiresAuth = false;
+        break;
+
+    case 'public.booking.conversation.view':
+        $method = 'GET';
+        $token = preg_replace('/[^A-Za-z0-9]/', '', $_GET['token'] ?? '');
+        if (!$token) { http_response_code(400); echo json_encode(['error' => 'Missing token']); exit; }
+        $endpoint = '/public/booking/conversation/' . $token;
+        $requiresAuth = false;
+        break;
+
+    case 'public.booking.conversation.post':
+        $method = 'POST';
+        $body = file_get_contents('php://input') ?: '{}';
+        $token = preg_replace('/[^A-Za-z0-9]/', '', $_GET['token'] ?? '');
+        if (!$token) { http_response_code(400); echo json_encode(['error' => 'Missing token']); exit; }
+        $endpoint = '/public/booking/conversation/' . $token . '/messages';
+        $requiresAuth = false;
+        break;
+
     case 'organizer.payout-details':
         $method = 'PUT';
         $body = file_get_contents('php://input');
