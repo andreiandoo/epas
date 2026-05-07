@@ -417,8 +417,10 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                             Distanță rută
                                             <span class="to-tip" :data-tip="planner.summary?.routing_has_fallback ? 'Unele segmente folosesc aproximare (Haversine × 1.35) pentru că OSRM era indisponibil. Dă Recalculează mai târziu pentru valori exacte.' : 'Distanță reală pe ruta auto, calculată cu OpenStreetMap (OSRM). Cache 30 zile per rută.'">ⓘ</span>
                                         </p>
-                                        <p class="mt-1 text-xl font-bold text-secondary">~<span x-text="formatNumber(planner.summary?.total_road_distance_km ?? 0)"></span> km</p>
-                                        <p class="text-xs text-muted mt-0.5"><span x-text="formatDuration(planner.summary?.total_drive_time_min ?? 0)"></span> de condus</p>
+                                        <div class="mt-1 text-xl font-bold text-secondary">
+                                            ~<span x-text="formatNumber(planner.summary?.total_road_distance_km ?? 0)"></span> km
+                                            <p class="ml-2 text-xs font-semibold text-muted">(<span x-text="formatDuration(planner.summary?.total_drive_time_min ?? 0)"></span> de condus)</p>
+                                        </div>                                        
                                     </div>
                                     <div class="p-4 bg-white border border-border rounded-xl">
                                         <p class="text-xs font-semibold tracking-wider uppercase text-muted">Durată tour</p>
@@ -511,7 +513,7 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                                     <span x-show="stop.fixed" class="flex-shrink-0 pt-1 text-xl leading-none text-success" title="Concert confirmat — drag dezactivat">🔒</span>
                                                     <button @click="expanded = !expanded" type="button"
                                                         class="text-xs font-semibold px-3 py-1.5 rounded-lg border transition-colors bg-surface text-muted border-border hover:bg-primary/5 hover:text-primary hover:border-primary/30">
-                                                        <span x-text="expanded ? '▲ Restrânge detaliile' : '▼ Vezi detaliile'"></span>
+                                                        <span x-text="expanded ? '▲ ' : '▼ '"></span>
                                                     </button>
                                                     <div class="flex items-center justify-center flex-shrink-0 w-10 h-10 font-bold text-white rounded-xl bg-gradient-to-br from-primary to-primary-dark" x-text="idx + 1"></div>
                                                     <div class="flex-1 min-w-0">
@@ -525,7 +527,7 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                                             <span x-show="stop.effective_capacity" class="text-xs to-badge bg-primary/10 text-primary"><span x-text="formatNumber(stop.effective_capacity)"></span> loc</span>
                                                             <span x-show="stop.manual_capacity && !stop.venue_capacity" class="to-badge bg-warning/10 text-warning text-[9px]" title="Capacitate setată manual">manual</span>
                                                         </div>
-                                                        <p class="text-xs text-muted"><span x-text="stop.date"></span> · <span x-text="stop.day"></span><span x-show="stop.arrival_road_km > 0"> · sosire ~<span x-text="formatNumber(stop.arrival_road_km)"></span> km (<span x-text="formatDuration(stop.arrival_drive_time_min)"></span>)</span><span x-show="stop.is_home"> · 🏠 nu e drum (concertul e acasă)</span></p>
+                                                        <p class="text-xs text-muted"><span x-text="stop.day" class="font-semibold capitalize"></span> · <span x-text="stop.date" class="font-semibold"></span> <span x-show="stop.arrival_road_km > 0"> · sosire ~<span x-text="formatNumber(stop.arrival_road_km)"></span> km (<span x-text="formatDuration(stop.arrival_drive_time_min)"></span>)</span><span x-show="stop.is_home"> · 🏠 nu e drum (concertul e acasă)</span></p>
                                                     </div>
                                                     <div class="flex flex-wrap items-center gap-2">
                                                         <button @click="toggleStopFixed(idx); expanded = !stop.fixed"
@@ -742,13 +744,6 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                                     → Întoarcere la <strong x-text="planner.config.start_location"></strong>: <strong><span x-text="formatNumber(stop.return_distance_km)"></span> km</strong> · ⛽ <span x-text="formatNumber(stop.return_fuel_cost ?? 0)"></span> RON
                                                 </p>
                                                 </div><!-- end x-show=expanded -->
-
-                                                <!-- Mini-summary când cardul e collapsed: arată cifrele importante o singură linie -->
-                                                <div x-show="!expanded" class="grid grid-cols-3 gap-2 text-xs ml-7 sm:ml-12">
-                                                    <div class="text-muted">📅 <span x-text="stop.date"></span></div>
-                                                    <div class="text-muted">💸 <span x-text="formatNumber(stop.stop_total_cost ?? 0)"></span> RON</div>
-                                                    <div class="text-success">🎟️ <span x-text="formatNumber(stop.prediction)"></span> bilete</div>
-                                                </div>
                                             </div>
                                         </template>
                                     </div>
@@ -1325,7 +1320,7 @@ function tourOptimizer() {
             }
         },
 
-        async saveScenario() {
+        async saveScenario({ silent = false } = {}) {
             if (!this.planner.optimized) return;
             this.planner.saving = true;
             try {
@@ -1337,15 +1332,25 @@ function tourOptimizer() {
                     constraints: this.buildConstraintsPayload(),
                     optimized_route: this.planner.route,
                     summary: this.planner.summary,
-                    status: 'draft',
                 };
-                const r = await this.fetchAction('artist.tour.scenario.save', {}, { method: 'POST', body });
-                if (r?.data?.id) {
-                    this.planner.currentScenarioId = r.data.id;
-                    this.scenariosData.scenarios = []; // force reload on next visit
-                    alert('Scenariul a fost salvat. Îl găsești în tab Scenarii.');
+                let r;
+                // Dacă scenariul a fost deja salvat o dată (currentScenarioId există), PATCH în loc de POST.
+                // Altfel s-ar crea duplicate la fiecare Save.
+                if (this.planner.currentScenarioId) {
+                    r = await this.fetchAction('artist.tour.scenario.update&id=' + this.planner.currentScenarioId, {}, { method: 'PATCH', body });
                 } else {
-                    alert(r?.message || 'Eroare la salvare.');
+                    body.status = 'draft';
+                    r = await this.fetchAction('artist.tour.scenario.save', {}, { method: 'POST', body });
+                }
+
+                if (r?.data?.id || r?.data?.success) {
+                    if (r?.data?.id && !this.planner.currentScenarioId) {
+                        this.planner.currentScenarioId = r.data.id;
+                    }
+                    this.scenariosData.scenarios = []; // force reload on next visit
+                    if (!silent) alert('Scenariul a fost salvat.');
+                } else {
+                    if (!silent) alert(r?.message || 'Eroare la salvare.');
                 }
             } finally {
                 this.planner.saving = false;
@@ -1424,6 +1429,11 @@ function tourOptimizer() {
             );
             if (usesOldFormat && this.planner.cities.length >= 2) {
                 await this.optimizeRoute(true);
+                // După recalc cu logica nouă, persistăm summary actualizat în DB (silent),
+                // ca lista de Scenarii Salvate să afișeze cifrele corecte la următoarea vizualizare.
+                if (this.planner.optimized) {
+                    await this.saveScenario({ silent: true });
+                }
             }
         },
 
