@@ -611,6 +611,57 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                         </div>
                     </div>
 
+                    <!-- iCal sync card -->
+                    <div class="p-5 border rounded-2xl border-blue-200 bg-blue-50">
+                        <div class="flex items-start gap-2 mb-3">
+                            <svg class="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                            <div class="flex-1 min-w-0">
+                                <h3 class="text-base font-bold text-secondary">Sync cu Google Calendar</h3>
+                                <p class="text-xs text-muted">Vezi cererile și booking-urile direct în calendarul tău preferat. Read-only, refresh la 12-24h.</p>
+                            </div>
+                        </div>
+
+                        <div x-show="!icalToken" class="p-3 text-sm text-center rounded-lg bg-white text-muted">
+                            <span class="inline-block w-4 h-4 border-2 rounded-full border-blue-500 border-t-transparent animate-spin"></span>
+                            <span class="ml-1">Se generează URL...</span>
+                        </div>
+
+                        <div x-show="icalToken" class="space-y-3">
+                            <div>
+                                <label class="block mb-1 text-[11px] font-bold tracking-wider uppercase text-muted">URL feed iCal</label>
+                                <div class="flex gap-1">
+                                    <input type="text" :value="icalUrl" readonly @click="$el.select()" class="flex-1 px-3 py-2 text-xs font-mono bg-white border rounded-lg border-border text-secondary">
+                                    <button @click="copyIcalUrl()" class="bk-btn bk-btn-secondary bk-btn-sm" :title="icalCopied ? 'Copiat!' : 'Copiază'">
+                                        <span x-show="!icalCopied">📋</span>
+                                        <span x-show="icalCopied">✓</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <details class="text-xs">
+                                <summary class="font-semibold cursor-pointer text-secondary">Cum adaug în Google Calendar?</summary>
+                                <ol class="pl-4 mt-2 space-y-1 list-decimal text-muted">
+                                    <li>Deschide <a href="https://calendar.google.com/calendar/u/0/r/settings/addbyurl" target="_blank" class="text-primary hover:underline">Google Calendar → Setări → Adaugă din URL</a></li>
+                                    <li>Lipește URL-ul de mai sus și apasă <strong>Adaugă calendar</strong></li>
+                                    <li>După ~1 minut, evenimentele apar în calendarul tău (categoria "Booking")</li>
+                                </ol>
+                            </details>
+
+                            <details class="text-xs">
+                                <summary class="font-semibold cursor-pointer text-secondary">Apple Calendar / Outlook?</summary>
+                                <div class="pl-4 mt-2 space-y-1 text-muted">
+                                    <p><strong>Apple:</strong> File → New Calendar Subscription → lipește URL-ul.</p>
+                                    <p><strong>Outlook:</strong> Calendar → Add → Subscribe from web → URL-ul.</p>
+                                </div>
+                            </details>
+
+                            <button @click="regenerateIcalToken()" :disabled="regeneratingToken" class="bk-btn bk-btn-secondary bk-btn-sm w-full">
+                                <span x-show="!regeneratingToken">🔄 Regenerează URL (invalidează linkul curent)</span>
+                                <span x-show="regeneratingToken">Se regenerează...</span>
+                            </button>
+                        </div>
+                    </div>
+
                     <div class="p-5 bg-white border rounded-2xl border-border">
                         <h3 class="mb-3 text-base font-bold text-secondary">Zile blocate manual</h3>
                         <div x-show="!unavailableDates.length" class="p-3 text-sm text-center rounded-lg bg-surface text-muted">
@@ -788,6 +839,10 @@ function bookingApp() {
         calCells: [],
         unavailableDates: [],
         calendarOverlay: [],
+        icalToken: null,
+        icalUrl: '',
+        icalCopied: false,
+        regeneratingToken: false,
 
         // Contracts
         contracts: [],
@@ -810,6 +865,7 @@ function bookingApp() {
                 this.loadInbox(),
                 this.loadCalendar(),
                 this.loadContracts(),
+                this.loadIcalToken(),
             ]);
 
             const reqId = url.searchParams.get('request');
@@ -1201,6 +1257,46 @@ function bookingApp() {
                 await this.loadCalendar();
             } catch (e) {
                 this.showToast(e.message, 'error');
+            }
+        },
+
+        async loadIcalToken() {
+            try {
+                const d = await this.api('artist.booking.ical-token');
+                if (d.data?.token) {
+                    this.icalToken = d.data.token;
+                    this.icalUrl = window.location.origin + d.data.feed_path;
+                }
+            } catch (e) {
+                console.warn('ical token', e);
+            }
+        },
+
+        async copyIcalUrl() {
+            if (!this.icalUrl) return;
+            try {
+                await navigator.clipboard.writeText(this.icalUrl);
+                this.icalCopied = true;
+                setTimeout(() => { this.icalCopied = false; }, 2000);
+            } catch (e) {
+                this.showToast('Selectează manual și copiază.', 'error');
+            }
+        },
+
+        async regenerateIcalToken() {
+            if (!confirm('Regenerez URL-ul iCal? URL-ul curent va deveni invalid și va trebui să te reabonezi în Google/Apple/Outlook.')) return;
+            this.regeneratingToken = true;
+            try {
+                const d = await this.api('artist.booking.ical-token.regenerate', { method: 'POST', body: {} });
+                if (d.data?.token) {
+                    this.icalToken = d.data.token;
+                    this.icalUrl = window.location.origin + d.data.feed_path;
+                    this.showToast(d.message || 'URL regenerat.', 'success');
+                }
+            } catch (e) {
+                this.showToast(e.message, 'error');
+            } finally {
+                this.regeneratingToken = false;
             }
         },
 

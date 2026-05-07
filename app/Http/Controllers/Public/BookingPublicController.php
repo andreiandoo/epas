@@ -176,6 +176,31 @@ class BookingPublicController extends Controller
     }
 
     /**
+     * GET ICS feed pentru calendarul artistului. Token-ul e secret în URL.
+     * Subscribed direct de Google Calendar / Apple Calendar / Outlook.
+     * Returnează text/calendar.
+     */
+    public function icalFeed(Request $request, string $token)
+    {
+        $listing = ArtistBookingListing::where('ical_token', $token)->first();
+        if (!$listing) {
+            return response('NOT FOUND', 404);
+        }
+        $artist = Artist::find($listing->artist_id);
+        if (!$artist) {
+            return response('NOT FOUND', 404);
+        }
+
+        $body = $this->booking->buildIcsFeed($artist);
+
+        return response($body, 200, [
+            'Content-Type' => 'text/calendar; charset=utf-8',
+            'Content-Disposition' => 'inline; filename="booking-' . $artist->id . '.ics"',
+            'Cache-Control' => 'public, max-age=900', // 15 min cache pentru clienții iCal
+        ]);
+    }
+
+    /**
      * POST guest message via signed token.
      * Throttle: 30/1 (vezi routes/api.php)
      */

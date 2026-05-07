@@ -171,6 +171,34 @@ class BookingController extends BaseController
         return $this->success($this->booking->kpis($artist));
     }
 
+    /**
+     * Returnează token-ul iCal al artistului (creat la prima accesare).
+     */
+    public function icalToken(Request $request): JsonResponse
+    {
+        $artist = $this->requireArtist($request);
+        $listing = $this->booking->getListing($artist);
+        $token = $listing->ensureIcalToken();
+        return $this->success([
+            'token' => $token,
+            'feed_path' => '/booking/ical/' . $token . '.ics',
+        ]);
+    }
+
+    /**
+     * Regenerează token-ul iCal — invalidează URL-urile precedente.
+     */
+    public function icalTokenRegenerate(Request $request): JsonResponse
+    {
+        $artist = $this->requireArtist($request);
+        $listing = $this->booking->getListing($artist);
+        $token = $listing->regenerateIcalToken();
+        return $this->success([
+            'token' => $token,
+            'feed_path' => '/booking/ical/' . $token . '.ics',
+        ], 'Token regenerat. Reabonează calendarul în Google/Apple/Outlook.');
+    }
+
     // -------------------------------------------------------------------------
     // Helpers
     // -------------------------------------------------------------------------

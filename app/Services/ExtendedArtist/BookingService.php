@@ -396,6 +396,149 @@ class BookingService
         ArtistBookingUnavailableDate::where('artist_id', $artist->id)->where('id', $id)->delete();
     }
 
+    /**
+     * Construiește feed-ul ICS pentru calendar-ul artistului. Include:
+     *  - Booking-uri acceptate (status=accepted, CONFIRMED)
+     *  - Cereri în negociere (status=new/viewed/negotiating, TENTATIVE)
+     *  - Zile blocate manual (DTSTART din date_start până în date_end+1, FREEBUSY=BUSY)
+     *
+     * Filtrează la 2 ani în trecut și 5 ani în viitor pentru a fi pragmatic.
+     */
+    public function buildIcsFeed(Artist $artist): string
+    {
+        $listing = $this->getListing($artist);
+        $artistName = $artist->name;
+        if (is_array($artistName)) {
+            $artistName = $artistName['ro'] ?? $artistName['en'] ?? reset($artistName) ?: 'Artist';
+        }
+
+        $from = now()->subYears(2)->toDateString();
+        $to = now()->addYears(5)->toDateString();
+
+        $requests = ArtistBookingRequest::where('artist_id', $artist->id)
+            ->whereBetween('event_date', [$from, $to])
+            ->whereIn('status', [
+                ArtistBookingRequest::STATUS_NEW,
+                ArtistBookingRequest::STATUS_VIEWED,
+                ArtistBookingRequest::STATUS_NEGOTIATING,
+                ArtistBookingRequest::STATUS_ACCEPTED,
+            ])
+            ->orderBy('event_date')
+            ->get();
+
+        $blocks = ArtistBookingUnavailableDate::where('artist_id', $artist->id)
+            ->where('date_end', '>=', $from)
+            ->where('date_start', '<=', $to)
+            ->orderBy('date_start')
+            ->get();
+
+        $lines = [
+            'BEGIN:VCALENDAR',
+            'VERSION:2.0',
+            'PRODID:-//Tixello//Booking ' . $artist->id . '//EN',
+            'CALSCALE:GREGORIAN',
+            'METHOD:PUBLISH',
+            'X-WR-CALNAME:' . $this->icsEscape('Booking ' . $artistName),
+            'X-WR-CALDESC:' . $this->icsEscape('Calendar booking ' . $artistName . ' (sync via Tixello)'),
+            'X-WR-TIMEZONE:Europe/Bucharest',
+        ];
+
+        $now = now()->utc()->format('Ymd\THis\Z');
+        $domain = parse_url(config('app.url'), PHP_URL_HOST) ?: 'tixello.com';
+
+        foreach ($requests as $r) {
+            $isAccepted = $r->status === ArtistBookingRequest::STATUS_ACCEPTED;
+            $eventDate = $r->final_terms['event_date'] ?? $r->event_date->toDateString();
+            $startTime = $r->event_time ?: '20:00:00';
+            // Normalize HH:MM or HH:MM:SS
+            if (strlen($startTime) === 5) $startTime .= ':00';
+            $start = $eventDate . ' ' . $startTime;
+            try {
+                $startDt = \Illuminate\Support\Carbon::parse($start, 'Europe/Bucharest');
+            } catch (\Throwable $e) {
+                $startDt = \Illuminate\Support\Carbon::parse($eventDate . ' 20:00:00', 'Europe/Bucharest');
+            }
+            $setLengthMin = (int) ($r->final_terms['set_length_min'] ?? $r->proposed_set_length_min ?? 60);
+            // Allow buffer around the set: artist arrives 2h before, leaves 1h after
+            $endDt = $startDt->copy()->addMinutes($setLengthMin)->addHour();
+            $startDt = $startDt->copy()->subHours(2);
+
+            $summary = ($isAccepted ? '✅ ' : '❓ ') . $r->guest_name
+                . ($r->event_city ? ' · ' . $r->event_city : '')
+                . ($r->event_venue_name ? ' (' . $r->event_venue_name . ')' : '');
+
+            $description = [];
+            if ($r->guest_company) $description[] = 'Organizator: ' . $r->guest_company;
+            $description[] = 'Tip: ' . $r->event_type;
+            if ($r->audience_size) $description[] = 'Audiență: ' . $r->audience_size;
+            $fee = (int) ($r->final_terms['fee_ron'] ?? $r->proposed_fee_ron);
+            if ($fee) $description[] = 'Buget: ' . number_format($fee, 0, ',', '.') . ' RON';
+            $description[] = 'Status: ' . ucfirst($r->status);
+            $description[] = '';
+            $description[] = 'Vezi în Tixello: ' . rtrim(config('app.marketplace_url') ?? config('app.url'), '/') . '/artist/cont/extended-artist/booking?tab=inbox&request=' . $r->id;
+
+            $location = trim(($r->event_venue_name ? $r->event_venue_name . ', ' : '') . ($r->event_city ?: ''));
+
+            $lines[] = 'BEGIN:VEVENT';
+            $lines[] = 'UID:booking-' . $r->id . '@' . $domain;
+            $lines[] = 'DTSTAMP:' . $now;
+            $lines[] = 'DTSTART;TZID=Europe/Bucharest:' . $startDt->format('Ymd\THis');
+            $lines[] = 'DTEND;TZID=Europe/Bucharest:' . $endDt->format('Ymd\THis');
+            $lines[] = 'SUMMARY:' . $this->icsEscape($summary);
+            $lines[] = 'DESCRIPTION:' . $this->icsEscape(implode("\n", $description));
+            if ($location) $lines[] = 'LOCATION:' . $this->icsEscape($location);
+            $lines[] = 'STATUS:' . ($isAccepted ? 'CONFIRMED' : 'TENTATIVE');
+            $lines[] = 'TRANSP:OPAQUE';
+            $lines[] = 'CATEGORIES:Booking,' . ($isAccepted ? 'Confirmed' : 'Pending');
+            $lines[] = 'LAST-MODIFIED:' . ($r->updated_at ? $r->updated_at->utc()->format('Ymd\THis\Z') : $now);
+            $lines[] = 'END:VEVENT';
+        }
+
+        foreach ($blocks as $b) {
+            // All-day events for blocked ranges (DTEND e exclusiv în iCal, deci +1 zi)
+            $startDate = \Illuminate\Support\Carbon::parse($b->date_start);
+            $endDate = \Illuminate\Support\Carbon::parse($b->date_end ?: $b->date_start)->addDay();
+            $lines[] = 'BEGIN:VEVENT';
+            $lines[] = 'UID:block-' . $b->id . '@' . $domain;
+            $lines[] = 'DTSTAMP:' . $now;
+            $lines[] = 'DTSTART;VALUE=DATE:' . $startDate->format('Ymd');
+            $lines[] = 'DTEND;VALUE=DATE:' . $endDate->format('Ymd');
+            $lines[] = 'SUMMARY:' . $this->icsEscape('🚫 ' . ($b->reason ?: 'Indisponibil'));
+            $lines[] = 'STATUS:CONFIRMED';
+            $lines[] = 'TRANSP:OPAQUE';
+            $lines[] = 'CATEGORIES:Booking,Blocked';
+            $lines[] = 'END:VEVENT';
+        }
+
+        $lines[] = 'END:VCALENDAR';
+
+        // Fold lines longer than 75 octets per RFC 5545 (continuation cu space)
+        $folded = [];
+        foreach ($lines as $line) {
+            if (strlen($line) <= 75) {
+                $folded[] = $line;
+                continue;
+            }
+            $folded[] = substr($line, 0, 75);
+            $rest = substr($line, 75);
+            while (strlen($rest) > 74) {
+                $folded[] = ' ' . substr($rest, 0, 74);
+                $rest = substr($rest, 74);
+            }
+            if ($rest !== '') $folded[] = ' ' . $rest;
+        }
+
+        return implode("\r\n", $folded) . "\r\n";
+    }
+
+    protected function icsEscape(string $value): string
+    {
+        // RFC 5545: escape commas, semicolons, backslashes, newlines
+        $value = str_replace(["\\", ",", ";"], ["\\\\", "\\,", "\\;"], $value);
+        $value = str_replace(["\r\n", "\r", "\n"], '\\n', $value);
+        return $value;
+    }
+
     public function expireStaleRequests(): int
     {
         return ArtistBookingRequest::whereIn('status', [

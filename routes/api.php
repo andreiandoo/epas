@@ -2696,6 +2696,11 @@ Route::prefix('marketplace-client/artist')->middleware(['throttle:120,1', 'marke
 
             Route::get('/kpis', [ArtistBookingController::class, 'kpis'])
                 ->name('api.marketplace-client.artist.booking.kpis');
+
+            Route::get('/ical-token', [ArtistBookingController::class, 'icalToken'])
+                ->name('api.marketplace-client.artist.booking.ical-token');
+            Route::post('/ical-token/regenerate', [ArtistBookingController::class, 'icalTokenRegenerate'])
+                ->name('api.marketplace-client.artist.booking.ical-token.regenerate');
         });
     });
 });
@@ -2713,6 +2718,9 @@ Route::middleware(['throttle:600,1', 'marketplace.auth'])->group(function () {
         ->name('api.public.artist.booking-status');
     Route::get('/marketplace-client/public/booking/conversation/{token}', [BookingPublicController::class, 'viewConversation'])
         ->name('api.public.booking.conversation.view');
+    Route::get('/marketplace-client/public/booking/ical/{token}', [BookingPublicController::class, 'icalFeed'])
+        ->where('token', '[A-Za-z0-9]+')
+        ->name('api.public.booking.ical');
 });
 Route::middleware(['throttle:200,1', 'marketplace.auth'])->group(function () {
     Route::post('/marketplace-client/public/artist/{slug}/booking-request', [BookingPublicController::class, 'submitRequest'])

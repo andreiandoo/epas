@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Support\Translatable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Str;
 
 class ArtistBookingListing extends Model
 {
@@ -32,6 +33,7 @@ class ArtistBookingListing extends Model
         'max_distance_km',
         'response_target_hours',
         'status',
+        'ical_token',
     ];
 
     protected $casts = [
@@ -49,5 +51,28 @@ class ArtistBookingListing extends Model
     public function artist(): BelongsTo
     {
         return $this->belongsTo(Artist::class);
+    }
+
+    /**
+     * Returnează token-ul iCal, generându-l prima dată dacă lipsește.
+     * Token-ul e folosit ca secret în URL-ul `/booking/ical/{token}.ics`.
+     */
+    public function ensureIcalToken(): string
+    {
+        if (!empty($this->ical_token)) {
+            return $this->ical_token;
+        }
+        do {
+            $token = Str::random(40);
+        } while (static::where('ical_token', $token)->exists());
+        $this->ical_token = $token;
+        $this->save();
+        return $token;
+    }
+
+    public function regenerateIcalToken(): string
+    {
+        $this->ical_token = null;
+        return $this->ensureIcalToken();
     }
 }

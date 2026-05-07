@@ -2373,6 +2373,19 @@ switch ($action) {
         $requiresAuth = true;
         break;
 
+    case 'artist.booking.ical-token':
+        $method = 'GET';
+        $endpoint = '/artist/booking/ical-token';
+        $requiresAuth = true;
+        break;
+
+    case 'artist.booking.ical-token.regenerate':
+        $method = 'POST';
+        $body = '{}';
+        $endpoint = '/artist/booking/ical-token/regenerate';
+        $requiresAuth = true;
+        break;
+
     // Public Booking — form submit + guest conversation (no artist auth, doar X-API-Key)
     case 'public.booking.status':
         $method = 'GET';
