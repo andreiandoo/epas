@@ -192,8 +192,13 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
 
                 <!-- ============ TAB: PLANNER ============ -->
                 <div x-show="tab === 'planner'" class="p-6">
-                    <div class="grid gap-6 lg:grid-cols-12">
-                        <div class="lg:col-span-4">
+                    <!-- Toggle pentru sidebar (vizibil doar pe lg+) -->
+                    <button @click="sidebarCollapsed = !sidebarCollapsed" type="button"
+                        class="hidden lg:inline-flex items-center gap-2 mb-4 text-xs font-semibold px-3 py-1.5 rounded-lg border bg-surface text-muted border-border hover:bg-primary/5 hover:text-primary hover:border-primary/30 transition-colors">
+                        <span x-text="sidebarCollapsed ? '▶ Arată setări tour' : '◀ Ascunde setări tour'"></span>
+                    </button>
+                    <div class="grid gap-6" :class="sidebarCollapsed ? 'lg:grid-cols-1' : 'lg:grid-cols-12'">
+                        <div x-show="!sidebarCollapsed" class="lg:col-span-4">
                             <div class="sticky space-y-5 top-6">
                                 <div class="p-5 bg-white border border-border rounded-2xl">
                                     <label class="block mb-2 text-xs font-bold tracking-wider uppercase text-muted">Nume turneu</label>
@@ -396,7 +401,7 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                             </div>
                         </div>
 
-                        <div class="lg:col-span-8">
+                        <div :class="sidebarCollapsed ? '' : 'lg:col-span-8'">
                             <div x-show="!planner.optimized">
                                 <div class="p-12 text-center border border-dashed bg-surface border-border rounded-2xl">
                                     <div class="flex items-center justify-center w-16 h-16 mx-auto mb-4 bg-white rounded-full">🎯</div>
@@ -429,16 +434,16 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                     </div>
                                 </div>
 
-                                <div class="grid gap-3 mb-4 grid-cols-2 sm:grid-cols-4">
-                                    <div class="p-3 text-center bg-surface rounded-xl">
+                                <div class="grid grid-cols-2 gap-3 mb-4 sm:grid-cols-4">
+                                    <div class="p-3 text-center border bg-surface rounded-xl border-border">
                                         <p class="text-xs font-semibold uppercase text-muted">⛽ Combustibil</p>
                                         <p class="text-sm font-bold text-secondary"><span x-text="formatNumber(planner.summary?.fuel_cost_ron ?? 0)"></span> RON</p>
                                     </div>
-                                    <div class="p-3 text-center bg-surface rounded-xl">
+                                    <div class="p-3 text-center border bg-surface rounded-xl border-border">
                                         <p class="text-xs font-semibold uppercase text-muted">🛏️ Cazare</p>
                                         <p class="text-sm font-bold text-secondary"><span x-text="formatNumber(planner.summary?.accommodation_cost_ron ?? 0)"></span> RON</p>
                                     </div>
-                                    <div class="p-3 text-center bg-surface rounded-xl">
+                                    <div class="p-3 text-center border bg-surface rounded-xl border-border">
                                         <p class="text-xs font-semibold uppercase text-muted">🍽️ Mâncare</p>
                                         <p class="text-sm font-bold text-secondary"><span x-text="formatNumber(planner.summary?.meal_cost_ron ?? 0)"></span> RON</p>
                                     </div>
@@ -447,6 +452,8 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                         <p class="text-sm font-bold text-secondary"><span x-text="formatNumber(planner.summary?.extra_cost_ron ?? 0)"></span> RON</p>
                                     </div>
                                 </div>
+
+                                <p class="mb-2 text-xs text-muted ml-7 sm:ml-12">* Toate costurile sunt <strong>estimative</strong>, calculate din setările tale (vehicule, cazare, diurnă).</p>
 
                                 <div class="grid grid-cols-3 gap-3 mb-4">
                                     <div class="p-3 text-center border bg-success/5 border-success/20 rounded-xl">
@@ -491,7 +498,7 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
 
                                     <div x-ref="routeList" class="space-y-3">
                                         <template x-for="(stop, idx) in planner.route || []" :key="stop.city + '-' + idx">
-                                            <div class="p-4 transition-colors rounded-xl" :data-idx="idx"
+                                            <div x-data="{ expanded: !stop.fixed }" class="p-4 transition-colors rounded-xl" :data-idx="idx"
                                                 :class="stop.fixed ? 'border-2 border-success bg-success/5' : (stop.is_home ? 'border border-accent/40 bg-accent/5' : 'border border-border hover:bg-surface/50')">
                                                 <div class="flex items-start gap-3 mb-3">
                                                     <span x-show="!stop.fixed" class="flex-shrink-0 pt-1 text-xl leading-none select-none cursor-grab text-muted route-handle" title="Trage pentru reordonare">⋮⋮</span>
@@ -520,15 +527,22 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                                     </div>
                                                 </div>
 
-                                                <!-- Buton Confirmă concert -->
-                                                <div class="mb-3 ml-7 sm:ml-12">
-                                                    <button @click="toggleStopFixed(idx)"
+                                                <!-- Buton Confirmă concert + toggle expand/collapse -->
+                                                <div class="flex flex-wrap items-center gap-2 mb-3 ml-7 sm:ml-12">
+                                                    <button @click="toggleStopFixed(idx); expanded = !stop.fixed"
                                                         :class="stop.fixed ? 'bg-success/10 text-success border-success/30' : 'bg-surface text-muted border-border hover:bg-success/5 hover:text-success hover:border-success/30'"
                                                         class="text-xs font-semibold px-3 py-1.5 rounded-lg border transition-colors">
                                                         <span x-text="stop.fixed ? '🔓 Anulează confirmarea' : '🔒 Confirmă concert'"></span>
                                                     </button>
-                                                    <span class="ml-2 text-xs text-muted" x-show="stop.fixed">Concertul e blocat — data și venue-ul nu mai pot fi modificate.</span>
+                                                    <button @click="expanded = !expanded" type="button"
+                                                        class="text-xs font-semibold px-3 py-1.5 rounded-lg border transition-colors bg-surface text-muted border-border hover:bg-primary/5 hover:text-primary hover:border-primary/30">
+                                                        <span x-text="expanded ? '▲ Restrânge detaliile' : '▼ Vezi detaliile'"></span>
+                                                    </button>
+                                                    <span class="text-xs text-muted" x-show="stop.fixed">Concertul e blocat — data și venue-ul nu mai pot fi modificate.</span>
                                                 </div>
+
+                                                <!-- Tot conținutul de mai jos e collapsible -->
+                                                <div x-show="expanded" x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100">
 
                                                 <!-- Inline edit row: data + venue -->
                                                 <div class="grid grid-cols-1 gap-2 mb-3 sm:grid-cols-2 ml-7 sm:ml-12">
@@ -602,7 +616,7 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                                 </div>
 
                                                 <!-- Costuri suplimentare opționale -->
-                                                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-3 ml-7 sm:ml-12">
+                                                <div class="grid grid-cols-1 gap-2 mb-3 sm:grid-cols-3 ml-7 sm:ml-12">
                                                     <div>
                                                         <label class="block mb-1 text-xs text-muted">
                                                             ➕ Costuri suplimentare (RON)
@@ -643,42 +657,40 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                                     </span>
                                                 </label>
 
-                                                <p class="mb-2 text-xs text-muted ml-7 sm:ml-12">* Toate costurile sunt <strong>estimative</strong>, calculate din setările tale (vehicule, cazare, diurnă).</p>
-
                                                 <!-- Cost breakdown extended cu tooltip cu formula -->
                                                 <div class="grid grid-cols-2 gap-2 mb-3 text-xs sm:grid-cols-5">
                                                     <div class="p-2 rounded bg-surface">
-                                                        <p class="flex items-center gap-1 text-xs text-muted">⛽ Combustibil
+                                                        <p class="flex items-center gap-1 text-sm text-muted">⛽ Combustibil
                                                             <span class="to-tip" :data-tip="fuelFormulaText(stop)">ⓘ</span>
                                                         </p>
                                                         <p class="font-semibold text-secondary"><span x-text="formatNumber(stop.fuel_cost ?? 0)"></span> RON</p>
-                                                        <p class="text-xs text-muted mt-0.5" x-show="(stop.fuel_arrival_cost ?? 0) > 0 && (stop.fuel_return_leg_cost ?? 0) > 0">
+                                                        <p class="hidden text-xs text-muted mt-0.5" x-show="(stop.fuel_arrival_cost ?? 0) > 0 && (stop.fuel_return_leg_cost ?? 0) > 0">
                                                             sosire <span x-text="formatNumber(stop.fuel_arrival_cost ?? 0)"></span> + retur <span x-text="formatNumber(stop.fuel_return_leg_cost ?? 0)"></span>
                                                         </p>
-                                                        <p class="text-xs text-muted mt-0.5" x-show="(stop.fuel_arrival_cost ?? 0) > 0 && (stop.fuel_return_leg_cost ?? 0) === 0">
+                                                        <p class="hidden text-xs text-muted mt-0.5" x-show="(stop.fuel_arrival_cost ?? 0) > 0 && (stop.fuel_return_leg_cost ?? 0) === 0">
                                                             <span x-text="formatNumber(stop.fuel_arrival_km ?? 0)"></span> km
                                                         </p>
                                                     </div>
                                                     <div class="p-2 rounded bg-surface">
-                                                        <p class="flex items-center gap-1 text-xs text-muted">🛏️ Cazare (<span x-text="stop.nights ?? 1"></span>n)
+                                                        <p class="flex items-center gap-1 text-sm text-muted">🛏️ Cazare (<span x-text="stop.nights ?? 1"></span>n)
                                                             <span class="to-tip" :data-tip="accommodationFormulaText(stop)">ⓘ</span>
                                                         </p>
                                                         <p class="font-semibold text-secondary"><span x-text="formatNumber(stop.accommodation_cost ?? 0)"></span> RON</p>
                                                     </div>
                                                     <div class="p-2 rounded bg-surface">
-                                                        <p class="flex items-center gap-1 text-xs text-muted">🍽️ Diurnă
+                                                        <p class="flex items-center gap-1 text-sm text-muted">🍽️ Diurnă
                                                             <span class="to-tip" :data-tip="mealFormulaText(stop)">ⓘ</span>
                                                         </p>
                                                         <p class="font-semibold text-secondary"><span x-text="formatNumber(stop.meal_cost ?? 0)"></span> RON</p>
                                                     </div>
                                                     <div class="p-2 rounded bg-surface" :class="(stop.extra_cost ?? 0) > 0 ? 'bg-warning/5 border border-warning/20' : ''">
-                                                        <p class="flex items-center gap-1 text-xs text-muted">➕ Extra
+                                                        <p class="flex items-center gap-1 text-sm text-muted">➕ Extra
                                                             <span class="to-tip" :data-tip="(stop.extra_cost_description || 'Costuri suplimentare introduse manual de tine pentru acest stop.')">ⓘ</span>
                                                         </p>
                                                         <p class="font-semibold text-secondary"><span x-text="formatNumber(stop.extra_cost ?? 0)"></span> RON</p>
                                                     </div>
                                                     <div class="p-2 border rounded bg-error/5 border-error/20">
-                                                        <p class="text-xs font-bold text-error">💸 Cost total*</p>
+                                                        <p class="text-sm font-bold text-error">💸 Cost total*</p>
                                                         <p class="font-bold text-error"><span x-text="formatNumber(stop.stop_total_cost ?? 0)"></span> RON</p>
                                                     </div>
                                                 </div>
@@ -702,10 +714,10 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                                 <!-- Cazare embed -->
                                                 <div class="pt-3 border-t border-border" x-data="{ stayOpen: false }">
                                                     <div class="flex items-center justify-between gap-x-4">
-                                                        <button @click="stayOpen = !stayOpen; $nextTick(() => stayOpen && loadStay22(idx))" class="flex items-center gap-1 text-xs text-primary hover:underline">
-                                                            🛏️ <span x-text="stayOpen ? 'Ascunde cazări' : 'Vezi cazări în zonă'"></span>
+                                                        <button @click="stayOpen = !stayOpen; $nextTick(() => stayOpen && loadStay22(idx))" class="flex items-center gap-1 px-6 py-2 text-sm text-white rounded-md bg-primary hover:underline">
+                                                            <span x-text="stayOpen ? 'Ascunde cazări' : 'Vezi cazări în zonă'"></span>
                                                         </button>
-                                                        <p class="mt-1 text-xs text-muted" x-show="!stayOpen">Recomandări lângă <span x-text="stop.venue_name || stop.city"></span> filtrate cu setările tale (<span x-text="planner.config.people_count"></span> persoane · <span x-text="totalRoomsCount()"></span> camere · max <span x-text="formatNumber(maxRoomPrice())"></span> RON/noapte).</p>
+                                                        <p class="mt-1 text-xs font-semibold text-muted" x-show="!stayOpen">Recomandări lângă <span x-text="stop.venue_name || stop.city"></span> filtrate cu setările tale (<span x-text="planner.config.people_count"></span> persoane · <span x-text="totalRoomsCount()"></span> camere · max <span x-text="formatNumber(maxRoomPrice())"></span> RON/noapte).</p>
                                                     </div>
                                                     <div x-show="stayOpen" x-transition class="mt-3">
                                                         <iframe :id="'stay22-frame-' + idx" :src="stay22Url(stop)" class="to-stay22-iframe" loading="lazy" referrerpolicy="origin"></iframe>
@@ -724,6 +736,14 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                                 <p x-show="!stop.distance_to_next_km && stop.return_distance_km" class="text-[11px] text-muted mt-3 pt-2 border-t border-border/50">
                                                     → Întoarcere la <strong x-text="planner.config.start_location"></strong>: <strong><span x-text="formatNumber(stop.return_distance_km)"></span> km</strong> · ⛽ <span x-text="formatNumber(stop.return_fuel_cost ?? 0)"></span> RON
                                                 </p>
+                                                </div><!-- end x-show=expanded -->
+
+                                                <!-- Mini-summary când cardul e collapsed: arată cifrele importante o singură linie -->
+                                                <div x-show="!expanded" class="grid grid-cols-3 gap-2 ml-7 sm:ml-12 text-xs">
+                                                    <div class="text-muted">📅 <span x-text="stop.date"></span></div>
+                                                    <div class="text-muted">💸 <span x-text="formatNumber(stop.stop_total_cost ?? 0)"></span> RON</div>
+                                                    <div class="text-success">🎟️ <span x-text="formatNumber(stop.prediction)"></span> bilete</div>
+                                                </div>
                                             </div>
                                         </template>
                                     </div>
@@ -774,15 +794,15 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                         <td class="px-2 py-3 font-bold text-right text-secondary" x-text="formatNumber(p.fans)"></td>
                                         <td class="px-2 py-3 text-center">
                                             <p class="text-sm font-bold text-secondary" x-text="p.small.estimate"></p>
-                                            <p class="text-xs text-muted" x-text="p.small.încredere + '%'"></p>
+                                            <p class="text-xs text-muted" x-text="p.small.confidence + '% încredere'"></p>
                                         </td>
                                         <td class="px-2 py-3 text-center">
                                             <p class="text-sm font-bold text-secondary" x-text="p.medium.estimate"></p>
-                                            <p class="text-xs text-muted" x-text="p.medium.încredere+ '%'"></p>
+                                            <p class="text-xs text-muted" x-text="p.medium.confidence + '% încredere'"></p>
                                         </td>
                                         <td class="px-2 py-3 text-center">
                                             <p class="text-sm font-bold text-secondary" x-text="p.large.estimate"></p>
-                                            <p class="text-xs text-muted" x-text="p.large.încredere+ '%'"></p>
+                                            <p class="text-xs text-muted" x-text="p.large.confidence + '% încredere'"></p>
                                         </td>
                                         <td class="px-2 py-3"><span class="text-xs to-badge" :class="statusBadgeClass(p.status)" x-text="p.status_label"></span></td>
                                         <td class="px-2 py-3 text-right">
@@ -824,41 +844,48 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                         <button @click="setTab('planner')" class="to-btn to-btn-primary to-btn-sm">+ Scenariu nou</button>
                     </div>
 
-                    <div class="grid gap-4 mb-8 lg:grid-cols-3">
+                    <div class="space-y-3 mb-8">
                         <template x-for="s in scenariosData.scenarios || []" :key="s.id">
-                            <div class="overflow-hidden transition-all border-2 rounded-2xl hover:shadow-md" :class="s.status === 'active' ? 'border-primary' : 'border-border'">
-                                <div class="relative flex flex-col justify-end p-4 aspect-video bg-gradient-to-br from-primary to-secondary">
-                                    <span x-show="s.status === 'active'" class="absolute text-white top-2 left-2 to-badge bg-primary">Activ</span>
-                                    <span x-show="s.status === 'draft'" class="absolute text-white top-2 left-2 to-badge bg-muted/50">Draft</span>
-                                    <p class="text-lg font-extrabold leading-tight text-white" x-text="s.name"></p>
-                                    <p class="text-xs text-white/80" x-text="s.cities_count + ' orașe · ' + s.date_range"></p>
+                            <div class="flex flex-col sm:flex-row sm:items-center gap-3 p-4 transition-all border-2 rounded-xl hover:shadow-sm" :class="s.status === 'active' ? 'border-primary bg-primary/5' : 'border-border bg-white'">
+                                <!-- Status indicator + name + meta -->
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center flex-wrap gap-2 mb-1">
+                                        <span x-show="s.status === 'active'" class="text-white to-badge bg-primary">Activ</span>
+                                        <span x-show="s.status === 'draft'" class="text-white to-badge bg-muted/50">Draft</span>
+                                        <p class="text-base font-bold text-secondary truncate" x-text="s.name"></p>
+                                    </div>
+                                    <p class="text-xs text-muted"><span x-text="s.cities_count"></span> orașe · <span x-text="s.date_range"></span></p>
                                 </div>
-                                <div class="p-4">
-                                    <div class="grid grid-cols-3 gap-2 mb-3 text-center">
-                                        <div>
-                                            <p class="text-xs text-muted">Distanță</p>
-                                            <p class="text-sm font-bold text-secondary"><span x-text="formatNumber(s.summary?.total_distance_km ?? 0)"></span> km</p>
-                                        </div>
-                                        <div>
-                                            <p class="text-xs text-muted">Bilete</p>
-                                            <p class="text-sm font-bold text-secondary" x-text="'~' + formatNumber(s.summary?.predicted_tickets ?? 0)"></p>
-                                        </div>
-                                        <div>
-                                            <p class="text-xs text-muted">Cost</p>
-                                            <p class="text-sm font-bold text-secondary" x-text="'~' + formatNumber(s.summary?.total_cost_ron ?? 0)"></p>
-                                        </div>
+                                <!-- Stats inline -->
+                                <div class="flex flex-wrap items-center gap-4 sm:gap-6 px-2">
+                                    <div class="text-center">
+                                        <p class="text-[10px] text-muted uppercase">Distanță</p>
+                                        <p class="text-sm font-bold text-secondary"><span x-text="formatNumber(s.summary?.total_distance_km ?? 0)"></span> km</p>
                                     </div>
-                                    <div class="flex gap-1">
-                                        <button @click="loadScenarioToPlanner(s)" class="flex-1 to-btn to-btn-secondary to-btn-sm">Deschide</button>
-                                        <button @click="toggleActive(s)" class="to-btn to-btn-secondary to-btn-sm" :title="s.status === 'active' ? 'Marcheză draft' : 'Marcheză activ'">
-                                            <span x-text="s.status === 'active' ? '⭐' : '☆'"></span>
-                                        </button>
-                                        <button @click="deleteScenario(s)" class="to-btn to-btn-secondary to-btn-sm" title="Șterge">🗑️</button>
+                                    <div class="text-center">
+                                        <p class="text-[10px] text-muted uppercase">Bilete</p>
+                                        <p class="text-sm font-bold text-secondary" x-text="'~' + formatNumber(s.summary?.predicted_tickets ?? 0)"></p>
                                     </div>
+                                    <div class="text-center">
+                                        <p class="text-[10px] text-muted uppercase">Cost</p>
+                                        <p class="text-sm font-bold text-secondary" x-text="'~' + formatNumber(s.summary?.total_cost_ron ?? 0) + ' RON'"></p>
+                                    </div>
+                                    <div class="text-center" x-show="s.summary?.profit_ron !== undefined">
+                                        <p class="text-[10px] text-muted uppercase">Profit</p>
+                                        <p class="text-sm font-bold" :class="(s.summary?.profit_ron ?? 0) >= 0 ? 'text-success' : 'text-error'" x-text="'~' + formatNumber(s.summary?.profit_ron ?? 0) + ' RON'"></p>
+                                    </div>
+                                </div>
+                                <!-- Actions -->
+                                <div class="flex gap-1 flex-shrink-0">
+                                    <button @click="loadScenarioToPlanner(s)" class="to-btn to-btn-primary to-btn-sm">Deschide</button>
+                                    <button @click="toggleActive(s)" class="to-btn to-btn-secondary to-btn-sm" :title="s.status === 'active' ? 'Marchează draft' : 'Marchează activ'">
+                                        <span x-text="s.status === 'active' ? '⭐' : '☆'"></span>
+                                    </button>
+                                    <button @click="deleteScenario(s)" class="to-btn to-btn-secondary to-btn-sm" title="Șterge">🗑️</button>
                                 </div>
                             </div>
                         </template>
-                        <p x-show="!(scenariosData.scenarios || []).length" class="py-8 text-sm text-center col-span-full text-muted">Niciun scenariu salvat încă.</p>
+                        <p x-show="!(scenariosData.scenarios || []).length" class="py-8 text-sm text-center text-muted">Niciun scenariu salvat încă.</p>
                     </div>
 
                     <div x-show="(scenariosData.scenarios || []).length >= 2" class="p-5 bg-white border border-border rounded-2xl">
@@ -986,6 +1013,7 @@ function tourOptimizer() {
         },
 
         venueSearchActive: { stopIdx: -1, query: '' },
+        sidebarCollapsed: false,
 
         get totalRoomCapacity() {
             const r = this.planner.config.rooms;
