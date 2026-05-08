@@ -433,22 +433,22 @@ class DashboardController extends BaseController
             // it. Order-level fields (Status/Valoare/Sursa/Data) stay
             // identical for every ticket in the same order.
             fputcsv($handle, [
-                'Comanda', 'Status', 'Client', 'Telefon',
+                'Data', 'Comanda', 'Status', 'Client', 'Telefon',
                 'Tip bilet', 'Cod bilet', 'Sectiune', 'Rand', 'Loc',
-                'Pret bilet', 'Valoare comanda', 'Sursa', 'Data',
+                'Pret bilet', 'Valoare comanda',
             ], escape: '\\');
 
             foreach ($orders as $order) {
                 $customer = $order->marketplaceCustomer?->full_name ?? $order->customer_name ?? '-';
                 $phone = $order->marketplaceCustomer?->phone ?? $order->customer_phone ?? '-';
                 $orderTotal = number_format((float) $order->total, 2, '.', '');
-                $source = $order->source ?? 'marketplace';
                 $createdAt = $order->created_at->format('Y-m-d H:i');
 
                 if ($order->tickets->isEmpty()) {
                     // Order without tickets — emit one row so the order is
                     // still represented in the export instead of vanishing.
                     fputcsv($handle, [
+                        $createdAt,
                         $order->order_number,
                         $order->status,
                         $customer,
@@ -456,8 +456,6 @@ class DashboardController extends BaseController
                         '-', '', '', '', '',
                         '0.00',
                         $orderTotal,
-                        $source,
-                        $createdAt,
                     ], escape: '\\');
                     continue;
                 }
@@ -466,19 +464,18 @@ class DashboardController extends BaseController
                     $type = $ticket->marketplaceTicketType?->name ?? $ticket->ticketType?->name ?? '-';
                     $details = $ticket->getSeatDetails();
                     fputcsv($handle, [
+                        $createdAt,
                         $order->order_number,
                         $order->status,
                         $customer,
                         $phone,
                         $type,
-                        $ticket->barcode ?? '',
+                        $ticket->code ?? '',
                         $details['section_name'] ?? '',
                         $details['row_label'] ?? '',
                         $details['seat_number'] ?? '',
                         number_format((float) ($ticket->price ?? 0), 2, '.', ''),
                         $orderTotal,
-                        $source,
-                        $createdAt,
                     ], escape: '\\');
                 }
             }
