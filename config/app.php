@@ -3,7 +3,7 @@
 return [
 
     // Staff mobile app latest version (used for update prompts)
-    'staff_app_version' => env('STAFF_APP_VERSION', '1.5.1'),
+    'staff_app_version' => env('STAFF_APP_VERSION', '1.5.2'),
 
     /*
     |--------------------------------------------------------------------------
