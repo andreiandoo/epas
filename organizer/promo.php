@@ -88,8 +88,14 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 <div><label class="label">Cod Promotional *</label><div class="flex gap-2"><input type="text" id="promo-code" placeholder="Ex: VARA2024" class="flex-1 uppercase input" required><button type="button" onclick="generateCode()" class="btn btn-secondary"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg></button></div></div>
                 <div><label class="label">Tip Reducere *</label><div class="grid grid-cols-2 gap-3"><label><input type="radio" name="discount_type" value="percentage" class="sr-only peer" checked><div class="p-4 border-2 cursor-pointer border-border rounded-xl peer-checked:border-primary peer-checked:bg-primary/5"><p class="font-medium text-secondary">Procent</p><p class="text-sm text-muted">Ex: 10% reducere</p></div></label><label><input type="radio" name="discount_type" value="fixed" class="sr-only peer"><div class="p-4 border-2 cursor-pointer border-border rounded-xl peer-checked:border-primary peer-checked:bg-primary/5"><p class="font-medium text-secondary">Suma Fixa</p><p class="text-sm text-muted">Ex: 50 RON</p></div></label></div></div>
                 <div><label class="label">Valoare Reducere *</label><div class="relative"><input type="number" id="discount-value" min="1" max="100" class="w-full pr-12 input" required><span id="discount-suffix" class="absolute -translate-y-1/2 right-4 top-1/2 text-muted">%</span></div></div>
-                <div><label class="label">Limiteaza la un eveniment</label><select id="promo-event" class="w-full input"><option value="">Toate evenimentele tale</option></select><p class="mt-1 text-sm text-muted">Optional. Codul se aplica oricum doar pe evenimentele tale; selecteaza unul daca vrei sa restrangi mai mult.</p></div>
-                <div id="ticket-type-container" class="hidden"><label class="label">Limiteaza la un tip de bilet</label><select id="promo-ticket-type" class="w-full input"><option value="">Toate tipurile de bilete</option></select><p class="mt-1 text-sm text-muted">Optional: aplica doar pentru un anumit tip de bilet</p></div>
+                <div><label class="label">Limiteaza la un eveniment *</label><select id="promo-event" class="w-full input" required><option value="">— Selecteaza un eveniment —</option></select><p class="mt-1 text-sm text-muted">Codul se aplica doar pe acest eveniment.</p></div>
+                <div id="ticket-type-container" class="hidden">
+                    <label class="label">Limiteaza la tipuri de bilete *</label>
+                    <div id="promo-ticket-type-list" class="p-3 space-y-1 border bg-surface rounded-xl border-border max-h-56 overflow-y-auto">
+                        <p class="text-sm text-muted">Selecteaza un eveniment pentru a vedea tipurile disponibile.</p>
+                    </div>
+                    <p class="mt-1 text-sm text-muted">Bifeaza unul sau mai multe. Codul va functiona doar pentru tipurile selectate.</p>
+                </div>
                 <div class="grid grid-cols-2 gap-4">
                     <div><label class="label">Limita Utilizari Totale</label><input type="number" id="usage-limit" min="0" placeholder="Nelimitat" class="w-full input"><p class="mt-1 text-sm text-muted">Lasa gol pentru nelimitat</p></div>
                     <div><label class="label">Limita Per Client</label><input type="number" id="usage-limit-per-customer" min="0" placeholder="Nelimitat" class="w-full input"><p class="mt-1 text-sm text-muted">Cate utilizari per client</p></div>
@@ -144,35 +150,45 @@ async function loadEvents() {
     } catch (e) { console.error('Failed to load events:', e); }
 }
 
-async function onEventSelected() {
+async function onEventSelected(preSelectedTicketTypeIds = []) {
     const eventId = document.getElementById('promo-event').value;
     const ticketTypeContainer = document.getElementById('ticket-type-container');
+    const list = document.getElementById('promo-ticket-type-list');
 
     if (!eventId) {
         ticketTypeContainer.classList.add('hidden');
+        list.innerHTML = '<p class="text-sm text-muted">Selecteaza un eveniment pentru a vedea tipurile disponibile.</p>';
         return;
     }
 
+    list.innerHTML = '<p class="text-sm text-muted">Se incarca...</p>';
+    ticketTypeContainer.classList.remove('hidden');
+
     try {
         const res = await AmbiletAPI.get(`/organizer/events/${eventId}`);
-        if (res.success && res.data?.event?.ticket_types) {
+        if (res.success && Array.isArray(res.data?.event?.ticket_types) && res.data.event.ticket_types.length > 0) {
             const ticketTypes = res.data.event.ticket_types;
-            const sel = document.getElementById('promo-ticket-type');
-            sel.innerHTML = '<option value="">Toate tipurile de bilete</option>';
-            ticketTypes.forEach(tt => {
-                const opt = document.createElement('option');
-                opt.value = tt.id;
-                opt.textContent = `${tt.name} (${AmbiletUtils.formatCurrency(tt.price || tt.display_price || 0)})`;
-                sel.appendChild(opt);
-            });
-            ticketTypeContainer.classList.remove('hidden');
+            const preSet = new Set((preSelectedTicketTypeIds || []).map(x => parseInt(x, 10)));
+            list.innerHTML = ticketTypes.map(tt => {
+                const price = AmbiletUtils.formatCurrency(tt.price || tt.display_price || 0);
+                const checked = preSet.has(parseInt(tt.id, 10)) ? 'checked' : '';
+                return `<label class="flex items-center gap-2 p-2 rounded-lg cursor-pointer hover:bg-white">
+                    <input type="checkbox" name="promo_ticket_type_ids" value="${tt.id}" class="rounded promo-tt-checkbox" ${checked}>
+                    <span class="flex-1 text-sm text-secondary">${tt.name}</span>
+                    <span class="text-xs text-muted">${price}</span>
+                </label>`;
+            }).join('');
         } else {
-            ticketTypeContainer.classList.add('hidden');
+            list.innerHTML = '<p class="text-sm text-muted">Acest eveniment nu are tipuri de bilete configurate.</p>';
         }
     } catch (e) {
         console.error('Failed to load ticket types:', e);
-        ticketTypeContainer.classList.add('hidden');
+        list.innerHTML = '<p class="text-sm text-error">Eroare la incarcarea tipurilor de bilete.</p>';
     }
+}
+
+function getSelectedTicketTypeIds() {
+    return Array.from(document.querySelectorAll('.promo-tt-checkbox:checked')).map(c => parseInt(c.value, 10)).filter(v => !isNaN(v));
 }
 
 async function loadPromoCodes() {
@@ -345,7 +361,7 @@ function openCreateModal() {
     document.getElementById('promo-event').value = '';
     document.getElementById('usage-limit').value = '';
     document.getElementById('usage-limit-per-customer').value = '';
-    document.getElementById('promo-ticket-type').innerHTML = '<option value="">Toate tipurile de bilete</option>';
+    document.getElementById('promo-ticket-type-list').innerHTML = '<p class="text-sm text-muted">Selecteaza un eveniment pentru a vedea tipurile disponibile.</p>';
     document.getElementById('ticket-type-container').classList.add('hidden');
     document.querySelector('input[name="discount_type"][value="percentage"]').checked = true;
     document.getElementById('start-date').value = new Date().toISOString().split('T')[0];
@@ -366,14 +382,18 @@ async function editCode(id) {
     document.getElementById('usage-limit').value = code.usage_limit || '';
     document.getElementById('usage-limit-per-customer').value = code.usage_limit_per_customer || '';
 
-    // Load ticket types if event is selected
+    // Load ticket types if event is selected, pre-check the right ones
     const eventId = code.event?.id || code.event_id;
     if (eventId) {
-        await onEventSelected();
-        const ticketTypeId = code.ticket_type?.id || code.ticket_type_id;
-        if (ticketTypeId) {
-            document.getElementById('promo-ticket-type').value = ticketTypeId;
+        // Build pre-selected list: prefer applicable_ticket_type_ids array, else legacy single id
+        let preSelected = [];
+        if (Array.isArray(code.applicable_ticket_type_ids) && code.applicable_ticket_type_ids.length) {
+            preSelected = code.applicable_ticket_type_ids;
+        } else {
+            const ttId = code.ticket_type?.id || code.ticket_type_id;
+            if (ttId) preSelected = [ttId];
         }
+        await onEventSelected(preSelected);
     } else {
         document.getElementById('ticket-type-container').classList.add('hidden');
     }
@@ -417,17 +437,20 @@ async function deleteCode(id) {
 async function savePromoCode(e) {
     e.preventDefault();
     const eventIdRaw = document.getElementById('promo-event').value;
-    // Only include event_id if it's a valid non-empty value
     const eventId = eventIdRaw && eventIdRaw.trim() !== '' ? parseInt(eventIdRaw, 10) : null;
-    // Validate that parseInt didn't return NaN
     const validEventId = eventId !== null && !isNaN(eventId) ? eventId : null;
 
-    // Get ticket type if selected
-    const ticketTypeRaw = document.getElementById('promo-ticket-type')?.value;
-    const ticketTypeId = ticketTypeRaw && ticketTypeRaw.trim() !== '' ? parseInt(ticketTypeRaw, 10) : null;
-    const validTicketTypeId = ticketTypeId !== null && !isNaN(ticketTypeId) ? ticketTypeId : null;
+    if (!validEventId) {
+        AmbiletNotifications.error('Selecteaza un eveniment.');
+        return;
+    }
 
-    // Get usage limit per customer
+    const ticketTypeIds = getSelectedTicketTypeIds();
+    if (ticketTypeIds.length === 0) {
+        AmbiletNotifications.error('Selecteaza cel putin un tip de bilet.');
+        return;
+    }
+
     const usageLimitPerCustomerRaw = document.getElementById('usage-limit-per-customer')?.value;
     const usageLimitPerCustomer = usageLimitPerCustomerRaw ? parseInt(usageLimitPerCustomerRaw, 10) : null;
 
@@ -435,22 +458,14 @@ async function savePromoCode(e) {
         code: document.getElementById('promo-code').value.trim().toUpperCase(),
         type: document.querySelector('input[name="discount_type"]:checked').value,
         value: parseFloat(document.getElementById('discount-value').value) || 0,
-        applies_to: validEventId ? 'specific_event' : 'all_events',
+        applies_to: 'ticket_type',
+        event_id: validEventId,
+        ticket_type_ids: ticketTypeIds,
         usage_limit: document.getElementById('usage-limit').value ? parseInt(document.getElementById('usage-limit').value, 10) : null,
         usage_limit_per_customer: usageLimitPerCustomer,
         starts_at: document.getElementById('start-date').value || null,
         expires_at: document.getElementById('end-date').value || null
     };
-
-    // Only add event_id if it's valid to avoid "The selected event id is invalid" error
-    if (validEventId) {
-        data.event_id = validEventId;
-    }
-
-    // Add ticket_type_id if selected
-    if (validTicketTypeId) {
-        data.ticket_type_id = validTicketTypeId;
-    }
 
     const id = document.getElementById('promo-id').value;
     try {
