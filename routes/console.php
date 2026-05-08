@@ -23,6 +23,14 @@ Schedule::command('orders:expire-pending')
     ->everyTwoMinutes()
     ->timezone('Europe/Bucharest');
 
+// Daily sweep for expired Ad Tracking service orders. Marks them
+// completed and tears down organizer pixel toggles no longer covered by
+// another active order. Idempotent and side-effect-free against orders
+// that have already expired in a prior run.
+Schedule::command('tracking:expire-services')
+    ->dailyAt('03:30')
+    ->timezone('Europe/Bucharest');
+
 // Schedule automatic invoice generation for tenants
 Schedule::command('invoices:generate-tenant')
     ->dailyAt('02:00')

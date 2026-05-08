@@ -388,6 +388,22 @@ class ServiceOrder extends Model
             return;
         }
 
+        // 0) Set service start/end dates if missing — tracking checkout
+        //    only collects duration_months, not absolute dates. Anchor to
+        //    paid_at when present, otherwise now. Idempotent: respects
+        //    pre-existing dates from the order config.
+        if (!$this->service_start_date || !$this->service_end_date) {
+            $months = max(1, (int) ($this->config['duration_months'] ?? 1));
+            $start = $this->paid_at ?? now();
+            $patch = [];
+            if (!$this->service_start_date) $patch['service_start_date'] = $start->copy()->startOfDay();
+            if (!$this->service_end_date)   $patch['service_end_date']   = $start->copy()->addMonths($months)->endOfDay();
+            if (!empty($patch)) {
+                $this->update($patch);
+                $this->refresh();
+            }
+        }
+
         // 1) Flip the master tracking gate on the organizer.
         $serviceSettings = is_array($organizer->service_settings) ? $organizer->service_settings : [];
         $serviceSettings['tracking_enabled'] = true;
@@ -483,6 +499,22 @@ class ServiceOrder extends Model
             }
         }
 
+        // Ad Tracking: when this order completes, check whether any other
+        // active tracking order on the same organizer still covers the
+        // platforms purchased here. Disable TrackingIntegration rows for
+        // platforms that are no longer covered by an active order so the
+        // public site stops injecting their pixel scripts.
+        if ($this->service_type === self::TYPE_TRACKING) {
+            try {
+                $this->deactivateTracking();
+            } catch (\Exception $e) {
+                Log::warning('Failed to deactivate Ad Tracking on complete', [
+                    'service_order_id' => $this->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
         // Notify organizer that service is completed
         try {
             OrganizerNotificationService::notifyServiceOrderStatus($this, 'completed');
@@ -494,6 +526,72 @@ class ServiceOrder extends Model
         }
 
         return $this;
+    }
+
+    /**
+     * Inverse of activateTracking(). Called when a tracking order
+     * transitions to completed/cancelled/refunded — disables the
+     * TrackingIntegration rows for any platform no longer covered by
+     * another active tracking order. Pixel IDs are preserved (settings
+     * JSON intact) so a future renewal flips the toggle back on without
+     * losing data.
+     *
+     * If no active tracking order remains on this organizer at all,
+     * service_settings.tracking_enabled is also flipped off.
+     */
+    protected function deactivateTracking(): void
+    {
+        if (!$this->marketplace_organizer_id) {
+            return;
+        }
+
+        $organizer = MarketplaceOrganizer::find($this->marketplace_organizer_id);
+        if (!$organizer) {
+            return;
+        }
+
+        // Other tracking orders still in flight for this organizer.
+        $otherActiveOrders = self::where('marketplace_organizer_id', $organizer->id)
+            ->where('service_type', self::TYPE_TRACKING)
+            ->where('id', '!=', $this->id)
+            ->whereIn('status', [self::STATUS_ACTIVE, self::STATUS_PROCESSING])
+            ->get();
+
+        $coveredPlatforms = [];
+        foreach ($otherActiveOrders as $other) {
+            foreach (($other->config['platforms'] ?? []) as $p) {
+                $coveredPlatforms[$p] = true;
+            }
+        }
+
+        $platforms = $this->config['platforms'] ?? [];
+        foreach ($platforms as $platform) {
+            if (isset($coveredPlatforms[$platform])) {
+                continue; // another active order still covers this platform
+            }
+            $provider = self::TRACKING_PLATFORM_PROVIDER_MAP[$platform] ?? null;
+            if (!$provider) continue;
+
+            $row = \App\Models\TrackingIntegration::where('marketplace_organizer_id', $organizer->id)
+                ->where('provider', $provider)
+                ->first();
+            if (!$row) continue;
+
+            $settings = is_array($row->settings) ? $row->settings : [];
+            $settings['toggle_enabled'] = false;
+            $row->update([
+                'enabled' => false,
+                'settings' => $settings,
+            ]);
+        }
+
+        // No active tracking orders left — flip the master gate off too.
+        if ($otherActiveOrders->isEmpty()) {
+            $serviceSettings = is_array($organizer->service_settings) ? $organizer->service_settings : [];
+            $serviceSettings['tracking_enabled'] = false;
+            $organizer->service_settings = $serviceSettings;
+            $organizer->save();
+        }
     }
 
     /**
@@ -1106,6 +1204,21 @@ HTML;
         $this->update([
             'status' => self::STATUS_CANCELLED,
         ]);
+
+        // Same teardown as complete() for tracking orders — if the cancel
+        // was on an already-active order (canBeCancelled() also covers
+        // draft/pending_payment which had no activation, so deactivate is
+        // a no-op there). Pixel IDs preserved.
+        if ($this->service_type === self::TYPE_TRACKING) {
+            try {
+                $this->deactivateTracking();
+            } catch (\Exception $e) {
+                Log::warning('Failed to deactivate Ad Tracking on cancel', [
+                    'service_order_id' => $this->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
 
         return $this;
     }
