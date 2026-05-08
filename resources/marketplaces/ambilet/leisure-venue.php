@@ -43,8 +43,12 @@ require_once __DIR__ . '/includes/header.php';
 
 <?php
 // Build issuers map from organizer (primary always, secondary only if has_secondary_issuer=true).
-// Falls back to event-level fields when organizer payload missing.
-$organizer = $ev['organizer'] ?? $ev['marketplace_organizer'] ?? [];
+// IMPORTANT: organizer e SIBLING al cheii event in raspuns ($eventPreload['data']['organizer']),
+// NU sub event. Fallback la $ev['organizer'] e pentru compatibilitate cu posibile alte payload-uri.
+$organizer = $eventPreload['data']['organizer']
+    ?? $ev['organizer']
+    ?? $ev['marketplace_organizer']
+    ?? [];
 $issuers = [
     'primary' => [
         'name' => $organizer['company_name'] ?? $organizer['name'] ?? ($ev['venue_name'] ?? ''),
