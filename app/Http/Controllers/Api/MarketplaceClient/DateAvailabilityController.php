@@ -22,8 +22,16 @@ class DateAvailabilityController extends BaseController
     {
         $client = $this->requireClient($request);
 
+        // Postgres: orWhere('id', $identifier) cu un slug string crash-uieste
+        // ("invalid input syntax for type bigint"). Aplica orWhere id-ul DOAR
+        // cand identifier-ul e numeric.
         $event = Event::where('marketplace_client_id', $client->id)
-            ->where(fn ($q) => $q->where('slug', $identifier)->orWhere('id', $identifier))
+            ->where(function ($q) use ($identifier) {
+                $q->where('slug', $identifier);
+                if (is_numeric($identifier)) {
+                    $q->orWhere('id', (int) $identifier);
+                }
+            })
             ->where('is_published', true)
             ->first();
 
