@@ -1854,6 +1854,8 @@ Route::prefix('marketplace-client/organizer')->middleware(['throttle:120,1', 'ma
             ->name('api.marketplace-client.organizer.services.orders.cancel');
         Route::post('/services/orders/{uuid}/pay', [OrganizerServiceOrderController::class, 'pay'])
             ->name('api.marketplace-client.organizer.services.orders.pay');
+        Route::post('/services/orders/{uuid}/tracking-pixels', [OrganizerServiceOrderController::class, 'updateTrackingPixels'])
+            ->name('api.marketplace-client.organizer.services.orders.tracking-pixels');
 
         // Notifications
         Route::get('/notifications', [OrganizerNotificationController::class, 'index'])

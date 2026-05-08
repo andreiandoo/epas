@@ -488,6 +488,37 @@ class ServiceOrderController extends BaseController
             ] : null,
         ]);
 
+        // For tracking orders, surface the per-platform setup state so the
+        // detail page can render a "Setup pixel ID-uri" panel. Each platform
+        // entry: { platform, provider, pixel_id, enabled, has_pixel }.
+        // pixel_id is whatever the organizer has currently saved on
+        // TrackingIntegration; the page uses it to pre-fill inputs.
+        if ($order->service_type === ServiceOrder::TYPE_TRACKING) {
+            $platforms = $order->config['platforms'] ?? [];
+            $integrations = \App\Models\TrackingIntegration::where('marketplace_organizer_id', $order->marketplace_organizer_id)
+                ->get()
+                ->keyBy('provider');
+
+            $tracking = [];
+            foreach ($platforms as $platform) {
+                $provider = ServiceOrder::TRACKING_PLATFORM_PROVIDER_MAP[$platform] ?? null;
+                $defaults = ServiceOrder::TRACKING_PROVIDER_DEFAULTS[$provider] ?? null;
+                if (!$provider || !$defaults) continue;
+
+                $row = $integrations->get($provider);
+                $pixelId = $row?->getProviderId() ?? '';
+                $tracking[] = [
+                    'platform' => $platform,
+                    'provider' => $provider,
+                    'id_field' => $defaults['id_field'],
+                    'pixel_id' => $pixelId,
+                    'enabled' => (bool) ($row?->enabled ?? false),
+                    'has_pixel' => $pixelId !== '',
+                ];
+            }
+            $detailed['tracking_setup'] = $tracking;
+        }
+
         // Add newsletter stats for email orders
         if ($order->service_type === 'email') {
             $newsletter = $order->getLinkedNewsletter();
@@ -743,6 +774,88 @@ class ServiceOrderController extends BaseController
         $result['with_birth_date'] = $withBirthDate;
 
         return $result;
+    }
+
+    /**
+     * Update pixel IDs for the platforms purchased on a tracking service
+     * order. This is the "setup later" path that complements the optional
+     * pixel inputs on the checkout form: the organizer can fill in IDs
+     * here at any point post-purchase. Once a pixel ID is non-empty, the
+     * matching TrackingIntegration row flips enabled=true so the public
+     * site starts injecting the script.
+     *
+     * Body: { pixel_ids: { facebook?: '...', google?: '...', tiktok?: '...' } }
+     *
+     * Empty/missing values are treated as "no change" — sending
+     * { facebook: '' } intentionally clears the saved pixel ID.
+     */
+    public function updateTrackingPixels(Request $request, string $uuid): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+
+        $order = ServiceOrder::where('uuid', $uuid)
+            ->where('marketplace_organizer_id', $organizer->id)
+            ->first();
+
+        if (!$order) {
+            return $this->error('Order not found', 404);
+        }
+        if ($order->service_type !== ServiceOrder::TYPE_TRACKING) {
+            return $this->error('Not a tracking order', 400);
+        }
+
+        $validator = \Validator::make($request->all(), [
+            'pixel_ids' => 'required|array',
+            'pixel_ids.facebook' => 'nullable|string|max:50',
+            'pixel_ids.google' => 'nullable|string|max:50',
+            'pixel_ids.tiktok' => 'nullable|string|max:50',
+        ]);
+        if ($validator->fails()) {
+            return $this->error('Validation failed', 422, $validator->errors()->toArray());
+        }
+
+        $orderPlatforms = $order->config['platforms'] ?? [];
+        $input = $request->input('pixel_ids', []);
+        $updated = [];
+
+        foreach ($orderPlatforms as $platform) {
+            // Only act on platforms that were actually paid for. Anything
+            // else in the request body is ignored (so the operator can't
+            // sneak in a pixel for an unpurchased platform).
+            if (!array_key_exists($platform, $input)) continue;
+
+            $provider = ServiceOrder::TRACKING_PLATFORM_PROVIDER_MAP[$platform] ?? null;
+            $defaults = ServiceOrder::TRACKING_PROVIDER_DEFAULTS[$provider] ?? null;
+            if (!$provider || !$defaults) continue;
+
+            $pixelId = trim((string) $input[$platform]);
+
+            $row = \App\Models\TrackingIntegration::firstOrNew([
+                'marketplace_organizer_id' => $organizer->id,
+                'provider' => $provider,
+            ]);
+
+            $settings = is_array($row->settings) ? $row->settings : [];
+            $settings[$defaults['id_field']] = $pixelId;
+            $settings['toggle_enabled'] = true; // service is paid, toggle stays ON
+            $settings['inject_at'] = $settings['inject_at'] ?? 'head';
+            $settings['page_scope'] = $settings['page_scope'] ?? 'public';
+
+            $row->fill([
+                'marketplace_client_id' => $organizer->marketplace_client_id,
+                'enabled' => $pixelId !== '',
+                'consent_category' => $defaults['consent_category'],
+                'settings' => $settings,
+            ]);
+            $row->save();
+
+            $updated[$platform] = ['pixel_id' => $pixelId, 'enabled' => $pixelId !== ''];
+        }
+
+        return $this->success([
+            'order' => $this->formatOrderDetailed($order->fresh(['event'])),
+            'updated' => $updated,
+        ], 'Pixel IDs salvate.');
     }
 
     /**
