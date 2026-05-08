@@ -84,6 +84,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                                 <th class="px-4 py-3 text-sm font-semibold text-left text-secondary">Comanda</th>
                                 <th class="px-4 py-3 text-sm font-semibold text-left text-secondary">Participant</th>
                                 <th class="px-4 py-3 text-sm font-semibold text-left text-secondary">Tip bilet</th>
+                                <th class="px-4 py-3 text-sm font-semibold text-left text-secondary">Loc</th>
                                 <th class="px-4 py-3 text-sm font-semibold text-center text-secondary">Bilete</th>
                                 <th class="px-4 py-3 text-sm font-semibold text-right text-secondary">Valoare</th>
                                 <th class="px-4 py-3 text-sm font-semibold text-center text-secondary">Status</th>
@@ -92,7 +93,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                             </tr>
                         </thead>
                         <tbody id="orders-list" class="divide-y divide-border">
-                            <tr id="select-event-prompt"><td colspan="8" class="px-4 py-16 text-center">
+                            <tr id="select-event-prompt"><td colspan="9" class="px-4 py-16 text-center">
                                 <svg class="w-12 h-12 mx-auto mb-3 text-muted/50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                                 <p class="mb-1 text-base font-medium text-secondary">Selectează un eveniment</p>
                                 <p class="text-sm text-muted">Alege un eveniment din filtrul de mai sus pentru a vedea comenzile</p>
@@ -212,7 +213,7 @@ async function loadOrders() {
 
     if (!eventId) {
         // No event selected — show prompt
-        document.getElementById('orders-list').innerHTML = `<tr><td colspan="8" class="px-4 py-16 text-center">
+        document.getElementById('orders-list').innerHTML = `<tr><td colspan="9" class="px-4 py-16 text-center">
             <svg class="w-12 h-12 mx-auto mb-3 text-muted/50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
             <p class="mb-1 text-base font-medium text-secondary">Selectează un eveniment</p>
             <p class="text-sm text-muted">Alege un eveniment din filtrul de mai sus pentru a vedea comenzile</p>
@@ -249,7 +250,7 @@ async function loadOrders() {
         }
     } catch (error) {
         console.error('Failed to load orders:', error);
-        document.getElementById('orders-list').innerHTML = `<tr><td colspan="8" class="px-4 py-12 text-center text-error">Eroare la încărcarea comenzilor</td></tr>`;
+        document.getElementById('orders-list').innerHTML = `<tr><td colspan="9" class="px-4 py-12 text-center text-error">Eroare la încărcarea comenzilor</td></tr>`;
     }
 }
 
@@ -257,7 +258,7 @@ function renderOrders() {
     const tbody = document.getElementById('orders-list');
 
     if (!ordersData.length) {
-        tbody.innerHTML = `<tr><td colspan="8" class="px-4 py-12 text-center text-muted">Nu există comenzi pentru filtrele selectate</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="9" class="px-4 py-12 text-center text-muted">Nu există comenzi pentru filtrele selectate</td></tr>`;
         return;
     }
 
@@ -289,6 +290,13 @@ function renderOrders() {
                         ${(order.ticket_types && order.ticket_types.length > 0)
                             ? order.ticket_types.map(tt => `<span class="px-2 py-0.5 text-xs font-medium rounded bg-primary/10 text-primary inline-block">${escHtml(tt)}</span>`).join('')
                             : '<span class="text-xs text-muted">-</span>'}
+                    </div>
+                </td>
+                <td class="px-4 py-3">
+                    <div class="flex flex-col gap-0.5 max-w-[180px] text-xs">
+                        ${(order.seats && order.seats.length > 0)
+                            ? order.seats.map(s => `<span class="text-secondary whitespace-nowrap">${escHtml([s.section, s.row ? 'R' + s.row : '', s.seat ? 'L' + s.seat : ''].filter(Boolean).join(' · '))}</span>`).join('')
+                            : '<span class="text-muted">—</span>'}
                     </div>
                 </td>
                 <td class="px-4 py-3 text-center">

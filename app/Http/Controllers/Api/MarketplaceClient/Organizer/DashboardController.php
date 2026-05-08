@@ -330,6 +330,26 @@ class DashboardController extends BaseController
                 ->whereIn('status', ['valid', 'used'])
                 ->sum('price');
 
+            // Per-ticket seat detail for seated events. Non-seated tickets
+            // get null entries which the UI filters out so general-admission
+            // orders don't render an empty Loc column.
+            $seats = $order->tickets
+                ->whereIn('status', ['valid', 'used'])
+                ->map(function ($t) {
+                    $details = $t->getSeatDetails();
+                    if (!$details) return null;
+                    $type = $t->marketplaceTicketType?->name ?? $t->ticketType?->name;
+                    return [
+                        'section' => $details['section_name'],
+                        'row' => $details['row_label'],
+                        'seat' => $details['seat_number'],
+                        'ticket_type' => $type,
+                    ];
+                })
+                ->filter()
+                ->values()
+                ->all();
+
             return [
                 'id' => $order->id,
                 'order_number' => $order->order_number,
@@ -353,6 +373,7 @@ class DashboardController extends BaseController
                     ->unique()
                     ->values()
                     ->all(),
+                'seats' => $seats,
                 'created_at' => $order->created_at->toIso8601String(),
                 'paid_at' => $order->paid_at?->toIso8601String(),
             ];
@@ -406,26 +427,60 @@ class DashboardController extends BaseController
             $handle = fopen('php://output', 'w');
             // BOM for Excel UTF-8 compatibility
             fwrite($handle, "\xEF\xBB\xBF");
-            fputcsv($handle, ['Comanda', 'Status', 'Client', 'Telefon', 'Tip bilet', 'Nr bilete', 'Valoare', 'Sursa', 'Data'], escape: '\\');
+            // One row per ticket so seat info (section/row/seat) gets a
+            // dedicated cell per ticket. The "Comanda" column repeats across
+            // tickets of the same order; spreadsheet users can group/sort by
+            // it. Order-level fields (Status/Valoare/Sursa/Data) stay
+            // identical for every ticket in the same order.
+            fputcsv($handle, [
+                'Comanda', 'Status', 'Client', 'Telefon',
+                'Tip bilet', 'Cod bilet', 'Sectiune', 'Rand', 'Loc',
+                'Pret bilet', 'Valoare comanda', 'Sursa', 'Data',
+            ], escape: '\\');
 
             foreach ($orders as $order) {
-                $ticketTypes = $order->tickets
-                    ->map(fn ($t) => $t->marketplaceTicketType?->name ?? $t->ticketType?->name ?? '-')
-                    ->filter()
-                    ->unique()
-                    ->implode(', ');
+                $customer = $order->marketplaceCustomer?->full_name ?? $order->customer_name ?? '-';
+                $phone = $order->marketplaceCustomer?->phone ?? $order->customer_phone ?? '-';
+                $orderTotal = number_format((float) $order->total, 2, '.', '');
+                $source = $order->source ?? 'marketplace';
+                $createdAt = $order->created_at->format('Y-m-d H:i');
 
-                fputcsv($handle, [
-                    $order->order_number,
-                    $order->status,
-                    $order->marketplaceCustomer?->full_name ?? $order->customer_name ?? '-',
-                    $order->marketplaceCustomer?->phone ?? $order->customer_phone ?? '-',
-                    $ticketTypes ?: '-',
-                    $order->tickets->count(),
-                    number_format((float) $order->total, 2, '.', ''),
-                    $order->source ?? 'marketplace',
-                    $order->created_at->format('Y-m-d H:i'),
-                ], escape: '\\');
+                if ($order->tickets->isEmpty()) {
+                    // Order without tickets — emit one row so the order is
+                    // still represented in the export instead of vanishing.
+                    fputcsv($handle, [
+                        $order->order_number,
+                        $order->status,
+                        $customer,
+                        $phone,
+                        '-', '', '', '', '',
+                        '0.00',
+                        $orderTotal,
+                        $source,
+                        $createdAt,
+                    ], escape: '\\');
+                    continue;
+                }
+
+                foreach ($order->tickets as $ticket) {
+                    $type = $ticket->marketplaceTicketType?->name ?? $ticket->ticketType?->name ?? '-';
+                    $details = $ticket->getSeatDetails();
+                    fputcsv($handle, [
+                        $order->order_number,
+                        $order->status,
+                        $customer,
+                        $phone,
+                        $type,
+                        $ticket->barcode ?? '',
+                        $details['section_name'] ?? '',
+                        $details['row_label'] ?? '',
+                        $details['seat_number'] ?? '',
+                        number_format((float) ($ticket->price ?? 0), 2, '.', ''),
+                        $orderTotal,
+                        $source,
+                        $createdAt,
+                    ], escape: '\\');
+                }
             }
 
             fclose($handle);
