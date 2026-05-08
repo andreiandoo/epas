@@ -21,7 +21,7 @@ class OrderTransferService
      *
      * Side-effects logged to:
      *  - Spatie activity log (Order has LogsActivity)
-     *  - orders.metadata.transfers[] history array (for audit + undo UI)
+     *  - orders.meta.transfers[] history array (for audit + undo UI)
      *
      * @param  Order                $order
      * @param  MarketplaceCustomer  $newCustomer
@@ -60,8 +60,12 @@ class OrderTransferService
                 'customer_phone' => $newCustomer->phone,
             ]);
 
-            $metadata = $order->metadata ?? [];
-            $transfers = $metadata['transfers'] ?? [];
+            // Persist transfer history on orders.meta. The Order model also
+            // declares a phantom 'metadata' attribute (no DB column backing
+            // it — never migrated), so any write to ->metadata blows up at
+            // SQL time. Use ->meta which is the real JSON column.
+            $meta = $order->meta ?? [];
+            $transfers = $meta['transfers'] ?? [];
             $transfers[] = [
                 'at' => now()->toIso8601String(),
                 'by_admin_id' => $performedByAdminId,
@@ -72,8 +76,8 @@ class OrderTransferService
                 'reason' => $reason,
                 'rewrote_tickets' => $rewriteTicketAttendee,
             ];
-            $metadata['transfers'] = $transfers;
-            $order->metadata = $metadata;
+            $meta['transfers'] = $transfers;
+            $order->meta = $meta;
             $order->save();
 
             // 2. Tickets (optional — only if explicitly requested)

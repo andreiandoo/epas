@@ -244,11 +244,11 @@ class ViewOrder extends ViewRecord
     }
 
     /**
-     * Most recent entry in orders.metadata['transfers'][] or null.
+     * Most recent entry in orders.meta['transfers'][] or null.
      */
     protected function lastTransferEntry(): ?array
     {
-        $transfers = $this->record->metadata['transfers'] ?? [];
+        $transfers = $this->record->meta['transfers'] ?? [];
         return end($transfers) ?: null;
     }
 
