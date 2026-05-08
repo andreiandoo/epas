@@ -124,9 +124,10 @@ class EventGeneratedDocument extends Model
         // Process the template
         $htmlContent = $template->processTemplate($variables);
 
-        // Process page 2 if exists
+        // Process page 2 if exists. Skip empty stubs (e.g. lone <p></p>) so
+        // they don't produce a phantom blank PDF page after the page-break.
         $htmlContentPage2 = null;
-        if ($template->html_content_page_2) {
+        if (MarketplaceTaxTemplate::hasMeaningfulContent($template->html_content_page_2)) {
             $htmlContentPage2 = $template->html_content_page_2;
             foreach ($variables as $key => $value) {
                 $htmlContentPage2 = preg_replace(

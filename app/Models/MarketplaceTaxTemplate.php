@@ -279,6 +279,21 @@ class MarketplaceTaxTemplate extends Model
         ],
     ];
 
+    /**
+     * Whether an HTML chunk has any visible content. Empty string, null, and
+     * stub markup like '<p></p>' or '<p>&nbsp;</p>' (left behind by the
+     * RichEditor when the user clears a textarea) all return false. Used to
+     * gate page 2 inclusion so an empty page doesn't generate a phantom
+     * trailing PDF page after a forced page-break.
+     */
+    public static function hasMeaningfulContent(?string $html): bool
+    {
+        if ($html === null) {
+            return false;
+        }
+        return trim(strip_tags(str_replace('&nbsp;', ' ', $html))) !== '';
+    }
+
     protected static function boot()
     {
         parent::boot();

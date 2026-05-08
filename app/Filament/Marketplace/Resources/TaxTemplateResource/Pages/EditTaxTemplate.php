@@ -129,17 +129,20 @@ class EditTaxTemplate extends EditRecord
                         template: $template,
                     );
 
-                    // Generate PDF pages
+                    // Generate PDF pages — skip pages whose HTML strips down to
+                    // nothing (e.g. an empty <p></p> left behind by the
+                    // RichEditor) so a phantom blank page doesn't get appended
+                    // after a forced page-break.
                     $pages = [];
 
-                    if ($template->html_content) {
+                    if (MarketplaceTaxTemplate::hasMeaningfulContent($template->html_content)) {
                         $pages[] = [
                             'content' => $this->processTemplateContent($template->html_content, $variables),
                             'orientation' => $template->page_orientation ?? 'portrait',
                         ];
                     }
 
-                    if ($template->html_content_page_2) {
+                    if (MarketplaceTaxTemplate::hasMeaningfulContent($template->html_content_page_2)) {
                         $pages[] = [
                             'content' => $this->processTemplateContent($template->html_content_page_2, $variables),
                             'orientation' => $template->page_2_orientation ?? $template->page_orientation ?? 'portrait',

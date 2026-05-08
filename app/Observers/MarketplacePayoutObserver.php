@@ -158,9 +158,10 @@ class MarketplacePayoutObserver
                 }
             }
 
-            // Handle page 2 if template has it
+            // Handle page 2 if template has it. Skip empty stubs (e.g. lone
+            // <p></p>) so they don't produce a phantom blank PDF page.
             $htmlContentPage2 = null;
-            if ($template->html_content_page_2) {
+            if (\App\Models\MarketplaceTaxTemplate::hasMeaningfulContent($template->html_content_page_2)) {
                 $htmlContentPage2 = $template->processTemplate($variables);
             }
 

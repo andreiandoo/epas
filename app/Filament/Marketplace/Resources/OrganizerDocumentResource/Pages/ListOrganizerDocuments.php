@@ -216,9 +216,10 @@ class ListOrganizerDocuments extends ListRecords
                     // Process template
                     $htmlContent = $template->processTemplate($variables);
 
-                    // Handle page 2 if exists
+                    // Handle page 2 if exists. Skip empty stubs (e.g. lone
+                    // <p></p>) so they don't produce a phantom blank PDF page.
                     $htmlContentPage2 = null;
-                    if ($template->html_content_page_2) {
+                    if (MarketplaceTaxTemplate::hasMeaningfulContent($template->html_content_page_2)) {
                         $tmpTemplate = new MarketplaceTaxTemplate(['html_content' => $template->html_content_page_2]);
                         $htmlContentPage2 = $tmpTemplate->processTemplate($variables);
                     }
