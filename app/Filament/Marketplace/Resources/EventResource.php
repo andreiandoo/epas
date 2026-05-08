@@ -576,7 +576,37 @@ class EventResource extends Resource
                                         $breakdown = self::getSalesBreakdown($record);
                                         $perType = $breakdown['per_type']; // keyed by tt_id
 
-                                        $rows = $record->ticketTypes->map(function ($tt) use (&$totals, $perType) {
+                                        // Commission defaults — same chain SalesBreakdownService uses, so the
+                                        // displayed mode/rate matches what's actually applied to each ticket.
+                                        $defaultCommissionRate = (float) (
+                                            $record->commission_rate
+                                            ?? $record->marketplaceOrganizer?->commission_rate
+                                            ?? $record->tenant?->commission_rate
+                                            ?? $record->marketplaceClient?->commission_rate
+                                            ?? 5
+                                        );
+                                        $defaultCommissionMode = $record->commission_mode
+                                            ?? $record->marketplaceOrganizer?->default_commission_mode
+                                            ?? $record->marketplaceClient?->commission_mode
+                                            ?? 'included';
+
+                                        $formatCommission = function ($tt) use ($t, $defaultCommissionRate, $defaultCommissionMode) {
+                                            $eff = $tt->getEffectiveCommission($defaultCommissionRate, $defaultCommissionMode);
+                                            $isOnTop = in_array($eff['mode'] ?? null, ['on_top', 'added_on_top'], true);
+                                            $modeLabel = $isOnTop ? $t('peste preț', 'on top') : $t('inclus', 'included');
+                                            if (($eff['type'] ?? null) === 'fixed') {
+                                                $value = (float) ($eff['fixed'] ?? 0);
+                                                if ($value <= 0) return null;
+                                                $valueFmt = rtrim(rtrim(number_format($value, 2, ',', '.'), '0'), ',');
+                                                return $valueFmt . ' RON ' . $modeLabel;
+                                            }
+                                            $rate = (float) ($eff['rate'] ?? 0);
+                                            if ($rate <= 0) return null;
+                                            $rateFmt = rtrim(rtrim(number_format($rate, 2, ',', '.'), '0'), ',');
+                                            return $rateFmt . '% ' . $modeLabel;
+                                        };
+
+                                        $rows = $record->ticketTypes->map(function ($tt) use (&$totals, $perType, $formatCommission) {
                                             // Valid/cancelled counts include all non-external-import tickets
                                             // (including invitations without an order) — displayed for inventory.
                                             $base = \App\Models\Ticket::where('ticket_type_id', $tt->id)
@@ -602,6 +632,7 @@ class EventResource extends Resource
 
                                             return [
                                                 'name' => $tt->name,
+                                                'commission' => $isInvitation ? null : $formatCommission($tt),
                                                 'valid' => $valid,
                                                 'cancelled' => $cancelled,
                                                 'stock' => $stock,
@@ -618,10 +649,14 @@ class EventResource extends Resource
                                         $rowsHtml = '';
                                         foreach ($rows as $r) {
                                             $name = e($r['name'] ?? '—');
+                                            $commission = $r['commission'] ?? null;
+                                            $commissionHtml = $commission
+                                                ? " <span class='text-gray-400 font-normal'>(" . e($commission) . ")</span>"
+                                                : '';
                                             $netFmt = number_format($r['net'] ?? 0, 2, ',', '.');
                                             $rowsHtml .= "
                                                 <tr class='border-t border-gray-700'>
-                                                    <td class='py-2 pr-2 text-gray-200'>{$name}</td>
+                                                    <td class='py-2 pr-2 text-gray-200'>{$name}{$commissionHtml}</td>
                                                     <td class='py-2 px-2 text-right text-emerald-400 font-semibold'>{$r['valid']}</td>
                                                     <td class='py-2 px-2 text-right text-red-400 font-semibold'>{$r['cancelled']}</td>
                                                     <td class='py-2 px-2 text-right text-gray-300'>{$r['stock']}</td>
