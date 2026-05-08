@@ -533,6 +533,19 @@ class PayoutResource extends Resource
                                             $email = $org->email ? ' (' . $org->email . ')' : '';
                                             return $org->name . $email;
                                         }
+                                        // Pre-2026-05-05 the "Generează decont"
+                                        // modal stored source='automated' with
+                                        // no approved_by even though a human
+                                        // admin had clicked it. The cron has
+                                        // been disabled the whole time, so
+                                        // these are factually admin-created —
+                                        // we just no longer have the admin id.
+                                        if ($record->source === 'automated'
+                                            && $record->approved_by === null
+                                            && $record->created_at
+                                            && $record->created_at < '2026-05-05') {
+                                            return 'Admin (legacy)';
+                                        }
                                         if ($record->source === 'automated') {
                                             return 'Sistem (cron)';
                                         }
