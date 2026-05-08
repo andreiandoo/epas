@@ -3044,6 +3044,14 @@ switch ($action) {
         $requiresAuth = true;
         break;
 
+    case 'organizer.services.orders.tracking-pixels':
+        $uuid = $_GET['uuid'] ?? '';
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = "/organizer/services/orders/{$uuid}/tracking-pixels";
+        $requiresAuth = true;
+        break;
+
     // ==================== ORGANIZER FINANCE ====================
 
     case 'organizer.balance':

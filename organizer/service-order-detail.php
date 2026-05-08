@@ -205,6 +205,24 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     </div>
                 </div>
 
+                <!-- Tracking Pixel Setup (only for tracking orders) -->
+                <div id="tracking-setup-section" class="hidden p-6 bg-white border rounded-2xl border-border">
+                    <div class="flex items-start gap-3 mb-4">
+                        <div class="flex items-center justify-center w-10 h-10 bg-blue-100 rounded-xl flex-shrink-0">
+                            <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                        </div>
+                        <div>
+                            <h2 class="font-bold text-secondary">Pixel ID-uri</h2>
+                            <p class="text-sm text-muted">Adauga sau editeaza ID-urile pixel-urilor pentru platformele cumparate. Tracking-ul incepe sa functioneze automat in momentul in care un Pixel ID este completat.</p>
+                        </div>
+                    </div>
+                    <div id="tracking-setup-list" class="space-y-3 mt-4"></div>
+                    <div class="mt-4 pt-4 border-t border-border flex items-center justify-end gap-3">
+                        <span id="tracking-setup-msg" class="text-sm"></span>
+                        <button id="tracking-setup-save" type="button" class="btn btn-primary bg-primary px-4">Salveaza ID-uri</button>
+                    </div>
+                </div>
+
                 <!-- Config (collapsible) -->
                 <div class="p-6 bg-white border rounded-2xl border-border" id="config-section">
                     <button onclick="document.getElementById('config-json').classList.toggle('hidden')" class="flex items-center gap-2 text-sm font-bold text-secondary">
@@ -364,6 +382,67 @@ function renderOrder(order) {
                 `<span class="px-2.5 py-1 bg-surface text-muted text-xs rounded-full">${t}</span>`
             ).join('');
         }
+    }
+
+    // Tracking pixel setup (only for tracking orders, only when paid)
+    if (order.type === 'tracking' && order.payment_status === 'paid' && Array.isArray(order.tracking_setup)) {
+        renderTrackingSetup(order);
+    }
+}
+
+const PLATFORM_LABELS = { facebook: 'Facebook Pixel', google: 'Google Ads', tiktok: 'TikTok Pixel' };
+const PLATFORM_PLACEHOLDERS = { facebook: '1234567890123456', google: 'AW-XXXXXXXXX', tiktok: 'CXXXXXXXXXXXXXXXXX' };
+
+function renderTrackingSetup(order) {
+    const section = document.getElementById('tracking-setup-section');
+    const list = document.getElementById('tracking-setup-list');
+    if (!section || !list) return;
+    section.classList.remove('hidden');
+    list.innerHTML = order.tracking_setup.map(t => {
+        const filled = !!t.has_pixel;
+        const status = filled
+            ? '<span class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium text-emerald-700 bg-emerald-100 rounded-full"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>Activ</span>'
+            : '<span class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium text-amber-700 bg-amber-100 rounded-full"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>Necesita Pixel ID</span>';
+        return `
+            <div class="border border-border rounded-xl p-4">
+                <div class="flex items-center justify-between mb-2">
+                    <p class="font-medium text-secondary">${PLATFORM_LABELS[t.platform] || t.platform}</p>
+                    ${status}
+                </div>
+                <input type="text" data-tracking-pixel="${t.platform}" value="${escAttr(t.pixel_id || '')}" placeholder="${PLATFORM_PLACEHOLDERS[t.platform] || ''}" class="input w-full text-sm" maxlength="50">
+            </div>
+        `;
+    }).join('');
+
+    const saveBtn = document.getElementById('tracking-setup-save');
+    saveBtn.onclick = () => saveTrackingPixels(order);
+}
+
+function escAttr(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+}
+
+async function saveTrackingPixels(order) {
+    const btn = document.getElementById('tracking-setup-save');
+    const msg = document.getElementById('tracking-setup-msg');
+    const inputs = document.querySelectorAll('[data-tracking-pixel]');
+    const pixel_ids = {};
+    inputs.forEach(i => { pixel_ids[i.dataset.trackingPixel] = i.value.trim(); });
+
+    btn.disabled = true;
+    msg.textContent = 'Se salveaza...';
+    msg.className = 'text-sm text-muted';
+    try {
+        const r = await AmbiletAPI.post(`/organizer/services/orders/${order.id}/tracking-pixels`, { pixel_ids });
+        if (!r.success) throw new Error(r.message || 'Eroare');
+        msg.textContent = 'Salvat ' + new Date().toLocaleTimeString('ro-RO');
+        msg.className = 'text-sm text-emerald-600';
+        if (r.data?.order) renderTrackingSetup(r.data.order);
+    } catch (e) {
+        msg.textContent = 'Eroare: ' + (e.message || 'incercati din nou');
+        msg.className = 'text-sm text-red-600';
+    } finally {
+        btn.disabled = false;
     }
 }
 
