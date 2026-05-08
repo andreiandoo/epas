@@ -1470,52 +1470,89 @@ class EventsController extends BaseController
             abort(404, 'Event not found');
         }
 
-        $tickets = \App\Models\Ticket::whereHas('order', function ($q) use ($event) {
-                $q->where('event_id', $event->id)
-                    ->whereIn('status', ['paid', 'confirmed', 'completed']);
+        $validOrderStatuses = ['paid', 'confirmed', 'completed'];
+
+        // Same scoping as the listing endpoint: tickets.event_id (per-ticket
+        // truth, handles mixed-cart orders) plus an invitations branch for
+        // tickets without an order. Ordered chronologically (newest first)
+        // since the export starts with the Purchased At column.
+        $tickets = \App\Models\Ticket::where(function ($q) use ($event, $validOrderStatuses) {
+                $q->where(function ($paid) use ($event, $validOrderStatuses) {
+                    $paid->where('event_id', $event->id)
+                        ->whereHas('order', fn ($oq) => $oq->whereIn('status', $validOrderStatuses));
+                })
+                ->orWhere(function ($inv) use ($event) {
+                    $inv->whereNull('order_id')
+                        ->where(function ($ev) use ($event) {
+                            $ev->where('event_id', $event->id)
+                                ->orWhereHas('ticketType', fn ($ttq) => $ttq->where('event_id', $event->id));
+                        });
+                });
             })
             ->with(['order.marketplaceCustomer', 'ticketType'])
+            ->orderByDesc('created_at')
             ->get();
 
         $filename = 'participants-' . $event->slug . '-' . now()->format('Y-m-d') . '.csv';
 
         return response()->streamDownload(function () use ($tickets) {
             $handle = fopen('php://output', 'w');
+            // BOM for Excel UTF-8 compatibility
+            fwrite($handle, "\xEF\xBB\xBF");
 
-            // Header
             fputcsv($handle, [
-                'Ticket ID',
-                'Barcode',
+                'Purchased At',
+                'Cod bilet',
                 'Ticket Type',
+                'Sectiune',
+                'Rand',
+                'Loc',
                 'Price',
                 'Customer Name',
                 'Customer Phone',
                 'Order Number',
-                'Purchased At',
                 'Checked In',
                 'Checked In At',
             ], escape: '\\');
 
             foreach ($tickets as $ticket) {
-                $customer = $ticket->order->marketplaceCustomer;
+                $customer = $ticket->order?->marketplaceCustomer;
                 $ticketType = $ticket->ticketType;
+                $details = $ticket->getSeatDetails();
+                $isInvitation = !$ticket->order;
+                $meta = is_array($ticket->meta) ? $ticket->meta : [];
+
+                if ($customer) {
+                    $customerName = trim(($customer->first_name ?? '') . ' ' . ($customer->last_name ?? ''));
+                    $customerPhone = $customer->phone ?? '';
+                } elseif ($ticket->order) {
+                    $customerName = $ticket->order->customer_name ?? '';
+                    $customerPhone = $ticket->order->customer_phone ?? '';
+                } else {
+                    $beneficiary = $meta['beneficiary'] ?? [];
+                    $customerName = $beneficiary['name'] ?? $ticket->attendee_name ?? 'Invitat';
+                    $customerPhone = $beneficiary['phone'] ?? $meta['attendee_phone'] ?? '';
+                }
+
                 fputcsv($handle, [
-                    $ticket->id,
-                    $ticket->barcode,
-                    $ticketType?->name ?? 'N/A',
-                    $ticketType?->display_price ?? 0,
-                    $customer ? $customer->first_name . ' ' . $customer->last_name : $ticket->order->customer_name,
-                    $customer?->phone ?? $ticket->order->customer_phone,
-                    $ticket->order->order_number,
                     $ticket->created_at->format('Y-m-d H:i:s'),
-                    $ticket->checked_in_at ? 'Yes' : 'No',
+                    $ticket->code,
+                    $ticketType?->name ?? ($isInvitation ? 'Invitatie' : 'N/A'),
+                    $details['section_name'] ?? '',
+                    $details['row_label'] ?? '',
+                    $details['seat_number'] ?? '',
+                    $ticketType?->display_price ?? 0,
+                    $customerName,
+                    $customerPhone,
+                    $ticket->order?->order_number ?? '',
+                    $ticket->checked_in_at ? 'Da' : 'Nu',
                     $ticket->checked_in_at?->format('Y-m-d H:i:s') ?? '',
                 ], escape: '\\');
             }
 
             fclose($handle);
         }, $filename, [
-            'Content-Type' => 'text/csv',
+            'Content-Type' => 'text/csv; charset=UTF-8',
             'Content-Disposition' => 'attachment; filename="' . $filename . '"',
         ]);
     }
@@ -1644,37 +1681,73 @@ class EventsController extends BaseController
         }
 
         $validOrderStatuses = ['paid', 'confirmed', 'completed'];
+        $eventIdsArr = $eventIds->all();
 
-        $tickets = \App\Models\Ticket::whereHas('order', function ($q) use ($eventIds, $validOrderStatuses) {
-                $q->whereIn('event_id', $eventIds)
-                    ->whereIn('status', $validOrderStatuses);
+        // Same tickets.event_id-based scoping as the listing endpoint —
+        // mixed-cart orders attribute their items via tickets.event_id, and
+        // invitations (no order) are pulled in via the second branch so the
+        // export matches what the operator sees on the page.
+        $tickets = \App\Models\Ticket::where(function ($q) use ($eventIdsArr, $validOrderStatuses) {
+                $q->where(function ($paid) use ($eventIdsArr, $validOrderStatuses) {
+                    $paid->whereIn('event_id', $eventIdsArr)
+                        ->whereHas('order', fn ($oq) => $oq->whereIn('status', $validOrderStatuses));
+                })
+                ->orWhere(function ($inv) use ($eventIdsArr) {
+                    $inv->whereNull('order_id')
+                        ->where(function ($ev) use ($eventIdsArr) {
+                            $ev->whereIn('event_id', $eventIdsArr)
+                                ->orWhereHas('ticketType', fn ($ttq) => $ttq->whereIn('event_id', $eventIdsArr));
+                        });
+                });
             })
-            ->with(['order.marketplaceCustomer', 'order.event', 'ticketType'])
+            ->with(['order.marketplaceCustomer', 'order.event', 'ticketType.event'])
+            ->orderByDesc('created_at')
             ->get();
 
-        $rows = $tickets->map(function ($ticket) {
-            $customer = $ticket->order->marketplaceCustomer;
-            $event = $ticket->order->event;
+        // Cache event titles so we can render invitation tickets (no order)
+        // and avoid re-translating per row. Keys = event id.
+        $eventTitles = [];
+        foreach (Event::whereIn('id', $eventIdsArr)->get(['id', 'title']) as $ev) {
+            $eventTitles[$ev->id] = $ev->getTranslation('title', 'ro')
+                ?: $ev->getTranslation('title', 'en')
+                ?: $ev->getTranslation('title')
+                ?: 'Unknown Event';
+        }
 
-            $eventTitle = 'Unknown Event';
-            if ($event) {
-                $eventTitle = $event->getTranslation('title', 'ro')
-                    ?: $event->getTranslation('title', 'en')
-                    ?: $event->getTranslation('title')
-                    ?: 'Unknown Event';
+        $rows = $tickets->map(function ($ticket) use ($eventTitles) {
+            $customer = $ticket->order?->marketplaceCustomer;
+            $eventId = $ticket->event_id ?? $ticket->order?->event_id ?? $ticket->ticketType?->event_id;
+            $eventTitle = $eventTitles[$eventId] ?? 'Unknown Event';
+
+            $details = $ticket->getSeatDetails();
+            $isInvitation = !$ticket->order;
+            $meta = is_array($ticket->meta) ? $ticket->meta : [];
+
+            // Customer fallback for invitation rows (no order/customer record).
+            if ($customer) {
+                $customerName = trim(($customer->first_name ?? '') . ' ' . ($customer->last_name ?? ''));
+                $customerPhone = $customer->phone ?? '';
+            } elseif ($ticket->order) {
+                $customerName = $ticket->order->customer_name ?? 'N/A';
+                $customerPhone = $ticket->order->customer_phone ?? '';
+            } else {
+                $beneficiary = $meta['beneficiary'] ?? [];
+                $customerName = $beneficiary['name'] ?? $ticket->attendee_name ?? 'Invitat';
+                $customerPhone = $beneficiary['phone'] ?? $meta['attendee_phone'] ?? '';
             }
 
             return [
-                'Ticket ID' => $ticket->id,
-                'Barcode' => $ticket->barcode,
-                'Control Code' => $ticket->code,
-                'Event' => $eventTitle,
-                'Ticket Type' => $ticket->ticketType?->name ?? 'Standard',
-                'Price' => $ticket->ticketType?->display_price ?? 0,
-                'Customer Name' => $customer ? $customer->first_name . ' ' . $customer->last_name : ($ticket->order->customer_name ?? 'N/A'),
-                'Customer Phone' => $customer?->phone ?? $ticket->order->customer_phone ?? '',
-                'Order Number' => $ticket->order->order_number,
                 'Purchased At' => $ticket->created_at->format('Y-m-d H:i:s'),
+                'Cod bilet' => $ticket->code,
+                'Event' => $eventTitle,
+                'Ticket Type' => $ticket->ticketType?->name ?? ($isInvitation ? 'Invitatie' : 'Standard'),
+                'Sectiune' => $details['section_name'] ?? '',
+                'Rand' => $details['row_label'] ?? '',
+                'Loc' => $details['seat_number'] ?? '',
+                'Price' => $ticket->ticketType?->display_price ?? 0,
+                'Customer Name' => $customerName ?: ($isInvitation ? 'Invitat' : 'N/A'),
+                'Customer Phone' => $customerPhone,
+                'Order Number' => $ticket->order?->order_number ?? '',
                 'Checked In' => $ticket->checked_in_at ? 'Da' : 'Nu',
                 'Checked In At' => $ticket->checked_in_at?->format('Y-m-d H:i:s') ?? '',
             ];
