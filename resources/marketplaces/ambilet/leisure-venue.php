@@ -426,11 +426,14 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 <?php
-require_once __DIR__ . '/includes/footer.php';
-// Tag-ul script trebuie injectat in slot-ul $scriptsExtra ÎNAINTE de scripts.php.
-// Dupa require_once scripts.php emite </body></html> si orice tag adaugat e ignorat.
+// Inject leisure-venue.js direct INLINE in body (inainte de footer + scripts).
+// Pus aici (nu via $scriptsExtra) ca sa fim siguri ca nu e suprascris de
+// alte include-uri sau ignorat dupa </body></html> emis de scripts.php.
 $leisureJsPath = __DIR__ . '/assets/js/pages/leisure-venue.js';
 $leisureJsVer = file_exists($leisureJsPath) ? filemtime($leisureJsPath) : time();
-$scriptsExtra = ($scriptsExtra ?? '') . '<script src="' . ASSETS_URL . '/js/pages/leisure-venue.js?v=' . $leisureJsVer . '"></script>';
+?>
+<script src="<?= ASSETS_URL ?>/js/pages/leisure-venue.js?v=<?= $leisureJsVer ?>"></script>
+<?php
+require_once __DIR__ . '/includes/footer.php';
 require_once __DIR__ . '/includes/scripts.php';
 ?>
