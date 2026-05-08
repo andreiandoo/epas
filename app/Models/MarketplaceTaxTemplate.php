@@ -604,6 +604,47 @@ class MarketplaceTaxTemplate extends Model
             $totalUnsoldSubscriptionsValue = 0;
 
             if ($event->ticketTypes) {
+                // Helper: build the underline-blue series cell text. Reuses the
+                // parent's series prefix and numeric range, but injects an
+                // optional discount label between the prefix and the numbers
+                // (RED for intrinsic discount, the promo code itself for
+                // promo-driven rows). Falls back to plain label or "-" when
+                // the parent has no parseable series range.
+                $buildSeriesDisplay = function (string $seriesStart, string $seriesEnd, string $labelSuffix): string {
+                    if ($seriesStart && $seriesEnd
+                        && preg_match('/^(.*?)(\d+)$/', $seriesStart, $sm)
+                        && preg_match('/^(.*?)(\d+)$/', $seriesEnd, $em)
+                        && trim($sm[1]) === trim($em[1])) {
+                        $prefix = trim($sm[1]);
+                        $effective = $labelSuffix === ''
+                            ? $prefix
+                            : ($prefix !== '' ? $prefix . '-' . $labelSuffix : $labelSuffix);
+                        return ($effective !== '' ? $effective . '&nbsp;&nbsp;' : '')
+                            . $sm[2] . ' &gt; ' . $em[2];
+                    }
+                    if ($labelSuffix !== '') {
+                        return $labelSuffix;
+                    }
+                    if ($seriesStart || $seriesEnd) {
+                        return $seriesStart . ' &gt; ' . $seriesEnd;
+                    }
+                    return '-';
+                };
+
+                // Helper: emit one tax-table row + advance the running totals.
+                $appendTicketRow = function (string $rowName, int $rowStock, float $rowPrice, string $seriesText)
+                    use (&$ticketRowsHtml, &$totalForSale, &$totalValueForSale) {
+                    $ticketRowsHtml .= '<tr>';
+                    $ticketRowsHtml .= '<td class="left-align">' . $rowName . '</td>';
+                    $ticketRowsHtml .= '<td>' . $rowStock . '</td>';
+                    $ticketRowsHtml .= '<td>' . number_format($rowPrice, 2) . '</td>';
+                    $ticketRowsHtml .= '<td>' . number_format($rowStock * $rowPrice, 2) . '</td>';
+                    $ticketRowsHtml .= '<td><span class="underline-blue">' . $seriesText . '</span></td>';
+                    $ticketRowsHtml .= '</tr>';
+                    $totalForSale += $rowStock;
+                    $totalValueForSale += $rowStock * $rowPrice;
+                };
+
                 foreach ($event->ticketTypes as $ticketType) {
                     // Skip non-declarable ticket types for document generation
                     if (isset($ticketType->is_declarable) && $ticketType->is_declarable === false) {
@@ -621,8 +662,6 @@ class MarketplaceTaxTemplate extends Model
                     $totalAvailable += $available;
                     $totalSold += $sold;
                     $totalSalesValue += ($sold * $price);
-                    $totalForSale += $available;
-                    $totalValueForSale += ($available * $price);
 
                     // Original table
                     $ticketTypesHtml .= '<tr>';
@@ -637,30 +676,62 @@ class MarketplaceTaxTemplate extends Model
                         $ticketSeriesList[] = $ticketName . ': ' . $seriesStart . ' - ' . $seriesEnd;
                     }
 
-                    // Custom rows format with series. When start/end share a common
-                    // alphanumeric prefix (e.g. GA001 / GA500), collapse to
-                    // "GA  001 > 500" — easier to read on the tax form. Otherwise
-                    // fall back to "<start> > <end>".
-                    $seriesDisplay = '-';
-                    if ($seriesStart || $seriesEnd) {
-                        if ($seriesStart && $seriesEnd
-                            && preg_match('/^(.*?)(\d+)$/', $seriesStart, $startMatch)
-                            && preg_match('/^(.*?)(\d+)$/', $seriesEnd, $endMatch)
-                            && trim($startMatch[1]) === trim($endMatch[1])) {
-                            $prefix = trim($startMatch[1]);
-                            $seriesDisplay = ($prefix !== '' ? $prefix . '&nbsp;&nbsp;' : '')
-                                . $startMatch[2] . ' &gt; ' . $endMatch[2];
-                        } else {
-                            $seriesDisplay = $seriesStart . ' &gt; ' . $seriesEnd;
-                        }
+                    // Row 1 — normal (full) price.
+                    $appendTicketRow(
+                        $ticketName,
+                        $available,
+                        $price,
+                        $buildSeriesDisplay($seriesStart, $seriesEnd, '')
+                    );
+
+                    // Row 2 — intrinsic earlybird discount on the ticket type
+                    // (column `discount_percent`). Same physical stock as the
+                    // parent — the row declares max value at that price point.
+                    $discountPercent = (float) ($ticketType->discount_percent ?? 0);
+                    if ($discountPercent > 0) {
+                        $reducedPrice = max(0.0, $price - ($price * $discountPercent / 100));
+                        $appendTicketRow(
+                            $ticketName . ' - RED',
+                            $available,
+                            $reducedPrice,
+                            $buildSeriesDisplay($seriesStart, $seriesEnd, 'RED')
+                        );
                     }
-                    $ticketRowsHtml .= '<tr>';
-                    $ticketRowsHtml .= '<td class="left-align">' . $ticketName . '</td>';
-                    $ticketRowsHtml .= '<td>' . $available . '</td>';
-                    $ticketRowsHtml .= '<td>' . number_format($price, 2) . '</td>';
-                    $ticketRowsHtml .= '<td>' . number_format($available * $price, 2) . '</td>';
-                    $ticketRowsHtml .= '<td><span class="underline-blue">' . $seriesDisplay . '</span></td>';
-                    $ticketRowsHtml .= '</tr>';
+
+                    // Row 3+ — promo codes scoped to this ticket type. Active
+                    // codes only (status='active', not soft-deleted, within
+                    // start/end window). Chronological order on created_at.
+                    $promoCodes = \App\Models\MarketplaceOrganizerPromoCode::where('ticket_type_id', $ticketType->id)
+                        ->where('status', 'active')
+                        ->where(function ($q) {
+                            $q->whereNull('expires_at')->orWhere('expires_at', '>', now());
+                        })
+                        ->where(function ($q) {
+                            $q->whereNull('starts_at')->orWhere('starts_at', '<=', now());
+                        })
+                        ->orderBy('created_at')
+                        ->get();
+
+                    foreach ($promoCodes as $promo) {
+                        $codeValue = (float) $promo->value;
+                        $reducedPrice = match ($promo->type) {
+                            'percentage' => $price - ($price * $codeValue / 100),
+                            'fixed' => $price - $codeValue,
+                            default => null,
+                        };
+                        if ($reducedPrice === null) {
+                            continue;
+                        }
+                        $reducedPrice = max(0.0, $reducedPrice);
+                        $codeText = htmlspecialchars(strtoupper($promo->code));
+
+                        $appendTicketRow(
+                            $ticketName . ' - ' . $codeText,
+                            $available,
+                            $reducedPrice,
+                            $buildSeriesDisplay($seriesStart, $seriesEnd, $codeText)
+                        );
+                    }
 
                     // PV Distrugere: calculate unsold tickets with series range
                     $unsold = max(0, $available - $sold);
