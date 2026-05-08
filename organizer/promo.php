@@ -144,13 +144,30 @@ async function loadEvents() {
                 sel.appendChild(opt);
             });
 
-            // Setup event change listener for ticket types
-            sel.addEventListener('change', onEventSelected);
+            // Setup event change listener for ticket types — wrap to ignore
+            // the Event object that the listener passes as first arg.
+            sel.addEventListener('change', () => onEventSelected());
         }
     } catch (e) { console.error('Failed to load events:', e); }
 }
 
-async function onEventSelected(preSelectedTicketTypeIds = []) {
+function formatPriceRon(value) {
+    const n = parseFloat(value) || 0;
+    if (typeof AmbiletUtils !== 'undefined' && AmbiletUtils.formatCurrency) {
+        return AmbiletUtils.formatCurrency(n);
+    }
+    try {
+        return new Intl.NumberFormat('ro-RO', { style: 'currency', currency: 'RON', minimumFractionDigits: 0 }).format(n);
+    } catch (e) {
+        return n.toFixed(2) + ' RON';
+    }
+}
+
+async function onEventSelected(preSelectedTicketTypeIds) {
+    // Defensive: if called by addEventListener fără arg, sau cu Event obj, normalize la []
+    if (!Array.isArray(preSelectedTicketTypeIds)) {
+        preSelectedTicketTypeIds = [];
+    }
     const eventId = document.getElementById('promo-event').value;
     const ticketTypeContainer = document.getElementById('ticket-type-container');
     const list = document.getElementById('promo-ticket-type-list');
@@ -168,9 +185,9 @@ async function onEventSelected(preSelectedTicketTypeIds = []) {
         const res = await AmbiletAPI.get(`/organizer/events/${eventId}`);
         if (res.success && Array.isArray(res.data?.event?.ticket_types) && res.data.event.ticket_types.length > 0) {
             const ticketTypes = res.data.event.ticket_types;
-            const preSet = new Set((preSelectedTicketTypeIds || []).map(x => parseInt(x, 10)));
+            const preSet = new Set(preSelectedTicketTypeIds.map(x => parseInt(x, 10)));
             list.innerHTML = ticketTypes.map(tt => {
-                const price = AmbiletUtils.formatCurrency(tt.price || tt.display_price || 0);
+                const price = formatPriceRon(tt.price || tt.display_price || 0);
                 const checked = preSet.has(parseInt(tt.id, 10)) ? 'checked' : '';
                 return `<label class="flex items-center gap-2 p-2 rounded-lg cursor-pointer hover:bg-white">
                     <input type="checkbox" name="promo_ticket_type_ids" value="${tt.id}" class="rounded promo-tt-checkbox" ${checked}>
