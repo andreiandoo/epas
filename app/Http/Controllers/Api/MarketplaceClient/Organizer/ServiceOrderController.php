@@ -400,7 +400,7 @@ class ServiceOrderController extends BaseController
      */
     protected function formatOrder(ServiceOrder $order): array
     {
-        return [
+        $row = [
             'id' => $order->uuid,
             'order_number' => $order->order_number,
             'type' => $order->service_type,
@@ -417,6 +417,35 @@ class ServiceOrderController extends BaseController
             'service_end_date' => $order->service_end_date?->format('Y-m-d'),
             'created_at' => $order->created_at->toIso8601String(),
         ];
+
+        // Surface a needs_pixel_setup flag on tracking orders so the
+        // /organizator/servicii table can render an alert next to the
+        // service when the operator hasn't filled their pixel ID yet.
+        // Computed inline (one TrackingIntegration query per tracking
+        // order in the listing) — perf is fine because tracking orders
+        // are rare relative to the total list.
+        if ($order->service_type === ServiceOrder::TYPE_TRACKING
+            && $order->payment_status === ServiceOrder::PAYMENT_PAID) {
+            $platforms = $order->config['platforms'] ?? [];
+            $needsSetup = false;
+            $missing = [];
+            if (!empty($platforms) && $order->marketplace_organizer_id) {
+                $integrations = \App\Models\TrackingIntegration::where('marketplace_organizer_id', $order->marketplace_organizer_id)
+                    ->get()->keyBy('provider');
+                foreach ($platforms as $platform) {
+                    $provider = ServiceOrder::TRACKING_PLATFORM_PROVIDER_MAP[$platform] ?? null;
+                    $row2 = $provider ? $integrations->get($provider) : null;
+                    if (empty($row2?->getProviderId() ?? '')) {
+                        $needsSetup = true;
+                        $missing[] = $platform;
+                    }
+                }
+            }
+            $row['needs_pixel_setup'] = $needsSetup;
+            $row['missing_pixel_platforms'] = $missing;
+        }
+
+        return $row;
     }
 
     protected function getEventTitle(?Event $event): string

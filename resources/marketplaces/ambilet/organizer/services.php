@@ -1278,22 +1278,40 @@ function renderActiveServices() {
         cancelled: { label: 'Anulat', color: 'muted' },
     };
 
+    const platformLabelsShort = { facebook: 'Facebook', google: 'Google Ads', tiktok: 'TikTok' };
+
     container.innerHTML = activeServices.map(s => {
         const statusInfo = statusMap[s.status] || { label: s.status, color: 'muted' };
+        // Tracking orders that still need the organizer to fill in a pixel
+        // ID get a warning chip next to the service type so the operator
+        // knows there's work to do before tracking actually fires. Click
+        // takes them straight to the service detail page where the new
+        // "Pixel ID-uri" panel lives.
+        const needsPixel = !!s.needs_pixel_setup;
+        const missingPlatforms = (s.missing_pixel_platforms || []).map(p => platformLabelsShort[p] || p).join(', ');
+        const pixelAlert = needsPixel
+            ? `<a href="/organizator/services/${s.id}" class="block mt-2 text-xs px-2 py-1.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-700 hover:bg-amber-100 transition-colors" title="Click pentru a completa Pixel ID">
+                <span class="inline-flex items-center gap-1.5">
+                    <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+                    <span class="font-medium">Necesită Pixel ID${missingPlatforms ? ': ' + escHtml(missingPlatforms) : ''}</span>
+                </span>
+            </a>`
+            : '';
         return `
         <tr class="hover:bg-surface/50">
-            <td class="px-6 py-4">
+            <td class="px-6 py-4 align-top">
                 <span class="px-3 py-1 bg-${typeColors[s.type] || 'muted'}/10 text-${typeColors[s.type] || 'muted'} text-sm font-medium rounded-full">${typeLabels[s.type] || s.type}</span>
+                ${pixelAlert}
             </td>
-            <td class="px-6 py-4 font-medium text-secondary">${s.event_name || '-'}</td>
-            <td class="px-6 py-4 text-sm text-muted">${s.details || '-'}</td>
-            <td class="px-6 py-4 text-sm text-muted">${AmbiletUtils.formatDate(s.service_start_date)} - ${AmbiletUtils.formatDate(s.service_end_date)}</td>
-            <td class="px-6 py-4">
+            <td class="px-6 py-4 font-medium text-secondary align-top">${s.event_name || '-'}</td>
+            <td class="px-6 py-4 text-sm text-muted align-top">${s.details || '-'}</td>
+            <td class="px-6 py-4 text-sm text-muted align-top">${AmbiletUtils.formatDate(s.service_start_date)} - ${AmbiletUtils.formatDate(s.service_end_date)}</td>
+            <td class="px-6 py-4 align-top">
                 <span class="px-3 py-1 bg-${statusInfo.color}/10 text-${statusInfo.color} text-sm rounded-full">
                     ${statusInfo.label}
                 </span>
             </td>
-            <td class="px-6 py-4 text-right">
+            <td class="px-6 py-4 text-right align-top">
                 <button onclick="viewServiceDetails('${s.id}')" class="p-2 text-muted hover:text-secondary">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
                 </button>
@@ -1301,6 +1319,12 @@ function renderActiveServices() {
         </tr>
     `;
     }).join('');
+}
+
+function escHtml(s) {
+    const d = document.createElement('div');
+    d.textContent = s == null ? '' : s;
+    return d.innerHTML;
 }
 
 function openServiceModal(type) {
