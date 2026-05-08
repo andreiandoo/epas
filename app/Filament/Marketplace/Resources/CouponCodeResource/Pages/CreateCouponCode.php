@@ -6,6 +6,7 @@ use App\Filament\Marketplace\Resources\CouponCodeResource;
 use App\Models\MarketplaceOrganizerPromoCode;
 use Filament\Resources\Pages\CreateRecord;
 use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 
 class CreateCouponCode extends CreateRecord
@@ -38,6 +39,7 @@ class CreateCouponCode extends CreateRecord
     {
         $data['marketplace_client_id'] = static::getMarketplaceClient()?->id;
         $data['code'] = strtoupper($data['code']);
+        $data['created_by'] = Auth::id();
 
         return $data;
     }

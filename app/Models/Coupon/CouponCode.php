@@ -10,11 +10,15 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Spatie\Activitylog\Contracts\Activity as ActivityContract;
+use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
 
 class CouponCode extends Model
 {
-    use HasUuids, SoftDeletes;
+    use HasUuids, SoftDeletes, LogsActivity;
 
     protected $table = 'coupon_codes';
 
@@ -245,4 +249,43 @@ class CouponCode extends Model
         return $this->belongsTo(MarketplaceClient::class);
     }
 
+    /**
+     * Activity log: trackuim cine creează/editează codul, când, de pe ce IP
+     * și ce client (user-agent) — pentru audit pe edit page.
+     */
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logFillable()
+            ->logOnlyDirty()
+            ->dontLogIfAttributesChangedOnly(['current_uses', 'updated_at'])
+            ->setDescriptionForEvent(fn (string $eventName) => "CouponCode {$eventName}");
+    }
+
+    /**
+     * Atașează IP + user-agent + tenant_id la fiecare entry de activity log
+     * (causer + causer_id sunt setate automat de Spatie).
+     */
+    public function tapActivity(ActivityContract $activity, string $eventName): void
+    {
+        $request = request();
+        $properties = $activity->properties ?? collect();
+
+        $properties = $properties
+            ->put('tenant_id', $this->tenant_id)
+            ->put('marketplace_client_id', $this->marketplace_client_id)
+            ->put('ip', $request?->ip())
+            ->put('user_agent', $request?->userAgent());
+
+        $activity->properties = $properties;
+    }
+
+    /**
+     * Toate activity log entries pentru această coupon code (creată + edits).
+     */
+    public function activities(): MorphMany
+    {
+        return $this->morphMany(\Spatie\Activitylog\Models\Activity::class, 'subject')
+            ->orderByDesc('created_at');
+    }
 }

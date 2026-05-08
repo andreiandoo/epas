@@ -254,6 +254,19 @@ class CouponCodeResource extends Resource
                             ->label('Combinable')
                             ->hintIcon('heroicon-o-information-circle', tooltip: 'Can be combined with other codes'),
                     ])->columns(3),
+
+                // Audit log — afișat doar pe edit (record există); arată cine
+                // a creat codul + istoricul de editări cu IP + device.
+                SC\Section::make('Audit log')
+                    ->description('Cine, când și de pe ce dispozitiv a creat / modificat acest cod')
+                    ->collapsible()
+                    ->collapsed(false)
+                    ->schema([
+                        \Filament\Forms\Components\ViewField::make('audit_log_view')
+                            ->view('filament.marketplace.coupon-audit-log')
+                            ->dehydrated(false),
+                    ])
+                    ->visible(fn ($record) => $record !== null),
             ]);
     }
 
