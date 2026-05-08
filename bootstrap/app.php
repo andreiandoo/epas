@@ -72,6 +72,29 @@ return Application::configure(basePath: dirname(__DIR__))
                 if (!$app || !$app->bound(\App\Logging\SystemErrorRecorder::class)) {
                     return null;
                 }
+
+                // Drop scanner / bot traffic targeting Livewire endpoints. The
+                // /livewire/update route is browser-only — any non-browser UA
+                // hitting it is a probe sending malformed payloads (which surface
+                // as TypeErrors during Livewire hydration). Logging these spams
+                // the system_errors dashboard with noise we cannot fix in code.
+                try {
+                    $request = $app->bound('request') ? $app->make('request') : null;
+                    if ($request) {
+                        $path = '/' . ltrim((string) $request->path(), '/');
+                        if (str_starts_with($path, '/livewire/') || str_contains($path, 'livewire/update')) {
+                            $ua = (string) $request->userAgent();
+                            $botRegex = '/(python-requests|curl|wget|libwww-perl|Go-http-client|Java\/|okhttp|node-fetch|axios|Scrapy|HeadlessChrome|HTTPClient|httpie|Postman)/i';
+                            $hasBrowserMarker = $ua !== '' && preg_match('/(Mozilla|AppleWebKit|Chrome|Safari|Firefox|Edge|Opera)/i', $ua);
+                            if (preg_match($botRegex, $ua) || !$hasBrowserMarker) {
+                                return null;
+                            }
+                        }
+                    }
+                } catch (\Throwable $filterFail) {
+                    // Filter must never block the recorder — fall through.
+                }
+
                 /** @var \App\Logging\SystemErrorRecorder $recorder */
                 $recorder = $app->make(\App\Logging\SystemErrorRecorder::class);
 
