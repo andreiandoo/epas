@@ -149,6 +149,13 @@ class DateAvailabilityController extends BaseController
                 'is_parking' => (bool) $tt->is_parking,
                 'requires_vehicle_info' => (bool) $tt->requires_vehicle_info,
                 'is_refundable' => (bool) $tt->is_refundable,
+                // Leisure venue: issuer + service category fields (NULL fallback la 'primary' / 'access')
+                'issuing_company' => $tt->issuing_company ?: 'primary',
+                'service_category' => $tt->service_category ?: 'access',
+                'service_duration_minutes' => $tt->service_duration_minutes,
+                'product_description' => $tt->product_description,
+                'usage_terms' => $tt->usage_terms,
+                'requires_access_ticket' => (bool) ($tt->requires_access_ticket ?? false),
             ];
 
             if ($hasTourSlots) {

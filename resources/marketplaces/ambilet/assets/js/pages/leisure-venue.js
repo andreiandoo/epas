@@ -11,10 +11,38 @@
     const SLUG = DATA.slug;
     const EVENT = DATA.event;
     const CONFIG = DATA.venue_config || {};
+    const ISSUERS = DATA.issuers || {};
     const MAX_ADVANCE = DATA.max_advance_days || 90;
     const PRICING_RULES = CONFIG.pricing_rules || [];
     const CLOSED_DATES = CONFIG.closed_dates || [];
     const SCHEDULE = CONFIG.operating_schedule || {};
+
+    // Romanian labels
+    const CATEGORY_LABEL = {
+        access: 'Bilete acces', parking: 'Parcare', rental: 'Închirieri',
+        activity: 'Activități', extra: 'Alte produse',
+    };
+
+    function formatDuration(minutes) {
+        if (!minutes) return '';
+        if (minutes < 60) return minutes + ' min';
+        if (minutes % 1440 === 0) return (minutes / 1440) + (minutes === 1440 ? ' zi' : ' zile');
+        if (minutes % 60 === 0) return (minutes / 60) + (minutes === 60 ? ' oră' : ' ore');
+        return minutes + ' min';
+    }
+
+    // Returns list of access ticket type IDs (service_category=access) — used for
+    // requires_access_ticket validation: a "linked" service can only be added
+    // if the cart already has at least 1 access ticket for the same day.
+    function accessTicketIds() {
+        if (!dateTickets) return [];
+        return dateTickets.filter(t => (t.service_category || 'access') === 'access').map(t => t.id);
+    }
+
+    function hasAccessTicketInCart() {
+        const accessIds = accessTicketIds();
+        return accessIds.some(id => (quantities[id] || 0) > 0);
+    }
 
     // Months in Romanian
     const MONTHS_RO = ['Ianuarie', 'Februarie', 'Martie', 'Aprilie', 'Mai', 'Iunie',
@@ -251,22 +279,52 @@
             return;
         }
 
-        // Group ticket types by ticket_group
-        const groups = {};
+        // Group ticket types by issuing_company → service_category.
+        // Top-level visual sections per issuer (PRINCIPALA / SECUNDARA when both exist),
+        // sub-grouped by service_category. Falls back to single section "Bilete" when
+        // ISSUERS map is not provided (legacy events).
+        const hasMultiIssuer = ISSUERS && ISSUERS.secondary;
+        const issuerOrder = hasMultiIssuer ? ['primary', 'secondary'] : ['primary'];
+
+        const grouped = {}; // { issuer: { category: [tickets] } }
         dateTickets.forEach(tt => {
-            const group = tt.group || 'Bilete';
-            if (!groups[group]) groups[group] = [];
-            groups[group].push(tt);
+            const issuer = tt.issuing_company || 'primary';
+            const category = tt.service_category || 'access';
+            if (!grouped[issuer]) grouped[issuer] = {};
+            if (!grouped[issuer][category]) grouped[issuer][category] = [];
+            grouped[issuer][category].push(tt);
         });
 
         let html = '';
 
-        for (const [groupName, tickets] of Object.entries(groups)) {
-            html += '<div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">';
-            html += '<div class="px-5 py-3 bg-gray-50 border-b border-gray-100">';
-            html += '<h3 class="text-sm font-bold text-secondary uppercase tracking-wide">' + escHtml(groupName) + '</h3>';
-            html += '</div>';
-            html += '<div class="divide-y divide-gray-50">';
+        for (const issuer of issuerOrder) {
+            const categories = grouped[issuer];
+            if (!categories || Object.keys(categories).length === 0) continue;
+
+            const issuerData = ISSUERS[issuer] || {};
+            const issuerName = issuerData.name || (issuer === 'secondary' ? 'Servicii conexe' : 'Bilete');
+            const issuerBadge = hasMultiIssuer
+                ? (issuer === 'secondary'
+                    ? '<span class="ml-2 px-2 py-0.5 text-[10px] font-bold tracking-wider rounded text-amber-700 bg-amber-100">SOCIETATE SECUNDARĂ</span>'
+                    : '<span class="ml-2 px-2 py-0.5 text-[10px] font-bold tracking-wider rounded text-primary bg-primary/10">SOCIETATE PRINCIPALĂ</span>')
+                : '';
+
+            // Order categories: access first, then others
+            const catOrder = ['access', 'parking', 'rental', 'activity', 'extra'];
+            const sortedCategories = catOrder.filter(c => categories[c]).concat(
+                Object.keys(categories).filter(c => !catOrder.includes(c))
+            );
+
+            for (const category of sortedCategories) {
+                const tickets = categories[category];
+                const groupName = CATEGORY_LABEL[category] || (tickets[0]?.group || 'Bilete');
+
+                html += '<div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">';
+                html += '<div class="px-5 py-3 bg-gray-50 border-b border-gray-100 flex items-center flex-wrap gap-1">';
+                html += '<h3 class="text-sm font-bold text-secondary uppercase tracking-wide">' + escHtml(groupName) + '</h3>';
+                if (hasMultiIssuer) html += issuerBadge;
+                html += '</div>';
+                html += '<div class="divide-y divide-gray-50">';
 
             tickets.forEach(tt => {
                 const available = tt.available;
@@ -276,16 +334,32 @@
                 const maxAllowed = available !== null ? Math.min(max, available) : max;
                 const qty = quantities[tt.id] || 0;
 
+                // Validate requires_access_ticket: blocheaza adaugarea daca nu e
+                // bilet acces in cos pentru aceeasi zi.
+                const linkedNeedsAccess = !!tt.requires_access_ticket && (tt.service_category || 'access') !== 'access';
+                const accessMissing = linkedNeedsAccess && !hasAccessTicketInCart();
+
                 html += '<div class="px-5 py-4 flex items-center gap-4' + (isUnavailable ? ' opacity-50' : '') + '">';
 
                 // Info
                 html += '<div class="flex-1 min-w-0">';
-                html += '<div class="font-semibold text-secondary">' + escHtml(tt.name) + '</div>';
+                html += '<div class="font-semibold text-secondary flex items-center gap-2 flex-wrap">';
+                html += '<span>' + escHtml(tt.name) + '</span>';
+                if (tt.service_duration_minutes) {
+                    html += '<span class="px-2 py-0.5 text-[10px] font-bold rounded bg-blue-50 text-blue-700">' + escHtml(formatDuration(tt.service_duration_minutes)) + '</span>';
+                }
+                if (linkedNeedsAccess) {
+                    html += '<span class="px-2 py-0.5 text-[10px] font-bold rounded bg-amber-50 text-amber-700">Necesită bilet acces</span>';
+                }
+                html += '</div>';
                 if (tt.description) {
                     html += '<div class="text-xs text-gray-500 mt-0.5">' + escHtml(tt.description) + '</div>';
                 }
                 if (min > 1) {
                     html += '<div class="text-xs text-amber-600 mt-0.5">Minim ' + min + ' bilete</div>';
+                }
+                if (tt.product_description || tt.usage_terms) {
+                    html += '<button class="lv-toggle-details mt-1 text-[11px] font-medium text-primary hover:underline" data-tt="' + tt.id + '" type="button">Detalii →</button>';
                 }
                 html += '</div>';
 
@@ -301,14 +375,35 @@
                 if (isUnavailable) {
                     html += '<div class="text-sm font-medium text-red-500 shrink-0">Sold out</div>';
                 } else {
+                    const plusDisabled = (qty >= maxAllowed) || (qty === 0 && accessMissing);
                     html += '<div class="flex items-center gap-2 shrink-0">';
                     html += '<button class="qty-btn w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 transition disabled:opacity-30" data-tt="' + tt.id + '" data-dir="-1"' + (qty <= 0 ? ' disabled' : '') + '>−</button>';
                     html += '<span class="qty-val w-8 text-center font-semibold text-secondary tabular-nums" data-tt="' + tt.id + '">' + qty + '</span>';
-                    html += '<button class="qty-btn w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 transition disabled:opacity-30" data-tt="' + tt.id + '" data-dir="1"' + (qty >= maxAllowed ? ' disabled' : '') + '>+</button>';
+                    html += '<button class="qty-btn w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 transition disabled:opacity-30" data-tt="' + tt.id + '" data-dir="1"' + (plusDisabled ? ' disabled' : '') + '>+</button>';
                     html += '</div>';
                 }
 
                 html += '</div>';
+
+                // Access-required warning when service is selected without an access ticket
+                if (linkedNeedsAccess && qty > 0 && !hasAccessTicketInCart()) {
+                    html += '<div class="px-5 pb-3 -mt-2"><div class="text-xs font-medium text-red-600 flex items-center gap-1.5"><svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>Adaugă mai întâi un bilet de acces pentru această zi.</div></div>';
+                }
+
+                // Hidden details (product_description + usage_terms)
+                if (tt.product_description || tt.usage_terms) {
+                    html += '<div class="lv-details px-5 pb-4 -mt-2 hidden text-sm text-gray-600" data-details-tt="' + tt.id + '">';
+                    if (tt.product_description) {
+                        html += '<div class="prose prose-sm max-w-none">' + tt.product_description + '</div>';
+                    }
+                    if (tt.usage_terms) {
+                        html += '<div class="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs">';
+                        html += '<div class="font-bold text-amber-900 mb-1 uppercase tracking-wide">Condiții de utilizare</div>';
+                        html += '<div class="prose prose-sm max-w-none text-amber-900">' + tt.usage_terms + '</div>';
+                        html += '</div>';
+                    }
+                    html += '</div>';
+                }
 
                 // Tour slot selector
                 if (tt.has_tour_slots && tt.tour_slots && qty > 0) {
@@ -342,11 +437,23 @@
                 }
             });
 
-            html += '</div></div>';
-        }
+                html += '</div></div>';
+            } // end category loop
+        } // end issuer loop
 
         $groups.innerHTML = html;
         $groups.classList.remove('hidden');
+
+        // Bind details toggle
+        $groups.querySelectorAll('.lv-toggle-details').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const ttId = btn.dataset.tt;
+                const panel = $groups.querySelector('[data-details-tt="' + ttId + '"]');
+                if (!panel) return;
+                const isHidden = panel.classList.toggle('hidden');
+                btn.textContent = isHidden ? 'Detalii →' : 'Ascunde detalii';
+            });
+        });
 
         // Bind quantity buttons
         $groups.querySelectorAll('.qty-btn').forEach(btn => {
@@ -432,7 +539,8 @@
             return;
         }
 
-        // Validate: parking tickets need license plates, tour tickets need slot
+        // Validate: parking tickets need license plates, tour tickets need slot,
+        // services with requires_access_ticket need an access ticket in cart.
         let valid = true;
         items.forEach(item => {
             if (item.tt.requires_vehicle_info) {
@@ -443,6 +551,9 @@
             }
             if (item.tt.has_tour_slots && !tourSlotSelections[item.tt.id]) {
                 valid = false;
+            }
+            if (item.tt.requires_access_ticket && (item.tt.service_category || 'access') !== 'access') {
+                if (!hasAccessTicketInCart()) valid = false;
             }
         });
 

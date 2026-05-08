@@ -777,6 +777,13 @@ class MarketplaceEventsController extends BaseController
                 'website' => $organizer->website,
                 'social_links' => $organizer->social_links,
                 'verified' => $organizer->verified_at !== null,
+                // Leisure venue: cele 2 societati emitente (doar denumirile + CIF
+                // pentru afisaj public, restul datelor fiscale raman private)
+                'company_name' => $organizer->company_name,
+                'company_tax_id' => $organizer->company_tax_id,
+                'has_secondary_issuer' => (bool) ($organizer->has_secondary_issuer ?? false),
+                'secondary_company_name' => $organizer->secondary_company_name ?? null,
+                'secondary_company_tax_id' => $organizer->secondary_company_tax_id ?? null,
             ] : null,
             'ticket_types' => $event->ticketTypes->sortBy('sort_order')->filter(fn ($tt) => $tt->status === 'active' && !$tt->is_entry_ticket && !($tt->meta['is_invitation'] ?? false))->map(function ($tt) use ($language, $targetPrice, $commissionMode, $commissionRate) {
                 // Debug: log ticket type color and seating row data
