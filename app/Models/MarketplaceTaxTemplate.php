@@ -637,8 +637,23 @@ class MarketplaceTaxTemplate extends Model
                         $ticketSeriesList[] = $ticketName . ': ' . $seriesStart . ' - ' . $seriesEnd;
                     }
 
-                    // Custom rows format with series
-                    $seriesDisplay = ($seriesStart || $seriesEnd) ? $seriesStart . ' - ' . $seriesEnd : '-';
+                    // Custom rows format with series. When start/end share a common
+                    // alphanumeric prefix (e.g. GA001 / GA500), collapse to
+                    // "GA  001 > 500" — easier to read on the tax form. Otherwise
+                    // fall back to "<start> > <end>".
+                    $seriesDisplay = '-';
+                    if ($seriesStart || $seriesEnd) {
+                        if ($seriesStart && $seriesEnd
+                            && preg_match('/^(.*?)(\d+)$/', $seriesStart, $startMatch)
+                            && preg_match('/^(.*?)(\d+)$/', $seriesEnd, $endMatch)
+                            && trim($startMatch[1]) === trim($endMatch[1])) {
+                            $prefix = trim($startMatch[1]);
+                            $seriesDisplay = ($prefix !== '' ? $prefix . '&nbsp;&nbsp;' : '')
+                                . $startMatch[2] . ' &gt; ' . $endMatch[2];
+                        } else {
+                            $seriesDisplay = $seriesStart . ' &gt; ' . $seriesEnd;
+                        }
+                    }
                     $ticketRowsHtml .= '<tr>';
                     $ticketRowsHtml .= '<td class="left-align">' . $ticketName . '</td>';
                     $ticketRowsHtml .= '<td>' . $available . '</td>';
