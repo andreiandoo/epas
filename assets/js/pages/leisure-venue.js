@@ -164,7 +164,7 @@
         if (monthCache[monthStr]) return monthCache[monthStr];
 
         try {
-            const resp = await AmbiletAPI.get('event.dateAvailability', { slug: SLUG, month: monthStr });
+            const resp = await AmbiletAPI.get(`/marketplace-events/${SLUG}/date-availability`, { month: monthStr });
             if (resp && resp.dates) {
                 monthCache[monthStr] = resp;
                 return resp;
@@ -231,7 +231,7 @@
         $loading.classList.remove('hidden');
 
         try {
-            const resp = await AmbiletAPI.get('event.dateAvailability', { slug: SLUG, date: dateStr });
+            const resp = await AmbiletAPI.get(`/marketplace-events/${SLUG}/date-availability`, { date: dateStr });
             if (!resp || !resp.is_open) {
                 $loading.classList.add('hidden');
                 $noDate.classList.remove('hidden');

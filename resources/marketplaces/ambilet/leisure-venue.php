@@ -425,22 +425,16 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 
-<!-- LV-DBG-1: about to render leisure JS tag -->
 <?php
-// Inject leisure-venue.js direct INLINE in body. Pus aici (nu via $scriptsExtra)
-// ca sa fim siguri ca nu e suprascris de alte include-uri sau ignorat dupa
-// </body></html> emis de scripts.php.
+// Inject leisure-venue.js direct INLINE in body, inainte de footer + scripts.
+// Pus aici (nu via $scriptsExtra) ca sa fim siguri ca tag-ul ajunge in HTML
+// si nu e ignorat dupa </body></html> emis de scripts.php.
 $leisureJsPath = __DIR__ . '/assets/js/pages/leisure-venue.js';
 $leisureJsVer = @filemtime($leisureJsPath) ?: time();
 $leisureAssets = defined('ASSETS_URL') ? ASSETS_URL : '/assets';
 ?>
 <script src="<?= $leisureAssets ?>/js/pages/leisure-venue.js?v=<?= $leisureJsVer ?>"></script>
-<!-- LV-DBG-2: leisure JS tag rendered, about to require footer -->
 <?php
 require_once __DIR__ . '/includes/footer.php';
-?>
-<!-- LV-DBG-3: footer required, about to require scripts -->
-<?php
 require_once __DIR__ . '/includes/scripts.php';
 ?>
-<!-- LV-DBG-4: scripts required (this should appear after </body></html>) -->
