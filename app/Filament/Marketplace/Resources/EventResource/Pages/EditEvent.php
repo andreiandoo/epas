@@ -174,13 +174,6 @@ class EditEvent extends EditRecord
                 ->url(fn () => EventResource::getUrl('daily-capacities', ['record' => $this->record]));
         }
 
-        // Statistics action
-        $actions[] = Actions\Action::make('statistics')
-            ->label('Statistici')
-            ->icon('heroicon-o-chart-pie')
-            ->color('gray')
-            ->url(fn () => EventResource::getUrl('statistics', ['record' => $this->record]));
-
         // Duplicate action
         $actions[] = Actions\Action::make('duplicate')
             ->label('Duplică')
