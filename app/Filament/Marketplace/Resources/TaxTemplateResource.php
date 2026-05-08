@@ -549,6 +549,7 @@ class TaxTemplateResource extends Resource
             'event_city' => 'București',
             'venue_name' => 'Arena Exemplu',
             'venue_address' => 'Str. Arenei Nr. 1, București',
+            'event_has_monument_tax' => 'Nu',
 
             // Tickets
             'ticket_types_table' => '<table style="width:100%; border-collapse: collapse;"><thead><tr><th style="border:1px solid #ddd; padding:8px; text-align:left;">Ticket Type</th><th style="border:1px solid #ddd; padding:8px; text-align:right;">Price</th><th style="border:1px solid #ddd; padding:8px; text-align:right;">Available</th><th style="border:1px solid #ddd; padding:8px; text-align:right;">Sold</th></tr></thead><tbody><tr><td style="border:1px solid #ddd; padding:8px;">General Admission</td><td style="border:1px solid #ddd; padding:8px; text-align:right;">150.00 RON</td><td style="border:1px solid #ddd; padding:8px; text-align:right;">500</td><td style="border:1px solid #ddd; padding:8px; text-align:right;">245</td></tr><tr><td style="border:1px solid #ddd; padding:8px;">VIP</td><td style="border:1px solid #ddd; padding:8px; text-align:right;">350.00 RON</td><td style="border:1px solid #ddd; padding:8px; text-align:right;">100</td><td style="border:1px solid #ddd; padding:8px; text-align:right;">52</td></tr></tbody></table>',

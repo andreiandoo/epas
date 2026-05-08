@@ -166,6 +166,7 @@ class MarketplaceTaxTemplate extends Model
             '{{event_city}}' => 'Event City (from venue)',
             '{{venue_name}}' => 'Venue Name',
             '{{venue_address}}' => 'Venue Address',
+            '{{event_has_monument_tax}}' => 'Eveniment plătitor de Taxa Monument (Da/Nu)',
             '{{ticket_types_table}}' => 'Ticket Types Table (with names, prices, available, sold)',
             '{{ticket_types_series}}' => 'Ticket Types with Series (Name: START - END)',
             '{{ticket_types_rows}}' => 'Ticket Types Table Rows (name, stock, price, value, series)',
@@ -572,6 +573,18 @@ class MarketplaceTaxTemplate extends Model
                 $variables['venue_address'] = $event->venue_address ?? '';
             }
 
+            // Historical monument tax flag — sourced from the venue first,
+            // with an event-level override (event->has_historical_monument_tax)
+            // taking precedence when explicitly set. Returns "Da" / "Nu" so it
+            // can be dropped straight into the form text.
+            $eventOverride = $event->has_historical_monument_tax ?? null;
+            if ($eventOverride !== null) {
+                $hasMonumentTax = (bool) $eventOverride;
+            } else {
+                $hasMonumentTax = (bool) ($event->venue?->has_historical_monument_tax ?? false);
+            }
+            $variables['event_has_monument_tax'] = $hasMonumentTax ? 'Da' : 'Nu';
+
             // Calculate totals
             $totalAvailable = 0;
             $totalSold = 0;
@@ -648,6 +661,14 @@ class MarketplaceTaxTemplate extends Model
                 foreach ($event->ticketTypes as $ticketType) {
                     // Skip non-declarable ticket types for document generation
                     if (isset($ticketType->is_declarable) && $ticketType->is_declarable === false) {
+                        continue;
+                    }
+                    // Skip invitations — no series, no price, not part of fiscal
+                    // declaration. Detected the same way as the EventResource
+                    // breakdown: by exact name "Invitatie" or meta flag.
+                    $meta = is_array($ticketType->meta ?? null) ? $ticketType->meta : [];
+                    $isInvitation = ($ticketType->name === 'Invitatie') || ($meta['is_invitation'] ?? false);
+                    if ($isInvitation) {
                         continue;
                     }
                     $isSubscription = (bool) ($ticketType->is_subscription ?? false);
