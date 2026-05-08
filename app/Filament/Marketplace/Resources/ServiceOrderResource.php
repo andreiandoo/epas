@@ -237,6 +237,61 @@ class ServiceOrderResource extends Resource
                         $record?->service_type === 'email'
                     ),
 
+                Section::make('Status pixel-uri Ad Tracking')
+                    ->visible(fn (?ServiceOrder $record): bool => $record?->service_type === ServiceOrder::TYPE_TRACKING)
+                    ->schema([
+                        Forms\Components\Placeholder::make('tracking_pixels_status')
+                            ->label('')
+                            ->columnSpanFull()
+                            ->content(function (?ServiceOrder $record): HtmlString {
+                                if (!$record || $record->service_type !== ServiceOrder::TYPE_TRACKING) {
+                                    return new HtmlString('<p class="text-sm text-gray-500">-</p>');
+                                }
+                                $platforms = $record->config['platforms'] ?? [];
+                                if (empty($platforms)) {
+                                    return new HtmlString('<p class="text-sm text-gray-500">Nicio platformă selectată în config-ul comenzii.</p>');
+                                }
+                                $integrations = \App\Models\TrackingIntegration::where('marketplace_organizer_id', $record->marketplace_organizer_id)
+                                    ->get()->keyBy('provider');
+                                $platformLabels = ['facebook' => 'Facebook Pixel', 'google' => 'Google Ads', 'tiktok' => 'TikTok Pixel'];
+                                $rows = '';
+                                foreach ($platforms as $platform) {
+                                    $provider = ServiceOrder::TRACKING_PLATFORM_PROVIDER_MAP[$platform] ?? null;
+                                    $row = $provider ? $integrations->get($provider) : null;
+                                    $pixelId = $row?->getProviderId() ?? '';
+                                    $enabled = (bool) ($row?->enabled ?? false);
+                                    $toggle = (bool) (($row?->settings['toggle_enabled'] ?? false));
+                                    $label = htmlspecialchars($platformLabels[$platform] ?? ucfirst($platform), ENT_QUOTES);
+                                    $providerLbl = htmlspecialchars($provider ?? '?', ENT_QUOTES);
+                                    if ($pixelId !== '') {
+                                        $statusBadge = '<span style="background:#d1fae5;color:#065f46;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:600;">✓ Activ</span>';
+                                    } elseif ($toggle) {
+                                        $statusBadge = '<span style="background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:600;">⚠ Necesită Pixel ID</span>';
+                                    } else {
+                                        $statusBadge = '<span style="background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:600;">✕ Toggle off</span>';
+                                    }
+                                    $pixelDisplay = $pixelId !== '' ? htmlspecialchars($pixelId, ENT_QUOTES) : '<span style="color:#9ca3af;">— gol —</span>';
+                                    $rows .= "<tr style='border-bottom:1px solid #e5e7eb;'>"
+                                        . "<td style='padding:10px 12px;font-size:13px;font-weight:600;color:#1f2937;'>{$label}</td>"
+                                        . "<td style='padding:10px 12px;font-size:12px;color:#6b7280;'>{$providerLbl}</td>"
+                                        . "<td style='padding:10px 12px;font-size:13px;font-family:monospace;'>{$pixelDisplay}</td>"
+                                        . "<td style='padding:10px 12px;text-align:right;'>{$statusBadge}</td>"
+                                        . '</tr>';
+                                }
+                                return new HtmlString(
+                                    '<table style="width:100%;border-collapse:collapse;background:white;border-radius:8px;overflow:hidden;border:1px solid #e5e7eb;">'
+                                    . '<thead><tr style="background:#f9fafb;">'
+                                    . '<th style="padding:10px 12px;text-align:left;font-size:11px;text-transform:uppercase;color:#6b7280;letter-spacing:0.05em;">Platforma</th>'
+                                    . '<th style="padding:10px 12px;text-align:left;font-size:11px;text-transform:uppercase;color:#6b7280;letter-spacing:0.05em;">Provider</th>'
+                                    . '<th style="padding:10px 12px;text-align:left;font-size:11px;text-transform:uppercase;color:#6b7280;letter-spacing:0.05em;">Pixel ID</th>'
+                                    . '<th style="padding:10px 12px;text-align:right;font-size:11px;text-transform:uppercase;color:#6b7280;letter-spacing:0.05em;">Status</th>'
+                                    . '</tr></thead>'
+                                    . "<tbody>{$rows}</tbody>"
+                                    . '</table>'
+                                );
+                            }),
+                    ]),
+
                 Section::make('Service Configuration')
                     ->schema([
                         Forms\Components\Placeholder::make('config_display')
