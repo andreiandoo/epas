@@ -254,10 +254,18 @@ class MarketplaceClientAuth
 
     /**
      * Log a failed authentication attempt.
+     *
+     * Reasons fall into two buckets:
+     *  - benign (missing/invalid API key): typically scanners or
+     *    misconfigured clients — log at INFO so they don't pollute
+     *    /admin/system-errors. Still recorded in the marketplace log.
+     *  - anomalous (inactive_client, ip_not_allowed): someone with a real
+     *    key using it from a disallowed context — log at WARNING so they
+     *    surface in the system errors dashboard.
      */
     protected function logFailedAttempt(Request $request, string $reason, ?MarketplaceClient $client = null): void
     {
-        Log::warning('Marketplace API authentication failed', [
+        $payload = [
             'reason' => $reason,
             'ip' => $request->ip(),
             'origin' => $request->header('Origin'),
@@ -266,7 +274,14 @@ class MarketplaceClientAuth
             'endpoint' => $request->path(),
             'client_id' => $client?->id,
             'client_name' => $client?->name,
-        ]);
+        ];
+
+        $isAnomalous = in_array($reason, ['inactive_client', 'ip_not_allowed'], true);
+        if ($isAnomalous) {
+            Log::warning('Marketplace API authentication failed', $payload);
+        } else {
+            Log::channel('marketplace')->info('Marketplace API authentication failed', $payload);
+        }
     }
 
     /**
