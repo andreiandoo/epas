@@ -1,21 +1,23 @@
 @php
     /**
      * Audit log pentru un coupon code.
-     * Variabila $record vine din ViewField.
+     * $record vine ca prop din Placeholder->content callback.
      *
      * Afișează:
      *  - Cine a creat codul (nume, email)
      *  - Când (timestamp + IP + device)
      *  - Istoric editări (causer, timestamp, IP, device, ce s-a schimbat)
      */
-    $record = $getRecord();
-
-    /** @var \App\Models\Coupon\CouponCode $record */
-    if (!$record || !$record->exists) {
+    /** @var \App\Models\Coupon\CouponCode|null $record */
+    if (!isset($record) || !$record || !$record->exists) {
         return;
     }
 
-    $activities = $record->activities()->with('causer')->limit(50)->get();
+    try {
+        $activities = $record->activities()->with('causer')->limit(50)->get();
+    } catch (\Throwable $e) {
+        $activities = collect();
+    }
 
     /**
      * Parsează un user-agent în format "Browser X pe OS Y" — minimal,

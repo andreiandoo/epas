@@ -255,16 +255,20 @@ class CouponCodeResource extends Resource
                             ->hintIcon('heroicon-o-information-circle', tooltip: 'Can be combined with other codes'),
                     ])->columns(3),
 
-                // Audit log — afișat doar pe edit (record există); arată cine
-                // a creat codul + istoricul de editări cu IP + device.
+                // Audit log — afișat doar pe edit/view (record există); arată
+                // cine a creat codul + istoricul de editări cu IP + device.
                 SC\Section::make('Audit log')
                     ->description('Cine, când și de pe ce dispozitiv a creat / modificat acest cod')
                     ->collapsible()
                     ->collapsed(false)
                     ->schema([
-                        \Filament\Forms\Components\ViewField::make('audit_log_view')
-                            ->view('filament.marketplace.coupon-audit-log')
-                            ->dehydrated(false),
+                        Forms\Components\Placeholder::make('audit_log_html')
+                            ->label('')
+                            ->content(fn ($record) => $record
+                                ? new \Illuminate\Support\HtmlString(
+                                    view('filament.marketplace.coupon-audit-log', ['record' => $record])->render()
+                                )
+                                : ''),
                     ])
                     ->visible(fn ($record) => $record !== null),
             ]);
