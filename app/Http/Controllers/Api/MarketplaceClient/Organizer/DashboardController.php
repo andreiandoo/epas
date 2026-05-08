@@ -406,7 +406,7 @@ class DashboardController extends BaseController
             $handle = fopen('php://output', 'w');
             // BOM for Excel UTF-8 compatibility
             fwrite($handle, "\xEF\xBB\xBF");
-            fputcsv($handle, ['Comanda', 'Status', 'Client', 'Telefon', 'Tip bilet', 'Nr bilete', 'Valoare', 'Sursa', 'Data']);
+            fputcsv($handle, ['Comanda', 'Status', 'Client', 'Telefon', 'Tip bilet', 'Nr bilete', 'Valoare', 'Sursa', 'Data'], escape: '\\');
 
             foreach ($orders as $order) {
                 $ticketTypes = $order->tickets
@@ -425,7 +425,7 @@ class DashboardController extends BaseController
                     number_format((float) $order->total, 2, '.', ''),
                     $order->source ?? 'marketplace',
                     $order->created_at->format('Y-m-d H:i'),
-                ]);
+                ], escape: '\\');
             }
 
             fclose($handle);
