@@ -756,16 +756,29 @@ class MarketplaceTaxTemplate extends Model
                         );
                     }
 
-                    // Row 3+ — promo codes scoped to this ticket type. Active
-                    // codes only (status='active', not soft-deleted, within
-                    // start/end window). Chronological order on created_at.
-                    $promoCodes = \App\Models\MarketplaceOrganizerPromoCode::where('ticket_type_id', $ticketType->id)
-                        ->where('status', 'active')
+                    // Row 3+ — promo codes that apply to this ticket type.
+                    // A code is relevant if EITHER:
+                    //   - ticket_type_id matches this exact ticket type
+                    //     (per-tt scoped code, applies only here), OR
+                    //   - marketplace_event_id matches the current event AND
+                    //     ticket_type_id is NULL (event-scoped code, applies
+                    //     to every ticket type of the event — generates one
+                    //     row per ticket type).
+                    // Active codes only (status='active', within start/end
+                    // window). Chronological order on created_at.
+                    $promoCodes = \App\Models\MarketplaceOrganizerPromoCode::where('status', 'active')
                         ->where(function ($q) {
                             $q->whereNull('expires_at')->orWhere('expires_at', '>', now());
                         })
                         ->where(function ($q) {
                             $q->whereNull('starts_at')->orWhere('starts_at', '<=', now());
+                        })
+                        ->where(function ($q) use ($ticketType, $event) {
+                            $q->where('ticket_type_id', $ticketType->id)
+                              ->orWhere(function ($q2) use ($event) {
+                                  $q2->where('marketplace_event_id', $event->id)
+                                     ->whereNull('ticket_type_id');
+                              });
                         })
                         ->orderBy('created_at')
                         ->get();
