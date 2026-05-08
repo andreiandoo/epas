@@ -444,15 +444,15 @@ class EventResource extends Resource
                                         $statisticsLabel = $t('Statistici', 'Statistics');
                                         $analyticsLabel = $t('Analiză', 'Analytics');
 
-                                        // Tickets & Orders counts and URLs — only tickets attached to orders that
-                                        // represent a real sale (paid/confirmed/completed, plus refunded variants
-                                        // for the cancelled/refunded buckets). Excludes external imports and
-                                        // failed/pending shells whose tickets never produced revenue.
+                                        // Tickets & Orders counts and URLs — EXCLUDE external imports.
+                                        // Bilete (valid) is restricted to paid/confirmed/completed so it matches
+                                        // Venituri/Net. Anulate/Rambursate keep the loose filter to match the
+                                        // /marketplace/tickets list page (which doesn't filter by order status),
+                                        // since cancelled tickets in failed/abandoned orders are still operationally
+                                        // relevant even though they never produced revenue.
                                         $eventId = $record->id;
                                         $ticketsQuery = \App\Models\Ticket::where(fn ($q) => $q->where('event_id', $eventId)->orWhere('marketplace_event_id', $eventId))
-                                            ->whereHas('order', fn($q) => $q
-                                                ->where('source', '!=', 'external_import')
-                                                ->whereIn('status', ['paid', 'confirmed', 'completed', 'refunded', 'partially_refunded']));
+                                            ->whereHas('order', fn($q) => $q->where('source', '!=', 'external_import'));
                                         $ticketCountValid = (clone $ticketsQuery)
                                             ->whereIn('status', ['valid', 'used'])
                                             ->whereHas('order', fn($q) => $q->whereIn('status', ['paid', 'confirmed', 'completed']))
