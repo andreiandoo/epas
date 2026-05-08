@@ -2195,10 +2195,10 @@ class EventResource extends Resource
                                                     ->visible(fn (SGet $get) => $get('../../duration_mode') === 'range')
                                                     ->columnSpan(12),
 
-                                                // ── Leisure Venue Fields (visible only for leisure_venue events) ──
-                                                SC\Grid::make(4)
-                                                    ->extraAttributes(['style' => '--col-span-default: span 1 / span 1; --col-span-lg: span 12 / span 12;'])
+                                                // ── Leisure Venue: split fiscal (categorie + societate emitenta) ──
+                                                SC\Grid::make(2)
                                                     ->visible(fn (SGet $get) => ($get('../../display_template') ?? 'standard') === 'leisure_venue')
+                                                    ->columnSpan(12)
                                                     ->schema([
                                                         Forms\Components\Select::make('service_category')
                                                             ->label($t('Categorie serviciu', 'Service category'))
@@ -2210,7 +2210,8 @@ class EventResource extends Resource
                                                                 'extra'    => $t('Alt produs', 'Other'),
                                                             ])
                                                             ->placeholder($t('Acces (implicit)', 'Access (default)'))
-                                                            ->helperText($t('Lasă gol pentru bilet de acces', 'Leave empty for access ticket')),
+                                                            ->helperText($t('Lasă gol pentru bilet de acces', 'Leave empty for access ticket'))
+                                                            ->columnSpan(1),
                                                         Forms\Components\Select::make('issuing_tax_registry_id')
                                                             ->label($t('Societate emitentă', 'Issuing entity'))
                                                             ->options(function () use ($marketplace) {
@@ -2229,7 +2230,15 @@ class EventResource extends Resource
                                                             })
                                                             ->placeholder($t('Implicit (de la eveniment)', 'Default (from event)'))
                                                             ->helperText($t('Lasă gol pentru a folosi societatea evenimentului', 'Leave empty to use event entity'))
-                                                            ->searchable(),
+                                                            ->searchable()
+                                                            ->columnSpan(1),
+                                                    ]),
+
+                                                // ── Leisure Venue: capacitate + parcare (existing) ──
+                                                SC\Grid::make(4)
+                                                    ->extraAttributes(['style' => '--col-span-default: span 1 / span 1; --col-span-lg: span 12 / span 12;'])
+                                                    ->visible(fn (SGet $get) => ($get('../../display_template') ?? 'standard') === 'leisure_venue')
+                                                    ->schema([
                                                         Forms\Components\TextInput::make('daily_capacity')
                                                             ->label($t('Capacitate zilnică', 'Daily capacity'))
                                                             ->numeric()
