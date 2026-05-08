@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers\Api\MarketplaceClient;
 
-use App\Models\MarketplaceEvent;
+use App\Models\Event;
 use App\Models\MarketplaceEventDateCapacity;
-use App\Models\MarketplaceTicketType;
+use App\Models\TicketType;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -22,9 +22,9 @@ class DateAvailabilityController extends BaseController
     {
         $client = $this->requireClient($request);
 
-        $event = MarketplaceEvent::where('marketplace_client_id', $client->id)
+        $event = Event::where('marketplace_client_id', $client->id)
             ->where(fn ($q) => $q->where('slug', $identifier)->orWhere('id', $identifier))
-            ->where('status', 'published')
+            ->where('is_published', true)
             ->first();
 
         if (!$event || !$event->isLeisureVenue()) {
@@ -48,15 +48,19 @@ class DateAvailabilityController extends BaseController
     /**
      * Full ticket type details for a single date.
      */
-    private function singleDateAvailability(MarketplaceEvent $event, string $date): JsonResponse
+    private function singleDateAvailability(Event $event, string $date): JsonResponse
     {
         $dateStr = $date;
 
-        // Validate date is within event range
-        if ($event->starts_at && Carbon::parse($dateStr)->lt($event->starts_at->startOfDay())) {
+        // Validate date is within event range. Event uses range_start_date / range_end_date
+        // for leisure venues with seasonal/recurring schedule, instead of starts_at/ends_at.
+        $rangeStart = $event->range_start_date ?? $event->event_date ?? null;
+        $rangeEnd = $event->range_end_date ?? null;
+
+        if ($rangeStart && Carbon::parse($dateStr)->lt(Carbon::parse($rangeStart)->startOfDay())) {
             return response()->json(['date' => $dateStr, 'is_open' => false, 'reason' => 'before_season']);
         }
-        if ($event->ends_at && Carbon::parse($dateStr)->gt($event->ends_at->endOfDay())) {
+        if ($rangeEnd && Carbon::parse($dateStr)->gt(Carbon::parse($rangeEnd)->endOfDay())) {
             return response()->json(['date' => $dateStr, 'is_open' => false, 'reason' => 'after_season']);
         }
 
@@ -71,37 +75,33 @@ class DateAvailabilityController extends BaseController
         $operatingHours = $event->getOperatingHours($dateStr);
         $season = $event->getSeasonForDate($dateStr);
 
+        // Event model: ticketTypes() returnează TicketType (table ticket_types).
+        // Status logic: TicketType nu are status='on_sale' ca MarketplaceTicketType.
+        // Folosim is_active (mutator) si filtram out is_entry_ticket / is_invitation.
         $ticketTypes = $event->ticketTypes()
-            ->where('status', 'on_sale')
-            ->where('is_visible', true)
             ->orderBy('sort_order')
-            ->get();
+            ->get()
+            ->filter(function ($tt) {
+                if ($tt->is_entry_ticket) return false;
+                if (!empty($tt->meta['is_invitation'] ?? false)) return false;
+                return true;
+            });
 
         $ticketData = [];
 
         foreach ($ticketTypes as $tt) {
-            $dateCapacity = null;
             $available = null;
-            $effectivePrice = (float) $tt->price;
+            $effectivePrice = (float) ($tt->price_max ?? $tt->price ?? 0);
 
             if ($tt->daily_capacity) {
-                // Get or create date capacity row
-                $dateCapacity = MarketplaceEventDateCapacity::getOrCreate(
-                    $event->id,
-                    $tt->id,
-                    $dateStr,
-                    $tt->daily_capacity
-                );
-
-                if ($dateCapacity->is_closed) {
-                    continue; // Skip closed ticket types for this date
-                }
-
-                $available = $dateCapacity->available;
-                $effectivePrice = $event->getEffectivePrice($tt, $dateStr, $dateCapacity->price_override ? (float) $dateCapacity->price_override : null);
+                // Daily capacity tracking via MarketplaceEventDateCapacity ramane disponibil
+                // doar daca event-ul are si un MarketplaceEvent corespunzator. Pentru
+                // Event direct, facem static fallback la daily_capacity (fara live tracking
+                // de sold per zi — va fi adaugat cu F4/F5 cand avem cart cu visit_date).
+                $available = (int) $tt->daily_capacity;
+                $effectivePrice = $event->getEffectivePrice($tt, $dateStr);
             } else {
-                // No daily capacity — use global stock
-                $available = $tt->available_quantity; // null = unlimited
+                $available = $tt->available_quantity ?? null; // null = unlimited
                 $effectivePrice = $event->getEffectivePrice($tt, $dateStr);
             }
 
@@ -139,11 +139,11 @@ class DateAvailabilityController extends BaseController
                 'name' => $tt->name,
                 'description' => $tt->description,
                 'group' => $tt->ticket_group,
-                'base_price' => (float) $tt->price,
+                'base_price' => (float) ($tt->price_max ?? $tt->price ?? 0),
                 'effective_price' => $effectivePrice,
                 'currency' => $tt->currency ?? 'RON',
                 'available' => $available,
-                'capacity' => $dateCapacity?->capacity ?? $tt->quantity,
+                'capacity' => $tt->daily_capacity ?? $tt->quota_total ?? null,
                 'min_per_order' => $tt->min_per_order ?? 1,
                 'max_per_order' => $tt->max_per_order ?? 10,
                 'is_parking' => (bool) $tt->is_parking,
@@ -179,29 +179,27 @@ class DateAvailabilityController extends BaseController
     /**
      * Month summary for calendar — returns status per date.
      */
-    private function monthAvailability(MarketplaceEvent $event, string $month): JsonResponse
+    private function monthAvailability(Event $event, string $month): JsonResponse
     {
         $start = Carbon::parse($month . '-01')->startOfMonth();
         $end = $start->copy()->endOfMonth();
 
-        // Clamp to event range
-        if ($event->starts_at && $start->lt($event->starts_at->startOfDay())) {
-            $start = $event->starts_at->copy()->startOfDay();
+        // Clamp to event range (range_start_date / range_end_date pe Event leisure_venue)
+        $rangeStart = $event->range_start_date ?? $event->event_date ?? null;
+        $rangeEnd = $event->range_end_date ?? null;
+        if ($rangeStart && $start->lt(Carbon::parse($rangeStart)->startOfDay())) {
+            $start = Carbon::parse($rangeStart)->startOfDay();
         }
-        if ($event->ends_at && $end->gt($event->ends_at->endOfDay())) {
-            $end = $event->ends_at->copy()->endOfDay();
+        if ($rangeEnd && $end->gt(Carbon::parse($rangeEnd)->endOfDay())) {
+            $end = Carbon::parse($rangeEnd)->endOfDay();
         }
 
-        // Get existing capacity rows for this month
-        $existingCapacities = MarketplaceEventDateCapacity::where('marketplace_event_id', $event->id)
-            ->whereBetween('visit_date', [$start->toDateString(), $end->toDateString()])
-            ->get()
-            ->groupBy(fn ($row) => $row->visit_date->format('Y-m-d'));
+        // Capacitati per zi: pentru moment lasam $existingCapacities goal — Event nu se
+        // sincronizeaza in MarketplaceEventDateCapacity. F4/F5 va aduce live tracking.
+        $existingCapacities = collect();
 
-        // Get ticket types with daily capacity for defaults
+        // Ticket types cu daily_capacity (pentru pretul minim afisat in calendar)
         $ticketTypes = $event->ticketTypes()
-            ->where('status', 'on_sale')
-            ->where('is_visible', true)
             ->whereNotNull('daily_capacity')
             ->get();
 

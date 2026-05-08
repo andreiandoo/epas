@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
+use App\Concerns\IsLeisureVenue;
 use App\Support\Translatable;
 use Illuminate\Support\Facades\DB;
 use Spatie\Activitylog\LogOptions;
@@ -18,6 +19,7 @@ class Event extends Model
     use HasFactory;
     use Translatable;
     use LogsActivity;
+    use IsLeisureVenue;
 
     /**
      * Sanitize SEO data to prevent malformed UTF-8 encoding errors.
