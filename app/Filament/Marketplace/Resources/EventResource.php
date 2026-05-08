@@ -494,14 +494,10 @@ class EventResource extends Resource
                                         $discountFormatted = number_format($totalDiscount, 2, ',', '.');
 
                                         return new HtmlString("
-                                            <div class='grid grid-cols-2 gap-3'>
+                                            <div class='grid grid-cols-3 gap-3'>
                                                 <div class='p-3 text-center bg-gray-800 rounded-lg'>
                                                     <div class='text-2xl font-bold text-white'>" . number_format($ticketsSold) . "</div>
                                                     <div class='text-xs text-gray-400'>{$ticketsLabel}</div>
-                                                </div>
-                                                <div class='p-3 text-center bg-gray-800 rounded-lg'>
-                                                    <div class='text-2xl font-bold text-emerald-400'>{$revenueFormatted}</div>
-                                                    <div class='text-xs text-gray-400'>{$revenueLabel}</div>
                                                 </div>
                                                 <div class='p-3 text-center bg-gray-800 rounded-lg'>
                                                     <div class='text-2xl font-bold text-red-400'>" . number_format($ticketCountCancelled) . "</div>
@@ -512,15 +508,9 @@ class EventResource extends Resource
                                                     <div class='text-xs text-gray-400'>{$refundedLabel}</div>
                                                 </div>
                                                 <div class='p-3 text-center bg-gray-800 rounded-lg'>
-                                                    <div class='text-2xl font-bold text-emerald-300'>{$netFormatted}</div>
-                                                    <div class='text-xs text-gray-400'>{$netLabel}</div>
+                                                    <div class='text-2xl font-bold text-emerald-400'>{$revenueFormatted}</div>
+                                                    <div class='text-xs text-gray-400'>{$revenueLabel}</div>
                                                 </div>
-                                                <div class='p-3 text-center bg-gray-800 rounded-lg'>
-                                                    <div class='text-2xl font-bold text-sky-400'>{$commissionFormatted}</div>
-                                                    <div class='text-xs text-gray-400'>{$commissionLabel}</div>
-                                                </div>
-                                            </div>
-                                            <div class='grid grid-cols-2 gap-3 mt-3'>
                                                 <div class='p-3 text-center bg-gray-800 rounded-lg'>
                                                     <div class='text-2xl font-bold text-purple-400'>{$extrasFormatted}</div>
                                                     <div class='text-xs text-gray-400'>{$extrasLabel}</div>
@@ -528,6 +518,14 @@ class EventResource extends Resource
                                                 <div class='p-3 text-center bg-gray-800 rounded-lg'>
                                                     <div class='text-2xl font-bold text-orange-400'>{$discountFormatted}</div>
                                                     <div class='text-xs text-gray-400'>{$discountLabel}</div>
+                                                </div>
+                                                <div class='p-3 text-center bg-gray-800 rounded-lg'>
+                                                    <div class='text-2xl font-bold text-emerald-300'>{$netFormatted}</div>
+                                                    <div class='text-xs text-gray-400'>{$netLabel}</div>
+                                                </div>
+                                                <div class='p-3 text-center bg-gray-800 rounded-lg'>
+                                                    <div class='text-2xl font-bold text-sky-400'>{$commissionFormatted}</div>
+                                                    <div class='text-xs text-gray-400'>{$commissionLabel}</div>
                                                 </div>
                                             </div>
                                             <div class='mt-3'>
