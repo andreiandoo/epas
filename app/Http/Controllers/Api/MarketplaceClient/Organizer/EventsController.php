@@ -789,23 +789,33 @@ class EventsController extends BaseController
         // Count tickets from paid/confirmed/completed orders (confirmed = POS cash)
         $validOrderStatuses = ['paid', 'confirmed', 'completed'];
 
-        // Include both regular tickets (via order) AND invitation tickets
-        // (no order; ticket_type.event_id matches the event). The event was
-        // already authorized as belonging to this organizer above, so a ticket
-        // type pointing to it is implicitly scoped correctly.
-        $query = \App\Models\Ticket::where(function ($q) use ($event, $validOrderStatuses, $organizer) {
-                $q->whereHas('order', function ($oq) use ($event, $validOrderStatuses, $organizer) {
-                    $oq->where('event_id', $event->id)
-                        ->whereIn('status', $validOrderStatuses)
-                        ->where('marketplace_organizer_id', $organizer->id);
-                })
-                ->orWhere(function ($iq) use ($event) {
-                    $iq->whereNull('order_id')
-                       ->whereHas('ticketType', function ($ttq) use ($event) {
-                           $ttq->where('event_id', $event->id);
-                       });
-                });
+        // Scope tickets via tickets.event_id — NOT order.event_id. Mixed-cart
+        // orders contain items from multiple events but the order has only a
+        // single event_id field, so the order's event_id can't be trusted to
+        // attribute tickets correctly. Each ticket carries its own event_id
+        // (set at creation) which is the source of truth. Event ownership for
+        // this organizer was already verified above; the order's organizer/
+        // marketplace fields are intentionally not re-checked here so a
+        // mixed-cart order placed against a different "primary" event still
+        // surfaces the items that actually belong to *this* event.
+        $eventScope = function ($q) use ($event, $validOrderStatuses) {
+            $q->where(function ($paid) use ($event, $validOrderStatuses) {
+                $paid->where('event_id', $event->id)
+                    ->whereHas('order', fn ($oq) => $oq->whereIn('status', $validOrderStatuses));
             })
+            ->orWhere(function ($inv) use ($event) {
+                // Invitations: no order. tickets.event_id is set at issue
+                // time; ticketType.event_id is the secondary fallback for
+                // any older invite rows that pre-date the event_id stamp.
+                $inv->whereNull('order_id')
+                    ->where(function ($ev) use ($event) {
+                        $ev->where('event_id', $event->id)
+                            ->orWhereHas('ticketType', fn ($ttq) => $ttq->where('event_id', $event->id));
+                    });
+            });
+        };
+
+        $query = \App\Models\Ticket::where($eventScope)
             ->with(['order.marketplaceCustomer', 'ticketType']);
 
         // Filters
@@ -847,21 +857,10 @@ class EventsController extends BaseController
         $tickets = $query->paginate($perPage);
 
         // Get stats — count only valid/used tickets (excludes cancelled/refunded);
-        // include invitations (no order) alongside regular tickets.
-        $statsBase = function () use ($event, $validOrderStatuses, $organizer) {
-            return \App\Models\Ticket::where(function ($q) use ($event, $validOrderStatuses, $organizer) {
-                $q->whereHas('order', function ($oq) use ($event, $validOrderStatuses, $organizer) {
-                    $oq->where('event_id', $event->id)
-                        ->whereIn('status', $validOrderStatuses)
-                        ->where('marketplace_organizer_id', $organizer->id);
-                })
-                ->orWhere(function ($iq) use ($event) {
-                    $iq->whereNull('order_id')
-                       ->whereHas('ticketType', function ($ttq) use ($event) {
-                           $ttq->where('event_id', $event->id);
-                       });
-                });
-            });
+        // include invitations (no order) alongside regular tickets. Same
+        // tickets.event_id-based scoping as the listing query.
+        $statsBase = function () use ($eventScope) {
+            return \App\Models\Ticket::where($eventScope);
         };
 
         $totalTickets = $statsBase()->whereIn('status', ['valid', 'used'])->count();
@@ -960,21 +959,28 @@ class EventsController extends BaseController
             ? array_values(array_intersect([(int) $request->event_id], $eventIds))
             : $eventIds;
 
-        // Two-branch match (paid-order tickets ∪ invitations with no order)
-        // mirrors the per-event participants endpoint so invitations show up
-        // in the listing AND are counted in stats. Without the second branch
-        // the page reported 66 tickets even when 15 invitations also existed
-        // for the event.
-        $branchTickets = function ($q) use ($scopedEventIds, $validOrderStatuses, $organizer) {
-            $q->whereHas('order', function ($oq) use ($scopedEventIds, $validOrderStatuses, $organizer) {
-                $oq->whereIn('event_id', $scopedEventIds)
-                    ->whereIn('status', $validOrderStatuses)
-                    ->where('marketplace_organizer_id', $organizer->id);
+        // Scope tickets via tickets.event_id — NOT order.event_id. Mixed-cart
+        // orders carry tickets for multiple events but the order has only a
+        // single event_id field, so attribution by order.event_id loses or
+        // misclassifies tickets. tickets.event_id is the per-ticket truth.
+        // The organizer-owned $eventIds gate above already enforces scoping
+        // (only events this organizer owns end up in $scopedEventIds), so we
+        // intentionally drop the order.marketplace_organizer_id check too —
+        // it would re-exclude legitimate items in mixed-cart orders whose
+        // "primary" event lives under a different organizer.
+        $branchTickets = function ($q) use ($scopedEventIds, $validOrderStatuses) {
+            $q->where(function ($paid) use ($scopedEventIds, $validOrderStatuses) {
+                $paid->whereIn('event_id', $scopedEventIds)
+                    ->whereHas('order', fn ($oq) => $oq->whereIn('status', $validOrderStatuses));
             })
-            ->orWhere(function ($iq) use ($scopedEventIds) {
-                $iq->whereNull('order_id')
-                    ->whereHas('ticketType', function ($ttq) use ($scopedEventIds) {
-                        $ttq->whereIn('event_id', $scopedEventIds);
+            ->orWhere(function ($inv) use ($scopedEventIds) {
+                // Invitations: order_id null. tickets.event_id is normally
+                // populated; ticketType.event_id is a fallback for any
+                // legacy invite rows that pre-date the stamping.
+                $inv->whereNull('order_id')
+                    ->where(function ($ev) use ($scopedEventIds) {
+                        $ev->whereIn('event_id', $scopedEventIds)
+                            ->orWhereHas('ticketType', fn ($ttq) => $ttq->whereIn('event_id', $scopedEventIds));
                     });
             });
         };
@@ -1004,19 +1010,25 @@ class EventsController extends BaseController
 
         // Revenue intentionally only counts ORDER-bound tickets — invitations
         // are zero-value by design, so adding them would just be a no-op.
+        // Scope by tickets.event_id (per-ticket truth) and by order status
+        // only — the order's marketplace_organizer_id is intentionally not
+        // checked, so mixed-cart orders contribute their relevant items to
+        // the right organizer's revenue.
         $revenue = (float) \App\Models\Ticket::whereIn('event_id', $scopedEventIds)
             ->whereIn('status', ['valid', 'used'])
-            ->whereHas('order', function ($q) use ($validOrderStatuses, $organizer) {
-                $q->whereIn('status', $validOrderStatuses)
-                    ->where('marketplace_organizer_id', $organizer->id);
-            })
+            ->whereHas('order', fn ($q) => $q->whereIn('status', $validOrderStatuses))
             ->sum('price');
 
-        // Get unique orders count
-        $ordersCount = Order::whereIn('event_id', $scopedEventIds)
-            ->where('marketplace_organizer_id', $organizer->id)
-            ->whereIn('status', $validOrderStatuses)
-            ->count();
+        // Unique orders touching this organizer's events. Counted via the
+        // tickets table so a mixed-cart order whose "primary" event_id
+        // belongs elsewhere is still counted once when any of its items
+        // matches.
+        $ordersCount = (int) \App\Models\Ticket::whereIn('event_id', $scopedEventIds)
+            ->whereIn('status', ['valid', 'used'])
+            ->whereHas('order', fn ($q) => $q->whereIn('status', $validOrderStatuses))
+            ->whereNotNull('order_id')
+            ->distinct('order_id')
+            ->count('order_id');
 
         $tickets = $query->take(200)->get();
 
