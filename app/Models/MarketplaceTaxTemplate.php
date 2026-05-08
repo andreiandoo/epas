@@ -172,8 +172,12 @@ class MarketplaceTaxTemplate extends Model
             '{{ticket_types_series}}' => 'Ticket Types with Series (Name: START - END)',
             '{{ticket_types_rows}}' => 'Ticket Types Table Rows (name, stock, price, value, series)',
             '{{ticket_types_total_row}}' => 'Ticket Types Total Row (TOTAL, stock, X, value, X)',
-            '{{total_tickets_for_sale}}' => 'Total Tickets For Sale',
-            '{{total_value_for_sale}}' => 'Total Value of Tickets For Sale',
+            '{{total_tickets_for_sale}}' => 'Total Tickets For Sale (cumulative — abonamente + bilete)',
+            '{{total_value_for_sale}}' => 'Total Value of Tickets For Sale (cumulative)',
+            '{{total_subscriptions_for_sale}}' => 'Total Abonamente — only is_subscription tickets (line 1 of form)',
+            '{{total_subscriptions_value_for_sale}}' => 'Total Value of Abonamente (line 1 of form)',
+            '{{total_non_subscription_tickets_for_sale}}' => 'Total Bilete (non-subscription) — line 2 of form',
+            '{{total_non_subscription_value_for_sale}}' => 'Total Value of Bilete (line 2 of form)',
             '{{total_tickets_available}}' => 'Total Tickets Available (Initial)',
             '{{total_tickets_sold}}' => 'Total Tickets Sold',
             '{{total_sales_value}}' => 'Total Sales Value',
@@ -628,6 +632,14 @@ class MarketplaceTaxTemplate extends Model
             $totalSalesValue = 0;
             $totalForSale = 0;
             $totalValueForSale = 0;
+            // Split totals — line 1 of the tax form ("S-au înregistrat … abonamente")
+            // and line 2 ("S-au înregistrat … bilete") need separate counts.
+            // Determined by ticket_types.is_subscription on the parent row;
+            // RED + promo variants inherit the parent's classification.
+            $totalSubscriptionsForSale = 0;
+            $totalSubscriptionsValueForSale = 0;
+            $totalNonSubscriptionTicketsForSale = 0;
+            $totalNonSubscriptionValueForSale = 0;
             $currency = 'RON';
 
             // Build ticket types table with available column
@@ -682,8 +694,19 @@ class MarketplaceTaxTemplate extends Model
                 };
 
                 // Helper: emit one tax-table row + advance the running totals.
-                $appendTicketRow = function (string $rowName, int $rowStock, float $rowPrice, string $seriesText)
-                    use (&$ticketRowsHtml, &$totalForSale, &$totalValueForSale) {
+                // The grand total ($totalForSale / $totalValueForSale) keeps
+                // cumulative behavior. The split totals (subscription vs not)
+                // feed the form's two-line breakdown ("abonamente" vs "bilete").
+                $appendTicketRow = function (string $rowName, int $rowStock, float $rowPrice, string $seriesText, bool $isSubscription = false)
+                    use (
+                        &$ticketRowsHtml,
+                        &$totalForSale,
+                        &$totalValueForSale,
+                        &$totalSubscriptionsForSale,
+                        &$totalSubscriptionsValueForSale,
+                        &$totalNonSubscriptionTicketsForSale,
+                        &$totalNonSubscriptionValueForSale,
+                    ) {
                     $ticketRowsHtml .= '<tr>';
                     $ticketRowsHtml .= '<td class="left-align">' . $rowName . '</td>';
                     $ticketRowsHtml .= '<td>' . $rowStock . '</td>';
@@ -691,8 +714,16 @@ class MarketplaceTaxTemplate extends Model
                     $ticketRowsHtml .= '<td>' . number_format($rowStock * $rowPrice, 2) . '</td>';
                     $ticketRowsHtml .= '<td><span class="underline-blue">' . $seriesText . '</span></td>';
                     $ticketRowsHtml .= '</tr>';
+                    $rowValue = $rowStock * $rowPrice;
                     $totalForSale += $rowStock;
-                    $totalValueForSale += $rowStock * $rowPrice;
+                    $totalValueForSale += $rowValue;
+                    if ($isSubscription) {
+                        $totalSubscriptionsForSale += $rowStock;
+                        $totalSubscriptionsValueForSale += $rowValue;
+                    } else {
+                        $totalNonSubscriptionTicketsForSale += $rowStock;
+                        $totalNonSubscriptionValueForSale += $rowValue;
+                    }
                 };
 
                 foreach ($event->ticketTypes as $ticketType) {
@@ -739,7 +770,8 @@ class MarketplaceTaxTemplate extends Model
                         $ticketName,
                         $available,
                         $price,
-                        $buildSeriesDisplay($seriesStart, $seriesEnd, '')
+                        $buildSeriesDisplay($seriesStart, $seriesEnd, ''),
+                        $isSubscription
                     );
 
                     // Row 2 — intrinsic earlybird discount on the ticket type
@@ -752,7 +784,8 @@ class MarketplaceTaxTemplate extends Model
                             $ticketName . ' - RED',
                             $available,
                             $reducedPrice,
-                            $buildSeriesDisplay($seriesStart, $seriesEnd, 'RED')
+                            $buildSeriesDisplay($seriesStart, $seriesEnd, 'RED'),
+                            $isSubscription
                         );
                     }
 
@@ -800,7 +833,8 @@ class MarketplaceTaxTemplate extends Model
                             $ticketName . ' - ' . $codeText,
                             $available,
                             $reducedPrice,
-                            $buildSeriesDisplay($seriesStart, $seriesEnd, $codeText)
+                            $buildSeriesDisplay($seriesStart, $seriesEnd, $codeText),
+                            $isSubscription
                         );
                     }
 
@@ -855,6 +889,13 @@ class MarketplaceTaxTemplate extends Model
             $variables['ticket_types_total_row'] = $totalRowHtml;
             $variables['total_tickets_for_sale'] = $totalForSale;
             $variables['total_value_for_sale'] = number_format($totalValueForSale, 2);
+            // Split totals — for the form's two-line breakdown:
+            //  line 1: '… abonamente' uses the subscription pair
+            //  line 2: '… bilete'     uses the non-subscription pair
+            $variables['total_subscriptions_for_sale'] = $totalSubscriptionsForSale;
+            $variables['total_subscriptions_value_for_sale'] = number_format($totalSubscriptionsValueForSale, 2);
+            $variables['total_non_subscription_tickets_for_sale'] = $totalNonSubscriptionTicketsForSale;
+            $variables['total_non_subscription_value_for_sale'] = number_format($totalNonSubscriptionValueForSale, 2);
             $variables['total_tickets_available'] = $totalAvailable;
             $variables['total_tickets_sold'] = $totalSold;
             $variables['total_sales_value'] = number_format($totalSalesValue, 2);
