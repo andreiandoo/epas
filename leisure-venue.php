@@ -41,6 +41,24 @@ require_once __DIR__ . '/includes/head.php';
 require_once __DIR__ . '/includes/header.php';
 ?>
 
+<?php
+// Build issuers map from organizer (primary always, secondary only if has_secondary_issuer=true).
+// Falls back to event-level fields when organizer payload missing.
+$organizer = $ev['organizer'] ?? $ev['marketplace_organizer'] ?? [];
+$issuers = [
+    'primary' => [
+        'name' => $organizer['company_name'] ?? $organizer['name'] ?? ($ev['venue_name'] ?? ''),
+        'tax_id' => $organizer['company_tax_id'] ?? null,
+    ],
+];
+if (!empty($organizer['has_secondary_issuer'])) {
+    $issuers['secondary'] = [
+        'name' => $organizer['secondary_company_name'] ?? '',
+        'tax_id' => $organizer['secondary_company_tax_id'] ?? null,
+    ];
+}
+?>
+
 <!-- Inject event data for JS -->
 <script>
     window.__LEISURE_VENUE__ = <?= json_encode([
@@ -57,6 +75,7 @@ require_once __DIR__ . '/includes/header.php';
         ],
         'venue_config' => $venueConfig,
         'max_advance_days' => $maxAdvanceDays,
+        'issuers' => $issuers,
     ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
 </script>
 
