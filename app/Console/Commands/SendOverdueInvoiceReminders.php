@@ -24,10 +24,13 @@ class SendOverdueInvoiceReminders extends Command
 
         $this->info('🔍 Checking for overdue invoices...');
 
-        // Get overdue invoices
+        // Get overdue invoices — skip any whose tenant has been deleted /
+        // detached (orphaned). Without this guard the loop below crashes on
+        // $tenant->name because the relation hydrates to null.
         $query = Invoice::query()
             ->where('status', 'outstanding')
-            ->where('due_date', '<', Carbon::today());
+            ->where('due_date', '<', Carbon::today())
+            ->whereHas('tenant');
 
         if ($specificDays) {
             $targetDate = Carbon::today()->subDays($specificDays);
@@ -48,6 +51,15 @@ class SendOverdueInvoiceReminders extends Command
 
         foreach ($overdueInvoices as $invoice) {
             $tenant = $invoice->tenant;
+
+            // whereHas() filters orphans at the DB layer, but keep this guard
+            // for the rare race where a tenant is soft-deleted between query
+            // hydration and iteration.
+            if (!$tenant) {
+                $this->warn("  ⚠️  Skipping invoice {$invoice->number} - tenant missing (tenant_id={$invoice->tenant_id})");
+                continue;
+            }
+
             $daysOverdue = Carbon::today()->diffInDays($invoice->due_date);
 
             $this->line("\n" . str_repeat('─', 60));
