@@ -12,6 +12,7 @@ class Invoice extends Model
         'tenant_id',
         'marketplace_client_id',
         'marketplace_organizer_id',
+        'marketplace_tax_registry_id',
         'marketplace_payout_id',
         'number',
         'type',
@@ -65,6 +66,11 @@ class Invoice extends Model
     public function payout(): BelongsTo
     {
         return $this->belongsTo(\App\Models\MarketplacePayout::class, 'marketplace_payout_id');
+    }
+
+    public function taxRegistry(): BelongsTo
+    {
+        return $this->belongsTo(MarketplaceTaxRegistry::class, 'marketplace_tax_registry_id');
     }
 
     public function anafQueue(): HasOne

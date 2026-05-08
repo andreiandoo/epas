@@ -28,11 +28,14 @@ class MarketplaceTaxRegistry extends Model
         'siruta_code',
         'coat_of_arms',
         'tax_rate',
+        'invoice_series',
+        'last_invoice_number',
         'is_active',
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
+        'last_invoice_number' => 'integer',
     ];
 
     // =========================================
@@ -86,6 +89,28 @@ class MarketplaceTaxRegistry extends Model
         ]);
 
         return implode(', ', $parts);
+    }
+
+    /**
+     * Reserve next invoice number atomically (lockForUpdate inside transaction).
+     * Returns formatted string like "LSA-000123" when invoice_series is set,
+     * or just the integer as string when series is null.
+     */
+    public function reserveNextInvoiceNumber(int $padding = 6): string
+    {
+        return \Illuminate\Support\Facades\DB::transaction(function () use ($padding) {
+            $fresh = static::where('id', $this->id)->lockForUpdate()->first();
+            $next = (int) ($fresh->last_invoice_number ?? 0) + 1;
+            $fresh->last_invoice_number = $next;
+            $fresh->save();
+
+            $this->last_invoice_number = $next;
+
+            $padded = str_pad((string) $next, $padding, '0', STR_PAD_LEFT);
+            return $fresh->invoice_series
+                ? $fresh->invoice_series . '-' . $padded
+                : $padded;
+        });
     }
 
     /**

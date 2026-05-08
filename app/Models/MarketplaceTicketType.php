@@ -40,6 +40,10 @@ class MarketplaceTicketType extends Model
         'is_parking',
         'requires_vehicle_info',
         'meta',
+        // Leisure venue: societate emitentă fiscală (fallback la event.marketplace_tax_registry_id când NULL)
+        'issuing_tax_registry_id',
+        // Leisure venue: categorie serviciu — access | parking | rental | activity | extra
+        'service_category',
     ];
 
     protected $casts = [
@@ -62,6 +66,16 @@ class MarketplaceTicketType extends Model
     public function event(): BelongsTo
     {
         return $this->belongsTo(MarketplaceEvent::class, 'marketplace_event_id');
+    }
+
+    public function issuingTaxRegistry(): BelongsTo
+    {
+        return $this->belongsTo(MarketplaceTaxRegistry::class, 'issuing_tax_registry_id');
+    }
+
+    public function getEffectiveServiceCategoryAttribute(): string
+    {
+        return $this->service_category ?: 'access';
     }
 
     // =========================================
