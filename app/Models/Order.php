@@ -457,7 +457,14 @@ class Order extends Model
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
-            ->logOnly(['customer_email', 'total_cents', 'status'])
+            ->logOnly([
+                'customer_email',
+                'total_cents',
+                'status',
+                'marketplace_organizer_id',
+                'marketplace_client_id',
+                'event_id',
+            ])
             ->logOnlyDirty()
             ->dontSubmitEmptyLogs()
             ->setDescriptionForEvent(fn (string $eventName) => "Order {$eventName}")
