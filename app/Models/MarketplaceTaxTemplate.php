@@ -459,7 +459,7 @@ class MarketplaceTaxTemplate extends Model
             $vatRate = $taxSettings['vat_rate'] ?? ($marketplace?->settings['tax']['vat_rate'] ?? 21);
             $variables['organizer_vat_status'] = $isVatPayer
                 ? "plătitor TVA bilete (cota {$vatRate}%)"
-                : "TVA 0%";
+                : "Neplătitor de TVA";
 
             // Work mode (exclusiv/neexclusiv)
             $workMode = $organizer->work_mode ?? '';
