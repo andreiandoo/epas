@@ -119,7 +119,18 @@ class EditOrganizer extends EditRecord
         $tracking = [];
         foreach (array_keys(self::TRACKING_PROVIDERS) as $provider) {
             $row = $integrations->firstWhere('provider', $provider);
-            $tracking["{$provider}_enabled"] = $row?->enabled ?? false;
+            // Prefer settings.toggle_enabled (the operator's intent) over
+            // the `enabled` column (the runtime gate). They diverge for paid
+            // tracking orders where activateTracking() flips toggle_enabled
+            // ON but leaves enabled OFF until the organizer fills in their
+            // pixel ID — without this preference, the toggle would visually
+            // reset to OFF on every page load. Falls back to the enabled
+            // column for legacy rows that pre-date the toggle_enabled key.
+            $rowSettings = $row && is_array($row->settings) ? $row->settings : [];
+            $toggle = array_key_exists('toggle_enabled', $rowSettings)
+                ? (bool) $rowSettings['toggle_enabled']
+                : (bool) ($row?->enabled ?? false);
+            $tracking["{$provider}_enabled"] = $toggle;
             $tracking["{$provider}_id"] = $row?->getProviderId() ?? '';
         }
         $data['tracking_integrations'] = $tracking;
