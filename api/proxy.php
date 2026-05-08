@@ -736,6 +736,8 @@ switch ($action) {
         $params = [];
         if (isset($_GET['date'])) $params['date'] = $_GET['date'];
         if (isset($_GET['month'])) $params['month'] = $_GET['month'];
+        // Forward preview flag pentru evenimente draft (is_published=false)
+        if (isset($_GET['preview'])) $params['preview'] = $_GET['preview'];
         $endpoint = '/marketplace-events/' . urlencode($slug) . '/date-availability?' . http_build_query($params);
         break;
 
