@@ -58,8 +58,8 @@ require_once __DIR__ . '/includes/header.php';
             <h1 id="artistName" class="text-[56px] font-extrabold text-white mb-4 leading-tight mobile:text-2xl">
                 <span class="inline-block rounded h-14 w-96 bg-white/20 animate-pulse"></span>
             </h1>
-            <!-- Verified Badge -->
-            <div class="w-[34px] h-[34px] bg-blue-500 rounded-full flex items-center justify-center">
+            <!-- Verified Badge — afișat doar dacă artistul are profilul verificat (artist-claim.js). -->
+            <div id="verifiedBadge" class="hidden w-[34px] h-[34px] bg-emerald-500 rounded-full items-center justify-center cursor-help shadow-md ring-2 ring-emerald-400/40" title="Profil verificat" aria-label="Profil verificat">
                 <svg class="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
                     <path d="M20 6L9 17l-5-5"/>
                 </svg>
