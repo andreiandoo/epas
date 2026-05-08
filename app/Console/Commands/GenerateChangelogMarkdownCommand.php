@@ -10,14 +10,24 @@ use Carbon\Carbon;
 class GenerateChangelogMarkdownCommand extends Command
 {
     protected $signature = 'changelog:generate-md
-                            {--output=CHANGELOG.md : Output file path}
+                            {--output= : Output file path (default: storage/app/CHANGELOG.md, relative paths resolved from base_path)}
                             {--days=30 : Number of days to include (0 for all)}';
 
     protected $description = 'Generate CHANGELOG.md file from database entries';
 
     public function handle(): int
     {
-        $outputPath = base_path($this->option('output'));
+        // Default to storage/app — guaranteed writable on prod. Earlier default
+        // wrote to project root which fails under non-deploy users (cron, php-fpm).
+        $output = $this->option('output');
+        if ($output === null || $output === '') {
+            $outputPath = storage_path('app/CHANGELOG.md');
+        } elseif (str_starts_with($output, '/') || preg_match('/^[A-Za-z]:[\\\\\\/]/', $output)) {
+            $outputPath = $output;
+        } else {
+            $outputPath = base_path($output);
+        }
+
         $days = (int) $this->option('days');
 
         $this->info('📝 Generating CHANGELOG.md...');
@@ -42,7 +52,13 @@ class GenerateChangelogMarkdownCommand extends Command
 
         $markdown = $this->generateMarkdown($grouped);
 
-        File::put($outputPath, $markdown);
+        try {
+            File::ensureDirectoryExists(dirname($outputPath));
+            File::put($outputPath, $markdown);
+        } catch (\Throwable $e) {
+            $this->error("❌ Could not write to {$outputPath}: {$e->getMessage()}");
+            return Command::FAILURE;
+        }
 
         $this->info("✅ Generated: {$outputPath}");
         $this->info("   Entries: " . $entries->count());
