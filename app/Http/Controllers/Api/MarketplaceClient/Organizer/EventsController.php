@@ -3365,6 +3365,7 @@ class EventsController extends BaseController
             'effective_commission_rate' => (float) $event->getEffectiveCommissionRate(),
             'commission_mode' => $event->getEffectiveCommissionMode(),
             'has_seating' => (bool) $event->seating_layout_id,
+            'display_template' => $event->display_template ?? 'standard',
         ];
     }
 
