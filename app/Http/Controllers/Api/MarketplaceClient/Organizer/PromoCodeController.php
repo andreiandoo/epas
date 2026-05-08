@@ -117,8 +117,12 @@ class PromoCodeController extends BaseController
             'type' => 'required|in:fixed,percentage',
             'value' => 'required|numeric|min:0',
             'applies_to' => 'required|in:all_events,specific_event,ticket_type',
-            'event_id' => 'nullable|integer|exists:events,id',
+            // event_id: required acum (organizatorul e obligat să selecteze un eveniment)
+            'event_id' => 'required|integer|exists:events,id',
             'ticket_type_id' => 'nullable|integer|exists:ticket_types,id',
+            // ticket_type_ids: required (cel puțin 1) — multiselect
+            'ticket_type_ids' => 'required|array|min:1',
+            'ticket_type_ids.*' => 'integer|exists:ticket_types,id',
             'min_purchase_amount' => 'nullable|numeric|min:0',
             'max_discount_amount' => 'nullable|numeric|min:0',
             'min_tickets' => 'nullable|integer|min:1',
@@ -134,39 +138,30 @@ class PromoCodeController extends BaseController
             return $this->error('Percentage value cannot exceed 100', 422);
         }
 
-        // Validate event ownership if specific event
-        if ($validated['applies_to'] === 'specific_event') {
-            if (empty($validated['event_id'])) {
-                return $this->error('Event ID is required when applying to specific event', 422);
-            }
+        // Force applies_to=ticket_type since we always require a ticket type subset
+        $validated['applies_to'] = 'ticket_type';
 
-            $eventBelongsToOrganizer = \App\Models\Event::where('id', $validated['event_id'])
-                ->where('marketplace_organizer_id', $organizer->id)
-                ->where('marketplace_client_id', $organizer->marketplace_client_id)
-                ->exists();
-
-            if (!$eventBelongsToOrganizer) {
-                return $this->error('Event not found', 404);
-            }
+        // Validate event ownership (event_id e acum required)
+        $eventBelongsToOrganizer = \App\Models\Event::where('id', $validated['event_id'])
+            ->where('marketplace_organizer_id', $organizer->id)
+            ->where('marketplace_client_id', $organizer->marketplace_client_id)
+            ->exists();
+        if (!$eventBelongsToOrganizer) {
+            return $this->error('Event not found', 404);
         }
 
-        // Validate ticket type ownership if ticket_type
-        if ($validated['applies_to'] === 'ticket_type') {
-            if (empty($validated['ticket_type_id'])) {
-                return $this->error('Ticket type ID is required', 422);
-            }
-
-            $ticketTypeBelongsToOrganizer = \App\Models\Event::where('marketplace_organizer_id', $organizer->id)
-                ->where('marketplace_client_id', $organizer->marketplace_client_id)
-                ->whereHas('ticketTypes', function ($q) use ($validated) {
-                    $q->where('id', $validated['ticket_type_id']);
-                })
-                ->exists();
-
-            if (!$ticketTypeBelongsToOrganizer) {
-                return $this->error('Ticket type not found', 404);
-            }
+        // Validate that all ticket_type_ids belong to the chosen event
+        $eventTicketTypeIds = \App\Models\TicketType::where('event_id', $validated['event_id'])
+            ->pluck('id')->map(fn ($v) => (int) $v)->all();
+        $invalidIds = array_diff(
+            array_map('intval', $validated['ticket_type_ids']),
+            $eventTicketTypeIds
+        );
+        if (!empty($invalidIds)) {
+            return $this->error('Some ticket types do not belong to the selected event', 422);
         }
+        // Pick the first id for backward compat (legacy ticket_type_id column)
+        $validated['ticket_type_id'] = (int) $validated['ticket_type_ids'][0];
 
         // Check for code uniqueness
         $code = strtoupper($validated['code'] ?? Str::random(8));
@@ -189,6 +184,7 @@ class PromoCodeController extends BaseController
             'value' => $validated['value'],
             'applies_to' => $validated['applies_to'],
             'ticket_type_id' => $validated['ticket_type_id'] ?? null,
+            'applicable_ticket_type_ids' => $validated['ticket_type_ids'] ?? null,
             'min_purchase_amount' => $validated['min_purchase_amount'] ?? null,
             'max_discount_amount' => $validated['max_discount_amount'] ?? null,
             'min_tickets' => $validated['min_tickets'] ?? null,
@@ -226,7 +222,9 @@ class PromoCodeController extends BaseController
             if (!empty($validated['event_id'])) {
                 $couponData['applicable_events'] = [(int) $validated['event_id']];
             }
-            if (!empty($validated['ticket_type_id'])) {
+            if (!empty($validated['ticket_type_ids'])) {
+                $couponData['applicable_ticket_types'] = array_map('intval', $validated['ticket_type_ids']);
+            } elseif (!empty($validated['ticket_type_id'])) {
                 $couponData['applicable_ticket_types'] = [(int) $validated['ticket_type_id']];
             }
 
@@ -592,6 +590,7 @@ class PromoCodeController extends BaseController
                 'id' => $promoCode->ticketType->id,
                 'name' => $promoCode->ticketType->name,
             ] : null,
+            'applicable_ticket_type_ids' => $promoCode->getApplicableTicketTypeIdsList(),
             'min_purchase_amount' => $promoCode->min_purchase_amount ? (float) $promoCode->min_purchase_amount : null,
             'max_discount_amount' => $promoCode->max_discount_amount ? (float) $promoCode->max_discount_amount : null,
             'min_tickets' => $promoCode->min_tickets,

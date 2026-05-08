@@ -26,6 +26,7 @@ class MarketplaceOrganizerPromoCode extends Model
         'value',
         'applies_to',
         'ticket_type_id',
+        'applicable_ticket_type_ids',
         'min_purchase_amount',
         'max_discount_amount',
         'min_tickets',
@@ -47,7 +48,22 @@ class MarketplaceOrganizerPromoCode extends Model
         'expires_at' => 'datetime',
         'is_public' => 'boolean',
         'metadata' => 'array',
+        'applicable_ticket_type_ids' => 'array',
     ];
+
+    /**
+     * Resolve effective list of allowed ticket type IDs:
+     *  - if applicable_ticket_type_ids array set → use it
+     *  - else fallback to single ticket_type_id (legacy)
+     */
+    public function getApplicableTicketTypeIdsList(): array
+    {
+        $ids = $this->applicable_ticket_type_ids;
+        if (is_array($ids) && count($ids) > 0) {
+            return array_map('intval', $ids);
+        }
+        return $this->ticket_type_id ? [(int) $this->ticket_type_id] : [];
+    }
 
     protected static function boot()
     {
@@ -203,17 +219,21 @@ class MarketplaceOrganizerPromoCode extends Model
         }
 
         // Check ticket type applicability
-        if ($this->applies_to === 'ticket_type' && $this->ticket_type_id) {
-            $hasApplicableTicket = false;
-            foreach ($cart['items'] ?? [] as $item) {
-                if (($item['ticket_type_id'] ?? null) == $this->ticket_type_id) {
-                    $hasApplicableTicket = true;
-                    break;
+        if ($this->applies_to === 'ticket_type') {
+            $allowedIds = $this->getApplicableTicketTypeIdsList();
+            if (count($allowedIds) > 0) {
+                $hasApplicableTicket = false;
+                foreach ($cart['items'] ?? [] as $item) {
+                    $ttId = (int) ($item['ticket_type_id'] ?? 0);
+                    if ($ttId && in_array($ttId, $allowedIds, true)) {
+                        $hasApplicableTicket = true;
+                        break;
+                    }
                 }
-            }
 
-            if (!$hasApplicableTicket) {
-                return ['valid' => false, 'reason' => 'Codul promoțional nu este valid pentru tipurile de bilete selectate'];
+                if (!$hasApplicableTicket) {
+                    return ['valid' => false, 'reason' => 'Codul promoțional nu este valid pentru tipurile de bilete selectate'];
+                }
             }
         }
 
@@ -272,14 +292,18 @@ class MarketplaceOrganizerPromoCode extends Model
             return $total;
         }
 
-        if ($this->applies_to === 'ticket_type' && $this->ticket_type_id) {
-            $total = 0;
-            foreach ($cart['items'] ?? [] as $item) {
-                if (($item['ticket_type_id'] ?? null) == $this->ticket_type_id) {
-                    $total += (float) ($item['total'] ?? 0);
+        if ($this->applies_to === 'ticket_type') {
+            $allowedIds = $this->getApplicableTicketTypeIdsList();
+            if (count($allowedIds) > 0) {
+                $total = 0;
+                foreach ($cart['items'] ?? [] as $item) {
+                    $ttId = (int) ($item['ticket_type_id'] ?? 0);
+                    if ($ttId && in_array($ttId, $allowedIds, true)) {
+                        $total += (float) ($item['total'] ?? 0);
+                    }
                 }
+                return $total;
             }
-            return $total;
         }
 
         return (float) ($cart['total'] ?? 0);
