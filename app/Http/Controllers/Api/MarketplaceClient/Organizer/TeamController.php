@@ -108,13 +108,17 @@ class TeamController extends BaseController
             'gate_id' => 'nullable|integer',
         ]);
 
-        // Check if email already exists for this organizer
+        // Block adding the organizer's own email (would clash with the owner login).
         if ($organizer->email === $validated['email']) {
             return $this->error('Nu poti adauga adresa ta de email', 422);
         }
 
+        // Block duplicate email on the SAME organizer (DB has composite unique
+        // on marketplace_organizer_id + email). Adding the same email to a
+        // DIFFERENT organizer in the same marketplace is intentionally allowed —
+        // a staff member can scan/operate for multiple organizers with one login.
         if ($organizer->teamMembers()->where('email', $validated['email'])->exists()) {
-            return $this->error('Acest email este deja in echipa', 422);
+            return $this->error('Acest email este deja in echipa acestui organizator', 422);
         }
 
         // Limit team size
@@ -131,17 +135,31 @@ class TeamController extends BaseController
             $permissions = ['checkin'];
         }
 
+        $hashedPassword = bcrypt($validated['password']);
+
         $member = MarketplaceOrganizerTeamMember::create([
             'marketplace_organizer_id' => $organizer->id,
             'name' => $validated['name'],
             'email' => $validated['email'],
-            'password' => bcrypt($validated['password']),
+            'password' => $hashedPassword,
             'role' => $validated['role'],
             'permissions' => $permissions,
             'gate_id' => $validated['gate_id'] ?? null,
             'status' => 'active',
             'accepted_at' => now(),
         ]);
+
+        // Cross-organizer password sync: if the same email exists on other
+        // active members within this marketplace, propagate the new password
+        // to all of them so one login works everywhere. The booted() observer
+        // only fires on update, not create — so we do it explicitly here.
+        MarketplaceOrganizerTeamMember::query()
+            ->whereHas('organizer', fn ($q) => $q->where('marketplace_client_id', $organizer->marketplace_client_id))
+            ->where('email', $validated['email'])
+            ->where('status', 'active')
+            ->where('id', '!=', $member->id)
+            ->get()
+            ->each(fn (MarketplaceOrganizerTeamMember $other) => $other->updateQuietly(['password' => $hashedPassword]));
 
         $emailSent = $this->sendWelcomeEmail($member, $organizer, $validated['password']);
 
