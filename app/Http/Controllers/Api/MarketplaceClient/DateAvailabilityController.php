@@ -25,15 +25,22 @@ class DateAvailabilityController extends BaseController
         // Postgres: orWhere('id', $identifier) cu un slug string crash-uieste
         // ("invalid input syntax for type bigint"). Aplica orWhere id-ul DOAR
         // cand identifier-ul e numeric.
-        $event = Event::where('marketplace_client_id', $client->id)
+        $query = Event::where('marketplace_client_id', $client->id)
             ->where(function ($q) use ($identifier) {
                 $q->where('slug', $identifier);
                 if (is_numeric($identifier)) {
                     $q->orWhere('id', (int) $identifier);
                 }
-            })
-            ->where('is_published', true)
-            ->first();
+            });
+
+        // ?preview=1 ocoleste filtrul is_published — necesar pentru evenimente
+        // draft (cazul tipic in dev/test). Pe public, fara preview, sunt vizibile
+        // doar evenimentele publicate.
+        if (!$request->boolean('preview')) {
+            $query->where('is_published', true);
+        }
+
+        $event = $query->first();
 
         if (!$event || !$event->isLeisureVenue()) {
             return response()->json(['error' => 'Event not found or not a leisure venue'], 404);
