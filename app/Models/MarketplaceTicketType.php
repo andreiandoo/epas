@@ -44,6 +44,13 @@ class MarketplaceTicketType extends Model
         'issuing_company',
         // Leisure venue: categorie serviciu — access | parking | rental | activity | extra
         'service_category',
+        // Leisure venue: durata serviciu in minute (parking, rental)
+        'service_duration_minutes',
+        // Leisure venue: descriere produs WYSIWYG (HTML) si conditii utilizare
+        'product_description',
+        'usage_terms',
+        // Leisure venue: necesita bilet acces valid pe aceeasi zi
+        'requires_access_ticket',
     ];
 
     protected $casts = [
@@ -56,6 +63,8 @@ class MarketplaceTicketType extends Model
         'is_refundable' => 'boolean',
         'is_parking' => 'boolean',
         'requires_vehicle_info' => 'boolean',
+        'requires_access_ticket' => 'boolean',
+        'service_duration_minutes' => 'integer',
         'meta' => 'array',
     ];
 

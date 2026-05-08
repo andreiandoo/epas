@@ -2251,8 +2251,17 @@ class EventResource extends Resource
                                                             ->label($t('Capacitate zilnică', 'Daily capacity'))
                                                             ->numeric()
                                                             ->minValue(1)
-                                                            ->placeholder($t('ex: 500', 'e.g. 500'))
-                                                            ->helperText($t('Bilete maxime pe zi pentru acest tip', 'Max tickets per day for this type'))
+                                                            ->placeholder($t('Lasă gol pentru nelimitat', 'Leave empty for unlimited'))
+                                                            ->helperText(function (SGet $get) use ($t) {
+                                                                $cat = $get('service_category') ?: 'access';
+                                                                if ($cat === 'access') {
+                                                                    return $t('Bilete acces maxime pe zi (limită strictă).', 'Max access tickets per day (strict limit).');
+                                                                }
+                                                                if ((bool) $get('requires_access_ticket')) {
+                                                                    return $t('Lasă gol = nelimitat (în limita biletelor de acces vândute pe acea zi).', 'Empty = unlimited (capped by access tickets sold that day).');
+                                                                }
+                                                                return $t('Stoc zilnic propriu pentru acest serviciu. Lasă gol pentru stoc nelimitat.', 'Daily stock for this service. Leave empty for unlimited.');
+                                                            })
                                                             ->columnSpan(1),
                                                         Forms\Components\Toggle::make('is_parking')
                                                             ->label($t('Bilet de parcare', 'Parking ticket'))
@@ -2263,6 +2272,53 @@ class EventResource extends Resource
                                                             ->visible(fn (SGet $get) => (bool) $get('is_parking'))
                                                             ->columnSpan(1),
                                                     ]),
+
+                                                // ── Leisure Venue: durata + corelare cu bilet acces ──
+                                                SC\Grid::make(2)
+                                                    ->visible(fn (SGet $get) => ($get('../../display_template') ?? 'standard') === 'leisure_venue'
+                                                        && in_array($get('service_category'), ['parking', 'rental', 'activity', 'extra'], true))
+                                                    ->columnSpan(12)
+                                                    ->schema([
+                                                        Forms\Components\Select::make('service_duration_minutes')
+                                                            ->label($t('Durată serviciu', 'Service duration'))
+                                                            ->options([
+                                                                15 => $t('15 minute', '15 minutes'),
+                                                                30 => $t('30 minute', '30 minutes'),
+                                                                60 => $t('1 oră', '1 hour'),
+                                                                120 => $t('2 ore', '2 hours'),
+                                                                180 => $t('3 ore', '3 hours'),
+                                                                240 => $t('4 ore', '4 hours'),
+                                                                360 => $t('6 ore', '6 hours'),
+                                                                480 => $t('8 ore', '8 hours'),
+                                                                720 => $t('12 ore', '12 hours'),
+                                                                1440 => $t('1 zi', '1 day'),
+                                                                2880 => $t('2 zile', '2 days'),
+                                                            ])
+                                                            ->placeholder($t('Selectează durata...', 'Select duration...'))
+                                                            ->helperText($t('Durata folosirii serviciului (ex: parcare 1h, kayak 2h).', 'How long the service can be used.'))
+                                                            ->visible(fn (SGet $get) => in_array($get('service_category'), ['parking', 'rental'], true))
+                                                            ->columnSpan(1),
+                                                        Forms\Components\Toggle::make('requires_access_ticket')
+                                                            ->label($t('Necesită bilet de acces valid', 'Requires valid access ticket'))
+                                                            ->helperText($t('Activează dacă acest serviciu poate fi cumpărat doar împreună cu un bilet de acces pe aceeași zi.', 'Enable if this service can only be purchased with a valid access ticket for the same day.'))
+                                                            ->columnSpan(1),
+                                                    ]),
+
+                                                // ── Leisure Venue: descriere produs (WYSIWYG) ──
+                                                Forms\Components\RichEditor::make('product_description')
+                                                    ->label($t('Descriere produs', 'Product description'))
+                                                    ->placeholder($t('Detalii afișate pe pagina publică (ex: ce include, recomandări de utilizare).', 'Public-facing details (what is included, usage recommendations).'))
+                                                    ->toolbarButtons(['bold', 'italic', 'underline', 'link', 'bulletList', 'orderedList'])
+                                                    ->visible(fn (SGet $get) => ($get('../../display_template') ?? 'standard') === 'leisure_venue')
+                                                    ->columnSpan(12),
+
+                                                // ── Leisure Venue: condiții de utilizare ──
+                                                Forms\Components\RichEditor::make('usage_terms')
+                                                    ->label($t('Condiții de utilizare / termeni', 'Usage terms / conditions'))
+                                                    ->placeholder($t('Reguli, restricții de vârstă, depozite, ce se întâmplă în caz de pierdere/deteriorare.', 'Rules, age restrictions, deposits, lost/damaged item handling.'))
+                                                    ->toolbarButtons(['bold', 'italic', 'underline', 'link', 'bulletList', 'orderedList'])
+                                                    ->visible(fn (SGet $get) => ($get('../../display_template') ?? 'standard') === 'leisure_venue')
+                                                    ->columnSpan(12),
                                             ])
                                             ->columns(12)
                                             ->columnSpan(12),
