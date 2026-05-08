@@ -193,8 +193,8 @@ class AnalyticsCacheService
                 ->groupBy('date')
                 ->selectRaw('DATE(created_at) as date,
                     COUNT(*) as events,
-                    SUM(CASE WHEN is_converted = 1 THEN 1 ELSE 0 END) as conversions,
-                    SUM(CASE WHEN is_converted = 1 THEN conversion_value ELSE 0 END) as revenue')
+                    SUM(CASE WHEN is_converted = TRUE THEN 1 ELSE 0 END) as conversions,
+                    SUM(CASE WHEN is_converted = TRUE THEN conversion_value ELSE 0 END) as revenue')
                 ->orderBy('date')
                 ->get();
 
@@ -326,8 +326,8 @@ class AnalyticsCacheService
                 ->groupBy('utm_source')
                 ->selectRaw('COALESCE(utm_source, "direct") as source,
                     COUNT(*) as sessions,
-                    SUM(CASE WHEN is_converted = 1 THEN 1 ELSE 0 END) as conversions,
-                    SUM(CASE WHEN is_converted = 1 THEN total_value ELSE 0 END) as revenue')
+                    SUM(CASE WHEN is_converted = TRUE THEN 1 ELSE 0 END) as conversions,
+                    SUM(CASE WHEN is_converted = TRUE THEN total_value ELSE 0 END) as revenue')
                 ->orderByDesc('sessions')
                 ->limit(10)
                 ->get();
@@ -372,8 +372,8 @@ class AnalyticsCacheService
                 ->selectRaw('country_code,
                     COUNT(*) as sessions,
                     COUNT(DISTINCT customer_id) as unique_visitors,
-                    SUM(CASE WHEN is_converted = 1 THEN 1 ELSE 0 END) as conversions,
-                    SUM(CASE WHEN is_converted = 1 THEN total_value ELSE 0 END) as revenue')
+                    SUM(CASE WHEN is_converted = TRUE THEN 1 ELSE 0 END) as conversions,
+                    SUM(CASE WHEN is_converted = TRUE THEN total_value ELSE 0 END) as revenue')
                 ->orderByDesc('sessions')
                 ->limit(20)
                 ->get();

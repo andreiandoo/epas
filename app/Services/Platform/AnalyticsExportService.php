@@ -406,8 +406,8 @@ class AnalyticsExportService
                 utm_campaign as campaign,
                 COUNT(*) as sessions,
                 COUNT(DISTINCT core_customer_id) as unique_visitors,
-                SUM(CASE WHEN is_converted = 1 THEN 1 ELSE 0 END) as conversions,
-                SUM(CASE WHEN is_converted = 1 THEN total_value ELSE 0 END) as revenue,
+                SUM(CASE WHEN is_converted = TRUE THEN 1 ELSE 0 END) as conversions,
+                SUM(CASE WHEN is_converted = TRUE THEN total_value ELSE 0 END) as revenue,
                 AVG(page_views) as avg_page_views,
                 AVG(duration_seconds) as avg_duration
             ')
