@@ -261,6 +261,22 @@ class ServiceOrder extends Model
             }
         }
 
+        // Ad Tracking: flip the organizer's tracking_enabled gate + create a
+        // TrackingIntegration row per purchased platform so the configured
+        // pixels start firing as soon as the organizer fills in the IDs.
+        // Without this, paid tracking orders sat in 'active' but the
+        // organizer's settings stayed off, so no pixels were ever injected.
+        if ($this->service_type === self::TYPE_TRACKING) {
+            try {
+                $this->activateTracking();
+            } catch (\Exception $e) {
+                Log::error('Failed to activate Ad Tracking service', [
+                    'service_order_id' => $this->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
         // Notify organizer that service has started (skip pentru ordine artist —
         // OrganizerNotificationService presupune marketplace_organizer_id existent)
         if ($this->marketplace_organizer_id) {
@@ -317,6 +333,111 @@ class ServiceOrder extends Model
             'cancelled_at' => null,
         ]);
         $pivot->save();
+    }
+
+    /**
+     * Mapping of checkout-platform names to TrackingIntegration provider rows.
+     * Edit-organizer form keys depend on the same provider strings; keep in
+     * sync with EditOrganizer::TRACKING_PROVIDERS and the OrganizerResource
+     * form.
+     */
+    public const TRACKING_PLATFORM_PROVIDER_MAP = [
+        'facebook' => 'meta',
+        'google'   => 'google_ads',
+        'tiktok'   => 'tiktok',
+    ];
+
+    /**
+     * Provider → settings shape on TrackingIntegration. Mirrors
+     * EditOrganizer::TRACKING_PROVIDERS (kept private over there because
+     * that class doesn't need to share it). Duplicated here intentionally:
+     * the organizer-edit page and the service-order activation are
+     * separate flows that both need to know the row shape.
+     */
+    public const TRACKING_PROVIDER_DEFAULTS = [
+        'meta'       => ['consent_category' => 'marketing', 'id_field' => 'pixel_id'],
+        'tiktok'     => ['consent_category' => 'marketing', 'id_field' => 'pixel_id'],
+        'google_ads' => ['consent_category' => 'marketing', 'id_field' => 'conversion_id'],
+    ];
+
+    /**
+     * Activate the Ad Tracking service:
+     *  - Flip organizer's `service_settings.tracking_enabled` gate to true
+     *    so the "Pixeli organizator" UI block becomes visible.
+     *  - Upsert a TrackingIntegration row per purchased platform with
+     *    `settings.toggle_enabled = true` so the toggle reads ON in the
+     *    organizer-edit form. We deliberately leave `enabled = false`
+     *    (the public injection gate) until the organizer fills in their
+     *    pixel ID — pre-flipping `enabled` would render an empty pixel
+     *    script and break the consent banner UX.
+     *
+     * Idempotent: re-activating an order updates the same rows without
+     * blowing away pixel IDs the organizer may have already entered.
+     */
+    protected function activateTracking(): void
+    {
+        if (!$this->marketplace_organizer_id) {
+            Log::warning('Tracking order missing marketplace_organizer_id', [
+                'service_order_id' => $this->id,
+            ]);
+            return;
+        }
+
+        $organizer = MarketplaceOrganizer::find($this->marketplace_organizer_id);
+        if (!$organizer) {
+            return;
+        }
+
+        // 1) Flip the master tracking gate on the organizer.
+        $serviceSettings = is_array($organizer->service_settings) ? $organizer->service_settings : [];
+        $serviceSettings['tracking_enabled'] = true;
+        $organizer->service_settings = $serviceSettings;
+        $organizer->save();
+
+        // 2) Per-platform: ensure a TrackingIntegration row exists with the
+        //    toggle visibly ON. Pixel IDs (if checkout collected them in
+        //    config.pixel_ids[platform]) are merged in without clobbering
+        //    anything the organizer might already have filled.
+        $platforms = $this->config['platforms'] ?? [];
+        $checkoutPixelIds = $this->config['pixel_ids'] ?? [];
+
+        foreach ($platforms as $platform) {
+            $provider = self::TRACKING_PLATFORM_PROVIDER_MAP[$platform] ?? null;
+            $defaults = self::TRACKING_PROVIDER_DEFAULTS[$provider] ?? null;
+            if (!$provider || !$defaults) {
+                continue;
+            }
+
+            $existing = \App\Models\TrackingIntegration::where('marketplace_organizer_id', $organizer->id)
+                ->where('provider', $provider)
+                ->first();
+
+            $existingSettings = $existing && is_array($existing->settings) ? $existing->settings : [];
+            $newPixelId = trim((string) ($checkoutPixelIds[$platform] ?? ''));
+            // Don't overwrite a pre-existing pixel id with empty input —
+            // re-activations on legacy orders shouldn't wipe what's there.
+            if ($newPixelId !== '') {
+                $existingSettings[$defaults['id_field']] = $newPixelId;
+            }
+            $existingSettings['toggle_enabled'] = true;
+            $existingSettings['inject_at'] = $existingSettings['inject_at'] ?? 'head';
+            $existingSettings['page_scope'] = $existingSettings['page_scope'] ?? 'public';
+
+            $hasPixelId = !empty($existingSettings[$defaults['id_field']] ?? null);
+
+            \App\Models\TrackingIntegration::updateOrCreate(
+                [
+                    'marketplace_organizer_id' => $organizer->id,
+                    'provider' => $provider,
+                ],
+                [
+                    'marketplace_client_id' => $organizer->marketplace_client_id,
+                    'enabled' => $hasPixelId,
+                    'consent_category' => $defaults['consent_category'],
+                    'settings' => $existingSettings,
+                ]
+            );
+        }
     }
 
     /**

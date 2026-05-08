@@ -106,10 +106,11 @@ class EditOrganizer extends EditRecord
      * Form keys: tracking_integrations.{provider}_enabled, tracking_integrations.{provider}_id.
      */
     private const TRACKING_PROVIDERS = [
-        'ga4'    => ['consent_category' => 'analytics',  'id_field' => 'measurement_id'],
-        'gtm'    => ['consent_category' => 'analytics',  'id_field' => 'container_id'],
-        'meta'   => ['consent_category' => 'marketing',  'id_field' => 'pixel_id'],
-        'tiktok' => ['consent_category' => 'marketing',  'id_field' => 'pixel_id'],
+        'ga4'        => ['consent_category' => 'analytics',  'id_field' => 'measurement_id'],
+        'gtm'        => ['consent_category' => 'analytics',  'id_field' => 'container_id'],
+        'meta'       => ['consent_category' => 'marketing',  'id_field' => 'pixel_id'],
+        'tiktok'     => ['consent_category' => 'marketing',  'id_field' => 'pixel_id'],
+        'google_ads' => ['consent_category' => 'marketing',  'id_field' => 'conversion_id'],
     ];
 
     protected function mutateFormDataBeforeFill(array $data): array

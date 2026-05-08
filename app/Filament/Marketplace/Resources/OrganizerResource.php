@@ -658,6 +658,16 @@ class OrganizerResource extends Resource
                                             ->maxLength(25)
                                             ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => (bool) $get('tracking_integrations.tiktok_enabled')),
                                     ]),
+                                    SC\Grid::make(2)->schema([
+                                        Forms\Components\Toggle::make('tracking_integrations.google_ads_enabled')
+                                            ->label('Google Ads')
+                                            ->live(),
+                                        Forms\Components\TextInput::make('tracking_integrations.google_ads_id')
+                                            ->label('Google Ads Conversion ID')
+                                            ->placeholder('AW-XXXXXXXXX')
+                                            ->maxLength(25)
+                                            ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => (bool) $get('tracking_integrations.google_ads_enabled')),
+                                    ]),
                                 ]),
 
                             Section::make('Facebook Conversions API (Server-Side)')

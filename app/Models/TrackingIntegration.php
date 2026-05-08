@@ -65,7 +65,7 @@ class TrackingIntegration extends Model
     }
 
     /**
-     * Get provider-specific ID (measurement_id, container_id, pixel_id)
+     * Get provider-specific ID (measurement_id, container_id, pixel_id, conversion_id)
      */
     public function getProviderId(): ?string
     {
@@ -76,6 +76,9 @@ class TrackingIntegration extends Model
             'gtm' => $settings['container_id'] ?? null,
             'meta' => $settings['pixel_id'] ?? null,
             'tiktok' => $settings['pixel_id'] ?? null,
+            // Google Ads conversion tracking — uses AW-XXXXXX format,
+            // distinct from GA4's G-XXXXXX measurement IDs.
+            'google_ads' => $settings['conversion_id'] ?? null,
             default => null,
         };
     }
