@@ -416,11 +416,15 @@ class EventResource extends Resource
                                         // Revenue now comes from the "valid tickets only" breakdown below.
                                         $eventId = $record->id;
 
-                                        // Count valid tickets — EXCLUDE external imports
-                                        // Use the same status filter as the "Bilete" button below so both numbers match.
+                                        // Count valid tickets — EXCLUDE external imports AND restrict to orders that
+                                        // produced revenue (paid/confirmed/completed). Otherwise tickets stuck as
+                                        // `valid` in failed/pending orders inflate this count without contributing to
+                                        // Venituri/Net (which already filter by these statuses in SalesBreakdownService).
                                         $ticketsSold = \App\Models\Ticket::where(fn($q) => $q->where('event_id', $eventId)->orWhere('marketplace_event_id', $eventId))
                                             ->whereIn('status', ['valid', 'used'])
-                                            ->whereHas('order', fn($q) => $q->where('source', '!=', 'external_import'))
+                                            ->whereHas('order', fn($q) => $q
+                                                ->where('source', '!=', 'external_import')
+                                                ->whereIn('status', ['paid', 'confirmed', 'completed']))
                                             ->count();
 
                                         $totalCapacity = $record->general_quota ?? $record->capacity ?? $record->ticketTypes->sum(fn ($tt) => $tt->capacity ?? 0) ?? 0;
@@ -440,11 +444,19 @@ class EventResource extends Resource
                                         $statisticsLabel = $t('Statistici', 'Statistics');
                                         $analyticsLabel = $t('Analiză', 'Analytics');
 
-                                        // Tickets & Orders counts and URLs — EXCLUDE external imports
+                                        // Tickets & Orders counts and URLs — only tickets attached to orders that
+                                        // represent a real sale (paid/confirmed/completed, plus refunded variants
+                                        // for the cancelled/refunded buckets). Excludes external imports and
+                                        // failed/pending shells whose tickets never produced revenue.
                                         $eventId = $record->id;
                                         $ticketsQuery = \App\Models\Ticket::where(fn ($q) => $q->where('event_id', $eventId)->orWhere('marketplace_event_id', $eventId))
-                                            ->whereHas('order', fn($q) => $q->where('source', '!=', 'external_import'));
-                                        $ticketCountValid = (clone $ticketsQuery)->whereIn('status', ['valid', 'used'])->count();
+                                            ->whereHas('order', fn($q) => $q
+                                                ->where('source', '!=', 'external_import')
+                                                ->whereIn('status', ['paid', 'confirmed', 'completed', 'refunded', 'partially_refunded']));
+                                        $ticketCountValid = (clone $ticketsQuery)
+                                            ->whereIn('status', ['valid', 'used'])
+                                            ->whereHas('order', fn($q) => $q->whereIn('status', ['paid', 'confirmed', 'completed']))
+                                            ->count();
                                         $ticketCountCancelled = (clone $ticketsQuery)->where('status', 'cancelled')->count();
                                         $ticketCountRefunded = (clone $ticketsQuery)->whereIn('status', ['refunded', 'void'])->count();
                                         $ordersQuery = \App\Models\Order::where(fn ($q) => $q
