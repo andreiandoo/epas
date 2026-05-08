@@ -167,6 +167,7 @@ class MarketplaceTaxTemplate extends Model
             '{{venue_name}}' => 'Venue Name',
             '{{venue_address}}' => 'Venue Address',
             '{{event_has_monument_tax}}' => 'Eveniment plătitor de Taxa Monument (Da/Nu)',
+            '{{event_manifestation_type}}' => 'Tip manifestare (ex: "Manifestare Muzicală", "Manifestare - Altele")',
             '{{ticket_types_table}}' => 'Ticket Types Table (with names, prices, available, sold)',
             '{{ticket_types_series}}' => 'Ticket Types with Series (Name: START - END)',
             '{{ticket_types_rows}}' => 'Ticket Types Table Rows (name, stock, price, value, series)',
@@ -455,7 +456,7 @@ class MarketplaceTaxTemplate extends Model
             // VAT status - check tax_settings or marketplace settings
             $taxSettings = $organizer->tax_settings ?? [];
             $isVatPayer = $taxSettings['is_vat_payer'] ?? false;
-            $vatRate = $taxSettings['vat_rate'] ?? ($marketplace?->settings['tax']['vat_rate'] ?? 19);
+            $vatRate = $taxSettings['vat_rate'] ?? ($marketplace?->settings['tax']['vat_rate'] ?? 21);
             $variables['organizer_vat_status'] = $isVatPayer
                 ? "plătitor TVA bilete (cota {$vatRate}%)"
                 : "TVA 0%";
@@ -584,6 +585,27 @@ class MarketplaceTaxTemplate extends Model
                 $hasMonumentTax = (bool) ($event->venue?->has_historical_monument_tax ?? false);
             }
             $variables['event_has_monument_tax'] = $hasMonumentTax ? 'Da' : 'Nu';
+
+            // Manifestation type — "Manifestare {label}" with the Romanian
+            // label of the event's `manifestation_type` enum. The "altele"
+            // value gets a dash separator: "Manifestare - Altele". Falls back
+            // to empty string when the event has no value set.
+            $manifestationLabels = [
+                'muzicala' => 'Muzicală',
+                'artistica' => 'Artistică',
+                'teatrala' => 'Teatrală',
+                'standup' => 'Stand-up',
+                'sportiva' => 'Sportivă',
+                'altele' => 'Altele',
+            ];
+            $manifestationKey = $event->manifestation_type ?? null;
+            if ($manifestationKey && isset($manifestationLabels[$manifestationKey])) {
+                $variables['event_manifestation_type'] = $manifestationKey === 'altele'
+                    ? 'Manifestare - Altele'
+                    : 'Manifestare ' . $manifestationLabels[$manifestationKey];
+            } else {
+                $variables['event_manifestation_type'] = '';
+            }
 
             // Calculate totals
             $totalAvailable = 0;
