@@ -2200,6 +2200,36 @@ class EventResource extends Resource
                                                     ->extraAttributes(['style' => '--col-span-default: span 1 / span 1; --col-span-lg: span 12 / span 12;'])
                                                     ->visible(fn (SGet $get) => ($get('../../display_template') ?? 'standard') === 'leisure_venue')
                                                     ->schema([
+                                                        Forms\Components\Select::make('service_category')
+                                                            ->label($t('Categorie serviciu', 'Service category'))
+                                                            ->options([
+                                                                'access'   => $t('Acces (bilet intrare)', 'Access (entry ticket)'),
+                                                                'parking'  => $t('Parcare', 'Parking'),
+                                                                'rental'   => $t('Închiriere', 'Rental'),
+                                                                'activity' => $t('Activitate / serviciu', 'Activity / service'),
+                                                                'extra'    => $t('Alt produs', 'Other'),
+                                                            ])
+                                                            ->placeholder($t('Acces (implicit)', 'Access (default)'))
+                                                            ->helperText($t('Lasă gol pentru bilet de acces', 'Leave empty for access ticket')),
+                                                        Forms\Components\Select::make('issuing_tax_registry_id')
+                                                            ->label($t('Societate emitentă', 'Issuing entity'))
+                                                            ->options(function () use ($marketplace) {
+                                                                if (!$marketplace) {
+                                                                    return [];
+                                                                }
+                                                                return \App\Models\MarketplaceTaxRegistry::query()
+                                                                    ->where('marketplace_client_id', $marketplace->id)
+                                                                    ->where('is_active', true)
+                                                                    ->orderBy('name')
+                                                                    ->get()
+                                                                    ->mapWithKeys(fn ($r) => [
+                                                                        $r->id => trim($r->name . ($r->subname ? ' — ' . $r->subname : '') . ($r->cif ? ' (CIF ' . $r->cif . ')' : '')),
+                                                                    ])
+                                                                    ->toArray();
+                                                            })
+                                                            ->placeholder($t('Implicit (de la eveniment)', 'Default (from event)'))
+                                                            ->helperText($t('Lasă gol pentru a folosi societatea evenimentului', 'Leave empty to use event entity'))
+                                                            ->searchable(),
                                                         Forms\Components\TextInput::make('daily_capacity')
                                                             ->label($t('Capacitate zilnică', 'Daily capacity'))
                                                             ->numeric()

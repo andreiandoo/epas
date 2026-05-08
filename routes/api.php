@@ -1525,6 +1525,7 @@ use App\Http\Controllers\Api\MarketplaceClient\Organizer\DashboardController as 
 use App\Http\Controllers\Api\MarketplaceClient\Organizer\PayoutController as OrganizerPayoutController;
 use App\Http\Controllers\Api\MarketplaceClient\Organizer\PromoCodeController as OrganizerPromoCodeController;
 use App\Http\Controllers\Api\MarketplaceClient\Organizer\TaxReportController as OrganizerTaxReportController;
+use App\Http\Controllers\Api\MarketplaceClient\Organizer\Leisure\LeisureController as OrganizerLeisureController;
 use App\Http\Controllers\Api\MarketplaceClient\Organizer\InvitationsController as OrganizerInvitationsController;
 use App\Http\Controllers\Api\MarketplaceClient\Organizer\RefundReportController as OrganizerRefundReportController;
 use App\Http\Controllers\Api\MarketplaceClient\Organizer\ServiceOrderController as OrganizerServiceOrderController;
@@ -1776,6 +1777,15 @@ Route::prefix('marketplace-client/organizer')->middleware(['throttle:120,1', 'ma
             ->name('api.marketplace-client.organizer.tax.quarterly');
         Route::get('/tax/document', [OrganizerTaxReportController::class, 'taxDocument'])
             ->name('api.marketplace-client.organizer.tax.document');
+
+        // Leisure venue (display_template === 'leisure_venue')
+        // Activate doar pentru evenimente de tip "Locatie de agrement" — celelalte intorc 422.
+        Route::get('/events/{event}/leisure/config', [OrganizerLeisureController::class, 'config'])
+            ->whereNumber('event')
+            ->name('api.marketplace-client.organizer.leisure.config');
+        Route::get('/events/{event}/leisure/reports/by-registry', [OrganizerLeisureController::class, 'reportsByRegistry'])
+            ->whereNumber('event')
+            ->name('api.marketplace-client.organizer.leisure.reports.by-registry');
 
         // Organizer Documents (Cerere avizare, Declaratie impozite)
         Route::get('/documents', [OrganizerDocumentController::class, 'index'])
