@@ -10,8 +10,6 @@ return new class extends Migration
     {
         Schema::table('ticket_types', function (Blueprint $table) {
             if (!Schema::hasColumn('ticket_types', 'service_category')) {
-                // NULL = legacy/unmapped (codul tratează ca 'access' la fallback);
-                // valorile noi: access | parking | rental | activity | extra
                 $table->string('service_category', 32)->nullable()->after('issuing_tax_registry_id');
                 $table->index('service_category', 'tt_service_category_idx');
             }

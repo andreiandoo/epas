@@ -83,6 +83,22 @@ class MarketplaceOrganizer extends Authenticatable
         'payout_details',
         'bank_name',
         'iban',
+        // A doua societate emitenta (cazul Lacul Sf. Ana)
+        'has_secondary_issuer',
+        'secondary_company_name',
+        'secondary_company_tax_id',
+        'secondary_company_registration',
+        'secondary_company_address',
+        'secondary_company_city',
+        'secondary_company_county',
+        'secondary_company_zip',
+        'secondary_bank_name',
+        'secondary_iban',
+        // Numerotare facturi separata per societate
+        'primary_invoice_series',
+        'primary_last_invoice_number',
+        'secondary_invoice_series',
+        'secondary_last_invoice_number',
         'contract_number_series',
         'contract_date',
         'invoice_due_days',
@@ -156,7 +172,72 @@ class MarketplaceOrganizer extends Authenticatable
         'total_paid_out' => 'decimal:2',
         'guarantor_id_issued_date' => 'date',
         'contract_date' => 'date',
+        'has_secondary_issuer' => 'boolean',
+        'primary_last_invoice_number' => 'integer',
+        'secondary_last_invoice_number' => 'integer',
     ];
+
+    /**
+     * Returneaza datele juridice ale societatii emitente cerute (primary | secondary).
+     * Cand 'secondary' e cerut dar has_secondary_issuer=false, cade la primary.
+     */
+    public function getIssuerData(?string $company = 'primary'): array
+    {
+        $useSecondary = ($company === 'secondary') && $this->has_secondary_issuer;
+
+        if ($useSecondary) {
+            return [
+                'company' => 'secondary',
+                'name' => $this->secondary_company_name,
+                'tax_id' => $this->secondary_company_tax_id,
+                'registration' => $this->secondary_company_registration,
+                'address' => $this->secondary_company_address,
+                'city' => $this->secondary_company_city,
+                'county' => $this->secondary_company_county,
+                'zip' => $this->secondary_company_zip,
+                'bank_name' => $this->secondary_bank_name,
+                'iban' => $this->secondary_iban,
+                'invoice_series' => $this->secondary_invoice_series,
+            ];
+        }
+
+        return [
+            'company' => 'primary',
+            'name' => $this->company_name,
+            'tax_id' => $this->company_tax_id,
+            'registration' => $this->company_registration,
+            'address' => $this->company_address,
+            'city' => $this->company_city,
+            'county' => $this->company_county,
+            'zip' => $this->company_zip,
+            'bank_name' => $this->bank_name,
+            'iban' => $this->iban,
+            'invoice_series' => $this->primary_invoice_series,
+        ];
+    }
+
+    /**
+     * Reserve atomic next invoice number for the requested company (primary|secondary).
+     * Returns formatted "SERIES-000123" when series is set, plain number string otherwise.
+     */
+    public function reserveNextInvoiceNumber(string $company = 'primary', int $padding = 6): string
+    {
+        $field = $company === 'secondary' ? 'secondary_last_invoice_number' : 'primary_last_invoice_number';
+        $seriesField = $company === 'secondary' ? 'secondary_invoice_series' : 'primary_invoice_series';
+
+        return \Illuminate\Support\Facades\DB::transaction(function () use ($field, $seriesField, $padding) {
+            $fresh = static::where('id', $this->id)->lockForUpdate()->first();
+            $next = (int) ($fresh->{$field} ?? 0) + 1;
+            $fresh->{$field} = $next;
+            $fresh->save();
+
+            $this->{$field} = $next;
+
+            $padded = str_pad((string) $next, $padding, '0', STR_PAD_LEFT);
+            $series = $fresh->{$seriesField};
+            return $series ? $series . '-' . $padded : $padded;
+        });
+    }
 
     protected static function boot()
     {

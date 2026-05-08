@@ -77,8 +77,8 @@ class TicketType extends Model
         'daily_capacity',
         'is_parking',
         'requires_vehicle_info',
-        // Leisure venue: societate emitentă fiscală (fallback la event.marketplace_tax_registry_id când NULL)
-        'issuing_tax_registry_id',
+        // Leisure venue: care societate a organizatorului emite factura — 'primary' | 'secondary' (NULL = primary)
+        'issuing_company',
         // Leisure venue: categorie serviciu — access | parking | rental | activity | extra (NULL = legacy, tratat ca 'access')
         'service_category',
     ];
@@ -125,11 +125,6 @@ class TicketType extends Model
         return $this->hasMany(Ticket::class);
     }
 
-    public function issuingTaxRegistry(): BelongsTo
-    {
-        return $this->belongsTo(MarketplaceTaxRegistry::class, 'issuing_tax_registry_id');
-    }
-
     public function scopeByServiceCategory($query, string $category)
     {
         if ($category === 'access') {
@@ -146,9 +141,14 @@ class TicketType extends Model
         return $this->service_category ?: 'access';
     }
 
-    public function getEffectiveTaxRegistryIdAttribute(): ?int
+    /**
+     * Care societate a organizatorului emite facturi pentru biletele de acest tip.
+     * 'primary' = societatea principala a organizatorului (default).
+     * 'secondary' = a doua societate (doar daca organizer.has_secondary_issuer = true).
+     */
+    public function getEffectiveIssuingCompanyAttribute(): string
     {
-        return $this->issuing_tax_registry_id ?: ($this->event->marketplace_tax_registry_id ?? null);
+        return $this->issuing_company ?: 'primary';
     }
 
     /**

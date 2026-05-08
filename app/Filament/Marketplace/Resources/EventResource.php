@@ -2212,25 +2212,33 @@ class EventResource extends Resource
                                                             ->placeholder($t('Acces (implicit)', 'Access (default)'))
                                                             ->helperText($t('Lasă gol pentru bilet de acces', 'Leave empty for access ticket'))
                                                             ->columnSpan(1),
-                                                        Forms\Components\Select::make('issuing_tax_registry_id')
-                                                            ->label($t('Societate emitentă', 'Issuing entity'))
-                                                            ->options(function () use ($marketplace) {
-                                                                if (!$marketplace) {
-                                                                    return [];
+                                                        Forms\Components\Select::make('issuing_company')
+                                                            ->label($t('Societate emitentă', 'Issuing company'))
+                                                            ->options(function (\Livewire\Component $livewire) use ($t) {
+                                                                $organizerId = $livewire->record?->marketplace_organizer_id ?? null;
+                                                                $organizer = $organizerId ? \App\Models\MarketplaceOrganizer::find($organizerId) : null;
+
+                                                                $primaryName = $organizer?->company_name
+                                                                    ?: $organizer?->name
+                                                                    ?: $t('Societate principală', 'Primary company');
+                                                                $secondaryName = $organizer?->secondary_company_name
+                                                                    ?: $t('Societate secundară (necompletată)', 'Secondary company (not set)');
+
+                                                                $opts = ['primary' => $primaryName];
+                                                                if ($organizer?->has_secondary_issuer) {
+                                                                    $opts['secondary'] = $secondaryName;
                                                                 }
-                                                                return \App\Models\MarketplaceTaxRegistry::query()
-                                                                    ->where('marketplace_client_id', $marketplace->id)
-                                                                    ->where('is_active', true)
-                                                                    ->orderBy('name')
-                                                                    ->get()
-                                                                    ->mapWithKeys(fn ($r) => [
-                                                                        $r->id => trim($r->name . ($r->subname ? ' — ' . $r->subname : '') . ($r->cif ? ' (CIF ' . $r->cif . ')' : '')),
-                                                                    ])
-                                                                    ->toArray();
+                                                                return $opts;
                                                             })
-                                                            ->placeholder($t('Implicit (de la eveniment)', 'Default (from event)'))
-                                                            ->helperText($t('Lasă gol pentru a folosi societatea evenimentului', 'Leave empty to use event entity'))
-                                                            ->searchable()
+                                                            ->placeholder($t('Principală (implicit)', 'Primary (default)'))
+                                                            ->helperText(function (\Livewire\Component $livewire) use ($t) {
+                                                                $organizerId = $livewire->record?->marketplace_organizer_id ?? null;
+                                                                $organizer = $organizerId ? \App\Models\MarketplaceOrganizer::find($organizerId) : null;
+                                                                if (!$organizer?->has_secondary_issuer) {
+                                                                    return $t('Activează "A doua societate emitentă" pe profilul organizatorului pentru a putea selecta societatea secundară.', 'Enable secondary issuer on organizer profile to select it here.');
+                                                                }
+                                                                return $t('Lasă gol pentru societatea principală a organizatorului.', 'Leave empty for the organizer primary company.');
+                                                            })
                                                             ->columnSpan(1),
                                                     ]),
 

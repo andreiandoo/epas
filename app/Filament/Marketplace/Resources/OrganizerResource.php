@@ -524,6 +524,87 @@ class OrganizerResource extends Resource
                         ])
                         ->columns(2),
 
+                    // ── A doua societate emitentă (cazul Lacul Sf. Ana) ──
+                    Section::make('A doua societate emitentă')
+                        ->icon('heroicon-o-building-office-2')
+                        ->description('Activează dacă organizatorul are 2 societăți distincte care emit facturi (ex: bilete acces pe SC1, servicii conexe pe SC2). În formularul tipurilor de bilete poți alege pentru fiecare bilet ce societate emite factura.')
+                        ->schema([
+                            Forms\Components\Toggle::make('has_secondary_issuer')
+                                ->label('Activează a doua societate')
+                                ->helperText('Lasă dezactivat dacă organizatorul are o singură societate.')
+                                ->live()
+                                ->columnSpanFull(),
+
+                            Forms\Components\Group::make([
+                                Forms\Components\TextInput::make('secondary_company_name')
+                                    ->label('Denumire societate')
+                                    ->maxLength(255)
+                                    ->placeholder('ex: SC Servicii Sf. Ana SRL')
+                                    ->columnSpan(2),
+                                Forms\Components\TextInput::make('secondary_company_tax_id')
+                                    ->label('CUI / CIF')
+                                    ->maxLength(32)
+                                    ->placeholder('RO12345678'),
+                                Forms\Components\TextInput::make('secondary_company_registration')
+                                    ->label('Nr. Reg. Comerț')
+                                    ->maxLength(32)
+                                    ->placeholder('J40/1234/2020'),
+                                Forms\Components\Textarea::make('secondary_company_address')
+                                    ->label('Adresă sediu')
+                                    ->rows(2)
+                                    ->columnSpanFull(),
+                                Forms\Components\TextInput::make('secondary_company_city')
+                                    ->label('Oraș')
+                                    ->maxLength(100),
+                                Forms\Components\TextInput::make('secondary_company_county')
+                                    ->label('Județ')
+                                    ->maxLength(100),
+                                Forms\Components\TextInput::make('secondary_company_zip')
+                                    ->label('Cod poștal')
+                                    ->maxLength(20),
+                                Forms\Components\TextInput::make('secondary_bank_name')
+                                    ->label('Bancă')
+                                    ->maxLength(255)
+                                    ->columnSpan(1),
+                                Forms\Components\TextInput::make('secondary_iban')
+                                    ->label('IBAN')
+                                    ->maxLength(34)
+                                    ->placeholder('RO49...')
+                                    ->dehydrateStateUsing(fn ($state) => $state ? strtoupper(preg_replace('/\s+/', '', $state)) : null)
+                                    ->columnSpan(2),
+                            ])
+                                ->columns(3)
+                                ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get): bool => (bool) $get('has_secondary_issuer'))
+                                ->columnSpanFull(),
+
+                            // Numerotare facturi separată
+                            Forms\Components\Group::make([
+                                Forms\Components\TextInput::make('primary_invoice_series')
+                                    ->label('Serie facturi — societate principală')
+                                    ->maxLength(16)
+                                    ->placeholder('ex: LSA-A'),
+                                Forms\Components\TextInput::make('primary_last_invoice_number')
+                                    ->label('Ultim nr. factură principală')
+                                    ->numeric()
+                                    ->minValue(0)
+                                    ->default(0)
+                                    ->helperText('Atenție: modifică doar la migrarea unei numerotări existente.'),
+                                Forms\Components\TextInput::make('secondary_invoice_series')
+                                    ->label('Serie facturi — societate secundară')
+                                    ->maxLength(16)
+                                    ->placeholder('ex: LSA-S'),
+                                Forms\Components\TextInput::make('secondary_last_invoice_number')
+                                    ->label('Ultim nr. factură secundară')
+                                    ->numeric()
+                                    ->minValue(0)
+                                    ->default(0),
+                            ])
+                                ->columns(2)
+                                ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get): bool => (bool) $get('has_secondary_issuer'))
+                                ->columnSpanFull(),
+                        ])
+                        ->columns(1),
+
                                 ]), // end Tab 3 (Financiar)
 
                             // ── TAB 4: Bilete & Termeni ──
