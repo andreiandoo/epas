@@ -100,20 +100,31 @@ function EventItem({ event, category, onPress }) {
   const isPast = category === 'past';
 
   const venueName = event.venue_name || event.venue?.name || '';
-  const eventDate = event.event_date || event.date || event.start_date || '';
+  const venueCity = event.venue_city || event.venue?.city || '';
+  // API returns `starts_at` as a single ISO string (e.g. "2026-05-15T19:00:00").
+  // Legacy fields kept as fallback.
+  const rawDate = event.starts_at || event.event_date || event.date || event.start_date || '';
   let formattedDate = '';
-  if (eventDate) {
+  if (rawDate) {
     try {
-      const d = new Date(eventDate);
-      const day = String(d.getDate()).padStart(2, '0');
-      const month = String(d.getMonth() + 1).padStart(2, '0');
-      const year = d.getFullYear();
-      formattedDate = `${day}.${month}.${year}`;
-      if (event.start_time) {
-        formattedDate += ` \u00B7 ${event.start_time.slice(0, 5)}`;
+      const d = new Date(rawDate);
+      if (!isNaN(d.getTime())) {
+        const day = String(d.getDate()).padStart(2, '0');
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const year = d.getFullYear();
+        formattedDate = `${day}.${month}.${year}`;
+        // If we got a full ISO with a time component, append HH:MM
+        if (typeof rawDate === 'string' && rawDate.includes('T')) {
+          const hh = String(d.getHours()).padStart(2, '0');
+          const mm = String(d.getMinutes()).padStart(2, '0');
+          formattedDate += ` \u00B7 ${hh}:${mm}`;
+        } else if (event.start_time) {
+          formattedDate += ` \u00B7 ${event.start_time.slice(0, 5)}`;
+        }
       }
-    } catch { formattedDate = eventDate; }
+    } catch { formattedDate = ''; }
   }
+  const venueLine = venueCity ? (venueName ? `${venueName}, ${venueCity}` : venueCity) : venueName;
 
   return (
     <TouchableOpacity
@@ -135,8 +146,8 @@ function EventItem({ event, category, onPress }) {
           <Text style={[styles.eventName, isPast && styles.eventNamePast]} numberOfLines={1}>
             {event.name || event.title}
           </Text>
-          {venueName ? (
-            <Text style={styles.eventMeta} numberOfLines={1}>{venueName}</Text>
+          {venueLine ? (
+            <Text style={styles.eventMeta} numberOfLines={1}>{venueLine}</Text>
           ) : null}
         </View>
         <View style={styles.eventItemRight}>
@@ -154,13 +165,18 @@ function EventItem({ event, category, onPress }) {
  * stable-ordered. Falls back to NaN-ish so undated events sink to the bottom.
  */
 function eventSortKey(event) {
-  const date = event.event_date || event.date || event.start_date;
-  if (!date) return Number.MAX_SAFE_INTEGER;
+  const raw = event.starts_at || event.event_date || event.date || event.start_date;
+  if (!raw) return Number.MAX_SAFE_INTEGER;
   try {
-    const time = event.start_time && event.start_time.length >= 4
-      ? event.start_time.slice(0, 5)
-      : '00:00';
-    const parsed = new Date(`${date}T${time}:00`);
+    let parsed;
+    if (typeof raw === 'string' && raw.includes('T')) {
+      parsed = new Date(raw);
+    } else {
+      const time = event.start_time && event.start_time.length >= 4
+        ? event.start_time.slice(0, 5)
+        : '00:00';
+      parsed = new Date(`${raw}T${time}:00`);
+    }
     const t = parsed.getTime();
     return isNaN(t) ? Number.MAX_SAFE_INTEGER : t;
   } catch {

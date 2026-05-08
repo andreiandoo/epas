@@ -936,9 +936,66 @@ function SalesBreakdownModal({ visible, onClose, eventId }) {
 // Main Screen
 // ---------------------------------------------------------------------------
 
+/**
+ * Format event start date as "DD.MM.YYYY · HH:MM" using a local-time interpretation.
+ * Accepts the API's `starts_at` ISO string (which is a naive local datetime) or
+ * a plain date.
+ */
+function formatEventDate(raw) {
+  if (!raw) return '';
+  try {
+    const d = new Date(raw);
+    if (isNaN(d.getTime())) return '';
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    let out = `${day}.${month}.${year}`;
+    if (typeof raw === 'string' && raw.includes('T')) {
+      const hh = String(d.getHours()).padStart(2, '0');
+      const mm = String(d.getMinutes()).padStart(2, '0');
+      out += ` · ${hh}:${mm}`;
+    }
+    return out;
+  } catch { return ''; }
+}
+
+/**
+ * Live ticking countdown to event start. Returns a short string like
+ * "5z 12h", "3h 45m", "12m 30s" depending on remaining time. Returns
+ * "Acum" while live and "Încheiat" once past.
+ */
+function useEventCountdown(startsAt) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!startsAt) return undefined;
+    const interval = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(interval);
+  }, [startsAt]);
+  if (!startsAt) return '';
+  const target = new Date(startsAt).getTime();
+  if (isNaN(target)) return '';
+  const diffMs = target - now;
+  if (diffMs <= 0) return 'A început';
+  const totalSec = Math.floor(diffMs / 1000);
+  const days = Math.floor(totalSec / 86400);
+  const hours = Math.floor((totalSec % 86400) / 3600);
+  const minutes = Math.floor((totalSec % 3600) / 60);
+  const seconds = totalSec % 60;
+  if (days >= 1) return `${days}z ${hours}h`;
+  if (hours >= 1) return `${hours}h ${minutes}m`;
+  if (minutes >= 1) return `${minutes}m ${seconds}s`;
+  return `${seconds}s`;
+}
+
 export default function DashboardScreen({ navigation, onShowStaff, onShowGuestList }) {
   const { userRole } = useAuth();
   const { selectedEvent, eventStats, ticketTypes, allTicketTypes, isReportsOnlyMode, refreshStats, refreshTicketTypes, isLoadingStats } = useEvent();
+  const startsAt = selectedEvent?.starts_at || selectedEvent?.event_date || selectedEvent?.date || null;
+  const formattedEventDate = formatEventDate(startsAt);
+  const countdown = useEventCountdown(startsAt);
+  const venueName = selectedEvent?.venue_name || selectedEvent?.location || '';
+  const venueCity = selectedEvent?.venue_city || selectedEvent?.city || '';
+  const venueLine = venueCity ? (venueName ? `${venueName}, ${venueCity}` : venueCity) : venueName;
   const {
     shiftStartTime,
     cashTurnover,
@@ -996,14 +1053,25 @@ export default function DashboardScreen({ navigation, onShowStaff, onShowGuestLi
       >
         {/* Event header */}
         <View style={styles.eventHeader}>
+          {selectedEvent && formattedEventDate ? (
+            <View style={styles.eventDateRow}>
+              <Text style={styles.eventDateText} numberOfLines={1}>
+                {formattedEventDate}
+              </Text>
+              {countdown ? (
+                <View style={styles.countdownBadge}>
+                  <Icon name="clock" size={11} color={colors.purple} />
+                  <Text style={styles.countdownText}>{countdown}</Text>
+                </View>
+              ) : null}
+            </View>
+          ) : null}
           <Text style={styles.eventName} numberOfLines={1}>
             {selectedEvent?.title || selectedEvent?.name || 'Niciun Eveniment Selectat'}
           </Text>
-          {selectedEvent && (
-            <Text style={styles.eventMeta}>
-              {selectedEvent.venue_name || selectedEvent.location || ''}
-            </Text>
-          )}
+          {selectedEvent && venueLine ? (
+            <Text style={styles.eventMeta}>{venueLine}</Text>
+          ) : null}
         </View>
 
         {isAdmin ? (
@@ -1081,6 +1149,36 @@ const styles = StyleSheet.create({
   // Event header
   eventHeader: {
     marginBottom: 20,
+  },
+  eventDateRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 6,
+  },
+  eventDateText: {
+    flex: 1,
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.purple,
+    letterSpacing: 0.5,
+  },
+  countdownBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.purpleBg,
+    borderWidth: 1,
+    borderColor: colors.purpleBorder,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    gap: 4,
+  },
+  countdownText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.purple,
+    letterSpacing: 0.4,
   },
   eventName: {
     fontSize: 22,
