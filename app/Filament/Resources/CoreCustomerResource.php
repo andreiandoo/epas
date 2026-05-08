@@ -1125,7 +1125,7 @@ class CoreCustomerResource extends Resource
                 'First Purchase',
                 'Last Purchase',
                 'Tags',
-            ]);
+            ], escape: '\\');
 
             $query = $records ?? CoreCustomer::query();
 
@@ -1174,6 +1174,6 @@ class CoreCustomerResource extends Resource
             $customer->first_purchase_at?->format('Y-m-d H:i:s'),
             $customer->last_purchase_at?->format('Y-m-d H:i:s'),
             is_array($customer->tags) ? implode(', ', $customer->tags) : $customer->tags,
-        ]);
+        ], escape: '\\');
     }
 }

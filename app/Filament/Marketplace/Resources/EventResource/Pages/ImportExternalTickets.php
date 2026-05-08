@@ -81,9 +81,9 @@ class ImportExternalTickets extends Page
             $handle = fopen('php://output', 'w');
             // UTF-8 BOM for Excel compatibility
             fprintf($handle, chr(0xEF) . chr(0xBB) . chr(0xBF));
-            fputcsv($handle, $header);
+            fputcsv($handle, $header, escape: '\\');
             foreach ($sample as $row) {
-                fputcsv($handle, $row);
+                fputcsv($handle, $row, escape: '\\');
             }
             fclose($handle);
         }, 'model-import-bilete.csv', [

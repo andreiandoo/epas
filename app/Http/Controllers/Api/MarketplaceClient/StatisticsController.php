@@ -287,7 +287,7 @@ class StatisticsController extends BaseController
                 'Commission Rate (%)',
                 'Commission Amount',
                 'Paid At',
-            ]);
+            ], escape: '\\');
 
             foreach ($orders as $order) {
                 fputcsv($file, [
@@ -299,12 +299,12 @@ class StatisticsController extends BaseController
                     $order->commission_rate,
                     $order->commission_amount,
                     $order->paid_at->format('Y-m-d H:i:s'),
-                ]);
+                ], escape: '\\');
             }
 
             // Summary row
-            fputcsv($file, []);
-            fputcsv($file, ['TOTALS', '', '', $orders->sum('total'), $orders->sum('subtotal'), '', $orders->sum('commission_amount'), '']);
+            fputcsv($file, [], escape: '\\');
+            fputcsv($file, ['TOTALS', '', '', $orders->sum('total'), $orders->sum('subtotal'), '', $orders->sum('commission_amount'), ''], escape: '\\');
 
             fclose($file);
         };

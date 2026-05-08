@@ -40,7 +40,7 @@ class ExportTaxonomiesCommand extends Command
         $handle = fopen($file, 'w');
 
         // Write header
-        fputcsv($handle, ['name', 'slug', 'description', 'parent_slug']);
+        fputcsv($handle, ['name', 'slug', 'description', 'parent_slug'], escape: '\\');
 
         // Get all records
         $records = $modelClass::with('parent')->get();
@@ -58,7 +58,7 @@ class ExportTaxonomiesCommand extends Command
                 $record->slug,
                 is_string($description) ? $description : '',
                 $record->parent?->slug ?? '',
-            ]);
+            ], escape: '\\');
         }
 
         fclose($handle);

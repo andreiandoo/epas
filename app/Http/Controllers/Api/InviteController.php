@@ -388,7 +388,7 @@ class InviteController extends Controller
             'Downloaded At',
             'Opened At',
             'Checked In At',
-        ]);
+        ], escape: '\\');
 
         // Data rows
         foreach ($batch->invites as $invite) {
@@ -409,7 +409,7 @@ class InviteController extends Controller
                 $invite->downloaded_at?->toDateTimeString(),
                 $invite->opened_at?->toDateTimeString(),
                 $invite->checked_in_at?->toDateTimeString(),
-            ]);
+            ], escape: '\\');
         }
 
         rewind($output);

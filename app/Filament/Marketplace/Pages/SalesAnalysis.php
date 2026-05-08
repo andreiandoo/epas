@@ -90,8 +90,8 @@ class SalesAnalysis extends Page
 
         return response()->streamDownload(function () use ($service, $tab) {
             $handle = fopen('php://output', 'w');
-            fputcsv($handle, ['Sales Analysis Export - ' . ucfirst($tab) . ' - ' . now()->format('d/m/Y H:i')]);
-            fputcsv($handle, []);
+            fputcsv($handle, ['Sales Analysis Export - ' . ucfirst($tab) . ' - ' . now()->format('d/m/Y H:i')], escape: '\\');
+            fputcsv($handle, [], escape: '\\');
 
             match ($tab) {
                 'patterns' => $this->exportPatterns($handle, $service),
@@ -109,82 +109,82 @@ class SalesAnalysis extends Page
     protected function exportPatterns($handle, SalesAnalysisService $service): void
     {
         $dow = $service->getDayOfWeekRevenue();
-        fputcsv($handle, ['Day of Week Revenue']);
-        fputcsv($handle, ['Zi', 'Revenue', 'Comenzi']);
+        fputcsv($handle, ['Day of Week Revenue'], escape: '\\');
+        fputcsv($handle, ['Zi', 'Revenue', 'Comenzi'], escape: '\\');
         foreach ($dow['labels'] as $i => $label) {
-            fputcsv($handle, [$label, $dow['revenue'][$i], $dow['orders'][$i]]);
+            fputcsv($handle, [$label, $dow['revenue'][$i], $dow['orders'][$i]], escape: '\\');
         }
-        fputcsv($handle, []);
+        fputcsv($handle, [], escape: '\\');
 
         $peak = $service->getPeakSalesWindows();
-        fputcsv($handle, ['Peak Sales Windows']);
-        fputcsv($handle, ['Zi', 'Interval', 'Revenue', 'Comenzi']);
+        fputcsv($handle, ['Peak Sales Windows'], escape: '\\');
+        fputcsv($handle, ['Zi', 'Interval', 'Revenue', 'Comenzi'], escape: '\\');
         foreach ($peak as $w) {
-            fputcsv($handle, [$w['day'], $w['hour'], $w['revenue'], $w['orders']]);
+            fputcsv($handle, [$w['day'], $w['hour'], $w['revenue'], $w['orders']], escape: '\\');
         }
     }
 
     protected function exportPredictions($handle, SalesAnalysisService $service): void
     {
         $season = $service->getSeasonalityIndex();
-        fputcsv($handle, ['Seasonality Index']);
-        fputcsv($handle, ['Luna', 'Index']);
+        fputcsv($handle, ['Seasonality Index'], escape: '\\');
+        fputcsv($handle, ['Luna', 'Index'], escape: '\\');
         foreach ($season['labels'] as $i => $label) {
-            fputcsv($handle, [$label, $season['index'][$i]]);
+            fputcsv($handle, [$label, $season['index'][$i]], escape: '\\');
         }
-        fputcsv($handle, []);
+        fputcsv($handle, [], escape: '\\');
 
         $velocity = $service->getSalesVelocity();
-        fputcsv($handle, ['Sales Velocity']);
-        fputcsv($handle, ['Eveniment', 'Categorie', 'Bilete/zi', 'Sold %']);
+        fputcsv($handle, ['Sales Velocity'], escape: '\\');
+        fputcsv($handle, ['Eveniment', 'Categorie', 'Bilete/zi', 'Sold %'], escape: '\\');
         foreach ($velocity as $v) {
-            fputcsv($handle, [$v['name'], $v['category'], $v['tickets_per_day'], $v['sell_through']]);
+            fputcsv($handle, [$v['name'], $v['category'], $v['tickets_per_day'], $v['sell_through']], escape: '\\');
         }
     }
 
     protected function exportOptimization($handle, SalesAnalysisService $service): void
     {
         $golden = $service->getGoldenPriceZone();
-        fputcsv($handle, ['Golden Price Zone']);
-        fputcsv($handle, ['Categorie', 'Min Pret', 'Max Pret', 'Golden Min', 'Golden Max', 'Golden %', 'Total Vandut']);
+        fputcsv($handle, ['Golden Price Zone'], escape: '\\');
+        fputcsv($handle, ['Categorie', 'Min Pret', 'Max Pret', 'Golden Min', 'Golden Max', 'Golden %', 'Total Vandut'], escape: '\\');
         foreach ($golden as $g) {
-            fputcsv($handle, [$g['category'], $g['min_price'], $g['max_price'], $g['golden_min'], $g['golden_max'], $g['golden_pct'], $g['total_sold']]);
+            fputcsv($handle, [$g['category'], $g['min_price'], $g['max_price'], $g['golden_min'], $g['golden_max'], $g['golden_pct'], $g['total_sold']], escape: '\\');
         }
-        fputcsv($handle, []);
+        fputcsv($handle, [], escape: '\\');
 
         $pareto = $service->getRevenueConcentration();
-        fputcsv($handle, ['Revenue Concentration']);
-        fputcsv($handle, ['Eveniment', 'Revenue', '%', 'Cumulativ %']);
+        fputcsv($handle, ['Revenue Concentration'], escape: '\\');
+        fputcsv($handle, ['Eveniment', 'Revenue', '%', 'Cumulativ %'], escape: '\\');
         foreach ($pareto as $p) {
-            fputcsv($handle, [$p['name'], $p['revenue'], $p['pct'], $p['cumulative_pct']]);
+            fputcsv($handle, [$p['name'], $p['revenue'], $p['pct'], $p['cumulative_pct']], escape: '\\');
         }
     }
 
     protected function exportAudience($handle, SalesAnalysisService $service): void
     {
         $geo = $service->getGeographicRevenue();
-        fputcsv($handle, ['Geographic Revenue']);
-        fputcsv($handle, ['Oras', 'Revenue', 'Comenzi']);
+        fputcsv($handle, ['Geographic Revenue'], escape: '\\');
+        fputcsv($handle, ['Oras', 'Revenue', 'Comenzi'], escape: '\\');
         foreach ($geo as $g) {
-            fputcsv($handle, [$g['city'], $g['revenue'], $g['orders']]);
+            fputcsv($handle, [$g['city'], $g['revenue'], $g['orders']], escape: '\\');
         }
-        fputcsv($handle, []);
+        fputcsv($handle, [], escape: '\\');
 
         $rfm = $service->getRfmSegmentation();
-        fputcsv($handle, ['RFM Segmentation']);
-        fputcsv($handle, ['Segment', 'Clienti']);
+        fputcsv($handle, ['RFM Segmentation'], escape: '\\');
+        fputcsv($handle, ['Segment', 'Clienti'], escape: '\\');
         foreach ($rfm['segments'] as $seg => $count) {
-            fputcsv($handle, [$seg, $count]);
+            fputcsv($handle, [$seg, $count], escape: '\\');
         }
     }
 
     protected function exportOperational($handle, SalesAnalysisService $service): void
     {
         $orgs = $service->getOrganizerLeaderboard();
-        fputcsv($handle, ['Organizer Leaderboard']);
-        fputcsv($handle, ['Organizator', 'Revenue', 'Bilete', 'Events']);
+        fputcsv($handle, ['Organizer Leaderboard'], escape: '\\');
+        fputcsv($handle, ['Organizator', 'Revenue', 'Bilete', 'Events'], escape: '\\');
         foreach ($orgs as $o) {
-            fputcsv($handle, [$o['name'], $o['revenue'], $o['tickets'], $o['events']]);
+            fputcsv($handle, [$o['name'], $o['revenue'], $o['tickets'], $o['events']], escape: '\\');
         }
     }
 

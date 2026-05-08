@@ -466,11 +466,11 @@ class AnalyticsExportService
             fprintf($output, chr(0xEF) . chr(0xBB) . chr(0xBF));
 
             // Write headers
-            fputcsv($output, $data['headers']);
+            fputcsv($output, $data['headers'], escape: '\\');
 
             // Write rows
             foreach ($data['rows'] as $row) {
-                fputcsv($output, $row);
+                fputcsv($output, $row, escape: '\\');
             }
 
             fclose($output);

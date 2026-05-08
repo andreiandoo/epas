@@ -395,50 +395,50 @@ class AttributionReport extends Page
             $handle = fopen('php://output', 'w');
 
             // Summary section
-            fputcsv($handle, ['ATTRIBUTION REPORT SUMMARY']);
-            fputcsv($handle, ['Period', $this->startDate . ' to ' . $this->endDate]);
-            fputcsv($handle, ['Total Conversions', $this->summary['total_conversions'] ?? 0]);
-            fputcsv($handle, ['Total Revenue', '$' . number_format($this->summary['total_revenue'] ?? 0, 2)]);
-            fputcsv($handle, ['Avg Order Value', '$' . number_format($this->summary['avg_order_value'] ?? 0, 2)]);
-            fputcsv($handle, []);
+            fputcsv($handle, ['ATTRIBUTION REPORT SUMMARY'], escape: '\\');
+            fputcsv($handle, ['Period', $this->startDate . ' to ' . $this->endDate], escape: '\\');
+            fputcsv($handle, ['Total Conversions', $this->summary['total_conversions'] ?? 0], escape: '\\');
+            fputcsv($handle, ['Total Revenue', '$' . number_format($this->summary['total_revenue'] ?? 0, 2)], escape: '\\');
+            fputcsv($handle, ['Avg Order Value', '$' . number_format($this->summary['avg_order_value'] ?? 0, 2)], escape: '\\');
+            fputcsv($handle, [], escape: '\\');
 
             // First Touch Attribution
-            fputcsv($handle, ['FIRST TOUCH ATTRIBUTION']);
-            fputcsv($handle, ['Channel', 'Conversions', 'Revenue']);
+            fputcsv($handle, ['FIRST TOUCH ATTRIBUTION'], escape: '\\');
+            fputcsv($handle, ['Channel', 'Conversions', 'Revenue'], escape: '\\');
             foreach ($this->firstTouchAttribution as $item) {
                 fputcsv($handle, [
                     $item['channel'],
                     $item['conversions'],
                     '$' . number_format($item['revenue'] ?? 0, 2),
-                ]);
+                ], escape: '\\');
             }
-            fputcsv($handle, []);
+            fputcsv($handle, [], escape: '\\');
 
             // Last Touch Attribution
-            fputcsv($handle, ['LAST TOUCH ATTRIBUTION']);
-            fputcsv($handle, ['Channel', 'Conversions', 'Revenue']);
+            fputcsv($handle, ['LAST TOUCH ATTRIBUTION'], escape: '\\');
+            fputcsv($handle, ['Channel', 'Conversions', 'Revenue'], escape: '\\');
             foreach ($this->lastTouchAttribution as $item) {
                 fputcsv($handle, [
                     $item['channel'],
                     $item['conversions'],
                     '$' . number_format($item['revenue'] ?? 0, 2),
-                ]);
+                ], escape: '\\');
             }
-            fputcsv($handle, []);
+            fputcsv($handle, [], escape: '\\');
 
             // Conversion Paths
-            fputcsv($handle, ['TOP CONVERSION PATHS']);
-            fputcsv($handle, ['Path', 'Count']);
+            fputcsv($handle, ['TOP CONVERSION PATHS'], escape: '\\');
+            fputcsv($handle, ['Path', 'Count'], escape: '\\');
             foreach ($this->conversionPaths as $path) {
-                fputcsv($handle, [$path['path'], $path['count']]);
+                fputcsv($handle, [$path['path'], $path['count']], escape: '\\');
             }
-            fputcsv($handle, []);
+            fputcsv($handle, [], escape: '\\');
 
             // Time to Conversion
-            fputcsv($handle, ['TIME TO CONVERSION']);
-            fputcsv($handle, ['Time Range', 'Count']);
+            fputcsv($handle, ['TIME TO CONVERSION'], escape: '\\');
+            fputcsv($handle, ['Time Range', 'Count'], escape: '\\');
             foreach ($this->timeToConversion as $time) {
-                fputcsv($handle, [$time['time_range'], $time['count']]);
+                fputcsv($handle, [$time['time_range'], $time['count']], escape: '\\');
             }
 
             fclose($handle);
@@ -462,7 +462,7 @@ class AttributionReport extends Page
                 'Last Touch Conversions',
                 'Last Touch Revenue',
                 'Conversion Difference',
-            ]);
+            ], escape: '\\');
 
             foreach ($this->channelComparison as $row) {
                 fputcsv($handle, [
@@ -472,7 +472,7 @@ class AttributionReport extends Page
                     $row['last_touch_conversions'],
                     '$' . number_format($row['last_touch_revenue'] ?? 0, 2),
                     $row['difference'],
-                ]);
+                ], escape: '\\');
             }
 
             fclose($handle);

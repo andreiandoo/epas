@@ -1494,7 +1494,7 @@ class EventsController extends BaseController
                 'Purchased At',
                 'Checked In',
                 'Checked In At',
-            ]);
+            ], escape: '\\');
 
             foreach ($tickets as $ticket) {
                 $customer = $ticket->order->marketplaceCustomer;
@@ -1510,7 +1510,7 @@ class EventsController extends BaseController
                     $ticket->created_at->format('Y-m-d H:i:s'),
                     $ticket->checked_in_at ? 'Yes' : 'No',
                     $ticket->checked_in_at?->format('Y-m-d H:i:s') ?? '',
-                ]);
+                ], escape: '\\');
             }
 
             fclose($handle);

@@ -293,7 +293,7 @@ class InsuranceController extends Controller
             'Policy ID', 'Order Ref', 'Ticket Ref', 'Insurer', 'Premium',
             'Currency', 'Tax', 'Status', 'Policy Number', 'Created At',
             'Refund Amount', 'Error Message'
-        ]);
+        ], escape: '\\');
 
         foreach ($policies as $policy) {
             fputcsv($output, [
@@ -309,7 +309,7 @@ class InsuranceController extends Controller
                 $policy->created_at->toDateTimeString(),
                 $policy->refund_amount,
                 $policy->error_message,
-            ]);
+            ], escape: '\\');
         }
 
         rewind($output);

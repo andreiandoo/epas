@@ -1285,7 +1285,7 @@ class Invitations extends Page
                 'Emailed At',
                 'Downloaded At',
                 'Checked In At',
-            ]);
+            ], escape: '\\');
 
             foreach ($batch->invites as $invite) {
                 fputcsv($handle, [
@@ -1300,7 +1300,7 @@ class Invitations extends Page
                     $invite->emailed_at?->format('Y-m-d H:i:s') ?? '',
                     $invite->downloaded_at?->format('Y-m-d H:i:s') ?? '',
                     $invite->checked_in_at?->format('Y-m-d H:i:s') ?? '',
-                ]);
+                ], escape: '\\');
             }
 
             fclose($handle);

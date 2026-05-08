@@ -857,7 +857,7 @@ class FanCrmService
             $out = fopen('php://output', 'w');
             // BOM pentru Excel UTF-8
             fwrite($out, "\xEF\xBB\xBF");
-            fputcsv($out, ['Nume', 'Email', 'Telefon', 'Oraș', 'Țară', 'Segment', 'Evenimente', 'LTV (RON)', 'Ultim eveniment', 'Opt-in']);
+            fputcsv($out, ['Nume', 'Email', 'Telefon', 'Oraș', 'Țară', 'Segment', 'Evenimente', 'LTV (RON)', 'Ultim eveniment', 'Opt-in'], escape: '\\');
 
             // Fetch in chunks of 500
             $page = 1;
@@ -875,7 +875,7 @@ class FanCrmService
                         $f['ltv'],
                         $f['last_event'],
                         $f['opt_in'] ? 'DA' : 'NU',
-                    ]);
+                    ], escape: '\\');
                 }
                 $page++;
             } while (!empty($batch['fans']) && $page <= $batch['pages']);

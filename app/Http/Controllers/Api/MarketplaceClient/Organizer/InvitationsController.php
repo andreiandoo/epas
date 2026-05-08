@@ -440,7 +440,7 @@ class InvitationsController extends BaseController
         $fh = fopen('php://temp', 'w+');
         fputs($fh, "\xEF\xBB\xBF"); // UTF-8 BOM so Excel opens diacritics correctly
         foreach ($rows as $row) {
-            fputcsv($fh, $row);
+            fputcsv($fh, $row, escape: '\\');
         }
         rewind($fh);
         $csv = stream_get_contents($fh);

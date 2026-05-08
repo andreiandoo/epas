@@ -294,9 +294,9 @@ class AnalyzeEventVenues extends Command
         $fp = fopen($path, 'w');
         // UTF-8 BOM for Excel compatibility
         fwrite($fp, "\xEF\xBB\xBF");
-        fputcsv($fp, $headers);
+        fputcsv($fp, $headers, escape: '\\');
         foreach ($rows as $row) {
-            fputcsv($fp, $row);
+            fputcsv($fp, $row, escape: '\\');
         }
         fclose($fp);
         $this->info("Exported to: {$path}");

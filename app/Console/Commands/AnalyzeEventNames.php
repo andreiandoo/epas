@@ -204,9 +204,9 @@ class AnalyzeEventNames extends Command
     {
         $path = storage_path("app/{$filename}");
         $fp = fopen($path, 'w');
-        fputcsv($fp, $headers);
+        fputcsv($fp, $headers, escape: '\\');
         foreach ($rows as $row) {
-            fputcsv($fp, $row);
+            fputcsv($fp, $row, escape: '\\');
         }
         fclose($fp);
         $this->info("Exported to: {$path}");

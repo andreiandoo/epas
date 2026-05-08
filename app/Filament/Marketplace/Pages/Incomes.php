@@ -528,43 +528,43 @@ class Incomes extends Page
             fwrite($handle, "\xEF\xBB\xBF");
 
             // Summary
-            fputcsv($handle, ['=== SUMAR INCASARI ===']);
-            fputcsv($handle, ['Metric', 'Valoare (RON)', 'Variatie vs Perioada Anterioara']);
-            fputcsv($handle, ['Vanzari Totale', number_format($stats['total_sales'], 2), $this->formatDelta($deltas['total_sales'] ?? null)]);
-            fputcsv($handle, ['Nr. Comenzi', $stats['total_orders'], $this->formatDelta($deltas['total_orders'] ?? null)]);
-            fputcsv($handle, ['Comisioane', number_format($stats['total_commissions'], 2), $this->formatDelta($deltas['total_commissions'] ?? null)]);
-            fputcsv($handle, ['Taxa Retur (Asigurare)', number_format($stats['refund_fee_revenue'], 2), $this->formatDelta($deltas['refund_fee_revenue'] ?? null)]);
-            fputcsv($handle, ['Carduri Cadou', number_format($stats['gift_card_revenue'], 2), $this->formatDelta($deltas['gift_card_revenue'] ?? null)]);
-            fputcsv($handle, ['Servicii Extra', number_format($stats['services_revenue'], 2), $this->formatDelta($deltas['services_revenue'] ?? null)]);
-            fputcsv($handle, ['TOTAL VENIT MARKETPLACE', number_format($stats['grand_total'], 2), $this->formatDelta($deltas['grand_total'] ?? null)]);
-            fputcsv($handle, []);
+            fputcsv($handle, ['=== SUMAR INCASARI ==='], escape: '\\');
+            fputcsv($handle, ['Metric', 'Valoare (RON)', 'Variatie vs Perioada Anterioara'], escape: '\\');
+            fputcsv($handle, ['Vanzari Totale', number_format($stats['total_sales'], 2), $this->formatDelta($deltas['total_sales'] ?? null)], escape: '\\');
+            fputcsv($handle, ['Nr. Comenzi', $stats['total_orders'], $this->formatDelta($deltas['total_orders'] ?? null)], escape: '\\');
+            fputcsv($handle, ['Comisioane', number_format($stats['total_commissions'], 2), $this->formatDelta($deltas['total_commissions'] ?? null)], escape: '\\');
+            fputcsv($handle, ['Taxa Retur (Asigurare)', number_format($stats['refund_fee_revenue'], 2), $this->formatDelta($deltas['refund_fee_revenue'] ?? null)], escape: '\\');
+            fputcsv($handle, ['Carduri Cadou', number_format($stats['gift_card_revenue'], 2), $this->formatDelta($deltas['gift_card_revenue'] ?? null)], escape: '\\');
+            fputcsv($handle, ['Servicii Extra', number_format($stats['services_revenue'], 2), $this->formatDelta($deltas['services_revenue'] ?? null)], escape: '\\');
+            fputcsv($handle, ['TOTAL VENIT MARKETPLACE', number_format($stats['grand_total'], 2), $this->formatDelta($deltas['grand_total'] ?? null)], escape: '\\');
+            fputcsv($handle, [], escape: '\\');
 
             // Averages
-            fputcsv($handle, ['=== MEDII ===']);
-            fputcsv($handle, ['Medie Zilnica Vanzari', number_format($stats['avg_daily_sales'], 2)]);
-            fputcsv($handle, ['Medie Zilnica Comisioane', number_format($stats['avg_daily_commissions'], 2)]);
-            fputcsv($handle, ['Medie Zilnica Venit Total', number_format($stats['avg_daily_revenue'], 2)]);
-            fputcsv($handle, ['Valoare Medie Comanda', number_format($stats['avg_order_value'], 2)]);
-            fputcsv($handle, ['Comision Mediu/Comanda', number_format($stats['avg_commission_per_order'], 2)]);
-            fputcsv($handle, ['Rata Efectiva Comision %', number_format($stats['effective_commission_rate'], 1) . '%']);
-            fputcsv($handle, []);
+            fputcsv($handle, ['=== MEDII ==='], escape: '\\');
+            fputcsv($handle, ['Medie Zilnica Vanzari', number_format($stats['avg_daily_sales'], 2)], escape: '\\');
+            fputcsv($handle, ['Medie Zilnica Comisioane', number_format($stats['avg_daily_commissions'], 2)], escape: '\\');
+            fputcsv($handle, ['Medie Zilnica Venit Total', number_format($stats['avg_daily_revenue'], 2)], escape: '\\');
+            fputcsv($handle, ['Valoare Medie Comanda', number_format($stats['avg_order_value'], 2)], escape: '\\');
+            fputcsv($handle, ['Comision Mediu/Comanda', number_format($stats['avg_commission_per_order'], 2)], escape: '\\');
+            fputcsv($handle, ['Rata Efectiva Comision %', number_format($stats['effective_commission_rate'], 1) . '%'], escape: '\\');
+            fputcsv($handle, [], escape: '\\');
 
             // Services breakdown
             if (!empty($servicesByType)) {
-                fputcsv($handle, ['=== DETALIU SERVICII EXTRA ===']);
-                fputcsv($handle, ['Tip Serviciu', 'Nr. Comenzi', 'Venit (RON)']);
+                fputcsv($handle, ['=== DETALIU SERVICII EXTRA ==='], escape: '\\');
+                fputcsv($handle, ['Tip Serviciu', 'Nr. Comenzi', 'Venit (RON)'], escape: '\\');
                 foreach ($servicesByType as $svc) {
-                    fputcsv($handle, [$svc['label'], $svc['count'], number_format($svc['revenue'], 2)]);
+                    fputcsv($handle, [$svc['label'], $svc['count'], number_format($svc['revenue'], 2)], escape: '\\');
                 }
-                fputcsv($handle, []);
+                fputcsv($handle, [], escape: '\\');
             }
 
             // Top organizers
             if (!empty($topOrganizers)) {
-                fputcsv($handle, ['=== TOP ORGANIZATORI ===']);
-                fputcsv($handle, ['Organizator', 'Nr. Comenzi', 'Vanzari (RON)', 'Comisioane (RON)']);
+                fputcsv($handle, ['=== TOP ORGANIZATORI ==='], escape: '\\');
+                fputcsv($handle, ['Organizator', 'Nr. Comenzi', 'Vanzari (RON)', 'Comisioane (RON)'], escape: '\\');
                 foreach ($topOrganizers as $org) {
-                    fputcsv($handle, [$org['name'], $org['order_count'], number_format($org['total_sales'], 2), number_format($org['total_commissions'], 2)]);
+                    fputcsv($handle, [$org['name'], $org['order_count'], number_format($org['total_sales'], 2), number_format($org['total_commissions'], 2)], escape: '\\');
                 }
             }
 
