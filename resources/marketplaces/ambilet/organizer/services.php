@@ -570,40 +570,62 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     <!-- Ad Tracking Options -->
                     <div id="tracking-options" class="hidden space-y-4">
                         <label class="label">Platforme de Tracking</label>
+                        <p class="text-xs text-muted -mt-2">Bifează platformele dorite. Pixel ID-ul poate fi completat acum (opțional) sau mai târziu din contul tău.</p>
                         <div class="space-y-3">
-                            <label class="flex items-center gap-3 p-4 border cursor-pointer border-border rounded-xl hover:border-blue-300">
-                                <input type="checkbox" name="tracking_platforms[]" value="facebook" class="w-5 h-5 text-blue-600 rounded">
-                                <div class="flex items-center justify-center w-10 h-10 bg-blue-100 rounded-lg">
-                                    <svg class="w-6 h-6 text-blue-600" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+                            <div class="border border-border rounded-xl hover:border-blue-300 transition-colors">
+                                <label class="flex items-center gap-3 p-4 cursor-pointer">
+                                    <input type="checkbox" name="tracking_platforms[]" value="facebook" class="w-5 h-5 text-blue-600 rounded" onchange="toggleTrackingPixelField(this, 'facebook')">
+                                    <div class="flex items-center justify-center w-10 h-10 bg-blue-100 rounded-lg">
+                                        <svg class="w-6 h-6 text-blue-600" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+                                    </div>
+                                    <div class="flex-1">
+                                        <p class="font-medium text-secondary">Facebook Pixel</p>
+                                        <p class="text-sm text-muted">Track conversii si retargeting</p>
+                                    </div>
+                                    <span class="text-sm font-semibold text-blue-600">49 RON / luna</span>
+                                </label>
+                                <div id="tracking-pixel-field-facebook" class="hidden px-4 pb-4 pt-0 border-t border-border">
+                                    <label class="block text-xs font-medium text-secondary mt-3 mb-1">Facebook Pixel ID <span class="font-normal text-muted">(opțional)</span></label>
+                                    <input type="text" name="tracking_pixel_id_facebook" placeholder="1234567890123456" class="w-full input text-sm" maxlength="50">
+                                    <p class="mt-1 text-xs text-muted">Lasă gol dacă vrei să-l completezi mai târziu din contul tău.</p>
                                 </div>
-                                <div class="flex-1">
-                                    <p class="font-medium text-secondary">Facebook Pixel</p>
-                                    <p class="text-sm text-muted">Track conversii si retargeting</p>
+                            </div>
+                            <div class="border border-border rounded-xl hover:border-blue-300 transition-colors">
+                                <label class="flex items-center gap-3 p-4 cursor-pointer">
+                                    <input type="checkbox" name="tracking_platforms[]" value="google" class="w-5 h-5 text-blue-600 rounded" onchange="toggleTrackingPixelField(this, 'google')">
+                                    <div class="flex items-center justify-center w-10 h-10 bg-red-100 rounded-lg">
+                                        <svg class="w-6 h-6 text-red-600" fill="currentColor" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+                                    </div>
+                                    <div class="flex-1">
+                                        <p class="font-medium text-secondary">Google Ads</p>
+                                        <p class="text-sm text-muted">Conversion tracking complet</p>
+                                    </div>
+                                    <span class="text-sm font-semibold text-blue-600">49 RON / luna</span>
+                                </label>
+                                <div id="tracking-pixel-field-google" class="hidden px-4 pb-4 pt-0 border-t border-border">
+                                    <label class="block text-xs font-medium text-secondary mt-3 mb-1">Google Ads Conversion ID <span class="font-normal text-muted">(opțional)</span></label>
+                                    <input type="text" name="tracking_pixel_id_google" placeholder="AW-XXXXXXXXX" class="w-full input text-sm" maxlength="50">
+                                    <p class="mt-1 text-xs text-muted">Lasă gol dacă vrei să-l completezi mai târziu din contul tău.</p>
                                 </div>
-                                <span class="text-sm font-semibold text-blue-600">49 RON / luna</span>
-                            </label>
-                            <label class="flex items-center gap-3 p-4 border cursor-pointer border-border rounded-xl hover:border-blue-300">
-                                <input type="checkbox" name="tracking_platforms[]" value="google" class="w-5 h-5 text-blue-600 rounded">
-                                <div class="flex items-center justify-center w-10 h-10 bg-red-100 rounded-lg">
-                                    <svg class="w-6 h-6 text-red-600" fill="currentColor" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+                            </div>
+                            <div class="border border-border rounded-xl hover:border-blue-300 transition-colors">
+                                <label class="flex items-center gap-3 p-4 cursor-pointer">
+                                    <input type="checkbox" name="tracking_platforms[]" value="tiktok" class="w-5 h-5 text-blue-600 rounded" onchange="toggleTrackingPixelField(this, 'tiktok')">
+                                    <div class="flex items-center justify-center w-10 h-10 bg-gray-900 rounded-lg">
+                                        <svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-5.2 1.74 2.89 2.89 0 012.31-4.64 2.93 2.93 0 01.88.13V9.4a6.84 6.84 0 00-1-.05A6.33 6.33 0 005 20.1a6.34 6.34 0 0010.86-4.43v-7a8.16 8.16 0 004.77 1.52v-3.4a4.85 4.85 0 01-1-.1z"/></svg>
+                                    </div>
+                                    <div class="flex-1">
+                                        <p class="font-medium text-secondary">TikTok Pixel</p>
+                                        <p class="text-sm text-muted">Audienta tanara targetata</p>
+                                    </div>
+                                    <span class="text-sm font-semibold text-blue-600">49 RON / luna</span>
+                                </label>
+                                <div id="tracking-pixel-field-tiktok" class="hidden px-4 pb-4 pt-0 border-t border-border">
+                                    <label class="block text-xs font-medium text-secondary mt-3 mb-1">TikTok Pixel ID <span class="font-normal text-muted">(opțional)</span></label>
+                                    <input type="text" name="tracking_pixel_id_tiktok" placeholder="CXXXXXXXXXXXXXXXXX" class="w-full input text-sm" maxlength="50">
+                                    <p class="mt-1 text-xs text-muted">Lasă gol dacă vrei să-l completezi mai târziu din contul tău.</p>
                                 </div>
-                                <div class="flex-1">
-                                    <p class="font-medium text-secondary">Google Ads</p>
-                                    <p class="text-sm text-muted">Conversion tracking complet</p>
-                                </div>
-                                <span class="text-sm font-semibold text-blue-600">49 RON / luna</span>
-                            </label>
-                            <label class="flex items-center gap-3 p-4 border cursor-pointer border-border rounded-xl hover:border-blue-300">
-                                <input type="checkbox" name="tracking_platforms[]" value="tiktok" class="w-5 h-5 text-blue-600 rounded">
-                                <div class="flex items-center justify-center w-10 h-10 bg-gray-900 rounded-lg">
-                                    <svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-5.2 1.74 2.89 2.89 0 012.31-4.64 2.93 2.93 0 01.88.13V9.4a6.84 6.84 0 00-1-.05A6.33 6.33 0 005 20.1a6.34 6.34 0 0010.86-4.43v-7a8.16 8.16 0 004.77 1.52v-3.4a4.85 4.85 0 01-1-.1z"/></svg>
-                                </div>
-                                <div class="flex-1">
-                                    <p class="font-medium text-secondary">TikTok Pixel</p>
-                                    <p class="text-sm text-muted">Audienta tanara targetata</p>
-                                </div>
-                                <span class="text-sm font-semibold text-blue-600">49 RON / luna</span>
-                            </label>
+                            </div>
                         </div>
                         <div>
                             <label class="label">Durata Abonament</label>
@@ -1120,6 +1142,16 @@ function updatePricingUI() {
 
     // Update the email price per label
     updateEmailAudienceUI();
+}
+
+function toggleTrackingPixelField(checkbox, platform) {
+    const field = document.getElementById('tracking-pixel-field-' + platform);
+    if (!field) return;
+    field.classList.toggle('hidden', !checkbox.checked);
+    if (!checkbox.checked) {
+        const input = field.querySelector('input[type="text"]');
+        if (input) input.value = '';
+    }
 }
 
 function setupDateValidation() {
@@ -1957,12 +1989,23 @@ document.getElementById('service-form').addEventListener('submit', async functio
             };
             break;
         }
-        case 'tracking':
+        case 'tracking': {
+            const platforms = Array.from(document.querySelectorAll('input[name="tracking_platforms[]"]:checked')).map(c => c.value);
+            const pixelIds = {};
+            platforms.forEach(p => {
+                const input = document.querySelector('input[name="tracking_pixel_id_' + p + '"]');
+                const val = input ? input.value.trim() : '';
+                if (val) pixelIds[p] = val;
+            });
             data.config = {
-                platforms: Array.from(document.querySelectorAll('input[name="tracking_platforms[]"]:checked')).map(c => c.value),
+                platforms: platforms,
                 duration_months: parseInt(document.getElementById('tracking-duration').value) || 1,
             };
+            if (Object.keys(pixelIds).length > 0) {
+                data.config.pixel_ids = pixelIds;
+            }
             break;
+        }
         case 'campaign':
             data.config = {
                 campaign_type: document.querySelector('input[name="campaign_type"]:checked').value,
