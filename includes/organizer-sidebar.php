@@ -54,6 +54,10 @@ $currentPage = $currentPage ?? getCurrentPage();
             <svg class="<?= $currentPage !== 'documents' ? 'text-muted' : 'text-white' ?> w-5 h-5 group-hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
             Documente
         </a>
+        <a id="nav-leisure-link" href="/organizator/leisure" style="display:none" class="sidebar-link <?= $currentPage === 'leisure' ? 'active' : '' ?> items-center gap-3 px-4 py-3 m-2 rounded-xl text-sm font-medium group <?= $currentPage !== 'leisure' ? 'text-white' : '' ?>">
+            <svg class="<?= $currentPage !== 'leisure' ? 'text-muted' : 'text-white' ?> w-5 h-5 group-hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10m14-10v10M9 21h6m-6 0a2 2 0 01-2-2v-4a2 2 0 012-2h6a2 2 0 012 2v4a2 2 0 01-2 2"/></svg>
+            Locație de agrement
+        </a>
 
         <div class="pt-4 mt-4 border-t border-slate-700">
             <p class="px-4 mb-2 text-xs font-semibold tracking-wider uppercase text-muted">Marketing</p>
@@ -147,6 +151,13 @@ window.addEventListener('load', async function() {
             }).length;
             const navCount = document.getElementById('nav-events-count');
             if (navCount) navCount.textContent = liveEvents;
+
+            // Show "Locație de agrement" link when at least one event has display_template === 'leisure_venue'
+            const hasLeisure = events.some(e => (e.display_template || 'standard') === 'leisure_venue');
+            const leisureLink = document.getElementById('nav-leisure-link');
+            if (leisureLink && hasLeisure) {
+                leisureLink.style.display = 'flex';
+            }
         }
 
         // Load organizer info for sidebar
