@@ -247,15 +247,30 @@ class NetopiaProcessor implements PaymentProcessorInterface
         $soapUsername = $this->keys['soap_username'] ?? null;
         $soapPassword = $this->keys['soap_password'] ?? null;
 
-        // Try V2 REST API first (if API key configured and paymentId looks like ntpID)
+        // Try V2 REST first when an API key is configured. V2 expects ntpID
+        // (Netopia's internal id) but our payment_reference is our merchant
+        // orderId — Netopia's V1 mobilPay flow doesn't surface ntpID to us,
+        // so V2 will typically fail for orders we placed via V1. SOAP V1
+        // accepts orderId directly, so fall through unconditionally on any
+        // V2 failure when SOAP creds are present. The previous behavior was
+        // a literal "ntpID" string match on the error text, which silently
+        // broke when Netopia changed the wording from "Invalid ntpID" to
+        // "Unable to retrieve order information" — refunds quietly stopped
+        // working without surfacing a clear cause. Always-fall-through also
+        // makes config issues (e.g. operator-rotated SOAP password) visible
+        // to the admin instead of hiding behind a generic V2 failure.
         if ($apiKey) {
             $v2Result = $this->refundViaV2Rest($paymentId, $amount, $apiKey);
-            if ($v2Result['success'] || !str_contains($v2Result['error'] ?? '', 'ntpID')) {
+            if ($v2Result['success']) {
                 return $v2Result;
             }
-            // V2 failed with ntpID error — fall through to SOAP
-            \Illuminate\Support\Facades\Log::channel('marketplace')->info('Netopia V2 failed with ntpID error, trying SOAP V1', [
+            if (!$soapUsername || !$soapPassword) {
+                // No SOAP fallback available — surface the V2 error.
+                return $v2Result;
+            }
+            \Illuminate\Support\Facades\Log::channel('marketplace')->info('Netopia V2 refund failed, falling through to SOAP V1', [
                 'payment_id' => $paymentId,
+                'v2_error' => $v2Result['error'] ?? null,
             ]);
         }
 

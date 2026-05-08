@@ -406,7 +406,29 @@ class PaymentController extends BaseController
                 return $this->netopiaResponse(0);
 
             } else {
-                // Payment failed or pending
+                // Payment failed or pending.
+                //
+                // Idempotency: refuse to downgrade an order that is already
+                // in a paid / refunded terminal state. Netopia can deliver
+                // late or duplicate IPNs (we've seen them arrive on the
+                // back of refund attempts, carrying the *original* payment
+                // confirmation under an action our processCallback maps to
+                // 'failed'); without this guard the late callback corrupts
+                // a paid order to status='failed', wipes payment_status to
+                // 'failed', and removes the Refund button from the admin.
+                // Mirrors the same idempotency the success branch above
+                // already enforces for already-paid orders.
+                if (in_array($order->status, ['paid', 'completed', 'confirmed', 'refunded', 'partially_refunded'])) {
+                    Log::channel('marketplace')->warning('Late/duplicate Netopia callback for already-finalized order — ignoring', [
+                        'order_id' => $order->id,
+                        'order_number' => $order->order_number,
+                        'current_status' => $order->status,
+                        'callback_status' => $result['status'],
+                        'callback_error' => $result['metadata']['error_message'] ?? $result['message'] ?? null,
+                    ]);
+                    return $this->netopiaResponse(0);
+                }
+
                 $errorMessage = $result['metadata']['error_message'] ?? $result['message'] ?? 'Payment failed';
                 $isFailed = $result['status'] !== 'pending';
                 $order->update([
