@@ -123,8 +123,8 @@ class AnalyticsCacheService
                         'name' => $segment['customer_segment'],
                         'count' => $segment['count'],
                         'percentage' => $total > 0 ? round(($segment['count'] / $total) * 100, 1) : 0,
-                        'total_spent' => round($segment['total_spent'], 2),
-                        'avg_rfm' => round($segment['avg_rfm'], 1),
+                        'total_spent' => round((float) ($segment['total_spent'] ?? 0), 2),
+                        'avg_rfm' => round((float) ($segment['avg_rfm'] ?? 0), 1),
                     ];
                 })->values()->toArray(),
                 'total_customers' => $total,
@@ -167,7 +167,7 @@ class AnalyticsCacheService
                         'confirmed' => $row->confirmed,
                         'failed' => $row->failed,
                         'success_rate' => $row->total > 0 ? round(($row->confirmed / $row->total) * 100, 1) : 0,
-                        'total_value' => round($row->total_value, 2),
+                        'total_value' => round((float) ($row->total_value ?? 0), 2),
                     ];
                 })->toArray(),
                 'cached_at' => now()->toIso8601String(),
@@ -259,7 +259,7 @@ class AnalyticsCacheService
                                 'offset' => $p->period_offset,
                                 'active' => $p->active_customers,
                                 'rate' => $baseCustomers > 0 ? round(($p->active_customers / $baseCustomers) * 100, 1) : 0,
-                                'revenue' => round($p->total_revenue, 2),
+                                'revenue' => round((float) ($p->total_revenue ?? 0), 2),
                             ];
                         })->values()->toArray(),
                     ];
@@ -294,7 +294,7 @@ class AnalyticsCacheService
                     return [
                         'uuid' => $c->uuid,
                         'display_name' => $c->getDisplayName(),
-                        'total_spent' => round($c->total_spent, 2),
+                        'total_spent' => round((float) ($c->total_spent ?? 0), 2),
                         'total_orders' => $c->total_orders,
                         'rfm_score' => $c->rfm_score,
                         'segment' => $c->customer_segment,
@@ -342,7 +342,7 @@ class AnalyticsCacheService
                         'percentage' => $total > 0 ? round(($s->sessions / $total) * 100, 1) : 0,
                         'conversions' => $s->conversions,
                         'conversion_rate' => $s->sessions > 0 ? round(($s->conversions / $s->sessions) * 100, 2) : 0,
-                        'revenue' => round($s->revenue, 2),
+                        'revenue' => round((float) ($s->revenue ?? 0), 2),
                     ];
                 })->toArray(),
                 'cached_at' => now()->toIso8601String(),
@@ -386,7 +386,7 @@ class AnalyticsCacheService
                         'unique_visitors' => $s->unique_visitors,
                         'conversions' => $s->conversions,
                         'conversion_rate' => $s->sessions > 0 ? round(($s->conversions / $s->sessions) * 100, 2) : 0,
-                        'revenue' => round($s->revenue, 2),
+                        'revenue' => round((float) ($s->revenue ?? 0), 2),
                     ];
                 })->toArray(),
                 'cached_at' => now()->toIso8601String(),
@@ -453,7 +453,7 @@ class AnalyticsCacheService
         $totalWeight += 25;
 
         // Monetary score (20% weight) - based on total spent
-        $monetaryScore = min(100, ($customer->total_spent / 100) * 10);
+        $monetaryScore = min(100, ((float) ($customer->total_spent ?? 0) / 100) * 10);
         $breakdown['monetary'] = ['score' => round($monetaryScore), 'weight' => 20];
         $weightedScore += $monetaryScore * 0.2;
         $totalWeight += 20;
