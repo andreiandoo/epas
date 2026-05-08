@@ -83,8 +83,8 @@ class CouponCodeResource extends Resource
                                         ->withoutTrashed();
                                 },
                             )
-                            ->formatStateUsing(fn ($state) => strtoupper($state))
-                            ->dehydrateStateUsing(fn ($state) => strtoupper($state)),
+                            ->formatStateUsing(fn ($state) => strtoupper((string) $state))
+                            ->dehydrateStateUsing(fn ($state) => strtoupper((string) $state)),
 
                         Forms\Components\Select::make('campaign_id')
                             ->label('Campaign')

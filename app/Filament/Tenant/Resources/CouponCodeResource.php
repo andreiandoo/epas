@@ -73,8 +73,8 @@ class CouponCodeResource extends Resource
                             ->required()
                             ->maxLength(50)
                             ->unique(ignoreRecord: true)
-                            ->formatStateUsing(fn ($state) => strtoupper($state))
-                            ->dehydrateStateUsing(fn ($state) => strtoupper($state)),
+                            ->formatStateUsing(fn ($state) => strtoupper((string) $state))
+                            ->dehydrateStateUsing(fn ($state) => strtoupper((string) $state)),
 
                         Forms\Components\Select::make('campaign_id')
                             ->label('Campaign')
