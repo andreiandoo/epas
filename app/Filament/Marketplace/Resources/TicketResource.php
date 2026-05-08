@@ -57,6 +57,9 @@ class TicketResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->reorderableColumns()
+            ->filtersLayout(\Filament\Tables\Enums\FiltersLayout::AboveContentCollapsible)
+            ->filtersFormColumns(2)
             ->columns([
                 Tables\Columns\TextColumn::make('code')
                     ->label('Cod Bilet')
