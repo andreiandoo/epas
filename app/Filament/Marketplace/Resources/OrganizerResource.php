@@ -535,7 +535,7 @@ class OrganizerResource extends Resource
                                 ->live()
                                 ->columnSpanFull(),
 
-                            Forms\Components\Group::make([
+                            SC\Group::make([
                                 Forms\Components\TextInput::make('secondary_company_name')
                                     ->label('Denumire societate')
                                     ->maxLength(255)
@@ -578,7 +578,7 @@ class OrganizerResource extends Resource
                                 ->columnSpanFull(),
 
                             // Numerotare facturi separată
-                            Forms\Components\Group::make([
+                            SC\Group::make([
                                 Forms\Components\TextInput::make('primary_invoice_series')
                                     ->label('Serie facturi — societate principală')
                                     ->maxLength(16)
