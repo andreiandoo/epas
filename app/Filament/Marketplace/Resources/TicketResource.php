@@ -181,10 +181,10 @@ class TicketResource extends Resource
                     ->label('Loc')
                     ->toggleable(),
                 Tables\Columns\TextColumn::make('created_at')
-                    ->label('Data')
+                    ->label('Data achiziție')
                     ->dateTime('d M Y H:i')
                     ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    ->toggleable(),
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('status')
@@ -230,6 +230,34 @@ class TicketResource extends Resource
                               ->orWhereJsonContains('meta->is_invitation', false);
                         }),
                     ),
+                Tables\Filters\Filter::make('purchase_period')
+                    ->label('Perioadă achiziție')
+                    ->form([
+                        \Filament\Forms\Components\DatePicker::make('from')
+                            ->label('De la')
+                            ->native(false)
+                            ->displayFormat('d M Y'),
+                        \Filament\Forms\Components\DatePicker::make('to')
+                            ->label('Până la')
+                            ->native(false)
+                            ->displayFormat('d M Y'),
+                    ])
+                    ->columns(2)
+                    ->query(function (Builder $query, array $data): Builder {
+                        return $query
+                            ->when($data['from'] ?? null, fn ($q, $date) => $q->whereDate('tickets.created_at', '>=', $date))
+                            ->when($data['to'] ?? null, fn ($q, $date) => $q->whereDate('tickets.created_at', '<=', $date));
+                    })
+                    ->indicateUsing(function (array $data): array {
+                        $indicators = [];
+                        if ($from = $data['from'] ?? null) {
+                            $indicators['from'] = 'De la: ' . \Carbon\Carbon::parse($from)->format('d M Y');
+                        }
+                        if ($to = $data['to'] ?? null) {
+                            $indicators['to'] = 'Până la: ' . \Carbon\Carbon::parse($to)->format('d M Y');
+                        }
+                        return $indicators;
+                    }),
             ])
             ->bulkActions([
                 \Filament\Actions\BulkActionGroup::make([
