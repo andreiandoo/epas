@@ -132,7 +132,8 @@ trait IsLeisureVenue
 
     /**
      * Calculate effective price for a ticket type on a given date.
-     * Accepts any ticket type with a numeric `price` attribute.
+     * Accepts both TicketType (cu accessor `price` care returneaza sale price)
+     * si MarketplaceTicketType (cu `price` ca decimal column).
      */
     public function getEffectivePrice($ticketType, string $date, ?float $dateOverride = null): float
     {
@@ -140,7 +141,18 @@ trait IsLeisureVenue
             return $dateOverride;
         }
 
-        $basePrice = (float) ($ticketType->price ?? 0);
+        // Resolva pretul de baza: TicketType are accessor `price` care da sale price (poate 0),
+        // dar pretul real e in price_max (accessor pe price_cents) sau direct in price_cents.
+        // MarketplaceTicketType are direct `price` ca decimal column.
+        $basePrice = 0.0;
+        if (!empty($ticketType->price_max)) {
+            $basePrice = (float) $ticketType->price_max;
+        } elseif (isset($ticketType->price_cents) && $ticketType->price_cents > 0) {
+            $basePrice = $ticketType->price_cents / 100;
+        } elseif (!empty($ticketType->price)) {
+            $basePrice = (float) $ticketType->price;
+        }
+
         $config = $this->venue_config ?? [];
         $pricingRules = $config['pricing_rules'] ?? [];
 
