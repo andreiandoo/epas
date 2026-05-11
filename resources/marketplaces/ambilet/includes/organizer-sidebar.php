@@ -33,30 +33,58 @@ $currentPage = $currentPage ?? getCurrentPage();
             <svg class="<?= $currentPage !== 'dashboard' ? 'text-muted' : 'text-white' ?> w-5 h-5 group-hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
             Dashboard
         </a>
-        <a href="/organizator/events" class="sidebar-link <?= $currentPage === 'events' ? 'active' : '' ?> flex items-center gap-3 px-4 py-3 m-2 rounded-xl text-sm font-medium group <?= $currentPage !== 'events' ? 'text-white' : '' ?>">
+        <!-- Linkuri pentru organizator STANDARD (hidden cand orgType=leisure) -->
+        <a data-org-show="standard" href="/organizator/events" class="sidebar-link <?= $currentPage === 'events' ? 'active' : '' ?> flex items-center gap-3 px-4 py-3 m-2 rounded-xl text-sm font-medium group <?= $currentPage !== 'events' ? 'text-white' : '' ?>">
             <svg class="<?= $currentPage !== 'events' ? 'text-muted' : 'text-white' ?> w-5 h-5 group-hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
             Evenimente
             <span id="nav-events-count" class="ml-auto px-2 py-0.5 bg-white text-primary text-xs font-bold rounded-full">0</span>
         </a>
-        <a href="/organizator/participanti" class="sidebar-link <?= $currentPage === 'participants' ? 'active' : '' ?> flex items-center gap-3 px-4 py-3 m-2 rounded-xl text-sm font-medium group <?= $currentPage !== 'participants' ? 'text-white' : '' ?>">
+        <a data-org-show="standard" href="/organizator/participanti" class="sidebar-link <?= $currentPage === 'participants' ? 'active' : '' ?> flex items-center gap-3 px-4 py-3 m-2 rounded-xl text-sm font-medium group <?= $currentPage !== 'participants' ? 'text-white' : '' ?>">
             <svg class="<?= $currentPage !== 'participants' ? 'text-muted' : 'text-white' ?> w-5 h-5 group-hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
             Participanți
         </a>
-        <a href="/organizator/vanzari" class="sidebar-link <?= $currentPage === 'sales' ? 'active' : '' ?> flex items-center gap-3 px-4 py-3 m-2 rounded-xl text-sm font-medium group <?= $currentPage !== 'sales' ? 'text-white' : '' ?>">
+        <a data-org-show="standard" href="/organizator/vanzari" class="sidebar-link <?= $currentPage === 'sales' ? 'active' : '' ?> flex items-center gap-3 px-4 py-3 m-2 rounded-xl text-sm font-medium group <?= $currentPage !== 'sales' ? 'text-white' : '' ?>">
             <svg class="<?= $currentPage !== 'sales' ? 'text-muted' : 'text-white' ?> w-5 h-5 group-hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
             Vânzări
+        </a>
+
+        <!-- Linkuri pentru organizator LEISURE (hidden cand orgType=standard) -->
+        <a data-org-show="leisure" href="/organizator/leisure-event" style="display:none" class="sidebar-link <?= $currentPage === 'leisure_event' ? 'active' : '' ?> items-center gap-3 px-4 py-3 m-2 rounded-xl text-sm font-medium group text-white">
+            <svg class="text-muted w-5 h-5 group-hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3"/></svg>
+            Eveniment
+        </a>
+        <a data-org-show="leisure" href="/organizator/leisure-dashboard" style="display:none" class="sidebar-link <?= $currentPage === 'leisure_dashboard' ? 'active' : '' ?> items-center gap-3 px-4 py-3 m-2 rounded-xl text-sm font-medium group text-white">
+            <svg class="text-muted w-5 h-5 group-hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+            Dashboard live
+            <span class="ml-auto w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+        </a>
+        <a data-org-show="leisure" href="/organizator/leisure-participants" style="display:none" class="sidebar-link <?= $currentPage === 'leisure_participants' ? 'active' : '' ?> items-center gap-3 px-4 py-3 m-2 rounded-xl text-sm font-medium group text-white">
+            <svg class="text-muted w-5 h-5 group-hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857"/></svg>
+            Participanți
+        </a>
+        <a data-org-show="leisure" href="/organizator/leisure-sales" style="display:none" class="sidebar-link <?= $currentPage === 'leisure_sales' ? 'active' : '' ?> items-center gap-3 px-4 py-3 m-2 rounded-xl text-sm font-medium group text-white">
+            <svg class="text-muted w-5 h-5 group-hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+            Vânzări
+        </a>
+        <a data-org-show="leisure" href="/organizator/leisure-pos" style="display:none" class="sidebar-link <?= $currentPage === 'leisure_pos' ? 'active' : '' ?> items-center gap-3 px-4 py-3 m-2 rounded-xl text-sm font-medium group text-white">
+            <svg class="text-muted w-5 h-5 group-hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+            Emite bilete (POS)
+        </a>
+        <a data-org-show="leisure" href="/organizator/leisure-team" style="display:none" class="sidebar-link <?= $currentPage === 'leisure_team' ? 'active' : '' ?> items-center gap-3 px-4 py-3 m-2 rounded-xl text-sm font-medium group text-white">
+            <svg class="text-muted w-5 h-5 group-hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"/></svg>
+            Echipă & schimburi
         </a>
         <a href="/organizator/reports" class=" sidebar-link <?= $currentPage === 'reports' ? 'active' : '' ?> hidden items-center gap-3 px-4 py-3 m-2 rounded-xl text-sm font-medium group <?= $currentPage !== 'reports' ? 'text-white' : '' ?>">
             <svg class="<?= $currentPage !== 'reports' ? 'text-muted' : 'text-white' ?> w-5 h-5 group-hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
             Rapoarte
         </a>
-        <a href="/organizator/documente" class="sidebar-link <?= $currentPage === 'documents' ? 'active' : '' ?> flex items-center gap-3 px-4 py-3 m-2 rounded-xl text-sm font-medium group <?= $currentPage !== 'documents' ? 'text-white' : '' ?>">
+        <a data-org-show="standard" href="/organizator/documente" class="sidebar-link <?= $currentPage === 'documents' ? 'active' : '' ?> flex items-center gap-3 px-4 py-3 m-2 rounded-xl text-sm font-medium group <?= $currentPage !== 'documents' ? 'text-white' : '' ?>">
             <svg class="<?= $currentPage !== 'documents' ? 'text-muted' : 'text-white' ?> w-5 h-5 group-hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
             Documente
         </a>
-        <a id="nav-leisure-link" href="/organizator/leisure" style="display:none" class="sidebar-link <?= $currentPage === 'leisure' ? 'active' : '' ?> items-center gap-3 px-4 py-3 m-2 rounded-xl text-sm font-medium group <?= $currentPage !== 'leisure' ? 'text-white' : '' ?>">
-            <svg class="<?= $currentPage !== 'leisure' ? 'text-muted' : 'text-white' ?> w-5 h-5 group-hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10m14-10v10M9 21h6m-6 0a2 2 0 01-2-2v-4a2 2 0 012-2h6a2 2 0 012 2v4a2 2 0 01-2 2"/></svg>
-            Locație de agrement
+        <a data-org-show="leisure" id="nav-leisure-link" href="/organizator/leisure" style="display:none" class="sidebar-link <?= $currentPage === 'leisure' ? 'active' : '' ?> items-center gap-3 px-4 py-3 m-2 rounded-xl text-sm font-medium group text-white">
+            <svg class="text-muted w-5 h-5 group-hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+            Conținut pagină
         </a>
 
         <div class="pt-4 mt-4 border-t border-slate-700">
@@ -160,8 +188,27 @@ window.addEventListener('load', async function() {
             }
         }
 
-        // Load organizer info for sidebar
-        const orgData = AmbiletAuth.getOrganizerData?.() || JSON.parse(localStorage.getItem('ambilet_organizer_data') || '{}');
+        // Fresh fetch /organizer/me to get latest organizer_type (LocalStorage can be stale)
+        let orgData = {};
+        try {
+            const meResp = await AmbiletAPI.get('/organizer/me');
+            orgData = (meResp.data && meResp.data.organizer) || meResp.organizer || {};
+            // Cache pentru alte pagini
+            if (orgData && orgData.id) {
+                localStorage.setItem('ambilet_organizer_data', JSON.stringify(orgData));
+            }
+        } catch (e) {
+            orgData = AmbiletAuth.getOrganizerData?.() || JSON.parse(localStorage.getItem('ambilet_organizer_data') || '{}');
+        }
+
+        // Apply org type — toggle leisure vs standard sidebar links
+        const orgType = (orgData && orgData.organizer_type) === 'leisure' ? 'leisure' : 'standard';
+        document.body.setAttribute('data-org-type', orgType);
+        document.querySelectorAll('[data-org-show]').forEach(el => {
+            const showFor = el.getAttribute('data-org-show');
+            el.style.display = (showFor === orgType) ? 'flex' : 'none';
+        });
+
         if (orgData) {
             const orgName = document.getElementById('sidebar-org-name');
             const orgInitials = document.getElementById('sidebar-org-initials');
@@ -175,6 +222,8 @@ window.addEventListener('load', async function() {
             }
             if (orgPlan && orgData.plan_name) {
                 orgPlan.textContent = orgData.plan_name;
+            } else if (orgPlan && orgType === 'leisure') {
+                orgPlan.textContent = 'Leisure venue';
             }
         }
     } catch (error) {

@@ -41,7 +41,8 @@ class AuthController extends BaseController
             // Organizer type
             'person_type' => 'nullable|in:pj,pf',
             'work_mode' => 'nullable|in:exclusive,non_exclusive',
-            'organizer_type' => 'nullable|in:agency,promoter,venue,artist,ngo,other',
+            'organizer_type' => 'nullable|in:agency,promoter,venue,artist,ngo,leisure,other',
+            'leisure_template_variant' => 'nullable|in:reserve,aquapark,castle,adventure,camping',
 
             // Company info (for PJ)
             'company_name' => 'nullable|string|max:255',
@@ -1129,6 +1130,7 @@ class AuthController extends BaseController
             'person_type' => $organizer->person_type,
             'work_mode' => $organizer->work_mode,
             'organizer_type' => $organizer->organizer_type,
+            'leisure_template_variant' => $organizer->leisure_template_variant,
 
             // Company info
             'company_name' => $organizer->company_name,

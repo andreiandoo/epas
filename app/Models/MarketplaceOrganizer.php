@@ -28,6 +28,7 @@ class MarketplaceOrganizer extends Authenticatable
         'person_type',
         'work_mode',
         'organizer_type',
+        'leisure_template_variant',
 
         // Company details
         'company_name',

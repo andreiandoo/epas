@@ -234,9 +234,26 @@ class OrganizerResource extends Resource
                                     'venue' => 'Venue / Hall',
                                     'artist' => 'Artist / Manager',
                                     'ngo' => 'NGO / Foundation',
+                                    'leisure' => '🏞️ Leisure Venue (rezervație, aquapark, castel, parc aventură, camping)',
                                     'other' => 'Other',
                                 ])
+                                ->live()
+                                ->helperText('Pentru "Leisure Venue" se aplică un panou self-service custom (dashboard live, POS, schimburi echipă, raportare detaliată).')
                                 ->native(false),
+                            Forms\Components\Select::make('leisure_template_variant')
+                                ->label('Template pagină publică (variant)')
+                                ->options([
+                                    'reserve'   => '🌲 Rezervație naturală / parc (Sf. Ana style)',
+                                    'aquapark'  => '💦 Aquapark / Ștrand',
+                                    'castle'    => '🏰 Castel / Muzeu',
+                                    'adventure' => '🧗 Parc aventură / Karting',
+                                    'camping'   => '🏕️ Camping standalone',
+                                ])
+                                ->placeholder('Lasă gol pentru template default (rezervație)')
+                                ->helperText('Determină ce variantă de layout/temă vizuală se folosește pe pagina publică. Va fi extins în viitor (vezi LEISURE_TEMPLATES_PLAN.md).')
+                                ->native(false)
+                                ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => $get('organizer_type') === 'leisure')
+                                ->columnSpan(3),
                         ])
                         ->columns(3),
 
