@@ -630,15 +630,22 @@ async function exportReport() {
     try {
         AmbiletNotifications.info('Se genereaza raportul PDF...');
 
-        // Get auth token
-        const authToken = localStorage.getItem('organizer_token');
+        // Use the canonical AmbiletAuth helper — localStorage key is
+        // 'ambilet_organizer_token', not 'organizer_token'. The old code
+        // read the wrong key, got null, and tripped the early-return that
+        // showed "Sesiune expirata" immediately after the toast.
+        const authToken = (typeof AmbiletAuth !== 'undefined' && AmbiletAuth.getToken)
+            ? AmbiletAuth.getToken()
+            : null;
         if (!authToken) {
             AmbiletNotifications.error('Sesiune expirata. Te rugam sa te autentifici din nou.');
             return;
         }
 
-        // Fetch PDF with authentication
-        const response = await fetch(`/api/marketplace-client/organizer/events/${eventId}/report/export`, {
+        // Go through proxy.php like every other API call from the
+        // marketplace; direct hits to /api/marketplace-client/... rely on
+        // request rewriting that isn't in place on ambilet.ro.
+        const response = await fetch(`/api/proxy.php?action=organizer.event.report.export&event_id=${encodeURIComponent(eventId)}`, {
             method: 'GET',
             headers: {
                 'Authorization': `Bearer ${authToken}`,

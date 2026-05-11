@@ -421,7 +421,7 @@ require_once __DIR__ . '/includes/head.php';
                             <div class="flex items-start gap-4">
                                 <div class="w-12 h-12 lg:w-14 lg:h-14 rounded-2xl flex items-center justify-center flex-shrink-0 transition-colors"
                                      :class="ticket.qty > 0 ? 'bg-forest-600 text-white' : 'bg-forest-50 text-forest-700'">
-                                    <span class="text-xl" x-text="ticket.icon || '🎟️'"></span>
+                                    <span class="text-2xl" x-text="ticket.icon || '🎟️'"></span>
                                 </div>
                                 <div class="flex-1 min-w-0">
                                     <div class="flex items-center gap-2 flex-wrap mb-1">
@@ -429,6 +429,15 @@ require_once __DIR__ . '/includes/head.php';
                                         <span x-show="ticket.is_parking" class="lv-badge bg-lake-100 text-lake-800 text-xs">🅿️ Parcare inclusă</span>
                                     </div>
                                     <p x-show="ticket.description" class="text-sm text-forest-700/70 mb-3" x-text="ticket.description"></p>
+                                    <!-- Includes — pillule beneficii -->
+                                    <div x-show="ticket.includes && ticket.includes.length > 0" class="flex flex-wrap gap-1.5 mt-2">
+                                        <template x-for="inc in ticket.includes" :key="inc">
+                                            <span class="inline-flex items-center gap-1 text-xs px-2 py-1 bg-forest-50 text-forest-800 rounded-md">
+                                                <svg class="w-3 h-3 text-forest-500" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                                                <span x-text="inc"></span>
+                                            </span>
+                                        </template>
+                                    </div>
                                 </div>
                             </div>
                             <div class="flex items-center justify-between pt-4 mt-4 border-t border-forest-100">
@@ -437,7 +446,8 @@ require_once __DIR__ . '/includes/head.php';
                                         <span x-text="ticket.effective_price"></span>
                                         <span class="text-sm font-medium text-forest-700/60" x-text="ticket.currency || 'RON'"></span>
                                     </p>
-                                    <p x-show="ticket.requires_vehicle_info" class="text-xs text-forest-700/60 mt-1">Necesită nr. înmatriculare</p>
+                                    <p x-show="ticket.unit_label" class="text-xs text-forest-700/60 mt-1" x-text="ticket.unit_label"></p>
+                                    <p x-show="!ticket.unit_label && ticket.requires_vehicle_info" class="text-xs text-forest-700/60 mt-1">Necesită nr. înmatriculare</p>
                                 </div>
                                 <div class="flex items-center gap-3">
                                     <button @click="ticket.qty = Math.max(0, ticket.qty - 1)" :disabled="ticket.qty === 0" class="lv-qty-btn">−</button>
@@ -449,21 +459,37 @@ require_once __DIR__ . '/includes/head.php';
                     </template>
                 </div>
 
-                <!-- Upsell CTA -->
+                <!-- Upsell CTA (apare după ce e cel puțin un bilet în coș + există servicii disponibile) -->
                 <div x-show="cartCount > 0 && !upsellDismissed && services.length > 0" x-transition class="mt-6">
                     <div class="bg-gradient-to-br from-lake-700 via-forest-700 to-forest-800 rounded-3xl p-6 lg:p-8 text-white relative overflow-hidden">
                         <div class="absolute -top-12 -right-12 w-48 h-48 rounded-full bg-lake-400/20 blur-3xl"></div>
+                        <div class="absolute -bottom-12 -left-12 w-48 h-48 rounded-full bg-forest-400/20 blur-3xl"></div>
                         <div class="relative flex flex-col lg:flex-row lg:items-center gap-5">
                             <div class="flex-1">
                                 <p class="text-lake-200 text-xs uppercase tracking-[0.2em] font-bold mb-2">✨ Recomandate pentru tine</p>
                                 <h3 class="font-display text-xl lg:text-2xl font-bold mb-2">Fă vizita o experiență completă</h3>
-                                <p class="text-white/80 text-sm">Adaugă servicii suplimentare pe care le poți rezerva acum.</p>
+                                <p class="text-white/80 text-sm">Alege ce te tentează și economisește timp pe loc.</p>
                             </div>
                             <div class="flex gap-2 flex-shrink-0">
-                                <button @click="scrollToServices()" class="lv-btn bg-white text-forest-800 hover:bg-lake-50">Vezi serviciile →</button>
+                                <button @click="scrollToServices()" class="lv-btn bg-white text-forest-800 hover:bg-lake-50">Vezi toate →</button>
                                 <button @click="upsellDismissed = true" class="p-2 text-white/60 hover:text-white" aria-label="Închide">
                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
                                 </button>
+                            </div>
+                        </div>
+                        <!-- Quick-add chips pentru top 3 servicii -->
+                        <div x-show="topUpsellServices.length > 0" class="mt-5 pt-5 border-t border-white/15 relative">
+                            <div class="flex flex-wrap gap-2">
+                                <template x-for="service in topUpsellServices" :key="service.id">
+                                    <button @click="incrementService(service)"
+                                            :disabled="service.requires_access_ticket && !hasAccessInCart"
+                                            class="inline-flex items-center gap-2 px-3 py-2 bg-white/10 backdrop-blur hover:bg-white/20 disabled:opacity-40 rounded-xl text-sm font-medium transition-colors group">
+                                        <span class="text-lg" x-text="serviceEmoji(service.service_category)"></span>
+                                        <span x-text="service.name"></span>
+                                        <span class="text-lake-200 font-bold">+<span x-text="service.effective_price"></span> <span class="text-xs" x-text="service.currency || 'RON'"></span></span>
+                                        <svg class="w-4 h-4 text-white/60 group-hover:text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
+                                    </button>
+                                </template>
                             </div>
                         </div>
                     </div>
@@ -507,12 +533,22 @@ require_once __DIR__ . '/includes/head.php';
                             <span x-show="service.service_duration_minutes" class="lv-badge bg-blue-50 text-blue-700 text-[10px]" x-text="formatDuration(service.service_duration_minutes)"></span>
                             <span x-show="service.requires_access_ticket" class="lv-badge bg-amber-50 text-amber-700 text-[10px]">Necesită bilet acces</span>
                         </div>
+                        <!-- Includes pe servicii -->
+                        <div x-show="service.includes && service.includes.length > 0" class="flex flex-wrap gap-1.5 mb-3">
+                            <template x-for="inc in service.includes" :key="inc">
+                                <span class="inline-flex items-center gap-1 text-xs px-2 py-1 bg-forest-50 text-forest-800 rounded-md">
+                                    <svg class="w-3 h-3 text-forest-500" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                                    <span x-text="inc"></span>
+                                </span>
+                            </template>
+                        </div>
                         <div class="flex items-end justify-between pt-3 border-t border-forest-100">
                             <div>
                                 <p class="font-display text-2xl font-bold text-ink">
                                     <span x-text="service.effective_price"></span>
                                     <span class="text-sm font-medium text-forest-700/60" x-text="service.currency || 'RON'"></span>
                                 </p>
+                                <p x-show="service.unit_label" class="text-xs text-forest-700/60" x-text="service.unit_label"></p>
                             </div>
                             <div class="flex items-center gap-2">
                                 <button @click="service.qty = Math.max(0, service.qty - 1)" :disabled="service.qty === 0" class="lv-qty-btn">−</button>
@@ -1025,6 +1061,10 @@ function reservationPage() {
         get canCheckout() {
             // Toate serviciile cu requires_access_ticket trebuie sa aiba bilet acces in cos
             return !this.services.some(s => s.requires_access_ticket && (this.qtyById[s.id] || 0) > 0 && !this.hasAccessInCart);
+        },
+        get topUpsellServices() {
+            // Primele 3 servicii cu qty=0 (utilizatorul nu le-a adaugat inca)
+            return this.services.filter(s => s.qty === 0).slice(0, 3);
         },
 
         incrementTicket(ticket) {
