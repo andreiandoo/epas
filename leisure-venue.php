@@ -1148,27 +1148,47 @@ function reservationPage() {
         // ========== Cart submit ==========
         checkout() {
             if (!this.selectedDate || this.cartCount === 0 || !this.canCheckout) return;
-            // Add to AmbiletCart si redirect la /cos
-            if (typeof AmbiletCart !== 'undefined' && AmbiletCart.addItem) {
-                this.cartItems.forEach(t => {
-                    AmbiletCart.addItem(
-                        { id: EVENT.id, title: EVENT.name, slug: EVENT.slug, image: EVENT.image, visit_date: this.selectedDate },
-                        {
-                            id: t.id,
-                            name: t.name,
-                            price: parseFloat(t.effective_price),
-                            min_per_order: t.min_per_order,
-                            max_per_order: t.max_per_order,
-                            is_parking: t.is_parking,
-                            requires_vehicle_info: t.requires_vehicle_info,
-                            service_category: t.service_category,
-                            issuing_company: t.issuing_company,
-                        },
-                        t.qty,
-                        { visit_date: this.selectedDate }
-                    );
-                });
+            if (typeof AmbiletCart === 'undefined' || !AmbiletCart.addItem) {
+                console.error('AmbiletCart not available');
+                return;
             }
+
+            // Build plain primitives — Alpine reactive proxies se serializeaza
+            // ca [object Object] si toate operatiile aritmetice dau NaN.
+            // Aici fortam Number()/String() pentru fiecare camp.
+            const eventPayload = {
+                id: Number(EVENT.id) || 0,
+                title: String(EVENT.name || ''),
+                slug: String(EVENT.slug || ''),
+                image: String(EVENT.image || ''),
+                visit_date: String(this.selectedDate),
+            };
+
+            this.cartItems.forEach(t => {
+                const ticketPayload = {
+                    id: Number(t.id) || 0,
+                    name: String(t.name || ''),
+                    price: Number(parseFloat(t.effective_price)) || 0,
+                    originalPrice: Number(parseFloat(t.base_price)) || null,
+                    min_per_order: Number(t.min_per_order) || 1,
+                    max_per_order: Number(t.max_per_order) || 10,
+                    is_parking: Boolean(t.is_parking),
+                    requires_vehicle_info: Boolean(t.requires_vehicle_info),
+                    service_category: String(t.service_category || 'access'),
+                    issuing_company: String(t.issuing_company || 'primary'),
+                    image_url: t.image_url ? String(t.image_url) : null,
+                };
+                const qty = parseInt(t.qty, 10) || 0;
+                if (qty <= 0) return;
+
+                AmbiletCart.addItem(
+                    eventPayload,
+                    ticketPayload,
+                    qty,
+                    { visit_date: String(this.selectedDate) }
+                );
+            });
+
             window.location.href = '/cos';
         },
 
