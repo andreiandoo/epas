@@ -466,6 +466,123 @@ class LeisureController extends BaseController
         ]);
     }
 
+    /**
+     * GET /marketplace-client/organizer/events/{event}/leisure/dashboard/live
+     *
+     * Snapshot real-time: vândut azi, scanat azi, ocupare curentă, venit azi,
+     * activitate pe porți (ultima oră, grupată pe bucket-uri de 5 min)
+     * și stream cu ultimele 20 activități (vânzări + scanări).
+     */
+    public function dashboardLive(Request $request, int $event): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+        $marketplace = $organizer->marketplaceClient;
+
+        $eventModel = Event::query()
+            ->where('id', $event)
+            ->where('marketplace_client_id', $marketplace->id)
+            ->first();
+
+        if (!$eventModel) {
+            return $this->error('Event not found', 404);
+        }
+
+        $todayStart = Carbon::today()->startOfDay();
+        $todayEnd = Carbon::today()->endOfDay();
+        $hourAgo = Carbon::now()->subHour();
+
+        // Stats azi
+        $ordersToday = Order::query()
+            ->where('event_id', $eventModel->id)
+            ->whereIn('status', ['paid', 'completed'])
+            ->whereBetween('paid_at', [$todayStart, $todayEnd])
+            ->get(['id', 'total', 'currency', 'paid_at', 'customer_name']);
+
+        $todayRevenue = round((float) $ordersToday->sum('total'), 2);
+        $todayOrders = $ordersToday->count();
+
+        $todaySoldTickets = (int) \App\Models\Ticket::query()
+            ->whereHas('order', fn ($q) => $q
+                ->where('event_id', $eventModel->id)
+                ->whereIn('status', ['paid', 'completed'])
+                ->whereBetween('paid_at', [$todayStart, $todayEnd]))
+            ->whereNotIn('status', ['cancelled', 'refunded'])
+            ->count();
+
+        $todayCheckedIn = (int) \App\Models\Ticket::query()
+            ->whereHas('order', fn ($q) => $q->where('event_id', $eventModel->id))
+            ->whereBetween('checked_in_at', [$todayStart, $todayEnd])
+            ->count();
+
+        $occupancy = max(0, $todayCheckedIn);
+
+        // Activitate ultima oră — check-ins grupate pe bucket 5 minute
+        $recentScans = \App\Models\Ticket::query()
+            ->whereHas('order', fn ($q) => $q->where('event_id', $eventModel->id))
+            ->where('checked_in_at', '>=', $hourAgo)
+            ->with(['ticketType:id,name,service_category'])
+            ->orderByDesc('checked_in_at')
+            ->limit(50)
+            ->get(['id', 'order_id', 'ticket_type_id', 'code', 'checked_in_at']);
+
+        $buckets = [];
+        foreach ($recentScans as $s) {
+            $ts = $s->checked_in_at;
+            if (!$ts) continue;
+            $bucketMinute = (int) floor($ts->minute / 5) * 5;
+            $key = $ts->copy()->minute($bucketMinute)->second(0)->format('H:i');
+            if (!isset($buckets[$key])) $buckets[$key] = ['time' => $key, 'count' => 0];
+            $buckets[$key]['count']++;
+        }
+        ksort($buckets);
+
+        // Stream — combinăm orders recente (vânzări) + check-ins recente
+        $recentOrders = Order::query()
+            ->where('event_id', $eventModel->id)
+            ->whereIn('status', ['paid', 'completed'])
+            ->where('paid_at', '>=', $hourAgo)
+            ->orderByDesc('paid_at')
+            ->limit(20)
+            ->get(['id', 'customer_name', 'total', 'currency', 'paid_at']);
+
+        $stream = [];
+        foreach ($recentOrders as $o) {
+            $stream[] = [
+                'type' => 'sale',
+                'at' => optional($o->paid_at)->toIso8601String(),
+                'ts' => optional($o->paid_at)->timestamp ?? 0,
+                'label' => 'Vânzare nouă',
+                'detail' => ($o->customer_name ?? 'Client') . ' · ' . number_format((float) $o->total, 2) . ' RON',
+                'order_id' => $o->id,
+            ];
+        }
+        foreach ($recentScans as $s) {
+            $stream[] = [
+                'type' => 'scan',
+                'at' => optional($s->checked_in_at)->toIso8601String(),
+                'ts' => optional($s->checked_in_at)->timestamp ?? 0,
+                'label' => 'Check-in',
+                'detail' => ($s->ticketType->name ?? 'Bilet') . ' · cod ' . ($s->code ?: '—'),
+                'ticket_id' => $s->id,
+            ];
+        }
+        usort($stream, fn ($a, $b) => ($b['ts'] ?? 0) <=> ($a['ts'] ?? 0));
+        $stream = array_slice($stream, 0, 20);
+
+        return $this->success([
+            'now' => Carbon::now()->toIso8601String(),
+            'stats' => [
+                'sold_today' => $todaySoldTickets,
+                'scanned_today' => $todayCheckedIn,
+                'occupancy' => $occupancy,
+                'revenue_today' => $todayRevenue,
+                'orders_today' => $todayOrders,
+            ],
+            'gates_activity' => array_values($buckets),
+            'stream' => $stream,
+        ]);
+    }
+
     protected function emptyBucket(): array
     {
         return [
