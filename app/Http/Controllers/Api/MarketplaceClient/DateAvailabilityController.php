@@ -149,6 +149,18 @@ class DateAvailabilityController extends BaseController
                 ], $slotTimes);
             }
 
+            // Image din meta (setat prin FileUpload pe meta.image in Filament).
+            // Storage::disk('public')->url() pentru URL absolut accesibil.
+            $imagePath = $tt->meta['image'] ?? null;
+            $imageUrl = null;
+            if ($imagePath) {
+                if (str_starts_with($imagePath, 'http')) {
+                    $imageUrl = $imagePath;
+                } else {
+                    $imageUrl = \Illuminate\Support\Facades\Storage::disk('public')->url($imagePath);
+                }
+            }
+
             $ttData = [
                 'id' => $tt->id,
                 'name' => $tt->name,
@@ -171,6 +183,7 @@ class DateAvailabilityController extends BaseController
                 'product_description' => $tt->product_description,
                 'usage_terms' => $tt->usage_terms,
                 'requires_access_ticket' => (bool) ($tt->requires_access_ticket ?? false),
+                'image_url' => $imageUrl,
             ];
 
             if ($hasTourSlots) {

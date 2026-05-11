@@ -171,7 +171,10 @@ class EventResource extends Resource
                             ]),
 
                         // FLAGS (section with background but no visible heading)
+                        // Pentru leisure_venue, ascundem aceste toggle-uri — nu au sens
+                        // pentru o locatie permanenta de agrement (nu "se anuleaza" sezonul).
                         SC\Section::make()
+                            ->visible(fn (SGet $get) => ($get('display_template') ?? 'standard') !== 'leisure_venue')
                             ->headerActions([])
                             ->schema([
                                 SC\Grid::make(5)->schema([
@@ -712,6 +715,7 @@ class EventResource extends Resource
                                 // ========== TAB 2: PROGRAM ==========
                                 SC\Tabs\Tab::make($t('Program', 'Schedule'))
                                     ->key('program')
+                                    ->visible(fn (SGet $get) => ($get('display_template') ?? 'standard') !== 'leisure_venue')
                                     ->icon('heroicon-o-calendar')
                                     ->lazy()
                                     ->schema([
@@ -1669,6 +1673,15 @@ class EventResource extends Resource
                                                     ->label($t('Badge-uri hero', 'Hero badges'))
                                                     ->placeholder($t('Adaugă badge cu Enter', 'Add badge with Enter'))
                                                     ->helperText($t('ex: 🌿 Sit Natura 2000, 🏔️ Altitudine 950m', 'Use emoji + text')),
+                                                Forms\Components\FileUpload::make('venue_config.hero_images')
+                                                    ->label($t('Imagini hero (drag & drop)', 'Hero images (drag & drop)'))
+                                                    ->image()
+                                                    ->multiple()
+                                                    ->reorderable()
+                                                    ->maxFiles(5)
+                                                    ->disk('public')
+                                                    ->directory(fn (?Event $record) => 'events/' . ($record?->id ?? 'tmp') . '/leisure')
+                                                    ->helperText($t('Prima imagine devine fundal hero. Recomandare: 1920×1080.', 'First image is hero background. Recommended: 1920×1080.')),
                                             ]),
 
                                         // ===== QUICK STATS BAR =====
@@ -1944,6 +1957,88 @@ class EventResource extends Resource
                                                     ->addActionLabel($t('Adaugă POI', 'Add POI'))
                                                     ->reorderable()
                                                     ->collapsible(),
+                                                Forms\Components\Repeater::make('venue_config.nearby_hotels')
+                                                    ->label($t('Hoteluri recomandate (pe harta de trasee)', 'Recommended hotels (on trail map)'))
+                                                    ->schema([
+                                                        SC\Grid::make(2)->schema([
+                                                            Forms\Components\TextInput::make('name')
+                                                                ->label($t('Nume hotel', 'Hotel name'))
+                                                                ->required(),
+                                                            Forms\Components\TextInput::make('subtitle')
+                                                                ->label($t('Subtitlu (stele/categorie)', 'Subtitle (stars/category)'))
+                                                                ->placeholder($t('ex: 4★ Băile Tușnad', 'e.g. 4★ Băile Tușnad')),
+                                                        ]),
+                                                        SC\Grid::make(3)->schema([
+                                                            Forms\Components\TextInput::make('lat')
+                                                                ->label('Lat')
+                                                                ->numeric()->step(0.000001),
+                                                            Forms\Components\TextInput::make('lng')
+                                                                ->label('Lng')
+                                                                ->numeric()->step(0.000001),
+                                                            Forms\Components\TextInput::make('url')
+                                                                ->label($t('URL (opțional)', 'URL (optional)'))
+                                                                ->placeholder('https://...'),
+                                                        ]),
+                                                    ])
+                                                    ->itemLabel(fn (array $state): ?string => $state['name'] ?? null)
+                                                    ->addActionLabel($t('Adaugă hotel', 'Add hotel'))
+                                                    ->reorderable()
+                                                    ->collapsible(),
+                                            ]),
+
+                                        // ===== GALERIE & VIDEO =====
+                                        SC\Section::make($t('Galerie & Video', 'Gallery & Video'))
+                                            ->description($t('Imagini și videoclipuri promoționale.', 'Promotional images and videos.'))
+                                            ->collapsed()
+                                            ->schema([
+                                                Forms\Components\FileUpload::make('venue_config.gallery')
+                                                    ->label($t('Galerie foto (drag & drop)', 'Gallery (drag & drop)'))
+                                                    ->image()
+                                                    ->multiple()
+                                                    ->reorderable()
+                                                    ->maxFiles(30)
+                                                    ->disk('public')
+                                                    ->directory(fn (?Event $record) => 'events/' . ($record?->id ?? 'tmp') . '/gallery')
+                                                    ->helperText($t('Ordonare prin drag & drop. Prima e cover pentru carusel.', 'Drag to reorder. First is gallery cover.')),
+                                                Forms\Components\Repeater::make('venue_config.videos')
+                                                    ->label($t('Videoclipuri', 'Videos'))
+                                                    ->schema([
+                                                        SC\Grid::make(2)->schema([
+                                                            Forms\Components\Select::make('type')
+                                                                ->label($t('Tip', 'Type'))
+                                                                ->options([
+                                                                    'youtube' => 'YouTube',
+                                                                    'vimeo' => 'Vimeo',
+                                                                    'mp4' => 'MP4 (self-hosted)',
+                                                                ])
+                                                                ->default('youtube')
+                                                                ->live()
+                                                                ->required(),
+                                                            Forms\Components\TextInput::make('title')
+                                                                ->label($t('Titlu', 'Title'))
+                                                                ->placeholder($t('ex: Vizită Tinov Mohoș', 'e.g. Tinov tour')),
+                                                        ]),
+                                                        Forms\Components\TextInput::make('url')
+                                                            ->label($t('URL video sau ID YouTube/Vimeo', 'Video URL or YouTube/Vimeo ID'))
+                                                            ->placeholder('https://www.youtube.com/watch?v=... sau dQw4w9WgXcQ')
+                                                            ->visible(fn (SGet $get) => $get('type') !== 'mp4'),
+                                                        Forms\Components\FileUpload::make('file')
+                                                            ->label($t('Fișier video MP4', 'MP4 video file'))
+                                                            ->acceptedFileTypes(['video/mp4'])
+                                                            ->disk('public')
+                                                            ->directory(fn (?Event $record) => 'events/' . ($record?->id ?? 'tmp') . '/videos')
+                                                            ->visible(fn (SGet $get) => $get('type') === 'mp4'),
+                                                        Forms\Components\FileUpload::make('poster')
+                                                            ->label($t('Thumbnail (opțional)', 'Thumbnail (optional)'))
+                                                            ->image()
+                                                            ->disk('public')
+                                                            ->directory(fn (?Event $record) => 'events/' . ($record?->id ?? 'tmp') . '/videos'),
+                                                    ])
+                                                    ->itemLabel(fn (array $state): ?string => $state['title'] ?? ($state['url'] ?? 'Video'))
+                                                    ->addActionLabel($t('Adaugă video', 'Add video'))
+                                                    ->reorderable()
+                                                    ->collapsible()
+                                                    ->collapsed(),
                                             ]),
 
                                         // ===== FAQ =====
@@ -2623,6 +2718,16 @@ class EventResource extends Resource
                                                             ->helperText($t('Activează dacă acest serviciu poate fi cumpărat doar împreună cu un bilet de acces pe aceeași zi.', 'Enable if this service can only be purchased with a valid access ticket for the same day.'))
                                                             ->columnSpan(1),
                                                     ]),
+
+                                                // ── Leisure Venue: imagine pentru card serviciu ──
+                                                Forms\Components\FileUpload::make('meta.image')
+                                                    ->label($t('Imagine card serviciu', 'Service card image'))
+                                                    ->image()
+                                                    ->disk('public')
+                                                    ->directory(fn (\Livewire\Component $livewire) => 'events/' . ($livewire->record?->id ?? 'tmp') . '/services')
+                                                    ->helperText($t('Imagine afișată în cardul de serviciu pe pagina publică (1:1 sau 4:3).', 'Image shown on service card on public page.'))
+                                                    ->visible(fn (SGet $get) => ($get('../../display_template') ?? 'standard') === 'leisure_venue')
+                                                    ->columnSpan(12),
 
                                                 // ── Leisure Venue: descriere produs (WYSIWYG) ──
                                                 Forms\Components\RichEditor::make('product_description')
@@ -3417,6 +3522,7 @@ class EventResource extends Resource
                                 // ========== TAB 7: GRUPARE ==========
                                 SC\Tabs\Tab::make($t('Grupare', 'Grouping'))
                                     ->key('turneu')
+                                    ->visible(fn (SGet $get) => ($get('display_template') ?? 'standard') !== 'leisure_venue')
                                     ->icon('heroicon-o-map-pin')
                                     ->lazy()
                                     ->schema([

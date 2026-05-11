@@ -61,8 +61,15 @@ $statsHighlights = $venueConfig['stats_highlights'] ?? [];
 // Trasee turistice
 $trails = $venueConfig['trails'] ?? [];
 
+// Galerie & video
+$galleryImages = $venueConfig['gallery'] ?? ($ev['gallery'] ?? []);
+$videos = $venueConfig['videos'] ?? [];
+
 // FAQs
 $faqs = $venueConfig['faqs'] ?? [];
+
+// Hoteluri din apropiere (markeri pe harta de trasee)
+$nearbyHotels = $venueConfig['nearby_hotels'] ?? [];
 
 // Floră & faună
 $flora = $venueConfig['flora'] ?? [];
@@ -187,6 +194,12 @@ require_once __DIR__ . '/includes/head.php';
         'hero_badges' => $heroBadges,
         'quick_stats' => $quickStats,
         'safety_warning' => $safetyWarning,
+        'gallery' => array_map(function ($img) {
+            if (str_starts_with($img, 'http')) return $img;
+            return STORAGE_URL . '/' . ltrim($img, '/');
+        }, $galleryImages),
+        'videos' => $videos,
+        'nearby_hotels' => $nearbyHotels,
         'is_preview' => !empty($_GET['preview']),
     ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
 </script>
@@ -478,12 +491,14 @@ require_once __DIR__ . '/includes/head.php';
                 <div class="group bg-fog rounded-2xl overflow-hidden border-2 transition-all"
                      :class="service.qty > 0 ? 'border-forest-500 shadow-md' : 'border-transparent hover:border-forest-200'">
                     <div class="aspect-[4/3] relative overflow-hidden flex items-center justify-center"
-                         :style="`background: ${categoryGradient(service.service_category)}`">
-                        <span class="absolute top-3 left-3 lv-badge bg-white/90 backdrop-blur text-forest-800 text-xs"
+                         :style="service.image_url ? '' : `background: ${categoryGradient(service.service_category)}`">
+                        <img x-show="service.image_url" :src="service.image_url" :alt="service.name" class="absolute inset-0 w-full h-full object-cover">
+                        <div x-show="service.image_url" class="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent"></div>
+                        <span class="absolute top-3 left-3 lv-badge bg-white/90 backdrop-blur text-forest-800 text-xs z-10"
                               x-text="categoryLabel(service.service_category)"></span>
                         <span x-show="service.issuing_company === 'secondary' && issuers.secondary"
-                              class="absolute top-3 right-3 lv-badge bg-amber-100 text-amber-800 text-[10px]">SECUNDARĂ</span>
-                        <span class="text-6xl opacity-80" x-text="serviceEmoji(service.service_category)"></span>
+                              class="absolute top-3 right-3 lv-badge bg-amber-100 text-amber-800 text-[10px] z-10">SECUNDARĂ</span>
+                        <span x-show="!service.image_url" class="text-6xl opacity-80" x-text="serviceEmoji(service.service_category)"></span>
                     </div>
                     <div class="p-5 bg-white">
                         <h3 class="font-display text-lg font-bold text-ink leading-tight mb-1" x-text="service.name"></h3>
@@ -721,14 +736,80 @@ require_once __DIR__ . '/includes/head.php';
             <div id="locationMap" class="rounded-2xl overflow-hidden" style="height: 480px;"></div>
         </div>
         <?php endif; ?>
-        <?php if ($directionsUrl): ?>
         <div class="flex flex-wrap items-center justify-center gap-3">
+            <?php if ($directionsUrl): ?>
             <a href="<?= htmlspecialchars($directionsUrl) ?>" target="_blank" rel="noopener" class="lv-btn lv-btn-primary">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/></svg>
                 Deschide în Google Maps
             </a>
+            <?php endif; ?>
+            <?php if ($contactPhone):
+                // WhatsApp click-to-chat — număr fără spații / + / paranteze
+                $waNumber = preg_replace('/[^0-9]/', '', $contactPhone);
+                $waMessage = rawurlencode('Salut! Sunt interesat de o vizită la ' . $eventTitle . '.');
+            ?>
+            <a href="https://wa.me/<?= $waNumber ?>?text=<?= $waMessage ?>" target="_blank" rel="noopener" class="lv-btn lv-btn-secondary">
+                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                Trimite pe WhatsApp
+            </a>
+            <?php endif; ?>
         </div>
-        <?php endif; ?>
+    </div>
+</section>
+<?php endif; ?>
+
+<!-- ============ GALERIE FOTO ============ -->
+<?php if (!empty($galleryImages)): ?>
+<section id="galerie" class="lv-scroll-mt py-16 lg:py-24 px-6 lg:px-12 bg-fog">
+    <div class="max-w-7xl mx-auto">
+        <div class="text-center mb-12">
+            <p class="text-forest-600 text-xs uppercase tracking-[0.3em] font-bold mb-3">Galerie</p>
+            <h2 class="font-display text-4xl lg:text-5xl font-bold text-ink">În imagini</h2>
+        </div>
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+            <template x-for="(img, i) in gallery" :key="i">
+                <a :href="img" target="_blank" rel="noopener"
+                   class="block rounded-xl overflow-hidden aspect-square group hover:opacity-90 transition"
+                   :class="i === 0 ? 'md:col-span-2 md:row-span-2 aspect-video md:aspect-square' : ''">
+                    <img :src="img" alt="" class="object-cover w-full h-full group-hover:scale-105 transition-transform duration-500" loading="lazy">
+                </a>
+            </template>
+        </div>
+    </div>
+</section>
+<?php endif; ?>
+
+<!-- ============ VIDEO ============ -->
+<?php if (!empty($videos)): ?>
+<section id="video" class="lv-scroll-mt py-16 lg:py-24 px-6 lg:px-12 bg-white">
+    <div class="max-w-5xl mx-auto">
+        <div class="text-center mb-12">
+            <p class="text-forest-600 text-xs uppercase tracking-[0.3em] font-bold mb-3">Video</p>
+            <h2 class="font-display text-4xl lg:text-5xl font-bold text-ink">Locul în mișcare</h2>
+        </div>
+        <div class="grid md:grid-cols-2 gap-6">
+            <template x-for="(v, i) in videos" :key="i">
+                <div class="bg-fog rounded-2xl overflow-hidden">
+                    <div class="aspect-video relative bg-forest-900">
+                        <!-- YouTube embed -->
+                        <template x-if="v.type === 'youtube'">
+                            <iframe :src="`https://www.youtube.com/embed/${extractYoutubeId(v.url)}`" class="absolute inset-0 w-full h-full" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                        </template>
+                        <template x-if="v.type === 'vimeo'">
+                            <iframe :src="`https://player.vimeo.com/video/${extractVimeoId(v.url)}`" class="absolute inset-0 w-full h-full" allow="autoplay; fullscreen" allowfullscreen></iframe>
+                        </template>
+                        <template x-if="v.type === 'mp4' && v.file">
+                            <video :poster="v.poster ? storageUrl(v.poster) : ''" controls class="absolute inset-0 w-full h-full object-cover">
+                                <source :src="storageUrl(v.file)" type="video/mp4">
+                            </video>
+                        </template>
+                    </div>
+                    <div class="p-4" x-show="v.title">
+                        <p class="font-display text-lg font-bold text-ink" x-text="v.title"></p>
+                    </div>
+                </div>
+            </template>
+        </div>
     </div>
 </section>
 <?php endif; ?>
@@ -823,6 +904,9 @@ function reservationPage() {
         qtyById: {},           // { ticketTypeId: qty }
         issuers: DATA.issuers || {},
         faqs: DATA.faqs || [],
+        gallery: DATA.gallery || [],
+        videos: DATA.videos || [],
+        nearbyHotels: DATA.nearby_hotels || [],
 
         init() {
             this.loadMonth(this.monthKey(this.currentMonth));
@@ -1004,6 +1088,23 @@ function reservationPage() {
             if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
         },
 
+        // Video helpers
+        extractYoutubeId(url) {
+            if (!url) return '';
+            const m = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|v\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/);
+            return m ? m[1] : url.trim();
+        },
+        extractVimeoId(url) {
+            if (!url) return '';
+            const m = url.match(/vimeo\.com\/(?:video\/)?(\d+)/);
+            return m ? m[1] : url.trim();
+        },
+        storageUrl(path) {
+            if (!path) return '';
+            if (path.startsWith('http')) return path;
+            return '<?= STORAGE_URL ?>/' + path.replace(/^\//, '');
+        },
+
         // ========== Cart submit ==========
         checkout() {
             if (!this.selectedDate || this.cartCount === 0 || !this.canCheckout) return;
@@ -1037,18 +1138,49 @@ function reservationPage() {
             const cfg = DATA.map_config || {};
             const center = cfg.center;
             const pois = cfg.pois || [];
+            const trails = DATA.trails || [];
+            const hotels = DATA.nearby_hotels || [];
             if (!center || !document.getElementById('trailMap')) return;
-            const map = L.map('trailMap').setView(center, cfg.zoom || 13);
+            const lat = center.lat || center[0];
+            const lng = center.lng || center[1];
+            const map = L.map('trailMap').setView([lat, lng], cfg.zoom || 13);
             L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
                 attribution: '&copy; OpenStreetMap, &copy; OpenTopoMap',
                 maxZoom: 17,
             }).addTo(map);
+
+            // POI markers — puncte principale (lac, tinov, etc.) + puncte de intrare trasee
             pois.forEach(p => {
                 const icon = L.divIcon({
                     html: `<div style="background:${p.color || '#1F4E37'};color:white;border-radius:50%;padding:6px 10px;font-weight:bold;font-size:11px;white-space:nowrap;border:2px solid white;box-shadow:0 4px 12px rgba(0,0,0,0.3)">${(p.label || '').replace(/[<>&]/g, '')}</div>`,
                     className: '', iconSize: null,
                 });
                 L.marker([p.lat, p.lng], { icon }).addTo(map);
+            });
+
+            // Hotel markers — mai mici, distincte
+            hotels.forEach(h => {
+                if (!h.lat || !h.lng) return;
+                const icon = L.divIcon({
+                    html: `<div style="background:#B89968;color:white;border-radius:8px;padding:4px 8px;font-weight:600;font-size:10px;white-space:nowrap;border:2px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.2);display:flex;align-items:center;gap:4px"><span>🏨</span><span>${(h.name || '').replace(/[<>&]/g, '')}</span></div>`,
+                    className: '', iconSize: null,
+                });
+                const marker = L.marker([h.lat, h.lng], { icon }).addTo(map);
+                if (h.subtitle || h.url) {
+                    const popup = `<strong>${(h.name || '').replace(/[<>&]/g, '')}</strong>` +
+                        (h.subtitle ? `<br><small>${(h.subtitle || '').replace(/[<>&]/g, '')}</small>` : '') +
+                        (h.url ? `<br><a href="${h.url}" target="_blank" rel="noopener">Vezi detalii →</a>` : '');
+                    marker.bindPopup(popup);
+                }
+            });
+
+            // Trail polylines (dacă au coords)
+            trails.forEach(t => {
+                if (!t.polyline || !Array.isArray(t.polyline) || t.polyline.length < 2) return;
+                const color = (t.marker && t.marker.toLowerCase().includes('albast')) ? '#3B82F6' : '#EF4444';
+                L.polyline(t.polyline, { color, weight: 3, dashArray: '6, 6' })
+                    .addTo(map)
+                    .bindPopup(`<strong>${(t.name || '').replace(/[<>&]/g, '')}</strong>`);
             });
         },
 
@@ -1057,7 +1189,9 @@ function reservationPage() {
             const cfg = DATA.map_config || {};
             const center = cfg.center;
             if (!center || !document.getElementById('locationMap')) return;
-            const map = L.map('locationMap').setView(center, (cfg.zoom || 13) - 1);
+            const lat = center.lat || center[0];
+            const lng = center.lng || center[1];
+            const map = L.map('locationMap').setView([lat, lng], (cfg.zoom || 13) - 1);
             L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
                 attribution: '&copy; OpenStreetMap, &copy; CARTO', maxZoom: 19,
             }).addTo(map);
@@ -1065,7 +1199,7 @@ function reservationPage() {
                 html: `<div style="background:#1F4E37;color:white;border-radius:50%;width:48px;height:48px;display:flex;align-items:center;justify-content:center;font-size:20px;border:4px solid white;box-shadow:0 6px 16px rgba(0,0,0,0.3)">📍</div>`,
                 className: '', iconSize: [48, 48],
             });
-            L.marker(center, { icon }).addTo(map).bindPopup(EVENT.name || 'Locație');
+            L.marker([lat, lng], { icon }).addTo(map).bindPopup(EVENT.name || 'Locație');
         },
     };
 }
