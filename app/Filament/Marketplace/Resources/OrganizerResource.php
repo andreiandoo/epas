@@ -1389,32 +1389,81 @@ class OrganizerResource extends Resource
         ");
     }
 
+    /**
+     * Memoized + cached aggregate of SalesBreakdownService results across
+     * every event of an organizer. Used by both renderFinancialStats and
+     * renderEventsList — previously each helper recomputed independently,
+     * so a 50-event organizer ran build() 100 times per page render.
+     *
+     * Cache layers (most-specific first):
+     *  - per-request static cache: same request never recomputes
+     *  - Laravel cache 5 min: page reloads inside that window get cached
+     *    numbers without hitting the database at all
+     *
+     * Stored shape per event: just the numbers (total_revenue, total_net,
+     * total_commission, tickets count). Full per_type / tt eloquent objects
+     * are NOT cached (huge serialization cost, not needed at the org stats
+     * level).
+     *
+     * Stale tolerance: stats can be up to 5 min behind the latest order —
+     * acceptable for the admin overview page.
+     */
+    protected static array $organizerBreakdownsCache = [];
+
+    protected static function getOrganizerBreakdowns(int $organizerId): array
+    {
+        if (isset(self::$organizerBreakdownsCache[$organizerId])) {
+            return self::$organizerBreakdownsCache[$organizerId];
+        }
+
+        $cached = \Illuminate\Support\Facades\Cache::remember(
+            "organizer:{$organizerId}:breakdowns:v1",
+            now()->addMinutes(5),
+            function () use ($organizerId) {
+                $service = app(\App\Services\Marketplace\SalesBreakdownService::class);
+                $events = Event::where('marketplace_organizer_id', $organizerId)
+                    ->with(['ticketTypes', 'marketplaceOrganizer', 'marketplaceClient', 'tenant'])
+                    ->get();
+
+                $perEvent = [];
+                $totalGross = 0.0;
+                $totalNet = 0.0;
+                $totalCommission = 0.0;
+                foreach ($events as $event) {
+                    $bd = $service->build($event);
+                    $perEvent[$event->id] = [
+                        'total_revenue' => (float) $bd['total_revenue'],
+                        'total_net' => (float) $bd['total_net'],
+                        'total_commission' => (float) $bd['total_commission'],
+                        'tickets' => (int) collect($bd['per_type'])->sum('qty'),
+                    ];
+                    $totalGross += (float) $bd['total_revenue'];
+                    $totalNet += (float) $bd['total_net'];
+                    $totalCommission += (float) $bd['total_commission'];
+                }
+
+                return [
+                    'per_event' => $perEvent,
+                    'totals' => [
+                        'gross' => $totalGross,
+                        'net' => $totalNet,
+                        'commission' => $totalCommission,
+                    ],
+                ];
+            }
+        );
+
+        return self::$organizerBreakdownsCache[$organizerId] = $cached;
+    }
+
     protected static function renderFinancialStats(?MarketplaceOrganizer $record): HtmlString
     {
         if (!$record) return new HtmlString('');
 
-        // Live aggregation across every event of this organizer, using the
-        // same SalesBreakdownService that powers the per-event Sales tab so
-        // numbers match end-to-end. Stored organizer.total_revenue was stale
-        // (only refreshed by updateStats() with a too-narrow status filter).
-        //
-        // Note: $record->events() returns MarketplaceEvent (different model),
-        // but the breakdown service expects \App\Models\Event. Query the
-        // real Event model directly via the FK column.
-        $service = app(\App\Services\Marketplace\SalesBreakdownService::class);
-        $events = Event::where('marketplace_organizer_id', $record->id)
-            ->with(['ticketTypes', 'marketplaceOrganizer', 'marketplaceClient', 'tenant'])
-            ->get();
-
-        $totalGross = 0.0;   // what customers paid for valid tickets
-        $totalNet = 0.0;     // organizer's portion after commission/discounts
-        $totalCommission = 0.0;
-        foreach ($events as $event) {
-            $bd = $service->build($event);
-            $totalGross      += (float) $bd['total_revenue'];
-            $totalNet        += (float) $bd['total_net'];
-            $totalCommission += (float) $bd['total_commission'];
-        }
+        $data = self::getOrganizerBreakdowns($record->id);
+        $totalGross = $data['totals']['gross'];
+        $totalNet = $data['totals']['net'];
+        $totalCommission = $data['totals']['commission'];
 
         return new HtmlString("
             <div style='display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;'>
@@ -1520,17 +1569,10 @@ class OrganizerResource extends Resource
             );
         }
 
-        // Use SalesBreakdownService per event so numbers align with the
-        // per-event Sales tab. The previous SQL aggregate diverged because
-        // it summed orders.total (gross with commission-on-top + extras)
-        // and approximated commission, while the Sales tab works from
-        // ticket-level price with proper discount/commission allocation.
-        $service = app(\App\Services\Marketplace\SalesBreakdownService::class);
-        $breakdowns = [];
-        foreach ($events as $event) {
-            $event->loadMissing(['ticketTypes', 'marketplaceOrganizer', 'marketplaceClient', 'tenant']);
-            $breakdowns[$event->id] = $service->build($event);
-        }
+        // Pull per-event breakdowns from the shared memoized/cached helper
+        // (same numbers as the per-event Sales tab, computed once per
+        // request and reused by renderFinancialStats).
+        $breakdowns = self::getOrganizerBreakdowns($record->id)['per_event'];
 
         $now = now();
         $rows = '';
@@ -1564,9 +1606,9 @@ class OrganizerResource extends Resource
             }
 
             $bd = $breakdowns[$event->id] ?? null;
-            $netToOrganizer = $bd ? (float) $bd['total_net'] : 0.0;
-            $commission     = $bd ? (float) $bd['total_commission'] : 0.0;
-            $tickets        = $bd ? collect($bd['per_type'])->sum('qty') : 0;
+            $netToOrganizer = $bd['total_net'] ?? 0.0;
+            $commission     = $bd['total_commission'] ?? 0.0;
+            $tickets        = $bd['tickets'] ?? 0;
 
             $totalNet += $netToOrganizer;
             $totalCommission += $commission;

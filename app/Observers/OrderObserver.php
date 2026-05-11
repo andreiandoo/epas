@@ -64,6 +64,10 @@ class OrderObserver
         if (in_array($order->status, MarketplaceCustomer::SUCCESS_ORDER_STATUSES, true)) {
             DB::afterCommit(fn () => $this->refreshCustomerStats($order->marketplace_customer_id));
         }
+
+        // Invalidate organizer-level breakdown cache on every new order so
+        // the stats tab picks the row up at next render.
+        DB::afterCommit(fn () => $this->bustOrganizerBreakdownCache($order));
     }
 
     /**
@@ -89,6 +93,12 @@ class OrderObserver
             if ($oldSuccess !== $newSuccess) {
                 DB::afterCommit(fn () => $this->refreshCustomerStats($order->marketplace_customer_id));
             }
+
+            // Bust cached organizer breakdowns whenever the status crosses a
+            // boundary that changes the breakdown service's output (it filters
+            // by status IN paid/confirmed/completed). 5-min TTL covers other
+            // edge cases on its own.
+            DB::afterCommit(fn () => $this->bustOrganizerBreakdownCache($order));
         }
 
         // Order moved between customers (rare — usually via OrderTransferService,
@@ -369,6 +379,26 @@ class OrderObserver
     {
         // Refresh cached aggregates after the order disappears
         DB::afterCommit(fn () => $this->refreshCustomerStats($order->marketplace_customer_id));
+        DB::afterCommit(fn () => $this->bustOrganizerBreakdownCache($order));
+    }
+
+    /**
+     * Invalidate the OrganizerResource per-organizer breakdown cache so the
+     * stats tab reflects the order change on next render. Falls back to a
+     * silent no-op if the order has no marketplace_organizer_id (legacy /
+     * orphan orders shouldn't crash the observer).
+     */
+    protected function bustOrganizerBreakdownCache(Order $order): void
+    {
+        $organizerId = $order->marketplace_organizer_id;
+        if (!$organizerId) {
+            return;
+        }
+        try {
+            \Illuminate\Support\Facades\Cache::forget("organizer:{$organizerId}:breakdowns:v1");
+        } catch (\Throwable $e) {
+            // Never let cache hiccups block order persistence.
+        }
     }
 
     /**
