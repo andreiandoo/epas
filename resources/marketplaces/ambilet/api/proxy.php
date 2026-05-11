@@ -2984,6 +2984,8 @@ switch ($action) {
         if (isset($_GET['to_date'])) $params['to_date'] = $_GET['to_date'];
         if (isset($_GET['page'])) $params['page'] = (int)$_GET['page'];
         if (isset($_GET['per_page'])) $params['per_page'] = min((int)$_GET['per_page'], 100);
+        if (isset($_GET['sort_by'])) $params['sort_by'] = $_GET['sort_by'];
+        if (isset($_GET['sort_dir'])) $params['sort_dir'] = $_GET['sort_dir'];
         $endpoint = '/organizer/orders' . ($params ? '?' . http_build_query($params) : '');
         $requiresAuth = true;
         break;

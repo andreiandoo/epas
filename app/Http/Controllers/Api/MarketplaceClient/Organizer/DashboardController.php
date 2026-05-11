@@ -281,7 +281,19 @@ class DashboardController extends BaseController
             });
         }
 
-        $query->orderByDesc('created_at');
+        // Sorting — explicit allowlist; anything else falls back to
+        // chronological desc. tickets_count isn't an orders column so it
+        // can't be sorted server-side via a plain orderBy; left out of
+        // the allowed set rather than adding a join the rest of the
+        // listing doesn't need.
+        $allowedSorts = ['order_number', 'customer_name', 'total', 'status', 'source', 'created_at'];
+        $sortBy = $request->input('sort_by');
+        $sortDir = strtolower($request->input('sort_dir', 'desc')) === 'asc' ? 'asc' : 'desc';
+        if (in_array($sortBy, $allowedSorts, true)) {
+            $query->orderBy($sortBy, $sortDir);
+        } else {
+            $query->orderByDesc('created_at');
+        }
 
         // Compute aggregate stats — only paid/confirmed/completed orders
         $statsQuery = (clone $query)
@@ -473,9 +485,9 @@ class DashboardController extends BaseController
                 foreach ($order->tickets as $ticket) {
                     $type = $ticket->marketplaceTicketType?->name ?? $ticket->ticketType?->name ?? '-';
                     $details = $ticket->getSeatDetails();
-                    // ticket.price is the net per-ticket value (commission
-                    // is tracked on the order, not deducted here) — same
-                    // value used for net_revenue on the listing stats.
+                    // Net = price minus baked-in commission for included
+                    // / POS orders; equals price for on_top orders.
+                    // See Ticket::getNetPrice() for the resolution table.
                     fputcsv($handle, [
                         $createdAt,
                         $order->order_number,
@@ -487,7 +499,7 @@ class DashboardController extends BaseController
                         $details['section_name'] ?? '',
                         $details['row_label'] ?? '',
                         $details['seat_number'] ?? '',
-                        number_format((float) ($ticket->price ?? 0), 2, '.', ''),
+                        number_format($ticket->getNetPrice(), 2, '.', ''),
                         $promoCode,
                     ], escape: '\\');
                 }

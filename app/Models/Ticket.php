@@ -190,6 +190,74 @@ class Ticket extends Model
     }
 
     /**
+     * Net per-ticket value (organizer's share — price minus included commission).
+     *
+     * Why this exists: tickets.price stores whatever the customer paid for
+     * the line item, which can mean two different things depending on how
+     * the order was placed:
+     *   - For "added_on_top" / "on_top" online orders, the customer pays
+     *     subtotal + commission. tickets.price = subtotal/qty = already net.
+     *   - For "included" online orders, the customer pays subtotal flat;
+     *     commission is carved out of the organizer's share. tickets.price
+     *     = the sticker = net + commission baked in.
+     *   - POS app orders (source=pos_app) are always included-style: the
+     *     ticket price IS what the customer paid at the door, and
+     *     commission is carved out of the organizer's payout.
+     *
+     * Per-ticket commission resolution priority:
+     *   1. order.meta.commission_details[type_name].commission_amount / qty
+     *      — exact amount written by online CheckoutController per type.
+     *   2. Fallback: order.commission_rate as percentage of tickets.price
+     *      — POS orders don't populate commission_details, so we derive
+     *      from the stored order-level rate.
+     *
+     * Used by Vânzări and Participanți CSV exports to show the operator
+     * the actual revenue per ticket (not the sticker), which is what
+     * matters for accounting.
+     */
+    public function getNetPrice(): float
+    {
+        $price = (float) ($this->price ?? 0);
+        if ($price <= 0) return 0.0;
+
+        $order = $this->order;
+        if (!$order) {
+            // Invitations have no order; ticket.price is zero by design anyway.
+            return $price;
+        }
+
+        $meta = is_array($order->meta) ? $order->meta : [];
+        $source = $order->source ?? 'marketplace';
+        $orderMode = $meta['commission_mode'] ?? null;
+        // POS app: commission is always carved out (no on-top adjustment in
+        // OrdersController). Online: follow the recorded commission_mode.
+        $isIncluded = $source === 'pos_app' || $orderMode === 'included';
+
+        if (!$isIncluded) {
+            return $price;
+        }
+
+        // Try per-type commission_details first (most accurate)
+        $typeName = $this->ticketType?->name ?? '';
+        $commissionPerUnit = null;
+        foreach (($meta['commission_details'] ?? []) as $cd) {
+            if (($cd['ticket_type'] ?? '') === $typeName) {
+                $qty = max(1, (int) ($cd['quantity'] ?? 1));
+                $commissionPerUnit = (float) ($cd['commission_amount'] ?? 0) / $qty;
+                break;
+            }
+        }
+
+        // Fallback to order-level rate (the POS path)
+        if ($commissionPerUnit === null) {
+            $rate = (float) ($order->commission_rate ?? 0);
+            $commissionPerUnit = round($price * $rate / 100, 2);
+        }
+
+        return round($price - $commissionPerUnit, 2);
+    }
+
+    /**
      * Cancel this ticket
      */
     public function cancel(?string $reason = null, ?int $refundRequestId = null): void

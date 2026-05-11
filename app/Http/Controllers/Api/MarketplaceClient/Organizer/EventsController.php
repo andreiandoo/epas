@@ -1534,9 +1534,9 @@ class EventsController extends BaseController
                     $customerPhone = $beneficiary['phone'] ?? $meta['attendee_phone'] ?? '';
                 }
 
-                // ticket.price is the net per-ticket value at sale time;
-                // ticket_type.display_price is the *current* sticker price
-                // which can drift after sales-stock transitions. Net wins.
+                // Net = price minus baked-in commission for included / POS
+                // orders; equals price for on_top orders. See
+                // Ticket::getNetPrice() for the resolution table.
                 fputcsv($handle, [
                     $ticket->created_at->format('Y-m-d H:i:s'),
                     $ticket->code,
@@ -1544,7 +1544,7 @@ class EventsController extends BaseController
                     $details['section_name'] ?? '',
                     $details['row_label'] ?? '',
                     $details['seat_number'] ?? '',
-                    number_format((float) ($ticket->price ?? 0), 2, '.', ''),
+                    number_format($ticket->getNetPrice(), 2, '.', ''),
                     $customerName,
                     $customerPhone,
                     $ticket->order?->order_number ?? '',
@@ -1747,9 +1747,10 @@ class EventsController extends BaseController
                 'Sectiune' => $details['section_name'] ?? '',
                 'Rand' => $details['row_label'] ?? '',
                 'Loc' => $details['seat_number'] ?? '',
-                // Net value at sale time (ticket.price); ticket_type.display_price
-                // can drift after sales-stock transitions so it would be wrong here.
-                'Net bilet' => number_format((float) ($ticket->price ?? 0), 2, '.', ''),
+                // Net = price minus baked-in commission for included / POS
+                // orders; equals price for on_top orders. See
+                // Ticket::getNetPrice() for the resolution table.
+                'Net bilet' => number_format($ticket->getNetPrice(), 2, '.', ''),
                 'Nume client' => $customerName ?: ($isInvitation ? 'Invitat' : 'N/A'),
                 'Telefon client' => $customerPhone,
                 'Numar comanda' => $ticket->order?->order_number ?? '',

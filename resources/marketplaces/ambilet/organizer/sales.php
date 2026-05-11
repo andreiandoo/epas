@@ -80,15 +80,15 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     <table class="w-full">
                         <thead class="bg-surface">
                             <tr>
-                                <th class="px-4 py-3 text-sm font-semibold text-left text-secondary">Comanda</th>
-                                <th class="px-4 py-3 text-sm font-semibold text-left text-secondary">Participant</th>
+                                <th class="px-4 py-3 text-sm font-semibold text-left text-secondary cursor-pointer select-none hover:bg-surface" data-sort="order_number" onclick="toggleSort('order_number')"><span class="inline-flex items-center gap-1">Comanda <span class="sort-arrow" data-arrow-for="order_number"></span></span></th>
+                                <th class="px-4 py-3 text-sm font-semibold text-left text-secondary cursor-pointer select-none hover:bg-surface" data-sort="customer_name" onclick="toggleSort('customer_name')"><span class="inline-flex items-center gap-1">Participant <span class="sort-arrow" data-arrow-for="customer_name"></span></span></th>
                                 <th class="px-4 py-3 text-sm font-semibold text-left text-secondary">Tip bilet</th>
                                 <th class="px-4 py-3 text-sm font-semibold text-left text-secondary">Loc</th>
                                 <th class="px-4 py-3 text-sm font-semibold text-center text-secondary">Bilete</th>
-                                <th class="px-4 py-3 text-sm font-semibold text-right text-secondary">Valoare</th>
-                                <th class="px-4 py-3 text-sm font-semibold text-center text-secondary">Status</th>
-                                <th class="px-4 py-3 text-sm font-semibold text-left text-secondary">Sursa</th>
-                                <th class="px-4 py-3 text-sm font-semibold text-left text-secondary">Data</th>
+                                <th class="px-4 py-3 text-sm font-semibold text-right text-secondary cursor-pointer select-none hover:bg-surface" data-sort="total" onclick="toggleSort('total')"><span class="inline-flex items-center justify-end gap-1 w-full">Valoare <span class="sort-arrow" data-arrow-for="total"></span></span></th>
+                                <th class="px-4 py-3 text-sm font-semibold text-center text-secondary cursor-pointer select-none hover:bg-surface" data-sort="status" onclick="toggleSort('status')"><span class="inline-flex items-center justify-center gap-1 w-full">Status <span class="sort-arrow" data-arrow-for="status"></span></span></th>
+                                <th class="px-4 py-3 text-sm font-semibold text-left text-secondary cursor-pointer select-none hover:bg-surface" data-sort="source" onclick="toggleSort('source')"><span class="inline-flex items-center gap-1">Sursa <span class="sort-arrow" data-arrow-for="source"></span></span></th>
+                                <th class="px-4 py-3 text-sm font-semibold text-left text-secondary cursor-pointer select-none hover:bg-surface" data-sort="created_at" onclick="toggleSort('created_at')"><span class="inline-flex items-center gap-1">Data <span class="sort-arrow" data-arrow-for="created_at"></span></span></th>
                             </tr>
                         </thead>
                         <tbody id="orders-list" class="divide-y divide-border">
@@ -124,11 +124,19 @@ let totalPages = 1;
 let searchTimeout = null;
 const perPage = 25;
 
+// Server-side sort: default is reverse chronological. Clicking a header
+// once sets it as the sort key (descending), clicking again flips to
+// ascending. Reset to created_at desc when any filter changes — the
+// pagination resets too, so this keeps the table predictable.
+let sortBy = 'created_at';
+let sortDir = 'desc';
+
 // Highlight event from URL param
 const urlParams = new URLSearchParams(window.location.search);
 const highlightEventId = urlParams.get('event');
 
 document.addEventListener('DOMContentLoaded', function() {
+    renderSortArrows();
     loadEvents().then(() => {
         // Only auto-load orders if an event is pre-selected via URL
         if (highlightEventId) {
@@ -201,8 +209,34 @@ function debounceSearch() {
     searchTimeout = setTimeout(() => loadOrders(), 300);
 }
 
+function toggleSort(column) {
+    if (sortBy === column) {
+        sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+    } else {
+        sortBy = column;
+        sortDir = 'desc';
+    }
+    currentPage = 1; // reset to page 1 when sort changes
+    loadOrders();
+}
+
+function renderSortArrows() {
+    document.querySelectorAll('[data-arrow-for]').forEach(el => {
+        const col = el.dataset.arrowFor;
+        if (col === sortBy) {
+            el.textContent = sortDir === 'asc' ? '▲' : '▼';
+            el.classList.add('text-primary');
+            el.classList.remove('text-muted');
+        } else {
+            el.textContent = '↕';
+            el.classList.add('text-muted');
+            el.classList.remove('text-primary');
+        }
+    });
+}
+
 async function loadOrders() {
-    const params = { page: currentPage, per_page: perPage };
+    const params = { page: currentPage, per_page: perPage, sort_by: sortBy, sort_dir: sortDir };
 
     const eventId = document.getElementById('filter-event').value;
     const status = document.getElementById('filter-status').value;
@@ -254,6 +288,7 @@ async function loadOrders() {
 }
 
 function renderOrders() {
+    renderSortArrows();
     const tbody = document.getElementById('orders-list');
 
     if (!ordersData.length) {
@@ -329,13 +364,15 @@ function getStatusBadge(status) {
 
 function getSourceLabel(source) {
     const labels = {
-        'marketplace': 'Website',
+        'marketplace': 'AmBilet',
         'widget': 'Widget',
         'pos': 'POS',
+        'pos_app': 'Aplicatie AmBilet',
         'api': 'API',
         'manual': 'Manual',
+        'legacy_import': 'Old AmBilet',
     };
-    return labels[source] || source || 'Website';
+    return labels[source] || source || 'AmBilet';
 }
 
 function updateStats(meta) {
