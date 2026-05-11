@@ -1838,6 +1838,19 @@ switch ($action) {
         $requiresAuth = true;
         break;
 
+    case 'organizer.event.leisure.pos-sale':
+        $eventId = (int) ($_GET['event'] ?? 0);
+        if (!$eventId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing event id']);
+            exit;
+        }
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/organizer/events/' . $eventId . '/leisure/pos-sale';
+        $requiresAuth = true;
+        break;
+
     case 'organizer.password':
         $method = 'PUT';
         $body = file_get_contents('php://input');

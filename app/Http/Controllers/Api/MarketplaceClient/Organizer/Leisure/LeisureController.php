@@ -6,10 +6,14 @@ use App\Http\Controllers\Api\MarketplaceClient\BaseController;
 use App\Models\Event;
 use App\Models\MarketplaceOrganizer;
 use App\Models\Order;
+use App\Models\OrderItem;
+use App\Models\Ticket;
 use App\Models\TicketType;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 /**
  * Leisure venue endpoints (F1 — minim viabil).
@@ -85,6 +89,8 @@ class LeisureController extends BaseController
                     'id' => $tt->id,
                     'name' => $tt->name,
                     'sku' => $tt->sku,
+                    'price' => (float) ($tt->price_max ?? $tt->price ?? 0),
+                    'price_max' => (float) ($tt->price_max ?? 0),
                     'service_category' => $tt->effective_service_category,
                     'is_parking' => (bool) $tt->is_parking,
                     'requires_vehicle_info' => (bool) $tt->requires_vehicle_info,
@@ -580,6 +586,203 @@ class LeisureController extends BaseController
             ],
             'gates_activity' => array_values($buckets),
             'stream' => $stream,
+        ]);
+    }
+
+    /**
+     * POST /marketplace-client/organizer/events/{event}/leisure/pos-sale
+     *
+     * Body: {
+     *   date: 'YYYY-MM-DD',
+     *   items: [{ticket_type_id, qty}, ...],
+     *   customer: { name?, email?, phone? },
+     *   payment_method: 'cash'|'card'|'invoice'
+     * }
+     *
+     * Creează Order + OrderItems + Tickets atomic (status='paid') pentru vânzare on-site.
+     * Întoarce structura pentru chitanță print.
+     */
+    public function posSale(Request $request, int $event): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+        $marketplace = $organizer->marketplaceClient;
+
+        $eventModel = Event::query()
+            ->where('id', $event)
+            ->where('marketplace_client_id', $marketplace->id)
+            ->first();
+
+        if (!$eventModel) {
+            return $this->error('Event not found', 404);
+        }
+
+        $validated = $request->validate([
+            'date' => 'nullable|date',
+            'items' => 'required|array|min:1|max:50',
+            'items.*.ticket_type_id' => 'required|integer|exists:ticket_types,id',
+            'items.*.qty' => 'required|integer|min:1|max:100',
+            'customer.name' => 'nullable|string|max:120',
+            'customer.email' => 'nullable|email|max:120',
+            'customer.phone' => 'nullable|string|max:30',
+            'customer.vehicle_plate' => 'nullable|string|max:20',
+            'payment_method' => 'required|in:cash,card,invoice',
+        ]);
+
+        $visitDate = isset($validated['date'])
+            ? Carbon::parse($validated['date'])->toDateString()
+            : Carbon::today()->toDateString();
+
+        // Fetch ticket types valid pentru event
+        $ttIds = collect($validated['items'])->pluck('ticket_type_id')->unique();
+        $types = TicketType::query()
+            ->whereIn('id', $ttIds)
+            ->where('event_id', $eventModel->id)
+            ->get()
+            ->keyBy('id');
+
+        if ($types->count() !== $ttIds->count()) {
+            return $this->error('Unele tipuri de bilet nu aparțin acestui eveniment.', 422);
+        }
+
+        // Calculează total
+        $subtotal = 0.0;
+        $items = [];
+        foreach ($validated['items'] as $row) {
+            $tt = $types->get($row['ticket_type_id']);
+            if (!$tt) continue;
+            $unit = (float) ($tt->price_max ?? $tt->price ?? 0);
+            $line = round($unit * (int) $row['qty'], 2);
+            $subtotal += $line;
+            $items[] = [
+                'ticket_type' => $tt,
+                'qty' => (int) $row['qty'],
+                'unit_price' => $unit,
+                'line_total' => $line,
+            ];
+        }
+        $subtotal = round($subtotal, 2);
+        $total = $subtotal;
+
+        $paymentMethod = $validated['payment_method'];
+        $now = Carbon::now();
+
+        $order = null;
+        $issued = [];
+
+        try {
+            DB::beginTransaction();
+
+            $order = Order::create([
+                'tenant_id' => $eventModel->tenant_id,
+                'marketplace_client_id' => $marketplace->id,
+                'marketplace_organizer_id' => $organizer->id,
+                'event_id' => $eventModel->id,
+                'order_number' => 'POS-' . strtoupper(Str::random(10)),
+                'customer_name' => $validated['customer']['name'] ?? 'POS — vânzare on-site',
+                'customer_email' => $validated['customer']['email'] ?? 'pos@ambilet.ro',
+                'customer_phone' => $validated['customer']['phone'] ?? null,
+                'subtotal' => $subtotal,
+                'discount_amount' => 0,
+                'total' => $total,
+                'currency' => 'RON',
+                'status' => $paymentMethod === 'invoice' ? 'pending' : 'paid',
+                'payment_status' => $paymentMethod === 'invoice' ? 'pending' : 'paid',
+                'payment_processor' => 'pos',
+                'payment_reference' => 'pos-' . $paymentMethod,
+                'paid_at' => $paymentMethod === 'invoice' ? null : $now,
+                'source' => 'pos',
+                'meta' => [
+                    'pos' => true,
+                    'payment_method' => $paymentMethod,
+                    'visit_date' => $visitDate,
+                    'vehicle_plate' => $validated['customer']['vehicle_plate'] ?? null,
+                    'cashier_organizer_id' => $organizer->id,
+                ],
+            ]);
+
+            foreach ($items as $it) {
+                $tt = $it['ticket_type'];
+                $orderItem = OrderItem::create([
+                    'order_id' => $order->id,
+                    'ticket_type_id' => $tt->id,
+                    'name' => is_array($tt->name) ? ($tt->name['ro'] ?? reset($tt->name)) : $tt->name,
+                    'quantity' => $it['qty'],
+                    'unit_price' => $it['unit_price'],
+                    'total' => $it['line_total'],
+                    'meta' => [
+                        'service_category' => $tt->service_category ?? 'access',
+                        'issuing_company' => $tt->issuing_company ?? 'primary',
+                        'visit_date' => $visitDate,
+                    ],
+                ]);
+
+                for ($i = 0; $i < $it['qty']; $i++) {
+                    $code = strtoupper(Str::random(10));
+                    $ticket = Ticket::create([
+                        'order_id' => $order->id,
+                        'order_item_id' => $orderItem->id,
+                        'ticket_type_id' => $tt->id,
+                        'event_id' => $eventModel->id,
+                        'tenant_id' => $eventModel->tenant_id,
+                        'marketplace_client_id' => $marketplace->id,
+                        'code' => $code,
+                        'barcode' => $code,
+                        'status' => $paymentMethod === 'invoice' ? 'pending' : 'valid',
+                        'price' => $it['unit_price'],
+                        'attendee_name' => $validated['customer']['name'] ?? null,
+                        'attendee_email' => $validated['customer']['email'] ?? null,
+                        'meta' => [
+                            'pos' => true,
+                            'visit_date' => $visitDate,
+                            'service_category' => $tt->service_category ?? 'access',
+                            'issuing_company' => $tt->issuing_company ?? 'primary',
+                        ],
+                    ]);
+                    $issued[] = [
+                        'id' => $ticket->id,
+                        'code' => $ticket->code,
+                        'ticket_type' => is_array($tt->name) ? ($tt->name['ro'] ?? reset($tt->name)) : $tt->name,
+                        'service_category' => $tt->service_category ?? 'access',
+                        'price' => $it['unit_price'],
+                    ];
+                }
+            }
+
+            DB::commit();
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return $this->error('Eroare la procesarea vânzării: ' . $e->getMessage(), 500);
+        }
+
+        // Datele pentru chitanță 80mm
+        $issuer = $organizer->getIssuerData('primary');
+
+        return $this->success([
+            'order' => [
+                'id' => $order->id,
+                'order_number' => $order->order_number,
+                'paid_at' => optional($order->paid_at)->toIso8601String(),
+                'total' => (float) $order->total,
+                'subtotal' => (float) $order->subtotal,
+                'currency' => $order->currency,
+                'payment_method' => $paymentMethod,
+                'status' => $order->status,
+                'visit_date' => $visitDate,
+            ],
+            'customer' => [
+                'name' => $order->customer_name,
+                'email' => $order->customer_email,
+                'phone' => $order->customer_phone,
+            ],
+            'issuer' => $issuer,
+            'items' => array_map(fn ($it) => [
+                'name' => is_array($it['ticket_type']->name) ? ($it['ticket_type']->name['ro'] ?? reset($it['ticket_type']->name)) : $it['ticket_type']->name,
+                'qty' => $it['qty'],
+                'unit_price' => $it['unit_price'],
+                'line_total' => $it['line_total'],
+                'service_category' => $it['ticket_type']->service_category ?? 'access',
+            ], $items),
+            'tickets' => $issued,
         ]);
     }
 
