@@ -317,6 +317,13 @@ class DashboardController extends BaseController
             'refunded' => (int) (clone $allOrdersQuery)->whereIn('status', ['refunded', 'partially_refunded'])->count(),
         ];
 
+        // Hide expired/cancelled orders from the listing — they're noise
+        // for the organizer (abandoned checkouts that never produced
+        // tickets). Stats above still see them via the
+        // order_breakdown.cancelled/expired counts so the operator can
+        // tell at a glance how many were dropped this period.
+        $query->whereNotIn('status', ['cancelled', 'expired']);
+
         $perPage = min((int) $request->input('per_page', 20), 100);
         $orders = $query->paginate($perPage);
 
@@ -435,14 +442,17 @@ class DashboardController extends BaseController
             fputcsv($handle, [
                 'Data', 'Comanda', 'Status', 'Client', 'Telefon',
                 'Tip bilet', 'Cod bilet', 'Sectiune', 'Rand', 'Loc',
-                'Pret bilet', 'Valoare comanda',
+                'Net bilet', 'Cod reducere',
             ], escape: '\\');
 
             foreach ($orders as $order) {
                 $customer = $order->marketplaceCustomer?->full_name ?? $order->customer_name ?? '-';
                 $phone = $order->marketplaceCustomer?->phone ?? $order->customer_phone ?? '-';
-                $orderTotal = number_format((float) $order->total, 2, '.', '');
                 $createdAt = $order->created_at->format('Y-m-d H:i');
+                // Promo code used on the order (stored as plain string on
+                // the order row, separate from the relationship to the
+                // promo_code_id). Empty when no discount was applied.
+                $promoCode = trim((string) ($order->promo_code ?? '')) ?: '';
 
                 if ($order->tickets->isEmpty()) {
                     // Order without tickets — emit one row so the order is
@@ -455,7 +465,7 @@ class DashboardController extends BaseController
                         $phone,
                         '-', '', '', '', '',
                         '0.00',
-                        $orderTotal,
+                        $promoCode,
                     ], escape: '\\');
                     continue;
                 }
@@ -463,6 +473,9 @@ class DashboardController extends BaseController
                 foreach ($order->tickets as $ticket) {
                     $type = $ticket->marketplaceTicketType?->name ?? $ticket->ticketType?->name ?? '-';
                     $details = $ticket->getSeatDetails();
+                    // ticket.price is the net per-ticket value (commission
+                    // is tracked on the order, not deducted here) — same
+                    // value used for net_revenue on the listing stats.
                     fputcsv($handle, [
                         $createdAt,
                         $order->order_number,
@@ -475,7 +488,7 @@ class DashboardController extends BaseController
                         $details['row_label'] ?? '',
                         $details['seat_number'] ?? '',
                         number_format((float) ($ticket->price ?? 0), 2, '.', ''),
-                        $orderTotal,
+                        $promoCode,
                     ], escape: '\\');
                 }
             }

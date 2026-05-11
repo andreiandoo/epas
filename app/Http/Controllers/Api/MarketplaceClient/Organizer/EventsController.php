@@ -1493,7 +1493,7 @@ class EventsController extends BaseController
             ->orderByDesc('created_at')
             ->get();
 
-        $filename = 'participants-' . $event->slug . '-' . now()->format('Y-m-d') . '.csv';
+        $filename = $this->buildParticipantsFilename($event);
 
         return response()->streamDownload(function () use ($tickets) {
             $handle = fopen('php://output', 'w');
@@ -1501,18 +1501,18 @@ class EventsController extends BaseController
             fwrite($handle, "\xEF\xBB\xBF");
 
             fputcsv($handle, [
-                'Purchased At',
+                'Data cumparare',
                 'Cod bilet',
-                'Ticket Type',
+                'Tip bilet',
                 'Sectiune',
                 'Rand',
                 'Loc',
-                'Price',
-                'Customer Name',
-                'Customer Phone',
-                'Order Number',
-                'Checked In',
-                'Checked In At',
+                'Net bilet',
+                'Nume client',
+                'Telefon client',
+                'Numar comanda',
+                'Check-in',
+                'Data check-in',
             ], escape: '\\');
 
             foreach ($tickets as $ticket) {
@@ -1534,6 +1534,9 @@ class EventsController extends BaseController
                     $customerPhone = $beneficiary['phone'] ?? $meta['attendee_phone'] ?? '';
                 }
 
+                // ticket.price is the net per-ticket value at sale time;
+                // ticket_type.display_price is the *current* sticker price
+                // which can drift after sales-stock transitions. Net wins.
                 fputcsv($handle, [
                     $ticket->created_at->format('Y-m-d H:i:s'),
                     $ticket->code,
@@ -1541,7 +1544,7 @@ class EventsController extends BaseController
                     $details['section_name'] ?? '',
                     $details['row_label'] ?? '',
                     $details['seat_number'] ?? '',
-                    $ticketType?->display_price ?? 0,
+                    number_format((float) ($ticket->price ?? 0), 2, '.', ''),
                     $customerName,
                     $customerPhone,
                     $ticket->order?->order_number ?? '',
@@ -1737,29 +1740,69 @@ class EventsController extends BaseController
             }
 
             return [
-                'Purchased At' => $ticket->created_at->format('Y-m-d H:i:s'),
+                'Data cumparare' => $ticket->created_at->format('Y-m-d H:i:s'),
                 'Cod bilet' => $ticket->code,
-                'Event' => $eventTitle,
-                'Ticket Type' => $ticket->ticketType?->name ?? ($isInvitation ? 'Invitatie' : 'Standard'),
+                'Eveniment' => $eventTitle,
+                'Tip bilet' => $ticket->ticketType?->name ?? ($isInvitation ? 'Invitatie' : 'Standard'),
                 'Sectiune' => $details['section_name'] ?? '',
                 'Rand' => $details['row_label'] ?? '',
                 'Loc' => $details['seat_number'] ?? '',
-                'Price' => $ticket->ticketType?->display_price ?? 0,
-                'Customer Name' => $customerName ?: ($isInvitation ? 'Invitat' : 'N/A'),
-                'Customer Phone' => $customerPhone,
-                'Order Number' => $ticket->order?->order_number ?? '',
-                'Checked In' => $ticket->checked_in_at ? 'Da' : 'Nu',
-                'Checked In At' => $ticket->checked_in_at?->format('Y-m-d H:i:s') ?? '',
+                // Net value at sale time (ticket.price); ticket_type.display_price
+                // can drift after sales-stock transitions so it would be wrong here.
+                'Net bilet' => number_format((float) ($ticket->price ?? 0), 2, '.', ''),
+                'Nume client' => $customerName ?: ($isInvitation ? 'Invitat' : 'N/A'),
+                'Telefon client' => $customerPhone,
+                'Numar comanda' => $ticket->order?->order_number ?? '',
+                'Check-in' => $ticket->checked_in_at ? 'Da' : 'Nu',
+                'Data check-in' => $ticket->checked_in_at?->format('Y-m-d H:i:s') ?? '',
             ];
         });
 
-        $filename = 'participanti-' . now()->format('Y-m-d');
+        // Build a filename anchored to the selected event when one is set
+        // (Vânzări always passes event_id, so this is the common path); for
+        // a cross-event dump fall back to today's date.
+        if ($eventId) {
+            $event = Event::find($eventId);
+            $filename = $event ? $this->buildParticipantsFilenameBase($event) : ('participanti-' . now()->format('Y-m-d'));
+        } else {
+            $filename = 'participanti-' . now()->format('Y-m-d');
+        }
 
         if ($format === 'xlsx') {
             return $this->exportToXlsx($rows->toArray(), $filename);
         }
 
         return $this->exportToCsv($rows->toArray(), $filename);
+    }
+
+    /**
+     * Filename base (no extension): "{slug}-{date}-participanti".
+     * Uses Romanian title for the slug and the event's actual date (single-
+     * day or range start), falling back to today if neither is set.
+     */
+    protected function buildParticipantsFilenameBase(Event $event): string
+    {
+        $title = $event->getTranslation('title', 'ro')
+            ?: $event->getTranslation('title', 'en')
+            ?: $event->getTranslation('title')
+            ?: 'eveniment';
+        $slug = \Illuminate\Support\Str::slug($title) ?: ($event->slug ?? 'eveniment');
+
+        $date = $event->event_date ?? $event->range_start_date ?? now();
+        $dateStr = $date instanceof \DateTimeInterface
+            ? $date->format('Y-m-d')
+            : (string) $date;
+
+        return "{$slug}-{$dateStr}-participanti";
+    }
+
+    /**
+     * Filename WITH extension — convenience wrapper around the base for
+     * the per-event export path which uses streamDownload directly.
+     */
+    protected function buildParticipantsFilename(Event $event): string
+    {
+        return $this->buildParticipantsFilenameBase($event) . '.csv';
     }
 
     /**
