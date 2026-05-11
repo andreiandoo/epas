@@ -1801,6 +1801,18 @@ Route::prefix('marketplace-client/organizer')->middleware(['throttle:120,1', 'ma
         Route::post('/events/{event}/leisure/pos-sale', [OrganizerLeisureController::class, 'posSale'])
             ->whereNumber('event')
             ->name('api.marketplace-client.organizer.leisure.pos-sale');
+        Route::get('/events/{event}/leisure/shifts', [OrganizerLeisureController::class, 'shiftsIndex'])
+            ->whereNumber('event')
+            ->name('api.marketplace-client.organizer.leisure.shifts.index');
+        Route::post('/events/{event}/leisure/shifts', [OrganizerLeisureController::class, 'shiftStore'])
+            ->whereNumber('event')
+            ->name('api.marketplace-client.organizer.leisure.shifts.store');
+        Route::put('/events/{event}/leisure/shifts/{shift}', [OrganizerLeisureController::class, 'shiftUpdate'])
+            ->whereNumber('event')->whereNumber('shift')
+            ->name('api.marketplace-client.organizer.leisure.shifts.update');
+        Route::delete('/events/{event}/leisure/shifts/{shift}', [OrganizerLeisureController::class, 'shiftDestroy'])
+            ->whereNumber('event')->whereNumber('shift')
+            ->name('api.marketplace-client.organizer.leisure.shifts.destroy');
 
         // Organizer Documents (Cerere avizare, Declaratie impozite)
         Route::get('/documents', [OrganizerDocumentController::class, 'index'])

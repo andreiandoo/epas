@@ -386,6 +386,8 @@ const AmbiletAPI = {
         if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/sales-timeline/)) return 'organizer.event.leisure.sales-timeline';
         if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/dashboard\/live/)) return 'organizer.event.leisure.dashboard.live';
         if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/pos-sale/)) return 'organizer.event.leisure.pos-sale';
+        if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/shifts\/\d+/)) return 'organizer.event.leisure.shifts.item';
+        if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/shifts/)) return 'organizer.event.leisure.shifts.collection';
 
         if (endpoint.match(/\/organizer\/events\/\d+\/analytics/)) return 'organizer.event.analytics';
         if (endpoint.match(/\/organizer\/events\/\d+\/goals\/\d+$/)) return 'organizer.event.goal';
@@ -493,6 +495,11 @@ const AmbiletAPI = {
      * Extract params from endpoint for proxy
      */
     getProxyParams(endpoint) {
+        // Extract event ID + optional shift ID from leisure shifts CRUD
+        const leisureShiftMatch = endpoint.match(/^\/organizer\/events\/(\d+)\/leisure\/shifts\/(\d+)/);
+        if (leisureShiftMatch) {
+            return `event=${encodeURIComponent(leisureShiftMatch[1])}&shift=${encodeURIComponent(leisureShiftMatch[2])}`;
+        }
         // Extract event ID from leisure organizer endpoints
         const leisureMatch = endpoint.match(/^\/organizer\/events\/(\d+)\/leisure\//);
         if (leisureMatch) {

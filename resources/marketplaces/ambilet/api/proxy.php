@@ -1851,6 +1851,28 @@ switch ($action) {
         $requiresAuth = true;
         break;
 
+    case 'organizer.event.leisure.shifts.collection':
+        $eventId = (int) ($_GET['event'] ?? 0);
+        if (!$eventId) { http_response_code(400); echo json_encode(['error' => 'Missing event id']); exit; }
+        $method = $_SERVER['REQUEST_METHOD'];
+        $body = in_array($method, ['POST','PUT','PATCH']) ? file_get_contents('php://input') : null;
+        $params = [];
+        if (isset($_GET['week'])) $params['week'] = $_GET['week'];
+        $endpoint = '/organizer/events/' . $eventId . '/leisure/shifts'
+            . ($method === 'GET' && $params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.event.leisure.shifts.item':
+        $eventId = (int) ($_GET['event'] ?? 0);
+        $shiftId = (int) ($_GET['shift'] ?? 0);
+        if (!$eventId || !$shiftId) { http_response_code(400); echo json_encode(['error' => 'Missing event/shift id']); exit; }
+        $method = $_SERVER['REQUEST_METHOD'];
+        $body = in_array($method, ['POST','PUT','PATCH']) ? file_get_contents('php://input') : null;
+        $endpoint = '/organizer/events/' . $eventId . '/leisure/shifts/' . $shiftId;
+        $requiresAuth = true;
+        break;
+
     case 'organizer.password':
         $method = 'PUT';
         $body = file_get_contents('php://input');

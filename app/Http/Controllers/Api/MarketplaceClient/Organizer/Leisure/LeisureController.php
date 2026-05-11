@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Api\MarketplaceClient\Organizer\Leisure;
 
 use App\Http\Controllers\Api\MarketplaceClient\BaseController;
 use App\Models\Event;
+use App\Models\LeisureShift;
 use App\Models\MarketplaceOrganizer;
+use App\Models\MarketplaceOrganizerTeamMember;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Ticket;
@@ -784,6 +786,154 @@ class LeisureController extends BaseController
             ], $items),
             'tickets' => $issued,
         ]);
+    }
+
+    /**
+     * GET /marketplace-client/organizer/events/{event}/leisure/shifts?week=YYYY-MM-DD
+     *
+     * Listă turnete pentru săptămâna care conține `week` (default: săptămâna curentă).
+     */
+    public function shiftsIndex(Request $request, int $event): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+        $marketplace = $organizer->marketplaceClient;
+
+        $eventModel = Event::query()
+            ->where('id', $event)
+            ->where('marketplace_client_id', $marketplace->id)
+            ->first();
+
+        if (!$eventModel) {
+            return $this->error('Event not found', 404);
+        }
+
+        $weekParam = $request->query('week');
+        $base = $weekParam ? Carbon::parse($weekParam) : Carbon::today();
+        $weekStart = $base->copy()->startOfWeek(Carbon::MONDAY)->startOfDay();
+        $weekEnd = $weekStart->copy()->endOfWeek(Carbon::SUNDAY)->endOfDay();
+
+        $shifts = LeisureShift::query()
+            ->where('event_id', $eventModel->id)
+            ->whereBetween('start_at', [$weekStart, $weekEnd])
+            ->with(['teamMember:id,name,email,role'])
+            ->orderBy('start_at')
+            ->get();
+
+        $members = MarketplaceOrganizerTeamMember::query()
+            ->where('marketplace_organizer_id', $organizer->id)
+            ->where('status', 'active')
+            ->orderBy('name')
+            ->get(['id', 'name', 'email', 'role']);
+
+        return $this->success([
+            'week_start' => $weekStart->toDateString(),
+            'week_end' => $weekEnd->toDateString(),
+            'members' => $members,
+            'shifts' => $shifts->map(fn ($s) => [
+                'id' => $s->id,
+                'team_member_id' => $s->team_member_id,
+                'member_name' => $s->teamMember->name ?? null,
+                'start_at' => optional($s->start_at)->toIso8601String(),
+                'end_at' => optional($s->end_at)->toIso8601String(),
+                'role' => $s->role,
+                'gate' => $s->gate,
+                'notes' => $s->notes,
+            ])->values(),
+        ]);
+    }
+
+    /**
+     * POST /marketplace-client/organizer/events/{event}/leisure/shifts
+     */
+    public function shiftStore(Request $request, int $event): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+        $marketplace = $organizer->marketplaceClient;
+
+        $eventModel = Event::query()
+            ->where('id', $event)
+            ->where('marketplace_client_id', $marketplace->id)
+            ->first();
+
+        if (!$eventModel) {
+            return $this->error('Event not found', 404);
+        }
+
+        $validated = $request->validate([
+            'team_member_id' => 'nullable|integer|exists:marketplace_organizer_team_members,id',
+            'start_at' => 'required|date',
+            'end_at' => 'required|date|after:start_at',
+            'role' => 'required|in:gate_scanner,sales_operator,shift_manager,accountant',
+            'gate' => 'nullable|string|max:32',
+            'notes' => 'nullable|string|max:500',
+        ]);
+
+        $shift = LeisureShift::create([
+            'marketplace_organizer_id' => $organizer->id,
+            'event_id' => $eventModel->id,
+            'team_member_id' => $validated['team_member_id'] ?? null,
+            'start_at' => Carbon::parse($validated['start_at']),
+            'end_at' => Carbon::parse($validated['end_at']),
+            'role' => $validated['role'],
+            'gate' => $validated['gate'] ?? null,
+            'notes' => $validated['notes'] ?? null,
+            'created_by' => $organizer->id,
+        ]);
+
+        return $this->success(['id' => $shift->id], 'Turnetă creată', 201);
+    }
+
+    /**
+     * PUT /marketplace-client/organizer/events/{event}/leisure/shifts/{shift}
+     */
+    public function shiftUpdate(Request $request, int $event, int $shift): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+
+        $shiftModel = LeisureShift::query()
+            ->where('id', $shift)
+            ->where('marketplace_organizer_id', $organizer->id)
+            ->where('event_id', $event)
+            ->first();
+
+        if (!$shiftModel) {
+            return $this->error('Shift not found', 404);
+        }
+
+        $validated = $request->validate([
+            'team_member_id' => 'nullable|integer|exists:marketplace_organizer_team_members,id',
+            'start_at' => 'nullable|date',
+            'end_at' => 'nullable|date|after:start_at',
+            'role' => 'nullable|in:gate_scanner,sales_operator,shift_manager,accountant',
+            'gate' => 'nullable|string|max:32',
+            'notes' => 'nullable|string|max:500',
+        ]);
+
+        $shiftModel->fill(array_filter($validated, fn ($v) => $v !== null && $v !== ''));
+        $shiftModel->save();
+
+        return $this->success(['id' => $shiftModel->id], 'Turnetă actualizată');
+    }
+
+    /**
+     * DELETE /marketplace-client/organizer/events/{event}/leisure/shifts/{shift}
+     */
+    public function shiftDestroy(Request $request, int $event, int $shift): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+
+        $shiftModel = LeisureShift::query()
+            ->where('id', $shift)
+            ->where('marketplace_organizer_id', $organizer->id)
+            ->where('event_id', $event)
+            ->first();
+
+        if (!$shiftModel) {
+            return $this->error('Shift not found', 404);
+        }
+
+        $shiftModel->delete();
+        return $this->success(['id' => $shift], 'Turnetă ștearsă');
     }
 
     protected function emptyBucket(): array
