@@ -1753,6 +1753,46 @@ switch ($action) {
         $requiresAuth = true;
         break;
 
+    // ===== LEISURE VENUE (organizer-side) =====
+    case 'organizer.event.leisure.config':
+        $eventId = (int) ($_GET['event'] ?? 0);
+        if (!$eventId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing event id']);
+            exit;
+        }
+        $endpoint = '/organizer/events/' . $eventId . '/leisure/config';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.event.leisure.reports.by-issuer':
+        $eventId = (int) ($_GET['event'] ?? 0);
+        if (!$eventId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing event id']);
+            exit;
+        }
+        $params = [];
+        if (isset($_GET['from'])) $params['from'] = $_GET['from'];
+        if (isset($_GET['to'])) $params['to'] = $_GET['to'];
+        $endpoint = '/organizer/events/' . $eventId . '/leisure/reports/by-issuer'
+            . ($params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.event.leisure.venue-config':
+        $eventId = (int) ($_GET['event'] ?? 0);
+        if (!$eventId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing event id']);
+            exit;
+        }
+        $method = 'PUT';
+        $body = file_get_contents('php://input');
+        $endpoint = '/organizer/events/' . $eventId . '/leisure/venue-config';
+        $requiresAuth = true;
+        break;
+
     case 'organizer.password':
         $method = 'PUT';
         $body = file_get_contents('php://input');

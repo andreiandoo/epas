@@ -218,6 +218,7 @@ const AmbiletAPI = {
         if (endpoint.includes('/marketplace-events/organizers')) return 'organizers';
 
         // Public endpoints
+        if (endpoint === '/contact') return 'public.contact';
         if (endpoint.includes('/search')) return 'search';
         if (endpoint.includes('/marketplace-events/categories')) return 'categories';
         if (endpoint.includes('/marketplace-events/cities')) return 'cities';
@@ -333,6 +334,31 @@ const AmbiletAPI = {
         if (endpoint === '/organizer/resend-verification') return 'organizer.resend-verification';
         if (endpoint === '/organizer/payout-details') return 'organizer.payout-details';
 
+        // Artist account auth endpoints (Etapa 3 - artist self-service)
+        if (endpoint === '/artist/register') return 'artist.register';
+        if (endpoint === '/artist/login') return 'artist.login';
+        if (endpoint === '/artist/logout') return 'artist.logout';
+        if (endpoint === '/artist/me') return 'artist.me';
+        if (endpoint === '/artist/forgot-password') return 'artist.forgot-password';
+        if (endpoint === '/artist/reset-password') return 'artist.reset-password';
+        if (endpoint === '/artist/verify-email') return 'artist.verify-email';
+        if (endpoint === '/artist/resend-verification') return 'artist.resend-verification';
+        if (endpoint.match(/^\/artist\/check-claim\/[a-z0-9-]+$/)) return 'artist.check-claim';
+        if (endpoint === '/artist/search' || endpoint.startsWith('/artist/search?')) return 'artist.search';
+        // Artist self-service (Etapa 4) — proxy.php branches GET/PUT/DELETE
+        // on REQUEST_METHOD so a single action string covers all verbs on
+        // the same resource.
+        if (endpoint === '/artist/dashboard') return 'artist.dashboard';
+        // Use a distinct action name to avoid clashing with the pre-existing
+        // public `artist.events` case (slug-required) earlier in proxy.php.
+        if (endpoint === '/artist/events' || endpoint.startsWith('/artist/events?')) return 'artist.account.events';
+        if (endpoint === '/artist/profile') return 'artist.profile';
+        if (endpoint === '/artist/profile/image') return 'artist.profile.image';
+        if (endpoint === '/artist/profile/taxonomies') return 'artist.profile.taxonomies';
+        if (endpoint === '/artist/profile/refresh-social-stats') return 'artist.profile.refresh-social-stats';
+        if (endpoint === '/artist/account') return 'artist.account';
+        if (endpoint === '/artist/account/password') return 'artist.account.password';
+
         // Organizer bank accounts
         if (endpoint === '/organizer/bank-accounts') return 'organizer.bank-accounts';
         if (endpoint.match(/\/organizer\/bank-accounts\/\d+$/)) return 'organizer.bank-account.delete';
@@ -352,6 +378,11 @@ const AmbiletAPI = {
         if (endpoint.includes('/organizer/dashboard/sales-timeline')) return 'organizer.dashboard.sales-timeline';
 
         // Organizer events
+        // Leisure venue endpoints (organizer-side)
+        if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/config$/)) return 'organizer.event.leisure.config';
+        if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/reports\/by-issuer/)) return 'organizer.event.leisure.reports.by-issuer';
+        if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/venue-config$/)) return 'organizer.event.leisure.venue-config';
+
         if (endpoint.match(/\/organizer\/events\/\d+\/analytics/)) return 'organizer.event.analytics';
         if (endpoint.match(/\/organizer\/events\/\d+\/goals\/\d+$/)) return 'organizer.event.goal';
         if (endpoint.match(/\/organizer\/events\/\d+\/goals$/)) return 'organizer.event.goals';
@@ -408,6 +439,14 @@ const AmbiletAPI = {
         if (endpoint.match(/\/organizer\/share-links\/[A-Za-z0-9]+$/)) return 'organizer.share-link';
         if (endpoint === '/organizer/share-links') return 'organizer.share-links';
 
+        // Organizer support tickets
+        if (endpoint === '/organizer/support/departments' || endpoint.startsWith('/organizer/support/departments?')) return 'organizer.support.departments';
+        if (endpoint.match(/\/organizer\/support\/tickets\/\d+\/messages$/)) return 'organizer.support.tickets.reply';
+        if (endpoint.match(/\/organizer\/support\/tickets\/\d+\/close$/)) return 'organizer.support.tickets.close';
+        if (endpoint.match(/\/organizer\/support\/tickets\/\d+\/reopen$/)) return 'organizer.support.tickets.reopen';
+        if (endpoint.match(/\/organizer\/support\/tickets\/\d+$/)) return 'organizer.support.tickets.show';
+        if (endpoint === '/organizer/support/tickets' || endpoint.startsWith('/organizer/support/tickets?')) return 'organizer.support.tickets';
+
         // Organizer API settings
         if (endpoint === '/organizer/api-key') return 'organizer.api-key';
         if (endpoint === '/organizer/api-key/regenerate') return 'organizer.api-key.regenerate';
@@ -450,6 +489,18 @@ const AmbiletAPI = {
      * Extract params from endpoint for proxy
      */
     getProxyParams(endpoint) {
+        // Extract event ID from leisure organizer endpoints
+        const leisureMatch = endpoint.match(/^\/organizer\/events\/(\d+)\/leisure\//);
+        if (leisureMatch) {
+            return `event=${encodeURIComponent(leisureMatch[1])}`;
+        }
+
+        // Extract artist slug from /artist/check-claim/{slug}
+        const artistClaimMatch = endpoint.match(/^\/artist\/check-claim\/([a-z0-9-]+)$/);
+        if (artistClaimMatch) {
+            return `slug=${encodeURIComponent(artistClaimMatch[1])}`;
+        }
+
         // Extract organizer slug from /marketplace-events/organizers/{slug}/contact
         const organizerContactMatch = endpoint.match(/\/marketplace-events\/organizers\/([\w-]+)\/contact$/);
         if (organizerContactMatch) {
@@ -478,6 +529,12 @@ const AmbiletAPI = {
         const ticketMatch = endpoint.match(/\/customer\/tickets\/(\d+)/);
         if (ticketMatch) {
             return `id=${encodeURIComponent(ticketMatch[1])}`;
+        }
+
+        // Extract support ticket id from /organizer/support/tickets/{id}[/messages|close|reopen]
+        const supportTicketMatch = endpoint.match(/\/organizer\/support\/tickets\/(\d+)(\/messages|\/close|\/reopen)?$/);
+        if (supportTicketMatch) {
+            return `id=${encodeURIComponent(supportTicketMatch[1])}`;
         }
 
         // Extract refund ID from /customer/refunds/{id}/cancel or /customer/refunds/{id}
@@ -1852,8 +1909,260 @@ const AmbiletAPI = {
          */
         async updatePayoutDetails(data) {
             return AmbiletAPI.put('/organizer/payout-details', data);
+        },
+
+        // ==================== SUPPORT TICKETS ====================
+
+        /**
+         * Get support taxonomy (departments + problem types + attachment rules).
+         */
+        async getSupportDepartments(params = {}) {
+            return AmbiletAPI.get('/organizer/support/departments', params);
+        },
+
+        /**
+         * List the organizer's own support tickets.
+         */
+        async getSupportTickets(params = {}) {
+            return AmbiletAPI.get('/organizer/support/tickets', params);
+        },
+
+        /**
+         * Get a single support ticket detail + thread.
+         */
+        async getSupportTicket(id) {
+            return AmbiletAPI.get(`/organizer/support/tickets/${id}`);
+        },
+
+        /**
+         * Create a support ticket. Always sent as multipart so attachments
+         * can ride along; the proxy handler doesn't care if there are no
+         * files in the request.
+         *
+         * @param {Object} data - { support_problem_type_id, subject, description, meta:{...}, context:{...} }
+         * @param {File[]} files - optional list of File objects (jpg/png/pdf, max 3MB each)
+         */
+        async createSupportTicket(data, files = []) {
+            const fd = new FormData();
+            fd.append('support_problem_type_id', String(data.support_problem_type_id));
+            fd.append('subject', data.subject || '');
+            fd.append('description', data.description || '');
+            // Flatten meta + context as bracket notation so Laravel can
+            // re-parse them with request->input('meta.url').
+            for (const [k, v] of Object.entries(data.meta || {})) {
+                if (v !== undefined && v !== null && v !== '') fd.append(`meta[${k}]`, String(v));
+            }
+            for (const [k, v] of Object.entries(data.context || {})) {
+                if (v !== undefined && v !== null && v !== '') fd.append(`context[${k}]`, String(v));
+            }
+            (files || []).forEach((f) => f && fd.append('attachments[]', f));
+
+            return AmbiletAPI._postMultipart('/organizer/support/tickets', fd);
+        },
+
+        /**
+         * Reply on a support ticket (organizer-side).
+         */
+        async replySupportTicket(id, body, files = []) {
+            const fd = new FormData();
+            fd.append('body', body || '');
+            (files || []).forEach((f) => f && fd.append('attachments[]', f));
+            return AmbiletAPI._postMultipart(`/organizer/support/tickets/${id}/messages`, fd);
+        },
+
+        /**
+         * Mark own support ticket resolved.
+         */
+        async closeSupportTicket(id) {
+            return AmbiletAPI.post(`/organizer/support/tickets/${id}/close`);
+        },
+
+        /**
+         * Reopen a previously resolved/closed support ticket.
+         */
+        async reopenSupportTicket(id) {
+            return AmbiletAPI.post(`/organizer/support/tickets/${id}/reopen`);
+        }
+    },
+
+    // ==================== ARTIST ACCOUNT ENDPOINTS ====================
+
+    artist: {
+        /**
+         * Register a new artist account (optionally claiming an existing
+         * /artist/{slug} profile via `artist_slug` in `data`).
+         */
+        async register(data) {
+            return AmbiletAPI.post('/artist/register', data);
+        },
+
+        /**
+         * Login. The Laravel controller returns structured 403 errors
+         * with `data.code` of:
+         *   email_not_verified | pending_approval | rejected | suspended
+         * and `data.reason` for the rejected case. The page-level JS
+         * inspects these to redirect appropriately.
+         */
+        async login(email, password) {
+            return AmbiletAPI.post('/artist/login', { email, password });
+        },
+
+        async logout() {
+            return AmbiletAPI.post('/artist/logout');
+        },
+
+        async getProfile() {
+            return AmbiletAPI.get('/artist/me');
+        },
+
+        async forgotPassword(email) {
+            return AmbiletAPI.post('/artist/forgot-password', { email });
+        },
+
+        async resetPassword(data) {
+            return AmbiletAPI.post('/artist/reset-password', data);
+        },
+
+        async verifyEmail(email, token) {
+            return AmbiletAPI.post('/artist/verify-email', { email, token });
+        },
+
+        async resendVerification(email) {
+            return AmbiletAPI.post('/artist/resend-verification', { email });
+        },
+
+        /**
+         * Public — used by artist-single.php to render the right CTA on
+         * the public profile page (claim vs. verified vs. edit).
+         */
+        async checkClaim(artistSlug) {
+            return AmbiletAPI.get(`/artist/check-claim/${artistSlug}`);
+        },
+
+        /**
+         * Picker search for the register page. Returns up to 20 partner
+         * artists with `is_claimed` flagged so claimed ones can be
+         * disabled in the dropdown.
+         */
+        async searchArtists(q = '') {
+            return AmbiletAPI.get('/artist/search', q ? { q } : {});
+        },
+
+        // -------- Self-service (Etapa 4) — auth required --------
+
+        async getDashboard() {
+            return AmbiletAPI.get('/artist/dashboard');
+        },
+
+        /**
+         * @param {object} params - { filter: 'upcoming'|'past'|'all', per_page, page }
+         */
+        async getEvents(params = {}) {
+            return AmbiletAPI.get('/artist/events', params);
+        },
+
+        async getProfile() {
+            return AmbiletAPI.get('/artist/profile');
+        },
+
+        async updateProfile(data) {
+            return AmbiletAPI.put('/artist/profile', data);
+        },
+
+        /** Cached server-side; returns { artist_types: [...], artist_genres: [...] } */
+        async getTaxonomies() {
+            return AmbiletAPI.get('/artist/profile/taxonomies');
+        },
+
+        /**
+         * Trigger a one-shot refresh of the artist's social stats
+         * (Spotify followers/popularity, YouTube subs, Facebook/Insta/
+         * TikTok followers etc). Server dispatches the FetchArtistSocialStats
+         * job; the response returns BEFORE the upstream APIs are hit, so
+         * the UI should poll /artist/profile or just tell the user to
+         * come back in a few minutes.
+         */
+        async refreshSocialStats() {
+            return AmbiletAPI.post('/artist/profile/refresh-social-stats');
+        },
+
+        /**
+         * Upload an image. `type` is one of: main | logo | portrait | discography.
+         * Uses native FormData so the proxy can forward the multipart body
+         * upstream without re-encoding.
+         */
+        async uploadProfileImage(file, type) {
+            const formData = new FormData();
+            formData.append('image', file);
+            formData.append('type', type);
+
+            const baseUrl = AmbiletAPI.getApiUrl();
+            const url = `${baseUrl}?action=artist.profile.image`;
+            const headers = {};
+            const token = typeof AmbiletAuth !== 'undefined' ? AmbiletAuth.getToken() : null;
+            if (token) headers['Authorization'] = `Bearer ${token}`;
+
+            const response = await fetch(url, { method: 'POST', headers, body: formData });
+            const data = await response.json();
+            if (!response.ok) {
+                const err = new APIError(data.message || 'Upload failed', response.status, data.errors);
+                err.data = data;
+                throw err;
+            }
+            return data;
+        },
+
+        async getAccount() {
+            return AmbiletAPI.get('/artist/account');
+        },
+
+        async updateAccount(data) {
+            return AmbiletAPI.put('/artist/account', data);
+        },
+
+        async updatePassword(data) {
+            return AmbiletAPI.put('/artist/account/password', data);
+        },
+
+        /**
+         * Self-delete the account. Requires `password` confirmation in body.
+         */
+        async deleteAccount(password) {
+            return AmbiletAPI.delete('/artist/account', { password });
         }
     }
+};
+
+/**
+ * Internal: POST a FormData body through the proxy with auth.
+ * Mirrors AmbiletAPI.post but doesn't JSON-encode the body so cURL on
+ * the proxy side ships a real multipart/form-data request upstream.
+ */
+AmbiletAPI._postMultipart = async function(endpointPath, formData) {
+    const action = AmbiletAPI.getProxyAction(endpointPath);
+    const params = AmbiletAPI.getProxyParams(endpointPath);
+    const baseUrl = AmbiletAPI.getApiUrl();
+    if (!action) {
+        throw new APIError(`Unknown endpoint: ${endpointPath}`, 400);
+    }
+    const url = `${baseUrl}?action=${action}${params ? '&' + params : ''}`;
+
+    const headers = {};
+    const token = (typeof AmbiletAuth !== 'undefined' && AmbiletAuth.getToken) ? AmbiletAuth.getToken() : null;
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    // Do NOT set Content-Type — the browser fills it with the boundary.
+
+    const res = await fetch(url, { method: 'POST', headers, body: formData, credentials: 'same-origin' });
+    let data = null;
+    try { data = await res.json(); } catch (_) { /* non-JSON */ }
+    if (!res.ok) {
+        throw new APIError(
+            (data && (data.message || data.error)) || `HTTP ${res.status}`,
+            res.status,
+            data && data.errors ? data.errors : null
+        );
+    }
+    return data;
 };
 
 /**

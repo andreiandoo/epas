@@ -203,6 +203,70 @@ class LeisureController extends BaseController
         ]);
     }
 
+    /**
+     * PUT /marketplace-client/organizer/events/{event}/leisure/venue-config
+     *
+     * Self-service editor pentru continutul venue_config (hero, FAQ, attractions,
+     * trails, etc.). Organizatorul rezervatiei poate modifica fara sa intre in
+     * Filament admin Tixello.
+     *
+     * Cheile array (faqs, trails, etc.) sunt INLOCUITE complet ca sa permita
+     * stergerea/reordonarea elementelor.
+     */
+    public function updateVenueConfig(Request $request, int $event): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+        $marketplace = $organizer->marketplaceClient;
+
+        $eventModel = Event::query()
+            ->where('id', $event)
+            ->where('marketplace_client_id', $marketplace->id)
+            ->where('marketplace_organizer_id', $organizer->id)
+            ->first();
+
+        if (!$eventModel) {
+            return $this->error('Event not found or access denied', 404);
+        }
+
+        if (($eventModel->display_template ?? 'standard') !== 'leisure_venue') {
+            return $this->error('Event is not a leisure venue', 422);
+        }
+
+        $validated = $request->validate([
+            'venue_config' => 'required|array',
+        ]);
+
+        $current = $eventModel->venue_config ?? [];
+        $incoming = $validated['venue_config'];
+
+        $listKeys = [
+            'hero_badges', 'amenities', 'closed_dates', 'pricing_rules', 'seasons',
+            'attractions', 'stats_highlights', 'flora', 'trails', 'getting_there',
+            'quick_stats', 'gallery', 'videos', 'nearby_hotels',
+            'faqs', 'bundle_discounts',
+            'sections', 'section_order',
+        ];
+
+        $merged = $current;
+        foreach ($incoming as $key => $value) {
+            if (in_array($key, $listKeys, true)) {
+                $merged[$key] = $value;
+            } elseif (is_array($value) && isset($merged[$key]) && is_array($merged[$key])) {
+                $merged[$key] = array_replace_recursive($merged[$key], $value);
+            } else {
+                $merged[$key] = $value;
+            }
+        }
+
+        $eventModel->venue_config = $merged;
+        $eventModel->save();
+
+        return $this->success([
+            'venue_config' => $merged,
+            'updated_keys' => array_keys($incoming),
+        ], 'Conținut actualizat cu succes');
+    }
+
     protected function emptyBucket(): array
     {
         return [

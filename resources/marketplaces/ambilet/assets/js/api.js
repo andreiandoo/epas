@@ -378,6 +378,11 @@ const AmbiletAPI = {
         if (endpoint.includes('/organizer/dashboard/sales-timeline')) return 'organizer.dashboard.sales-timeline';
 
         // Organizer events
+        // Leisure venue endpoints (organizer-side)
+        if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/config$/)) return 'organizer.event.leisure.config';
+        if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/reports\/by-issuer/)) return 'organizer.event.leisure.reports.by-issuer';
+        if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/venue-config$/)) return 'organizer.event.leisure.venue-config';
+
         if (endpoint.match(/\/organizer\/events\/\d+\/analytics/)) return 'organizer.event.analytics';
         if (endpoint.match(/\/organizer\/events\/\d+\/goals\/\d+$/)) return 'organizer.event.goal';
         if (endpoint.match(/\/organizer\/events\/\d+\/goals$/)) return 'organizer.event.goals';
@@ -484,6 +489,12 @@ const AmbiletAPI = {
      * Extract params from endpoint for proxy
      */
     getProxyParams(endpoint) {
+        // Extract event ID from leisure organizer endpoints
+        const leisureMatch = endpoint.match(/^\/organizer\/events\/(\d+)\/leisure\//);
+        if (leisureMatch) {
+            return `event=${encodeURIComponent(leisureMatch[1])}`;
+        }
+
         // Extract artist slug from /artist/check-claim/{slug}
         const artistClaimMatch = endpoint.match(/^\/artist\/check-claim\/([a-z0-9-]+)$/);
         if (artistClaimMatch) {
