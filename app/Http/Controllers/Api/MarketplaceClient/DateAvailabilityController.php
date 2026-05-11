@@ -161,6 +161,13 @@ class DateAvailabilityController extends BaseController
                 }
             }
 
+            $iconEmoji = $tt->meta['icon'] ?? null;
+            $unitLabel = $tt->meta['unit_label'] ?? null;
+            $includes = $tt->meta['includes'] ?? null;
+            if ($includes && !is_array($includes)) {
+                $includes = is_string($includes) ? array_filter(array_map('trim', explode(',', $includes))) : null;
+            }
+
             $ttData = [
                 'id' => $tt->id,
                 'name' => $tt->name,
@@ -184,6 +191,9 @@ class DateAvailabilityController extends BaseController
                 'usage_terms' => $tt->usage_terms,
                 'requires_access_ticket' => (bool) ($tt->requires_access_ticket ?? false),
                 'image_url' => $imageUrl,
+                'icon' => $iconEmoji,
+                'unit_label' => $unitLabel,
+                'includes' => $includes ?: [],
             ];
 
             if ($hasTourSlots) {

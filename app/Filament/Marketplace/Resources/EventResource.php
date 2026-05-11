@@ -2719,13 +2719,38 @@ class EventResource extends Resource
                                                             ->columnSpan(1),
                                                     ]),
 
-                                                // ── Leisure Venue: imagine pentru card serviciu ──
+                                                // ── Leisure Venue: iconită bilet (DOAR pentru categoria 'access') ──
+                                                Forms\Components\TextInput::make('meta.icon')
+                                                    ->label($t('Iconită bilet (emoji)', 'Ticket icon (emoji)'))
+                                                    ->placeholder('🚗')
+                                                    ->maxLength(10)
+                                                    ->helperText($t('Emoji afișat în pătrățelul rotund din stânga numelui (ex: 🚗 pentru mașină, 🚶 pentru pieton, 🏕️ pentru camping).', 'Emoji shown in the rounded badge next to ticket name.'))
+                                                    ->visible(fn (SGet $get) => ($get('../../display_template') ?? 'standard') === 'leisure_venue' && (($get('service_category') ?: 'access') === 'access'))
+                                                    ->columnSpan(12),
+
+                                                // ── Leisure Venue: imagine cover (DOAR pentru servicii ne-access) ──
                                                 Forms\Components\FileUpload::make('meta.image')
                                                     ->label($t('Imagine card serviciu', 'Service card image'))
                                                     ->image()
                                                     ->disk('public')
                                                     ->directory(fn (\Livewire\Component $livewire) => 'events/' . ($livewire->record?->id ?? 'tmp') . '/services')
-                                                    ->helperText($t('Imagine afișată în cardul de serviciu pe pagina publică (1:1 sau 4:3).', 'Image shown on service card on public page.'))
+                                                    ->helperText($t('Imagine cover afișată în cardul de serviciu pe pagina publică (1:1 sau 4:3).', 'Cover image on service card on public page.'))
+                                                    ->visible(fn (SGet $get) => ($get('../../display_template') ?? 'standard') === 'leisure_venue' && (($get('service_category') ?: 'access') !== 'access'))
+                                                    ->columnSpan(12),
+
+                                                // ── Leisure Venue: unit label (gen "/ mașină / 3h", "/ persoană / zi") ──
+                                                Forms\Components\TextInput::make('meta.unit_label')
+                                                    ->label($t('Unitate preț (mic, sub preț)', 'Price unit (small, below price)'))
+                                                    ->placeholder($t('ex: / mașină / 3h sau / persoană / zi', 'e.g. / car / 3h or / person / day'))
+                                                    ->helperText($t('Apare gri sub prețul afișat pe card.', 'Shown in gray below the price.'))
+                                                    ->visible(fn (SGet $get) => ($get('../../display_template') ?? 'standard') === 'leisure_venue')
+                                                    ->columnSpan(12),
+
+                                                // ── Leisure Venue: beneficii / includes (pillule sub nume) ──
+                                                Forms\Components\TagsInput::make('meta.includes')
+                                                    ->label($t('Beneficii incluse (pillule sub denumire)', 'Includes (pills below name)'))
+                                                    ->placeholder($t('Tastează beneficiul + Enter', 'Type benefit + Enter'))
+                                                    ->helperText($t('ex: "Parcare 3 ore inclusă", "Acces Lacul Sf. Ana", "Vizită Tinov Mohoș cu ghid"', 'e.g. specific included features'))
                                                     ->visible(fn (SGet $get) => ($get('../../display_template') ?? 'standard') === 'leisure_venue')
                                                     ->columnSpan(12),
 
