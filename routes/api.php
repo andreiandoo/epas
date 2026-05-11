@@ -1789,6 +1789,12 @@ Route::prefix('marketplace-client/organizer')->middleware(['throttle:120,1', 'ma
         Route::put('/events/{event}/leisure/venue-config', [OrganizerLeisureController::class, 'updateVenueConfig'])
             ->whereNumber('event')
             ->name('api.marketplace-client.organizer.leisure.venue-config.update');
+        Route::get('/events/{event}/leisure/participants', [OrganizerLeisureController::class, 'participants'])
+            ->whereNumber('event')
+            ->name('api.marketplace-client.organizer.leisure.participants');
+        Route::get('/events/{event}/leisure/sales-timeline', [OrganizerLeisureController::class, 'salesTimeline'])
+            ->whereNumber('event')
+            ->name('api.marketplace-client.organizer.leisure.sales-timeline');
 
         // Organizer Documents (Cerere avizare, Declaratie impozite)
         Route::get('/documents', [OrganizerDocumentController::class, 'index'])

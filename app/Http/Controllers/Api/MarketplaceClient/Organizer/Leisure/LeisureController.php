@@ -267,6 +267,205 @@ class LeisureController extends BaseController
         ], 'Conținut actualizat cu succes');
     }
 
+    /**
+     * GET /marketplace-client/organizer/events/{event}/leisure/participants
+     *     ?from=&to=&search=&page=&per_page=
+     *
+     * Listă tickete vândute (= participanți) cu filtre dată + search + paginare.
+     */
+    public function participants(Request $request, int $event): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+        $marketplace = $organizer->marketplaceClient;
+
+        $eventModel = Event::query()
+            ->where('id', $event)
+            ->where('marketplace_client_id', $marketplace->id)
+            ->first();
+
+        if (!$eventModel) {
+            return $this->error('Event not found', 404);
+        }
+
+        $validated = $request->validate([
+            'from' => 'nullable|date',
+            'to' => 'nullable|date|after_or_equal:from',
+            'search' => 'nullable|string|max:100',
+            'per_page' => 'nullable|integer|min:1|max:200',
+            'page' => 'nullable|integer|min:1',
+        ]);
+
+        $from = isset($validated['from'])
+            ? Carbon::parse($validated['from'])->startOfDay()
+            : Carbon::today()->subDays(30)->startOfDay();
+        $to = isset($validated['to'])
+            ? Carbon::parse($validated['to'])->endOfDay()
+            : Carbon::today()->endOfDay();
+        $perPage = (int) ($validated['per_page'] ?? 50);
+        $search = $validated['search'] ?? null;
+
+        $query = \App\Models\Ticket::query()
+            ->whereHas('order', fn ($q) => $q
+                ->where('event_id', $eventModel->id)
+                ->whereIn('status', ['completed', 'paid'])
+                ->whereBetween('paid_at', [$from, $to]))
+            ->with([
+                'order:id,customer_name,customer_email,customer_phone,paid_at,status,total',
+                'ticketType:id,name,service_category,issuing_company,valid_date',
+            ]);
+
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('code', 'ilike', "%{$search}%")
+                  ->orWhere('barcode', 'ilike', "%{$search}%")
+                  ->orWhereHas('order', fn ($oq) => $oq
+                      ->where('customer_name', 'ilike', "%{$search}%")
+                      ->orWhere('customer_email', 'ilike', "%{$search}%"));
+            });
+        }
+
+        $paginator = $query->orderByDesc('id')->paginate($perPage);
+
+        // Aggregare stats (total, checked-in, no-show) — query separat pe acelasi filter
+        $statsQuery = \App\Models\Ticket::query()
+            ->whereHas('order', fn ($q) => $q
+                ->where('event_id', $eventModel->id)
+                ->whereIn('status', ['completed', 'paid'])
+                ->whereBetween('paid_at', [$from, $to]));
+        $totalTickets = (clone $statsQuery)->count();
+        $checkedIn = (clone $statsQuery)->whereNotNull('checked_in_at')->count();
+        $rate = $totalTickets > 0 ? round($checkedIn / $totalTickets * 100, 1) : 0;
+
+        $rows = $paginator->getCollection()->map(function ($t) {
+            $metaVisit = is_array($t->meta ?? null) ? ($t->meta['visit_date'] ?? null) : null;
+            $visit = $metaVisit
+                ?? optional($t->ticketType?->valid_date)->toDateString()
+                ?? optional($t->order?->paid_at)->toDateString();
+            return [
+                'id' => $t->id,
+                'code' => $t->code,
+                'barcode' => $t->barcode,
+                'customer_name' => $t->order->customer_name ?? null,
+                'customer_email' => $t->order->customer_email ?? null,
+                'ticket_type' => $t->ticketType->name ?? null,
+                'service_category' => $t->ticketType->service_category ?? 'access',
+                'issuing_company' => $t->ticketType->issuing_company ?? 'primary',
+                'visit_date' => $visit,
+                'status' => $t->status,
+                'checked_in_at' => optional($t->checked_in_at)->toIso8601String(),
+            ];
+        });
+
+        return $this->success([
+            'from' => $from->toDateString(),
+            'to' => $to->toDateString(),
+            'stats' => [
+                'total' => $totalTickets,
+                'checked_in' => $checkedIn,
+                'no_show' => max(0, $totalTickets - $checkedIn),
+                'rate' => $rate,
+            ],
+            'rows' => $rows,
+            'meta' => [
+                'current_page' => $paginator->currentPage(),
+                'last_page' => $paginator->lastPage(),
+                'per_page' => $paginator->perPage(),
+                'total' => $paginator->total(),
+            ],
+        ]);
+    }
+
+    /**
+     * GET /marketplace-client/organizer/events/{event}/leisure/sales-timeline
+     *     ?from=&to=&group_by=day|week|month
+     *
+     * Time series vânzări — pentru chart-uri pe pagina Sales.
+     */
+    public function salesTimeline(Request $request, int $event): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+        $marketplace = $organizer->marketplaceClient;
+
+        $eventModel = Event::query()
+            ->where('id', $event)
+            ->where('marketplace_client_id', $marketplace->id)
+            ->first();
+
+        if (!$eventModel) {
+            return $this->error('Event not found', 404);
+        }
+
+        $validated = $request->validate([
+            'from' => 'nullable|date',
+            'to' => 'nullable|date|after_or_equal:from',
+            'group_by' => 'nullable|in:day,week,month',
+        ]);
+
+        $from = isset($validated['from'])
+            ? Carbon::parse($validated['from'])->startOfDay()
+            : Carbon::today()->subDays(7)->startOfDay();
+        $to = isset($validated['to'])
+            ? Carbon::parse($validated['to'])->endOfDay()
+            : Carbon::today()->endOfDay();
+        $groupBy = $validated['group_by'] ?? 'day';
+
+        $orders = Order::query()
+            ->where('event_id', $eventModel->id)
+            ->whereIn('status', ['completed', 'paid'])
+            ->whereBetween('paid_at', [$from, $to])
+            ->with(['tickets:id,order_id,ticket_type_id,price,status', 'tickets.ticketType:id,service_category'])
+            ->get(['id', 'event_id', 'paid_at', 'status', 'total', 'currency']);
+
+        // Format key per groupBy
+        $fmtKey = function ($carbon) use ($groupBy) {
+            if ($groupBy === 'month') return $carbon->format('Y-m');
+            if ($groupBy === 'week')  return $carbon->format('o-W'); // ISO week
+            return $carbon->toDateString();
+        };
+
+        $buckets = [];
+        $totalRevenue = 0.0;
+        $totalTickets = 0;
+        $totalOrders = $orders->count();
+        $byCategory = [];
+
+        foreach ($orders as $order) {
+            $key = $fmtKey($order->paid_at);
+            if (!isset($buckets[$key])) {
+                $buckets[$key] = ['date' => $key, 'orders' => 0, 'tickets' => 0, 'revenue' => 0.0];
+            }
+            $buckets[$key]['orders']++;
+            $rev = (float) ($order->total ?? 0);
+            $buckets[$key]['revenue'] += $rev;
+            $totalRevenue += $rev;
+
+            foreach ($order->tickets as $ticket) {
+                if (in_array($ticket->status, ['cancelled', 'refunded'], true)) continue;
+                $buckets[$key]['tickets']++;
+                $totalTickets++;
+                $cat = $ticket->ticketType->service_category ?? 'access';
+                $byCategory[$cat] = ($byCategory[$cat] ?? 0) + 1;
+            }
+        }
+
+        ksort($buckets);
+
+        return $this->success([
+            'from' => $from->toDateString(),
+            'to' => $to->toDateString(),
+            'group_by' => $groupBy,
+            'currency' => $orders->first()?->currency ?? 'RON',
+            'rows' => array_values($buckets),
+            'totals' => [
+                'orders' => $totalOrders,
+                'tickets' => $totalTickets,
+                'revenue' => round($totalRevenue, 2),
+                'avg_order' => $totalOrders > 0 ? round($totalRevenue / $totalOrders, 2) : 0,
+            ],
+            'by_category' => $byCategory,
+        ]);
+    }
+
     protected function emptyBucket(): array
     {
         return [

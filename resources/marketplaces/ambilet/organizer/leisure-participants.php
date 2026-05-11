@@ -91,15 +91,93 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             <div id="lv-empty" class="hidden p-8 text-center text-muted">Niciun participant în perioada selectată.</div>
         </div>
 
-        <div class="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-900">
-            ℹ️ <strong>Implementare în curs:</strong> tabelul folosește un endpoint nou (F5.4) <code class="bg-amber-100 px-1 rounded">GET /organizer/events/{event}/leisure/participants</code>. Pentru moment afișează zero. Datele vor veni din join Order ↔ Ticket ↔ TicketType cu filtre pe paid_at și status check-in.
-        </div>
     </main>
 </div>
 <script>
 (function(){
     const $ = (id) => document.getElementById(id);
-    let currentRange = '7'; // zile
+    let currentRange = '7';
+    let currentEventId = null;
+    let currentFrom = null;
+    let currentTo = null;
+    let allRows = [];
+    let searchTimer = null;
+
+    function fmtDate(iso) {
+        if (!iso) return '—';
+        try { return new Date(iso).toLocaleString('ro-RO', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }); }
+        catch { return iso; }
+    }
+
+    function fmtDay(iso) {
+        if (!iso) return '—';
+        try { return new Date(iso + 'T00:00:00').toLocaleDateString('ro-RO', { day: '2-digit', month: 'short', year: 'numeric' }); }
+        catch { return iso; }
+    }
+
+    function statusBadge(s) {
+        const map = {
+            'valid':    ['bg-emerald-100','text-emerald-800','Valid'],
+            'used':     ['bg-slate-100','text-slate-700','Folosit'],
+            'cancelled':['bg-rose-100','text-rose-700','Anulat'],
+            'refunded': ['bg-amber-100','text-amber-800','Restituit'],
+        };
+        const m = map[s] || ['bg-slate-100','text-slate-600', s || '—'];
+        return `<span class="inline-block px-2 py-0.5 text-xs rounded-full ${m[0]} ${m[1]}">${m[2]}</span>`;
+    }
+
+    function categoryBadge(c) {
+        const map = {
+            'access':   ['bg-blue-100','text-blue-800','Acces'],
+            'parking':  ['bg-violet-100','text-violet-800','Parcare'],
+            'rental':   ['bg-amber-100','text-amber-800','Închiriere'],
+            'activity': ['bg-emerald-100','text-emerald-800','Activitate'],
+            'extra':    ['bg-slate-100','text-slate-700','Extra'],
+        };
+        const m = map[c] || ['bg-slate-100','text-slate-600', c || ''];
+        return `<span class="inline-block px-1.5 py-0.5 text-[10px] font-semibold rounded ${m[0]} ${m[1]}">${m[2]}</span>`;
+    }
+
+    function renderRows(rows) {
+        const tbody = $('lv-rows');
+        if (!rows || rows.length === 0) {
+            tbody.innerHTML = '';
+            $('lv-table-wrap').classList.add('hidden');
+            $('lv-empty').classList.remove('hidden');
+            return;
+        }
+        tbody.innerHTML = rows.map(r => `
+            <tr class="hover:bg-slate-50">
+                <td class="px-5 py-3 font-mono text-xs">${r.code || r.barcode || '—'}</td>
+                <td class="px-5 py-3">
+                    <div class="font-medium text-secondary">${r.customer_name || '—'}</div>
+                    <div class="text-xs text-muted">${r.customer_email || ''}</div>
+                </td>
+                <td class="px-5 py-3">
+                    <div class="text-sm">${r.ticket_type || '—'}</div>
+                    <div class="mt-0.5">${categoryBadge(r.service_category)}</div>
+                </td>
+                <td class="px-5 py-3 text-sm">${fmtDay(r.visit_date)}</td>
+                <td class="px-5 py-3">${statusBadge(r.status)}</td>
+                <td class="px-5 py-3 text-xs">${r.checked_in_at ? fmtDate(r.checked_in_at) : '<span class="text-muted">— neefectuat</span>'}</td>
+            </tr>
+        `).join('');
+        $('lv-table-wrap').classList.remove('hidden');
+        $('lv-empty').classList.add('hidden');
+    }
+
+    function applyClientSearch() {
+        const q = ($('lv-search').value || '').trim().toLowerCase();
+        if (!q) return renderRows(allRows);
+        const filtered = allRows.filter(r =>
+            (r.code || '').toLowerCase().includes(q) ||
+            (r.barcode || '').toLowerCase().includes(q) ||
+            (r.customer_name || '').toLowerCase().includes(q) ||
+            (r.customer_email || '').toLowerCase().includes(q) ||
+            (r.ticket_type || '').toLowerCase().includes(q)
+        );
+        renderRows(filtered);
+    }
 
     function setRange(days) {
         currentRange = days;
@@ -116,33 +194,110 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             $('lv-custom-range').classList.remove('flex');
             const labels = { '7': 'Ultimele 7 zile', '14': 'Ultimele 14 zile', '30': 'Ultima lună', '90': 'Ultimele 3 luni', '180': 'Ultimele 6 luni' };
             $('lv-range-label').textContent = labels[days] || `${days} zile`;
-            loadParticipants(days);
+            const to = new Date();
+            const from = new Date(Date.now() - parseInt(days, 10) * 86400000);
+            currentFrom = from.toISOString().slice(0, 10);
+            currentTo = to.toISOString().slice(0, 10);
+            loadParticipants();
         }
     }
 
-    async function loadParticipants(days) {
+    async function loadParticipants() {
         $('lv-loading').classList.remove('hidden');
         $('lv-table-wrap').classList.add('hidden');
         $('lv-empty').classList.add('hidden');
-        // TODO F5.4: fetch real data
-        // const to = new Date().toISOString().slice(0,10);
-        // const from = new Date(Date.now() - days*86400000).toISOString().slice(0,10);
-        // try { const r = await AmbiletAPI.get(`/organizer/events/${eventId}/leisure/participants`, {from, to}); ... } catch{}
-        setTimeout(() => {
+
+        if (!currentEventId) {
             $('lv-loading').classList.add('hidden');
+            $('lv-empty').textContent = 'Nu există un eveniment de tip Lacul / Locație de agrement asociat.';
             $('lv-empty').classList.remove('hidden');
-        }, 300);
+            return;
+        }
+        try {
+            const params = {};
+            if (currentFrom) params.from = currentFrom;
+            if (currentTo) params.to = currentTo;
+            params.per_page = 200;
+            const res = await AmbiletAPI.get(`/organizer/events/${currentEventId}/leisure/participants`, params);
+            const data = res.data || {};
+            const stats = data.stats || {};
+            $('lv-stat-total').textContent = stats.total || 0;
+            $('lv-stat-checked').textContent = stats.checked_in || 0;
+            $('lv-stat-rate').textContent = stats.rate || 0;
+            $('lv-stat-noshow').textContent = stats.no_show || 0;
+            allRows = data.rows || [];
+            applyClientSearch();
+        } catch (e) {
+            console.error('[leisure-participants] load failed', e);
+            allRows = [];
+            $('lv-empty').textContent = 'Eroare la încărcarea datelor. Verifică consola.';
+            $('lv-empty').classList.remove('hidden');
+        } finally {
+            $('lv-loading').classList.add('hidden');
+        }
     }
 
-    document.addEventListener('DOMContentLoaded', () => {
+    function exportCsv() {
+        const rows = allRows;
+        if (!rows.length) { alert('Niciun rând de exportat.'); return; }
+        const header = ['Cod', 'Nume', 'Email', 'Tip bilet', 'Categorie', 'Societate', 'Data vizita', 'Status', 'Check-in'];
+        const csv = [header.join(',')].concat(rows.map(r => [
+            r.code || r.barcode || '',
+            (r.customer_name || '').replace(/"/g, '""'),
+            r.customer_email || '',
+            (r.ticket_type || '').replace(/"/g, '""'),
+            r.service_category || '',
+            r.issuing_company || '',
+            r.visit_date || '',
+            r.status || '',
+            r.checked_in_at || '',
+        ].map(v => `"${v}"`).join(','))).join('\n');
+        const blob = new Blob(["﻿" + csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `participanti_${currentFrom || ''}_${currentTo || ''}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+
+    window.addEventListener('load', async () => {
+        let retries = 0;
+        while (typeof AmbiletAPI === 'undefined' && retries < 10) { await new Promise(r => setTimeout(r, 100)); retries++; }
+        if (typeof AmbiletAPI === 'undefined') {
+            $('lv-loading').classList.add('hidden');
+            $('lv-empty').textContent = 'API indisponibil — reîncarcă pagina.';
+            $('lv-empty').classList.remove('hidden');
+            return;
+        }
+        try {
+            const res = await AmbiletAPI.get('/organizer/events');
+            const events = res.data || [];
+            const leisure = events.filter(e => (e.display_template || 'standard') === 'leisure_venue');
+            if (leisure.length > 0) currentEventId = leisure[0].id;
+        } catch (e) { console.error(e); }
+
         document.querySelectorAll('.lv-range-btn').forEach(btn => {
             btn.addEventListener('click', () => setRange(btn.dataset.range));
         });
+        $('lv-apply-custom').addEventListener('click', () => {
+            const f = $('lv-from').value;
+            const t = $('lv-to').value;
+            if (!f || !t) return;
+            currentFrom = f;
+            currentTo = t;
+            $('lv-range-label').textContent = `${f} → ${t}`;
+            loadParticipants();
+        });
+        $('lv-search').addEventListener('input', () => {
+            clearTimeout(searchTimer);
+            searchTimer = setTimeout(applyClientSearch, 150);
+        });
+        $('lv-export').addEventListener('click', exportCsv);
         setRange('7');
     });
 })();
 </script>
 <?php
-require_once dirname(__DIR__) . '/includes/organizer-footer.php';
 require_once dirname(__DIR__) . '/includes/scripts.php';
 ?>

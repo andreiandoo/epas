@@ -1793,6 +1793,40 @@ switch ($action) {
         $requiresAuth = true;
         break;
 
+    case 'organizer.event.leisure.participants':
+        $eventId = (int) ($_GET['event'] ?? 0);
+        if (!$eventId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing event id']);
+            exit;
+        }
+        $params = [];
+        if (isset($_GET['from'])) $params['from'] = $_GET['from'];
+        if (isset($_GET['to'])) $params['to'] = $_GET['to'];
+        if (isset($_GET['search'])) $params['search'] = $_GET['search'];
+        if (isset($_GET['page'])) $params['page'] = (int) $_GET['page'];
+        if (isset($_GET['per_page'])) $params['per_page'] = (int) $_GET['per_page'];
+        $endpoint = '/organizer/events/' . $eventId . '/leisure/participants'
+            . ($params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.event.leisure.sales-timeline':
+        $eventId = (int) ($_GET['event'] ?? 0);
+        if (!$eventId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing event id']);
+            exit;
+        }
+        $params = [];
+        if (isset($_GET['from'])) $params['from'] = $_GET['from'];
+        if (isset($_GET['to'])) $params['to'] = $_GET['to'];
+        if (isset($_GET['group_by'])) $params['group_by'] = $_GET['group_by'];
+        $endpoint = '/organizer/events/' . $eventId . '/leisure/sales-timeline'
+            . ($params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
     case 'organizer.password':
         $method = 'PUT';
         $body = file_get_contents('php://input');
