@@ -1,50 +1,88 @@
 <?php
 /**
- * Leisure Venue custom event page — modern immersive template.
+ * Leisure Venue page — atmospheric immersive template.
  * Included from event.php when display_template === 'leisure_venue'.
  *
- * Variables available from event.php:
- *   $ev             — event data array
- *   $eventSlug      — event slug
- *   $pageTitle       — already set to event name
- *   $pageDescription — already set
- *   $eventPreload   — full API response
+ * Source design: epas/resources/marketplaces/ambilet/designs/sf-ana.html
+ * Stack: Alpine.js (CDN) + Tailwind (inline config) + Leaflet (CDN) +
+ *        Plus Jakarta Sans + Fraunces (Google Fonts).
+ *
+ * Data sources:
+ *  - $ev (event preload)
+ *  - $ev.venue_config — seasons, schedule, pricing_rules, closed_dates,
+ *    amenities, gallery, hero_images, contact_phone, directions_url,
+ *    + NEW (vezi LIST_BACKEND_FIELDS.md): trails, faqs, flora, attractions,
+ *    stats_highlights, services_overview, getting_there, location_map,
+ *    safety_warning, etc.
+ *  - $issuers din $eventPreload['data']['organizer'] — 2 societati emitente
+ *  - API live: GET /marketplace-events/{slug}/date-availability?month|date
  */
 
-$venueConfig = $ev['venue_config'] ?? [];
-$amenities   = $venueConfig['amenities'] ?? [];
-$heroImages  = $venueConfig['hero_images'] ?? [];
-$heroImage   = !empty($heroImages) ? $heroImages[0] : ($ev['cover_image_url'] ?? $ev['hero_image_url'] ?? $ev['image_url'] ?? '');
+$venueConfig    = $ev['venue_config'] ?? [];
+$amenities      = $venueConfig['amenities'] ?? [];
+$heroImages     = $venueConfig['hero_images'] ?? [];
+$heroImage      = !empty($heroImages) ? $heroImages[0] : ($ev['cover_image_url'] ?? $ev['hero_image_url'] ?? '');
 if ($heroImage && !str_starts_with($heroImage, 'http')) {
     $heroImage = STORAGE_URL . '/' . $heroImage;
 }
-$posterImage = $ev['poster_url'] ?? $ev['image_url'] ?? $ev['image'] ?? '';
+$posterImage    = $ev['poster_url'] ?? $ev['image_url'] ?? $ev['image'] ?? '';
 if ($posterImage && !str_starts_with($posterImage, 'http')) {
     $posterImage = STORAGE_URL . '/' . $posterImage;
 }
-$contactPhone  = $venueConfig['contact_phone'] ?? '';
-$directionsUrl = $venueConfig['directions_url'] ?? '';
-$rulesHtml     = $venueConfig['rules_html'] ?? '';
-$operatingSchedule = $venueConfig['operating_schedule'] ?? [];
-$seasons       = $venueConfig['seasons'] ?? [];
+$contactPhone   = $venueConfig['contact_phone'] ?? '';
+$directionsUrl  = $venueConfig['directions_url'] ?? '';
+$rulesHtml      = $venueConfig['rules_html'] ?? '';
+$seasons        = $venueConfig['seasons'] ?? [];
 $maxAdvanceDays = $venueConfig['max_advance_days'] ?? 90;
-$gallery = $ev['gallery'] ?? [];
-$venueName = $ev['venue_name'] ?? '';
-$venueCity = $ev['venue_city'] ?? '';
-$venueAddress = $ev['venue_address'] ?? '';
-$description = $ev['description'] ?? '';
+$gallery        = $ev['gallery'] ?? [];
+$venueName      = $ev['venue_name'] ?? '';
+$venueCity      = $ev['venue_city'] ?? '';
+$venueAddress   = $ev['venue_address'] ?? '';
+$description    = $ev['description'] ?? '';
 $shortDescription = $ev['short_description'] ?? '';
+$eventTitle     = $ev['name'] ?? $ev['title'] ?? 'Rezervație';
 
-$bodyClass = 'bg-surface';
-$cssBundle = 'single';
-require_once __DIR__ . '/includes/head.php';
-require_once __DIR__ . '/includes/header.php';
-?>
+// Title parts (hero — title + italic subtitle)
+$titlePrimary   = $venueConfig['title_primary']   ?? $eventTitle;
+$titleSecondary = $venueConfig['title_secondary'] ?? '';
 
-<?php
-// Build issuers map from organizer (primary always, secondary only if has_secondary_issuer=true).
-// IMPORTANT: organizer e SIBLING al cheii event in raspuns ($eventPreload['data']['organizer']),
-// NU sub event. Fallback la $ev['organizer'] e pentru compatibilitate cu posibile alte payload-uri.
+// Hero badges (Sit Natura 2000, Altitudine, Județ)
+$heroBadges = $venueConfig['hero_badges'] ?? [];
+
+// Quick stats bar
+$quickStats = $venueConfig['quick_stats'] ?? [];
+
+// Tagline / kicker peste titlu
+$heroKicker = $venueConfig['hero_kicker'] ?? '';
+
+// Big stats highlights (30k, 950m, etc.)
+$statsHighlights = $venueConfig['stats_highlights'] ?? [];
+
+// Trasee turistice
+$trails = $venueConfig['trails'] ?? [];
+
+// FAQs
+$faqs = $venueConfig['faqs'] ?? [];
+
+// Floră & faună
+$flora = $venueConfig['flora'] ?? [];
+
+// Atracții — cele 2 cratere / locuri principale
+$attractions = $venueConfig['attractions'] ?? [];
+
+// Cum ajungi — 3 carduri (mașină / pe jos / cazare)
+$gettingThere = $venueConfig['getting_there'] ?? [];
+
+// Map config
+$mapConfig = $venueConfig['map_config'] ?? [];
+$mapCenter = $mapConfig['center'] ?? null; // [lat, lng]
+$mapZoom = $mapConfig['zoom'] ?? 12;
+$mapPois = $mapConfig['pois'] ?? [];
+
+// Safety warning
+$safetyWarning = $venueConfig['safety_warning'] ?? null;
+
+// Build issuers map (organizer e SIBLING al cheii event in raspuns)
 $organizer = $eventPreload['data']['organizer']
     ?? $ev['organizer']
     ?? $ev['marketplace_organizer']
@@ -61,9 +99,67 @@ if (!empty($organizer['has_secondary_issuer'])) {
         'tax_id' => $organizer['secondary_company_tax_id'] ?? null,
     ];
 }
+
+$bodyClass = 'bg-fog text-ink font-sans antialiased';
+$cssBundle = 'single'; // fallback — folosim tailwind inline + custom CSS
+
+require_once __DIR__ . '/includes/head.php';
+
+// Marker that head.php already emitted </head><body>
 ?>
 
-<!-- Inject event data for JS -->
+<!-- Tailwind CDN cu config inline (pentru paleta forest/lake/sand) -->
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+    tailwind.config = {
+        theme: {
+            extend: {
+                fontFamily: {
+                    'sans': ['Plus Jakarta Sans', 'sans-serif'],
+                    'display': ['Fraunces', 'serif'],
+                },
+                colors: {
+                    'forest': { 50:'#F0FAF4',100:'#DCF2E3',200:'#BBE5C9',300:'#8DCFA5',400:'#5BB17F',500:'#3D9663',600:'#2D7A4F',700:'#256142',800:'#1F4E37',900:'#0F2C20' },
+                    'lake':   { 50:'#ECFEFF',100:'#CFFAFE',200:'#A5F3FC',300:'#67E8F9',400:'#22D3EE',500:'#06B6D4',600:'#0891B2',700:'#0E7490',800:'#155E75',900:'#164E63' },
+                    'sand':   { 50:'#FAF7F2',100:'#F1EBE0',200:'#E5D8C0',300:'#D3BD93',400:'#B89968',500:'#9A7B4D' },
+                    'ink': '#0F1E1A',
+                    'fog': '#F5F7F4',
+                }
+            }
+        }
+    }
+</script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700;9..144,800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+<style>
+    body { -webkit-font-smoothing: antialiased; }
+    .lv-btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.75rem 1.5rem; border-radius: 9999px; font-weight: 600; font-size: 0.9375rem; transition: all 0.2s; cursor: pointer; border: none; }
+    .lv-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .lv-btn-primary { background: #1F4E37; color: white; }
+    .lv-btn-primary:hover:not(:disabled) { background: #0F2C20; transform: translateY(-1px); box-shadow: 0 8px 24px rgba(31, 78, 55, 0.25); }
+    .lv-btn-secondary { background: white; color: #1F4E37; border: 1.5px solid #BBE5C9; }
+    .lv-btn-secondary:hover:not(:disabled) { background: #F0FAF4; border-color: #5BB17F; }
+    .lv-qty-btn { width: 36px; height: 36px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; background: white; border: 1.5px solid #DCF2E3; color: #1F4E37; font-weight: 700; font-size: 1.125rem; cursor: pointer; transition: all 0.15s; }
+    .lv-qty-btn:hover:not(:disabled) { background: #F0FAF4; border-color: #5BB17F; }
+    .lv-qty-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+    .lv-hero-bg {
+        background:
+            radial-gradient(ellipse at 50% 100%, rgba(11, 130, 87, 0.3) 0%, transparent 60%),
+            radial-gradient(ellipse at 80% 20%, rgba(34, 211, 238, 0.15) 0%, transparent 50%),
+            linear-gradient(180deg, #0F2C20 0%, #1F4E37 40%, #256142 70%, #2D7A4F 100%);
+    }
+    .lv-topo-pattern {
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'%3E%3Cg fill='none' stroke='%23BBE5C9' stroke-width='0.5' opacity='0.4'%3E%3Cpath d='M0 100 Q 50 80, 100 100 T 200 100'/%3E%3Cpath d='M0 120 Q 50 100, 100 120 T 200 120'/%3E%3Cpath d='M0 140 Q 50 120, 100 140 T 200 140'/%3E%3Cpath d='M0 80 Q 50 60, 100 80 T 200 80'/%3E%3Cpath d='M0 60 Q 50 40, 100 60 T 200 60'/%3E%3C/g%3E%3C/svg%3E");
+    }
+    #trailMap, #locationMap { z-index: 1; }
+    .lv-scroll-mt { scroll-margin-top: 80px; }
+    .lv-badge { display: inline-flex; align-items: center; gap: 0.375rem; padding: 0.3rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; }
+</style>
+
+<!-- Inject server-side data ca să fie disponibilă în Alpine fără API roundtrip -->
 <script>
     window.__LEISURE_VENUE__ = <?= json_encode([
         'slug' => $eventSlug,
@@ -72,6 +168,7 @@ if (!empty($organizer['has_secondary_issuer'])) {
             'name' => $ev['name'] ?? '',
             'slug' => $eventSlug,
             'image' => $posterImage,
+            'hero_image' => $heroImage,
             'starts_at' => $ev['starts_at'] ?? null,
             'ends_at' => $ev['ends_at'] ?? null,
             'range_start_date' => $ev['range_start_date'] ?? null,
@@ -80,361 +177,906 @@ if (!empty($organizer['has_secondary_issuer'])) {
         'venue_config' => $venueConfig,
         'max_advance_days' => $maxAdvanceDays,
         'issuers' => $issuers,
+        'trails' => $trails,
+        'faqs' => $faqs,
+        'flora' => $flora,
+        'attractions' => $attractions,
+        'getting_there' => $gettingThere,
+        'map_config' => $mapConfig,
+        'stats_highlights' => $statsHighlights,
+        'hero_badges' => $heroBadges,
+        'quick_stats' => $quickStats,
+        'safety_warning' => $safetyWarning,
+        'is_preview' => !empty($_GET['preview']),
     ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
 </script>
 
-<style>
-    .lv-hero { min-height: 85vh; }
-    @media (max-width: 767px) { .lv-hero { min-height: 70vh; } }
-    .lv-hero-overlay { background: linear-gradient(180deg, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.3) 40%, rgba(0,0,0,0.75) 100%); }
-    .lv-glass { background: rgba(255,255,255,0.08); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.15); }
-    .lv-cta-pulse { animation: lv-pulse 2s infinite; }
-    @keyframes lv-pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(var(--color-primary-rgb, 59,130,246), 0.5); } 50% { box-shadow: 0 0 0 12px rgba(var(--color-primary-rgb, 59,130,246), 0); } }
-    .lv-amenity { transition: transform 0.2s; }
-    .lv-amenity:hover { transform: translateY(-2px); }
-    .lv-section-fade { opacity: 0; transform: translateY(24px); transition: opacity 0.6s ease, transform 0.6s ease; }
-    .lv-section-fade.visible { opacity: 1; transform: translateY(0); }
-    .lv-calendar-day { transition: all 0.15s ease; }
-    .lv-calendar-day:not(.disabled):hover { transform: scale(1.12); z-index: 1; }
-    .lv-ticket-card { transition: all 0.2s ease; }
-    .lv-ticket-card:hover { box-shadow: 0 4px 24px rgba(0,0,0,0.08); }
-    .lv-gallery-item { transition: transform 0.3s ease; }
-    .lv-gallery-item:hover { transform: scale(1.03); }
-    #ticket-booking-section { scroll-margin-top: 80px; }
-</style>
+<div x-data="reservationPage()" x-cloak>
 
-<!-- ==================== HERO ==================== -->
-<section class="lv-hero relative flex items-end overflow-hidden mt-17 mobile:mt-0">
+<!-- ============ TOP NAV (overlay over hero) ============ -->
+<nav class="absolute top-0 left-0 right-0 z-30 px-6 lg:px-12 py-5">
+    <div class="max-w-7xl mx-auto flex items-center justify-between">
+        <a href="/" class="flex items-center gap-2 text-white">
+            <div class="w-9 h-9 bg-white/15 backdrop-blur rounded-xl flex items-center justify-center">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/></svg>
+            </div>
+            <span class="font-extrabold text-lg"><?= SITE_NAME ?></span>
+        </a>
+        <div class="hidden lg:flex items-center gap-1 bg-white/10 backdrop-blur rounded-full px-2 py-1.5">
+            <a href="#bilete" class="px-4 py-1.5 text-white/80 hover:text-white text-sm font-medium transition-colors rounded-full hover:bg-white/10">Bilete</a>
+            <a href="#trasee" class="px-4 py-1.5 text-white/80 hover:text-white text-sm font-medium transition-colors rounded-full hover:bg-white/10">Trasee</a>
+            <a href="#despre" class="px-4 py-1.5 text-white/80 hover:text-white text-sm font-medium transition-colors rounded-full hover:bg-white/10">Despre</a>
+            <a href="#cum-ajungi" class="px-4 py-1.5 text-white/80 hover:text-white text-sm font-medium transition-colors rounded-full hover:bg-white/10">Cum ajungi</a>
+        </div>
+        <a href="#bilete" class="bg-white/15 backdrop-blur text-white px-4 py-2 rounded-full text-sm font-semibold hover:bg-white/25 transition-colors">Rezervă acces →</a>
+    </div>
+</nav>
+
+<!-- ============ HERO ============ -->
+<section class="lv-hero-bg relative min-h-[100vh] flex flex-col justify-end overflow-hidden pb-24 lg:pb-32">
     <?php if ($heroImage): ?>
-    <img src="<?= htmlspecialchars($heroImage) ?>" alt="<?= htmlspecialchars($ev['name'] ?? '') ?>"
-         class="absolute inset-0 w-full h-full object-cover object-center" loading="eager">
+    <img src="<?= htmlspecialchars($heroImage) ?>" alt="<?= htmlspecialchars($eventTitle) ?>"
+         class="absolute inset-0 w-full h-full object-cover opacity-30" loading="eager">
     <?php endif; ?>
-    <div class="absolute inset-0 lv-hero-overlay"></div>
+    <svg class="absolute bottom-0 left-0 right-0 w-full h-64 lg:h-96 text-forest-900/60" viewBox="0 0 1440 320" preserveAspectRatio="none"><path fill="currentColor" d="M0,224L48,213.3C96,203,192,181,288,165.3C384,149,480,139,576,154.7C672,171,768,213,864,213.3C960,213,1056,171,1152,165.3C1248,160,1344,192,1392,208L1440,224L1440,320L0,320Z"/></svg>
+    <svg class="absolute bottom-0 left-0 right-0 w-full h-48 lg:h-64 text-forest-900/80" viewBox="0 0 1440 320" preserveAspectRatio="none"><path fill="currentColor" d="M0,288L60,272C120,256,240,224,360,224C480,224,600,256,720,261.3C840,267,960,245,1080,234.7C1200,224,1320,224,1380,224L1440,224L1440,320L0,320Z"/></svg>
 
-    <div class="relative z-10 w-full px-4 pb-12 pt-32 mx-auto max-w-7xl md:pb-16">
-        <!-- Amenities pills -->
-        <?php if (!empty($amenities)): ?>
-        <div class="flex flex-wrap gap-2 mb-5">
-            <?php foreach ($amenities as $amenity): ?>
-            <span class="lv-amenity lv-glass px-3 py-1.5 text-xs font-semibold text-white rounded-full uppercase tracking-wider">
-                <?= htmlspecialchars($amenity) ?>
+    <div class="relative z-10 px-6 lg:px-12 max-w-7xl mx-auto w-full">
+        <div class="max-w-3xl">
+            <?php if (!empty($heroBadges)): ?>
+            <div class="flex flex-wrap items-center gap-2 mb-6">
+                <?php foreach ($heroBadges as $b): ?>
+                <span class="lv-badge bg-white/10 backdrop-blur text-white border border-white/15">
+                    <?= htmlspecialchars($b) ?>
+                </span>
+                <?php endforeach; ?>
+            </div>
+            <?php endif; ?>
+
+            <?php if ($heroKicker): ?>
+            <p class="text-lake-200 text-xs uppercase tracking-[0.3em] font-bold mb-4"><?= htmlspecialchars($heroKicker) ?></p>
+            <?php endif; ?>
+
+            <h1 class="font-display text-5xl sm:text-6xl lg:text-8xl font-black text-white leading-[0.95] mb-6">
+                <?= htmlspecialchars($titlePrimary) ?>
+                <?php if ($titleSecondary): ?>
+                <br><span class="text-lake-300 italic font-medium"><?= htmlspecialchars($titleSecondary) ?></span>
+                <?php endif; ?>
+            </h1>
+
+            <?php if ($shortDescription): ?>
+            <p class="text-lg lg:text-xl text-white/80 max-w-2xl font-light leading-relaxed"><?= htmlspecialchars($shortDescription) ?></p>
+            <?php endif; ?>
+
+            <div class="flex flex-wrap items-center gap-4 mt-8">
+                <a href="#bilete" class="lv-btn bg-white text-forest-800 hover:bg-lake-50">Rezervă accesul →</a>
+                <?php if (!empty($trails)): ?>
+                <a href="#trasee" class="lv-btn bg-transparent text-white border border-white/30 hover:bg-white/10">Vezi traseele turistice</a>
+                <?php endif; ?>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ============ QUICK STATS BAR (sticky) ============ -->
+<section class="bg-white border-y border-forest-100 sticky top-0 z-20 backdrop-blur">
+    <div class="max-w-7xl mx-auto px-6 lg:px-12">
+        <div class="grid grid-cols-2 lg:grid-cols-4 divide-x divide-forest-100">
+            <div class="py-4 px-4 flex items-center gap-3">
+                <div class="w-9 h-9 bg-forest-50 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <svg class="w-5 h-5 text-forest-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                </div>
+                <div class="min-w-0">
+                    <p class="text-xs text-forest-700/60 font-medium">Program</p>
+                    <p class="text-sm font-bold text-forest-900 truncate" x-text="currentScheduleLabel"></p>
+                </div>
+            </div>
+            <?php if ($contactPhone): ?>
+            <a href="tel:<?= htmlspecialchars($contactPhone) ?>" class="py-4 px-4 flex items-center gap-3 hover:bg-forest-50 transition-colors">
+                <div class="w-9 h-9 bg-lake-50 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <svg class="w-5 h-5 text-lake-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
+                </div>
+                <div class="min-w-0">
+                    <p class="text-xs text-forest-700/60 font-medium">Contact</p>
+                    <p class="text-sm font-bold text-forest-900 truncate"><?= htmlspecialchars($contactPhone) ?></p>
+                </div>
+            </a>
+            <?php endif; ?>
+            <?php if ($venueCity || $venueAddress): ?>
+            <div class="py-4 px-4 flex items-center gap-3">
+                <div class="w-9 h-9 bg-sand-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <svg class="w-5 h-5 text-sand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                </div>
+                <div class="min-w-0">
+                    <p class="text-xs text-forest-700/60 font-medium">Locație</p>
+                    <p class="text-sm font-bold text-forest-900 truncate"><?= htmlspecialchars($venueCity ?: $venueAddress) ?></p>
+                </div>
+            </div>
+            <?php endif; ?>
+            <?php foreach (array_slice($quickStats, 0, 1) as $qs): ?>
+            <div class="py-4 px-4 flex items-center gap-3">
+                <div class="w-9 h-9 bg-amber-50 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <span class="text-lg"><?= htmlspecialchars($qs['icon'] ?? '⚠️') ?></span>
+                </div>
+                <div class="min-w-0">
+                    <p class="text-xs text-forest-700/60 font-medium"><?= htmlspecialchars($qs['label'] ?? 'Atenție') ?></p>
+                    <p class="text-sm font-bold text-forest-900 truncate"><?= htmlspecialchars($qs['value'] ?? '') ?></p>
+                </div>
+            </div>
+            <?php endforeach; ?>
+        </div>
+    </div>
+</section>
+
+<!-- ============ CALENDAR + BILETE ============ -->
+<section id="bilete" class="lv-scroll-mt py-16 lg:py-24 px-6 lg:px-12 bg-fog">
+    <div class="max-w-7xl mx-auto">
+        <div class="text-center mb-12">
+            <p class="text-forest-600 text-xs uppercase tracking-[0.3em] font-bold mb-3">Pasul 1 din 2</p>
+            <h2 class="font-display text-4xl lg:text-5xl font-bold text-ink mb-3">Alege data și biletele</h2>
+            <p class="text-forest-700/70 max-w-xl mx-auto">Selectează ziua vizitei, apoi tipul de acces.</p>
+        </div>
+
+        <div class="grid lg:grid-cols-12 gap-6">
+            <!-- LEFT: Calendar -->
+            <div class="lg:col-span-5">
+                <div class="bg-white rounded-3xl border border-forest-100 shadow-sm p-6 lg:p-7 lg:sticky lg:top-24">
+                    <p class="text-xs uppercase tracking-wider text-forest-700/60 font-bold mb-3">📅 Data vizitei</p>
+                    <div class="flex items-center justify-between mb-5">
+                        <button @click="prevMonth()" class="lv-qty-btn" aria-label="Luna anterioară">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+                        </button>
+                        <h3 class="font-display text-xl font-bold text-ink" x-text="monthLabel"></h3>
+                        <button @click="nextMonth()" class="lv-qty-btn" aria-label="Luna următoare">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                        </button>
+                    </div>
+                    <div class="grid grid-cols-7 gap-1 mb-2">
+                        <template x-for="d in ['Lu','Ma','Mi','Jo','Vi','Sâ','Du']">
+                            <div class="text-center text-xs font-bold text-forest-700/50 py-2" x-text="d"></div>
+                        </template>
+                    </div>
+                    <div class="grid grid-cols-7 gap-1" x-show="!loadingMonth">
+                        <template x-for="day in calendarDays" :key="day.key">
+                            <button :disabled="day.empty || day.disabled"
+                                    @click="!day.disabled && selectDate(day.key)"
+                                    :class="[
+                                        day.empty ? 'invisible' : '',
+                                        day.disabled ? 'text-forest-700/20 cursor-not-allowed' : '',
+                                        !day.disabled && selectedDate === day.key ? 'bg-forest-700 text-white shadow-md' : '',
+                                        !day.disabled && selectedDate !== day.key ? 'hover:bg-forest-50 text-ink' : '',
+                                    ]"
+                                    class="aspect-square rounded-xl text-sm font-semibold relative transition-all">
+                                <span x-text="day.day"></span>
+                                <span x-show="!day.disabled && !day.empty"
+                                      class="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full"
+                                      :class="{
+                                          'bg-forest-400': day.status === 'available' && selectedDate !== day.key,
+                                          'bg-amber-400': day.status === 'limited' && selectedDate !== day.key,
+                                          'bg-red-400': day.status === 'sold_out' && selectedDate !== day.key,
+                                          'bg-white': selectedDate === day.key,
+                                      }"></span>
+                            </button>
+                        </template>
+                    </div>
+                    <div x-show="loadingMonth" class="grid grid-cols-7 gap-1">
+                        <template x-for="i in 35">
+                            <div class="aspect-square rounded-xl bg-forest-50 animate-pulse"></div>
+                        </template>
+                    </div>
+
+                    <div class="flex flex-wrap items-center gap-3 mt-5 pt-5 border-t border-forest-100 text-xs text-forest-700/70">
+                        <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-forest-400"></span>Disponibil</span>
+                        <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-amber-400"></span>Aproape full</span>
+                        <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-red-400"></span>Sold out</span>
+                        <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-forest-700/20"></span>Închis</span>
+                    </div>
+
+                    <div x-show="selectedDate" class="mt-5 p-3 bg-forest-50 rounded-xl flex items-center gap-3">
+                        <svg class="w-5 h-5 text-forest-700 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                        <div class="text-sm min-w-0">
+                            <p class="text-xs text-forest-700/60 font-medium">Data selectată</p>
+                            <p class="font-bold text-forest-900 truncate" x-text="formatDate(selectedDate)"></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RIGHT: Tickets -->
+            <div class="lg:col-span-7">
+                <p class="text-xs uppercase tracking-wider text-forest-700/60 font-bold mb-3">🎫 Tipuri de acces</p>
+
+                <div x-show="!selectedDate" class="bg-white rounded-2xl p-8 text-center border-2 border-dashed border-forest-200">
+                    <svg class="w-12 h-12 mx-auto text-forest-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                    <p class="text-forest-700/70 font-medium">Selectează o dată din calendar</p>
+                </div>
+
+                <div x-show="selectedDate && loadingTickets" class="space-y-3">
+                    <template x-for="i in 3">
+                        <div class="bg-white rounded-2xl p-5 h-32 animate-pulse"></div>
+                    </template>
+                </div>
+
+                <div x-show="selectedDate && !loadingTickets && accessTickets.length === 0" class="bg-white rounded-2xl p-8 text-center">
+                    <p class="text-forest-700/70">Nu sunt bilete disponibile pentru această dată.</p>
+                </div>
+
+                <div x-show="selectedDate && !loadingTickets && accessTickets.length > 0" class="space-y-3">
+                    <template x-for="ticket in accessTickets" :key="ticket.id">
+                        <div class="bg-white rounded-2xl p-5 lg:p-6 border-2 transition-all"
+                             :class="ticket.qty > 0 ? 'border-forest-500 shadow-md' : 'border-transparent hover:border-forest-200'">
+                            <div class="flex items-start gap-4">
+                                <div class="w-12 h-12 lg:w-14 lg:h-14 rounded-2xl flex items-center justify-center flex-shrink-0 transition-colors"
+                                     :class="ticket.qty > 0 ? 'bg-forest-600 text-white' : 'bg-forest-50 text-forest-700'">
+                                    <span class="text-xl" x-text="ticket.icon || '🎟️'"></span>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center gap-2 flex-wrap mb-1">
+                                        <h3 class="font-display text-lg lg:text-xl font-bold text-ink" x-text="ticket.name"></h3>
+                                        <span x-show="ticket.is_parking" class="lv-badge bg-lake-100 text-lake-800 text-xs">🅿️ Parcare inclusă</span>
+                                    </div>
+                                    <p x-show="ticket.description" class="text-sm text-forest-700/70 mb-3" x-text="ticket.description"></p>
+                                </div>
+                            </div>
+                            <div class="flex items-center justify-between pt-4 mt-4 border-t border-forest-100">
+                                <div>
+                                    <p class="font-display text-2xl lg:text-3xl font-bold text-ink leading-none">
+                                        <span x-text="ticket.effective_price"></span>
+                                        <span class="text-sm font-medium text-forest-700/60" x-text="ticket.currency || 'RON'"></span>
+                                    </p>
+                                    <p x-show="ticket.requires_vehicle_info" class="text-xs text-forest-700/60 mt-1">Necesită nr. înmatriculare</p>
+                                </div>
+                                <div class="flex items-center gap-3">
+                                    <button @click="ticket.qty = Math.max(0, ticket.qty - 1)" :disabled="ticket.qty === 0" class="lv-qty-btn">−</button>
+                                    <span class="w-6 text-center font-bold text-lg text-ink" x-text="ticket.qty"></span>
+                                    <button @click="incrementTicket(ticket)" :disabled="ticket.available !== null && ticket.qty >= ticket.available" class="lv-qty-btn bg-forest-700 text-white border-forest-700 hover:bg-forest-800 hover:border-forest-800">+</button>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+
+                <!-- Upsell CTA -->
+                <div x-show="cartCount > 0 && !upsellDismissed && services.length > 0" x-transition class="mt-6">
+                    <div class="bg-gradient-to-br from-lake-700 via-forest-700 to-forest-800 rounded-3xl p-6 lg:p-8 text-white relative overflow-hidden">
+                        <div class="absolute -top-12 -right-12 w-48 h-48 rounded-full bg-lake-400/20 blur-3xl"></div>
+                        <div class="relative flex flex-col lg:flex-row lg:items-center gap-5">
+                            <div class="flex-1">
+                                <p class="text-lake-200 text-xs uppercase tracking-[0.2em] font-bold mb-2">✨ Recomandate pentru tine</p>
+                                <h3 class="font-display text-xl lg:text-2xl font-bold mb-2">Fă vizita o experiență completă</h3>
+                                <p class="text-white/80 text-sm">Adaugă servicii suplimentare pe care le poți rezerva acum.</p>
+                            </div>
+                            <div class="flex gap-2 flex-shrink-0">
+                                <button @click="scrollToServices()" class="lv-btn bg-white text-forest-800 hover:bg-lake-50">Vezi serviciile →</button>
+                                <button @click="upsellDismissed = true" class="p-2 text-white/60 hover:text-white" aria-label="Închide">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ============ SERVICII ============ -->
+<section id="servicii" x-show="services.length > 0" class="lv-scroll-mt py-16 lg:py-24 px-6 lg:px-12 bg-white">
+    <div class="max-w-7xl mx-auto">
+        <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-4 mb-12">
+            <div>
+                <p class="text-forest-600 text-xs uppercase tracking-[0.3em] font-bold mb-3">Pasul 2 din 2 · Opțional</p>
+                <h2 class="font-display text-4xl lg:text-5xl font-bold text-ink mb-3">Servicii suplimentare</h2>
+                <p class="text-forest-700/70 max-w-xl">Adaugă plimbare cu barca, ghid privat sau alte experiențe.</p>
+            </div>
+            <span class="lv-badge bg-fog text-forest-700 border border-forest-100" x-show="anyRequiresAccess">
+                ⚠️ Unele necesită bilet de acces
             </span>
+        </div>
+        <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+            <template x-for="service in services" :key="service.id">
+                <div class="group bg-fog rounded-2xl overflow-hidden border-2 transition-all"
+                     :class="service.qty > 0 ? 'border-forest-500 shadow-md' : 'border-transparent hover:border-forest-200'">
+                    <div class="aspect-[4/3] relative overflow-hidden flex items-center justify-center"
+                         :style="`background: ${categoryGradient(service.service_category)}`">
+                        <span class="absolute top-3 left-3 lv-badge bg-white/90 backdrop-blur text-forest-800 text-xs"
+                              x-text="categoryLabel(service.service_category)"></span>
+                        <span x-show="service.issuing_company === 'secondary' && issuers.secondary"
+                              class="absolute top-3 right-3 lv-badge bg-amber-100 text-amber-800 text-[10px]">SECUNDARĂ</span>
+                        <span class="text-6xl opacity-80" x-text="serviceEmoji(service.service_category)"></span>
+                    </div>
+                    <div class="p-5 bg-white">
+                        <h3 class="font-display text-lg font-bold text-ink leading-tight mb-1" x-text="service.name"></h3>
+                        <p class="text-sm text-forest-700/70 mb-2" x-text="service.description || ''"></p>
+                        <div class="flex flex-wrap gap-1.5 mb-3" x-show="service.service_duration_minutes || service.requires_access_ticket">
+                            <span x-show="service.service_duration_minutes" class="lv-badge bg-blue-50 text-blue-700 text-[10px]" x-text="formatDuration(service.service_duration_minutes)"></span>
+                            <span x-show="service.requires_access_ticket" class="lv-badge bg-amber-50 text-amber-700 text-[10px]">Necesită bilet acces</span>
+                        </div>
+                        <div class="flex items-end justify-between pt-3 border-t border-forest-100">
+                            <div>
+                                <p class="font-display text-2xl font-bold text-ink">
+                                    <span x-text="service.effective_price"></span>
+                                    <span class="text-sm font-medium text-forest-700/60" x-text="service.currency || 'RON'"></span>
+                                </p>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <button @click="service.qty = Math.max(0, service.qty - 1)" :disabled="service.qty === 0" class="lv-qty-btn">−</button>
+                                <span class="w-5 text-center font-bold text-ink" x-text="service.qty"></span>
+                                <button @click="incrementService(service)" :disabled="(service.requires_access_ticket && !hasAccessInCart) || (service.available !== null && service.qty >= service.available)" class="lv-qty-btn bg-forest-700 text-white border-forest-700 hover:bg-forest-800 hover:border-forest-800">+</button>
+                            </div>
+                        </div>
+                        <p x-show="service.requires_access_ticket && !hasAccessInCart && service.qty === 0" class="text-[11px] text-red-600 mt-2 font-medium">Adaugă mai întâi un bilet de acces</p>
+                    </div>
+                </div>
+            </template>
+        </div>
+    </div>
+</section>
+
+<!-- ============ TRASEE TURISTICE ============ -->
+<?php if (!empty($trails) || !empty($mapPois)): ?>
+<section id="trasee" class="lv-scroll-mt py-16 lg:py-24 px-6 lg:px-12 bg-forest-900 text-white relative overflow-hidden">
+    <div class="absolute inset-0 lv-topo-pattern opacity-10"></div>
+    <div class="max-w-7xl mx-auto relative">
+        <div class="text-center mb-12">
+            <p class="text-lake-300 text-xs uppercase tracking-[0.3em] font-bold mb-3">Drumeții marcate</p>
+            <h2 class="font-display text-4xl lg:text-5xl font-bold mb-3">Trasee turistice</h2>
+        </div>
+        <?php if (!empty($trails)): ?>
+        <div class="grid lg:grid-cols-2 gap-6 mb-10">
+            <?php foreach ($trails as $trail): ?>
+            <div class="bg-white/5 backdrop-blur rounded-2xl border border-white/10 p-6 hover:bg-white/[0.08] transition-all">
+                <div class="flex items-start justify-between gap-4 mb-4">
+                    <div class="flex-1 min-w-0">
+                        <?php if (!empty($trail['marker'])): ?>
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="inline-flex items-center justify-center w-7 h-7 rounded-md bg-white/10"><span class="font-bold text-sm"><?= htmlspecialchars($trail['marker_symbol'] ?? '✚') ?></span></span>
+                            <p class="text-xs uppercase tracking-wider text-white/60 font-bold"><?= htmlspecialchars($trail['marker']) ?></p>
+                        </div>
+                        <?php endif; ?>
+                        <h3 class="font-display text-2xl font-bold mb-2 leading-tight"><?= htmlspecialchars($trail['name'] ?? '') ?></h3>
+                        <p class="text-sm text-white/70 leading-relaxed"><?= htmlspecialchars($trail['description'] ?? '') ?></p>
+                    </div>
+                    <?php if (!empty($trail['difficulty'])): ?>
+                    <span class="lv-badge text-xs flex-shrink-0 bg-amber-500/20 text-amber-300"><?= htmlspecialchars($trail['difficulty']) ?></span>
+                    <?php endif; ?>
+                </div>
+                <div class="grid grid-cols-3 gap-3 pt-4 border-t border-white/10">
+                    <?php foreach (['length' => 'Lungime', 'duration' => 'Durată', 'elevation' => 'Diferență'] as $k => $lbl): ?>
+                    <?php if (!empty($trail[$k])): ?>
+                    <div>
+                        <p class="text-xs text-white/50 uppercase tracking-wider font-medium"><?= $lbl ?></p>
+                        <p class="font-display text-lg font-bold mt-0.5"><?= htmlspecialchars($trail[$k]) ?></p>
+                    </div>
+                    <?php endif; ?>
+                    <?php endforeach; ?>
+                </div>
+                <?php if (!empty($trail['start_point'])): ?>
+                <div class="mt-4 flex items-center gap-2 text-sm">
+                    <svg class="w-4 h-4 text-lake-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/></svg>
+                    <span class="text-white/70">Pornește din: <span class="font-semibold text-white"><?= htmlspecialchars($trail['start_point']) ?></span></span>
+                </div>
+                <?php endif; ?>
+            </div>
+            <?php endforeach; ?>
+        </div>
+        <?php endif; ?>
+        <?php if (!empty($mapPois)): ?>
+        <div class="bg-white/5 backdrop-blur rounded-2xl border border-white/10 p-2">
+            <div id="trailMap" class="rounded-xl overflow-hidden" style="height: 400px;"></div>
+        </div>
+        <?php endif; ?>
+        <?php if ($safetyWarning): ?>
+        <div class="mt-8 bg-amber-500/10 border border-amber-500/30 rounded-2xl p-5 flex items-start gap-3 max-w-3xl mx-auto">
+            <span class="text-2xl flex-shrink-0"><?= htmlspecialchars($safetyWarning['icon'] ?? '⚠️') ?></span>
+            <div class="text-sm">
+                <p class="font-bold text-amber-200 mb-1"><?= htmlspecialchars($safetyWarning['title'] ?? 'Atenție') ?></p>
+                <p class="text-amber-100/80"><?= htmlspecialchars($safetyWarning['body'] ?? '') ?></p>
+            </div>
+        </div>
+        <?php endif; ?>
+    </div>
+</section>
+<?php endif; ?>
+
+<!-- ============ DESPRE LOCAȚIE ============ -->
+<?php if (!empty($attractions) || $description): ?>
+<section id="despre" class="lv-scroll-mt py-16 lg:py-24 px-6 lg:px-12 bg-white">
+    <div class="max-w-7xl mx-auto">
+        <div class="text-center mb-12">
+            <p class="text-forest-600 text-xs uppercase tracking-[0.3em] font-bold mb-3">Cunoaște locul</p>
+            <h2 class="font-display text-4xl lg:text-5xl font-bold text-ink mb-3"><?= htmlspecialchars($venueConfig['about_title'] ?? 'Despre locație') ?></h2>
+        </div>
+        <?php if (!empty($attractions)): ?>
+        <div class="grid lg:grid-cols-<?= min(count($attractions), 2) ?> gap-8 mb-16">
+            <?php foreach ($attractions as $a): ?>
+            <article class="bg-fog rounded-3xl p-8 lg:p-10 relative overflow-hidden">
+                <div class="absolute top-0 right-0 w-40 h-40 rounded-full opacity-20 blur-3xl" style="background: <?= htmlspecialchars($a['blob_gradient'] ?? 'linear-gradient(135deg, #A5F3FC, #22D3EE)') ?>"></div>
+                <div class="relative">
+                    <?php if (!empty($a['badge'])): ?>
+                    <span class="lv-badge mb-4" style="background: <?= htmlspecialchars($a['badge_bg'] ?? '#CFFAFE') ?>; color: <?= htmlspecialchars($a['badge_color'] ?? '#155E75') ?>;">
+                        <?= htmlspecialchars($a['badge']) ?>
+                    </span>
+                    <?php endif; ?>
+                    <h3 class="font-display text-3xl font-bold text-ink mb-4"><?= htmlspecialchars($a['name'] ?? '') ?></h3>
+                    <p class="text-forest-800 leading-relaxed mb-4"><?= htmlspecialchars($a['description'] ?? '') ?></p>
+                    <?php if (!empty($a['bullets'])): ?>
+                    <ul class="space-y-2 text-sm text-forest-800">
+                        <?php foreach ($a['bullets'] as $bullet): ?>
+                        <li class="flex items-start gap-2"><span class="text-forest-600 font-bold">•</span><span><?= htmlspecialchars($bullet) ?></span></li>
+                        <?php endforeach; ?>
+                    </ul>
+                    <?php endif; ?>
+                </div>
+            </article>
             <?php endforeach; ?>
         </div>
         <?php endif; ?>
 
-        <!-- Title -->
-        <h1 class="text-4xl font-black text-white md:text-5xl lg:text-6xl leading-tight tracking-tight drop-shadow-lg max-w-3xl">
-            <?= htmlspecialchars($ev['name'] ?? 'Locație') ?>
-        </h1>
-
-        <?php if ($shortDescription): ?>
-        <p class="mt-3 text-lg text-white/85 max-w-2xl leading-relaxed"><?= htmlspecialchars($shortDescription) ?></p>
+        <?php if (!empty($statsHighlights)): ?>
+        <div class="grid grid-cols-2 lg:grid-cols-<?= min(count($statsHighlights), 4) ?> gap-6 mb-16">
+            <?php foreach ($statsHighlights as $i => $s): ?>
+            <div class="text-center">
+                <p class="font-display text-5xl lg:text-6xl font-black <?= $i % 2 ? 'text-lake-700' : 'text-forest-700' ?>"><?= htmlspecialchars($s['value'] ?? '') ?></p>
+                <p class="text-xs uppercase tracking-wider text-forest-700/60 font-bold mt-2"><?= htmlspecialchars($s['label'] ?? '') ?></p>
+            </div>
+            <?php endforeach; ?>
+        </div>
         <?php endif; ?>
 
-        <!-- Quick info row -->
-        <div class="flex flex-wrap items-center gap-4 mt-5 text-sm text-white/75">
-            <?php if ($venueName || $venueCity): ?>
-            <span class="flex items-center gap-1.5">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                <?= htmlspecialchars($venueName ? ($venueName . ($venueCity ? ', ' . $venueCity : '')) : $venueCity) ?>
-            </span>
-            <?php endif; ?>
-            <?php if ($contactPhone): ?>
-            <a href="tel:<?= htmlspecialchars($contactPhone) ?>" class="flex items-center gap-1.5 hover:text-white transition">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
-                <?= htmlspecialchars($contactPhone) ?>
-            </a>
-            <?php endif; ?>
-            <?php if ($directionsUrl): ?>
-            <a href="<?= htmlspecialchars($directionsUrl) ?>" target="_blank" rel="noopener" class="flex items-center gap-1.5 hover:text-white transition">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/></svg>
-                Indicații
-            </a>
-            <?php endif; ?>
+        <?php if (!empty($flora)): ?>
+        <div class="bg-forest-50 rounded-3xl p-8 lg:p-12">
+            <h3 class="font-display text-2xl lg:text-3xl font-bold text-ink mb-6 text-center">Floră &amp; faună</h3>
+            <div class="grid sm:grid-cols-2 lg:grid-cols-<?= min(count($flora), 4) ?> gap-6">
+                <?php foreach ($flora as $sp): ?>
+                <div class="text-center">
+                    <div class="w-16 h-16 mx-auto bg-white rounded-2xl flex items-center justify-center mb-3 text-3xl shadow-sm"><?= htmlspecialchars($sp['emoji'] ?? '🌿') ?></div>
+                    <p class="font-bold text-ink text-sm"><?= htmlspecialchars($sp['name'] ?? '') ?></p>
+                    <p class="text-xs text-forest-700/60 italic"><?= htmlspecialchars($sp['latin'] ?? '') ?></p>
+                </div>
+                <?php endforeach; ?>
+            </div>
         </div>
+        <?php endif; ?>
 
-        <!-- CTA Button -->
-        <div class="mt-8">
-            <a href="#ticket-booking-section" class="lv-cta-pulse inline-flex items-center gap-2 px-8 py-4 text-base font-bold text-white rounded-xl bg-primary hover:bg-primary-dark transition-colors shadow-lg">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/></svg>
-                Cumpără bilete
-            </a>
+        <?php if (!empty($description) && empty($attractions)): ?>
+        <div class="max-w-3xl mx-auto prose prose-lg text-forest-800">
+            <?= $description ?>
         </div>
+        <?php endif; ?>
     </div>
 </section>
+<?php endif; ?>
 
-<!-- ==================== BOOKING SECTION ==================== -->
-<section id="ticket-booking-section" class="px-4 py-12 mx-auto max-w-7xl lv-section-fade">
-    <div class="text-center mb-10">
-        <h2 class="text-2xl font-bold text-secondary md:text-3xl">Alege data și biletele</h2>
-        <p class="mt-2 text-gray-500">Selectează o dată din calendar, apoi alege biletele dorite.</p>
-    </div>
-
-    <div class="flex flex-col gap-8 lg:flex-row">
-        <!-- Left: Calendar -->
-        <div class="lg:w-5/12">
-            <div class="sticky top-24 space-y-4">
-                <div class="p-6 bg-white shadow-sm rounded-2xl border border-gray-100">
-                    <!-- Calendar nav -->
-                    <div class="flex items-center justify-between mb-4">
-                        <button id="cal-prev" class="p-2 rounded-lg hover:bg-gray-100 transition" aria-label="Luna anterioară">
-                            <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
-                        </button>
-                        <span id="cal-month-label" class="text-base font-bold text-secondary"></span>
-                        <button id="cal-next" class="p-2 rounded-lg hover:bg-gray-100 transition" aria-label="Luna următoare">
-                            <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-                        </button>
+<!-- ============ PROGRAM SEZONIER ============ -->
+<?php if (!empty($seasons)): ?>
+<section class="py-16 lg:py-24 px-6 lg:px-12 bg-fog">
+    <div class="max-w-5xl mx-auto">
+        <div class="text-center mb-12">
+            <p class="text-forest-600 text-xs uppercase tracking-[0.3em] font-bold mb-3">Program</p>
+            <h2 class="font-display text-4xl lg:text-5xl font-bold text-ink mb-3">Când suntem deschiși</h2>
+        </div>
+        <div class="grid md:grid-cols-<?= min(count($seasons), 2) ?> gap-6">
+            <?php
+            $dayLabels = ['mon'=>'Luni','tue'=>'Marți','wed'=>'Miercuri','thu'=>'Joi','fri'=>'Vineri','sat'=>'Sâmbătă','sun'=>'Duminică'];
+            foreach ($seasons as $idx => $season):
+                $schedule = $season['schedule'] ?? [];
+            ?>
+            <div class="bg-white rounded-3xl p-8 <?= $idx === 0 ? 'border-2 border-forest-500 relative' : 'border-2 border-forest-100' ?>">
+                <?php if ($idx === 0): ?>
+                <span class="absolute -top-3 left-8 lv-badge bg-forest-700 text-white">☀️ Activ</span>
+                <?php endif; ?>
+                <h3 class="font-display text-2xl font-bold text-ink mb-1"><?= htmlspecialchars($season['name'] ?? 'Sezon') ?></h3>
+                <?php if (!empty($season['start']) && !empty($season['end'])): ?>
+                <p class="text-sm text-forest-700/60 mb-6"><?= htmlspecialchars($season['start']) ?> – <?= htmlspecialchars($season['end']) ?></p>
+                <?php endif; ?>
+                <div class="space-y-2">
+                    <?php foreach ($dayLabels as $key => $lbl): $hrs = $schedule[$key] ?? null; ?>
+                    <div class="flex items-center justify-between py-2 border-b border-forest-100 last:border-0">
+                        <span class="text-forest-800 font-medium"><?= $lbl ?></span>
+                        <?php if ($hrs && !empty($hrs['open'])): ?>
+                        <span class="text-ink font-semibold"><?= htmlspecialchars($hrs['open']) ?> – <?= htmlspecialchars($hrs['close'] ?? '') ?></span>
+                        <?php else: ?>
+                        <span class="text-red-600 font-semibold">Închis</span>
+                        <?php endif; ?>
                     </div>
-
-                    <!-- Day headers -->
-                    <div class="grid grid-cols-7 mb-2">
-                        <div class="text-xs font-semibold text-center text-gray-400 py-1">Lu</div>
-                        <div class="text-xs font-semibold text-center text-gray-400 py-1">Ma</div>
-                        <div class="text-xs font-semibold text-center text-gray-400 py-1">Mi</div>
-                        <div class="text-xs font-semibold text-center text-gray-400 py-1">Jo</div>
-                        <div class="text-xs font-semibold text-center text-gray-400 py-1">Vi</div>
-                        <div class="text-xs font-semibold text-center text-gray-400 py-1">Sâ</div>
-                        <div class="text-xs font-semibold text-center text-gray-400 py-1">Du</div>
-                    </div>
-
-                    <!-- Calendar days -->
-                    <div id="cal-days" class="grid grid-cols-7 gap-1"></div>
-
-                    <!-- Legend -->
-                    <div class="flex flex-wrap items-center gap-x-4 gap-y-1 mt-4 text-[11px] text-gray-400 uppercase tracking-wide font-medium">
-                        <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> Disponibil</span>
-                        <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span> Limitat</span>
-                        <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-red-500"></span> Sold out</span>
-                        <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-gray-300"></span> Închis</span>
-                    </div>
+                    <?php endforeach; ?>
                 </div>
-
-                <!-- Operating hours -->
-                <?php if (!empty($operatingSchedule) || !empty($seasons)): ?>
-                <div class="p-5 bg-white shadow-sm rounded-2xl border border-gray-100">
-                    <h3 class="text-sm font-bold text-secondary mb-3 flex items-center gap-2">
-                        <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                        Program
-                    </h3>
-                    <?php if (!empty($seasons)): ?>
-                        <?php foreach ($seasons as $season):
-                            $seasonSchedule = $season['schedule'] ?? [];
-                        ?>
-                        <div class="mb-3 last:mb-0">
-                            <div class="text-xs font-semibold text-primary mb-1.5 uppercase tracking-wide"><?= htmlspecialchars($season['name'] ?? 'Sezon') ?></div>
-                            <div class="grid grid-cols-1 gap-y-0.5 text-sm">
-                                <?php
-                                $dayNames = ['mon' => 'Luni', 'tue' => 'Marți', 'wed' => 'Miercuri', 'thu' => 'Joi', 'fri' => 'Vineri', 'sat' => 'Sâmbătă', 'sun' => 'Duminică'];
-                                foreach ($dayNames as $key => $label):
-                                    $hours = $seasonSchedule[$key] ?? null;
-                                ?>
-                                <div class="flex justify-between py-0.5">
-                                    <span class="text-gray-500"><?= $label ?></span>
-                                    <?php if ($hours && !empty($hours['open'])): ?>
-                                    <span class="font-medium text-secondary"><?= htmlspecialchars($hours['open']) ?> – <?= htmlspecialchars($hours['close'] ?? '') ?></span>
-                                    <?php else: ?>
-                                    <span class="text-gray-400 text-xs">Închis</span>
-                                    <?php endif; ?>
-                                </div>
-                                <?php endforeach; ?>
-                            </div>
-                        </div>
-                        <?php endforeach; ?>
-                    <?php elseif (!empty($operatingSchedule)): ?>
-                        <div class="grid grid-cols-1 gap-y-0.5 text-sm">
-                            <?php
-                            $dayNames = ['mon' => 'Luni', 'tue' => 'Marți', 'wed' => 'Miercuri', 'thu' => 'Joi', 'fri' => 'Vineri', 'sat' => 'Sâmbătă', 'sun' => 'Duminică'];
-                            foreach ($dayNames as $key => $label):
-                                $hours = $operatingSchedule[$key] ?? null;
-                            ?>
-                            <div class="flex justify-between py-0.5">
-                                <span class="text-gray-500"><?= $label ?></span>
-                                <?php if ($hours): ?>
-                                <span class="font-medium text-secondary"><?= htmlspecialchars($hours['open'] ?? '') ?> – <?= htmlspecialchars($hours['close'] ?? '') ?></span>
-                                <?php else: ?>
-                                <span class="text-gray-400 text-xs">Închis</span>
-                                <?php endif; ?>
-                            </div>
-                            <?php endforeach; ?>
-                        </div>
-                    <?php endif; ?>
-                </div>
+                <?php if (!empty($season['note'])): ?>
+                <div class="mt-6 pt-6 border-t border-forest-100 text-sm text-forest-800"><?= htmlspecialchars($season['note']) ?></div>
                 <?php endif; ?>
             </div>
-        </div>
-
-        <!-- Right: Ticket selector -->
-        <div class="lg:w-7/12">
-            <!-- Selected date bar -->
-            <div id="selected-date-bar" class="hidden mb-4">
-                <div class="flex items-center justify-between p-4 bg-primary/5 border border-primary/20 rounded-xl">
-                    <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 flex items-center justify-center rounded-lg bg-primary text-white">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                        </div>
-                        <div>
-                            <div class="text-xs text-gray-500 uppercase tracking-wide font-medium">Data vizitei</div>
-                            <div id="selected-date-label" class="font-bold text-secondary"></div>
-                        </div>
-                    </div>
-                    <button id="change-date-btn" class="text-sm font-semibold text-primary hover:underline">Schimbă</button>
-                </div>
-            </div>
-
-            <!-- Placeholder -->
-            <div id="no-date-placeholder" class="flex flex-col items-center justify-center p-12 text-center bg-white rounded-2xl border-2 border-dashed border-gray-200">
-                <div class="w-16 h-16 flex items-center justify-center rounded-full bg-gray-100 mb-4">
-                    <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                </div>
-                <p class="text-gray-500 font-medium">Selectează o dată din calendar</p>
-                <p class="text-sm text-gray-400 mt-1">pentru a vedea biletele disponibile</p>
-            </div>
-
-            <!-- Loading -->
-            <div id="tickets-loading" class="hidden space-y-4">
-                <div class="h-20 skeleton rounded-2xl"></div>
-                <div class="h-20 skeleton rounded-2xl"></div>
-                <div class="h-20 skeleton rounded-2xl"></div>
-            </div>
-
-            <!-- Ticket groups (JS-rendered) -->
-            <div id="ticket-groups" class="hidden space-y-4"></div>
-
-            <!-- Cart summary -->
-            <div id="cart-summary" class="hidden mt-6 p-5 bg-white rounded-2xl border border-gray-100 shadow-lg sticky top-24">
-                <h3 class="text-sm font-bold text-secondary mb-3 uppercase tracking-wide">Sumar</h3>
-                <div id="cart-items-summary" class="space-y-2 text-sm"></div>
-                <div class="flex justify-between items-center pt-3 mt-3 border-t border-gray-100">
-                    <span class="text-sm font-semibold text-gray-500">Total</span>
-                    <span id="cart-total" class="text-xl font-black text-primary">0 RON</span>
-                </div>
-                <button id="add-to-cart-btn" class="w-full mt-4 py-3.5 px-6 bg-primary hover:bg-primary-dark text-white font-bold rounded-xl transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2" disabled>
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 100 4 2 2 0 000-4z"/></svg>
-                    Adaugă în coș
-                </button>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- ==================== ABOUT ==================== -->
-<?php if (!empty($description)): ?>
-<section class="px-4 py-12 mx-auto max-w-7xl lv-section-fade">
-    <div class="max-w-4xl mx-auto">
-        <div class="p-8 bg-white rounded-2xl shadow-sm border border-gray-100 md:p-10">
-            <h2 class="text-2xl font-bold text-secondary mb-6">Despre</h2>
-            <div class="prose prose-lg max-w-none text-gray-600 ep-event-description">
-                <?= $description ?>
-            </div>
+            <?php endforeach; ?>
         </div>
     </div>
 </section>
 <?php endif; ?>
 
-<!-- ==================== GALLERY ==================== -->
-<?php if (!empty($gallery)): ?>
-<section class="px-4 py-12 mx-auto max-w-7xl lv-section-fade">
-    <h2 class="text-2xl font-bold text-secondary mb-6 text-center">Galerie</h2>
-    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-        <?php foreach ($gallery as $i => $img):
-            $imgUrl = str_starts_with($img, 'http') ? $img : STORAGE_URL . '/' . $img;
-            $span = ($i === 0) ? 'md:col-span-2 md:row-span-2' : '';
-        ?>
-        <a href="<?= htmlspecialchars($imgUrl) ?>" target="_blank"
-           class="lv-gallery-item block rounded-xl overflow-hidden <?= $span ?> aspect-video hover:opacity-90 transition">
-            <img src="<?= htmlspecialchars($imgUrl) ?>" alt="" class="object-cover w-full h-full" loading="lazy">
-        </a>
-        <?php endforeach; ?>
-    </div>
-</section>
-<?php endif; ?>
-
-<!-- ==================== RULES ==================== -->
-<?php if (!empty($rulesHtml)): ?>
-<section class="px-4 py-12 mx-auto max-w-7xl lv-section-fade">
-    <div class="max-w-4xl mx-auto">
-        <div class="p-8 bg-white rounded-2xl shadow-sm border border-gray-100 md:p-10">
-            <h2 class="text-2xl font-bold text-secondary mb-6 flex items-center gap-2">
-                <svg class="w-6 h-6 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4.5c-.77-.833-2.694-.833-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>
-                Regulament
-            </h2>
-            <div class="prose prose-sm max-w-none text-gray-600">
-                <?= $rulesHtml ?>
-            </div>
+<!-- ============ CUM AJUNGI ============ -->
+<?php if (!empty($gettingThere) || $mapCenter): ?>
+<section id="cum-ajungi" class="lv-scroll-mt py-16 lg:py-24 px-6 lg:px-12 bg-white">
+    <div class="max-w-7xl mx-auto">
+        <div class="text-center mb-12">
+            <p class="text-forest-600 text-xs uppercase tracking-[0.3em] font-bold mb-3">Locație</p>
+            <h2 class="font-display text-4xl lg:text-5xl font-bold text-ink mb-3">Cum ajungi la noi</h2>
         </div>
-    </div>
-</section>
-<?php endif; ?>
-
-<!-- ==================== LOCATION ==================== -->
-<?php if ($venueName || $directionsUrl): ?>
-<section class="px-4 py-12 mx-auto max-w-7xl lv-section-fade">
-    <div class="max-w-4xl mx-auto">
-        <div class="p-8 bg-white rounded-2xl shadow-sm border border-gray-100 md:p-10">
-            <h2 class="text-2xl font-bold text-secondary mb-4 flex items-center gap-2">
-                <svg class="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                Locație
-            </h2>
-            <?php if ($venueName): ?>
-            <p class="text-lg font-semibold text-secondary"><?= htmlspecialchars($venueName) ?></p>
-            <?php endif; ?>
-            <?php if ($venueAddress): ?>
-            <p class="text-gray-500 mt-1"><?= htmlspecialchars($venueAddress) ?><?php if ($venueCity): ?>, <?= htmlspecialchars($venueCity) ?><?php endif; ?></p>
-            <?php endif; ?>
-            <?php if ($directionsUrl): ?>
-            <a href="<?= htmlspecialchars($directionsUrl) ?>" target="_blank" rel="noopener"
-               class="inline-flex items-center gap-2 mt-4 px-5 py-2.5 text-sm font-semibold text-white bg-primary rounded-xl hover:bg-primary-dark transition shadow-sm">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/></svg>
+        <?php if (!empty($gettingThere)): ?>
+        <div class="grid lg:grid-cols-<?= min(count($gettingThere), 3) ?> gap-6 mb-8">
+            <?php foreach ($gettingThere as $gt): ?>
+            <div class="bg-fog rounded-2xl p-6">
+                <div class="w-12 h-12 rounded-xl flex items-center justify-center mb-4 text-white" style="background: <?= htmlspecialchars($gt['icon_bg'] ?? '#1F4E37') ?>">
+                    <span class="text-2xl"><?= htmlspecialchars($gt['icon'] ?? '📍') ?></span>
+                </div>
+                <h3 class="font-display text-lg font-bold text-ink mb-2"><?= htmlspecialchars($gt['title'] ?? '') ?></h3>
+                <p class="text-sm text-forest-800 mb-3"><?= htmlspecialchars($gt['description'] ?? '') ?></p>
+                <?php if (!empty($gt['note'])): ?>
+                <p class="text-xs text-forest-700/60"><?= htmlspecialchars($gt['note']) ?></p>
+                <?php endif; ?>
+            </div>
+            <?php endforeach; ?>
+        </div>
+        <?php endif; ?>
+        <?php if ($mapCenter): ?>
+        <div class="bg-fog rounded-3xl p-2 mb-6">
+            <div id="locationMap" class="rounded-2xl overflow-hidden" style="height: 480px;"></div>
+        </div>
+        <?php endif; ?>
+        <?php if ($directionsUrl): ?>
+        <div class="flex flex-wrap items-center justify-center gap-3">
+            <a href="<?= htmlspecialchars($directionsUrl) ?>" target="_blank" rel="noopener" class="lv-btn lv-btn-primary">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/></svg>
                 Deschide în Google Maps
             </a>
-            <?php endif; ?>
+        </div>
+        <?php endif; ?>
+    </div>
+</section>
+<?php endif; ?>
+
+<!-- ============ FAQ ============ -->
+<?php if (!empty($faqs)): ?>
+<section class="py-16 lg:py-24 px-6 lg:px-12 bg-fog">
+    <div class="max-w-3xl mx-auto">
+        <div class="text-center mb-10">
+            <p class="text-forest-600 text-xs uppercase tracking-[0.3em] font-bold mb-3">Bine de știut</p>
+            <h2 class="font-display text-4xl lg:text-5xl font-bold text-ink">Întrebări frecvente</h2>
+        </div>
+        <div class="space-y-3">
+            <template x-for="(faq, idx) in faqs" :key="idx">
+                <div class="bg-white rounded-2xl border border-forest-100 overflow-hidden">
+                    <button @click="openFaq = openFaq === idx ? null : idx" class="w-full text-left p-5 flex items-center justify-between gap-4 hover:bg-forest-50/50 transition-colors">
+                        <span class="font-semibold text-ink" x-text="faq.q"></span>
+                        <svg class="w-5 h-5 text-forest-700 flex-shrink-0 transition-transform" :class="openFaq === idx ? 'rotate-180' : ''" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+                    </button>
+                    <div x-show="openFaq === idx" x-collapse class="px-5 pb-5 text-forest-800 text-sm leading-relaxed border-t border-forest-100 pt-4" x-html="faq.a"></div>
+                </div>
+            </template>
         </div>
     </div>
 </section>
 <?php endif; ?>
 
-<!-- ==================== MOBILE STICKY BAR ==================== -->
-<div id="mobile-bottom-bar" class="fixed bottom-0 left-0 right-0 z-40 hidden lg:hidden">
-    <div class="bg-white/95 backdrop-blur-lg border-t border-gray-200 shadow-2xl px-4 py-3">
-        <div class="flex items-center justify-between gap-4 max-w-lg mx-auto">
-            <div>
-                <div id="mobile-total-label" class="text-xs text-gray-500 font-medium">Total</div>
-                <div id="mobile-total-amount" class="text-xl font-black text-primary">0 RON</div>
+<!-- ============ STICKY CART ============ -->
+<div x-show="cartCount > 0" x-transition class="fixed bottom-0 left-0 right-0 z-40 lg:bottom-6 lg:right-6 lg:left-auto lg:max-w-sm">
+    <div class="bg-forest-900 text-white shadow-2xl lg:rounded-2xl overflow-hidden">
+        <button @click="cartOpen = !cartOpen" class="w-full p-4 flex items-center justify-between gap-4 hover:bg-forest-800 transition-colors">
+            <div class="flex items-center gap-3 min-w-0">
+                <div class="w-10 h-10 bg-lake-400 rounded-xl flex items-center justify-center flex-shrink-0 font-bold text-forest-900" x-text="cartCount"></div>
+                <div class="text-left min-w-0">
+                    <p class="font-bold text-sm" x-text="cartCount + (cartCount === 1 ? ' bilet selectat' : ' items selectate')"></p>
+                    <p class="text-xs text-white/60 truncate" x-text="selectedDate ? 'Pentru ' + formatDate(selectedDate) : 'Alege data'"></p>
+                </div>
             </div>
-            <button id="mobile-add-to-cart-btn" class="px-6 py-3 bg-primary hover:bg-primary-dark text-white font-bold rounded-xl transition-all disabled:opacity-40 flex items-center gap-2" disabled>
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 100 4 2 2 0 000-4z"/></svg>
-                Adaugă în coș
+            <div class="text-right flex-shrink-0">
+                <p class="font-display text-xl font-bold"><span x-text="cartTotal"></span> RON</p>
+                <svg class="w-4 h-4 ml-auto text-white/60 transition-transform" :class="cartOpen ? 'rotate-180' : ''" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7"/></svg>
+            </div>
+        </button>
+        <div x-show="cartOpen" x-collapse class="px-4 pb-4 border-t border-white/10 max-h-[60vh] overflow-y-auto">
+            <p class="text-xs uppercase tracking-wider text-white/40 font-bold mt-4 mb-2">Sumar comandă</p>
+            <div class="space-y-2 mb-4">
+                <template x-for="item in cartItems" :key="item.id">
+                    <div class="flex items-center justify-between text-sm py-1.5">
+                        <span class="text-white/80"><span x-text="item.qty"></span>× <span x-text="item.name"></span></span>
+                        <span class="font-semibold"><span x-text="(item.qty * item.effective_price).toFixed(2)"></span> RON</span>
+                    </div>
+                </template>
+            </div>
+            <div class="flex items-center justify-between py-3 border-t border-white/10">
+                <span class="font-bold">Total</span>
+                <span class="font-display text-2xl font-bold"><span x-text="cartTotal"></span> RON</span>
+            </div>
+            <button @click="checkout()" :disabled="!selectedDate || cartCount === 0 || !canCheckout" class="lv-btn w-full mt-2"
+                    :class="!selectedDate || cartCount === 0 || !canCheckout ? 'bg-white/10 text-white/40' : 'bg-lake-400 text-forest-900 hover:bg-lake-300'">
+                <span x-show="!selectedDate">Alege mai întâi data</span>
+                <span x-show="selectedDate && !canCheckout && cartCount > 0">Verifică validarea</span>
+                <span x-show="selectedDate && canCheckout && cartCount > 0">Continuă spre plată →</span>
             </button>
         </div>
     </div>
 </div>
 
-<!-- Scroll reveal observer -->
+<div class="h-24 lg:h-0"></div>
+
+</div><!-- /x-data reservationPage -->
+
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    const observer = new IntersectionObserver(function(entries) {
-        entries.forEach(function(entry) {
-            if (entry.isIntersecting) {
-                entry.target.classList.add('visible');
-                observer.unobserve(entry.target);
+function reservationPage() {
+    const DATA = window.__LEISURE_VENUE__ || {};
+    const SLUG = DATA.slug;
+    const EVENT = DATA.event || {};
+    const MAX_ADVANCE = DATA.max_advance_days || 90;
+    const IS_PREVIEW = !!DATA.is_preview;
+
+    const MONTHS_RO = ['Ianuarie','Februarie','Martie','Aprilie','Mai','Iunie','Iulie','August','Septembrie','Octombrie','Noiembrie','Decembrie'];
+
+    return {
+        cartOpen: false,
+        openFaq: 0,
+        upsellDismissed: false,
+        selectedDate: null,
+        currentMonth: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
+        loadingMonth: true,
+        loadingTickets: false,
+        monthCache: {},        // 'YYYY-MM' -> { dates: { 'YYYY-MM-DD': { status } } }
+        ticketsRaw: [],        // toate ticket types pentru data selectata (din API)
+        qtyById: {},           // { ticketTypeId: qty }
+        issuers: DATA.issuers || {},
+        faqs: DATA.faqs || [],
+
+        init() {
+            this.loadMonth(this.monthKey(this.currentMonth));
+            this.$nextTick(() => {
+                this.renderTrailMap();
+                this.renderLocationMap();
+            });
+        },
+
+        // ========== Calendar ==========
+        monthKey(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'); },
+
+        get monthLabel() {
+            return MONTHS_RO[this.currentMonth.getMonth()] + ' ' + this.currentMonth.getFullYear();
+        },
+
+        get calendarDays() {
+            const days = [];
+            const y = this.currentMonth.getFullYear();
+            const m = this.currentMonth.getMonth();
+            const first = new Date(y, m, 1);
+            let startDow = first.getDay();
+            startDow = startDow === 0 ? 6 : startDow - 1;
+            const daysInMonth = new Date(y, m + 1, 0).getDate();
+            const today = new Date(); today.setHours(0, 0, 0, 0);
+            const maxDate = new Date(); maxDate.setDate(maxDate.getDate() + MAX_ADVANCE);
+            const monthData = (this.monthCache[this.monthKey(this.currentMonth)] || {}).dates || {};
+
+            for (let i = 0; i < startDow; i++) days.push({ key: 'e' + i, empty: true });
+
+            for (let d = 1; d <= daysInMonth; d++) {
+                const key = y + '-' + String(m + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+                const dObj = new Date(y, m, d);
+                const data = monthData[key] || {};
+                let status = data.status || 'available';
+                let disabled = false;
+                if (dObj < today || dObj > maxDate) { disabled = true; status = 'past'; }
+                if (status === 'closed' || status === 'sold_out' || status === 'past') disabled = true;
+                days.push({ key, day: d, empty: false, disabled, status });
             }
-        });
-    }, { threshold: 0.1 });
-    document.querySelectorAll('.lv-section-fade').forEach(function(el) { observer.observe(el); });
-});
+            return days;
+        },
+
+        prevMonth() {
+            this.currentMonth = new Date(this.currentMonth.getFullYear(), this.currentMonth.getMonth() - 1, 1);
+            this.loadMonth(this.monthKey(this.currentMonth));
+        },
+        nextMonth() {
+            this.currentMonth = new Date(this.currentMonth.getFullYear(), this.currentMonth.getMonth() + 1, 1);
+            this.loadMonth(this.monthKey(this.currentMonth));
+        },
+
+        async loadMonth(monthStr) {
+            if (this.monthCache[monthStr]) { this.loadingMonth = false; return; }
+            this.loadingMonth = true;
+            try {
+                const url = `/marketplace-events/${SLUG}/date-availability` + (IS_PREVIEW ? `?month=${monthStr}&preview=1` : `?month=${monthStr}`);
+                const resp = await AmbiletAPI.get(url.split('?')[0], Object.fromEntries(new URLSearchParams(url.split('?')[1] || '')));
+                if (resp && resp.dates) this.monthCache[monthStr] = resp;
+            } catch (e) {
+                console.warn('loadMonth failed', e);
+            }
+            this.loadingMonth = false;
+        },
+
+        // ========== Date selection ==========
+        async selectDate(key) {
+            this.selectedDate = key;
+            this.loadingTickets = true;
+            this.ticketsRaw = [];
+            this.qtyById = {};
+            try {
+                const params = { date: key };
+                if (IS_PREVIEW) params.preview = 1;
+                const resp = await AmbiletAPI.get(`/marketplace-events/${SLUG}/date-availability`, params);
+                if (resp && resp.is_open) {
+                    this.ticketsRaw = resp.ticket_types || [];
+                    // Init qty map
+                    this.ticketsRaw.forEach(t => { this.qtyById[t.id] = 0; });
+                } else {
+                    this.ticketsRaw = [];
+                }
+            } catch (e) {
+                console.error('selectDate failed', e);
+                this.ticketsRaw = [];
+            }
+            this.loadingTickets = false;
+        },
+
+        // ========== Tickets/Services derived ==========
+        // Pune qty + reactivitate pe ticketsRaw items
+        get _ticketsWithQty() {
+            return this.ticketsRaw.map(t => ({ ...t, qty: this.qtyById[t.id] || 0 }));
+        },
+        get accessTickets() {
+            return this._ticketsWithQty.filter(t => (t.service_category || 'access') === 'access');
+        },
+        get services() {
+            return this._ticketsWithQty.filter(t => (t.service_category || 'access') !== 'access');
+        },
+        get anyRequiresAccess() {
+            return this.services.some(s => !!s.requires_access_ticket);
+        },
+        get hasAccessInCart() {
+            return this.accessTickets.some(t => (this.qtyById[t.id] || 0) > 0);
+        },
+        get cartItems() {
+            return this._ticketsWithQty.filter(t => t.qty > 0);
+        },
+        get cartCount() {
+            return this.cartItems.reduce((s, t) => s + t.qty, 0);
+        },
+        get cartTotal() {
+            return this.cartItems.reduce((s, t) => s + t.qty * parseFloat(t.effective_price || 0), 0).toFixed(2);
+        },
+        get canCheckout() {
+            // Toate serviciile cu requires_access_ticket trebuie sa aiba bilet acces in cos
+            return !this.services.some(s => s.requires_access_ticket && (this.qtyById[s.id] || 0) > 0 && !this.hasAccessInCart);
+        },
+
+        incrementTicket(ticket) {
+            this.qtyById[ticket.id] = (this.qtyById[ticket.id] || 0) + 1;
+        },
+        incrementService(service) {
+            if (service.requires_access_ticket && !this.hasAccessInCart) return;
+            this.qtyById[service.id] = (this.qtyById[service.id] || 0) + 1;
+            this.cartOpen = true;
+        },
+
+        // ========== Helpers ==========
+        formatDate(d) {
+            if (!d) return '';
+            const date = new Date(d + 'T00:00:00');
+            return date.toLocaleDateString('ro-RO', { weekday: 'long', day: 'numeric', month: 'long' });
+        },
+        formatDuration(min) {
+            if (!min) return '';
+            if (min < 60) return min + ' min';
+            if (min % 1440 === 0) return (min / 1440) + (min === 1440 ? ' zi' : ' zile');
+            if (min % 60 === 0) return (min / 60) + (min === 60 ? ' oră' : ' ore');
+            return min + ' min';
+        },
+        categoryLabel(cat) {
+            const map = { access:'Acces', parking:'Parcare', rental:'Închiriere', activity:'Activitate', extra:'Extra' };
+            return map[cat] || 'Serviciu';
+        },
+        categoryGradient(cat) {
+            const map = {
+                access:   'linear-gradient(135deg, #1F4E37, #0F2C20)',
+                parking:  'linear-gradient(135deg, #5BB17F, #2D7A4F)',
+                rental:   'linear-gradient(135deg, #0891B2, #155E75)',
+                activity: 'linear-gradient(135deg, #2D7A4F, #0F2C20)',
+                extra:    'linear-gradient(135deg, #B89968, #92400E)',
+            };
+            return map[cat] || 'linear-gradient(135deg, #5BB17F, #155E75)';
+        },
+        serviceEmoji(cat) {
+            const map = { access:'🎟️', parking:'🅿️', rental:'🎿', activity:'🚣', extra:'✨' };
+            return map[cat] || '✨';
+        },
+        get currentScheduleLabel() {
+            // Returneaza programul pe ziua curenta (sau "Verificați programul" fallback)
+            const seasons = (DATA.venue_config || {}).seasons || [];
+            if (seasons.length === 0) return 'Verificați programul';
+            const today = new Date().toISOString().slice(5, 10); // MM-DD
+            const dayKey = ['sun','mon','tue','wed','thu','fri','sat'][new Date().getDay()];
+            for (const s of seasons) {
+                const start = s.start || '01-01', end = s.end || '12-31';
+                const inSeason = start <= end ? (today >= start && today <= end) : (today >= start || today <= end);
+                if (inSeason && s.schedule && s.schedule[dayKey] && s.schedule[dayKey].open) {
+                    return (s.name || 'Program') + ': ' + s.schedule[dayKey].open + ' – ' + s.schedule[dayKey].close;
+                }
+            }
+            return 'Închis astăzi';
+        },
+
+        scrollToServices() {
+            const el = document.getElementById('servicii');
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        },
+
+        // ========== Cart submit ==========
+        checkout() {
+            if (!this.selectedDate || this.cartCount === 0 || !this.canCheckout) return;
+            // Add to AmbiletCart si redirect la /cos
+            if (typeof AmbiletCart !== 'undefined' && AmbiletCart.addItem) {
+                this.cartItems.forEach(t => {
+                    AmbiletCart.addItem(
+                        { id: EVENT.id, title: EVENT.name, slug: EVENT.slug, image: EVENT.image, visit_date: this.selectedDate },
+                        {
+                            id: t.id,
+                            name: t.name,
+                            price: parseFloat(t.effective_price),
+                            min_per_order: t.min_per_order,
+                            max_per_order: t.max_per_order,
+                            is_parking: t.is_parking,
+                            requires_vehicle_info: t.requires_vehicle_info,
+                            service_category: t.service_category,
+                            issuing_company: t.issuing_company,
+                        },
+                        t.qty,
+                        { visit_date: this.selectedDate }
+                    );
+                });
+            }
+            window.location.href = '/cos';
+        },
+
+        // ========== Maps (Leaflet) ==========
+        renderTrailMap() {
+            if (typeof L === 'undefined') return;
+            const cfg = DATA.map_config || {};
+            const center = cfg.center;
+            const pois = cfg.pois || [];
+            if (!center || !document.getElementById('trailMap')) return;
+            const map = L.map('trailMap').setView(center, cfg.zoom || 13);
+            L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap, &copy; OpenTopoMap',
+                maxZoom: 17,
+            }).addTo(map);
+            pois.forEach(p => {
+                const icon = L.divIcon({
+                    html: `<div style="background:${p.color || '#1F4E37'};color:white;border-radius:50%;padding:6px 10px;font-weight:bold;font-size:11px;white-space:nowrap;border:2px solid white;box-shadow:0 4px 12px rgba(0,0,0,0.3)">${(p.label || '').replace(/[<>&]/g, '')}</div>`,
+                    className: '', iconSize: null,
+                });
+                L.marker([p.lat, p.lng], { icon }).addTo(map);
+            });
+        },
+
+        renderLocationMap() {
+            if (typeof L === 'undefined') return;
+            const cfg = DATA.map_config || {};
+            const center = cfg.center;
+            if (!center || !document.getElementById('locationMap')) return;
+            const map = L.map('locationMap').setView(center, (cfg.zoom || 13) - 1);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+                attribution: '&copy; OpenStreetMap, &copy; CARTO', maxZoom: 19,
+            }).addTo(map);
+            const icon = L.divIcon({
+                html: `<div style="background:#1F4E37;color:white;border-radius:50%;width:48px;height:48px;display:flex;align-items:center;justify-content:center;font-size:20px;border:4px solid white;box-shadow:0 6px 16px rgba(0,0,0,0.3)">📍</div>`,
+                className: '', iconSize: [48, 48],
+            });
+            L.marker(center, { icon }).addTo(map).bindPopup(EVENT.name || 'Locație');
+        },
+    };
+}
 </script>
 
 <?php
-// Inject leisure-venue.js direct INLINE in body, inainte de footer + scripts.
-// Pus aici (nu via $scriptsExtra) ca sa fim siguri ca tag-ul ajunge in HTML
-// si nu e ignorat dupa </body></html> emis de scripts.php.
+// Inject leisure-venue.js (păstrat pentru retrocompatibilitate cu vechi DOM, dar
+// designul nou foloseste Alpine inline; JS-ul vechi nu mai gaseste elementele
+// vechi #cal-days etc., deci nu strica nimic).
 $leisureJsPath = __DIR__ . '/assets/js/pages/leisure-venue.js';
-$leisureJsVer = @filemtime($leisureJsPath) ?: time();
 $leisureAssets = defined('ASSETS_URL') ? ASSETS_URL : '/assets';
-?>
-<script src="<?= $leisureAssets ?>/js/pages/leisure-venue.js?v=<?= $leisureJsVer ?>"></script>
-<?php
 require_once __DIR__ . '/includes/footer.php';
 require_once __DIR__ . '/includes/scripts.php';
 ?>
