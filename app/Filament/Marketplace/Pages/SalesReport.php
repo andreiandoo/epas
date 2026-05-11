@@ -66,6 +66,7 @@ class SalesReport extends Page implements HasForms
             'filterBy'    => 'event',
             'eventIds'    => [],
             'organizerId' => null,
+            'eventStatuses' => [],
             'statuses'    => ['paid', 'confirmed', 'completed'],
             'viewMode'    => 'compact',
             'dateColumn'  => 'paid_at',
@@ -174,6 +175,20 @@ class SalesReport extends Page implements HasForms
                             ->helperText('Toate evenimentele acestui organizator vor fi incluse.')
                             ->columnSpanFull()
                             ->visible(fn (Get $get) => $get('filterBy') === 'organizer')
+                            ->live()
+                            ->afterStateUpdated(fn () => $this->resetReport()),
+
+                        Forms\Components\CheckboxList::make('eventStatuses')
+                            ->label('Status evenimente')
+                            ->helperText('Lasă gol pentru a include toate evenimentele (din selecția curentă), indiferent de status. Bifează una sau mai multe pentru a restrânge.')
+                            ->options([
+                                'live'      => 'Live (publicate, neanulate, în viitor)',
+                                'past'      => 'Încheiat (data trecută)',
+                                'draft'     => 'Draft (nepublicat)',
+                                'cancelled' => 'Anulat',
+                            ])
+                            ->columns(2)
+                            ->columnSpanFull()
                             ->live()
                             ->afterStateUpdated(fn () => $this->resetReport()),
 
@@ -339,11 +354,12 @@ class SalesReport extends Page implements HasForms
         $organizerId = $this->data['organizerId'] ?? null;
 
         if ($filterBy === 'organizer' && $organizerId) {
-            return Event::query()
+            $ids = Event::query()
                 ->where('marketplace_client_id', $marketplace->id)
                 ->where('marketplace_organizer_id', (int) $organizerId)
                 ->pluck('id')
                 ->all();
+            return $this->applyEventStatusFilter($ids);
         }
 
         if ($filterBy === 'all_in_period') {
@@ -352,7 +368,7 @@ class SalesReport extends Page implements HasForms
             // from picking events one by one when they want a "what
             // happened this month/quarter" report.
             [$from, $to] = $this->resolvePeriod();
-            return Event::query()
+            $ids = Event::query()
                 ->where('marketplace_client_id', $marketplace->id)
                 ->where('is_published', true)
                 ->whereNotNull('marketplace_organizer_id')
@@ -360,13 +376,66 @@ class SalesReport extends Page implements HasForms
                 ->whereBetween('event_date', [$from, $to])
                 ->pluck('id')
                 ->all();
+            return $this->applyEventStatusFilter($ids);
         }
 
         $eventIds = $this->data['eventIds'] ?? [];
         if (!is_array($eventIds)) {
             return [];
         }
-        return array_values(array_filter(array_map('intval', $eventIds)));
+        $ids = array_values(array_filter(array_map('intval', $eventIds)));
+        return $this->applyEventStatusFilter($ids);
+    }
+
+    /**
+     * Restrict an event id list to those matching one of the picked event
+     * status checkboxes. Empty checkbox list = no restriction.
+     *
+     * Status options (OR semantics — checking multiple widens the set):
+     *  - live      = is_published AND NOT is_cancelled AND date in future
+     *  - past      = event_date (or range_end_date) is in the past
+     *  - draft     = is_published = false
+     *  - cancelled = is_cancelled = true
+     */
+    protected function applyEventStatusFilter(array $eventIds): array
+    {
+        $eventStatuses = $this->data['eventStatuses'] ?? [];
+        if (empty($eventStatuses) || empty($eventIds)) {
+            return $eventIds;
+        }
+
+        $today = now()->toDateString();
+        return Event::whereIn('id', $eventIds)
+            ->where(function ($q) use ($eventStatuses, $today) {
+                if (in_array('live', $eventStatuses, true)) {
+                    $q->orWhere(function ($q2) use ($today) {
+                        $q2->where('is_published', true)
+                           ->where(function ($q3) { $q3->where('is_cancelled', false)->orWhereNull('is_cancelled'); })
+                           ->where(function ($q3) use ($today) {
+                               $q3->whereDate('event_date', '>=', $today)
+                                  ->orWhereDate('range_end_date', '>=', $today);
+                           });
+                    });
+                }
+                if (in_array('past', $eventStatuses, true)) {
+                    $q->orWhere(function ($q2) use ($today) {
+                        $q2->whereDate('event_date', '<', $today)
+                           ->orWhere(function ($q3) use ($today) {
+                               $q3->whereNotNull('range_end_date')->whereDate('range_end_date', '<', $today);
+                           });
+                    });
+                }
+                if (in_array('draft', $eventStatuses, true)) {
+                    $q->orWhere(function ($q2) {
+                        $q2->where('is_published', false)->orWhereNull('is_published');
+                    });
+                }
+                if (in_array('cancelled', $eventStatuses, true)) {
+                    $q->orWhere('is_cancelled', true);
+                }
+            })
+            ->pluck('id')
+            ->all();
     }
 
     public function generate(): void

@@ -1393,11 +1393,40 @@ class OrganizerResource extends Resource
     {
         if (!$record) return new HtmlString('');
 
+        // Live aggregation across every event of this organizer, using the
+        // same SalesBreakdownService that powers the per-event Sales tab so
+        // numbers match end-to-end. Stored organizer.total_revenue was stale
+        // (only refreshed by updateStats() with a too-narrow status filter).
+        $service = app(\App\Services\Marketplace\SalesBreakdownService::class);
+        $events = $record->events()->with(['ticketTypes', 'marketplaceOrganizer', 'marketplaceClient', 'tenant'])->get();
+
+        $totalGross = 0.0;   // what customers paid for valid tickets
+        $totalNet = 0.0;     // organizer's portion after commission/discounts
+        $totalCommission = 0.0;
+        foreach ($events as $event) {
+            $bd = $service->build($event);
+            $totalGross      += (float) $bd['total_revenue'];
+            $totalNet        += (float) $bd['total_net'];
+            $totalCommission += (float) $bd['total_commission'];
+        }
+
         return new HtmlString("
             <div style='display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;'>
                 <div style='text-align: center; padding: 8px;'>
-                    <div style='font-size: 16px; font-weight: 700; color: white;'>" . number_format($record->total_revenue, 2) . " RON</div>
-                    <div style='font-size: 11px; color: #64748B;'>Total Revenue</div>
+                    <div style='font-size: 16px; font-weight: 700; color: white;'>" . number_format($totalGross, 2) . " RON</div>
+                    <div style='font-size: 11px; color: #64748B;'>Total Revenue <span style='color:#475569;'>(live)</span></div>
+                </div>
+                <div style='text-align: center; padding: 8px;'>
+                    <div style='font-size: 16px; font-weight: 700; color: #10B981;'>" . number_format($totalNet, 2) . " RON</div>
+                    <div style='font-size: 11px; color: #64748B;'>Net Revenue <span style='color:#475569;'>(live)</span></div>
+                </div>
+                <div style='text-align: center; padding: 8px;'>
+                    <div style='font-size: 16px; font-weight: 700; color: #f87171;'>" . number_format($totalCommission, 2) . " RON</div>
+                    <div style='font-size: 11px; color: #64748B;'>Comisioane <span style='color:#475569;'>(live)</span></div>
+                </div>
+                <div style='text-align: center; padding: 8px;'>
+                    <div style='font-size: 16px; font-weight: 700; color: white;'>" . number_format($record->total_paid_out, 2) . " RON</div>
+                    <div style='font-size: 11px; color: #64748B;'>Total Paid Out</div>
                 </div>
                 <div style='text-align: center; padding: 8px;'>
                     <div style='font-size: 16px; font-weight: 700; color: #10B981;'>" . number_format($record->available_balance, 2) . " RON</div>
@@ -1407,10 +1436,6 @@ class OrganizerResource extends Resource
                     <div style='font-size: 16px; font-weight: 700; color: #F59E0B;'>" . number_format($record->pending_balance, 2) . " RON</div>
                     <div style='font-size: 11px; color: #64748B;'>Pending Balance</div>
                 </div>
-                <div style='text-align: center; padding: 8px;'>
-                    <div style='font-size: 16px; font-weight: 700; color: white;'>" . number_format($record->total_paid_out, 2) . " RON</div>
-                    <div style='font-size: 11px; color: #64748B;'>Total Paid Out</div>
-                </div>
             </div>
         ");
     }
@@ -1419,12 +1444,35 @@ class OrganizerResource extends Resource
     {
         if (!$record) return new HtmlString('');
 
+        // Event schema has is_published / is_cancelled / event_date, not the
+        // status/starts_at columns the old code assumed — every stat was
+        // returning 0 because none of those filters matched anything.
+        $today = now()->toDateString();
         $totalEvents = $record->events()->count();
         $activeEvents = $record->events()
-            ->whereIn('status', ['published', 'active'])
+            ->where('is_published', true)
+            ->where(function ($q) {
+                $q->where('is_cancelled', false)->orWhereNull('is_cancelled');
+            })
             ->count();
-        $upcomingEvents = $record->events()->where('starts_at', '>=', now())->count();
-        $completedEvents = $record->events()->where('starts_at', '<', now())->count();
+        $upcomingEvents = $record->events()
+            ->where('is_published', true)
+            ->where(function ($q) {
+                $q->where('is_cancelled', false)->orWhereNull('is_cancelled');
+            })
+            ->where(function ($q) use ($today) {
+                $q->whereDate('event_date', '>=', $today)
+                  ->orWhereDate('range_end_date', '>=', $today);
+            })
+            ->count();
+        $completedEvents = $record->events()
+            ->where(function ($q) use ($today) {
+                $q->whereDate('event_date', '<', $today)
+                  ->orWhere(function ($q2) use ($today) {
+                      $q2->whereNotNull('range_end_date')->whereDate('range_end_date', '<', $today);
+                  });
+            })
+            ->count();
 
         return new HtmlString("
             <div style='display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;'>
@@ -1465,33 +1513,17 @@ class OrganizerResource extends Resource
             );
         }
 
-        $eventIds = $events->pluck('id')->toArray();
-        $validStatuses = ['paid', 'confirmed', 'completed', 'refunded'];
-
-        // Aggregate orders per event (by marketplace_event_id OR event_id)
-        $orderAgg = Order::where(function ($q) use ($eventIds) {
-                $q->whereIn('marketplace_event_id', $eventIds)
-                  ->orWhereIn('event_id', $eventIds);
-            })
-            ->whereIn('status', $validStatuses)
-            ->where('source', '!=', 'test_order')->where('source', '!=', 'external_import')
-            ->selectRaw('COALESCE(marketplace_event_id, event_id) as eid')
-            ->selectRaw("SUM(CASE WHEN status = 'refunded' THEN 0 ELSE total END) as net_revenue")
-            ->selectRaw('SUM(total) as gross_revenue_all')
-            ->selectRaw('SUM(CASE WHEN commission_amount > 0 THEN commission_amount ELSE total * COALESCE(commission_rate, 0) / 100 END) as total_commission')
-            ->groupBy('eid')
-            ->get()
-            ->keyBy('eid');
-
-        // Aggregate sold tickets per event
-        $ticketAgg = DB::table('tickets')
-            ->join('ticket_types', 'ticket_types.id', '=', 'tickets.ticket_type_id')
-            ->whereIn('ticket_types.event_id', $eventIds)
-            ->whereIn('tickets.status', ['valid', 'used'])
-            ->selectRaw('ticket_types.event_id as eid, COUNT(tickets.id) as cnt')
-            ->groupBy('eid')
-            ->pluck('cnt', 'eid')
-            ->toArray();
+        // Use SalesBreakdownService per event so numbers align with the
+        // per-event Sales tab. The previous SQL aggregate diverged because
+        // it summed orders.total (gross with commission-on-top + extras)
+        // and approximated commission, while the Sales tab works from
+        // ticket-level price with proper discount/commission allocation.
+        $service = app(\App\Services\Marketplace\SalesBreakdownService::class);
+        $breakdowns = [];
+        foreach ($events as $event) {
+            $event->loadMissing(['ticketTypes', 'marketplaceOrganizer', 'marketplaceClient', 'tenant']);
+            $breakdowns[$event->id] = $service->build($event);
+        }
 
         $now = now();
         $rows = '';
@@ -1524,12 +1556,10 @@ class OrganizerResource extends Resource
                 $statusBadge = '<span style="display:inline-block;padding:2px 8px;font-size:10px;font-weight:600;border-radius:9999px;background:#dcfce7;color:#15803d;">Live</span>';
             }
 
-            $agg = $orderAgg->get($event->id);
-            $netRevenue = (float) ($agg->net_revenue ?? 0);
-            $commission = (float) ($agg->total_commission ?? 0);
-            // Net to organizer = revenue (excluding refunds) - commission
-            $netToOrganizer = max(0, $netRevenue - $commission);
-            $tickets = (int) ($ticketAgg[$event->id] ?? 0);
+            $bd = $breakdowns[$event->id] ?? null;
+            $netToOrganizer = $bd ? (float) $bd['total_net'] : 0.0;
+            $commission     = $bd ? (float) $bd['total_commission'] : 0.0;
+            $tickets        = $bd ? collect($bd['per_type'])->sum('qty') : 0;
 
             $totalNet += $netToOrganizer;
             $totalCommission += $commission;
