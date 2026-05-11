@@ -1647,6 +1647,326 @@ class EventResource extends Resource
                                                     ->label('')
                                                     ->toolbarButtons(['bold', 'italic', 'bulletList', 'orderedList', 'link']),
                                             ]),
+
+                                        // ===== HERO & IDENTITATE =====
+                                        SC\Section::make($t('Hero & Identitate', 'Hero & Identity'))
+                                            ->description($t('Titlul, subtitlul italic, kicker și badge-urile afișate pe hero-ul paginii publice.', 'Title, italic subtitle, kicker and hero badges.'))
+                                            ->collapsed()
+                                            ->schema([
+                                                SC\Grid::make(2)->schema([
+                                                    Forms\Components\TextInput::make('venue_config.title_primary')
+                                                        ->label($t('Titlu principal', 'Primary title'))
+                                                        ->placeholder('ex: Lacul Sfânta Ana')
+                                                        ->helperText($t('Lasă gol pentru a folosi numele evenimentului', 'Leave empty to use event name')),
+                                                    Forms\Components\TextInput::make('venue_config.title_secondary')
+                                                        ->label($t('Subtitlu italic', 'Italic subtitle'))
+                                                        ->placeholder('ex: & Tinovul Mohoș'),
+                                                ]),
+                                                Forms\Components\TextInput::make('venue_config.hero_kicker')
+                                                    ->label($t('Kicker (text mic deasupra titlului)', 'Kicker (small text above title)'))
+                                                    ->placeholder($t('ex: Rezervație naturală protejată', 'e.g. Protected natural reserve')),
+                                                Forms\Components\TagsInput::make('venue_config.hero_badges')
+                                                    ->label($t('Badge-uri hero', 'Hero badges'))
+                                                    ->placeholder($t('Adaugă badge cu Enter', 'Add badge with Enter'))
+                                                    ->helperText($t('ex: 🌿 Sit Natura 2000, 🏔️ Altitudine 950m', 'Use emoji + text')),
+                                            ]),
+
+                                        // ===== QUICK STATS BAR =====
+                                        SC\Section::make($t('Bară informativă (Quick Stats)', 'Quick Stats Bar'))
+                                            ->description($t('Cardul mic cu iconul de atenție / info pe bara sticky de sub hero.', 'Small info card on sticky bar under hero.'))
+                                            ->collapsed()
+                                            ->schema([
+                                                Forms\Components\Repeater::make('venue_config.quick_stats')
+                                                    ->label('')
+                                                    ->schema([
+                                                        SC\Grid::make(3)->schema([
+                                                            Forms\Components\TextInput::make('icon')
+                                                                ->label($t('Emoji', 'Emoji'))
+                                                                ->placeholder('🐻'),
+                                                            Forms\Components\TextInput::make('label')
+                                                                ->label($t('Etichetă', 'Label'))
+                                                                ->placeholder($t('ex: Atenție', 'e.g. Notice')),
+                                                            Forms\Components\TextInput::make('value')
+                                                                ->label($t('Valoare', 'Value'))
+                                                                ->placeholder($t('ex: Zonă cu urși', 'e.g. Bear area')),
+                                                        ]),
+                                                    ])
+                                                    ->itemLabel(fn (array $state): ?string => $state['label'] ?? null)
+                                                    ->addActionLabel($t('Adaugă info', 'Add info'))
+                                                    ->reorderable()
+                                                    ->maxItems(2),
+                                            ]),
+
+                                        // ===== ATRACȚII (cratere / locuri principale) =====
+                                        SC\Section::make($t('Atracții principale', 'Main attractions'))
+                                            ->description($t('Cardurile mari cu descrierea locurilor (ex: Lacul Sf. Ana, Tinovul Mohoș).', 'Big cards describing main attractions.'))
+                                            ->collapsed()
+                                            ->schema([
+                                                Forms\Components\TextInput::make('venue_config.about_title')
+                                                    ->label($t('Titlu secțiune "Despre"', '"About" section title'))
+                                                    ->placeholder($t('ex: Două cratere, o poveste', 'e.g. Two craters, one story')),
+                                                Forms\Components\Repeater::make('venue_config.attractions')
+                                                    ->label('')
+                                                    ->schema([
+                                                        SC\Grid::make(2)->schema([
+                                                            Forms\Components\TextInput::make('name')
+                                                                ->label($t('Nume', 'Name'))
+                                                                ->required()
+                                                                ->placeholder('Lacul Sfânta Ana'),
+                                                            Forms\Components\TextInput::make('badge')
+                                                                ->label($t('Badge (cu emoji)', 'Badge (with emoji)'))
+                                                                ->placeholder('💧 Lac vulcanic'),
+                                                        ]),
+                                                        Forms\Components\Textarea::make('description')
+                                                            ->label($t('Descriere', 'Description'))
+                                                            ->rows(3),
+                                                        Forms\Components\TagsInput::make('bullets')
+                                                            ->label($t('Bullets (Enter pentru fiecare)', 'Bullets (Enter for each)')),
+                                                        SC\Grid::make(3)->schema([
+                                                            Forms\Components\ColorPicker::make('badge_bg')
+                                                                ->label($t('Fundal badge', 'Badge bg'))
+                                                                ->default('#CFFAFE'),
+                                                            Forms\Components\ColorPicker::make('badge_color')
+                                                                ->label($t('Culoare badge', 'Badge color'))
+                                                                ->default('#155E75'),
+                                                            Forms\Components\TextInput::make('blob_gradient')
+                                                                ->label($t('Gradient blob decorativ (CSS)', 'Decorative blob gradient'))
+                                                                ->placeholder('linear-gradient(135deg, #A5F3FC, #22D3EE)'),
+                                                        ]),
+                                                    ])
+                                                    ->itemLabel(fn (array $state): ?string => $state['name'] ?? null)
+                                                    ->addActionLabel($t('Adaugă atracție', 'Add attraction'))
+                                                    ->reorderable()
+                                                    ->maxItems(4)
+                                                    ->collapsible(),
+                                            ]),
+
+                                        // ===== STATS HIGHLIGHTS (numere mari) =====
+                                        SC\Section::make($t('Statistici mari', 'Big stats'))
+                                            ->description($t('Numere mari afișate (ex: 30k ani, 950m altitudine, 240ha).', 'Big numbers display (e.g. 30k years, 950m altitude).'))
+                                            ->collapsed()
+                                            ->schema([
+                                                Forms\Components\Repeater::make('venue_config.stats_highlights')
+                                                    ->label('')
+                                                    ->schema([
+                                                        SC\Grid::make(2)->schema([
+                                                            Forms\Components\TextInput::make('value')
+                                                                ->label($t('Valoare', 'Value'))
+                                                                ->placeholder('ex: 30k, 950m, 240ha, 17'),
+                                                            Forms\Components\TextInput::make('label')
+                                                                ->label($t('Etichetă', 'Label'))
+                                                                ->placeholder($t('ex: Ani de la formare', 'e.g. Years since formation')),
+                                                        ]),
+                                                    ])
+                                                    ->itemLabel(fn (array $state): ?string => ($state['value'] ?? '') . ' — ' . ($state['label'] ?? ''))
+                                                    ->addActionLabel($t('Adaugă statistică', 'Add stat'))
+                                                    ->reorderable()
+                                                    ->maxItems(4),
+                                            ]),
+
+                                        // ===== FLORĂ & FAUNĂ =====
+                                        SC\Section::make($t('Floră & faună', 'Flora & fauna'))
+                                            ->description($t('Cardurile cu specii reprezentative.', 'Representative species cards.'))
+                                            ->collapsed()
+                                            ->schema([
+                                                Forms\Components\Repeater::make('venue_config.flora')
+                                                    ->label('')
+                                                    ->schema([
+                                                        SC\Grid::make(3)->schema([
+                                                            Forms\Components\TextInput::make('emoji')
+                                                                ->label('Emoji')
+                                                                ->placeholder('🌿'),
+                                                            Forms\Components\TextInput::make('name')
+                                                                ->label($t('Nume', 'Name'))
+                                                                ->placeholder('Roua cerului'),
+                                                            Forms\Components\TextInput::make('latin')
+                                                                ->label($t('Nume latin', 'Latin name'))
+                                                                ->placeholder('Drosera rotundifolia'),
+                                                        ]),
+                                                    ])
+                                                    ->itemLabel(fn (array $state): ?string => ($state['emoji'] ?? '') . ' ' . ($state['name'] ?? ''))
+                                                    ->addActionLabel($t('Adaugă specie', 'Add species'))
+                                                    ->reorderable(),
+                                            ]),
+
+                                        // ===== TRASEE TURISTICE =====
+                                        SC\Section::make($t('Trasee turistice', 'Trails'))
+                                            ->description($t('Drumeții marcate cu lungime, durată, denivelare, marcaj, dificultate.', 'Marked trails with length, duration, elevation, marker, difficulty.'))
+                                            ->collapsed()
+                                            ->schema([
+                                                Forms\Components\Repeater::make('venue_config.trails')
+                                                    ->label('')
+                                                    ->schema([
+                                                        Forms\Components\TextInput::make('name')
+                                                            ->label($t('Nume traseu', 'Trail name'))
+                                                            ->required()
+                                                            ->placeholder('Băile Tușnad → Lacul Sf. Ana'),
+                                                        Forms\Components\Textarea::make('description')
+                                                            ->label($t('Descriere', 'Description'))
+                                                            ->rows(2),
+                                                        SC\Grid::make(3)->schema([
+                                                            Forms\Components\TextInput::make('marker')
+                                                                ->label($t('Marcaj', 'Marker'))
+                                                                ->placeholder('Cruce roșie'),
+                                                            Forms\Components\TextInput::make('marker_symbol')
+                                                                ->label($t('Simbol marcaj', 'Marker symbol'))
+                                                                ->default('✚')
+                                                                ->maxLength(4),
+                                                            Forms\Components\Select::make('difficulty')
+                                                                ->label($t('Dificultate', 'Difficulty'))
+                                                                ->options([
+                                                                    'Ușor' => $t('Ușor', 'Easy'),
+                                                                    'Mediu' => $t('Mediu', 'Medium'),
+                                                                    'Mediu-greu' => $t('Mediu-greu', 'Medium-hard'),
+                                                                    'Greu' => $t('Greu', 'Hard'),
+                                                                ]),
+                                                        ]),
+                                                        SC\Grid::make(4)->schema([
+                                                            Forms\Components\TextInput::make('length')
+                                                                ->label($t('Lungime', 'Length'))
+                                                                ->placeholder('6.7 km'),
+                                                            Forms\Components\TextInput::make('duration')
+                                                                ->label($t('Durată', 'Duration'))
+                                                                ->placeholder('2.5 – 3h'),
+                                                            Forms\Components\TextInput::make('elevation')
+                                                                ->label($t('Diferență nivel', 'Elevation'))
+                                                                ->placeholder('+450m'),
+                                                            Forms\Components\TextInput::make('start_point')
+                                                                ->label($t('Punct de plecare', 'Start point'))
+                                                                ->placeholder('Centrul Băile Tușnad'),
+                                                        ]),
+                                                        Forms\Components\Textarea::make('polyline')
+                                                            ->label($t('Polyline (JSON cu [[lat,lng],...])', 'Polyline JSON'))
+                                                            ->rows(2)
+                                                            ->placeholder('[[46.150, 25.847], [46.140, 25.870], [46.128, 25.886]]')
+                                                            ->helperText($t('Opțional, pentru afișaj pe hartă', 'Optional, for map display'))
+                                                            ->dehydrateStateUsing(fn ($state) => is_string($state) && trim($state) !== '' ? json_decode($state, true) : null)
+                                                            ->afterStateHydrated(fn ($component, $state) => $component->state(is_array($state) ? json_encode($state) : ($state ?? ''))),
+                                                    ])
+                                                    ->itemLabel(fn (array $state): ?string => $state['name'] ?? null)
+                                                    ->addActionLabel($t('Adaugă traseu', 'Add trail'))
+                                                    ->reorderable()
+                                                    ->collapsible()
+                                                    ->collapsed(),
+                                            ]),
+
+                                        // ===== SAFETY WARNING =====
+                                        SC\Section::make($t('Atenționare siguranță', 'Safety warning'))
+                                            ->description($t('Mesaj de avertisment afișat sub trasee (ex: zonă cu urși).', 'Warning shown below trails section.'))
+                                            ->collapsed()
+                                            ->schema([
+                                                SC\Grid::make(3)->schema([
+                                                    Forms\Components\TextInput::make('venue_config.safety_warning.icon')
+                                                        ->label('Emoji')
+                                                        ->placeholder('🐻'),
+                                                    Forms\Components\TextInput::make('venue_config.safety_warning.title')
+                                                        ->label($t('Titlu', 'Title'))
+                                                        ->placeholder($t('ex: Zonă cu urși', 'e.g. Bear area'))
+                                                        ->columnSpan(2),
+                                                ]),
+                                                Forms\Components\Textarea::make('venue_config.safety_warning.body')
+                                                    ->label($t('Mesaj', 'Body'))
+                                                    ->rows(3),
+                                            ]),
+
+                                        // ===== CUM AJUNGI =====
+                                        SC\Section::make($t('Cum ajungi', 'How to get there'))
+                                            ->description($t('Cardurile cu modalitățile de a ajunge la locație.', 'Cards with ways to reach the venue.'))
+                                            ->collapsed()
+                                            ->schema([
+                                                Forms\Components\Repeater::make('venue_config.getting_there')
+                                                    ->label('')
+                                                    ->schema([
+                                                        SC\Grid::make(3)->schema([
+                                                            Forms\Components\TextInput::make('icon')
+                                                                ->label($t('Emoji', 'Emoji'))
+                                                                ->placeholder('🚗'),
+                                                            Forms\Components\ColorPicker::make('icon_bg')
+                                                                ->label($t('Fundal iconă', 'Icon bg'))
+                                                                ->default('#1F4E37'),
+                                                            Forms\Components\TextInput::make('title')
+                                                                ->label($t('Titlu', 'Title'))
+                                                                ->placeholder($t('ex: Cu mașina', 'e.g. By car')),
+                                                        ]),
+                                                        Forms\Components\Textarea::make('description')
+                                                            ->label($t('Descriere', 'Description'))
+                                                            ->rows(2),
+                                                        Forms\Components\TextInput::make('note')
+                                                            ->label($t('Notă (mic, gri)', 'Note (small, gray)')),
+                                                    ])
+                                                    ->itemLabel(fn (array $state): ?string => $state['title'] ?? null)
+                                                    ->addActionLabel($t('Adaugă mod', 'Add way'))
+                                                    ->reorderable()
+                                                    ->maxItems(4),
+                                            ]),
+
+                                        // ===== MAP CONFIG =====
+                                        SC\Section::make($t('Hartă & POI-uri', 'Map & POIs'))
+                                            ->description($t('Centrul hărții (lat/lng), zoom inițial și marker-ele afișate.', 'Map center (lat/lng), initial zoom and POI markers.'))
+                                            ->collapsed()
+                                            ->schema([
+                                                SC\Grid::make(3)->schema([
+                                                    Forms\Components\TextInput::make('venue_config.map_config.center.lat')
+                                                        ->label('Latitudine centru')
+                                                        ->numeric()
+                                                        ->step(0.000001)
+                                                        ->placeholder('46.1287'),
+                                                    Forms\Components\TextInput::make('venue_config.map_config.center.lng')
+                                                        ->label('Longitudine centru')
+                                                        ->numeric()
+                                                        ->step(0.000001)
+                                                        ->placeholder('25.8867'),
+                                                    Forms\Components\TextInput::make('venue_config.map_config.zoom')
+                                                        ->label('Zoom')
+                                                        ->numeric()
+                                                        ->minValue(8)
+                                                        ->maxValue(18)
+                                                        ->default(12),
+                                                ]),
+                                                Forms\Components\Repeater::make('venue_config.map_config.pois')
+                                                    ->label($t('POI-uri (markere pe hartă)', 'POIs (map markers)'))
+                                                    ->schema([
+                                                        SC\Grid::make(4)->schema([
+                                                            Forms\Components\TextInput::make('lat')
+                                                                ->label('Lat')
+                                                                ->numeric()->step(0.000001),
+                                                            Forms\Components\TextInput::make('lng')
+                                                                ->label('Lng')
+                                                                ->numeric()->step(0.000001),
+                                                            Forms\Components\TextInput::make('label')
+                                                                ->label($t('Etichetă', 'Label')),
+                                                            Forms\Components\ColorPicker::make('color')
+                                                                ->label($t('Culoare', 'Color'))
+                                                                ->default('#06B6D4'),
+                                                        ]),
+                                                    ])
+                                                    ->itemLabel(fn (array $state): ?string => $state['label'] ?? null)
+                                                    ->addActionLabel($t('Adaugă POI', 'Add POI'))
+                                                    ->reorderable()
+                                                    ->collapsible(),
+                                            ]),
+
+                                        // ===== FAQ =====
+                                        SC\Section::make($t('Întrebări frecvente (FAQ)', 'FAQs'))
+                                            ->description($t('Accordion cu întrebări și răspunsuri.', 'Accordion with Q&A.'))
+                                            ->collapsed()
+                                            ->schema([
+                                                Forms\Components\Repeater::make('venue_config.faqs')
+                                                    ->label('')
+                                                    ->schema([
+                                                        Forms\Components\TextInput::make('q')
+                                                            ->label($t('Întrebare', 'Question'))
+                                                            ->required(),
+                                                        Forms\Components\RichEditor::make('a')
+                                                            ->label($t('Răspuns', 'Answer'))
+                                                            ->toolbarButtons(['bold', 'italic', 'link', 'bulletList', 'orderedList']),
+                                                    ])
+                                                    ->itemLabel(fn (array $state): ?string => $state['q'] ?? null)
+                                                    ->addActionLabel($t('Adaugă întrebare', 'Add question'))
+                                                    ->reorderable()
+                                                    ->collapsible()
+                                                    ->collapsed(),
+                                            ]),
                                     ]),
 
                                 // ========== TAB 4: BILETE ==========
