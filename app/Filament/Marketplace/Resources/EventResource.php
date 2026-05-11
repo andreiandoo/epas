@@ -78,8 +78,21 @@ class EventResource extends Resource
         $today = Carbon::today();
         $marketplace = static::getMarketplaceClient();
 
-        // For past/ended events, remove minDate constraints so all fields can be edited freely
-        $minDateForEvent = fn (mixed $record = null) => static::isEventEnded($record instanceof Event ? $record : null) ? null : $today;
+        // For past/ended OR already-started events, remove minDate
+        // constraints so admins can tweak other fields without being forced
+        // to push the historical start date forward. Constraint stays for
+        // brand-new events (creating) and for upcoming events that haven't
+        // begun yet.
+        $minDateForEvent = function (mixed $record = null) use ($today) {
+            $r = $record instanceof Event ? $record : null;
+            if (!$r) {
+                return $today;
+            }
+            if (static::isEventEnded($r) || static::isEventStarted($r)) {
+                return null;
+            }
+            return $today;
+        };
 
         // Inline labels for ticket type fields — set to true for inline, false for stacked
         $il = false;
@@ -4578,6 +4591,33 @@ class EventResource extends Resource
         }
 
         return $eventEndDateTime && $eventEndDateTime->isPast();
+    }
+
+    /**
+     * Whether the event's start date is in the past. Used alongside
+     * isEventEnded() to relax minDate on date pickers — an event that has
+     * already begun (but isn't yet finished) shouldn't block edits because
+     * its stored start date is older than today.
+     */
+    protected static function isEventStarted(?Event $record): bool
+    {
+        if (!$record || !$record->exists) {
+            return false;
+        }
+
+        $startDate = null;
+        if ($record->duration_mode === 'single_day' && $record->event_date) {
+            $startDate = Carbon::parse($record->event_date->format('Y-m-d'));
+        } elseif ($record->duration_mode === 'range' && $record->range_start_date) {
+            $startDate = Carbon::parse($record->range_start_date->format('Y-m-d'));
+        } elseif ($record->duration_mode === 'multi_day' && !empty($record->multi_slots)) {
+            $firstSlot = collect($record->multi_slots)->sortBy('date')->first();
+            if ($firstSlot && !empty($firstSlot['date'])) {
+                $startDate = Carbon::parse($firstSlot['date']);
+            }
+        }
+
+        return $startDate && $startDate->startOfDay()->isPast();
     }
 
     public static function table(Table $table): Table

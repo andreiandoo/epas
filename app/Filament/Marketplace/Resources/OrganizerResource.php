@@ -1397,8 +1397,14 @@ class OrganizerResource extends Resource
         // same SalesBreakdownService that powers the per-event Sales tab so
         // numbers match end-to-end. Stored organizer.total_revenue was stale
         // (only refreshed by updateStats() with a too-narrow status filter).
+        //
+        // Note: $record->events() returns MarketplaceEvent (different model),
+        // but the breakdown service expects \App\Models\Event. Query the
+        // real Event model directly via the FK column.
         $service = app(\App\Services\Marketplace\SalesBreakdownService::class);
-        $events = $record->events()->with(['ticketTypes', 'marketplaceOrganizer', 'marketplaceClient', 'tenant'])->get();
+        $events = Event::where('marketplace_organizer_id', $record->id)
+            ->with(['ticketTypes', 'marketplaceOrganizer', 'marketplaceClient', 'tenant'])
+            ->get();
 
         $totalGross = 0.0;   // what customers paid for valid tickets
         $totalNet = 0.0;     // organizer's portion after commission/discounts
@@ -1444,18 +1450,19 @@ class OrganizerResource extends Resource
     {
         if (!$record) return new HtmlString('');
 
-        // Event schema has is_published / is_cancelled / event_date, not the
-        // status/starts_at columns the old code assumed — every stat was
-        // returning 0 because none of those filters matched anything.
+        // $record->events() returns MarketplaceEvent (a different model that
+        // doesn't carry is_published/is_cancelled/event_date columns). Query
+        // the real Event model directly so the filters land on actual data.
         $today = now()->toDateString();
-        $totalEvents = $record->events()->count();
-        $activeEvents = $record->events()
+        $eventsBase = Event::where('marketplace_organizer_id', $record->id);
+        $totalEvents = (clone $eventsBase)->count();
+        $activeEvents = (clone $eventsBase)
             ->where('is_published', true)
             ->where(function ($q) {
                 $q->where('is_cancelled', false)->orWhereNull('is_cancelled');
             })
             ->count();
-        $upcomingEvents = $record->events()
+        $upcomingEvents = (clone $eventsBase)
             ->where('is_published', true)
             ->where(function ($q) {
                 $q->where('is_cancelled', false)->orWhereNull('is_cancelled');
@@ -1465,7 +1472,7 @@ class OrganizerResource extends Resource
                   ->orWhereDate('range_end_date', '>=', $today);
             })
             ->count();
-        $completedEvents = $record->events()
+        $completedEvents = (clone $eventsBase)
             ->where(function ($q) use ($today) {
                 $q->whereDate('event_date', '<', $today)
                   ->orWhere(function ($q2) use ($today) {
