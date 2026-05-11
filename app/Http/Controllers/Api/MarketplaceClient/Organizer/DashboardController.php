@@ -369,6 +369,14 @@ class DashboardController extends BaseController
                 ->values()
                 ->all();
 
+            // Promo / discount fields surfaced on the Vanzari row's
+            // Valoare column. promo_discount is the per-promo amount we
+            // care about for display; discount_amount can include other
+            // sources (gift card, manual adjustments) and would mislead
+            // the operator into thinking the promo gave the full discount.
+            $promoCode = trim((string) ($order->promo_code ?? '')) ?: null;
+            $promoDiscount = (float) ($order->promo_discount ?? 0);
+
             return [
                 'id' => $order->id,
                 'order_number' => $order->order_number,
@@ -393,6 +401,9 @@ class DashboardController extends BaseController
                     ->values()
                     ->all(),
                 'seats' => $seats,
+                'promo_code' => $promoCode,
+                'promo_discount' => $promoDiscount,
+                'currency' => $order->currency ?? 'RON',
                 'created_at' => $order->created_at->toIso8601String(),
                 'paid_at' => $order->paid_at?->toIso8601String(),
             ];
