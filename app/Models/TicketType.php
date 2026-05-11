@@ -243,26 +243,67 @@ class TicketType extends Model
             ));
         });
 
-        // Auto-generate series_start/series_end after create (needs ID)
-        static::created(function ($model) {
-            $needsUpdate = false;
+        // Normalize series_start/series_end to use the ticket type id in
+        // the identifier slot. Runs on every save (create + update) so it
+        // catches:
+        //   - NEW rows where the Filament form generated series with the
+        //     SKU fallback because $get('id') was null during repeater
+        //     interaction (id only becomes known after the model is saved).
+        //   - Legacy rows that pre-date the id-first policy (e.g.
+        //     AMB-4402-ACCES-00001 → AMB-4402-{id}-00001).
+        // The save listener is also what fills empty values on first save.
+        // Uses saveQuietly to avoid re-entry through the saved event.
+        static::saved(function ($model) {
             $event = $model->event;
             $eventSeries = $event?->event_series;
-            $capacity = $model->quota_total;
-            $identifier = $model->id;
-
-            if ($eventSeries && $identifier) {
-                if (empty($model->series_start)) {
-                    $model->series_start = $eventSeries . '-' . $identifier . '-00001';
-                    $needsUpdate = true;
-                }
-                if (empty($model->series_end) && $capacity && (int) $capacity > 0) {
-                    $model->series_end = $eventSeries . '-' . $identifier . '-' . str_pad((int) $capacity, 5, '0', STR_PAD_LEFT);
-                    $needsUpdate = true;
-                }
+            if (!$eventSeries || empty($model->id)) {
+                return;
             }
 
-            if ($needsUpdate) {
+            $prefix = $eventSeries . '-';
+            $idStr = (string) $model->id;
+            $capacity = (int) ($model->quota_total ?? 0);
+            if ($capacity === -1) {
+                // -1 = unlimited per the rest of the codebase; fall back to a
+                // generous default for the series_end so the value is filled.
+                $capacity = 1000;
+            }
+
+            $patched = [];
+            foreach (['series_start', 'series_end'] as $field) {
+                $value = $model->{$field};
+
+                if (empty($value)) {
+                    // Fill missing — only if we know the capacity for end.
+                    if ($field === 'series_start') {
+                        $patched[$field] = $prefix . $idStr . '-00001';
+                    } elseif ($capacity > 0) {
+                        $patched[$field] = $prefix . $idStr . '-' . str_pad($capacity, 5, '0', STR_PAD_LEFT);
+                    }
+                    continue;
+                }
+
+                // Existing — only touch if it matches our generated pattern
+                // ({event_series}-{identifier}-{NNNNN}) AND the identifier
+                // slot isn't already the id. Custom-formatted series the
+                // operator entered manually are left alone.
+                if (!str_starts_with($value, $prefix)) {
+                    continue;
+                }
+                $tail = substr($value, strlen($prefix));
+                if (!preg_match('/^(.+)-(\d+)$/', $tail, $m)) {
+                    continue;
+                }
+                if ($m[1] === $idStr) {
+                    continue; // already normalized
+                }
+                $patched[$field] = $prefix . $idStr . '-' . $m[2];
+            }
+
+            if (!empty($patched)) {
+                foreach ($patched as $f => $v) {
+                    $model->{$f} = $v;
+                }
                 $model->saveQuietly();
             }
         });

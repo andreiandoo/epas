@@ -2416,7 +2416,12 @@ class EventResource extends Resource
                                                         ->afterStateUpdated(function ($state, SSet $set, SGet $get) {
                                                             // Regenerate series_end when stock changes
                                                             $eventSeries = $get('../../event_series');
-                                                            $ticketTypeIdentifier = $get('id') ?: $get('sku');
+                                                            // ID-only: no SKU fallback. For NEW ticket types the
+                                                            // id is null here (model not yet saved); leaving series
+                                                            // blank lets TicketType::saved() backfill with the real
+                                                            // id once the row gets persisted. The old fallback put
+                                                            // the slug (e.g. "ACCES") into the identifier slot.
+                                                            $ticketTypeIdentifier = $get('id') ?: null;
                                                             if (!$eventSeries || !$ticketTypeIdentifier) return;
 
                                                             $capacity = (int) ($state ?: 0);
@@ -3252,7 +3257,12 @@ class EventResource extends Resource
                                                         if (!$state) {
                                                             $eventSeries = $get('../../event_series');
                                                             $capacity = $get('capacity');
-                                                            $ticketTypeIdentifier = $get('id') ?: $get('sku');
+                                                            // ID-only: no SKU fallback. For NEW ticket types the
+                                                            // id is null here (model not yet saved); leaving series
+                                                            // blank lets TicketType::saved() backfill with the real
+                                                            // id once the row gets persisted. The old fallback put
+                                                            // the slug (e.g. "ACCES") into the identifier slot.
+                                                            $ticketTypeIdentifier = $get('id') ?: null;
                                                             if ($eventSeries && $capacity && (int)$capacity > 0 && $ticketTypeIdentifier) {
                                                                 $set('series_start', $eventSeries . '-' . $ticketTypeIdentifier . '-00001');
                                                             }
@@ -3268,7 +3278,12 @@ class EventResource extends Resource
                                                         if (!$state) {
                                                             $eventSeries = $get('../../event_series');
                                                             $capacity = (int) ($get('capacity') ?: 0);
-                                                            $ticketTypeIdentifier = $get('id') ?: $get('sku');
+                                                            // ID-only: no SKU fallback. For NEW ticket types the
+                                                            // id is null here (model not yet saved); leaving series
+                                                            // blank lets TicketType::saved() backfill with the real
+                                                            // id once the row gets persisted. The old fallback put
+                                                            // the slug (e.g. "ACCES") into the identifier slot.
+                                                            $ticketTypeIdentifier = $get('id') ?: null;
                                                             // Use 1000 as default when stock is unlimited (-1)
                                                             if ($capacity === -1) $capacity = 1000;
                                                             if ($eventSeries && $capacity > 0 && $ticketTypeIdentifier) {
