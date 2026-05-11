@@ -680,4 +680,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 })();
 </script>
 
-<?php require_once dirname(__DIR__) . '/includes/organizer-footer.php'; ?>
+<?php
+require_once dirname(__DIR__) . '/includes/organizer-footer.php';
+require_once dirname(__DIR__) . '/includes/scripts.php';
+?>

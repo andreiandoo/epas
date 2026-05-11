@@ -34,8 +34,23 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 <div id="events-loading" class="text-sm text-muted mt-2">Se incarca evenimentele...</div>
             </div>
 
-            <!-- Event Detail + Document Generation (hidden until event selected) -->
-            <div id="event-detail-section" class="hidden mb-6">
+            <!-- SERVICIU TEMPORAR INDISPONIBIL — afișează mesajul în locul detaliilor -->
+            <div id="service-unavailable-message" class="hidden mb-6">
+                <div class="bg-amber-50 border border-amber-200 rounded-2xl p-6 flex items-start gap-4">
+                    <div class="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                        <svg class="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+                        </svg>
+                    </div>
+                    <div class="flex-1">
+                        <h3 class="text-base font-bold text-amber-900">Serviciu indisponibil momentan!</h3>
+                        <p class="text-sm text-amber-800 mt-1">Lucrăm la rezolvare.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Event Detail + Document Generation (TEMPORARILY HIDDEN — see message above) -->
+            <div id="event-detail-section" class="hidden mb-6" style="display:none !important;">
                 <div class="bg-white rounded-2xl border border-border overflow-hidden">
                     <!-- Event Info Header -->
                     <div class="p-6 border-b border-border">
@@ -258,36 +273,43 @@ function selectEvent(id) {
 
 function onEventSelected() {
     const id = document.getElementById('event-selector').value;
+    const msgEl = document.getElementById('service-unavailable-message');
+    const detailEl = document.getElementById('event-detail-section');
+    const historyEl = document.getElementById('event-docs-history');
+
     if (!id || !eventsData[id]) {
-        document.getElementById('event-detail-section').classList.add('hidden');
-        document.getElementById('event-docs-history').classList.add('hidden');
+        if (msgEl) msgEl.classList.add('hidden');
+        if (detailEl) detailEl.classList.add('hidden');
+        if (historyEl) historyEl.classList.add('hidden');
         selectedEventId = null;
         return;
     }
 
     selectedEventId = parseInt(id);
-    const event = eventsData[id];
 
-    // Populate event info
+    // SERVICIU TEMPORAR INDISPONIBIL — afișăm mesajul în locul detaliilor.
+    // Pentru a reactiva: șterge următoarele 4 linii și de-commentează blocul de mai jos.
+    if (msgEl) msgEl.classList.remove('hidden');
+    if (detailEl) detailEl.classList.add('hidden');
+    if (historyEl) historyEl.classList.add('hidden');
+    return;
+
+    /* --- BLOC NORMAL (păstrat pentru reactivare ușoară) ---
+    const event = eventsData[id];
     document.getElementById('event-name').textContent = event.name || '';
     document.getElementById('event-venue-text').textContent = (event.venue_name || '') + (event.venue_city ? ', ' + event.venue_city : '');
     document.getElementById('event-date-text').textContent = event.starts_at ? formatDate(event.starts_at) : '-';
-
     const statusColors = {
         published: 'success', pending_review: 'warning', ended: 'muted', draft: 'secondary', cancelled: 'error'
     };
     const sc = statusColors[event.status] || 'secondary';
     document.getElementById('event-status-badge').innerHTML =
         '<span class="px-2.5 py-1 bg-' + sc + '/10 text-' + sc + ' text-xs font-medium rounded-lg">' + escapeHtml(event.status_label || event.status || '') + '</span>';
-
-    // Render aviz actions
     renderAvizActions(event);
     renderImpoziteActions(event);
-
     document.getElementById('event-detail-section').classList.remove('hidden');
-
-    // Load event-specific document history
     loadEventDocuments(selectedEventId);
+    --- END BLOC NORMAL --- */
 }
 
 function renderAvizActions(event) {
