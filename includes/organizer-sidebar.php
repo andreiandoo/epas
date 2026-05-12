@@ -29,7 +29,15 @@ $currentPage = $currentPage ?? getCurrentPage();
 
     <!-- Navigation -->
     <nav class="flex-1 space-y-1 overflow-y-auto">
-        <a href="/organizator/panou" class="sidebar-link <?= $currentPage === 'dashboard' ? 'active' : '' ?> flex items-center gap-3 px-4 py-3 m-2 rounded-xl text-sm font-medium group <?= $currentPage !== 'dashboard' ? 'text-white' : '' ?>">
+        <!-- LEISURE: Dashboard live PRIMUL în meniu -->
+        <a data-org-show="leisure" href="/organizator/leisure-dashboard" style="display:none" class="sidebar-link <?= $currentPage === 'leisure_dashboard' ? 'active' : '' ?> items-center gap-3 px-4 py-3 m-2 rounded-xl text-sm font-medium group text-white">
+            <svg class="text-muted w-5 h-5 group-hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+            Dashboard live
+            <span class="ml-auto w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+        </a>
+
+        <!-- STANDARD: Dashboard normal (hidden pentru leisure) -->
+        <a data-org-show="standard" href="/organizator/panou" class="sidebar-link <?= $currentPage === 'dashboard' ? 'active' : '' ?> flex items-center gap-3 px-4 py-3 m-2 rounded-xl text-sm font-medium group <?= $currentPage !== 'dashboard' ? 'text-white' : '' ?>">
             <svg class="<?= $currentPage !== 'dashboard' ? 'text-muted' : 'text-white' ?> w-5 h-5 group-hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
             Dashboard
         </a>
@@ -52,11 +60,6 @@ $currentPage = $currentPage ?? getCurrentPage();
         <a data-org-show="leisure" href="/organizator/leisure-event" style="display:none" class="sidebar-link <?= $currentPage === 'leisure_event' ? 'active' : '' ?> items-center gap-3 px-4 py-3 m-2 rounded-xl text-sm font-medium group text-white">
             <svg class="text-muted w-5 h-5 group-hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3"/></svg>
             Eveniment
-        </a>
-        <a data-org-show="leisure" href="/organizator/leisure-dashboard" style="display:none" class="sidebar-link <?= $currentPage === 'leisure_dashboard' ? 'active' : '' ?> items-center gap-3 px-4 py-3 m-2 rounded-xl text-sm font-medium group text-white">
-            <svg class="text-muted w-5 h-5 group-hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-            Dashboard live
-            <span class="ml-auto w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
         </a>
         <a data-org-show="leisure" href="/organizator/leisure-participants" style="display:none" class="sidebar-link <?= $currentPage === 'leisure_participants' ? 'active' : '' ?> items-center gap-3 px-4 py-3 m-2 rounded-xl text-sm font-medium group text-white">
             <svg class="text-muted w-5 h-5 group-hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857"/></svg>

@@ -45,70 +45,153 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             </div>
         </div>
 
-        <!-- Two columns: gates live + staff online -->
+        <!-- Two columns: gates live + stream -->
         <div class="grid lg:grid-cols-3 gap-6">
             <div class="lg:col-span-2 bg-white border rounded-2xl border-border">
                 <div class="px-5 py-4 border-b border-border flex items-center justify-between">
-                    <h2 class="font-bold text-secondary">Activitate pe porți (ultima oră)</h2>
-                    <span class="text-xs text-muted">Real-time</span>
+                    <h2 class="font-bold text-secondary">Activitate scanări (ultima oră)</h2>
+                    <span class="text-xs text-muted">Bucket-uri 5 min</span>
                 </div>
-                <div id="lv-gates" class="p-5 space-y-3">
-                    <p class="text-sm text-muted text-center py-8">Niciun check-in în ultima oră. (Implementare completă în F5.6)</p>
+                <div id="lv-gates" class="p-5">
+                    <p class="text-sm text-muted text-center py-8">Niciun check-in în ultima oră.</p>
                 </div>
             </div>
             <div class="bg-white border rounded-2xl border-border">
                 <div class="px-5 py-4 border-b border-border flex items-center justify-between">
-                    <h2 class="font-bold text-secondary">Staff online</h2>
+                    <h2 class="font-bold text-secondary">Ultimele activități</h2>
                     <span class="text-xs text-emerald-600 font-semibold">● Live</span>
                 </div>
-                <div id="lv-staff" class="p-5 space-y-2">
-                    <p class="text-sm text-muted text-center py-8">Niciun membru activ acum. (Implementare completă în F5.6)</p>
+                <div id="lv-stream" class="p-3 max-h-[420px] overflow-y-auto divide-y divide-border">
+                    <p class="text-sm text-muted text-center py-8">Nicio activitate recentă.</p>
                 </div>
             </div>
         </div>
 
-        <!-- Live stream -->
-        <div class="mt-6 bg-white border rounded-2xl border-border">
-            <div class="px-5 py-4 border-b border-border">
-                <h2 class="font-bold text-secondary">Ultimele activități</h2>
-            </div>
-            <div id="lv-stream" class="p-5 divide-y divide-border">
-                <p class="text-sm text-muted text-center py-8">Nicio activitate recentă. (Implementare completă în F5.6)</p>
-            </div>
-        </div>
-
-        <!-- TODO note -->
-        <div class="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-900">
-            ℹ️ <strong>Implementare în curs:</strong> dashboard-ul live se conectează la API-ul real în F5.6. Pentru moment, valorile sunt 0. Punctele de check-in efective vor proveni din endpoint-ul <code class="bg-amber-100 px-1 rounded">/organizer/events/{event}/leisure/dashboard/live</code>.
-        </div>
+        <div id="lv-error" class="hidden mt-6 p-4 bg-rose-50 border border-rose-200 rounded-xl text-sm text-rose-900"></div>
     </main>
 </div>
 <script>
 (function(){
     const $ = (id) => document.getElementById(id);
     let currentEventId = null;
-    async function refreshDashboard() {
-        $('lv-last-refresh').textContent = new Date().toLocaleTimeString('ro-RO');
-        if (!currentEventId) return;
-        // TODO F5.6: fetch real-time data
-        // try { const res = await AmbiletAPI.get(`/organizer/events/${currentEventId}/leisure/dashboard/live`); ... } catch {}
+    let pollHandle = null;
+    let isPolling = false;
+
+    function fmtMoney(v) {
+        return Number(v || 0).toLocaleString('ro-RO', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
     }
+
+    function timeAgo(iso) {
+        if (!iso) return '—';
+        try {
+            const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+            if (diff < 60) return diff + 's';
+            if (diff < 3600) return Math.floor(diff / 60) + 'm';
+            return Math.floor(diff / 3600) + 'h';
+        } catch { return '—'; }
+    }
+
+    function renderGates(buckets) {
+        const wrap = $('lv-gates');
+        if (!buckets || !buckets.length) {
+            wrap.innerHTML = '<p class="text-sm text-muted text-center py-8">Niciun check-in în ultima oră.</p>';
+            return;
+        }
+        const max = Math.max(1, ...buckets.map(b => b.count));
+        wrap.innerHTML = '<div class="flex items-end gap-1 h-32">' +
+            buckets.map(b => {
+                const h = Math.round((b.count / max) * 100);
+                return `<div class="flex-1 flex flex-col items-center gap-1" title="${b.time}: ${b.count}">
+                    <div class="text-[10px] font-bold text-secondary">${b.count}</div>
+                    <div class="w-full bg-emerald-500 rounded-t" style="height:${h}%;min-height:4px"></div>
+                    <div class="text-[10px] text-muted">${b.time}</div>
+                </div>`;
+            }).join('') +
+        '</div>';
+    }
+
+    function renderStream(stream) {
+        const wrap = $('lv-stream');
+        if (!stream || !stream.length) {
+            wrap.innerHTML = '<p class="text-sm text-muted text-center py-8">Nicio activitate recentă.</p>';
+            return;
+        }
+        wrap.innerHTML = stream.map(ev => {
+            const isSale = ev.type === 'sale';
+            const icon = isSale ? '💰' : '🎟️';
+            const colorRing = isSale ? 'bg-amber-100' : 'bg-emerald-100';
+            return `<div class="px-2 py-2 flex items-start gap-3">
+                <div class="w-9 h-9 ${colorRing} rounded-full flex items-center justify-center text-base flex-shrink-0">${icon}</div>
+                <div class="flex-1 min-w-0">
+                    <div class="text-xs font-semibold text-secondary">${ev.label}</div>
+                    <div class="text-xs text-muted truncate">${ev.detail || ''}</div>
+                </div>
+                <div class="text-[11px] text-muted whitespace-nowrap">${timeAgo(ev.at)}</div>
+            </div>`;
+        }).join('');
+    }
+
+    async function refreshDashboard() {
+        if (isPolling || !currentEventId) return;
+        isPolling = true;
+        try {
+            const res = await AmbiletAPI.get(`/organizer/events/${currentEventId}/leisure/dashboard/live`);
+            const data = res.data || {};
+            const s = data.stats || {};
+            $('lv-stat-sold').textContent = s.sold_today || 0;
+            $('lv-stat-scanned').textContent = s.scanned_today || 0;
+            $('lv-stat-occupancy').textContent = s.occupancy || 0;
+            $('lv-stat-revenue').textContent = fmtMoney(s.revenue_today);
+            renderGates(data.gates_activity || []);
+            renderStream(data.stream || []);
+            $('lv-last-refresh').textContent = new Date().toLocaleTimeString('ro-RO');
+            $('lv-error').classList.add('hidden');
+        } catch (e) {
+            console.error('[leisure-dashboard] live failed', e);
+            $('lv-error').textContent = 'Eroare la încărcarea snapshot-ului live: ' + (e?.message || 'necunoscut');
+            $('lv-error').classList.remove('hidden');
+        } finally {
+            isPolling = false;
+        }
+    }
+
     window.addEventListener('load', async () => {
         let retries = 0;
         while (typeof AmbiletAPI === 'undefined' && retries < 10) { await new Promise(r => setTimeout(r, 100)); retries++; }
-        if (typeof AmbiletAPI === 'undefined') return;
+        if (typeof AmbiletAPI === 'undefined') {
+            $('lv-error').textContent = 'API indisponibil — reîncarcă pagina.';
+            $('lv-error').classList.remove('hidden');
+            return;
+        }
         try {
             const res = await AmbiletAPI.get('/organizer/events');
             const events = res.data || [];
             const leisure = events.filter(e => (e.display_template || 'standard') === 'leisure_venue');
             if (leisure.length > 0) currentEventId = leisure[0].id;
         } catch (e) { console.error(e); }
+
+        if (!currentEventId) {
+            $('lv-error').textContent = 'Nu există un eveniment de tip Locație de agrement.';
+            $('lv-error').classList.remove('hidden');
+            return;
+        }
+
         refreshDashboard();
-        setInterval(refreshDashboard, 10000);
+        pollHandle = setInterval(refreshDashboard, 10000);
+
+        // Oprește polling-ul când tab-ul nu e activ
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                clearInterval(pollHandle);
+                pollHandle = null;
+            } else if (!pollHandle) {
+                refreshDashboard();
+                pollHandle = setInterval(refreshDashboard, 10000);
+            }
+        });
     });
 })();
 </script>
 <?php
-require_once dirname(__DIR__) . '/includes/organizer-footer.php';
 require_once dirname(__DIR__) . '/includes/scripts.php';
 ?>
