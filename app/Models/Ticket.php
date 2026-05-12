@@ -228,17 +228,52 @@ class Ticket extends Model
 
         $meta = is_array($order->meta) ? $order->meta : [];
         $source = $order->source ?? 'marketplace';
-        $orderMode = $meta['commission_mode'] ?? null;
-        // POS app: commission is always carved out (no on-top adjustment in
-        // OrdersController). Online: follow the recorded commission_mode.
-        $isIncluded = $source === 'pos_app' || $orderMode === 'included';
+        $ticketType = $this->ticketType;
+        $event = $ticketType?->event ?? $order->event ?? null;
+
+        // Resolve commission mode per ticket type. Priority chain (mirrors
+        // SalesBreakdownService so the export is consistent with what the
+        // Sales tab shows):
+        //   1. ticket_type.commission_mode (explicit override on the type)
+        //   2. event.commission_mode
+        //   3. organizer.default_commission_mode
+        //   4. marketplace.commission_mode
+        //   5. 'included' fallback
+        // POS app orders are always treated as included (operator collected
+        // cash at the door; commission is carved out of payout).
+        $defaultMode = $event?->commission_mode
+            ?? $event?->marketplaceOrganizer?->default_commission_mode
+            ?? $event?->marketplaceClient?->commission_mode
+            ?? 'included';
+
+        $mode = $defaultMode;
+        if ($ticketType && method_exists($ticketType, 'getEffectiveCommission')) {
+            $defaultRate = (float) (
+                $event?->commission_rate
+                ?? $event?->marketplaceOrganizer?->commission_rate
+                ?? $order->commission_rate
+                ?? $event?->tenant?->commission_rate
+                ?? $event?->marketplaceClient?->commission_rate
+                ?? 5
+            );
+            $effective = $ticketType->getEffectiveCommission($defaultRate, $defaultMode);
+            $mode = $effective['mode'] ?? $defaultMode;
+        }
+
+        $isIncluded = !in_array($mode, ['on_top', 'added_on_top'], true);
+        if ($source === 'pos_app') {
+            $isIncluded = true;
+        }
 
         if (!$isIncluded) {
+            // Commission was added on top of the ticket price — the price
+            // stored on the row is already the net to the organizer.
             return $price;
         }
 
-        // Try per-type commission_details first (most accurate)
-        $typeName = $this->ticketType?->name ?? '';
+        // Try per-type commission_details first (recorded at sale time, most
+        // accurate — accounts for discounts, fixed fees, etc.).
+        $typeName = $ticketType?->name ?? '';
         $commissionPerUnit = null;
         foreach (($meta['commission_details'] ?? []) as $cd) {
             if (($cd['ticket_type'] ?? '') === $typeName) {
@@ -248,7 +283,19 @@ class Ticket extends Model
             }
         }
 
-        // Fallback to order-level rate (the POS path)
+        // Fallback: ticket type's own commission settings (per-type override
+        // or organizer/marketplace chain).
+        if ($commissionPerUnit === null && $ticketType && method_exists($ticketType, 'calculateCommission')) {
+            $defaultRate = (float) (
+                $event?->commission_rate
+                ?? $event?->marketplaceOrganizer?->commission_rate
+                ?? $order->commission_rate
+                ?? 5
+            );
+            $commissionPerUnit = (float) $ticketType->calculateCommission($price, $defaultRate, $defaultMode);
+        }
+
+        // Last-ditch fallback: order-level commission_rate (the POS path).
         if ($commissionPerUnit === null) {
             $rate = (float) ($order->commission_rate ?? 0);
             $commissionPerUnit = round($price * $rate / 100, 2);
