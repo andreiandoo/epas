@@ -417,13 +417,17 @@ class DashboardController extends BaseController
     {
         $organizer = $this->requireOrganizer($request);
 
+        // ticketType MUST include commission_* columns — Ticket::getNetPrice()
+        // resolves the mode from there. Without them the per-type override
+        // (added_on_top / included) silently falls through to organizer
+        // default, producing wrong Net bilet values on the CSV.
         $query = Order::where('marketplace_organizer_id', $organizer->id)
             ->with([
-                'event:id,title',
+                'event:id,title,marketplace_organizer_id,commission_rate,commission_mode',
                 'marketplaceEvent:id,name',
                 'marketplaceCustomer:id,first_name,last_name,phone',
                 'tickets.marketplaceTicketType:id,name',
-                'tickets.ticketType:id,name',
+                'tickets.ticketType:id,name,event_id,commission_type,commission_rate,commission_fixed,commission_mode',
             ]);
 
         if ($request->has('event_id')) {
