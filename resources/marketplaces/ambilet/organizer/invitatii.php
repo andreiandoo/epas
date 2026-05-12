@@ -39,12 +39,28 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         </div>
 
         <div id="step-quantity" class="bg-white rounded-2xl border border-border p-6 mb-6 hidden">
-            <h3 class="font-semibold text-secondary mb-1">Pasul 1 — Câte invitații?</h3>
-            <p class="text-sm text-muted mb-4">Introdu numărul de invitații pe care vrei să le generezi. Maxim 1000 pe o serie.</p>
-            <div class="flex items-center gap-3">
-                <input type="number" id="qty-input" min="1" max="1000" value="1" class="input w-32" />
-                <button id="qty-continue" class="px-4 py-2 rounded-lg bg-rose-600 text-white font-semibold hover:bg-rose-700 transition-colors">Continuă</button>
+            <h3 class="font-semibold text-secondary mb-1">Pasul 1 — Detalii serie</h3>
+            <p class="text-sm text-muted mb-4">Dă un nume seriei (opțional, pentru organizare — ex. „Firma X", „Sponsori") și alege numărul de invitații.</p>
+
+            <div class="grid sm:grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label for="batch-name-input" class="block text-xs font-semibold text-muted mb-1">Nume serie (opțional)</label>
+                    <input type="text" id="batch-name-input" maxlength="120" placeholder="ex. Firma X - presa" class="input w-full" />
+                </div>
+                <div>
+                    <label for="qty-input" class="block text-xs font-semibold text-muted mb-1">Număr invitații <span class="text-rose-600">*</span></label>
+                    <input type="number" id="qty-input" min="1" max="50" value="1" class="input w-32" />
+                </div>
             </div>
+
+            <div class="rounded-lg bg-amber-50 border border-amber-200 p-3 mb-4 flex items-start gap-2">
+                <svg class="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <p class="text-xs text-amber-800">
+                    <strong>Maxim 50 de invitații per serie.</strong> Generarea poate dura câteva secunde — fiecare invitație produce un PDF cu QR + șablonul tău de bilet. Dacă ai nevoie de mai multe, creează mai multe serii.
+                </p>
+            </div>
+
+            <button id="qty-continue" class="px-4 py-2 rounded-lg bg-rose-600 text-white font-semibold hover:bg-rose-700 transition-colors">Continuă</button>
         </div>
 
         <div id="step-seats" class="bg-white rounded-2xl border border-border p-6 mb-6 hidden">
@@ -997,6 +1013,10 @@ $scriptsExtra = <<<'JS'
                 event_id: parseInt(eventId, 10),
                 recipients: recipients,
             };
+            const batchNameInput = $('batch-name-input');
+            if (batchNameInput && batchNameInput.value.trim() !== '') {
+                payload.name = batchNameInput.value.trim();
+            }
             if (isSeated && seatingData && seatingData.event_seating_id) {
                 payload.event_seating_id = seatingData.event_seating_id;
                 payload.seats = selectedSeats;

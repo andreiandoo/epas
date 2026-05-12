@@ -72,7 +72,12 @@ class InvitationsController extends BaseController
             'event_id' => 'required|integer',
             'name' => 'nullable|string|max:255',
             'watermark' => 'nullable|string|max:50',
-            'recipients' => 'required|array|min:1|max:1000',
+            // Capped at 50 per batch — PDF generation is synchronous and we
+            // already pushed organizer-side latency limits past comfort at
+            // ~100 recipients (~10s+ render). Keeping batches small means
+            // each request finishes in a few seconds and the organizer can
+            // run multiple batches if they need >50 invitations.
+            'recipients' => 'required|array|min:1|max:50',
             'recipients.*.first_name' => 'nullable|string|max:100',
             'recipients.*.last_name' => 'nullable|string|max:100',
             'recipients.*.email' => 'nullable|email|max:180',
