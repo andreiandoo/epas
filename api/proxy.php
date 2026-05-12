@@ -1873,6 +1873,34 @@ switch ($action) {
         $requiresAuth = true;
         break;
 
+    case 'organizer.event.leisure.products.collection':
+        $eventId = (int) ($_GET['event'] ?? 0);
+        if (!$eventId) { http_response_code(400); echo json_encode(['error' => 'Missing event id']); exit; }
+        $method = $_SERVER['REQUEST_METHOD'];
+        $body = in_array($method, ['POST','PUT','PATCH']) ? file_get_contents('php://input') : null;
+        $endpoint = '/organizer/events/' . $eventId . '/leisure/products';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.event.leisure.products.item':
+        $eventId = (int) ($_GET['event'] ?? 0);
+        $productId = (int) ($_GET['product'] ?? 0);
+        if (!$eventId || !$productId) { http_response_code(400); echo json_encode(['error' => 'Missing event/product id']); exit; }
+        $method = $_SERVER['REQUEST_METHOD'];
+        $body = in_array($method, ['POST','PUT','PATCH']) ? file_get_contents('php://input') : null;
+        $endpoint = '/organizer/events/' . $eventId . '/leisure/products/' . $productId;
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.event.leisure.products.reorder':
+        $eventId = (int) ($_GET['event'] ?? 0);
+        if (!$eventId) { http_response_code(400); echo json_encode(['error' => 'Missing event id']); exit; }
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/organizer/events/' . $eventId . '/leisure/products/reorder';
+        $requiresAuth = true;
+        break;
+
     case 'organizer.password':
         $method = 'PUT';
         $body = file_get_contents('php://input');

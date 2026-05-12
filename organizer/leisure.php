@@ -24,6 +24,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             <!-- Tab switcher -->
             <div class="inline-flex rounded-xl bg-white border border-border p-1">
                 <button type="button" id="tab-btn-overview" class="px-4 py-2 text-sm font-medium rounded-lg transition-colors bg-primary text-white">Sumar & raport</button>
+                <button type="button" id="tab-btn-products" class="px-4 py-2 text-sm font-medium rounded-lg transition-colors text-muted hover:bg-slate-50">🎫 Produse</button>
                 <button type="button" id="tab-btn-content" class="px-4 py-2 text-sm font-medium rounded-lg transition-colors text-muted hover:bg-slate-50">Conținut pagină</button>
             </div>
         </div>
@@ -54,6 +55,122 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         <div id="leisure-loading" class="p-8 text-center">
             <div class="inline-block w-6 h-6 border-2 rounded-full border-primary border-t-transparent animate-spin"></div>
             <p class="mt-2 text-sm text-muted">Se încarcă...</p>
+        </div>
+
+        <!-- Tab: Produse (initial hidden) -->
+        <div id="tab-products" class="hidden space-y-6">
+            <div class="p-5 bg-white border rounded-2xl border-border flex flex-wrap items-center justify-between gap-3">
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 bg-primary/10 text-primary rounded-xl flex items-center justify-center">🎫</div>
+                    <div>
+                        <h2 class="text-lg font-bold text-secondary">Bilete și servicii</h2>
+                        <p class="text-xs text-muted">Adaugă, editează sau dezactivează produsele oferite la locație.</p>
+                    </div>
+                </div>
+                <button type="button" id="pr-add-btn" class="px-4 py-2 bg-primary text-white font-semibold rounded-lg hover:bg-primary-dark">+ Adaugă produs</button>
+            </div>
+
+            <div id="pr-loading" class="p-8 text-center"><div class="inline-block w-6 h-6 border-2 rounded-full border-primary border-t-transparent animate-spin"></div></div>
+            <div id="pr-empty" class="hidden p-8 text-center bg-white border rounded-2xl border-border text-muted">Niciun produs încă. Apasă „Adaugă produs" ca să creezi primul bilet.</div>
+            <div id="pr-list" class="hidden space-y-3"></div>
+        </div>
+
+        <!-- Modal produs -->
+        <div id="pr-modal" class="hidden fixed inset-0 bg-black/50 z-50 items-center justify-center p-4 overflow-y-auto">
+            <div class="bg-white rounded-2xl border border-border max-w-2xl w-full my-8 p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 id="pr-modal-title" class="font-bold text-secondary text-xl">Produs</h3>
+                    <button type="button" id="pr-modal-close" class="text-muted hover:text-secondary text-2xl leading-none">×</button>
+                </div>
+                <div class="grid md:grid-cols-2 gap-4">
+                    <label class="block md:col-span-2">
+                        <span class="text-xs font-semibold text-muted uppercase tracking-wider">Nume *</span>
+                        <input id="pr-f-name" type="text" class="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg" placeholder="ex: Bilet adult, Parcare auto, Ghidaj…">
+                    </label>
+                    <label class="block">
+                        <span class="text-xs font-semibold text-muted uppercase tracking-wider">Categorie serviciu *</span>
+                        <select id="pr-f-category" class="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg">
+                            <option value="access">🎟️ Acces (bilet intrare)</option>
+                            <option value="parking">🚗 Parcare</option>
+                            <option value="rental">🛶 Închiriere echipament</option>
+                            <option value="activity">🎯 Activitate cu operator</option>
+                            <option value="extra">➕ Extra</option>
+                        </select>
+                    </label>
+                    <label class="block">
+                        <span class="text-xs font-semibold text-muted uppercase tracking-wider">Societate emitentă</span>
+                        <select id="pr-f-issuer" class="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg">
+                            <option value="primary">Principală</option>
+                            <option value="secondary">Secundară</option>
+                        </select>
+                    </label>
+                    <label class="block">
+                        <span class="text-xs font-semibold text-muted uppercase tracking-wider">Preț (RON) *</span>
+                        <input id="pr-f-price" type="number" min="0" step="0.01" class="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg" placeholder="0.00">
+                    </label>
+                    <label class="block">
+                        <span class="text-xs font-semibold text-muted uppercase tracking-wider">Stoc total (opțional)</span>
+                        <input id="pr-f-capacity" type="number" min="0" class="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg" placeholder="lăsa gol = nelimitat">
+                    </label>
+                    <label class="block">
+                        <span class="text-xs font-semibold text-muted uppercase tracking-wider">Capacitate zilnică (opțional)</span>
+                        <input id="pr-f-dailycap" type="number" min="0" class="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg" placeholder="ex: 500">
+                    </label>
+                    <label class="block">
+                        <span class="text-xs font-semibold text-muted uppercase tracking-wider">Durată serviciu (min)</span>
+                        <input id="pr-f-duration" type="number" min="0" class="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg" placeholder="ex: 60">
+                    </label>
+                    <label class="block">
+                        <span class="text-xs font-semibold text-muted uppercase tracking-wider">Iconiță (emoji)</span>
+                        <input id="pr-f-icon" type="text" maxlength="6" class="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg" placeholder="🎟️">
+                    </label>
+                    <label class="block">
+                        <span class="text-xs font-semibold text-muted uppercase tracking-wider">Etichetă unitate</span>
+                        <input id="pr-f-unit" type="text" class="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg" placeholder="bilet, persoană, oră, zi…">
+                    </label>
+                    <label class="block md:col-span-2">
+                        <span class="text-xs font-semibold text-muted uppercase tracking-wider">URL imagine card (opțional)</span>
+                        <input id="pr-f-image" type="url" class="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg" placeholder="https://...">
+                    </label>
+                    <label class="block md:col-span-2">
+                        <span class="text-xs font-semibold text-muted uppercase tracking-wider">Descriere scurtă</span>
+                        <textarea id="pr-f-description" rows="2" class="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg" placeholder="Descriere..."></textarea>
+                    </label>
+                    <label class="block md:col-span-2">
+                        <span class="text-xs font-semibold text-muted uppercase tracking-wider">Include (un element per linie)</span>
+                        <textarea id="pr-f-includes" rows="3" class="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg" placeholder="Acces toată ziua&#10;Hartă tipărită&#10;Apă gratuită"></textarea>
+                    </label>
+                    <label class="block md:col-span-2">
+                        <span class="text-xs font-semibold text-muted uppercase tracking-wider">Termeni utilizare</span>
+                        <textarea id="pr-f-terms" rows="2" class="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg" placeholder="Condiții, restricții..."></textarea>
+                    </label>
+                    <div class="md:col-span-2 grid grid-cols-2 md:grid-cols-4 gap-3">
+                        <label class="flex items-center gap-2 text-sm">
+                            <input id="pr-f-active" type="checkbox" class="w-4 h-4 accent-primary">
+                            <span>Activ</span>
+                        </label>
+                        <label class="flex items-center gap-2 text-sm">
+                            <input id="pr-f-parking" type="checkbox" class="w-4 h-4 accent-primary">
+                            <span>E parcare</span>
+                        </label>
+                        <label class="flex items-center gap-2 text-sm">
+                            <input id="pr-f-vehicle" type="checkbox" class="w-4 h-4 accent-primary">
+                            <span>Cere date vehicul</span>
+                        </label>
+                        <label class="flex items-center gap-2 text-sm">
+                            <input id="pr-f-reqaccess" type="checkbox" class="w-4 h-4 accent-primary">
+                            <span>Necesită bilet acces</span>
+                        </label>
+                    </div>
+                </div>
+                <div class="mt-6 flex justify-between gap-2">
+                    <button id="pr-f-delete" type="button" class="hidden px-3 py-2 text-sm text-rose-600 hover:bg-rose-50 rounded-lg">🗑 Șterge</button>
+                    <div class="ml-auto flex gap-2">
+                        <button id="pr-f-cancel" type="button" class="px-3 py-2 text-sm border border-border rounded-lg hover:bg-slate-50">Renunță</button>
+                        <button id="pr-f-save" type="button" class="px-5 py-2 text-sm bg-primary text-white font-semibold rounded-lg hover:bg-primary-dark">Salvează</button>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- Tab: Conținut pagină (initial hidden) -->
@@ -172,10 +289,134 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 </div>
             </details>
 
-            <!-- INFO RESTUL SECTIUNILOR -->
-            <div class="p-5 bg-amber-50 border border-amber-200 rounded-2xl text-sm text-amber-900">
-                <p class="font-semibold mb-1">ℹ️ Pentru editarea atracțiilor, traseelor, hărții, hotelurilor, galeriei, video-urilor și a programului:</p>
-                <p>Accesează panoul Tixello → <a id="admin-edit-link" href="#" target="_blank" class="font-bold underline text-primary">core.tixello.com/marketplace/events/.../edit</a> → tab "Configurare Locație".</p>
+            <!-- ATRACȚII -->
+            <details class="bg-white border rounded-2xl border-border">
+                <summary class="px-5 py-4 cursor-pointer font-semibold text-secondary flex items-center justify-between hover:bg-slate-50 rounded-2xl">
+                    <span>🏞️ Atracții (carduri principale)</span>
+                    <svg class="w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                </summary>
+                <div class="px-5 pb-5 pt-2 space-y-3 border-t border-border">
+                    <div id="attractions-list" class="space-y-3"></div>
+                    <button type="button" id="attractions-add" class="px-4 py-2 text-sm font-medium text-primary bg-primary/10 hover:bg-primary/20 rounded-lg">+ Adaugă atracție</button>
+                </div>
+            </details>
+
+            <!-- TRASEE -->
+            <details class="bg-white border rounded-2xl border-border">
+                <summary class="px-5 py-4 cursor-pointer font-semibold text-secondary flex items-center justify-between hover:bg-slate-50 rounded-2xl">
+                    <span>🥾 Trasee turistice</span>
+                    <svg class="w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                </summary>
+                <div class="px-5 pb-5 pt-2 space-y-3 border-t border-border">
+                    <div id="trails-list" class="space-y-3"></div>
+                    <button type="button" id="trails-add" class="px-4 py-2 text-sm font-medium text-primary bg-primary/10 hover:bg-primary/20 rounded-lg">+ Adaugă traseu</button>
+                </div>
+            </details>
+
+            <!-- GALERIE -->
+            <details class="bg-white border rounded-2xl border-border">
+                <summary class="px-5 py-4 cursor-pointer font-semibold text-secondary flex items-center justify-between hover:bg-slate-50 rounded-2xl">
+                    <span>📷 Galerie foto</span>
+                    <svg class="w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                </summary>
+                <div class="px-5 pb-5 pt-2 space-y-3 border-t border-border">
+                    <div id="gallery-list" class="space-y-2"></div>
+                    <button type="button" id="gallery-add" class="px-4 py-2 text-sm font-medium text-primary bg-primary/10 hover:bg-primary/20 rounded-lg">+ Adaugă imagine</button>
+                </div>
+            </details>
+
+            <!-- VIDEO -->
+            <details class="bg-white border rounded-2xl border-border">
+                <summary class="px-5 py-4 cursor-pointer font-semibold text-secondary flex items-center justify-between hover:bg-slate-50 rounded-2xl">
+                    <span>🎥 Video (YouTube / Vimeo)</span>
+                    <svg class="w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                </summary>
+                <div class="px-5 pb-5 pt-2 space-y-3 border-t border-border">
+                    <div id="videos-list" class="space-y-2"></div>
+                    <button type="button" id="videos-add" class="px-4 py-2 text-sm font-medium text-primary bg-primary/10 hover:bg-primary/20 rounded-lg">+ Adaugă video</button>
+                </div>
+            </details>
+
+            <!-- HARTĂ - centru + POIs -->
+            <details class="bg-white border rounded-2xl border-border">
+                <summary class="px-5 py-4 cursor-pointer font-semibold text-secondary flex items-center justify-between hover:bg-slate-50 rounded-2xl">
+                    <span>📍 Hartă (centru + puncte de interes)</span>
+                    <svg class="w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                </summary>
+                <div class="px-5 pb-5 pt-2 space-y-4 border-t border-border">
+                    <div class="grid md:grid-cols-3 gap-4">
+                        <label class="block">
+                            <span class="text-xs font-semibold text-muted uppercase tracking-wider">Latitudine centru</span>
+                            <input type="text" data-vc-nested="map_config.center_lat" class="vc-input mt-1 w-full px-3 py-2 border border-border rounded-lg" placeholder="46.135">
+                        </label>
+                        <label class="block">
+                            <span class="text-xs font-semibold text-muted uppercase tracking-wider">Longitudine centru</span>
+                            <input type="text" data-vc-nested="map_config.center_lng" class="vc-input mt-1 w-full px-3 py-2 border border-border rounded-lg" placeholder="25.778">
+                        </label>
+                        <label class="block">
+                            <span class="text-xs font-semibold text-muted uppercase tracking-wider">Zoom (1-18)</span>
+                            <input type="number" min="1" max="18" data-vc-nested="map_config.zoom" class="vc-input mt-1 w-full px-3 py-2 border border-border rounded-lg" placeholder="13">
+                        </label>
+                    </div>
+                    <div>
+                        <p class="text-xs font-semibold text-muted uppercase tracking-wider mb-2">Puncte de interes pe hartă</p>
+                        <div id="pois-list" class="space-y-2"></div>
+                        <button type="button" id="pois-add" class="mt-2 px-4 py-2 text-sm font-medium text-primary bg-primary/10 hover:bg-primary/20 rounded-lg">+ Adaugă POI</button>
+                    </div>
+                </div>
+            </details>
+
+            <!-- HOTELURI -->
+            <details class="bg-white border rounded-2xl border-border">
+                <summary class="px-5 py-4 cursor-pointer font-semibold text-secondary flex items-center justify-between hover:bg-slate-50 rounded-2xl">
+                    <span>🏨 Hoteluri / cazări apropiate</span>
+                    <svg class="w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                </summary>
+                <div class="px-5 pb-5 pt-2 space-y-3 border-t border-border">
+                    <div id="hotels-list" class="space-y-3"></div>
+                    <button type="button" id="hotels-add" class="px-4 py-2 text-sm font-medium text-primary bg-primary/10 hover:bg-primary/20 rounded-lg">+ Adaugă cazare</button>
+                </div>
+            </details>
+
+            <!-- FLORA -->
+            <details class="bg-white border rounded-2xl border-border">
+                <summary class="px-5 py-4 cursor-pointer font-semibold text-secondary flex items-center justify-between hover:bg-slate-50 rounded-2xl">
+                    <span>🌿 Floră & faună</span>
+                    <svg class="w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                </summary>
+                <div class="px-5 pb-5 pt-2 space-y-3 border-t border-border">
+                    <div id="flora-list" class="space-y-2"></div>
+                    <button type="button" id="flora-add" class="px-4 py-2 text-sm font-medium text-primary bg-primary/10 hover:bg-primary/20 rounded-lg">+ Adaugă specie</button>
+                </div>
+            </details>
+
+            <!-- PROGRAM / SEZOANE -->
+            <details class="bg-white border rounded-2xl border-border">
+                <summary class="px-5 py-4 cursor-pointer font-semibold text-secondary flex items-center justify-between hover:bg-slate-50 rounded-2xl">
+                    <span>📅 Program / sezoane operaționale</span>
+                    <svg class="w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                </summary>
+                <div class="px-5 pb-5 pt-2 space-y-3 border-t border-border">
+                    <div id="seasons-list" class="space-y-3"></div>
+                    <button type="button" id="seasons-add" class="px-4 py-2 text-sm font-medium text-primary bg-primary/10 hover:bg-primary/20 rounded-lg">+ Adaugă sezon</button>
+                </div>
+            </details>
+
+            <!-- GETTING THERE -->
+            <details class="bg-white border rounded-2xl border-border">
+                <summary class="px-5 py-4 cursor-pointer font-semibold text-secondary flex items-center justify-between hover:bg-slate-50 rounded-2xl">
+                    <span>🚗 Cum ajungi (instrucțiuni)</span>
+                    <svg class="w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                </summary>
+                <div class="px-5 pb-5 pt-2 space-y-3 border-t border-border">
+                    <div id="getting-list" class="space-y-3"></div>
+                    <button type="button" id="getting-add" class="px-4 py-2 text-sm font-medium text-primary bg-primary/10 hover:bg-primary/20 rounded-lg">+ Adaugă instrucțiune</button>
+                </div>
+            </details>
+
+            <!-- INFO: pagina publică -->
+            <div class="p-4 bg-blue-50 border border-blue-200 rounded-2xl text-xs text-blue-900">
+                💡 Salvează apoi vezi modificările pe <a id="admin-edit-link" href="#" target="_blank" class="font-bold underline">pagina publică</a> (deschide cu <code class="bg-blue-100 px-1 rounded">?preview=1</code> pentru a vedea draft).
             </div>
 
             <!-- Save bar -->
@@ -461,38 +702,201 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
     // ========== TAB SWITCHING ==========
     function setupTabs() {
         const btnOverview = $('tab-btn-overview');
+        const btnProducts = $('tab-btn-products');
         const btnContent = $('tab-btn-content');
         const overview = $('leisure-content');
+        const products = $('tab-products');
         const content = $('tab-content');
-        const loading = $('leisure-loading');
-        const picker = $('leisure-event-picker');
         const empty = $('leisure-empty');
 
         if (!btnOverview || !btnContent) return;
 
+        const tabs = [
+            { btn: btnOverview, panel: overview, key: 'overview' },
+            { btn: btnProducts, panel: products, key: 'products' },
+            { btn: btnContent, panel: content, key: 'content' },
+        ];
+
         function activate(which) {
+            tabs.forEach(t => {
+                if (!t.btn) return;
+                const sel = t.key === which;
+                t.btn.classList.toggle('bg-primary', sel);
+                t.btn.classList.toggle('text-white', sel);
+                t.btn.classList.toggle('text-muted', !sel);
+                t.btn.classList.toggle('hover:bg-slate-50', !sel);
+                if (t.panel) t.panel.classList.toggle('hidden', !sel);
+            });
+            empty.classList.add('hidden');
             if (which === 'overview') {
-                btnOverview.classList.add('bg-primary', 'text-white');
-                btnOverview.classList.remove('text-muted', 'hover:bg-slate-50');
-                btnContent.classList.remove('bg-primary', 'text-white');
-                btnContent.classList.add('text-muted', 'hover:bg-slate-50');
-                content.classList.add('hidden');
-                if (leisureEvents.length === 0) { empty.classList.remove('hidden'); }
-                else if (currentEventId) { overview.classList.remove('hidden'); }
-            } else {
-                btnContent.classList.add('bg-primary', 'text-white');
-                btnContent.classList.remove('text-muted', 'hover:bg-slate-50');
-                btnOverview.classList.remove('bg-primary', 'text-white');
-                btnOverview.classList.add('text-muted', 'hover:bg-slate-50');
-                overview.classList.add('hidden');
-                empty.classList.add('hidden');
-                content.classList.remove('hidden');
+                if (leisureEvents.length === 0) { empty.classList.remove('hidden'); overview.classList.add('hidden'); }
+                else if (!currentEventId) overview.classList.add('hidden');
+            } else if (which === 'products') {
+                loadProducts();
+            } else if (which === 'content') {
                 hydrateContentForm();
             }
         }
 
         btnOverview.addEventListener('click', () => activate('overview'));
+        if (btnProducts) btnProducts.addEventListener('click', () => activate('products'));
         btnContent.addEventListener('click', () => activate('content'));
+    }
+
+    // ========== PRODUCTS CRUD ==========
+    let productsCache = [];
+    let editingProductId = null;
+
+    const CAT_LABEL = { access: '🎟️ Acces', parking: '🚗 Parcare', rental: '🛶 Închiriere', activity: '🎯 Activitate', extra: '➕ Extra' };
+    const CAT_COLOR = { access: 'blue', parking: 'violet', rental: 'amber', activity: 'emerald', extra: 'slate' };
+
+    async function loadProducts() {
+        if (!currentEventId) return;
+        $('pr-loading').classList.remove('hidden');
+        $('pr-list').classList.add('hidden');
+        $('pr-empty').classList.add('hidden');
+        try {
+            const res = await AmbiletAPI.get(`/organizer/events/${currentEventId}/leisure/products`);
+            productsCache = res.data?.products || [];
+            renderProducts();
+        } catch (e) {
+            console.error('[leisure-products] load failed', e);
+            $('pr-empty').textContent = 'Eroare: ' + (e?.message || '');
+            $('pr-empty').classList.remove('hidden');
+        } finally {
+            $('pr-loading').classList.add('hidden');
+        }
+    }
+
+    function renderProducts() {
+        if (!productsCache.length) {
+            $('pr-empty').classList.remove('hidden');
+            $('pr-list').classList.add('hidden');
+            return;
+        }
+        $('pr-empty').classList.add('hidden');
+        $('pr-list').classList.remove('hidden');
+        $('pr-list').innerHTML = productsCache.map(p => {
+            const cat = p.service_category || 'access';
+            const color = CAT_COLOR[cat] || 'slate';
+            const icon = (p.meta?.icon) || '';
+            const inactive = !p.is_active;
+            return `<div class="bg-white border rounded-2xl border-border ${inactive ? 'opacity-60' : ''}">
+                <div class="px-5 py-4 flex items-center gap-4">
+                    <div class="text-2xl">${icon || '🎫'}</div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <span class="font-bold text-secondary truncate">${escapeHtml(p.name)}</span>
+                            <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-${color}-100 text-${color}-800">${CAT_LABEL[cat] || cat}</span>
+                            <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-slate-100 text-slate-700">${p.issuing_company === 'secondary' ? 'SC2' : 'SC1'}</span>
+                            ${inactive ? '<span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-100 text-rose-700">INACTIV</span>' : ''}
+                        </div>
+                        ${p.description ? `<div class="text-xs text-muted mt-0.5 truncate">${escapeHtml(p.description)}</div>` : ''}
+                        <div class="text-xs text-muted mt-1">
+                            ${p.daily_capacity ? `📅 ${p.daily_capacity}/zi · ` : ''}${p.capacity ? `Stoc total: ${p.capacity}` : 'Stoc nelimitat'}
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-xl font-bold text-${color}-700">${Number(p.price).toFixed(2)}</div>
+                        <div class="text-[10px] text-muted">${p.currency || 'RON'} / ${(p.meta?.unit_label) || 'buc'}</div>
+                    </div>
+                    <button data-edit-id="${p.id}" class="ml-2 px-3 py-1.5 text-xs font-medium border border-border rounded-lg hover:bg-slate-50">Editează</button>
+                </div>
+            </div>`;
+        }).join('');
+        $('pr-list').querySelectorAll('button[data-edit-id]').forEach(btn => {
+            btn.addEventListener('click', () => openProductModal(parseInt(btn.dataset.editId, 10)));
+        });
+    }
+
+    function openProductModal(id) {
+        editingProductId = id;
+        const p = id ? productsCache.find(x => x.id === id) : null;
+        $('pr-modal-title').textContent = p ? 'Editează produs' : 'Adaugă produs';
+        $('pr-f-name').value = p?.name || '';
+        $('pr-f-category').value = p?.service_category || 'access';
+        $('pr-f-issuer').value = p?.issuing_company || 'primary';
+        $('pr-f-price').value = p ? Number(p.price).toFixed(2) : '';
+        $('pr-f-capacity').value = p?.capacity || '';
+        $('pr-f-dailycap').value = p?.daily_capacity || '';
+        $('pr-f-duration').value = p?.service_duration_minutes || '';
+        $('pr-f-icon').value = p?.meta?.icon || '';
+        $('pr-f-unit').value = p?.meta?.unit_label || '';
+        $('pr-f-image').value = p?.meta?.image || p?.meta?.image_url || '';
+        $('pr-f-description').value = p?.description || '';
+        $('pr-f-includes').value = Array.isArray(p?.meta?.includes) ? p.meta.includes.join('\n') : (p?.meta?.includes || '');
+        $('pr-f-terms').value = p?.usage_terms || '';
+        $('pr-f-active').checked = p ? !!p.is_active : true;
+        $('pr-f-parking').checked = p ? !!p.is_parking : false;
+        $('pr-f-vehicle').checked = p ? !!p.requires_vehicle_info : false;
+        $('pr-f-reqaccess').checked = p ? !!p.requires_access_ticket : false;
+        $('pr-f-delete').classList.toggle('hidden', !p);
+        $('pr-modal').classList.remove('hidden');
+        $('pr-modal').classList.add('flex');
+    }
+    function closeProductModal() {
+        $('pr-modal').classList.add('hidden');
+        $('pr-modal').classList.remove('flex');
+        editingProductId = null;
+    }
+
+    async function saveProduct() {
+        const includesText = $('pr-f-includes').value.trim();
+        const includes = includesText ? includesText.split('\n').map(s => s.trim()).filter(Boolean) : [];
+        const body = {
+            name: $('pr-f-name').value.trim(),
+            service_category: $('pr-f-category').value,
+            issuing_company: $('pr-f-issuer').value,
+            price: parseFloat($('pr-f-price').value) || 0,
+            capacity: $('pr-f-capacity').value ? parseInt($('pr-f-capacity').value, 10) : null,
+            daily_capacity: $('pr-f-dailycap').value ? parseInt($('pr-f-dailycap').value, 10) : null,
+            service_duration_minutes: $('pr-f-duration').value ? parseInt($('pr-f-duration').value, 10) : null,
+            description: $('pr-f-description').value.trim() || null,
+            usage_terms: $('pr-f-terms').value.trim() || null,
+            is_active: $('pr-f-active').checked,
+            is_parking: $('pr-f-parking').checked,
+            requires_vehicle_info: $('pr-f-vehicle').checked,
+            requires_access_ticket: $('pr-f-reqaccess').checked,
+            meta: {
+                icon: $('pr-f-icon').value.trim() || null,
+                unit_label: $('pr-f-unit').value.trim() || null,
+                image: $('pr-f-image').value.trim() || null,
+                includes,
+            },
+        };
+        if (!body.name) { alert('Numele produsului e obligatoriu.'); return; }
+        try {
+            if (editingProductId) {
+                await AmbiletAPI.put(`/organizer/events/${currentEventId}/leisure/products/${editingProductId}`, body);
+            } else {
+                await AmbiletAPI.post(`/organizer/events/${currentEventId}/leisure/products`, body);
+            }
+            closeProductModal();
+            loadProducts();
+        } catch (e) {
+            alert('Eroare salvare: ' + (e?.message || ''));
+        }
+    }
+
+    async function deleteProduct() {
+        if (!editingProductId) return;
+        if (!confirm('Sigur ștergi acest produs? (Dacă există bilete vândute deja, doar dezactivează-l.)')) return;
+        try {
+            await AmbiletAPI.delete(`/organizer/events/${currentEventId}/leisure/products/${editingProductId}`);
+            closeProductModal();
+            loadProducts();
+        } catch (e) {
+            alert('Eroare ștergere: ' + (e?.message || ''));
+        }
+    }
+
+    function setupProductsHandlers() {
+        const addBtn = $('pr-add-btn'); if (addBtn) addBtn.addEventListener('click', () => openProductModal(null));
+        const closeBtn = $('pr-modal-close'); if (closeBtn) closeBtn.addEventListener('click', closeProductModal);
+        const cancelBtn = $('pr-f-cancel'); if (cancelBtn) cancelBtn.addEventListener('click', closeProductModal);
+        const saveBtn = $('pr-f-save'); if (saveBtn) saveBtn.addEventListener('click', saveProduct);
+        const delBtn = $('pr-f-delete'); if (delBtn) delBtn.addEventListener('click', deleteProduct);
+        const modal = $('pr-modal'); if (modal) modal.addEventListener('click', (e) => { if (e.target === modal) closeProductModal(); });
     }
 
     // ========== CONTENT EDITOR ==========
@@ -503,9 +907,9 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         if (!ev) return;
         currentVenueConfig = ev.venue_config || {};
 
-        // Update admin link
+        // Update public preview link
         const adminLink = $('admin-edit-link');
-        if (adminLink) adminLink.href = `https://core.tixello.com/marketplace/events/${ev.id}/edit?tab=venue-config`;
+        if (adminLink && ev.slug) adminLink.href = `/bilete/${ev.slug}-${ev.id}?preview=1`;
 
         // Populate simple scalar fields
         document.querySelectorAll('[data-vc]').forEach((input) => {
@@ -543,6 +947,24 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             (currentVenueConfig.stats_highlights || []).forEach((s, i) => statsList.appendChild(makeStatRow(s.value || '', s.label || '', i)));
             if ((currentVenueConfig.stats_highlights || []).length === 0) statsList.appendChild(makeStatRow('', '', 0));
         }
+
+        // Hydrate new repeaters
+        hydrateRepeater('attractions-list', currentVenueConfig.attractions, makeAttractionRow);
+        hydrateRepeater('trails-list', currentVenueConfig.trails, makeTrailRow);
+        hydrateRepeater('gallery-list', currentVenueConfig.gallery, makeGalleryRow);
+        hydrateRepeater('videos-list', currentVenueConfig.videos, makeVideoRow);
+        hydrateRepeater('pois-list', currentVenueConfig.map_pois, makePoiRow);
+        hydrateRepeater('hotels-list', currentVenueConfig.nearby_hotels, makeHotelRow);
+        hydrateRepeater('flora-list', currentVenueConfig.flora_species, makeFloraRow);
+        hydrateRepeater('seasons-list', currentVenueConfig.seasons, makeSeasonRow);
+        hydrateRepeater('getting-list', currentVenueConfig.getting_there, makeGettingRow);
+    }
+
+    function hydrateRepeater(listId, data, factory) {
+        const list = $(listId);
+        if (!list) return;
+        list.innerHTML = '';
+        (Array.isArray(data) ? data : []).forEach((item) => list.appendChild(factory(item || {})));
     }
 
     function makeFaqRow(q, a, idx) {
@@ -573,6 +995,147 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         `;
         wrap.querySelector('.stat-remove').addEventListener('click', () => wrap.remove());
         return wrap;
+    }
+
+    // === Repeater row factories ===
+    function repWrap(html, onRemove) {
+        const wrap = document.createElement('div');
+        wrap.className = 'p-3 bg-slate-50 rounded-lg';
+        wrap.innerHTML = html;
+        const rm = wrap.querySelector('[data-rm]');
+        if (rm) rm.addEventListener('click', () => { if (onRemove) onRemove(wrap); wrap.remove(); });
+        return wrap;
+    }
+    function repAttr(name, value) { return `data-rep="${name}" value="${escapeHtml(value ?? '')}"`; }
+
+    function makeAttractionRow(d) {
+        return repWrap(`
+            <div class="grid grid-cols-1 md:grid-cols-6 gap-2 items-start">
+                <input type="text" data-rep="icon" maxlength="6" class="md:col-span-1 px-3 py-2 border border-border rounded-lg bg-white" placeholder="🏞️" value="${escapeHtml(d.icon || '')}">
+                <input type="text" data-rep="title" class="md:col-span-5 px-3 py-2 border border-border rounded-lg bg-white" placeholder="Titlu atracție" value="${escapeHtml(d.title || '')}">
+                <input type="url" data-rep="image" class="md:col-span-6 px-3 py-2 border border-border rounded-lg bg-white" placeholder="URL imagine (opțional)" value="${escapeHtml(d.image || '')}">
+                <textarea data-rep="description" rows="2" class="md:col-span-6 px-3 py-2 border border-border rounded-lg bg-white" placeholder="Descriere scurtă">${escapeHtml(d.description || '')}</textarea>
+            </div>
+            <div class="text-right mt-2"><button type="button" data-rm class="text-xs text-rose-600 hover:bg-rose-100 px-2 py-1 rounded">🗑 Șterge</button></div>
+        `);
+    }
+
+    function makeTrailRow(d) {
+        return repWrap(`
+            <div class="grid grid-cols-1 md:grid-cols-6 gap-2 items-start">
+                <input type="text" data-rep="name" class="md:col-span-3 px-3 py-2 border border-border rounded-lg bg-white" placeholder="Nume traseu" value="${escapeHtml(d.name || '')}">
+                <select data-rep="difficulty" class="md:col-span-1 px-3 py-2 border border-border rounded-lg bg-white">
+                    <option value="easy" ${d.difficulty==='easy'?'selected':''}>Ușor</option>
+                    <option value="medium" ${d.difficulty==='medium'?'selected':''}>Mediu</option>
+                    <option value="hard" ${d.difficulty==='hard'?'selected':''}>Dificil</option>
+                </select>
+                <input type="number" step="0.1" data-rep="distance_km" class="md:col-span-1 px-3 py-2 border border-border rounded-lg bg-white" placeholder="km" value="${d.distance_km ?? ''}">
+                <input type="number" data-rep="duration_min" class="md:col-span-1 px-3 py-2 border border-border rounded-lg bg-white" placeholder="min" value="${d.duration_min ?? ''}">
+                <input type="number" data-rep="elevation_m" class="md:col-span-2 px-3 py-2 border border-border rounded-lg bg-white" placeholder="Diferență nivel (m)" value="${d.elevation_m ?? ''}">
+                <input type="text" data-rep="start_point" class="md:col-span-4 px-3 py-2 border border-border rounded-lg bg-white" placeholder="Punct de plecare" value="${escapeHtml(d.start_point || '')}">
+                <textarea data-rep="description" rows="2" class="md:col-span-6 px-3 py-2 border border-border rounded-lg bg-white" placeholder="Descriere">${escapeHtml(d.description || '')}</textarea>
+            </div>
+            <div class="text-right mt-2"><button type="button" data-rm class="text-xs text-rose-600 hover:bg-rose-100 px-2 py-1 rounded">🗑 Șterge</button></div>
+        `);
+    }
+
+    function makeGalleryRow(d) {
+        return repWrap(`
+            <div class="flex items-center gap-2">
+                <input type="url" data-rep="url" class="flex-1 px-3 py-2 border border-border rounded-lg bg-white" placeholder="URL imagine" value="${escapeHtml(d.url || d)}">
+                <input type="text" data-rep="caption" class="flex-1 px-3 py-2 border border-border rounded-lg bg-white" placeholder="Caption (opțional)" value="${escapeHtml(d.caption || '')}">
+                <button type="button" data-rm class="text-rose-600 hover:bg-rose-100 px-2 py-1 rounded">🗑</button>
+            </div>
+        `);
+    }
+
+    function makeVideoRow(d) {
+        return repWrap(`
+            <div class="flex items-center gap-2">
+                <input type="url" data-rep="url" class="flex-1 px-3 py-2 border border-border rounded-lg bg-white" placeholder="URL YouTube / Vimeo" value="${escapeHtml(d.url || d)}">
+                <input type="text" data-rep="title" class="flex-1 px-3 py-2 border border-border rounded-lg bg-white" placeholder="Titlu (opțional)" value="${escapeHtml(d.title || '')}">
+                <button type="button" data-rm class="text-rose-600 hover:bg-rose-100 px-2 py-1 rounded">🗑</button>
+            </div>
+        `);
+    }
+
+    function makePoiRow(d) {
+        return repWrap(`
+            <div class="grid grid-cols-1 md:grid-cols-6 gap-2 items-start">
+                <input type="text" data-rep="lat" class="md:col-span-1 px-3 py-2 border border-border rounded-lg bg-white" placeholder="Lat" value="${escapeHtml(d.lat ?? '')}">
+                <input type="text" data-rep="lng" class="md:col-span-1 px-3 py-2 border border-border rounded-lg bg-white" placeholder="Lng" value="${escapeHtml(d.lng ?? '')}">
+                <input type="text" data-rep="icon" maxlength="6" class="md:col-span-1 px-3 py-2 border border-border rounded-lg bg-white" placeholder="📍" value="${escapeHtml(d.icon || '')}">
+                <input type="text" data-rep="title" class="md:col-span-3 px-3 py-2 border border-border rounded-lg bg-white" placeholder="Titlu POI" value="${escapeHtml(d.title || '')}">
+                <input type="text" data-rep="description" class="md:col-span-6 px-3 py-2 border border-border rounded-lg bg-white" placeholder="Descriere scurtă" value="${escapeHtml(d.description || '')}">
+            </div>
+            <div class="text-right mt-2"><button type="button" data-rm class="text-xs text-rose-600 hover:bg-rose-100 px-2 py-1 rounded">🗑 Șterge</button></div>
+        `);
+    }
+
+    function makeHotelRow(d) {
+        return repWrap(`
+            <div class="grid grid-cols-1 md:grid-cols-6 gap-2 items-start">
+                <input type="text" data-rep="name" class="md:col-span-3 px-3 py-2 border border-border rounded-lg bg-white" placeholder="Nume cazare" value="${escapeHtml(d.name || '')}">
+                <input type="number" step="0.1" data-rep="distance_km" class="md:col-span-1 px-3 py-2 border border-border rounded-lg bg-white" placeholder="Dist km" value="${d.distance_km ?? ''}">
+                <input type="text" data-rep="stars" class="md:col-span-1 px-3 py-2 border border-border rounded-lg bg-white" placeholder="Stele (ex: 4)" value="${escapeHtml(d.stars ?? '')}">
+                <input type="url" data-rep="url" class="md:col-span-1 px-3 py-2 border border-border rounded-lg bg-white" placeholder="Link" value="${escapeHtml(d.url || '')}">
+                <input type="url" data-rep="image" class="md:col-span-6 px-3 py-2 border border-border rounded-lg bg-white" placeholder="URL imagine (opțional)" value="${escapeHtml(d.image || '')}">
+            </div>
+            <div class="text-right mt-2"><button type="button" data-rm class="text-xs text-rose-600 hover:bg-rose-100 px-2 py-1 rounded">🗑 Șterge</button></div>
+        `);
+    }
+
+    function makeFloraRow(d) {
+        return repWrap(`
+            <div class="flex items-start gap-2">
+                <input type="text" data-rep="icon" maxlength="6" class="w-16 px-3 py-2 border border-border rounded-lg bg-white" placeholder="🌳" value="${escapeHtml(d.icon || '')}">
+                <input type="text" data-rep="name" class="flex-1 px-3 py-2 border border-border rounded-lg bg-white" placeholder="Nume specie" value="${escapeHtml(d.name || '')}">
+                <input type="text" data-rep="description" class="flex-1 px-3 py-2 border border-border rounded-lg bg-white" placeholder="Detalii (opțional)" value="${escapeHtml(d.description || '')}">
+                <button type="button" data-rm class="text-rose-600 hover:bg-rose-100 px-2 py-1 rounded">🗑</button>
+            </div>
+        `);
+    }
+
+    function makeSeasonRow(d) {
+        return repWrap(`
+            <div class="grid grid-cols-1 md:grid-cols-6 gap-2 items-start">
+                <input type="text" data-rep="name" class="md:col-span-2 px-3 py-2 border border-border rounded-lg bg-white" placeholder="Vară / Iarnă / Mai-Sept" value="${escapeHtml(d.name || '')}">
+                <input type="text" data-rep="period" class="md:col-span-2 px-3 py-2 border border-border rounded-lg bg-white" placeholder="Mai-Sept" value="${escapeHtml(d.period || '')}">
+                <input type="time" data-rep="hours_start" class="md:col-span-1 px-3 py-2 border border-border rounded-lg bg-white" value="${escapeHtml(d.hours_start || '')}">
+                <input type="time" data-rep="hours_end" class="md:col-span-1 px-3 py-2 border border-border rounded-lg bg-white" value="${escapeHtml(d.hours_end || '')}">
+                <input type="text" data-rep="notes" class="md:col-span-6 px-3 py-2 border border-border rounded-lg bg-white" placeholder="Note (ex: ultimă intrare 17:00)" value="${escapeHtml(d.notes || '')}">
+            </div>
+            <div class="text-right mt-2"><button type="button" data-rm class="text-xs text-rose-600 hover:bg-rose-100 px-2 py-1 rounded">🗑 Șterge</button></div>
+        `);
+    }
+
+    function makeGettingRow(d) {
+        return repWrap(`
+            <div class="grid grid-cols-1 md:grid-cols-6 gap-2 items-start">
+                <input type="text" data-rep="icon" maxlength="6" class="md:col-span-1 px-3 py-2 border border-border rounded-lg bg-white" placeholder="🚗" value="${escapeHtml(d.icon || '')}">
+                <input type="text" data-rep="title" class="md:col-span-2 px-3 py-2 border border-border rounded-lg bg-white" placeholder="Cu mașina" value="${escapeHtml(d.title || '')}">
+                <input type="text" data-rep="from" class="md:col-span-3 px-3 py-2 border border-border rounded-lg bg-white" placeholder="De la / direcție" value="${escapeHtml(d.from || '')}">
+                <textarea data-rep="description" rows="2" class="md:col-span-6 px-3 py-2 border border-border rounded-lg bg-white" placeholder="Detalii rută">${escapeHtml(d.description || '')}</textarea>
+            </div>
+            <div class="text-right mt-2"><button type="button" data-rm class="text-xs text-rose-600 hover:bg-rose-100 px-2 py-1 rounded">🗑 Șterge</button></div>
+        `);
+    }
+
+    function collectRepeater(listId) {
+        const out = [];
+        const list = $(listId);
+        if (!list) return out;
+        list.querySelectorAll(':scope > div').forEach((row) => {
+            const item = {};
+            row.querySelectorAll('[data-rep]').forEach((el) => {
+                const key = el.dataset.rep;
+                let val = el.value;
+                if (typeof val === 'string') val = val.trim();
+                if (val !== '' && val !== null && val !== undefined) item[key] = val;
+            });
+            if (Object.keys(item).length > 0) out.push(item);
+        });
+        return out;
     }
 
     function setNested(obj, pathStr, value) {
@@ -628,6 +1191,32 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         });
         payload.stats_highlights = stats;
 
+        // New repeaters
+        payload.attractions = collectRepeater('attractions-list');
+        payload.trails = collectRepeater('trails-list');
+        payload.gallery = collectRepeater('gallery-list');
+        payload.videos = collectRepeater('videos-list');
+        payload.map_pois = collectRepeater('pois-list');
+        payload.nearby_hotels = collectRepeater('hotels-list');
+        payload.flora_species = collectRepeater('flora-list');
+        payload.seasons = collectRepeater('seasons-list');
+        payload.getting_there = collectRepeater('getting-list');
+
+        // Cast numeric fields in trails/hotels/POIs (Postgres expects numbers)
+        payload.trails.forEach(t => {
+            if (t.distance_km) t.distance_km = parseFloat(t.distance_km);
+            if (t.duration_min) t.duration_min = parseInt(t.duration_min, 10);
+            if (t.elevation_m) t.elevation_m = parseInt(t.elevation_m, 10);
+        });
+        payload.nearby_hotels.forEach(h => {
+            if (h.distance_km) h.distance_km = parseFloat(h.distance_km);
+            if (h.stars) h.stars = parseInt(h.stars, 10);
+        });
+        payload.map_pois.forEach(p => {
+            if (p.lat) p.lat = parseFloat(p.lat);
+            if (p.lng) p.lng = parseFloat(p.lng);
+        });
+
         try {
             const res = await AmbiletAPI.put(`/organizer/events/${currentEventId}/leisure/venue-config`, { venue_config: payload });
             if (res.success) {
@@ -662,7 +1251,28 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             if (list) list.appendChild(makeStatRow('', '', list.children.length));
         });
         $('vc-save-btn')?.addEventListener('click', () => saveContent());
+
+        // Generic "+ Adaugă" handlers pentru noile repeatere
+        const repeaters = [
+            ['attractions-add', 'attractions-list', makeAttractionRow],
+            ['trails-add', 'trails-list', makeTrailRow],
+            ['gallery-add', 'gallery-list', makeGalleryRow],
+            ['videos-add', 'videos-list', makeVideoRow],
+            ['pois-add', 'pois-list', makePoiRow],
+            ['hotels-add', 'hotels-list', makeHotelRow],
+            ['flora-add', 'flora-list', makeFloraRow],
+            ['seasons-add', 'seasons-list', makeSeasonRow],
+            ['getting-add', 'getting-list', makeGettingRow],
+        ];
+        repeaters.forEach(([btnId, listId, factory]) => {
+            $(btnId)?.addEventListener('click', () => {
+                const list = $(listId);
+                if (list) list.appendChild(factory({}));
+            });
+        });
+
         setupTabs();
+        setupProductsHandlers();
     });
 
     window.addEventListener('load', async () => {
