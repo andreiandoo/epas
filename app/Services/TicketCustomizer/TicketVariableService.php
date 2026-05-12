@@ -99,9 +99,24 @@ class TicketVariableService
                     [
                         'path' => 'date.start_formatted',
                         'label' => 'Event Date (Formatted)',
-                        'description' => 'Event start date formatted',
+                        'description' => 'Smart: shows range "23–25 iunie 2026" for range events, or single date "23 iunie 2026"',
                         'type' => 'string',
-                        'example' => 'July 15, 2025',
+                        'example' => '23–25 iunie 2026',
+                    ],
+                    [
+                        'path' => 'date.end',
+                        'label' => 'Event End Date',
+                        'description' => 'Range end date (empty for single-day events)',
+                        'type' => 'date',
+                        'example' => '2025-07-17',
+                        'format' => 'Y-m-d',
+                    ],
+                    [
+                        'path' => 'date.end_formatted',
+                        'label' => 'Event End Date (Formatted)',
+                        'description' => 'Range end date formatted (empty for single-day events)',
+                        'type' => 'string',
+                        'example' => '17 July 2025',
                     ],
                     [
                         'path' => 'date.time',
@@ -110,6 +125,21 @@ class TicketVariableService
                         'type' => 'time',
                         'example' => '20:00',
                         'format' => 'H:i',
+                    ],
+                    [
+                        'path' => 'date.end_time',
+                        'label' => 'Event End Time',
+                        'description' => 'Event end time (empty if not set)',
+                        'type' => 'time',
+                        'example' => '23:00',
+                        'format' => 'H:i',
+                    ],
+                    [
+                        'path' => 'date.time_range',
+                        'label' => 'Event Time (Smart)',
+                        'description' => 'Smart: "19:00 – 22:00" when both set, just "19:00" when only start, empty when none',
+                        'type' => 'string',
+                        'example' => '19:00 – 22:00',
                     ],
                     [
                         'path' => 'date.doors_open',
@@ -121,9 +151,16 @@ class TicketVariableService
                     [
                         'path' => 'date.day_name',
                         'label' => 'Day Name',
-                        'description' => 'Day of week',
+                        'description' => 'Day of week (empty for range events)',
                         'type' => 'string',
                         'example' => 'Saturday',
+                    ],
+                    [
+                        'path' => 'date.full_text',
+                        'label' => 'Full Date Line (Smart)',
+                        'description' => 'Smart combined line: "Sâmbătă | 23 iunie 2026 | Ora: 19:00 | Doors: 18:00" for single day, "23–25 iunie 2026" for range. Empty parts are skipped automatically.',
+                        'type' => 'string',
+                        'example' => 'Sâmbătă | 23 iunie 2026 | Ora: 19:00 | Doors: 18:00',
                     ],
                 ],
             ],
@@ -472,9 +509,14 @@ class TicketVariableService
             'date' => [
                 'start' => '2025-07-15',
                 'start_formatted' => 'July 15, 2025',
+                'end' => '',
+                'end_formatted' => '',
                 'time' => '20:00',
+                'end_time' => '23:00',
+                'time_range' => '20:00 – 23:00',
                 'doors_open' => '18:00',
                 'day_name' => 'Saturday',
+                'full_text' => 'Saturday | July 15, 2025 | Ora: 20:00 – 23:00 | Doors: 18:00',
             ],
             'ticket' => [
                 'type' => 'VIP Access',
@@ -594,27 +636,33 @@ class TicketVariableService
             $venueName = $marketplaceEvent?->venue_name ?? '';
         }
 
-        // Event date info — smart resolution based on duration_mode + ticket type
+        // Event date info — smart resolution based on duration_mode + ticket type.
+        // For range events we now show the full range by default (covers
+        // invitations and regular tickets without a per-day valid_date),
+        // not just for subscription tickets. A ticket with an explicit
+        // valid_date still trumps the range — that's a single-day ticket
+        // inside a multi-day event.
         $durationMode = $event?->duration_mode ?? 'single_day';
         $performance = $ticket->performance;
         $isRangeDisplay = false;
         $endDate = null;
+        $endTime = '';
 
         switch ($durationMode) {
             case 'range':
-                if ($ticketType?->is_subscription) {
-                    // Subscription (abonament): show full date range
-                    $eventDate = $event?->range_start_date;
-                    $endDate = $event?->range_end_date;
-                    $isRangeDisplay = true;
-                } elseif ($ticketType?->valid_date) {
+                if ($ticketType?->valid_date && !$ticketType?->is_subscription) {
                     // Single-day ticket within range: show the valid_date
                     $eventDate = $ticketType->valid_date;
                 } else {
-                    // Fallback: show range start date
+                    // Subscription, invitation, or anything else — show full
+                    // range. isRangeDisplay flips on when we actually have
+                    // both endpoints; otherwise we degrade to a single date.
                     $eventDate = $event?->range_start_date;
+                    $endDate = $event?->range_end_date;
+                    $isRangeDisplay = $endDate !== null;
                 }
                 $startTime = $event?->range_start_time ?? '';
+                $endTime = $event?->range_end_time ?? '';
                 $doorTime = $event?->door_time ?? '';
                 break;
 
@@ -635,20 +683,67 @@ class TicketVariableService
             default: // single_day, recurring
                 $eventDate = $event?->event_date;
                 $startTime = $event?->start_time ?? '';
+                $endTime = $event?->end_time ?? '';
                 $doorTime = $event?->door_time ?? '';
                 break;
         }
 
+        // Smart formatter for date or range. Collapses redundant tokens so
+        //   same month+year  -> "23–25 iunie 2026"
+        //   same year only   -> "23 iunie – 5 iulie 2026"
+        //   different years  -> "23 dec 2026 – 5 ian 2027"
+        //   no end / same day-> "23 iunie 2026"
+        $formatDateOrRange = function ($start, $end) {
+            if (!$start) return '';
+            if (!$end || $start->isSameDay($end)) {
+                return $start->locale('ro')->translatedFormat('j F Y');
+            }
+            if ($start->year !== $end->year) {
+                return $start->locale('ro')->translatedFormat('j F Y')
+                    . ' – ' . $end->locale('ro')->translatedFormat('j F Y');
+            }
+            if ($start->month !== $end->month) {
+                return $start->locale('ro')->translatedFormat('j F')
+                    . ' – ' . $end->locale('ro')->translatedFormat('j F Y');
+            }
+            return $start->format('j') . '–' . $end->locale('ro')->translatedFormat('j F Y');
+        };
+
         // Build computed date display values
-        if ($isRangeDisplay && $eventDate && $endDate) {
-            $startFormatted = $eventDate->locale('ro')->translatedFormat('j F') . ' – ' . $endDate->locale('ro')->translatedFormat('j F Y');
-            $dayName = '';
-            $dateStartRaw = $eventDate->format('Y-m-d') . ' – ' . $endDate->format('Y-m-d');
+        $startFormatted = $formatDateOrRange($eventDate, $isRangeDisplay ? $endDate : null);
+        $endFormatted = $endDate ? $endDate->locale('ro')->translatedFormat('j F Y') : '';
+        $dayName = ($eventDate && !$isRangeDisplay) ? $eventDate->locale('ro')->dayName : '';
+        $dateStartRaw = $eventDate ? $eventDate->format('Y-m-d') : '';
+        $dateEndRaw = $endDate ? $endDate->format('Y-m-d') : '';
+
+        // Smart time range: "19:00 – 22:00" if both set, "19:00" if just
+        // start, "" if neither. Useful when a template wants a single
+        // labelled line without conditional logic in the template itself.
+        if ($startTime && $endTime && $startTime !== $endTime) {
+            $timeRange = $startTime . ' – ' . $endTime;
+        } elseif ($startTime) {
+            $timeRange = $startTime;
         } else {
-            $startFormatted = $eventDate ? $eventDate->locale('ro')->translatedFormat('j F Y') : '';
-            $dayName = $eventDate ? $eventDate->locale('ro')->dayName : '';
-            $dateStartRaw = $eventDate ? $eventDate->format('Y-m-d') : '';
+            $timeRange = '';
         }
+
+        // Smart combined text — what most ticket templates actually want to
+        // show as a single date line. Skips empty parts so the template
+        // doesn't end up with dangling commas / 'Ora: ' with no value.
+        $fullTextParts = [];
+        if ($dayName) {
+            $fullTextParts[] = mb_convert_case($dayName, MB_CASE_TITLE, 'UTF-8');
+        }
+        if ($startFormatted) {
+            $fullTextParts[] = $startFormatted;
+        }
+        if ($timeRange) {
+            $fullTextParts[] = 'Ora: ' . $timeRange;
+        }
+        if ($doorTime) {
+            $fullTextParts[] = 'Doors: ' . $doorTime;
+        }
+        $fullText = implode(' | ', $fullTextParts);
 
         // Seat details
         $seatDetails = $ticket->getSeatDetails();
@@ -701,9 +796,14 @@ class TicketVariableService
             'date' => [
                 'start' => $dateStartRaw,
                 'start_formatted' => $startFormatted,
+                'end' => $dateEndRaw,
+                'end_formatted' => $endFormatted,
                 'time' => $startTime,
+                'end_time' => $endTime,
+                'time_range' => $timeRange,
                 'doors_open' => $doorTime,
                 'day_name' => $dayName,
+                'full_text' => $fullText,
             ],
             'ticket' => [
                 'type' => $ticketType?->name ?? $ticket->marketplaceTicketType?->name ?? '',
