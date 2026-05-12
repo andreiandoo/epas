@@ -996,12 +996,13 @@ class InvitationsController extends BaseController
             ? ($description['ro'] ?? $description['en'] ?? (reset($description) ?: ''))
             : ($description ?? '');
 
-        // Date components
-        $dateStartRaw = $event->event_date?->format('Y-m-d') ?? '';
-        $startFormatted = $ctx['eventDate'] ?? '';
-        $startTime = $event->start_time ? substr((string) $event->start_time, 0, 5) : '';
-        $doorTime = $event->door_time ? substr((string) $event->door_time, 0, 5) : '';
-        $dayName = $event->event_date?->translatedFormat('l') ?? '';
+        // Date block — delegated to TicketVariableService so invitations get
+        // the same smart range / labelled / Romanian-day-name output as
+        // ticket PDFs. Invitations don't have a specific ticket type for
+        // date logic (they're issued against a generic 'Invitatie' type),
+        // so we pass null — that triggers the "show full range" branch on
+        // range events which is exactly what we want here.
+        $dateBlock = $variableService->buildDateBlock($event, null, null);
 
         // Venue address — translatable name handled by ctx['venueName'] already
         $venueAddress = $venue?->address ?? '';
@@ -1042,13 +1043,7 @@ class InvitationsController extends BaseController
                 'address' => $venueAddress,
                 'city' => $venueCity,
             ],
-            'date' => [
-                'start' => $dateStartRaw,
-                'start_formatted' => $startFormatted,
-                'time' => $startTime,
-                'doors_open' => $doorTime,
-                'day_name' => $dayName,
-            ],
+            'date' => $dateBlock,
             'ticket' => [
                 'type' => 'INVITAȚIE',
                 'price' => 'GRATUIT',

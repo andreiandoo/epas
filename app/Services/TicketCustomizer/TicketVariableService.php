@@ -610,6 +610,157 @@ class TicketVariableService
     }
 
     /**
+     * Build the {{date.*}} block for a ticket / invitation / preview.
+     *
+     * Smart resolution rules:
+     *  - single_day:  use event.event_date + start_time / end_time
+     *  - range:       full date range by default (covers invitations,
+     *                 subscriptions, anything without a per-day valid_date);
+     *                 a ticket type with valid_date renders just that day
+     *  - multi_day:   use the performance's starts_at when provided;
+     *                 otherwise event.event_date as fallback
+     *
+     * Returned shape matches what the editor variable picker and
+     * getSampleData advertise — every key is always present (empty string
+     * when no data) so templates can drop in any {{date.*}} without a
+     * missing-path placeholder leaking through.
+     *
+     * Reused by InvitationsController so invitations get the same smart
+     * range / labelled / Romanian-day-name treatment as ticket PDFs.
+     */
+    public function buildDateBlock($event, $ticketType = null, $performance = null): array
+    {
+        $durationMode = $event?->duration_mode ?? 'single_day';
+        $eventDate = null;
+        $endDate = null;
+        $startTime = '';
+        $endTime = '';
+        $doorTime = '';
+        $isRangeDisplay = false;
+
+        switch ($durationMode) {
+            case 'range':
+                if ($ticketType?->valid_date && !$ticketType?->is_subscription) {
+                    // Single-day ticket within range: show the valid_date
+                    $eventDate = $ticketType->valid_date;
+                } else {
+                    // Subscription, invitation, or anything else — show full
+                    // range. isRangeDisplay flips on when we actually have
+                    // both endpoints; otherwise we degrade to a single date.
+                    $eventDate = $event?->range_start_date;
+                    $endDate = $event?->range_end_date;
+                    $isRangeDisplay = $endDate !== null;
+                }
+                $startTime = $event?->range_start_time ?? '';
+                $endTime = $event?->range_end_time ?? '';
+                $doorTime = $event?->door_time ?? '';
+                break;
+
+            case 'multi_day':
+                if ($performance?->starts_at) {
+                    $eventDate = $performance->starts_at->copy()->startOfDay();
+                    $startTime = $performance->starts_at->format('H:i');
+                    $doorTime = $performance->door_time ?? '';
+                } else {
+                    $eventDate = $event?->event_date;
+                    $startTime = $event?->start_time ?? '';
+                    $doorTime = $event?->door_time ?? '';
+                }
+                break;
+
+            default: // single_day, recurring
+                $eventDate = $event?->event_date;
+                $startTime = $event?->start_time ?? '';
+                $endTime = $event?->end_time ?? '';
+                $doorTime = $event?->door_time ?? '';
+                break;
+        }
+
+        // Normalize HH:MM (DB sometimes stores HH:MM:SS or full datetimes).
+        $startTime = $startTime ? substr((string) $startTime, 0, 5) : '';
+        $endTime = $endTime ? substr((string) $endTime, 0, 5) : '';
+        $doorTime = $doorTime ? substr((string) $doorTime, 0, 5) : '';
+
+        // Smart formatter for date or range. Collapses redundant tokens so
+        //   same month+year  -> "23–25 iunie 2026"
+        //   same year only   -> "23 iunie – 5 iulie 2026"
+        //   different years  -> "23 dec 2026 – 5 ian 2027"
+        //   no end / same day-> "23 iunie 2026"
+        $formatDateOrRange = function ($start, $end) {
+            if (!$start) return '';
+            if (!$end || $start->isSameDay($end)) {
+                return $start->locale('ro')->translatedFormat('j F Y');
+            }
+            if ($start->year !== $end->year) {
+                return $start->locale('ro')->translatedFormat('j F Y')
+                    . ' – ' . $end->locale('ro')->translatedFormat('j F Y');
+            }
+            if ($start->month !== $end->month) {
+                return $start->locale('ro')->translatedFormat('j F')
+                    . ' – ' . $end->locale('ro')->translatedFormat('j F Y');
+            }
+            return $start->format('j') . '–' . $end->locale('ro')->translatedFormat('j F Y');
+        };
+
+        $startFormatted = $formatDateOrRange($eventDate, $isRangeDisplay ? $endDate : null);
+        $endFormatted = $endDate ? $endDate->locale('ro')->translatedFormat('j F Y') : '';
+        $dateStartRaw = $eventDate ? $eventDate->format('Y-m-d') : '';
+        $dateEndRaw = $endDate ? $endDate->format('Y-m-d') : '';
+
+        // Carbon's ->locale('ro')->dayName silently falls back to English on
+        // some setups (depends on intl + ICU data being loaded). Explicit
+        // map guarantees Romanian regardless of server config.
+        $dayNamesRo = [
+            'Monday' => 'Luni', 'Tuesday' => 'Marți', 'Wednesday' => 'Miercuri',
+            'Thursday' => 'Joi', 'Friday' => 'Vineri', 'Saturday' => 'Sâmbătă', 'Sunday' => 'Duminică',
+        ];
+        $dayName = ($eventDate && !$isRangeDisplay)
+            ? ($dayNamesRo[$eventDate->format('l')] ?? '')
+            : '';
+
+        if ($startTime && $endTime && $startTime !== $endTime) {
+            $timeRange = $startTime . ' – ' . $endTime;
+        } elseif ($startTime) {
+            $timeRange = $startTime;
+        } else {
+            $timeRange = '';
+        }
+
+        $timeLabel = $timeRange !== '' ? 'Ora: ' . $timeRange : '';
+        $doorsLabel = $doorTime !== '' ? 'Doors: ' . $doorTime : '';
+
+        $fullTextParts = [];
+        if ($dayName) {
+            $fullTextParts[] = mb_convert_case($dayName, MB_CASE_TITLE, 'UTF-8');
+        }
+        if ($startFormatted) {
+            $fullTextParts[] = $startFormatted;
+        }
+        if ($timeRange) {
+            $fullTextParts[] = 'Ora: ' . $timeRange;
+        }
+        if ($doorTime) {
+            $fullTextParts[] = 'Doors: ' . $doorTime;
+        }
+        $fullText = implode(' | ', $fullTextParts);
+
+        return [
+            'start' => $dateStartRaw,
+            'start_formatted' => $startFormatted,
+            'end' => $dateEndRaw,
+            'end_formatted' => $endFormatted,
+            'time' => $startTime,
+            'end_time' => $endTime,
+            'time_range' => $timeRange,
+            'time_label' => $timeLabel,
+            'doors_open' => $doorTime,
+            'doors_label' => $doorsLabel,
+            'day_name' => $dayName,
+            'full_text' => $fullText,
+        ];
+    }
+
+    /**
      * Resolve real ticket data from a Ticket model
      * Maps actual database values to the same variable paths used by getSampleData()
      */
@@ -652,131 +803,11 @@ class TicketVariableService
             $venueName = $marketplaceEvent?->venue_name ?? '';
         }
 
-        // Event date info — smart resolution based on duration_mode + ticket type.
-        // For range events we now show the full range by default (covers
-        // invitations and regular tickets without a per-day valid_date),
-        // not just for subscription tickets. A ticket with an explicit
-        // valid_date still trumps the range — that's a single-day ticket
-        // inside a multi-day event.
-        $durationMode = $event?->duration_mode ?? 'single_day';
-        $performance = $ticket->performance;
-        $isRangeDisplay = false;
-        $endDate = null;
-        $endTime = '';
-
-        switch ($durationMode) {
-            case 'range':
-                if ($ticketType?->valid_date && !$ticketType?->is_subscription) {
-                    // Single-day ticket within range: show the valid_date
-                    $eventDate = $ticketType->valid_date;
-                } else {
-                    // Subscription, invitation, or anything else — show full
-                    // range. isRangeDisplay flips on when we actually have
-                    // both endpoints; otherwise we degrade to a single date.
-                    $eventDate = $event?->range_start_date;
-                    $endDate = $event?->range_end_date;
-                    $isRangeDisplay = $endDate !== null;
-                }
-                $startTime = $event?->range_start_time ?? '';
-                $endTime = $event?->range_end_time ?? '';
-                $doorTime = $event?->door_time ?? '';
-                break;
-
-            case 'multi_day':
-                if ($performance?->starts_at) {
-                    // Performance-specific date/time
-                    $eventDate = $performance->starts_at->copy()->startOfDay();
-                    $startTime = $performance->starts_at->format('H:i');
-                    $doorTime = $performance->door_time ?? '';
-                } else {
-                    // Fallback to event's base fields
-                    $eventDate = $event?->event_date;
-                    $startTime = $event?->start_time ?? '';
-                    $doorTime = $event?->door_time ?? '';
-                }
-                break;
-
-            default: // single_day, recurring
-                $eventDate = $event?->event_date;
-                $startTime = $event?->start_time ?? '';
-                $endTime = $event?->end_time ?? '';
-                $doorTime = $event?->door_time ?? '';
-                break;
-        }
-
-        // Smart formatter for date or range. Collapses redundant tokens so
-        //   same month+year  -> "23–25 iunie 2026"
-        //   same year only   -> "23 iunie – 5 iulie 2026"
-        //   different years  -> "23 dec 2026 – 5 ian 2027"
-        //   no end / same day-> "23 iunie 2026"
-        $formatDateOrRange = function ($start, $end) {
-            if (!$start) return '';
-            if (!$end || $start->isSameDay($end)) {
-                return $start->locale('ro')->translatedFormat('j F Y');
-            }
-            if ($start->year !== $end->year) {
-                return $start->locale('ro')->translatedFormat('j F Y')
-                    . ' – ' . $end->locale('ro')->translatedFormat('j F Y');
-            }
-            if ($start->month !== $end->month) {
-                return $start->locale('ro')->translatedFormat('j F')
-                    . ' – ' . $end->locale('ro')->translatedFormat('j F Y');
-            }
-            return $start->format('j') . '–' . $end->locale('ro')->translatedFormat('j F Y');
-        };
-
-        // Build computed date display values
-        $startFormatted = $formatDateOrRange($eventDate, $isRangeDisplay ? $endDate : null);
-        $endFormatted = $endDate ? $endDate->locale('ro')->translatedFormat('j F Y') : '';
-        $dateStartRaw = $eventDate ? $eventDate->format('Y-m-d') : '';
-        $dateEndRaw = $endDate ? $endDate->format('Y-m-d') : '';
-
-        // Carbon's ->locale('ro')->dayName silently falls back to English on
-        // some setups (depends on intl + ICU data being loaded). Explicit
-        // map guarantees Romanian regardless of server config.
-        $dayNamesRo = [
-            'Monday' => 'Luni', 'Tuesday' => 'Marți', 'Wednesday' => 'Miercuri',
-            'Thursday' => 'Joi', 'Friday' => 'Vineri', 'Saturday' => 'Sâmbătă', 'Sunday' => 'Duminică',
-        ];
-        $dayName = ($eventDate && !$isRangeDisplay)
-            ? ($dayNamesRo[$eventDate->format('l')] ?? '')
-            : '';
-
-        // Smart time range: "19:00 – 22:00" if both set, "19:00" if just
-        // start, "" if neither. Useful when a template wants a single
-        // labelled line without conditional logic in the template itself.
-        if ($startTime && $endTime && $startTime !== $endTime) {
-            $timeRange = $startTime . ' – ' . $endTime;
-        } elseif ($startTime) {
-            $timeRange = $startTime;
-        } else {
-            $timeRange = '';
-        }
-
-        // Labelled variants — exposed as separate variables so templates
-        // can put them on their own line / styled differently. Empty when
-        // the underlying value is empty, so the template doesn't end up
-        // with a dangling "Ora: " or "Doors: ".
-        $timeLabel = $timeRange !== '' ? 'Ora: ' . $timeRange : '';
-        $doorsLabel = $doorTime !== '' ? 'Doors: ' . $doorTime : '';
-
-        // Smart combined text — what most ticket templates actually want to
-        // show as a single date line. Skips empty parts so the template
-        // doesn't end up with dangling commas / 'Ora: ' with no value.
-        $fullTextParts = [];
-        if ($dayName) {
-            $fullTextParts[] = mb_convert_case($dayName, MB_CASE_TITLE, 'UTF-8');
-        }
-        if ($startFormatted) {
-            $fullTextParts[] = $startFormatted;
-        }
-        if ($timeRange) {
-            $fullTextParts[] = 'Ora: ' . $timeRange;
-        }
-        if ($doorTime) {
-            $fullTextParts[] = 'Doors: ' . $doorTime;
-        }
-        $fullText = implode(' | ', $fullTextParts);
+        // Event date info — extracted into a public helper so the
+        // InvitationsController (which builds its own data array) can
+        // produce the exact same {{date.*}} shape without duplicating the
+        // range / locale / smart-label logic.
+        $dateBlock = $this->buildDateBlock($event, $ticketType, $ticket->performance);
 
         // Seat details
         $seatDetails = $ticket->getSeatDetails();
@@ -826,20 +857,7 @@ class TicketVariableService
                 'address' => $venue?->address ?? $marketplaceEvent?->venue_address ?? '',
                 'city' => $venue?->city ?? $marketplaceEvent?->venue_city ?? '',
             ],
-            'date' => [
-                'start' => $dateStartRaw,
-                'start_formatted' => $startFormatted,
-                'end' => $dateEndRaw,
-                'end_formatted' => $endFormatted,
-                'time' => $startTime,
-                'end_time' => $endTime,
-                'time_range' => $timeRange,
-                'time_label' => $timeLabel,
-                'doors_open' => $doorTime,
-                'doors_label' => $doorsLabel,
-                'day_name' => $dayName,
-                'full_text' => $fullText,
-            ],
+            'date' => $dateBlock,
             'ticket' => [
                 'type' => $ticketType?->name ?? $ticket->marketplaceTicketType?->name ?? '',
                 'price' => number_format($ticketPrice, 2) . ' ' . $currency,
