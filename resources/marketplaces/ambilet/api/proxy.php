@@ -1838,6 +1838,17 @@ switch ($action) {
         $requiresAuth = true;
         break;
 
+    case 'organizer.event.leisure.raport':
+        $eventId = (int) ($_GET['event'] ?? 0);
+        if (!$eventId) { http_response_code(400); echo json_encode(['error' => 'Missing event id']); exit; }
+        $params = [];
+        if (isset($_GET['from'])) $params['from'] = $_GET['from'];
+        if (isset($_GET['to'])) $params['to'] = $_GET['to'];
+        $endpoint = '/organizer/events/' . $eventId . '/leisure/raport'
+            . ($params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
     case 'organizer.event.leisure.pos-sale':
         $eventId = (int) ($_GET['event'] ?? 0);
         if (!$eventId) {
@@ -1889,6 +1900,25 @@ switch ($action) {
         $method = $_SERVER['REQUEST_METHOD'];
         $body = in_array($method, ['POST','PUT','PATCH']) ? file_get_contents('php://input') : null;
         $endpoint = '/organizer/events/' . $eventId . '/leisure/products/' . $productId;
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.venue-gates.collection':
+        $venueId = (int) ($_GET['venue'] ?? 0);
+        if (!$venueId) { http_response_code(400); echo json_encode(['error' => 'Missing venue id']); exit; }
+        $method = $_SERVER['REQUEST_METHOD'];
+        $body = in_array($method, ['POST','PUT','PATCH']) ? file_get_contents('php://input') : null;
+        $endpoint = '/organizer/venues/' . $venueId . '/gates';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.venue-gates.item':
+        $venueId = (int) ($_GET['venue'] ?? 0);
+        $gateId = (int) ($_GET['gate'] ?? 0);
+        if (!$venueId || !$gateId) { http_response_code(400); echo json_encode(['error' => 'Missing venue/gate id']); exit; }
+        $method = $_SERVER['REQUEST_METHOD'];
+        $body = in_array($method, ['POST','PUT','PATCH']) ? file_get_contents('php://input') : null;
+        $endpoint = '/organizer/venues/' . $venueId . '/gates/' . $gateId;
         $requiresAuth = true;
         break;
 

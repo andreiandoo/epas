@@ -3410,6 +3410,7 @@ class EventsController extends BaseController
             'commission_mode' => $event->getEffectiveCommissionMode(),
             'has_seating' => (bool) $event->seating_layout_id,
             'display_template' => $event->display_template ?? 'standard',
+            'venue_config' => is_array($event->venue_config) ? $event->venue_config : (object) [],
         ];
     }
 

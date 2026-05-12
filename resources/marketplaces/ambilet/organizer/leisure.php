@@ -22,10 +22,13 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 </p>
             </div>
             <!-- Tab switcher -->
-            <div class="inline-flex rounded-xl bg-white border border-border p-1">
-                <button type="button" id="tab-btn-overview" class="px-4 py-2 text-sm font-medium rounded-lg transition-colors bg-primary text-white">Sumar & raport</button>
-                <button type="button" id="tab-btn-products" class="px-4 py-2 text-sm font-medium rounded-lg transition-colors text-muted hover:bg-slate-50">🎫 Produse</button>
-                <button type="button" id="tab-btn-content" class="px-4 py-2 text-sm font-medium rounded-lg transition-colors text-muted hover:bg-slate-50">Conținut pagină</button>
+            <div class="inline-flex flex-wrap rounded-xl bg-white border border-border p-1 gap-1">
+                <button type="button" id="tab-btn-overview" class="px-3 py-2 text-sm font-medium rounded-lg transition-colors bg-primary text-white">Sumar & raport</button>
+                <button type="button" id="tab-btn-products" class="px-3 py-2 text-sm font-medium rounded-lg transition-colors text-muted hover:bg-slate-50">🎫 Produse</button>
+                <button type="button" id="tab-btn-event" class="px-3 py-2 text-sm font-medium rounded-lg transition-colors text-muted hover:bg-slate-50">🗓️ Detalii eveniment</button>
+                <button type="button" id="tab-btn-team" class="px-3 py-2 text-sm font-medium rounded-lg transition-colors text-muted hover:bg-slate-50">👥 Echipă</button>
+                <button type="button" id="tab-btn-gates" class="px-3 py-2 text-sm font-medium rounded-lg transition-colors text-muted hover:bg-slate-50">🚪 Porți acces</button>
+                <button type="button" id="tab-btn-content" class="px-3 py-2 text-sm font-medium rounded-lg transition-colors text-muted hover:bg-slate-50">⚙️ Setări</button>
             </div>
         </div>
 
@@ -57,6 +60,98 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             <p class="mt-2 text-sm text-muted">Se încarcă...</p>
         </div>
 
+        <!-- Tab: Detalii eveniment -->
+        <div id="tab-event" class="hidden space-y-6">
+            <div class="bg-white border rounded-2xl border-border overflow-hidden">
+                <div id="ev-cover" class="h-48 bg-gradient-to-br from-emerald-700 to-emerald-900 relative">
+                    <img id="ev-cover-img" class="absolute inset-0 w-full h-full object-cover" alt="">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
+                    <div class="absolute bottom-4 left-6 right-6 text-white">
+                        <p id="ev-status" class="text-xs uppercase tracking-wider font-semibold mb-1">—</p>
+                        <h2 id="ev-name" class="text-2xl lg:text-3xl font-bold">—</h2>
+                    </div>
+                </div>
+                <div class="p-6 grid md:grid-cols-3 gap-4">
+                    <div class="bg-slate-50 p-4 rounded-xl">
+                        <p class="text-xs uppercase tracking-wider text-muted font-semibold mb-1">Tip pagină</p>
+                        <p class="font-semibold text-secondary">Locație de agrement</p>
+                    </div>
+                    <div class="bg-slate-50 p-4 rounded-xl">
+                        <p class="text-xs uppercase tracking-wider text-muted font-semibold mb-1">Tipuri de bilete</p>
+                        <p id="ev-ticket-count" class="font-semibold text-secondary">—</p>
+                    </div>
+                    <div class="bg-slate-50 p-4 rounded-xl">
+                        <p class="text-xs uppercase tracking-wider text-muted font-semibold mb-1">Pagină publică</p>
+                        <a id="ev-public-url" href="#" target="_blank" class="font-semibold text-primary hover:underline">Deschide →</a>
+                    </div>
+                </div>
+                <div class="border-t border-border p-6">
+                    <h3 class="text-sm font-bold text-secondary uppercase tracking-wider mb-3">Acțiuni rapide</h3>
+                    <div class="flex flex-wrap gap-3">
+                        <a href="/organizator/leisure-dashboard" class="px-4 py-2 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary-dark transition-colors">📊 Dashboard live</a>
+                        <a href="/organizator/leisure-pos" class="px-4 py-2 bg-emerald-600 text-white text-sm font-medium rounded-lg hover:bg-emerald-700 transition-colors">🎫 Emite bilete (POS)</a>
+                        <a href="/organizator/leisure-participants" class="px-4 py-2 bg-white border border-border text-secondary text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors">👥 Participanți</a>
+                        <a href="/organizator/leisure-raport" class="px-4 py-2 bg-white border border-border text-secondary text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors">📑 Raport</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: Echipă -->
+        <div id="tab-team" class="hidden">
+            <div class="bg-white border rounded-2xl border-border p-4">
+                <p class="text-xs text-muted mb-3">👥 Gestionează membrii echipei tale (invitații, roluri, permisiuni). Pentru programarea turnetelor accesează <a href="/organizator/leisure-team" class="text-primary underline">Echipă & schimburi</a>.</p>
+                <iframe id="tab-team-frame" src="about:blank" class="w-full rounded-xl border border-border" style="height: 80vh;"></iframe>
+            </div>
+        </div>
+
+        <!-- Tab: Porți acces -->
+        <div id="tab-gates" class="hidden">
+            <div class="bg-white border rounded-2xl border-border p-5">
+                <div class="flex items-center justify-between mb-4">
+                    <div>
+                        <h2 class="text-lg font-bold text-secondary">🚪 Porți de acces</h2>
+                        <p class="text-xs text-muted">Configurează porțile fizice și asociază-le membrilor echipei pentru scanare.</p>
+                    </div>
+                    <button type="button" id="gates-add-btn" class="px-4 py-2 bg-primary text-white font-semibold rounded-lg hover:bg-primary-dark">+ Adaugă poartă</button>
+                </div>
+                <div id="gates-loading" class="p-8 text-center"><div class="inline-block w-6 h-6 border-2 rounded-full border-primary border-t-transparent animate-spin"></div></div>
+                <div id="gates-empty" class="hidden p-6 text-center text-muted bg-slate-50 rounded-xl">Niciun acces fizic configurat. Apasă „Adaugă poartă" pentru a începe.</div>
+                <div id="gates-list" class="hidden space-y-2"></div>
+            </div>
+        </div>
+
+        <!-- Modal poartă -->
+        <div id="gate-modal" class="hidden fixed inset-0 bg-black/50 z-50 items-start justify-center p-6 md:p-10 overflow-y-auto">
+            <div class="bg-white rounded-2xl border border-border max-w-md w-full my-6 p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 id="gate-modal-title" class="font-bold text-secondary text-lg">Poartă</h3>
+                    <button type="button" id="gate-modal-close" class="text-muted hover:text-secondary text-2xl leading-none">×</button>
+                </div>
+                <div class="space-y-3">
+                    <label class="block">
+                        <span class="text-xs font-semibold text-muted uppercase tracking-wider">Nume poartă *</span>
+                        <input id="gate-f-name" type="text" class="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg" placeholder="ex: Poarta A, Intrare principală">
+                    </label>
+                    <label class="block">
+                        <span class="text-xs font-semibold text-muted uppercase tracking-wider">Cod scurt</span>
+                        <input id="gate-f-code" type="text" maxlength="16" class="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg" placeholder="A, B, ENTRY-1">
+                    </label>
+                    <label class="block">
+                        <span class="text-xs font-semibold text-muted uppercase tracking-wider">Descriere</span>
+                        <textarea id="gate-f-description" rows="2" class="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg" placeholder="Detalii (opțional)"></textarea>
+                    </label>
+                </div>
+                <div class="mt-5 flex justify-between">
+                    <button id="gate-f-delete" type="button" class="hidden px-3 py-2 text-sm text-rose-600 hover:bg-rose-50 rounded-lg">🗑 Șterge</button>
+                    <div class="ml-auto flex gap-2">
+                        <button id="gate-f-cancel" type="button" class="px-3 py-2 text-sm border border-border rounded-lg hover:bg-slate-50">Renunță</button>
+                        <button id="gate-f-save" type="button" class="px-4 py-2 text-sm bg-primary text-white font-semibold rounded-lg hover:bg-primary-dark">Salvează</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Tab: Produse (initial hidden) -->
         <div id="tab-products" class="hidden space-y-6">
             <div class="p-5 bg-white border rounded-2xl border-border flex flex-wrap items-center justify-between gap-3">
@@ -76,8 +171,8 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         </div>
 
         <!-- Modal produs -->
-        <div id="pr-modal" class="hidden fixed inset-0 bg-black/50 z-50 items-center justify-center p-4 overflow-y-auto">
-            <div class="bg-white rounded-2xl border border-border max-w-2xl w-full my-8 p-6">
+        <div id="pr-modal" class="hidden fixed inset-0 bg-black/50 z-50 items-start justify-center p-6 md:p-10 overflow-y-auto">
+            <div class="bg-white rounded-2xl border border-border max-w-4xl w-full my-6 p-6 max-h-[calc(100vh-3rem)] overflow-y-auto">
                 <div class="flex items-center justify-between mb-4">
                     <h3 id="pr-modal-title" class="font-bold text-secondary text-xl">Produs</h3>
                     <button type="button" id="pr-modal-close" class="text-muted hover:text-secondary text-2xl leading-none">×</button>
@@ -701,24 +796,19 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 
     // ========== TAB SWITCHING ==========
     function setupTabs() {
-        const btnOverview = $('tab-btn-overview');
-        const btnProducts = $('tab-btn-products');
-        const btnContent = $('tab-btn-content');
-        const overview = $('leisure-content');
-        const products = $('tab-products');
-        const content = $('tab-content');
-        const empty = $('leisure-empty');
-
-        if (!btnOverview || !btnContent) return;
-
-        const tabs = [
-            { btn: btnOverview, panel: overview, key: 'overview' },
-            { btn: btnProducts, panel: products, key: 'products' },
-            { btn: btnContent, panel: content, key: 'content' },
+        const tabsMap = [
+            { btn: $('tab-btn-overview'), panel: $('leisure-content'), key: 'overview' },
+            { btn: $('tab-btn-products'), panel: $('tab-products'), key: 'products' },
+            { btn: $('tab-btn-event'), panel: $('tab-event'), key: 'event' },
+            { btn: $('tab-btn-team'), panel: $('tab-team'), key: 'team' },
+            { btn: $('tab-btn-gates'), panel: $('tab-gates'), key: 'gates' },
+            { btn: $('tab-btn-content'), panel: $('tab-content'), key: 'content' },
         ];
+        const empty = $('leisure-empty');
+        const overview = $('leisure-content');
 
         function activate(which) {
-            tabs.forEach(t => {
+            tabsMap.forEach(t => {
                 if (!t.btn) return;
                 const sel = t.key === which;
                 t.btn.classList.toggle('bg-primary', sel);
@@ -733,14 +823,141 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 else if (!currentEventId) overview.classList.add('hidden');
             } else if (which === 'products') {
                 loadProducts();
+            } else if (which === 'event') {
+                hydrateEventTab();
+            } else if (which === 'team') {
+                const fr = $('tab-team-frame');
+                if (fr && fr.src === 'about:blank') fr.src = '/organizator/echipa';
+            } else if (which === 'gates') {
+                loadGates();
             } else if (which === 'content') {
                 hydrateContentForm();
             }
         }
+        window.__leisureActivateTab = activate;
+        tabsMap.forEach(t => t.btn && t.btn.addEventListener('click', () => activate(t.key)));
+    }
 
-        btnOverview.addEventListener('click', () => activate('overview'));
-        if (btnProducts) btnProducts.addEventListener('click', () => activate('products'));
-        btnContent.addEventListener('click', () => activate('content'));
+    function hydrateEventTab() {
+        const ev = leisureEvents.find(e => e.id === currentEventId);
+        if (!ev) return;
+        $('ev-name').textContent = ev.name || 'Evenimentul tău';
+        $('ev-status').textContent = ev.status || (ev.is_published ? 'PUBLICAT' : 'DRAFT');
+        $('ev-ticket-count').textContent = (ev.ticket_types?.length || ev.ticket_types_count || '—');
+        if (ev.image) { $('ev-cover-img').src = ev.image; $('ev-cover-img').style.display = ''; }
+        else { $('ev-cover-img').style.display = 'none'; }
+        $('ev-public-url').href = '/bilete/' + (ev.slug || ev.id) + (ev.is_published ? '' : '?preview=1');
+    }
+
+    // ========== GATES CRUD ==========
+    let gatesCache = [];
+    let editingGate = null;
+    let venueIdForGates = null;
+
+    async function loadGates() {
+        $('gates-loading').classList.remove('hidden');
+        $('gates-list').classList.add('hidden');
+        $('gates-empty').classList.add('hidden');
+        const ev = leisureEvents.find(e => e.id === currentEventId);
+        venueIdForGates = ev?.venue_id || null;
+        if (!venueIdForGates) {
+            $('gates-loading').classList.add('hidden');
+            $('gates-empty').textContent = 'Evenimentul nu are o locație fizică (venue) configurată. Setează o locație în „Detalii eveniment" mai întâi.';
+            $('gates-empty').classList.remove('hidden');
+            return;
+        }
+        try {
+            const res = await AmbiletAPI.get(`/organizer/venues/${venueIdForGates}/gates`);
+            gatesCache = res.data?.gates || res.data || [];
+            renderGates();
+        } catch (e) {
+            console.error('[gates] load', e);
+            $('gates-empty').textContent = 'Eroare la încărcare: ' + (e?.message || '');
+            $('gates-empty').classList.remove('hidden');
+        } finally {
+            $('gates-loading').classList.add('hidden');
+        }
+    }
+
+    function renderGates() {
+        if (!gatesCache.length) {
+            $('gates-empty').classList.remove('hidden');
+            $('gates-list').classList.add('hidden');
+            return;
+        }
+        $('gates-list').classList.remove('hidden');
+        $('gates-empty').classList.add('hidden');
+        $('gates-list').innerHTML = gatesCache.map(g => `
+            <div class="p-3 bg-slate-50 rounded-lg flex items-center gap-3">
+                <div class="w-10 h-10 bg-primary/10 text-primary rounded-lg flex items-center justify-center font-bold">${escapeHtml(g.code || '🚪')}</div>
+                <div class="flex-1 min-w-0">
+                    <div class="font-semibold text-secondary">${escapeHtml(g.name || '—')}</div>
+                    ${g.description ? `<div class="text-xs text-muted truncate">${escapeHtml(g.description)}</div>` : ''}
+                </div>
+                <button data-edit-gate="${g.id}" class="px-3 py-1.5 text-xs font-medium border border-border bg-white rounded-lg hover:bg-slate-50">Editează</button>
+            </div>
+        `).join('');
+        $('gates-list').querySelectorAll('button[data-edit-gate]').forEach(btn => {
+            btn.addEventListener('click', () => openGateModal(parseInt(btn.dataset.editGate, 10)));
+        });
+    }
+
+    function openGateModal(id) {
+        editingGate = id ? gatesCache.find(g => g.id === id) : null;
+        $('gate-modal-title').textContent = editingGate ? 'Editează poartă' : 'Adaugă poartă';
+        $('gate-f-name').value = editingGate?.name || '';
+        $('gate-f-code').value = editingGate?.code || '';
+        $('gate-f-description').value = editingGate?.description || '';
+        $('gate-f-delete').classList.toggle('hidden', !editingGate);
+        $('gate-modal').classList.remove('hidden');
+        $('gate-modal').classList.add('flex');
+    }
+    function closeGateModal() {
+        $('gate-modal').classList.add('hidden');
+        $('gate-modal').classList.remove('flex');
+        editingGate = null;
+    }
+
+    async function saveGate() {
+        const body = {
+            name: $('gate-f-name').value.trim(),
+            code: $('gate-f-code').value.trim() || null,
+            description: $('gate-f-description').value.trim() || null,
+        };
+        if (!body.name) { alert('Numele porții e obligatoriu.'); return; }
+        if (!venueIdForGates) { alert('Lipsește venue.'); return; }
+        try {
+            if (editingGate) {
+                await AmbiletAPI.put(`/organizer/venues/${venueIdForGates}/gates/${editingGate.id}`, body);
+            } else {
+                await AmbiletAPI.post(`/organizer/venues/${venueIdForGates}/gates`, body);
+            }
+            closeGateModal();
+            loadGates();
+        } catch (e) {
+            alert('Eroare salvare: ' + (e?.message || ''));
+        }
+    }
+
+    async function deleteGate() {
+        if (!editingGate) return;
+        if (!confirm('Sigur ștergi această poartă?')) return;
+        try {
+            await AmbiletAPI.delete(`/organizer/venues/${venueIdForGates}/gates/${editingGate.id}`);
+            closeGateModal();
+            loadGates();
+        } catch (e) {
+            alert('Eroare ștergere: ' + (e?.message || ''));
+        }
+    }
+
+    function setupGatesHandlers() {
+        $('gates-add-btn')?.addEventListener('click', () => openGateModal(null));
+        $('gate-modal-close')?.addEventListener('click', closeGateModal);
+        $('gate-f-cancel')?.addEventListener('click', closeGateModal);
+        $('gate-f-save')?.addEventListener('click', saveGate);
+        $('gate-f-delete')?.addEventListener('click', deleteGate);
+        $('gate-modal')?.addEventListener('click', (e) => { if (e.target === $('gate-modal')) closeGateModal(); });
     }
 
     // ========== PRODUCTS CRUD ==========
@@ -1273,6 +1490,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 
         setupTabs();
         setupProductsHandlers();
+        setupGatesHandlers();
     });
 
     window.addEventListener('load', async () => {

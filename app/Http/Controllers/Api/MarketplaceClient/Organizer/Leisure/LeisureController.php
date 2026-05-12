@@ -1176,6 +1176,115 @@ class LeisureController extends BaseController
         ];
     }
 
+    /**
+     * GET /marketplace-client/organizer/events/{event}/leisure/raport?from=&to=
+     *
+     * Raport agregat: by_ticket_type, by_source (online vs POS),
+     * by_cashier (operator POS) cu totaluri venit + bilete + comenzi.
+     */
+    public function raport(Request $request, int $event): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+        $marketplace = $organizer->marketplaceClient;
+
+        $eventModel = Event::query()
+            ->where('id', $event)
+            ->where('marketplace_client_id', $marketplace->id)
+            ->first();
+        if (!$eventModel) return $this->error('Event not found', 404);
+
+        $validated = $request->validate([
+            'from' => 'nullable|date',
+            'to' => 'nullable|date|after_or_equal:from',
+        ]);
+
+        $from = isset($validated['from'])
+            ? Carbon::parse($validated['from'])->startOfDay()
+            : Carbon::today()->subDays(30)->startOfDay();
+        $to = isset($validated['to'])
+            ? Carbon::parse($validated['to'])->endOfDay()
+            : Carbon::today()->endOfDay();
+
+        $orders = Order::query()
+            ->where('event_id', $eventModel->id)
+            ->whereIn('status', ['completed', 'paid'])
+            ->whereBetween('paid_at', [$from, $to])
+            ->with(['tickets:id,order_id,ticket_type_id,price,status', 'tickets.ticketType:id,name,service_category,issuing_company'])
+            ->get(['id', 'event_id', 'paid_at', 'status', 'total', 'currency', 'source', 'meta']);
+
+        $byTicketType = [];
+        $bySource = [];
+        $byCashier = [];
+        $totalRevenue = 0.0;
+        $totalTickets = 0;
+        $totalOrders = $orders->count();
+
+        foreach ($orders as $o) {
+            $rev = (float) ($o->total ?? 0);
+            $totalRevenue += $rev;
+
+            // Source: pos vs online
+            $source = $o->source === 'pos' ? 'pos' : ($o->source ?: 'online');
+            if ($source !== 'pos') $source = 'online';
+            if (!isset($bySource[$source])) $bySource[$source] = ['source' => $source, 'orders' => 0, 'tickets' => 0, 'revenue' => 0.0];
+            $bySource[$source]['orders']++;
+            $bySource[$source]['revenue'] += $rev;
+
+            // Cashier (operator POS) — din meta.cashier_organizer_id
+            $cashierId = $o->meta['cashier_organizer_id'] ?? null;
+            $cashierKey = $cashierId ? "org_{$cashierId}" : 'online';
+            if (!isset($byCashier[$cashierKey])) $byCashier[$cashierKey] = ['cashier_id' => $cashierId, 'cashier_label' => $cashierId ? "Operator #{$cashierId}" : 'Online (auto)', 'orders' => 0, 'tickets' => 0, 'revenue' => 0.0];
+            $byCashier[$cashierKey]['orders']++;
+            $byCashier[$cashierKey]['revenue'] += $rev;
+
+            foreach ($o->tickets as $t) {
+                if (in_array($t->status, ['cancelled', 'refunded'], true)) continue;
+                $totalTickets++;
+                $bySource[$source]['tickets']++;
+                $byCashier[$cashierKey]['tickets']++;
+
+                $ttId = $t->ticket_type_id;
+                $ttName = $t->ticketType->name ?? "Tip #{$ttId}";
+                if (is_array($ttName)) $ttName = $ttName['ro'] ?? reset($ttName);
+                $key = "tt_{$ttId}";
+                if (!isset($byTicketType[$key])) {
+                    $byTicketType[$key] = [
+                        'ticket_type_id' => $ttId,
+                        'name' => $ttName,
+                        'service_category' => $t->ticketType->service_category ?? 'access',
+                        'issuing_company' => $t->ticketType->issuing_company ?? 'primary',
+                        'tickets' => 0,
+                        'revenue' => 0.0,
+                    ];
+                }
+                $byTicketType[$key]['tickets']++;
+                $byTicketType[$key]['revenue'] += (float) ($t->price ?? 0);
+            }
+        }
+
+        // Round totals
+        $totalRevenue = round($totalRevenue, 2);
+        foreach ($bySource as &$row) $row['revenue'] = round($row['revenue'], 2);
+        foreach ($byCashier as &$row) $row['revenue'] = round($row['revenue'], 2);
+        foreach ($byTicketType as &$row) $row['revenue'] = round($row['revenue'], 2);
+        unset($row);
+
+        return $this->success([
+            'from' => $from->toDateString(),
+            'to' => $to->toDateString(),
+            'currency' => $orders->first()?->currency ?? 'RON',
+            'totals' => [
+                'orders' => $totalOrders,
+                'tickets' => $totalTickets,
+                'revenue' => $totalRevenue,
+                'avg_order' => $totalOrders > 0 ? round($totalRevenue / $totalOrders, 2) : 0,
+            ],
+            'by_source' => array_values($bySource),
+            'by_ticket_type' => array_values($byTicketType),
+            'by_cashier' => array_values($byCashier),
+        ]);
+    }
+
     protected function emptyBucket(): array
     {
         return [

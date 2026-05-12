@@ -385,9 +385,12 @@ const AmbiletAPI = {
         if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/participants/)) return 'organizer.event.leisure.participants';
         if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/sales-timeline/)) return 'organizer.event.leisure.sales-timeline';
         if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/dashboard\/live/)) return 'organizer.event.leisure.dashboard.live';
+        if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/raport/)) return 'organizer.event.leisure.raport';
         if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/pos-sale/)) return 'organizer.event.leisure.pos-sale';
         if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/shifts\/\d+/)) return 'organizer.event.leisure.shifts.item';
         if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/shifts/)) return 'organizer.event.leisure.shifts.collection';
+        if (endpoint.match(/\/organizer\/venues\/\d+\/gates\/\d+/)) return 'organizer.venue-gates.item';
+        if (endpoint.match(/\/organizer\/venues\/\d+\/gates/)) return 'organizer.venue-gates.collection';
         if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/products\/reorder/)) return 'organizer.event.leisure.products.reorder';
         if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/products\/\d+/)) return 'organizer.event.leisure.products.item';
         if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/products/)) return 'organizer.event.leisure.products.collection';
@@ -507,6 +510,15 @@ const AmbiletAPI = {
         const leisureProductMatch = endpoint.match(/^\/organizer\/events\/(\d+)\/leisure\/products\/(\d+)/);
         if (leisureProductMatch) {
             return `event=${encodeURIComponent(leisureProductMatch[1])}&product=${encodeURIComponent(leisureProductMatch[2])}`;
+        }
+        // Extract venue+gate IDs
+        const venueGateMatch = endpoint.match(/^\/organizer\/venues\/(\d+)\/gates\/(\d+)/);
+        if (venueGateMatch) {
+            return `venue=${encodeURIComponent(venueGateMatch[1])}&gate=${encodeURIComponent(venueGateMatch[2])}`;
+        }
+        const venueGatesMatch = endpoint.match(/^\/organizer\/venues\/(\d+)\/gates/);
+        if (venueGatesMatch) {
+            return `venue=${encodeURIComponent(venueGatesMatch[1])}`;
         }
         // Extract event ID from leisure organizer endpoints
         const leisureMatch = endpoint.match(/^\/organizer\/events\/(\d+)\/leisure\//);
