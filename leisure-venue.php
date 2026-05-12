@@ -893,11 +893,25 @@ require_once __DIR__ . '/includes/head.php';
             <p class="text-xs uppercase tracking-wider text-white/40 font-bold mt-4 mb-2">Sumar comandă</p>
             <div class="space-y-2 mb-4">
                 <template x-for="item in cartItems" :key="item.id">
-                    <div class="flex items-center justify-between text-sm py-1.5">
-                        <span class="text-white/80"><span x-text="item.qty"></span>× <span x-text="item.name"></span></span>
-                        <span class="font-semibold"><span x-text="(item.qty * item.effective_price).toFixed(2)"></span> RON</span>
+                    <div class="py-1.5">
+                        <div class="flex items-center justify-between text-sm">
+                            <span class="text-white/80"><span x-text="item.qty"></span>× <span x-text="item.name"></span></span>
+                            <span class="font-semibold"><span x-text="(item.qty * item.effective_price).toFixed(2)"></span> RON</span>
+                        </div>
+                        <div x-show="hasCommission" class="flex items-center justify-between text-xs text-white/50 mt-0.5 pl-3">
+                            <span>+ Comision/bilet (max <span x-text="commission.rate"></span>%, min <span x-text="parseFloat(commission.fixed).toFixed(2)"></span> RON)</span>
+                            <span>+<span x-text="(item.qty * commissionPerTicket(item.effective_price)).toFixed(2)"></span> RON</span>
+                        </div>
                     </div>
                 </template>
+            </div>
+            <div x-show="hasCommission" class="flex items-center justify-between text-sm text-white/70 py-2 border-t border-white/10">
+                <span>Subtotal bilete</span>
+                <span><span x-text="cartSubtotalBase.toFixed(2)"></span> RON</span>
+            </div>
+            <div x-show="hasCommission" class="flex items-center justify-between text-sm text-white/70 py-1">
+                <span>Total comision</span>
+                <span>+<span x-text="cartCommissionTotal.toFixed(2)"></span> RON</span>
             </div>
             <div class="flex items-center justify-between py-3 border-t border-white/10">
                 <span class="font-bold">Total</span>
@@ -943,6 +957,7 @@ function reservationPage() {
         gallery: DATA.gallery || [],
         videos: DATA.videos || [],
         nearbyHotels: DATA.nearby_hotels || [],
+        commission: { rate: 0, fixed: 0, mode: 'included' },
 
         init() {
             this.loadMonth(this.monthKey(this.currentMonth));
@@ -1020,6 +1035,7 @@ function reservationPage() {
                 const resp = await AmbiletAPI.get(`/marketplace-events/${SLUG}/date-availability`, params);
                 if (resp && resp.is_open) {
                     this.ticketsRaw = resp.ticket_types || [];
+                    if (resp.commission) this.commission = resp.commission;
                     // Init qty map
                     this.ticketsRaw.forEach(t => { this.qtyById[t.id] = 0; });
                 } else {
@@ -1055,8 +1071,30 @@ function reservationPage() {
         get cartCount() {
             return this.cartItems.reduce((s, t) => s + t.qty, 0);
         },
+        // Comision per UN bilet din acel tip: max(price * rate%, fixed) — numai daca mode='added_on_top'
+        commissionPerTicket(price) {
+            if ((this.commission.mode || 'included') !== 'added_on_top') return 0;
+            const rate = parseFloat(this.commission.rate || 0);
+            const fixed = parseFloat(this.commission.fixed || 0);
+            const pct = parseFloat(price || 0) * rate / 100;
+            return Math.max(pct, fixed);
+        },
+        cartItemSubtotal(item) {
+            const unit = parseFloat(item.effective_price || 0);
+            const com = this.commissionPerTicket(unit);
+            return item.qty * (unit + com);
+        },
+        get cartSubtotalBase() {
+            return this.cartItems.reduce((s, t) => s + t.qty * parseFloat(t.effective_price || 0), 0);
+        },
+        get cartCommissionTotal() {
+            return this.cartItems.reduce((s, t) => s + t.qty * this.commissionPerTicket(parseFloat(t.effective_price || 0)), 0);
+        },
         get cartTotal() {
-            return this.cartItems.reduce((s, t) => s + t.qty * parseFloat(t.effective_price || 0), 0).toFixed(2);
+            return (this.cartSubtotalBase + this.cartCommissionTotal).toFixed(2);
+        },
+        get hasCommission() {
+            return (this.commission.mode === 'added_on_top') && (this.commission.rate > 0 || this.commission.fixed > 0);
         },
         get canCheckout() {
             // Toate serviciile cu requires_access_ticket trebuie sa aiba bilet acces in cos
@@ -1165,11 +1203,15 @@ function reservationPage() {
             };
 
             this.cartItems.forEach(t => {
+                const unit = parseFloat(t.effective_price) || 0;
+                const commission = this.commissionPerTicket(unit);
+                const finalUnit = unit + commission;
                 const ticketPayload = {
                     id: Number(t.id) || 0,
                     name: String(t.name || ''),
-                    price: Number(parseFloat(t.effective_price)) || 0,
+                    price: Number(finalUnit) || 0,
                     originalPrice: Number(parseFloat(t.base_price)) || null,
+                    commission_per_ticket: Number(commission) || 0,
                     min_per_order: Number(t.min_per_order) || 1,
                     max_per_order: Number(t.max_per_order) || 10,
                     is_parking: Boolean(t.is_parking),

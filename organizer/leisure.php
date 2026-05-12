@@ -25,8 +25,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             <div class="inline-flex flex-wrap rounded-xl bg-white border border-border p-1 gap-1">
                 <button type="button" id="tab-btn-overview" class="px-3 py-2 text-sm font-medium rounded-lg transition-colors bg-primary text-white">Sumar & raport</button>
                 <button type="button" id="tab-btn-products" class="px-3 py-2 text-sm font-medium rounded-lg transition-colors text-muted hover:bg-slate-50">🎫 Produse</button>
-                <button type="button" id="tab-btn-event" class="px-3 py-2 text-sm font-medium rounded-lg transition-colors text-muted hover:bg-slate-50">🗓️ Detalii eveniment</button>
-                <button type="button" id="tab-btn-team" class="px-3 py-2 text-sm font-medium rounded-lg transition-colors text-muted hover:bg-slate-50">👥 Echipă</button>
                 <button type="button" id="tab-btn-gates" class="px-3 py-2 text-sm font-medium rounded-lg transition-colors text-muted hover:bg-slate-50">🚪 Porți acces</button>
                 <button type="button" id="tab-btn-content" class="px-3 py-2 text-sm font-medium rounded-lg transition-colors text-muted hover:bg-slate-50">⚙️ Setări</button>
             </div>
@@ -58,51 +56,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         <div id="leisure-loading" class="p-8 text-center">
             <div class="inline-block w-6 h-6 border-2 rounded-full border-primary border-t-transparent animate-spin"></div>
             <p class="mt-2 text-sm text-muted">Se încarcă...</p>
-        </div>
-
-        <!-- Tab: Detalii eveniment -->
-        <div id="tab-event" class="hidden space-y-6">
-            <div class="bg-white border rounded-2xl border-border overflow-hidden">
-                <div id="ev-cover" class="h-48 bg-gradient-to-br from-emerald-700 to-emerald-900 relative">
-                    <img id="ev-cover-img" class="absolute inset-0 w-full h-full object-cover" alt="">
-                    <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
-                    <div class="absolute bottom-4 left-6 right-6 text-white">
-                        <p id="ev-status" class="text-xs uppercase tracking-wider font-semibold mb-1">—</p>
-                        <h2 id="ev-name" class="text-2xl lg:text-3xl font-bold">—</h2>
-                    </div>
-                </div>
-                <div class="p-6 grid md:grid-cols-3 gap-4">
-                    <div class="bg-slate-50 p-4 rounded-xl">
-                        <p class="text-xs uppercase tracking-wider text-muted font-semibold mb-1">Tip pagină</p>
-                        <p class="font-semibold text-secondary">Locație de agrement</p>
-                    </div>
-                    <div class="bg-slate-50 p-4 rounded-xl">
-                        <p class="text-xs uppercase tracking-wider text-muted font-semibold mb-1">Tipuri de bilete</p>
-                        <p id="ev-ticket-count" class="font-semibold text-secondary">—</p>
-                    </div>
-                    <div class="bg-slate-50 p-4 rounded-xl">
-                        <p class="text-xs uppercase tracking-wider text-muted font-semibold mb-1">Pagină publică</p>
-                        <a id="ev-public-url" href="#" target="_blank" class="font-semibold text-primary hover:underline">Deschide →</a>
-                    </div>
-                </div>
-                <div class="border-t border-border p-6">
-                    <h3 class="text-sm font-bold text-secondary uppercase tracking-wider mb-3">Acțiuni rapide</h3>
-                    <div class="flex flex-wrap gap-3">
-                        <a href="/organizator/leisure-dashboard" class="px-4 py-2 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary-dark transition-colors">📊 Dashboard live</a>
-                        <a href="/organizator/leisure-pos" class="px-4 py-2 bg-emerald-600 text-white text-sm font-medium rounded-lg hover:bg-emerald-700 transition-colors">🎫 Emite bilete (POS)</a>
-                        <a href="/organizator/leisure-participants" class="px-4 py-2 bg-white border border-border text-secondary text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors">👥 Participanți</a>
-                        <a href="/organizator/leisure-raport" class="px-4 py-2 bg-white border border-border text-secondary text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors">📑 Raport</a>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Tab: Echipă -->
-        <div id="tab-team" class="hidden">
-            <div class="bg-white border rounded-2xl border-border p-4">
-                <p class="text-xs text-muted mb-3">👥 Gestionează membrii echipei tale (invitații, roluri, permisiuni). Pentru programarea turnetelor accesează <a href="/organizator/leisure-team" class="text-primary underline">Echipă & schimburi</a>.</p>
-                <iframe id="tab-team-frame" src="about:blank" class="w-full rounded-xl border border-border" style="height: 80vh;"></iframe>
-            </div>
         </div>
 
         <!-- Tab: Porți acces -->
@@ -327,6 +280,14 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                             <span class="text-xs font-semibold text-muted uppercase tracking-wider">Telefon contact (cu prefix)</span>
                             <input type="text" data-vc="contact_phone" class="vc-input mt-1 w-full px-3 py-2 border border-border rounded-lg" placeholder="+40 752 171 050">
                             <span class="text-xs text-muted mt-1 block">Folosit pentru buton WhatsApp și bara info.</span>
+                        </label>
+                        <label class="block">
+                            <span class="text-xs font-semibold text-muted uppercase tracking-wider">Email contact</span>
+                            <input type="email" data-vc="contact_email" class="vc-input mt-1 w-full px-3 py-2 border border-border rounded-lg" placeholder="contact@example.ro">
+                        </label>
+                        <label class="block">
+                            <span class="text-xs font-semibold text-muted uppercase tracking-wider">Website oficial</span>
+                            <input type="url" data-vc="website_url" class="vc-input mt-1 w-full px-3 py-2 border border-border rounded-lg" placeholder="https://example.ro">
                         </label>
                         <label class="block">
                             <span class="text-xs font-semibold text-muted uppercase tracking-wider">URL Google Maps</span>
@@ -799,8 +760,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         const tabsMap = [
             { btn: $('tab-btn-overview'), panel: $('leisure-content'), key: 'overview' },
             { btn: $('tab-btn-products'), panel: $('tab-products'), key: 'products' },
-            { btn: $('tab-btn-event'), panel: $('tab-event'), key: 'event' },
-            { btn: $('tab-btn-team'), panel: $('tab-team'), key: 'team' },
             { btn: $('tab-btn-gates'), panel: $('tab-gates'), key: 'gates' },
             { btn: $('tab-btn-content'), panel: $('tab-content'), key: 'content' },
         ];
@@ -823,11 +782,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 else if (!currentEventId) overview.classList.add('hidden');
             } else if (which === 'products') {
                 loadProducts();
-            } else if (which === 'event') {
-                hydrateEventTab();
-            } else if (which === 'team') {
-                const fr = $('tab-team-frame');
-                if (fr && fr.src === 'about:blank') fr.src = '/organizator/echipa';
             } else if (which === 'gates') {
                 loadGates();
             } else if (which === 'content') {
@@ -836,17 +790,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         }
         window.__leisureActivateTab = activate;
         tabsMap.forEach(t => t.btn && t.btn.addEventListener('click', () => activate(t.key)));
-    }
-
-    function hydrateEventTab() {
-        const ev = leisureEvents.find(e => e.id === currentEventId);
-        if (!ev) return;
-        $('ev-name').textContent = ev.name || 'Evenimentul tău';
-        $('ev-status').textContent = ev.status || (ev.is_published ? 'PUBLICAT' : 'DRAFT');
-        $('ev-ticket-count').textContent = (ev.ticket_types?.length || ev.ticket_types_count || '—');
-        if (ev.image) { $('ev-cover-img').src = ev.image; $('ev-cover-img').style.display = ''; }
-        else { $('ev-cover-img').style.display = 'none'; }
-        $('ev-public-url').href = '/bilete/' + (ev.slug || ev.id) + (ev.is_published ? '' : '?preview=1');
     }
 
     // ========== GATES CRUD ==========
@@ -1314,16 +1257,63 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
     }
 
     function makeSeasonRow(d) {
-        return repWrap(`
-            <div class="grid grid-cols-1 md:grid-cols-6 gap-2 items-start">
-                <input type="text" data-rep="name" class="md:col-span-2 px-3 py-2 border border-border rounded-lg bg-white" placeholder="Vară / Iarnă / Mai-Sept" value="${escapeHtml(d.name || '')}">
-                <input type="text" data-rep="period" class="md:col-span-2 px-3 py-2 border border-border rounded-lg bg-white" placeholder="Mai-Sept" value="${escapeHtml(d.period || '')}">
-                <input type="time" data-rep="hours_start" class="md:col-span-1 px-3 py-2 border border-border rounded-lg bg-white" value="${escapeHtml(d.hours_start || '')}">
-                <input type="time" data-rep="hours_end" class="md:col-span-1 px-3 py-2 border border-border rounded-lg bg-white" value="${escapeHtml(d.hours_end || '')}">
-                <input type="text" data-rep="notes" class="md:col-span-6 px-3 py-2 border border-border rounded-lg bg-white" placeholder="Note (ex: ultimă intrare 17:00)" value="${escapeHtml(d.notes || '')}">
+        const wrap = document.createElement('div');
+        wrap.className = 'p-3 bg-slate-50 rounded-lg space-y-3';
+        // Schedule_list e o lista cu 7 zile { day, open, close } — completam intotdeauna toate zilele
+        const DAYS = [
+            { key: 'mon', label: 'Luni' },
+            { key: 'tue', label: 'Marți' },
+            { key: 'wed', label: 'Miercuri' },
+            { key: 'thu', label: 'Joi' },
+            { key: 'fri', label: 'Vineri' },
+            { key: 'sat', label: 'Sâmbătă' },
+            { key: 'sun', label: 'Duminică' },
+        ];
+        const scheduleByDay = {};
+        (Array.isArray(d.schedule_list) ? d.schedule_list : []).forEach(s => {
+            if (s && s.day) scheduleByDay[s.day] = s;
+        });
+        const scheduleRows = DAYS.map(D => {
+            const s = scheduleByDay[D.key] || {};
+            return `<div class="grid grid-cols-12 gap-2 items-center">
+                <div class="col-span-3 text-sm font-medium text-secondary">${D.label}</div>
+                <div class="col-span-4">
+                    <input type="time" data-day-key="${D.key}" data-day-field="open" class="w-full px-2 py-1.5 text-sm border border-border rounded bg-white" placeholder="Deschidere" value="${escapeHtml(s.open || '')}">
+                </div>
+                <div class="col-span-1 text-center text-muted text-xs">–</div>
+                <div class="col-span-4">
+                    <input type="time" data-day-key="${D.key}" data-day-field="close" class="w-full px-2 py-1.5 text-sm border border-border rounded bg-white" placeholder="Închidere" value="${escapeHtml(s.close || '')}">
+                </div>
+            </div>`;
+        }).join('');
+        wrap.innerHTML = `
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-2">
+                <label class="block md:col-span-2">
+                    <span class="text-xs font-semibold text-muted uppercase tracking-wider">Nume sezon</span>
+                    <input type="text" data-rep="name" class="mt-1 w-full px-3 py-2 border border-border rounded-lg bg-white" placeholder="ex: Sezon vară" value="${escapeHtml(d.name || '')}">
+                </label>
+                <label class="block">
+                    <span class="text-xs font-semibold text-muted uppercase tracking-wider">Start (LL-ZZ)</span>
+                    <input type="text" data-rep="start" class="mt-1 w-full px-3 py-2 border border-border rounded-lg bg-white" placeholder="04-01" value="${escapeHtml(d.start || '')}">
+                </label>
+                <label class="block">
+                    <span class="text-xs font-semibold text-muted uppercase tracking-wider">Sfârșit (LL-ZZ)</span>
+                    <input type="text" data-rep="end" class="mt-1 w-full px-3 py-2 border border-border rounded-lg bg-white" placeholder="10-31" value="${escapeHtml(d.end || '')}">
+                </label>
+                <label class="block md:col-span-4">
+                    <span class="text-xs font-semibold text-muted uppercase tracking-wider">Ultima intrare</span>
+                    <input type="text" data-rep="last_entry" class="mt-1 w-full px-3 py-2 border border-border rounded-lg bg-white" placeholder="18:30 — vânzarea online se blochează după" value="${escapeHtml(d.last_entry || '')}">
+                </label>
             </div>
-            <div class="text-right mt-2"><button type="button" data-rm class="text-xs text-rose-600 hover:bg-rose-100 px-2 py-1 rounded">🗑 Șterge</button></div>
-        `);
+            <div class="pt-2 border-t border-border">
+                <p class="text-xs font-semibold text-muted uppercase tracking-wider mb-2">Program pe zile</p>
+                <div class="space-y-2 season-days">${scheduleRows}</div>
+            </div>
+            <div class="text-right"><button type="button" data-rm class="text-xs text-rose-600 hover:bg-rose-100 px-2 py-1 rounded">🗑 Șterge sezon</button></div>
+        `;
+        const rm = wrap.querySelector('[data-rm]');
+        if (rm) rm.addEventListener('click', () => wrap.remove());
+        return wrap;
     }
 
     function makeGettingRow(d) {
@@ -1336,6 +1326,34 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             </div>
             <div class="text-right mt-2"><button type="button" data-rm class="text-xs text-rose-600 hover:bg-rose-100 px-2 py-1 rounded">🗑 Șterge</button></div>
         `);
+    }
+
+    function collectSeasons() {
+        const out = [];
+        const list = $('seasons-list');
+        if (!list) return out;
+        list.querySelectorAll(':scope > div').forEach((row) => {
+            const item = {};
+            row.querySelectorAll('[data-rep]').forEach((el) => {
+                const key = el.dataset.rep;
+                let val = el.value;
+                if (typeof val === 'string') val = val.trim();
+                if (val !== '' && val !== null && val !== undefined) item[key] = val;
+            });
+            // schedule_list: agreggate by data-day-key + data-day-field
+            const dayInputs = row.querySelectorAll('[data-day-key]');
+            const byDay = {};
+            dayInputs.forEach((el) => {
+                const day = el.dataset.dayKey;
+                const field = el.dataset.dayField;
+                if (!byDay[day]) byDay[day] = { day };
+                if (el.value) byDay[day][field] = el.value;
+            });
+            const scheduleList = Object.values(byDay).filter(s => s.open || s.close);
+            if (scheduleList.length > 0) item.schedule_list = scheduleList;
+            if (Object.keys(item).length > 0) out.push(item);
+        });
+        return out;
     }
 
     function collectRepeater(listId) {
@@ -1416,8 +1434,8 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         payload.map_pois = collectRepeater('pois-list');
         payload.nearby_hotels = collectRepeater('hotels-list');
         payload.flora_species = collectRepeater('flora-list');
-        payload.seasons = collectRepeater('seasons-list');
         payload.getting_there = collectRepeater('getting-list');
+        payload.seasons = collectSeasons();
 
         // Cast numeric fields in trails/hotels/POIs (Postgres expects numbers)
         payload.trails.forEach(t => {
