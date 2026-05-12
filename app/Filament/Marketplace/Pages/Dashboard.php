@@ -179,6 +179,28 @@ class Dashboard extends Page
                 ->count()
         );
 
+        // Pending artist accounts — status='pending' shows as "În review"
+        // in the ArtistAccountResource UI. Same visibility rules / cache
+        // window as support tickets above.
+        $pendingArtistAccounts = Cache::remember(
+            "mp_dash_artists_pending_{$marketplaceId}",
+            60,
+            fn () => \App\Models\MarketplaceArtistAccount::query()
+                ->where('marketplace_client_id', $marketplaceId)
+                ->where('status', 'pending')
+                ->orderByDesc('created_at')
+                ->limit(10)
+                ->get()
+        );
+        $pendingArtistAccountsCount = Cache::remember(
+            "mp_dash_artists_pending_count_{$marketplaceId}",
+            60,
+            fn () => \App\Models\MarketplaceArtistAccount::query()
+                ->where('marketplace_client_id', $marketplaceId)
+                ->where('status', 'pending')
+                ->count()
+        );
+
         return [
             'marketplace' => $marketplace,
             'isSuperAdmin' => Auth::guard('marketplace_admin')->user()?->isSuperAdmin() ?? false,
@@ -192,6 +214,8 @@ class Dashboard extends Page
             'pendingReviewEvents' => $pendingReviewEvents,
             'pendingSupportTickets' => $pendingSupportTickets,
             'pendingSupportTicketsCount' => $pendingSupportTicketsCount,
+            'pendingArtistAccounts' => $pendingArtistAccounts,
+            'pendingArtistAccountsCount' => $pendingArtistAccountsCount,
             'billing' => $billingData,
             'todayStats' => $todayStats,
             'prevYearChartData' => $prevYearChartData,

@@ -388,6 +388,9 @@ const AmbiletAPI = {
         if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/pos-sale/)) return 'organizer.event.leisure.pos-sale';
         if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/shifts\/\d+/)) return 'organizer.event.leisure.shifts.item';
         if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/shifts/)) return 'organizer.event.leisure.shifts.collection';
+        if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/products\/reorder/)) return 'organizer.event.leisure.products.reorder';
+        if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/products\/\d+/)) return 'organizer.event.leisure.products.item';
+        if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/products/)) return 'organizer.event.leisure.products.collection';
 
         if (endpoint.match(/\/organizer\/events\/\d+\/analytics/)) return 'organizer.event.analytics';
         if (endpoint.match(/\/organizer\/events\/\d+\/goals\/\d+$/)) return 'organizer.event.goal';
@@ -499,6 +502,11 @@ const AmbiletAPI = {
         const leisureShiftMatch = endpoint.match(/^\/organizer\/events\/(\d+)\/leisure\/shifts\/(\d+)/);
         if (leisureShiftMatch) {
             return `event=${encodeURIComponent(leisureShiftMatch[1])}&shift=${encodeURIComponent(leisureShiftMatch[2])}`;
+        }
+        // Extract event ID + product ID from leisure products CRUD
+        const leisureProductMatch = endpoint.match(/^\/organizer\/events\/(\d+)\/leisure\/products\/(\d+)/);
+        if (leisureProductMatch) {
+            return `event=${encodeURIComponent(leisureProductMatch[1])}&product=${encodeURIComponent(leisureProductMatch[2])}`;
         }
         // Extract event ID from leisure organizer endpoints
         const leisureMatch = endpoint.match(/^\/organizer\/events\/(\d+)\/leisure\//);

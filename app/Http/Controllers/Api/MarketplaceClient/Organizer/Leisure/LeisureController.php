@@ -936,6 +936,246 @@ class LeisureController extends BaseController
         return $this->success(['id' => $shift], 'Turnetă ștearsă');
     }
 
+    /**
+     * GET /marketplace-client/organizer/events/{event}/leisure/products
+     *
+     * Listă completă produse (TicketType) cu toate câmpurile editabile prin panou.
+     */
+    public function productsIndex(Request $request, int $event): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+        $marketplace = $organizer->marketplaceClient;
+
+        $eventModel = Event::query()
+            ->where('id', $event)
+            ->where('marketplace_client_id', $marketplace->id)
+            ->first();
+
+        if (!$eventModel) {
+            return $this->error('Event not found', 404);
+        }
+
+        $types = TicketType::query()
+            ->where('event_id', $eventModel->id)
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->get();
+
+        return $this->success([
+            'products' => $types->map(fn (TicketType $t) => $this->presentProduct($t))->all(),
+        ]);
+    }
+
+    /**
+     * POST /marketplace-client/organizer/events/{event}/leisure/products
+     */
+    public function productStore(Request $request, int $event): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+        $marketplace = $organizer->marketplaceClient;
+
+        $eventModel = Event::query()
+            ->where('id', $event)
+            ->where('marketplace_client_id', $marketplace->id)
+            ->first();
+
+        if (!$eventModel) {
+            return $this->error('Event not found', 404);
+        }
+
+        $data = $this->validateProduct($request);
+        $data['event_id'] = $eventModel->id;
+        $data['sort_order'] = (int) (TicketType::where('event_id', $eventModel->id)->max('sort_order') ?? 0) + 10;
+        $data['is_active'] = $data['is_active'] ?? true;
+
+        $meta = $this->extractProductMeta($request);
+        if ($meta !== null) $data['meta'] = $meta;
+
+        $tt = TicketType::create($data);
+
+        return $this->success(['product' => $this->presentProduct($tt)], 'Produs creat', 201);
+    }
+
+    /**
+     * PUT /marketplace-client/organizer/events/{event}/leisure/products/{product}
+     */
+    public function productUpdate(Request $request, int $event, int $product): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+        $marketplace = $organizer->marketplaceClient;
+
+        $eventModel = Event::query()
+            ->where('id', $event)
+            ->where('marketplace_client_id', $marketplace->id)
+            ->first();
+
+        if (!$eventModel) {
+            return $this->error('Event not found', 404);
+        }
+
+        $tt = TicketType::query()
+            ->where('id', $product)
+            ->where('event_id', $eventModel->id)
+            ->first();
+        if (!$tt) return $this->error('Product not found', 404);
+
+        $data = $this->validateProduct($request, $tt->id);
+
+        $meta = $this->extractProductMeta($request);
+        if ($meta !== null) {
+            $existing = is_array($tt->meta) ? $tt->meta : [];
+            $data['meta'] = array_merge($existing, $meta);
+        }
+
+        $tt->fill($data);
+        $tt->save();
+
+        return $this->success(['product' => $this->presentProduct($tt->fresh())], 'Produs actualizat');
+    }
+
+    /**
+     * DELETE /marketplace-client/organizer/events/{event}/leisure/products/{product}
+     */
+    public function productDestroy(Request $request, int $event, int $product): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+        $marketplace = $organizer->marketplaceClient;
+
+        $eventModel = Event::query()
+            ->where('id', $event)
+            ->where('marketplace_client_id', $marketplace->id)
+            ->first();
+        if (!$eventModel) return $this->error('Event not found', 404);
+
+        $tt = TicketType::query()
+            ->where('id', $product)
+            ->where('event_id', $eventModel->id)
+            ->first();
+        if (!$tt) return $this->error('Product not found', 404);
+
+        // Refuz ștergerea dacă există bilete emise (siguranță)
+        $issued = Ticket::where('ticket_type_id', $tt->id)->limit(1)->exists();
+        if ($issued) {
+            return $this->error('Există bilete emise pentru acest produs. Dezactivează în loc să ștergi.', 422);
+        }
+
+        $tt->delete();
+        return $this->success(['id' => $product], 'Produs șters');
+    }
+
+    /**
+     * POST /marketplace-client/organizer/events/{event}/leisure/products/reorder
+     * Body: { ids: [12, 5, 18, ...] }
+     */
+    public function productsReorder(Request $request, int $event): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+        $marketplace = $organizer->marketplaceClient;
+
+        $eventModel = Event::query()
+            ->where('id', $event)
+            ->where('marketplace_client_id', $marketplace->id)
+            ->first();
+        if (!$eventModel) return $this->error('Event not found', 404);
+
+        $validated = $request->validate(['ids' => 'required|array', 'ids.*' => 'integer']);
+        $order = 10;
+        foreach ($validated['ids'] as $id) {
+            TicketType::where('id', $id)->where('event_id', $eventModel->id)->update(['sort_order' => $order]);
+            $order += 10;
+        }
+        return $this->success(['count' => count($validated['ids'])], 'Ordine actualizată');
+    }
+
+    protected function validateProduct(Request $request, ?int $skipId = null): array
+    {
+        $rules = [
+            'name' => 'required|string|max:160',
+            'sku' => 'nullable|string|max:64',
+            'description' => 'nullable|string|max:2000',
+            'service_category' => 'nullable|in:access,parking,rental,activity,extra',
+            'issuing_company' => 'nullable|in:primary,secondary',
+            'price' => 'nullable|numeric|min:0|max:999999',
+            'price_max' => 'nullable|numeric|min:0|max:999999',
+            'currency' => 'nullable|string|size:3',
+            'capacity' => 'nullable|integer|min:0',
+            'daily_capacity' => 'nullable|integer|min:0',
+            'service_duration_minutes' => 'nullable|integer|min:0|max:1440',
+            'product_description' => 'nullable|string|max:10000',
+            'usage_terms' => 'nullable|string|max:10000',
+            'is_parking' => 'nullable|boolean',
+            'requires_vehicle_info' => 'nullable|boolean',
+            'requires_access_ticket' => 'nullable|boolean',
+            'is_active' => 'nullable|boolean',
+            'ticket_group' => 'nullable|string|max:64',
+            'min_per_order' => 'nullable|integer|min:0',
+            'max_per_order' => 'nullable|integer|min:0',
+            'sales_start_at' => 'nullable|date',
+            'sales_end_at' => 'nullable|date',
+            'valid_date' => 'nullable|date',
+        ];
+
+        $validated = $request->validate($rules);
+
+        // Conversie tipuri pentru tabel
+        $out = array_filter($validated, fn ($v) => $v !== null);
+
+        // price -> price_max (compat schema)
+        if (isset($out['price']) && !isset($out['price_max'])) {
+            $out['price_max'] = $out['price'];
+        }
+        if (!isset($out['currency'])) {
+            $out['currency'] = 'RON';
+        }
+
+        return $out;
+    }
+
+    protected function extractProductMeta(Request $request): ?array
+    {
+        $meta = $request->input('meta');
+        if (!is_array($meta)) return null;
+
+        // whitelist meta keys safe pentru organizer
+        $allowed = [
+            'icon', 'image', 'image_url', 'unit_label', 'includes',
+            'package_outputs', 'badge', 'color',
+        ];
+        return array_intersect_key($meta, array_flip($allowed));
+    }
+
+    protected function presentProduct(TicketType $t): array
+    {
+        return [
+            'id' => $t->id,
+            'name' => $t->name,
+            'sku' => $t->sku,
+            'description' => $t->description,
+            'service_category' => $t->effective_service_category,
+            'issuing_company' => $t->effective_issuing_company,
+            'price' => (float) ($t->price_max ?? $t->price ?? 0),
+            'price_max' => (float) ($t->price_max ?? 0),
+            'currency' => $t->currency,
+            'capacity' => $t->capacity,
+            'daily_capacity' => $t->daily_capacity,
+            'is_active' => (bool) $t->is_active,
+            'is_parking' => (bool) $t->is_parking,
+            'requires_vehicle_info' => (bool) $t->requires_vehicle_info,
+            'requires_access_ticket' => (bool) $t->requires_access_ticket,
+            'service_duration_minutes' => $t->service_duration_minutes,
+            'product_description' => $t->product_description,
+            'usage_terms' => $t->usage_terms,
+            'ticket_group' => $t->ticket_group,
+            'min_per_order' => $t->min_per_order,
+            'max_per_order' => $t->max_per_order,
+            'sales_start_at' => optional($t->sales_start_at)->toIso8601String(),
+            'sales_end_at' => optional($t->sales_end_at)->toIso8601String(),
+            'valid_date' => optional($t->valid_date)->toDateString(),
+            'sort_order' => $t->sort_order,
+            'meta' => is_array($t->meta) ? $t->meta : (object) [],
+        ];
+    }
+
     protected function emptyBucket(): array
     {
         return [

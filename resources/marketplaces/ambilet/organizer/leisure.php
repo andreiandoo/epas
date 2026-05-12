@@ -24,6 +24,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             <!-- Tab switcher -->
             <div class="inline-flex rounded-xl bg-white border border-border p-1">
                 <button type="button" id="tab-btn-overview" class="px-4 py-2 text-sm font-medium rounded-lg transition-colors bg-primary text-white">Sumar & raport</button>
+                <button type="button" id="tab-btn-products" class="px-4 py-2 text-sm font-medium rounded-lg transition-colors text-muted hover:bg-slate-50">🎫 Produse</button>
                 <button type="button" id="tab-btn-content" class="px-4 py-2 text-sm font-medium rounded-lg transition-colors text-muted hover:bg-slate-50">Conținut pagină</button>
             </div>
         </div>
@@ -54,6 +55,122 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         <div id="leisure-loading" class="p-8 text-center">
             <div class="inline-block w-6 h-6 border-2 rounded-full border-primary border-t-transparent animate-spin"></div>
             <p class="mt-2 text-sm text-muted">Se încarcă...</p>
+        </div>
+
+        <!-- Tab: Produse (initial hidden) -->
+        <div id="tab-products" class="hidden space-y-6">
+            <div class="p-5 bg-white border rounded-2xl border-border flex flex-wrap items-center justify-between gap-3">
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 bg-primary/10 text-primary rounded-xl flex items-center justify-center">🎫</div>
+                    <div>
+                        <h2 class="text-lg font-bold text-secondary">Bilete și servicii</h2>
+                        <p class="text-xs text-muted">Adaugă, editează sau dezactivează produsele oferite la locație.</p>
+                    </div>
+                </div>
+                <button type="button" id="pr-add-btn" class="px-4 py-2 bg-primary text-white font-semibold rounded-lg hover:bg-primary-dark">+ Adaugă produs</button>
+            </div>
+
+            <div id="pr-loading" class="p-8 text-center"><div class="inline-block w-6 h-6 border-2 rounded-full border-primary border-t-transparent animate-spin"></div></div>
+            <div id="pr-empty" class="hidden p-8 text-center bg-white border rounded-2xl border-border text-muted">Niciun produs încă. Apasă „Adaugă produs" ca să creezi primul bilet.</div>
+            <div id="pr-list" class="hidden space-y-3"></div>
+        </div>
+
+        <!-- Modal produs -->
+        <div id="pr-modal" class="hidden fixed inset-0 bg-black/50 z-50 items-center justify-center p-4 overflow-y-auto">
+            <div class="bg-white rounded-2xl border border-border max-w-2xl w-full my-8 p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 id="pr-modal-title" class="font-bold text-secondary text-xl">Produs</h3>
+                    <button type="button" id="pr-modal-close" class="text-muted hover:text-secondary text-2xl leading-none">×</button>
+                </div>
+                <div class="grid md:grid-cols-2 gap-4">
+                    <label class="block md:col-span-2">
+                        <span class="text-xs font-semibold text-muted uppercase tracking-wider">Nume *</span>
+                        <input id="pr-f-name" type="text" class="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg" placeholder="ex: Bilet adult, Parcare auto, Ghidaj…">
+                    </label>
+                    <label class="block">
+                        <span class="text-xs font-semibold text-muted uppercase tracking-wider">Categorie serviciu *</span>
+                        <select id="pr-f-category" class="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg">
+                            <option value="access">🎟️ Acces (bilet intrare)</option>
+                            <option value="parking">🚗 Parcare</option>
+                            <option value="rental">🛶 Închiriere echipament</option>
+                            <option value="activity">🎯 Activitate cu operator</option>
+                            <option value="extra">➕ Extra</option>
+                        </select>
+                    </label>
+                    <label class="block">
+                        <span class="text-xs font-semibold text-muted uppercase tracking-wider">Societate emitentă</span>
+                        <select id="pr-f-issuer" class="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg">
+                            <option value="primary">Principală</option>
+                            <option value="secondary">Secundară</option>
+                        </select>
+                    </label>
+                    <label class="block">
+                        <span class="text-xs font-semibold text-muted uppercase tracking-wider">Preț (RON) *</span>
+                        <input id="pr-f-price" type="number" min="0" step="0.01" class="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg" placeholder="0.00">
+                    </label>
+                    <label class="block">
+                        <span class="text-xs font-semibold text-muted uppercase tracking-wider">Stoc total (opțional)</span>
+                        <input id="pr-f-capacity" type="number" min="0" class="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg" placeholder="lăsa gol = nelimitat">
+                    </label>
+                    <label class="block">
+                        <span class="text-xs font-semibold text-muted uppercase tracking-wider">Capacitate zilnică (opțional)</span>
+                        <input id="pr-f-dailycap" type="number" min="0" class="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg" placeholder="ex: 500">
+                    </label>
+                    <label class="block">
+                        <span class="text-xs font-semibold text-muted uppercase tracking-wider">Durată serviciu (min)</span>
+                        <input id="pr-f-duration" type="number" min="0" class="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg" placeholder="ex: 60">
+                    </label>
+                    <label class="block">
+                        <span class="text-xs font-semibold text-muted uppercase tracking-wider">Iconiță (emoji)</span>
+                        <input id="pr-f-icon" type="text" maxlength="6" class="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg" placeholder="🎟️">
+                    </label>
+                    <label class="block">
+                        <span class="text-xs font-semibold text-muted uppercase tracking-wider">Etichetă unitate</span>
+                        <input id="pr-f-unit" type="text" class="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg" placeholder="bilet, persoană, oră, zi…">
+                    </label>
+                    <label class="block md:col-span-2">
+                        <span class="text-xs font-semibold text-muted uppercase tracking-wider">URL imagine card (opțional)</span>
+                        <input id="pr-f-image" type="url" class="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg" placeholder="https://...">
+                    </label>
+                    <label class="block md:col-span-2">
+                        <span class="text-xs font-semibold text-muted uppercase tracking-wider">Descriere scurtă</span>
+                        <textarea id="pr-f-description" rows="2" class="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg" placeholder="Descriere..."></textarea>
+                    </label>
+                    <label class="block md:col-span-2">
+                        <span class="text-xs font-semibold text-muted uppercase tracking-wider">Include (un element per linie)</span>
+                        <textarea id="pr-f-includes" rows="3" class="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg" placeholder="Acces toată ziua&#10;Hartă tipărită&#10;Apă gratuită"></textarea>
+                    </label>
+                    <label class="block md:col-span-2">
+                        <span class="text-xs font-semibold text-muted uppercase tracking-wider">Termeni utilizare</span>
+                        <textarea id="pr-f-terms" rows="2" class="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg" placeholder="Condiții, restricții..."></textarea>
+                    </label>
+                    <div class="md:col-span-2 grid grid-cols-2 md:grid-cols-4 gap-3">
+                        <label class="flex items-center gap-2 text-sm">
+                            <input id="pr-f-active" type="checkbox" class="w-4 h-4 accent-primary">
+                            <span>Activ</span>
+                        </label>
+                        <label class="flex items-center gap-2 text-sm">
+                            <input id="pr-f-parking" type="checkbox" class="w-4 h-4 accent-primary">
+                            <span>E parcare</span>
+                        </label>
+                        <label class="flex items-center gap-2 text-sm">
+                            <input id="pr-f-vehicle" type="checkbox" class="w-4 h-4 accent-primary">
+                            <span>Cere date vehicul</span>
+                        </label>
+                        <label class="flex items-center gap-2 text-sm">
+                            <input id="pr-f-reqaccess" type="checkbox" class="w-4 h-4 accent-primary">
+                            <span>Necesită bilet acces</span>
+                        </label>
+                    </div>
+                </div>
+                <div class="mt-6 flex justify-between gap-2">
+                    <button id="pr-f-delete" type="button" class="hidden px-3 py-2 text-sm text-rose-600 hover:bg-rose-50 rounded-lg">🗑 Șterge</button>
+                    <div class="ml-auto flex gap-2">
+                        <button id="pr-f-cancel" type="button" class="px-3 py-2 text-sm border border-border rounded-lg hover:bg-slate-50">Renunță</button>
+                        <button id="pr-f-save" type="button" class="px-5 py-2 text-sm bg-primary text-white font-semibold rounded-lg hover:bg-primary-dark">Salvează</button>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- Tab: Conținut pagină (initial hidden) -->
@@ -461,38 +578,201 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
     // ========== TAB SWITCHING ==========
     function setupTabs() {
         const btnOverview = $('tab-btn-overview');
+        const btnProducts = $('tab-btn-products');
         const btnContent = $('tab-btn-content');
         const overview = $('leisure-content');
+        const products = $('tab-products');
         const content = $('tab-content');
-        const loading = $('leisure-loading');
-        const picker = $('leisure-event-picker');
         const empty = $('leisure-empty');
 
         if (!btnOverview || !btnContent) return;
 
+        const tabs = [
+            { btn: btnOverview, panel: overview, key: 'overview' },
+            { btn: btnProducts, panel: products, key: 'products' },
+            { btn: btnContent, panel: content, key: 'content' },
+        ];
+
         function activate(which) {
+            tabs.forEach(t => {
+                if (!t.btn) return;
+                const sel = t.key === which;
+                t.btn.classList.toggle('bg-primary', sel);
+                t.btn.classList.toggle('text-white', sel);
+                t.btn.classList.toggle('text-muted', !sel);
+                t.btn.classList.toggle('hover:bg-slate-50', !sel);
+                if (t.panel) t.panel.classList.toggle('hidden', !sel);
+            });
+            empty.classList.add('hidden');
             if (which === 'overview') {
-                btnOverview.classList.add('bg-primary', 'text-white');
-                btnOverview.classList.remove('text-muted', 'hover:bg-slate-50');
-                btnContent.classList.remove('bg-primary', 'text-white');
-                btnContent.classList.add('text-muted', 'hover:bg-slate-50');
-                content.classList.add('hidden');
-                if (leisureEvents.length === 0) { empty.classList.remove('hidden'); }
-                else if (currentEventId) { overview.classList.remove('hidden'); }
-            } else {
-                btnContent.classList.add('bg-primary', 'text-white');
-                btnContent.classList.remove('text-muted', 'hover:bg-slate-50');
-                btnOverview.classList.remove('bg-primary', 'text-white');
-                btnOverview.classList.add('text-muted', 'hover:bg-slate-50');
-                overview.classList.add('hidden');
-                empty.classList.add('hidden');
-                content.classList.remove('hidden');
+                if (leisureEvents.length === 0) { empty.classList.remove('hidden'); overview.classList.add('hidden'); }
+                else if (!currentEventId) overview.classList.add('hidden');
+            } else if (which === 'products') {
+                loadProducts();
+            } else if (which === 'content') {
                 hydrateContentForm();
             }
         }
 
         btnOverview.addEventListener('click', () => activate('overview'));
+        if (btnProducts) btnProducts.addEventListener('click', () => activate('products'));
         btnContent.addEventListener('click', () => activate('content'));
+    }
+
+    // ========== PRODUCTS CRUD ==========
+    let productsCache = [];
+    let editingProductId = null;
+
+    const CAT_LABEL = { access: '🎟️ Acces', parking: '🚗 Parcare', rental: '🛶 Închiriere', activity: '🎯 Activitate', extra: '➕ Extra' };
+    const CAT_COLOR = { access: 'blue', parking: 'violet', rental: 'amber', activity: 'emerald', extra: 'slate' };
+
+    async function loadProducts() {
+        if (!currentEventId) return;
+        $('pr-loading').classList.remove('hidden');
+        $('pr-list').classList.add('hidden');
+        $('pr-empty').classList.add('hidden');
+        try {
+            const res = await AmbiletAPI.get(`/organizer/events/${currentEventId}/leisure/products`);
+            productsCache = res.data?.products || [];
+            renderProducts();
+        } catch (e) {
+            console.error('[leisure-products] load failed', e);
+            $('pr-empty').textContent = 'Eroare: ' + (e?.message || '');
+            $('pr-empty').classList.remove('hidden');
+        } finally {
+            $('pr-loading').classList.add('hidden');
+        }
+    }
+
+    function renderProducts() {
+        if (!productsCache.length) {
+            $('pr-empty').classList.remove('hidden');
+            $('pr-list').classList.add('hidden');
+            return;
+        }
+        $('pr-empty').classList.add('hidden');
+        $('pr-list').classList.remove('hidden');
+        $('pr-list').innerHTML = productsCache.map(p => {
+            const cat = p.service_category || 'access';
+            const color = CAT_COLOR[cat] || 'slate';
+            const icon = (p.meta?.icon) || '';
+            const inactive = !p.is_active;
+            return `<div class="bg-white border rounded-2xl border-border ${inactive ? 'opacity-60' : ''}">
+                <div class="px-5 py-4 flex items-center gap-4">
+                    <div class="text-2xl">${icon || '🎫'}</div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <span class="font-bold text-secondary truncate">${escapeHtml(p.name)}</span>
+                            <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-${color}-100 text-${color}-800">${CAT_LABEL[cat] || cat}</span>
+                            <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-slate-100 text-slate-700">${p.issuing_company === 'secondary' ? 'SC2' : 'SC1'}</span>
+                            ${inactive ? '<span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-100 text-rose-700">INACTIV</span>' : ''}
+                        </div>
+                        ${p.description ? `<div class="text-xs text-muted mt-0.5 truncate">${escapeHtml(p.description)}</div>` : ''}
+                        <div class="text-xs text-muted mt-1">
+                            ${p.daily_capacity ? `📅 ${p.daily_capacity}/zi · ` : ''}${p.capacity ? `Stoc total: ${p.capacity}` : 'Stoc nelimitat'}
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-xl font-bold text-${color}-700">${Number(p.price).toFixed(2)}</div>
+                        <div class="text-[10px] text-muted">${p.currency || 'RON'} / ${(p.meta?.unit_label) || 'buc'}</div>
+                    </div>
+                    <button data-edit-id="${p.id}" class="ml-2 px-3 py-1.5 text-xs font-medium border border-border rounded-lg hover:bg-slate-50">Editează</button>
+                </div>
+            </div>`;
+        }).join('');
+        $('pr-list').querySelectorAll('button[data-edit-id]').forEach(btn => {
+            btn.addEventListener('click', () => openProductModal(parseInt(btn.dataset.editId, 10)));
+        });
+    }
+
+    function openProductModal(id) {
+        editingProductId = id;
+        const p = id ? productsCache.find(x => x.id === id) : null;
+        $('pr-modal-title').textContent = p ? 'Editează produs' : 'Adaugă produs';
+        $('pr-f-name').value = p?.name || '';
+        $('pr-f-category').value = p?.service_category || 'access';
+        $('pr-f-issuer').value = p?.issuing_company || 'primary';
+        $('pr-f-price').value = p ? Number(p.price).toFixed(2) : '';
+        $('pr-f-capacity').value = p?.capacity || '';
+        $('pr-f-dailycap').value = p?.daily_capacity || '';
+        $('pr-f-duration').value = p?.service_duration_minutes || '';
+        $('pr-f-icon').value = p?.meta?.icon || '';
+        $('pr-f-unit').value = p?.meta?.unit_label || '';
+        $('pr-f-image').value = p?.meta?.image || p?.meta?.image_url || '';
+        $('pr-f-description').value = p?.description || '';
+        $('pr-f-includes').value = Array.isArray(p?.meta?.includes) ? p.meta.includes.join('\n') : (p?.meta?.includes || '');
+        $('pr-f-terms').value = p?.usage_terms || '';
+        $('pr-f-active').checked = p ? !!p.is_active : true;
+        $('pr-f-parking').checked = p ? !!p.is_parking : false;
+        $('pr-f-vehicle').checked = p ? !!p.requires_vehicle_info : false;
+        $('pr-f-reqaccess').checked = p ? !!p.requires_access_ticket : false;
+        $('pr-f-delete').classList.toggle('hidden', !p);
+        $('pr-modal').classList.remove('hidden');
+        $('pr-modal').classList.add('flex');
+    }
+    function closeProductModal() {
+        $('pr-modal').classList.add('hidden');
+        $('pr-modal').classList.remove('flex');
+        editingProductId = null;
+    }
+
+    async function saveProduct() {
+        const includesText = $('pr-f-includes').value.trim();
+        const includes = includesText ? includesText.split('\n').map(s => s.trim()).filter(Boolean) : [];
+        const body = {
+            name: $('pr-f-name').value.trim(),
+            service_category: $('pr-f-category').value,
+            issuing_company: $('pr-f-issuer').value,
+            price: parseFloat($('pr-f-price').value) || 0,
+            capacity: $('pr-f-capacity').value ? parseInt($('pr-f-capacity').value, 10) : null,
+            daily_capacity: $('pr-f-dailycap').value ? parseInt($('pr-f-dailycap').value, 10) : null,
+            service_duration_minutes: $('pr-f-duration').value ? parseInt($('pr-f-duration').value, 10) : null,
+            description: $('pr-f-description').value.trim() || null,
+            usage_terms: $('pr-f-terms').value.trim() || null,
+            is_active: $('pr-f-active').checked,
+            is_parking: $('pr-f-parking').checked,
+            requires_vehicle_info: $('pr-f-vehicle').checked,
+            requires_access_ticket: $('pr-f-reqaccess').checked,
+            meta: {
+                icon: $('pr-f-icon').value.trim() || null,
+                unit_label: $('pr-f-unit').value.trim() || null,
+                image: $('pr-f-image').value.trim() || null,
+                includes,
+            },
+        };
+        if (!body.name) { alert('Numele produsului e obligatoriu.'); return; }
+        try {
+            if (editingProductId) {
+                await AmbiletAPI.put(`/organizer/events/${currentEventId}/leisure/products/${editingProductId}`, body);
+            } else {
+                await AmbiletAPI.post(`/organizer/events/${currentEventId}/leisure/products`, body);
+            }
+            closeProductModal();
+            loadProducts();
+        } catch (e) {
+            alert('Eroare salvare: ' + (e?.message || ''));
+        }
+    }
+
+    async function deleteProduct() {
+        if (!editingProductId) return;
+        if (!confirm('Sigur ștergi acest produs? (Dacă există bilete vândute deja, doar dezactivează-l.)')) return;
+        try {
+            await AmbiletAPI.delete(`/organizer/events/${currentEventId}/leisure/products/${editingProductId}`);
+            closeProductModal();
+            loadProducts();
+        } catch (e) {
+            alert('Eroare ștergere: ' + (e?.message || ''));
+        }
+    }
+
+    function setupProductsHandlers() {
+        const addBtn = $('pr-add-btn'); if (addBtn) addBtn.addEventListener('click', () => openProductModal(null));
+        const closeBtn = $('pr-modal-close'); if (closeBtn) closeBtn.addEventListener('click', closeProductModal);
+        const cancelBtn = $('pr-f-cancel'); if (cancelBtn) cancelBtn.addEventListener('click', closeProductModal);
+        const saveBtn = $('pr-f-save'); if (saveBtn) saveBtn.addEventListener('click', saveProduct);
+        const delBtn = $('pr-f-delete'); if (delBtn) delBtn.addEventListener('click', deleteProduct);
+        const modal = $('pr-modal'); if (modal) modal.addEventListener('click', (e) => { if (e.target === modal) closeProductModal(); });
     }
 
     // ========== CONTENT EDITOR ==========
@@ -663,6 +943,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         });
         $('vc-save-btn')?.addEventListener('click', () => saveContent());
         setupTabs();
+        setupProductsHandlers();
     });
 
     window.addEventListener('load', async () => {

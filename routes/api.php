@@ -1814,6 +1814,23 @@ Route::prefix('marketplace-client/organizer')->middleware(['throttle:120,1', 'ma
             ->whereNumber('event')->whereNumber('shift')
             ->name('api.marketplace-client.organizer.leisure.shifts.destroy');
 
+        // Leisure products (TicketType CRUD din panou organizer)
+        Route::get('/events/{event}/leisure/products', [OrganizerLeisureController::class, 'productsIndex'])
+            ->whereNumber('event')
+            ->name('api.marketplace-client.organizer.leisure.products.index');
+        Route::post('/events/{event}/leisure/products', [OrganizerLeisureController::class, 'productStore'])
+            ->whereNumber('event')
+            ->name('api.marketplace-client.organizer.leisure.products.store');
+        Route::post('/events/{event}/leisure/products/reorder', [OrganizerLeisureController::class, 'productsReorder'])
+            ->whereNumber('event')
+            ->name('api.marketplace-client.organizer.leisure.products.reorder');
+        Route::put('/events/{event}/leisure/products/{product}', [OrganizerLeisureController::class, 'productUpdate'])
+            ->whereNumber('event')->whereNumber('product')
+            ->name('api.marketplace-client.organizer.leisure.products.update');
+        Route::delete('/events/{event}/leisure/products/{product}', [OrganizerLeisureController::class, 'productDestroy'])
+            ->whereNumber('event')->whereNumber('product')
+            ->name('api.marketplace-client.organizer.leisure.products.destroy');
+
         // Organizer Documents (Cerere avizare, Declaratie impozite)
         Route::get('/documents', [OrganizerDocumentController::class, 'index'])
             ->name('api.marketplace-client.organizer.documents');
