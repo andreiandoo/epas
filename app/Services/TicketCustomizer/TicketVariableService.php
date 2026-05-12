@@ -142,11 +142,25 @@ class TicketVariableService
                         'example' => '19:00 – 22:00',
                     ],
                     [
+                        'path' => 'date.time_label',
+                        'label' => 'Event Time (with label)',
+                        'description' => 'Labelled time: "Ora: 19:00 – 22:00" when time exists, empty string when it does not. Put on its own line in the template — disappears cleanly when missing.',
+                        'type' => 'string',
+                        'example' => 'Ora: 19:00 – 22:00',
+                    ],
+                    [
                         'path' => 'date.doors_open',
                         'label' => 'Doors Open Time',
                         'description' => 'Time when doors open',
                         'type' => 'time',
                         'example' => '19:00',
+                    ],
+                    [
+                        'path' => 'date.doors_label',
+                        'label' => 'Doors (with label)',
+                        'description' => 'Labelled doors time: "Doors: 18:00" when set, empty string when not. Put on its own line — disappears cleanly when missing.',
+                        'type' => 'string',
+                        'example' => 'Doors: 18:00',
                     ],
                     [
                         'path' => 'date.day_name',
@@ -508,15 +522,17 @@ class TicketVariableService
             ],
             'date' => [
                 'start' => '2025-07-15',
-                'start_formatted' => 'July 15, 2025',
+                'start_formatted' => '15 iulie 2025',
                 'end' => '',
                 'end_formatted' => '',
                 'time' => '20:00',
                 'end_time' => '23:00',
                 'time_range' => '20:00 – 23:00',
+                'time_label' => 'Ora: 20:00 – 23:00',
                 'doors_open' => '18:00',
-                'day_name' => 'Saturday',
-                'full_text' => 'Saturday | July 15, 2025 | Ora: 20:00 – 23:00 | Doors: 18:00',
+                'doors_label' => 'Doors: 18:00',
+                'day_name' => 'Sâmbătă',
+                'full_text' => 'Sâmbătă | 15 iulie 2025 | Ora: 20:00 – 23:00 | Doors: 18:00',
             ],
             'ticket' => [
                 'type' => 'VIP Access',
@@ -712,9 +728,19 @@ class TicketVariableService
         // Build computed date display values
         $startFormatted = $formatDateOrRange($eventDate, $isRangeDisplay ? $endDate : null);
         $endFormatted = $endDate ? $endDate->locale('ro')->translatedFormat('j F Y') : '';
-        $dayName = ($eventDate && !$isRangeDisplay) ? $eventDate->locale('ro')->dayName : '';
         $dateStartRaw = $eventDate ? $eventDate->format('Y-m-d') : '';
         $dateEndRaw = $endDate ? $endDate->format('Y-m-d') : '';
+
+        // Carbon's ->locale('ro')->dayName silently falls back to English on
+        // some setups (depends on intl + ICU data being loaded). Explicit
+        // map guarantees Romanian regardless of server config.
+        $dayNamesRo = [
+            'Monday' => 'Luni', 'Tuesday' => 'Marți', 'Wednesday' => 'Miercuri',
+            'Thursday' => 'Joi', 'Friday' => 'Vineri', 'Saturday' => 'Sâmbătă', 'Sunday' => 'Duminică',
+        ];
+        $dayName = ($eventDate && !$isRangeDisplay)
+            ? ($dayNamesRo[$eventDate->format('l')] ?? '')
+            : '';
 
         // Smart time range: "19:00 – 22:00" if both set, "19:00" if just
         // start, "" if neither. Useful when a template wants a single
@@ -726,6 +752,13 @@ class TicketVariableService
         } else {
             $timeRange = '';
         }
+
+        // Labelled variants — exposed as separate variables so templates
+        // can put them on their own line / styled differently. Empty when
+        // the underlying value is empty, so the template doesn't end up
+        // with a dangling "Ora: " or "Doors: ".
+        $timeLabel = $timeRange !== '' ? 'Ora: ' . $timeRange : '';
+        $doorsLabel = $doorTime !== '' ? 'Doors: ' . $doorTime : '';
 
         // Smart combined text — what most ticket templates actually want to
         // show as a single date line. Skips empty parts so the template
@@ -801,7 +834,9 @@ class TicketVariableService
                 'time' => $startTime,
                 'end_time' => $endTime,
                 'time_range' => $timeRange,
+                'time_label' => $timeLabel,
                 'doors_open' => $doorTime,
+                'doors_label' => $doorsLabel,
                 'day_name' => $dayName,
                 'full_text' => $fullText,
             ],
