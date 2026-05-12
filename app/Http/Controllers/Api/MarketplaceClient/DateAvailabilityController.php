@@ -204,12 +204,26 @@ class DateAvailabilityController extends BaseController
             $ticketData[] = $ttData;
         }
 
+        // Comision la nivel de organizator (folosit la cart pentru calcul live)
+        $commission = ['rate' => 0.0, 'fixed' => 0.0, 'mode' => 'included'];
+        if ($event->marketplace_organizer_id) {
+            $org = \App\Models\MarketplaceOrganizer::find($event->marketplace_organizer_id);
+            if ($org) {
+                $commission = [
+                    'rate' => (float) $org->getEffectiveCommissionRate(),
+                    'fixed' => (float) ($org->fixed_commission_default ?? 0),
+                    'mode' => $org->getEffectiveCommissionMode(),
+                ];
+            }
+        }
+
         return response()->json([
             'date' => $dateStr,
             'is_open' => true,
             'past_last_entry' => $pastLastEntry,
             'operating_hours' => $operatingHours,
             'season' => $season ? ['name' => $season['name'] ?? null] : null,
+            'commission' => $commission,
             'ticket_types' => $ticketData,
         ]);
     }

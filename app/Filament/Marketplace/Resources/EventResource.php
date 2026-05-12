@@ -728,12 +728,12 @@ class EventResource extends Resource
                                 // ========== TAB 2: PROGRAM ==========
                                 SC\Tabs\Tab::make($t('Program', 'Schedule'))
                                     ->key('program')
-                                    ->visible(fn (SGet $get) => ($get('display_template') ?? 'standard') !== 'leisure_venue')
                                     ->icon('heroicon-o-calendar')
                                     ->lazy()
                                     ->schema([
-                        // SCHEDULE
+                        // SCHEDULE — ascuns pentru leisure_venue (folosesc venue_config.seasons in tab-ul propriu)
                         SC\Section::make($t('Program', 'Schedule'))
+                            ->visible(fn (SGet $get) => ($get('display_template') ?? 'standard') !== 'leisure_venue')
                             ->schema([
                                 Forms\Components\Radio::make('duration_mode')
                                     ->label($t('Durată', 'Duration'))
