@@ -105,14 +105,12 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 
     function fmtDate(iso) {
         if (!iso) return '—';
-        try { return new Date(iso).toLocaleString('ro-RO', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }); }
-        catch { return iso; }
+        return (window.AmbiletFmt?.datetime(iso)) || iso;
     }
 
     function fmtDay(iso) {
         if (!iso) return '—';
-        try { return new Date(iso + 'T00:00:00').toLocaleDateString('ro-RO', { day: '2-digit', month: 'short', year: 'numeric' }); }
-        catch { return iso; }
+        return (window.AmbiletFmt?.date(iso)) || iso;
     }
 
     function statusBadge(s) {

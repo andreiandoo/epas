@@ -10,6 +10,81 @@
             currency: 'RON',
             currencySymbol: 'lei'
         };
+
+        // Flatpickr — calendar custom DD/MM/YYYY pe orice <input type="date">
+        (function () {
+            if (document.getElementById('ambilet-flatpickr-css')) return;
+            const css = document.createElement('link');
+            css.id = 'ambilet-flatpickr-css';
+            css.rel = 'stylesheet';
+            css.href = 'https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css';
+            document.head.appendChild(css);
+            const js = document.createElement('script');
+            js.src = 'https://cdn.jsdelivr.net/npm/flatpickr';
+            js.onload = () => {
+                const ro = document.createElement('script');
+                ro.src = 'https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/ro.js';
+                ro.onload = () => initFlatpickrs();
+                document.head.appendChild(ro);
+            };
+            document.head.appendChild(js);
+        })();
+        function initFlatpickrs() {
+            if (typeof flatpickr === 'undefined') return;
+            const apply = () => document.querySelectorAll('input[type="date"]:not(.fp-bound)').forEach((el) => {
+                el.classList.add('fp-bound');
+                flatpickr(el, {
+                    dateFormat: 'Y-m-d',
+                    altInput: true,
+                    altFormat: 'd/m/Y',
+                    locale: window.flatpickr?.l10ns?.ro || undefined,
+                    allowInput: true,
+                });
+            });
+            apply();
+            // Observer pentru elemente noi adăugate dinamic (modale, repeatere)
+            const obs = new MutationObserver(() => apply());
+            obs.observe(document.body, { childList: true, subtree: true });
+        }
+
+        // Helpers globale pentru formatare data DD/MM/YYYY (locale ro)
+        window.AmbiletFmt = {
+            _pad: (n) => String(n).padStart(2, '0'),
+            // "2026-05-12" or ISO → "12/05/2026"
+            date: function (input) {
+                if (!input) return '';
+                let d;
+                if (input instanceof Date) d = input;
+                else if (typeof input === 'string') {
+                    // YYYY-MM-DD plain date → parse local
+                    if (/^\d{4}-\d{2}-\d{2}$/.test(input)) d = new Date(input + 'T00:00:00');
+                    else d = new Date(input);
+                } else d = new Date(input);
+                if (isNaN(d)) return '';
+                return this._pad(d.getDate()) + '/' + this._pad(d.getMonth() + 1) + '/' + d.getFullYear();
+            },
+            // ISO datetime → "12/05/2026 14:30"
+            datetime: function (input) {
+                if (!input) return '';
+                const d = input instanceof Date ? input : new Date(input);
+                if (isNaN(d)) return '';
+                return this.date(d) + ' ' + this._pad(d.getHours()) + ':' + this._pad(d.getMinutes());
+            },
+            // ISO time → "14:30"
+            time: function (input) {
+                if (!input) return '';
+                const d = input instanceof Date ? input : new Date(input);
+                if (isNaN(d)) return '';
+                return this._pad(d.getHours()) + ':' + this._pad(d.getMinutes());
+            },
+            // "12 mai 2026"
+            longDate: function (input) {
+                if (!input) return '';
+                const d = input instanceof Date ? input : new Date(typeof input === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(input) ? (input + 'T00:00:00') : input);
+                if (isNaN(d)) return '';
+                return d.toLocaleDateString('ro-RO', { day: '2-digit', month: 'long', year: 'numeric' });
+            },
+        };
     </script>
     <script defer src="<?= asset('assets/js/config.js') ?>"></script>
     <!-- Utilities -->

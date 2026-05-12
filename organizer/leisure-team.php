@@ -124,10 +124,10 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         return r;
     }
 
-    function fmtDay(d) { return d.toLocaleDateString('ro-RO', { day: '2-digit', month: 'short' }); }
+    function fmtDay(d) { return (window.AmbiletFmt?.date(d)) || d.toLocaleDateString('ro-RO'); }
     function fmtWeekLabel(s) {
         const end = new Date(s); end.setDate(end.getDate() + 6);
-        return `${fmtDay(s)} → ${fmtDay(end)}, ${s.getFullYear()}`;
+        return `${fmtDay(s)} → ${fmtDay(end)}`;
     }
     function isoDate(d) { return d.toISOString().slice(0,10); }
     function toLocalDateTime(d) {

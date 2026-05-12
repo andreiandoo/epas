@@ -208,8 +208,8 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             ${iss.address ? `<div style="text-align:center;font-size:9px;margin-bottom:2mm">${iss.address}</div>` : ''}
             <div class="sep"></div>
             <div class="row"><span>Comandă:</span><span>${o.order_number || ''}</span></div>
-            <div class="row"><span>Dată:</span><span>${o.paid_at ? new Date(o.paid_at).toLocaleString('ro-RO') : new Date().toLocaleString('ro-RO')}</span></div>
-            <div class="row"><span>Vizită:</span><span>${o.visit_date || ''}</span></div>
+            <div class="row"><span>Dată:</span><span>${window.AmbiletFmt ? AmbiletFmt.datetime(o.paid_at || new Date()) : new Date().toLocaleString('ro-RO')}</span></div>
+            <div class="row"><span>Vizită:</span><span>${o.visit_date ? (AmbiletFmt?.date(o.visit_date) || o.visit_date) : ''}</span></div>
             ${c.name ? `<div class="row"><span>Client:</span><span>${c.name}</span></div>` : ''}
             <div class="sep"></div>
             ${lines}
