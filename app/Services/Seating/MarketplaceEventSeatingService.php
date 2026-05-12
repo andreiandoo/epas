@@ -494,6 +494,63 @@ class MarketplaceEventSeatingService
      * @param array $seatLabels
      * @return int Number of seats blocked
      */
+    /**
+     * Re-sync section_name / row_label / seat_label on event_seats from the
+     * current base layout (seating_sections / seating_rows / seating_seats).
+     *
+     * Why this exists: the snapshot taken at event_seating creation freezes
+     * labels at that moment. If an admin later renames a row or section in
+     * the layout designer, the event's blocked-seats / sales views keep
+     * showing the OLD label even though the source has changed. This
+     * method preserves status (blocked, sold, held, ...) and the seat_uid,
+     * but refreshes the human-readable labels.
+     *
+     * Returns the number of event_seats rows whose labels actually moved.
+     */
+    public function resyncLabelsFromLayout(int $eventSeatingId): int
+    {
+        $eventSeating = EventSeatingLayout::find($eventSeatingId);
+        if (!$eventSeating || !$eventSeating->layout_id) {
+            return 0;
+        }
+
+        // Build seat_uid → (section_name, row_label, seat_label) from the
+        // current base layout. One JOIN trip beats N queries per seat.
+        $current = \App\Models\Seating\SeatingSeat::query()
+            ->join('seating_rows', 'seating_rows.id', '=', 'seating_seats.row_id')
+            ->join('seating_sections', 'seating_sections.id', '=', 'seating_rows.section_id')
+            ->where('seating_sections.layout_id', $eventSeating->layout_id)
+            ->get([
+                'seating_seats.seat_uid',
+                'seating_rows.label as r_label',
+                'seating_seats.label as s_label',
+                'seating_sections.name as sec_name',
+            ])
+            ->keyBy('seat_uid');
+
+        $updated = 0;
+        foreach (EventSeat::where('event_seating_id', $eventSeatingId)->get() as $es) {
+            $src = $current->get($es->seat_uid);
+            if (!$src) {
+                continue;
+            }
+            if (
+                (string) $es->row_label !== (string) $src->r_label
+                || (string) $es->seat_label !== (string) $src->s_label
+                || (string) $es->section_name !== (string) $src->sec_name
+            ) {
+                $es->update([
+                    'section_name' => $src->sec_name,
+                    'row_label' => $src->r_label,
+                    'seat_label' => $src->s_label,
+                ]);
+                $updated++;
+            }
+        }
+
+        return $updated;
+    }
+
     public function blockSeatsByLocation(int $eventSeatingId, string $sectionName, string $rowLabel, array $seatLabels): int
     {
         return EventSeat::where('event_seating_id', $eventSeatingId)
