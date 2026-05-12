@@ -289,10 +289,134 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 </div>
             </details>
 
-            <!-- INFO RESTUL SECTIUNILOR -->
-            <div class="p-5 bg-amber-50 border border-amber-200 rounded-2xl text-sm text-amber-900">
-                <p class="font-semibold mb-1">ℹ️ Pentru editarea atracțiilor, traseelor, hărții, hotelurilor, galeriei, video-urilor și a programului:</p>
-                <p>Accesează panoul Tixello → <a id="admin-edit-link" href="#" target="_blank" class="font-bold underline text-primary">core.tixello.com/marketplace/events/.../edit</a> → tab "Configurare Locație".</p>
+            <!-- ATRACȚII -->
+            <details class="bg-white border rounded-2xl border-border">
+                <summary class="px-5 py-4 cursor-pointer font-semibold text-secondary flex items-center justify-between hover:bg-slate-50 rounded-2xl">
+                    <span>🏞️ Atracții (carduri principale)</span>
+                    <svg class="w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                </summary>
+                <div class="px-5 pb-5 pt-2 space-y-3 border-t border-border">
+                    <div id="attractions-list" class="space-y-3"></div>
+                    <button type="button" id="attractions-add" class="px-4 py-2 text-sm font-medium text-primary bg-primary/10 hover:bg-primary/20 rounded-lg">+ Adaugă atracție</button>
+                </div>
+            </details>
+
+            <!-- TRASEE -->
+            <details class="bg-white border rounded-2xl border-border">
+                <summary class="px-5 py-4 cursor-pointer font-semibold text-secondary flex items-center justify-between hover:bg-slate-50 rounded-2xl">
+                    <span>🥾 Trasee turistice</span>
+                    <svg class="w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                </summary>
+                <div class="px-5 pb-5 pt-2 space-y-3 border-t border-border">
+                    <div id="trails-list" class="space-y-3"></div>
+                    <button type="button" id="trails-add" class="px-4 py-2 text-sm font-medium text-primary bg-primary/10 hover:bg-primary/20 rounded-lg">+ Adaugă traseu</button>
+                </div>
+            </details>
+
+            <!-- GALERIE -->
+            <details class="bg-white border rounded-2xl border-border">
+                <summary class="px-5 py-4 cursor-pointer font-semibold text-secondary flex items-center justify-between hover:bg-slate-50 rounded-2xl">
+                    <span>📷 Galerie foto</span>
+                    <svg class="w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                </summary>
+                <div class="px-5 pb-5 pt-2 space-y-3 border-t border-border">
+                    <div id="gallery-list" class="space-y-2"></div>
+                    <button type="button" id="gallery-add" class="px-4 py-2 text-sm font-medium text-primary bg-primary/10 hover:bg-primary/20 rounded-lg">+ Adaugă imagine</button>
+                </div>
+            </details>
+
+            <!-- VIDEO -->
+            <details class="bg-white border rounded-2xl border-border">
+                <summary class="px-5 py-4 cursor-pointer font-semibold text-secondary flex items-center justify-between hover:bg-slate-50 rounded-2xl">
+                    <span>🎥 Video (YouTube / Vimeo)</span>
+                    <svg class="w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                </summary>
+                <div class="px-5 pb-5 pt-2 space-y-3 border-t border-border">
+                    <div id="videos-list" class="space-y-2"></div>
+                    <button type="button" id="videos-add" class="px-4 py-2 text-sm font-medium text-primary bg-primary/10 hover:bg-primary/20 rounded-lg">+ Adaugă video</button>
+                </div>
+            </details>
+
+            <!-- HARTĂ - centru + POIs -->
+            <details class="bg-white border rounded-2xl border-border">
+                <summary class="px-5 py-4 cursor-pointer font-semibold text-secondary flex items-center justify-between hover:bg-slate-50 rounded-2xl">
+                    <span>📍 Hartă (centru + puncte de interes)</span>
+                    <svg class="w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                </summary>
+                <div class="px-5 pb-5 pt-2 space-y-4 border-t border-border">
+                    <div class="grid md:grid-cols-3 gap-4">
+                        <label class="block">
+                            <span class="text-xs font-semibold text-muted uppercase tracking-wider">Latitudine centru</span>
+                            <input type="text" data-vc-nested="map_config.center_lat" class="vc-input mt-1 w-full px-3 py-2 border border-border rounded-lg" placeholder="46.135">
+                        </label>
+                        <label class="block">
+                            <span class="text-xs font-semibold text-muted uppercase tracking-wider">Longitudine centru</span>
+                            <input type="text" data-vc-nested="map_config.center_lng" class="vc-input mt-1 w-full px-3 py-2 border border-border rounded-lg" placeholder="25.778">
+                        </label>
+                        <label class="block">
+                            <span class="text-xs font-semibold text-muted uppercase tracking-wider">Zoom (1-18)</span>
+                            <input type="number" min="1" max="18" data-vc-nested="map_config.zoom" class="vc-input mt-1 w-full px-3 py-2 border border-border rounded-lg" placeholder="13">
+                        </label>
+                    </div>
+                    <div>
+                        <p class="text-xs font-semibold text-muted uppercase tracking-wider mb-2">Puncte de interes pe hartă</p>
+                        <div id="pois-list" class="space-y-2"></div>
+                        <button type="button" id="pois-add" class="mt-2 px-4 py-2 text-sm font-medium text-primary bg-primary/10 hover:bg-primary/20 rounded-lg">+ Adaugă POI</button>
+                    </div>
+                </div>
+            </details>
+
+            <!-- HOTELURI -->
+            <details class="bg-white border rounded-2xl border-border">
+                <summary class="px-5 py-4 cursor-pointer font-semibold text-secondary flex items-center justify-between hover:bg-slate-50 rounded-2xl">
+                    <span>🏨 Hoteluri / cazări apropiate</span>
+                    <svg class="w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                </summary>
+                <div class="px-5 pb-5 pt-2 space-y-3 border-t border-border">
+                    <div id="hotels-list" class="space-y-3"></div>
+                    <button type="button" id="hotels-add" class="px-4 py-2 text-sm font-medium text-primary bg-primary/10 hover:bg-primary/20 rounded-lg">+ Adaugă cazare</button>
+                </div>
+            </details>
+
+            <!-- FLORA -->
+            <details class="bg-white border rounded-2xl border-border">
+                <summary class="px-5 py-4 cursor-pointer font-semibold text-secondary flex items-center justify-between hover:bg-slate-50 rounded-2xl">
+                    <span>🌿 Floră & faună</span>
+                    <svg class="w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                </summary>
+                <div class="px-5 pb-5 pt-2 space-y-3 border-t border-border">
+                    <div id="flora-list" class="space-y-2"></div>
+                    <button type="button" id="flora-add" class="px-4 py-2 text-sm font-medium text-primary bg-primary/10 hover:bg-primary/20 rounded-lg">+ Adaugă specie</button>
+                </div>
+            </details>
+
+            <!-- PROGRAM / SEZOANE -->
+            <details class="bg-white border rounded-2xl border-border">
+                <summary class="px-5 py-4 cursor-pointer font-semibold text-secondary flex items-center justify-between hover:bg-slate-50 rounded-2xl">
+                    <span>📅 Program / sezoane operaționale</span>
+                    <svg class="w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                </summary>
+                <div class="px-5 pb-5 pt-2 space-y-3 border-t border-border">
+                    <div id="seasons-list" class="space-y-3"></div>
+                    <button type="button" id="seasons-add" class="px-4 py-2 text-sm font-medium text-primary bg-primary/10 hover:bg-primary/20 rounded-lg">+ Adaugă sezon</button>
+                </div>
+            </details>
+
+            <!-- GETTING THERE -->
+            <details class="bg-white border rounded-2xl border-border">
+                <summary class="px-5 py-4 cursor-pointer font-semibold text-secondary flex items-center justify-between hover:bg-slate-50 rounded-2xl">
+                    <span>🚗 Cum ajungi (instrucțiuni)</span>
+                    <svg class="w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                </summary>
+                <div class="px-5 pb-5 pt-2 space-y-3 border-t border-border">
+                    <div id="getting-list" class="space-y-3"></div>
+                    <button type="button" id="getting-add" class="px-4 py-2 text-sm font-medium text-primary bg-primary/10 hover:bg-primary/20 rounded-lg">+ Adaugă instrucțiune</button>
+                </div>
+            </details>
+
+            <!-- INFO: pagina publică -->
+            <div class="p-4 bg-blue-50 border border-blue-200 rounded-2xl text-xs text-blue-900">
+                💡 Salvează apoi vezi modificările pe <a id="admin-edit-link" href="#" target="_blank" class="font-bold underline">pagina publică</a> (deschide cu <code class="bg-blue-100 px-1 rounded">?preview=1</code> pentru a vedea draft).
             </div>
 
             <!-- Save bar -->
@@ -783,9 +907,9 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         if (!ev) return;
         currentVenueConfig = ev.venue_config || {};
 
-        // Update admin link
+        // Update public preview link
         const adminLink = $('admin-edit-link');
-        if (adminLink) adminLink.href = `https://core.tixello.com/marketplace/events/${ev.id}/edit?tab=venue-config`;
+        if (adminLink && ev.slug) adminLink.href = `/bilete/${ev.slug}-${ev.id}?preview=1`;
 
         // Populate simple scalar fields
         document.querySelectorAll('[data-vc]').forEach((input) => {
@@ -823,6 +947,24 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             (currentVenueConfig.stats_highlights || []).forEach((s, i) => statsList.appendChild(makeStatRow(s.value || '', s.label || '', i)));
             if ((currentVenueConfig.stats_highlights || []).length === 0) statsList.appendChild(makeStatRow('', '', 0));
         }
+
+        // Hydrate new repeaters
+        hydrateRepeater('attractions-list', currentVenueConfig.attractions, makeAttractionRow);
+        hydrateRepeater('trails-list', currentVenueConfig.trails, makeTrailRow);
+        hydrateRepeater('gallery-list', currentVenueConfig.gallery, makeGalleryRow);
+        hydrateRepeater('videos-list', currentVenueConfig.videos, makeVideoRow);
+        hydrateRepeater('pois-list', currentVenueConfig.map_pois, makePoiRow);
+        hydrateRepeater('hotels-list', currentVenueConfig.nearby_hotels, makeHotelRow);
+        hydrateRepeater('flora-list', currentVenueConfig.flora_species, makeFloraRow);
+        hydrateRepeater('seasons-list', currentVenueConfig.seasons, makeSeasonRow);
+        hydrateRepeater('getting-list', currentVenueConfig.getting_there, makeGettingRow);
+    }
+
+    function hydrateRepeater(listId, data, factory) {
+        const list = $(listId);
+        if (!list) return;
+        list.innerHTML = '';
+        (Array.isArray(data) ? data : []).forEach((item) => list.appendChild(factory(item || {})));
     }
 
     function makeFaqRow(q, a, idx) {
@@ -853,6 +995,147 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         `;
         wrap.querySelector('.stat-remove').addEventListener('click', () => wrap.remove());
         return wrap;
+    }
+
+    // === Repeater row factories ===
+    function repWrap(html, onRemove) {
+        const wrap = document.createElement('div');
+        wrap.className = 'p-3 bg-slate-50 rounded-lg';
+        wrap.innerHTML = html;
+        const rm = wrap.querySelector('[data-rm]');
+        if (rm) rm.addEventListener('click', () => { if (onRemove) onRemove(wrap); wrap.remove(); });
+        return wrap;
+    }
+    function repAttr(name, value) { return `data-rep="${name}" value="${escapeHtml(value ?? '')}"`; }
+
+    function makeAttractionRow(d) {
+        return repWrap(`
+            <div class="grid grid-cols-1 md:grid-cols-6 gap-2 items-start">
+                <input type="text" data-rep="icon" maxlength="6" class="md:col-span-1 px-3 py-2 border border-border rounded-lg bg-white" placeholder="🏞️" value="${escapeHtml(d.icon || '')}">
+                <input type="text" data-rep="title" class="md:col-span-5 px-3 py-2 border border-border rounded-lg bg-white" placeholder="Titlu atracție" value="${escapeHtml(d.title || '')}">
+                <input type="url" data-rep="image" class="md:col-span-6 px-3 py-2 border border-border rounded-lg bg-white" placeholder="URL imagine (opțional)" value="${escapeHtml(d.image || '')}">
+                <textarea data-rep="description" rows="2" class="md:col-span-6 px-3 py-2 border border-border rounded-lg bg-white" placeholder="Descriere scurtă">${escapeHtml(d.description || '')}</textarea>
+            </div>
+            <div class="text-right mt-2"><button type="button" data-rm class="text-xs text-rose-600 hover:bg-rose-100 px-2 py-1 rounded">🗑 Șterge</button></div>
+        `);
+    }
+
+    function makeTrailRow(d) {
+        return repWrap(`
+            <div class="grid grid-cols-1 md:grid-cols-6 gap-2 items-start">
+                <input type="text" data-rep="name" class="md:col-span-3 px-3 py-2 border border-border rounded-lg bg-white" placeholder="Nume traseu" value="${escapeHtml(d.name || '')}">
+                <select data-rep="difficulty" class="md:col-span-1 px-3 py-2 border border-border rounded-lg bg-white">
+                    <option value="easy" ${d.difficulty==='easy'?'selected':''}>Ușor</option>
+                    <option value="medium" ${d.difficulty==='medium'?'selected':''}>Mediu</option>
+                    <option value="hard" ${d.difficulty==='hard'?'selected':''}>Dificil</option>
+                </select>
+                <input type="number" step="0.1" data-rep="distance_km" class="md:col-span-1 px-3 py-2 border border-border rounded-lg bg-white" placeholder="km" value="${d.distance_km ?? ''}">
+                <input type="number" data-rep="duration_min" class="md:col-span-1 px-3 py-2 border border-border rounded-lg bg-white" placeholder="min" value="${d.duration_min ?? ''}">
+                <input type="number" data-rep="elevation_m" class="md:col-span-2 px-3 py-2 border border-border rounded-lg bg-white" placeholder="Diferență nivel (m)" value="${d.elevation_m ?? ''}">
+                <input type="text" data-rep="start_point" class="md:col-span-4 px-3 py-2 border border-border rounded-lg bg-white" placeholder="Punct de plecare" value="${escapeHtml(d.start_point || '')}">
+                <textarea data-rep="description" rows="2" class="md:col-span-6 px-3 py-2 border border-border rounded-lg bg-white" placeholder="Descriere">${escapeHtml(d.description || '')}</textarea>
+            </div>
+            <div class="text-right mt-2"><button type="button" data-rm class="text-xs text-rose-600 hover:bg-rose-100 px-2 py-1 rounded">🗑 Șterge</button></div>
+        `);
+    }
+
+    function makeGalleryRow(d) {
+        return repWrap(`
+            <div class="flex items-center gap-2">
+                <input type="url" data-rep="url" class="flex-1 px-3 py-2 border border-border rounded-lg bg-white" placeholder="URL imagine" value="${escapeHtml(d.url || d)}">
+                <input type="text" data-rep="caption" class="flex-1 px-3 py-2 border border-border rounded-lg bg-white" placeholder="Caption (opțional)" value="${escapeHtml(d.caption || '')}">
+                <button type="button" data-rm class="text-rose-600 hover:bg-rose-100 px-2 py-1 rounded">🗑</button>
+            </div>
+        `);
+    }
+
+    function makeVideoRow(d) {
+        return repWrap(`
+            <div class="flex items-center gap-2">
+                <input type="url" data-rep="url" class="flex-1 px-3 py-2 border border-border rounded-lg bg-white" placeholder="URL YouTube / Vimeo" value="${escapeHtml(d.url || d)}">
+                <input type="text" data-rep="title" class="flex-1 px-3 py-2 border border-border rounded-lg bg-white" placeholder="Titlu (opțional)" value="${escapeHtml(d.title || '')}">
+                <button type="button" data-rm class="text-rose-600 hover:bg-rose-100 px-2 py-1 rounded">🗑</button>
+            </div>
+        `);
+    }
+
+    function makePoiRow(d) {
+        return repWrap(`
+            <div class="grid grid-cols-1 md:grid-cols-6 gap-2 items-start">
+                <input type="text" data-rep="lat" class="md:col-span-1 px-3 py-2 border border-border rounded-lg bg-white" placeholder="Lat" value="${escapeHtml(d.lat ?? '')}">
+                <input type="text" data-rep="lng" class="md:col-span-1 px-3 py-2 border border-border rounded-lg bg-white" placeholder="Lng" value="${escapeHtml(d.lng ?? '')}">
+                <input type="text" data-rep="icon" maxlength="6" class="md:col-span-1 px-3 py-2 border border-border rounded-lg bg-white" placeholder="📍" value="${escapeHtml(d.icon || '')}">
+                <input type="text" data-rep="title" class="md:col-span-3 px-3 py-2 border border-border rounded-lg bg-white" placeholder="Titlu POI" value="${escapeHtml(d.title || '')}">
+                <input type="text" data-rep="description" class="md:col-span-6 px-3 py-2 border border-border rounded-lg bg-white" placeholder="Descriere scurtă" value="${escapeHtml(d.description || '')}">
+            </div>
+            <div class="text-right mt-2"><button type="button" data-rm class="text-xs text-rose-600 hover:bg-rose-100 px-2 py-1 rounded">🗑 Șterge</button></div>
+        `);
+    }
+
+    function makeHotelRow(d) {
+        return repWrap(`
+            <div class="grid grid-cols-1 md:grid-cols-6 gap-2 items-start">
+                <input type="text" data-rep="name" class="md:col-span-3 px-3 py-2 border border-border rounded-lg bg-white" placeholder="Nume cazare" value="${escapeHtml(d.name || '')}">
+                <input type="number" step="0.1" data-rep="distance_km" class="md:col-span-1 px-3 py-2 border border-border rounded-lg bg-white" placeholder="Dist km" value="${d.distance_km ?? ''}">
+                <input type="text" data-rep="stars" class="md:col-span-1 px-3 py-2 border border-border rounded-lg bg-white" placeholder="Stele (ex: 4)" value="${escapeHtml(d.stars ?? '')}">
+                <input type="url" data-rep="url" class="md:col-span-1 px-3 py-2 border border-border rounded-lg bg-white" placeholder="Link" value="${escapeHtml(d.url || '')}">
+                <input type="url" data-rep="image" class="md:col-span-6 px-3 py-2 border border-border rounded-lg bg-white" placeholder="URL imagine (opțional)" value="${escapeHtml(d.image || '')}">
+            </div>
+            <div class="text-right mt-2"><button type="button" data-rm class="text-xs text-rose-600 hover:bg-rose-100 px-2 py-1 rounded">🗑 Șterge</button></div>
+        `);
+    }
+
+    function makeFloraRow(d) {
+        return repWrap(`
+            <div class="flex items-start gap-2">
+                <input type="text" data-rep="icon" maxlength="6" class="w-16 px-3 py-2 border border-border rounded-lg bg-white" placeholder="🌳" value="${escapeHtml(d.icon || '')}">
+                <input type="text" data-rep="name" class="flex-1 px-3 py-2 border border-border rounded-lg bg-white" placeholder="Nume specie" value="${escapeHtml(d.name || '')}">
+                <input type="text" data-rep="description" class="flex-1 px-3 py-2 border border-border rounded-lg bg-white" placeholder="Detalii (opțional)" value="${escapeHtml(d.description || '')}">
+                <button type="button" data-rm class="text-rose-600 hover:bg-rose-100 px-2 py-1 rounded">🗑</button>
+            </div>
+        `);
+    }
+
+    function makeSeasonRow(d) {
+        return repWrap(`
+            <div class="grid grid-cols-1 md:grid-cols-6 gap-2 items-start">
+                <input type="text" data-rep="name" class="md:col-span-2 px-3 py-2 border border-border rounded-lg bg-white" placeholder="Vară / Iarnă / Mai-Sept" value="${escapeHtml(d.name || '')}">
+                <input type="text" data-rep="period" class="md:col-span-2 px-3 py-2 border border-border rounded-lg bg-white" placeholder="Mai-Sept" value="${escapeHtml(d.period || '')}">
+                <input type="time" data-rep="hours_start" class="md:col-span-1 px-3 py-2 border border-border rounded-lg bg-white" value="${escapeHtml(d.hours_start || '')}">
+                <input type="time" data-rep="hours_end" class="md:col-span-1 px-3 py-2 border border-border rounded-lg bg-white" value="${escapeHtml(d.hours_end || '')}">
+                <input type="text" data-rep="notes" class="md:col-span-6 px-3 py-2 border border-border rounded-lg bg-white" placeholder="Note (ex: ultimă intrare 17:00)" value="${escapeHtml(d.notes || '')}">
+            </div>
+            <div class="text-right mt-2"><button type="button" data-rm class="text-xs text-rose-600 hover:bg-rose-100 px-2 py-1 rounded">🗑 Șterge</button></div>
+        `);
+    }
+
+    function makeGettingRow(d) {
+        return repWrap(`
+            <div class="grid grid-cols-1 md:grid-cols-6 gap-2 items-start">
+                <input type="text" data-rep="icon" maxlength="6" class="md:col-span-1 px-3 py-2 border border-border rounded-lg bg-white" placeholder="🚗" value="${escapeHtml(d.icon || '')}">
+                <input type="text" data-rep="title" class="md:col-span-2 px-3 py-2 border border-border rounded-lg bg-white" placeholder="Cu mașina" value="${escapeHtml(d.title || '')}">
+                <input type="text" data-rep="from" class="md:col-span-3 px-3 py-2 border border-border rounded-lg bg-white" placeholder="De la / direcție" value="${escapeHtml(d.from || '')}">
+                <textarea data-rep="description" rows="2" class="md:col-span-6 px-3 py-2 border border-border rounded-lg bg-white" placeholder="Detalii rută">${escapeHtml(d.description || '')}</textarea>
+            </div>
+            <div class="text-right mt-2"><button type="button" data-rm class="text-xs text-rose-600 hover:bg-rose-100 px-2 py-1 rounded">🗑 Șterge</button></div>
+        `);
+    }
+
+    function collectRepeater(listId) {
+        const out = [];
+        const list = $(listId);
+        if (!list) return out;
+        list.querySelectorAll(':scope > div').forEach((row) => {
+            const item = {};
+            row.querySelectorAll('[data-rep]').forEach((el) => {
+                const key = el.dataset.rep;
+                let val = el.value;
+                if (typeof val === 'string') val = val.trim();
+                if (val !== '' && val !== null && val !== undefined) item[key] = val;
+            });
+            if (Object.keys(item).length > 0) out.push(item);
+        });
+        return out;
     }
 
     function setNested(obj, pathStr, value) {
@@ -908,6 +1191,32 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         });
         payload.stats_highlights = stats;
 
+        // New repeaters
+        payload.attractions = collectRepeater('attractions-list');
+        payload.trails = collectRepeater('trails-list');
+        payload.gallery = collectRepeater('gallery-list');
+        payload.videos = collectRepeater('videos-list');
+        payload.map_pois = collectRepeater('pois-list');
+        payload.nearby_hotels = collectRepeater('hotels-list');
+        payload.flora_species = collectRepeater('flora-list');
+        payload.seasons = collectRepeater('seasons-list');
+        payload.getting_there = collectRepeater('getting-list');
+
+        // Cast numeric fields in trails/hotels/POIs (Postgres expects numbers)
+        payload.trails.forEach(t => {
+            if (t.distance_km) t.distance_km = parseFloat(t.distance_km);
+            if (t.duration_min) t.duration_min = parseInt(t.duration_min, 10);
+            if (t.elevation_m) t.elevation_m = parseInt(t.elevation_m, 10);
+        });
+        payload.nearby_hotels.forEach(h => {
+            if (h.distance_km) h.distance_km = parseFloat(h.distance_km);
+            if (h.stars) h.stars = parseInt(h.stars, 10);
+        });
+        payload.map_pois.forEach(p => {
+            if (p.lat) p.lat = parseFloat(p.lat);
+            if (p.lng) p.lng = parseFloat(p.lng);
+        });
+
         try {
             const res = await AmbiletAPI.put(`/organizer/events/${currentEventId}/leisure/venue-config`, { venue_config: payload });
             if (res.success) {
@@ -942,6 +1251,26 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             if (list) list.appendChild(makeStatRow('', '', list.children.length));
         });
         $('vc-save-btn')?.addEventListener('click', () => saveContent());
+
+        // Generic "+ Adaugă" handlers pentru noile repeatere
+        const repeaters = [
+            ['attractions-add', 'attractions-list', makeAttractionRow],
+            ['trails-add', 'trails-list', makeTrailRow],
+            ['gallery-add', 'gallery-list', makeGalleryRow],
+            ['videos-add', 'videos-list', makeVideoRow],
+            ['pois-add', 'pois-list', makePoiRow],
+            ['hotels-add', 'hotels-list', makeHotelRow],
+            ['flora-add', 'flora-list', makeFloraRow],
+            ['seasons-add', 'seasons-list', makeSeasonRow],
+            ['getting-add', 'getting-list', makeGettingRow],
+        ];
+        repeaters.forEach(([btnId, listId, factory]) => {
+            $(btnId)?.addEventListener('click', () => {
+                const list = $(listId);
+                if (list) list.appendChild(factory({}));
+            });
+        });
+
         setupTabs();
         setupProductsHandlers();
     });
