@@ -3470,7 +3470,9 @@ switch ($action) {
             echo json_encode(['error' => 'Missing account_id parameter']);
             exit;
         }
-        $method = 'DELETE';
+        // Suporta atat DELETE (sterge cont) cat si PUT (update issuing_company)
+        $method = $_SERVER['REQUEST_METHOD'] === 'PUT' ? 'PUT' : 'DELETE';
+        if ($method === 'PUT') $body = file_get_contents('php://input');
         $endpoint = '/organizer/bank-accounts/' . urlencode($accountId);
         $requiresAuth = true;
         break;
@@ -3484,6 +3486,19 @@ switch ($action) {
         }
         $method = 'POST';
         $endpoint = '/organizer/bank-accounts/' . urlencode($accountId) . '/primary';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.bank-account.update':
+        $accountId = $_GET['account_id'] ?? '';
+        if (!$accountId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing account_id parameter']);
+            exit;
+        }
+        $method = 'PUT';
+        $body = file_get_contents('php://input');
+        $endpoint = '/organizer/bank-accounts/' . urlencode($accountId);
         $requiresAuth = true;
         break;
 
