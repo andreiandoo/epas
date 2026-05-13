@@ -315,6 +315,13 @@ require_once __DIR__ . '/includes/head.php';
 
         const events = data.events || [];
         showParticipants = !!data.show_participants;
+        // show_revenue gates the "Incasari nete" summary card and the
+        // per-event "Incasari" stat. Defaults to true on the client so
+        // older clients that haven't reloaded post-deploy don't suddenly
+        // start hiding the revenue card mid-session — the server-side
+        // gate in proxy.php is what makes this safe (revenue_net is
+        // stripped from event payloads when show_revenue is false).
+        window.shareShowRevenue = data.show_revenue !== false;
         participantsData = data.participants || {};
 
         // Calculate totals
@@ -332,6 +339,14 @@ require_once __DIR__ . '/includes/head.php';
         // Summary cards
         const summaryEl = document.getElementById('summary-cards');
         const pct = totalTickets > 0 ? Math.round((totalSold / totalTickets) * 100) : 0;
+        // Revenue card hidden when the link's show_revenue is false. Grid
+        // shrinks naturally from 4 to 3 columns via Tailwind responsive
+        // wrappers in the parent element.
+        const revenueCardHtml = window.shareShowRevenue ? `
+            <div class="p-5 bg-white border rounded-2xl border-border">
+                <p class="mb-1 text-sm text-muted">Incasari nete</p>
+                <p class="text-2xl font-bold text-secondary">${formatMoney(totalRevenue, revenueCurrency)}</p>
+            </div>` : '';
         summaryEl.innerHTML = `
             <div class="p-5 bg-white border rounded-2xl border-border">
                 <p class="mb-1 text-sm text-muted">Evenimente</p>
@@ -341,10 +356,7 @@ require_once __DIR__ . '/includes/head.php';
                 <p class="mb-1 text-sm text-muted">Bilete vandute</p>
                 <p class="text-2xl font-bold text-primary">${formatNumber(totalSold)} <span class="text-base font-normal text-muted">/ ${formatNumber(totalTickets)}</span></p>
             </div>
-            <div class="p-5 bg-white border rounded-2xl border-border">
-                <p class="mb-1 text-sm text-muted">Incasari nete</p>
-                <p class="text-2xl font-bold text-secondary">${formatMoney(totalRevenue, revenueCurrency)}</p>
-            </div>
+            ${revenueCardHtml}
             <div class="p-5 bg-white border rounded-2xl border-border">
                 <p class="mb-1 text-sm text-muted">Grad ocupare</p>
                 <p class="text-2xl font-bold ${pct >= 80 ? 'text-green-600' : pct >= 50 ? 'text-yellow-600' : 'text-secondary'}">${pct}%</p>
@@ -455,10 +467,10 @@ require_once __DIR__ . '/includes/head.php';
                                     <p class="text-xl font-bold text-secondary">${formatNumber(evTotal)}</p>
                                     <p class="text-xs text-muted">Total</p>
                                 </div>
-                                <div class="text-center">
+                                ${window.shareShowRevenue ? `<div class="text-center">
                                     <p class="text-xl font-bold text-secondary">${formatMoney(evRevenue, evCurrency)}</p>
                                     <p class="text-xs text-muted">Incasari</p>
-                                </div>
+                                </div>` : ''}
                                 <div class="min-w-[60px]">
                                     <div class="h-2 overflow-hidden rounded-full bg-slate-100">
                                         <div class="h-full rounded-full ${evPct >= 90 ? 'bg-red-500' : evPct >= 70 ? 'bg-yellow-500' : 'bg-primary'}" style="width: ${evPct}%"></div>

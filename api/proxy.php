@@ -3827,6 +3827,12 @@ switch ($action) {
             if ($showParticipants && $authHeader) {
                 $participantsData = fetchParticipantsWithAuth($eventIds, $authHeader);
             }
+            // Show revenue flag — new links default to FALSE (must opt in
+            // via the modal checkbox). Pre-existing links that pre-date
+            // this key default to TRUE on the read path (see share-link.data
+            // below) so their historical behavior of showing the revenue
+            // card is preserved.
+            $showRevenue = !empty($input['show_revenue']);
 
             $link = [
                 'code' => $code,
@@ -3840,6 +3846,7 @@ switch ($action) {
                 'password_hash' => $passwordHash,
                 'has_password' => !empty($passwordHash),
                 'show_participants' => $showParticipants,
+                'show_revenue' => $showRevenue,
                 'ticket_data' => $ticketData,
                 'participants_data' => $participantsData,
                 'ticket_data_updated_at' => date('c'),
@@ -3933,6 +3940,9 @@ switch ($action) {
             }
             if (isset($input['show_participants'])) {
                 $allLinks[$code]['show_participants'] = (bool)$input['show_participants'];
+            }
+            if (isset($input['show_revenue'])) {
+                $allLinks[$code]['show_revenue'] = (bool)$input['show_revenue'];
             }
             // Refresh participant + ticket data on demand
             if (!empty($input['refresh_data'])) {
@@ -4034,9 +4044,30 @@ switch ($action) {
         $storedTicketData = $link['ticket_data'] ?? [];
         $events = fetchEventsForShareLink($link['event_ids'] ?? [], $storedTicketData);
 
+        // show_revenue: existing links from before this feature shipped
+        // (no key in JSON) default to TRUE so their view doesn't suddenly
+        // hide the "Incasari nete" card the organizer was already
+        // expecting. New links explicitly set the flag at create time.
+        $showRevenue = array_key_exists('show_revenue', $link)
+            ? (bool) $link['show_revenue']
+            : true;
+
+        // Strip revenue from event payloads when hidden so a custom client
+        // can't read it off the wire. View.php also reads show_revenue
+        // and gates UI on it.
+        if (!$showRevenue) {
+            $events = array_map(function ($ev) {
+                if (is_array($ev)) {
+                    unset($ev['revenue_net']);
+                }
+                return $ev;
+            }, $events);
+        }
+
         $responseData = [
             'events' => $events,
             'show_participants' => !empty($link['show_participants']),
+            'show_revenue' => $showRevenue,
             'updated_at' => date('c'),
         ];
 

@@ -34,7 +34,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     <h2 class="font-bold text-secondary">Tipuri de bilete</h2>
                     <label class="flex items-center gap-2 text-sm">
                         <span class="text-muted">Data vizită:</span>
-                        <input id="lv-visit-date" type="date" class="px-2 py-1 text-sm border border-border rounded-lg">
+                        <input id="lv-visit-date" type="date" value="<?= date('Y-m-d') ?>" class="px-2 py-1 text-sm border border-border rounded-lg">
                     </label>
                 </div>
                 <div id="lv-loading" class="p-8 text-center"><div class="inline-block w-6 h-6 border-2 rounded-full border-primary border-t-transparent animate-spin"></div></div>
@@ -50,7 +50,10 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     <p class="text-sm text-muted text-center py-6">Coș gol. Apasă pe un bilet ca să-l adaugi.</p>
                 </div>
                 <div class="px-5 py-3 border-t border-border bg-slate-50 space-y-1 text-sm">
-                    <div class="flex justify-between"><span class="text-muted">Subtotal</span><span id="lv-subtotal">0.00 RON</span></div>
+                    <div class="flex justify-between"><span class="text-muted">Subtotal bilete</span><span id="lv-subtotal">0.00 RON</span></div>
+                    <div id="lv-commission-line" class="hidden justify-between text-muted">
+                        <span>Comision ticketing</span><span id="lv-commission-amount">+0.00 RON</span>
+                    </div>
                     <div class="flex justify-between font-bold text-lg pt-1 border-t border-border"><span>Total</span><span id="lv-total" class="text-primary">0.00 RON</span></div>
                 </div>
 
@@ -70,9 +73,12 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     <p class="text-xs uppercase tracking-wider text-muted font-semibold">Metodă plată</p>
                     <div class="grid grid-cols-3 gap-2">
                         <button data-pay="cash" class="lv-pay-btn px-3 py-2 text-sm font-medium border border-border rounded-lg hover:bg-slate-50">💵 Cash</button>
-                        <button data-pay="card" class="lv-pay-btn px-3 py-2 text-sm font-medium border border-border rounded-lg hover:bg-slate-50">💳 Card</button>
-                        <button data-pay="invoice" class="lv-pay-btn px-3 py-2 text-sm font-medium border border-border rounded-lg hover:bg-slate-50">📧 Pe mail</button>
+                        <button data-pay="card" disabled title="Necesită integrare terminal POS — în pregătire" class="lv-pay-btn px-3 py-2 text-sm font-medium border border-border rounded-lg opacity-50 cursor-not-allowed">💳 Card<span class="ml-1 text-[10px] font-bold text-amber-600">(soon)</span></button>
+                        <button data-pay="invoice" class="lv-pay-btn px-3 py-2 text-sm font-medium border border-border rounded-lg hover:bg-slate-50">📧 Link plată pe email</button>
                     </div>
+                    <p class="text-[10px] text-muted leading-snug mt-1">
+                        💡 <strong>Cash</strong>: marchezi încasarea fizică acum, biletele sunt emise valid. <strong>Link plată pe email</strong>: clientul primește un link pentru plată online — biletele rămân în „așteptare" până la confirmare.
+                    </p>
                     <button id="lv-checkout" disabled class="w-full mt-2 px-4 py-3 bg-primary text-white font-bold rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-primary-dark transition-colors">Finalizează</button>
                 </div>
             </div>
@@ -89,6 +95,14 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
     let types = [];
     let cart = {}; // {ticket_type_id: {qty, price, name, category}}
     let payment = 'cash';
+    let commission = { rate: 0, fixed: 0, mode: 'included' };
+
+    function commissionPerTicket(price) {
+        if ((commission.mode || 'included') !== 'added_on_top') return 0;
+        const rate = parseFloat(commission.rate || 0);
+        const fixed = parseFloat(commission.fixed || 0);
+        return Math.max(parseFloat(price || 0) * rate / 100, fixed);
+    }
 
     function fmtMoney(v) { return Number(v || 0).toFixed(2); }
 
@@ -143,25 +157,47 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             return;
         }
         let subtotal = 0;
+        let commissionTotal = 0;
         wrap.innerHTML = entries.map(([id, it]) => {
             const line = it.qty * it.price;
+            const com = commissionPerTicket(it.price) * it.qty;
             subtotal += line;
-            return `<div class="flex items-center gap-2 text-sm bg-slate-50 rounded-lg p-2">
-                <div class="flex-1 min-w-0">
-                    <div class="font-medium text-secondary truncate">${it.name}</div>
-                    <div class="text-xs text-muted">${fmtMoney(it.price)} × ${it.qty}</div>
+            commissionTotal += com;
+            const comRow = (com > 0)
+                ? `<div class="text-[10px] text-muted pl-1">+ Comision ticketing: ${fmtMoney(com)} RON</div>`
+                : '';
+            return `<div class="bg-slate-50 rounded-lg p-2">
+                <div class="flex items-center gap-2 text-sm">
+                    <div class="flex-1 min-w-0">
+                        <div class="font-medium text-secondary truncate">${it.name}</div>
+                        <div class="text-xs text-muted">${fmtMoney(it.price)} × ${it.qty}</div>
+                    </div>
+                    <div class="flex items-center gap-1">
+                        <button data-act="dec" data-id="${id}" class="w-7 h-7 bg-white border border-border rounded hover:bg-slate-100">−</button>
+                        <span class="w-6 text-center text-sm font-semibold">${it.qty}</span>
+                        <button data-act="inc" data-id="${id}" class="w-7 h-7 bg-white border border-border rounded hover:bg-slate-100">+</button>
+                    </div>
+                    <div class="w-20 text-right text-sm font-bold">${fmtMoney(line)}</div>
+                    <button data-act="del" data-id="${id}" class="text-rose-500 hover:text-rose-700">✕</button>
                 </div>
-                <div class="flex items-center gap-1">
-                    <button data-act="dec" data-id="${id}" class="w-7 h-7 bg-white border border-border rounded hover:bg-slate-100">−</button>
-                    <span class="w-6 text-center text-sm font-semibold">${it.qty}</span>
-                    <button data-act="inc" data-id="${id}" class="w-7 h-7 bg-white border border-border rounded hover:bg-slate-100">+</button>
-                </div>
-                <div class="w-20 text-right text-sm font-bold">${fmtMoney(line)}</div>
-                <button data-act="del" data-id="${id}" class="text-rose-500 hover:text-rose-700">✕</button>
+                ${comRow}
             </div>`;
         }).join('');
+        const grandTotal = subtotal + commissionTotal;
         $('lv-subtotal').textContent = fmtMoney(subtotal) + ' RON';
-        $('lv-total').textContent = fmtMoney(subtotal) + ' RON';
+        $('lv-total').textContent = fmtMoney(grandTotal) + ' RON';
+        // Afiseaza/ascunde linia "Comision ticketing" sub subtotal
+        const comLine = $('lv-commission-line');
+        if (comLine) {
+            if (commissionTotal > 0) {
+                comLine.classList.remove('hidden');
+                comLine.classList.add('flex');
+                $('lv-commission-amount').textContent = '+' + fmtMoney(commissionTotal) + ' RON';
+            } else {
+                comLine.classList.add('hidden');
+                comLine.classList.remove('flex');
+            }
+        }
         $('lv-checkout').disabled = !payment;
 
         wrap.querySelectorAll('button[data-act]').forEach(btn => {
@@ -214,6 +250,8 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             <div class="sep"></div>
             ${lines}
             <div class="sep"></div>
+            ${(Number(o.commission_total) > 0) ? `<div class="row"><span>Subtotal bilete</span><span>${fmtMoney(o.subtotal)}</span></div>
+            <div class="row"><span>Comision ticketing</span><span>+${fmtMoney(o.commission_total)}</span></div>` : ''}
             <div class="row" style="font-weight:bold;font-size:13px"><span>TOTAL</span><span>${fmtMoney(o.total)} ${o.currency || 'RON'}</span></div>
             <div class="row"><span>Plată:</span><span>${payMap[o.payment_method] || o.payment_method}</span></div>
             <div class="sep"></div>
@@ -295,12 +333,13 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         try {
             const res = await AmbiletAPI.get(`/organizer/events/${currentEventId}/leisure/config`);
             types = res.data?.ticket_types || [];
+            if (res.data?.commission) commission = res.data.commission;
         } catch (e) {
             $('lv-error').textContent = 'Eroare la încărcarea biletelor: ' + (e?.message || '');
             $('lv-error').classList.remove('hidden');
         }
 
-        $('lv-visit-date').value = new Date().toISOString().slice(0,10);
+        if (!$('lv-visit-date').value) $('lv-visit-date').value = new Date().toISOString().slice(0,10);
         renderGrid();
         renderCart();
         selectPayment('cash');

@@ -9,6 +9,14 @@
 $currentPage = $currentPage ?? getCurrentPage();
 ?>
 
+<!-- Ascunde linkurile condiționate până când JS-ul detectează tipul organizatorului.
+     Previne "flash of all sidebar links" la încărcarea paginii. -->
+<style>
+  body:not([data-org-type]) [data-org-show] { display: none !important; }
+  body[data-org-type="leisure"] [data-org-show="standard"] { display: none !important; }
+  body[data-org-type="standard"] [data-org-show="leisure"] { display: none !important; }
+</style>
+
 <!-- Sidebar Overlay (Mobile) -->
 <div id="sidebarOverlay" class="fixed inset-0 z-40 sidebar-overlay bg-slate-900/50 lg:hidden" onclick="toggleSidebar()"></div>
 
@@ -86,9 +94,9 @@ $currentPage = $currentPage ?? getCurrentPage();
             Setări
         </a>
 
-        <div class="pt-4 mt-4 border-t border-slate-700">
+        <div data-org-show="standard" class="pt-4 mt-4 border-t border-slate-700">
             <p class="px-4 mb-2 text-xs font-semibold tracking-wider uppercase text-muted">Marketing</p>
-            <a href="/organizator/servicii" class="sidebar-link <?= $currentPage === 'services' ? 'active' : '' ?> flex items-center gap-3 px-4 py-3 m-2 rounded-xl text-sm font-medium group <?= $currentPage !== 'services' ? 'text-white' : '' ?>">
+            <a data-org-show="standard" href="/organizator/servicii" class="sidebar-link <?= $currentPage === 'services' ? 'active' : '' ?> flex items-center gap-3 px-4 py-3 m-2 rounded-xl text-sm font-medium group <?= $currentPage !== 'services' ? 'text-white' : '' ?>">
                 <svg class="<?= $currentPage !== 'services' ? 'text-muted' : 'text-white' ?> w-5 h-5 group-hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
                 Servicii Extra
                 <span class="ml-auto px-2 py-0.5 bg-accent/10 text-accent text-xs font-bold rounded-full">NOU</span>

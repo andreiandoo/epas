@@ -347,6 +347,15 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                         </div>
                     </label>
                 </div>
+                <div>
+                    <label class="flex items-center gap-3 cursor-pointer">
+                        <input type="checkbox" id="share-link-show-revenue" class="rounded border-border text-primary focus:ring-primary">
+                        <div>
+                            <p class="text-sm font-medium text-secondary">Afiseaza incasari</p>
+                            <p class="text-xs text-muted">Cardul "Incasari nete" si suma incasata per eveniment vor fi vizibile in pagina link-ului</p>
+                        </div>
+                    </label>
+                </div>
                 <div class="flex gap-3 pt-2">
                     <button type="button" onclick="closeShareLinkModal()" class="flex-1 btn btn-secondary">Anuleaza</button>
                     <button type="submit" id="create-share-btn" class="flex-1 btn btn-primary bg-primary" disabled>Genereaza Link</button>
@@ -921,6 +930,7 @@ async function openShareLinkModal() {
     document.getElementById('share-link-name').value = '';
     document.getElementById('share-link-password').value = '';
     document.getElementById('share-link-show-participants').checked = false;
+    document.getElementById('share-link-show-revenue').checked = false;
     document.getElementById('create-share-btn').disabled = true;
 
     // Load events
@@ -960,16 +970,28 @@ async function openShareLinkModal() {
 
 function renderEventCheckboxes(events) {
     const container = document.getElementById('share-events-list');
+    // Format an ISO/string date into Romanian short format. Falls back to
+    // empty when parsing fails — multiple field names tried since the
+    // events listing endpoint has historically used different keys.
+    const _fmtShareDate = (raw) => {
+        if (!raw) return '';
+        const d = new Date(raw);
+        if (isNaN(d.getTime())) return '';
+        return d.toLocaleDateString('ro-RO', { day: '2-digit', month: 'short', year: 'numeric' });
+    };
     container.innerHTML = events.map(ev => {
         const evTitle = ev.title || ev.name || 'Eveniment';
-        const evDate = ev.start_date || ev.date || '';
+        // Event date under the name — tried in priority order:
+        // starts_at (ISO with time), start_date, event_date, then date.
+        const evDate = _fmtShareDate(ev.starts_at || ev.start_date || ev.event_date || ev.date);
         const evStatus = ev.status || '';
+        const meta = [evDate, evStatus].filter(Boolean).join(' · ');
         return `
             <label class="flex items-center gap-3 p-3 cursor-pointer hover:bg-surface">
                 <input type="checkbox" value="${ev.id}" class="rounded share-event-checkbox border-border text-primary focus:ring-primary" onchange="updateShareBtnState()">
                 <div class="flex-1 min-w-0">
                     <p class="text-sm font-medium truncate text-secondary">${slEscapeHtml(evTitle)}</p>
-                    <p class="text-xs text-muted">${slEscapeHtml(evDate)}${evStatus ? ' &middot; ' + slEscapeHtml(evStatus) : ''}</p>
+                    ${meta ? `<p class="text-xs text-muted mt-0.5">${slEscapeHtml(meta)}</p>` : ''}
                 </div>
             </label>
         `;
@@ -1006,6 +1028,7 @@ async function createShareLink(e) {
         const payload = { event_ids: eventIds, name: name };
         if (password) payload.password = password;
         if (document.getElementById('share-link-show-participants').checked) payload.show_participants = true;
+        if (document.getElementById('share-link-show-revenue').checked) payload.show_revenue = true;
         const response = await AmbiletAPI.post('/organizer/share-links', payload);
 
         if (response.success) {
