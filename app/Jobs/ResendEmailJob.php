@@ -34,7 +34,8 @@ class ResendEmailJob implements ShouldQueue
 
         // Resends must follow the same routing rules as the original send: if
         // the original was a transactional template, retry through the
-        // transactional provider; otherwise (e.g. newsletters) stay on primary.
+        // transactional provider (with primary fallback on exception);
+        // otherwise (e.g. newsletters) stay on primary.
         $useTransactional = EmailRouting::isTransactional($log->template_slug);
 
         $hasPrimary = $marketplace->hasMailConfigured();
@@ -49,41 +50,54 @@ class ResendEmailJob implements ShouldQueue
             return;
         }
 
-        try {
-            $transport = $useTransactional
-                ? $marketplace->getTransactionalMailTransport()
-                : $marketplace->getMailTransport();
+        // Use the original log's from-address when present; otherwise pick
+        // the correct default for this routing decision.
+        $fromAddress = $log->from_email
+            ?? ($useTransactional
+                ? $marketplace->getTransactionalEmailFromAddress()
+                : $marketplace->getEmailFromAddress());
+        $fromName = $log->from_name
+            ?? ($useTransactional
+                ? $marketplace->getTransactionalEmailFromName()
+                : $marketplace->getEmailFromName());
 
+        $email = (new Email())
+            ->from(new Address($fromAddress, $fromName))
+            ->to(new Address($log->to_email, $log->to_name ?? ''))
+            ->subject($log->subject)
+            ->html($log->body_html);
+
+        if ($log->body_text) {
+            $email->text($log->body_text);
+        }
+
+        if ($useTransactional) {
+            // Try transactional, fall back to primary on exception
+            $result = $marketplace->sendTransactionalEmail($email);
+            if ($result['success']) {
+                $log->markSent($result['message_id']);
+                if ($result['transport_used'] === 'primary_fallback') {
+                    \Log::channel('marketplace')->info("ResendEmailJob: sent via primary fallback (transactional failed)", [
+                        'log_id' => $log->id,
+                        'to' => $log->to_email,
+                    ]);
+                }
+                return;
+            }
+            \Log::error("ResendEmailJob failed for log {$log->id}: " . ($result['error'] ?? 'unknown'));
+            $log->markFailed($result['error'] ?? 'Both transactional and primary failed');
+            return;
+        }
+
+        // Non-transactional — primary only
+        try {
+            $transport = $marketplace->getMailTransport();
             if (!$transport) {
                 $log->markFailed('Could not create mail transport');
                 return;
             }
-
-            // Use the original log's from-address when present; otherwise pick
-            // the correct default for this routing decision.
-            $fromAddress = $log->from_email
-                ?? ($useTransactional
-                    ? $marketplace->getTransactionalEmailFromAddress()
-                    : $marketplace->getEmailFromAddress());
-            $fromName = $log->from_name
-                ?? ($useTransactional
-                    ? $marketplace->getTransactionalEmailFromName()
-                    : $marketplace->getEmailFromName());
-
-            $email = (new Email())
-                ->from(new Address($fromAddress, $fromName))
-                ->to(new Address($log->to_email, $log->to_name ?? ''))
-                ->subject($log->subject)
-                ->html($log->body_html);
-
-            if ($log->body_text) {
-                $email->text($log->body_text);
-            }
-
             $transport->send($email);
-
             $log->markSent();
-
         } catch (\Exception $e) {
             \Log::error("ResendEmailJob failed for log {$log->id}: {$e->getMessage()}");
             $log->markFailed($e->getMessage());

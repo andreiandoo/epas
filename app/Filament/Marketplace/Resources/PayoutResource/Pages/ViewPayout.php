@@ -831,11 +831,9 @@ class ViewPayout extends ViewRecord
             }
 
             $marketplace = $this->record->marketplaceClient;
-            // Deconturile sunt tranzacționale → mergi prin providerul tranzacțional
-            // (cu fallback automat la cel principal când nu e configurat).
-            $transport = $marketplace?->getTransactionalMailTransport();
-
-            if (!$transport) {
+            // Deconturile sunt tranzacționale → providerul tranzacțional cu
+            // fallback runtime la primary dacă SMTP-ul tranzacțional eșuează.
+            if (!$marketplace?->hasMailConfigured() && !$marketplace?->hasTransactionalMailConfigured()) {
                 Notification::make()->title('Mail-ul nu este configurat')->body('Configurează SMTP/Brevo în Settings > Emails.')->danger()->send();
                 return;
             }
@@ -877,7 +875,12 @@ class ViewPayout extends ViewRecord
                 ->html($bodyHtml)
                 ->attachFromPath($filePath, $document->file_name, 'application/pdf');
 
-            $sentMessage = $transport->send($symfonyEmail);
+            $result = $marketplace->sendTransactionalEmail($symfonyEmail);
+
+            if (!$result['success']) {
+                Notification::make()->title('Eroare la trimitere')->body($result['error'] ?? 'Trimiterea a eșuat')->danger()->send();
+                return;
+            }
 
             // Log to marketplace email logs
             \App\Models\MarketplaceEmailLog::create([
@@ -893,10 +896,12 @@ class ViewPayout extends ViewRecord
                 'body_html' => $bodyHtml,
                 'status' => 'sent',
                 'sent_at' => now(),
-                'message_id' => $sentMessage?->getMessageId() ?? null,
+                'message_id' => $result['message_id'] ?? null,
+                'metadata' => ['transport_used' => $result['transport_used']],
             ]);
 
-            Notification::make()->title("{$docType} trimis la {$email}")->success()->send();
+            $suffix = $result['transport_used'] === 'primary_fallback' ? ' (via Brevo fallback)' : '';
+            Notification::make()->title("{$docType} trimis la {$email}{$suffix}")->success()->send();
         } catch (\Exception $e) {
             Notification::make()->title('Eroare la trimitere')->body($e->getMessage())->danger()->send();
         }
@@ -909,10 +914,8 @@ class ViewPayout extends ViewRecord
     {
         try {
             $marketplace = $this->record->marketplaceClient;
-            // Facturile sunt tranzacționale → providerul tranzacțional (cu fallback la primary).
-            $transport = $marketplace?->getTransactionalMailTransport();
-
-            if (!$transport) {
+            // Facturile sunt tranzacționale → providerul tranzacțional cu fallback runtime la primary.
+            if (!$marketplace?->hasMailConfigured() && !$marketplace?->hasTransactionalMailConfigured()) {
                 Notification::make()->title('Mail-ul nu este configurat')->danger()->send();
                 return;
             }
@@ -952,7 +955,12 @@ class ViewPayout extends ViewRecord
                 ->subject($subject)
                 ->html($bodyHtml);
 
-            $sentMessage = $transport->send($symfonyEmail);
+            $result = $marketplace->sendTransactionalEmail($symfonyEmail);
+
+            if (!$result['success']) {
+                Notification::make()->title('Eroare la trimitere')->body($result['error'] ?? 'Trimiterea a eșuat')->danger()->send();
+                return;
+            }
 
             // Log to marketplace email logs
             \App\Models\MarketplaceEmailLog::create([
@@ -968,10 +976,12 @@ class ViewPayout extends ViewRecord
                 'body_html' => $bodyHtml,
                 'status' => 'sent',
                 'sent_at' => now(),
-                'message_id' => $sentMessage?->getMessageId() ?? null,
+                'message_id' => $result['message_id'] ?? null,
+                'metadata' => ['transport_used' => $result['transport_used']],
             ]);
 
-            Notification::make()->title("Factură trimisă la {$email}")->success()->send();
+            $suffix = $result['transport_used'] === 'primary_fallback' ? ' (via Brevo fallback)' : '';
+            Notification::make()->title("Factură trimisă la {$email}{$suffix}")->success()->send();
         } catch (\Exception $e) {
             Notification::make()->title('Eroare la trimitere')->body($e->getMessage())->danger()->send();
         }

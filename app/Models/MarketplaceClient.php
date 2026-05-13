@@ -733,6 +733,125 @@ class MarketplaceClient extends Model
     }
 
     /**
+     * Send a Symfony Email using the transactional transport, with automatic
+     * fallback to the primary transport when the transactional one throws
+     * (e.g. SMTP timeout, connection refused, auth failure...).
+     *
+     * Behaviour:
+     * - If a transactional provider is configured, try it first.
+     * - On any \Throwable, log a warning and retry through the primary provider.
+     * - The Email object is reused as-is — caller controls the from-address
+     *   (typically the transactional one, which is what we want clients to see).
+     *
+     * Returns:
+     *   [
+     *     'success'        => bool,
+     *     'message_id'     => string|null,
+     *     'transport_used' => 'transactional' | 'primary' | 'primary_fallback' | 'none',
+     *     'error'          => string|null,
+     *   ]
+     *
+     * Use this for any TRANSACTIONAL send (ticket delivery, invoices, deconturi,
+     * password resets, refunds...). Don't use it for newsletter campaigns —
+     * those should go through the primary provider directly.
+     */
+    public function sendTransactionalEmail(\Symfony\Component\Mime\Email $email): array
+    {
+        $errors = [];
+        $hasTransactional = $this->hasTransactionalMailConfigured();
+        $hasPrimary = $this->hasMailConfigured();
+
+        if (!$hasTransactional && !$hasPrimary) {
+            return [
+                'success' => false,
+                'message_id' => null,
+                'transport_used' => 'none',
+                'error' => 'No mail provider configured (neither transactional nor primary)',
+            ];
+        }
+
+        // Try transactional first when available
+        if ($hasTransactional) {
+            try {
+                $transport = $this->getTransactionalMailTransport();
+                if ($transport) {
+                    $sent = $transport->send($email);
+                    return [
+                        'success' => true,
+                        'message_id' => $sent?->getMessageId(),
+                        'transport_used' => 'transactional',
+                        'error' => null,
+                    ];
+                }
+                $errors[] = 'transactional: transport could not be created';
+            } catch (\Throwable $e) {
+                $errors[] = 'transactional: ' . $e->getMessage();
+                try {
+                    \Log::channel('marketplace')->warning('Transactional mail failed, falling back to primary', [
+                        'marketplace_client_id' => $this->id,
+                        'to' => $this->extractAddressForLog($email),
+                        'subject' => $email->getSubject(),
+                        'error' => $e->getMessage(),
+                    ]);
+                } catch (\Throwable $logEx) {
+                    // never let logging break the email pipeline
+                }
+            }
+        }
+
+        // Fallback to primary (or use primary directly when no transactional configured)
+        if ($hasPrimary) {
+            try {
+                $transport = $this->getMailTransport();
+                if ($transport) {
+                    $sent = $transport->send($email);
+                    return [
+                        'success' => true,
+                        'message_id' => $sent?->getMessageId(),
+                        'transport_used' => $hasTransactional ? 'primary_fallback' : 'primary',
+                        'error' => null,
+                    ];
+                }
+                $errors[] = 'primary: transport could not be created';
+            } catch (\Throwable $e) {
+                $errors[] = 'primary: ' . $e->getMessage();
+                try {
+                    \Log::channel('marketplace')->error('Primary mail also failed', [
+                        'marketplace_client_id' => $this->id,
+                        'to' => $this->extractAddressForLog($email),
+                        'subject' => $email->getSubject(),
+                        'error' => $e->getMessage(),
+                    ]);
+                } catch (\Throwable $logEx) {
+                    // swallow
+                }
+            }
+        }
+
+        return [
+            'success' => false,
+            'message_id' => null,
+            'transport_used' => 'none',
+            'error' => implode(' | ', $errors),
+        ];
+    }
+
+    /**
+     * Best-effort string representation of the email's first To: address for logs.
+     */
+    private function extractAddressForLog(\Symfony\Component\Mime\Email $email): string
+    {
+        try {
+            $to = $email->getTo();
+            if (empty($to)) return '(no recipient)';
+            $first = $to[0];
+            return method_exists($first, 'getAddress') ? $first->getAddress() : (string) $first;
+        } catch (\Throwable $e) {
+            return '(unknown)';
+        }
+    }
+
+    /**
      * Send a test email via the transactional transport.
      */
     public function sendTransactionalTestEmail(string $toEmail): array

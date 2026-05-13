@@ -892,20 +892,20 @@ class Invitations extends Page
 
                 if ($pdfData && ($marketplace->hasMailConfigured() || $marketplace->hasTransactionalMailConfigured())) {
                     // Invitațiile sunt tranzacționale → providerul tranzacțional
-                    // (cu fallback automat la primary când nu e configurat).
-                    $transport = $marketplace->getTransactionalMailTransport();
-                    if ($transport) {
-                        $symfonyEmail = (new \Symfony\Component\Mime\Email())
-                            ->from(new \Symfony\Component\Mime\Address(
-                                $marketplace->getTransactionalEmailFromAddress(),
-                                $marketplace->getTransactionalEmailFromName()
-                            ))
-                            ->to(new \Symfony\Component\Mime\Address($email, $name))
-                            ->subject($subject)
-                            ->html($html)
-                            ->attach($pdfData, "invitatie-{$invite->invite_code}.pdf", 'application/pdf');
+                    // cu fallback runtime la primary dacă SMTP-ul tranzacțional eșuează.
+                    $symfonyEmail = (new \Symfony\Component\Mime\Email())
+                        ->from(new \Symfony\Component\Mime\Address(
+                            $marketplace->getTransactionalEmailFromAddress(),
+                            $marketplace->getTransactionalEmailFromName()
+                        ))
+                        ->to(new \Symfony\Component\Mime\Address($email, $name))
+                        ->subject($subject)
+                        ->html($html)
+                        ->attach($pdfData, "invitatie-{$invite->invite_code}.pdf", 'application/pdf');
 
-                        $transport->send($symfonyEmail);
+                    $result = $marketplace->sendTransactionalEmail($symfonyEmail);
+                    if ($result['success']) {
+                        // sent — fall-through to markAsEmailed()
                     } else {
                         // Fallback to Laravel mailer without attachment
                         \App\Http\Controllers\Api\MarketplaceClient\BaseController::sendViaMarketplace(

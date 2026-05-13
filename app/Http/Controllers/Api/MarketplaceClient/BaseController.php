@@ -125,57 +125,75 @@ abstract class BaseController extends Controller
 
         try {
             if ($marketplaceConfigured) {
-                $transport = $useTransactional
-                    ? $client->getTransactionalMailTransport()
-                    : $client->getMailTransport();
-                if ($transport) {
-                    $email = (new \Symfony\Component\Mime\Email())
-                        ->from(new \Symfony\Component\Mime\Address($fromAddress, $fromName))
-                        ->to(new \Symfony\Component\Mime\Address($toEmail, $toName))
-                        ->subject($subject)
-                        ->html($html);
+                $email = (new \Symfony\Component\Mime\Email())
+                    ->from(new \Symfony\Component\Mime\Address($fromAddress, $fromName))
+                    ->to(new \Symfony\Component\Mime\Address($toEmail, $toName))
+                    ->subject($subject)
+                    ->html($html);
 
-                    // Optional reply-to. Used by e.g. the venue contact form
-                    // so the venue owner can hit "Reply" and reach the
-                    // visitor that actually wrote the message.
-                    if (!empty($logExtra['reply_to_email'])) {
-                        $email->replyTo(new \Symfony\Component\Mime\Address(
-                            $logExtra['reply_to_email'],
-                            $logExtra['reply_to_name'] ?? ''
-                        ));
-                    }
-
-                    $sentMessage = $transport->send($email);
-                    $messageId = $sentMessage?->getMessageId();
-                    $log->markSent($messageId);
-
-                    // Audit log is best-effort. If the channel write fails (e.g. log
-                    // file perms), the email already went out — never propagate.
-                    try {
-                        $settingsForLog = $useTransactional
-                            ? $client->getTransactionalMailSettings()
-                            : $client->getMailSettings();
-                        Log::channel('marketplace')->info('Email sent via marketplace transport', [
-                            'marketplace_client_id' => $client->id,
-                            'to' => $toEmail,
-                            'subject' => $subject,
-                            'message_id' => $messageId,
-                            'driver' => $settingsForLog['driver'] ?? 'unknown',
-                            'transport' => $useTransactional
-                                ? ($hasTransactionalConfig ? 'transactional' : 'primary (transactional fallback)')
-                                : 'primary',
-                            'template_slug' => $slug,
-                        ]);
-                    } catch (\Throwable $logEx) {
-                        // swallow — DB row already marked sent with message_id
-                    }
-                    return;
+                // Optional reply-to. Used by e.g. the venue contact form
+                // so the venue owner can hit "Reply" and reach the
+                // visitor that actually wrote the message.
+                if (!empty($logExtra['reply_to_email'])) {
+                    $email->replyTo(new \Symfony\Component\Mime\Address(
+                        $logExtra['reply_to_email'],
+                        $logExtra['reply_to_name'] ?? ''
+                    ));
                 }
 
-                Log::channel('marketplace')->warning('Marketplace mail configured but transport creation failed, falling back to Laravel mailer', [
-                    'marketplace_client_id' => $client->id,
-                    'transport' => $useTransactional ? 'transactional' : 'primary',
-                ]);
+                if ($useTransactional) {
+                    // Transactional sends — try secondary first, fall back to primary on
+                    // any exception (timeout, connection refused, auth failure). The
+                    // from-address stays the transactional one so clients see the
+                    // expected sender even when the email actually went through Brevo.
+                    $result = $client->sendTransactionalEmail($email);
+                    if ($result['success']) {
+                        $log->markSent($result['message_id']);
+                        try {
+                            Log::channel('marketplace')->info('Email sent via marketplace transport', [
+                                'marketplace_client_id' => $client->id,
+                                'to' => $toEmail,
+                                'subject' => $subject,
+                                'message_id' => $result['message_id'],
+                                'transport' => $result['transport_used'], // transactional|primary|primary_fallback
+                                'template_slug' => $slug,
+                            ]);
+                        } catch (\Throwable $logEx) {
+                            // swallow — DB row already marked sent with message_id
+                        }
+                        return;
+                    }
+                    // Both transports failed — record error and continue to default mailer
+                    Log::channel('marketplace')->warning('Transactional + primary both failed, falling back to Laravel mailer', [
+                        'marketplace_client_id' => $client->id,
+                        'error' => $result['error'],
+                    ]);
+                } else {
+                    // Non-transactional (newsletters etc.) — primary only, no fallback.
+                    $transport = $client->getMailTransport();
+                    if ($transport) {
+                        $sentMessage = $transport->send($email);
+                        $messageId = $sentMessage?->getMessageId();
+                        $log->markSent($messageId);
+                        try {
+                            Log::channel('marketplace')->info('Email sent via marketplace transport', [
+                                'marketplace_client_id' => $client->id,
+                                'to' => $toEmail,
+                                'subject' => $subject,
+                                'message_id' => $messageId,
+                                'driver' => $client->getMailSettings()['driver'] ?? 'unknown',
+                                'transport' => 'primary',
+                                'template_slug' => $slug,
+                            ]);
+                        } catch (\Throwable $logEx) {
+                            // swallow — DB row already marked sent with message_id
+                        }
+                        return;
+                    }
+                    Log::channel('marketplace')->warning('Primary mail configured but transport creation failed, falling back to Laravel mailer', [
+                        'marketplace_client_id' => $client->id,
+                    ]);
+                }
             }
 
             // Fallback to Laravel default mailer

@@ -103,24 +103,14 @@ class ViewTicket extends ViewRecord
                     }
 
                     // Get marketplace client for mail transport.
-                    // Retrimiterea biletelor este tranzacțională → folosim providerul
-                    // tranzacțional dacă e configurat (fallback automat la primary).
+                    // Retrimiterea biletelor este tranzacțională → providerul tranzacțional
+                    // cu fallback runtime la primary dacă SMTP-ul tranzacțional eșuează.
                     $marketplaceClient = static::getMarketplaceClient();
 
                     if (!$marketplaceClient?->hasMailConfigured() && !$marketplaceClient?->hasTransactionalMailConfigured()) {
                         Notification::make()
                             ->title('Email neconfigurat')
                             ->body('Configurați SMTP-ul în setările marketplace-ului pentru a trimite emailuri.')
-                            ->danger()
-                            ->send();
-                        return;
-                    }
-
-                    $transport = $marketplaceClient->getTransactionalMailTransport();
-                    if (!$transport) {
-                        Notification::make()
-                            ->title('Eroare transport email')
-                            ->body('Nu s-a putut crea transportul de email. Verificați configurarea SMTP.')
                             ->danger()
                             ->send();
                         return;
@@ -133,7 +123,6 @@ class ViewTicket extends ViewRecord
                         'ticket_id' => $ticket->id,
                         'ticket_code' => $ticket->code,
                         'to' => $email,
-                        'transport' => $marketplaceClient->hasTransactionalMailConfigured() ? 'transactional' : 'primary (fallback)',
                     ]);
 
                     try {
@@ -152,7 +141,6 @@ class ViewTicket extends ViewRecord
                         // Generate PDF attachment
                         $pdfData = $ticketMail->generatePdfData();
 
-                        // Send via marketplace client's mail transport
                         $symfonyEmail = (new SymfonyEmail())
                             ->from(new SymfonyAddress($fromAddress, $fromName))
                             ->to($email)
@@ -160,17 +148,34 @@ class ViewTicket extends ViewRecord
                             ->html($emailBody)
                             ->attach($pdfData, "ticket-{$ticket->code}.pdf", 'application/pdf');
 
-                        $transport->send($symfonyEmail);
+                        // sendTransactionalEmail() încearcă tranzacțional → primary
+                        $result = $marketplaceClient->sendTransactionalEmail($symfonyEmail);
+
+                        if (!$result['success']) {
+                            Log::channel('marketplace')->error('Ticket email: both transports failed', [
+                                'ticket_id' => $ticket->id,
+                                'to' => $email,
+                                'error' => $result['error'],
+                            ]);
+                            Notification::make()
+                                ->title('Eroare trimitere email')
+                                ->body('Nu s-a putut trimite emailul: ' . ($result['error'] ?? 'unknown'))
+                                ->danger()
+                                ->send();
+                            return;
+                        }
 
                         Log::channel('marketplace')->info('Ticket email: sent successfully', [
                             'ticket_id' => $ticket->id,
                             'to' => $email,
                             'from' => $fromAddress,
+                            'transport_used' => $result['transport_used'],
                         ]);
 
+                        $suffix = $result['transport_used'] === 'primary_fallback' ? ' (via Brevo fallback)' : '';
                         Notification::make()
                             ->title('Bilet trimis!')
-                            ->body("Biletul a fost trimis la {$email}")
+                            ->body("Biletul a fost trimis la {$email}{$suffix}")
                             ->success()
                             ->send();
 

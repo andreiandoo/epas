@@ -402,15 +402,6 @@ class MarketplaceEmailService
         ]);
 
         try {
-            $transport = $useTransactional
-                ? $this->marketplace->getTransactionalMailTransport()
-                : $this->marketplace->getMailTransport();
-
-            if (!$transport) {
-                $log->markFailed('Could not create SMTP transport');
-                return false;
-            }
-
             $email = (new Email())
                 ->from(new Address($fromAddress, $fromName))
                 ->to(new Address($toEmail, $toName ?? ''))
@@ -419,6 +410,31 @@ class MarketplaceEmailService
 
             if ($bodyText) {
                 $email->text($bodyText);
+            }
+
+            if ($useTransactional) {
+                // Try transactional, fall back to primary on exception.
+                $result = $this->marketplace->sendTransactionalEmail($email);
+                if ($result['success']) {
+                    $log->markSent($result['message_id']);
+                    if ($result['transport_used'] === 'primary_fallback') {
+                        Log::channel('marketplace')->info("Email sent via primary fallback (transactional failed)", [
+                            'marketplace_client_id' => $this->marketplace->id,
+                            'template_slug' => $templateSlug,
+                            'to' => $toEmail,
+                        ]);
+                    }
+                    return true;
+                }
+                $log->markFailed($result['error'] ?? 'Both transactional and primary failed');
+                return false;
+            }
+
+            // Non-transactional — primary only
+            $transport = $this->marketplace->getMailTransport();
+            if (!$transport) {
+                $log->markFailed('Could not create SMTP transport');
+                return false;
             }
 
             $sentMessage = $transport->send($email);

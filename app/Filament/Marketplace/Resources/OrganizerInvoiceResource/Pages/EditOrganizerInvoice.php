@@ -661,10 +661,8 @@ class EditOrganizerInvoice extends EditRecord
         }
 
         $marketplace = static::getMarketplaceClient();
-        // Facturi = tranzacțional → providerul tranzacțional (fallback la primary).
-        $transport = $marketplace?->getTransactionalMailTransport();
-
-        if (!$transport) {
+        // Facturi = tranzacțional → providerul tranzacțional cu fallback runtime la primary.
+        if (!$marketplace?->hasMailConfigured() && !$marketplace?->hasTransactionalMailConfigured()) {
             Notification::make()->danger()->title('SMTP nu este configurat.')->send();
             return;
         }
@@ -700,11 +698,20 @@ class EditOrganizerInvoice extends EditRecord
                 ->subject("Factură #{$invoice->number} — PDF {$provider}")
                 ->html($wrappedHtml);
 
-            $transport->send($emailMessage);
+            $result = $marketplace->sendTransactionalEmail($emailMessage);
 
+            if (!$result['success']) {
+                Notification::make()->danger()
+                    ->title('Eroare la trimitere')
+                    ->body($result['error'] ?? 'Trimiterea a eșuat')
+                    ->send();
+                return;
+            }
+
+            $suffix = $result['transport_used'] === 'primary_fallback' ? ' (via Brevo fallback)' : '';
             Notification::make()->success()
                 ->title('Email trimis')
-                ->body("PDF-ul facturii a fost trimis la {$email}")
+                ->body("PDF-ul facturii a fost trimis la {$email}{$suffix}")
                 ->send();
         } catch (\Throwable $e) {
             \Log::error("Failed to send accounting PDF email: {$e->getMessage()}");
@@ -730,10 +737,8 @@ class EditOrganizerInvoice extends EditRecord
         }
 
         $marketplace = static::getMarketplaceClient();
-        // Facturi = tranzacțional → providerul tranzacțional (fallback la primary).
-        $transport = $marketplace?->getTransactionalMailTransport();
-
-        if (!$transport) {
+        // Facturi = tranzacțional → providerul tranzacțional cu fallback runtime la primary.
+        if (!$marketplace?->hasMailConfigured() && !$marketplace?->hasTransactionalMailConfigured()) {
             Notification::make()->danger()->title('SMTP nu este configurat.')->send();
             return;
         }
@@ -751,11 +756,20 @@ class EditOrganizerInvoice extends EditRecord
                 ->subject("Factură #{$invoice->number}")
                 ->html($wrappedHtml);
 
-            $transport->send($emailMessage);
+            $result = $marketplace->sendTransactionalEmail($emailMessage);
 
+            if (!$result['success']) {
+                Notification::make()->danger()
+                    ->title('Eroare la trimitere')
+                    ->body($result['error'] ?? 'Trimiterea a eșuat')
+                    ->send();
+                return;
+            }
+
+            $suffix = $result['transport_used'] === 'primary_fallback' ? ' (via Brevo fallback)' : '';
             Notification::make()->success()
                 ->title('Email trimis')
-                ->body("Factura a fost trimisă la {$email}")
+                ->body("Factura a fost trimisă la {$email}{$suffix}")
                 ->send();
         } catch (\Throwable $e) {
             \Log::error("Failed to send invoice email: {$e->getMessage()}");
