@@ -2830,6 +2830,54 @@ class EventResource extends Resource
                                                         && in_array(($get('service_category') ?: 'access'), ['rental', 'activity']))
                                                     ->columnSpan(12),
 
+                                                // ── Leisure Venue: Add-ons (opționale, ex: Sanii cu tractare extra) ──
+                                                Forms\Components\Repeater::make('meta.addons')
+                                                    ->label($t('Add-ons opționale', 'Optional add-ons'))
+                                                    ->helperText($t('Servicii opționale legate de acest produs. Ex: "Tractare suplimentară" la sanii. "Incluse" = câte sunt gratuite per bilet cumpărat (calculate real, nu doar marketing).', 'Optional services tied to this product. e.g. "Extra tow" for sleds. "Included" = how many are free per ticket purchased (real calculation, not just marketing).'))
+                                                    ->schema([
+                                                        Forms\Components\TextInput::make('id')
+                                                            ->label($t('ID (slug)', 'ID (slug)'))
+                                                            ->placeholder('tractare-extra')
+                                                            ->maxLength(32)
+                                                            ->columnSpan(3),
+                                                        Forms\Components\TextInput::make('label')
+                                                            ->label($t('Etichetă afișată', 'Display label'))
+                                                            ->placeholder($t('Tractare suplimentară', 'Extra tow'))
+                                                            ->required()
+                                                            ->maxLength(80)
+                                                            ->columnSpan(4),
+                                                        Forms\Components\TextInput::make('price')
+                                                            ->label($t('Preț / buc (RON)', 'Price / unit (RON)'))
+                                                            ->numeric()
+                                                            ->minValue(0)
+                                                            ->step(0.01)
+                                                            ->required()
+                                                            ->columnSpan(2),
+                                                        Forms\Components\TextInput::make('included_qty')
+                                                            ->label($t('Incluse / bilet', 'Included / ticket'))
+                                                            ->numeric()
+                                                            ->minValue(0)
+                                                            ->default(0)
+                                                            ->helperText($t('Gratuite per bilet', 'Free per ticket'))
+                                                            ->columnSpan(2),
+                                                        Forms\Components\TextInput::make('max_per_unit')
+                                                            ->label($t('Max plătite / bilet', 'Max paid / ticket'))
+                                                            ->numeric()
+                                                            ->minValue(0)
+                                                            ->default(5)
+                                                            ->helperText($t('Suplimentar la incluse', 'On top of included'))
+                                                            ->columnSpan(2),
+                                                    ])
+                                                    ->columns(12)
+                                                    ->reorderable(true)
+                                                    ->collapsible()
+                                                    ->collapsed()
+                                                    ->addActionLabel($t('+ Adaugă add-on', '+ Add add-on'))
+                                                    ->itemLabel(fn (array $state) => ($state['label'] ?? '—') . (isset($state['price']) ? ' · ' . $state['price'] . ' RON' : '') . (!empty($state['included_qty']) ? ' (' . $state['included_qty'] . ' incluse)' : ''))
+                                                    ->visible(fn (SGet $get) => ($get('../../display_template') ?? 'standard') === 'leisure_venue'
+                                                        && in_array(($get('service_category') ?: 'access'), ['rental', 'activity', 'access']))
+                                                    ->columnSpan(12),
+
                                                 // ── Leisure Venue: Conținut pachet (pentru service_category=package) ──
                                                 Forms\Components\Repeater::make('meta.package_outputs')
                                                     ->label($t('Conține (componente pachet)', 'Includes (package components)'))

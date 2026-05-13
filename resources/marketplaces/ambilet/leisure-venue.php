@@ -490,6 +490,25 @@ require_once __DIR__ . '/includes/head.php';
                                     <button @click="incrementTicket(ticket)" :disabled="ticket.available !== null && qtyForTicket(ticket) >= ticket.available" class="lv-qty-btn bg-forest-700 text-white border-forest-700 hover:bg-forest-800 hover:border-forest-800">+</button>
                                 </div>
                             </div>
+                            <!-- Add-ons (apar doar dacă ticket are cantitate > 0) -->
+                            <div x-show="ticket.addons && ticket.addons.length > 0 && qtyForTicket(ticket) > 0" class="mt-4 pt-4 border-t border-forest-100">
+                                <p class="text-xs uppercase tracking-wider text-forest-700/60 font-bold mb-2">+ Extras opționale</p>
+                                <div class="space-y-2">
+                                    <template x-for="addon in (ticket.addons || [])" :key="addon.id">
+                                        <div class="flex items-center justify-between gap-3 p-2.5 bg-amber-50 rounded-lg">
+                                            <div class="flex-1 min-w-0">
+                                                <div class="text-sm font-semibold text-ink" x-text="addon.label"></div>
+                                                <div class="text-[11px] text-forest-700/70" x-text="addonHint(ticket, addon)"></div>
+                                            </div>
+                                            <div class="flex items-center gap-2 flex-shrink-0">
+                                                <button @click="addonDec(ticket, addon)" :disabled="(addonQty(ticket, addon) || 0) === 0" class="lv-qty-btn !w-7 !h-7 !text-sm">−</button>
+                                                <span class="w-5 text-center font-bold text-sm" x-text="addonQty(ticket, addon)"></span>
+                                                <button @click="addonInc(ticket, addon)" :disabled="(addonQty(ticket, addon) || 0) >= addonMaxTotal(ticket, addon)" class="lv-qty-btn !w-7 !h-7 !text-sm bg-forest-700 text-white border-forest-700 hover:bg-forest-800 hover:border-forest-800">+</button>
+                                            </div>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
                         </div>
                     </template>
                 </div>
@@ -966,6 +985,14 @@ require_once __DIR__ . '/includes/head.php';
                                 <span class="font-semibold whitespace-nowrap"><span x-text="(item.qty * item.effective_price).toFixed(2)"></span> RON</span>
                             </div>
                         </div>
+                        <!-- Add-on lines -->
+                        <template x-for="addon in (item._addons || [])" :key="addon.addon_id">
+                            <div class="flex items-center justify-between text-xs text-white/55 mt-0.5 pl-3">
+                                <span>+ <span x-text="addon.total_qty"></span>× <span x-text="addon.label"></span><span x-show="addon.free_qty > 0" class="text-emerald-300"> · <span x-text="addon.free_qty"></span> gratis</span></span>
+                                <span x-show="addon.line_total > 0">+<span x-text="addon.line_total.toFixed(2)"></span> RON</span>
+                                <span x-show="addon.line_total === 0" class="text-emerald-300">gratis</span>
+                            </div>
+                        </template>
                         <div x-show="hasCommission" class="flex items-center justify-between text-xs text-white/50 mt-0.5 pl-3">
                             <span>+ Comision ticketing</span>
                             <span>+<span x-text="(item.qty * commissionPerTicket(item.effective_price)).toFixed(2)"></span> RON</span>
@@ -1021,6 +1048,7 @@ function reservationPage() {
         ticketsRaw: [],        // toate ticket types pentru data selectata (din API)
         qtyById: {},           // { ticketTypeId: qty } sau { 'ticketTypeId|variantId': qty }
         variantSelectedByTicket: {}, // { ticketId: variantId } — varianta activă pe card
+        addonQtyByKey: {},     // { 'ticketCartKey::addonId': qty } — add-ons selectate per linie de cart
         issuers: DATA.issuers || {},
         faqs: DATA.faqs || [],
         gallery: DATA.gallery || [],
@@ -1177,7 +1205,8 @@ function reservationPage() {
             for (const t of this.ticketsRaw) {
                 if (Array.isArray(t.variants) && t.variants.length > 0) {
                     for (const v of t.variants) {
-                        const qty = this.qtyById[this.cartKey(t.id, v.id)] || 0;
+                        const cartK = this.cartKey(t.id, v.id);
+                        const qty = this.qtyById[cartK] || 0;
                         if (qty > 0) {
                             out.push({
                                 ...t,
@@ -1185,16 +1214,48 @@ function reservationPage() {
                                 effective_price: parseFloat(v.price || 0),
                                 variant: v,
                                 name: t.name + ' — ' + v.label,
-                                _cartKey: this.cartKey(t.id, v.id),
+                                _cartKey: cartK,
+                                _addons: this._lineAddonsFor(t, cartK),
                             });
                         }
                     }
                 } else {
                     const qty = this.qtyById[t.id] || 0;
                     if (qty > 0) {
-                        out.push({ ...t, qty, variant: null, _cartKey: String(t.id) });
+                        out.push({
+                            ...t,
+                            qty,
+                            variant: null,
+                            _cartKey: String(t.id),
+                            _addons: this._lineAddonsFor(t, String(t.id)),
+                        });
                     }
                 }
+            }
+            return out;
+        },
+        // Construiește lista add-ons pentru o linie de cart (cu qty + paid_qty + total)
+        _lineAddonsFor(ticket, cartK) {
+            const out = [];
+            if (!Array.isArray(ticket.addons)) return out;
+            const parentQty = this.qtyById[cartK] || 0;
+            if (parentQty === 0) return out;
+            for (const addon of ticket.addons) {
+                const total = this.addonQtyByKey[cartK + '::' + addon.id] || 0;
+                if (total <= 0) continue;
+                const inc = parseInt(addon.included_qty || 0, 10);
+                const free = Math.min(parentQty * inc, total);
+                const paid = Math.max(0, total - free);
+                const lineTotal = paid * parseFloat(addon.price || 0);
+                out.push({
+                    addon_id: addon.id,
+                    label: addon.label,
+                    total_qty: total,
+                    free_qty: free,
+                    paid_qty: paid,
+                    unit_price: parseFloat(addon.price || 0),
+                    line_total: lineTotal,
+                });
             }
             return out;
         },
@@ -1217,11 +1278,14 @@ function reservationPage() {
         get cartSubtotalBase() {
             return this.cartItems.reduce((s, t) => s + t.qty * parseFloat(t.effective_price || 0), 0);
         },
+        get cartAddonsTotal() {
+            return this.cartItems.reduce((s, t) => s + (Array.isArray(t._addons) ? t._addons.reduce((a, ad) => a + ad.line_total, 0) : 0), 0);
+        },
         get cartCommissionTotal() {
             return this.cartItems.reduce((s, t) => s + t.qty * this.commissionPerTicket(parseFloat(t.effective_price || 0)), 0);
         },
         get cartTotal() {
-            return (this.cartSubtotalBase + this.cartCommissionTotal).toFixed(2);
+            return (this.cartSubtotalBase + this.cartAddonsTotal + this.cartCommissionTotal).toFixed(2);
         },
         get hasCommission() {
             return (this.commission.mode === 'added_on_top') && (this.commission.rate > 0 || this.commission.fixed > 0);
@@ -1249,6 +1313,53 @@ function reservationPage() {
         removeLineFromCart(item) {
             if (!item || !item._cartKey) return;
             this.qtyById[item._cartKey] = 0;
+            // Curăță și add-on-urile legate de acea linie
+            Object.keys(this.addonQtyByKey).forEach(k => {
+                if (k.startsWith(item._cartKey + '::')) this.addonQtyByKey[k] = 0;
+            });
+        },
+
+        // ========== Add-ons helpers ==========
+        addonCartKey(ticket, addon) {
+            const vid = this.activeVariantId(ticket);
+            return this.cartKey(ticket.id, vid) + '::' + addon.id;
+        },
+        addonQty(ticket, addon) {
+            return this.addonQtyByKey[this.addonCartKey(ticket, addon)] || 0;
+        },
+        addonMaxTotal(ticket, addon) {
+            const parentQty = this.qtyForTicket(ticket);
+            const inc = parseInt(addon.included_qty || 0, 10);
+            const max = parseInt(addon.max_per_unit || 5, 10);
+            return parentQty * (inc + max);
+        },
+        addonFreePool(ticket, addon) {
+            return this.qtyForTicket(ticket) * parseInt(addon.included_qty || 0, 10);
+        },
+        addonPaidQty(ticket, addon) {
+            const total = this.addonQty(ticket, addon);
+            const free = this.addonFreePool(ticket, addon);
+            return Math.max(0, total - free);
+        },
+        addonHint(ticket, addon) {
+            const free = this.addonFreePool(ticket, addon);
+            const max = this.addonMaxTotal(ticket, addon);
+            const price = parseFloat(addon.price || 0).toFixed(2);
+            if (free > 0) {
+                return `${free} incluse · ${price} RON/buc după · max ${max}`;
+            }
+            return `${price} RON/buc · max ${max}`;
+        },
+        addonInc(ticket, addon) {
+            const key = this.addonCartKey(ticket, addon);
+            const max = this.addonMaxTotal(ticket, addon);
+            const cur = this.addonQty(ticket, addon);
+            if (cur >= max) return;
+            this.addonQtyByKey[key] = cur + 1;
+        },
+        addonDec(ticket, addon) {
+            const key = this.addonCartKey(ticket, addon);
+            this.addonQtyByKey[key] = Math.max(0, (this.addonQtyByKey[key] || 0) - 1);
         },
         incrementService(service) {
             if (service.requires_access_ticket && !this.hasAccessInCart) return;
@@ -1377,6 +1488,19 @@ function reservationPage() {
                 // Semnatura veche (6 args) — alternative new (4 args) are
                 // mapping bug in cart.js: muta meta -> quantity rezultand
                 // [object Object] / NaN in /cos. Apelam direct positional.
+                // Add-ons din linia curentă (Sanii cu tractare extra etc.)
+                const addonsForCart = Array.isArray(t._addons) && t._addons.length > 0
+                    ? t._addons.map(a => ({
+                        addon_id: String(a.addon_id),
+                        label: String(a.label),
+                        total_qty: Number(a.total_qty) || 0,
+                        free_qty: Number(a.free_qty) || 0,
+                        paid_qty: Number(a.paid_qty) || 0,
+                        unit_price: Number(a.unit_price) || 0,
+                        line_total: Number(a.line_total) || 0,
+                    }))
+                    : null;
+
                 AmbiletCart.addItem(
                     Number(EVENT.id) || 0,
                     eventPayload,
@@ -1387,6 +1511,7 @@ function reservationPage() {
                         visit_date: String(this.selectedDate),
                         variant_id: variantInfo ? variantInfo.id : null,
                         variant_label: variantInfo ? variantInfo.label : null,
+                        addons: addonsForCart,
                     }
                 );
             });

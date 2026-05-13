@@ -183,6 +183,22 @@ class DateAvailabilityController extends BaseController
                 }
             }
 
+            // Add-ons inline (F2: ex. Tractare suplimentară pe Sanii)
+            $rawAddons = $tt->meta['addons'] ?? null;
+            $addons = [];
+            if (is_array($rawAddons)) {
+                foreach ($rawAddons as $a) {
+                    if (!is_array($a) || empty($a['label'])) continue;
+                    $addons[] = [
+                        'id' => $a['id'] ?? \Illuminate\Support\Str::slug($a['label']),
+                        'label' => $a['label'],
+                        'price' => (float) ($a['price'] ?? 0),
+                        'included_qty' => max(0, (int) ($a['included_qty'] ?? 0)),
+                        'max_per_unit' => max(0, (int) ($a['max_per_unit'] ?? 5)),
+                    ];
+                }
+            }
+
             // Pachete (F4): expune componentele + suma componentelor pentru "Economisești X"
             $rawPackageOutputs = $tt->meta['package_outputs'] ?? null;
             $packageOutputs = [];
@@ -245,6 +261,7 @@ class DateAvailabilityController extends BaseController
                 'unit_label' => $unitLabel,
                 'includes' => $includes ?: [],
                 'variants' => $variants,
+                'addons' => $addons,
                 'package_outputs' => $packageOutputs,
                 'package_components_sum' => round($packageSumComponents, 2),
                 'package_savings' => $packageOutputs ? round($packageSumComponents - $effectivePrice, 2) : 0,

@@ -112,6 +112,22 @@ class LeisureController extends BaseController
                     }
                 }
 
+                // Add-ons (F2: ex Sanii tractare extra)
+                $addons = [];
+                $rawAddons = is_array($tt->meta) ? ($tt->meta['addons'] ?? null) : null;
+                if (is_array($rawAddons)) {
+                    foreach ($rawAddons as $a) {
+                        if (!is_array($a) || empty($a['label'])) continue;
+                        $addons[] = [
+                            'id' => $a['id'] ?? \Illuminate\Support\Str::slug($a['label']),
+                            'label' => $a['label'],
+                            'price' => (float) ($a['price'] ?? 0),
+                            'included_qty' => max(0, (int) ($a['included_qty'] ?? 0)),
+                            'max_per_unit' => max(0, (int) ($a['max_per_unit'] ?? 5)),
+                        ];
+                    }
+                }
+
                 // Pachete: enrich outputs cu nume + preț component
                 $packageOutputs = [];
                 $packageSum = 0.0;
@@ -160,6 +176,7 @@ class LeisureController extends BaseController
                     'issuing_explicit' => (bool) $tt->issuing_company,
                     'meta' => is_array($tt->meta) ? $tt->meta : (object) [],
                     'variants' => $variants,
+                    'addons' => $addons,
                     'package_outputs' => $packageOutputs,
                     'package_components_sum' => round($packageSum, 2),
                     'package_savings' => $packageOutputs ? round($packageSum - $price, 2) : 0,
@@ -687,6 +704,9 @@ class LeisureController extends BaseController
             'items.*.ticket_type_id' => 'required|integer|exists:ticket_types,id',
             'items.*.qty' => 'required|integer|min:1|max:100',
             'items.*.variant_id' => 'nullable|string|max:64',
+            'items.*.addons' => 'nullable|array|max:20',
+            'items.*.addons.*.addon_id' => 'required_with:items.*.addons|string|max:64',
+            'items.*.addons.*.qty' => 'required_with:items.*.addons|integer|min:0|max:500',
             'customer.name' => 'nullable|string|max:120',
             'customer.email' => 'nullable|email|max:120',
             'customer.phone' => 'nullable|string|max:30',
@@ -740,6 +760,49 @@ class LeisureController extends BaseController
 
             $qty = (int) $row['qty'];
             $line = round($unit * $qty, 2);
+
+            // Add-ons (F2): calcul paid_qty = total_qty - parent_qty * included_qty
+            $addonsResolved = [];
+            $addonsTotal = 0.0;
+            if (!empty($row['addons']) && is_array($row['addons']) && !empty($tt->meta['addons']) && is_array($tt->meta['addons'])) {
+                $addonsByid = [];
+                foreach ($tt->meta['addons'] as $a) {
+                    if (!is_array($a) || empty($a['label'])) continue;
+                    $aid = $a['id'] ?? \Illuminate\Support\Str::slug($a['label']);
+                    $addonsByid[$aid] = $a;
+                }
+                foreach ($row['addons'] as $reqAddon) {
+                    if (empty($reqAddon['addon_id'])) continue;
+                    $aid = $reqAddon['addon_id'];
+                    $aDef = $addonsByid[$aid] ?? null;
+                    if (!$aDef) continue;
+                    $totalAddonQty = max(0, (int) ($reqAddon['qty'] ?? 0));
+                    if ($totalAddonQty === 0) continue;
+
+                    $includedPerTicket = max(0, (int) ($aDef['included_qty'] ?? 0));
+                    $maxPaidPerTicket = max(0, (int) ($aDef['max_per_unit'] ?? 5));
+                    $freePool = $includedPerTicket * $qty;
+                    $maxTotal = ($includedPerTicket + $maxPaidPerTicket) * $qty;
+                    if ($totalAddonQty > $maxTotal) {
+                        return $this->error('Add-on "' . $aDef['label'] . '" depășește maximul (' . $maxTotal . ' pentru ' . $qty . ' bilete).', 422);
+                    }
+                    $paidQty = max(0, $totalAddonQty - $freePool);
+                    $unitPriceAddon = (float) ($aDef['price'] ?? 0);
+                    $addonLine = round($unitPriceAddon * $paidQty, 2);
+                    $addonsTotal += $addonLine;
+                    $addonsResolved[] = [
+                        'addon_id' => $aid,
+                        'label' => $aDef['label'],
+                        'total_qty' => $totalAddonQty,
+                        'free_qty' => min($freePool, $totalAddonQty),
+                        'paid_qty' => $paidQty,
+                        'unit_price' => $unitPriceAddon,
+                        'line_total' => $addonLine,
+                    ];
+                }
+            }
+
+            $line += round($addonsTotal, 2);
             $subtotal += $line;
 
             // Comision per bilet emis: max(unit * rate%, fixed) doar dacă 'added_on_top'
@@ -760,6 +823,8 @@ class LeisureController extends BaseController
                     'label' => $variant['label'],
                     'duration_minutes' => $variant['duration_minutes'] ?? null,
                 ] : null,
+                'addons' => $addonsResolved,
+                'addons_total' => round($addonsTotal, 2),
             ];
         }
         $subtotal = round($subtotal, 2);
@@ -834,6 +899,8 @@ class LeisureController extends BaseController
                         'variant' => $variantMeta,
                         'package' => $isPackage,
                         'package_outputs' => $isPackage ? $packageOutputs : null,
+                        'addons' => !empty($it['addons']) ? $it['addons'] : null,
+                        'addons_total' => $it['addons_total'] ?? 0,
                     ]),
                 ]);
 
@@ -1018,6 +1085,8 @@ class LeisureController extends BaseController
                     'commission_per_ticket' => $it['commission_per_ticket'] ?? 0,
                     'service_category' => $it['ticket_type']->service_category ?? 'access',
                     'variant' => $it['variant'],
+                    'addons' => $it['addons'] ?? [],
+                    'addons_total' => $it['addons_total'] ?? 0,
                 ];
             }, $items),
             'tickets' => $issued,
@@ -1375,7 +1444,7 @@ class LeisureController extends BaseController
         // whitelist meta keys safe pentru organizer
         $allowed = [
             'icon', 'image', 'image_url', 'unit_label', 'includes',
-            'package_outputs', 'badge', 'color', 'variants',
+            'package_outputs', 'badge', 'color', 'variants', 'addons',
         ];
         $filtered = array_intersect_key($meta, array_flip($allowed));
 
@@ -1395,6 +1464,25 @@ class LeisureController extends BaseController
                 ];
             }
             $filtered['variants'] = $normalized;
+        }
+
+        // Normalize addons (F2)
+        if (isset($filtered['addons']) && is_array($filtered['addons'])) {
+            $normalizedAddons = [];
+            foreach ($filtered['addons'] as $a) {
+                if (!is_array($a) || empty($a['label'])) continue;
+                $id = isset($a['id']) && $a['id'] !== ''
+                    ? preg_replace('/[^a-z0-9-]+/i', '-', strtolower($a['id']))
+                    : \Illuminate\Support\Str::slug($a['label']);
+                $normalizedAddons[] = [
+                    'id' => substr($id, 0, 32) ?: 'a',
+                    'label' => (string) $a['label'],
+                    'price' => isset($a['price']) ? (float) $a['price'] : 0.0,
+                    'included_qty' => max(0, (int) ($a['included_qty'] ?? 0)),
+                    'max_per_unit' => max(0, (int) ($a['max_per_unit'] ?? 5)),
+                ];
+            }
+            $filtered['addons'] = $normalizedAddons;
         }
 
         // Normalize package_outputs (F4)
@@ -1433,6 +1521,21 @@ class LeisureController extends BaseController
         $packageOutputs = is_array($t->meta) ? ($t->meta['package_outputs'] ?? null) : null;
         $packageOutputs = is_array($packageOutputs) ? $packageOutputs : [];
 
+        $addons = [];
+        $rawAddons = is_array($t->meta) ? ($t->meta['addons'] ?? null) : null;
+        if (is_array($rawAddons)) {
+            foreach ($rawAddons as $a) {
+                if (!is_array($a) || empty($a['label'])) continue;
+                $addons[] = [
+                    'id' => $a['id'] ?? \Illuminate\Support\Str::slug($a['label']),
+                    'label' => $a['label'],
+                    'price' => (float) ($a['price'] ?? 0),
+                    'included_qty' => max(0, (int) ($a['included_qty'] ?? 0)),
+                    'max_per_unit' => max(0, (int) ($a['max_per_unit'] ?? 5)),
+                ];
+            }
+        }
+
         return [
             'id' => $t->id,
             'name' => $t->name,
@@ -1461,6 +1564,7 @@ class LeisureController extends BaseController
             'sort_order' => $t->sort_order,
             'meta' => is_array($t->meta) ? $t->meta : (object) [],
             'variants' => $variants,
+            'addons' => $addons,
             'package_outputs' => $packageOutputs,
         ];
     }

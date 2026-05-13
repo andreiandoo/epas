@@ -202,6 +202,15 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                         <p class="text-[11px] text-muted mb-2">Aceeași entitate fizică (ex: 10 bărci), prețuri diferite pe durată. Stocul rămâne partajat — fiecare rezervare consumă 1 unitate indiferent de varianta aleasă.</p>
                         <div id="pr-f-variants-list" class="space-y-2"></div>
                     </div>
+                    <!-- Add-ons opționale (pentru access, rental, activity) -->
+                    <div id="pr-f-addons-wrap" class="md:col-span-2 hidden">
+                        <div class="flex items-center justify-between mb-2">
+                            <p class="text-xs font-semibold text-muted uppercase tracking-wider">Add-ons opționale</p>
+                            <button type="button" id="pr-f-addon-add" class="px-2.5 py-1 text-xs font-medium text-primary bg-primary/10 hover:bg-primary/20 rounded">+ Adaugă add-on</button>
+                        </div>
+                        <p class="text-[11px] text-muted mb-2">Servicii opționale legate de acest produs (ex: tractare extra la sanii). „Incluse" = câte sunt gratuite per bilet cumpărat (calculate real). „Max plătite" = câte adăugiri se pot face peste cele incluse.</p>
+                        <div id="pr-f-addons-list" class="space-y-2"></div>
+                    </div>
                     <!-- Componente pachet (pentru service_category=package) -->
                     <div id="pr-f-package-wrap" class="md:col-span-2 hidden">
                         <div class="flex items-center justify-between mb-2">
@@ -1018,6 +1027,9 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         // Pachet — populează componentele din meta.package_outputs
         const packageOutputs = Array.isArray(p?.package_outputs) ? p.package_outputs : (Array.isArray(p?.meta?.package_outputs) ? p.meta.package_outputs : []);
         renderPackageRows(packageOutputs);
+        // Add-ons — populează din meta.addons
+        const addons = Array.isArray(p?.addons) ? p.addons : (Array.isArray(p?.meta?.addons) ? p.meta.addons : []);
+        renderAddonRows(addons);
         updateVariantsVisibility();
 
         $('pr-modal').classList.remove('hidden');
@@ -1029,6 +1041,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         const show = (cat === 'rental' || cat === 'activity');
         $('pr-f-variants-wrap').classList.toggle('hidden', !show);
         $('pr-f-package-wrap').classList.toggle('hidden', cat !== 'package');
+        $('pr-f-addons-wrap').classList.toggle('hidden', !(cat === 'access' || cat === 'rental' || cat === 'activity'));
         // Pentru pachete, ascunde câmpurile irrelevante (parcare, vehicul)
         const isPkg = (cat === 'package');
         const pkgHiddenFields = ['pr-f-parking', 'pr-f-vehicle'];
@@ -1037,6 +1050,50 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             if (el && el.closest('label')) el.closest('label').classList.toggle('hidden', isPkg);
         });
         if (isPkg) updatePackageSavings();
+    }
+
+    function makeAddonRow(a) {
+        a = a || {};
+        const row = document.createElement('div');
+        row.className = 'p-2 bg-slate-50 rounded-lg';
+        row.innerHTML = `
+            <div class="grid grid-cols-12 gap-2 items-center">
+                <input type="text" data-ao="id" placeholder="slug (tractare)" maxlength="32" value="${escapeHtml(a.id || '')}" class="col-span-3 px-2 py-1.5 text-xs border border-border rounded bg-white">
+                <input type="text" data-ao="label" placeholder="Etichetă (Tractare extra)" required value="${escapeHtml(a.label || '')}" class="col-span-3 px-2 py-1.5 text-sm border border-border rounded bg-white">
+                <input type="number" data-ao="price" placeholder="RON/buc" min="0" step="0.01" required value="${a.price ?? ''}" class="col-span-2 px-2 py-1.5 text-sm border border-border rounded bg-white">
+                <input type="number" data-ao="included_qty" placeholder="Gratuite/bilet" min="0" value="${a.included_qty ?? 0}" class="col-span-2 px-2 py-1.5 text-sm border border-border rounded bg-white" title="Câte sunt gratuite per bilet cumpărat">
+                <input type="number" data-ao="max_per_unit" placeholder="Max plătite/bilet" min="0" value="${a.max_per_unit ?? 5}" class="col-span-1 px-2 py-1.5 text-sm border border-border rounded bg-white" title="Câte se pot adăuga plătit pe lângă cele incluse">
+                <button type="button" data-ao-rm class="col-span-1 text-xs text-rose-600 hover:bg-rose-100 rounded px-1.5 py-1">🗑</button>
+            </div>
+        `;
+        row.querySelector('[data-ao-rm]').addEventListener('click', () => row.remove());
+        return row;
+    }
+
+    function renderAddonRows(addons) {
+        const list = $('pr-f-addons-list');
+        list.innerHTML = '';
+        (addons || []).forEach(a => list.appendChild(makeAddonRow(a)));
+    }
+
+    function collectAddons() {
+        const out = [];
+        $('pr-f-addons-list').querySelectorAll(':scope > div').forEach(row => {
+            const item = {};
+            row.querySelectorAll('[data-ao]').forEach(el => {
+                const k = el.dataset.ao;
+                let v = el.value;
+                if (typeof v === 'string') v = v.trim();
+                if (v !== '' && v !== null && v !== undefined) item[k] = v;
+            });
+            if (!item.label) return;
+            if (!item.id) item.id = item.label.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 32) || ('a' + Date.now());
+            if (item.price) item.price = parseFloat(item.price);
+            item.included_qty = parseInt(item.included_qty || 0, 10);
+            item.max_per_unit = parseInt(item.max_per_unit || 5, 10);
+            out.push(item);
+        });
+        return out;
     }
 
     function makePackageRow(o) {
@@ -1175,6 +1232,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         const cat = $('pr-f-category').value;
         const variants = (cat === 'rental' || cat === 'activity') ? collectVariants() : [];
         const packageOutputs = (cat === 'package') ? collectPackageOutputs() : [];
+        const addons = (cat === 'access' || cat === 'rental' || cat === 'activity') ? collectAddons() : [];
         const body = {
             name: $('pr-f-name').value.trim(),
             service_category: cat,
@@ -1195,6 +1253,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 image: $('pr-f-image').value.trim() || null,
                 includes,
                 variants,
+                addons,
                 package_outputs: packageOutputs,
             },
         };
@@ -1237,6 +1296,8 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         // Package outputs: add row + auto-recalc savings on price change
         const pkgAdd = $('pr-f-package-add'); if (pkgAdd) pkgAdd.addEventListener('click', () => { $('pr-f-package-list').appendChild(makePackageRow({})); updatePackageSavings(); });
         const priceInp = $('pr-f-price'); if (priceInp) priceInp.addEventListener('input', updatePackageSavings);
+        // Add-ons: add row
+        const aoAdd = $('pr-f-addon-add'); if (aoAdd) aoAdd.addEventListener('click', () => $('pr-f-addons-list').appendChild(makeAddonRow({})));
     }
 
     // ========== CONTENT EDITOR ==========
