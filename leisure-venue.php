@@ -427,8 +427,27 @@ require_once __DIR__ . '/includes/head.php';
                                     <div class="flex items-center gap-2 flex-wrap mb-1">
                                         <h3 class="font-display text-lg lg:text-xl font-bold text-ink" x-text="ticket.name"></h3>
                                         <span x-show="ticket.is_parking" class="lv-badge bg-lake-100 text-lake-800 text-xs">🅿️ Parcare inclusă</span>
+                                        <span x-show="ticket.service_category === 'package'" class="lv-badge bg-rose-100 text-rose-800 text-xs font-bold">🎁 PACHET</span>
+                                        <span x-show="ticket.package_savings > 0" class="lv-badge bg-emerald-100 text-emerald-800 text-xs font-bold">
+                                            Economisești <span x-text="parseFloat(ticket.package_savings).toFixed(2)"></span> RON
+                                        </span>
                                     </div>
                                     <p x-show="ticket.description" class="text-sm text-forest-700/70 mb-3" x-text="ticket.description"></p>
+                                    <!-- Lista componentelor (pentru pachet) -->
+                                    <div x-show="ticket.service_category === 'package' && ticket.package_outputs && ticket.package_outputs.length > 0" class="mt-2 p-3 bg-rose-50 rounded-lg">
+                                        <p class="text-[10px] uppercase tracking-wider text-rose-700 font-bold mb-1.5">Include în pachet</p>
+                                        <ul class="space-y-1">
+                                            <template x-for="comp in (ticket.package_outputs || [])" :key="comp.ticket_type_id + (comp.variant_id || '')">
+                                                <li class="text-sm text-rose-900 flex items-start gap-1.5">
+                                                    <span class="text-rose-600">•</span>
+                                                    <span><strong x-text="comp.qty + '×'"></strong> <span x-text="comp.component_name"></span><span x-show="comp.variant_id" class="text-rose-700/70"> · <span x-text="comp.variant_id"></span></span></span>
+                                                </li>
+                                            </template>
+                                        </ul>
+                                        <p x-show="ticket.package_components_sum > 0" class="mt-2 text-xs text-rose-700/80">
+                                            Valoare individuală: <s><span x-text="parseFloat(ticket.package_components_sum).toFixed(2)"></span> RON</s>
+                                        </p>
+                                    </div>
                                     <!-- Includes — pillule beneficii -->
                                     <div x-show="ticket.includes && ticket.includes.length > 0" class="flex flex-wrap gap-1.5 mt-2">
                                         <template x-for="inc in ticket.includes" :key="inc">
@@ -440,19 +459,35 @@ require_once __DIR__ . '/includes/head.php';
                                     </div>
                                 </div>
                             </div>
+                            <!-- Variante (Bărci 30m/1h etc.) — se afișează când există -->
+                            <div x-show="ticket.variants && ticket.variants.length > 0" class="mt-4 pt-4 border-t border-forest-100">
+                                <p class="text-xs uppercase tracking-wider text-forest-700/60 font-bold mb-2">Alege opțiunea</p>
+                                <div class="flex flex-wrap gap-2">
+                                    <template x-for="v in (ticket.variants || [])" :key="v.id">
+                                        <button @click="variantSelectedByTicket[ticket.id] = v.id"
+                                                :class="(variantSelectedByTicket[ticket.id] || ticket.variants[0].id) === v.id
+                                                    ? 'border-forest-600 bg-forest-600 text-white'
+                                                    : 'border-forest-200 bg-white text-ink hover:border-forest-400'"
+                                                class="px-3 py-2 border-2 rounded-xl text-sm font-semibold transition-colors text-left">
+                                            <div x-text="v.label"></div>
+                                            <div class="text-xs font-medium opacity-75"><span x-text="parseFloat(v.price).toFixed(2)"></span> RON</div>
+                                        </button>
+                                    </template>
+                                </div>
+                            </div>
                             <div class="flex items-center justify-between pt-4 mt-4 border-t border-forest-100">
                                 <div>
                                     <p class="font-display text-2xl lg:text-3xl font-bold text-ink leading-none">
-                                        <span x-text="ticket.effective_price"></span>
+                                        <span x-text="displayPriceFor(ticket).toFixed(2)"></span>
                                         <span class="text-sm font-medium text-forest-700/60" x-text="ticket.currency || 'RON'"></span>
                                     </p>
                                     <p x-show="ticket.unit_label" class="text-xs text-forest-700/60 mt-1" x-text="ticket.unit_label"></p>
                                     <p x-show="!ticket.unit_label && ticket.requires_vehicle_info" class="text-xs text-forest-700/60 mt-1">Necesită nr. înmatriculare</p>
                                 </div>
                                 <div class="flex items-center gap-3">
-                                    <button @click="ticket.qty = Math.max(0, ticket.qty - 1)" :disabled="ticket.qty === 0" class="lv-qty-btn">−</button>
-                                    <span class="w-6 text-center font-bold text-lg text-ink" x-text="ticket.qty"></span>
-                                    <button @click="incrementTicket(ticket)" :disabled="ticket.available !== null && ticket.qty >= ticket.available" class="lv-qty-btn bg-forest-700 text-white border-forest-700 hover:bg-forest-800 hover:border-forest-800">+</button>
+                                    <button @click="decrementTicket(ticket)" :disabled="qtyForTicket(ticket) === 0" class="lv-qty-btn">−</button>
+                                    <span class="w-6 text-center font-bold text-lg text-ink" x-text="qtyForTicket(ticket)"></span>
+                                    <button @click="incrementTicket(ticket)" :disabled="ticket.available !== null && qtyForTicket(ticket) >= ticket.available" class="lv-qty-btn bg-forest-700 text-white border-forest-700 hover:bg-forest-800 hover:border-forest-800">+</button>
                                 </div>
                             </div>
                         </div>
@@ -527,11 +562,26 @@ require_once __DIR__ . '/includes/head.php';
                         <span x-show="!service.image_url" class="text-6xl opacity-80" x-text="serviceEmoji(service.service_category)"></span>
                     </div>
                     <div class="p-5 bg-white">
-                        <h3 class="font-display text-lg font-bold text-ink leading-tight mb-1" x-text="service.name"></h3>
+                        <div class="flex items-start justify-between gap-2 mb-1">
+                            <h3 class="font-display text-lg font-bold text-ink leading-tight" x-text="service.name"></h3>
+                            <span x-show="service.service_category === 'package'" class="lv-badge bg-rose-100 text-rose-800 text-[10px] font-bold flex-shrink-0">🎁 PACHET</span>
+                        </div>
                         <p class="text-sm text-forest-700/70 mb-2" x-text="service.description || ''"></p>
-                        <div class="flex flex-wrap gap-1.5 mb-3" x-show="service.service_duration_minutes || service.requires_access_ticket">
+                        <div class="flex flex-wrap gap-1.5 mb-3" x-show="service.service_duration_minutes || service.requires_access_ticket || service.package_savings > 0">
                             <span x-show="service.service_duration_minutes" class="lv-badge bg-blue-50 text-blue-700 text-[10px]" x-text="formatDuration(service.service_duration_minutes)"></span>
                             <span x-show="service.requires_access_ticket" class="lv-badge bg-amber-50 text-amber-700 text-[10px]">Necesită bilet acces</span>
+                            <span x-show="service.package_savings > 0" class="lv-badge bg-emerald-100 text-emerald-800 text-[10px] font-bold">
+                                Economisești <span x-text="parseFloat(service.package_savings).toFixed(2)"></span> RON
+                            </span>
+                        </div>
+                        <!-- Componente pachet -->
+                        <div x-show="service.service_category === 'package' && service.package_outputs && service.package_outputs.length > 0" class="mb-3 p-2.5 bg-rose-50 rounded-lg">
+                            <p class="text-[10px] uppercase tracking-wider text-rose-700 font-bold mb-1">Include</p>
+                            <ul class="space-y-0.5">
+                                <template x-for="comp in (service.package_outputs || [])" :key="comp.ticket_type_id + (comp.variant_id || '')">
+                                    <li class="text-xs text-rose-900"><strong x-text="comp.qty + '×'"></strong> <span x-text="comp.component_name"></span></li>
+                                </template>
+                            </ul>
                         </div>
                         <!-- Includes pe servicii -->
                         <div x-show="service.includes && service.includes.length > 0" class="flex flex-wrap gap-1.5 mb-3">
@@ -542,18 +592,33 @@ require_once __DIR__ . '/includes/head.php';
                                 </span>
                             </template>
                         </div>
+                        <!-- Variante (Bărci 30m/1h etc.) — se afișează când există -->
+                        <div x-show="service.variants && service.variants.length > 0" class="mt-3 mb-3">
+                            <div class="flex flex-wrap gap-2">
+                                <template x-for="v in (service.variants || [])" :key="v.id">
+                                    <button @click="variantSelectedByTicket[service.id] = v.id"
+                                            :class="(variantSelectedByTicket[service.id] || service.variants[0].id) === v.id
+                                                ? 'border-forest-600 bg-forest-600 text-white'
+                                                : 'border-forest-200 bg-white text-ink hover:border-forest-400'"
+                                            class="px-2.5 py-1.5 border-2 rounded-lg text-xs font-semibold transition-colors text-left">
+                                        <div x-text="v.label"></div>
+                                        <div class="text-[10px] font-medium opacity-75"><span x-text="parseFloat(v.price).toFixed(2)"></span> RON</div>
+                                    </button>
+                                </template>
+                            </div>
+                        </div>
                         <div class="flex items-end justify-between pt-3 border-t border-forest-100">
                             <div>
                                 <p class="font-display text-2xl font-bold text-ink">
-                                    <span x-text="service.effective_price"></span>
+                                    <span x-text="displayPriceFor(service).toFixed(2)"></span>
                                     <span class="text-sm font-medium text-forest-700/60" x-text="service.currency || 'RON'"></span>
                                 </p>
                                 <p x-show="service.unit_label" class="text-xs text-forest-700/60" x-text="service.unit_label"></p>
                             </div>
                             <div class="flex items-center gap-2">
-                                <button @click="service.qty = Math.max(0, service.qty - 1)" :disabled="service.qty === 0" class="lv-qty-btn">−</button>
-                                <span class="w-5 text-center font-bold text-ink" x-text="service.qty"></span>
-                                <button @click="incrementService(service)" :disabled="(service.requires_access_ticket && !hasAccessInCart) || (service.available !== null && service.qty >= service.available)" class="lv-qty-btn bg-forest-700 text-white border-forest-700 hover:bg-forest-800 hover:border-forest-800">+</button>
+                                <button @click="decrementTicket(service)" :disabled="qtyForTicket(service) === 0" class="lv-qty-btn">−</button>
+                                <span class="w-5 text-center font-bold text-ink" x-text="qtyForTicket(service)"></span>
+                                <button @click="incrementService(service)" :disabled="(service.requires_access_ticket && !hasAccessInCart) || (service.available !== null && qtyForTicket(service) >= service.available)" class="lv-qty-btn bg-forest-700 text-white border-forest-700 hover:bg-forest-800 hover:border-forest-800">+</button>
                             </div>
                         </div>
                         <p x-show="service.requires_access_ticket && !hasAccessInCart && service.qty === 0" class="text-[11px] text-red-600 mt-2 font-medium">Adaugă mai întâi un bilet de acces</p>
@@ -951,7 +1016,8 @@ function reservationPage() {
         loadingTickets: false,
         monthCache: {},        // 'YYYY-MM' -> { dates: { 'YYYY-MM-DD': { status } } }
         ticketsRaw: [],        // toate ticket types pentru data selectata (din API)
-        qtyById: {},           // { ticketTypeId: qty }
+        qtyById: {},           // { ticketTypeId: qty } sau { 'ticketTypeId|variantId': qty }
+        variantSelectedByTicket: {}, // { ticketId: variantId } — varianta activă pe card
         issuers: DATA.issuers || {},
         faqs: DATA.faqs || [],
         gallery: DATA.gallery || [],
@@ -1036,8 +1102,16 @@ function reservationPage() {
                 if (resp && resp.is_open) {
                     this.ticketsRaw = resp.ticket_types || [];
                     if (resp.commission) this.commission = resp.commission;
-                    // Init qty map
-                    this.ticketsRaw.forEach(t => { this.qtyById[t.id] = 0; });
+                    // Init qty map pentru ambele scenarii (cu/fara variants)
+                    this.ticketsRaw.forEach(t => {
+                        if (Array.isArray(t.variants) && t.variants.length > 0) {
+                            t.variants.forEach(v => { this.qtyById[`${t.id}|${v.id}`] = 0; });
+                            // pre-selecteaza prima varianta
+                            this.variantSelectedByTicket[t.id] = t.variants[0].id;
+                        } else {
+                            this.qtyById[t.id] = 0;
+                        }
+                    });
                 } else {
                     this.ticketsRaw = [];
                 }
@@ -1049,9 +1123,38 @@ function reservationPage() {
         },
 
         // ========== Tickets/Services derived ==========
+        // Helper: qty pe (ticket, variantă) — sau direct pe ticket dacă fără variants
+        cartKey(ticketId, variantId) {
+            return variantId ? `${ticketId}|${variantId}` : String(ticketId);
+        },
+        activeVariantId(t) {
+            if (!Array.isArray(t.variants) || t.variants.length === 0) return null;
+            return this.variantSelectedByTicket[t.id] || t.variants[0].id;
+        },
+        activeVariant(t) {
+            const vid = this.activeVariantId(t);
+            if (!vid) return null;
+            return (t.variants || []).find(v => v.id === vid) || null;
+        },
+        displayPriceFor(t) {
+            const v = this.activeVariant(t);
+            return v ? parseFloat(v.price || 0) : parseFloat(t.effective_price || 0);
+        },
+        qtyForTicket(t) {
+            // Pe card, qty = qty pentru varianta selectată curent (sau pentru tichet dacă fără variants)
+            const vid = this.activeVariantId(t);
+            return this.qtyById[this.cartKey(t.id, vid)] || 0;
+        },
+        // Sumă totală qty pe acest ticket (toate variantele)
+        totalQtyForTicket(t) {
+            if (!Array.isArray(t.variants) || t.variants.length === 0) {
+                return this.qtyById[t.id] || 0;
+            }
+            return t.variants.reduce((s, v) => s + (this.qtyById[this.cartKey(t.id, v.id)] || 0), 0);
+        },
         // Pune qty + reactivitate pe ticketsRaw items
         get _ticketsWithQty() {
-            return this.ticketsRaw.map(t => ({ ...t, qty: this.qtyById[t.id] || 0 }));
+            return this.ticketsRaw.map(t => ({ ...t, qty: this.totalQtyForTicket(t) }));
         },
         get accessTickets() {
             return this._ticketsWithQty.filter(t => (t.service_category || 'access') === 'access');
@@ -1063,10 +1166,34 @@ function reservationPage() {
             return this.services.some(s => !!s.requires_access_ticket);
         },
         get hasAccessInCart() {
-            return this.accessTickets.some(t => (this.qtyById[t.id] || 0) > 0);
+            return this.accessTickets.some(t => this.totalQtyForTicket(t) > 0);
         },
         get cartItems() {
-            return this._ticketsWithQty.filter(t => t.qty > 0);
+            // Splite pe (ticket, variant) — fiecare combinaţie cu qty>0 = un line item în coş
+            const out = [];
+            for (const t of this.ticketsRaw) {
+                if (Array.isArray(t.variants) && t.variants.length > 0) {
+                    for (const v of t.variants) {
+                        const qty = this.qtyById[this.cartKey(t.id, v.id)] || 0;
+                        if (qty > 0) {
+                            out.push({
+                                ...t,
+                                qty,
+                                effective_price: parseFloat(v.price || 0),
+                                variant: v,
+                                name: t.name + ' — ' + v.label,
+                                _cartKey: this.cartKey(t.id, v.id),
+                            });
+                        }
+                    }
+                } else {
+                    const qty = this.qtyById[t.id] || 0;
+                    if (qty > 0) {
+                        out.push({ ...t, qty, variant: null, _cartKey: String(t.id) });
+                    }
+                }
+            }
+            return out;
         },
         get cartCount() {
             return this.cartItems.reduce((s, t) => s + t.qty, 0);
@@ -1106,11 +1233,20 @@ function reservationPage() {
         },
 
         incrementTicket(ticket) {
-            this.qtyById[ticket.id] = (this.qtyById[ticket.id] || 0) + 1;
+            const vid = this.activeVariantId(ticket);
+            const key = this.cartKey(ticket.id, vid);
+            this.qtyById[key] = (this.qtyById[key] || 0) + 1;
+        },
+        decrementTicket(ticket) {
+            const vid = this.activeVariantId(ticket);
+            const key = this.cartKey(ticket.id, vid);
+            this.qtyById[key] = Math.max(0, (this.qtyById[key] || 0) - 1);
         },
         incrementService(service) {
             if (service.requires_access_ticket && !this.hasAccessInCart) return;
-            this.qtyById[service.id] = (this.qtyById[service.id] || 0) + 1;
+            const vid = this.activeVariantId(service);
+            const key = this.cartKey(service.id, vid);
+            this.qtyById[key] = (this.qtyById[key] || 0) + 1;
             this.cartOpen = true;
         },
 
@@ -1206,6 +1342,12 @@ function reservationPage() {
                 const unit = parseFloat(t.effective_price) || 0;
                 const commission = this.commissionPerTicket(unit);
                 const finalUnit = unit + commission;
+                const variantInfo = t.variant ? {
+                    id: String(t.variant.id),
+                    label: String(t.variant.label),
+                    duration_minutes: t.variant.duration_minutes ? Number(t.variant.duration_minutes) : null,
+                    price: Number(parseFloat(t.variant.price)) || 0,
+                } : null;
                 const ticketPayload = {
                     id: Number(t.id) || 0,
                     name: String(t.name || ''),
@@ -1219,6 +1361,7 @@ function reservationPage() {
                     service_category: String(t.service_category || 'access'),
                     issuing_company: String(t.issuing_company || 'primary'),
                     image_url: t.image_url ? String(t.image_url) : null,
+                    variant: variantInfo,
                 };
                 const qty = parseInt(t.qty, 10) || 0;
                 if (qty <= 0) return;
@@ -1232,7 +1375,11 @@ function reservationPage() {
                     Number(t.id) || 0,
                     ticketPayload,
                     qty,
-                    { visit_date: String(this.selectedDate) }
+                    {
+                        visit_date: String(this.selectedDate),
+                        variant_id: variantInfo ? variantInfo.id : null,
+                        variant_label: variantInfo ? variantInfo.label : null,
+                    }
                 );
             });
 

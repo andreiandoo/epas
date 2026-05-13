@@ -143,6 +143,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                             <option value="rental">🛶 Închiriere echipament</option>
                             <option value="activity">🎯 Activitate cu operator</option>
                             <option value="extra">➕ Extra</option>
+                            <option value="package">🎁 Pachet (combinație de produse)</option>
                         </select>
                     </label>
                     <label class="block">
@@ -192,6 +193,25 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                         <span class="text-xs font-semibold text-muted uppercase tracking-wider">Termeni utilizare</span>
                         <textarea id="pr-f-terms" rows="2" class="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg" placeholder="Condiții, restricții..."></textarea>
                     </label>
+                    <!-- Variante (durată / preț) — pentru rental + activity -->
+                    <div id="pr-f-variants-wrap" class="md:col-span-2 hidden">
+                        <div class="flex items-center justify-between mb-2">
+                            <p class="text-xs font-semibold text-muted uppercase tracking-wider">Variante (durată / preț)</p>
+                            <button type="button" id="pr-f-variant-add" class="px-2.5 py-1 text-xs font-medium text-primary bg-primary/10 hover:bg-primary/20 rounded">+ Adaugă variantă</button>
+                        </div>
+                        <p class="text-[11px] text-muted mb-2">Aceeași entitate fizică (ex: 10 bărci), prețuri diferite pe durată. Stocul rămâne partajat — fiecare rezervare consumă 1 unitate indiferent de varianta aleasă.</p>
+                        <div id="pr-f-variants-list" class="space-y-2"></div>
+                    </div>
+                    <!-- Componente pachet (pentru service_category=package) -->
+                    <div id="pr-f-package-wrap" class="md:col-span-2 hidden">
+                        <div class="flex items-center justify-between mb-2">
+                            <p class="text-xs font-semibold text-muted uppercase tracking-wider">Conține (componente pachet)</p>
+                            <button type="button" id="pr-f-package-add" class="px-2.5 py-1 text-xs font-medium text-primary bg-primary/10 hover:bg-primary/20 rounded">+ Adaugă component</button>
+                        </div>
+                        <p class="text-[11px] text-muted mb-2">Pachetul emite automat aceste bilete la cumpărare. Prețul pachetului (mai sus) este fix și manual — sistemul afișează automat economiile față de suma componentelor.</p>
+                        <div id="pr-f-package-list" class="space-y-2"></div>
+                        <div id="pr-f-package-savings" class="mt-2 text-xs text-emerald-700 font-semibold hidden"></div>
+                    </div>
                     <div class="md:col-span-2 grid grid-cols-2 md:grid-cols-4 gap-3">
                         <label class="flex items-center gap-2 text-sm">
                             <input id="pr-f-active" type="checkbox" class="w-4 h-4 accent-primary">
@@ -907,8 +927,8 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
     let productsCache = [];
     let editingProductId = null;
 
-    const CAT_LABEL = { access: '🎟️ Acces', parking: '🚗 Parcare', rental: '🛶 Închiriere', activity: '🎯 Activitate', extra: '➕ Extra' };
-    const CAT_COLOR = { access: 'blue', parking: 'violet', rental: 'amber', activity: 'emerald', extra: 'slate' };
+    const CAT_LABEL = { access: '🎟️ Acces', parking: '🚗 Parcare', rental: '🛶 Închiriere', activity: '🎯 Activitate', extra: '➕ Extra', package: '🎁 Pachet' };
+    const CAT_COLOR = { access: 'blue', parking: 'violet', rental: 'amber', activity: 'emerald', extra: 'slate', package: 'rose' };
 
     async function loadProducts() {
         if (!currentEventId) return;
@@ -991,8 +1011,157 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         $('pr-f-vehicle').checked = p ? !!p.requires_vehicle_info : false;
         $('pr-f-reqaccess').checked = p ? !!p.requires_access_ticket : false;
         $('pr-f-delete').classList.toggle('hidden', !p);
+
+        // Variante — afișează doar pentru rental/activity, populează din meta.variants
+        const variants = Array.isArray(p?.variants) ? p.variants : (Array.isArray(p?.meta?.variants) ? p.meta.variants : []);
+        renderVariantRows(variants);
+        // Pachet — populează componentele din meta.package_outputs
+        const packageOutputs = Array.isArray(p?.package_outputs) ? p.package_outputs : (Array.isArray(p?.meta?.package_outputs) ? p.meta.package_outputs : []);
+        renderPackageRows(packageOutputs);
+        updateVariantsVisibility();
+
         $('pr-modal').classList.remove('hidden');
         $('pr-modal').classList.add('flex');
+    }
+
+    function updateVariantsVisibility() {
+        const cat = $('pr-f-category').value;
+        const show = (cat === 'rental' || cat === 'activity');
+        $('pr-f-variants-wrap').classList.toggle('hidden', !show);
+        $('pr-f-package-wrap').classList.toggle('hidden', cat !== 'package');
+        // Pentru pachete, ascunde câmpurile irrelevante (parcare, vehicul)
+        const isPkg = (cat === 'package');
+        const pkgHiddenFields = ['pr-f-parking', 'pr-f-vehicle'];
+        pkgHiddenFields.forEach(id => {
+            const el = $(id);
+            if (el && el.closest('label')) el.closest('label').classList.toggle('hidden', isPkg);
+        });
+        if (isPkg) updatePackageSavings();
+    }
+
+    function makePackageRow(o) {
+        o = o || {};
+        const row = document.createElement('div');
+        row.className = 'p-2 bg-slate-50 rounded-lg';
+        const opts = productsCache
+            .filter(p => p.service_category !== 'package' && p.id !== editingProductId)
+            .map(p => `<option value="${p.id}" ${o.ticket_type_id == p.id ? 'selected' : ''}>${escapeHtml(p.name)}${p.service_category ? ' (' + p.service_category + ')' : ''}</option>`)
+            .join('');
+        row.innerHTML = `
+            <div class="grid grid-cols-12 gap-2 items-center">
+                <select data-pkg="ticket_type_id" class="col-span-6 px-2 py-1.5 text-sm border border-border rounded bg-white">
+                    <option value="">— Selectează component —</option>
+                    ${opts}
+                </select>
+                <input type="text" data-pkg="variant_id" placeholder="Variantă (ex: 1h)" maxlength="32" value="${escapeHtml(o.variant_id || '')}" class="col-span-3 px-2 py-1.5 text-sm border border-border rounded bg-white">
+                <input type="number" data-pkg="qty" placeholder="Cant." min="1" value="${o.qty ?? 1}" class="col-span-2 px-2 py-1.5 text-sm border border-border rounded bg-white">
+                <button type="button" data-pkg-rm class="col-span-1 text-xs text-rose-600 hover:bg-rose-100 rounded px-1.5 py-1">🗑</button>
+            </div>
+        `;
+        row.querySelector('[data-pkg-rm]').addEventListener('click', () => { row.remove(); updatePackageSavings(); });
+        row.querySelectorAll('[data-pkg]').forEach(el => el.addEventListener('input', updatePackageSavings));
+        row.querySelectorAll('[data-pkg]').forEach(el => el.addEventListener('change', updatePackageSavings));
+        return row;
+    }
+
+    function renderPackageRows(outputs) {
+        const list = $('pr-f-package-list');
+        list.innerHTML = '';
+        (outputs || []).forEach(o => list.appendChild(makePackageRow(o)));
+        updatePackageSavings();
+    }
+
+    function collectPackageOutputs() {
+        const out = [];
+        $('pr-f-package-list').querySelectorAll(':scope > div').forEach(row => {
+            const item = {};
+            row.querySelectorAll('[data-pkg]').forEach(el => {
+                const k = el.dataset.pkg;
+                let v = el.value;
+                if (typeof v === 'string') v = v.trim();
+                if (v !== '' && v !== null && v !== undefined) item[k] = v;
+            });
+            if (!item.ticket_type_id) return;
+            item.ticket_type_id = parseInt(item.ticket_type_id, 10);
+            item.qty = Math.max(1, parseInt(item.qty || 1, 10));
+            if (!item.variant_id) delete item.variant_id;
+            out.push(item);
+        });
+        return out;
+    }
+
+    function updatePackageSavings() {
+        const outputs = collectPackageOutputs();
+        const price = parseFloat($('pr-f-price').value) || 0;
+        let sum = 0;
+        outputs.forEach(o => {
+            const comp = productsCache.find(p => p.id === o.ticket_type_id);
+            if (!comp) return;
+            let unit = parseFloat(comp.price || 0);
+            if (o.variant_id && Array.isArray(comp.variants)) {
+                const v = comp.variants.find(x => x.id === o.variant_id);
+                if (v) unit = parseFloat(v.price);
+            }
+            sum += unit * o.qty;
+        });
+        const savings = sum - price;
+        const wrap = $('pr-f-package-savings');
+        if (!wrap) return;
+        if (sum > 0 && price > 0) {
+            wrap.classList.remove('hidden');
+            const pct = sum > 0 ? Math.round((savings / sum) * 100) : 0;
+            wrap.innerHTML = `Suma componentelor: <strong>${sum.toFixed(2)} RON</strong> · ` +
+                (savings > 0
+                    ? `Economisești <strong class="text-emerald-700">${savings.toFixed(2)} RON</strong> (${pct}%)`
+                    : (savings < 0
+                        ? `<span class="text-amber-700">Prețul pachetului e mai mare decât suma componentelor (+${Math.abs(savings).toFixed(2)} RON)</span>`
+                        : `Preț egal cu suma componentelor`));
+        } else {
+            wrap.classList.add('hidden');
+        }
+    }
+
+    function makeVariantRow(v) {
+        v = v || {};
+        const row = document.createElement('div');
+        row.className = 'p-2 bg-slate-50 rounded-lg';
+        row.innerHTML = `
+            <div class="grid grid-cols-12 gap-2 items-center">
+                <input type="text" data-vr="id" placeholder="slug (30m)" maxlength="32" value="${escapeHtml(v.id || '')}" class="col-span-3 px-2 py-1.5 text-xs border border-border rounded bg-white">
+                <input type="text" data-vr="label" placeholder="Etichetă (30 minute)" required value="${escapeHtml(v.label || '')}" class="col-span-4 px-2 py-1.5 text-sm border border-border rounded bg-white">
+                <input type="number" data-vr="duration_minutes" placeholder="min" min="0" value="${v.duration_minutes ?? ''}" class="col-span-2 px-2 py-1.5 text-sm border border-border rounded bg-white">
+                <input type="number" data-vr="price" placeholder="RON" min="0" step="0.01" required value="${v.price ?? ''}" class="col-span-2 px-2 py-1.5 text-sm border border-border rounded bg-white">
+                <button type="button" data-vr-rm class="col-span-1 text-xs text-rose-600 hover:bg-rose-100 rounded px-1.5 py-1">🗑</button>
+            </div>
+        `;
+        row.querySelector('[data-vr-rm]').addEventListener('click', () => row.remove());
+        return row;
+    }
+
+    function renderVariantRows(variants) {
+        const list = $('pr-f-variants-list');
+        list.innerHTML = '';
+        (variants || []).forEach(v => list.appendChild(makeVariantRow(v)));
+    }
+
+    function collectVariants() {
+        const out = [];
+        $('pr-f-variants-list').querySelectorAll(':scope > div').forEach(row => {
+            const item = {};
+            row.querySelectorAll('[data-vr]').forEach(el => {
+                const k = el.dataset.vr;
+                let v = el.value;
+                if (typeof v === 'string') v = v.trim();
+                if (v !== '' && v !== null && v !== undefined) item[k] = v;
+            });
+            if (!item.label) return; // sărim peste rândurile incomplete
+            // normalize: id slug, price float, duration int
+            if (!item.id) item.id = item.label.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 32) || ('v' + Date.now());
+            if (item.price) item.price = parseFloat(item.price);
+            if (item.duration_minutes) item.duration_minutes = parseInt(item.duration_minutes, 10);
+            out.push(item);
+        });
+        return out;
     }
     function closeProductModal() {
         $('pr-modal').classList.add('hidden');
@@ -1003,9 +1172,12 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
     async function saveProduct() {
         const includesText = $('pr-f-includes').value.trim();
         const includes = includesText ? includesText.split('\n').map(s => s.trim()).filter(Boolean) : [];
+        const cat = $('pr-f-category').value;
+        const variants = (cat === 'rental' || cat === 'activity') ? collectVariants() : [];
+        const packageOutputs = (cat === 'package') ? collectPackageOutputs() : [];
         const body = {
             name: $('pr-f-name').value.trim(),
-            service_category: $('pr-f-category').value,
+            service_category: cat,
             issuing_company: $('pr-f-issuer').value,
             price: parseFloat($('pr-f-price').value) || 0,
             capacity: $('pr-f-capacity').value ? parseInt($('pr-f-capacity').value, 10) : null,
@@ -1022,6 +1194,8 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 unit_label: $('pr-f-unit').value.trim() || null,
                 image: $('pr-f-image').value.trim() || null,
                 includes,
+                variants,
+                package_outputs: packageOutputs,
             },
         };
         if (!body.name) { alert('Numele produsului e obligatoriu.'); return; }
@@ -1057,6 +1231,12 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         const saveBtn = $('pr-f-save'); if (saveBtn) saveBtn.addEventListener('click', saveProduct);
         const delBtn = $('pr-f-delete'); if (delBtn) delBtn.addEventListener('click', deleteProduct);
         const modal = $('pr-modal'); if (modal) modal.addEventListener('click', (e) => { if (e.target === modal) closeProductModal(); });
+        // Variants: add row + show/hide on category change
+        const varAdd = $('pr-f-variant-add'); if (varAdd) varAdd.addEventListener('click', () => $('pr-f-variants-list').appendChild(makeVariantRow({})));
+        const catSel = $('pr-f-category'); if (catSel) catSel.addEventListener('change', updateVariantsVisibility);
+        // Package outputs: add row + auto-recalc savings on price change
+        const pkgAdd = $('pr-f-package-add'); if (pkgAdd) pkgAdd.addEventListener('click', () => { $('pr-f-package-list').appendChild(makePackageRow({})); updatePackageSavings(); });
+        const priceInp = $('pr-f-price'); if (priceInp) priceInp.addEventListener('input', updatePackageSavings);
     }
 
     // ========== CONTENT EDITOR ==========
