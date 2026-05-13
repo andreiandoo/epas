@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Models\MarketplaceEmailLog;
 use App\Services\MarketplaceEmailService;
+use App\Support\EmailRouting;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -31,24 +32,46 @@ class ResendEmailJob implements ShouldQueue
         $log = $this->emailLog;
         $marketplace = $log->marketplaceClient;
 
-        if (!$marketplace->hasSmtpConfigured()) {
-            $log->markFailed('SMTP not configured for marketplace');
+        // Resends must follow the same routing rules as the original send: if
+        // the original was a transactional template, retry through the
+        // transactional provider; otherwise (e.g. newsletters) stay on primary.
+        $useTransactional = EmailRouting::isTransactional($log->template_slug);
+
+        $hasPrimary = $marketplace->hasMailConfigured();
+        $hasTransactional = $marketplace->hasTransactionalMailConfigured();
+
+        if (!$useTransactional && !$hasPrimary) {
+            $log->markFailed('Primary mail not configured for marketplace');
+            return;
+        }
+        if ($useTransactional && !$hasTransactional && !$hasPrimary) {
+            $log->markFailed('Neither transactional nor primary mail is configured for marketplace');
             return;
         }
 
         try {
-            $transport = $marketplace->getSmtpTransport();
+            $transport = $useTransactional
+                ? $marketplace->getTransactionalMailTransport()
+                : $marketplace->getMailTransport();
 
             if (!$transport) {
-                $log->markFailed('Could not create SMTP transport');
+                $log->markFailed('Could not create mail transport');
                 return;
             }
 
+            // Use the original log's from-address when present; otherwise pick
+            // the correct default for this routing decision.
+            $fromAddress = $log->from_email
+                ?? ($useTransactional
+                    ? $marketplace->getTransactionalEmailFromAddress()
+                    : $marketplace->getEmailFromAddress());
+            $fromName = $log->from_name
+                ?? ($useTransactional
+                    ? $marketplace->getTransactionalEmailFromName()
+                    : $marketplace->getEmailFromName());
+
             $email = (new Email())
-                ->from(new Address(
-                    $log->from_email ?? $marketplace->getEmailFromAddress(),
-                    $log->from_name ?? $marketplace->getEmailFromName()
-                ))
+                ->from(new Address($fromAddress, $fromName))
                 ->to(new Address($log->to_email, $log->to_name ?? ''))
                 ->subject($log->subject)
                 ->html($log->body_html);

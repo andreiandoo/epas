@@ -890,13 +890,15 @@ class Invitations extends Page
                 $pdfPath = $invite->urls['pdf'] ?? null;
                 $pdfData = $pdfPath ? Storage::disk('local')->get($pdfPath) : null;
 
-                if ($pdfData && $marketplace->hasMailConfigured()) {
-                    $transport = $marketplace->getMailTransport();
+                if ($pdfData && ($marketplace->hasMailConfigured() || $marketplace->hasTransactionalMailConfigured())) {
+                    // Invitațiile sunt tranzacționale → providerul tranzacțional
+                    // (cu fallback automat la primary când nu e configurat).
+                    $transport = $marketplace->getTransactionalMailTransport();
                     if ($transport) {
                         $symfonyEmail = (new \Symfony\Component\Mime\Email())
                             ->from(new \Symfony\Component\Mime\Address(
-                                $marketplace->getEmailFromAddress(),
-                                $marketplace->getEmailFromName()
+                                $marketplace->getTransactionalEmailFromAddress(),
+                                $marketplace->getTransactionalEmailFromName()
                             ))
                             ->to(new \Symfony\Component\Mime\Address($email, $name))
                             ->subject($subject)

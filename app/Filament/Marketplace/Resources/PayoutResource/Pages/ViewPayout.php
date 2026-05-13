@@ -831,12 +831,17 @@ class ViewPayout extends ViewRecord
             }
 
             $marketplace = $this->record->marketplaceClient;
-            $transport = $marketplace?->getMailTransport();
+            // Deconturile sunt tranzacționale → mergi prin providerul tranzacțional
+            // (cu fallback automat la cel principal când nu e configurat).
+            $transport = $marketplace?->getTransactionalMailTransport();
 
             if (!$transport) {
                 Notification::make()->title('Mail-ul nu este configurat')->body('Configurează SMTP/Brevo în Settings > Emails.')->danger()->send();
                 return;
             }
+
+            $fromAddress = $marketplace->getTransactionalEmailFromAddress();
+            $fromName = $marketplace->getTransactionalEmailFromName();
 
             $payout = $this->record;
             $event = $payout->event;
@@ -866,10 +871,7 @@ class ViewPayout extends ViewRecord
                 . '</div>';
 
             $symfonyEmail = (new \Symfony\Component\Mime\Email())
-                ->from(new \Symfony\Component\Mime\Address(
-                    $marketplace->getEmailFromAddress(),
-                    $marketplace->getEmailFromName()
-                ))
+                ->from(new \Symfony\Component\Mime\Address($fromAddress, $fromName))
                 ->to($email)
                 ->subject($subject)
                 ->html($bodyHtml)
@@ -883,8 +885,8 @@ class ViewPayout extends ViewRecord
                 'marketplace_organizer_id' => $organizer?->id,
                 'marketplace_event_id' => null,
                 'template_slug' => 'decont_send',
-                'from_email' => $marketplace->getEmailFromAddress(),
-                'from_name' => $marketplace->getEmailFromName(),
+                'from_email' => $fromAddress,
+                'from_name' => $fromName,
                 'to_email' => $email,
                 'to_name' => $organizer?->name ?? $email,
                 'subject' => $subject,
@@ -907,12 +909,16 @@ class ViewPayout extends ViewRecord
     {
         try {
             $marketplace = $this->record->marketplaceClient;
-            $transport = $marketplace?->getMailTransport();
+            // Facturile sunt tranzacționale → providerul tranzacțional (cu fallback la primary).
+            $transport = $marketplace?->getTransactionalMailTransport();
 
             if (!$transport) {
                 Notification::make()->title('Mail-ul nu este configurat')->danger()->send();
                 return;
             }
+
+            $fromAddress = $marketplace->getTransactionalEmailFromAddress();
+            $fromName = $marketplace->getTransactionalEmailFromName();
 
             $payout = $this->record;
             $event = $payout->event;
@@ -941,10 +947,7 @@ class ViewPayout extends ViewRecord
                 . '</div>';
 
             $symfonyEmail = (new \Symfony\Component\Mime\Email())
-                ->from(new \Symfony\Component\Mime\Address(
-                    $marketplace->getEmailFromAddress(),
-                    $marketplace->getEmailFromName()
-                ))
+                ->from(new \Symfony\Component\Mime\Address($fromAddress, $fromName))
                 ->to($email)
                 ->subject($subject)
                 ->html($bodyHtml);
@@ -957,8 +960,8 @@ class ViewPayout extends ViewRecord
                 'marketplace_organizer_id' => $organizer?->id,
                 'marketplace_event_id' => null,
                 'template_slug' => 'invoice_send',
-                'from_email' => $marketplace->getEmailFromAddress(),
-                'from_name' => $marketplace->getEmailFromName(),
+                'from_email' => $fromAddress,
+                'from_name' => $fromName,
                 'to_email' => $email,
                 'to_name' => $organizer?->name ?? $email,
                 'subject' => $subject,

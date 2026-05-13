@@ -102,10 +102,12 @@ class ViewTicket extends ViewRecord
                         return;
                     }
 
-                    // Get marketplace client for mail transport
+                    // Get marketplace client for mail transport.
+                    // Retrimiterea biletelor este tranzacțională → folosim providerul
+                    // tranzacțional dacă e configurat (fallback automat la primary).
                     $marketplaceClient = static::getMarketplaceClient();
 
-                    if (!$marketplaceClient?->hasMailConfigured()) {
+                    if (!$marketplaceClient?->hasMailConfigured() && !$marketplaceClient?->hasTransactionalMailConfigured()) {
                         Notification::make()
                             ->title('Email neconfigurat')
                             ->body('Configurați SMTP-ul în setările marketplace-ului pentru a trimite emailuri.')
@@ -114,7 +116,7 @@ class ViewTicket extends ViewRecord
                         return;
                     }
 
-                    $transport = $marketplaceClient->getMailTransport();
+                    $transport = $marketplaceClient->getTransactionalMailTransport();
                     if (!$transport) {
                         Notification::make()
                             ->title('Eroare transport email')
@@ -124,11 +126,14 @@ class ViewTicket extends ViewRecord
                         return;
                     }
 
+                    $fromAddress = $marketplaceClient->getTransactionalEmailFromAddress();
+                    $fromName = $marketplaceClient->getTransactionalEmailFromName();
+
                     Log::channel('marketplace')->info('Ticket email: starting send', [
                         'ticket_id' => $ticket->id,
                         'ticket_code' => $ticket->code,
                         'to' => $email,
-                        'mail_driver' => $marketplaceClient->getMailSettings()['driver'] ?? 'unknown',
+                        'transport' => $marketplaceClient->hasTransactionalMailConfigured() ? 'transactional' : 'primary (fallback)',
                     ]);
 
                     try {
@@ -149,10 +154,7 @@ class ViewTicket extends ViewRecord
 
                         // Send via marketplace client's mail transport
                         $symfonyEmail = (new SymfonyEmail())
-                            ->from(new SymfonyAddress(
-                                $marketplaceClient->getEmailFromAddress(),
-                                $marketplaceClient->getEmailFromName()
-                            ))
+                            ->from(new SymfonyAddress($fromAddress, $fromName))
                             ->to($email)
                             ->subject("Biletul tău pentru {$ticketMail->eventTitle}")
                             ->html($emailBody)
@@ -163,7 +165,7 @@ class ViewTicket extends ViewRecord
                         Log::channel('marketplace')->info('Ticket email: sent successfully', [
                             'ticket_id' => $ticket->id,
                             'to' => $email,
-                            'from' => $marketplaceClient->getEmailFromAddress(),
+                            'from' => $fromAddress,
                         ]);
 
                         Notification::make()

@@ -661,12 +661,16 @@ class EditOrganizerInvoice extends EditRecord
         }
 
         $marketplace = static::getMarketplaceClient();
-        $transport = $marketplace?->getSmtpTransport();
+        // Facturi = tranzacțional → providerul tranzacțional (fallback la primary).
+        $transport = $marketplace?->getTransactionalMailTransport();
 
         if (!$transport) {
             Notification::make()->danger()->title('SMTP nu este configurat.')->send();
             return;
         }
+
+        $fromAddress = $marketplace->getTransactionalEmailFromAddress();
+        $fromName = $marketplace->getTransactionalEmailFromName();
 
         try {
             $accMeta = !empty($meta['accounting']['pdf_url']) ? $meta['accounting'] : ($meta['accounting_proforma'] ?? []);
@@ -691,10 +695,7 @@ class EditOrganizerInvoice extends EditRecord
             $wrappedHtml = $this->wrapInEmailTemplate($html, $marketplace);
 
             $emailMessage = (new \Symfony\Component\Mime\Email())
-                ->from(new \Symfony\Component\Mime\Address(
-                    $marketplace->getEmailFromAddress(),
-                    $marketplace->getEmailFromName()
-                ))
+                ->from(new \Symfony\Component\Mime\Address($fromAddress, $fromName))
                 ->to($email)
                 ->subject("Factură #{$invoice->number} — PDF {$provider}")
                 ->html($wrappedHtml);
@@ -729,22 +730,23 @@ class EditOrganizerInvoice extends EditRecord
         }
 
         $marketplace = static::getMarketplaceClient();
-        $transport = $marketplace?->getSmtpTransport();
+        // Facturi = tranzacțional → providerul tranzacțional (fallback la primary).
+        $transport = $marketplace?->getTransactionalMailTransport();
 
         if (!$transport) {
             Notification::make()->danger()->title('SMTP nu este configurat.')->send();
             return;
         }
 
+        $fromAddress = $marketplace->getTransactionalEmailFromAddress();
+        $fromName = $marketplace->getTransactionalEmailFromName();
+
         try {
             $html = OrganizerInvoiceResource::renderInvoiceHtml($invoice);
             $wrappedHtml = $this->wrapInEmailTemplate($html, $marketplace);
 
             $emailMessage = (new \Symfony\Component\Mime\Email())
-                ->from(new \Symfony\Component\Mime\Address(
-                    $marketplace->getEmailFromAddress(),
-                    $marketplace->getEmailFromName()
-                ))
+                ->from(new \Symfony\Component\Mime\Address($fromAddress, $fromName))
                 ->to($email)
                 ->subject("Factură #{$invoice->number}")
                 ->html($wrappedHtml);

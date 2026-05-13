@@ -680,6 +680,27 @@ class Settings extends Page
                                                             ->send();
                                                     }
                                                 }),
+
+                                            \Filament\Actions\Action::make('clearTransactionalConfig')
+                                                ->label('Șterge configurare')
+                                                ->icon('heroicon-o-trash')
+                                                ->color('danger')
+                                                ->requiresConfirmation()
+                                                ->modalHeading('Șterge configurarea providerului tranzacțional')
+                                                ->modalDescription('După ștergere, emailurile tranzacționale vor pleca prin providerul principal (de mai sus). Această acțiune nu afectează providerul principal.')
+                                                ->modalSubmitActionLabel('Da, șterge')
+                                                ->action(function () {
+                                                    $marketplace = static::getMarketplaceClient();
+                                                    if (!$marketplace) {
+                                                        return;
+                                                    }
+                                                    $marketplace->update(['transactional_smtp_settings' => []]);
+                                                    Notification::make()
+                                                        ->success()
+                                                        ->title('Configurare ștearsă')
+                                                        ->body('Providerul tranzacțional a fost resetat. Reîncarcă pagina pentru a vedea valorile actualizate.')
+                                                        ->send();
+                                                }),
                                         ])
                                         ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get): bool => filled($get('transactional_mail_driver')))
                                         ->columnSpanFull(),
@@ -758,34 +779,42 @@ class Settings extends Page
             'data_admin_services' => $data['admin_notification_service_orders_email'] ?? '(missing)',
             'data_mail_driver' => $data['mail_driver'] ?? '(missing)',
             'data_transactional_mail_driver' => $data['transactional_mail_driver'] ?? '(missing)',
+            'data_has_tx_host' => array_key_exists('transactional_mail_host', $data),
+            'data_tx_host' => $data['transactional_mail_host'] ?? '(missing)',
             'db_stock_alert_threshold' => $marketplace->settings['stock_alert_threshold'] ?? '(missing)',
             'db_stock_alert_email' => $marketplace->settings['stock_alert_email'] ?? '(missing)',
             'db_admin_orders' => $marketplace->settings['admin_notifications']['orders_email'] ?? '(missing)',
             'db_admin_services' => $marketplace->settings['admin_notifications']['service_orders_email'] ?? '(missing)',
+            'db_tx_driver' => $marketplace->transactional_smtp_settings['driver'] ?? '(missing)',
+            'db_tx_host' => $marketplace->transactional_smtp_settings['host'] ?? '(missing)',
         ]);
 
-        // Update tenant fields
-        $marketplace->update([
-            'company_name' => $data['company_name'],
-            'cui' => $data['cui'],
-            'reg_com' => $data['reg_com'],
+        // Build the full update array first; commit in a SINGLE update at the end
+        // so smtp_settings, transactional_smtp_settings and settings all land in
+        // the same UPDATE row. Splitting it into multiple update()s previously
+        // caused the SMTP columns to occasionally be reset depending on the
+        // order in which Eloquent flushed dirty attributes.
+        $update = [
+            'company_name' => $data['company_name'] ?? $marketplace->company_name,
+            'cui' => $data['cui'] ?? $marketplace->cui,
+            'reg_com' => $data['reg_com'] ?? $marketplace->reg_com,
             'vat_payer' => (bool) ($data['vat_payer'] ?? false),
             'tax_display_mode' => $data['tax_display_mode'] ?? 'included',
             'fixed_commission' => $data['fixed_commission'] ?? null,
-            'address' => $data['address'],
-            'city' => $data['city'],
-            'state' => $data['state'],
-            'country' => $data['country'],
-            'postal_code' => $data['postal_code'],
-            'contact_email' => $data['contact_email'],
-            'contact_phone' => $data['contact_phone'],
+            'address' => $data['address'] ?? $marketplace->address,
+            'city' => $data['city'] ?? $marketplace->city,
+            'state' => $data['state'] ?? $marketplace->state,
+            'country' => $data['country'] ?? $marketplace->country,
+            'postal_code' => $data['postal_code'] ?? $marketplace->postal_code,
+            'contact_email' => $data['contact_email'] ?? $marketplace->contact_email,
+            'contact_phone' => $data['contact_phone'] ?? $marketplace->contact_phone,
             'operating_hours' => $data['operating_hours'] ?? null,
-            'website' => $data['website'],
-            'bank_name' => $data['bank_name'],
-            'bank_account' => $data['bank_account'],
-            'currency' => $data['currency'],
-            'ticket_terms' => $data['ticket_terms'],
-        ]);
+            'website' => $data['website'] ?? $marketplace->website,
+            'bank_name' => $data['bank_name'] ?? $marketplace->bank_name,
+            'bank_account' => $data['bank_account'] ?? $marketplace->bank_account,
+            'currency' => $data['currency'] ?? $marketplace->currency,
+            'ticket_terms' => $data['ticket_terms'] ?? $marketplace->ticket_terms,
+        ];
 
         // Update settings JSON — start from existing to preserve all keys
         $settings = $marketplace->settings ?? [];
@@ -837,81 +866,25 @@ class Settings extends Page
 
         // Update mail settings — saved in dedicated smtp_settings column (not settings JSON)
         // to prevent loss when settings JSON is rebuilt on save.
-        $currentSmtp = $marketplace->smtp_settings ?? [];
-        $incomingDriver = $data['mail_driver'] ?? null;
-
-        // Only update if driver is explicitly provided
-        if (filled($incomingDriver)) {
-            $currentSmtp['driver'] = $incomingDriver;
-
-            // Common fields
-            if (array_key_exists('mail_from_address', $data) && filled($data['mail_from_address'])) {
-                $currentSmtp['from_address'] = $data['mail_from_address'];
-            }
-            if (array_key_exists('mail_from_name', $data) && filled($data['mail_from_name'])) {
-                $currentSmtp['from_name'] = $data['mail_from_name'];
-            }
-
-            // SMTP-specific fields
-            if (!empty($data['mail_host'])) $currentSmtp['host'] = $data['mail_host'];
-            if (!empty($data['mail_port'])) $currentSmtp['port'] = $data['mail_port'];
-            if (array_key_exists('mail_username', $data) && filled($data['mail_username'])) {
-                $currentSmtp['username'] = $data['mail_username'];
-            }
-            if (!empty($data['mail_password'])) $currentSmtp['password'] = encrypt($data['mail_password']);
-            if (isset($data['mail_encryption'])) $currentSmtp['encryption'] = $data['mail_encryption'];
-
-            // API-based providers
-            if (!empty($data['mail_api_key'])) $currentSmtp['api_key'] = encrypt($data['mail_api_key']);
-            if (!empty($data['mail_api_secret'])) $currentSmtp['api_secret'] = encrypt($data['mail_api_secret']);
-
-            // Mailgun/SES specific
-            if (!empty($data['mail_domain'])) $currentSmtp['domain'] = $data['mail_domain'];
-            if (!empty($data['mail_region'])) $currentSmtp['region'] = $data['mail_region'];
-        }
-        // If no driver selected, don't touch smtp_settings at all
-
-        // Save mail settings to dedicated column (survives settings JSON rebuilds)
-        $marketplace->smtp_settings = $currentSmtp;
+        $currentSmtp = $this->mergeSmtpFromFormData(
+            existing: $marketplace->smtp_settings ?? [],
+            data: $data,
+            prefix: 'mail_'
+        );
 
         // Clear settings.mail to avoid stale data (smtp_settings is the source of truth now)
         unset($settings['mail']);
 
         // Transactional mail settings — secondary provider stored in its own column.
-        // Mirrors the primary save logic; when no driver is selected we leave the
-        // existing config alone (or reset to empty when explicitly cleared).
-        $currentTxSmtp = $marketplace->transactional_smtp_settings ?? [];
-        $incomingTxDriver = $data['transactional_mail_driver'] ?? null;
-
-        if (filled($incomingTxDriver)) {
-            $currentTxSmtp['driver'] = $incomingTxDriver;
-
-            if (array_key_exists('transactional_mail_from_address', $data) && filled($data['transactional_mail_from_address'])) {
-                $currentTxSmtp['from_address'] = $data['transactional_mail_from_address'];
-            }
-            if (array_key_exists('transactional_mail_from_name', $data) && filled($data['transactional_mail_from_name'])) {
-                $currentTxSmtp['from_name'] = $data['transactional_mail_from_name'];
-            }
-
-            if (!empty($data['transactional_mail_host'])) $currentTxSmtp['host'] = $data['transactional_mail_host'];
-            if (!empty($data['transactional_mail_port'])) $currentTxSmtp['port'] = $data['transactional_mail_port'];
-            if (array_key_exists('transactional_mail_username', $data) && filled($data['transactional_mail_username'])) {
-                $currentTxSmtp['username'] = $data['transactional_mail_username'];
-            }
-            if (!empty($data['transactional_mail_password'])) $currentTxSmtp['password'] = encrypt($data['transactional_mail_password']);
-            if (isset($data['transactional_mail_encryption'])) $currentTxSmtp['encryption'] = $data['transactional_mail_encryption'];
-
-            if (!empty($data['transactional_mail_api_key'])) $currentTxSmtp['api_key'] = encrypt($data['transactional_mail_api_key']);
-            if (!empty($data['transactional_mail_api_secret'])) $currentTxSmtp['api_secret'] = encrypt($data['transactional_mail_api_secret']);
-
-            if (!empty($data['transactional_mail_domain'])) $currentTxSmtp['domain'] = $data['transactional_mail_domain'];
-            if (!empty($data['transactional_mail_region'])) $currentTxSmtp['region'] = $data['transactional_mail_region'];
-        } else {
-            // Driver was cleared — wipe the secondary config so we fall back to primary
-            $currentTxSmtp = [];
-        }
-
-        $marketplace->transactional_smtp_settings = $currentTxSmtp;
+        // IMPORTANT: never wipe just because the driver field arrived empty in $data
+        // (the conditional Group in the form can shed values when other tabs save).
+        // The only way to clear it is to explicitly pick "Use Platform Default" AND
+        // be looking at the Emails tab with the secondary section visible.
+        $currentTxSmtp = $this->mergeSmtpFromFormData(
+            existing: $marketplace->transactional_smtp_settings ?? [],
+            data: $data,
+            prefix: 'transactional_mail_'
+        );
 
         // Stock alert settings — preserve existing if form fields are empty
         if (!empty($data['stock_alert_threshold'])) {
@@ -921,9 +894,12 @@ class Settings extends Page
             $settings['stock_alert_email'] = $data['stock_alert_email'];
         }
 
-        $marketplace->update([
-            'settings' => $settings,
-        ]);
+        // Single atomic commit — settings JSON + both SMTP columns in one UPDATE.
+        $update['settings'] = $settings;
+        $update['smtp_settings'] = $currentSmtp;
+        $update['transactional_smtp_settings'] = $currentTxSmtp;
+
+        $marketplace->update($update);
 
         \Log::info('[Settings::save] done', [
             'marketplace_id' => $marketplace->id,
@@ -931,6 +907,9 @@ class Settings extends Page
             'saved_stock_alert_email' => $settings['stock_alert_email'] ?? '(missing)',
             'saved_admin_orders' => $settings['admin_notifications']['orders_email'] ?? '(missing)',
             'saved_admin_services' => $settings['admin_notifications']['service_orders_email'] ?? '(missing)',
+            'saved_smtp_driver' => $currentSmtp['driver'] ?? '(empty)',
+            'saved_tx_driver' => $currentTxSmtp['driver'] ?? '(empty)',
+            'saved_tx_host' => $currentTxSmtp['host'] ?? '(empty)',
         ]);
 
         Notification::make()
@@ -943,6 +922,55 @@ class Settings extends Page
     public function getTitle(): string
     {
         return 'Settings';
+    }
+
+    /**
+     * Merge SMTP fields from the form $data into an existing SMTP config array.
+     *
+     * Non-destructive: when the driver in $data is empty (which can happen on a
+     * save initiated from another tab where the conditional fields haven't fully
+     * rehydrated), the existing config is kept as-is. The only way to clear the
+     * config is the explicit Clear button (or a manual UPDATE in DB).
+     */
+    private function mergeSmtpFromFormData(array $existing, array $data, string $prefix): array
+    {
+        $incomingDriver = $data[$prefix . 'driver'] ?? null;
+
+        // Defensive: never wipe an existing config because the form happened to
+        // submit an empty driver. Only patch if a real driver value is present.
+        if (!filled($incomingDriver)) {
+            return $existing;
+        }
+
+        $merged = $existing;
+        $merged['driver'] = $incomingDriver;
+
+        // Common across all providers
+        if (array_key_exists($prefix . 'from_address', $data) && filled($data[$prefix . 'from_address'])) {
+            $merged['from_address'] = $data[$prefix . 'from_address'];
+        }
+        if (array_key_exists($prefix . 'from_name', $data) && filled($data[$prefix . 'from_name'])) {
+            $merged['from_name'] = $data[$prefix . 'from_name'];
+        }
+
+        // SMTP-specific
+        if (!empty($data[$prefix . 'host'])) $merged['host'] = $data[$prefix . 'host'];
+        if (!empty($data[$prefix . 'port'])) $merged['port'] = $data[$prefix . 'port'];
+        if (array_key_exists($prefix . 'username', $data) && filled($data[$prefix . 'username'])) {
+            $merged['username'] = $data[$prefix . 'username'];
+        }
+        if (!empty($data[$prefix . 'password'])) $merged['password'] = encrypt($data[$prefix . 'password']);
+        if (isset($data[$prefix . 'encryption'])) $merged['encryption'] = $data[$prefix . 'encryption'];
+
+        // API-based providers (Brevo, Postmark, SendGrid, SES, Mailgun)
+        if (!empty($data[$prefix . 'api_key'])) $merged['api_key'] = encrypt($data[$prefix . 'api_key']);
+        if (!empty($data[$prefix . 'api_secret'])) $merged['api_secret'] = encrypt($data[$prefix . 'api_secret']);
+
+        // Mailgun / SES specific
+        if (!empty($data[$prefix . 'domain'])) $merged['domain'] = $data[$prefix . 'domain'];
+        if (!empty($data[$prefix . 'region'])) $merged['region'] = $data[$prefix . 'region'];
+
+        return $merged;
     }
 
     /**
