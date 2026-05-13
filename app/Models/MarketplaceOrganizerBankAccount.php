@@ -13,6 +13,7 @@ class MarketplaceOrganizerBankAccount extends Model
         'iban',
         'account_holder',
         'is_primary',
+        'issuing_company',
     ];
 
     protected $casts = [

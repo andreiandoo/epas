@@ -79,14 +79,39 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             </div>
 
             <div id="company-section" class="hidden settings-section">
-                <div class="p-6 bg-white border rounded-2xl border-border">
-                    <h2 class="mb-6 text-lg font-bold text-secondary">Date Companie</h2>
-                    <form onsubmit="saveCompany(event)" class="space-y-4">
+                <div class="p-6 bg-white border rounded-2xl border-border mb-6">
+                    <h2 class="mb-6 text-lg font-bold text-secondary">Date Companie principală (SC1)</h2>
+                    <form id="form-company-primary" onsubmit="saveCompany(event)" class="space-y-4">
                         <div class="grid gap-4 lg:grid-cols-2"><div><label class="label">Denumire Firma *</label><input type="text" id="company-name" class="w-full input" required></div><div><label class="label">CUI / CIF *</label><div class="flex gap-2"><input type="text" id="company-cui" class="flex-1 input" required><button type="button" onclick="verifyCUI()" class="btn btn-secondary">Verifica ANAF</button></div></div></div>
                         <div class="grid gap-4 lg:grid-cols-2"><div><label class="label">Nr. Reg. Comertului</label><input type="text" id="company-reg" class="w-full input"></div><div><label class="label">Platitor TVA</label><select id="company-vat" class="w-full input"><option value="0">Nu</option><option value="1">Da</option></select></div></div>
                         <div><label class="label">Adresa Sediu *</label><input type="text" id="company-address" class="w-full input" required></div>
                         <div class="grid gap-4 lg:grid-cols-3"><div><label class="label">Oras *</label><input type="text" id="company-city" class="w-full input" required></div><div><label class="label">Judet *</label><input type="text" id="company-county" class="w-full input" required></div><div><label class="label">Cod Postal</label><input type="text" id="company-zip" class="w-full input"></div></div>
-                        <div class="flex justify-end pt-4"><button type="submit" class="btn btn-primary bg-primary">Salveaza</button></div>
+                        <div class="flex justify-end pt-4"><button type="submit" class="btn btn-primary bg-primary">Salveaza SC1</button></div>
+                    </form>
+                </div>
+
+                <div class="p-6 bg-white border rounded-2xl border-border">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-lg font-bold text-secondary">Companie secundară (SC2)</h2>
+                        <label class="flex items-center gap-2 text-sm">
+                            <input type="checkbox" id="has-secondary-issuer" onchange="toggleSecondaryCompany(this.checked)" class="w-4 h-4 accent-primary">
+                            <span>Am o a doua societate emitentă</span>
+                        </label>
+                    </div>
+                    <p class="text-xs text-muted mb-4">Bilete de acces pot fi emise pe SC1, iar serviciile conexe (parcare, închirieri, activități) pe SC2. Asociază fiecare cont bancar cu societatea corespunzătoare din tab-ul „Conturi Bancare".</p>
+                    <form id="form-company-secondary" onsubmit="saveSecondaryCompany(event)" class="space-y-4 opacity-50 pointer-events-none" id="secondary-form-wrap">
+                        <div class="grid gap-4 lg:grid-cols-2">
+                            <div><label class="label">Denumire Firma</label><input type="text" id="secondary-company-name" class="w-full input"></div>
+                            <div><label class="label">CUI / CIF</label><input type="text" id="secondary-company-cui" class="w-full input"></div>
+                        </div>
+                        <div><label class="label">Nr. Reg. Comertului</label><input type="text" id="secondary-company-reg" class="w-full input"></div>
+                        <div><label class="label">Adresa Sediu</label><input type="text" id="secondary-company-address" class="w-full input"></div>
+                        <div class="grid gap-4 lg:grid-cols-3">
+                            <div><label class="label">Oras</label><input type="text" id="secondary-company-city" class="w-full input"></div>
+                            <div><label class="label">Judet</label><input type="text" id="secondary-company-county" class="w-full input"></div>
+                            <div><label class="label">Cod Postal</label><input type="text" id="secondary-company-zip" class="w-full input"></div>
+                        </div>
+                        <div class="flex justify-end pt-4"><button type="submit" class="btn btn-primary bg-primary">Salveaza SC2</button></div>
                     </form>
                 </div>
             </div>
@@ -341,6 +366,14 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     <div id="iban-validation" class="hidden mt-1 text-xs"></div>
                 </div>
                 <div><label class="label">Titular Cont *</label><input type="text" id="bank-holder" class="w-full input" required></div>
+                <div>
+                    <label class="label">Societate emitentă *</label>
+                    <select id="bank-issuing-company" class="w-full input">
+                        <option value="primary">Companie principală (SC1)</option>
+                        <option value="secondary">Companie secundară (SC2)</option>
+                    </select>
+                    <p class="mt-1 text-xs text-muted">Contul va fi folosit pentru încasări pentru această societate. Schimbarea afectează doar emiterea facturilor viitoare.</p>
+                </div>
                 <div class="flex gap-3"><button type="button" onclick="closeBankModal()" class="flex-1 btn btn-secondary">Anuleaza</button><button type="submit" class="flex-1 btn btn-primary bg-primary">Adauga</button></div>
             </form>
         </div>
@@ -416,8 +449,53 @@ async function loadSettings() {
             // Hide personal info section if no guarantor data
             const hasGuarantorData = data.guarantor_first_name || data.guarantor_last_name || data.guarantor_cnp;
             document.getElementById('personal-info-section').style.display = hasGuarantorData ? '' : 'none';
+
+            // Secondary company hydration
+            const hasSec = !!data.has_secondary_issuer;
+            const secToggle = document.getElementById('has-secondary-issuer');
+            if (secToggle) {
+                secToggle.checked = hasSec;
+                toggleSecondaryCompany(hasSec);
+            }
+            const setSec = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
+            setSec('secondary-company-name', data.secondary_company_name);
+            setSec('secondary-company-cui', data.secondary_company_tax_id);
+            setSec('secondary-company-reg', data.secondary_company_registration);
+            setSec('secondary-company-address', data.secondary_company_address);
+            setSec('secondary-company-city', data.secondary_company_city);
+            setSec('secondary-company-county', data.secondary_company_county);
+            setSec('secondary-company-zip', data.secondary_company_zip);
         }
     } catch (error) { /* Fields remain empty */ }
+}
+
+function toggleSecondaryCompany(enabled) {
+    const form = document.getElementById('form-company-secondary');
+    if (!form) return;
+    if (enabled) {
+        form.classList.remove('opacity-50', 'pointer-events-none');
+    } else {
+        form.classList.add('opacity-50', 'pointer-events-none');
+    }
+}
+
+async function saveSecondaryCompany(e) {
+    e.preventDefault();
+    try {
+        const data = {
+            has_secondary_issuer: document.getElementById('has-secondary-issuer').checked,
+            secondary_company_name: document.getElementById('secondary-company-name').value,
+            secondary_company_tax_id: document.getElementById('secondary-company-cui').value,
+            secondary_company_registration: document.getElementById('secondary-company-reg').value,
+            secondary_company_address: document.getElementById('secondary-company-address').value,
+            secondary_company_city: document.getElementById('secondary-company-city').value,
+            secondary_company_county: document.getElementById('secondary-company-county').value,
+            secondary_company_zip: document.getElementById('secondary-company-zip').value,
+        };
+        const response = await AmbiletAPI.put('/organizer/profile', data);
+        if (response.success) { AmbiletNotifications.success('Datele SC2 au fost salvate'); }
+        else { AmbiletNotifications.error(response.message || 'Eroare la salvare'); }
+    } catch (error) { AmbiletNotifications.error('Eroare la salvare'); }
 }
 
 async function loadBankAccounts() {
@@ -430,12 +508,49 @@ async function loadBankAccounts() {
 
 function renderBankAccounts(accounts) {
     if (!accounts.length) { document.getElementById('bank-accounts-list').innerHTML = '<div class="p-6 text-center text-muted">Nu ai conturi bancare adaugate</div>'; return; }
-    document.getElementById('bank-accounts-list').innerHTML = accounts.map(a => `
-        <div class="flex items-center justify-between p-4 bg-surface rounded-xl ${a.is_primary ? 'ring-2 ring-primary' : ''}">
-            <div class="flex items-center gap-4"><div class="flex items-center justify-center w-12 h-12 bg-white border rounded-xl border-border"><svg class="w-6 h-6 text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg></div><div><div class="flex items-center gap-2"><p class="font-medium text-secondary">${a.bank}</p>${a.is_primary ? '<span class="px-2 py-0.5 bg-primary/10 text-primary text-xs rounded-full">Principal</span>' : ''}</div><p class="font-mono text-sm text-muted">${a.iban}</p></div></div>
-            <div class="flex items-center gap-2">${!a.is_primary ? `<button onclick="setPrimaryAccount(${a.id})" class="btn btn-secondary btn-sm">Seteaza Principal</button>` : ''}<button onclick="deleteAccount(${a.id})" class="p-2 text-muted hover:text-error"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button></div>
-        </div>
-    `).join('');
+    document.getElementById('bank-accounts-list').innerHTML = accounts.map(a => {
+        const issuer = a.issuing_company || 'primary';
+        const issuerLabel = issuer === 'secondary' ? 'SC2' : 'SC1';
+        const issuerColor = issuer === 'secondary' ? 'bg-amber-100 text-amber-800' : 'bg-blue-100 text-blue-800';
+        return `
+        <div class="flex flex-wrap items-center justify-between gap-3 p-4 bg-surface rounded-xl ${a.is_primary ? 'ring-2 ring-primary' : ''}">
+            <div class="flex items-center gap-4 min-w-0">
+                <div class="flex items-center justify-center w-12 h-12 bg-white border rounded-xl border-border flex-shrink-0">
+                    <svg class="w-6 h-6 text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
+                </div>
+                <div class="min-w-0">
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <p class="font-medium text-secondary">${a.bank}</p>
+                        <span class="px-2 py-0.5 ${issuerColor} text-[10px] font-semibold rounded-full">${issuerLabel}</span>
+                        ${a.is_primary ? '<span class="px-2 py-0.5 bg-primary/10 text-primary text-xs rounded-full">Principal</span>' : ''}
+                    </div>
+                    <p class="font-mono text-xs text-muted truncate">${a.iban}</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-2 flex-wrap">
+                <select onchange="changeBankIssuer(${a.id}, this.value)" class="text-xs px-2 py-1 border border-border rounded bg-white">
+                    <option value="primary" ${issuer === 'primary' ? 'selected' : ''}>SC1 (Principală)</option>
+                    <option value="secondary" ${issuer === 'secondary' ? 'selected' : ''}>SC2 (Secundară)</option>
+                </select>
+                ${!a.is_primary ? `<button onclick="setPrimaryAccount(${a.id})" class="btn btn-secondary btn-sm">Seteaza Principal</button>` : ''}
+                <button onclick="deleteAccount(${a.id})" class="p-2 text-muted hover:text-error" aria-label="Sterge">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                </button>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+async function changeBankIssuer(id, issuing) {
+    try {
+        const response = await AmbiletAPI.put('/organizer/bank-accounts/' + id, { issuing_company: issuing });
+        if (response.success) {
+            AmbiletNotifications.success('Emitent actualizat');
+            loadBankAccounts();
+        } else {
+            AmbiletNotifications.error(response.message || 'Eroare la actualizare');
+        }
+    } catch (error) { AmbiletNotifications.error('Eroare la actualizare emitent'); }
 }
 
 async function saveProfile(e) {
@@ -595,7 +710,12 @@ function closeBankModal() { document.getElementById('bank-modal').classList.add(
 async function addBankAccount(e) {
     e.preventDefault();
     try {
-        const data = { bank: document.getElementById('bank-name').value, iban: document.getElementById('bank-iban').value, holder: document.getElementById('bank-holder').value };
+        const data = {
+            bank: document.getElementById('bank-name').value,
+            iban: document.getElementById('bank-iban').value,
+            holder: document.getElementById('bank-holder').value,
+            issuing_company: document.getElementById('bank-issuing-company').value || 'primary',
+        };
         const response = await AmbiletAPI.post('/organizer/bank-accounts', data);
         if (response.success) { closeBankModal(); AmbiletNotifications.success('Contul a fost adaugat'); loadBankAccounts(); }
         else { AmbiletNotifications.error(response.message || 'Eroare la adaugare'); }

@@ -1599,6 +1599,8 @@ Route::prefix('marketplace-client/organizer')->middleware(['throttle:120,1', 'ma
             ->name('api.marketplace-client.organizer.bank-accounts.delete');
         Route::post('/bank-accounts/{accountId}/primary', [OrganizerAuthController::class, 'setPrimaryBankAccount'])
             ->name('api.marketplace-client.organizer.bank-accounts.primary');
+        Route::put('/bank-accounts/{accountId}', [OrganizerAuthController::class, 'updateBankAccount'])
+            ->name('api.marketplace-client.organizer.bank-accounts.update');
 
         // Team
         Route::get('/team', [OrganizerTeamController::class, 'index'])

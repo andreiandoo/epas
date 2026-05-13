@@ -457,6 +457,15 @@ class AuthController extends BaseController
             'company_city' => 'nullable|string|max:100',
             'company_county' => 'nullable|string|max:100',
             'company_zip' => 'nullable|string|max:20',
+            // A doua societate emitenta (leisure_venue)
+            'has_secondary_issuer' => 'nullable|boolean',
+            'secondary_company_name' => 'nullable|string|max:255',
+            'secondary_company_tax_id' => 'nullable|string|max:50',
+            'secondary_company_registration' => 'nullable|string|max:100',
+            'secondary_company_address' => 'nullable|string|max:500',
+            'secondary_company_city' => 'nullable|string|max:100',
+            'secondary_company_county' => 'nullable|string|max:100',
+            'secondary_company_zip' => 'nullable|string|max:20',
             'description' => 'nullable|string|max:2000',
             'website' => 'nullable|url|max:255',
             'social_links' => 'nullable|array',
@@ -1001,6 +1010,7 @@ class AuthController extends BaseController
                 'bank' => $a->bank_name,
                 'iban' => $a->iban,
                 'holder' => $a->account_holder,
+                'issuing_company' => $a->issuing_company ?? 'primary',
                 'is_primary' => $a->is_primary,
                 'created_at' => $a->created_at->toIso8601String(),
             ])->toArray(),
@@ -1022,6 +1032,7 @@ class AuthController extends BaseController
             'bank' => 'required|string|max:100',
             'iban' => 'required|string|max:34|regex:/^[A-Z]{2}[0-9]{2}[A-Z0-9]{1,30}$/',
             'holder' => 'required|string|max:255',
+            'issuing_company' => 'nullable|in:primary,secondary',
         ]);
 
         // Check if IBAN already exists for this organizer
@@ -1041,6 +1052,7 @@ class AuthController extends BaseController
             'bank_name' => $validated['bank'],
             'iban' => strtoupper($validated['iban']),
             'account_holder' => $validated['holder'],
+            'issuing_company' => $validated['issuing_company'] ?? 'primary',
             'is_primary' => $isFirst, // First account is automatically primary
         ]);
 
@@ -1050,10 +1062,46 @@ class AuthController extends BaseController
                 'bank' => $account->bank_name,
                 'iban' => $account->iban,
                 'holder' => $account->account_holder,
+                'issuing_company' => $account->issuing_company,
                 'is_primary' => $account->is_primary,
                 'created_at' => $account->created_at->toIso8601String(),
             ],
         ], 'Contul bancar a fost adaugat');
+    }
+
+    /**
+     * Update existing bank account (issuing_company change, primarily)
+     */
+    public function updateBankAccount(Request $request, int $accountId): JsonResponse
+    {
+        $organizer = $request->user();
+        if (!$organizer instanceof MarketplaceOrganizer) {
+            return $this->error('Unauthorized', 401);
+        }
+        $account = $organizer->bankAccounts()->find($accountId);
+        if (!$account) return $this->error('Contul bancar nu a fost gasit', 404);
+
+        $validated = $request->validate([
+            'bank' => 'nullable|string|max:100',
+            'holder' => 'nullable|string|max:255',
+            'issuing_company' => 'nullable|in:primary,secondary',
+        ]);
+
+        if (isset($validated['bank'])) $account->bank_name = $validated['bank'];
+        if (isset($validated['holder'])) $account->account_holder = $validated['holder'];
+        if (isset($validated['issuing_company'])) $account->issuing_company = $validated['issuing_company'];
+        $account->save();
+
+        return $this->success([
+            'account' => [
+                'id' => $account->id,
+                'bank' => $account->bank_name,
+                'iban' => $account->iban,
+                'holder' => $account->account_holder,
+                'issuing_company' => $account->issuing_company,
+                'is_primary' => $account->is_primary,
+            ],
+        ], 'Cont bancar actualizat');
     }
 
     /**
@@ -1143,6 +1191,16 @@ class AuthController extends BaseController
             'vat_payer' => (bool) $organizer->vat_payer,
             'representative_first_name' => $organizer->representative_first_name,
             'representative_last_name' => $organizer->representative_last_name,
+
+            // A doua societate emitenta (leisure_venue split)
+            'has_secondary_issuer' => (bool) $organizer->has_secondary_issuer,
+            'secondary_company_name' => $organizer->secondary_company_name,
+            'secondary_company_tax_id' => $organizer->secondary_company_tax_id,
+            'secondary_company_registration' => $organizer->secondary_company_registration,
+            'secondary_company_address' => $organizer->secondary_company_address,
+            'secondary_company_city' => $organizer->secondary_company_city,
+            'secondary_company_county' => $organizer->secondary_company_county,
+            'secondary_company_zip' => $organizer->secondary_company_zip,
 
             // Guarantor info
             'guarantor_first_name' => $organizer->guarantor_first_name,
