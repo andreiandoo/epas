@@ -899,7 +899,7 @@ require_once __DIR__ . '/includes/head.php';
                             <span class="font-semibold"><span x-text="(item.qty * item.effective_price).toFixed(2)"></span> RON</span>
                         </div>
                         <div x-show="hasCommission" class="flex items-center justify-between text-xs text-white/50 mt-0.5 pl-3">
-                            <span>+ Comision/bilet (max <span x-text="commission.rate"></span>%, min <span x-text="parseFloat(commission.fixed).toFixed(2)"></span> RON)</span>
+                            <span>+ Comision ticketing</span>
                             <span>+<span x-text="(item.qty * commissionPerTicket(item.effective_price)).toFixed(2)"></span> RON</span>
                         </div>
                     </div>
@@ -1223,8 +1223,13 @@ function reservationPage() {
                 const qty = parseInt(t.qty, 10) || 0;
                 if (qty <= 0) return;
 
+                // Semnatura veche (6 args) — alternative new (4 args) are
+                // mapping bug in cart.js: muta meta -> quantity rezultand
+                // [object Object] / NaN in /cos. Apelam direct positional.
                 AmbiletCart.addItem(
+                    Number(EVENT.id) || 0,
                     eventPayload,
+                    Number(t.id) || 0,
                     ticketPayload,
                     qty,
                     { visit_date: String(this.selectedDate) }

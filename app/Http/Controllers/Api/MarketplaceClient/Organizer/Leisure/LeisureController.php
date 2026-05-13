@@ -74,6 +74,16 @@ class LeisureController extends BaseController
             $issuers['secondary'] = $eventOrganizer->getIssuerData('secondary');
         }
 
+        // Comision la nivel de organizator (folosit pentru calcul live in POS)
+        $commission = ['rate' => 0.0, 'fixed' => 0.0, 'mode' => 'included'];
+        if ($eventOrganizer) {
+            $commission = [
+                'rate' => (float) $eventOrganizer->getEffectiveCommissionRate(),
+                'fixed' => (float) ($eventOrganizer->fixed_commission_default ?? 0),
+                'mode' => $eventOrganizer->getEffectiveCommissionMode(),
+            ];
+        }
+
         return $this->success([
             'event' => [
                 'id' => $eventModel->id,
@@ -85,6 +95,7 @@ class LeisureController extends BaseController
                 'name' => $eventOrganizer->name,
                 'has_secondary_issuer' => (bool) $eventOrganizer->has_secondary_issuer,
             ] : null,
+            'commission' => $commission,
             'issuers' => $issuers,
             'ticket_types' => $ticketTypes->map(function (TicketType $tt) {
                 return [
@@ -646,24 +657,42 @@ class LeisureController extends BaseController
             return $this->error('Unele tipuri de bilet nu aparțin acestui eveniment.', 422);
         }
 
-        // Calculează total
+        // Comision la nivel de organizator (max procentual sau fix per bilet)
+        $commissionRate = (float) $organizer->getEffectiveCommissionRate();
+        $commissionFixed = (float) ($organizer->fixed_commission_default ?? 0);
+        $commissionMode = $organizer->getEffectiveCommissionMode();
+        $commissionOnTop = ($commissionMode === 'added_on_top');
+
+        // Calculează subtotal + comision per linie
         $subtotal = 0.0;
+        $commissionTotal = 0.0;
         $items = [];
         foreach ($validated['items'] as $row) {
             $tt = $types->get($row['ticket_type_id']);
             if (!$tt) continue;
             $unit = (float) ($tt->price_max ?? $tt->price ?? 0);
-            $line = round($unit * (int) $row['qty'], 2);
+            $qty = (int) $row['qty'];
+            $line = round($unit * $qty, 2);
             $subtotal += $line;
+
+            // Comision per bilet emis: max(unit * rate%, fixed) doar dacă 'added_on_top'
+            $commissionPerTicket = 0.0;
+            if ($commissionOnTop) {
+                $commissionPerTicket = max($unit * $commissionRate / 100, $commissionFixed);
+                $commissionTotal += round($commissionPerTicket * $qty, 2);
+            }
+
             $items[] = [
                 'ticket_type' => $tt,
-                'qty' => (int) $row['qty'],
+                'qty' => $qty,
                 'unit_price' => $unit,
                 'line_total' => $line,
+                'commission_per_ticket' => round($commissionPerTicket, 2),
             ];
         }
         $subtotal = round($subtotal, 2);
-        $total = $subtotal;
+        $commissionTotal = round($commissionTotal, 2);
+        $total = round($subtotal + $commissionTotal, 2);
 
         $paymentMethod = $validated['payment_method'];
         $now = Carbon::now();
@@ -699,6 +728,10 @@ class LeisureController extends BaseController
                     'visit_date' => $visitDate,
                     'vehicle_plate' => $validated['customer']['vehicle_plate'] ?? null,
                     'cashier_organizer_id' => $organizer->id,
+                    'commission_total' => $commissionTotal,
+                    'commission_rate' => $commissionRate,
+                    'commission_fixed' => $commissionFixed,
+                    'commission_mode' => $commissionMode,
                 ],
             ]);
 
@@ -766,6 +799,7 @@ class LeisureController extends BaseController
                 'paid_at' => optional($order->paid_at)->toIso8601String(),
                 'total' => (float) $order->total,
                 'subtotal' => (float) $order->subtotal,
+                'commission_total' => $commissionTotal,
                 'currency' => $order->currency,
                 'payment_method' => $paymentMethod,
                 'status' => $order->status,
@@ -782,6 +816,7 @@ class LeisureController extends BaseController
                 'qty' => $it['qty'],
                 'unit_price' => $it['unit_price'],
                 'line_total' => $it['line_total'],
+                'commission_per_ticket' => $it['commission_per_ticket'] ?? 0,
                 'service_category' => $it['ticket_type']->service_category ?? 'access',
             ], $items),
             'tickets' => $issued,
