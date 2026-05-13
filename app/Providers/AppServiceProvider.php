@@ -114,6 +114,14 @@ class AppServiceProvider extends ServiceProvider
         // services.ambilet.cache_bust_url is unconfigured.
         \App\Models\Seating\SeatingLayout::observe(\App\Observers\SeatingLayoutBustObserver::class);
         \App\Models\Seating\SeatingSection::observe(\App\Observers\SeatingSectionBustObserver::class);
+
+        // Keep event_seats labels in sync when the underlying layout
+        // (section.name / row.label / seat.label) is renamed in the
+        // designer. Without these the snapshot taken at event creation
+        // drifts silently — see resyncLabelsFromLayout() backfill helper.
+        \App\Models\Seating\SeatingSection::observe(\App\Observers\Seating\SeatingSectionObserver::class);
+        \App\Models\Seating\SeatingRow::observe(\App\Observers\Seating\SeatingRowObserver::class);
+        \App\Models\Seating\SeatingSeat::observe(\App\Observers\Seating\SeatingSeatObserver::class);
         \App\Models\FestivalEdition::observe(\App\Observers\FestivalEditionObserver::class);
         \App\Models\Coupon\CouponCode::observe(\App\Observers\CouponCodeObserver::class);
 
