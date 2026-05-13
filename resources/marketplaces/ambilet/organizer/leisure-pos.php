@@ -108,8 +108,8 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 
     function fmtMoney(v) { return Number(v || 0).toFixed(2); }
 
-    const CAT_LABEL = { 'access': 'Acces', 'parking': 'Parcare', 'rental': 'Închiriere', 'activity': 'Activitate', 'extra': 'Extra' };
-    const CAT_COLOR = { 'access': 'blue', 'parking': 'violet', 'rental': 'amber', 'activity': 'emerald', 'extra': 'slate' };
+    const CAT_LABEL = { 'access': 'Acces', 'parking': 'Parcare', 'rental': 'Închiriere', 'activity': 'Activitate', 'extra': 'Extra', 'package': '🎁 Pachet' };
+    const CAT_COLOR = { 'access': 'blue', 'parking': 'violet', 'rental': 'amber', 'activity': 'emerald', 'extra': 'slate', 'package': 'rose' };
 
     function renderGrid() {
         $('lv-loading').classList.add('hidden');

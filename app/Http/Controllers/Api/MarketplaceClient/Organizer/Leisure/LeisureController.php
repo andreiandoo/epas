@@ -97,7 +97,7 @@ class LeisureController extends BaseController
             ] : null,
             'commission' => $commission,
             'issuers' => $issuers,
-            'ticket_types' => $ticketTypes->map(function (TicketType $tt) {
+            'ticket_types' => $ticketTypes->map(function (TicketType $tt) use ($ticketTypes) {
                 $variants = [];
                 $rawVariants = is_array($tt->meta) ? ($tt->meta['variants'] ?? null) : null;
                 if (is_array($rawVariants)) {
@@ -112,11 +112,44 @@ class LeisureController extends BaseController
                     }
                 }
 
+                // Pachete: enrich outputs cu nume + preț component
+                $packageOutputs = [];
+                $packageSum = 0.0;
+                $rawOutputs = is_array($tt->meta) ? ($tt->meta['package_outputs'] ?? null) : null;
+                $price = (float) ($tt->price_max ?? $tt->price ?? 0);
+                if (is_array($rawOutputs) && ($tt->effective_service_category === 'package')) {
+                    foreach ($rawOutputs as $row) {
+                        if (!is_array($row) || empty($row['ticket_type_id'])) continue;
+                        $compTt = $ticketTypes->firstWhere('id', $row['ticket_type_id']);
+                        if (!$compTt) continue;
+                        $compPrice = (float) ($compTt->price_max ?? $compTt->price ?? 0);
+                        if (!empty($row['variant_id']) && is_array($compTt->meta['variants'] ?? null)) {
+                            foreach ($compTt->meta['variants'] as $cv) {
+                                if (!is_array($cv) || empty($cv['label'])) continue;
+                                $cvid = $cv['id'] ?? \Illuminate\Support\Str::slug($cv['label']);
+                                if ($cvid === $row['variant_id']) {
+                                    $compPrice = (float) ($cv['price'] ?? $compPrice);
+                                    break;
+                                }
+                            }
+                        }
+                        $qty = (int) ($row['qty'] ?? 1);
+                        $packageSum += $compPrice * $qty;
+                        $packageOutputs[] = [
+                            'ticket_type_id' => (int) $row['ticket_type_id'],
+                            'variant_id' => $row['variant_id'] ?? null,
+                            'qty' => $qty,
+                            'component_name' => is_array($compTt->name) ? ($compTt->name['ro'] ?? reset($compTt->name)) : $compTt->name,
+                            'component_unit_price' => $compPrice,
+                        ];
+                    }
+                }
+
                 return [
                     'id' => $tt->id,
                     'name' => $tt->name,
                     'sku' => $tt->sku,
-                    'price' => (float) ($tt->price_max ?? $tt->price ?? 0),
+                    'price' => $price,
                     'price_max' => (float) ($tt->price_max ?? 0),
                     'service_category' => $tt->effective_service_category,
                     'is_parking' => (bool) $tt->is_parking,
@@ -127,6 +160,9 @@ class LeisureController extends BaseController
                     'issuing_explicit' => (bool) $tt->issuing_company,
                     'meta' => is_array($tt->meta) ? $tt->meta : (object) [],
                     'variants' => $variants,
+                    'package_outputs' => $packageOutputs,
+                    'package_components_sum' => round($packageSum, 2),
+                    'package_savings' => $packageOutputs ? round($packageSum - $price, 2) : 0,
                 ];
             })->all(),
         ]);
@@ -779,6 +815,11 @@ class LeisureController extends BaseController
                     $displayName .= ' — ' . $variantMeta['label'];
                 }
 
+                $isPackage = (($tt->service_category ?? null) === 'package');
+                $packageOutputs = is_array($tt->meta['package_outputs'] ?? null)
+                    ? $tt->meta['package_outputs']
+                    : [];
+
                 $orderItem = OrderItem::create([
                     'order_id' => $order->id,
                     'ticket_type_id' => $tt->id,
@@ -791,40 +832,150 @@ class LeisureController extends BaseController
                         'issuing_company' => $tt->issuing_company ?? 'primary',
                         'visit_date' => $visitDate,
                         'variant' => $variantMeta,
+                        'package' => $isPackage,
+                        'package_outputs' => $isPackage ? $packageOutputs : null,
                     ]),
                 ]);
 
-                for ($i = 0; $i < $it['qty']; $i++) {
-                    $code = strtoupper(Str::random(10));
-                    $ticket = Ticket::create([
-                        'order_id' => $order->id,
-                        'order_item_id' => $orderItem->id,
-                        'ticket_type_id' => $tt->id,
-                        'event_id' => $eventModel->id,
-                        'tenant_id' => $eventModel->tenant_id,
-                        'marketplace_client_id' => $marketplace->id,
-                        'code' => $code,
-                        'barcode' => $code,
-                        'status' => $paymentMethod === 'invoice' ? 'pending' : 'valid',
-                        'price' => $it['unit_price'],
-                        'attendee_name' => $validated['customer']['name'] ?? null,
-                        'attendee_email' => $validated['customer']['email'] ?? null,
-                        'meta' => array_filter([
-                            'pos' => true,
-                            'visit_date' => $visitDate,
+                if ($isPackage && !empty($packageOutputs)) {
+                    // Fan-out: pentru fiecare bucată de pachet cumpărată, emite N tickets per component
+                    $componentIds = collect($packageOutputs)->pluck('ticket_type_id')->filter()->unique();
+                    $componentTypes = TicketType::query()
+                        ->whereIn('id', $componentIds)
+                        ->where('event_id', $eventModel->id)
+                        ->get()
+                        ->keyBy('id');
+
+                    $packagesQty = (int) $it['qty'];
+                    for ($p = 0; $p < $packagesQty; $p++) {
+                        $packageCode = strtoupper(Str::random(10));
+                        // Bilet "umbrella" pentru pachet (status valid dar fără scanare directă)
+                        $pkgTicket = Ticket::create([
+                            'order_id' => $order->id,
+                            'order_item_id' => $orderItem->id,
+                            'ticket_type_id' => $tt->id,
+                            'event_id' => $eventModel->id,
+                            'tenant_id' => $eventModel->tenant_id,
+                            'marketplace_client_id' => $marketplace->id,
+                            'code' => $packageCode,
+                            'barcode' => $packageCode,
+                            'status' => $paymentMethod === 'invoice' ? 'pending' : 'valid',
+                            'price' => $it['unit_price'],
+                            'attendee_name' => $validated['customer']['name'] ?? null,
+                            'attendee_email' => $validated['customer']['email'] ?? null,
+                            'meta' => array_filter([
+                                'pos' => true,
+                                'visit_date' => $visitDate,
+                                'service_category' => 'package',
+                                'issuing_company' => $tt->issuing_company ?? 'primary',
+                                'is_package_umbrella' => true,
+                                'package_outputs' => $packageOutputs,
+                            ]),
+                        ]);
+                        $issued[] = [
+                            'id' => $pkgTicket->id,
+                            'code' => $pkgTicket->code,
+                            'ticket_type' => $displayName . ' (pachet)',
+                            'service_category' => 'package',
+                            'price' => $it['unit_price'],
+                            'variant' => null,
+                        ];
+
+                        // Componentele reale (scanabile, fără preț propriu — prețul = 0)
+                        foreach ($packageOutputs as $row) {
+                            if (empty($row['ticket_type_id'])) continue;
+                            $compTt = $componentTypes->get($row['ticket_type_id']);
+                            if (!$compTt) continue;
+                            $compQty = (int) ($row['qty'] ?? 1);
+                            $compVariant = null;
+                            if (!empty($row['variant_id']) && is_array($compTt->meta['variants'] ?? null)) {
+                                foreach ($compTt->meta['variants'] as $cv) {
+                                    if (!is_array($cv) || empty($cv['label'])) continue;
+                                    $cvid = $cv['id'] ?? Str::slug($cv['label']);
+                                    if ($cvid === $row['variant_id']) {
+                                        $compVariant = [
+                                            'id' => $cvid,
+                                            'label' => $cv['label'],
+                                            'duration_minutes' => $cv['duration_minutes'] ?? null,
+                                        ];
+                                        break;
+                                    }
+                                }
+                            }
+                            $compDisplay = is_array($compTt->name) ? ($compTt->name['ro'] ?? reset($compTt->name)) : $compTt->name;
+                            if ($compVariant) $compDisplay .= ' — ' . $compVariant['label'];
+
+                            for ($c = 0; $c < $compQty; $c++) {
+                                $code = strtoupper(Str::random(10));
+                                $compTicket = Ticket::create([
+                                    'order_id' => $order->id,
+                                    'order_item_id' => $orderItem->id,
+                                    'ticket_type_id' => $compTt->id,
+                                    'event_id' => $eventModel->id,
+                                    'tenant_id' => $eventModel->tenant_id,
+                                    'marketplace_client_id' => $marketplace->id,
+                                    'code' => $code,
+                                    'barcode' => $code,
+                                    'status' => $paymentMethod === 'invoice' ? 'pending' : 'valid',
+                                    'price' => 0, // componenta = $0, prețul e în pachet
+                                    'attendee_name' => $validated['customer']['name'] ?? null,
+                                    'attendee_email' => $validated['customer']['email'] ?? null,
+                                    'meta' => array_filter([
+                                        'pos' => true,
+                                        'visit_date' => $visitDate,
+                                        'service_category' => $compTt->service_category ?? 'access',
+                                        'issuing_company' => $compTt->issuing_company ?? 'primary',
+                                        'variant' => $compVariant,
+                                        'from_package' => true,
+                                        'parent_package_ticket_id' => $pkgTicket->id,
+                                    ]),
+                                ]);
+                                $issued[] = [
+                                    'id' => $compTicket->id,
+                                    'code' => $compTicket->code,
+                                    'ticket_type' => $compDisplay,
+                                    'service_category' => $compTt->service_category ?? 'access',
+                                    'price' => 0,
+                                    'variant' => $compVariant,
+                                    'from_package' => true,
+                                ];
+                            }
+                        }
+                    }
+                } else {
+                    // Flow standard (non-pachet)
+                    for ($i = 0; $i < $it['qty']; $i++) {
+                        $code = strtoupper(Str::random(10));
+                        $ticket = Ticket::create([
+                            'order_id' => $order->id,
+                            'order_item_id' => $orderItem->id,
+                            'ticket_type_id' => $tt->id,
+                            'event_id' => $eventModel->id,
+                            'tenant_id' => $eventModel->tenant_id,
+                            'marketplace_client_id' => $marketplace->id,
+                            'code' => $code,
+                            'barcode' => $code,
+                            'status' => $paymentMethod === 'invoice' ? 'pending' : 'valid',
+                            'price' => $it['unit_price'],
+                            'attendee_name' => $validated['customer']['name'] ?? null,
+                            'attendee_email' => $validated['customer']['email'] ?? null,
+                            'meta' => array_filter([
+                                'pos' => true,
+                                'visit_date' => $visitDate,
+                                'service_category' => $tt->service_category ?? 'access',
+                                'issuing_company' => $tt->issuing_company ?? 'primary',
+                                'variant' => $variantMeta,
+                            ]),
+                        ]);
+                        $issued[] = [
+                            'id' => $ticket->id,
+                            'code' => $ticket->code,
+                            'ticket_type' => $displayName,
                             'service_category' => $tt->service_category ?? 'access',
-                            'issuing_company' => $tt->issuing_company ?? 'primary',
+                            'price' => $it['unit_price'],
                             'variant' => $variantMeta,
-                        ]),
-                    ]);
-                    $issued[] = [
-                        'id' => $ticket->id,
-                        'code' => $ticket->code,
-                        'ticket_type' => $displayName,
-                        'service_category' => $tt->service_category ?? 'access',
-                        'price' => $it['unit_price'],
-                        'variant' => $variantMeta,
-                    ];
+                        ];
+                    }
                 }
             }
 
@@ -1178,7 +1329,7 @@ class LeisureController extends BaseController
             'name' => 'required|string|max:160',
             'sku' => 'nullable|string|max:64',
             'description' => 'nullable|string|max:2000',
-            'service_category' => 'nullable|in:access,parking,rental,activity,extra',
+            'service_category' => 'nullable|in:access,parking,rental,activity,extra,package',
             'issuing_company' => 'nullable|in:primary,secondary',
             'price' => 'nullable|numeric|min:0|max:999999',
             'price_max' => 'nullable|numeric|min:0|max:999999',
@@ -1246,11 +1397,42 @@ class LeisureController extends BaseController
             $filtered['variants'] = $normalized;
         }
 
+        // Normalize package_outputs (F4)
+        if (isset($filtered['package_outputs']) && is_array($filtered['package_outputs'])) {
+            $normalizedOutputs = [];
+            foreach ($filtered['package_outputs'] as $row) {
+                if (!is_array($row) || empty($row['ticket_type_id'])) continue;
+                $normalizedOutputs[] = [
+                    'ticket_type_id' => (int) $row['ticket_type_id'],
+                    'variant_id' => !empty($row['variant_id']) ? (string) $row['variant_id'] : null,
+                    'qty' => max(1, (int) ($row['qty'] ?? 1)),
+                ];
+            }
+            $filtered['package_outputs'] = $normalizedOutputs;
+        }
+
         return $filtered;
     }
 
     protected function presentProduct(TicketType $t): array
     {
+        $variants = [];
+        $rawVariants = is_array($t->meta) ? ($t->meta['variants'] ?? null) : null;
+        if (is_array($rawVariants)) {
+            foreach ($rawVariants as $v) {
+                if (!is_array($v) || empty($v['label'])) continue;
+                $variants[] = [
+                    'id' => $v['id'] ?? \Illuminate\Support\Str::slug($v['label']),
+                    'label' => $v['label'],
+                    'duration_minutes' => isset($v['duration_minutes']) ? (int) $v['duration_minutes'] : null,
+                    'price' => isset($v['price']) ? (float) $v['price'] : (float) ($t->price_max ?? $t->price ?? 0),
+                ];
+            }
+        }
+
+        $packageOutputs = is_array($t->meta) ? ($t->meta['package_outputs'] ?? null) : null;
+        $packageOutputs = is_array($packageOutputs) ? $packageOutputs : [];
+
         return [
             'id' => $t->id,
             'name' => $t->name,
@@ -1278,6 +1460,8 @@ class LeisureController extends BaseController
             'valid_date' => optional($t->valid_date)->toDateString(),
             'sort_order' => $t->sort_order,
             'meta' => is_array($t->meta) ? $t->meta : (object) [],
+            'variants' => $variants,
+            'package_outputs' => $packageOutputs,
         ];
     }
 

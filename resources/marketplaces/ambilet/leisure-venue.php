@@ -427,8 +427,27 @@ require_once __DIR__ . '/includes/head.php';
                                     <div class="flex items-center gap-2 flex-wrap mb-1">
                                         <h3 class="font-display text-lg lg:text-xl font-bold text-ink" x-text="ticket.name"></h3>
                                         <span x-show="ticket.is_parking" class="lv-badge bg-lake-100 text-lake-800 text-xs">🅿️ Parcare inclusă</span>
+                                        <span x-show="ticket.service_category === 'package'" class="lv-badge bg-rose-100 text-rose-800 text-xs font-bold">🎁 PACHET</span>
+                                        <span x-show="ticket.package_savings > 0" class="lv-badge bg-emerald-100 text-emerald-800 text-xs font-bold">
+                                            Economisești <span x-text="parseFloat(ticket.package_savings).toFixed(2)"></span> RON
+                                        </span>
                                     </div>
                                     <p x-show="ticket.description" class="text-sm text-forest-700/70 mb-3" x-text="ticket.description"></p>
+                                    <!-- Lista componentelor (pentru pachet) -->
+                                    <div x-show="ticket.service_category === 'package' && ticket.package_outputs && ticket.package_outputs.length > 0" class="mt-2 p-3 bg-rose-50 rounded-lg">
+                                        <p class="text-[10px] uppercase tracking-wider text-rose-700 font-bold mb-1.5">Include în pachet</p>
+                                        <ul class="space-y-1">
+                                            <template x-for="comp in (ticket.package_outputs || [])" :key="comp.ticket_type_id + (comp.variant_id || '')">
+                                                <li class="text-sm text-rose-900 flex items-start gap-1.5">
+                                                    <span class="text-rose-600">•</span>
+                                                    <span><strong x-text="comp.qty + '×'"></strong> <span x-text="comp.component_name"></span><span x-show="comp.variant_id" class="text-rose-700/70"> · <span x-text="comp.variant_id"></span></span></span>
+                                                </li>
+                                            </template>
+                                        </ul>
+                                        <p x-show="ticket.package_components_sum > 0" class="mt-2 text-xs text-rose-700/80">
+                                            Valoare individuală: <s><span x-text="parseFloat(ticket.package_components_sum).toFixed(2)"></span> RON</s>
+                                        </p>
+                                    </div>
                                     <!-- Includes — pillule beneficii -->
                                     <div x-show="ticket.includes && ticket.includes.length > 0" class="flex flex-wrap gap-1.5 mt-2">
                                         <template x-for="inc in ticket.includes" :key="inc">
@@ -543,11 +562,26 @@ require_once __DIR__ . '/includes/head.php';
                         <span x-show="!service.image_url" class="text-6xl opacity-80" x-text="serviceEmoji(service.service_category)"></span>
                     </div>
                     <div class="p-5 bg-white">
-                        <h3 class="font-display text-lg font-bold text-ink leading-tight mb-1" x-text="service.name"></h3>
+                        <div class="flex items-start justify-between gap-2 mb-1">
+                            <h3 class="font-display text-lg font-bold text-ink leading-tight" x-text="service.name"></h3>
+                            <span x-show="service.service_category === 'package'" class="lv-badge bg-rose-100 text-rose-800 text-[10px] font-bold flex-shrink-0">🎁 PACHET</span>
+                        </div>
                         <p class="text-sm text-forest-700/70 mb-2" x-text="service.description || ''"></p>
-                        <div class="flex flex-wrap gap-1.5 mb-3" x-show="service.service_duration_minutes || service.requires_access_ticket">
+                        <div class="flex flex-wrap gap-1.5 mb-3" x-show="service.service_duration_minutes || service.requires_access_ticket || service.package_savings > 0">
                             <span x-show="service.service_duration_minutes" class="lv-badge bg-blue-50 text-blue-700 text-[10px]" x-text="formatDuration(service.service_duration_minutes)"></span>
                             <span x-show="service.requires_access_ticket" class="lv-badge bg-amber-50 text-amber-700 text-[10px]">Necesită bilet acces</span>
+                            <span x-show="service.package_savings > 0" class="lv-badge bg-emerald-100 text-emerald-800 text-[10px] font-bold">
+                                Economisești <span x-text="parseFloat(service.package_savings).toFixed(2)"></span> RON
+                            </span>
+                        </div>
+                        <!-- Componente pachet -->
+                        <div x-show="service.service_category === 'package' && service.package_outputs && service.package_outputs.length > 0" class="mb-3 p-2.5 bg-rose-50 rounded-lg">
+                            <p class="text-[10px] uppercase tracking-wider text-rose-700 font-bold mb-1">Include</p>
+                            <ul class="space-y-0.5">
+                                <template x-for="comp in (service.package_outputs || [])" :key="comp.ticket_type_id + (comp.variant_id || '')">
+                                    <li class="text-xs text-rose-900"><strong x-text="comp.qty + '×'"></strong> <span x-text="comp.component_name"></span></li>
+                                </template>
+                            </ul>
                         </div>
                         <!-- Includes pe servicii -->
                         <div x-show="service.includes && service.includes.length > 0" class="flex flex-wrap gap-1.5 mb-3">

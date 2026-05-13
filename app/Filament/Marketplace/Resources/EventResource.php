@@ -2641,6 +2641,7 @@ class EventResource extends Resource
                                                                 'rental'   => $t('Închiriere', 'Rental'),
                                                                 'activity' => $t('Activitate / serviciu', 'Activity / service'),
                                                                 'extra'    => $t('Alt produs', 'Other'),
+                                                                'package'  => $t('🎁 Pachet (combinație de produse)', '🎁 Package (bundle)'),
                                                             ])
                                                             ->placeholder($t('Acces (implicit)', 'Access (default)'))
                                                             ->helperText($t('Lasă gol pentru bilet de acces', 'Leave empty for access ticket'))
@@ -2827,6 +2828,53 @@ class EventResource extends Resource
                                                     ->addActionLabel($t('+ Adaugă variantă', '+ Add variant'))
                                                     ->visible(fn (SGet $get) => ($get('../../display_template') ?? 'standard') === 'leisure_venue'
                                                         && in_array(($get('service_category') ?: 'access'), ['rental', 'activity']))
+                                                    ->columnSpan(12),
+
+                                                // ── Leisure Venue: Conținut pachet (pentru service_category=package) ──
+                                                Forms\Components\Repeater::make('meta.package_outputs')
+                                                    ->label($t('Conține (componente pachet)', 'Includes (package components)'))
+                                                    ->helperText($t('Pachetul emite automat aceste bilete la cumpărare. Prețul de mai sus este fix (manual) — afișajul public calculează economiile fata de suma componentelor.', 'Package auto-issues these tickets at checkout. Price above is manual — public display calculates savings vs sum of components.'))
+                                                    ->schema([
+                                                        Forms\Components\Select::make('ticket_type_id')
+                                                            ->label($t('Produs component', 'Component product'))
+                                                            ->options(function (SGet $get) {
+                                                                $repeaterPath = '../../';
+                                                                $eventId = $get($repeaterPath . 'id');
+                                                                if (!$eventId) return [];
+                                                                return \App\Models\TicketType::query()
+                                                                    ->where('event_id', $eventId)
+                                                                    ->where(function ($q) {
+                                                                        $q->whereNull('service_category')
+                                                                          ->orWhere('service_category', '!=', 'package');
+                                                                    })
+                                                                    ->pluck('name', 'id')
+                                                                    ->mapWithKeys(fn ($name, $id) => [
+                                                                        $id => (is_array($name) ? ($name['ro'] ?? reset($name)) : $name) ?: ('TT #' . $id),
+                                                                    ]);
+                                                            })
+                                                            ->required()
+                                                            ->reactive()
+                                                            ->columnSpan(5),
+                                                        Forms\Components\TextInput::make('variant_id')
+                                                            ->label($t('Variantă (opțional)', 'Variant (optional)'))
+                                                            ->placeholder($t('ex: 1h (lasă gol = preț de bază)', 'e.g. 1h (empty = base price)'))
+                                                            ->maxLength(32)
+                                                            ->helperText($t('Slug-ul variantei (din meta.variants ale componentului)', 'Variant slug from component meta.variants'))
+                                                            ->columnSpan(4),
+                                                        Forms\Components\TextInput::make('qty')
+                                                            ->label($t('Cantitate', 'Quantity'))
+                                                            ->numeric()
+                                                            ->minValue(1)
+                                                            ->default(1)
+                                                            ->required()
+                                                            ->columnSpan(3),
+                                                    ])
+                                                    ->columns(12)
+                                                    ->reorderable(true)
+                                                    ->collapsible()
+                                                    ->addActionLabel($t('+ Adaugă component', '+ Add component'))
+                                                    ->visible(fn (SGet $get) => ($get('../../display_template') ?? 'standard') === 'leisure_venue'
+                                                        && ($get('service_category') === 'package'))
                                                     ->columnSpan(12),
                                             ])
                                             ->columns(12)

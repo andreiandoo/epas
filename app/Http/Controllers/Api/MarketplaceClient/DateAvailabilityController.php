@@ -183,6 +183,41 @@ class DateAvailabilityController extends BaseController
                 }
             }
 
+            // Pachete (F4): expune componentele + suma componentelor pentru "Economisești X"
+            $rawPackageOutputs = $tt->meta['package_outputs'] ?? null;
+            $packageOutputs = [];
+            $packageSumComponents = 0.0;
+            if (is_array($rawPackageOutputs) && ($tt->service_category ?? null) === 'package') {
+                $componentIds = collect($rawPackageOutputs)->pluck('ticket_type_id')->filter()->unique();
+                $components = \App\Models\TicketType::query()->whereIn('id', $componentIds)->get()->keyBy('id');
+                foreach ($rawPackageOutputs as $row) {
+                    if (!is_array($row) || empty($row['ticket_type_id'])) continue;
+                    $compTt = $components->get($row['ticket_type_id']);
+                    if (!$compTt) continue;
+                    $compPrice = (float) ($compTt->price_max ?? $compTt->price ?? 0);
+                    // Dacă specificată variantă, folosește prețul ei
+                    if (!empty($row['variant_id']) && is_array($compTt->meta['variants'] ?? null)) {
+                        foreach ($compTt->meta['variants'] as $cv) {
+                            if (!is_array($cv) || empty($cv['label'])) continue;
+                            $cvid = $cv['id'] ?? \Illuminate\Support\Str::slug($cv['label']);
+                            if ($cvid === $row['variant_id']) {
+                                $compPrice = (float) ($cv['price'] ?? $compPrice);
+                                break;
+                            }
+                        }
+                    }
+                    $qtyPerPkg = (int) ($row['qty'] ?? 1);
+                    $packageSumComponents += $compPrice * $qtyPerPkg;
+                    $packageOutputs[] = [
+                        'ticket_type_id' => (int) $row['ticket_type_id'],
+                        'variant_id' => $row['variant_id'] ?? null,
+                        'qty' => $qtyPerPkg,
+                        'component_name' => is_array($compTt->name) ? ($compTt->name['ro'] ?? reset($compTt->name)) : $compTt->name,
+                        'component_unit_price' => $compPrice,
+                    ];
+                }
+            }
+
             $ttData = [
                 'id' => $tt->id,
                 'name' => $tt->name,
@@ -210,6 +245,9 @@ class DateAvailabilityController extends BaseController
                 'unit_label' => $unitLabel,
                 'includes' => $includes ?: [],
                 'variants' => $variants,
+                'package_outputs' => $packageOutputs,
+                'package_components_sum' => round($packageSumComponents, 2),
+                'package_savings' => $packageOutputs ? round($packageSumComponents - $effectivePrice, 2) : 0,
             ];
 
             if ($hasTourSlots) {
