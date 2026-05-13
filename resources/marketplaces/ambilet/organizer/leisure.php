@@ -192,6 +192,15 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                         <span class="text-xs font-semibold text-muted uppercase tracking-wider">Termeni utilizare</span>
                         <textarea id="pr-f-terms" rows="2" class="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg" placeholder="Condiții, restricții..."></textarea>
                     </label>
+                    <!-- Variante (durată / preț) — pentru rental + activity -->
+                    <div id="pr-f-variants-wrap" class="md:col-span-2 hidden">
+                        <div class="flex items-center justify-between mb-2">
+                            <p class="text-xs font-semibold text-muted uppercase tracking-wider">Variante (durată / preț)</p>
+                            <button type="button" id="pr-f-variant-add" class="px-2.5 py-1 text-xs font-medium text-primary bg-primary/10 hover:bg-primary/20 rounded">+ Adaugă variantă</button>
+                        </div>
+                        <p class="text-[11px] text-muted mb-2">Aceeași entitate fizică (ex: 10 bărci), prețuri diferite pe durată. Stocul rămâne partajat — fiecare rezervare consumă 1 unitate indiferent de varianta aleasă.</p>
+                        <div id="pr-f-variants-list" class="space-y-2"></div>
+                    </div>
                     <div class="md:col-span-2 grid grid-cols-2 md:grid-cols-4 gap-3">
                         <label class="flex items-center gap-2 text-sm">
                             <input id="pr-f-active" type="checkbox" class="w-4 h-4 accent-primary">
@@ -991,8 +1000,63 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         $('pr-f-vehicle').checked = p ? !!p.requires_vehicle_info : false;
         $('pr-f-reqaccess').checked = p ? !!p.requires_access_ticket : false;
         $('pr-f-delete').classList.toggle('hidden', !p);
+
+        // Variante — afișează doar pentru rental/activity, populează din meta.variants
+        const variants = Array.isArray(p?.variants) ? p.variants : (Array.isArray(p?.meta?.variants) ? p.meta.variants : []);
+        renderVariantRows(variants);
+        updateVariantsVisibility();
+
         $('pr-modal').classList.remove('hidden');
         $('pr-modal').classList.add('flex');
+    }
+
+    function updateVariantsVisibility() {
+        const cat = $('pr-f-category').value;
+        const show = (cat === 'rental' || cat === 'activity');
+        $('pr-f-variants-wrap').classList.toggle('hidden', !show);
+    }
+
+    function makeVariantRow(v) {
+        v = v || {};
+        const row = document.createElement('div');
+        row.className = 'p-2 bg-slate-50 rounded-lg';
+        row.innerHTML = `
+            <div class="grid grid-cols-12 gap-2 items-center">
+                <input type="text" data-vr="id" placeholder="slug (30m)" maxlength="32" value="${escapeHtml(v.id || '')}" class="col-span-3 px-2 py-1.5 text-xs border border-border rounded bg-white">
+                <input type="text" data-vr="label" placeholder="Etichetă (30 minute)" required value="${escapeHtml(v.label || '')}" class="col-span-4 px-2 py-1.5 text-sm border border-border rounded bg-white">
+                <input type="number" data-vr="duration_minutes" placeholder="min" min="0" value="${v.duration_minutes ?? ''}" class="col-span-2 px-2 py-1.5 text-sm border border-border rounded bg-white">
+                <input type="number" data-vr="price" placeholder="RON" min="0" step="0.01" required value="${v.price ?? ''}" class="col-span-2 px-2 py-1.5 text-sm border border-border rounded bg-white">
+                <button type="button" data-vr-rm class="col-span-1 text-xs text-rose-600 hover:bg-rose-100 rounded px-1.5 py-1">🗑</button>
+            </div>
+        `;
+        row.querySelector('[data-vr-rm]').addEventListener('click', () => row.remove());
+        return row;
+    }
+
+    function renderVariantRows(variants) {
+        const list = $('pr-f-variants-list');
+        list.innerHTML = '';
+        (variants || []).forEach(v => list.appendChild(makeVariantRow(v)));
+    }
+
+    function collectVariants() {
+        const out = [];
+        $('pr-f-variants-list').querySelectorAll(':scope > div').forEach(row => {
+            const item = {};
+            row.querySelectorAll('[data-vr]').forEach(el => {
+                const k = el.dataset.vr;
+                let v = el.value;
+                if (typeof v === 'string') v = v.trim();
+                if (v !== '' && v !== null && v !== undefined) item[k] = v;
+            });
+            if (!item.label) return; // sărim peste rândurile incomplete
+            // normalize: id slug, price float, duration int
+            if (!item.id) item.id = item.label.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 32) || ('v' + Date.now());
+            if (item.price) item.price = parseFloat(item.price);
+            if (item.duration_minutes) item.duration_minutes = parseInt(item.duration_minutes, 10);
+            out.push(item);
+        });
+        return out;
     }
     function closeProductModal() {
         $('pr-modal').classList.add('hidden');
@@ -1003,9 +1067,11 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
     async function saveProduct() {
         const includesText = $('pr-f-includes').value.trim();
         const includes = includesText ? includesText.split('\n').map(s => s.trim()).filter(Boolean) : [];
+        const cat = $('pr-f-category').value;
+        const variants = (cat === 'rental' || cat === 'activity') ? collectVariants() : [];
         const body = {
             name: $('pr-f-name').value.trim(),
-            service_category: $('pr-f-category').value,
+            service_category: cat,
             issuing_company: $('pr-f-issuer').value,
             price: parseFloat($('pr-f-price').value) || 0,
             capacity: $('pr-f-capacity').value ? parseInt($('pr-f-capacity').value, 10) : null,
@@ -1022,6 +1088,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 unit_label: $('pr-f-unit').value.trim() || null,
                 image: $('pr-f-image').value.trim() || null,
                 includes,
+                variants,
             },
         };
         if (!body.name) { alert('Numele produsului e obligatoriu.'); return; }
@@ -1057,6 +1124,9 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         const saveBtn = $('pr-f-save'); if (saveBtn) saveBtn.addEventListener('click', saveProduct);
         const delBtn = $('pr-f-delete'); if (delBtn) delBtn.addEventListener('click', deleteProduct);
         const modal = $('pr-modal'); if (modal) modal.addEventListener('click', (e) => { if (e.target === modal) closeProductModal(); });
+        // Variants: add row + show/hide on category change
+        const varAdd = $('pr-f-variant-add'); if (varAdd) varAdd.addEventListener('click', () => $('pr-f-variants-list').appendChild(makeVariantRow({})));
+        const catSel = $('pr-f-category'); if (catSel) catSel.addEventListener('change', updateVariantsVisibility);
     }
 
     // ========== CONTENT EDITOR ==========

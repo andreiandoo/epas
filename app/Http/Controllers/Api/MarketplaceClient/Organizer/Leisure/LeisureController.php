@@ -98,6 +98,20 @@ class LeisureController extends BaseController
             'commission' => $commission,
             'issuers' => $issuers,
             'ticket_types' => $ticketTypes->map(function (TicketType $tt) {
+                $variants = [];
+                $rawVariants = is_array($tt->meta) ? ($tt->meta['variants'] ?? null) : null;
+                if (is_array($rawVariants)) {
+                    foreach ($rawVariants as $v) {
+                        if (!is_array($v) || empty($v['label'])) continue;
+                        $variants[] = [
+                            'id' => $v['id'] ?? \Illuminate\Support\Str::slug($v['label']),
+                            'label' => $v['label'],
+                            'duration_minutes' => isset($v['duration_minutes']) ? (int) $v['duration_minutes'] : null,
+                            'price' => isset($v['price']) ? (float) $v['price'] : (float) ($tt->price_max ?? $tt->price ?? 0),
+                        ];
+                    }
+                }
+
                 return [
                     'id' => $tt->id,
                     'name' => $tt->name,
@@ -111,6 +125,8 @@ class LeisureController extends BaseController
                     'ticket_group' => $tt->ticket_group,
                     'issuing_company' => $tt->effective_issuing_company,
                     'issuing_explicit' => (bool) $tt->issuing_company,
+                    'meta' => is_array($tt->meta) ? $tt->meta : (object) [],
+                    'variants' => $variants,
                 ];
             })->all(),
         ]);
@@ -634,6 +650,7 @@ class LeisureController extends BaseController
             'items' => 'required|array|min:1|max:50',
             'items.*.ticket_type_id' => 'required|integer|exists:ticket_types,id',
             'items.*.qty' => 'required|integer|min:1|max:100',
+            'items.*.variant_id' => 'nullable|string|max:64',
             'customer.name' => 'nullable|string|max:120',
             'customer.email' => 'nullable|email|max:120',
             'customer.phone' => 'nullable|string|max:30',
@@ -670,7 +687,21 @@ class LeisureController extends BaseController
         foreach ($validated['items'] as $row) {
             $tt = $types->get($row['ticket_type_id']);
             if (!$tt) continue;
-            $unit = (float) ($tt->price_max ?? $tt->price ?? 0);
+
+            // Rezolvă varianta selectată (dacă e cazul)
+            $variant = null;
+            $rawVariants = is_array($tt->meta) ? ($tt->meta['variants'] ?? null) : null;
+            if (!empty($row['variant_id']) && is_array($rawVariants)) {
+                foreach ($rawVariants as $v) {
+                    if (!is_array($v) || empty($v['label'])) continue;
+                    $vid = $v['id'] ?? \Illuminate\Support\Str::slug($v['label']);
+                    if ($vid === $row['variant_id']) { $variant = $v; break; }
+                }
+            }
+            $unit = $variant !== null && isset($variant['price'])
+                ? (float) $variant['price']
+                : (float) ($tt->price_max ?? $tt->price ?? 0);
+
             $qty = (int) $row['qty'];
             $line = round($unit * $qty, 2);
             $subtotal += $line;
@@ -688,6 +719,11 @@ class LeisureController extends BaseController
                 'unit_price' => $unit,
                 'line_total' => $line,
                 'commission_per_ticket' => round($commissionPerTicket, 2),
+                'variant' => $variant ? [
+                    'id' => $variant['id'] ?? \Illuminate\Support\Str::slug($variant['label']),
+                    'label' => $variant['label'],
+                    'duration_minutes' => $variant['duration_minutes'] ?? null,
+                ] : null,
             ];
         }
         $subtotal = round($subtotal, 2);
@@ -737,18 +773,25 @@ class LeisureController extends BaseController
 
             foreach ($items as $it) {
                 $tt = $it['ticket_type'];
+                $variantMeta = $it['variant'] ?? null;
+                $displayName = is_array($tt->name) ? ($tt->name['ro'] ?? reset($tt->name)) : $tt->name;
+                if ($variantMeta) {
+                    $displayName .= ' — ' . $variantMeta['label'];
+                }
+
                 $orderItem = OrderItem::create([
                     'order_id' => $order->id,
                     'ticket_type_id' => $tt->id,
-                    'name' => is_array($tt->name) ? ($tt->name['ro'] ?? reset($tt->name)) : $tt->name,
+                    'name' => $displayName,
                     'quantity' => $it['qty'],
                     'unit_price' => $it['unit_price'],
                     'total' => $it['line_total'],
-                    'meta' => [
+                    'meta' => array_filter([
                         'service_category' => $tt->service_category ?? 'access',
                         'issuing_company' => $tt->issuing_company ?? 'primary',
                         'visit_date' => $visitDate,
-                    ],
+                        'variant' => $variantMeta,
+                    ]),
                 ]);
 
                 for ($i = 0; $i < $it['qty']; $i++) {
@@ -766,19 +809,21 @@ class LeisureController extends BaseController
                         'price' => $it['unit_price'],
                         'attendee_name' => $validated['customer']['name'] ?? null,
                         'attendee_email' => $validated['customer']['email'] ?? null,
-                        'meta' => [
+                        'meta' => array_filter([
                             'pos' => true,
                             'visit_date' => $visitDate,
                             'service_category' => $tt->service_category ?? 'access',
                             'issuing_company' => $tt->issuing_company ?? 'primary',
-                        ],
+                            'variant' => $variantMeta,
+                        ]),
                     ]);
                     $issued[] = [
                         'id' => $ticket->id,
                         'code' => $ticket->code,
-                        'ticket_type' => is_array($tt->name) ? ($tt->name['ro'] ?? reset($tt->name)) : $tt->name,
+                        'ticket_type' => $displayName,
                         'service_category' => $tt->service_category ?? 'access',
                         'price' => $it['unit_price'],
+                        'variant' => $variantMeta,
                     ];
                 }
             }
@@ -811,14 +856,19 @@ class LeisureController extends BaseController
                 'phone' => $order->customer_phone,
             ],
             'issuer' => $issuer,
-            'items' => array_map(fn ($it) => [
-                'name' => is_array($it['ticket_type']->name) ? ($it['ticket_type']->name['ro'] ?? reset($it['ticket_type']->name)) : $it['ticket_type']->name,
-                'qty' => $it['qty'],
-                'unit_price' => $it['unit_price'],
-                'line_total' => $it['line_total'],
-                'commission_per_ticket' => $it['commission_per_ticket'] ?? 0,
-                'service_category' => $it['ticket_type']->service_category ?? 'access',
-            ], $items),
+            'items' => array_map(function ($it) {
+                $baseName = is_array($it['ticket_type']->name) ? ($it['ticket_type']->name['ro'] ?? reset($it['ticket_type']->name)) : $it['ticket_type']->name;
+                $name = $it['variant'] ? ($baseName . ' — ' . $it['variant']['label']) : $baseName;
+                return [
+                    'name' => $name,
+                    'qty' => $it['qty'],
+                    'unit_price' => $it['unit_price'],
+                    'line_total' => $it['line_total'],
+                    'commission_per_ticket' => $it['commission_per_ticket'] ?? 0,
+                    'service_category' => $it['ticket_type']->service_category ?? 'access',
+                    'variant' => $it['variant'],
+                ];
+            }, $items),
             'tickets' => $issued,
         ]);
     }
@@ -1174,9 +1224,29 @@ class LeisureController extends BaseController
         // whitelist meta keys safe pentru organizer
         $allowed = [
             'icon', 'image', 'image_url', 'unit_label', 'includes',
-            'package_outputs', 'badge', 'color',
+            'package_outputs', 'badge', 'color', 'variants',
         ];
-        return array_intersect_key($meta, array_flip($allowed));
+        $filtered = array_intersect_key($meta, array_flip($allowed));
+
+        // Normalize variants: ensure id slug, prețul ca float, durata ca int
+        if (isset($filtered['variants']) && is_array($filtered['variants'])) {
+            $normalized = [];
+            foreach ($filtered['variants'] as $v) {
+                if (!is_array($v) || empty($v['label'])) continue;
+                $id = isset($v['id']) && $v['id'] !== ''
+                    ? preg_replace('/[^a-z0-9-]+/i', '-', strtolower($v['id']))
+                    : \Illuminate\Support\Str::slug($v['label']);
+                $normalized[] = [
+                    'id' => substr($id, 0, 32) ?: 'v',
+                    'label' => (string) $v['label'],
+                    'duration_minutes' => isset($v['duration_minutes']) ? (int) $v['duration_minutes'] : null,
+                    'price' => isset($v['price']) ? (float) $v['price'] : 0.0,
+                ];
+            }
+            $filtered['variants'] = $normalized;
+        }
+
+        return $filtered;
     }
 
     protected function presentProduct(TicketType $t): array

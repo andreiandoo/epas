@@ -93,9 +93,11 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
     const $ = (id) => document.getElementById(id);
     let currentEventId = null;
     let types = [];
-    let cart = {}; // {ticket_type_id: {qty, price, name, category}}
+    let cart = {}; // { key (tid sau tid|variantId): {qty, price, name, category, ticket_type_id, variant} }
     let payment = 'cash';
     let commission = { rate: 0, fixed: 0, mode: 'included' };
+
+    function cartKey(ttId, variantId) { return variantId ? `${ttId}|${variantId}` : String(ttId); }
 
     function commissionPerTicket(price) {
         if ((commission.mode || 'included') !== 'added_on_top') return 0;
@@ -120,26 +122,67 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         $('lv-grid').innerHTML = types.map(t => {
             const cat = t.service_category || 'access';
             const color = CAT_COLOR[cat] || 'slate';
-            const price = Number(t.price_max ?? t.price ?? 0);
+            const variants = Array.isArray(t.variants) ? t.variants : [];
+            const hasVariants = variants.length > 0;
+            const basePrice = Number(t.price_max ?? t.price ?? 0);
+
+            if (hasVariants) {
+                // Card cu butoane separate per variantă
+                const varBtns = variants.map(v => {
+                    const key = cartKey(t.id, v.id);
+                    const qty = (cart[key]?.qty || 0);
+                    return `<button data-tt="${t.id}" data-vid="${v.id}" data-vlabel="${(v.label || '').replace(/"/g,'&quot;')}" data-vduration="${v.duration_minutes ?? ''}" data-price="${Number(v.price)}" data-name="${(t.name || '').replace(/"/g,'&quot;')}" data-cat="${cat}"
+                        class="lv-tt-btn relative w-full p-2 border-2 border-border hover:border-${color}-400 rounded-lg text-left transition-colors">
+                        <div class="flex items-center justify-between mb-0.5">
+                            <span class="text-xs font-semibold text-secondary">${v.label}</span>
+                            ${qty > 0 ? `<span class="text-[10px] font-bold bg-primary text-white rounded-full w-5 h-5 flex items-center justify-center">${qty}</span>` : ''}
+                        </div>
+                        <div class="text-base font-bold text-${color}-700">${fmtMoney(Number(v.price))} RON</div>
+                    </button>`;
+                }).join('');
+                return `<div class="p-4 border-2 border-border rounded-xl">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded bg-${color}-100 text-${color}-800">${CAT_LABEL[cat] || cat}</span>
+                    </div>
+                    <div class="font-bold text-secondary text-sm leading-tight mb-2">${t.name || ''}</div>
+                    <div class="grid grid-cols-2 gap-1.5">${varBtns}</div>
+                </div>`;
+            }
+
+            // Card simplu fără variante
             const inCart = (cart[t.id]?.qty || 0);
-            return `<button data-tt="${t.id}" data-price="${price}" data-name="${(t.name || '').replace(/"/g,'&quot;')}" data-cat="${cat}"
+            return `<button data-tt="${t.id}" data-price="${basePrice}" data-name="${(t.name || '').replace(/"/g,'&quot;')}" data-cat="${cat}"
                 class="lv-tt-btn relative p-4 border-2 border-border hover:border-${color}-400 rounded-xl text-left transition-colors group">
                 <div class="flex items-center justify-between mb-1">
                     <span class="text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded bg-${color}-100 text-${color}-800">${CAT_LABEL[cat] || cat}</span>
                     ${inCart > 0 ? `<span class="text-xs font-bold bg-primary text-white rounded-full w-6 h-6 flex items-center justify-center">${inCart}</span>` : ''}
                 </div>
                 <div class="font-bold text-secondary text-sm leading-tight">${t.name || ''}</div>
-                <div class="text-lg font-bold text-${color}-700 mt-2">${fmtMoney(price)} RON</div>
+                <div class="text-lg font-bold text-${color}-700 mt-2">${fmtMoney(basePrice)} RON</div>
             </button>`;
         }).join('');
+
         $('lv-grid').querySelectorAll('.lv-tt-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 const id = btn.dataset.tt;
                 const name = btn.dataset.name;
                 const price = Number(btn.dataset.price);
                 const cat = btn.dataset.cat;
-                if (!cart[id]) cart[id] = { qty: 0, price, name, category: cat };
-                cart[id].qty++;
+                const vid = btn.dataset.vid || null;
+                const vlabel = btn.dataset.vlabel || null;
+                const vduration = btn.dataset.vduration ? parseInt(btn.dataset.vduration, 10) : null;
+                const key = cartKey(id, vid);
+                if (!cart[key]) {
+                    cart[key] = {
+                        qty: 0,
+                        price,
+                        name: vlabel ? `${name} — ${vlabel}` : name,
+                        category: cat,
+                        ticket_type_id: parseInt(id, 10),
+                        variant: vid ? { id: vid, label: vlabel, duration_minutes: vduration } : null,
+                    };
+                }
+                cart[key].qty++;
                 renderCart();
                 renderGrid();
             });
@@ -268,7 +311,11 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         $('lv-checkout').textContent = 'Procesează...';
         $('lv-error').classList.add('hidden');
 
-        const items = Object.entries(cart).map(([id, it]) => ({ ticket_type_id: parseInt(id, 10), qty: it.qty }));
+        const items = Object.entries(cart).map(([key, it]) => ({
+            ticket_type_id: it.ticket_type_id || parseInt(String(key).split('|')[0], 10),
+            qty: it.qty,
+            variant_id: it.variant ? it.variant.id : null,
+        }));
         const body = {
             date: $('lv-visit-date').value || new Date().toISOString().slice(0,10),
             items,

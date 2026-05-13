@@ -168,6 +168,21 @@ class DateAvailabilityController extends BaseController
                 $includes = is_string($includes) ? array_filter(array_map('trim', explode(',', $includes))) : null;
             }
 
+            // Variante de preț/durată (F1 — Bărci 30m/1h, Sanii etc.)
+            $rawVariants = $tt->meta['variants'] ?? null;
+            $variants = [];
+            if (is_array($rawVariants)) {
+                foreach ($rawVariants as $v) {
+                    if (!is_array($v) || empty($v['label'])) continue;
+                    $variants[] = [
+                        'id' => $v['id'] ?? \Illuminate\Support\Str::slug($v['label']),
+                        'label' => $v['label'],
+                        'duration_minutes' => isset($v['duration_minutes']) ? (int) $v['duration_minutes'] : null,
+                        'price' => isset($v['price']) ? (float) $v['price'] : (float) ($tt->price_max ?? $tt->price ?? 0),
+                    ];
+                }
+            }
+
             $ttData = [
                 'id' => $tt->id,
                 'name' => $tt->name,
@@ -194,6 +209,7 @@ class DateAvailabilityController extends BaseController
                 'icon' => $iconEmoji,
                 'unit_label' => $unitLabel,
                 'includes' => $includes ?: [],
+                'variants' => $variants,
             ];
 
             if ($hasTourSlots) {

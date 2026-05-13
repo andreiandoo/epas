@@ -1305,7 +1305,7 @@ const EventPage = {
 
             document.getElementById(this.elements.eventDay).textContent = startDate.getDate() + '-' + endDate.getDate();
             document.getElementById(this.elements.eventMonth).textContent = months[startDate.getMonth()];
-            document.getElementById(this.elements.eventWeekday).textContent = 'Festival';
+            document.getElementById(this.elements.eventWeekday).textContent = '';
 
             // Full date range text
             let dateFullText = startDate.getDate() + ' ' + months[startDate.getMonth()];

@@ -2787,6 +2787,47 @@ class EventResource extends Resource
                                                     ->toolbarButtons(['bold', 'italic', 'underline', 'link', 'bulletList', 'orderedList'])
                                                     ->visible(fn (SGet $get) => ($get('../../display_template') ?? 'standard') === 'leisure_venue')
                                                     ->columnSpan(12),
+
+                                                // ── Leisure Venue: Variante (durată/preț — Bărci 30m/1h, Sanii etc.) ──
+                                                Forms\Components\Repeater::make('meta.variants')
+                                                    ->label($t('Variante (durată / preț)', 'Variants (duration / price)'))
+                                                    ->helperText($t('Aceeași entitate fizică, opțiuni diferite. Stocul rămâne partajat din capacitatea biletului — fiecare rezervare consumă 1 unitate indiferent de durată.', 'Same physical resource, different options. Stock stays shared from ticket capacity — each reservation consumes 1 unit regardless of duration.'))
+                                                    ->schema([
+                                                        Forms\Components\TextInput::make('id')
+                                                            ->label($t('ID (slug)', 'ID (slug)'))
+                                                            ->placeholder('30m, 1h, 1zi')
+                                                            ->maxLength(32)
+                                                            ->helperText($t('Identificator stabil — folosit la check-in/raportare. Doar litere mici, cifre, liniuțe.', 'Stable identifier — used in check-in/reporting. Lowercase, digits, dashes only.'))
+                                                            ->columnSpan(3),
+                                                        Forms\Components\TextInput::make('label')
+                                                            ->label($t('Etichetă afișată', 'Display label'))
+                                                            ->placeholder($t('30 minute', '30 minutes'))
+                                                            ->required()
+                                                            ->maxLength(80)
+                                                            ->columnSpan(4),
+                                                        Forms\Components\TextInput::make('duration_minutes')
+                                                            ->label($t('Durată (min)', 'Duration (min)'))
+                                                            ->numeric()
+                                                            ->minValue(1)
+                                                            ->maxValue(10080)
+                                                            ->columnSpan(2),
+                                                        Forms\Components\TextInput::make('price')
+                                                            ->label($t('Preț (RON)', 'Price (RON)'))
+                                                            ->numeric()
+                                                            ->minValue(0)
+                                                            ->step(0.01)
+                                                            ->required()
+                                                            ->columnSpan(3),
+                                                    ])
+                                                    ->columns(12)
+                                                    ->reorderable(true)
+                                                    ->collapsible()
+                                                    ->collapsed()
+                                                    ->itemLabel(fn (array $state) => ($state['label'] ?? '—') . (isset($state['price']) ? ' · ' . $state['price'] . ' RON' : ''))
+                                                    ->addActionLabel($t('+ Adaugă variantă', '+ Add variant'))
+                                                    ->visible(fn (SGet $get) => ($get('../../display_template') ?? 'standard') === 'leisure_venue'
+                                                        && in_array(($get('service_category') ?: 'access'), ['rental', 'activity']))
+                                                    ->columnSpan(12),
                                             ])
                                             ->columns(12)
                                             ->columnSpan(12),
