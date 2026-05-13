@@ -557,8 +557,6 @@ require_once __DIR__ . '/includes/head.php';
                         <div x-show="service.image_url" class="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent"></div>
                         <span class="absolute top-3 left-3 lv-badge bg-white/90 backdrop-blur text-forest-800 text-xs z-10"
                               x-text="categoryLabel(service.service_category)"></span>
-                        <span x-show="service.issuing_company === 'secondary' && issuers.secondary"
-                              class="absolute top-3 right-3 lv-badge bg-amber-100 text-amber-800 text-[10px] z-10">SECUNDARĂ</span>
                         <span x-show="!service.image_url" class="text-6xl opacity-80" x-text="serviceEmoji(service.service_category)"></span>
                     </div>
                     <div class="p-5 bg-white">
@@ -957,11 +955,16 @@ require_once __DIR__ . '/includes/head.php';
         <div x-show="cartOpen" x-collapse class="px-4 pb-4 border-t border-white/10 max-h-[60vh] overflow-y-auto">
             <p class="text-xs uppercase tracking-wider text-white/40 font-bold mt-4 mb-2">Sumar comandă</p>
             <div class="space-y-2 mb-4">
-                <template x-for="item in cartItems" :key="item.id">
-                    <div class="py-1.5">
-                        <div class="flex items-center justify-between text-sm">
-                            <span class="text-white/80"><span x-text="item.qty"></span>× <span x-text="item.name"></span></span>
-                            <span class="font-semibold"><span x-text="(item.qty * item.effective_price).toFixed(2)"></span> RON</span>
+                <template x-for="item in cartItems" :key="item._cartKey">
+                    <div class="py-1.5 group">
+                        <div class="flex items-center justify-between text-sm gap-2">
+                            <span class="text-white/80 flex-1 min-w-0"><span x-text="item.qty"></span>× <span x-text="item.name"></span></span>
+                            <div class="flex items-center gap-1 flex-shrink-0">
+                                <button @click="removeLineFromCart(item)" type="button" class="text-white/40 hover:text-rose-300 transition-colors p-0.5" title="Elimină din coș">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22"/></svg>
+                                </button>
+                                <span class="font-semibold whitespace-nowrap"><span x-text="(item.qty * item.effective_price).toFixed(2)"></span> RON</span>
+                            </div>
                         </div>
                         <div x-show="hasCommission" class="flex items-center justify-between text-xs text-white/50 mt-0.5 pl-3">
                             <span>+ Comision ticketing</span>
@@ -1241,6 +1244,11 @@ function reservationPage() {
             const vid = this.activeVariantId(ticket);
             const key = this.cartKey(ticket.id, vid);
             this.qtyById[key] = Math.max(0, (this.qtyById[key] || 0) - 1);
+        },
+        // Elimină complet o linie din coș (pe baza cheii compuse din _cartKey)
+        removeLineFromCart(item) {
+            if (!item || !item._cartKey) return;
+            this.qtyById[item._cartKey] = 0;
         },
         incrementService(service) {
             if (service.requires_access_ticket && !this.hasAccessInCart) return;
