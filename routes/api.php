@@ -2122,6 +2122,11 @@ Route::prefix('marketplace-client/customer')->middleware(['throttle:120,1', 'mar
             ->name('api.marketplace-client.customer.referrals.claim');
 
         // Ticket Transfers
+        // Instant customer-to-customer transfer used by /cont/bilete on
+        // ambilet + tics. Recipient must already have an account on this
+        // marketplace; ownership flips immediately, no pending-accept dance.
+        Route::post('/transfers/direct', [CustomerTicketTransferController::class, 'transferDirect'])
+            ->name('api.marketplace-client.customer.transfers.direct');
         Route::post('/transfers', [CustomerTicketTransferController::class, 'initiate'])
             ->name('api.marketplace-client.customer.transfers.initiate');
         Route::get('/transfers/outgoing', [CustomerTicketTransferController::class, 'outgoing'])

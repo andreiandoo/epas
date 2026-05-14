@@ -295,6 +295,243 @@ class TicketTransferController extends BaseController
     }
 
     /**
+     * Direct (instant) ticket transfer: move N tickets from the
+     * authenticated customer to a recipient identified by email, who
+     * MUST already have an account on this marketplace. The ticket
+     * ownership flips immediately — no pending-accept dance like the
+     * initiate() flow above. This is the flow used by the
+     * /cont/bilete UI on both ambilet and tics.
+     *
+     * Body: {
+     *   ticket_ids: int[],            // owned by the caller, valid status
+     *   recipient_email: string,      // existing MarketplaceCustomer email
+     * }
+     *
+     * Response shapes:
+     *   - 200 success: { tickets_transferred: N, recipient: {...} }
+     *   - 404 recipient_not_found: {
+     *       error: 'recipient_not_found',
+     *       message: 'Destinatarul...',
+     *       signup_url: 'https://.../inregistrare?email=...'
+     *     }
+     *   - 4xx other validation errors
+     *
+     * On success: each ticket gets current_owner_customer_id set to the
+     * recipient, attendee_name/email and meta.beneficiary_* refreshed,
+     * order.meta.beneficiaries rebuilt, MarketplaceTicketTransfer audit
+     * row written with status=accepted + ip/UA + accepted_at=now.
+     */
+    public function transferDirect(Request $request): JsonResponse
+    {
+        $client = $this->requireClient($request);
+        $customer = $this->requireCustomer($request);
+
+        $validated = $request->validate([
+            'ticket_ids' => 'required|array|min:1|max:50',
+            'ticket_ids.*' => 'integer',
+            'recipient_email' => 'required|email|max:255',
+        ]);
+
+        $recipientEmail = strtolower(trim($validated['recipient_email']));
+
+        if ($recipientEmail === strtolower($customer->email)) {
+            return $this->error('Nu poți transfera bilete către tine.', 422);
+        }
+
+        // Recipient must already have an account on this marketplace.
+        $recipient = MarketplaceCustomer::where('marketplace_client_id', $client->id)
+            ->whereRaw('LOWER(email) = ?', [$recipientEmail])
+            ->first();
+
+        if (!$recipient) {
+            $domain = $client->domain ?: parse_url(config('app.url'), PHP_URL_HOST);
+            $base = (str_starts_with((string) $domain, 'http') ? $domain : 'https://' . $domain);
+            $signupUrl = rtrim($base, '/') . '/inregistrare?email=' . urlencode($recipientEmail);
+
+            return response()->json([
+                'success' => false,
+                'error' => 'recipient_not_found',
+                'message' => 'Destinatarul nu are cont pe această platformă. Trimite-i acest link de înregistrare și încearcă din nou după ce și-a creat contul.',
+                'signup_url' => $signupUrl,
+                'recipient_email' => $recipientEmail,
+            ], 404);
+        }
+
+        // Load tickets — must be owned by the caller (current_owner_customer_id
+        // gate, not order.marketplace_customer_id), valid, in this marketplace.
+        $tickets = Ticket::whereIn('id', $validated['ticket_ids'])
+            ->where('current_owner_customer_id', $customer->id)
+            ->where('marketplace_client_id', $client->id)
+            ->with(['order', 'ticketType'])
+            ->get();
+
+        if ($tickets->count() !== count($validated['ticket_ids'])) {
+            return response()->json([
+                'success' => false,
+                'error' => 'tickets_not_owned',
+                'message' => 'Unul sau mai multe bilete nu îți aparțin sau nu pot fi transferate. Reîncarcă pagina și încearcă din nou.',
+            ], 422);
+        }
+
+        // Per-ticket eligibility checks (valid status, event in future,
+        // not already used/cancelled). One bad ticket fails the whole
+        // batch — keeps the response intent clean ("transferul s-a
+        // făcut" vs partial-success ambiguity).
+        $now = now();
+        foreach ($tickets as $t) {
+            if (!in_array($t->status, ['valid'])) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'ticket_not_transferable',
+                    'message' => "Biletul {$t->code} nu poate fi transferat (status: {$t->status}).",
+                ], 422);
+            }
+            if ($t->checked_in_at) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'ticket_already_used',
+                    'message' => "Biletul {$t->code} a fost deja validat la intrare și nu mai poate fi transferat.",
+                ], 422);
+            }
+            $event = $t->resolveEvent();
+            $eventDate = $event?->event_date ?? $event?->range_end_date ?? null;
+            if ($eventDate && $eventDate->lt($now->copy()->startOfDay())) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'event_passed',
+                    'message' => "Biletul {$t->code} aparține unui eveniment care a trecut.",
+                ], 422);
+            }
+        }
+
+        $recipientName = trim(($recipient->first_name ?? '') . ' ' . ($recipient->last_name ?? '')) ?: $recipient->email;
+        $senderName = trim(($customer->first_name ?? '') . ' ' . ($customer->last_name ?? '')) ?: $customer->email;
+        $ipAddress = $request->ip();
+        $userAgent = (string) $request->userAgent();
+
+        $transferRecords = [];
+
+        DB::transaction(function () use ($tickets, $customer, $recipient, $client, $recipientName, $senderName, $ipAddress, $userAgent, $now, &$transferRecords) {
+            $touchedOrderIds = [];
+
+            foreach ($tickets as $ticket) {
+                $meta = is_array($ticket->meta) ? $ticket->meta : [];
+
+                // Append to the per-ticket transfer chain so admin can see
+                // the full history even if MarketplaceTicketTransfer rows
+                // ever get pruned. Keep both in sync.
+                $transfers = $meta['transfers'] ?? [];
+                $transfers[] = [
+                    'at' => $now->toIso8601String(),
+                    'from_customer_id' => $customer->id,
+                    'from_email' => $customer->email,
+                    'from_name' => $senderName,
+                    'to_customer_id' => $recipient->id,
+                    'to_email' => $recipient->email,
+                    'to_name' => $recipientName,
+                    'ip_address' => $ipAddress,
+                    'user_agent' => $userAgent,
+                ];
+                $meta['transfers'] = $transfers;
+                $meta['beneficiary_name'] = $recipientName;
+                $meta['beneficiary_email'] = $recipient->email;
+
+                $ticket->fill([
+                    'current_owner_customer_id' => $recipient->id,
+                    'attendee_name' => $recipientName,
+                    'attendee_email' => $recipient->email,
+                    'meta' => $meta,
+                ])->save();
+
+                // MarketplaceTicketTransfer audit row — status=accepted
+                // for the instant flow. Token kept (boot fills it) so the
+                // shape stays compatible with the older accept-by-token
+                // path in case it gets reused for reporting.
+                $transferRecords[] = MarketplaceTicketTransfer::create([
+                    'marketplace_client_id' => $client->id,
+                    'ticket_id' => $ticket->id,
+                    'from_customer_id' => $customer->id,
+                    'from_email' => $customer->email,
+                    'from_name' => $senderName,
+                    'to_email' => $recipient->email,
+                    'to_name' => $recipientName,
+                    'to_customer_id' => $recipient->id,
+                    'status' => 'accepted',
+                    'expires_at' => $now,
+                    'accepted_at' => $now,
+                    'ip_address' => $ipAddress,
+                    'user_agent' => $userAgent,
+                ]);
+
+                if ($ticket->order_id) {
+                    $touchedOrderIds[$ticket->order_id] = true;
+                }
+            }
+
+            // Refresh order.meta.beneficiaries from current ticket state
+            // so OrderResource's Beneficiari panel reads the new names.
+            foreach (array_keys($touchedOrderIds) as $orderId) {
+                $order = \App\Models\Order::find($orderId);
+                if (!$order) continue;
+                $orderTickets = $order->tickets()->get();
+                $beneficiaries = $orderTickets->map(function ($t) {
+                    $m = is_array($t->meta) ? $t->meta : [];
+                    return [
+                        'name' => $m['beneficiary_name'] ?? $t->attendee_name ?? null,
+                        'email' => $m['beneficiary_email'] ?? $t->attendee_email ?? null,
+                        'ticket_code' => $t->code,
+                        'ticket_type' => $t->ticketType?->name,
+                    ];
+                })->filter(fn ($b) => $b['name'] || $b['email'])->values()->all();
+
+                $meta = is_array($order->meta) ? $order->meta : [];
+                $meta['beneficiaries'] = $beneficiaries;
+                $order->meta = $meta;
+                $order->saveQuietly();
+            }
+        });
+
+        // Spatie activity log (after the transaction so the rows are
+        // queryable). Causer = the sending customer; performed-on = the
+        // first ticket as a representative, with full ticket id list in
+        // properties so the admin view can resolve all of them.
+        activity('marketplace')
+            ->performedOn($tickets->first())
+            ->withProperties([
+                'marketplace_client_id' => $client->id,
+                'ticket_ids' => $tickets->pluck('id')->all(),
+                'from' => ['customer_id' => $customer->id, 'email' => $customer->email, 'name' => $senderName],
+                'to' => ['customer_id' => $recipient->id, 'email' => $recipient->email, 'name' => $recipientName],
+                'ip_address' => $ipAddress,
+                'user_agent' => $userAgent,
+            ])
+            ->log("Customer ticket transfer: {$customer->email} → {$recipient->email} (" . $tickets->count() . " ticket(s))");
+
+        // Fire-and-forget notifications. Both sides get an email; failures
+        // are logged but don't fail the request because the data move
+        // already succeeded.
+        try {
+            $customer->notify(new \App\Notifications\MarketplaceTicketTransferNotification($transferRecords[0] ?? null, 'accepted'));
+        } catch (\Throwable $e) {
+            \Log::warning('Transfer sender notification failed', ['error' => $e->getMessage()]);
+        }
+        try {
+            $recipient->notify(new \App\Notifications\MarketplaceTicketTransferNotification($transferRecords[0] ?? null, 'received'));
+        } catch (\Throwable $e) {
+            \Log::warning('Transfer recipient notification failed', ['error' => $e->getMessage()]);
+        }
+
+        return $this->success([
+            'tickets_transferred' => $tickets->count(),
+            'recipient' => [
+                'id' => $recipient->id,
+                'email' => $recipient->email,
+                'name' => $recipientName,
+            ],
+        ], "Ai transferat {$tickets->count()} bilet(e) către {$recipient->email}.");
+    }
+
+    /**
      * Require authenticated customer
      */
     protected function requireCustomer(Request $request): MarketplaceCustomer

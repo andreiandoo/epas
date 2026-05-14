@@ -153,6 +153,9 @@ const AmbiletAPI = {
         if (endpoint.match(/\/customer\/orders\/[\w-]+$/)) return 'customer.order';
         if (endpoint === '/customer/orders' || endpoint.includes('/customer/orders?')) return 'customer.orders';
 
+        // Customer ticket transfers
+        if (endpoint === '/customer/transfers/direct') return 'customer.transfers.direct';
+
         // Customer refunds
         if (endpoint.includes('/customer/refunds/reasons')) return 'customer.refunds.reasons';
         if (endpoint.includes('/customer/refunds/check-eligibility')) return 'customer.refunds.check-eligibility';

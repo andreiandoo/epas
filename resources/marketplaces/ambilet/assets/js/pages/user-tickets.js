@@ -207,6 +207,10 @@ const UserTickets = {
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                                 Calendar
                             </button>
+                            <button onclick="UserTickets.openTransferModal(${idx})" class="flex items-center gap-1.5 px-3 py-1.5 bg-white text-secondary text-xs font-medium rounded-lg border border-border hover:border-primary hover:text-primary transition-colors">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
+                                Transferă
+                            </button>
                         </div>
                     </div>
                     <div class="relative tickets-collapsible-wrap" data-event-idx="${idx}">
@@ -687,7 +691,161 @@ ${tickets.map((t, i) => {
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-    }
+    },
+
+    // ===== Ticket Transfer =====
+    _transferState: null,
+
+    openTransferModal(eventIdx) {
+        const grouped = this.eventGroups || this.groupedEvents || [];
+        const grp = grouped[eventIdx];
+        if (!grp) return;
+        // Only transferable tickets: status=valid, not checked-in, event in
+        // the future. Server re-validates all of these anyway, but filtering
+        // here keeps the UI honest.
+        const eligible = (grp.tickets || []).filter(t => (t.status || '').toLowerCase() === 'valid' && !t.checked_in);
+        if (!eligible.length) {
+            alert('Nu ai bilete eligibile pentru transfer la acest eveniment.');
+            return;
+        }
+        this._transferState = { eventIdx, eligible };
+        this._renderTransferModal(grp, eligible);
+    },
+
+    _renderTransferModal(grp, eligible) {
+        const old = document.getElementById('transfer-modal-backdrop');
+        if (old) old.remove();
+
+        const escAttr = (s) => String(s || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+        const ticketRows = eligible.map((t, i) => {
+            const seat = this.formatSeatInfo(t.seat);
+            const label = [t.type, t.attendee_name, seat, t.code].filter(Boolean).join(' · ');
+            return `
+                <label class="flex items-center gap-3 p-3 border border-border rounded-xl cursor-pointer hover:bg-surface">
+                    <input type="checkbox" class="transfer-ticket-check rounded border-border text-primary focus:ring-primary" value="${t.id}" checked>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-medium text-secondary truncate">${escAttr(label)}</p>
+                    </div>
+                </label>
+            `;
+        }).join('');
+
+        const backdrop = document.createElement('div');
+        backdrop.id = 'transfer-modal-backdrop';
+        backdrop.className = 'fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70';
+        backdrop.innerHTML = `
+            <div class="bg-white rounded-2xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto" onclick="event.stopPropagation()">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-bold text-secondary">Transferă bilete</h3>
+                    <button onclick="UserTickets.closeTransferModal()" class="text-muted hover:text-secondary">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </div>
+                <p class="text-sm text-muted mb-4">Eveniment: <strong class="text-secondary">${escAttr(grp.event && grp.event.name)}</strong></p>
+
+                <div class="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900">
+                    <p class="font-semibold mb-1">⚠️ Important</p>
+                    <p>Destinatarul trebuie să aibă deja un cont activ pe această platformă. Dacă nu are, primești un link de înregistrare pe care poți să-l transmiți pentru a-și crea contul.</p>
+                </div>
+
+                <div class="space-y-2 mb-4">
+                    <label class="text-xs font-medium text-secondary">Selectează biletele de transferat</label>
+                    <div class="space-y-2 max-h-60 overflow-y-auto" id="transfer-tickets-list">
+                        ${ticketRows}
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label for="transfer-recipient-email" class="block text-xs font-medium text-secondary mb-1">Email destinatar</label>
+                    <input id="transfer-recipient-email" type="email" required class="w-full px-3 py-2 border border-border rounded-xl text-sm focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none" placeholder="email@exemplu.ro">
+                </div>
+
+                <div id="transfer-error" class="hidden mb-4"></div>
+
+                <div class="flex items-center gap-3 pt-2 border-t border-border">
+                    <button onclick="UserTickets.closeTransferModal()" class="flex-1 px-4 py-2.5 text-sm font-medium text-secondary bg-surface rounded-xl hover:bg-border transition-colors">Anulează</button>
+                    <button id="transfer-submit-btn" onclick="UserTickets.submitTransfer()" class="flex-1 px-4 py-2.5 text-sm font-semibold text-white bg-primary rounded-xl hover:bg-primary/90 transition-colors">Transferă biletele</button>
+                </div>
+            </div>
+        `;
+        backdrop.onclick = () => this.closeTransferModal();
+        document.body.appendChild(backdrop);
+    },
+
+    closeTransferModal() {
+        const el = document.getElementById('transfer-modal-backdrop');
+        if (el) el.remove();
+        this._transferState = null;
+    },
+
+    async submitTransfer() {
+        const state = this._transferState;
+        if (!state) return;
+        const checks = document.querySelectorAll('.transfer-ticket-check:checked');
+        const ticketIds = Array.from(checks).map(c => parseInt(c.value, 10)).filter(n => n > 0);
+        const recipientEmail = (document.getElementById('transfer-recipient-email').value || '').trim();
+        const errorBox = document.getElementById('transfer-error');
+        errorBox.classList.add('hidden');
+        errorBox.innerHTML = '';
+
+        if (ticketIds.length === 0) {
+            errorBox.classList.remove('hidden');
+            errorBox.innerHTML = '<p class="text-xs text-red-600 p-2 bg-red-50 rounded-lg">Selectează cel puțin un bilet.</p>';
+            return;
+        }
+        if (!recipientEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipientEmail)) {
+            errorBox.classList.remove('hidden');
+            errorBox.innerHTML = '<p class="text-xs text-red-600 p-2 bg-red-50 rounded-lg">Introdu un email valid.</p>';
+            return;
+        }
+
+        const btn = document.getElementById('transfer-submit-btn');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="inline-flex items-center gap-2"><span class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span> Se transferă...</span>';
+
+        try {
+            const resp = await AmbiletAPI.post('/customer/transfers/direct', {
+                ticket_ids: ticketIds,
+                recipient_email: recipientEmail,
+            });
+
+            if (resp && resp.success) {
+                this.closeTransferModal();
+                if (typeof AmbiletNotifications !== 'undefined') {
+                    AmbiletNotifications.success(resp.message || 'Bilete transferate.');
+                } else {
+                    alert(resp.message || 'Bilete transferate.');
+                }
+                await this.loadTickets();
+                return;
+            }
+
+            // Error path — surface signup URL when recipient doesn't exist
+            if (resp && resp.error === 'recipient_not_found') {
+                const url = resp.signup_url || '';
+                errorBox.classList.remove('hidden');
+                errorBox.innerHTML = `
+                    <div class="p-3 bg-amber-50 border border-amber-200 rounded-xl">
+                        <p class="text-xs text-amber-900 font-semibold mb-2">Destinatarul nu are cont încă</p>
+                        <p class="text-xs text-amber-800 mb-3">Trimite-i acest link de înregistrare. După ce își creează contul, revino aici și trimite biletele.</p>
+                        <div class="flex items-center gap-2">
+                            <input type="text" readonly value="${url}" class="flex-1 px-2 py-1.5 text-xs font-mono bg-white border border-amber-300 rounded-lg text-amber-900" onclick="this.select()">
+                            <button type="button" onclick="navigator.clipboard.writeText('${url}'); this.textContent='Copiat ✓'; setTimeout(()=>this.textContent='Copiază',2000)" class="px-3 py-1.5 text-xs font-semibold text-white bg-amber-600 hover:bg-amber-700 rounded-lg">Copiază</button>
+                        </div>
+                    </div>
+                `;
+            } else {
+                errorBox.classList.remove('hidden');
+                errorBox.innerHTML = `<p class="text-xs text-red-600 p-2 bg-red-50 rounded-lg">${(resp && resp.message) || 'Transferul a eșuat.'}</p>`;
+            }
+        } catch (e) {
+            errorBox.classList.remove('hidden');
+            errorBox.innerHTML = `<p class="text-xs text-red-600 p-2 bg-red-50 rounded-lg">Eroare de rețea. Încearcă din nou.</p>`;
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = 'Transferă biletele';
+        }
+    },
 };
 
 // Close QR modal with Escape key

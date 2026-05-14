@@ -560,7 +560,11 @@ class AccountController extends BaseController
     {
         $customer = $this->requireCustomer($request);
 
-        $orders = Order::where('marketplace_customer_id', $customer->id)
+        // Scope by tickets.current_owner_customer_id so transferred-in
+        // tickets show up in the new owner's account and transferred-away
+        // tickets disappear from the original buyer's. See migration
+        // 2026_05_14_110000 for the rationale.
+        $orders = Order::whereHas('tickets', fn ($q) => $q->where('current_owner_customer_id', $customer->id))
             ->whereIn('status', ['completed', 'paid', 'confirmed'])
             ->whereHas('marketplaceEvent', function ($q) {
                 $q->where('starts_at', '>=', now());
@@ -572,8 +576,10 @@ class AccountController extends BaseController
             ->orderBy('created_at', 'desc')
             ->get();
 
-        $tickets = $orders->flatMap(function ($order) {
-            return $order->tickets->map(function ($ticket) use ($order) {
+        $tickets = $orders->flatMap(function ($order) use ($customer) {
+            return $order->tickets
+                ->where('current_owner_customer_id', $customer->id)
+                ->map(function ($ticket) use ($order) {
                 return [
                     'id' => $ticket->id,
                     'barcode' => $ticket->barcode,
@@ -608,27 +614,14 @@ class AccountController extends BaseController
     {
         $customer = $this->requireCustomer($request);
 
-        // Find the ticket through orders
-        $ticket = null;
-        $order = null;
-
-        $orders = Order::where('marketplace_customer_id', $customer->id)
-            ->whereIn('status', ['completed', 'paid', 'confirmed'])
-            ->with([
-                'marketplaceEvent',
-                'tickets.marketplaceTicketType',
-            ])
-            ->get();
-
-        foreach ($orders as $o) {
-            foreach ($o->tickets as $t) {
-                if ($t->id === $ticketId) {
-                    $ticket = $t;
-                    $order = $o;
-                    break 2;
-                }
-            }
-        }
+        // Scope by current_owner_customer_id so transferred tickets are
+        // accessible to the new owner (and not the old one).
+        $ticket = \App\Models\Ticket::where('id', $ticketId)
+            ->where('current_owner_customer_id', $customer->id)
+            ->whereHas('order', fn ($q) => $q->whereIn('status', ['completed', 'paid', 'confirmed']))
+            ->with(['order.marketplaceEvent', 'marketplaceTicketType'])
+            ->first();
+        $order = $ticket?->order;
 
         if (!$ticket || !$order) {
             return $this->error('Ticket not found', 404);
@@ -699,7 +692,7 @@ class AccountController extends BaseController
         // range_end_date set, and a SQL `event_date < now` would push them into
         // "past" with a 1970-01-01 date). We fetch all the customer's orders
         // (always a small set) and split by isPast() in PHP below.
-        $orders = Order::where('marketplace_customer_id', $customer->id)
+        $orders = Order::whereHas('tickets', fn ($q) => $q->where('current_owner_customer_id', $customer->id))
             ->whereIn('status', ['completed', 'paid', 'confirmed'])
             ->with([
                 'marketplaceEvent:id,name,slug,starts_at,ends_at,doors_open_at,venue_name,venue_city,image',
@@ -715,9 +708,12 @@ class AccountController extends BaseController
             ->orderByDesc('created_at')
             ->get();
 
-        $tickets = $orders->flatMap(function ($order) {
+        $currentCustomerId = $customer->id;
+        $tickets = $orders->flatMap(function ($order) use ($currentCustomerId) {
             $customer = $order->marketplaceCustomer;
-            return $order->tickets->map(function ($ticket) use ($order, $customer) {
+            return $order->tickets
+                ->where('current_owner_customer_id', $currentCustomerId)
+                ->map(function ($ticket) use ($order, $customer) {
                 // Handle both marketplace events and tenant events
                 if ($order->marketplaceEvent) {
                     $event = $order->marketplaceEvent;
