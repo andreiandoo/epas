@@ -8,7 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useKeepAwake } from 'expo-keep-awake';
 import Svg, { Rect, Path, Circle } from 'react-native-svg';
 
-const APP_VERSION = '1.5.3';
+const APP_VERSION = '1.5.4';
 
 import ErrorBoundary from './src/components/ErrorBoundary';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
@@ -22,11 +22,10 @@ import CheckInScreen from './src/screens/CheckInScreen';
 import SalesScreen from './src/screens/SalesScreen';
 import ReportsScreen from './src/screens/ReportsScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
-import VenueEventsScreen from './src/screens/VenueEventsScreen';
-import VenueEventDetailScreen from './src/screens/VenueEventDetailScreen';
-import VenueTicketDetailScreen from './src/screens/VenueTicketDetailScreen';
-import VenueScanScreen from './src/screens/VenueScanScreen';
-import VenueSalesScreen from './src/screens/VenueSalesScreen';
+// Venue owner now uses MainTabs (the api/client.js path rewriter handles the
+// URL switch). Legacy Venue*Screen files are left in place for now but no
+// longer mounted — the screens that exist on the organizer side cover
+// every venue-owner workflow once endpoints align.
 
 import Header from './src/components/Header';
 import EventSelector from './src/components/EventSelector';
@@ -125,7 +124,7 @@ function TabIcon({ name, focused, disabled }) {
 
 function MainTabs() {
   useKeepAwake(); // Prevent screen from sleeping
-  const { userRole, userPermissions, user } = useAuth();
+  const { userRole, userPermissions, user, venueOwner, isVenueOwner } = useAuth();
   const insets = useSafeAreaInsets();
   const { groupedEvents, selectEvent, fetchEvents, isReportsOnlyMode } = useEvent();
   const { notifications, markAllRead, shiftStartTime } = useApp();
@@ -140,12 +139,15 @@ function MainTabs() {
   const [updateAvailable, setUpdateAvailable] = useState(null);
   const [activeTab, setActiveTab] = useState('Dashboard');
 
-  // Re-fetch events whenever the active organizer changes (including switches)
+  // Re-fetch events whenever the active account changes (organizer switch
+  // OR venue-owner login). Venue owner has no `user.id` so we trigger off
+  // the venueOwner identity too.
   useEffect(() => {
-    if (user?.id) {
+    const id = user?.id || venueOwner?.id;
+    if (id) {
       fetchEvents();
     }
-  }, [user?.id]);
+  }, [user?.id, venueOwner?.id]);
 
   useEffect(() => {
     // Check for app updates
@@ -230,7 +232,9 @@ function MainTabs() {
         )}
         <Tab.Screen name="CheckIn" component={CheckInScreen} options={{ tabBarLabel: 'Scanare' }} />
         <Tab.Screen name="Sales" component={SalesScreen} options={{ tabBarLabel: 'Vânzare' }} />
-        {isAdmin && hasPermission('reports') && (
+        {/* Reports is financial → organizer-only. Venue owner sees venue
+            stats via Dashboard; they don't need the financial reports. */}
+        {isAdmin && hasPermission('reports') && !isVenueOwner && (
           <Tab.Screen name="Reports" component={ReportsScreen} options={{ tabBarLabel: 'Rapoarte' }} />
         )}
         <Tab.Screen name="Settings" options={{ tabBarLabel: 'Setări' }}>
@@ -238,8 +242,8 @@ function MainTabs() {
             <SettingsScreen
               {...props}
               appVersion={APP_VERSION}
-              onShowGateManager={() => setShowGateManager(true)}
-              onShowStaffAssignment={isAdmin ? () => setShowStaffAssignment(true) : null}
+              onShowGateManager={isVenueOwner ? null : () => setShowGateManager(true)}
+              onShowStaffAssignment={(isAdmin && !isVenueOwner) ? () => setShowStaffAssignment(true) : null}
             />
           )}
         </Tab.Screen>
@@ -310,115 +314,6 @@ function MainTabs() {
   );
 }
 
-// ── Venue owner navigation ──────────────────────────────────────
-function VenueOwnerEventsStack() {
-  return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="VenueEventsList" component={VenueEventsScreen} />
-      <Stack.Screen name="VenueEventDetail" component={VenueEventDetailScreen} />
-      <Stack.Screen name="VenueTicketDetail" component={VenueTicketDetailScreen} />
-    </Stack.Navigator>
-  );
-}
-
-function VenueOwnerTabs() {
-  useKeepAwake();
-  const insets = useSafeAreaInsets();
-  const { venueOwner } = useAuth();
-  const [updateAvailable, setUpdateAvailable] = useState(null);
-
-  useEffect(() => {
-    (async () => {
-      try {
-        const res = await fetch('https://core.tixello.com/api/app-version');
-        const data = await res.json();
-        if (data.latest_version && data.latest_version !== APP_VERSION) {
-          const current = APP_VERSION.split('.').map(Number);
-          const latest = data.latest_version.split('.').map(Number);
-          for (let i = 0; i < 3; i++) {
-            if ((latest[i] || 0) > (current[i] || 0)) {
-              setUpdateAvailable({ version: data.latest_version, url: data.download_url });
-              break;
-            }
-            if ((latest[i] || 0) < (current[i] || 0)) break;
-          }
-        }
-      } catch (e) {}
-    })();
-  }, []);
-
-  return (
-    <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor={colors.background} />
-
-      <Tab.Navigator
-        screenOptions={({ route }) => ({
-          headerShown: false,
-          tabBarIcon: ({ focused }) => <TabIcon name={route.name} focused={focused} />,
-          tabBarActiveTintColor: colors.purple,
-          tabBarInactiveTintColor: 'rgba(255,255,255,0.4)',
-          tabBarStyle: {
-            backgroundColor: colors.background,
-            borderTopColor: 'rgba(255,255,255,0.05)',
-            borderTopWidth: 1,
-            paddingBottom: Math.max(insets.bottom, 8),
-            paddingTop: 8,
-            height: 56 + Math.max(insets.bottom, 8),
-          },
-          tabBarLabelStyle: { fontSize: 11, fontWeight: '500' },
-        })}
-      >
-        <Tab.Screen
-          name="VenueEvents"
-          component={VenueOwnerEventsStack}
-          options={{ tabBarLabel: 'Evenimente' }}
-        />
-        <Tab.Screen
-          name="VenueScan"
-          component={VenueScanScreen}
-          options={{ tabBarLabel: 'Scanare' }}
-        />
-        <Tab.Screen
-          name="VenueSales"
-          component={VenueSalesScreen}
-          options={{ tabBarLabel: 'Vânzare' }}
-        />
-        <Tab.Screen name="Settings" options={{ tabBarLabel: 'Setări' }}>
-          {(props) => <SettingsScreen {...props} appVersion={APP_VERSION} />}
-        </Tab.Screen>
-      </Tab.Navigator>
-
-      {updateAvailable && (
-        <Modal visible transparent animationType="fade" statusBarTranslucent>
-          <View style={styles.updateOverlay}>
-            <View style={styles.updateCard}>
-              <Text style={styles.updateTitle}>Actualizare disponibilă</Text>
-              <Text style={styles.updateText}>
-                Versiunea {updateAvailable.version} este disponibilă.{'\n'}
-                Versiunea ta curentă: {APP_VERSION}
-              </Text>
-              <TouchableOpacity
-                style={styles.updateButton}
-                onPress={() => Linking.openURL(updateAvailable.url)}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.updateButtonText}>Descarcă actualizarea</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.updateDismiss}
-                onPress={() => setUpdateAvailable(null)}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.updateDismissText}>Mai târziu</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </Modal>
-      )}
-    </View>
-  );
-}
-
 function AuthNavigator() {
   const { isAuthenticated, userType, checkAuth } = useAuth();
   const [showSplash, setShowSplash] = useState(true);
@@ -435,10 +330,10 @@ function AuthNavigator() {
     return <LoginScreen onLoginSuccess={() => {}} />;
   }
 
-  if (userType === 'venue_owner') {
-    return <VenueOwnerTabs />;
-  }
-
+  // Both organizer and venue_owner share MainTabs — the path rewriter in
+  // src/api/client.js reroutes organizer URLs onto the venue-owner namespace
+  // when userType==='venue_owner', so SalesScreen / CheckInScreen / Dashboard
+  // work verbatim. Tabs and Settings options are gated by isVenueOwner.
   return <MainTabs />;
 }
 

@@ -50,6 +50,37 @@ export function getToken() {
   return _token;
 }
 
+/**
+ * Rewrite organizer-style paths to their venue-owner equivalents when the
+ * authenticated user is a venue owner. Keeps the organizer screens (Sales,
+ * CheckIn, Dashboard etc.) usable verbatim — they call the same `apiPost`
+ * helpers, but the URL transparently lands on the venue-owner namespace.
+ *
+ * Rules (only applied when userType==='venue_owner'):
+ *   /organizer/...                          → /venue-owner/...
+ *   /orders[, /orders/{id}/*]               → /venue-owner/orders[, /...]
+ *   /events/{id}/sales-breakdown            → /venue-owner/events/{id}/sales-breakdown
+ *
+ * Already-prefixed paths (/venue-owner/..., /customer/..., /admin/...) pass
+ * through unchanged.
+ */
+function rewritePath(path) {
+  if (_userType !== 'venue_owner' || !path) return path;
+  if (path.startsWith('/venue-owner/')) return path;
+
+  if (path.startsWith('/organizer/')) {
+    return '/venue-owner/' + path.slice('/organizer/'.length);
+  }
+  if (path === '/orders' || path.startsWith('/orders/') || path.startsWith('/orders?')) {
+    return '/venue-owner' + path;
+  }
+  // /events/{id}/sales-breakdown — used by DashboardScreen's SalesBreakdownModal
+  if (/^\/events\/\d+\/sales-breakdown(\?|$)/.test(path)) {
+    return '/venue-owner' + path;
+  }
+  return path;
+}
+
 async function request(url, options = {}) {
   const headers = {
     'Content-Type': 'application/json',
@@ -90,34 +121,35 @@ async function request(url, options = {}) {
 }
 
 export function apiGet(path, params = {}) {
+  const rewritten = rewritePath(path);
   const query = new URLSearchParams(params).toString();
-  const url = `${BASE_URL}${path}${query ? '?' + query : ''}`;
+  const url = `${BASE_URL}${rewritten}${query ? '?' + query : ''}`;
   return request(url, { method: 'GET' });
 }
 
 export function apiPost(path, body = {}) {
-  return request(`${BASE_URL}${path}`, {
+  return request(`${BASE_URL}${rewritePath(path)}`, {
     method: 'POST',
     body: JSON.stringify(body),
   });
 }
 
 export function apiPut(path, body = {}) {
-  return request(`${BASE_URL}${path}`, {
+  return request(`${BASE_URL}${rewritePath(path)}`, {
     method: 'PUT',
     body: JSON.stringify(body),
   });
 }
 
 export function apiPatch(path, body = {}) {
-  return request(`${BASE_URL}${path}`, {
+  return request(`${BASE_URL}${rewritePath(path)}`, {
     method: 'PATCH',
     body: JSON.stringify(body),
   });
 }
 
 export function apiDelete(path) {
-  return request(`${BASE_URL}${path}`, {
+  return request(`${BASE_URL}${rewritePath(path)}`, {
     method: 'DELETE',
   });
 }

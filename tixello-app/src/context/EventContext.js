@@ -43,7 +43,12 @@ export function EventProvider({ children }) {
     try {
       const data = await getEvents({ per_page: 100 });
       if (data.success && data.data) {
-        const enriched = data.data.map(e => ({
+        // Organizer endpoint returns paginated `data: [...]`; venue-owner
+        // endpoint returns `data: { events: [...] }`. Accept either.
+        const list = Array.isArray(data.data)
+          ? data.data
+          : (data.data.events || data.events || []);
+        const enriched = list.map(e => ({
           ...e,
           timeCategory: categorizeEvent(e),
         }));
