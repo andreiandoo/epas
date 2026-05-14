@@ -741,6 +741,22 @@ switch ($action) {
         $endpoint = '/marketplace-events/' . urlencode($slug) . '/date-availability?' . http_build_query($params);
         break;
 
+    case 'event.slotAvailability':
+        $slug = $_GET['slug'] ?? '';
+        if (!$slug) { http_response_code(400); echo json_encode(['error' => 'Missing event slug']); exit; }
+        $params = [];
+        foreach (['ticket_type_id', 'date'] as $k) if (isset($_GET[$k])) $params[$k] = $_GET[$k];
+        $endpoint = '/marketplace-events/' . urlencode($slug) . '/slot-availability?' . http_build_query($params);
+        break;
+
+    case 'event.resourceAvailability':
+        $slug = $_GET['slug'] ?? '';
+        if (!$slug) { http_response_code(400); echo json_encode(['error' => 'Missing event slug']); exit; }
+        $params = [];
+        foreach (['ticket_type_id', 'date', 'start_time', 'duration_minutes'] as $k) if (isset($_GET[$k])) $params[$k] = $_GET[$k];
+        $endpoint = '/marketplace-events/' . urlencode($slug) . '/resource-availability?' . http_build_query($params);
+        break;
+
     case 'tracking.organizer-scripts':
         $organizerId = $_GET['organizer_id'] ?? '';
         if (!$organizerId) {

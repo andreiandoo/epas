@@ -202,6 +202,69 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                         <p class="text-[11px] text-muted mb-2">Aceeași entitate fizică (ex: 10 bărci), prețuri diferite pe durată. Stocul rămâne partajat — fiecare rezervare consumă 1 unitate indiferent de varianta aleasă.</p>
                         <div id="pr-f-variants-list" class="space-y-2"></div>
                     </div>
+                    <!-- Add-ons opționale (pentru access, rental, activity) -->
+                    <div id="pr-f-addons-wrap" class="md:col-span-2 hidden">
+                        <div class="flex items-center justify-between mb-2">
+                            <p class="text-xs font-semibold text-muted uppercase tracking-wider">Add-ons opționale</p>
+                            <button type="button" id="pr-f-addon-add" class="px-2.5 py-1 text-xs font-medium text-primary bg-primary/10 hover:bg-primary/20 rounded">+ Adaugă add-on</button>
+                        </div>
+                        <p class="text-[11px] text-muted mb-2">Servicii opționale legate de acest produs (ex: tractare extra la sanii). „Incluse" = câte sunt gratuite per bilet cumpărat (calculate real). „Max plătite" = câte adăugiri se pot face peste cele incluse.</p>
+                        <div id="pr-f-addons-list" class="space-y-2"></div>
+                    </div>
+                    <!-- F3: Slot-uri pe oră (Vaporașe etc.) -->
+                    <div id="pr-f-slots-wrap" class="md:col-span-2 hidden">
+                        <div class="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                            <label class="flex items-center gap-2 text-sm font-semibold mb-3">
+                                <input type="checkbox" id="pr-f-slots-enabled" class="w-4 h-4 accent-primary">
+                                <span>🕐 Activează booking pe slot-uri (curse repetitive)</span>
+                            </label>
+                            <div id="pr-f-slots-fields" class="grid grid-cols-2 md:grid-cols-4 gap-2 hidden">
+                                <label class="block">
+                                    <span class="text-[10px] uppercase text-muted">Prima cursă</span>
+                                    <input id="pr-f-slot-first" type="text" placeholder="09:00" class="mt-1 w-full px-2 py-1.5 text-sm border border-border rounded bg-white">
+                                </label>
+                                <label class="block">
+                                    <span class="text-[10px] uppercase text-muted">Ultima cursă</span>
+                                    <input id="pr-f-slot-last" type="text" placeholder="18:00" class="mt-1 w-full px-2 py-1.5 text-sm border border-border rounded bg-white">
+                                </label>
+                                <label class="block">
+                                    <span class="text-[10px] uppercase text-muted">Interval (min)</span>
+                                    <input id="pr-f-slot-interval" type="number" min="5" placeholder="30" class="mt-1 w-full px-2 py-1.5 text-sm border border-border rounded bg-white">
+                                </label>
+                                <label class="block">
+                                    <span class="text-[10px] uppercase text-muted">Durată cursă (min)</span>
+                                    <input id="pr-f-slot-duration" type="number" min="5" placeholder="30" class="mt-1 w-full px-2 py-1.5 text-sm border border-border rounded bg-white">
+                                </label>
+                                <label class="block">
+                                    <span class="text-[10px] uppercase text-muted">Capacitate / cursă</span>
+                                    <input id="pr-f-slot-capacity" type="number" min="1" placeholder="14" class="mt-1 w-full px-2 py-1.5 text-sm border border-border rounded bg-white">
+                                </label>
+                                <label class="block md:col-span-3">
+                                    <span class="text-[10px] uppercase text-muted">Vânzare</span>
+                                    <select id="pr-f-slot-pricing" class="mt-1 w-full px-2 py-1.5 text-sm border border-border rounded bg-white">
+                                        <option value="per_person">Per persoană</option>
+                                        <option value="per_slot">Per cursă (cumpără toată cursa)</option>
+                                    </select>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- F5: Inventar fizic (Bărci etc.) -->
+                    <div id="pr-f-physical-wrap" class="md:col-span-2 hidden">
+                        <div class="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                            <label class="flex items-center gap-2 text-sm font-semibold mb-3">
+                                <input type="checkbox" id="pr-f-physical-enabled" class="w-4 h-4 accent-primary">
+                                <span>🔒 Inventar fizic cu lock pe interval</span>
+                            </label>
+                            <div id="pr-f-physical-fields" class="hidden">
+                                <label class="block">
+                                    <span class="text-[10px] uppercase text-muted">Număr unități fizice</span>
+                                    <input id="pr-f-physical-count" type="number" min="1" placeholder="10" class="mt-1 w-full px-2 py-1.5 text-sm border border-border rounded bg-white">
+                                    <span class="text-[10px] text-muted">ex: 10 bărci — o unitate nu poate fi în 2 intervale care se suprapun</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
                     <!-- Componente pachet (pentru service_category=package) -->
                     <div id="pr-f-package-wrap" class="md:col-span-2 hidden">
                         <div class="flex items-center justify-between mb-2">
@@ -1018,6 +1081,29 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         // Pachet — populează componentele din meta.package_outputs
         const packageOutputs = Array.isArray(p?.package_outputs) ? p.package_outputs : (Array.isArray(p?.meta?.package_outputs) ? p.meta.package_outputs : []);
         renderPackageRows(packageOutputs);
+        // Add-ons — populează din meta.addons
+        const addons = Array.isArray(p?.addons) ? p.addons : (Array.isArray(p?.meta?.addons) ? p.meta.addons : []);
+        renderAddonRows(addons);
+
+        // F3 — Slot config
+        const slotsCfg = (p?.slots_config && typeof p.slots_config === 'object') ? p.slots_config : (p?.meta?.slots_config || null);
+        const slotsEnabled = !!(slotsCfg && slotsCfg.enabled);
+        $('pr-f-slots-enabled').checked = slotsEnabled;
+        $('pr-f-slots-fields').classList.toggle('hidden', !slotsEnabled);
+        $('pr-f-slot-first').value = slotsCfg?.first_slot || '';
+        $('pr-f-slot-last').value = slotsCfg?.last_slot || '';
+        $('pr-f-slot-interval').value = slotsCfg?.interval_minutes || '';
+        $('pr-f-slot-duration').value = slotsCfg?.duration_minutes || '';
+        $('pr-f-slot-capacity').value = slotsCfg?.capacity_per_slot || '';
+        $('pr-f-slot-pricing').value = slotsCfg?.unit_pricing || 'per_person';
+
+        // F5 — Physical inventory
+        const physCfg = (p?.physical_inventory && typeof p.physical_inventory === 'object') ? p.physical_inventory : (p?.meta?.physical_inventory || null);
+        const physEnabled = !!(physCfg && physCfg.enabled);
+        $('pr-f-physical-enabled').checked = physEnabled;
+        $('pr-f-physical-fields').classList.toggle('hidden', !physEnabled);
+        $('pr-f-physical-count').value = physCfg?.count || '';
+
         updateVariantsVisibility();
 
         $('pr-modal').classList.remove('hidden');
@@ -1029,6 +1115,9 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         const show = (cat === 'rental' || cat === 'activity');
         $('pr-f-variants-wrap').classList.toggle('hidden', !show);
         $('pr-f-package-wrap').classList.toggle('hidden', cat !== 'package');
+        $('pr-f-addons-wrap').classList.toggle('hidden', !(cat === 'access' || cat === 'rental' || cat === 'activity'));
+        $('pr-f-slots-wrap').classList.toggle('hidden', !show);
+        $('pr-f-physical-wrap').classList.toggle('hidden', !show);
         // Pentru pachete, ascunde câmpurile irrelevante (parcare, vehicul)
         const isPkg = (cat === 'package');
         const pkgHiddenFields = ['pr-f-parking', 'pr-f-vehicle'];
@@ -1037,6 +1126,50 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             if (el && el.closest('label')) el.closest('label').classList.toggle('hidden', isPkg);
         });
         if (isPkg) updatePackageSavings();
+    }
+
+    function makeAddonRow(a) {
+        a = a || {};
+        const row = document.createElement('div');
+        row.className = 'p-2 bg-slate-50 rounded-lg';
+        row.innerHTML = `
+            <div class="grid grid-cols-12 gap-2 items-center">
+                <input type="text" data-ao="id" placeholder="slug (tractare)" maxlength="32" value="${escapeHtml(a.id || '')}" class="col-span-3 px-2 py-1.5 text-xs border border-border rounded bg-white">
+                <input type="text" data-ao="label" placeholder="Etichetă (Tractare extra)" required value="${escapeHtml(a.label || '')}" class="col-span-3 px-2 py-1.5 text-sm border border-border rounded bg-white">
+                <input type="number" data-ao="price" placeholder="RON/buc" min="0" step="0.01" required value="${a.price ?? ''}" class="col-span-2 px-2 py-1.5 text-sm border border-border rounded bg-white">
+                <input type="number" data-ao="included_qty" placeholder="Gratuite/bilet" min="0" value="${a.included_qty ?? 0}" class="col-span-2 px-2 py-1.5 text-sm border border-border rounded bg-white" title="Câte sunt gratuite per bilet cumpărat">
+                <input type="number" data-ao="max_per_unit" placeholder="Max plătite/bilet" min="0" value="${a.max_per_unit ?? 5}" class="col-span-1 px-2 py-1.5 text-sm border border-border rounded bg-white" title="Câte se pot adăuga plătit pe lângă cele incluse">
+                <button type="button" data-ao-rm class="col-span-1 text-xs text-rose-600 hover:bg-rose-100 rounded px-1.5 py-1">🗑</button>
+            </div>
+        `;
+        row.querySelector('[data-ao-rm]').addEventListener('click', () => row.remove());
+        return row;
+    }
+
+    function renderAddonRows(addons) {
+        const list = $('pr-f-addons-list');
+        list.innerHTML = '';
+        (addons || []).forEach(a => list.appendChild(makeAddonRow(a)));
+    }
+
+    function collectAddons() {
+        const out = [];
+        $('pr-f-addons-list').querySelectorAll(':scope > div').forEach(row => {
+            const item = {};
+            row.querySelectorAll('[data-ao]').forEach(el => {
+                const k = el.dataset.ao;
+                let v = el.value;
+                if (typeof v === 'string') v = v.trim();
+                if (v !== '' && v !== null && v !== undefined) item[k] = v;
+            });
+            if (!item.label) return;
+            if (!item.id) item.id = item.label.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 32) || ('a' + Date.now());
+            if (item.price) item.price = parseFloat(item.price);
+            item.included_qty = parseInt(item.included_qty || 0, 10);
+            item.max_per_unit = parseInt(item.max_per_unit || 5, 10);
+            out.push(item);
+        });
+        return out;
     }
 
     function makePackageRow(o) {
@@ -1175,6 +1308,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         const cat = $('pr-f-category').value;
         const variants = (cat === 'rental' || cat === 'activity') ? collectVariants() : [];
         const packageOutputs = (cat === 'package') ? collectPackageOutputs() : [];
+        const addons = (cat === 'access' || cat === 'rental' || cat === 'activity') ? collectAddons() : [];
         const body = {
             name: $('pr-f-name').value.trim(),
             service_category: cat,
@@ -1195,7 +1329,21 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 image: $('pr-f-image').value.trim() || null,
                 includes,
                 variants,
+                addons,
                 package_outputs: packageOutputs,
+                slots_config: $('pr-f-slots-enabled').checked ? {
+                    enabled: true,
+                    first_slot: $('pr-f-slot-first').value.trim() || '09:00',
+                    last_slot: $('pr-f-slot-last').value.trim() || '18:00',
+                    interval_minutes: parseInt($('pr-f-slot-interval').value || 30, 10),
+                    duration_minutes: parseInt($('pr-f-slot-duration').value || 30, 10),
+                    capacity_per_slot: parseInt($('pr-f-slot-capacity').value || 1, 10),
+                    unit_pricing: $('pr-f-slot-pricing').value || 'per_person',
+                } : null,
+                physical_inventory: $('pr-f-physical-enabled').checked ? {
+                    enabled: true,
+                    count: parseInt($('pr-f-physical-count').value || 1, 10),
+                } : null,
             },
         };
         if (!body.name) { alert('Numele produsului e obligatoriu.'); return; }
@@ -1237,6 +1385,12 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         // Package outputs: add row + auto-recalc savings on price change
         const pkgAdd = $('pr-f-package-add'); if (pkgAdd) pkgAdd.addEventListener('click', () => { $('pr-f-package-list').appendChild(makePackageRow({})); updatePackageSavings(); });
         const priceInp = $('pr-f-price'); if (priceInp) priceInp.addEventListener('input', updatePackageSavings);
+        // Add-ons: add row
+        const aoAdd = $('pr-f-addon-add'); if (aoAdd) aoAdd.addEventListener('click', () => $('pr-f-addons-list').appendChild(makeAddonRow({})));
+        // F3 slots toggle
+        const slotsToggle = $('pr-f-slots-enabled'); if (slotsToggle) slotsToggle.addEventListener('change', e => $('pr-f-slots-fields').classList.toggle('hidden', !e.target.checked));
+        // F5 physical toggle
+        const physToggle = $('pr-f-physical-enabled'); if (physToggle) physToggle.addEventListener('change', e => $('pr-f-physical-fields').classList.toggle('hidden', !e.target.checked));
     }
 
     // ========== CONTENT EDITOR ==========

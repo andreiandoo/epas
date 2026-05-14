@@ -163,7 +163,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         }).join('');
 
         $('lv-grid').querySelectorAll('.lv-tt-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
+            btn.addEventListener('click', async () => {
                 const id = btn.dataset.tt;
                 const name = btn.dataset.name;
                 const price = Number(btn.dataset.price);
@@ -171,15 +171,36 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 const vid = btn.dataset.vid || null;
                 const vlabel = btn.dataset.vlabel || null;
                 const vduration = btn.dataset.vduration ? parseInt(btn.dataset.vduration, 10) : null;
-                const key = cartKey(id, vid);
+                const tt = types.find(t => t.id == id);
+                const hasSlots = tt && tt.slots_config && tt.slots_config.enabled;
+                const hasPhysical = tt && tt.physical_inventory && tt.physical_inventory.enabled;
+
+                let slotTime = null;
+                if (hasSlots || hasPhysical) {
+                    // Quick prompt pentru ora (POS — input rapid)
+                    const cfg = tt.slots_config || {};
+                    const first = cfg.first_slot || '09:00';
+                    const last = cfg.last_slot || '18:00';
+                    slotTime = prompt(`Ora pentru ${name} (format HH:MM, între ${first}-${last}):`, first);
+                    if (!slotTime) return; // anulare
+                    if (!/^\d{2}:\d{2}$/.test(slotTime)) {
+                        alert('Format invalid. Folosește HH:MM (ex: 14:30).');
+                        return;
+                    }
+                }
+
+                // Cheia diferă dacă ai slot — separa rezervările pe slot diferit
+                const slotSuffix = slotTime ? '@' + slotTime : '';
+                const key = cartKey(id, vid) + slotSuffix;
                 if (!cart[key]) {
                     cart[key] = {
                         qty: 0,
                         price,
-                        name: vlabel ? `${name} — ${vlabel}` : name,
+                        name: (vlabel ? `${name} — ${vlabel}` : name) + (slotTime ? ` · ${slotTime}` : ''),
                         category: cat,
                         ticket_type_id: parseInt(id, 10),
                         variant: vid ? { id: vid, label: vlabel, duration_minutes: vduration } : null,
+                        slot_time: slotTime,
                     };
                 }
                 cart[key].qty++;
@@ -201,7 +222,8 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         }
         let subtotal = 0;
         let commissionTotal = 0;
-        wrap.innerHTML = entries.map(([id, it]) => {
+        let addonsGrandTotal = 0;
+        wrap.innerHTML = entries.map(([key, it]) => {
             const line = it.qty * it.price;
             const com = commissionPerTicket(it.price) * it.qty;
             subtotal += line;
@@ -209,6 +231,35 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             const comRow = (com > 0)
                 ? `<div class="text-[10px] text-muted pl-1">+ Comision ticketing: ${fmtMoney(com)} RON</div>`
                 : '';
+            // Add-ons UI pentru această linie (dacă tipul de bilet are addons configurate)
+            const tt = types.find(t => t.id === it.ticket_type_id);
+            const addons = (tt && Array.isArray(tt.addons)) ? tt.addons : [];
+            let addonsRows = '';
+            if (addons.length > 0) {
+                addonsRows = '<div class="mt-1.5 pt-1.5 border-t border-slate-200 space-y-1">' +
+                    addons.map(a => {
+                        const aQty = (it.addons && it.addons[a.id]) || 0;
+                        const incPerTicket = parseInt(a.included_qty || 0, 10);
+                        const maxPaidPerTicket = parseInt(a.max_per_unit || 5, 10);
+                        const freePool = incPerTicket * it.qty;
+                        const maxTotal = (incPerTicket + maxPaidPerTicket) * it.qty;
+                        const freeUsed = Math.min(freePool, aQty);
+                        const paid = Math.max(0, aQty - freePool);
+                        const lineTotal = paid * parseFloat(a.price || 0);
+                        addonsGrandTotal += lineTotal;
+                        return `<div class="flex items-center gap-2 text-xs">
+                            <span class="flex-1 min-w-0">
+                                <span class="font-medium text-secondary">${a.label}</span>
+                                <span class="text-muted">${freePool > 0 ? ` · ${freePool} gratis` : ''} · ${fmtMoney(parseFloat(a.price))} RON/buc</span>
+                            </span>
+                            <button data-ao-act="dec" data-key="${key}" data-aid="${a.id}" class="w-6 h-6 bg-white border border-border rounded hover:bg-slate-100 text-xs">−</button>
+                            <span class="w-5 text-center font-semibold">${aQty}</span>
+                            <button data-ao-act="inc" data-key="${key}" data-aid="${a.id}" data-max="${maxTotal}" class="w-6 h-6 bg-white border border-border rounded hover:bg-slate-100 text-xs">+</button>
+                            <span class="w-16 text-right font-semibold text-xs">${lineTotal > 0 ? '+' + fmtMoney(lineTotal) : (aQty > 0 ? 'gratis' : '')}</span>
+                        </div>`;
+                    }).join('') +
+                '</div>';
+            }
             return `<div class="bg-slate-50 rounded-lg p-2">
                 <div class="flex items-center gap-2 text-sm">
                     <div class="flex-1 min-w-0">
@@ -216,18 +267,19 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                         <div class="text-xs text-muted">${fmtMoney(it.price)} × ${it.qty}</div>
                     </div>
                     <div class="flex items-center gap-1">
-                        <button data-act="dec" data-id="${id}" class="w-7 h-7 bg-white border border-border rounded hover:bg-slate-100">−</button>
+                        <button data-act="dec" data-id="${key}" class="w-7 h-7 bg-white border border-border rounded hover:bg-slate-100">−</button>
                         <span class="w-6 text-center text-sm font-semibold">${it.qty}</span>
-                        <button data-act="inc" data-id="${id}" class="w-7 h-7 bg-white border border-border rounded hover:bg-slate-100">+</button>
+                        <button data-act="inc" data-id="${key}" class="w-7 h-7 bg-white border border-border rounded hover:bg-slate-100">+</button>
                     </div>
                     <div class="w-20 text-right text-sm font-bold">${fmtMoney(line)}</div>
-                    <button data-act="del" data-id="${id}" class="text-rose-500 hover:text-rose-700">✕</button>
+                    <button data-act="del" data-id="${key}" class="text-rose-500 hover:text-rose-700">✕</button>
                 </div>
                 ${comRow}
+                ${addonsRows}
             </div>`;
         }).join('');
-        const grandTotal = subtotal + commissionTotal;
-        $('lv-subtotal').textContent = fmtMoney(subtotal) + ' RON';
+        const grandTotal = subtotal + addonsGrandTotal + commissionTotal;
+        $('lv-subtotal').textContent = fmtMoney(subtotal + addonsGrandTotal) + ' RON';
         $('lv-total').textContent = fmtMoney(grandTotal) + ' RON';
         // Afiseaza/ascunde linia "Comision ticketing" sub subtotal
         const comLine = $('lv-commission-line');
@@ -253,6 +305,25 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 else if (act === 'del') delete cart[id];
                 renderCart();
                 renderGrid();
+            });
+        });
+        wrap.querySelectorAll('button[data-ao-act]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const key = btn.dataset.key;
+                const aid = btn.dataset.aid;
+                const act = btn.dataset.aoAct;
+                const max = parseInt(btn.dataset.max || 9999, 10);
+                if (!cart[key]) return;
+                if (!cart[key].addons) cart[key].addons = {};
+                const cur = cart[key].addons[aid] || 0;
+                if (act === 'inc') {
+                    if (cur >= max) return;
+                    cart[key].addons[aid] = cur + 1;
+                } else if (act === 'dec') {
+                    cart[key].addons[aid] = Math.max(0, cur - 1);
+                    if (cart[key].addons[aid] === 0) delete cart[key].addons[aid];
+                }
+                renderCart();
             });
         });
     }
@@ -311,11 +382,19 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         $('lv-checkout').textContent = 'Procesează...';
         $('lv-error').classList.add('hidden');
 
-        const items = Object.entries(cart).map(([key, it]) => ({
-            ticket_type_id: it.ticket_type_id || parseInt(String(key).split('|')[0], 10),
-            qty: it.qty,
-            variant_id: it.variant ? it.variant.id : null,
-        }));
+        const items = Object.entries(cart).map(([key, it]) => {
+            const addonList = it.addons ? Object.entries(it.addons)
+                .filter(([, q]) => q > 0)
+                .map(([aid, q]) => ({ addon_id: aid, qty: q })) : [];
+            return {
+                ticket_type_id: it.ticket_type_id || parseInt(String(key).split('|')[0], 10),
+                qty: it.qty,
+                variant_id: it.variant ? it.variant.id : null,
+                slot_time: it.slot_time || undefined,
+                start_time: it.slot_time || undefined, // pentru physical_inventory
+                addons: addonList.length > 0 ? addonList : undefined,
+            };
+        });
         const body = {
             date: $('lv-visit-date').value || new Date().toISOString().slice(0,10),
             items,

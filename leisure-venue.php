@@ -464,7 +464,7 @@ require_once __DIR__ . '/includes/head.php';
                                 <p class="text-xs uppercase tracking-wider text-forest-700/60 font-bold mb-2">Alege opțiunea</p>
                                 <div class="flex flex-wrap gap-2">
                                     <template x-for="v in (ticket.variants || [])" :key="v.id">
-                                        <button @click="variantSelectedByTicket[ticket.id] = v.id"
+                                        <button @click="variantSelectedByTicket[ticket.id] = v.id; if (ticket.physical_inventory && ticket.physical_inventory.enabled) refreshPhysicalAvailability(ticket)"
                                                 :class="(variantSelectedByTicket[ticket.id] || ticket.variants[0].id) === v.id
                                                     ? 'border-forest-600 bg-forest-600 text-white'
                                                     : 'border-forest-200 bg-white text-ink hover:border-forest-400'"
@@ -473,6 +473,30 @@ require_once __DIR__ . '/includes/head.php';
                                             <div class="text-xs font-medium opacity-75"><span x-text="parseFloat(v.price).toFixed(2)"></span> RON</div>
                                         </button>
                                     </template>
+                                </div>
+                            </div>
+                            <!-- F3: Slot-uri pe oră (Vaporașe etc.) -->
+                            <div x-show="ticket.slots_config && ticket.slots_config.enabled" class="mt-4 pt-4 border-t border-forest-100">
+                                <p class="text-xs uppercase tracking-wider text-forest-700/60 font-bold mb-2">Alege ora cursei</p>
+                                <div class="flex flex-wrap gap-1.5 max-h-44 overflow-y-auto pr-1">
+                                    <template x-for="slot in (ticketSlots[ticket.id] || [])" :key="slot.time">
+                                        <button @click="slotSelectedByTicket[ticket.id] = slot.time"
+                                                :disabled="slot.sold_out"
+                                                :class="slot.sold_out ? 'bg-rose-100 text-rose-600 border-rose-200 cursor-not-allowed' : (slotSelectedByTicket[ticket.id] === slot.time ? 'bg-forest-600 text-white border-forest-600' : 'bg-white text-ink border-forest-200 hover:border-forest-500')"
+                                                class="px-2.5 py-1.5 border-2 rounded-lg text-xs font-semibold transition-colors">
+                                            <div x-text="slot.time"></div>
+                                            <div class="text-[10px] opacity-70" x-text="slot.sold_out ? 'plin' : (slot.remaining + ' libere')"></div>
+                                        </button>
+                                    </template>
+                                </div>
+                                <p x-show="!(ticketSlots[ticket.id] && ticketSlots[ticket.id].length)" class="text-xs text-forest-700/60">Se încarcă orele disponibile...</p>
+                            </div>
+                            <!-- F5: Inventar fizic — selector ora start -->
+                            <div x-show="ticket.physical_inventory && ticket.physical_inventory.enabled && !(ticket.slots_config && ticket.slots_config.enabled)" class="mt-4 pt-4 border-t border-forest-100">
+                                <p class="text-xs uppercase tracking-wider text-forest-700/60 font-bold mb-2">Ora de start a închirierii</p>
+                                <div class="flex items-center gap-3">
+                                    <input type="time" x-model="slotSelectedByTicket[ticket.id]" @change="refreshPhysicalAvailability(ticket)" class="px-3 py-2 border-2 border-forest-200 rounded-lg text-sm">
+                                    <span class="text-xs text-forest-700/70" x-text="physicalAvailableLabel(ticket)"></span>
                                 </div>
                             </div>
                             <div class="flex items-center justify-between pt-4 mt-4 border-t border-forest-100">
@@ -488,6 +512,25 @@ require_once __DIR__ . '/includes/head.php';
                                     <button @click="decrementTicket(ticket)" :disabled="qtyForTicket(ticket) === 0" class="lv-qty-btn">−</button>
                                     <span class="w-6 text-center font-bold text-lg text-ink" x-text="qtyForTicket(ticket)"></span>
                                     <button @click="incrementTicket(ticket)" :disabled="ticket.available !== null && qtyForTicket(ticket) >= ticket.available" class="lv-qty-btn bg-forest-700 text-white border-forest-700 hover:bg-forest-800 hover:border-forest-800">+</button>
+                                </div>
+                            </div>
+                            <!-- Add-ons (apar doar dacă ticket are cantitate > 0) -->
+                            <div x-show="ticket.addons && ticket.addons.length > 0 && qtyForTicket(ticket) > 0" class="mt-4 pt-4 border-t border-forest-100">
+                                <p class="text-xs uppercase tracking-wider text-forest-700/60 font-bold mb-2">+ Extras opționale</p>
+                                <div class="space-y-2">
+                                    <template x-for="addon in (ticket.addons || [])" :key="addon.id">
+                                        <div class="flex items-center justify-between gap-3 p-2.5 bg-amber-50 rounded-lg">
+                                            <div class="flex-1 min-w-0">
+                                                <div class="text-sm font-semibold text-ink" x-text="addon.label"></div>
+                                                <div class="text-[11px] text-forest-700/70" x-text="addonHint(ticket, addon)"></div>
+                                            </div>
+                                            <div class="flex items-center gap-2 flex-shrink-0">
+                                                <button @click="addonDec(ticket, addon)" :disabled="(addonQty(ticket, addon) || 0) === 0" class="lv-qty-btn !w-7 !h-7 !text-sm">−</button>
+                                                <span class="w-5 text-center font-bold text-sm" x-text="addonQty(ticket, addon)"></span>
+                                                <button @click="addonInc(ticket, addon)" :disabled="(addonQty(ticket, addon) || 0) >= addonMaxTotal(ticket, addon)" class="lv-qty-btn !w-7 !h-7 !text-sm bg-forest-700 text-white border-forest-700 hover:bg-forest-800 hover:border-forest-800">+</button>
+                                            </div>
+                                        </div>
+                                    </template>
                                 </div>
                             </div>
                         </div>
@@ -594,7 +637,7 @@ require_once __DIR__ . '/includes/head.php';
                         <div x-show="service.variants && service.variants.length > 0" class="mt-3 mb-3">
                             <div class="flex flex-wrap gap-2">
                                 <template x-for="v in (service.variants || [])" :key="v.id">
-                                    <button @click="variantSelectedByTicket[service.id] = v.id"
+                                    <button @click="variantSelectedByTicket[service.id] = v.id; if (service.physical_inventory && service.physical_inventory.enabled) refreshPhysicalAvailability(service)"
                                             :class="(variantSelectedByTicket[service.id] || service.variants[0].id) === v.id
                                                 ? 'border-forest-600 bg-forest-600 text-white'
                                                 : 'border-forest-200 bg-white text-ink hover:border-forest-400'"
@@ -603,6 +646,28 @@ require_once __DIR__ . '/includes/head.php';
                                         <div class="text-[10px] font-medium opacity-75"><span x-text="parseFloat(v.price).toFixed(2)"></span> RON</div>
                                     </button>
                                 </template>
+                            </div>
+                        </div>
+                        <!-- F3: Slot-uri pe oră (Vaporașe) -->
+                        <div x-show="service.slots_config && service.slots_config.enabled" class="mb-3">
+                            <p class="text-[10px] uppercase tracking-wider text-forest-700/60 font-bold mb-1.5">Alege ora cursei</p>
+                            <div class="flex flex-wrap gap-1 max-h-36 overflow-y-auto pr-1">
+                                <template x-for="slot in (ticketSlots[service.id] || [])" :key="slot.time">
+                                    <button @click="slotSelectedByTicket[service.id] = slot.time"
+                                            :disabled="slot.sold_out"
+                                            :class="slot.sold_out ? 'bg-rose-100 text-rose-600 border-rose-200 cursor-not-allowed' : (slotSelectedByTicket[service.id] === slot.time ? 'bg-forest-600 text-white border-forest-600' : 'bg-white text-ink border-forest-200')"
+                                            class="px-2 py-1 border-2 rounded text-[11px] font-semibold">
+                                        <span x-text="slot.time"></span><span x-show="!slot.sold_out" class="opacity-60"> · <span x-text="slot.remaining"></span></span>
+                                    </button>
+                                </template>
+                            </div>
+                        </div>
+                        <!-- F5: Physical inventory time picker -->
+                        <div x-show="service.physical_inventory && service.physical_inventory.enabled && !(service.slots_config && service.slots_config.enabled)" class="mb-3">
+                            <p class="text-[10px] uppercase tracking-wider text-forest-700/60 font-bold mb-1.5">Ora închiriere</p>
+                            <div class="flex items-center gap-2">
+                                <input type="time" x-model="slotSelectedByTicket[service.id]" @change="refreshPhysicalAvailability(service)" class="px-2 py-1.5 border-2 border-forest-200 rounded text-sm">
+                                <span class="text-[11px] text-forest-700/70" x-text="physicalAvailableLabel(service)"></span>
                             </div>
                         </div>
                         <div class="flex items-end justify-between pt-3 border-t border-forest-100">
@@ -966,6 +1031,14 @@ require_once __DIR__ . '/includes/head.php';
                                 <span class="font-semibold whitespace-nowrap"><span x-text="(item.qty * item.effective_price).toFixed(2)"></span> RON</span>
                             </div>
                         </div>
+                        <!-- Add-on lines -->
+                        <template x-for="addon in (item._addons || [])" :key="addon.addon_id">
+                            <div class="flex items-center justify-between text-xs text-white/55 mt-0.5 pl-3">
+                                <span>+ <span x-text="addon.total_qty"></span>× <span x-text="addon.label"></span><span x-show="addon.free_qty > 0" class="text-emerald-300"> · <span x-text="addon.free_qty"></span> gratis</span></span>
+                                <span x-show="addon.line_total > 0">+<span x-text="addon.line_total.toFixed(2)"></span> RON</span>
+                                <span x-show="addon.line_total === 0" class="text-emerald-300">gratis</span>
+                            </div>
+                        </template>
                         <div x-show="hasCommission" class="flex items-center justify-between text-xs text-white/50 mt-0.5 pl-3">
                             <span>+ Comision ticketing</span>
                             <span>+<span x-text="(item.qty * commissionPerTicket(item.effective_price)).toFixed(2)"></span> RON</span>
@@ -1021,6 +1094,10 @@ function reservationPage() {
         ticketsRaw: [],        // toate ticket types pentru data selectata (din API)
         qtyById: {},           // { ticketTypeId: qty } sau { 'ticketTypeId|variantId': qty }
         variantSelectedByTicket: {}, // { ticketId: variantId } — varianta activă pe card
+        addonQtyByKey: {},     // { 'ticketCartKey::addonId': qty } — add-ons selectate per linie de cart
+        slotSelectedByTicket: {}, // { ticketId: 'HH:MM' } — slot/ora aleasă (F3 / F5)
+        ticketSlots: {},          // { ticketId: [{time, remaining, sold_out}] } — F3 cache disponibilitate
+        physicalAvailableByTicket: {}, // { ticketId: number } — F5 cache rămas la interval
         issuers: DATA.issuers || {},
         faqs: DATA.faqs || [],
         gallery: DATA.gallery || [],
@@ -1114,6 +1191,10 @@ function reservationPage() {
                         } else {
                             this.qtyById[t.id] = 0;
                         }
+                        // F3: preload slot availability dacă produsul are slots configurate
+                        if (t.slots_config && t.slots_config.enabled) {
+                            this.loadSlotsFor(t);
+                        }
                     });
                 } else {
                     this.ticketsRaw = [];
@@ -1177,7 +1258,8 @@ function reservationPage() {
             for (const t of this.ticketsRaw) {
                 if (Array.isArray(t.variants) && t.variants.length > 0) {
                     for (const v of t.variants) {
-                        const qty = this.qtyById[this.cartKey(t.id, v.id)] || 0;
+                        const cartK = this.cartKey(t.id, v.id);
+                        const qty = this.qtyById[cartK] || 0;
                         if (qty > 0) {
                             out.push({
                                 ...t,
@@ -1185,16 +1267,48 @@ function reservationPage() {
                                 effective_price: parseFloat(v.price || 0),
                                 variant: v,
                                 name: t.name + ' — ' + v.label,
-                                _cartKey: this.cartKey(t.id, v.id),
+                                _cartKey: cartK,
+                                _addons: this._lineAddonsFor(t, cartK),
                             });
                         }
                     }
                 } else {
                     const qty = this.qtyById[t.id] || 0;
                     if (qty > 0) {
-                        out.push({ ...t, qty, variant: null, _cartKey: String(t.id) });
+                        out.push({
+                            ...t,
+                            qty,
+                            variant: null,
+                            _cartKey: String(t.id),
+                            _addons: this._lineAddonsFor(t, String(t.id)),
+                        });
                     }
                 }
+            }
+            return out;
+        },
+        // Construiește lista add-ons pentru o linie de cart (cu qty + paid_qty + total)
+        _lineAddonsFor(ticket, cartK) {
+            const out = [];
+            if (!Array.isArray(ticket.addons)) return out;
+            const parentQty = this.qtyById[cartK] || 0;
+            if (parentQty === 0) return out;
+            for (const addon of ticket.addons) {
+                const total = this.addonQtyByKey[cartK + '::' + addon.id] || 0;
+                if (total <= 0) continue;
+                const inc = parseInt(addon.included_qty || 0, 10);
+                const free = Math.min(parentQty * inc, total);
+                const paid = Math.max(0, total - free);
+                const lineTotal = paid * parseFloat(addon.price || 0);
+                out.push({
+                    addon_id: addon.id,
+                    label: addon.label,
+                    total_qty: total,
+                    free_qty: free,
+                    paid_qty: paid,
+                    unit_price: parseFloat(addon.price || 0),
+                    line_total: lineTotal,
+                });
             }
             return out;
         },
@@ -1217,11 +1331,14 @@ function reservationPage() {
         get cartSubtotalBase() {
             return this.cartItems.reduce((s, t) => s + t.qty * parseFloat(t.effective_price || 0), 0);
         },
+        get cartAddonsTotal() {
+            return this.cartItems.reduce((s, t) => s + (Array.isArray(t._addons) ? t._addons.reduce((a, ad) => a + ad.line_total, 0) : 0), 0);
+        },
         get cartCommissionTotal() {
             return this.cartItems.reduce((s, t) => s + t.qty * this.commissionPerTicket(parseFloat(t.effective_price || 0)), 0);
         },
         get cartTotal() {
-            return (this.cartSubtotalBase + this.cartCommissionTotal).toFixed(2);
+            return (this.cartSubtotalBase + this.cartAddonsTotal + this.cartCommissionTotal).toFixed(2);
         },
         get hasCommission() {
             return (this.commission.mode === 'added_on_top') && (this.commission.rate > 0 || this.commission.fixed > 0);
@@ -1236,6 +1353,21 @@ function reservationPage() {
         },
 
         incrementTicket(ticket) {
+            // F3/F5: blochează adăugare dacă produsul cere slot/oră
+            const needsSlot = (ticket.slots_config && ticket.slots_config.enabled) || (ticket.physical_inventory && ticket.physical_inventory.enabled);
+            if (needsSlot && !this.slotSelectedByTicket[ticket.id]) {
+                alert('Selectează mai întâi ora pentru ' + ticket.name);
+                return;
+            }
+            // F5: verifică disponibilitate fizică
+            if (ticket.physical_inventory && ticket.physical_inventory.enabled) {
+                const av = this.physicalAvailableByTicket[ticket.id];
+                const curQty = this.qtyForTicket(ticket);
+                if (av !== undefined && av !== null && curQty >= av) {
+                    alert('Doar ' + av + ' unități libere la acea oră.');
+                    return;
+                }
+            }
             const vid = this.activeVariantId(ticket);
             const key = this.cartKey(ticket.id, vid);
             this.qtyById[key] = (this.qtyById[key] || 0) + 1;
@@ -1249,6 +1381,96 @@ function reservationPage() {
         removeLineFromCart(item) {
             if (!item || !item._cartKey) return;
             this.qtyById[item._cartKey] = 0;
+            // Curăță și add-on-urile legate de acea linie
+            Object.keys(this.addonQtyByKey).forEach(k => {
+                if (k.startsWith(item._cartKey + '::')) this.addonQtyByKey[k] = 0;
+            });
+        },
+
+        // ========== F3: Slot availability ==========
+        async loadSlotsFor(ticket) {
+            if (!ticket || !ticket.slots_config || !ticket.slots_config.enabled || !this.selectedDate) return;
+            try {
+                const resp = await AmbiletAPI.get(`/marketplace-events/${SLUG}/slot-availability`, {
+                    ticket_type_id: ticket.id,
+                    date: this.selectedDate,
+                });
+                this.ticketSlots[ticket.id] = resp.slots || [];
+            } catch (e) {
+                console.error('[loadSlotsFor] failed', e);
+                this.ticketSlots[ticket.id] = [];
+            }
+        },
+
+        // ========== F5: Physical inventory availability ==========
+        async refreshPhysicalAvailability(ticket) {
+            if (!ticket || !ticket.physical_inventory || !ticket.physical_inventory.enabled) return;
+            if (!this.selectedDate) return;
+            const startTime = this.slotSelectedByTicket[ticket.id];
+            if (!startTime || !/^\d{2}:\d{2}$/.test(startTime)) return;
+            const variant = this.activeVariant(ticket);
+            const duration = (variant && variant.duration_minutes) ? variant.duration_minutes : (ticket.service_duration_minutes || 60);
+            try {
+                const resp = await AmbiletAPI.get(`/marketplace-events/${SLUG}/resource-availability`, {
+                    ticket_type_id: ticket.id,
+                    date: this.selectedDate,
+                    start_time: startTime,
+                    duration_minutes: duration,
+                });
+                this.physicalAvailableByTicket[ticket.id] = resp.available;
+            } catch (e) {
+                console.error('[refreshPhysicalAvailability] failed', e);
+                this.physicalAvailableByTicket[ticket.id] = null;
+            }
+        },
+        physicalAvailableLabel(ticket) {
+            const av = this.physicalAvailableByTicket[ticket.id];
+            const total = ticket.physical_inventory?.count || 0;
+            if (av === undefined || av === null) return total > 0 ? `${total} total · alege ora pentru disponibilitate` : '';
+            return av > 0 ? `${av}/${total} libere la acea oră` : `Niciuna liberă la acea oră`;
+        },
+
+        // ========== Add-ons helpers ==========
+        addonCartKey(ticket, addon) {
+            const vid = this.activeVariantId(ticket);
+            return this.cartKey(ticket.id, vid) + '::' + addon.id;
+        },
+        addonQty(ticket, addon) {
+            return this.addonQtyByKey[this.addonCartKey(ticket, addon)] || 0;
+        },
+        addonMaxTotal(ticket, addon) {
+            const parentQty = this.qtyForTicket(ticket);
+            const inc = parseInt(addon.included_qty || 0, 10);
+            const max = parseInt(addon.max_per_unit || 5, 10);
+            return parentQty * (inc + max);
+        },
+        addonFreePool(ticket, addon) {
+            return this.qtyForTicket(ticket) * parseInt(addon.included_qty || 0, 10);
+        },
+        addonPaidQty(ticket, addon) {
+            const total = this.addonQty(ticket, addon);
+            const free = this.addonFreePool(ticket, addon);
+            return Math.max(0, total - free);
+        },
+        addonHint(ticket, addon) {
+            const free = this.addonFreePool(ticket, addon);
+            const max = this.addonMaxTotal(ticket, addon);
+            const price = parseFloat(addon.price || 0).toFixed(2);
+            if (free > 0) {
+                return `${free} incluse · ${price} RON/buc după · max ${max}`;
+            }
+            return `${price} RON/buc · max ${max}`;
+        },
+        addonInc(ticket, addon) {
+            const key = this.addonCartKey(ticket, addon);
+            const max = this.addonMaxTotal(ticket, addon);
+            const cur = this.addonQty(ticket, addon);
+            if (cur >= max) return;
+            this.addonQtyByKey[key] = cur + 1;
+        },
+        addonDec(ticket, addon) {
+            const key = this.addonCartKey(ticket, addon);
+            this.addonQtyByKey[key] = Math.max(0, (this.addonQtyByKey[key] || 0) - 1);
         },
         incrementService(service) {
             if (service.requires_access_ticket && !this.hasAccessInCart) return;
@@ -1377,6 +1599,21 @@ function reservationPage() {
                 // Semnatura veche (6 args) — alternative new (4 args) are
                 // mapping bug in cart.js: muta meta -> quantity rezultand
                 // [object Object] / NaN in /cos. Apelam direct positional.
+                // Add-ons din linia curentă (Sanii cu tractare extra etc.)
+                const addonsForCart = Array.isArray(t._addons) && t._addons.length > 0
+                    ? t._addons.map(a => ({
+                        addon_id: String(a.addon_id),
+                        label: String(a.label),
+                        total_qty: Number(a.total_qty) || 0,
+                        free_qty: Number(a.free_qty) || 0,
+                        paid_qty: Number(a.paid_qty) || 0,
+                        unit_price: Number(a.unit_price) || 0,
+                        line_total: Number(a.line_total) || 0,
+                    }))
+                    : null;
+
+                const slotTime = this.slotSelectedByTicket[t.id] || null;
+
                 AmbiletCart.addItem(
                     Number(EVENT.id) || 0,
                     eventPayload,
@@ -1387,6 +1624,9 @@ function reservationPage() {
                         visit_date: String(this.selectedDate),
                         variant_id: variantInfo ? variantInfo.id : null,
                         variant_label: variantInfo ? variantInfo.label : null,
+                        addons: addonsForCart,
+                        slot_time: slotTime,
+                        start_time: slotTime, // pentru physical_inventory
                     }
                 );
             });
