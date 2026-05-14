@@ -47,6 +47,28 @@ export async function scanLookup(code) {
   return apiPost('/venue-owner/scan', { code });
 }
 
+/**
+ * Actually check in a ticket (was read-only lookup before). Same shape as the
+ * organizer endpoint: `{ticket_code}` in / `{ticket, customer, order}` out.
+ */
+export async function checkInByCode(ticketCode) {
+  return apiPost('/venue-owner/check-in', { ticket_code: ticketCode });
+}
+
+export async function undoCheckInByCode(ticketCode) {
+  return apiDelete(`/venue-owner/check-in/${encodeURIComponent(ticketCode)}`);
+}
+
+// ── POS sales ────────────────────────────────────────────────
+
+export async function listEventTicketTypes(eventId) {
+  return apiGet(`/venue-owner/events/${eventId}/ticket-types`);
+}
+
+export async function createPosOrder(payload) {
+  return apiPost('/venue-owner/orders', payload);
+}
+
 // ── Export ───────────────────────────────────────────────────
 
 /**

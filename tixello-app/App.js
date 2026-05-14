@@ -8,7 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useKeepAwake } from 'expo-keep-awake';
 import Svg, { Rect, Path, Circle } from 'react-native-svg';
 
-const APP_VERSION = '1.5.2';
+const APP_VERSION = '1.5.3';
 
 import ErrorBoundary from './src/components/ErrorBoundary';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
@@ -26,6 +26,7 @@ import VenueEventsScreen from './src/screens/VenueEventsScreen';
 import VenueEventDetailScreen from './src/screens/VenueEventDetailScreen';
 import VenueTicketDetailScreen from './src/screens/VenueTicketDetailScreen';
 import VenueScanScreen from './src/screens/VenueScanScreen';
+import VenueSalesScreen from './src/screens/VenueSalesScreen';
 
 import Header from './src/components/Header';
 import EventSelector from './src/components/EventSelector';
@@ -107,6 +108,14 @@ function TabIcon({ name, focused, disabled }) {
       return (
         <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2}>
           <Path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M7 12h10" strokeLinecap="round" strokeLinejoin="round" />
+        </Svg>
+      );
+    case 'VenueSales':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2}>
+          <Circle cx="9" cy="21" r="1" />
+          <Circle cx="20" cy="21" r="1" />
+          <Path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
         </Svg>
       );
     default:
@@ -367,7 +376,12 @@ function VenueOwnerTabs() {
         <Tab.Screen
           name="VenueScan"
           component={VenueScanScreen}
-          options={{ tabBarLabel: 'Scanare info' }}
+          options={{ tabBarLabel: 'Scanare' }}
+        />
+        <Tab.Screen
+          name="VenueSales"
+          component={VenueSalesScreen}
+          options={{ tabBarLabel: 'Vânzare' }}
         />
         <Tab.Screen name="Settings" options={{ tabBarLabel: 'Setări' }}>
           {(props) => <SettingsScreen {...props} appVersion={APP_VERSION} />}

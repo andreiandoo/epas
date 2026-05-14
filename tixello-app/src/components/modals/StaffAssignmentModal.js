@@ -19,7 +19,9 @@ import { colors } from '../../theme/colors';
 import { useEvent } from '../../context/EventContext';
 import { getTeamMembers, inviteTeamMember, removeTeamMember, updateTeamMember, activateTeamMember } from '../../api/team';
 import { getVenueGates } from '../../api/gates';
+import { getEvents } from '../../api/events';
 import useSwipeToDismiss from '../../hooks/useSwipeToDismiss';
+import { categorizeEvent } from '../../utils/eventCategories';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -142,9 +144,30 @@ function OptionPicker({ options, selected, onSelect, getColor, getBg, getBorder,
   );
 }
 
-function MemberCard({ member, gates, isExpanded, onToggleExpand, onAssignGate, onRemove, onActivate }) {
+function MemberCard({
+  member,
+  gates,
+  upcomingEvents,
+  isExpanded,
+  isEditingEvents,
+  editingEventIds,
+  savingEvents,
+  onToggleExpand,
+  onAssignGate,
+  onRemove,
+  onActivate,
+  onOpenEventEditor,
+  onToggleEditingEvent,
+  onSaveEventEditor,
+  onCancelEventEditor,
+}) {
   const isOwner = member.role === 'owner';
+  const isAdmin = member.role === 'admin';
   const assignedGate = gates.find(g => g.id === member.gate_id);
+  const eventIds = Array.isArray(member.event_ids) ? member.event_ids : [];
+  const accessLabel = isOwner || isAdmin
+    ? 'Toate evenimentele'
+    : (eventIds.length === 0 ? 'Toate evenimentele' : `${eventIds.length} eveniment${eventIds.length === 1 ? '' : 'e'}`);
 
   return (
     <View style={[styles.memberCard, isExpanded && styles.memberCardExpanded]}>
@@ -263,6 +286,77 @@ function MemberCard({ member, gates, isExpanded, onToggleExpand, onAssignGate, o
         </View>
       </View>
 
+      {/* Event whitelist row + editor (not for owner/admin) */}
+      {!isOwner && !isAdmin && (
+        <View style={styles.eventAccessRow}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.eventAccessLabel}>Acces la evenimente</Text>
+            <Text style={styles.eventAccessValue}>{accessLabel}</Text>
+          </View>
+          <TouchableOpacity
+            style={styles.eventAccessBtn}
+            onPress={() => (isEditingEvents ? onCancelEventEditor() : onOpenEventEditor(member))}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.eventAccessBtnText}>{isEditingEvents ? 'Anulează' : 'Modifică'}</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {isEditingEvents && (
+        <View style={styles.eventEditorBox}>
+          {upcomingEvents.length === 0 ? (
+            <Text style={styles.eventPickerEmpty}>Nu există evenimente viitoare.</Text>
+          ) : (
+            <View style={styles.eventPickerList}>
+              {upcomingEvents.map(ev => {
+                const isSel = editingEventIds.includes(ev.id);
+                const dateLabel = ev.starts_at
+                  ? new Date(ev.starts_at).toLocaleDateString('ro-RO', { day: '2-digit', month: '2-digit', year: 'numeric' })
+                  : '';
+                return (
+                  <TouchableOpacity
+                    key={ev.id}
+                    style={[styles.eventPickerRow, isSel && styles.eventPickerRowSelected]}
+                    onPress={() => onToggleEditingEvent(ev.id)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={[styles.checkbox, isSel && styles.checkboxSelected]}>
+                      {isSel && (
+                        <Svg width={12} height={12} viewBox="0 0 24 24" fill="none">
+                          <Path d="M20 6L9 17l-5-5" stroke={colors.white} strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" />
+                        </Svg>
+                      )}
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.eventPickerName} numberOfLines={1}>{ev.name || ev.title}</Text>
+                      {dateLabel ? (
+                        <Text style={styles.eventPickerDate}>{dateLabel}</Text>
+                      ) : null}
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          )}
+          <Text style={styles.eventPickerHint}>
+            Nu selecta nimic = acces la toate evenimentele viitoare.
+          </Text>
+          <TouchableOpacity
+            style={[styles.addButton, savingEvents && styles.addButtonDisabled, { marginTop: 8 }]}
+            onPress={onSaveEventEditor}
+            activeOpacity={0.8}
+            disabled={savingEvents}
+          >
+            {savingEvents ? (
+              <ActivityIndicator size="small" color={colors.white} />
+            ) : (
+              <Text style={styles.addButtonText}>Salvează</Text>
+            )}
+          </TouchableOpacity>
+        </View>
+      )}
+
       {/* Gate assignment picker (expanded) */}
       {isExpanded && gates.length > 0 && (
         <View style={styles.gatePickerSection}>
@@ -317,9 +411,16 @@ export default function StaffAssignmentModal({ visible, onClose }) {
   const { selectedEvent } = useEvent();
   const [members, setMembers] = useState([]);
   const [gates, setGates] = useState([]);
+  const [upcomingEvents, setUpcomingEvents] = useState([]);
   const [loading, setLoading] = useState(false);
   const [inviting, setInviting] = useState(false);
   const [expandedMemberId, setExpandedMemberId] = useState(null);
+  // Per-existing-member event whitelist editor state. Keyed by member.id —
+  // null means "panel collapsed". When open holds the in-progress checkbox
+  // state until the user taps Save.
+  const [editingEventsForMember, setEditingEventsForMember] = useState(null);
+  const [editingEventIds, setEditingEventIds] = useState([]);
+  const [savingEvents, setSavingEvents] = useState(false);
 
   // Add-staff form state. The flow is direct-add now (not invite-by-email):
   // organizer fills first/last name + email + password + role + optional gate;
@@ -330,6 +431,7 @@ export default function StaffAssignmentModal({ visible, onClose }) {
   const [invitePassword, setInvitePassword] = useState('');
   const [inviteRole, setInviteRole] = useState('staff');
   const [inviteGate, setInviteGate] = useState(null);
+  const [inviteEventIds, setInviteEventIds] = useState([]);
 
   // Activation password state
   const [activatingMemberId, setActivatingMemberId] = useState(null);
@@ -352,6 +454,22 @@ export default function StaffAssignmentModal({ visible, onClose }) {
       const teamData = teamResponse.data?.members || teamResponse.data || teamResponse.members || [];
       setMembers(Array.isArray(teamData) ? teamData : []);
 
+      // Fetch upcoming events (live + today + future — exclude past). Used by
+      // both the Add-staff form and the per-member event whitelist editor.
+      try {
+        const evResp = await getEvents({ per_page: 100, published_only: true });
+        const evList = evResp.data || evResp || [];
+        const enriched = (Array.isArray(evList) ? evList : []).map(e => ({
+          ...e,
+          timeCategory: categorizeEvent(e),
+        }));
+        const upcoming = enriched.filter(e => e.timeCategory !== 'past');
+        setUpcomingEvents(upcoming);
+      } catch (e) {
+        console.error('Failed to fetch events for staff whitelist:', e);
+        setUpcomingEvents([]);
+      }
+
       // Fetch gates if venue exists
       if (venueId) {
         try {
@@ -370,9 +488,48 @@ export default function StaffAssignmentModal({ visible, onClose }) {
     setLoading(false);
   };
 
+  const toggleInviteEvent = (eventId) => {
+    setInviteEventIds(prev =>
+      prev.includes(eventId) ? prev.filter(id => id !== eventId) : [...prev, eventId]
+    );
+  };
+
+  const openEventEditor = (member) => {
+    setEditingEventsForMember(member.id);
+    setEditingEventIds(Array.isArray(member.event_ids) ? [...member.event_ids] : []);
+  };
+
+  const toggleEditingEvent = (eventId) => {
+    setEditingEventIds(prev =>
+      prev.includes(eventId) ? prev.filter(id => id !== eventId) : [...prev, eventId]
+    );
+  };
+
+  const saveEventEditor = async () => {
+    if (editingEventsForMember == null) return;
+    setSavingEvents(true);
+    try {
+      const resp = await updateTeamMember({
+        member_id: editingEventsForMember,
+        event_ids: editingEventIds,
+      });
+      const updated = resp.data?.member || resp.member;
+      setMembers(prev => prev.map(m => {
+        if (m.id !== editingEventsForMember) return m;
+        return { ...m, event_ids: updated?.event_ids ?? editingEventIds };
+      }));
+      setEditingEventsForMember(null);
+      setEditingEventIds([]);
+    } catch (e) {
+      console.error('Failed to save event whitelist:', e);
+      Alert.alert('Eroare', e.message || 'Nu s-a putut salva lista de evenimente.');
+    }
+    setSavingEvents(false);
+  };
+
   const handleInvite = async () => {
     const fullName = `${inviteFirstName.trim()} ${inviteLastName.trim()}`.trim();
-    if (!fullName || !inviteEmail.trim()) return;
+    if (!inviteEmail.trim()) return;
     if (!invitePassword || invitePassword.length < 8) {
       Alert.alert('Eroare', 'Parola trebuie să aibă cel puțin 8 caractere.');
       return;
@@ -387,6 +544,8 @@ export default function StaffAssignmentModal({ visible, onClose }) {
         role: inviteRole,
         permissions: inviteRole === 'staff' ? ['checkin'] : undefined,
         gate_id: inviteGate ?? null,
+        // Empty array = "all events" by backend convention; admins ignore it.
+        event_ids: inviteRole === 'admin' ? [] : inviteEventIds,
       };
 
       const response = await inviteTeamMember(payload);
@@ -398,6 +557,7 @@ export default function StaffAssignmentModal({ visible, onClose }) {
         status: 'active',
         gate_id: inviteGate ?? null,
         permissions: inviteRole === 'staff' ? ['checkin'] : ['events', 'orders', 'reports', 'team', 'checkin'],
+        event_ids: inviteRole === 'admin' ? [] : inviteEventIds,
       };
       setMembers(prev => [...prev, newMember]);
       setInviteFirstName('');
@@ -406,6 +566,7 @@ export default function StaffAssignmentModal({ visible, onClose }) {
       setInvitePassword('');
       setInviteRole('staff');
       setInviteGate(null);
+      setInviteEventIds([]);
       const emailSent = response.data?.email_sent ?? response.email_sent;
       Alert.alert(
         'Succes',
@@ -570,13 +731,21 @@ export default function StaffAssignmentModal({ visible, onClose }) {
                       key={member.id}
                       member={member}
                       gates={gates}
+                      upcomingEvents={upcomingEvents}
                       isExpanded={expandedMemberId === member.id}
+                      isEditingEvents={editingEventsForMember === member.id}
+                      editingEventIds={editingEventIds}
+                      savingEvents={savingEvents}
                       onToggleExpand={() => setExpandedMemberId(
                         expandedMemberId === member.id ? null : member.id
                       )}
                       onAssignGate={handleAssignGate}
                       onActivate={handleActivate}
                       onRemove={handleRemove}
+                      onOpenEventEditor={openEventEditor}
+                      onToggleEditingEvent={toggleEditingEvent}
+                      onSaveEventEditor={saveEventEditor}
+                      onCancelEventEditor={() => { setEditingEventsForMember(null); setEditingEventIds([]); }}
                     />
                   ))
                 )}
@@ -590,7 +759,7 @@ export default function StaffAssignmentModal({ visible, onClose }) {
                 <Text style={styles.sectionTitle}>Adaugă Personal Nou</Text>
 
                 {/* First name */}
-                <Text style={styles.formLabel}>Nume</Text>
+                <Text style={styles.formLabel}>Nume (opțional)</Text>
                 <TextInput
                   style={styles.formInput}
                   placeholder="Nume"
@@ -600,7 +769,7 @@ export default function StaffAssignmentModal({ visible, onClose }) {
                 />
 
                 {/* Last name */}
-                <Text style={styles.formLabel}>Prenume</Text>
+                <Text style={styles.formLabel}>Prenume (opțional)</Text>
                 <TextInput
                   style={styles.formInput}
                   placeholder="Prenume"
@@ -700,12 +869,56 @@ export default function StaffAssignmentModal({ visible, onClose }) {
                   </>
                 )}
 
+                {/* Event whitelist (manager/staff only — admins get full access) */}
+                {inviteRole !== 'admin' && (
+                  <>
+                    <Text style={styles.formLabel}>Acces la evenimente {inviteEventIds.length === 0 ? '(toate)' : `(${inviteEventIds.length} selectate)`}</Text>
+                    {upcomingEvents.length === 0 ? (
+                      <Text style={styles.eventPickerEmpty}>Nu există evenimente viitoare.</Text>
+                    ) : (
+                      <View style={styles.eventPickerList}>
+                        {upcomingEvents.map(ev => {
+                          const isSel = inviteEventIds.includes(ev.id);
+                          const dateLabel = ev.starts_at
+                            ? new Date(ev.starts_at).toLocaleDateString('ro-RO', { day: '2-digit', month: '2-digit', year: 'numeric' })
+                            : '';
+                          return (
+                            <TouchableOpacity
+                              key={ev.id}
+                              style={[styles.eventPickerRow, isSel && styles.eventPickerRowSelected]}
+                              onPress={() => toggleInviteEvent(ev.id)}
+                              activeOpacity={0.7}
+                            >
+                              <View style={[styles.checkbox, isSel && styles.checkboxSelected]}>
+                                {isSel && (
+                                  <Svg width={12} height={12} viewBox="0 0 24 24" fill="none">
+                                    <Path d="M20 6L9 17l-5-5" stroke={colors.white} strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" />
+                                  </Svg>
+                                )}
+                              </View>
+                              <View style={{ flex: 1 }}>
+                                <Text style={styles.eventPickerName} numberOfLines={1}>{ev.name || ev.title}</Text>
+                                {dateLabel ? (
+                                  <Text style={styles.eventPickerDate}>{dateLabel}</Text>
+                                ) : null}
+                              </View>
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </View>
+                    )}
+                    <Text style={styles.eventPickerHint}>
+                      Nu selecta nimic = acces la toate evenimentele viitoare.
+                    </Text>
+                  </>
+                )}
+
                 {/* Add Button */}
                 <TouchableOpacity
-                  style={[styles.addButton, ((!inviteFirstName.trim() && !inviteLastName.trim()) || !inviteEmail.trim() || !invitePassword || invitePassword.length < 8 || inviting) && styles.addButtonDisabled]}
+                  style={[styles.addButton, (!inviteEmail.trim() || !invitePassword || invitePassword.length < 8 || inviting) && styles.addButtonDisabled]}
                   onPress={handleInvite}
                   activeOpacity={0.8}
-                  disabled={(!inviteFirstName.trim() && !inviteLastName.trim()) || !inviteEmail.trim() || !invitePassword || invitePassword.length < 8 || inviting}
+                  disabled={!inviteEmail.trim() || !invitePassword || invitePassword.length < 8 || inviting}
                 >
                   {inviting ? (
                     <ActivityIndicator size="small" color={colors.white} />
@@ -1031,6 +1244,99 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     color: colors.textTertiary,
+  },
+  // Event whitelist
+  eventAccessRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingTop: 10,
+    marginTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    gap: 10,
+  },
+  eventAccessLabel: {
+    fontSize: 11,
+    color: colors.textTertiary,
+    fontWeight: '500',
+  },
+  eventAccessValue: {
+    fontSize: 13,
+    color: colors.textPrimary,
+    fontWeight: '600',
+    marginTop: 2,
+  },
+  eventAccessBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 8,
+    backgroundColor: colors.purpleLight,
+    borderWidth: 1,
+    borderColor: colors.purpleBorder,
+  },
+  eventAccessBtnText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.purple,
+  },
+  eventEditorBox: {
+    marginTop: 10,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  eventPickerList: {
+    gap: 6,
+    marginBottom: 6,
+  },
+  eventPickerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 10,
+    padding: 10,
+    gap: 10,
+  },
+  eventPickerRowSelected: {
+    backgroundColor: colors.purpleLight,
+    borderColor: colors.purpleBorder,
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 5,
+    borderWidth: 1.5,
+    borderColor: colors.textTertiary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkboxSelected: {
+    backgroundColor: colors.purple,
+    borderColor: colors.purple,
+  },
+  eventPickerName: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.textPrimary,
+  },
+  eventPickerDate: {
+    fontSize: 11,
+    color: colors.textTertiary,
+    marginTop: 2,
+  },
+  eventPickerEmpty: {
+    fontSize: 12,
+    color: colors.textTertiary,
+    paddingVertical: 8,
+    textAlign: 'center',
+  },
+  eventPickerHint: {
+    fontSize: 11,
+    color: colors.textQuaternary,
+    fontStyle: 'italic',
+    marginTop: 4,
   },
   // Divider
   divider: {

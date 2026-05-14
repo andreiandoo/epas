@@ -18,7 +18,7 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../theme/colors';
 import { useAuth } from '../context/AuthContext';
-import { scanLookup, createNote } from '../api/venueOwner';
+import { scanLookup, createNote, checkInByCode } from '../api/venueOwner';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const SCANNER_SIZE = Math.min(300, SCREEN_WIDTH - 60);
@@ -106,7 +106,18 @@ export default function VenueScanScreen() {
   const [newNote, setNewNote] = useState('');
   const [isSavingNote, setIsSavingNote] = useState(false);
   const [groupByCustomer, setGroupByCustomer] = useState(false);
+  // Scan mode: 'checkin' actually marks the ticket as checked in;
+  // 'info' is the legacy read-only lookup. Defaults to checkin since the
+  // venue owner now has real validation rights per backend (May 2026).
+  const [scanMode, setScanMode] = useState('checkin');
   const scanLock = useRef(false);
+
+  const performScan = useCallback(async (code) => {
+    if (scanMode === 'checkin') {
+      return checkInByCode(code);
+    }
+    return scanLookup(code);
+  }, [scanMode]);
 
   useEffect(() => {
     if (permission && !permission.granted) {
@@ -128,18 +139,29 @@ export default function VenueScanScreen() {
 
     setIsLookingUp(true);
     try {
-      const data = await scanLookup(code);
+      const data = await performScan(code);
       if (data?.success) {
-        setResult({ ticket: data.data?.ticket });
+        // Check-in response shape: { ticket, customer, order } at data.data root.
+        // Lookup response: { ticket } at data.data.ticket. Normalize.
+        const ticket = data.data?.ticket
+          ? { ...data.data.ticket, customer: data.data.customer, order: data.data.order }
+          : (data.data?.ticket || null);
+        setResult({ ticket, message: data.message });
       } else {
-        setResult({ error: data?.message || 'Bilet negăsit' });
+        // The check-in endpoint returns 400 with success=false and full
+        // payload when the ticket was already used. Surface that as both
+        // error message AND ticket so the operator can see details.
+        const ticket = data?.ticket
+          ? { ...data.ticket, customer: data.customer, order: data.order }
+          : null;
+        setResult({ ticket, error: data?.message || 'Bilet negăsit' });
       }
     } catch (err) {
       setResult({ error: err?.message || 'Eroare de conexiune' });
     } finally {
       setIsLookingUp(false);
     }
-  }, [isLookingUp]);
+  }, [isLookingUp, performScan]);
 
   const closeResult = () => {
     setResult(null);
@@ -154,9 +176,18 @@ export default function VenueScanScreen() {
     setShowManual(false);
     setIsLookingUp(true);
     try {
-      const data = await scanLookup(extractCode(manualCode));
-      if (data?.success) setResult({ ticket: data.data?.ticket });
-      else setResult({ error: data?.message || 'Bilet negăsit' });
+      const data = await performScan(extractCode(manualCode));
+      if (data?.success) {
+        const ticket = data.data?.ticket
+          ? { ...data.data.ticket, customer: data.data.customer, order: data.data.order }
+          : null;
+        setResult({ ticket, message: data.message });
+      } else {
+        const ticket = data?.ticket
+          ? { ...data.ticket, customer: data.customer, order: data.order }
+          : null;
+        setResult({ ticket, error: data?.message || 'Bilet negăsit' });
+      }
     } catch (err) {
       setResult({ error: err?.message || 'Eroare de conexiune' });
     } finally {
@@ -205,8 +236,26 @@ export default function VenueScanScreen() {
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Scanare info</Text>
-        <Text style={styles.headerSubtitle}>Informații bilet (nu face check-in)</Text>
+        <Text style={styles.headerTitle}>{scanMode === 'checkin' ? 'Scanare check-in' : 'Scanare info'}</Text>
+        <Text style={styles.headerSubtitle}>
+          {scanMode === 'checkin' ? 'Validează bilete la intrare' : 'Informații bilet (nu face check-in)'}
+        </Text>
+        <View style={styles.modeToggle}>
+          <TouchableOpacity
+            style={[styles.modeBtn, scanMode === 'checkin' && styles.modeBtnActive]}
+            onPress={() => setScanMode('checkin')}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.modeBtnText, scanMode === 'checkin' && styles.modeBtnTextActive]}>Check-in</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.modeBtn, scanMode === 'info' && styles.modeBtnActive]}
+            onPress={() => setScanMode('info')}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.modeBtnText, scanMode === 'info' && styles.modeBtnTextActive]}>Doar info</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <View style={styles.scannerWrap}>
@@ -442,6 +491,31 @@ const styles = StyleSheet.create({
   header: { padding: 16, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)' },
   headerTitle: { color: colors.textPrimary, fontSize: 18, fontWeight: '700' },
   headerSubtitle: { color: colors.textSecondary, fontSize: 12, marginTop: 2 },
+  modeToggle: {
+    flexDirection: 'row',
+    marginTop: 10,
+    gap: 6,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderRadius: 10,
+    padding: 4,
+    alignSelf: 'flex-start',
+  },
+  modeBtn: {
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    borderRadius: 7,
+  },
+  modeBtnActive: {
+    backgroundColor: colors.purple,
+  },
+  modeBtnText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.textTertiary,
+  },
+  modeBtnTextActive: {
+    color: colors.white,
+  },
   scannerWrap: {
     marginHorizontal: 20,
     marginTop: 24,
