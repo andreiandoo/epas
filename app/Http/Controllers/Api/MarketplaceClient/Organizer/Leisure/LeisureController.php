@@ -733,6 +733,40 @@ class LeisureController extends BaseController
             return $this->error('Unele tipuri de bilet nu aparțin acestui eveniment.', 422);
         }
 
+        // F6 — validare asociere acces (1:1 între produs și bilet acces)
+        // Calculează în cart:
+        //   - count_access_any = total bilete acces (adult + copil)
+        //   - count_access_adult = total bilete acces ADULT (is_child_ticket=false)
+        //   - count_requires_any = total qty produse cu access_requirement='any'
+        //   - count_requires_adult = total qty produse cu access_requirement='adult_only'
+        $countAccessAny = 0;
+        $countAccessAdult = 0;
+        $countRequiresAny = 0;
+        $countRequiresAdult = 0;
+        foreach ($validated['items'] as $row) {
+            $tt = $types->get($row['ticket_type_id']);
+            if (!$tt) continue;
+            $qty = (int) ($row['qty'] ?? 1);
+            $cat = $tt->effective_service_category;
+            $accessReq = $tt->meta['access_requirement'] ?? null;
+            if (!in_array($accessReq, ['none', 'any', 'adult_only'], true)) {
+                $accessReq = ($tt->requires_access_ticket ?? false) ? 'any' : 'none';
+            }
+            $isChild = (bool) ($tt->meta['is_child_ticket'] ?? false);
+            if ($cat === 'access') {
+                $countAccessAny += $qty;
+                if (!$isChild) $countAccessAdult += $qty;
+            }
+            if ($accessReq === 'any') $countRequiresAny += $qty;
+            if ($accessReq === 'adult_only') $countRequiresAdult += $qty;
+        }
+        if ($countRequiresAny > $countAccessAny) {
+            return $this->error('Produse care necesită bilet acces (' . $countRequiresAny . ') dar în coș sunt doar ' . $countAccessAny . ' bilete acces.', 422);
+        }
+        if ($countRequiresAdult > $countAccessAdult) {
+            return $this->error('Produse care necesită bilet acces ADULT (' . $countRequiresAdult . ') dar în coș sunt doar ' . $countAccessAdult . ' bilete acces adult.', 422);
+        }
+
         // Comision la nivel de organizator (max procentual sau fix per bilet)
         $commissionRate = (float) $organizer->getEffectiveCommissionRate();
         $commissionFixed = (float) ($organizer->fixed_commission_default ?? 0);
@@ -760,6 +794,11 @@ class LeisureController extends BaseController
             $unit = $variant !== null && isset($variant['price'])
                 ? (float) $variant['price']
                 : (float) ($tt->price_max ?? $tt->price ?? 0);
+            // F9: dacă produsul are pos_price configurat, folosim prețul POS în loc de cel online
+            $posPrice = $tt->meta['pos_price'] ?? null;
+            if ($variant === null && $posPrice !== null && $posPrice !== '') {
+                $unit = (float) $posPrice;
+            }
 
             $qty = (int) $row['qty'];
 
@@ -1523,6 +1562,7 @@ class LeisureController extends BaseController
             'icon', 'image', 'image_url', 'unit_label', 'includes',
             'package_outputs', 'badge', 'color', 'variants', 'addons',
             'slots_config', 'physical_inventory',
+            'pos_price', 'is_child_ticket', 'access_requirement', 'blocked_time_ranges',
         ];
         $filtered = array_intersect_key($meta, array_flip($allowed));
 
@@ -1561,6 +1601,33 @@ class LeisureController extends BaseController
                 ];
             }
             $filtered['addons'] = $normalizedAddons;
+        }
+
+        // Normalize pos_price + is_child_ticket + access_requirement
+        if (isset($filtered['pos_price'])) {
+            $filtered['pos_price'] = $filtered['pos_price'] !== null && $filtered['pos_price'] !== '' ? (float) $filtered['pos_price'] : null;
+        }
+        if (isset($filtered['is_child_ticket'])) {
+            $filtered['is_child_ticket'] = (bool) $filtered['is_child_ticket'];
+        }
+        if (isset($filtered['access_requirement'])) {
+            $val = $filtered['access_requirement'];
+            $filtered['access_requirement'] = in_array($val, ['none', 'any', 'adult_only'], true) ? $val : 'none';
+        }
+
+        // Normalize blocked_time_ranges (F10 — informativ)
+        if (isset($filtered['blocked_time_ranges']) && is_array($filtered['blocked_time_ranges'])) {
+            $normalizedRanges = [];
+            foreach ($filtered['blocked_time_ranges'] as $r) {
+                if (!is_array($r) || empty($r['date']) || empty($r['start_time']) || empty($r['end_time'])) continue;
+                $normalizedRanges[] = [
+                    'date' => substr((string) $r['date'], 0, 10),
+                    'start_time' => substr((string) $r['start_time'], 0, 5),
+                    'end_time' => substr((string) $r['end_time'], 0, 5),
+                    'reason' => isset($r['reason']) ? substr((string) $r['reason'], 0, 200) : null,
+                ];
+            }
+            $filtered['blocked_time_ranges'] = $normalizedRanges;
         }
 
         // Normalize package_outputs (F4)
@@ -1645,6 +1712,12 @@ class LeisureController extends BaseController
             'addons' => $addons,
             'slots_config' => is_array($t->meta['slots_config'] ?? null) ? $t->meta['slots_config'] : null,
             'physical_inventory' => is_array($t->meta['physical_inventory'] ?? null) ? $t->meta['physical_inventory'] : null,
+            'pos_price' => isset($t->meta['pos_price']) && $t->meta['pos_price'] !== '' ? (float) $t->meta['pos_price'] : null,
+            'is_child_ticket' => (bool) ($t->meta['is_child_ticket'] ?? false),
+            'access_requirement' => in_array($t->meta['access_requirement'] ?? null, ['none', 'any', 'adult_only'], true)
+                ? $t->meta['access_requirement']
+                : ((bool) $t->requires_access_ticket ? 'any' : 'none'),
+            'blocked_time_ranges' => is_array($t->meta['blocked_time_ranges'] ?? null) ? $t->meta['blocked_time_ranges'] : [],
             'package_outputs' => $packageOutputs,
         ];
     }

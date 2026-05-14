@@ -57,6 +57,9 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     <div class="flex justify-between font-bold text-lg pt-1 border-t border-border"><span>Total</span><span id="lv-total" class="text-primary">0.00 RON</span></div>
                 </div>
 
+                <!-- F6: Banner gating bilete acces -->
+                <div id="lv-access-banner" class="hidden mx-5 my-2 p-2 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-900"></div>
+
                 <!-- Date client opțional -->
                 <details class="px-5 py-3 border-t border-border text-sm">
                     <summary class="cursor-pointer font-medium text-secondary">Date client (opțional)</summary>
@@ -124,7 +127,10 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             const color = CAT_COLOR[cat] || 'slate';
             const variants = Array.isArray(t.variants) ? t.variants : [];
             const hasVariants = variants.length > 0;
-            const basePrice = Number(t.price_max ?? t.price ?? 0);
+            // F9: pos_price are prioritate față de price online (pentru POS la fața locului)
+            const basePrice = (t.pos_price !== null && t.pos_price !== undefined && t.pos_price !== '')
+                ? Number(t.pos_price)
+                : Number(t.price_max ?? t.price ?? 0);
 
             if (hasVariants) {
                 // Card cu butoane separate per variantă
@@ -281,6 +287,36 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         const grandTotal = subtotal + addonsGrandTotal + commissionTotal;
         $('lv-subtotal').textContent = fmtMoney(subtotal + addonsGrandTotal) + ' RON';
         $('lv-total').textContent = fmtMoney(grandTotal) + ' RON';
+
+        // F6: gating bilete acces — count any/adult în coș + necesar
+        let accessAny = 0, accessAdult = 0, needsAny = 0, needsAdult = 0;
+        for (const [k, it] of Object.entries(cart)) {
+            const tt = types.find(x => x.id === it.ticket_type_id);
+            if (!tt) continue;
+            const cat = tt.service_category || 'access';
+            const req = tt.access_requirement || (tt.requires_access_ticket ? 'any' : 'none');
+            const isChild = !!tt.is_child_ticket;
+            if (cat === 'access') {
+                accessAny += it.qty;
+                if (!isChild) accessAdult += it.qty;
+            }
+            if (req === 'any') needsAny += it.qty;
+            if (req === 'adult_only') needsAdult += it.qty;
+        }
+        const banner = $('lv-access-banner');
+        if (banner) {
+            const lackAdult = Math.max(0, needsAdult - accessAdult);
+            const lackAny = Math.max(0, needsAny - accessAny);
+            if (lackAdult > 0) {
+                banner.textContent = `⚠️ Lipsește ${lackAdult} bilet acces ADULT pentru bărci. Scanează biletul clientului sau adaugă-l în coș.`;
+                banner.classList.remove('hidden');
+            } else if (lackAny > 0) {
+                banner.textContent = `⚠️ Lipsește ${lackAny} bilet acces pentru vaporașe. Scanează biletul clientului sau adaugă-l în coș.`;
+                banner.classList.remove('hidden');
+            } else {
+                banner.classList.add('hidden');
+            }
+        }
         // Afiseaza/ascunde linia "Comision ticketing" sub subtotal
         const comLine = $('lv-commission-line');
         if (comLine) {

@@ -2757,6 +2757,74 @@ class EventResource extends Resource
                                                     ->visible(fn (SGet $get) => ($get('../../display_template') ?? 'standard') === 'leisure_venue' && (($get('service_category') ?: 'access') !== 'access'))
                                                     ->columnSpan(12),
 
+                                                // ── F9: Preț POS (vânzare la fața locului — diferit de prețul online) ──
+                                                Forms\Components\TextInput::make('meta.pos_price')
+                                                    ->label($t('Preț POS (la fața locului)', 'POS price (on-site)'))
+                                                    ->numeric()
+                                                    ->step(0.01)
+                                                    ->minValue(0)
+                                                    ->placeholder($t('Lasă gol = folosește prețul online', 'Empty = use online price'))
+                                                    ->helperText($t('Preț folosit doar la vânzarea prin POS. Lasă gol pentru a folosi prețul standard.', 'Used only at POS sales. Empty = standard price.'))
+                                                    ->visible(fn (SGet $get) => ($get('../../display_template') ?? 'standard') === 'leisure_venue')
+                                                    ->columnSpan(6),
+
+                                                // ── F8: Marker bilet copil (pentru distincție în asociere acces adult_only) ──
+                                                Forms\Components\Toggle::make('meta.is_child_ticket')
+                                                    ->label($t('🧒 Bilet copil (gratuit)', '🧒 Child ticket (free)'))
+                                                    ->helperText($t('Marchează biletele acces pentru copii (0-5 ani). Setează prețul = 0. Nu permite asociere cu bărci.', 'Marks access tickets for children (under 5). Set price = 0. Cannot be associated with boats.'))
+                                                    ->visible(fn (SGet $get) => ($get('../../display_template') ?? 'standard') === 'leisure_venue'
+                                                        && (($get('service_category') ?: 'access') === 'access'))
+                                                    ->columnSpan(6),
+
+                                                // ── F6: Cerere asociere acces (pentru vaporașe / bărci) ──
+                                                Forms\Components\Select::make('meta.access_requirement')
+                                                    ->label($t('Necesită bilet acces', 'Requires access ticket'))
+                                                    ->options([
+                                                        'none' => $t('Nu necesită', 'No requirement'),
+                                                        'any' => $t('Da — orice bilet acces (adult/copil)', 'Yes — any access ticket'),
+                                                        'adult_only' => $t('Da — DOAR bilet acces ADULT', 'Yes — adult access ONLY'),
+                                                    ])
+                                                    ->default('none')
+                                                    ->helperText($t('Vaporașe = "orice" (1:1 cu pasagerul). Bărci = "adult only" (1 bilet adult per barcă închiriată).', 'Pontoon = "any" (1:1 per passenger). Boats = "adult only" (1 adult per boat).'))
+                                                    ->visible(fn (SGet $get) => ($get('../../display_template') ?? 'standard') === 'leisure_venue'
+                                                        && in_array(($get('service_category') ?: 'access'), ['rental', 'activity']))
+                                                    ->columnSpan(12),
+
+                                                // ── F10: Blocare intervale orare (informativ) ──
+                                                Forms\Components\Repeater::make('meta.blocked_time_ranges')
+                                                    ->label($t('🚫 Blocare intervale orare (informativ)', '🚫 Time range blocks (informational)'))
+                                                    ->helperText($t('Afișează banner-uri pe pagina publică și POS pentru date/ore specifice când produsul nu e disponibil din motive interne (ex: grup organizat). Nu blochează vânzarea automată.', 'Shows banners on public page + POS for specific dates/times when product is unavailable for internal reasons (e.g. private group). Does NOT auto-block sales.'))
+                                                    ->schema([
+                                                        Forms\Components\DatePicker::make('date')
+                                                            ->label($t('Dată', 'Date'))
+                                                            ->required()
+                                                            ->columnSpan(3),
+                                                        Forms\Components\TextInput::make('start_time')
+                                                            ->label($t('Start (HH:MM)', 'Start (HH:MM)'))
+                                                            ->placeholder('13:00')
+                                                            ->required()
+                                                            ->columnSpan(2),
+                                                        Forms\Components\TextInput::make('end_time')
+                                                            ->label($t('Sfârșit (HH:MM)', 'End (HH:MM)'))
+                                                            ->placeholder('14:00')
+                                                            ->required()
+                                                            ->columnSpan(2),
+                                                        Forms\Components\TextInput::make('reason')
+                                                            ->label($t('Motiv (afișat clienților)', 'Reason (shown to customers)'))
+                                                            ->placeholder($t('Grup privat', 'Private group'))
+                                                            ->maxLength(200)
+                                                            ->columnSpan(5),
+                                                    ])
+                                                    ->columns(12)
+                                                    ->reorderable(true)
+                                                    ->collapsible()
+                                                    ->collapsed()
+                                                    ->addActionLabel($t('+ Adaugă blocare', '+ Add block'))
+                                                    ->itemLabel(fn (array $state) => ($state['date'] ?? '—') . ' · ' . ($state['start_time'] ?? '') . '–' . ($state['end_time'] ?? ''))
+                                                    ->visible(fn (SGet $get) => ($get('../../display_template') ?? 'standard') === 'leisure_venue'
+                                                        && in_array(($get('service_category') ?: 'access'), ['rental', 'activity']))
+                                                    ->columnSpan(12),
+
                                                 // ── Leisure Venue: unit label (gen "/ mașină / 3h", "/ persoană / zi") ──
                                                 Forms\Components\TextInput::make('meta.unit_label')
                                                     ->label($t('Unitate preț (mic, sub preț)', 'Price unit (small, below price)'))

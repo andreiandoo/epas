@@ -608,12 +608,22 @@ require_once __DIR__ . '/includes/head.php';
                             <span x-show="service.service_category === 'package'" class="lv-badge bg-rose-100 text-rose-800 text-[10px] font-bold flex-shrink-0">🎁 PACHET</span>
                         </div>
                         <p class="text-sm text-forest-700/70 mb-2" x-text="service.description || ''"></p>
-                        <div class="flex flex-wrap gap-1.5 mb-3" x-show="service.service_duration_minutes || service.requires_access_ticket || service.package_savings > 0">
+                        <div class="flex flex-wrap gap-1.5 mb-3" x-show="service.service_duration_minutes || (service.access_requirement && service.access_requirement !== 'none') || service.package_savings > 0">
                             <span x-show="service.service_duration_minutes" class="lv-badge bg-blue-50 text-blue-700 text-[10px]" x-text="formatDuration(service.service_duration_minutes)"></span>
-                            <span x-show="service.requires_access_ticket" class="lv-badge bg-amber-50 text-amber-700 text-[10px]">Necesită bilet acces</span>
+                            <span x-show="service.access_requirement === 'adult_only'" class="lv-badge bg-amber-50 text-amber-700 text-[10px]">Necesită bilet acces ADULT</span>
+                            <span x-show="service.access_requirement === 'any'" class="lv-badge bg-amber-50 text-amber-700 text-[10px]">Necesită bilet acces</span>
                             <span x-show="service.package_savings > 0" class="lv-badge bg-emerald-100 text-emerald-800 text-[10px] font-bold">
                                 Economisești <span x-text="parseFloat(service.package_savings).toFixed(2)"></span> RON
                             </span>
+                        </div>
+                        <!-- F10: Banner blocked time ranges pentru ziua selectată -->
+                        <div x-show="Array.isArray(service.blocked_time_ranges_today) && service.blocked_time_ranges_today.length > 0" class="mb-3 p-2 bg-amber-50 border border-amber-200 rounded text-[11px] text-amber-900">
+                            <p class="font-bold mb-0.5">⚠️ Atenție — intervale rezervate astăzi:</p>
+                            <ul class="space-y-0.5">
+                                <template x-for="(b, idx) in (service.blocked_time_ranges_today || [])" :key="idx">
+                                    <li><strong x-text="b.start_time + '–' + b.end_time"></strong><span x-show="b.reason"> · <span x-text="b.reason"></span></span></li>
+                                </template>
+                            </ul>
                         </div>
                         <!-- Componente pachet -->
                         <div x-show="service.service_category === 'package' && service.package_outputs && service.package_outputs.length > 0" class="mb-3 p-2.5 bg-rose-50 rounded-lg">
@@ -1061,9 +1071,17 @@ require_once __DIR__ . '/includes/head.php';
             <button @click="checkout()" :disabled="!selectedDate || cartCount === 0 || !canCheckout" class="lv-btn w-full mt-2"
                     :class="!selectedDate || cartCount === 0 || !canCheckout ? 'bg-white/10 text-white/40' : 'bg-lake-400 text-forest-900 hover:bg-lake-300'">
                 <span x-show="!selectedDate">Alege mai întâi data</span>
-                <span x-show="selectedDate && !canCheckout && cartCount > 0">Verifică validarea</span>
+                <span x-show="selectedDate && !canCheckout && cartCount > 0">Lipsesc bilete acces</span>
                 <span x-show="selectedDate && canCheckout && cartCount > 0">Continuă spre plată →</span>
             </button>
+            <p x-show="!canCheckout && cartCount > 0" class="mt-2 text-xs text-amber-200">
+                <template x-if="requiresAccessAdult > accessAdultInCart">
+                    <span>⚠️ Adaugă <strong x-text="requiresAccessAdult - accessAdultInCart"></strong> bilet(e) acces ADULT (necesare pentru bărci).</span>
+                </template>
+                <template x-if="requiresAccessAdult <= accessAdultInCart && requiresAccessAny > accessAnyInCart">
+                    <span>⚠️ Adaugă <strong x-text="requiresAccessAny - accessAnyInCart"></strong> bilet(e) acces (necesare pentru vaporașe).</span>
+                </template>
+            </p>
         </div>
     </div>
 </div>
@@ -1252,6 +1270,40 @@ function reservationPage() {
         get hasAccessInCart() {
             return this.accessTickets.some(t => this.totalQtyForTicket(t) > 0);
         },
+        // F6 — Total bilete acces în coș (any vs adult)
+        get accessAnyInCart() {
+            let n = 0;
+            for (const t of this.accessTickets) n += this.totalQtyForTicket(t);
+            return n;
+        },
+        get accessAdultInCart() {
+            let n = 0;
+            for (const t of this.accessTickets) {
+                if (t.is_child_ticket) continue;
+                n += this.totalQtyForTicket(t);
+            }
+            return n;
+        },
+        // F6 — Necesar pe baza produselor cu access_requirement
+        get requiresAccessAny() {
+            let n = 0;
+            for (const t of this.ticketsRaw) {
+                const req = t.access_requirement || (t.requires_access_ticket ? 'any' : 'none');
+                if (req === 'any') n += this.totalQtyForTicket(t);
+            }
+            return n;
+        },
+        get requiresAccessAdult() {
+            let n = 0;
+            for (const t of this.ticketsRaw) {
+                if ((t.access_requirement || 'none') === 'adult_only') n += this.totalQtyForTicket(t);
+            }
+            return n;
+        },
+        get accessGatingOk() {
+            return this.requiresAccessAny <= this.accessAnyInCart
+                && this.requiresAccessAdult <= this.accessAdultInCart;
+        },
         get cartItems() {
             // Splite pe (ticket, variant) — fiecare combinaţie cu qty>0 = un line item în coş
             const out = [];
@@ -1344,8 +1396,9 @@ function reservationPage() {
             return (this.commission.mode === 'added_on_top') && (this.commission.rate > 0 || this.commission.fixed > 0);
         },
         get canCheckout() {
-            // Toate serviciile cu requires_access_ticket trebuie sa aiba bilet acces in cos
-            return !this.services.some(s => s.requires_access_ticket && (this.qtyById[s.id] || 0) > 0 && !this.hasAccessInCart);
+            // F6: gating cumulativ — toate produsele care cer acces (any sau adult_only)
+            // trebuie să aibă suficiente bilete acces în coș
+            return this.accessGatingOk;
         },
         get topUpsellServices() {
             // Primele 3 servicii cu qty=0 (utilizatorul nu le-a adaugat inca)

@@ -210,6 +210,30 @@ class DateAvailabilityController extends BaseController
                 ];
             }
 
+            // F6/F8/F9 — POS price, child marker, access requirement
+            $posPrice = $tt->meta['pos_price'] ?? null;
+            $posPrice = ($posPrice !== null && $posPrice !== '') ? (float) $posPrice : null;
+            $isChildTicket = (bool) ($tt->meta['is_child_ticket'] ?? false);
+            $accessRequirement = $tt->meta['access_requirement'] ?? null;
+            if (!in_array($accessRequirement, ['none', 'any', 'adult_only'], true)) {
+                // Fallback compatibilitate: dacă boolean vechi e true și nu există enum, tratează ca 'any'
+                $accessRequirement = ($tt->requires_access_ticket ?? false) ? 'any' : 'none';
+            }
+
+            // F10 — blocked time ranges (informativ, filtrat pe data curentă)
+            $blockedRangesAll = is_array($tt->meta['blocked_time_ranges'] ?? null) ? $tt->meta['blocked_time_ranges'] : [];
+            $blockedToday = [];
+            foreach ($blockedRangesAll as $r) {
+                if (!is_array($r)) continue;
+                if (($r['date'] ?? null) === $dateStr) {
+                    $blockedToday[] = [
+                        'start_time' => $r['start_time'] ?? null,
+                        'end_time' => $r['end_time'] ?? null,
+                        'reason' => $r['reason'] ?? null,
+                    ];
+                }
+            }
+
             // Add-ons inline (F2: ex. Tractare suplimentară pe Sanii)
             $rawAddons = $tt->meta['addons'] ?? null;
             $addons = [];
@@ -291,6 +315,10 @@ class DateAvailabilityController extends BaseController
                 'addons' => $addons,
                 'slots_config' => $slotsConfig,
                 'physical_inventory' => $physicalInventory,
+                'pos_price' => $posPrice,
+                'is_child_ticket' => $isChildTicket,
+                'access_requirement' => $accessRequirement,
+                'blocked_time_ranges_today' => $blockedToday,
                 'package_outputs' => $packageOutputs,
                 'package_components_sum' => round($packageSumComponents, 2),
                 'package_savings' => $packageOutputs ? round($packageSumComponents - $effectivePrice, 2) : 0,
