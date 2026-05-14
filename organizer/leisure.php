@@ -154,8 +154,13 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                         </select>
                     </label>
                     <label class="block">
-                        <span class="text-xs font-semibold text-muted uppercase tracking-wider">Preț (RON) *</span>
+                        <span class="text-xs font-semibold text-muted uppercase tracking-wider">Preț online (RON) *</span>
                         <input id="pr-f-price" type="number" min="0" step="0.01" class="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg" placeholder="0.00">
+                    </label>
+                    <label class="block">
+                        <span class="text-xs font-semibold text-muted uppercase tracking-wider">Preț POS (la fața locului)</span>
+                        <input id="pr-f-pos-price" type="number" min="0" step="0.01" class="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg" placeholder="lasă gol = preț online">
+                        <span class="text-[10px] text-muted">Folosit doar la vânzarea on-site prin POS.</span>
                     </label>
                     <label class="block">
                         <span class="text-xs font-semibold text-muted uppercase tracking-wider">Stoc total (opțional)</span>
@@ -218,7 +223,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                                 <input type="checkbox" id="pr-f-slots-enabled" class="w-4 h-4 accent-primary">
                                 <span>🕐 Activează booking pe slot-uri (curse repetitive)</span>
                             </label>
-                            <div id="pr-f-slots-fields" class="grid grid-cols-2 md:grid-cols-4 gap-2 hidden">
+                            <div id="pr-f-slots-fields" class="hidden grid-cols-2 md:grid-cols-4 gap-2">
                                 <label class="block">
                                     <span class="text-[10px] uppercase text-muted">Prima cursă</span>
                                     <input id="pr-f-slot-first" type="text" placeholder="09:00" class="mt-1 w-full px-2 py-1.5 text-sm border border-border rounded bg-white">
@@ -288,10 +293,29 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                             <input id="pr-f-vehicle" type="checkbox" class="w-4 h-4 accent-primary">
                             <span>Cere date vehicul</span>
                         </label>
-                        <label class="flex items-center gap-2 text-sm">
-                            <input id="pr-f-reqaccess" type="checkbox" class="w-4 h-4 accent-primary">
-                            <span>Necesită bilet acces</span>
+                        <label id="pr-f-child-wrap" class="flex items-center gap-2 text-sm hidden">
+                            <input id="pr-f-child" type="checkbox" class="w-4 h-4 accent-primary">
+                            <span>🧒 Bilet copil (gratuit)</span>
                         </label>
+                    </div>
+                    <!-- F6: Asociere acces (vizibil doar pentru rental/activity) -->
+                    <label id="pr-f-access-req-wrap" class="block md:col-span-2 hidden">
+                        <span class="text-xs font-semibold text-muted uppercase tracking-wider">Necesită bilet acces</span>
+                        <select id="pr-f-access-req" class="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg">
+                            <option value="none">Nu necesită</option>
+                            <option value="any">Da — orice bilet acces (adult/copil)</option>
+                            <option value="adult_only">Da — DOAR bilet acces ADULT</option>
+                        </select>
+                        <span class="text-[10px] text-muted">Vaporașe = "orice" (1:1 cu pasagerul). Bărci = "adult only" (1 adult per barcă închiriată).</span>
+                    </label>
+                    <!-- F10: Blocare intervale orare (informativ) -->
+                    <div id="pr-f-blocks-wrap" class="md:col-span-2 hidden">
+                        <div class="flex items-center justify-between mb-2">
+                            <p class="text-xs font-semibold text-muted uppercase tracking-wider">🚫 Blocare intervale orare (informativ)</p>
+                            <button type="button" id="pr-f-block-add" class="px-2.5 py-1 text-xs font-medium text-primary bg-primary/10 hover:bg-primary/20 rounded">+ Adaugă</button>
+                        </div>
+                        <p class="text-[11px] text-muted mb-2">Afișează banner-uri pe pagina publică + POS pentru date/ore specifice când produsul are grup organizat. NU blochează vânzarea automată.</p>
+                        <div id="pr-f-blocks-list" class="space-y-2"></div>
                     </div>
                 </div>
                 <div class="mt-6 flex justify-between gap-2">
@@ -1072,7 +1096,12 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         $('pr-f-active').checked = p ? !!p.is_active : true;
         $('pr-f-parking').checked = p ? !!p.is_parking : false;
         $('pr-f-vehicle').checked = p ? !!p.requires_vehicle_info : false;
-        $('pr-f-reqaccess').checked = p ? !!p.requires_access_ticket : false;
+        // F6/F8/F9: access_requirement, is_child_ticket, pos_price
+        $('pr-f-access-req').value = p?.access_requirement || 'none';
+        $('pr-f-child').checked = p ? !!p.is_child_ticket : false;
+        $('pr-f-pos-price').value = (p?.pos_price !== undefined && p?.pos_price !== null) ? p.pos_price : '';
+        // F10: blocked time ranges
+        renderBlockRows(Array.isArray(p?.blocked_time_ranges) ? p.blocked_time_ranges : (Array.isArray(p?.meta?.blocked_time_ranges) ? p.meta.blocked_time_ranges : []));
         $('pr-f-delete').classList.toggle('hidden', !p);
 
         // Variante — afișează doar pentru rental/activity, populează din meta.variants
@@ -1090,6 +1119,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         const slotsEnabled = !!(slotsCfg && slotsCfg.enabled);
         $('pr-f-slots-enabled').checked = slotsEnabled;
         $('pr-f-slots-fields').classList.toggle('hidden', !slotsEnabled);
+        $('pr-f-slots-fields').classList.toggle('grid', slotsEnabled);
         $('pr-f-slot-first').value = slotsCfg?.first_slot || '';
         $('pr-f-slot-last').value = slotsCfg?.last_slot || '';
         $('pr-f-slot-interval').value = slotsCfg?.interval_minutes || '';
@@ -1118,6 +1148,10 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         $('pr-f-addons-wrap').classList.toggle('hidden', !(cat === 'access' || cat === 'rental' || cat === 'activity'));
         $('pr-f-slots-wrap').classList.toggle('hidden', !show);
         $('pr-f-physical-wrap').classList.toggle('hidden', !show);
+        // F6/F8/F10 visibility
+        $('pr-f-access-req-wrap').classList.toggle('hidden', !show);
+        $('pr-f-blocks-wrap').classList.toggle('hidden', !show);
+        $('pr-f-child-wrap').classList.toggle('hidden', cat !== 'access');
         // Pentru pachete, ascunde câmpurile irrelevante (parcare, vehicul)
         const isPkg = (cat === 'package');
         const pkgHiddenFields = ['pr-f-parking', 'pr-f-vehicle'];
@@ -1126,6 +1160,44 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             if (el && el.closest('label')) el.closest('label').classList.toggle('hidden', isPkg);
         });
         if (isPkg) updatePackageSavings();
+    }
+
+    // F10 — Blocare intervale orare (informativ)
+    function makeBlockRow(b) {
+        b = b || {};
+        const row = document.createElement('div');
+        row.className = 'p-2 bg-slate-50 rounded-lg';
+        row.innerHTML = `
+            <div class="grid grid-cols-12 gap-2 items-center">
+                <input type="date" data-bl="date" value="${escapeHtml(b.date || '')}" required class="col-span-3 px-2 py-1.5 text-sm border border-border rounded bg-white">
+                <input type="time" data-bl="start_time" value="${escapeHtml(b.start_time || '')}" required class="col-span-2 px-2 py-1.5 text-sm border border-border rounded bg-white">
+                <input type="time" data-bl="end_time" value="${escapeHtml(b.end_time || '')}" required class="col-span-2 px-2 py-1.5 text-sm border border-border rounded bg-white">
+                <input type="text" data-bl="reason" placeholder="Motiv (ex: Grup privat)" maxlength="200" value="${escapeHtml(b.reason || '')}" class="col-span-4 px-2 py-1.5 text-sm border border-border rounded bg-white">
+                <button type="button" data-bl-rm class="col-span-1 text-xs text-rose-600 hover:bg-rose-100 rounded px-1.5 py-1">🗑</button>
+            </div>
+        `;
+        row.querySelector('[data-bl-rm]').addEventListener('click', () => row.remove());
+        return row;
+    }
+    function renderBlockRows(ranges) {
+        const list = $('pr-f-blocks-list');
+        list.innerHTML = '';
+        (ranges || []).forEach(b => list.appendChild(makeBlockRow(b)));
+    }
+    function collectBlockedRanges() {
+        const out = [];
+        $('pr-f-blocks-list').querySelectorAll(':scope > div').forEach(row => {
+            const item = {};
+            row.querySelectorAll('[data-bl]').forEach(el => {
+                const k = el.dataset.bl;
+                let v = el.value;
+                if (typeof v === 'string') v = v.trim();
+                if (v !== '' && v !== null && v !== undefined) item[k] = v;
+            });
+            if (!item.date || !item.start_time || !item.end_time) return;
+            out.push(item);
+        });
+        return out;
     }
 
     function makeAddonRow(a) {
@@ -1322,11 +1394,15 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             is_active: $('pr-f-active').checked,
             is_parking: $('pr-f-parking').checked,
             requires_vehicle_info: $('pr-f-vehicle').checked,
-            requires_access_ticket: $('pr-f-reqaccess').checked,
+            requires_access_ticket: ($('pr-f-access-req').value || 'none') !== 'none',
             meta: {
                 icon: $('pr-f-icon').value.trim() || null,
                 unit_label: $('pr-f-unit').value.trim() || null,
                 image: $('pr-f-image').value.trim() || null,
+                pos_price: $('pr-f-pos-price').value !== '' ? parseFloat($('pr-f-pos-price').value) : null,
+                is_child_ticket: $('pr-f-child').checked,
+                access_requirement: $('pr-f-access-req').value || 'none',
+                blocked_time_ranges: collectBlockedRanges(),
                 includes,
                 variants,
                 addons,
@@ -1387,8 +1463,13 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         const priceInp = $('pr-f-price'); if (priceInp) priceInp.addEventListener('input', updatePackageSavings);
         // Add-ons: add row
         const aoAdd = $('pr-f-addon-add'); if (aoAdd) aoAdd.addEventListener('click', () => $('pr-f-addons-list').appendChild(makeAddonRow({})));
+        // F10 Block ranges: add row
+        const blAdd = $('pr-f-block-add'); if (blAdd) blAdd.addEventListener('click', () => $('pr-f-blocks-list').appendChild(makeBlockRow({})));
         // F3 slots toggle
-        const slotsToggle = $('pr-f-slots-enabled'); if (slotsToggle) slotsToggle.addEventListener('change', e => $('pr-f-slots-fields').classList.toggle('hidden', !e.target.checked));
+        const slotsToggle = $('pr-f-slots-enabled'); if (slotsToggle) slotsToggle.addEventListener('change', e => {
+            $('pr-f-slots-fields').classList.toggle('hidden', !e.target.checked);
+            $('pr-f-slots-fields').classList.toggle('grid', e.target.checked);
+        });
         // F5 physical toggle
         const physToggle = $('pr-f-physical-enabled'); if (physToggle) physToggle.addEventListener('change', e => $('pr-f-physical-fields').classList.toggle('hidden', !e.target.checked));
     }
