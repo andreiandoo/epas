@@ -211,6 +211,60 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                         <p class="text-[11px] text-muted mb-2">Servicii opționale legate de acest produs (ex: tractare extra la sanii). „Incluse" = câte sunt gratuite per bilet cumpărat (calculate real). „Max plătite" = câte adăugiri se pot face peste cele incluse.</p>
                         <div id="pr-f-addons-list" class="space-y-2"></div>
                     </div>
+                    <!-- F3: Slot-uri pe oră (Vaporașe etc.) -->
+                    <div id="pr-f-slots-wrap" class="md:col-span-2 hidden">
+                        <div class="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                            <label class="flex items-center gap-2 text-sm font-semibold mb-3">
+                                <input type="checkbox" id="pr-f-slots-enabled" class="w-4 h-4 accent-primary">
+                                <span>🕐 Activează booking pe slot-uri (curse repetitive)</span>
+                            </label>
+                            <div id="pr-f-slots-fields" class="grid grid-cols-2 md:grid-cols-4 gap-2 hidden">
+                                <label class="block">
+                                    <span class="text-[10px] uppercase text-muted">Prima cursă</span>
+                                    <input id="pr-f-slot-first" type="text" placeholder="09:00" class="mt-1 w-full px-2 py-1.5 text-sm border border-border rounded bg-white">
+                                </label>
+                                <label class="block">
+                                    <span class="text-[10px] uppercase text-muted">Ultima cursă</span>
+                                    <input id="pr-f-slot-last" type="text" placeholder="18:00" class="mt-1 w-full px-2 py-1.5 text-sm border border-border rounded bg-white">
+                                </label>
+                                <label class="block">
+                                    <span class="text-[10px] uppercase text-muted">Interval (min)</span>
+                                    <input id="pr-f-slot-interval" type="number" min="5" placeholder="30" class="mt-1 w-full px-2 py-1.5 text-sm border border-border rounded bg-white">
+                                </label>
+                                <label class="block">
+                                    <span class="text-[10px] uppercase text-muted">Durată cursă (min)</span>
+                                    <input id="pr-f-slot-duration" type="number" min="5" placeholder="30" class="mt-1 w-full px-2 py-1.5 text-sm border border-border rounded bg-white">
+                                </label>
+                                <label class="block">
+                                    <span class="text-[10px] uppercase text-muted">Capacitate / cursă</span>
+                                    <input id="pr-f-slot-capacity" type="number" min="1" placeholder="14" class="mt-1 w-full px-2 py-1.5 text-sm border border-border rounded bg-white">
+                                </label>
+                                <label class="block md:col-span-3">
+                                    <span class="text-[10px] uppercase text-muted">Vânzare</span>
+                                    <select id="pr-f-slot-pricing" class="mt-1 w-full px-2 py-1.5 text-sm border border-border rounded bg-white">
+                                        <option value="per_person">Per persoană</option>
+                                        <option value="per_slot">Per cursă (cumpără toată cursa)</option>
+                                    </select>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- F5: Inventar fizic (Bărci etc.) -->
+                    <div id="pr-f-physical-wrap" class="md:col-span-2 hidden">
+                        <div class="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                            <label class="flex items-center gap-2 text-sm font-semibold mb-3">
+                                <input type="checkbox" id="pr-f-physical-enabled" class="w-4 h-4 accent-primary">
+                                <span>🔒 Inventar fizic cu lock pe interval</span>
+                            </label>
+                            <div id="pr-f-physical-fields" class="hidden">
+                                <label class="block">
+                                    <span class="text-[10px] uppercase text-muted">Număr unități fizice</span>
+                                    <input id="pr-f-physical-count" type="number" min="1" placeholder="10" class="mt-1 w-full px-2 py-1.5 text-sm border border-border rounded bg-white">
+                                    <span class="text-[10px] text-muted">ex: 10 bărci — o unitate nu poate fi în 2 intervale care se suprapun</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
                     <!-- Componente pachet (pentru service_category=package) -->
                     <div id="pr-f-package-wrap" class="md:col-span-2 hidden">
                         <div class="flex items-center justify-between mb-2">
@@ -1030,6 +1084,26 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         // Add-ons — populează din meta.addons
         const addons = Array.isArray(p?.addons) ? p.addons : (Array.isArray(p?.meta?.addons) ? p.meta.addons : []);
         renderAddonRows(addons);
+
+        // F3 — Slot config
+        const slotsCfg = (p?.slots_config && typeof p.slots_config === 'object') ? p.slots_config : (p?.meta?.slots_config || null);
+        const slotsEnabled = !!(slotsCfg && slotsCfg.enabled);
+        $('pr-f-slots-enabled').checked = slotsEnabled;
+        $('pr-f-slots-fields').classList.toggle('hidden', !slotsEnabled);
+        $('pr-f-slot-first').value = slotsCfg?.first_slot || '';
+        $('pr-f-slot-last').value = slotsCfg?.last_slot || '';
+        $('pr-f-slot-interval').value = slotsCfg?.interval_minutes || '';
+        $('pr-f-slot-duration').value = slotsCfg?.duration_minutes || '';
+        $('pr-f-slot-capacity').value = slotsCfg?.capacity_per_slot || '';
+        $('pr-f-slot-pricing').value = slotsCfg?.unit_pricing || 'per_person';
+
+        // F5 — Physical inventory
+        const physCfg = (p?.physical_inventory && typeof p.physical_inventory === 'object') ? p.physical_inventory : (p?.meta?.physical_inventory || null);
+        const physEnabled = !!(physCfg && physCfg.enabled);
+        $('pr-f-physical-enabled').checked = physEnabled;
+        $('pr-f-physical-fields').classList.toggle('hidden', !physEnabled);
+        $('pr-f-physical-count').value = physCfg?.count || '';
+
         updateVariantsVisibility();
 
         $('pr-modal').classList.remove('hidden');
@@ -1042,6 +1116,8 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         $('pr-f-variants-wrap').classList.toggle('hidden', !show);
         $('pr-f-package-wrap').classList.toggle('hidden', cat !== 'package');
         $('pr-f-addons-wrap').classList.toggle('hidden', !(cat === 'access' || cat === 'rental' || cat === 'activity'));
+        $('pr-f-slots-wrap').classList.toggle('hidden', !show);
+        $('pr-f-physical-wrap').classList.toggle('hidden', !show);
         // Pentru pachete, ascunde câmpurile irrelevante (parcare, vehicul)
         const isPkg = (cat === 'package');
         const pkgHiddenFields = ['pr-f-parking', 'pr-f-vehicle'];
@@ -1255,6 +1331,19 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 variants,
                 addons,
                 package_outputs: packageOutputs,
+                slots_config: $('pr-f-slots-enabled').checked ? {
+                    enabled: true,
+                    first_slot: $('pr-f-slot-first').value.trim() || '09:00',
+                    last_slot: $('pr-f-slot-last').value.trim() || '18:00',
+                    interval_minutes: parseInt($('pr-f-slot-interval').value || 30, 10),
+                    duration_minutes: parseInt($('pr-f-slot-duration').value || 30, 10),
+                    capacity_per_slot: parseInt($('pr-f-slot-capacity').value || 1, 10),
+                    unit_pricing: $('pr-f-slot-pricing').value || 'per_person',
+                } : null,
+                physical_inventory: $('pr-f-physical-enabled').checked ? {
+                    enabled: true,
+                    count: parseInt($('pr-f-physical-count').value || 1, 10),
+                } : null,
             },
         };
         if (!body.name) { alert('Numele produsului e obligatoriu.'); return; }
@@ -1298,6 +1387,10 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         const priceInp = $('pr-f-price'); if (priceInp) priceInp.addEventListener('input', updatePackageSavings);
         // Add-ons: add row
         const aoAdd = $('pr-f-addon-add'); if (aoAdd) aoAdd.addEventListener('click', () => $('pr-f-addons-list').appendChild(makeAddonRow({})));
+        // F3 slots toggle
+        const slotsToggle = $('pr-f-slots-enabled'); if (slotsToggle) slotsToggle.addEventListener('change', e => $('pr-f-slots-fields').classList.toggle('hidden', !e.target.checked));
+        // F5 physical toggle
+        const physToggle = $('pr-f-physical-enabled'); if (physToggle) physToggle.addEventListener('change', e => $('pr-f-physical-fields').classList.toggle('hidden', !e.target.checked));
     }
 
     // ========== CONTENT EDITOR ==========

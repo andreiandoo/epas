@@ -163,7 +163,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         }).join('');
 
         $('lv-grid').querySelectorAll('.lv-tt-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
+            btn.addEventListener('click', async () => {
                 const id = btn.dataset.tt;
                 const name = btn.dataset.name;
                 const price = Number(btn.dataset.price);
@@ -171,15 +171,36 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 const vid = btn.dataset.vid || null;
                 const vlabel = btn.dataset.vlabel || null;
                 const vduration = btn.dataset.vduration ? parseInt(btn.dataset.vduration, 10) : null;
-                const key = cartKey(id, vid);
+                const tt = types.find(t => t.id == id);
+                const hasSlots = tt && tt.slots_config && tt.slots_config.enabled;
+                const hasPhysical = tt && tt.physical_inventory && tt.physical_inventory.enabled;
+
+                let slotTime = null;
+                if (hasSlots || hasPhysical) {
+                    // Quick prompt pentru ora (POS — input rapid)
+                    const cfg = tt.slots_config || {};
+                    const first = cfg.first_slot || '09:00';
+                    const last = cfg.last_slot || '18:00';
+                    slotTime = prompt(`Ora pentru ${name} (format HH:MM, între ${first}-${last}):`, first);
+                    if (!slotTime) return; // anulare
+                    if (!/^\d{2}:\d{2}$/.test(slotTime)) {
+                        alert('Format invalid. Folosește HH:MM (ex: 14:30).');
+                        return;
+                    }
+                }
+
+                // Cheia diferă dacă ai slot — separa rezervările pe slot diferit
+                const slotSuffix = slotTime ? '@' + slotTime : '';
+                const key = cartKey(id, vid) + slotSuffix;
                 if (!cart[key]) {
                     cart[key] = {
                         qty: 0,
                         price,
-                        name: vlabel ? `${name} — ${vlabel}` : name,
+                        name: (vlabel ? `${name} — ${vlabel}` : name) + (slotTime ? ` · ${slotTime}` : ''),
                         category: cat,
                         ticket_type_id: parseInt(id, 10),
                         variant: vid ? { id: vid, label: vlabel, duration_minutes: vduration } : null,
+                        slot_time: slotTime,
                     };
                 }
                 cart[key].qty++;
@@ -369,6 +390,8 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 ticket_type_id: it.ticket_type_id || parseInt(String(key).split('|')[0], 10),
                 qty: it.qty,
                 variant_id: it.variant ? it.variant.id : null,
+                slot_time: it.slot_time || undefined,
+                start_time: it.slot_time || undefined, // pentru physical_inventory
                 addons: addonList.length > 0 ? addonList : undefined,
             };
         });

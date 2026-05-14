@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\MarketplaceClient\Organizer\Leisure;
 
 use App\Http\Controllers\Api\MarketplaceClient\BaseController;
 use App\Models\Event;
+use App\Models\LeisureResourceLock;
 use App\Models\LeisureShift;
 use App\Models\MarketplaceOrganizer;
 use App\Models\MarketplaceOrganizerTeamMember;
@@ -704,6 +705,8 @@ class LeisureController extends BaseController
             'items.*.ticket_type_id' => 'required|integer|exists:ticket_types,id',
             'items.*.qty' => 'required|integer|min:1|max:100',
             'items.*.variant_id' => 'nullable|string|max:64',
+            'items.*.slot_time' => 'nullable|string|regex:/^\d{2}:\d{2}$/',
+            'items.*.start_time' => 'nullable|string|regex:/^\d{2}:\d{2}$/',
             'items.*.addons' => 'nullable|array|max:20',
             'items.*.addons.*.addon_id' => 'required_with:items.*.addons|string|max:64',
             'items.*.addons.*.qty' => 'required_with:items.*.addons|integer|min:0|max:500',
@@ -759,6 +762,61 @@ class LeisureController extends BaseController
                 : (float) ($tt->price_max ?? $tt->price ?? 0);
 
             $qty = (int) $row['qty'];
+
+            // F3: slot booking (Vaporașe etc.)
+            $slotsConfig = is_array($tt->meta['slots_config'] ?? null) ? $tt->meta['slots_config'] : null;
+            $slotTime = null;
+            $slotMeta = null;
+            if ($slotsConfig && !empty($slotsConfig['enabled'])) {
+                $slotTime = $row['slot_time'] ?? null;
+                if (!$slotTime) {
+                    return $this->error('Lipsește slot_time pentru produsul "' . (is_array($tt->name) ? reset($tt->name) : $tt->name) . '"', 422);
+                }
+                $capacity = max(1, (int) ($slotsConfig['capacity_per_slot'] ?? 1));
+                $perSlot = ($slotsConfig['unit_pricing'] ?? 'per_person') === 'per_slot';
+                $consume = $perSlot ? $capacity : $qty;
+                // Sumă rezervări existente pe acel slot+dată
+                $soldOnSlot = (int) OrderItem::query()
+                    ->where('ticket_type_id', $tt->id)
+                    ->whereHas('order', fn ($q) => $q->whereIn('status', ['paid', 'completed', 'pending']))
+                    ->whereRaw("meta->>'visit_date' = ?", [$visitDate])
+                    ->whereRaw("meta->>'slot_time' = ?", [$slotTime])
+                    ->sum('quantity');
+                if ($soldOnSlot + $consume > $capacity) {
+                    return $this->error('Cursa de la ' . $slotTime . ' este aproape plină (rămân ' . max(0, $capacity - $soldOnSlot) . ' locuri).', 422);
+                }
+                $slotMeta = [
+                    'slot_time' => $slotTime,
+                    'duration_minutes' => (int) ($slotsConfig['duration_minutes'] ?? 30),
+                    'unit_pricing' => $slotsConfig['unit_pricing'] ?? 'per_person',
+                ];
+            }
+
+            // F5: physical inventory lock (Bărci etc.)
+            $physical = is_array($tt->meta['physical_inventory'] ?? null) ? $tt->meta['physical_inventory'] : null;
+            $physicalMeta = null;
+            if ($physical && !empty($physical['enabled'])) {
+                $startTime = $row['start_time'] ?? $row['slot_time'] ?? null;
+                $duration = (int) ($variant['duration_minutes'] ?? $tt->service_duration_minutes ?? 60);
+                if (!$startTime) {
+                    return $this->error('Lipsește start_time / slot_time pentru rezervare interval pe "' . (is_array($tt->name) ? reset($tt->name) : $tt->name) . '"', 422);
+                }
+                $start = Carbon::parse($visitDate . ' ' . $startTime);
+                $end = $start->copy()->addMinutes($duration);
+                $count = max(1, (int) ($physical['count'] ?? 1));
+                $availableUnits = LeisureResourceLock::availableForInterval($tt->id, $count, $start, $end);
+                if ($availableUnits < $qty) {
+                    return $this->error('Doar ' . $availableUnits . ' unități fizice libere în intervalul ' . $start->format('H:i') . '-' . $end->format('H:i') . '.', 422);
+                }
+                $physicalMeta = [
+                    'start_at' => $start->toIso8601String(),
+                    'end_at' => $end->toIso8601String(),
+                    'start_time' => $startTime,
+                    'duration_minutes' => $duration,
+                    'physical_inventory' => true,
+                ];
+            }
+
             $line = round($unit * $qty, 2);
 
             // Add-ons (F2): calcul paid_qty = total_qty - parent_qty * included_qty
@@ -825,6 +883,8 @@ class LeisureController extends BaseController
                 ] : null,
                 'addons' => $addonsResolved,
                 'addons_total' => round($addonsTotal, 2),
+                'slot' => $slotMeta,
+                'physical' => $physicalMeta,
             ];
         }
         $subtotal = round($subtotal, 2);
@@ -901,8 +961,25 @@ class LeisureController extends BaseController
                         'package_outputs' => $isPackage ? $packageOutputs : null,
                         'addons' => !empty($it['addons']) ? $it['addons'] : null,
                         'addons_total' => $it['addons_total'] ?? 0,
+                        'slot_time' => $it['slot'] ? ($it['slot']['slot_time'] ?? null) : null,
+                        'slot_duration' => $it['slot'] ? ($it['slot']['duration_minutes'] ?? null) : null,
+                        'physical' => $it['physical'] ?? null,
                     ]),
                 ]);
+
+                // F5: creează lock-ul fizic dacă produsul are physical_inventory
+                if (!empty($it['physical']) && is_array($it['physical'])) {
+                    LeisureResourceLock::create([
+                        'event_id' => $eventModel->id,
+                        'ticket_type_id' => $tt->id,
+                        'order_id' => $order->id,
+                        'order_item_id' => $orderItem->id,
+                        'start_at' => $it['physical']['start_at'],
+                        'end_at' => $it['physical']['end_at'],
+                        'qty' => $it['qty'],
+                        'status' => 'active',
+                    ]);
+                }
 
                 if ($isPackage && !empty($packageOutputs)) {
                     // Fan-out: pentru fiecare bucată de pachet cumpărată, emite N tickets per component
@@ -1445,6 +1522,7 @@ class LeisureController extends BaseController
         $allowed = [
             'icon', 'image', 'image_url', 'unit_label', 'includes',
             'package_outputs', 'badge', 'color', 'variants', 'addons',
+            'slots_config', 'physical_inventory',
         ];
         $filtered = array_intersect_key($meta, array_flip($allowed));
 
@@ -1565,6 +1643,8 @@ class LeisureController extends BaseController
             'meta' => is_array($t->meta) ? $t->meta : (object) [],
             'variants' => $variants,
             'addons' => $addons,
+            'slots_config' => is_array($t->meta['slots_config'] ?? null) ? $t->meta['slots_config'] : null,
+            'physical_inventory' => is_array($t->meta['physical_inventory'] ?? null) ? $t->meta['physical_inventory'] : null,
             'package_outputs' => $packageOutputs,
         ];
     }

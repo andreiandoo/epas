@@ -2830,6 +2830,86 @@ class EventResource extends Resource
                                                         && in_array(($get('service_category') ?: 'access'), ['rental', 'activity']))
                                                     ->columnSpan(12),
 
+                                                // ── Leisure Venue: Slot-uri pe oră (F3 — Vaporașe cu curse 30min) ──
+                                                Forms\Components\Section::make($t('🕐 Slot-uri pe oră (booking pe interval)', '🕐 Time slots (interval booking)'))
+                                                    ->description($t('Pentru produse cu curse repetitive (vaporașe, ghidaj, activități cu operator).', 'For products with repeating sessions (boat tours, guided tours, operator activities).'))
+                                                    ->schema([
+                                                        Forms\Components\Toggle::make('meta.slots_config.enabled')
+                                                            ->label($t('Activează booking pe slot-uri', 'Enable slot-based booking'))
+                                                            ->reactive()
+                                                            ->columnSpan(12),
+                                                        Forms\Components\TextInput::make('meta.slots_config.first_slot')
+                                                            ->label($t('Prima cursă', 'First slot'))
+                                                            ->placeholder('09:00')
+                                                            ->visible(fn (SGet $get) => (bool) $get('meta.slots_config.enabled'))
+                                                            ->columnSpan(3),
+                                                        Forms\Components\TextInput::make('meta.slots_config.last_slot')
+                                                            ->label($t('Ultima cursă', 'Last slot'))
+                                                            ->placeholder('18:00')
+                                                            ->visible(fn (SGet $get) => (bool) $get('meta.slots_config.enabled'))
+                                                            ->columnSpan(3),
+                                                        Forms\Components\TextInput::make('meta.slots_config.interval_minutes')
+                                                            ->label($t('Interval (min) între curse', 'Interval (min) between slots'))
+                                                            ->numeric()
+                                                            ->minValue(5)
+                                                            ->default(30)
+                                                            ->visible(fn (SGet $get) => (bool) $get('meta.slots_config.enabled'))
+                                                            ->columnSpan(3),
+                                                        Forms\Components\TextInput::make('meta.slots_config.duration_minutes')
+                                                            ->label($t('Durată cursă (min)', 'Slot duration (min)'))
+                                                            ->numeric()
+                                                            ->minValue(5)
+                                                            ->default(30)
+                                                            ->visible(fn (SGet $get) => (bool) $get('meta.slots_config.enabled'))
+                                                            ->columnSpan(3),
+                                                        Forms\Components\TextInput::make('meta.slots_config.capacity_per_slot')
+                                                            ->label($t('Capacitate / cursă', 'Capacity / slot'))
+                                                            ->numeric()
+                                                            ->minValue(1)
+                                                            ->default(14)
+                                                            ->visible(fn (SGet $get) => (bool) $get('meta.slots_config.enabled'))
+                                                            ->columnSpan(6),
+                                                        Forms\Components\Select::make('meta.slots_config.unit_pricing')
+                                                            ->label($t('Vânzare', 'Pricing'))
+                                                            ->options([
+                                                                'per_person' => $t('Per persoană', 'Per person'),
+                                                                'per_slot' => $t('Per cursă (cumpără toată cursa)', 'Per slot (book entire slot)'),
+                                                            ])
+                                                            ->default('per_person')
+                                                            ->visible(fn (SGet $get) => (bool) $get('meta.slots_config.enabled'))
+                                                            ->columnSpan(6),
+                                                    ])
+                                                    ->columns(12)
+                                                    ->collapsible()
+                                                    ->collapsed()
+                                                    ->visible(fn (SGet $get) => ($get('../../display_template') ?? 'standard') === 'leisure_venue'
+                                                        && in_array(($get('service_category') ?: 'access'), ['rental', 'activity']))
+                                                    ->columnSpan(12),
+
+                                                // ── Leisure Venue: Inventar fizic + lock pe interval (F5 — Bărci) ──
+                                                Forms\Components\Section::make($t('🔒 Inventar fizic (lock pe interval)', '🔒 Physical inventory (interval lock)'))
+                                                    ->description($t('Pentru produse cu unități fizice (bărci, kayak-uri). O unitate nu poate fi rezervată în 2 intervale care se suprapun.', 'For products with physical units (boats, kayaks). One unit cannot be reserved in 2 overlapping intervals.'))
+                                                    ->schema([
+                                                        Forms\Components\Toggle::make('meta.physical_inventory.enabled')
+                                                            ->label($t('Activează inventory pe interval', 'Enable interval inventory'))
+                                                            ->reactive()
+                                                            ->columnSpan(12),
+                                                        Forms\Components\TextInput::make('meta.physical_inventory.count')
+                                                            ->label($t('Număr unități fizice', 'Physical unit count'))
+                                                            ->numeric()
+                                                            ->minValue(1)
+                                                            ->default(10)
+                                                            ->helperText($t('ex: 10 bărci', 'e.g. 10 boats'))
+                                                            ->visible(fn (SGet $get) => (bool) $get('meta.physical_inventory.enabled'))
+                                                            ->columnSpan(12),
+                                                    ])
+                                                    ->columns(12)
+                                                    ->collapsible()
+                                                    ->collapsed()
+                                                    ->visible(fn (SGet $get) => ($get('../../display_template') ?? 'standard') === 'leisure_venue'
+                                                        && in_array(($get('service_category') ?: 'access'), ['rental', 'activity']))
+                                                    ->columnSpan(12),
+
                                                 // ── Leisure Venue: Add-ons (opționale, ex: Sanii cu tractare extra) ──
                                                 Forms\Components\Repeater::make('meta.addons')
                                                     ->label($t('Add-ons opționale', 'Optional add-ons'))

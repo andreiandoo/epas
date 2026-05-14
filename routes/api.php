@@ -2380,6 +2380,10 @@ Route::prefix('marketplace-client/marketplace-events')->middleware(['throttle:12
         ->name('api.marketplace-client.marketplace-events.availability');
     Route::get('/{identifier}/date-availability', [\App\Http\Controllers\Api\MarketplaceClient\DateAvailabilityController::class, '__invoke'])
         ->name('api.marketplace-client.marketplace-events.date-availability');
+    Route::get('/{identifier}/slot-availability', [\App\Http\Controllers\Api\MarketplaceClient\LeisureAvailabilityController::class, 'slotAvailability'])
+        ->name('api.marketplace-client.marketplace-events.slot-availability');
+    Route::get('/{identifier}/resource-availability', [\App\Http\Controllers\Api\MarketplaceClient\LeisureAvailabilityController::class, 'resourceAvailability'])
+        ->name('api.marketplace-client.marketplace-events.resource-availability');
 });
 
 /*

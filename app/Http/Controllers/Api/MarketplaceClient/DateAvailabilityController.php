@@ -183,6 +183,33 @@ class DateAvailabilityController extends BaseController
                 }
             }
 
+            // Slot-uri pe oră (F3 — Vaporașe etc.)
+            $slotsConfig = null;
+            $rawSlotsConfig = $tt->meta['slots_config'] ?? null;
+            if (is_array($rawSlotsConfig) && !empty($rawSlotsConfig['enabled'])) {
+                $slotsConfig = [
+                    'enabled' => true,
+                    'first_slot' => (string) ($rawSlotsConfig['first_slot'] ?? '09:00'),
+                    'last_slot' => (string) ($rawSlotsConfig['last_slot'] ?? '18:00'),
+                    'interval_minutes' => max(5, (int) ($rawSlotsConfig['interval_minutes'] ?? 30)),
+                    'duration_minutes' => max(5, (int) ($rawSlotsConfig['duration_minutes'] ?? 30)),
+                    'capacity_per_slot' => max(1, (int) ($rawSlotsConfig['capacity_per_slot'] ?? 1)),
+                    'unit_pricing' => in_array(($rawSlotsConfig['unit_pricing'] ?? 'per_person'), ['per_person', 'per_slot'], true)
+                        ? $rawSlotsConfig['unit_pricing']
+                        : 'per_person',
+                ];
+            }
+
+            // Inventar fizic (F5 — Bărci etc.)
+            $physicalInventory = null;
+            $rawPhysical = $tt->meta['physical_inventory'] ?? null;
+            if (is_array($rawPhysical) && !empty($rawPhysical['enabled'])) {
+                $physicalInventory = [
+                    'enabled' => true,
+                    'count' => max(1, (int) ($rawPhysical['count'] ?? 1)),
+                ];
+            }
+
             // Add-ons inline (F2: ex. Tractare suplimentară pe Sanii)
             $rawAddons = $tt->meta['addons'] ?? null;
             $addons = [];
@@ -262,6 +289,8 @@ class DateAvailabilityController extends BaseController
                 'includes' => $includes ?: [],
                 'variants' => $variants,
                 'addons' => $addons,
+                'slots_config' => $slotsConfig,
+                'physical_inventory' => $physicalInventory,
                 'package_outputs' => $packageOutputs,
                 'package_components_sum' => round($packageSumComponents, 2),
                 'package_savings' => $packageOutputs ? round($packageSumComponents - $effectivePrice, 2) : 0,
