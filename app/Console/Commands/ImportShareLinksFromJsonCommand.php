@@ -94,38 +94,49 @@ class ImportShareLinksFromJsonCommand extends Command
                     continue;
                 }
 
-                $row = [
-                    'code' => $code,
-                    'marketplace_client_id' => (int) ($link['marketplace_client_id'] ?? $defaultClientId),
-                    'marketplace_organizer_id' => (int) ($link['organizer_id'] ?? $link['marketplace_organizer_id'] ?? 0),
-                    'name' => substr(strip_tags((string) ($link['name'] ?? '')), 0, 100),
-                    'event_ids' => $eventIds,
-                    'is_active' => (bool) ($link['is_active'] ?? true),
-                    'has_password' => !empty($link['password_hash']),
-                    'password_hash' => $link['password_hash'] ?? null,
-                    'show_participants' => (bool) ($link['show_participants'] ?? false),
-                    'show_revenue' => array_key_exists('show_revenue', $link) ? (bool) $link['show_revenue'] : true,
-                    'ticket_data' => is_array($link['ticket_data'] ?? null) ? $link['ticket_data'] : null,
-                    'participants_data' => is_array($link['participants_data'] ?? null) ? $link['participants_data'] : null,
-                    'ticket_data_updated_at' => !empty($link['ticket_data_updated_at'])
-                        ? \Carbon\Carbon::parse($link['ticket_data_updated_at'])
-                        : now(),
-                    'access_count' => (int) ($link['access_count'] ?? 0),
-                    'last_accessed_at' => !empty($link['last_accessed_at'])
-                        ? \Carbon\Carbon::parse($link['last_accessed_at'])
-                        : null,
-                    'created_at' => !empty($link['created_at']) ? \Carbon\Carbon::parse($link['created_at']) : now(),
-                    'updated_at' => now(),
-                ];
-
-                if ($row['marketplace_organizer_id'] <= 0) {
+                $organizerId = (int) ($link['organizer_id'] ?? $link['marketplace_organizer_id'] ?? 0);
+                if ($organizerId <= 0) {
                     $errors++;
                     $this->warn("  [skip] code={$code} has no organizer_id");
                     continue;
                 }
 
+                $tdRaw = $link['ticket_data'] ?? null;
+                $pdRaw = $link['participants_data'] ?? null;
+
                 if (!$dry) {
-                    DB::table('marketplace_share_links')->insert($row);
+                    // Use the Eloquent model so JSON columns get cast
+                    // through Laravel's array → JSON encoder. Raw
+                    // DB::table()->insert() with array values blows up
+                    // on Postgres jsonb columns ("Array to string
+                    // conversion") because the query bindings don't
+                    // run through any caster.
+                    $model = new \App\Models\MarketplaceShareLink([
+                        'code' => $code,
+                        'marketplace_client_id' => (int) ($link['marketplace_client_id'] ?? $defaultClientId),
+                        'marketplace_organizer_id' => $organizerId,
+                        'name' => substr(strip_tags((string) ($link['name'] ?? '')), 0, 100),
+                        'event_ids' => $eventIds,
+                        'is_active' => (bool) ($link['is_active'] ?? true),
+                        'has_password' => !empty($link['password_hash']),
+                        'password_hash' => $link['password_hash'] ?? null,
+                        'show_participants' => (bool) ($link['show_participants'] ?? false),
+                        'show_revenue' => array_key_exists('show_revenue', $link) ? (bool) $link['show_revenue'] : true,
+                        'ticket_data' => is_array($tdRaw) ? $tdRaw : null,
+                        'participants_data' => is_array($pdRaw) ? $pdRaw : null,
+                        'ticket_data_updated_at' => !empty($link['ticket_data_updated_at'])
+                            ? \Carbon\Carbon::parse($link['ticket_data_updated_at'])
+                            : now(),
+                        'access_count' => (int) ($link['access_count'] ?? 0),
+                        'last_accessed_at' => !empty($link['last_accessed_at'])
+                            ? \Carbon\Carbon::parse($link['last_accessed_at'])
+                            : null,
+                    ]);
+                    // Preserve original created_at; updated_at = now().
+                    if (!empty($link['created_at'])) {
+                        $model->created_at = \Carbon\Carbon::parse($link['created_at']);
+                    }
+                    $model->save();
                 }
                 $imported++;
                 $this->line("  [ok] code={$code} organizer={$row['marketplace_organizer_id']} events=" . count($eventIds));
