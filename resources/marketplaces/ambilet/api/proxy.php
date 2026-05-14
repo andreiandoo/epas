@@ -1956,6 +1956,69 @@ switch ($action) {
         $requiresAuth = true;
         break;
 
+    case 'organizer.event.leisure.boats':
+        $eventId = (int) ($_GET['event'] ?? 0);
+        if (!$eventId) { http_response_code(400); echo json_encode(['error' => 'Missing event id']); exit; }
+        $params = [];
+        if (isset($_GET['ticket_type_id'])) $params['ticket_type_id'] = (int) $_GET['ticket_type_id'];
+        $endpoint = '/organizer/events/' . $eventId . '/leisure/boats' . ($params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.event.leisure.boats.sync':
+        $eventId = (int) ($_GET['event'] ?? 0);
+        if (!$eventId) { http_response_code(400); echo json_encode(['error' => 'Missing event id']); exit; }
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/organizer/events/' . $eventId . '/leisure/boats/sync';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.event.leisure.rentals.active':
+        $eventId = (int) ($_GET['event'] ?? 0);
+        if (!$eventId) { http_response_code(400); echo json_encode(['error' => 'Missing event id']); exit; }
+        $params = [];
+        if (isset($_GET['ticket_type_id'])) $params['ticket_type_id'] = (int) $_GET['ticket_type_id'];
+        $endpoint = '/organizer/events/' . $eventId . '/leisure/active-rentals' . ($params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.event.leisure.rentals.start':
+        $eventId = (int) ($_GET['event'] ?? 0);
+        if (!$eventId) { http_response_code(400); echo json_encode(['error' => 'Missing event id']); exit; }
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/organizer/events/' . $eventId . '/leisure/boat-rentals/start';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.event.leisure.rentals.end':
+        $eventId = (int) ($_GET['event'] ?? 0);
+        $rentalId = (int) ($_GET['rental'] ?? 0);
+        if (!$eventId || !$rentalId) { http_response_code(400); echo json_encode(['error' => 'Missing event/rental id']); exit; }
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/organizer/events/' . $eventId . '/leisure/boat-rentals/' . $rentalId . '/end';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.event.leisure.rentals.finalize':
+        $eventId = (int) ($_GET['event'] ?? 0);
+        $rentalId = (int) ($_GET['rental'] ?? 0);
+        if (!$eventId || !$rentalId) { http_response_code(400); echo json_encode(['error' => 'Missing event/rental id']); exit; }
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/organizer/events/' . $eventId . '/leisure/boat-rentals/' . $rentalId . '/finalize';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.me.active-shift':
+        $params = [];
+        if (isset($_GET['team_member_id'])) $params['team_member_id'] = (int) $_GET['team_member_id'];
+        $endpoint = '/organizer/me/active-shift' . ($params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
     case 'organizer.password':
         $method = 'PUT';
         $body = file_get_contents('php://input');

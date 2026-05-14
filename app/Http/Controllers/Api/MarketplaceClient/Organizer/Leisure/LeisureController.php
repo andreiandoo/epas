@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Api\MarketplaceClient\Organizer\Leisure;
 
 use App\Http\Controllers\Api\MarketplaceClient\BaseController;
+use App\Models\BoatRental;
 use App\Models\Event;
+use App\Models\LeisureBoat;
 use App\Models\LeisureResourceLock;
 use App\Models\LeisureShift;
 use App\Models\MarketplaceOrganizer;
@@ -1284,7 +1286,7 @@ class LeisureController extends BaseController
             'team_member_id' => 'nullable|integer|exists:marketplace_organizer_team_members,id',
             'start_at' => 'required|date',
             'end_at' => 'required|date|after:start_at',
-            'role' => 'required|in:gate_scanner,sales_operator,shift_manager,accountant',
+            'role' => 'required|in:gate_scanner,sales_operator,shift_manager,accountant,operator_boats,operator_pontoon,field_seller',
             'gate' => 'nullable|string|max:32',
             'notes' => 'nullable|string|max:500',
         ]);
@@ -1325,7 +1327,7 @@ class LeisureController extends BaseController
             'team_member_id' => 'nullable|integer|exists:marketplace_organizer_team_members,id',
             'start_at' => 'nullable|date',
             'end_at' => 'nullable|date|after:start_at',
-            'role' => 'nullable|in:gate_scanner,sales_operator,shift_manager,accountant',
+            'role' => 'nullable|in:gate_scanner,sales_operator,shift_manager,accountant,operator_boats,operator_pontoon,field_seller',
             'gate' => 'nullable|string|max:32',
             'notes' => 'nullable|string|max:500',
         ]);
@@ -1829,6 +1831,440 @@ class LeisureController extends BaseController
             'by_ticket_type' => array_values($byTicketType),
             'by_cashier' => array_values($byCashier),
         ]);
+    }
+
+    // ========================================================================
+    // F7 — Bărci: tabel boats + rentals (timer + calup recalculare)
+    // ========================================================================
+
+    /**
+     * GET /marketplace-client/organizer/events/{event}/leisure/boats?ticket_type_id=X
+     * Listă bărci pentru un produs (rental). Sincronizează automat dacă lipsesc.
+     */
+    public function boatsIndex(Request $request, int $event): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+        $marketplace = $organizer->marketplaceClient;
+        $eventModel = Event::where('id', $event)->where('marketplace_client_id', $marketplace->id)->first();
+        if (!$eventModel) return $this->error('Event not found', 404);
+
+        $validated = $request->validate(['ticket_type_id' => 'required|integer']);
+        $tt = TicketType::where('id', $validated['ticket_type_id'])->where('event_id', $eventModel->id)->first();
+        if (!$tt) return $this->error('Ticket type not found', 404);
+
+        $boats = LeisureBoat::query()
+            ->where('ticket_type_id', $tt->id)
+            ->orderBy('number')
+            ->get();
+
+        // Atașează rental activ dacă există
+        $activeRentals = BoatRental::query()
+            ->whereIn('boat_id', $boats->pluck('id'))
+            ->where('status', 'active')
+            ->get()
+            ->keyBy('boat_id');
+
+        return $this->success([
+            'boats' => $boats->map(function ($b) use ($activeRentals) {
+                $active = $activeRentals->get($b->id);
+                return [
+                    'id' => $b->id,
+                    'number' => $b->number,
+                    'label' => $b->label ?: ('Barca #' . $b->number),
+                    'qr_code' => $b->qr_code,
+                    'status' => $b->status,
+                    'active_rental' => $active ? [
+                        'id' => $active->id,
+                        'started_at' => $active->started_at->toIso8601String(),
+                        'planned_end_at' => $active->planned_end_at->toIso8601String(),
+                    ] : null,
+                ];
+            })->values(),
+        ]);
+    }
+
+    /**
+     * POST /marketplace-client/organizer/events/{event}/leisure/boats/sync
+     * Sincronizează numărul de bărci pentru un produs cu meta.physical_inventory.count.
+     */
+    public function boatsSync(Request $request, int $event): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+        $marketplace = $organizer->marketplaceClient;
+        $eventModel = Event::where('id', $event)->where('marketplace_client_id', $marketplace->id)->first();
+        if (!$eventModel) return $this->error('Event not found', 404);
+
+        $validated = $request->validate(['ticket_type_id' => 'required|integer']);
+        $tt = TicketType::where('id', $validated['ticket_type_id'])->where('event_id', $eventModel->id)->first();
+        if (!$tt) return $this->error('Ticket type not found', 404);
+
+        $physical = is_array($tt->meta['physical_inventory'] ?? null) ? $tt->meta['physical_inventory'] : null;
+        if (!$physical || empty($physical['enabled'])) {
+            return $this->error('Produsul nu are inventar fizic activat (meta.physical_inventory.enabled).', 422);
+        }
+        $targetCount = max(1, (int) ($physical['count'] ?? 1));
+        $current = LeisureBoat::where('ticket_type_id', $tt->id)->count();
+
+        $created = 0;
+        $deactivated = 0;
+        if ($current < $targetCount) {
+            // Adaug bărci noi (numere consecutive)
+            $maxNumber = (int) LeisureBoat::where('ticket_type_id', $tt->id)->max('number');
+            for ($i = $maxNumber + 1; $i <= $maxNumber + ($targetCount - $current); $i++) {
+                LeisureBoat::create([
+                    'event_id' => $eventModel->id,
+                    'ticket_type_id' => $tt->id,
+                    'number' => $i,
+                    'status' => 'available',
+                ]);
+                $created++;
+            }
+        } elseif ($current > $targetCount) {
+            // Marchez ca retired pe cele suplimentare (NU le șterg dacă au rentals istorice)
+            $extraIds = LeisureBoat::where('ticket_type_id', $tt->id)
+                ->orderByDesc('number')
+                ->take($current - $targetCount)
+                ->pluck('id');
+            LeisureBoat::whereIn('id', $extraIds)->update(['status' => 'retired']);
+            $deactivated = $extraIds->count();
+        }
+
+        return $this->success([
+            'target' => $targetCount,
+            'before' => $current,
+            'created' => $created,
+            'deactivated' => $deactivated,
+            'total_now' => LeisureBoat::where('ticket_type_id', $tt->id)->where('status', '!=', 'retired')->count(),
+        ], 'Sincronizare completă');
+    }
+
+    /**
+     * GET /marketplace-client/organizer/events/{event}/leisure/active-rentals?ticket_type_id=X
+     */
+    public function activeRentals(Request $request, int $event): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+        $marketplace = $organizer->marketplaceClient;
+        $eventModel = Event::where('id', $event)->where('marketplace_client_id', $marketplace->id)->first();
+        if (!$eventModel) return $this->error('Event not found', 404);
+
+        $query = BoatRental::query()
+            ->where('event_id', $eventModel->id)
+            ->where('status', 'active')
+            ->with(['boat:id,number,label', 'ticketType:id,name'])
+            ->orderBy('started_at');
+
+        if ($request->filled('ticket_type_id')) {
+            $query->where('ticket_type_id', (int) $request->input('ticket_type_id'));
+        }
+
+        return $this->success([
+            'rentals' => $query->get()->map(function ($r) {
+                return [
+                    'id' => $r->id,
+                    'boat_id' => $r->boat_id,
+                    'boat_number' => $r->boat?->number,
+                    'boat_label' => $r->boat?->label ?: ('Barca #' . $r->boat?->number),
+                    'started_at' => $r->started_at->toIso8601String(),
+                    'planned_end_at' => $r->planned_end_at->toIso8601String(),
+                    'calup_duration_minutes' => $r->calup_duration_minutes,
+                    'calupuri_planned' => $r->calupuri_planned,
+                    'calup_unit_price' => (float) $r->calup_unit_price,
+                    'ticket_type' => is_array($r->ticketType?->name) ? ($r->ticketType->name['ro'] ?? reset($r->ticketType->name)) : $r->ticketType?->name,
+                ];
+            })->values(),
+        ]);
+    }
+
+    /**
+     * POST /marketplace-client/organizer/events/{event}/leisure/boat-rentals/start
+     * Body: { ticket_type_id, boat_id, rental_ticket_id? sau access_ticket_id?, calupuri?: 1, variant_id? }
+     *
+     * Pornește cursa pe o barcă. Dacă rental_ticket_id e dat, atașează-l;
+     * altfel emite un Ticket nou (flow on-site: cumpărare imediată).
+     */
+    public function rentalStart(Request $request, int $event): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+        $marketplace = $organizer->marketplaceClient;
+        $eventModel = Event::where('id', $event)->where('marketplace_client_id', $marketplace->id)->first();
+        if (!$eventModel) return $this->error('Event not found', 404);
+
+        $validated = $request->validate([
+            'ticket_type_id' => 'required|integer',
+            'boat_id' => 'required|integer',
+            'rental_ticket_id' => 'nullable|integer',
+            'access_ticket_id' => 'nullable|integer',
+            'calupuri' => 'nullable|integer|min:1|max:48',
+            'variant_id' => 'nullable|string|max:64',
+            'started_by_member_id' => 'nullable|integer',
+            'notes' => 'nullable|string|max:500',
+        ]);
+
+        $tt = TicketType::where('id', $validated['ticket_type_id'])->where('event_id', $eventModel->id)->first();
+        if (!$tt) return $this->error('Ticket type not found', 404);
+
+        $boat = LeisureBoat::where('id', $validated['boat_id'])->where('ticket_type_id', $tt->id)->first();
+        if (!$boat) return $this->error('Barca nu există pentru acest produs.', 404);
+        if ($boat->status !== 'available') return $this->error('Barca nu e disponibilă (status: ' . $boat->status . ')', 422);
+
+        // Verifică dacă barca are deja un rental activ
+        $existingActive = BoatRental::where('boat_id', $boat->id)->where('status', 'active')->exists();
+        if ($existingActive) return $this->error('Barca are deja o cursă activă. Închide-o prima dată.', 422);
+
+        // Rezolvă varianta pentru a calcula calup_duration_minutes + unit_price
+        $variant = null;
+        if (!empty($validated['variant_id']) && is_array($tt->meta['variants'] ?? null)) {
+            foreach ($tt->meta['variants'] as $v) {
+                if (!is_array($v) || empty($v['label'])) continue;
+                $vid = $v['id'] ?? Str::slug($v['label']);
+                if ($vid === $validated['variant_id']) { $variant = $v; break; }
+            }
+        }
+
+        $calupDurationMinutes = (int) ($variant['duration_minutes'] ?? 30);
+        // Dacă durata e 60 (1h), calupul e tot 30min, deci calupuri_planned = 2
+        $calupBase = 30;
+        $calupuriPlanned = max(1, (int) ($validated['calupuri'] ?? ceil($calupDurationMinutes / $calupBase)));
+        $calupUnitPrice = (float) ($variant['price'] ?? $tt->price_max ?? $tt->price ?? 0) / max(1, $calupuriPlanned);
+
+        $now = Carbon::now();
+        $plannedEnd = $now->copy()->addMinutes($calupBase * $calupuriPlanned);
+
+        $rental = BoatRental::create([
+            'event_id' => $eventModel->id,
+            'ticket_type_id' => $tt->id,
+            'boat_id' => $boat->id,
+            'rental_ticket_id' => $validated['rental_ticket_id'] ?? null,
+            'access_ticket_id' => $validated['access_ticket_id'] ?? null,
+            'started_by_member_id' => $validated['started_by_member_id'] ?? null,
+            'started_at' => $now,
+            'planned_end_at' => $plannedEnd,
+            'calup_duration_minutes' => $calupBase,
+            'calup_unit_price' => round($calupUnitPrice, 2),
+            'calupuri_planned' => $calupuriPlanned,
+            'status' => 'active',
+            'notes' => $validated['notes'] ?? null,
+        ]);
+
+        // Marchează barca în uz
+        $boat->update(['status' => 'in_use']);
+
+        // Marchează biletul rental ca "used" dacă există
+        if (!empty($validated['rental_ticket_id'])) {
+            Ticket::where('id', $validated['rental_ticket_id'])->update(['status' => 'used', 'checked_in_at' => $now]);
+        }
+        if (!empty($validated['access_ticket_id'])) {
+            $accessTicket = Ticket::find($validated['access_ticket_id']);
+            if ($accessTicket && empty($accessTicket->checked_in_at)) {
+                $accessTicket->update(['checked_in_at' => $now]);
+            }
+        }
+
+        return $this->success([
+            'rental' => [
+                'id' => $rental->id,
+                'boat_number' => $boat->number,
+                'started_at' => $rental->started_at->toIso8601String(),
+                'planned_end_at' => $rental->planned_end_at->toIso8601String(),
+                'calupuri_planned' => $rental->calupuri_planned,
+                'calup_unit_price' => (float) $rental->calup_unit_price,
+            ],
+        ], 'Cursă pornită');
+    }
+
+    /**
+     * POST /marketplace-client/organizer/events/{event}/leisure/boat-rentals/{rental}/end
+     * Închide timer-ul (operator). Calculează calupuri_actual + extra_charge dar nu emite ticket încă.
+     */
+    public function rentalEnd(Request $request, int $event, int $rental): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+        $marketplace = $organizer->marketplaceClient;
+        $eventModel = Event::where('id', $event)->where('marketplace_client_id', $marketplace->id)->first();
+        if (!$eventModel) return $this->error('Event not found', 404);
+
+        $r = BoatRental::where('id', $rental)->where('event_id', $eventModel->id)->first();
+        if (!$r) return $this->error('Cursa nu există.', 404);
+        if ($r->status !== 'active') return $this->error('Cursa nu e activă (status: ' . $r->status . ')', 422);
+
+        $now = Carbon::now();
+        $r->ended_at = $now;
+        $r->calupuri_actual = $r->calculateActualCalupuri();
+        $extraCalupuri = max(0, $r->calupuri_actual - $r->calupuri_planned);
+        $r->extra_charge_total = round($extraCalupuri * (float) $r->calup_unit_price, 2);
+        $r->status = 'ended';
+        $r->save();
+
+        return $this->success([
+            'rental_id' => $r->id,
+            'started_at' => $r->started_at->toIso8601String(),
+            'ended_at' => $r->ended_at->toIso8601String(),
+            'duration_minutes' => $r->started_at->diffInMinutes($r->ended_at),
+            'calupuri_planned' => $r->calupuri_planned,
+            'calupuri_actual' => $r->calupuri_actual,
+            'extra_calupuri' => $extraCalupuri,
+            'calup_unit_price' => (float) $r->calup_unit_price,
+            'extra_charge_total' => (float) $r->extra_charge_total,
+        ], $extraCalupuri > 0
+            ? "Cursă încheiată. Clientul a depășit cu {$extraCalupuri} calup(uri) — încasează {$r->extra_charge_total} RON."
+            : 'Cursă încheiată în limita planificată.');
+    }
+
+    /**
+     * POST /marketplace-client/organizer/events/{event}/leisure/boat-rentals/{rental}/finalize
+     * Finalizează complet: emite ticket extra pentru calupurile suplimentare (dacă există),
+     * eliberează barca.
+     */
+    public function rentalFinalize(Request $request, int $event, int $rental): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+        $marketplace = $organizer->marketplaceClient;
+        $eventModel = Event::where('id', $event)->where('marketplace_client_id', $marketplace->id)->first();
+        if (!$eventModel) return $this->error('Event not found', 404);
+
+        $r = BoatRental::where('id', $rental)->where('event_id', $eventModel->id)->first();
+        if (!$r) return $this->error('Cursa nu există.', 404);
+        if ($r->status !== 'ended') return $this->error('Cursa trebuie închisă (end) înainte de finalizare.', 422);
+
+        $now = Carbon::now();
+        $extraTicketId = null;
+
+        try {
+            DB::beginTransaction();
+
+            if ($r->extra_charge_total > 0 && $r->order_id) {
+                // Adăugare OrderItem suplimentar + Ticket extra pentru calupurile depășite
+                $tt = TicketType::find($r->ticket_type_id);
+                $extraCalupuri = max(0, $r->calupuri_actual - $r->calupuri_planned);
+                $orderItem = OrderItem::create([
+                    'order_id' => $r->order_id,
+                    'ticket_type_id' => $tt->id,
+                    'name' => 'Calup suplimentar 30min × ' . $extraCalupuri,
+                    'quantity' => $extraCalupuri,
+                    'unit_price' => $r->calup_unit_price,
+                    'total' => $r->extra_charge_total,
+                    'meta' => [
+                        'service_category' => $tt->service_category ?? 'rental',
+                        'visit_date' => Carbon::today()->toDateString(),
+                        'rental_extra_calup' => true,
+                        'rental_id' => $r->id,
+                    ],
+                ]);
+                $code = strtoupper(Str::random(10));
+                $extraTicket = Ticket::create([
+                    'order_id' => $r->order_id,
+                    'order_item_id' => $orderItem->id,
+                    'ticket_type_id' => $tt->id,
+                    'event_id' => $eventModel->id,
+                    'tenant_id' => $eventModel->tenant_id,
+                    'marketplace_client_id' => $marketplace->id,
+                    'code' => $code,
+                    'barcode' => $code,
+                    'status' => 'used',
+                    'price' => $r->extra_charge_total,
+                    'checked_in_at' => $now,
+                    'meta' => [
+                        'pos' => true,
+                        'rental_extra_calup' => true,
+                        'rental_id' => $r->id,
+                        'extra_calupuri' => $extraCalupuri,
+                    ],
+                ]);
+                $extraTicketId = $extraTicket->id;
+
+                // Update order total
+                if ($r->order) {
+                    $r->order->update([
+                        'subtotal' => round((float) $r->order->subtotal + $r->extra_charge_total, 2),
+                        'total' => round((float) $r->order->total + $r->extra_charge_total, 2),
+                    ]);
+                }
+            }
+
+            $r->update([
+                'finalized_at' => $now,
+                'extra_ticket_id' => $extraTicketId,
+                'status' => 'finalized',
+            ]);
+
+            // Eliberează barca
+            $r->boat?->update(['status' => 'available']);
+
+            // Eliberează lock-ul pe resource (dacă există pe order_item)
+            if ($r->order_item_id) {
+                LeisureResourceLock::where('order_item_id', $r->order_item_id)->update(['status' => 'released']);
+            }
+
+            DB::commit();
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return $this->error('Eroare la finalizare: ' . $e->getMessage(), 500);
+        }
+
+        return $this->success([
+            'rental_id' => $r->id,
+            'extra_ticket_id' => $extraTicketId,
+            'extra_charge_total' => (float) $r->extra_charge_total,
+            'boat_status' => 'available',
+        ], 'Cursă finalizată');
+    }
+
+    // ========================================================================
+    // F11 — Shift activ pentru rolul curent al operatorului
+    // ========================================================================
+
+    /**
+     * GET /marketplace-client/organizer/me/active-shift
+     * Returnează shift-ul activ acum pentru organizer-ul autentificat (sau pentru un team_member specific).
+     * Folosit de mobile app pentru a determina rolul curent.
+     */
+    public function myActiveShift(Request $request): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+        $now = Carbon::now();
+        $teamMemberId = $request->query('team_member_id');
+
+        $query = LeisureShift::query()
+            ->where('marketplace_organizer_id', $organizer->id)
+            ->where('start_at', '<=', $now)
+            ->where('end_at', '>=', $now);
+
+        if ($teamMemberId) {
+            $query->where('team_member_id', (int) $teamMemberId);
+        }
+
+        $shifts = $query->orderByDesc('start_at')->get();
+
+        return $this->success([
+            'now' => $now->toIso8601String(),
+            'shifts' => $shifts->map(fn ($s) => [
+                'id' => $s->id,
+                'team_member_id' => $s->team_member_id,
+                'role' => $s->role,
+                'gate' => $s->gate,
+                'start_at' => $s->start_at->toIso8601String(),
+                'end_at' => $s->end_at->toIso8601String(),
+                'allowed_features' => $this->featuresForRole($s->role),
+            ])->values(),
+        ]);
+    }
+
+    /**
+     * Lista feature-uri permise per rol (folosit la UI gating).
+     */
+    protected function featuresForRole(?string $role): array
+    {
+        return match ($role) {
+            'gate_scanner' => ['checkin'],
+            'sales_operator' => ['pos', 'checkin'],
+            'shift_manager' => ['pos', 'checkin', 'reports', 'team'],
+            'accountant' => ['reports', 'finance'],
+            'operator_boats' => ['boat_rentals', 'checkin', 'pos'],
+            'operator_pontoon' => ['pontoon_sales', 'checkin', 'pos'],
+            'field_seller' => ['pos_mobile', 'checkin'],
+            default => [],
+        };
     }
 
     protected function emptyBucket(): array

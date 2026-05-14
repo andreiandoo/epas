@@ -396,6 +396,13 @@ const AmbiletAPI = {
         if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/products\/reorder/)) return 'organizer.event.leisure.products.reorder';
         if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/products\/\d+/)) return 'organizer.event.leisure.products.item';
         if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/products/)) return 'organizer.event.leisure.products.collection';
+        if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/boats\/sync/)) return 'organizer.event.leisure.boats.sync';
+        if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/boats/)) return 'organizer.event.leisure.boats';
+        if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/active-rentals/)) return 'organizer.event.leisure.rentals.active';
+        if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/boat-rentals\/start/)) return 'organizer.event.leisure.rentals.start';
+        if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/boat-rentals\/\d+\/end/)) return 'organizer.event.leisure.rentals.end';
+        if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/boat-rentals\/\d+\/finalize/)) return 'organizer.event.leisure.rentals.finalize';
+        if (endpoint === '/organizer/me/active-shift') return 'organizer.me.active-shift';
 
         if (endpoint.match(/\/organizer\/events\/\d+\/analytics/)) return 'organizer.event.analytics';
         if (endpoint.match(/\/organizer\/events\/\d+\/goals\/\d+$/)) return 'organizer.event.goal';
@@ -512,6 +519,11 @@ const AmbiletAPI = {
         const leisureProductMatch = endpoint.match(/^\/organizer\/events\/(\d+)\/leisure\/products\/(\d+)/);
         if (leisureProductMatch) {
             return `event=${encodeURIComponent(leisureProductMatch[1])}&product=${encodeURIComponent(leisureProductMatch[2])}`;
+        }
+        // Extract event ID + rental ID from boat-rentals
+        const rentalMatch = endpoint.match(/^\/organizer\/events\/(\d+)\/leisure\/boat-rentals\/(\d+)/);
+        if (rentalMatch) {
+            return `event=${encodeURIComponent(rentalMatch[1])}&rental=${encodeURIComponent(rentalMatch[2])}`;
         }
         // Extract venue+gate IDs
         const venueGateMatch = endpoint.match(/^\/organizer\/venues\/(\d+)\/gates\/(\d+)/);

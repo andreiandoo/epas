@@ -1836,6 +1836,30 @@ Route::prefix('marketplace-client/organizer')->middleware(['throttle:120,1', 'ma
             ->whereNumber('event')->whereNumber('product')
             ->name('api.marketplace-client.organizer.leisure.products.destroy');
 
+        // F7 — Boats + Rentals
+        Route::get('/events/{event}/leisure/boats', [OrganizerLeisureController::class, 'boatsIndex'])
+            ->whereNumber('event')
+            ->name('api.marketplace-client.organizer.leisure.boats.index');
+        Route::post('/events/{event}/leisure/boats/sync', [OrganizerLeisureController::class, 'boatsSync'])
+            ->whereNumber('event')
+            ->name('api.marketplace-client.organizer.leisure.boats.sync');
+        Route::get('/events/{event}/leisure/active-rentals', [OrganizerLeisureController::class, 'activeRentals'])
+            ->whereNumber('event')
+            ->name('api.marketplace-client.organizer.leisure.rentals.active');
+        Route::post('/events/{event}/leisure/boat-rentals/start', [OrganizerLeisureController::class, 'rentalStart'])
+            ->whereNumber('event')
+            ->name('api.marketplace-client.organizer.leisure.rentals.start');
+        Route::post('/events/{event}/leisure/boat-rentals/{rental}/end', [OrganizerLeisureController::class, 'rentalEnd'])
+            ->whereNumber('event')->whereNumber('rental')
+            ->name('api.marketplace-client.organizer.leisure.rentals.end');
+        Route::post('/events/{event}/leisure/boat-rentals/{rental}/finalize', [OrganizerLeisureController::class, 'rentalFinalize'])
+            ->whereNumber('event')->whereNumber('rental')
+            ->name('api.marketplace-client.organizer.leisure.rentals.finalize');
+
+        // F11 — Active shift pentru rolul curent
+        Route::get('/me/active-shift', [OrganizerLeisureController::class, 'myActiveShift'])
+            ->name('api.marketplace-client.organizer.me.active-shift');
+
         // Organizer Documents (Cerere avizare, Declaratie impozite)
         Route::get('/documents', [OrganizerDocumentController::class, 'index'])
             ->name('api.marketplace-client.organizer.documents');
