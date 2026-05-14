@@ -92,6 +92,24 @@ class OrderResource extends Resource
                                 ->content(fn ($record) => self::renderBeneficiaries($record)),
                         ]),
 
+                    // Ticket transfer history (per-order roll-up of every
+                    // tickets.meta.transfers[] entry on the order's tickets,
+                    // sorted newest first). Visible only when at least one
+                    // ticket in the order has been transferred at least once.
+                    SC\Section::make('Istoric transferuri bilete')
+                        ->icon('heroicon-o-arrow-path-rounded-square')
+                        ->compact()
+                        ->collapsible()
+                        ->collapsed()
+                        ->visible(fn ($record) => $record->tickets->contains(
+                            fn ($t) => !empty(($t->meta ?? [])['transfers'] ?? [])
+                        ))
+                        ->schema([
+                            Forms\Components\Placeholder::make('ticket_transfers_top')
+                                ->hiddenLabel()
+                                ->content(fn ($record) => self::renderTicketTransferHistory($record)),
+                        ]),
+
                     // Event Section
                     SC\Section::make('Eveniment')
                         ->icon('heroicon-o-calendar')
@@ -1540,6 +1558,64 @@ class OrderResource extends Resource
                 </div>
             ";
         }
+
+        return new HtmlString($html);
+    }
+
+    /**
+     * Roll up tickets.meta.transfers[] across every ticket on an order
+     * into a chronological list rendered in the Istoric transferuri panel.
+     * Each entry shows From → To with email + IP + the ticket code so the
+     * operator can resolve which specific ticket changed hands.
+     */
+    protected static function renderTicketTransferHistory(Order $record): HtmlString
+    {
+        $entries = collect();
+        foreach ($record->tickets as $ticket) {
+            $meta = is_array($ticket->meta) ? $ticket->meta : [];
+            foreach (($meta['transfers'] ?? []) as $t) {
+                $entries->push(array_merge($t, [
+                    'ticket_id' => $ticket->id,
+                    'ticket_code' => $ticket->code,
+                ]));
+            }
+        }
+
+        if ($entries->isEmpty()) {
+            return new HtmlString('<p style="color:#64748B;font-size:13px;">Niciun transfer pe această comandă.</p>');
+        }
+
+        // Newest first
+        $entries = $entries->sortByDesc('at')->values();
+
+        $html = '<div style="display:flex;flex-direction:column;gap:10px;">';
+        foreach ($entries as $t) {
+            $when = !empty($t['at']) ? \Carbon\Carbon::parse($t['at'])->format('d.m.Y H:i') : '—';
+            $fromName = e($t['from_name'] ?? '—');
+            $fromEmail = !empty($t['from_email']) ? e($t['from_email']) : '';
+            $toName = e($t['to_name'] ?? '—');
+            $toEmail = !empty($t['to_email']) ? e($t['to_email']) : '';
+            $ticketCode = e($t['ticket_code'] ?? '');
+            $ip = !empty($t['ip_address']) ? e($t['ip_address']) : null;
+
+            $html .= '<div style="padding:12px;background:#0F172A;border-radius:8px;border-left:3px solid #3B82F6;">'
+                . '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">'
+                . "<span style='font-size:11px;color:#94A3B8;'>{$when}</span>"
+                . "<span style='font-family:monospace;font-size:11px;color:#94A3B8;background:#334155;padding:2px 6px;border-radius:4px;'>Bilet {$ticketCode}</span>"
+                . '</div>'
+                . "<div style='font-size:13px;color:#E2E8F0;line-height:1.5;'>"
+                . "De la <strong>{$fromName}</strong>"
+                . ($fromEmail ? " <span style='color:#94A3B8;'>({$fromEmail})</span>" : '')
+                . ' &rarr; '
+                . "<strong>{$toName}</strong>"
+                . ($toEmail ? " <span style='color:#94A3B8;'>({$toEmail})</span>" : '')
+                . '</div>';
+            if ($ip) {
+                $html .= "<div style='font-family:monospace;font-size:11px;color:#64748B;margin-top:4px;'>IP {$ip}</div>";
+            }
+            $html .= '</div>';
+        }
+        $html .= '</div>';
 
         return new HtmlString($html);
     }

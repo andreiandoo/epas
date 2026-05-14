@@ -296,6 +296,49 @@
                 </div>
             @endif
 
+            {{-- Transfer history --}}
+            @php
+                $ticketMeta = is_array($ticket->meta) ? $ticket->meta : [];
+                $transferHistory = $ticketMeta['transfers'] ?? [];
+            @endphp
+            @if(!empty($transferHistory))
+                <div class="p-5 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
+                    <h3 class="mb-3 text-sm font-semibold tracking-wider text-gray-400 uppercase dark:text-gray-500">Istoric transferuri</h3>
+                    <ol class="relative border-l border-gray-200 dark:border-gray-700 ml-2 space-y-4">
+                        @foreach(array_reverse($transferHistory) as $transfer)
+                            <li class="ml-4">
+                                <div class="absolute w-2.5 h-2.5 bg-blue-500 rounded-full mt-1.5 -left-1.5 border border-white dark:border-gray-800"></div>
+                                <time class="text-xs font-normal leading-none text-gray-400 dark:text-gray-500">
+                                    {{ isset($transfer['at']) ? \Carbon\Carbon::parse($transfer['at'])->format('d.m.Y H:i') : '—' }}
+                                </time>
+                                <p class="mt-1 text-sm text-gray-900 dark:text-gray-100">
+                                    De la
+                                    <strong>{{ $transfer['from_name'] ?? '—' }}</strong>
+                                    @if($transfer['from_email'] ?? null)
+                                        <span class="text-gray-500 dark:text-gray-400">({{ $transfer['from_email'] }})</span>
+                                    @endif
+                                    către
+                                    <strong>{{ $transfer['to_name'] ?? '—' }}</strong>
+                                    @if($transfer['to_email'] ?? null)
+                                        <span class="text-gray-500 dark:text-gray-400">({{ $transfer['to_email'] }})</span>
+                                    @endif
+                                </p>
+                                @if(($transfer['ip_address'] ?? null) || ($transfer['user_agent'] ?? null))
+                                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                        @if($transfer['ip_address'] ?? null)
+                                            <span class="font-mono">IP {{ $transfer['ip_address'] }}</span>
+                                        @endif
+                                        @if($transfer['user_agent'] ?? null)
+                                            <span class="block truncate" title="{{ $transfer['user_agent'] }}">{{ \Illuminate\Support\Str::limit($transfer['user_agent'], 90) }}</span>
+                                        @endif
+                                    </p>
+                                @endif
+                            </li>
+                        @endforeach
+                    </ol>
+                </div>
+            @endif
+
             {{-- Beneficiary --}}
             @if($beneficiary)
                 <div class="p-5 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
