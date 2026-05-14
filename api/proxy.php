@@ -1697,6 +1697,15 @@ switch ($action) {
         $requiresAuth = true;
         break;
 
+    case 'customer.transfers.direct':
+        // Instant customer-to-customer ticket transfer used by the
+        // /cont/bilete UI on both ambilet and tics.
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/customer/transfers/direct';
+        $requiresAuth = true;
+        break;
+
     case 'customer.refunds':
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $method = 'POST';
