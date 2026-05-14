@@ -152,8 +152,35 @@ class EventsController extends BaseController
         $startDate = $event->start_date; // accessor (handles duration modes)
         $endDate = $event->end_date;
 
+        // Build a naive-local ISO `starts_at` so the mobile EventsModal /
+        // DashboardScreen read the same field whether they got the data from
+        // the organizer or the venue-owner endpoint.
+        $startsAt = null;
+        if ($startDate) {
+            $time = match ($event->duration_mode) {
+                'range' => $event->range_start_time ?? $event->start_time ?? '00:00',
+                default => $event->start_time ?? '00:00',
+            };
+            $startsAt = $startDate->format('Y-m-d') . 'T' . substr($time, 0, 5) . ':00';
+        }
+
+        $venueName = $event->venue ? $event->venue->getTranslation('name') : null;
+        $venueCity = $event->venue->city ?? null;
+
         $data = [
             'id' => (string) $event->id,
+            // Organizer-shape aliases — let SalesScreen/DashboardScreen treat
+            // venue-owner events identically to organizer events.
+            'name' => $event->getTranslation('title'),
+            'starts_at' => $startsAt,
+            'venue_name' => $venueName,
+            'venue_city' => $venueCity,
+            'image' => $event->poster_url,
+            'status' => $this->derivedStatus($event),
+            'tickets_sold' => $s->tickets_sold,
+            'revenue' => 0.0, // Computed differently in the organizer endpoint; leave 0 for venue owner UI.
+            'capacity' => $s->stock_total,
+            // Original venue-owner-shape fields (kept for VenueEventsScreen).
             'title' => $event->getTranslation('title'),
             'slug' => $event->slug,
             'poster_url' => $event->poster_url,
@@ -169,8 +196,8 @@ class EventsController extends BaseController
             'is_published' => (bool) $event->is_published,
             'venue' => $event->venue ? [
                 'id' => (string) $event->venue->id,
-                'name' => $event->venue->getTranslation('name'),
-                'city' => $event->venue->city ?? null,
+                'name' => $venueName,
+                'city' => $venueCity,
                 'address' => $event->venue->address ?? null,
             ] : null,
             'tenant' => $event->tenant ? [
@@ -198,19 +225,42 @@ class EventsController extends BaseController
         ];
 
         if ($includeTickets && $event->relationLoaded('ticketTypes')) {
-            $data['ticket_types'] = $event->ticketTypes->map(fn ($tt) => [
-                'id' => (string) $tt->id,
-                'name' => $tt->name,
-                'price' => (float) ($tt->price ?? 0),
-                'currency' => $tt->currency ?? 'RON',
-                'description' => $tt->description ?? null,
-                'status' => $tt->status,
-                'quota_total' => $tt->quota_total !== null ? (int) $tt->quota_total : null,
-                'quota_sold' => $tt->quota_sold !== null ? (int) $tt->quota_sold : 0,
-                'unlimited' => $tt->quota_total !== null && (int) $tt->quota_total < 0,
-            ])->values()->toArray();
+            $data['ticket_types'] = $event->ticketTypes->map(function ($tt) {
+                $quota = $tt->quota_total !== null ? (int) $tt->quota_total : null;
+                $sold = $tt->quota_sold !== null ? (int) $tt->quota_sold : 0;
+                $available = $quota !== null && $quota >= 0 ? max(0, $quota - $sold) : 999999;
+                $price = (float) ($tt->display_price ?? (($tt->price_cents ?? 0) / 100));
+                return [
+                    'id' => (int) $tt->id, // SalesScreen / EventContext expect numeric id
+                    'name' => $tt->name,
+                    'price' => $price,
+                    'currency' => $tt->currency ?? 'RON',
+                    'description' => $tt->description ?? null,
+                    'status' => $tt->status,
+                    'quota_total' => $quota,
+                    'quota_sold' => $sold,
+                    'quantity' => $quota,
+                    'quantity_sold' => $sold,
+                    'available' => $available,
+                    'max_per_order' => $tt->max_per_order,
+                    // Critical for SalesScreen: only entry tickets render in POS.
+                    'is_entry_ticket' => (bool) ($tt->is_entry_ticket ?? true),
+                    'unlimited' => $quota !== null && $quota < 0,
+                ];
+            })->values()->toArray();
         }
 
         return $data;
+    }
+
+    /**
+     * Derive an organizer-compatible status string for an event.
+     */
+    protected function derivedStatus(Event $event): string
+    {
+        if ($event->is_cancelled) return 'cancelled';
+        if ($event->is_postponed) return 'postponed';
+        if (!$event->is_published) return 'draft';
+        return 'published';
     }
 }

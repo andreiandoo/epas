@@ -97,6 +97,108 @@ class CheckInController extends BaseController
     }
 
     /**
+     * Per-event check-in. Mirrors OrganizerEventsController::checkIn so the
+     * mobile CheckInScreen can call the identical URL shape via the path
+     * rewriter. Event scope is validated by EnsureVenueOwner middleware
+     * (which sets venue_owner_event on the request).
+     */
+    public function checkInPerEvent(Request $request, int $event, string $barcode): JsonResponse
+    {
+        $venueEvent = $request->attributes->get('venue_owner_event');
+        if (!$venueEvent instanceof Event) {
+            return $this->error('Event not accessible', 403);
+        }
+        $tenant = $request->attributes->get('venue_owner_tenant');
+        $user = $request->user();
+        if (!$tenant instanceof Tenant || !$user instanceof User) {
+            return $this->error('Venue owner context not resolved', 500);
+        }
+
+        $normalized = $this->normalizeTicketCode($barcode);
+
+        $ticket = Ticket::with('ticketType', 'order.marketplaceCustomer')
+            ->where(function ($q) use ($normalized) {
+                $q->whereRaw('LOWER(barcode) = ?', [strtolower($normalized)])
+                  ->orWhereRaw('LOWER(code) = ?', [strtolower($normalized)]);
+            })
+            ->first();
+
+        if (!$ticket) {
+            return $this->error('Ticket not found', 404);
+        }
+
+        $isInvitation = is_array($ticket->meta) && !empty($ticket->meta['is_invitation']);
+        $resolvedEventId = $ticket->event_id ?? $ticket->ticketType?->event_id;
+
+        // Hard scope: ticket MUST belong to this specific event. Different from
+        // the cross-event lookup endpoint.
+        if ($resolvedEventId === null || (int) $resolvedEventId !== (int) $venueEvent->id) {
+            return $this->error('Biletul nu este pentru acest eveniment', 400);
+        }
+
+        if (!$isInvitation) {
+            $validOrderStatuses = ['paid', 'confirmed', 'completed'];
+            if (!$ticket->order || !in_array($ticket->order->status, $validOrderStatuses, true)) {
+                return $this->error('Ticket order is not in a valid status', 400);
+            }
+        }
+
+        if (in_array($ticket->status, ['cancelled', 'refunded'], true)) {
+            return $this->error('This ticket has been ' . $ticket->status, 400);
+        }
+
+        $scannerLabel = $this->scannerLabel($tenant, $user);
+
+        if ($ticket->checked_in_at) {
+            $payload = $this->buildScanPayload($ticket, $isInvitation);
+            return response()->json(array_merge([
+                'success' => false,
+                'message' => 'Ticket already checked in at ' . $ticket->checked_in_at->format('Y-m-d H:i:s'),
+            ], $payload), 400);
+        }
+
+        $ticket->update([
+            'checked_in_at' => now(),
+            'checked_in_by' => $scannerLabel,
+        ]);
+
+        return $this->success($this->buildScanPayload($ticket, $isInvitation), 'Ticket checked in successfully');
+    }
+
+    /**
+     * Undo per-event check-in. Mirrors OrganizerEventsController::undoCheckIn.
+     */
+    public function undoCheckInPerEvent(Request $request, int $event, string $barcode): JsonResponse
+    {
+        $venueEvent = $request->attributes->get('venue_owner_event');
+        if (!$venueEvent instanceof Event) {
+            return $this->error('Event not accessible', 403);
+        }
+
+        $normalized = $this->normalizeTicketCode($barcode);
+
+        $ticket = Ticket::where(function ($q) use ($normalized) {
+            $q->whereRaw('LOWER(barcode) = ?', [strtolower($normalized)])
+              ->orWhereRaw('LOWER(code) = ?', [strtolower($normalized)]);
+        })->first();
+
+        if (!$ticket) {
+            return $this->error('Ticket not found', 404);
+        }
+        $resolvedEventId = $ticket->event_id ?? $ticket->ticketType?->event_id;
+        if ($resolvedEventId === null || (int) $resolvedEventId !== (int) $venueEvent->id) {
+            return $this->error('Biletul nu este pentru acest eveniment', 400);
+        }
+        if (!$ticket->checked_in_at) {
+            return $this->error('Ticket is not checked in', 400);
+        }
+
+        $ticket->update(['checked_in_at' => null, 'checked_in_by' => null]);
+
+        return $this->success(null, 'Check-in undone');
+    }
+
+    /**
      * Undo check-in for a ticket scoped to this venue. Used to recover from
      * a mistaken scan.
      */

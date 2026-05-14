@@ -2504,19 +2504,50 @@ Route::prefix('marketplace-client/venue-owner')->middleware(['throttle:120,1', '
         // Check-in (validates the ticket — was read-only lookup before).
         // The venue owner now has the same operational scan capability as the
         // organizer, but only for events at their partnered venues.
+        // The /participants/checkin alias mirrors the organizer URL shape so
+        // the mobile path-rewriter can reroute organizer screens 1:1.
         Route::post('/check-in', [VenueOwnerCheckInController::class, 'checkInByCode'])
             ->name('api.marketplace-client.venue-owner.check-in');
+        Route::post('/participants/checkin', [VenueOwnerCheckInController::class, 'checkInByCode'])
+            ->name('api.marketplace-client.venue-owner.participants.checkin');
         Route::delete('/check-in/{barcode}', [VenueOwnerCheckInController::class, 'undoCheckIn'])
             ->where('barcode', '[A-Za-z0-9_-]+')
             ->name('api.marketplace-client.venue-owner.check-in.undo');
-
-        // POS sales at the venue. Orders land in the ORGANIZER's books with
-        // source='venue_owner_pos' and meta.sold_by='Venue: {tenant}'.
-        Route::get('/events/{event}/ticket-types', [VenueOwnerOrdersController::class, 'ticketTypes'])
+        // Per-event check-in (matches organizer URL shape)
+        Route::post('/events/{event}/check-in/{barcode}', [VenueOwnerCheckInController::class, 'checkInPerEvent'])
             ->whereNumber('event')
-            ->name('api.marketplace-client.venue-owner.events.ticket-types');
+            ->where('barcode', '[A-Za-z0-9_-]+')
+            ->name('api.marketplace-client.venue-owner.events.check-in');
+        Route::delete('/events/{event}/check-in/{barcode}', [VenueOwnerCheckInController::class, 'undoCheckInPerEvent'])
+            ->whereNumber('event')
+            ->where('barcode', '[A-Za-z0-9_-]+')
+            ->name('api.marketplace-client.venue-owner.events.check-in.undo');
+
+        // Per-event participants (mirrors organizer's listing endpoint).
+        Route::get('/events/{event}/participants', [VenueOwnerAttendeesController::class, 'index'])
+            ->whereNumber('event')
+            ->name('api.marketplace-client.venue-owner.events.participants');
+
+        // POS sales. Orders land in the ORGANIZER's books with
+        // source='venue_owner_pos' and meta.sold_by='Venue: {tenant}'.
+        // Mobile reuses the organizer SalesScreen via path rewriter.
         Route::post('/orders', [VenueOwnerOrdersController::class, 'create'])
             ->name('api.marketplace-client.venue-owner.orders.create');
+        Route::post('/orders/{order}/generate-claim-url', [VenueOwnerOrdersController::class, 'generateClaimUrl'])
+            ->whereNumber('order')
+            ->name('api.marketplace-client.venue-owner.orders.generate-claim-url');
+        Route::post('/orders/{order}/pos-complete', [VenueOwnerOrdersController::class, 'posComplete'])
+            ->whereNumber('order')
+            ->name('api.marketplace-client.venue-owner.orders.pos-complete');
+        Route::post('/orders/{order}/send-tickets', [VenueOwnerOrdersController::class, 'sendTickets'])
+            ->whereNumber('order')
+            ->name('api.marketplace-client.venue-owner.orders.send-tickets');
+
+        // Sales breakdown — same shape as organizer's endpoint so the
+        // SalesBreakdownModal renders identically.
+        Route::get('/events/{event}/sales-breakdown', [VenueOwnerOrdersController::class, 'salesBreakdown'])
+            ->whereNumber('event')
+            ->name('api.marketplace-client.venue-owner.events.sales-breakdown');
 
         Route::get('/notes', [VenueOwnerNotesController::class, 'index'])
             ->name('api.marketplace-client.venue-owner.notes.index');
