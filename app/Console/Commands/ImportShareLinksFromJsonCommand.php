@@ -139,7 +139,7 @@ class ImportShareLinksFromJsonCommand extends Command
                     $model->save();
                 }
                 $imported++;
-                $this->line("  [ok] code={$code} organizer={$row['marketplace_organizer_id']} events=" . count($eventIds));
+                $this->line("  [ok] code={$code} organizer={$organizerId} events=" . count($eventIds));
             } catch (\Throwable $e) {
                 $errors++;
                 $this->error("  [error] code={$code}: " . $e->getMessage());
