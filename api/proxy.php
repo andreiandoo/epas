@@ -3853,6 +3853,20 @@ switch ($action) {
     // ==================== ORGANIZER SHARE LINKS (LOCAL) ====================
 
     case 'organizer.share-links':
+        // DB-backed: forwards to Laravel /organizer/share-links so the
+        // links survive deploy cycles. File-backed loadShareLinks() etc.
+        // are kept for legacy fallback only — never read here.
+        $method = $_SERVER['REQUEST_METHOD'] === 'POST' ? 'POST' : 'GET';
+        if ($method === 'POST') {
+            $body = file_get_contents('php://input');
+            $endpoint = '/organizer/share-links';
+        } else {
+            $endpoint = '/organizer/share-links';
+        }
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.share-links.legacy_unused':
         $orgId = authenticateOrganizer();
         $allLinks = loadShareLinks();
 
@@ -3966,6 +3980,24 @@ switch ($action) {
         exit;
 
     case 'organizer.share-link':
+        // DB-backed forwarder. Validate code shape locally so we don't
+        // hammer the API with junk.
+        $code = $_GET['code'] ?? '';
+        if (!$code || !preg_match('/^[A-Za-z0-9]{6,20}$/', $code)) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Invalid share link code']);
+            exit;
+        }
+        $verb = strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');
+        $method = in_array($verb, ['GET', 'PUT', 'DELETE'], true) ? $verb : 'GET';
+        if (in_array($method, ['PUT', 'DELETE'], true) || $method === 'POST') {
+            $body = file_get_contents('php://input');
+        }
+        $endpoint = '/organizer/share-links/' . urlencode($code);
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.share-link.legacy_unused':
         $orgId = authenticateOrganizer();
         $code = $_GET['code'] ?? '';
 
@@ -4056,7 +4088,26 @@ switch ($action) {
         exit;
 
     case 'share-link.data':
-        // Public endpoint - no auth required
+        // Public DB-backed forwarder. Auth NOT required — the URL code
+        // is the access token. POST body carries the password for
+        // protected links; the Laravel controller handles rate limit
+        // and brute-force lockouts.
+        $code = $_GET['code'] ?? '';
+        if (!$code || !preg_match('/^[A-Za-z0-9]{6,20}$/', $code)) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Invalid code']);
+            exit;
+        }
+        $verb = strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');
+        $method = $verb === 'POST' ? 'POST' : 'GET';
+        if ($method === 'POST') {
+            $body = file_get_contents('php://input');
+        }
+        $endpoint = '/share/' . urlencode($code) . '/data';
+        $requiresAuth = false;
+        break;
+
+    case 'share-link.data.legacy_unused':
         $code = $_GET['code'] ?? '';
 
         if (!$code || !preg_match('/^[A-Za-z0-9]{6,20}$/', $code)) {
@@ -4313,6 +4364,12 @@ $headers = [
     'User-Agent: Ambilet Marketplace/1.0',
     'X-Session-ID: ' . $sessionIdForHeader  // Pass session ID for cart/checkout functionality
 ];
+
+// Forward X-Auto-Refresh through to the upstream (share-link.data uses
+// this to skip the access_count bump on background polls).
+if (!empty($_SERVER['HTTP_X_AUTO_REFRESH'])) {
+    $headers[] = 'X-Auto-Refresh: ' . $_SERVER['HTTP_X_AUTO_REFRESH'];
+}
 
 // Forward Authorization header for authenticated requests
 if ($requiresAuth) {
