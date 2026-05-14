@@ -26,6 +26,8 @@ class MarketplaceTicketTransfer extends Model
         'expires_at',
         'accepted_at',
         'rejected_at',
+        'ip_address',
+        'user_agent',
     ];
 
     protected $casts = [

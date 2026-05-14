@@ -16,6 +16,7 @@ class Ticket extends Model
         'tenant_id',
         'marketplace_client_id',
         'marketplace_customer_id',
+        'current_owner_customer_id',
         'marketplace_event_id',
         'marketplace_ticket_type_id',
         'code',
@@ -54,6 +55,17 @@ class Ticket extends Model
     public function marketplaceTicketType(): BelongsTo
     {
         return $this->belongsTo(MarketplaceTicketType::class);
+    }
+
+    /**
+     * Current owner of the ticket — may differ from the order's customer
+     * after a customer-to-customer transfer. See the migration
+     * 2026_05_14_110000 for the rationale on keeping order ownership
+     * separate from ticket ownership.
+     */
+    public function currentOwnerCustomer(): BelongsTo
+    {
+        return $this->belongsTo(MarketplaceCustomer::class, 'current_owner_customer_id');
     }
 
     public function marketplaceEvent(): BelongsTo
