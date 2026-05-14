@@ -1000,8 +1000,13 @@ class OrdersController extends BaseController
             // Only include orders that have at least one valid ticket
             ->filter(fn($o) => $o->tickets->isNotEmpty());
 
-        $online = $orders->where('source', '!=', 'pos_app');
-        $pos = $orders->where('source', 'pos_app');
+        // POS bucket covers both the in-house POS (organizer team) and venue
+        // owner POS sales. They show up as distinct rows in `by_user` via the
+        // meta.sold_by label ("Venue: {tenant}" for venue-owner sales) so the
+        // organizer can see how much each scanner/venue collected.
+        $posSources = ['pos_app', 'venue_owner_pos'];
+        $online = $orders->whereNotIn('source', $posSources);
+        $pos = $orders->whereIn('source', $posSources);
 
         // Helper: count valid tickets and sum their prices
         $ticketCount = fn($orders) => $orders->sum(fn($o) => $o->tickets->count());

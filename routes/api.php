@@ -2432,6 +2432,8 @@ use App\Http\Controllers\Api\MarketplaceClient\VenueOwner\EventsController as Ve
 use App\Http\Controllers\Api\MarketplaceClient\VenueOwner\AttendeesController as VenueOwnerAttendeesController;
 use App\Http\Controllers\Api\MarketplaceClient\VenueOwner\TicketsController as VenueOwnerTicketsController;
 use App\Http\Controllers\Api\MarketplaceClient\VenueOwner\ScanController as VenueOwnerScanController;
+use App\Http\Controllers\Api\MarketplaceClient\VenueOwner\CheckInController as VenueOwnerCheckInController;
+use App\Http\Controllers\Api\MarketplaceClient\VenueOwner\OrdersController as VenueOwnerOrdersController;
 use App\Http\Controllers\Api\MarketplaceClient\VenueOwner\NotesController as VenueOwnerNotesController;
 use App\Http\Controllers\Api\MarketplaceClient\VenueOwner\ExportController as VenueOwnerExportController;
 
@@ -2470,6 +2472,23 @@ Route::prefix('marketplace-client/venue-owner')->middleware(['throttle:120,1', '
 
         Route::post('/scan', [VenueOwnerScanController::class, 'lookup'])
             ->name('api.marketplace-client.venue-owner.scan');
+
+        // Check-in (validates the ticket — was read-only lookup before).
+        // The venue owner now has the same operational scan capability as the
+        // organizer, but only for events at their partnered venues.
+        Route::post('/check-in', [VenueOwnerCheckInController::class, 'checkInByCode'])
+            ->name('api.marketplace-client.venue-owner.check-in');
+        Route::delete('/check-in/{barcode}', [VenueOwnerCheckInController::class, 'undoCheckIn'])
+            ->where('barcode', '[A-Za-z0-9_-]+')
+            ->name('api.marketplace-client.venue-owner.check-in.undo');
+
+        // POS sales at the venue. Orders land in the ORGANIZER's books with
+        // source='venue_owner_pos' and meta.sold_by='Venue: {tenant}'.
+        Route::get('/events/{event}/ticket-types', [VenueOwnerOrdersController::class, 'ticketTypes'])
+            ->whereNumber('event')
+            ->name('api.marketplace-client.venue-owner.events.ticket-types');
+        Route::post('/orders', [VenueOwnerOrdersController::class, 'create'])
+            ->name('api.marketplace-client.venue-owner.orders.create');
 
         Route::get('/notes', [VenueOwnerNotesController::class, 'index'])
             ->name('api.marketplace-client.venue-owner.notes.index');

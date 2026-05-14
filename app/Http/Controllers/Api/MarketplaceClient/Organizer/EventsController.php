@@ -31,6 +31,17 @@ class EventsController extends BaseController
             ->where('marketplace_client_id', $organizer->marketplace_client_id)
             ->with(['ticketTypes', 'venue', 'marketplaceCity']);
 
+        // Per-event whitelist: when the caller is a non-admin team member and
+        // they have an explicit event whitelist, restrict the list. Empty
+        // whitelist = no restriction (legacy default). Admins always see all.
+        $member = $this->currentTeamMember($request);
+        if ($member && $member->role !== 'admin') {
+            $allowedIds = $member->events()->pluck('events.id')->all();
+            if (!empty($allowedIds)) {
+                $query->whereIn('id', $allowedIds);
+            }
+        }
+
         // Mobile-only flag: hide events that aren't approved yet (drafts,
         // pending review, rejected). The mobile scanner / POS app has nothing
         // operational to do with those, and they confused organizers.
@@ -90,6 +101,15 @@ class EventsController extends BaseController
 
         if (!$event) {
             return $this->error('Event not found', 404);
+        }
+
+        // Non-admin team members can only access events on their whitelist.
+        $member = $this->currentTeamMember($request);
+        if ($member && $member->role !== 'admin') {
+            $allowedIds = $member->events()->pluck('events.id')->all();
+            if (!empty($allowedIds) && !in_array((int) $event->id, $allowedIds, true)) {
+                return $this->error('Event not accessible', 403);
+            }
         }
 
         return $this->success([

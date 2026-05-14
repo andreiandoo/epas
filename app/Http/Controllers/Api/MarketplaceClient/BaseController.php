@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\MarketplaceClient;
 
 use App\Http\Controllers\Controller;
 use App\Models\MarketplaceClient;
+use App\Models\MarketplaceOrganizerTeamMember;
 use App\Support\EmailRouting;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
@@ -277,6 +278,33 @@ abstract class BaseController extends Controller
         }
 
         return $payload;
+    }
+
+    /**
+     * Resolve the team member behind the current Sanctum token, if any.
+     * Token names are minted as `team-member-{id}` for team-member logins
+     * and as `marketplace-organizer-...` for direct organizer logins.
+     * Returns null when the caller is the organizer itself.
+     */
+    protected function currentTeamMember(Request $request): ?MarketplaceOrganizerTeamMember
+    {
+        $user = $request->user();
+        if (!$user) {
+            return null;
+        }
+
+        $token = method_exists($user, 'currentAccessToken') ? $user->currentAccessToken() : null;
+        $tokenName = $token?->name ?? '';
+        if (!str_starts_with($tokenName, 'team-member-')) {
+            return null;
+        }
+
+        $memberId = (int) str_replace('team-member-', '', $tokenName);
+        if ($memberId <= 0) {
+            return null;
+        }
+
+        return MarketplaceOrganizerTeamMember::find($memberId);
     }
 
     /**

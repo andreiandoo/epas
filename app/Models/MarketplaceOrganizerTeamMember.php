@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Support\Str;
 
 class MarketplaceOrganizerTeamMember extends Model
@@ -71,6 +72,21 @@ class MarketplaceOrganizerTeamMember extends Model
     public function organizer(): BelongsTo
     {
         return $this->belongsTo(MarketplaceOrganizer::class, 'marketplace_organizer_id');
+    }
+
+    /**
+     * Per-event whitelist for non-admin members. An empty relation means
+     * "no restriction" — the member sees all events on the organizer.
+     * Admins bypass this entirely at controller layer.
+     */
+    public function events(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            Event::class,
+            'marketplace_organizer_team_member_event',
+            'team_member_id',
+            'event_id'
+        )->withTimestamps();
     }
 
     // =========================================

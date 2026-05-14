@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\MarketplaceClient\Organizer;
 
 use App\Http\Controllers\Api\MarketplaceClient\BaseController;
+use App\Models\Event;
 use App\Models\MarketplaceOrganizer;
 use App\Models\MarketplaceOrganizerTeamMember;
 use Illuminate\Http\Request;
@@ -25,6 +26,7 @@ class TeamController extends BaseController
         }
 
         $members = $organizer->teamMembers()
+            ->with('events:id')
             ->orderByRaw(DB::getDriverName() === 'pgsql'
                 ? "ARRAY_POSITION(ARRAY['admin', 'manager', 'staff'], role)"
                 : "FIELD(role, 'admin', 'manager', 'staff')"
@@ -61,6 +63,10 @@ class TeamController extends BaseController
                 'permissions' => $member->getEffectivePermissions(),
                 'gate_id' => $member->gate_id,
                 'status' => $member->status,
+                // event_ids = [] means "all events" (legacy); a non-empty list
+                // is an explicit whitelist for non-admin members. Admins always
+                // have access to everything regardless of the pivot.
+                'event_ids' => $member->role === 'admin' ? [] : $member->events->pluck('id')->all(),
                 'is_current_user' => false,
                 'invite_sent_at' => $member->invite_sent_at?->toIso8601String(),
                 'accepted_at' => $member->accepted_at?->toIso8601String(),
@@ -99,14 +105,24 @@ class TeamController extends BaseController
         }
 
         $validated = $request->validate([
-            'name' => 'required|string|max:255',
+            'name' => 'nullable|string|max:255',
             'email' => 'required|email|max:255',
             'password' => 'required|string|min:8|max:100',
             'role' => 'required|in:admin,manager,staff',
             'permissions' => 'nullable|array',
             'permissions.*' => 'in:events,orders,reports,team,checkin',
             'gate_id' => 'nullable|integer',
+            'event_ids' => 'nullable|array',
+            'event_ids.*' => 'integer|exists:events,id',
         ]);
+
+        // Name is optional now — fall back to the email's local part so the
+        // member always has *something* to display in lists and emails.
+        $resolvedName = trim((string) ($validated['name'] ?? ''));
+        if ($resolvedName === '') {
+            $emailLocal = strstr($validated['email'], '@', true) ?: $validated['email'];
+            $resolvedName = $emailLocal;
+        }
 
         // Block adding the organizer's own email (would clash with the owner login).
         if ($organizer->email === $validated['email']) {
@@ -139,7 +155,7 @@ class TeamController extends BaseController
 
         $member = MarketplaceOrganizerTeamMember::create([
             'marketplace_organizer_id' => $organizer->id,
-            'name' => $validated['name'],
+            'name' => $resolvedName,
             'email' => $validated['email'],
             'password' => $hashedPassword,
             'role' => $validated['role'],
@@ -148,6 +164,18 @@ class TeamController extends BaseController
             'status' => 'active',
             'accepted_at' => now(),
         ]);
+
+        // Per-event whitelist. Admins always have access to all events
+        // (no filtering applied at query time), so we skip writing the pivot
+        // for them. For manager/staff, an empty array means "all events"
+        // (legacy behavior); a non-empty array restricts access.
+        if ($validated['role'] !== 'admin' && !empty($validated['event_ids'])) {
+            $allowedEventIds = Event::whereIn('id', $validated['event_ids'])
+                ->where('marketplace_organizer_id', $organizer->id)
+                ->pluck('id')
+                ->all();
+            $member->events()->sync($allowedEventIds);
+        }
 
         // Cross-organizer password sync: if the same email exists on other
         // active members within this marketplace, propagate the new password
@@ -167,6 +195,8 @@ class TeamController extends BaseController
             ? 'Membru adaugat. Email-ul cu credențialele a fost trimis.'
             : 'Membru adaugat, dar emailul nu a putut fi trimis. Comunica-i credentialele direct.';
 
+        $member->load('events:id');
+
         return $this->success([
             'member' => [
                 'id' => (string) $member->id,
@@ -176,6 +206,7 @@ class TeamController extends BaseController
                 'permissions' => $member->getEffectivePermissions(),
                 'gate_id' => $member->gate_id,
                 'status' => $member->status,
+                'event_ids' => $member->role === 'admin' ? [] : $member->events->pluck('id')->all(),
             ],
             'email_sent' => $emailSent,
         ], $message);
@@ -198,6 +229,8 @@ class TeamController extends BaseController
             'permissions' => 'nullable|array',
             'permissions.*' => 'in:events,orders,reports,team,checkin',
             'gate_id' => 'nullable|integer',
+            'event_ids' => 'nullable|array',
+            'event_ids.*' => 'integer|exists:events,id',
         ]);
 
         // Can't update owner
@@ -232,6 +265,23 @@ class TeamController extends BaseController
             $member->update($updates);
         }
 
+        // Event whitelist sync — only meaningful for non-admins. If event_ids
+        // is explicitly sent (even as empty array), we treat it as authoritative.
+        if ($request->has('event_ids')) {
+            if ($member->role === 'admin') {
+                // Admins ignore whitelist; clear any stale pivot rows.
+                $member->events()->sync([]);
+            } else {
+                $allowed = Event::whereIn('id', $validated['event_ids'] ?? [])
+                    ->where('marketplace_organizer_id', $organizer->id)
+                    ->pluck('id')
+                    ->all();
+                $member->events()->sync($allowed);
+            }
+        }
+
+        $member->load('events:id');
+
         return $this->success([
             'member' => [
                 'id' => (string) $member->id,
@@ -241,6 +291,7 @@ class TeamController extends BaseController
                 'permissions' => $member->getEffectivePermissions(),
                 'gate_id' => $member->gate_id,
                 'status' => $member->status,
+                'event_ids' => $member->role === 'admin' ? [] : $member->events->pluck('id')->all(),
             ],
         ], 'Membru actualizat cu succes');
     }
