@@ -59,8 +59,15 @@
 
 .sticky-cart { position: sticky; top: 88px; }
 
-/* Mobile ticket drawer */
-@media (max-width: 1023px) {
+/* Mobile ticket drawer — cart hidden only on true mobile (<768px) where
+ * the mobile:block bottom button + slide-up drawer take over. From 768px
+ * upward (tablets, desktop-mode-on-mobile which forces ~980px viewport,
+ * and full desktop) the cart renders inline; below lg (1024px) it
+ * appears stacked under the event details since the column flex
+ * (lg:flex-row) only activates at lg+. Previous max-width:1023px killed
+ * both the cart AND the mobile button in the 769–1023px band, so
+ * desktop-mode-on-mobile users had no way to buy tickets at all. */
+@media (max-width: 767px) {
     .sticky-cart-wrapper { display: none; }
 }
 #ticketDrawerBackdrop {
