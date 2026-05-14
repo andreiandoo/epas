@@ -1534,6 +1534,16 @@ use App\Http\Controllers\Api\MarketplaceClient\Organizer\BillingController as Or
 use App\Http\Controllers\Api\MarketplaceClient\Organizer\DocumentController as OrganizerDocumentController;
 use App\Http\Controllers\Api\MarketplaceClient\Organizer\NotificationController as OrganizerNotificationController;
 use App\Http\Controllers\Api\MarketplaceClient\Organizer\SupportController as OrganizerSupportController;
+use App\Http\Controllers\Api\MarketplaceClient\Organizer\ShareLinkController as OrganizerShareLinkController;
+use App\Http\Controllers\Api\MarketplaceClient\PublicShareLinkController;
+
+// Public share-link data endpoint — no auth, URL code is the access
+// token. POST accepts password body for protected links.
+Route::prefix('marketplace-client/share')->middleware(['throttle:300,1', 'marketplace.auth'])->group(function () {
+    Route::match(['get', 'post'], '/{code}/data', [PublicShareLinkController::class, 'data'])
+        ->where('code', '[A-Za-z0-9]{6,20}')
+        ->name('api.marketplace-client.share.data');
+});
 
 Route::prefix('marketplace-client/organizer')->middleware(['throttle:120,1', 'marketplace.auth'])->group(function () {
     // Public routes (no organizer auth)
@@ -1979,6 +1989,24 @@ Route::prefix('marketplace-client/organizer')->middleware(['throttle:120,1', 'ma
         Route::post('/support/tickets/{id}/reopen', [OrganizerSupportController::class, 'reopen'])
             ->whereNumber('id')
             ->name('api.marketplace-client.organizer.support.tickets.reopen');
+
+        // Share links — DB-backed replacement for the proxy.php JSON file
+        // that kept disappearing across deploys. Scoped to the
+        // authenticated organizer; the public read path is registered
+        // separately above under /marketplace-client/share/{code}/data.
+        Route::get('/share-links', [OrganizerShareLinkController::class, 'index'])
+            ->name('api.marketplace-client.organizer.share-links.index');
+        Route::post('/share-links', [OrganizerShareLinkController::class, 'store'])
+            ->name('api.marketplace-client.organizer.share-links.store');
+        Route::get('/share-links/{code}', [OrganizerShareLinkController::class, 'show'])
+            ->where('code', '[A-Za-z0-9]{6,20}')
+            ->name('api.marketplace-client.organizer.share-links.show');
+        Route::put('/share-links/{code}', [OrganizerShareLinkController::class, 'update'])
+            ->where('code', '[A-Za-z0-9]{6,20}')
+            ->name('api.marketplace-client.organizer.share-links.update');
+        Route::delete('/share-links/{code}', [OrganizerShareLinkController::class, 'destroy'])
+            ->where('code', '[A-Za-z0-9]{6,20}')
+            ->name('api.marketplace-client.organizer.share-links.destroy');
 
         // Billing & Invoices
         Route::get('/invoices', [OrganizerBillingController::class, 'invoices'])
