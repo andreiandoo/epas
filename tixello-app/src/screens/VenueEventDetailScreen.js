@@ -18,6 +18,7 @@ import Svg, { Path, Circle, Rect } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../theme/colors';
 import { getEvent, listAttendees, exportAttendees } from '../api/venueOwner';
+import { useEvent } from '../context/EventContext';
 
 function BackIcon({ size = 22, color }) {
   return (
@@ -119,6 +120,7 @@ function AttendeeRow({ ticket, onPress }) {
 export default function VenueEventDetailScreen({ route, navigation }) {
   const insets = useSafeAreaInsets();
   const { eventId, title } = route.params || {};
+  const { selectEvent } = useEvent();
 
   const [event, setEvent] = useState(null);
   const [tickets, setTickets] = useState([]);
@@ -255,6 +257,23 @@ export default function VenueEventDetailScreen({ route, navigation }) {
 
   const stats = event?.stats || {};
 
+  /**
+   * Push the current venue event into EventContext and jump to a sibling tab
+   * (Scanare = CheckIn or Vânzare = Sales). Those tabs are the organizer
+   * screens reused via the api/client.js path rewriter, so they pick up
+   * selectedEvent and operate on the venue-owner endpoints transparently.
+   */
+  const jumpToTab = (tabName) => {
+    if (!event) return;
+    selectEvent(event);
+    const parent = navigation.getParent?.();
+    if (parent) {
+      parent.navigate(tabName);
+    } else {
+      navigation.navigate(tabName);
+    }
+  };
+
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.topBar}>
@@ -289,6 +308,25 @@ export default function VenueEventDetailScreen({ route, navigation }) {
                 <Path d="M12 3v13m0 0l-4-4m4 4l4-4M4 21h16" strokeLinecap="round" strokeLinejoin="round" />
               </Svg>
               <Text style={styles.exportLabel}>Export CSV</Text>
+            </TouchableOpacity>
+          </View>
+          {/* Action buttons — jump to Scanare / Vânzare tab with this event
+              pre-selected. Operates on /venue-owner/* endpoints via the
+              path rewriter in api/client.js. */}
+          <View style={styles.actionRow}>
+            <TouchableOpacity style={[styles.actionBtn, styles.actionScan]} onPress={() => jumpToTab('CheckIn')} activeOpacity={0.8}>
+              <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={2}>
+                <Path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M7 12h10" strokeLinecap="round" strokeLinejoin="round" />
+              </Svg>
+              <Text style={styles.actionText}>Scanare</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.actionBtn, styles.actionSale]} onPress={() => jumpToTab('Sales')} activeOpacity={0.8}>
+              <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={2}>
+                <Circle cx="9" cy="21" r="1" />
+                <Circle cx="20" cy="21" r="1" />
+                <Path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
+              </Svg>
+              <Text style={styles.actionText}>Vânzare</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -554,6 +592,23 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   exportLabel: { color: '#fff', fontWeight: '700', fontSize: 13 },
+  actionRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 12,
+  },
+  actionBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    borderRadius: 10,
+    gap: 8,
+  },
+  actionScan: { backgroundColor: colors.purple },
+  actionSale: { backgroundColor: colors.green },
+  actionText: { color: '#fff', fontWeight: '700', fontSize: 14, letterSpacing: 0.3 },
   modalBackdrop: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.7)',
