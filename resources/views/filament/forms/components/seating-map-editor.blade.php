@@ -76,6 +76,7 @@
 
     // Load event-level seat statuses (blocked/sold/held) for display
     $eventSeatStatuses = [];
+    $invitationSeatUids = [];
     if ($eventId && $layoutId) {
         $eventSeating = \App\Models\Seating\EventSeatingLayout::where('event_id', $eventId)
             ->where('layout_id', $layoutId)
@@ -86,6 +87,24 @@
                 ->pluck('status', 'seat_uid')
                 ->toArray();
         }
+
+        // Identify which "sold" seats belong to invitation tickets so the
+        // map can render them distinctly from regular paid sales. The
+        // structured seat_uid was backfilled onto invitation tickets'
+        // meta — use that. event_id covers both ticket_type->event and
+        // the direct event_id column on Ticket (invitations are stored
+        // with event_id populated).
+        $invitationSeatUids = \App\Models\Ticket::query()
+            ->where('event_id', $eventId)
+            ->where('meta->is_invitation', true)
+            ->whereIn('status', ['valid', 'used'])
+            ->whereNotNull('meta->seat_uid')
+            ->get()
+            ->pluck('meta.seat_uid')
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
     }
 
     // Build seat info map for blocked seats summary (seat_uid => [section, row, seatLabel])
@@ -117,6 +136,7 @@
     $rowInfoJson = json_encode((object) $rowInfoMap);
     $eventSeatStatusesJson = json_encode((object) $eventSeatStatuses);
     $seatInfoJson = json_encode((object) $seatInfoMap);
+    $invitationSeatUidsJson = json_encode(array_values($invitationSeatUids));
     $firstTTId = !empty($ticketTypesData) ? $ticketTypesData[0]['id'] : 'null';
 @endphp
 
@@ -130,6 +150,9 @@
         RI: {{ $rowInfoJson }},
         ES: {{ $eventSeatStatusesJson }},
         SI: {{ $seatInfoJson }},
+        // Seats whose Ticket has meta.is_invitation=true. Kept as a Set for
+        // O(1) membership checks inside fc() / tooltips.
+        IS: new Set({{ $invitationSeatUidsJson }}),
         imposibilCount: {{ $imposibilCount }},
         totalSeatCount: {{ $totalSeatCount }},
         mode: 'view',
@@ -157,6 +180,10 @@
         fc(uid, rid) {
             if (this.mode === 'block' && this.selSeats.includes(uid)) return '#fbbf24';
             let es = this.ES[uid];
+            // Invitation seats render distinctly from regular paid sales
+            // even though both share status='sold' in event_seats.
+            if (es === 'sold' && this.IS.has(uid)) return '#a78bfa';
+            if (es === 'blocked' && this.IS.has(uid)) return '#a78bfa';
             if (es === 'blocked') return '#dc2626';
             if (es === 'sold') return '#dc2626';
             if (es === 'held') return '#f59e0b';
@@ -296,7 +323,10 @@
                     let info = rid ? this.RI[rid] : null;
                     let es = this.ES[uid];
                     let t = info ? info.section + ' \u2014 ' + (/^Mas/i.test(info.label) ? '' : 'R\u00e2nd ') + info.label + ' \u2014 Loc ' + label : 'Loc ' + label;
-                    if (es === 'blocked') t += '\n\u26d4 Blocat';
+                    let isInv = this.IS.has(uid);
+                    if (es === 'blocked' && isInv) t += '\n\u2709\ufe0f Invita\u021bie';
+                    else if (es === 'sold' && isInv) t += '\n\u2709\ufe0f Invita\u021bie';
+                    else if (es === 'blocked') t += '\n\u26d4 Blocat';
                     else if (es === 'sold') t += '\n\u2714 V\u00e2ndut';
                     else if (es === 'held') t += '\n\u23f3 Re\u021binut';
                     else t += '\n\u2705 Disponibil';
@@ -312,14 +342,16 @@
                 let rid = rg ? rg.dataset.rowId : null;
                 let info = rid ? this.RI[rid] : null;
                 let es = this.ES[uid];
-                if (es === 'blocked') {
+                let isInv = this.IS.has(uid);
+                if (es === 'blocked' && !isInv) {
                     this.tip = '\u26d4 Blocat'; this.tipX = e.clientX + 14; this.tipY = e.clientY - 10; this.showTip = true;
                 } else {
                     let t = info ? info.section + ' \u2014 ' + (/^Mas/i.test(info.label) ? '' : 'R\u00e2nd ') + info.label + ' \u2014 Loc ' + label : 'Loc ' + label;
                     let a = rid ? this.A[rid] : null;
                     if (a && a.length) t += '\n' + a.map(x => x.name).join(', ');
                     else t += '\nNeatribuit';
-                    if (es === 'sold') t += '\n\u2714 V\u00e2ndut';
+                    if (isInv && (es === 'sold' || es === 'blocked')) t += '\n\u2709\ufe0f Invita\u021bie';
+                    else if (es === 'sold') t += '\n\u2714 V\u00e2ndut';
                     else if (es === 'held') t += '\n\u23f3 Re\u021binut';
                     this.tip = t; this.tipX = e.clientX + 14; this.tipY = e.clientY - 10; this.showTip = true;
                 }
@@ -371,10 +403,15 @@
             return { groups: Object.values(groups), total };
         },
         get LC() {
-            let es = Object.values(this.ES);
-            let blocked = es.filter(s => s === 'blocked').length;
-            let sold = es.filter(s => s === 'sold').length;
-            let held = es.filter(s => s === 'held').length;
+            let esKeys = Object.keys(this.ES);
+            let blocked = 0, sold = 0, held = 0, invitation = 0;
+            for (let i = 0; i < esKeys.length; i++) {
+                let uid = esKeys[i], s = this.ES[uid];
+                let isInv = this.IS.has(uid);
+                if (s === 'blocked') { isInv ? invitation++ : blocked++; }
+                else if (s === 'sold') { isInv ? invitation++ : sold++; }
+                else if (s === 'held') held++;
+            }
             let assigned = 0, riKeys = Object.keys(this.RI), assignedRids = new Set();
             for (let k = 0; k < riKeys.length; k++) {
                 let rid = riKeys[k];
@@ -385,7 +422,7 @@
                 let rid = riKeys[k];
                 if (!assignedRids.has(rid)) unassigned += this.RI[rid].seatCount;
             }
-            return { blocked, sold, held, unassigned, imposibil: this.imposibilCount };
+            return { blocked, sold, held, invitation, unassigned, imposibil: this.imposibilCount };
         }
     }"
     x-init="
@@ -706,6 +743,11 @@
             </span>
             <span class="text-gray-400">Blocat</span>
             <span class="text-gray-500" x-text="LC.blocked"></span>
+        </span>
+        <span class="flex items-center gap-1.5 px-2 py-1 rounded-full bg-gray-800 border border-gray-700">
+            <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background:#a78bfa"></span>
+            <span class="text-gray-400">Invitație</span>
+            <span class="text-gray-500" x-text="LC.invitation"></span>
         </span>
         <span x-show="mode==='block'" x-cloak class="flex items-center gap-1.5 px-2 py-1 rounded-full bg-gray-800 border border-gray-700">
             <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background:#fbbf24"></span>
