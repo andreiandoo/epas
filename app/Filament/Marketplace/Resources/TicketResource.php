@@ -182,6 +182,26 @@ class TicketResource extends Resource
                     ->toggleable(),
                 Tables\Columns\TextColumn::make('seat_label')
                     ->label('Loc')
+                    ->getStateUsing(function ($record) {
+                        // Prefer the resolved seat details (section name,
+                        // row label, seat number) so paid tickets show
+                        // "PARTER 2 · Rând 8 · Loc 3" instead of the raw
+                        // seat_uid ("S228-7-16") that was stored at
+                        // checkout time. Invitations already store the
+                        // pretty label directly.
+                        $details = $record->getSeatDetails();
+                        if ($details) {
+                            $parts = array_filter([
+                                $details['section_name'] ?? null,
+                                ($details['row_label'] ?? null) ? 'Rând ' . $details['row_label'] : null,
+                                ($details['seat_number'] ?? null) ? 'Loc ' . $details['seat_number'] : null,
+                            ]);
+                            if (!empty($parts)) {
+                                return implode(' · ', $parts);
+                            }
+                        }
+                        return $record->seat_label;
+                    })
                     ->toggleable(),
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Data achiziție')
