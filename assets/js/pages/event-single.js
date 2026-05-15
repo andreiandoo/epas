@@ -2999,8 +2999,12 @@ const EventPage = {
         // Store the initially selected ticket type (for reference)
         this.currentTicketTypeId = ticketTypeId;
 
-        // Clear ALL previous seat selections
-        this.selectedSeats = {};
+        // Don't wipe existing selections — the cart-restore flow puts
+        // already-picked seats into this.selectedSeats on page mount, and
+        // wiping them here would empty both the right-side list and the
+        // map highlighting the moment the user reopens the picker.
+        // (Originally the clear was here to start fresh — we accomplish
+        // that now via "Resetează selecția" button if/when needed.)
 
         // Reset zoom and pan
         this.mapZoom = 1;
