@@ -5,6 +5,7 @@ namespace App\Filament\Marketplace\Resources;
 use App\Filament\Marketplace\Resources\NewsletterResource\Pages;
 use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 use App\Models\Event;
+use App\Models\MarketplaceCity;
 use App\Models\MarketplaceNewsletter;
 use App\Models\MarketplaceContactList;
 use App\Models\MarketplaceContactTag;
@@ -92,21 +93,68 @@ class NewsletterResource extends Resource
             SC\Section::make('Recipients')
                 ->description('Send to contact lists, tag-filtered customers, or ticket buyers of specific events. Recipients are dedup-ed by email across all sources.')
                 ->schema([
+                    // Oraș filter — purely a UI helper to narrow the events
+                    // list below by city. Not persisted (dehydrated false) —
+                    // the actual recipient targeting still goes through
+                    // target_event_ids, which dedups customer emails across
+                    // any number of selected events in the buildRecipientList
+                    // resolver.
+                    Forms\Components\Select::make('target_city_ids')
+                        ->label('Oraș — filtrează evenimentele')
+                        ->multiple()
+                        ->searchable()
+                        ->preload()
+                        ->dehydrated(false)
+                        ->live(onBlur: true)
+                        ->options(function () use ($marketplace) {
+                            return MarketplaceCity::where('marketplace_client_id', $marketplace?->id)
+                                ->where('is_visible', true)
+                                ->orderBy('sort_order')
+                                ->get()
+                                ->mapWithKeys(function ($city) {
+                                    $name = $city->getTranslation('name', 'ro')
+                                        ?? $city->getTranslation('name', 'en')
+                                        ?? '—';
+                                    $label = $city->event_count
+                                        ? "{$name} ({$city->event_count} evenimente)"
+                                        : $name;
+                                    return [$city->id => $label];
+                                })
+                                ->toArray();
+                        })
+                        ->afterStateUpdated(function (SSet $set) {
+                            // Reset event selection when city filter changes
+                            // — keeping stale events from another city would
+                            // be confusing.
+                            $set('target_event_ids', []);
+                        })
+                        ->helperText('Selectează unul sau mai multe orașe pentru a vedea doar evenimentele de acolo. Lasă gol pentru toate.')
+                        ->columnSpanFull(),
+
                     Forms\Components\Select::make('target_event_ids')
                         ->label('Evenimente — către cumpărătorii biletelor')
                         ->multiple()
                         ->searchable()
                         ->preload(false)
                         ->live(onBlur: true)
-                        ->getSearchResultsUsing(function (string $search) use ($marketplace) {
-                            return Event::where('marketplace_client_id', $marketplace?->id)
-                                ->where(function ($q) use ($search) {
+                        ->getSearchResultsUsing(function (string $search, SGet $get) use ($marketplace) {
+                            $cityIds = $get('target_city_ids') ?? [];
+                            $query = Event::where('marketplace_client_id', $marketplace?->id);
+                            if (!empty($cityIds)) {
+                                $query->whereIn('marketplace_city_id', $cityIds);
+                            }
+                            if ($search !== '') {
+                                $query->where(function ($q) use ($search) {
                                     $q->where('title->ro', 'ilike', "%{$search}%")
                                         ->orWhere('title->en', 'ilike', "%{$search}%")
                                         ->orWhere('slug', 'ilike', "%{$search}%");
-                                })
-                                ->orderByDesc('event_date')
-                                ->limit(30)
+                                });
+                            }
+                            // City picked but no search → show top 30 events
+                            // by date so the admin can pick directly without
+                            // having to start typing.
+                            return $query->orderByDesc('event_date')
+                                ->limit(!empty($cityIds) && $search === '' ? 50 : 30)
                                 ->get()
                                 ->mapWithKeys(fn ($e) => [
                                     $e->id => static::formatEventOption($e),
@@ -121,7 +169,7 @@ class NewsletterResource extends Resource
                                 ])
                                 ->toArray();
                         })
-                        ->helperText('Newsletter va ajunge la toți cumpărătorii cu bilete valide pe evenimentele selectate.')
+                        ->helperText('Newsletter va ajunge la toți cumpărătorii cu bilete valide pe evenimentele selectate (email-uri unice — dacă un client a cumpărat la mai multe, primește un singur email).')
                         ->columnSpanFull(),
 
                     Forms\Components\Select::make('target_lists')
