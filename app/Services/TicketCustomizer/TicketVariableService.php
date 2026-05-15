@@ -3,6 +3,7 @@
 namespace App\Services\TicketCustomizer;
 
 use App\Models\Event;
+use App\Models\Order;
 use App\Models\Tax\GeneralTax;
 use App\Models\Ticket;
 
@@ -80,6 +81,20 @@ class TicketVariableService
                         'description' => 'Venue city',
                         'type' => 'string',
                         'example' => 'Bucharest',
+                    ],
+                    [
+                        'path' => 'venue.program_today',
+                        'label' => 'Program azi (Leisure)',
+                        'description' => 'Orele de funcționare pe data biletului (ex: "09:00 – 19:00"). Calculat din venue_config.seasons + ziua biletului. Empty dacă nu există sezon activ.',
+                        'type' => 'string',
+                        'example' => '09:00 – 19:00',
+                    ],
+                    [
+                        'path' => 'venue.season_label',
+                        'label' => 'Sezon activ (Leisure)',
+                        'description' => 'Numele sezonului în care se află data biletului (ex: "Sezon vară"). Empty dacă nu există sezon configurat pentru data respectivă.',
+                        'type' => 'string',
+                        'example' => 'Sezon vară',
                     ],
                 ],
             ],
@@ -365,6 +380,13 @@ class TicketVariableService
                         'type' => 'currency',
                         'example' => '199.99 EUR',
                     ],
+                    [
+                        'path' => 'order.addon_services',
+                        'label' => 'Servicii extra (Leisure)',
+                        'description' => 'Lista multi-linie cu serviciile extra cumpărate (rental/activity/parking). Format: "🚣 Plimbare cu barca · ×1 · cod: ABC123". Empty dacă nu există add-on-uri.',
+                        'type' => 'text',
+                        'example' => "🚣 Plimbare cu barca · ×1 · cod: WLMVWB2G\n🧺 Coș picnic · ×1 · cod: COSPI-AB2",
+                    ],
                 ],
             ],
 
@@ -519,6 +541,8 @@ class TicketVariableService
                 'name' => 'Arena Națională',
                 'address' => 'Strada Basarabia 37-39, Sector 2',
                 'city' => 'București',
+                'program_today' => '09:00 – 19:00',
+                'season_label' => 'Sezon vară',
             ],
             'date' => [
                 'start' => '2025-07-15',
@@ -563,6 +587,7 @@ class TicketVariableService
                 'code' => 'ORD-2025-789456',
                 'date' => '2025-06-01',
                 'total' => '299.00 EUR',
+                'addon_services' => "🚣 Plimbare cu barca · ×1 · cod: WLMVWB2G\n🧺 Coș picnic · ×1 · cod: COSPI-AB2",
             ],
             'barcode' => 'TKT2025001234',
             'qrcode' => 'https://tickets.example.com/verify/TKT2025001234',
@@ -845,6 +870,14 @@ class TicketVariableService
         $buyerName = $order?->customer_name ?? $ticket->attendee_name ?? '';
         $nameParts = explode(' ', $buyerName, 2);
 
+        // Leisure venue fields (program + season + addon services)
+        $visitDate = $meta['visit_date'] ?? $orderMeta['visit_date'] ?? null;
+        if (!$visitDate && $event) {
+            $visitDate = $event->event_date?->format('Y-m-d');
+        }
+        $leisureProgram = $this->buildLeisureProgramFields($event, $visitDate);
+        $addonServices = $this->buildAddonServicesText($order, $ticket->id);
+
         return [
             'event' => [
                 'name' => $eventTitle,
@@ -856,6 +889,8 @@ class TicketVariableService
                 'name' => $venueName,
                 'address' => $venue?->address ?? $marketplaceEvent?->venue_address ?? '',
                 'city' => $venue?->city ?? $marketplaceEvent?->venue_city ?? '',
+                'program_today' => $leisureProgram['program_today'],
+                'season_label' => $leisureProgram['season_label'],
             ],
             'date' => $dateBlock,
             'ticket' => [
@@ -891,6 +926,7 @@ class TicketVariableService
                 'code' => $order?->order_number ?? '',
                 'date' => $order?->created_at?->format('Y-m-d') ?? '',
                 'total' => $order ? number_format((float) $order->total, 2) . ' ' . $currency : '',
+                'addon_services' => $addonServices,
             ],
             'barcode' => $ticket->barcode ?? $ticket->code ?? '',
             'qrcode' => $ticket->code ?? $ticket->barcode ?? '',
@@ -1073,6 +1109,109 @@ class TicketVariableService
         if (empty($items)) return '';
 
         return '• ' . implode(' • ', $items);
+    }
+
+    /**
+     * Calculează programul orar al locației pe data biletului + numele sezonului.
+     * Citește din event.venue_config.seasons[] cu structura definită în Filament:
+     *   { name, start (MM-DD), end (MM-DD), last_entry,
+     *     schedule_list: [{ day: mon|tue|..., open: 'HH:MM', close: 'HH:MM' }] }
+     *
+     * @param  \App\Models\Event|null  $event
+     * @param  string|null  $visitDate  YYYY-MM-DD
+     * @return array{program_today: string, season_label: string}
+     */
+    private function buildLeisureProgramFields($event, ?string $visitDate): array
+    {
+        $empty = ['program_today' => '', 'season_label' => ''];
+        if (!$event || !$visitDate) return $empty;
+
+        $venueConfig = is_array($event->venue_config ?? null) ? $event->venue_config : [];
+        $seasons = is_array($venueConfig['seasons'] ?? null) ? $venueConfig['seasons'] : [];
+        if (empty($seasons)) return $empty;
+
+        try {
+            $dateObj = \Carbon\Carbon::parse($visitDate);
+        } catch (\Throwable $e) {
+            return $empty;
+        }
+        $mmdd = $dateObj->format('m-d');
+        $dowKey = ['sun','mon','tue','wed','thu','fri','sat'][(int) $dateObj->format('w')];
+
+        // Caut sezonul activ (MM-DD între start și end, cu wrap-around dec→jan)
+        $activeSeason = null;
+        foreach ($seasons as $s) {
+            if (!is_array($s)) continue;
+            $start = $s['start'] ?? '01-01';
+            $end = $s['end'] ?? '12-31';
+            $inSeason = $start <= $end
+                ? ($mmdd >= $start && $mmdd <= $end)
+                : ($mmdd >= $start || $mmdd <= $end);
+            if ($inSeason) {
+                $activeSeason = $s;
+                break;
+            }
+        }
+        if (!$activeSeason) return $empty;
+
+        $seasonLabel = (string) ($activeSeason['name'] ?? '');
+
+        // Program pe ziua respectivă (DOW)
+        $programToday = '';
+        $scheduleList = is_array($activeSeason['schedule_list'] ?? null) ? $activeSeason['schedule_list'] : [];
+        foreach ($scheduleList as $entry) {
+            if (!is_array($entry) || ($entry['day'] ?? null) !== $dowKey) continue;
+            $open = $entry['open'] ?? null;
+            $close = $entry['close'] ?? null;
+            if ($open && $close) {
+                $programToday = $open . ' – ' . $close;
+            } elseif ($open) {
+                $programToday = $open;
+            }
+            break;
+        }
+
+        return ['program_today' => $programToday, 'season_label' => $seasonLabel];
+    }
+
+    /**
+     * Construiește lista multi-linie cu add-on services din comandă.
+     * Exclude tipul de bilet curent (biletul "principal") + categoria 'access'
+     * + serviciile considerate add-on inline (fără propriul tichet emis).
+     *
+     * Format pe linie: "{icon} {nume produs} · ×{qty} · cod: {ticket.code}"
+     * Returnează empty string dacă nu există add-on-uri.
+     */
+    private function buildAddonServicesText(?Order $order, ?int $excludeTicketId = null): string
+    {
+        if (!$order) return '';
+        $items = $order->items()->with(['ticketType', 'tickets'])->get();
+        if ($items->isEmpty()) return '';
+
+        $emojiMap = [
+            'access' => '🎟️', 'parking' => '🅿️', 'rental' => '🛶',
+            'activity' => '🎯', 'extra' => '➕', 'package' => '🎁',
+        ];
+        $lines = [];
+        foreach ($items as $oi) {
+            $tt = $oi->ticketType;
+            $cat = $tt?->service_category ?? ($oi->meta['service_category'] ?? null);
+            // Excludem categoria 'access' (e biletul principal)
+            if ($cat === 'access' || $cat === null) continue;
+            $icon = $emojiMap[$cat] ?? '✨';
+            $name = $oi->name ?: ($tt && $tt->name ? (is_array($tt->name) ? ($tt->name['ro'] ?? reset($tt->name)) : $tt->name) : 'Serviciu');
+            // Lista codurilor biletelor emise pe această linie (DOAR primul, restul implicat de ×qty)
+            $relatedTickets = $oi->tickets ?? collect();
+            $firstCode = '';
+            foreach ($relatedTickets as $rt) {
+                if ($excludeTicketId && $rt->id === $excludeTicketId) continue;
+                $firstCode = $rt->code ?? '';
+                if ($firstCode) break;
+            }
+            $codeFragment = $firstCode ? ' · cod: ' . $firstCode : '';
+            $lines[] = sprintf('%s %s · ×%d%s', $icon, $name, (int) $oi->quantity, $codeFragment);
+        }
+        return implode("\n", $lines);
     }
 
     private function buildSerialNumber(Ticket $ticket): string
