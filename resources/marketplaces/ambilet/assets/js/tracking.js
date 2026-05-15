@@ -274,6 +274,7 @@
             marketplace_event_id: eventId,
             content_id: String(orderId),
             content_type: 'order',
+            order_id: orderId,
             event_value: totalValue,
             currency: currency,
             ...data

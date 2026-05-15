@@ -59,6 +59,9 @@ class MarketplaceTrackingController extends Controller
             'client_event_id' => 'nullable|string|max:128',
             'email' => 'nullable|email|max:255',
             'customer_email' => 'nullable|email|max:255',
+            // Order linkage — frontend passes this on purchase events so
+            // ROAS attribution can join core_customer_events ↔ orders.
+            'order_id' => 'nullable|integer',
         ]);
 
         // Generate or use provided visitor/session IDs
@@ -84,6 +87,16 @@ class MarketplaceTrackingController extends Controller
         // Truncate string fields to fit varchar(255) — fbclid, referrer, page_url can exceed 255 chars
         $t = fn (?string $v, int $max = 255) => $v ? mb_substr($v, 0, $max) : $v;
 
+        // Resolve order_id: prefer explicit payload, fall back to content_id
+        // for purchase events (legacy frontends only sent content_id).
+        $resolvedOrderId = $request->input('order_id');
+        if (!$resolvedOrderId
+            && $request->input('event_type') === 'purchase'
+            && ctype_digit((string) $request->input('content_id'))
+        ) {
+            $resolvedOrderId = (int) $request->input('content_id');
+        }
+
         // Create the tracking event
         $event = CoreCustomerEvent::create([
             'marketplace_event_id' => $request->input('marketplace_event_id'),
@@ -91,6 +104,7 @@ class MarketplaceTrackingController extends Controller
             'visitor_id' => $visitorId,
             'session_id' => $sessionId,
             'event_type' => $t($request->input('event_type')),
+            'order_id' => $resolvedOrderId,
             'event_category' => $t($eventCategory),
             'event_action' => $t($request->input('event_action')),
             'event_label' => $t($request->input('event_label')),
