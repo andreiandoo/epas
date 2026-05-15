@@ -463,11 +463,35 @@ Route::get('/android', function () {
     return redirect()->route('download.android');
 });
 
+// Tixello Sfana APK Download
+Route::get('/download-android-sfana', function () {
+    $path = public_path('downloads/sfana-android.apk');
+    if (!file_exists($path)) {
+        abort(404, 'APK not available yet');
+    }
+    return response()->download($path, 'sfana-android.apk', [
+        'Content-Type' => 'application/vnd.android.package-archive',
+    ]);
+})->name('download.android.sfana');
+
+Route::get('/android-sfana', function () {
+    return redirect()->route('download.android.sfana');
+});
+
 // App version check (used by mobile app to detect updates)
 Route::get('/api/app-version', function () {
     return response()->json([
         'latest_version' => config('app.staff_app_version', '1.0.0'),
         'download_url' => 'https://ambilet.ro/android',
+        'force_update' => false,
+    ]);
+});
+
+// Sfana app version check
+Route::get('/api/app-version-sfana', function () {
+    return response()->json([
+        'latest_version' => config('app.sfana_app_version', '0.1.0'),
+        'download_url' => 'https://ambilet.ro/android-sfana',
         'force_update' => false,
     ]);
 });
