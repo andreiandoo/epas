@@ -823,13 +823,14 @@ class CheckoutController extends BaseController
                         $ticketMeta['has_insurance'] = true;
                         $ticketMeta['insurance_amount'] = $insurancePerTicket;
                     }
-                    if ($perTicketDiscount > 0) {
-                        // Stored per ticket so Ticket::getEffectivePrice()
-                        // can show the exact discounted price on PDFs,
-                        // order pages, and the ticket view — bypasses the
-                        // proportional-across-subtotal fallback for new
-                        // orders, which would be wrong when the coupon
-                        // only covered a subset of the cart.
+                    if ($discount > 0) {
+                        // Always write per-ticket discount when the order
+                        // has any discount — including 0 for ineligible
+                        // tickets in mixed-eligibility carts. The 0
+                        // explicitly tells getEffectivePrice "don't fall
+                        // back to the proportional approximation for this
+                        // ticket", so non-covered tickets display their
+                        // full price instead of an incorrect fraction.
                         $ticketMeta['discount_amount'] = $perTicketDiscount;
                     }
 

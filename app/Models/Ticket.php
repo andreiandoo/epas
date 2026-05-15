@@ -229,9 +229,14 @@ class Ticket extends Model
         $price = (float) ($this->price ?? 0);
         if ($price <= 0) return 0.0;
 
-        // Precise: per-ticket discount written at checkout time.
+        // Precise: per-ticket discount written at checkout time. Use
+        // array_key_exists (not isset+>0) so that an explicit 0 — meaning
+        // "this ticket was in a discounted order but the promo did NOT
+        // cover it" — short-circuits the proportional fallback. Without
+        // this, ineligible tickets in mixed-eligibility carts would fall
+        // through to the legacy fallback and appear falsely discounted.
         $meta = $this->meta ?? [];
-        if (isset($meta['discount_amount']) && (float) $meta['discount_amount'] > 0) {
+        if (array_key_exists('discount_amount', $meta)) {
             return max(0.0, round($price - (float) $meta['discount_amount'], 2));
         }
 

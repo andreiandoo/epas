@@ -193,21 +193,37 @@ class AuditTicketDiscountsCommand extends Command
 
             if ($backfill && $mismatched) {
                 $written = 0;
-                DB::transaction(function () use ($tickets, $allocations, &$written) {
-                    foreach ($tickets as $t) {
-                        $disc = (float) ($allocations[$t->id] ?? 0);
-                        if ($disc <= 0) continue; // not eligible — nothing to write
-                        $meta = $t->meta ?? [];
-                        if (isset($meta['discount_amount'])) continue; // never overwrite
-                        $meta['discount_amount'] = round($disc, 2);
-                        $t->meta = $meta;
-                        $t->saveQuietly();
-                        $written++;
-                    }
-                });
-                $this->info("  ✔ wrote {$written} ticket meta records");
-                $totalWritten++;
-                $totalTicketsWritten += $written;
+                $skippedOrder = false;
+                if (empty($allocations)) {
+                    // Couldn't resolve ANY eligible ticket (promo was
+                    // edited / deleted after sale, or filters no longer
+                    // match anything in this cart). Leave the order
+                    // alone — proportional fallback is the best guess
+                    // we have for what the customer actually saw.
+                    $skippedOrder = true;
+                } else {
+                    DB::transaction(function () use ($tickets, $allocations, &$written) {
+                        foreach ($tickets as $t) {
+                            $meta = $t->meta ?? [];
+                            if (array_key_exists('discount_amount', $meta)) continue; // never overwrite
+                            // Write the allocated discount (0 for ineligible
+                            // tickets) so getEffectivePrice doesn't fall
+                            // through to proportional for them.
+                            $disc = (float) ($allocations[$t->id] ?? 0);
+                            $meta['discount_amount'] = round($disc, 2);
+                            $t->meta = $meta;
+                            $t->saveQuietly();
+                            $written++;
+                        }
+                    });
+                }
+                if ($skippedOrder) {
+                    $this->warn('  ⚠ skipped — eligibility unresolvable (promo edited/deleted since sale)');
+                } else {
+                    $this->info("  ✔ wrote {$written} ticket meta records");
+                    $totalWritten++;
+                    $totalTicketsWritten += $written;
+                }
             } elseif ($mismatched) {
                 $this->warn('  (preview — pass --backfill to persist)');
             }
