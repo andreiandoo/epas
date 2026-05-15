@@ -47,7 +47,8 @@ class AuditTicketDiscountsCommand extends Command
         {--to= : created_at <= date (Y-m-d)}
         {--order= : single order id}
         {--limit=0 : max orders to process (0 = no limit)}
-        {--only-mismatched : show only orders where proposal differs from current}
+        {--only-mismatched : show only orders with material display error (restricted promo or >0.5 RON diff)}
+        {--only-restricted : show only orders where the promo did NOT cover all tickets (true corner case)}
         {--include-done : include orders where every ticket already has meta.discount_amount}
         {--backfill : persist proposed discount_amount onto ticket.meta}';
 
@@ -76,6 +77,7 @@ class AuditTicketDiscountsCommand extends Command
         $limit = (int) $this->option('limit');
         $backfill = (bool) $this->option('backfill');
         $onlyMismatch = (bool) $this->option('only-mismatched');
+        $onlyRestricted = (bool) $this->option('only-restricted');
         $includeDone = (bool) $this->option('include-done');
 
         $totalSeen = 0;
@@ -105,21 +107,29 @@ class AuditTicketDiscountsCommand extends Command
                 eligibleTicketIds: $eligibleTicketIds,
             );
 
-            // Build per-ticket comparison rows + mismatch flag.
+            // Build per-ticket comparison rows. Distinguish two kinds of
+            // discrepancy:
+            //   - "restricted" — the promo did NOT cover all tickets
+            //     (the real corner case the audit was built for; current
+            //     display falsely discounts ineligible tickets).
+            //   - "displayDiff" — at least one ticket's currently-shown
+            //     price differs from proposed by > 0.5 RON. Catches any
+            //     other source of material display error. Tighter
+            //     thresholds (<0.5) just flag the 1-cent rounding noise
+            //     from how the proportional fallback rounds per-ticket
+            //     vs the allocation's last-gets-remainder logic.
             $rows = [];
-            $mismatched = false;
+            $maxDelta = 0.0;
             foreach ($tickets as $t) {
                 $price = (float) $t->price;
                 $proposed = (float) ($allocations[$t->id] ?? 0);
                 $proposedEffective = round(max(0, $price - $proposed), 2);
                 $currentEffective = $t->getEffectivePrice();
+                $delta = abs($currentEffective - $proposedEffective);
+                if ($delta > $maxDelta) $maxDelta = $delta;
                 $source = isset(($t->meta ?? [])['discount_amount'])
                     ? 'meta'
                     : ((float) $order->subtotal > 0 ? 'proportional' : 'raw');
-
-                if (abs($currentEffective - $proposedEffective) > 0.01) {
-                    $mismatched = true;
-                }
 
                 $rows[] = [
                     '#' . $t->id . ' ' . ($t->code ?? ''),
@@ -134,6 +144,15 @@ class AuditTicketDiscountsCommand extends Command
                 ];
             }
 
+            $allCount = $tickets->count();
+            $eligibleCount = count($eligibleTicketIds);
+            $isRestricted = $eligibleCount > 0 && $eligibleCount < $allCount;
+            $bigDisplayDiff = $maxDelta > 0.5;
+            $mismatched = $isRestricted || $bigDisplayDiff;
+
+            if ($onlyRestricted && !$isRestricted) {
+                continue;
+            }
             if ($onlyMismatch && !$mismatched) {
                 continue;
             }
@@ -143,16 +162,20 @@ class AuditTicketDiscountsCommand extends Command
             }
 
             $promo = $order->meta['promo_code'] ?? null;
+            $restrictedTag = $isRestricted ? " [RESTRICTED {$eligibleCount}/{$allCount}]" : '';
+            $diffTag = $bigDisplayDiff ? sprintf(' [Δmax=%.2f]', $maxDelta) : '';
             $this->newLine();
             $this->info(sprintf(
-                'Order #%d %s — subtotal %s, discount %s, total %s — mc=%d %s',
+                'Order #%d %s — subtotal %s, discount %s, total %s — mc=%d %s%s%s',
                 $order->id,
                 $order->order_number ?? '',
                 number_format((float) $order->subtotal, 2),
                 number_format((float) $order->discount_amount, 2),
                 number_format((float) $order->total, 2),
                 (int) $order->marketplace_client_id,
-                $order->created_at?->format('Y-m-d H:i') ?? ''
+                $order->created_at?->format('Y-m-d H:i') ?? '',
+                $restrictedTag,
+                $diffTag
             ));
             if ($promo) {
                 $this->line(sprintf(
