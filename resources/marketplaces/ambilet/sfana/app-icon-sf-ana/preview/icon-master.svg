@@ -1,0 +1,154 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+    <defs>
+        <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%"   stop-color="#0F2C20"/>
+            <stop offset="60%"  stop-color="#1F4E37"/>
+            <stop offset="100%" stop-color="#256142"/>
+        </linearGradient>
+
+        <radialGradient id="moonHalo" cx="0.5" cy="0.5" r="0.5">
+            <stop offset="0%"   stop-color="#FAFBF8" stop-opacity="0.35"/>
+            <stop offset="50%"  stop-color="#FAFBF8" stop-opacity="0.06"/>
+            <stop offset="100%" stop-color="#FAFBF8" stop-opacity="0"/>
+        </radialGradient>
+
+        <linearGradient id="lakeSurface" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%"   stop-color="#22D3EE"/>
+            <stop offset="60%"  stop-color="#06B6D4"/>
+            <stop offset="100%" stop-color="#0E7490"/>
+        </linearGradient>
+
+        <linearGradient id="mountainBack" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%"   stop-color="#3D9663"/>
+            <stop offset="100%" stop-color="#256142"/>
+        </linearGradient>
+
+        <linearGradient id="mountainFront" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%"   stop-color="#256142"/>
+            <stop offset="100%" stop-color="#0F2C20"/>
+        </linearGradient>
+    </defs>
+
+    <!-- ================== Background ================== -->
+    <rect width="1024" height="1024" fill="url(#sky)"/>
+
+    <!-- ================== Moon ================== -->
+    <circle cx="780" cy="240" r="220" fill="url(#moonHalo)"/>
+    <circle cx="780" cy="240" r="80" fill="#FAFBF8"/>
+    <circle cx="800" cy="228" r="9" fill="#E5D8C0" opacity="0.5"/>
+    <circle cx="762" cy="252" r="6" fill="#E5D8C0" opacity="0.45"/>
+    <circle cx="788" cy="268" r="5" fill="#E5D8C0" opacity="0.4"/>
+
+    <!-- ================== A few large stars (fewer, more visible at small sizes) ================== -->
+    <g fill="#FAFBF8">
+        <circle cx="180" cy="180" r="5"/>
+        <circle cx="360" cy="140" r="4"/>
+        <circle cx="520" cy="200" r="4"/>
+        <circle cx="980" cy="180" r="4"/>
+        <circle cx="120" cy="320" r="4"/>
+        <circle cx="280" cy="280" r="3.5"/>
+    </g>
+    <g fill="#A5F3FC" opacity="0.7">
+        <circle cx="440" cy="280" r="3"/>
+        <circle cx="600" cy="340" r="3"/>
+    </g>
+
+    <!-- ================== Back mountain (single subtle range behind) ================== -->
+    <path d="M 0,680
+             L 200,540
+             L 380,620
+             L 560,520
+             L 740,600
+             L 920,540
+             L 1024,580
+             L 1024,720
+             L 0,720 Z"
+          fill="url(#mountainBack)"
+          opacity="0.75"/>
+
+    <!-- One subtle snow cap on the back peak -->
+    <path d="M 540,548 L 560,520 L 580,548 L 568,556 L 558,544 L 548,558 Z" fill="#FAFBF8" opacity="0.55"/>
+
+    <!-- ================== Front mountain — single dominant peak (Ciomatu) ================== -->
+    <!-- Much taller, centered, dominant — fills the icon -->
+    <path d="M 0,720
+             L 120,620
+             L 260,480
+             L 400,320
+             L 512,180
+             L 624,320
+             L 760,440
+             L 880,540
+             L 1024,500
+             L 1024,720
+             L 0,720 Z"
+          fill="url(#mountainFront)"/>
+
+    <!-- Big snow cap on main peak — bold, generous coverage that reads at small sizes -->
+    <path d="M 440,280
+             L 460,240
+             L 478,260
+             L 495,225
+             L 512,180
+             L 529,225
+             L 546,260
+             L 564,240
+             L 584,280
+             L 575,300
+             L 560,288
+             L 545,310
+             L 530,290
+             L 515,318
+             L 500,295
+             L 485,316
+             L 470,292
+             L 455,302 Z"
+          fill="#FAFBF8"/>
+
+    <!-- Right ridge snow (smaller) -->
+    <path d="M 600,360
+             L 612,348
+             L 624,320
+             L 636,348
+             L 648,360
+             L 638,372
+             L 626,358
+             L 614,370 Z"
+          fill="#FAFBF8" opacity="0.95"/>
+
+    <!-- Moonlight highlight on right slope (where the moon faces) -->
+    <path d="M 512,180 L 624,320 L 615,345 L 540,235 Z" fill="#FAFBF8" opacity="0.10"/>
+    <path d="M 624,320 L 760,440 L 750,465 L 640,345 Z" fill="#FAFBF8" opacity="0.08"/>
+
+    <!-- ================== LAKE ================== -->
+    <!-- Bigger, more prominent lake -->
+    <ellipse cx="512" cy="820" rx="440" ry="100" fill="url(#lakeSurface)"/>
+
+    <!-- Far edge of lake (dark seam where lake meets mountain base) -->
+    <ellipse cx="512" cy="722" rx="440" ry="8" fill="#0F2C20" opacity="0.6"/>
+
+    <!-- Moon reflection — bold horizontal streaks -->
+    <ellipse cx="630" cy="780" rx="100" ry="3" fill="#FAFBF8" opacity="0.85"/>
+    <ellipse cx="630" cy="800" rx="150" ry="2.5" fill="#FAFBF8" opacity="0.55"/>
+    <ellipse cx="630" cy="820" rx="120" ry="2" fill="#FAFBF8" opacity="0.4"/>
+    <ellipse cx="630" cy="840" rx="85" ry="1.5" fill="#FAFBF8" opacity="0.25"/>
+
+    <!-- Soft glow under moon reflection -->
+    <ellipse cx="630" cy="810" rx="70" ry="20" fill="#FAFBF8" opacity="0.10"/>
+
+    <!-- ================== Foreground / shoreline ================== -->
+    <path d="M 0,920
+             Q 256,910 512,918
+             Q 768,910 1024,918
+             L 1024,1024
+             L 0,1024 Z"
+          fill="#0F2C20"/>
+
+    <!-- A few prominent pine silhouettes (fewer but larger) -->
+    <g fill="#0F2C20">
+        <path d="M 140,920 L 124,852 L 156,852 Z"/>
+        <path d="M 320,925 L 305,860 L 335,860 Z"/>
+        <path d="M 720,925 L 705,860 L 735,860 Z"/>
+        <path d="M 880,920 L 864,852 L 896,852 Z"/>
+    </g>
+</svg>
