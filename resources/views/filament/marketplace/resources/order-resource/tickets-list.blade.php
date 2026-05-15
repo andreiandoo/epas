@@ -37,9 +37,18 @@
                 </div>
             </div>
             <div class="text-right flex flex-col items-end gap-1">
-                <div class="font-semibold text-gray-900 dark:text-gray-100">
-                    {{ number_format($ticket->price ?? 0, 2) }} {{ $record->currency ?? 'RON' }}
-                </div>
+                @if($ticket->hasDiscount())
+                    <div class="text-xs text-gray-400 dark:text-gray-500 line-through leading-tight">
+                        {{ number_format($ticket->price ?? 0, 2) }} {{ $record->currency ?? 'RON' }}
+                    </div>
+                    <div class="font-semibold text-emerald-600 dark:text-emerald-400">
+                        {{ number_format($ticket->getEffectivePrice(), 2) }} {{ $record->currency ?? 'RON' }}
+                    </div>
+                @else
+                    <div class="font-semibold text-gray-900 dark:text-gray-100">
+                        {{ number_format($ticket->getEffectivePrice(), 2) }} {{ $record->currency ?? 'RON' }}
+                    </div>
+                @endif
                 <span class="px-2 py-0.5 rounded text-xs {{ match($ticket->status) {
                     'valid' => 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300',
                     'pending' => 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300',

@@ -109,7 +109,12 @@
                                 <tr>
                                     <td style="padding: 12px 0; border-bottom: 1px solid #f3f4f6;">
                                         <span style="color: #9ca3af; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">Pret</span><br>
-                                        <span style="color: #181622; font-size: 15px; font-weight: 600;">{{ number_format((float) $ticket->price, 2, ',', '.') }} {{ $ticket->order?->currency ?? 'RON' }}</span>
+                                        @if($ticket->hasDiscount())
+                                            <span style="color: #181622; font-size: 15px; font-weight: 600;">{{ number_format($ticket->getEffectivePrice(), 2, ',', '.') }} {{ $ticket->order?->currency ?? 'RON' }}</span>
+                                            <span style="color: #9ca3af; font-size: 13px; font-weight: 400; text-decoration: line-through; margin-left: 6px;">{{ number_format((float) $ticket->price, 2, ',', '.') }}</span>
+                                        @else
+                                            <span style="color: #181622; font-size: 15px; font-weight: 600;">{{ number_format($ticket->getEffectivePrice(), 2, ',', '.') }} {{ $ticket->order?->currency ?? 'RON' }}</span>
+                                        @endif
                                     </td>
                                 </tr>
                                 @endif

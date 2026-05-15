@@ -165,7 +165,7 @@
             $ticketCode = $ticket->code ?? $ticket->barcode ?? '';
             $attendeeName = $ticket->attendee_name ?? $order->customer_name ?? '';
             $ticketTypeName = $ticket->marketplaceTicketType?->name ?? 'Bilet';
-            $ticketPrice = number_format($ticket->price ?? 0, 2, ',', '.') . ' ' . ($order->currency ?? 'RON');
+            $ticketPrice = number_format($ticket->getEffectivePrice(), 2, ',', '.') . ' ' . ($order->currency ?? 'RON');
             $seatDetails = method_exists($ticket, 'getSeatDetails') ? $ticket->getSeatDetails() : null;
             $verifyUrl = method_exists($ticket, 'getVerifyUrl') ? $ticket->getVerifyUrl() : $ticketCode;
             $ticketSeries = $ticket->meta['ticket_series'] ?? null;

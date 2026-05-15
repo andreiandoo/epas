@@ -202,6 +202,131 @@ class Ticket extends Model
     }
 
     /**
+     * Effective per-ticket price after the order-level discount has been
+     * allocated proportionally across the order's subtotal.
+     *
+     * Why this exists: `tickets.price` stores the per-line price the
+     * customer was quoted BEFORE any order-level promo code or coupon was
+     * applied. The actual amount the customer paid per ticket is lower
+     * when a discount was applied to the whole order. All customer-facing
+     * displays (PDF, ticket view, order detail, ticket email) should call
+     * this method so the printed price matches what was actually paid.
+     *
+     * Internal flows (refund engine, payout calculation, Vânzări /
+     * Participanți CSV exports, accounting) continue to read
+     * `ticket.price` + `order.discount_amount` directly so this helper
+     * has zero impact on financial reporting.
+     *
+     * Allocation: proportional by ticket price. For a 20% off promo on a
+     * 180-RON order with three 60-RON tickets:
+     *   ratio = 36 / 180 = 0.20
+     *   effective_price = 60 * 0.80 = 48 per ticket
+     *
+     * Known limitation: coupons restricted to a subset of ticket types /
+     * events spread the discount across ALL tickets instead of just the
+     * eligible ones — the headline number is still correct overall but
+     * per-ticket display is slightly off in that corner case.
+     */
+    public function getEffectivePrice(): float
+    {
+        $price = (float) ($this->price ?? 0);
+        if ($price <= 0) return 0.0;
+
+        $order = $this->order;
+        if (!$order) return $price;
+
+        $discount = (float) ($order->discount_amount ?? 0);
+        $subtotal = (float) ($order->subtotal ?? 0);
+
+        if ($discount <= 0 || $subtotal <= 0) {
+            return $price;
+        }
+
+        $ratio = min(1.0, $discount / $subtotal);
+        return round($price * (1 - $ratio), 2);
+    }
+
+    /**
+     * Portion of this ticket's quoted price that was covered by the
+     * order-level discount. Equals price - getEffectivePrice() and
+     * returns 0 when no discount applied.
+     */
+    public function getDiscountAmount(): float
+    {
+        return round((float) ($this->price ?? 0) - $this->getEffectivePrice(), 2);
+    }
+
+    /**
+     * True when an order-level discount affects this ticket's displayed
+     * price. Used by views to decide whether to render a strikethrough
+     * on the original price.
+     */
+    public function hasDiscount(): bool
+    {
+        return $this->getDiscountAmount() > 0.01;
+    }
+
+    /**
+     * Per-unit commission charged at sale time, regardless of mode
+     * (on_top or included). Resolution priority mirrors getNetPrice:
+     *   1. order.meta.commission_details[ticket_type].commission_amount / qty
+     *   2. ticket_type.calculateCommission() if available
+     *   3. ticket.price * order.commission_rate / 100
+     * Returns 0 for invitations / tickets without an order.
+     */
+    public function getCommissionPerUnit(): float
+    {
+        $price = (float) ($this->price ?? 0);
+        if ($price <= 0) return 0.0;
+
+        $order = $this->order;
+        if (!$order) return 0.0;
+
+        $meta = is_array($order->meta) ? $order->meta : [];
+        $ticketType = $this->ticketType;
+        $event = $ticketType?->event ?? $order->event ?? null;
+
+        $defaultMode = $event?->commission_mode
+            ?? $event?->marketplaceOrganizer?->default_commission_mode
+            ?? $event?->marketplaceClient?->commission_mode
+            ?? 'included';
+
+        $defaultRate = (float) (
+            $event?->commission_rate
+            ?? $event?->marketplaceOrganizer?->commission_rate
+            ?? $order->commission_rate
+            ?? $event?->tenant?->commission_rate
+            ?? $event?->marketplaceClient?->commission_rate
+            ?? 5
+        );
+
+        // 1. Per-type commission_details written at checkout time.
+        $typeNameRaw = $ticketType?->name ?? $this->marketplaceTicketType?->name ?? '';
+        $typeName = is_array($typeNameRaw)
+            ? ($typeNameRaw['ro'] ?? $typeNameRaw['en'] ?? reset($typeNameRaw) ?: '')
+            : (string) $typeNameRaw;
+        foreach (($meta['commission_details'] ?? []) as $cd) {
+            $cdName = $cd['ticket_type'] ?? '';
+            $cdName = is_array($cdName)
+                ? ($cdName['ro'] ?? $cdName['en'] ?? reset($cdName) ?: '')
+                : (string) $cdName;
+            if ($cdName !== '' && $cdName === $typeName) {
+                $qty = max(1, (int) ($cd['quantity'] ?? 1));
+                return round((float) ($cd['commission_amount'] ?? 0) / $qty, 2);
+            }
+        }
+
+        // 2. Ticket type's own commission settings.
+        if ($ticketType && method_exists($ticketType, 'calculateCommission')) {
+            return round((float) $ticketType->calculateCommission($price, $defaultRate, $defaultMode), 2);
+        }
+
+        // 3. Order-level rate fallback (POS path).
+        $rate = (float) ($order->commission_rate ?? 0);
+        return round($price * $rate / 100, 2);
+    }
+
+    /**
      * Net per-ticket value (organizer's share — price minus included commission).
      *
      * Why this exists: tickets.price stores whatever the customer paid for

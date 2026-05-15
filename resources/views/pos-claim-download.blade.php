@@ -213,7 +213,7 @@
                     <table class="info-table">
                         <tr>
                             <td class="info-label">Suma achitată:</td>
-                            <td class="info-value">{{ number_format($ticket->price ?? (($ticket->ticketType?->price_cents ?? 0) / 100), 2, ',', '.') }} {{ $order->currency ?? 'RON' }}</td>
+                            <td class="info-value">{{ number_format($ticket->getEffectivePrice() ?: (($ticket->ticketType?->price_cents ?? 0) / 100), 2, ',', '.') }} {{ $order->currency ?? 'RON' }}</td>
                         </tr>
                         <tr>
                             <td class="info-label">Încasare:</td>

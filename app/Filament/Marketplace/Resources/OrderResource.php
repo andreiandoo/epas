@@ -795,8 +795,11 @@ class OrderResource extends Resource
             $typeName = is_array($typeNameRaw) ? ($typeNameRaw['ro'] ?? $typeNameRaw['en'] ?? reset($typeNameRaw) ?: 'Bilet') : ($typeNameRaw ?? 'Bilet');
             $code = $ticket->code ?? $ticket->unique_code ?? 'N/A';
             $barcode = $ticket->barcode ?? $code;
-            $priceValue = $ticket->price ?? (($ticket->ticketType?->price_cents ?? 0) / 100);
-            $price = number_format($priceValue, 2);
+            $rawPriceValue = (float) ($ticket->price ?? (($ticket->ticketType?->price_cents ?? 0) / 100));
+            $effectivePrice = $rawPriceValue > 0 ? $ticket->getEffectivePrice() : $rawPriceValue;
+            $hasTicketDiscount = $ticket->hasDiscount();
+            $price = number_format($effectivePrice, 2);
+            $rawPrice = number_format($rawPriceValue, 2);
             $currency = $ticket->marketplaceTicketType?->currency ?? $ticket->ticketType?->currency ?? 'RON';
 
             // Get beneficiary from meta or order
@@ -878,7 +881,12 @@ class OrderResource extends Resource
 
                     <!-- Price and actions -->
                     <div style='display: flex; flex-direction: column; justify-content: space-between; align-items: flex-end; min-width: 120px;'>
-                        <div style='font-size: 16px; font-weight: 700; color: white;'>{$price} {$currency}</div>
+                        " . ($hasTicketDiscount
+                            ? "<div style='display: flex; flex-direction: column; align-items: flex-end;'>
+                                <div style='font-size: 11px; color: #64748B; text-decoration: line-through; line-height: 1.1;'>{$rawPrice} {$currency}</div>
+                                <div style='font-size: 16px; font-weight: 700; color: #34D399;'>{$price} {$currency}</div>
+                              </div>"
+                            : "<div style='font-size: 16px; font-weight: 700; color: white;'>{$price} {$currency}</div>") . "
                         <div style='display: flex; gap: 8px;'>
                             <a href='{$viewUrl}' style='width: 32px; height: 32px; border-radius: 6px; background: #334155; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #94A3B8; text-decoration: none;' title='Vezi bilet'>
                                 <svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor' style='width: 16px; height: 16px;'>

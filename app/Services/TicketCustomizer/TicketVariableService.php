@@ -571,7 +571,7 @@ class TicketVariableService
                 'is_insured' => 'true',
                 'insurance_badge' => "\u{1F6E1}\u{FE0F}",
                 'insurance_label' => 'Bilet asigurat',
-                'price_detail' => 'Preț: 299,00 lei + 5% taxă procesare (313,95 lei)',
+                'price_detail' => 'Preț: 299,00 lei + 14,95 lei taxă procesare (313,95 lei)',
                 'fees_text' => 'Prețul include 5% Timbru Muzical, 2% Taxa de Monument Istoric',
                 'verify_url' => 'https://tickets.example.com/t/WLMVWB2G',
                 'description' => 'Acces VIP cu drink de bun venit și loc rezervat în primele rânduri',
@@ -858,11 +858,18 @@ class TicketVariableService
                 ?? $organizer?->getEffectiveCommissionRate()
                 ?? 5);
         }
-        $ticketPrice = (float) ($ticket->price ?? $ticketType?->display_price ?? 0);
+        // Use the discount-adjusted price for display. getEffectivePrice
+        // returns ticket.price unchanged when no order-level discount was
+        // applied, so this is safe for the (overwhelmingly) common case.
+        $rawTicketPrice = (float) ($ticket->price ?? 0);
+        $ticketPrice = $rawTicketPrice > 0
+            ? $ticket->getEffectivePrice()
+            : (float) ($ticketType?->display_price ?? 0);
+        $commissionPerUnit = $rawTicketPrice > 0 ? $ticket->getCommissionPerUnit() : 0.0;
         $currency = $order?->currency ?? $ticketType?->currency ?? 'RON';
 
         // Build computed fields
-        $priceDetail = $this->buildPriceDetail($ticketPrice, $commissionRate, $commissionMode, $currency);
+        $priceDetail = $this->buildPriceDetail($ticketPrice, $commissionRate, $commissionMode, $currency, $commissionPerUnit);
         $feesText = $this->buildFeesText($event);
         $serial = $this->buildSerialNumber($ticket);
 
@@ -951,18 +958,34 @@ class TicketVariableService
     }
 
     /**
-     * Build the smart price detail text based on commission mode
+     * Build the smart price detail text based on commission mode.
+     *
+     * @param  float  $price  The (possibly discount-adjusted) per-ticket price.
+     * @param  float  $commissionRate  Display rate, used only when no actual
+     *                                 commission amount is available (preview).
+     * @param  string $commissionMode  on_top / added_on_top / included.
+     * @param  string $currency  Order currency code.
+     * @param  float  $commissionPerTicket  Actual per-ticket commission charged
+     *         at sale time. Passed by resolveTicketData(); 0 when unknown
+     *         (preview / template editor) — in which case we fall back to
+     *         rate × price so the preview still renders a plausible number.
      */
-    private function buildPriceDetail(float $price, float $commissionRate, string $commissionMode, string $currency): string
+    private function buildPriceDetail(float $price, float $commissionRate, string $commissionMode, string $currency, float $commissionPerTicket = 0.0): string
     {
         $currencyLabel = strtolower($currency) === 'ron' ? 'lei' : $currency;
         $formattedPrice = number_format($price, 2, ',', '.');
 
         if (in_array($commissionMode, ['added_on_top', 'on_top'])) {
-            $totalWithCommission = $price * (1 + $commissionRate / 100);
+            // Use the commission actually charged at sale time when known
+            // (so the line matches what the customer paid even after a
+            // promo-code discount shrinks the displayed base price).
+            $commission = $commissionPerTicket > 0
+                ? $commissionPerTicket
+                : round($price * $commissionRate / 100, 2);
+            $totalWithCommission = $price + $commission;
             $formattedTotal = number_format($totalWithCommission, 2, ',', '.');
-            $rateFormatted = rtrim(rtrim(number_format($commissionRate, 2), '0'), '.');
-            return "Preț: {$formattedPrice} {$currencyLabel} + {$rateFormatted}% taxă procesare ({$formattedTotal} {$currencyLabel})";
+            $formattedCommission = number_format($commission, 2, ',', '.');
+            return "Preț: {$formattedPrice} {$currencyLabel} + {$formattedCommission} {$currencyLabel} taxă procesare ({$formattedTotal} {$currencyLabel})";
         }
 
         return "Preț: {$formattedPrice} {$currencyLabel} (taxă procesare inclusă)";

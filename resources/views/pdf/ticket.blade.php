@@ -185,7 +185,7 @@
                 @endif
                 <div class="info-row">
                     <div class="info-label">Price</div>
-                    <div class="info-value">{{ number_format(($ticket->ticketType?->price_cents ?? 0) / 100, 2) }} {{ $ticket->ticketType?->currency ?? 'RON' }}</div>
+                    <div class="info-value">{{ number_format($ticket->getEffectivePrice(), 2) }} {{ $ticket->order?->currency ?? $ticket->ticketType?->currency ?? 'RON' }}</div>
                 </div>
                 @if($ticket->order)
                 <div class="info-row">

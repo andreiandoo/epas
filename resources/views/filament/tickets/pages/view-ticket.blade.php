@@ -117,9 +117,21 @@
                     @endif
                     <div>
                         <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Preț</span>
-                        <p class="text-base font-semibold text-gray-900 dark:text-white">
-                            {{ number_format($ticket->price ?? (($ticket->ticketType?->price_cents ?? 0) / 100), 2) }} {{ $ticket->order?->currency ?? $ticket->ticketType?->currency ?? 'RON' }}
-                        </p>
+                        @if($ticket->hasDiscount())
+                            <p class="text-base font-semibold text-emerald-600 dark:text-emerald-400">
+                                {{ number_format($ticket->getEffectivePrice(), 2) }} {{ $ticket->order?->currency ?? $ticket->ticketType?->currency ?? 'RON' }}
+                                <span class="ml-1 text-xs text-gray-400 dark:text-gray-500 line-through font-normal">
+                                    {{ number_format((float) ($ticket->price ?? 0), 2) }}
+                                </span>
+                            </p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                Reducere aplicată: {{ number_format($ticket->getDiscountAmount(), 2) }} {{ $ticket->order?->currency ?? 'RON' }}
+                            </p>
+                        @else
+                            <p class="text-base font-semibold text-gray-900 dark:text-white">
+                                {{ number_format($ticket->getEffectivePrice() ?: (($ticket->ticketType?->price_cents ?? 0) / 100), 2) }} {{ $ticket->order?->currency ?? $ticket->ticketType?->currency ?? 'RON' }}
+                            </p>
+                        @endif
                     </div>
                     <div>
                         <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Creat la</span>
