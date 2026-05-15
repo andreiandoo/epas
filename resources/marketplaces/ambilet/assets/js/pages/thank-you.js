@@ -18,6 +18,34 @@ const ThankYouPage = {
         return this.order.status === 'pending' || this.order.payment_status === 'pending';
     },
 
+    /**
+     * Fire trackPurchase ONCE per successful order load. Uses
+     * "purchase_<orderId>" as the deterministic client_event_id so the
+     * browser pixel firing here dedupes with the server-side Layer C
+     * Purchase event (SendFacebookCapiPurchaseJob uses the same id).
+     */
+    fireTrackPurchase() {
+        try {
+            if (!window.EPASTracking || typeof EPASTracking.trackPurchase !== 'function') return;
+            const order = this.order || {};
+            const orderId = order.id;
+            if (!orderId) return;
+            const eventId = order.marketplace_event_id
+                || order.event_id
+                || (Array.isArray(order.items) && order.items[0]?.marketplace_event_id)
+                || (Array.isArray(order.items) && order.items[0]?.event_id)
+                || null;
+            const total = parseFloat(order.total || order.total_amount || 0);
+            const currency = order.currency || 'RON';
+            EPASTracking.trackPurchase(eventId, orderId, total, currency, {
+                client_event_id: 'purchase_' + orderId,
+                content_name: order.event_name || null,
+            });
+        } catch (e) {
+            // tracking must never break the thank-you page
+        }
+    },
+
     createConfetti() {
         const container = document.getElementById('confetti');
         const colors = ['#A51C30', '#10B981', '#E67E22', '#3B82F6', '#8B5CF6', '#EC4899'];
@@ -69,6 +97,7 @@ const ThankYouPage = {
                 } else {
                     this.createConfetti();
                     this.renderOrderData();
+                    this.fireTrackPurchase();
                 }
             } else {
                 console.warn('Order data not found in response:', response);
