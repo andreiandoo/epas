@@ -821,21 +821,48 @@ class InvitationsController extends BaseController
                     ];
 
                     // Persist structured seat fields so Ticket::getSeatDetails()
-                    // returns them — without this, the Vânzări CSV export and
-                    // the ticket details view show empty Section/Row/Seat
-                    // columns for invitations even though the seats were
-                    // blocked on the map. Note: invite.recipient.seat uses
-                    // {uid, section, row, label} naming; ticket.meta expects
-                    // {seat_uid, section_name, row_label, seat_number}.
+                    // returns them. Source of truth: SeatingSeat / SeatingRow /
+                    // SeatingSection (the same tables the map editor renders
+                    // from). Do NOT trust the section/row/label values stored
+                    // on invite.recipient.seat — those came from the FE at
+                    // /organizator/invitatii and have been observed to send a
+                    // wrong row_label even when the seat_uid was correct
+                    // (tickets 304175/304176 case: seat_uid was S228-4-X but
+                    // recipient.seat.row was sent as "6"). seat_uid is the
+                    // canonical reference; everything else we derive from it.
                     $inviteSeat = is_array($invite->recipient ?? null)
                         ? ($invite->recipient['seat'] ?? null)
                         : null;
-                    if (is_array($inviteSeat)) {
-                        if (!empty($inviteSeat['uid'])) $ticketMeta['seat_uid'] = $inviteSeat['uid'];
-                        if (!empty($inviteSeat['event_seating_id'])) $ticketMeta['event_seating_id'] = (int) $inviteSeat['event_seating_id'];
-                        if (!empty($inviteSeat['section'])) $ticketMeta['section_name'] = $inviteSeat['section'];
-                        if (!empty($inviteSeat['row'])) $ticketMeta['row_label'] = $inviteSeat['row'];
-                        if (!empty($inviteSeat['label'])) $ticketMeta['seat_number'] = $inviteSeat['label'];
+                    $seatUid = is_array($inviteSeat) ? ($inviteSeat['uid'] ?? null) : null;
+                    $canonicalLabel = $invite->seat_ref;
+                    if ($seatUid) {
+                        $ticketMeta['seat_uid'] = $seatUid;
+                        if (!empty($inviteSeat['event_seating_id'])) {
+                            $ticketMeta['event_seating_id'] = (int) $inviteSeat['event_seating_id'];
+                        }
+                        $ss = \App\Models\Seating\SeatingSeat::with(['row.section'])
+                            ->where('seat_uid', $seatUid)
+                            ->first();
+                        if ($ss && $ss->row && $ss->row->section) {
+                            $sectionName = (string) $ss->row->section->name;
+                            $rowLabel = (string) $ss->row->label;
+                            $seatNumber = (string) $ss->label;
+                            $ticketMeta['section_name'] = $sectionName;
+                            $ticketMeta['row_label'] = $rowLabel;
+                            $ticketMeta['seat_number'] = $seatNumber;
+                            // Rebuild the pretty label from canonical values so
+                            // it stays in sync with what CSV / map / Vânzări
+                            // show (also fixes silently-wrong seat_ref strings
+                            // produced by a misbehaving FE).
+                            $parts = array_filter([
+                                $sectionName,
+                                $rowLabel !== '' ? 'Rând ' . $rowLabel : null,
+                                $seatNumber !== '' ? 'Loc ' . $seatNumber : null,
+                            ]);
+                            if (!empty($parts)) {
+                                $canonicalLabel = implode(' · ', $parts);
+                            }
+                        }
                     }
 
                     Ticket::create([
@@ -845,7 +872,7 @@ class InvitationsController extends BaseController
                         'performance_id' => null,
                         'code' => $invite->invite_code,
                         'status' => 'valid',
-                        'seat_label' => $invite->seat_ref,
+                        'seat_label' => $canonicalLabel,
                         'meta' => $ticketMeta,
                     ]);
                 }
