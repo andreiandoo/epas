@@ -119,6 +119,35 @@ class DiagnoseRoasAttributionCommand extends Command
         $this->line("<fg=green>Combined (any signal): " . $this->pct($combinedCount, $total) . " · revenue: " . number_format($combinedRevenue, 2) . "</>");
         $this->line('');
 
+        // If the window has zero orders at all, dump a 12-month
+        // distribution so it's obvious whether the organizer ever sold
+        // anything (wrong filter) vs hasn't sold lately (just empty).
+        if ($total === 0 && ($this->option('organizer') || $this->option('marketplace'))) {
+            $this->warn('Window contains zero paid orders. Wider 12-month distribution:');
+            $allBase = DB::table('orders')
+                ->whereIn('status', ['paid', 'confirmed', 'completed'])
+                ->where('created_at', '>=', now()->subMonths(12));
+            if ($org = $this->option('organizer')) {
+                $allBase->where('marketplace_organizer_id', (int) $org);
+            }
+            if ($mp = $this->option('marketplace')) {
+                $allBase->where('marketplace_client_id', (int) $mp);
+            }
+            $rows = $allBase
+                ->selectRaw("to_char(created_at, 'YYYY-MM') as month, COUNT(*) as c, SUM(total) as rev")
+                ->groupBy('month')
+                ->orderBy('month')
+                ->get();
+            if ($rows->isEmpty()) {
+                $this->line('  No paid orders in the last 12 months either.');
+            } else {
+                foreach ($rows as $r) {
+                    $this->line(sprintf('  %s: %d orders · %s RON', $r->month, $r->c, number_format((float) $r->rev, 2)));
+                }
+            }
+            $this->line('');
+        }
+
         // Quick sample to help see WHY signal 1 is empty if it is
         if ($metaCount === 0 && $total > 0) {
             $sample = (clone $base)->select('id', 'order_number', 'customer_email', 'meta', 'created_at')
