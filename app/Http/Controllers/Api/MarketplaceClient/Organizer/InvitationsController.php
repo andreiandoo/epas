@@ -809,6 +809,35 @@ class InvitationsController extends BaseController
                 // event_id is populated so the participants endpoint and venue
                 // owner attendees query find it without joining through batch.
                 if (!Ticket::where('code', $invite->invite_code)->exists()) {
+                    $ticketMeta = [
+                        'is_invitation' => true,
+                        'invite_batch_id' => $batch->id,
+                        'beneficiary' => [
+                            'name' => $invite->getRecipientName(),
+                            'email' => $invite->getRecipientEmail(),
+                            'phone' => $invite->getRecipientPhone(),
+                            'company' => $invite->getRecipientCompany(),
+                        ],
+                    ];
+
+                    // Persist structured seat fields so Ticket::getSeatDetails()
+                    // returns them — without this, the Vânzări CSV export and
+                    // the ticket details view show empty Section/Row/Seat
+                    // columns for invitations even though the seats were
+                    // blocked on the map. Note: invite.recipient.seat uses
+                    // {uid, section, row, label} naming; ticket.meta expects
+                    // {seat_uid, section_name, row_label, seat_number}.
+                    $inviteSeat = is_array($invite->recipient ?? null)
+                        ? ($invite->recipient['seat'] ?? null)
+                        : null;
+                    if (is_array($inviteSeat)) {
+                        if (!empty($inviteSeat['uid'])) $ticketMeta['seat_uid'] = $inviteSeat['uid'];
+                        if (!empty($inviteSeat['event_seating_id'])) $ticketMeta['event_seating_id'] = (int) $inviteSeat['event_seating_id'];
+                        if (!empty($inviteSeat['section'])) $ticketMeta['section_name'] = $inviteSeat['section'];
+                        if (!empty($inviteSeat['row'])) $ticketMeta['row_label'] = $inviteSeat['row'];
+                        if (!empty($inviteSeat['label'])) $ticketMeta['seat_number'] = $inviteSeat['label'];
+                    }
+
                     Ticket::create([
                         'order_id' => null,
                         'event_id' => $event->id,
@@ -817,16 +846,7 @@ class InvitationsController extends BaseController
                         'code' => $invite->invite_code,
                         'status' => 'valid',
                         'seat_label' => $invite->seat_ref,
-                        'meta' => [
-                            'is_invitation' => true,
-                            'invite_batch_id' => $batch->id,
-                            'beneficiary' => [
-                                'name' => $invite->getRecipientName(),
-                                'email' => $invite->getRecipientEmail(),
-                                'phone' => $invite->getRecipientPhone(),
-                                'company' => $invite->getRecipientCompany(),
-                            ],
-                        ],
+                        'meta' => $ticketMeta,
                     ]);
                 }
 
