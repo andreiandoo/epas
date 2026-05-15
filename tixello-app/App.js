@@ -8,7 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useKeepAwake } from 'expo-keep-awake';
 import Svg, { Rect, Path, Circle } from 'react-native-svg';
 
-const APP_VERSION = '1.5.5';
+const APP_VERSION = '1.5.6';
 
 import ErrorBoundary from './src/components/ErrorBoundary';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
@@ -324,6 +324,130 @@ function VenueOwnerEventsStack() {
   );
 }
 
+/**
+ * Compact header shown above the Scanare and Vânzare tabs for venue owner.
+ * Surfaces the event name, date+time and organizer name so the operator
+ * always knows what they're scanning / selling for. Reads selectedEvent
+ * from EventContext — set either by tapping an event in VenueEventDetail
+ * or by tapping the in-screen Scanare/Vânzare action buttons.
+ */
+function VenueOwnerEventHeader() {
+  const insets = useSafeAreaInsets();
+  const { selectedEvent } = useEvent();
+
+  if (!selectedEvent) {
+    return (
+      <View style={[venueHeaderStyles.wrap, { paddingTop: insets.top + 8 }]}>
+        <Text style={venueHeaderStyles.empty}>Selectează un eveniment din tab-ul Evenimente</Text>
+      </View>
+    );
+  }
+
+  const name = selectedEvent.name || selectedEvent.title || 'Eveniment';
+  const organizerName =
+    selectedEvent.marketplace_organizer?.name
+    || selectedEvent.organizer?.name
+    || null;
+
+  // Format date + time from either `starts_at` (ISO) or
+  // start_date + start_time (legacy venue-owner shape).
+  let dateLabel = '';
+  if (selectedEvent.starts_at) {
+    try {
+      const d = new Date(selectedEvent.starts_at);
+      if (!isNaN(d.getTime())) {
+        const day = String(d.getDate()).padStart(2, '0');
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const year = d.getFullYear();
+        const hh = String(d.getHours()).padStart(2, '0');
+        const mm = String(d.getMinutes()).padStart(2, '0');
+        dateLabel = `${day}.${month}.${year} · ${hh}:${mm}`;
+      }
+    } catch { /* fall through */ }
+  }
+  if (!dateLabel && selectedEvent.start_date) {
+    try {
+      const d = new Date(selectedEvent.start_date);
+      const day = String(d.getDate()).padStart(2, '0');
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const year = d.getFullYear();
+      dateLabel = `${day}.${month}.${year}`;
+      if (selectedEvent.start_time) {
+        dateLabel += ` · ${String(selectedEvent.start_time).slice(0, 5)}`;
+      }
+    } catch { /* fall through */ }
+  }
+
+  return (
+    <View style={[venueHeaderStyles.wrap, { paddingTop: insets.top + 8 }]}>
+      <Text style={venueHeaderStyles.eventName} numberOfLines={1}>{name}</Text>
+      <View style={venueHeaderStyles.metaRow}>
+        {dateLabel ? (
+          <Text style={venueHeaderStyles.metaText} numberOfLines={1}>{dateLabel}</Text>
+        ) : null}
+        {organizerName ? (
+          <Text style={venueHeaderStyles.organizerText} numberOfLines={1}>{organizerName}</Text>
+        ) : null}
+      </View>
+    </View>
+  );
+}
+
+function VenueOwnerCheckInTab(props) {
+  return (
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
+      <VenueOwnerEventHeader />
+      <CheckInScreen {...props} />
+    </View>
+  );
+}
+
+function VenueOwnerSalesTab(props) {
+  return (
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
+      <VenueOwnerEventHeader />
+      <SalesScreen {...props} />
+    </View>
+  );
+}
+
+const venueHeaderStyles = StyleSheet.create({
+  wrap: {
+    backgroundColor: colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    paddingHorizontal: 16,
+    paddingBottom: 10,
+  },
+  eventName: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: colors.textPrimary,
+  },
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 4,
+  },
+  metaText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.purple,
+    letterSpacing: 0.3,
+  },
+  organizerText: {
+    fontSize: 12,
+    color: colors.textSecondary,
+  },
+  empty: {
+    fontSize: 13,
+    color: colors.textTertiary,
+    textAlign: 'center',
+  },
+});
+
 function VenueOwnerTabs() {
   useKeepAwake();
   const insets = useSafeAreaInsets();
@@ -375,8 +499,8 @@ function VenueOwnerTabs() {
           component={VenueOwnerEventsStack}
           options={{ tabBarLabel: 'Evenimente' }}
         />
-        <Tab.Screen name="CheckIn" component={CheckInScreen} options={{ tabBarLabel: 'Scanare' }} />
-        <Tab.Screen name="Sales" component={SalesScreen} options={{ tabBarLabel: 'Vânzare' }} />
+        <Tab.Screen name="CheckIn" component={VenueOwnerCheckInTab} options={{ tabBarLabel: 'Scanare' }} />
+        <Tab.Screen name="Sales" component={VenueOwnerSalesTab} options={{ tabBarLabel: 'Vânzare' }} />
         <Tab.Screen name="Settings" options={{ tabBarLabel: 'Setări' }}>
           {(props) => <SettingsScreen {...props} appVersion={APP_VERSION} />}
         </Tab.Screen>

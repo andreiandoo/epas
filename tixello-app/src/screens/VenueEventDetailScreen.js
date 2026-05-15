@@ -93,6 +93,13 @@ function AttendeeRow({ ticket, onPress }) {
         .filter(Boolean).join(' · ')
     : null;
 
+  // Check-in stamps the ticket with `checked_in_at` but the API still
+  // returns status='valid' (lifecycle convention). Surface a distinct
+  // "Checked-in" pill so the operator sees who already walked in.
+  const isCheckedIn = !!ticket.checked_in_at;
+  const displayStatus = isCheckedIn ? 'Checked-in' : statusLabel(ticket.status);
+  const displayColor = isCheckedIn ? colors.green : statusColor(ticket.status);
+
   return (
     <TouchableOpacity style={styles.row} onPress={onPress} activeOpacity={0.7}>
       <View style={{ flex: 1 }}>
@@ -101,8 +108,8 @@ function AttendeeRow({ ticket, onPress }) {
             {ticket.has_notes && <NoteIcon />}
             <Text style={styles.rowName} numberOfLines={1}>{customerName}</Text>
           </View>
-          <Text style={[styles.rowStatus, { color: statusColor(ticket.status) }]}>
-            {statusLabel(ticket.status)}
+          <Text style={[styles.rowStatus, { color: displayColor }]}>
+            {displayStatus}
           </Text>
         </View>
         <Text style={styles.rowMeta} numberOfLines={1}>
@@ -144,9 +151,19 @@ export default function VenueEventDetailScreen({ route, navigation }) {
   const fetchEvent = useCallback(async () => {
     try {
       const data = await getEvent(eventId);
-      if (data?.success) setEvent(data.data?.event || null);
+      if (data?.success) {
+        const fetched = data.data?.event || null;
+        setEvent(fetched);
+        // Push the freshly-loaded event into EventContext so that tapping
+        // the Scanare / Vânzare bottom tabs directly (without using the
+        // in-screen action buttons) still operates on this event, not the
+        // last one the user explicitly selected.
+        if (fetched) {
+          selectEvent(fetched);
+        }
+      }
     } catch (e) {}
-  }, [eventId]);
+  }, [eventId, selectEvent]);
 
   const fetchAttendees = useCallback(async ({ query = search, nextPage = 1, append = false } = {}) => {
     try {
