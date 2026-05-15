@@ -1164,7 +1164,9 @@ const EventPage = {
         // Ticket types (skip for ended events)
         if (!this.eventEnded) {
             this.ticketTypes = e.ticket_types || this.getDefaultTicketTypes();
+            this.restoreSelectionFromCart();
             this.renderTicketTypes();
+            this.renderCartSeatBanner();
         }
 
         // Ticket terms
@@ -4450,6 +4452,108 @@ const EventPage = {
 
         // Redirect to cart page (only after seats are successfully held)
         window.location.href = '/cos';
+    },
+
+    /**
+     * Read the cart for this event and re-hydrate this.quantities and
+     * this.selectedSeats. Without this the page mounts with everything
+     * at zero even though the cart icon shows N items — when the user
+     * clicks back from /checkout / /cos they need to see what they
+     * already had picked, otherwise they may try to re-pick and end up
+     * with an inconsistent cart.
+     */
+    restoreSelectionFromCart() {
+        if (!this.event || !this.event.id || typeof AmbiletCart === 'undefined') return;
+
+        var eventId = this.event.id;
+        var items = AmbiletCart.getItems();
+        var self = this;
+        items.forEach(function(item) {
+            if (item.eventId !== eventId) return;
+            var ttId = item.ticketTypeId;
+            if (!ttId) return;
+            // Quantity always restores
+            self.quantities[ttId] = item.quantity || 0;
+            // Seats restore only when the cart item carries them
+            if (Array.isArray(item.seats) && item.seats.length > 0) {
+                self.selectedSeats[ttId] = item.seats.map(function(s) {
+                    return {
+                        id: s.id || s.seat_uid,
+                        seat_uid: s.seat_uid,
+                        section: s.section || s.section_name,
+                        row: s.row || s.row_label,
+                        seat: s.seat || s.seat_label,
+                    };
+                });
+            }
+        });
+        console.log('[EventPage] Restored from cart:', { quantities: this.quantities, selectedSeats: this.selectedSeats });
+    },
+
+    /**
+     * Render an inline banner at the top of the ticket area listing
+     * the seats currently held for this event. Lets the customer SEE
+     * what they had picked before clicking back on the browser. Hidden
+     * when there's nothing to show.
+     */
+    renderCartSeatBanner() {
+        var container = document.getElementById('cart-seat-banner');
+        if (!container) {
+            // Inject the container once if the template doesn't include it
+            var anchor = document.getElementById('ticket-types-container')
+                || document.querySelector('[data-ticket-types]');
+            if (!anchor) return;
+            container = document.createElement('div');
+            container.id = 'cart-seat-banner';
+            anchor.parentNode.insertBefore(container, anchor);
+        }
+
+        if (!this.event || !this.event.id || typeof AmbiletCart === 'undefined') {
+            container.innerHTML = '';
+            return;
+        }
+
+        var eventId = this.event.id;
+        var items = AmbiletCart.getItems().filter(function(item) {
+            return item.eventId === eventId
+                && Array.isArray(item.seats)
+                && item.seats.length > 0;
+        });
+
+        if (items.length === 0) {
+            container.innerHTML = '';
+            return;
+        }
+
+        var seatRows = items.map(function(item) {
+            var ttName = (item.ticketType && item.ticketType.name) || 'Bilet';
+            var seatList = item.seats.map(function(s) {
+                var section = s.section || s.section_name || '';
+                var row = s.row || s.row_label || '';
+                var seat = s.seat || s.seat_label || '';
+                return [section, row ? 'R' + row : '', seat ? 'L' + seat : ''].filter(Boolean).join(' · ');
+            }).join('<br>');
+            return ''
+                + '<div style="margin-bottom:8px;">'
+                +   '<div style="font-weight:600;color:#0f172a;">' + ttName + ' (' + item.seats.length + ')</div>'
+                +   '<div style="font-size:13px;color:#475569;line-height:1.5;">' + seatList + '</div>'
+                + '</div>';
+        }).join('');
+
+        container.innerHTML = ''
+            + '<div style="margin:0 0 16px;padding:14px 16px;background:#ecfdf5;border:1px solid #a7f3d0;border-radius:12px;">'
+            +   '<div style="display:flex;align-items:flex-start;gap:10px;">'
+            +     '<svg style="width:20px;height:20px;color:#059669;flex-shrink:0;margin-top:2px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>'
+            +     '<div style="flex:1;">'
+            +       '<div style="font-weight:700;color:#065f46;margin-bottom:6px;">Ai locuri rezervate în coș</div>'
+            +       seatRows
+            +       '<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">'
+            +         '<a href="/checkout" style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;font-size:13px;font-weight:600;color:#fff;background:#059669;border-radius:8px;text-decoration:none;">Continuă plata</a>'
+            +         '<a href="/cos" style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;font-size:13px;font-weight:600;color:#065f46;background:#fff;border:1px solid #a7f3d0;border-radius:8px;text-decoration:none;">Vezi coșul</a>'
+            +       '</div>'
+            +     '</div>'
+            +   '</div>'
+            + '</div>';
     },
 
     /**

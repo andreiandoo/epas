@@ -346,10 +346,24 @@ const CartPage = {
         const items = AmbiletCart.getItems();
         if (!items[index]) return;
 
-        const currentQty = items[index].quantity;
+        const item = items[index];
+
+        // For seated cart items quantity is bound to the picked seats —
+        // bumping qty without picking more seats produced ghost tickets
+        // with no seat_uid on the checkout. Force the user back to the
+        // event page where they can re-open the seat picker.
+        const hasHeldSeats = Array.isArray(item.seat_uids) && item.seat_uids.length > 0;
+        if (hasHeldSeats) {
+            if (typeof AmbiletNotifications !== 'undefined') {
+                AmbiletNotifications.warning('Pentru bilete cu locuri specifice, schimbă cantitatea din pagina evenimentului — alege/elimină locurile pe hartă.');
+            }
+            return;
+        }
+
+        const currentQty = item.quantity;
         let newQty = currentQty + delta;
-        const minQty = items[index].ticketType?.min_per_order || items[index].min_per_order || 1;
-        const maxQty = items[index].ticketType?.max_per_order || items[index].max_per_order || items[index].max_quantity || 10;
+        const minQty = item.ticketType?.min_per_order || item.min_per_order || 1;
+        const maxQty = item.ticketType?.max_per_order || item.max_per_order || item.max_quantity || 10;
 
         if (delta > 0 && newQty > maxQty) {
             if (typeof AmbiletNotifications !== 'undefined') {

@@ -386,6 +386,41 @@ class CheckoutController extends BaseController
                     $totalOnTopCommission += $itemCommission;
                 }
 
+                // Seat-consistency safety net. For seated events the cart
+                // item MUST carry exactly as many seat_uids as the quantity
+                // — otherwise the ticket-creation loop below silently emits
+                // tickets with no seat metadata (no row/seat, not blocked
+                // on the map). This protected one observed case where a
+                // customer ended up with 3 paid tickets and zero seats
+                // because a front-end edge case stripped seat_uids while
+                // leaving quantity intact. Reject the whole checkout so
+                // they go back and re-pick instead of paying for blanks.
+                $itemSeatUids = $item['seat_uids'] ?? [];
+                $hasSeatedTicketType = ($ticketType && method_exists($ticketType, 'getAttribute') && $ticketType->getAttribute('has_seating'))
+                    || ($mktTicketType && method_exists($mktTicketType, 'getAttribute') && $mktTicketType->getAttribute('has_seating'));
+                if (!empty($item['event_seating_id']) || $hasSeatedTicketType || !empty($itemSeatUids)) {
+                    if (count($itemSeatUids) !== (int) $quantity) {
+                        Log::channel('marketplace')->warning('Checkout: seat/quantity mismatch on seated item', [
+                            'client_id' => $client->id,
+                            'event_id' => $event?->id ?? $marketplaceEvent?->id,
+                            'ticket_type_id' => $ticketType?->id ?? $mktTicketType?->id,
+                            'quantity' => $quantity,
+                            'seat_uids_count' => count($itemSeatUids),
+                            'event_seating_id' => $item['event_seating_id'] ?? null,
+                        ]);
+                        return $this->error(
+                            'Numărul de bilete nu corespunde cu locurile alese pentru ' . ($ticketType?->name ?? $mktTicketType?->name ?? 'unul dintre tipurile de bilete') . '. Te rugăm să te întorci pe pagina evenimentului și să alegi din nou locurile.',
+                            422,
+                            [
+                                'code' => 'seat_quantity_mismatch',
+                                'ticket_type_id' => $ticketType?->id ?? $mktTicketType?->id,
+                                'expected_seats' => (int) $quantity,
+                                'received_seats' => count($itemSeatUids),
+                            ]
+                        );
+                    }
+                }
+
                 $processedItems[] = [
                     'event' => $event,
                     'marketplace_event' => $marketplaceEvent,
