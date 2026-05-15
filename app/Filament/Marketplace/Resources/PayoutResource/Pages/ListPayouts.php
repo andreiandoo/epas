@@ -1278,247 +1278,149 @@ class ListPayouts extends ListRecords
     }
 
     /**
-     * Render detailed event breakdown HTML for the manual decont modal
+     * Render detailed event breakdown HTML for the manual decont modal.
+     *
+     * Uses SalesBreakdownService + calculateEventFinancials as the single
+     * source of truth so the numbers shown here match (a) the modal
+     * header "Sold disponibil", (b) the event "Vânzări" tab, and (c) the
+     * payout detail page. The previous implementation re-derived every
+     * value from Order::sum('total') with its own commission math and
+     * routinely disagreed with the rest of the system — see the audit
+     * thread for the specific bugs (wrong on_top base extraction, double-
+     * counting cancelled tickets, missing discount/extras lines, etc.).
      */
     protected function renderEventBreakdown(Event $event): string
     {
         $organizer = $event->marketplaceOrganizer;
         if (!$organizer) return '';
 
-        $commissionMode = $event->getEffectiveCommissionMode();
-        $commissionRate = $event->getEffectiveCommissionRate();
-        $commissionModeLabel = $commissionMode === 'added_on_top' ? 'Adăugat peste preț' : 'Inclus în preț';
+        // Authoritative numbers (same call used by the modal header)
+        $financials = self::calculateEventFinancials($event);
 
-        // Completed orders — match by event_id OR marketplace_event_id
-        // Include orders with or without marketplace_organizer_id (migrated may lack it)
-        $completedOrders = Order::where(function ($q) use ($event) {
-                $q->where('event_id', $event->id)
-                  ->orWhere('marketplace_event_id', $event->id);
-            })
-            ->whereIn('status', ['paid', 'confirmed', 'completed'])
-            ->where('source', '!=', 'test_order')
-            ->with(['items.ticketType'])
-            ->get();
+        // Per-ticket-type breakdown — same service the Vânzări tab uses,
+        // so the per-row figures match what the organizer sees on the
+        // event edit page.
+        $breakdown = app(\App\Services\Marketplace\SalesBreakdownService::class)
+            ->build($event, null, null, excludePos: true);
 
-        // Refunded orders
-        $refundedOrders = Order::where(function ($q) use ($event) {
-                $q->where('event_id', $event->id)
-                  ->orWhere('marketplace_event_id', $event->id);
+        $perType = $breakdown['per_type'] ?? [];
+        $totalRevenue = (float) ($breakdown['total_revenue'] ?? 0);
+        $totalCommission = (float) ($breakdown['total_commission'] ?? 0);
+        $totalDiscount = (float) ($breakdown['total_discount'] ?? 0);
+        $totalExtras = (float) ($breakdown['total_extras'] ?? 0);
+        $totalNet = (float) ($breakdown['total_net'] ?? 0);
+
+        $totalTicketsSold = array_sum(array_map(fn ($r) => (int) ($r['qty'] ?? 0), $perType));
+        $hasDiscountAny = array_sum(array_map(fn ($r) => (float) ($r['discount'] ?? 0), $perType)) > 0.01;
+        $hasExtrasAny = array_sum(array_map(fn ($r) => (float) ($r['extras'] ?? 0), $perType)) > 0.01;
+
+        $totalRefundedAmount = (float) $financials['refunds'];
+        $totalRefundedCount = (int) Order::where(function ($q) use ($event) {
+                $q->where('event_id', $event->id)->orWhere('marketplace_event_id', $event->id);
             })
             ->where('status', 'refunded')
-            ->get();
-
-        $totalRefundedAmount = (float) $refundedOrders->sum(fn ($o) => $o->refund_amount ?: $o->total);
-        $totalRefundedCount = $refundedOrders->count();
-
-        // Ticket type breakdown with per-ticket commission info
-        $ticketBreakdown = [];
-        $totalTicketsSold = 0;
-
-        // Also load ticket types for the event (for commission info fallback)
-        $eventTicketTypes = $event->ticketTypes()->get()->keyBy('id');
-
-        foreach ($completedOrders as $order) {
-            if ($order->items->isNotEmpty()) {
-                foreach ($order->items as $item) {
-                    $tt = $item->ticketType ?? ($item->ticket_type_id ? $eventTicketTypes->get($item->ticket_type_id) : null);
-                    $name = $item->name ?? $tt?->name ?? 'Bilet';
-
-                    if (!isset($ticketBreakdown[$name])) {
-                        $ticketBreakdown[$name] = [
-                            'quantity' => 0,
-                            'total' => 0,
-                            'unit_price' => (float) $item->unit_price,
-                            'commission_type' => $tt?->commission_type,
-                            'commission_rate' => $tt?->commission_rate,
-                            'commission_fixed' => $tt?->commission_fixed,
-                            'commission_mode' => $tt?->commission_mode,
-                            'ticket_type_id' => $tt?->id,
-                        ];
-                    }
-                    $ticketBreakdown[$name]['quantity'] += $item->quantity;
-                    $ticketBreakdown[$name]['total'] += (float) $item->total;
-                    $totalTicketsSold += $item->quantity;
-                }
-            } else {
-                // Orders without items (migrated) — try to match ticket records
-                $orderTickets = \App\Models\Ticket::where('order_id', $order->id)->get();
-                if ($orderTickets->isNotEmpty()) {
-                    foreach ($orderTickets->groupBy('ticket_type_id') as $ttId => $tickets) {
-                        $tt = $eventTicketTypes->get($ttId);
-                        $name = $tt?->name ?? 'Bilet #' . $ttId;
-                        $qty = $tickets->count();
-                        $unitPrice = (float) ($tickets->first()->price ?? ($order->total / max(1, $orderTickets->count())));
-
-                        if (!isset($ticketBreakdown[$name])) {
-                            $ticketBreakdown[$name] = [
-                                'quantity' => 0,
-                                'total' => 0,
-                                'unit_price' => $unitPrice,
-                                'commission_type' => $tt?->commission_type,
-                                'commission_rate' => $tt?->commission_rate,
-                                'commission_fixed' => $tt?->commission_fixed,
-                                'commission_mode' => $tt?->commission_mode,
-                                'ticket_type_id' => $tt?->id,
-                            ];
-                        }
-                        $ticketBreakdown[$name]['quantity'] += $qty;
-                        $ticketBreakdown[$name]['total'] += $unitPrice * $qty;
-                        $totalTicketsSold += $qty;
-                    }
-                } else {
-                    // No items, no tickets — fallback
-                    $name = 'Bilet (fără detalii)';
-                    if (!isset($ticketBreakdown[$name])) {
-                        $ticketBreakdown[$name] = [
-                            'quantity' => 0, 'total' => 0, 'unit_price' => (float) $order->total,
-                            'commission_type' => null, 'commission_rate' => null,
-                            'commission_fixed' => null, 'commission_mode' => null,
-                            'ticket_type_id' => null,
-                        ];
-                    }
-                    $ticketBreakdown[$name]['quantity'] += 1;
-                    $ticketBreakdown[$name]['total'] += (float) $order->total;
-                    $totalTicketsSold += 1;
-                }
-            }
-        }
-
-        // Also count actual ticket records as fallback
-        $ticketRecordCount = \App\Models\Ticket::whereHas('ticketType', fn ($q) => $q->where('event_id', $event->id))
-            ->whereIn('status', ['valid', 'used'])
+            ->where('source', '!=', 'pos_app')
             ->count();
-        if ($ticketRecordCount > $totalTicketsSold) {
-            $totalTicketsSold = $ticketRecordCount;
-        }
 
-        $grossRevenue = (float) $completedOrders->sum('total');
-        $subtotalRevenue = (float) $completedOrders->sum('subtotal');
-
-        // Per-ticket-type commission calculation
-        // CRITICAL: when commission is ON TOP, $data['total'] includes the commission.
-        // We must extract the base price first: base = total / (1 + rate/100) for percentage
-        // When INCLUDED, $data['total'] IS the base — commission is deducted from it.
-        $totalCommission = 0;
-        foreach ($ticketBreakdown as $name => &$data) {
-            $ttCommType = $data['commission_type'] ?? null;
-            $ttCommRate = (float) ($data['commission_rate'] ?? 0);
-            $ttCommFixed = (float) ($data['commission_fixed'] ?? 0);
-            $ttCommMode = $data['commission_mode'] ?? null;
-            $effectiveMode = $ttCommMode ?: $commissionMode;
-            $data['effective_mode'] = $effectiveMode;
-
-            if ($ttCommType && $ttCommType !== '') {
-                // Per-ticket custom commission
-                if ($effectiveMode === 'added_on_top') {
-                    // Total INCLUDES commission on top — extract base
-                    $baseTotal = match ($ttCommType) {
-                        'percentage' => round($data['total'] / (1 + $ttCommRate / 100), 2),
-                        'fixed' => $data['total'] - round($ttCommFixed * $data['quantity'], 2),
-                        'both' => round(($data['total'] - $ttCommFixed * $data['quantity']) / (1 + $ttCommRate / 100), 2),
-                        default => round($data['total'] / (1 + $commissionRate / 100), 2),
-                    };
-                    $comm = round($data['total'] - $baseTotal, 2);
-                    $data['base_total'] = $baseTotal;
-                    $data['base_unit_price'] = $data['quantity'] > 0 ? round($baseTotal / $data['quantity'], 2) : 0;
-                } else {
-                    // Commission INCLUDED — total is what customer paid, commission deducted from organizer
-                    $comm = match ($ttCommType) {
-                        'percentage' => round($data['total'] * ($ttCommRate / 100), 2),
-                        'fixed' => round($ttCommFixed * $data['quantity'], 2),
-                        'both' => round($data['total'] * ($ttCommRate / 100), 2) + round($ttCommFixed * $data['quantity'], 2),
-                        default => round($data['total'] * ($commissionRate / 100), 2),
-                    };
-                    $data['base_total'] = $data['total'];
-                    $data['base_unit_price'] = $data['unit_price'];
-                }
-                $data['calculated_commission'] = $comm;
-
-                $modeLabel = $effectiveMode === 'added_on_top' ? 'on top' : 'inclus';
-                $data['commission_label'] = match ($ttCommType) {
-                    'percentage' => number_format($ttCommRate, 2) . '% ' . $modeLabel,
-                    'fixed' => number_format($ttCommFixed, 2) . ' RON/bilet ' . $modeLabel,
-                    'both' => number_format($ttCommRate, 2) . '% + ' . number_format($ttCommFixed, 2) . ' RON/bilet ' . $modeLabel,
-                    default => number_format($commissionRate, 2) . '% ' . $modeLabel,
-                };
-            } else {
-                // Use event-level commission
-                if ($commissionMode === 'added_on_top') {
-                    $baseTotal = round($data['total'] / (1 + $commissionRate / 100), 2);
-                    $comm = round($data['total'] - $baseTotal, 2);
-                    $data['base_total'] = $baseTotal;
-                    $data['base_unit_price'] = $data['quantity'] > 0 ? round($baseTotal / $data['quantity'], 2) : 0;
-                } else {
-                    $comm = round($data['total'] * ($commissionRate / 100), 2);
-                    $data['base_total'] = $data['total'];
-                    $data['base_unit_price'] = $data['unit_price'];
-                }
-                $data['calculated_commission'] = $comm;
-                $modeLabel = $commissionMode === 'added_on_top' ? 'on top' : 'inclus';
-                $data['commission_label'] = number_format($commissionRate, 2) . '% ' . $modeLabel . ' (eveniment)';
-            }
-            $totalCommission += $data['calculated_commission'];
-        }
-        unset($data);
-
-        // Net revenue = gross - commission - refunds
-        $netRevenue = $grossRevenue - $totalCommission - $totalRefundedAmount;
-
-        // Previous payouts for this event
+        // Previous payouts for this event (status badges + list)
         $previousPayouts = \App\Models\MarketplacePayout::where('marketplace_organizer_id', $organizer->id)
             ->where('event_id', $event->id)
             ->whereIn('status', ['completed', 'processing', 'approved', 'pending'])
             ->orderBy('created_at', 'desc')
             ->get();
-        $totalPreviouslyPaid = (float) $previousPayouts->where('status', 'completed')->sum('amount');
-        $totalPreviousPending = (float) $previousPayouts->whereIn('status', ['pending', 'approved', 'processing'])->sum('amount');
+        $totalPreviouslyPaid = (float) $financials['paid'];
+        $totalPreviousPending = (float) $financials['pending'];
+
+        $modeLabelFor = function (?string $mode): string {
+            return in_array($mode, ['added_on_top', 'on_top'], true) ? 'on top' : 'inclus';
+        };
+        $commissionLabelFor = function (array $row) use ($modeLabelFor): string {
+            $modeLabel = $modeLabelFor($row['commission_mode'] ?? null);
+            $type = $row['commission_type'] ?? null;
+            $rate = (float) ($row['commission_rate'] ?? 0);
+            $fixed = (float) ($row['commission_fixed'] ?? 0);
+            if (!$type) {
+                $perTicket = (float) ($row['commission_per_ticket'] ?? 0);
+                return number_format($perTicket, 2) . ' RON/bilet ' . $modeLabel;
+            }
+            return match ($type) {
+                'percentage' => number_format($rate, 2) . '% ' . $modeLabel,
+                'fixed' => number_format($fixed, 2) . ' RON/bilet ' . $modeLabel,
+                'both' => number_format($rate, 2) . '% + ' . number_format($fixed, 2) . ' RON/bilet ' . $modeLabel,
+                default => number_format($rate, 2) . '% ' . $modeLabel,
+            };
+        };
 
         // === BUILD HTML ===
         $html = '<div class="border border-gray-200 dark:border-white/10 rounded-lg overflow-hidden text-sm">';
 
-        // Ticket types table with commission per type
-        if (!empty($ticketBreakdown)) {
+        if (!empty($perType)) {
             $html .= '<table class="w-full">';
             $html .= '<thead><tr class="bg-gray-50 dark:bg-white/5 border-b border-gray-200 dark:border-white/10">';
             $html .= '<th class="px-3 py-2 text-left font-medium text-gray-600 dark:text-gray-400">Tip bilet</th>';
             $html .= '<th class="px-3 py-2 text-right font-medium text-gray-600 dark:text-gray-400">Preț bilet</th>';
             $html .= '<th class="px-3 py-2 text-right font-medium text-gray-600 dark:text-gray-400">Qty</th>';
-            $html .= '<th class="px-3 py-2 text-right font-medium text-gray-600 dark:text-gray-400">Total bilete</th>';
-            $html .= '<th class="px-3 py-2 text-right font-medium text-gray-600 dark:text-gray-400">Total încasat</th>';
+            $html .= '<th class="px-3 py-2 text-right font-medium text-gray-600 dark:text-gray-400">Total brut</th>';
             $html .= '<th class="px-3 py-2 text-right font-medium text-gray-600 dark:text-gray-400">Comision</th>';
+            if ($hasDiscountAny) {
+                $html .= '<th class="px-3 py-2 text-right font-medium text-gray-600 dark:text-gray-400">Discount</th>';
+            }
+            if ($hasExtrasAny) {
+                $html .= '<th class="px-3 py-2 text-right font-medium text-gray-600 dark:text-gray-400">Extras</th>';
+            }
+            $html .= '<th class="px-3 py-2 text-right font-medium text-gray-600 dark:text-gray-400">Net</th>';
             $html .= '</tr></thead><tbody class="divide-y divide-gray-100 dark:divide-white/5">';
 
-            foreach ($ticketBreakdown as $name => $data) {
-                $baseUnitPrice = $data['base_unit_price'] ?? $data['unit_price'];
-                $baseTotal = $data['base_total'] ?? $data['total'];
+            foreach ($perType as $row) {
+                $name = (string) ($row['ticket_type_name'] ?? 'Bilet');
+                $price = (float) ($row['price'] ?? 0);
+                $qty = (int) ($row['qty'] ?? 0);
+                $gross = (float) ($row['gross'] ?? 0);
+                $commAmt = (float) ($row['commission_amount'] ?? 0);
+                $discAmt = (float) ($row['discount'] ?? 0);
+                $extrAmt = (float) ($row['extras'] ?? 0);
+                $netAmt = (float) ($row['net'] ?? 0);
 
                 $html .= '<tr>';
                 $html .= '<td class="px-3 py-1.5 text-gray-900 dark:text-white">' . e($name) . '</td>';
-                $html .= '<td class="px-3 py-1.5 text-right font-mono text-gray-600 dark:text-gray-400">' . number_format($baseUnitPrice, 2) . '</td>';
-                $html .= '<td class="px-3 py-1.5 text-right font-mono text-gray-600 dark:text-gray-400">' . $data['quantity'] . '</td>';
-                $html .= '<td class="px-3 py-1.5 text-right font-mono text-gray-900 dark:text-white">' . number_format($baseTotal, 2) . '</td>';
-                $html .= '<td class="px-3 py-1.5 text-right font-mono text-gray-500 dark:text-gray-400">' . number_format($data['total'], 2) . '</td>';
+                $html .= '<td class="px-3 py-1.5 text-right font-mono text-gray-600 dark:text-gray-400">' . number_format($price, 2) . '</td>';
+                $html .= '<td class="px-3 py-1.5 text-right font-mono text-gray-600 dark:text-gray-400">' . $qty . '</td>';
+                $html .= '<td class="px-3 py-1.5 text-right font-mono text-gray-900 dark:text-white">' . number_format($gross, 2) . '</td>';
                 $html .= '<td class="px-3 py-1.5 text-right text-gray-500 dark:text-gray-400">';
-                $html .= '<span class="font-mono">' . number_format($data['calculated_commission'], 2) . '</span>';
-                $html .= '<br><span class="text-xs text-gray-400">' . $data['commission_label'] . '</span>';
+                $html .= '<span class="font-mono">' . number_format($commAmt, 2) . '</span>';
+                $html .= '<br><span class="text-xs text-gray-400">' . e($commissionLabelFor($row)) . '</span>';
                 $html .= '</td>';
+                if ($hasDiscountAny) {
+                    $html .= '<td class="px-3 py-1.5 text-right font-mono text-gray-500 dark:text-gray-400">' . ($discAmt > 0 ? '-' . number_format($discAmt, 2) : '–') . '</td>';
+                }
+                if ($hasExtrasAny) {
+                    $html .= '<td class="px-3 py-1.5 text-right font-mono text-gray-500 dark:text-gray-400">' . ($extrAmt > 0 ? '-' . number_format($extrAmt, 2) : '–') . '</td>';
+                }
+                $html .= '<td class="px-3 py-1.5 text-right font-mono text-emerald-700 dark:text-emerald-400 font-medium">' . number_format($netAmt, 2) . '</td>';
                 $html .= '</tr>';
             }
 
             $html .= '</tbody></table>';
         }
 
-        // Summary section
-        $totalBase = collect($ticketBreakdown)->sum(fn ($d) => $d['base_total'] ?? $d['total']);
+        // Summary block — same numbers as header + Vânzări tab + payout
+        // detail page. Order mirrors the math: revenue − commission −
+        // discount − extras − refunds = net brut; minus deconturi
+        // anterioare = sold disponibil.
         $html .= '<div class="border-t border-gray-200 dark:border-white/10 px-3 py-2 space-y-1 bg-gray-50 dark:bg-white/5">';
         $html .= '<div class="flex justify-between"><span class="text-gray-600 dark:text-gray-400">Total bilete vândute:</span><span class="font-medium">' . number_format($totalTicketsSold) . '</span></div>';
-        $html .= '<div class="flex justify-between"><span class="text-gray-600 dark:text-gray-400">Total bilete (fără comision):</span><span class="font-mono font-medium">' . number_format($totalBase, 2) . ' RON</span></div>';
-        $html .= '<div class="flex justify-between"><span class="text-gray-600 dark:text-gray-400">Total încasat:</span><span class="font-mono font-medium">' . number_format($grossRevenue, 2) . ' RON</span></div>';
-        $html .= '<div class="flex justify-between"><span class="text-gray-600 dark:text-gray-400">Total comision:</span><span class="font-mono font-medium text-amber-600 dark:text-amber-400">-' . number_format($totalCommission, 2) . ' RON</span></div>';
-
-        if ($totalRefundedCount > 0) {
+        $html .= '<div class="flex justify-between"><span class="text-gray-600 dark:text-gray-400">Venituri totale (brut):</span><span class="font-mono font-medium">' . number_format($totalRevenue, 2) . ' RON</span></div>';
+        $html .= '<div class="flex justify-between"><span class="text-gray-600 dark:text-gray-400">Comision platformă:</span><span class="font-mono font-medium text-amber-600 dark:text-amber-400">-' . number_format($totalCommission, 2) . ' RON</span></div>';
+        if ($totalDiscount > 0) {
+            $html .= '<div class="flex justify-between"><span class="text-gray-600 dark:text-gray-400">Discounturi aplicate:</span><span class="font-mono font-medium text-violet-600 dark:text-violet-400">-' . number_format($totalDiscount, 2) . ' RON</span></div>';
+        }
+        if ($totalExtras > 0) {
+            $html .= '<div class="flex justify-between"><span class="text-gray-600 dark:text-gray-400">Taxe / Asigurări (extras):</span><span class="font-mono font-medium text-sky-600 dark:text-sky-400">-' . number_format($totalExtras, 2) . ' RON</span></div>';
+        }
+        if ($totalRefundedAmount > 0) {
             $html .= '<div class="flex justify-between text-red-600 dark:text-red-400"><span>Retururi (' . $totalRefundedCount . ' comenzi):</span><span class="font-mono font-medium">-' . number_format($totalRefundedAmount, 2) . ' RON</span></div>';
         }
+        $html .= '<div class="flex justify-between pt-1 border-t border-gray-200 dark:border-white/10"><span class="text-gray-700 dark:text-gray-300 font-medium">Net (brut organizator):</span><span class="font-mono font-medium">' . number_format(max(0, $totalNet - $totalRefundedAmount), 2) . ' RON</span></div>';
 
         // Previous payouts
         if ($previousPayouts->isNotEmpty()) {
@@ -1539,15 +1441,19 @@ class ListPayouts extends ListRecords
                 $html .= '</div>';
             }
             if ($totalPreviouslyPaid > 0) {
-                $html .= '<div class="flex justify-between text-xs font-semibold mt-1 pt-1 border-t border-gray-100 dark:border-white/5"><span>Total achitat anterior:</span><span class="font-mono">' . number_format($totalPreviouslyPaid, 2) . ' RON</span></div>';
+                $html .= '<div class="flex justify-between text-xs font-semibold mt-1 pt-1 border-t border-gray-100 dark:border-white/5"><span>Total achitat anterior:</span><span class="font-mono">-' . number_format($totalPreviouslyPaid, 2) . ' RON</span></div>';
+            }
+            if ($totalPreviousPending > 0) {
+                $html .= '<div class="flex justify-between text-xs font-semibold"><span>În curs de plată:</span><span class="font-mono">-' . number_format($totalPreviousPending, 2) . ' RON</span></div>';
             }
             $html .= '</div>';
         }
 
-        // Net balance line
+        // Final balance — identical to the modal header (both call
+        // calculateEventFinancials()['balance']).
         $html .= '<div class="flex justify-between pt-1 border-t border-gray-200 dark:border-white/10 font-semibold">';
         $html .= '<span>Sold disponibil</span>';
-        $html .= '<span class="font-mono text-emerald-600 dark:text-emerald-400">' . number_format(max(0, $netRevenue - $totalPreviouslyPaid - $totalPreviousPending), 2) . ' RON</span>';
+        $html .= '<span class="font-mono text-emerald-600 dark:text-emerald-400">' . number_format($financials['balance'], 2) . ' RON</span>';
         $html .= '</div>';
 
         $html .= '</div></div>';
