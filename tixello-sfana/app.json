@@ -1,0 +1,44 @@
+{
+  "expo": {
+    "name": "Tixello Sfana",
+    "slug": "tixello-sfana",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": false,
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Permite accesul la cameră pentru scanarea codurilor QR ale biletelor."
+        }
+      ]
+    ],
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0F2C20"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.tixello.sfana",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Permite accesul la cameră pentru scanarea codurilor QR ale biletelor."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0F2C20"
+      },
+      "edgeToEdgeEnabled": true,
+      "softwareKeyboardLayoutMode": "pan",
+      "package": "com.tixello.sfana",
+      "permissions": ["VIBRATE", "INTERNET", "ACCESS_NETWORK_STATE", "CAMERA"]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    }
+  }
+}
