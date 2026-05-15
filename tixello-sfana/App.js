@@ -28,6 +28,10 @@ function AppNavigator() {
   const user = auth.user || auth.venueOwner;
   const loading = auth.isLoading;
 
+  useEffect(() => {
+    auth.checkAuth();
+  }, []);
+
   if (loading) {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.background }}>
