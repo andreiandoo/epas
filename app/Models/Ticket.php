@@ -203,35 +203,39 @@ class Ticket extends Model
 
     /**
      * Effective per-ticket price after the order-level discount has been
-     * allocated proportionally across the order's subtotal.
+     * applied.
+     *
+     * Resolution priority:
+     *   1. `ticket.meta.discount_amount` (set by CheckoutController per
+     *      ticket — accurate even when a coupon was restricted to a
+     *      subset of events / ticket types and the rest of the cart
+     *      paid full price)
+     *   2. Proportional fallback across `order.subtotal` (legacy orders
+     *      that predate per-ticket persistence)
      *
      * Why this exists: `tickets.price` stores the per-line price the
-     * customer was quoted BEFORE any order-level promo code or coupon was
-     * applied. The actual amount the customer paid per ticket is lower
-     * when a discount was applied to the whole order. All customer-facing
-     * displays (PDF, ticket view, order detail, ticket email) should call
-     * this method so the printed price matches what was actually paid.
+     * customer was quoted BEFORE any promo code was applied. Customer-
+     * facing displays (PDF, ticket view, order detail, ticket email)
+     * call this method so the printed price matches what was actually
+     * paid.
      *
      * Internal flows (refund engine, payout calculation, Vânzări /
      * Participanți CSV exports, accounting) continue to read
      * `ticket.price` + `order.discount_amount` directly so this helper
      * has zero impact on financial reporting.
-     *
-     * Allocation: proportional by ticket price. For a 20% off promo on a
-     * 180-RON order with three 60-RON tickets:
-     *   ratio = 36 / 180 = 0.20
-     *   effective_price = 60 * 0.80 = 48 per ticket
-     *
-     * Known limitation: coupons restricted to a subset of ticket types /
-     * events spread the discount across ALL tickets instead of just the
-     * eligible ones — the headline number is still correct overall but
-     * per-ticket display is slightly off in that corner case.
      */
     public function getEffectivePrice(): float
     {
         $price = (float) ($this->price ?? 0);
         if ($price <= 0) return 0.0;
 
+        // Precise: per-ticket discount written at checkout time.
+        $meta = $this->meta ?? [];
+        if (isset($meta['discount_amount']) && (float) $meta['discount_amount'] > 0) {
+            return max(0.0, round($price - (float) $meta['discount_amount'], 2));
+        }
+
+        // Fallback: proportional across order subtotal (legacy orders).
         $order = $this->order;
         if (!$order) return $price;
 

@@ -418,6 +418,13 @@ class CheckoutController extends BaseController
             $discount = 0;
             $promoCode = null;
             $promoCodeInput = $request->input('promo_code');
+            // Indices into $processedItems that the promo is eligible for.
+            // Set inside the matching branch below; used after the discount
+            // block to allocate per-ticket discount_amount so views display
+            // the correct discounted price only on tickets the coupon
+            // actually applied to (instead of spreading proportionally
+            // across all tickets in mixed-eligibility carts).
+            $eligibleItemIndices = null;
 
             if ($promoCodeInput) {
                 $promoCodeInput = strtoupper(trim($promoCodeInput));
@@ -454,6 +461,32 @@ class CheckoutController extends BaseController
                             'source' => 'organizer',
                             'id' => $orgPromo->id,
                         ];
+
+                        // Track which line items the promo is eligible for
+                        // — mirror the same `applies_to` filter the model
+                        // uses internally to compute the discount amount.
+                        $appliesTo = $orgPromo->applies_to;
+                        $eligibleItemIndices = [];
+                        if ($appliesTo === 'specific_event') {
+                            $targetEventId = (int) $orgPromo->marketplace_event_id;
+                            foreach ($processedItems as $idx => $pi) {
+                                $eId = (int) ($pi['event']?->id ?? $pi['marketplace_event']?->id ?? 0);
+                                if ($eId === $targetEventId) {
+                                    $eligibleItemIndices[] = $idx;
+                                }
+                            }
+                        } elseif ($appliesTo === 'ticket_type') {
+                            $allowedIds = $orgPromo->getApplicableTicketTypeIdsList();
+                            foreach ($processedItems as $idx => $pi) {
+                                $ttId = (int) ($pi['marketplace_ticket_type']?->id ?? $pi['ticket_type']?->id ?? 0);
+                                if ($ttId > 0 && in_array($ttId, $allowedIds, true)) {
+                                    $eligibleItemIndices[] = $idx;
+                                }
+                            }
+                        } else {
+                            // all_events (or unrecognized) → whole cart
+                            $eligibleItemIndices = array_keys($processedItems);
+                        }
                     }
                 }
 
@@ -523,6 +556,30 @@ class CheckoutController extends BaseController
                                 'source' => 'coupon',
                                 'id' => $coupon->id,
                             ];
+
+                            // Same predicate the loop above used to build
+                            // $discountBase — collect the corresponding
+                            // $processedItems indices so we can allocate
+                            // the discount per ticket later.
+                            $eligibleItemIndices = [];
+                            foreach ($processedItems as $idx => $pi) {
+                                $itemEventId = (int) ($pi['event']?->id ?? $pi['marketplace_event']?->id ?? 0);
+                                if ($hasEventFilter && !$eventMatches($itemEventId)) {
+                                    continue;
+                                }
+                                if ($hasTicketTypeFilter) {
+                                    $ttId = (int) ($pi['ticket_type']?->id ?? 0);
+                                    if (!in_array($ttId, array_map('intval', $applicableTicketTypes), true)) {
+                                        continue;
+                                    }
+                                }
+                                $eligibleItemIndices[] = $idx;
+                            }
+                            if (empty($eligibleItemIndices)) {
+                                // No-filter case: $discountBase fell back
+                                // to $subtotal, so every item is eligible.
+                                $eligibleItemIndices = array_keys($processedItems);
+                            }
                         }
                     }
                 }
@@ -530,6 +587,40 @@ class CheckoutController extends BaseController
                 // Fallback: read from database cart (legacy)
                 $promoCode = $cart->promo_code;
                 $discount = (float) ($cart->discount ?? 0);
+                // No eligibility info from the legacy cart — assume all
+                // items eligible so the discount spreads over the whole
+                // cart (matches previous behavior).
+                $eligibleItemIndices = array_keys($processedItems);
+            }
+
+            // Allocate the order-level discount across line items.
+            // Eligible items share the discount proportionally to their
+            // line total; non-eligible items keep their full price. This
+            // map is persisted onto each ticket's meta so views and PDFs
+            // can show the exact per-ticket discount even when the promo
+            // only covered a subset of the cart.
+            $discountPerItem = []; // idx in $processedItems => discount RON
+            if ($discount > 0 && is_array($eligibleItemIndices) && count($eligibleItemIndices) > 0) {
+                $eligibleBase = 0.0;
+                foreach ($eligibleItemIndices as $idx) {
+                    $eligibleBase += (float) ($processedItems[$idx]['total'] ?? 0);
+                }
+                if ($eligibleBase > 0) {
+                    $allocated = 0.0;
+                    $lastIdx = end($eligibleItemIndices);
+                    foreach ($eligibleItemIndices as $idx) {
+                        if ($idx === $lastIdx) {
+                            // Give the remainder to the last eligible
+                            // line so allocations sum exactly to $discount
+                            // (avoids penny drift from rounding).
+                            $discountPerItem[$idx] = round($discount - $allocated, 2);
+                        } else {
+                            $share = round(((float) $processedItems[$idx]['total'] / $eligibleBase) * $discount, 2);
+                            $discountPerItem[$idx] = $share;
+                            $allocated += $share;
+                        }
+                    }
+                }
             }
 
             // Determine primary commission mode (for order-level meta)
@@ -617,7 +708,11 @@ class CheckoutController extends BaseController
 
             // Create order items and pending tickets
             $ticketIndex = 0;
-            foreach ($processedItems as $item) {
+            foreach ($processedItems as $idx => $item) {
+                $itemDiscountTotal = (float) ($discountPerItem[$idx] ?? 0);
+                $perTicketDiscount = ($item['quantity'] > 0 && $itemDiscountTotal > 0)
+                    ? round($itemDiscountTotal / $item['quantity'], 2)
+                    : 0;
                 $mtt = $item['marketplace_ticket_type'];
                 $tt = $item['ticket_type'];
                 $event = $item['event'];
@@ -692,6 +787,15 @@ class CheckoutController extends BaseController
                     if ($hasInsurance && $insurancePerTicket > 0) {
                         $ticketMeta['has_insurance'] = true;
                         $ticketMeta['insurance_amount'] = $insurancePerTicket;
+                    }
+                    if ($perTicketDiscount > 0) {
+                        // Stored per ticket so Ticket::getEffectivePrice()
+                        // can show the exact discounted price on PDFs,
+                        // order pages, and the ticket view — bypasses the
+                        // proportional-across-subtotal fallback for new
+                        // orders, which would be wrong when the coupon
+                        // only covered a subset of the cart.
+                        $ticketMeta['discount_amount'] = $perTicketDiscount;
                     }
 
                     // Leisure venue metadata
