@@ -382,10 +382,17 @@ class TicketVariableService
                     ],
                     [
                         'path' => 'order.addon_services',
-                        'label' => 'Servicii extra (Leisure)',
-                        'description' => 'Lista multi-linie cu serviciile extra cumpărate (rental/activity/parking). Format: "🚣 Plimbare cu barca · ×1 · cod: ABC123". Empty dacă nu există add-on-uri.',
+                        'label' => 'Servicii extra (Leisure) — text',
+                        'description' => 'Lista multi-linie cu serviciile extra atribuite acestui bilet acces (rental/activity/parking). Distribuție automată per bilet acces (adult/copil). Format pe linie: "🛶 Plimbare cu barca · cod: ABC123". Empty pe bilete non-access.',
                         'type' => 'text',
-                        'example' => "🚣 Plimbare cu barca · ×1 · cod: WLMVWB2G\n🧺 Coș picnic · ×1 · cod: COSPI-AB2",
+                        'example' => "🛶 Plimbare cu barca · cod: WLMVWB2G\n🎯 Coș picnic · cod: COSPI-AB2",
+                    ],
+                    [
+                        'path' => 'order.addon_services_html',
+                        'label' => 'Servicii extra (Leisure) — cu QR-uri vizuale',
+                        'description' => 'Variantă HTML cu cod QR vizual mic pentru fiecare add-on (data URI inline). Folosește într-un layer text mare pentru a permite afișarea QR-urilor (placeholder _html sare peste escape).',
+                        'type' => 'text',
+                        'example' => 'HTML cu <img> QR + nume produs',
                     ],
                 ],
             ],
@@ -587,7 +594,8 @@ class TicketVariableService
                 'code' => 'ORD-2025-789456',
                 'date' => '2025-06-01',
                 'total' => '299.00 EUR',
-                'addon_services' => "🚣 Plimbare cu barca · ×1 · cod: WLMVWB2G\n🧺 Coș picnic · ×1 · cod: COSPI-AB2",
+                'addon_services' => "🛶 Plimbare cu barca · cod: WLMVWB2G\n🎯 Vaporaș 30min · cod: VAP-A1B2",
+                'addon_services_html' => '<div>🛶 <strong>Plimbare cu barca</strong> · cod: WLMVWB2G</div><div>🎯 <strong>Vaporaș 30min</strong> · cod: VAP-A1B2</div>',
             ],
             'barcode' => 'TKT2025001234',
             'qrcode' => 'https://tickets.example.com/verify/TKT2025001234',
@@ -884,6 +892,7 @@ class TicketVariableService
         }
         $leisureProgram = $this->buildLeisureProgramFields($event, $visitDate);
         $addonServices = $this->buildAddonServicesText($order, $ticket->id);
+        $addonServicesHtml = $this->buildAddonServicesHtml($order, $ticket->id);
 
         return [
             'event' => [
@@ -934,6 +943,7 @@ class TicketVariableService
                 'date' => $order?->created_at?->format('Y-m-d') ?? '',
                 'total' => $order ? number_format((float) $order->total, 2) . ' ' . $currency : '',
                 'addon_services' => $addonServices,
+                'addon_services_html' => $addonServicesHtml,
             ],
             'barcode' => $ticket->barcode ?? $ticket->code ?? '',
             'qrcode' => $ticket->code ?? $ticket->barcode ?? '',
@@ -1198,43 +1208,180 @@ class TicketVariableService
     }
 
     /**
-     * Construiește lista multi-linie cu add-on services din comandă.
-     * Exclude tipul de bilet curent (biletul "principal") + categoria 'access'
-     * + serviciile considerate add-on inline (fără propriul tichet emis).
+     * Construiește lista multi-linie cu add-on services atribuite biletului curent.
      *
-     * Format pe linie: "{icon} {nume produs} · ×{qty} · cod: {ticket.code}"
-     * Returnează empty string dacă nu există add-on-uri.
+     * Algoritm distribuție per Order:
+     *  1. Toate biletele acces (service_category='access'), sortate adulți prima (is_child_ticket=false),
+     *     apoi copii, apoi după id ASC
+     *  2. Toate biletele non-access (rental/activity/parking/extra)
+     *  3. Round-robin: atribui fiecare bilet extra primului bilet acces compatibil:
+     *     - access_requirement='adult_only' → doar pe bilet adult
+     *     - access_requirement='any' sau none → orice acces
+     *  4. Returnez doar add-on-urile atribuite ticketului curent
+     *
+     * Pentru biletele non-access (extras propriu-zise), returnez empty (au propriul QR pe bilet).
+     *
+     * Format pe linie: "{icon} {nume produs} · cod: {ticket.code}"
+     * Returnează empty string dacă nu există add-on-uri pentru ticketul curent.
      */
-    private function buildAddonServicesText(?Order $order, ?int $excludeTicketId = null): string
+    private function buildAddonServicesText(?Order $order, ?int $currentTicketId = null): string
     {
-        if (!$order) return '';
-        $items = $order->items()->with(['ticketType', 'tickets'])->get();
-        if ($items->isEmpty()) return '';
+        $assigned = $this->resolveAddonAssignmentsForTicket($order, $currentTicketId);
+        if (empty($assigned)) return '';
 
         $emojiMap = [
             'access' => '🎟️', 'parking' => '🅿️', 'rental' => '🛶',
             'activity' => '🎯', 'extra' => '➕', 'package' => '🎁',
         ];
         $lines = [];
-        foreach ($items as $oi) {
-            $tt = $oi->ticketType;
-            $cat = $tt?->service_category ?? ($oi->meta['service_category'] ?? null);
-            // Excludem categoria 'access' (e biletul principal)
-            if ($cat === 'access' || $cat === null) continue;
-            $icon = $emojiMap[$cat] ?? '✨';
-            $name = $oi->name ?: ($tt && $tt->name ? (is_array($tt->name) ? ($tt->name['ro'] ?? reset($tt->name)) : $tt->name) : 'Serviciu');
-            // Lista codurilor biletelor emise pe această linie (DOAR primul, restul implicat de ×qty)
-            $relatedTickets = $oi->tickets ?? collect();
-            $firstCode = '';
-            foreach ($relatedTickets as $rt) {
-                if ($excludeTicketId && $rt->id === $excludeTicketId) continue;
-                $firstCode = $rt->code ?? '';
-                if ($firstCode) break;
-            }
-            $codeFragment = $firstCode ? ' · cod: ' . $firstCode : '';
-            $lines[] = sprintf('%s %s · ×%d%s', $icon, $name, (int) $oi->quantity, $codeFragment);
+        foreach ($assigned as $entry) {
+            $icon = $emojiMap[$entry['category']] ?? '✨';
+            $codeFragment = $entry['code'] ? ' · cod: ' . $entry['code'] : '';
+            $lines[] = sprintf('%s %s%s', $icon, $entry['name'], $codeFragment);
         }
         return implode("\n", $lines);
+    }
+
+    /**
+     * Variantă HTML cu QR-uri vizuale inline pentru fiecare add-on.
+     * Folosit prin {{ order.addon_services_html }} (placeholder cu suffix _html
+     * detectat în renderTextLayerHtml pentru a sări peste htmlspecialchars).
+     */
+    private function buildAddonServicesHtml(?Order $order, ?int $currentTicketId = null): string
+    {
+        $assigned = $this->resolveAddonAssignmentsForTicket($order, $currentTicketId);
+        if (empty($assigned)) return '';
+
+        $emojiMap = [
+            'access' => '🎟️', 'parking' => '🅿️', 'rental' => '🛶',
+            'activity' => '🎯', 'extra' => '➕', 'package' => '🎁',
+        ];
+        $rows = [];
+        foreach ($assigned as $entry) {
+            $icon = $emojiMap[$entry['category']] ?? '✨';
+            $qrDataUri = $entry['code'] ? $this->buildQrDataUri($entry['code'], 80) : '';
+            $qrImg = $qrDataUri
+                ? '<img src="' . $qrDataUri . '" style="display:inline-block;vertical-align:middle;width:42pt;height:42pt;margin-right:6pt;">'
+                : '';
+            $codeText = $entry['code']
+                ? '<span style="font-family:DejaVu Sans Mono,monospace;font-size:7pt;color:#256142;">' . htmlspecialchars($entry['code']) . '</span>'
+                : '';
+            $rows[] = sprintf(
+                '<div style="display:block;margin-bottom:4pt;">%s<span style="vertical-align:middle;">%s <strong>%s</strong>%s%s</span></div>',
+                $qrImg,
+                $icon,
+                htmlspecialchars($entry['name']),
+                $codeText ? '<br>' : '',
+                $codeText
+            );
+        }
+        return implode('', $rows);
+    }
+
+    /**
+     * Distribuie add-on-urile pe biletele de acces și returnează doar pe cele
+     * atribuite biletului curent. Algoritm round-robin cu constraint adult_only.
+     *
+     * @return array<int,array{category:string,name:string,code:string,ticket_id:int}>
+     */
+    private function resolveAddonAssignmentsForTicket(?Order $order, ?int $currentTicketId): array
+    {
+        if (!$order || !$currentTicketId) return [];
+
+        $all = $order->tickets()->with(['ticketType'])->orderBy('id')->get();
+        if ($all->isEmpty()) return [];
+
+        $current = $all->firstWhere('id', $currentTicketId);
+        if (!$current) return [];
+
+        $currentCat = $current->ticketType?->service_category
+            ?? ($current->meta['service_category'] ?? 'access');
+        // Pentru biletele non-access (e.g. bilet barcă/vaporaș), nu listez add-ons
+        // (acel bilet are propriul QR și nu acoperă altele)
+        if ($currentCat !== 'access') return [];
+
+        // Sortez biletele acces: adulți primii (is_child_ticket=false), apoi copii, apoi după id ASC
+        $access = $all->filter(function ($t) {
+            $cat = $t->ticketType?->service_category ?? ($t->meta['service_category'] ?? 'access');
+            return $cat === 'access';
+        })->sortBy(function ($t) {
+            $tt = $t->ticketType;
+            $isChild = (bool) ($tt?->meta['is_child_ticket'] ?? false);
+            return [$isChild ? 1 : 0, $t->id];
+        })->values();
+
+        if ($access->isEmpty()) return [];
+
+        // Extra-uri: tot ce nu e access
+        $extras = $all->filter(function ($t) {
+            $cat = $t->ticketType?->service_category ?? ($t->meta['service_category'] ?? 'access');
+            return $cat !== 'access';
+        })->values();
+
+        if ($extras->isEmpty()) return [];
+
+        // Round-robin distribution cu constraint adult_only
+        $assignments = []; // accessId => [extra_ticket, ...]
+        foreach ($access as $a) {
+            $assignments[$a->id] = [];
+        }
+        $cursor = 0;
+        $accessCount = $access->count();
+        foreach ($extras as $extra) {
+            $tt = $extra->ticketType;
+            $req = $tt?->meta['access_requirement']
+                ?? (($tt?->requires_access_ticket ?? false) ? 'any' : 'none');
+
+            // Caut prima ținta compatibilă (din cursor, round-robin)
+            $tries = 0;
+            $assigned = false;
+            while ($tries < $accessCount) {
+                $candidate = $access[$cursor % $accessCount];
+                $cursor++;
+                $tries++;
+                $isCandChild = (bool) ($candidate->ticketType?->meta['is_child_ticket'] ?? false);
+                if ($req === 'adult_only' && $isCandChild) continue;
+                $assignments[$candidate->id][] = $extra;
+                $assigned = true;
+                break;
+            }
+            // Dacă nu am găsit (e.g. adult_only fără adulți), skip silent
+        }
+
+        // Returnez add-on-urile pentru ticketul curent
+        $mine = $assignments[$current->id] ?? [];
+        $out = [];
+        foreach ($mine as $extra) {
+            $tt = $extra->ticketType;
+            $cat = $tt?->service_category ?? 'extra';
+            $name = $tt && $tt->name
+                ? (is_array($tt->name) ? ($tt->name['ro'] ?? reset($tt->name)) : $tt->name)
+                : 'Serviciu';
+            $out[] = [
+                'category' => $cat,
+                'name' => (string) $name,
+                'code' => (string) ($extra->code ?? ''),
+                'ticket_id' => (int) $extra->id,
+            ];
+        }
+        return $out;
+    }
+
+    /**
+     * Generează un QR ca data URI base64 PNG (via qrserver.com).
+     * Fallback la string gol dacă fetch-ul eșuează.
+     */
+    private function buildQrDataUri(string $code, int $sizePx = 100): string
+    {
+        $url = 'https://api.qrserver.com/v1/create-qr-code/?size=' . $sizePx . 'x' . $sizePx . '&data=' . urlencode($code);
+        try {
+            $ctx = stream_context_create(['http' => ['timeout' => 3]]);
+            $img = @file_get_contents($url, false, $ctx);
+            if ($img === false || strlen($img) < 100) return '';
+            return 'data:image/png;base64,' . base64_encode($img);
+        } catch (\Throwable $e) {
+            return '';
+        }
     }
 
     private function buildSerialNumber(Ticket $ticket): string
