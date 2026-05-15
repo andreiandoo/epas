@@ -26,6 +26,7 @@ class CapiAdsRoasReport extends Page
     public int $totalClicks = 0;
     public float $avgCtr = 0;
     public float $avgCpc = 0;
+    public int $attributedOrderCount = 0;
 
     /** @var array<int,array<string,mixed>> */
     public array $campaignTable = [];
@@ -137,7 +138,8 @@ class CapiAdsRoasReport extends Page
         // campaign mapping (not exposed via Marketing API). We approximate
         // by attributing ALL fbclid revenue to the campaign mix here, then
         // per-campaign by total clicks weight.
-        $totalRevenueFromFbAds = (float) $this->fbclidRevenueQuery($start, $end)->sum('total');
+        $totalRevenueFromFbAds = (float) $this->fbclidRevenueQuery($start, $end)->sum('orders.total');
+        $this->attributedOrderCount = (int) $this->fbclidRevenueQuery($start, $end)->count();
         $this->totalRevenue = $totalRevenueFromFbAds;
         $this->roas = $this->totalSpend > 0 ? round($this->totalRevenue / $this->totalSpend, 2) : 0;
 
@@ -176,19 +178,41 @@ class CapiAdsRoasReport extends Page
         $this->campaignTable = $list;
     }
 
+    /**
+     * Orders attributable to Facebook ads via ANY of three signals:
+     *   1. orders.meta JSON contains fbclid/fbc (last-touch at checkout)
+     *   2. core_customer_events has fbclid set for this order_id (mid-funnel)
+     *   3. core_customers.last_fbclid set for the customer (last-seen)
+     *
+     * Different checkout flows store the click id in different places;
+     * union of all three avoids missing revenue that's clearly attributable.
+     */
     protected function fbclidRevenueQuery(Carbon $start, Carbon $end)
     {
         $query = DB::table('orders')
-            ->whereBetween('created_at', [$start, $end])
-            ->whereIn('status', ['paid', 'confirmed', 'completed'])
-            // Postgres JSON predicate — works for column type json/jsonb.
-            ->whereRaw("(meta::text LIKE '%fbclid%' OR meta::text LIKE '%fbc%')");
+            ->whereBetween('orders.created_at', [$start, $end])
+            ->whereIn('orders.status', ['paid', 'confirmed', 'completed'])
+            ->where(function ($q) {
+                $q->whereRaw("(orders.meta::text LIKE '%fbclid%' OR orders.meta::text LIKE '%fbc%')")
+                    ->orWhereExists(function ($sub) {
+                        $sub->select(DB::raw(1))
+                            ->from('core_customer_events')
+                            ->whereColumn('core_customer_events.order_id', 'orders.id')
+                            ->whereNotNull('core_customer_events.fbclid');
+                    })
+                    ->orWhereExists(function ($sub) {
+                        $sub->select(DB::raw(1))
+                            ->from('core_customers')
+                            ->whereColumn('core_customers.email', 'orders.customer_email')
+                            ->whereNotNull('core_customers.last_fbclid');
+                    });
+            });
 
         if ($this->marketplaceClientId) {
-            $query->where('marketplace_client_id', $this->marketplaceClientId);
+            $query->where('orders.marketplace_client_id', $this->marketplaceClientId);
         }
         if ($this->marketplaceOrganizerId) {
-            $query->where('marketplace_organizer_id', $this->marketplaceOrganizerId);
+            $query->where('orders.marketplace_organizer_id', $this->marketplaceOrganizerId);
         }
         return $query;
     }
@@ -213,6 +237,7 @@ class CapiAdsRoasReport extends Page
         $this->totalClicks = 0;
         $this->avgCtr = 0;
         $this->avgCpc = 0;
+        $this->attributedOrderCount = 0;
         $this->campaignTable = [];
     }
 }

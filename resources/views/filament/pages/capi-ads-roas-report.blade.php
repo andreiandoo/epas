@@ -54,7 +54,7 @@
         <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
             <div class="text-sm font-medium text-gray-500 dark:text-gray-400">Revenue (Tixello)</div>
             <div class="text-2xl font-bold text-green-600">{{ number_format($totalRevenue, 2) }}</div>
-            <div class="text-xs text-gray-500 mt-1">comenzi cu fbclid (last-touch)</div>
+            <div class="text-xs text-gray-500 mt-1">{{ number_format($attributedOrderCount) }} comenzi atribuibile · meta JSON / events / customer.last_fbclid</div>
         </div>
         <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
             <div class="text-sm font-medium text-gray-500 dark:text-gray-400">ROAS</div>
