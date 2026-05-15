@@ -4557,6 +4557,9 @@ class EventResource extends Resource
                                         $eventsLabel = $t('Evenimente', 'Events');
                                         $revenueLabel = $t('Venit', 'Revenue');
 
+                                        $organizerUrl = e(\App\Filament\Marketplace\Resources\OrganizerResource::getUrl('view', ['record' => $organizer->id]));
+                                        $organizerName = e($organizer->name);
+
                                         return new HtmlString("
                                             <div class='text-sm'>
                                                 <div class='flex items-center gap-2 pb-2'>
@@ -4564,7 +4567,7 @@ class EventResource extends Resource
                                                         " . strtoupper(substr($organizer->name, 0, 2)) . "
                                                     </div>
                                                     <div>
-                                                        <div class='font-semibold text-white'>{$organizer->name}</div>
+                                                        <a href='{$organizerUrl}' class='font-semibold text-white hover:text-primary-400 hover:underline' target='_blank'>{$organizerName}</a>
                                                         <div class='text-xs text-gray-400'>{$organizer->email}</div>
                                                     </div>
                                                 </div>
