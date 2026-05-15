@@ -151,6 +151,27 @@ const EventPage = {
         this.trackView();
         this.loadInterestStatus();
         this.setupClickOutside();
+        this.setupBfcacheSync();
+    },
+
+    /**
+     * When the user clicks back from /cos or /checkout, the browser may
+     * restore the page from bfcache — JS memory is preserved but the cart
+     * in localStorage may have changed (items deleted, hold expired). Re-
+     * hydrate from the cart and re-render the relevant pieces so the UI
+     * always reflects the current cart state.
+     */
+    setupBfcacheSync() {
+        var self = this;
+        window.addEventListener('pageshow', function(e) {
+            if (!e.persisted) return; // Only when restored from bfcache
+            if (!self.event || !self.event.id) return;
+            self.restoreSelectionFromCart();
+            self.renderTicketTypes();
+            self.renderCartSeatBanner();
+            self.updateCart();
+            self.updateHeaderCart();
+        });
     },
 
     /**
@@ -2377,15 +2398,45 @@ const EventPage = {
      * Handle checkout button click
      */
     handleCheckout() {
+        var self = this;
         var needingSelection = this.getSeatingTicketsNeedingSelection();
 
         if (needingSelection.length > 0) {
             // Open seat selection for the first ticket type that needs it
             this.openSeatSelection(needingSelection[0].ticketType.id);
-        } else {
-            // Proceed to cart
-            this.addToCart();
+            return;
         }
+
+        // If any selected seats exist, we MUST route through the seated flow.
+        // Plain addToCart() doesn't preserve the seats array and would just
+        // bump the existing item's quantity, leaving the cart without seat
+        // info (the bug behind the 3-paid-0-seats incident).
+        var hasSelectedSeats = Object.keys(this.selectedSeats || {}).some(function(ttId) {
+            return Array.isArray(self.selectedSeats[ttId]) && self.selectedSeats[ttId].length > 0;
+        });
+
+        if (hasSelectedSeats) {
+            // Seats already match the cart (e.g. user clicked back from /cos
+            // via bfcache without touching anything) — no need to re-hold,
+            // just navigate.
+            if (this.areSelectedSeatsInCart()) {
+                window.location.href = '/cos';
+                return;
+            }
+            // Otherwise (cart was emptied, or selection diverged) — clear any
+            // stale items for this event, hold via API, write seats to cart,
+            // then redirect.
+            this.clearEventFromCart();
+            this.addToCartWithSeats().then(function() {
+                window.location.href = '/cos';
+            }).catch(function(err) {
+                console.error('[EventPage] handleCheckout addToCartWithSeats failed:', err);
+            });
+            return;
+        }
+
+        // No seating involved — original flow.
+        this.addToCart();
     },
 
     /**
@@ -4501,8 +4552,15 @@ const EventPage = {
         if (!this.event || !this.event.id || typeof AmbiletCart === 'undefined') return;
 
         var eventId = this.event.id;
-        var items = AmbiletCart.getItems();
         var self = this;
+
+        // Reset state — cart is the source of truth on (re)mount / bfcache
+        // restore. Without this, a user who emptied the cart but kept the
+        // page in bfcache would still have stale selectedSeats in memory.
+        this.quantities = {};
+        this.selectedSeats = {};
+
+        var items = AmbiletCart.getItems();
         items.forEach(function(item) {
             if (item.eventId !== eventId) return;
             var ttId = item.ticketTypeId;
@@ -4523,6 +4581,36 @@ const EventPage = {
             }
         });
         console.log('[EventPage] Restored from cart:', { quantities: this.quantities, selectedSeats: this.selectedSeats });
+    },
+
+    /**
+     * Compare in-memory selectedSeats against what the cart actually holds
+     * for this event. True only when every selected seat (by seat_uid) is
+     * already present in the cart with the same ticket type.
+     */
+    areSelectedSeatsInCart() {
+        if (!this.event || !this.event.id || typeof AmbiletCart === 'undefined') return false;
+        var eventId = this.event.id;
+        var ticketTypeIds = Object.keys(this.selectedSeats || {});
+        if (ticketTypeIds.length === 0) return false;
+
+        var items = AmbiletCart.getItems().filter(function(it) { return it.eventId === eventId; });
+
+        for (var i = 0; i < ticketTypeIds.length; i++) {
+            var ttId = ticketTypeIds[i];
+            var memSeats = this.selectedSeats[ttId] || [];
+            if (memSeats.length === 0) continue;
+
+            var cartItem = items.find(function(it) { return String(it.ticketTypeId) === String(ttId); });
+            if (!cartItem || !Array.isArray(cartItem.seats) || cartItem.seats.length !== memSeats.length) return false;
+
+            var memUids = memSeats.map(function(s) { return s.seat_uid || s.id; }).sort();
+            var cartUids = cartItem.seats.map(function(s) { return s.seat_uid || s.id; }).sort();
+            for (var j = 0; j < memUids.length; j++) {
+                if (memUids[j] !== cartUids[j]) return false;
+            }
+        }
+        return true;
     },
 
     /**
