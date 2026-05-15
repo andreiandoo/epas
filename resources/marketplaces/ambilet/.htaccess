@@ -13,8 +13,8 @@ RewriteCond %{QUERY_STRING} download_ticket [NC]
 RewriteRule ^(.*)$ https://old.ambilet.ro/$1 [R=302,L,QSA]
 
 # Android app download redirect
-RewriteRule ^android/?$ https://core.tixello.com/android [R=302,L]
-RewriteRule ^android-sfana/?$ https://core.tixello.com/android-sfana [R=302,L]
+RewriteRule ^android/?$ https://core.tixello.com/android [R=302,L,QSA]
+RewriteRule ^android-sfana/?$ https://core.tixello.com/android-sfana [R=302,L,QSA]
 
 # Force HTTPS (uncomment in production)
 # RewriteCond %{HTTPS} off
@@ -30,7 +30,7 @@ RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^bilete/([a-z0-9-]+)/?$ event.php?slug=$1 [L,QSA]
 
 # Legacy: redirect /event/slug to /bilete/slug
-RewriteRule ^event/([a-z0-9-]+)/?$ /bilete/$1 [R=301,L]
+RewriteRule ^event/([a-z0-9-]+)/?$ /bilete/$1 [R=301,L,QSA]
 
 # Handle category pages - /concerte, /festivaluri, /teatru, etc.
 RewriteCond %{REQUEST_FILENAME} !-f
@@ -38,7 +38,7 @@ RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^(bilete-concerte|festivaluri|teatru|stand-up|evenimente-copii|festival-moto|sport|comedy|spectacole|alte-evenimente|muzica|dans|expozitii|conferinte|workshop)/?$ category.php?slug=$1 [L,QSA]
 
 # Legacy: redirect /category/slug to /slug
-RewriteRule ^category/([a-z0-9-]+)/?$ /$1 [R=301,L]
+RewriteRule ^category/([a-z0-9-]+)/?$ /$1 [R=301,L,QSA]
 
 # Handle genre pages - /gen/rock, /gen/pop etc.
 RewriteCond %{REQUEST_FILENAME} !-f
@@ -46,7 +46,7 @@ RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^gen/([a-z0-9-]+)/?$ genre.php?slug=$1 [L,QSA]
 
 # Legacy: redirect /genre/slug to /gen/slug
-RewriteRule ^genre/([a-z0-9-]+)/?$ /gen/$1 [R=301,L]
+RewriteRule ^genre/([a-z0-9-]+)/?$ /gen/$1 [R=301,L,QSA]
 
 # Handle all events listing - /evenimente
 RewriteCond %{REQUEST_FILENAME} !-f
@@ -73,7 +73,7 @@ RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^locatie/([a-z0-9-]+)/?$ venue-single.php?slug=$1 [L,QSA]
 
 # Legacy: redirect /venues to /locatii
-RewriteRule ^venues/?$ /locatii [R=301,L]
+RewriteRule ^venues/?$ /locatii [R=301,L,QSA]
 
 # Handle cities - /orase
 RewriteCond %{REQUEST_FILENAME} !-f
@@ -86,10 +86,10 @@ RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^regiune/([a-z0-9-]+)/?$ region.php?slug=$1 [L,QSA]
 
 # Legacy: redirect /region/slug to /regiune/slug
-RewriteRule ^region/([a-z0-9-]+)/?$ /regiune/$1 [R=301,L]
+RewriteRule ^region/([a-z0-9-]+)/?$ /regiune/$1 [R=301,L,QSA]
 
 # Legacy: redirect /cities to /orase
-RewriteRule ^cities/?$ /orase [R=301,L]
+RewriteRule ^cities/?$ /orase [R=301,L,QSA]
 
 # Handle artists - /artisti and /artist/artist-slug
 RewriteCond %{REQUEST_FILENAME} !-f
@@ -335,7 +335,7 @@ RewriteCond %{REQUEST_URI} !^/organizator/(login|register|events|analytics|ticke
 RewriteRule ^organizator/([a-z0-9-]+)/?$ organizer/public.php?slug=$1 [L,QSA]
 
 # Legacy: redirect /organizer/slug to /organizator/slug
-RewriteRule ^organizer/([a-z0-9-]+)/?$ /organizator/$1 [R=301,L]
+RewriteRule ^organizer/([a-z0-9-]+)/?$ /organizator/$1 [R=301,L,QSA]
 
 # ============================================
 # USER ACCOUNT ROUTES - /cont/*
@@ -403,20 +403,20 @@ RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^cont/cerere-rambursare/?$ user/refund-request.php [L,QSA]
 
 # Legacy: redirect /user/* to /cont/*
-RewriteRule ^user/?$ /cont [R=301,L]
-RewriteRule ^user/dashboard/?$ /cont/dashboard [R=301,L]
-RewriteRule ^user/tickets/?$ /cont/bilete [R=301,L]
-RewriteRule ^user/orders/?$ /cont/comenzi [R=301,L]
-RewriteRule ^user/watchlist/?$ /cont/favorite [R=301,L]
-RewriteRule ^user/rewards/?$ /cont/puncte [R=301,L]
-RewriteRule ^user/profile/?$ /cont/profil [R=301,L]
-RewriteRule ^user/payments/?$ /cont/plati [R=301,L]
-RewriteRule ^user/notifications/?$ /cont/notificari [R=301,L]
-RewriteRule ^user/settings/?$ /cont/setari [R=301,L]
-RewriteRule ^user/help/?$ /cont/ajutor [R=301,L]
-RewriteRule ^user/gift-cards/?$ /cont/carduri-cadou [R=301,L]
-RewriteRule ^user/referrals/?$ /cont/invitatii [R=301,L]
-RewriteRule ^user/reviews/?$ /cont/recenzii [R=301,L]
+RewriteRule ^user/?$ /cont [R=301,L,QSA]
+RewriteRule ^user/dashboard/?$ /cont/dashboard [R=301,L,QSA]
+RewriteRule ^user/tickets/?$ /cont/bilete [R=301,L,QSA]
+RewriteRule ^user/orders/?$ /cont/comenzi [R=301,L,QSA]
+RewriteRule ^user/watchlist/?$ /cont/favorite [R=301,L,QSA]
+RewriteRule ^user/rewards/?$ /cont/puncte [R=301,L,QSA]
+RewriteRule ^user/profile/?$ /cont/profil [R=301,L,QSA]
+RewriteRule ^user/payments/?$ /cont/plati [R=301,L,QSA]
+RewriteRule ^user/notifications/?$ /cont/notificari [R=301,L,QSA]
+RewriteRule ^user/settings/?$ /cont/setari [R=301,L,QSA]
+RewriteRule ^user/help/?$ /cont/ajutor [R=301,L,QSA]
+RewriteRule ^user/gift-cards/?$ /cont/carduri-cadou [R=301,L,QSA]
+RewriteRule ^user/referrals/?$ /cont/invitatii [R=301,L,QSA]
+RewriteRule ^user/reviews/?$ /cont/recenzii [R=301,L,QSA]
 
 # ============================================
 # ORGANIZER DASHBOARD ROUTES - /organizator/*
@@ -443,7 +443,7 @@ RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^organizator/(dashboard|events|settings|analytics|tickets|orders|payouts|team|support|finance|help|participants|promo|sales|reports|email|documents|notifications|widgets|invitatii)/?$ organizer/$1.php [L]
 
 # Legacy: redirect /organizer/* dashboard routes to /organizator/*
-RewriteRule ^organizer/(dashboard|events|settings|analytics|tickets|orders|payouts|team|support|finance|help|participants|promo|sales|reports|email|documents|notifications)/?$ /organizator/$1 [R=301,L]
+RewriteRule ^organizer/(dashboard|events|settings|analytics|tickets|orders|payouts|team|support|finance|help|participants|promo|sales|reports|email|documents|notifications)/?$ /organizator/$1 [R=301,L,QSA]
 
 # ============================================
 # EMBED / WIDGET ROUTES
