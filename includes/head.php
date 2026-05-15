@@ -16,7 +16,7 @@
 
 // Defaults
 if (!isset($pageTitle)) $pageTitle = SITE_NAME;
-if (!isset($pageDescription)) $pageDescription = 'Cumpara bilete online pentru concerte, festivaluri, teatru, sport si multe altele. Cel mai mare portal de bilete din Romania.';
+if (!isset($pageDescription)) $pageDescription = 'Cumpără bilete online pentru concerte, festivaluri, teatru, sport si multe altele. Cel mai mare portal de bilete din Romania.';
 if (!isset($canonicalUrl)) $canonicalUrl = SITE_URL . ($_SERVER['REQUEST_URI'] ?? '/');
 if (!isset($pageImage)) $pageImage = SITE_URL . '/assets/images/og-default.jpg';
 if (!isset($pageType)) $pageType = 'website';
@@ -57,7 +57,7 @@ $siteAndOrgSchema = [
             '@id' => SITE_URL . '/#website',
             'name' => SITE_NAME,
             'url' => SITE_URL,
-            'description' => 'Cumpara bilete online pentru concerte, festivaluri, teatru, sport si multe altele.',
+            'description' => 'Cumpără bilete online pentru concerte, festivaluri, teatru, sport si multe altele.',
             'publisher' => ['@id' => SITE_URL . '/#organization'],
             'potentialAction' => [
                 '@type' => 'SearchAction',
