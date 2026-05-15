@@ -885,14 +885,19 @@ class TicketVariableService
         $buyerName = $order?->customer_name ?? $ticket->attendee_name ?? '';
         $nameParts = explode(' ', $buyerName, 2);
 
-        // Leisure venue fields (program + season + addon services)
+        // Leisure venue fields (program + season + addon services) — DOAR pentru
+        // evenimente leisure_venue. Pe celelalte tipuri evenimente nu calculăm
+        // nimic (rămân empty) ca să nu afectăm template-urile / biletele existente.
+        $isLeisure = ($event?->display_template ?? 'standard') === 'leisure_venue';
         $visitDate = $meta['visit_date'] ?? $orderMeta['visit_date'] ?? null;
         if (!$visitDate && $event) {
             $visitDate = $event->event_date?->format('Y-m-d');
         }
-        $leisureProgram = $this->buildLeisureProgramFields($event, $visitDate);
-        $addonServices = $this->buildAddonServicesText($order, $ticket->id);
-        $addonServicesHtml = $this->buildAddonServicesHtml($order, $ticket->id);
+        $leisureProgram = $isLeisure
+            ? $this->buildLeisureProgramFields($event, $visitDate)
+            : ['program_today' => '', 'season_label' => ''];
+        $addonServices = $isLeisure ? $this->buildAddonServicesText($order, $ticket->id) : '';
+        $addonServicesHtml = $isLeisure ? $this->buildAddonServicesHtml($order, $ticket->id) : '';
 
         return [
             'event' => [

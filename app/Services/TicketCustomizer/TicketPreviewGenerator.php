@@ -514,10 +514,21 @@ SVG;
     private function renderTextLayer(array $layer, array $data, float $x, float $y, float $w, float $h, float $opacity, string $transform, float $pxPerMm): string
     {
         // Get content directly from layer (new structure)
-        $content = $layer['content'] ?? '';
+        $rawContent = $layer['content'] ?? '';
+        $usesHtmlVar = (bool) preg_match('/\{\{\s*[^}]*_html\s*\}\}/', $rawContent);
 
         // Replace placeholders
-        $content = $this->replacePlaceholders($content, $data);
+        $content = $this->replacePlaceholders($rawContent, $data);
+
+        // SVG preview (editor) nu poate randa HTML inline cu <img>/<div>/etc.
+        // Dacă layer-ul folosește o variabilă *_html, înlocuiesc HTML-ul cu
+        // un placeholder vizual + strip tags pentru a permite preview lizibil.
+        if ($usesHtmlVar) {
+            $stripped = trim(strip_tags($content));
+            $preview = $stripped !== '' ? mb_substr($stripped, 0, 120) : '[Preview HTML disponibil în PDF]';
+            if (mb_strlen($stripped) > 120) $preview .= '…';
+            $content = $preview;
+        }
 
         // Get styles directly from layer (new structure)
         // fontSize in editor is CSS px at zoom=100%, which corresponds to 1px per mm in the editor
