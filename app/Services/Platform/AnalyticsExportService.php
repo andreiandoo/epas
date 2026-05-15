@@ -400,8 +400,8 @@ class AnalyticsExportService
             ->when($this->tenantId, fn($q) => $q->where('tenant_id', $this->tenantId))
             ->whereBetween('started_at', [$startDate, $endDate])
             ->groupBy('utm_source', 'utm_medium', 'utm_campaign')
-            ->selectRaw('
-                COALESCE(utm_source, "direct") as source,
+            ->selectRaw("
+                COALESCE(utm_source, 'direct') as source,
                 utm_medium as medium,
                 utm_campaign as campaign,
                 COUNT(*) as sessions,
@@ -410,7 +410,7 @@ class AnalyticsExportService
                 SUM(CASE WHEN is_converted = TRUE THEN total_value ELSE 0 END) as revenue,
                 AVG(page_views) as avg_page_views,
                 AVG(duration_seconds) as avg_duration
-            ')
+            ")
             ->orderByDesc('sessions')
             ->limit(500)
             ->get();

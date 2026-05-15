@@ -105,14 +105,14 @@ class SalesController extends Controller
 
         $report = VendorSaleItem::where('vendor_id', $vendor->id)
             ->where('festival_edition_id', $editionId)
-            ->selectRaw('
-                COALESCE(category_name, "Uncategorized") as category,
+            ->selectRaw("
+                COALESCE(category_name, 'Uncategorized') as category,
                 COUNT(*) as total_transactions,
                 SUM(quantity) as total_quantity,
                 SUM(total_cents) as total_revenue_cents,
                 SUM(commission_cents) as total_commission_cents,
                 AVG(unit_price_cents) as avg_price_cents
-            ')
+            ")
             ->groupBy('category_name')
             ->orderByDesc('total_revenue_cents')
             ->get();
@@ -129,9 +129,9 @@ class SalesController extends Controller
 
         $report = VendorSaleItem::where('vendor_id', $vendor->id)
             ->where('festival_edition_id', $editionId)
-            ->selectRaw('
+            ->selectRaw("
                 product_name,
-                COALESCE(category_name, "Uncategorized") as category,
+                COALESCE(category_name, 'Uncategorized') as category,
                 variant_name,
                 COUNT(*) as total_transactions,
                 SUM(quantity) as total_quantity,
@@ -140,7 +140,7 @@ class SalesController extends Controller
                 MIN(unit_price_cents) as min_price_cents,
                 MAX(unit_price_cents) as max_price_cents,
                 AVG(unit_price_cents) as avg_price_cents
-            ')
+            ")
             ->groupBy('product_name', 'category_name', 'variant_name')
             ->orderByDesc('total_revenue_cents')
             ->get();

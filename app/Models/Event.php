@@ -187,6 +187,20 @@ class Event extends Model
                 $event->saveQuietly(); // Save without triggering events again
             }
         });
+
+        // Defensive: events.slug is NOT NULL, but historical rows may have null slug
+        // and the Filament form lets users blank the field. Derive from title or id.
+        static::saving(function ($event) {
+            if (empty($event->slug)) {
+                $title = $event->title;
+                if (is_array($title)) {
+                    $title = $title['ro'] ?? $title['en'] ?? reset($title) ?? '';
+                }
+                $base = \Illuminate\Support\Str::slug((string) ($title ?: 'event'));
+                $suffix = $event->id ?: ('tmp-' . uniqid());
+                $event->slug = ($base ?: 'event') . '-' . $suffix;
+            }
+        });
     }
 
     /**

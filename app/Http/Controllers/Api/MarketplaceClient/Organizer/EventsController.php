@@ -2369,7 +2369,7 @@ class EventsController extends BaseController
                 $customer = $order->marketplaceCustomer;
                 return [
                     'buyer_name' => $customer
-                        ? $customer->first_name . ' ' . substr($customer->last_name ?? '', 0, 1) . '.'
+                        ? $customer->first_name . ' ' . mb_substr((string) ($customer->last_name ?? ''), 0, 1) . '.'
                         : ($order->customer_name ?? 'Client'),
                     'time_ago' => $order->created_at->diffForHumans(),
                     'amount' => (float) $order->total,

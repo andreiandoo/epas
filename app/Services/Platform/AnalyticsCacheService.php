@@ -324,10 +324,10 @@ class AnalyticsCacheService
                 ->when($tenantId, fn($q) => $q->where('tenant_id', $tenantId))
                 ->whereBetween('started_at', [$startDate, $endDate])
                 ->groupBy('utm_source')
-                ->selectRaw('COALESCE(utm_source, "direct") as source,
+                ->selectRaw("COALESCE(utm_source, 'direct') as source,
                     COUNT(*) as sessions,
                     SUM(CASE WHEN is_converted = TRUE THEN 1 ELSE 0 END) as conversions,
-                    SUM(CASE WHEN is_converted = TRUE THEN total_value ELSE 0 END) as revenue')
+                    SUM(CASE WHEN is_converted = TRUE THEN total_value ELSE 0 END) as revenue")
                 ->orderByDesc('sessions')
                 ->limit(10)
                 ->get();
