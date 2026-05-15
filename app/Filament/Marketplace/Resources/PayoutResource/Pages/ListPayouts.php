@@ -105,7 +105,10 @@ class ListPayouts extends ListRecords
                             $event = Event::with(['marketplaceOrganizer', 'ticketTypes'])->find($state);
                             if ($event) {
                                 $fin = self::calculateEventFinancials($event);
-                                $set('fees_amount', '0.00');
+                                $eventDiscount = (float) ($fin['discount'] ?? 0);
+                                $eventExtras = (float) ($fin['extras'] ?? 0);
+                                $set('discount_amount', number_format($eventDiscount, 2, '.', ''));
+                                $set('fees_amount', number_format($eventExtras, 2, '.', ''));
 
                                 if ($fin['balance'] <= 0) {
                                     // Distinguish: no sales vs fully paid
@@ -114,6 +117,8 @@ class ListPayouts extends ListRecords
                                     $set('payout_tickets', []);
                                     $set('gross_amount', '0.00');
                                     $set('commission_amount', '0.00');
+                                    $set('discount_amount', '0.00');
+                                    $set('fees_amount', '0.00');
                                     $set('net_amount', '0.00');
                                     $set('desired_net_amount', null);
                                 } else {
@@ -137,11 +142,14 @@ class ListPayouts extends ListRecords
                                         }
                                         $set('gross_amount', number_format($ticketGross, 2, '.', ''));
                                         $set('commission_amount', number_format($ticketComm, 2, '.', ''));
-                                        $set('net_amount', number_format(max(0, $ticketGross - $ticketComm), 2, '.', ''));
+                                        $set('net_amount', number_format(max(0, $ticketGross - $ticketComm - $eventDiscount - $eventExtras), 2, '.', ''));
                                     } else {
                                         // Remainder payout — no specific tickets, just the balance
+                                        // (balance already nets out discount + extras + refunds + previous payouts)
                                         $set('gross_amount', number_format($fin['balance'], 2, '.', ''));
                                         $set('commission_amount', '0.00');
+                                        $set('discount_amount', '0.00');
+                                        $set('fees_amount', '0.00');
                                         $set('net_amount', number_format($fin['balance'], 2, '.', ''));
                                     }
                                 }
@@ -149,6 +157,7 @@ class ListPayouts extends ListRecords
                         } else {
                             $set('gross_amount', '0.00');
                             $set('commission_amount', '0.00');
+                            $set('discount_amount', '0.00');
                             $set('fees_amount', '0.00');
                             $set('net_amount', '0.00');
                             $set('payout_tickets', []);
@@ -354,14 +363,15 @@ class ListPayouts extends ListRecords
                                     $gross += $qty * ($unitPrice + $commPerTicket);
                                     $commission += $qty * $commPerTicket;
                                 }
+                                $discount = (float) ($get('discount_amount') ?? 0);
                                 $fees = (float) ($get('fees_amount') ?? 0);
                                 $set('gross_amount', number_format($gross, 2, '.', ''));
                                 $set('commission_amount', number_format($commission, 2, '.', ''));
-                                $set('net_amount', number_format(max(0, $gross - $commission - $fees), 2, '.', ''));
+                                $set('net_amount', number_format(max(0, $gross - $commission - $discount - $fees), 2, '.', ''));
 
                                 \Filament\Notifications\Notification::make()
                                     ->title('Bilete distribuite automat')
-                                    ->body('Suma netă: ' . number_format($gross - $commission - $fees, 2) . ' RON din ' . number_format($desiredNet, 2) . ' RON solicitate')
+                                    ->body('Suma netă: ' . number_format($gross - $commission - $discount - $fees, 2) . ' RON din ' . number_format($desiredNet, 2) . ' RON solicitate')
                                     ->success()
                                     ->send();
                             })
@@ -423,10 +433,11 @@ class ListPayouts extends ListRecords
                                 $commission += $qty * $commPerTicket;
                             }
 
+                            $discount = (float) ($get('discount_amount') ?? 0);
                             $fees = (float) ($get('fees_amount') ?? 0);
                             $set('gross_amount', number_format($gross, 2, '.', ''));
                             $set('commission_amount', number_format($commission, 2, '.', ''));
-                            $set('net_amount', number_format(max(0, $gross - $commission - $fees), 2, '.', ''));
+                            $set('net_amount', number_format(max(0, $gross - $commission - $discount - $fees), 2, '.', ''));
                         }),
                     \Filament\Actions\Action::make('reset_payout_tickets')
                         ->label('Resetează la valori inițiale')
@@ -443,8 +454,12 @@ class ListPayouts extends ListRecords
                             if (!$event) return;
 
                             $fin = self::calculateEventFinancials($event);
+                            $eventDiscount = (float) ($fin['discount'] ?? 0);
+                            $eventExtras = (float) ($fin['extras'] ?? 0);
                             $this->populatePayoutTicketsFromEvent($set, $event, $fin);
                             $set('desired_net_amount', null);
+                            $set('discount_amount', number_format($eventDiscount, 2, '.', ''));
+                            $set('fees_amount', number_format($eventExtras, 2, '.', ''));
 
                             $populatedTickets = $get('payout_tickets') ?? [];
                             $hasTickets = collect($populatedTickets)->sum(fn ($t) => (int) ($t['qty'] ?? 0)) > 0;
@@ -459,10 +474,12 @@ class ListPayouts extends ListRecords
                                 }
                                 $set('gross_amount', number_format($ticketGross, 2, '.', ''));
                                 $set('commission_amount', number_format($ticketComm, 2, '.', ''));
-                                $set('net_amount', number_format(max(0, $ticketGross - $ticketComm), 2, '.', ''));
+                                $set('net_amount', number_format(max(0, $ticketGross - $ticketComm - $eventDiscount - $eventExtras), 2, '.', ''));
                             } else {
                                 $set('gross_amount', number_format($fin['balance'], 2, '.', ''));
                                 $set('commission_amount', '0.00');
+                                $set('discount_amount', '0.00');
+                                $set('fees_amount', '0.00');
                                 $set('net_amount', number_format($fin['balance'], 2, '.', ''));
                             }
 
@@ -483,8 +500,9 @@ class ListPayouts extends ListRecords
                         ->afterStateUpdated(function ($state, Set $set, Get $get) {
                             $gross = (float) $state;
                             $commission = (float) $get('commission_amount');
+                            $discount = (float) $get('discount_amount');
                             $fees = (float) $get('fees_amount');
-                            $set('net_amount', number_format(max(0, $gross - $commission - $fees), 2, '.', ''));
+                            $set('net_amount', number_format(max(0, $gross - $commission - $discount - $fees), 2, '.', ''));
                         }),
 
                     Forms\Components\TextInput::make('commission_amount')
@@ -496,12 +514,14 @@ class ListPayouts extends ListRecords
                         ->afterStateUpdated(function ($state, Set $set, Get $get) {
                             $gross = (float) $get('gross_amount');
                             $commission = (float) $state;
+                            $discount = (float) $get('discount_amount');
                             $fees = (float) $get('fees_amount');
-                            $set('net_amount', number_format(max(0, $gross - $commission - $fees), 2, '.', ''));
+                            $set('net_amount', number_format(max(0, $gross - $commission - $discount - $fees), 2, '.', ''));
                         }),
 
-                    Forms\Components\TextInput::make('fees_amount')
-                        ->label('Taxe')
+                    Forms\Components\TextInput::make('discount_amount')
+                        ->label('Discounturi aplicate')
+                        ->helperText('Codurile promo aplicate de clienți pe biletele acestui eveniment')
                         ->numeric()
                         ->default('0.00')
                         ->suffix('RON')
@@ -509,8 +529,24 @@ class ListPayouts extends ListRecords
                         ->afterStateUpdated(function ($state, Set $set, Get $get) {
                             $gross = (float) $get('gross_amount');
                             $commission = (float) $get('commission_amount');
+                            $discount = (float) $state;
+                            $fees = (float) $get('fees_amount');
+                            $set('net_amount', number_format(max(0, $gross - $commission - $discount - $fees), 2, '.', ''));
+                        }),
+
+                    Forms\Components\TextInput::make('fees_amount')
+                        ->label('Taxe / Asigurări')
+                        ->helperText('Extras încasate de la client (asigurare, suprataxă card cultural, etc.)')
+                        ->numeric()
+                        ->default('0.00')
+                        ->suffix('RON')
+                        ->live(onBlur: true)
+                        ->afterStateUpdated(function ($state, Set $set, Get $get) {
+                            $gross = (float) $get('gross_amount');
+                            $commission = (float) $get('commission_amount');
+                            $discount = (float) $get('discount_amount');
                             $fees = (float) $state;
-                            $set('net_amount', number_format(max(0, $gross - $commission - $fees), 2, '.', ''));
+                            $set('net_amount', number_format(max(0, $gross - $commission - $discount - $fees), 2, '.', ''));
                         }),
 
                     Forms\Components\TextInput::make('net_amount')
@@ -518,6 +554,7 @@ class ListPayouts extends ListRecords
                         ->numeric()
                         ->required(fn (Get $get) => (bool) $get('has_balance'))
                         ->suffix('RON')
+                        ->columnSpan(2)
                         ->readOnly(),
                 ])->visible(fn (Get $get) => $get('has_balance')),
 
@@ -604,6 +641,7 @@ class ListPayouts extends ListRecords
                     'period_end' => $event?->event_date?->toDateString() ?? now()->toDateString(),
                     'gross_amount' => (float) $data['gross_amount'],
                     'commission_amount' => (float) ($data['commission_amount'] ?? 0),
+                    'discount_amount' => (float) ($data['discount_amount'] ?? 0),
                     'fees_amount' => (float) ($data['fees_amount'] ?? 0),
                     'adjustments_amount' => 0,
                     'status' => 'approved',
@@ -1258,6 +1296,8 @@ class ListPayouts extends ListRecords
         return [
             'gross' => round($grossRevenue, 2),
             'commission' => round($totalCommission, 2),
+            'discount' => round($totalDiscount, 2),
+            'extras' => round($totalExtras, 2),
             'refunds' => round($refundedAmount, 2),
             'net' => round($netRevenue, 2),
             'paid' => round($paidPayouts, 2),
