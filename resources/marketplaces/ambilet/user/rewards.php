@@ -160,7 +160,7 @@ require_once dirname(__DIR__) . '/includes/header.php';
                     <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                         <div class="p-4 text-center bg-surface rounded-xl">
                             <div class="mb-2 text-2xl">🎫</div>
-                            <p class="font-semibold text-secondary">Cumpara bilete</p>
+                            <p class="font-semibold text-secondary">Cumpără bilete</p>
                             <p class="text-sm font-medium text-success">+2 XP / leu</p>
                         </div>
                         <div class="p-4 text-center bg-surface rounded-xl">
@@ -170,12 +170,12 @@ require_once dirname(__DIR__) . '/includes/header.php';
                         </div>
                         <div class="p-4 text-center bg-surface rounded-xl">
                             <div class="mb-2 text-2xl">⭐</div>
-                            <p class="font-semibold text-secondary">Lasa o recenzie</p>
+                            <p class="font-semibold text-secondary">Lasă o recenzie</p>
                             <p class="text-sm font-medium text-success">+30 XP</p>
                         </div>
                         <div class="p-4 text-center bg-surface rounded-xl">
                             <div class="mb-2 text-2xl">👥</div>
-                            <p class="font-semibold text-secondary">Invita prieteni</p>
+                            <p class="font-semibold text-secondary">Invită prieteni</p>
                             <p class="text-sm font-medium text-success">+100 XP</p>
                         </div>
                     </div>
