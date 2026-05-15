@@ -53,6 +53,16 @@ Schedule::command('invoices:send-overdue-reminders')
         \Log::error('Failed to send overdue invoice reminders');
     });
 
+// Rebuild stale event_seating_layouts.json_geometry snapshots. Detects
+// duplicate seat_uid entries (the canary signal that the snapshot has
+// drifted from the seating_layouts DB after a row rename / regen) and
+// regenerates only those. --stale-only keeps this cheap on every run
+// since the check is a small JSON scan, not a DB rebuild.
+Schedule::command('seating:refresh-snapshots --stale-only')
+    ->everyFiveMinutes()
+    ->withoutOverlapping()
+    ->timezone('Europe/Bucharest');
+
 // Release expired seat holds (every minute)
 Schedule::command('seating:release-expired-holds')
     ->everyMinute()
