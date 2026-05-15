@@ -323,7 +323,27 @@
     }
 
     /**
-     * Get UTM parameters from URL
+     * Extract fbclid from the _fbc cookie set on the first visit.
+     * Meta's spec: `fb.1.{timestamp_ms}.{fbclid}` — we split on the
+     * third dot and rejoin the rest so an fbclid containing dots
+     * survives intact.
+     */
+    function fbclidFromCookie() {
+        const fbc = getCookie('_fbc');
+        if (!fbc) return null;
+        const idx1 = fbc.indexOf('.');
+        if (idx1 < 0) return null;
+        const idx2 = fbc.indexOf('.', idx1 + 1);
+        if (idx2 < 0) return null;
+        const idx3 = fbc.indexOf('.', idx2 + 1);
+        if (idx3 < 0) return null;
+        return fbc.substring(idx3 + 1) || null;
+    }
+
+    /**
+     * Get UTM parameters from URL, falling back to first-party cookies
+     * for click ids when the URL no longer carries them (e.g. on the
+     * thank-you page, which is reached without query params).
      */
     function getUtmParams() {
         const params = new URLSearchParams(window.location.search);
@@ -334,7 +354,7 @@
             utm_term: params.get('utm_term'),
             utm_content: params.get('utm_content'),
             gclid: params.get('gclid'),
-            fbclid: params.get('fbclid'),
+            fbclid: params.get('fbclid') || fbclidFromCookie(),
             ttclid: params.get('ttclid')
         };
     }
