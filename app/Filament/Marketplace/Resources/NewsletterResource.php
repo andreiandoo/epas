@@ -103,22 +103,35 @@ class NewsletterResource extends Resource
                         ->label('Oraș — filtrează evenimentele')
                         ->multiple()
                         ->searchable()
-                        ->preload()
                         ->dehydrated(false)
                         ->live(onBlur: true)
-                        ->options(function () use ($marketplace) {
-                            return MarketplaceCity::where('marketplace_client_id', $marketplace?->id)
-                                ->where('is_visible', true)
-                                ->orderBy('sort_order')
+                        // Static dropdown content — shown when the admin
+                        // opens the picker before typing. Loads every
+                        // visible city for the marketplace.
+                        ->options(fn () => static::buildCityOptions($marketplace))
+                        // Typed search uses a PHP-side filter on
+                        // diacritic-stripped, lowercased names so
+                        // "timisoara" matches "Timișoara" (and vice
+                        // versa). Postgres ilike on a JSON column does
+                        // case-insensitive but NOT accent-insensitive
+                        // matching, hence the in-app filter instead of
+                        // a raw whereLike.
+                        ->getSearchResultsUsing(function (string $search) use ($marketplace) {
+                            $needle = static::normalizeSearch($search);
+                            return collect(static::buildCityOptions($marketplace))
+                                ->filter(function ($label) use ($needle) {
+                                    return $needle === '' || str_contains(static::normalizeSearch($label), $needle);
+                                })
+                                ->toArray();
+                        })
+                        ->getOptionLabelsUsing(function (array $values) {
+                            return MarketplaceCity::whereIn('id', $values)
                                 ->get()
                                 ->mapWithKeys(function ($city) {
                                     $name = $city->getTranslation('name', 'ro')
                                         ?? $city->getTranslation('name', 'en')
                                         ?? '—';
-                                    $label = $city->event_count
-                                        ? "{$name} ({$city->event_count} evenimente)"
-                                        : $name;
-                                    return [$city->id => $label];
+                                    return [$city->id => $name];
                                 })
                                 ->toArray();
                         })
@@ -128,15 +141,33 @@ class NewsletterResource extends Resource
                             // be confusing.
                             $set('target_event_ids', []);
                         })
-                        ->helperText('Selectează unul sau mai multe orașe pentru a vedea doar evenimentele de acolo. Lasă gol pentru toate.')
+                        ->helperText('Selectează unul sau mai multe orașe pentru a vedea doar evenimentele de acolo. Caută cu sau fără diacritice. Lasă gol pentru toate.')
                         ->columnSpanFull(),
 
                     Forms\Components\Select::make('target_event_ids')
                         ->label('Evenimente — către cumpărătorii biletelor')
                         ->multiple()
                         ->searchable()
-                        ->preload(false)
                         ->live(onBlur: true)
+                        // Initial dropdown content reacts to the city
+                        // filter — selecting cities pre-fills the events
+                        // dropdown without requiring the admin to type
+                        // anything. When no city is selected, returns an
+                        // empty list so the dropdown stays clean (admin
+                        // can still search by typing — see below).
+                        ->options(function (SGet $get) use ($marketplace) {
+                            $cityIds = $get('target_city_ids') ?? [];
+                            if (empty($cityIds)) return [];
+                            return Event::where('marketplace_client_id', $marketplace?->id)
+                                ->whereIn('marketplace_city_id', $cityIds)
+                                ->orderByDesc('event_date')
+                                ->limit(100)
+                                ->get()
+                                ->mapWithKeys(fn ($e) => [
+                                    $e->id => static::formatEventOption($e),
+                                ])
+                                ->toArray();
+                        })
                         ->getSearchResultsUsing(function (string $search, SGet $get) use ($marketplace) {
                             $cityIds = $get('target_city_ids') ?? [];
                             $query = Event::where('marketplace_client_id', $marketplace?->id);
@@ -150,11 +181,8 @@ class NewsletterResource extends Resource
                                         ->orWhere('slug', 'ilike', "%{$search}%");
                                 });
                             }
-                            // City picked but no search → show top 30 events
-                            // by date so the admin can pick directly without
-                            // having to start typing.
                             return $query->orderByDesc('event_date')
-                                ->limit(!empty($cityIds) && $search === '' ? 50 : 30)
+                                ->limit(!empty($cityIds) && $search === '' ? 100 : 30)
                                 ->get()
                                 ->mapWithKeys(fn ($e) => [
                                     $e->id => static::formatEventOption($e),
@@ -169,7 +197,7 @@ class NewsletterResource extends Resource
                                 ])
                                 ->toArray();
                         })
-                        ->helperText('Newsletter va ajunge la toți cumpărătorii cu bilete valide pe evenimentele selectate (email-uri unice — dacă un client a cumpărat la mai multe, primește un singur email).')
+                        ->helperText('Selectează orașul mai sus → evenimentele se preîncărc automat. Newsletter ajunge la toți cumpărătorii cu bilete valide; un client care a cumpărat la mai multe evenimente primește un singur email.')
                         ->columnSpanFull(),
 
                     Forms\Components\Select::make('target_lists')
@@ -603,6 +631,39 @@ class NewsletterResource extends Resource
                         }),
                 ]),
         ];
+    }
+
+    /**
+     * Build the [city_id => label] map shown in the Oraș filter. Shared
+     * between the static options() callback and the diacritic-aware
+     * search results closure so both display the same labels.
+     */
+    protected static function buildCityOptions($marketplace): array
+    {
+        if (!$marketplace) return [];
+        return MarketplaceCity::where('marketplace_client_id', $marketplace->id)
+            ->where('is_visible', true)
+            ->orderBy('sort_order')
+            ->get()
+            ->mapWithKeys(function ($city) {
+                $name = $city->getTranslation('name', 'ro')
+                    ?? $city->getTranslation('name', 'en')
+                    ?? '—';
+                $label = $city->event_count
+                    ? "{$name} ({$city->event_count} evenimente)"
+                    : $name;
+                return [$city->id => $label];
+            })
+            ->toArray();
+    }
+
+    /**
+     * Lowercase + strip diacritics so admin can search "timisoara"
+     * and match "Timișoara" / "TIMIȘOARA" / "Timisoara" all the same.
+     */
+    protected static function normalizeSearch(string $s): string
+    {
+        return strtolower(\Illuminate\Support\Str::ascii(trim($s)));
     }
 
     /**
