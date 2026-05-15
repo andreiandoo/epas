@@ -2003,6 +2003,25 @@ const EventPage = {
                 controlsHtml = '<span class="text-sm font-medium text-gray-500">Sold Out</span>';
             } else if (isSoldOut) {
                 controlsHtml = '<span class="text-sm font-medium text-gray-400">Epuizat</span>';
+            } else if (hasSeating) {
+                // For seated ticket types quantity is driven by the seat
+                // picker — exposing +/- here lets users bump qty past their
+                // actual seat picks and silently produce ghost tickets at
+                // checkout. The "Alege locurile" / "X locuri selectate"
+                // button below is the single source of truth.
+                var seatedBtnLabel;
+                if (selectedCount > 0) {
+                    seatedBtnLabel = selectedCount + ' loc' + (selectedCount > 1 ? 'uri' : '') + ' selectat' + (selectedCount > 1 ? 'e' : '');
+                } else {
+                    seatedBtnLabel = 'Alege locurile pe hartă';
+                }
+                controlsHtml = '<div class="flex items-center gap-2">' +
+                    '<button onclick="EventPage.openSeatSelection(\'' + tt.id + '\')" class="flex items-center gap-2 px-3 py-2 text-xs font-semibold transition-colors rounded-lg ' +
+                    (selectedCount > 0 ? 'bg-green-500 text-white' : 'bg-accent text-white hover:bg-accent/80') + '" aria-label="Select seat(s)">' +
+                    '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>' +
+                    seatedBtnLabel +
+                    '</button>' +
+                '</div>';
             } else {
                 if (currentQty === 0) {
                     controlsHtml = '<div class="flex items-center gap-2">' +
@@ -3747,7 +3766,7 @@ const EventPage = {
                         var seatCX = section.x + seat.x;
                         var seatCY = section.y + seat.y;
 
-                        var isSelected = self.isSeatSelected(ticketTypeId, seat.id);
+                        var isSelected = self.isSeatSelected(ticketTypeId, seat.id, seat.seat_uid);
                         var status = seat.status || 'available';
                         var isDisabled = (status === 'disabled' || seat.base_status === 'imposibil');
 
@@ -4007,7 +4026,7 @@ const EventPage = {
                         var seatCX = section.x + seat.x;
                         var seatCY = section.y + seat.y;
 
-                        var isSelected = self.isSeatSelectedAny(seat.id);
+                        var isSelected = self.isSeatSelectedAny(seat.id, seat.seat_uid);
                         var status = seat.status || 'available';
                         var isDisabled = (status === 'disabled' || seat.base_status === 'imposibil');
 
@@ -4112,18 +4131,30 @@ const EventPage = {
     /**
      * Check if a seat is selected for a ticket type
      */
-    isSeatSelected(ticketTypeId, seatId) {
+    isSeatSelected(ticketTypeId, seatId, seatUid) {
         var seats = this.selectedSeats[ticketTypeId] || [];
-        return seats.some(function(s) { return s.id === seatId; });
+        return seats.some(function(s) {
+            // Compare on both id and seat_uid — cart-restored selections
+            // carry seat_uid but NOT the per-render seat.id (it's only
+            // assigned when the map renders), so an id-only check would
+            // mark every restored seat as 'not selected' on the map.
+            if (seatId != null && s.id === seatId) return true;
+            if (seatUid && s.seat_uid === seatUid) return true;
+            return false;
+        });
     },
 
     /**
      * Check if a seat is selected in ANY ticket type
      */
-    isSeatSelectedAny(seatId) {
+    isSeatSelectedAny(seatId, seatUid) {
         var self = this;
         return Object.keys(this.selectedSeats).some(function(ttId) {
-            return self.selectedSeats[ttId].some(function(s) { return s.id === seatId; });
+            return self.selectedSeats[ttId].some(function(s) {
+                if (seatId != null && s.id === seatId) return true;
+                if (seatUid && s.seat_uid === seatUid) return true;
+                return false;
+            });
         });
     },
 
