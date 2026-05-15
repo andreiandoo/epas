@@ -1,0 +1,101 @@
+import { apiGet, apiPost, apiPatch, apiDelete, setToken } from './client';
+
+// ── Auth ─────────────────────────────────────────────────────
+
+export async function login(email, password) {
+  const data = await apiPost('/venue-owner/login', { email, password });
+  if (data.success && data.data?.token) {
+    setToken(data.data.token);
+  }
+  return data;
+}
+
+export async function logout() {
+  try {
+    await apiPost('/venue-owner/logout');
+  } catch (e) {}
+  setToken(null);
+}
+
+export async function getMe() {
+  return apiGet('/venue-owner/me');
+}
+
+// ── Events ───────────────────────────────────────────────────
+
+export async function listEvents(scope = 'all') {
+  return apiGet('/venue-owner/events', { scope });
+}
+
+export async function getEvent(eventId) {
+  return apiGet(`/venue-owner/events/${eventId}`);
+}
+
+export async function listAttendees(eventId, { search = '', page = 1, perPage = 25, status = 'all' } = {}) {
+  const params = { page, per_page: perPage, status };
+  if (search) params.search = search;
+  return apiGet(`/venue-owner/events/${eventId}/attendees`, params);
+}
+
+// ── Tickets ──────────────────────────────────────────────────
+
+export async function getTicket(ticketId) {
+  return apiGet(`/venue-owner/tickets/${ticketId}`);
+}
+
+export async function scanLookup(code) {
+  return apiPost('/venue-owner/scan', { code });
+}
+
+/**
+ * Actually check in a ticket (was read-only lookup before). Same shape as the
+ * organizer endpoint: `{ticket_code}` in / `{ticket, customer, order}` out.
+ */
+export async function checkInByCode(ticketCode) {
+  return apiPost('/venue-owner/check-in', { ticket_code: ticketCode });
+}
+
+export async function undoCheckInByCode(ticketCode) {
+  return apiDelete(`/venue-owner/check-in/${encodeURIComponent(ticketCode)}`);
+}
+
+// ── POS sales ────────────────────────────────────────────────
+
+export async function listEventTicketTypes(eventId) {
+  return apiGet(`/venue-owner/events/${eventId}/ticket-types`);
+}
+
+export async function createPosOrder(payload) {
+  return apiPost('/venue-owner/orders', payload);
+}
+
+// ── Export ───────────────────────────────────────────────────
+
+/**
+ * Request a CSV export of valid tickets. Returns either a signed
+ * download URL (destination='download') or a success message after the
+ * email has been sent (destination='email').
+ */
+export async function exportAttendees(eventId, { destination, email }) {
+  const body = { destination };
+  if (destination === 'email') body.email = email;
+  return apiPost(`/venue-owner/events/${eventId}/export`, body);
+}
+
+// ── Notes (polymorphic) ──────────────────────────────────────
+
+export async function listNotes(targetType, targetId) {
+  return apiGet('/venue-owner/notes', { target_type: targetType, target_id: targetId });
+}
+
+export async function createNote(targetType, targetId, note) {
+  return apiPost('/venue-owner/notes', { target_type: targetType, target_id: targetId, note });
+}
+
+export async function updateNote(noteId, note) {
+  return apiPatch(`/venue-owner/notes/${noteId}`, { note });
+}
+
+export async function deleteNote(noteId) {
+  return apiDelete(`/venue-owner/notes/${noteId}`);
+}
