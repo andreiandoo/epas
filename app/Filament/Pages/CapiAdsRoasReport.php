@@ -138,8 +138,27 @@ class CapiAdsRoasReport extends Page
         // campaign mapping (not exposed via Marketing API). We approximate
         // by attributing ALL fbclid revenue to the campaign mix here, then
         // per-campaign by total clicks weight.
-        $totalRevenueFromFbAds = (float) $this->fbclidRevenueQuery($start, $end)->sum('orders.total');
-        $this->attributedOrderCount = (int) $this->fbclidRevenueQuery($start, $end)->count();
+        // Single aggregate query (sum + count) wrapped in a 5-min cache.
+        // Keeps the page snappy when an admin clicks around date pickers
+        // and prevents the multi-month-window Cloudflare timeout.
+        $cacheKey = sprintf(
+            'capi_roas_rev:%s:%s:%s:%s',
+            $start->toDateString(),
+            $end->toDateString(),
+            $this->marketplaceClientId ?: 'all',
+            $this->marketplaceOrganizerId ?: 'all'
+        );
+        $attr = \Illuminate\Support\Facades\Cache::remember($cacheKey, 300, function () use ($start, $end) {
+            $row = $this->fbclidRevenueQuery($start, $end)
+                ->selectRaw('COALESCE(SUM(orders.total), 0) as rev, COUNT(*) as cnt')
+                ->first();
+            return [
+                'revenue' => (float) ($row->rev ?? 0),
+                'count' => (int) ($row->cnt ?? 0),
+            ];
+        });
+        $totalRevenueFromFbAds = $attr['revenue'];
+        $this->attributedOrderCount = $attr['count'];
         $this->totalRevenue = $totalRevenueFromFbAds;
         $this->roas = $this->totalSpend > 0 ? round($this->totalRevenue / $this->totalSpend, 2) : 0;
 
@@ -193,7 +212,9 @@ class CapiAdsRoasReport extends Page
             ->whereBetween('orders.created_at', [$start, $end])
             ->whereIn('orders.status', ['paid', 'confirmed', 'completed'])
             ->where(function ($q) {
-                $q->whereRaw("(orders.meta::text LIKE '%fbclid%' OR orders.meta::text LIKE '%fbc%')")
+                // jsonb ? 'key' is an index-friendly key-existence check;
+                // way faster than LIKE on the serialized text form.
+                $q->whereRaw("(orders.meta::jsonb ? 'fbclid' OR orders.meta::jsonb ? 'fbc')")
                     ->orWhereExists(function ($sub) {
                         $sub->select(DB::raw(1))
                             ->from('core_customer_events')
