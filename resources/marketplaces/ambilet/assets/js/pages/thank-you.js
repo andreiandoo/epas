@@ -37,9 +37,18 @@ const ThankYouPage = {
                 || null;
             const total = parseFloat(order.total || order.total_amount || 0);
             const currency = order.currency || 'RON';
+            // Forward customer identity so the backend can populate
+            // core_customers.email / last_fbclid for this visitor — the
+            // single missing link that breaks ROAS attribution on
+            // Ambilet (visitors get a CoreCustomer row by visitor_id
+            // but never get linked to their email otherwise).
             EPASTracking.trackPurchase(eventId, orderId, total, currency, {
                 client_event_id: 'purchase_' + orderId,
                 content_name: order.event_name || null,
+                email: order.customer_email || order.email || null,
+                customer_email: order.customer_email || order.email || null,
+                customer_name: order.customer_name || null,
+                customer_phone: order.customer_phone || null,
             });
         } catch (e) {
             // tracking must never break the thank-you page

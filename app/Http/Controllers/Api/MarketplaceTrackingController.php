@@ -59,6 +59,8 @@ class MarketplaceTrackingController extends Controller
             'client_event_id' => 'nullable|string|max:128',
             'email' => 'nullable|email|max:255',
             'customer_email' => 'nullable|email|max:255',
+            'customer_name' => 'nullable|string|max:255',
+            'customer_phone' => 'nullable|string|max:50',
             // Order linkage — frontend passes this on purchase events so
             // ROAS attribution can join core_customer_events ↔ orders.
             'order_id' => 'nullable|integer',
@@ -565,13 +567,14 @@ class MarketplaceTrackingController extends Controller
     {
         $t = fn (?string $v, int $max = 255) => $v ? mb_substr($v, 0, $max) : $v;
         try {
-            // Find customer by visitor_id
+            $email = $request->input('email') ?? $request->input('customer_email');
+            $emailNormalized = $email ? mb_strtolower(trim($email)) : null;
+
+            // Find customer by visitor_id first, fall back to email.
             $customer = CoreCustomer::where('visitor_id', $visitorId)->first();
 
-            // If not found by visitor, try linking via email in request
-            $email = $request->input('email') ?? $request->input('customer_email');
-            if (!$customer && $email) {
-                $customer = CoreCustomer::findByEmail($email);
+            if (!$customer && $emailNormalized) {
+                $customer = CoreCustomer::findByEmail($emailNormalized);
                 if ($customer && !$customer->visitor_id) {
                     $customer->update(['visitor_id' => $visitorId]);
                 }
@@ -581,6 +584,10 @@ class MarketplaceTrackingController extends Controller
                 // Create minimal customer from visitor data (will be enriched on purchase)
                 $customer = CoreCustomer::create([
                     'visitor_id' => $visitorId,
+                    'email' => $emailNormalized,
+                    'first_name' => $t($request->input('customer_name') ? explode(' ', $request->input('customer_name'), 2)[0] : null),
+                    'last_name' => $t($request->input('customer_name') && str_contains($request->input('customer_name'), ' ') ? explode(' ', $request->input('customer_name'), 2)[1] : null),
+                    'phone' => $t($request->input('customer_phone')),
                     'ip_address' => $request->ip(),
                     'device_type' => $event->device_type,
                     'browser' => $event->browser,
@@ -602,12 +609,35 @@ class MarketplaceTrackingController extends Controller
                     'first_fbclid' => $t($request->input('fbclid')),
                     'first_ttclid' => $t($request->input('ttclid')),
                 ]);
+            } else {
+                // Backfill email / name / phone on existing customer when
+                // we now have data we didn't have before (typical on
+                // purchase events fired from the thank-you page).
+                $patch = [];
+                if ($emailNormalized && !$customer->email) {
+                    $patch['email'] = $emailNormalized;
+                }
+                if ($request->input('customer_phone') && !$customer->phone) {
+                    $patch['phone'] = $t($request->input('customer_phone'));
+                }
+                $name = trim((string) $request->input('customer_name'));
+                if ($name && !$customer->first_name) {
+                    $parts = explode(' ', $name, 2);
+                    $patch['first_name'] = $t($parts[0] ?? null);
+                    if (!empty($parts[1])) {
+                        $patch['last_name'] = $t($parts[1]);
+                    }
+                }
+                if (!empty($patch)) {
+                    $customer->update($patch);
+                }
             }
 
             // Link event to customer
             $event->update(['customer_id' => $customer->id]);
 
-            // Update visit metrics
+            // Update visit metrics — also persists last_fbclid / last_gclid /
+            // utm_* / referrer on the customer row.
             $customer->recordVisit([
                 'referrer' => $request->input('referrer'),
                 'utm_source' => $request->input('utm_source'),
