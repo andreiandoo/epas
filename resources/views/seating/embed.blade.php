@@ -210,21 +210,30 @@ function paint() {
   roundedRect(ctx, 0, 0, cw, ch, 8);
   ctx.fill();
 
-  // Section container outlines — faint, no labels (user requested no
-  // section names visible). Outlines kept as a structural reference so
-  // sections stay distinguishable when zoomed out.
+  // Section container outlines — faint. Section names are hidden by
+  // default (visual noise on seated sections), BUT sections without any
+  // seats are structural / decorative labels (stage, bar, entrance, etc.)
+  // and need their name visible at every zoom level.
   for (const section of SEATING.sections) {
     const sx = section.x || 0, sy = section.y || 0;
     const sw = section.width || 100, sh = section.height || 100;
     ctx.strokeStyle = 'rgba(139,92,246,0.18)';
     ctx.lineWidth = 1;
     ctx.strokeRect(sx, sy, sw, sh);
+
+    const hasSeats = (section.rows || []).some(r => (r.seats || []).length > 0);
+    if (!hasSeats && section.name) {
+      ctx.fillStyle = 'rgba(255,255,255,0.75)';
+      ctx.font = 'bold 14px system-ui';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(section.name, sx + sw / 2, sy + sh / 2);
+    }
   }
 
   // Row labels — drawn to the left of the first seat in each row when
-  // zoom is high enough to make text legible. Skip at far-out zoom to
-  // keep the overview clean.
-  const showRowLabels = view.scale > 0.7;
+  // zoom is high enough to make text legible.
+  const showRowLabels = view.scale > 0.5;
   if (showRowLabels) {
     ctx.fillStyle = 'rgba(255,255,255,0.65)';
     ctx.font = '700 9px system-ui';
@@ -247,8 +256,9 @@ function paint() {
     }
   }
 
-  // Seats + seat numbers
-  const showSeatNumbers = view.scale > 1.4;
+  // Seats + seat numbers. Lower threshold than row labels — numbers
+  // need a slightly larger zoom to stay legible inside the seat circle.
+  const showSeatNumbers = view.scale > 0.9;
   for (const entry of seatIndex.values()) {
     const { seat, absX, absY, r } = entry;
     ctx.beginPath();
@@ -368,6 +378,25 @@ canvas.addEventListener('pointerup', (e) => {
 canvas.addEventListener('pointercancel', (e) => {
   pointers.delete(e.pointerId);
 });
+
+// Desktop wheel-zoom (and mac trackpad pinch, which fires wheel with
+// ctrlKey). Anchored on the cursor so users zoom where they're looking.
+canvas.addEventListener('wheel', (e) => {
+  e.preventDefault();
+  const rect = canvas.getBoundingClientRect();
+  const cx = e.clientX - rect.left;
+  const cy = e.clientY - rect.top;
+  // Mac pinch sends large deltaY with ctrlKey; treat both the same way
+  // but tone down the per-event step to keep zoom feeling smooth.
+  const step = e.ctrlKey ? 0.05 : 0.15;
+  const factor = e.deltaY < 0 ? (1 + step) : 1 / (1 + step);
+  const newScale = Math.max(view.minScale, Math.min(view.maxScale, view.scale * factor));
+  const k = newScale / view.scale;
+  view.tx = cx - (cx - view.tx) * k;
+  view.ty = cy - (cy - view.ty) * k;
+  view.scale = newScale;
+  requestPaint();
+}, { passive: false });
 
 function handleTap(clientX, clientY) {
   const rect = canvas.getBoundingClientRect();
