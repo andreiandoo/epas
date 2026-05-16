@@ -1089,7 +1089,12 @@ class MarketplaceTaxTemplate extends Model
             }
             $variables['payout_sequence_number'] = $sequenceNumber;
 
-            // Tickets breakdown label: (50lei*2+60lei*16) format — exclude POS/app rows
+            // Tickets breakdown label: (50lei*2+60lei*16) format — exclude POS/app rows.
+            // Prices keep their decimals when they have any (e.g. 59.50 stays as
+            // 59.50, not rounded to 60); integer prices stay clean (60 not 60.00).
+            $formatPrice = fn (float $p): string => fmod($p, 1.0) === 0.0
+                ? number_format($p, 0, '.', '')
+                : number_format($p, 2, '.', '');
             $breakdownParts = [];
             $ticketBreakdown = $payout->ticket_breakdown ?? [];
             $totalTicketsSold = 0;
@@ -1103,7 +1108,7 @@ class MarketplaceTaxTemplate extends Model
                 $qty = (int) ($item['quantity'] ?? $item['tickets'] ?? $item['qty'] ?? 0);
                 $totalTicketsSold += $qty;
                 if ($qty > 0 && $price > 0) {
-                    $breakdownParts[] = number_format($price, 0) . 'lei*' . $qty;
+                    $breakdownParts[] = $formatPrice($price) . 'lei*' . $qty;
                 }
             }
             $variables['tickets_breakdown_label'] = !empty($breakdownParts) ? ' (' . implode('+', $breakdownParts) . ')' : '';
@@ -1147,9 +1152,13 @@ class MarketplaceTaxTemplate extends Model
                     ->sum('commission_amount');
 
                 // Build "(120lei*1)" style label same as tickets_breakdown_label.
-                $byPrice = $refundItems->groupBy(fn ($it) => (int) round((float) $it->face_value));
+                // Group by exact face_value (rounded to cents) so 59.50 stays
+                // visible — the rounding-to-int in the previous cut conflated
+                // distinct prices and lost decimals in the label.
+                $byPrice = $refundItems->groupBy(fn ($it) => number_format((float) $it->face_value, 2, '.', ''));
                 foreach ($byPrice as $price => $set) {
-                    $refundedBreakdownParts[] = $price . 'lei*' . $set->count();
+                    $priceFloat = (float) $price;
+                    $refundedBreakdownParts[] = $formatPrice($priceFloat) . 'lei*' . $set->count();
                 }
             }
             $variables['total_tickets_refunded'] = $refundCount;
