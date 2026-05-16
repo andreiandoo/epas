@@ -249,17 +249,16 @@ class SeatingEmbedController extends Controller
      */
     protected function reverbClientConfig(): array
     {
+        // Use config() not env() — Laravel's config:cache invalidates env()
+        // in the request lifecycle (returns the default), which would leave
+        // the embed page stuck on "real-time off" in production.
         return [
-            'driver' => env('BROADCAST_CONNECTION', 'null'),
-            'app_key' => env('REVERB_APP_KEY'),
-            'host' => env('REVERB_HOST_PUBLIC', env('REVERB_HOST', null)),
-            'port' => (int) env('REVERB_PORT_PUBLIC', env('REVERB_PORT', 8080)),
-            'scheme' => env('REVERB_SCHEME', 'https'),
-            // Path prefix when Reverb is reverse-proxied under a sub-path
-            // (e.g. nginx routes `/reverb/` → `127.0.0.1:8080`). Pusher JS
-            // prepends this to the WS URL: wss://{host}{path}/app/{key}.
-            // Empty string = root.
-            'path' => env('REVERB_PATH_PUBLIC', ''),
+            'driver' => config('broadcasting.default'),
+            'app_key' => config('reverb-client.app_key'),
+            'host' => config('reverb-client.host'),
+            'port' => (int) config('reverb-client.port'),
+            'scheme' => config('reverb-client.scheme'),
+            'path' => config('reverb-client.path'),
         ];
     }
 
