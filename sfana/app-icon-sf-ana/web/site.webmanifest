@@ -1,0 +1,21 @@
+{
+  "name": "Rezerva\u021bia Sf\u00e2nta Ana",
+  "short_name": "Sf. Ana",
+  "description": "Aplica\u021bia oficial\u0103 Rezerva\u021bia Lacul Sf\u00e2nta Ana & Tinovul Moho\u0219",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0F2C20",
+  "theme_color": "#1F4E37",
+  "icons": [
+    {
+      "src": "/android-chrome-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/android-chrome-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

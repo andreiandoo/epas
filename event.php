@@ -18,6 +18,23 @@ if ($eventSlug && !$isPreview) {
         $pageCacheKey = md5($_SERVER['REQUEST_URI'] ?? '/');
         @unlink($pageCacheDir . '/' . $pageCacheKey . '.html');
 
+        // Propagate query string (fbclid, gclid, utm_*, etc.) so ad-click
+        // attribution survives this redirect. PHP's header() does NOT do
+        // this by default — anything after the original URL's `?` would
+        // otherwise be lost on Location.
+        $incomingQuery = $_SERVER['QUERY_STRING'] ?? '';
+        if ($incomingQuery !== '') {
+            // Strip the rewriter's own `slug=…` param so it doesn't get
+            // duplicated onto the destination URL.
+            parse_str($incomingQuery, $incomingParams);
+            unset($incomingParams['slug']);
+            $forwardQuery = http_build_query($incomingParams);
+            if ($forwardQuery !== '') {
+                $sep = (strpos($redirectUrl, '?') === false) ? '?' : '&';
+                $redirectUrl .= $sep . $forwardQuery;
+            }
+        }
+
         header('Location: ' . $redirectUrl, true, 302);
         exit;
     }
