@@ -33,8 +33,35 @@
   }
   #seat-canvas { position: absolute; top: 0; left: 0; transform-origin: 0 0; }
   #footer {
-    flex-shrink: 0; padding: 12px 16px; background: #0f0f1f;
-    border-top: 1px solid rgba(255,255,255,0.08); display: flex; gap: 10px; align-items: center;
+    flex-shrink: 0; background: #0f0f1f;
+    border-top: 1px solid rgba(255,255,255,0.08);
+    display: flex; flex-direction: column;
+  }
+  #selected-list {
+    max-height: 38vh; overflow-y: auto;
+    padding: 8px 16px;
+  }
+  #selected-list.hidden { display: none; }
+  .sel-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.04);
+  }
+  .sel-row:last-child { border-bottom: 0; }
+  .sel-dot { width: 10px; height: 10px; border-radius: 5px; flex-shrink: 0; }
+  .sel-info { flex: 1; min-width: 0; }
+  .sel-name { font-size: 13px; font-weight: 700; color: #fff; }
+  .sel-pos { font-size: 11px; color: rgba(255,255,255,0.55); margin-top: 2px; }
+  .sel-price { font-size: 14px; font-weight: 700; color: #a78bfa; flex-shrink: 0; }
+  .sel-remove {
+    width: 28px; height: 28px; border-radius: 14px;
+    background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.6);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; font-weight: 700; cursor: pointer; flex-shrink: 0;
+  }
+  #totals-row {
+    flex-shrink: 0; padding: 12px 16px;
+    border-top: 1px solid rgba(255,255,255,0.08);
+    display: flex; gap: 10px; align-items: center;
   }
   #summary { flex: 1; font-size: 13px; color: rgba(255,255,255,0.7); }
   #summary strong { color: #fff; }
@@ -61,9 +88,12 @@
     <div id="status-line">offline</div>
   </div>
   <div id="footer">
-    <div id="summary">Selectează locurile dorite din hartă.</div>
-    <button id="cancel-btn">Anulează</button>
-    <button id="confirm-btn" disabled>Confirmă</button>
+    <div id="selected-list" class="hidden"></div>
+    <div id="totals-row">
+      <div id="summary">Selectează locurile dorite din hartă.</div>
+      <button id="cancel-btn">Anulează</button>
+      <button id="confirm-btn" disabled>Confirmă</button>
+    </div>
   </div>
 </div>
 
@@ -180,23 +210,45 @@ function paint() {
   roundedRect(ctx, 0, 0, cw, ch, 8);
   ctx.fill();
 
-  // Section labels + container outlines
+  // Section container outlines — faint, no labels (user requested no
+  // section names visible). Outlines kept as a structural reference so
+  // sections stay distinguishable when zoomed out.
   for (const section of SEATING.sections) {
     const sx = section.x || 0, sy = section.y || 0;
     const sw = section.width || 100, sh = section.height || 100;
-    ctx.strokeStyle = 'rgba(139,92,246,0.25)';
+    ctx.strokeStyle = 'rgba(139,92,246,0.18)';
     ctx.lineWidth = 1;
     ctx.strokeRect(sx, sy, sw, sh);
+  }
 
-    if (section.name) {
-      ctx.fillStyle = 'rgba(255,255,255,0.55)';
-      ctx.font = '600 11px system-ui';
-      ctx.textAlign = 'left';
-      ctx.fillText(section.name, sx + 6, sy + 14);
+  // Row labels — drawn to the left of the first seat in each row when
+  // zoom is high enough to make text legible. Skip at far-out zoom to
+  // keep the overview clean.
+  const showRowLabels = view.scale > 0.7;
+  if (showRowLabels) {
+    ctx.fillStyle = 'rgba(255,255,255,0.65)';
+    ctx.font = '700 9px system-ui';
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    for (const section of SEATING.sections) {
+      const sx = section.x || 0, sy = section.y || 0;
+      const seatR = (section.seat_size || 14) / 2;
+      for (const row of section.rows || []) {
+        if (!row.seats || row.seats.length === 0) continue;
+        // Leftmost seat in the row anchors the label position.
+        let left = row.seats[0];
+        for (const s of row.seats) {
+          if ((s.x || 0) < (left.x || 0)) left = s;
+        }
+        const lx = sx + (left.x || 0) - seatR - 4;
+        const ly = sy + (left.y || 0);
+        ctx.fillText(String(row.label || ''), lx, ly);
+      }
     }
   }
 
-  // Seats
+  // Seats + seat numbers
+  const showSeatNumbers = view.scale > 1.4;
   for (const entry of seatIndex.values()) {
     const { seat, absX, absY, r } = entry;
     ctx.beginPath();
@@ -208,6 +260,14 @@ function paint() {
       ctx.strokeStyle = '#fff';
       ctx.lineWidth = 2 / view.scale;
       ctx.stroke();
+    }
+
+    if (showSeatNumbers && seat.seat_number != null) {
+      ctx.fillStyle = '#fff';
+      ctx.font = `700 ${Math.max(7, r * 0.95)}px system-ui`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(String(seat.seat_number), absX, absY);
     }
   }
 
@@ -350,17 +410,59 @@ function toggleSeat(entry) {
 const summaryEl = document.getElementById('summary');
 const confirmBtn = document.getElementById('confirm-btn');
 const cancelBtn = document.getElementById('cancel-btn');
+const selectedListEl = document.getElementById('selected-list');
+
+function findTicketType(id) {
+  return SEATING.ticket_types.find(t => Number(t.id) === Number(id));
+}
 
 function updateFooter() {
   const list = [...selectedSeats].map(uid => seatIndex.get(uid)).filter(Boolean);
   if (list.length === 0) {
+    selectedListEl.classList.add('hidden');
+    selectedListEl.innerHTML = '';
     summaryEl.textContent = 'Selectează locurile dorite din hartă.';
     confirmBtn.disabled = true;
     return;
   }
+
+  // Build the per-seat detail list. One row per seat: type name +
+  // position (row + seat number) + price + delete affordance.
+  selectedListEl.classList.remove('hidden');
+  selectedListEl.innerHTML = '';
   let total = 0;
-  for (const e of list) total += Number(e.seat.price || 0);
-  summaryEl.innerHTML = `<strong>${list.length}</strong> locuri · <strong>${total.toFixed(2)} RON</strong>`;
+  for (const e of list) {
+    const { seat, row } = e;
+    const tt = findTicketType(seat.ticket_type_id || PRESELECTED_TT);
+    const ttName = tt?.name || 'Bilet';
+    const ttColor = tt?.color || seat.ticket_type_color || '#10B981';
+    const price = Number(seat.price || 0);
+    total += price;
+
+    const div = document.createElement('div');
+    div.className = 'sel-row';
+    div.innerHTML =
+      '<span class="sel-dot" style="background:' + ttColor + '"></span>' +
+      '<div class="sel-info">' +
+        '<div class="sel-name">' + escapeHtml(ttName) + '</div>' +
+        '<div class="sel-pos">Rând ' + escapeHtml(String(row.label || '')) +
+          ' · Loc ' + escapeHtml(String(seat.seat_number || '')) + '</div>' +
+      '</div>' +
+      '<span class="sel-price">' + price.toFixed(2) + ' RON</span>' +
+      '<span class="sel-remove" data-uid="' + escapeHtml(seat.seat_uid) + '">×</span>';
+    selectedListEl.appendChild(div);
+  }
+
+  // Wire up the × buttons after innerHTML rewrite.
+  selectedListEl.querySelectorAll('.sel-remove').forEach(el => {
+    el.addEventListener('click', () => {
+      selectedSeats.delete(el.dataset.uid);
+      requestPaint();
+      updateFooter();
+    });
+  });
+
+  summaryEl.innerHTML = '<strong>' + list.length + '</strong> locuri · <strong>' + total.toFixed(2) + ' RON</strong>';
   confirmBtn.disabled = false;
 }
 
