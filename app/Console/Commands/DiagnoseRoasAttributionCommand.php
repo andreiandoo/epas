@@ -74,13 +74,13 @@ class DiagnoseRoasAttributionCommand extends Command
         $this->line("Signal 2 — core_customer_events.fbclid set for the order:");
         $this->line("  count: " . $this->pct($eventsCount, $total) . " · revenue: " . number_format($eventsRevenue, 2));
 
-        // Signal 3 — core_customers.last_fbclid set (joined by email)
+        // Signal 3 — core_customers.last_fbclid set (joined by email, case-insensitive)
         $customerCount = (clone $base)
             ->whereNotNull('customer_email')
             ->whereExists(function ($q) {
                 $q->select(DB::raw(1))
                   ->from('core_customers')
-                  ->whereColumn('core_customers.email', 'orders.customer_email')
+                  ->whereRaw('LOWER(core_customers.email) = LOWER(orders.customer_email)')
                   ->whereNotNull('last_fbclid');
             })
             ->count();
@@ -89,7 +89,7 @@ class DiagnoseRoasAttributionCommand extends Command
             ->whereExists(function ($q) {
                 $q->select(DB::raw(1))
                   ->from('core_customers')
-                  ->whereColumn('core_customers.email', 'orders.customer_email')
+                  ->whereRaw('LOWER(core_customers.email) = LOWER(orders.customer_email)')
                   ->whereNotNull('last_fbclid');
             })
             ->sum('total');
@@ -109,7 +109,7 @@ class DiagnoseRoasAttributionCommand extends Command
                   ->orWhereExists(function ($s) {
                       $s->select(DB::raw(1))
                         ->from('core_customers')
-                        ->whereColumn('core_customers.email', 'orders.customer_email')
+                        ->whereRaw('LOWER(core_customers.email) = LOWER(orders.customer_email)')
                         ->whereNotNull('last_fbclid');
                   });
             });

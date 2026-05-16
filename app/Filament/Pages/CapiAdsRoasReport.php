@@ -226,9 +226,14 @@ class CapiAdsRoasReport extends Page
                             ->whereNotNull('core_customer_events.fbclid');
                     })
                     ->orWhereExists(function ($sub) {
+                        // Case-insensitive match — orders.customer_email is
+                        // free-form (preserves whatever case the buyer
+                        // typed), while backfill normalizes
+                        // core_customers.email to lowercase. Without LOWER
+                        // on both sides, mixed-case rows never match.
                         $sub->select(DB::raw(1))
                             ->from('core_customers')
-                            ->whereColumn('core_customers.email', 'orders.customer_email')
+                            ->whereRaw('LOWER(core_customers.email) = LOWER(orders.customer_email)')
                             ->whereNotNull('core_customers.last_fbclid');
                     });
             });
