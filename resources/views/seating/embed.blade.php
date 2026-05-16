@@ -210,47 +210,97 @@ function paint() {
   roundedRect(ctx, 0, 0, cw, ch, 8);
   ctx.fill();
 
-  // Section container outlines — faint. Section names are hidden by
-  // default (visual noise on seated sections), BUT sections without any
-  // seats are structural / decorative labels (stage, bar, entrance, etc.)
-  // and need their name visible at every zoom level.
+  // Section pass: outlines, decorative free-text, and section names.
+  // Respects designer metadata:
+  //   section.metadata.show_label       — explicit show/hide of section name
+  //   section.metadata.shape === 'text' — render as free text (decorative)
+  //                                       with admin-set font/color/size
+  //   section.metadata.text / fontSize / fontFamily / fontWeight / color / opacity
   for (const section of SEATING.sections) {
     const sx = section.x || 0, sy = section.y || 0;
     const sw = section.width || 100, sh = section.height || 100;
+    const meta = section.metadata || {};
+
+    // Decorative text element — no outline, just the styled text.
+    if (meta.shape === 'text' && meta.text) {
+      ctx.save();
+      ctx.globalAlpha = meta.opacity != null ? Number(meta.opacity) : 1;
+      ctx.fillStyle = meta.color || section.color || '#ffffff';
+      const fSize = Number(meta.fontSize || 14);
+      const fWeight = meta.fontWeight || '600';
+      const fFam = meta.fontFamily || 'system-ui';
+      ctx.font = `${fWeight} ${fSize}px ${fFam}`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      // Support rotation if set on the section.
+      if (section.rotation) {
+        ctx.translate(sx + sw / 2, sy + sh / 2);
+        ctx.rotate((section.rotation * Math.PI) / 180);
+        ctx.fillText(meta.text, 0, 0);
+      } else {
+        ctx.fillText(meta.text, sx + sw / 2, sy + sh / 2);
+      }
+      ctx.restore();
+      continue;
+    }
+
+    // Standard seated section — faint outline.
     ctx.strokeStyle = 'rgba(139,92,246,0.18)';
     ctx.lineWidth = 1;
     ctx.strokeRect(sx, sy, sw, sh);
 
+    // Section name: respect explicit show_label flag; fall back to "show
+    // only if section has no seats" so legacy layouts still display
+    // structural labels (stage, bar, entrance).
     const hasSeats = (section.rows || []).some(r => (r.seats || []).length > 0);
-    if (!hasSeats && section.name) {
+    const showSectionName = meta.show_label === true
+      || (meta.show_label !== false && !hasSeats);
+    if (showSectionName && section.name) {
       ctx.fillStyle = 'rgba(255,255,255,0.75)';
       ctx.font = 'bold 14px system-ui';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(section.name, sx + sw / 2, sy + sh / 2);
+      const labelPos = meta.label_position || 'inside';
+      const ny = labelPos === 'outside' ? sy - 8 : sy + sh / 2;
+      ctx.fillText(section.name, sx + sw / 2, ny);
     }
   }
 
-  // Row labels — drawn to the left of the first seat in each row when
-  // zoom is high enough to make text legible.
-  const showRowLabels = view.scale > 0.5;
-  if (showRowLabels) {
-    ctx.fillStyle = 'rgba(255,255,255,0.65)';
+  // Row labels — respect both per-section auto_show_row_labels and
+  // per-row metadata.show_label. Position from row.metadata.label_position
+  // (default 'left').
+  const zoomLetsLabelsShow = view.scale > 0.5;
+  if (zoomLetsLabelsShow) {
+    ctx.fillStyle = 'rgba(255,255,255,0.7)';
     ctx.font = '700 9px system-ui';
-    ctx.textAlign = 'right';
     ctx.textBaseline = 'middle';
     for (const section of SEATING.sections) {
+      const secMeta = section.metadata || {};
+      if (secMeta.shape === 'text') continue; // decorative — no rows
+      if (secMeta.auto_show_row_labels === false) continue;
       const sx = section.x || 0, sy = section.y || 0;
       const seatR = (section.seat_size || 14) / 2;
       for (const row of section.rows || []) {
         if (!row.seats || row.seats.length === 0) continue;
-        // Leftmost seat in the row anchors the label position.
-        let left = row.seats[0];
+        const rowMeta = row.metadata || {};
+        if (rowMeta.show_label === false) continue;
+        // Leftmost/rightmost seat anchors the label.
+        let left = row.seats[0], right = row.seats[0];
         for (const s of row.seats) {
           if ((s.x || 0) < (left.x || 0)) left = s;
+          if ((s.x || 0) > (right.x || 0)) right = s;
         }
-        const lx = sx + (left.x || 0) - seatR - 4;
-        const ly = sy + (left.y || 0);
+        const pos = rowMeta.label_position || 'left';
+        let lx, ly;
+        if (pos === 'right') {
+          lx = sx + (right.x || 0) + seatR + 4;
+          ly = sy + (right.y || 0);
+          ctx.textAlign = 'left';
+        } else {
+          lx = sx + (left.x || 0) - seatR - 4;
+          ly = sy + (left.y || 0);
+          ctx.textAlign = 'right';
+        }
         ctx.fillText(String(row.label || ''), lx, ly);
       }
     }
