@@ -431,9 +431,11 @@ function escapeHtml(s) {
 }
 
 // ────────────────────────────────────────────────────────────────────────
-// Real-time updates — Echo + Pusher protocol pointing at Reverb. Falls
-// back gracefully when REVERB_APP_KEY isn't configured (driver === null).
-// CDN-hosted: avoids any build step on the server side.
+// Real-time updates — minimal Pusher protocol over a raw WebSocket.
+// pusher-js 8.x had a sync 'initialized → failed' bug with our config; the
+// underlying Pusher wire protocol is trivial (JSON over WS) so we just
+// speak it directly. ~30 LOC instead of a 100KB CDN dependency.
+// Protocol reference: https://pusher.com/docs/channels/library_auth_reference/pusher-websockets-protocol/
 // ────────────────────────────────────────────────────────────────────────
 const statusEl = document.getElementById('status-line');
 
@@ -442,58 +444,121 @@ const statusEl = document.getElementById('status-line');
     statusEl.textContent = 'real-time off';
     return;
   }
-  const pusherScript = document.createElement('script');
-  pusherScript.src = 'https://js.pusher.com/8.4/pusher.min.js';
-  pusherScript.onload = () => {
-    try {
-      const pusherOpts = {
-        wsHost: REVERB.host,
-        wsPort: REVERB.port,
-        wssPort: REVERB.port,
-        forceTLS: REVERB.scheme === 'https',
-        enabledTransports: REVERB.scheme === 'https' ? ['wss'] : ['ws'],
-        enableStats: false,
-        cluster: 'mt1', // ignored by Reverb but required by Pusher
-      };
-      // Reverb behind a sub-path proxy (e.g. nginx /reverb/ → 8080).
-      // Pusher 8.x reads `wsPath`, not `path` — set both to cover other clients.
-      // Result URL: wss://{host}{wsPath}/app/{key}.
-      if (REVERB.path) {
-        pusherOpts.wsPath = REVERB.path;
-        pusherOpts.path = REVERB.path;
-      }
-      const pusher = new Pusher(REVERB.app_key, pusherOpts);
-      pusher.connection.bind('connected', () => {
-        statusEl.textContent = '● real-time';
-        statusEl.classList.add('connected');
-      });
-      pusher.connection.bind('disconnected', () => {
-        statusEl.textContent = 'reconnecting…';
-        statusEl.classList.remove('connected');
-      });
-      const channel = pusher.subscribe('event.' + EVENT_ID + '.seats');
-      channel.bind('seat.status.changed', (data) => {
-        if (!data || !Array.isArray(data.seats)) return;
-        for (const u of data.seats) {
-          const entry = seatIndex.get(u.seat_uid);
-          if (entry) {
-            entry.seat.status = u.status;
-            // If we held a seat that someone else just sold, clear it.
-            if (u.status !== 'available' && u.status !== 'held' && selectedSeats.has(u.seat_uid)) {
-              selectedSeats.delete(u.seat_uid);
-            }
-          }
+
+  const channelName = 'event.' + EVENT_ID + '.seats';
+  let ws = null;
+  let reconnectTimer = null;
+  let pingTimer = null;
+  let reconnectDelay = 1000; // start at 1s, exponential back-off capped at 30s
+
+  function buildWsUrl() {
+    const scheme = REVERB.scheme === 'https' ? 'wss' : 'ws';
+    const portPart = (REVERB.scheme === 'https' && REVERB.port === 443)
+      || (REVERB.scheme !== 'https' && REVERB.port === 80)
+      ? '' : ':' + REVERB.port;
+    const path = REVERB.path || '';
+    return `${scheme}://${REVERB.host}${portPart}${path}/app/${REVERB.app_key}?protocol=7&client=js&version=8.4.0&flash=false`;
+  }
+
+  function setStatus(text, connected) {
+    statusEl.textContent = text;
+    statusEl.classList.toggle('connected', !!connected);
+  }
+
+  function applySeatChange(payload) {
+    if (!payload || !Array.isArray(payload.seats)) return;
+    for (const u of payload.seats) {
+      const entry = seatIndex.get(u.seat_uid);
+      if (entry) {
+        entry.seat.status = u.status;
+        // If we held a seat that someone else just sold, clear it.
+        if (u.status !== 'available' && u.status !== 'held' && selectedSeats.has(u.seat_uid)) {
+          selectedSeats.delete(u.seat_uid);
         }
-        updateFooter();
-        requestPaint();
-      });
-    } catch (e) {
-      console.warn('reverb setup failed', e);
-      statusEl.textContent = 'real-time error';
+      }
     }
-  };
-  pusherScript.onerror = () => { statusEl.textContent = 'no real-time'; };
-  document.head.appendChild(pusherScript);
+    updateFooter();
+    requestPaint();
+  }
+
+  function connect() {
+    try {
+      ws = new WebSocket(buildWsUrl());
+    } catch (e) {
+      setStatus('real-time error');
+      scheduleReconnect();
+      return;
+    }
+    setStatus('connecting…');
+
+    ws.onopen = () => {
+      // No-op — wait for pusher:connection_established before subscribing.
+    };
+
+    ws.onmessage = (evt) => {
+      let frame;
+      try { frame = JSON.parse(evt.data); } catch { return; }
+      // Pusher frames double-encode `data` for application events.
+      const data = typeof frame.data === 'string'
+        ? (frame.data ? safeParse(frame.data) : null)
+        : frame.data;
+
+      switch (frame.event) {
+        case 'pusher:connection_established':
+          setStatus('● real-time', true);
+          reconnectDelay = 1000;
+          // Subscribe to the public seat channel.
+          ws.send(JSON.stringify({
+            event: 'pusher:subscribe',
+            data: { channel: channelName },
+          }));
+          // Start a keep-alive ping every 30s (Reverb expects activity).
+          clearInterval(pingTimer);
+          pingTimer = setInterval(() => {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+              ws.send(JSON.stringify({ event: 'pusher:ping', data: {} }));
+            }
+          }, 30000);
+          break;
+        case 'pusher:error':
+          console.warn('reverb error', data);
+          break;
+        case 'pusher:pong':
+          // Reverb is alive — nothing to do.
+          break;
+        case 'pusher_internal:subscription_succeeded':
+          // Subscribed — no-op.
+          break;
+        case 'seat.status.changed':
+          applySeatChange(data);
+          break;
+        default:
+          // Other internal events (subscription_count etc) — ignore.
+          break;
+      }
+    };
+
+    ws.onclose = () => {
+      clearInterval(pingTimer);
+      pingTimer = null;
+      setStatus('reconnecting…');
+      scheduleReconnect();
+    };
+
+    ws.onerror = () => {
+      // onclose fires right after; reconnect logic lives there.
+    };
+  }
+
+  function scheduleReconnect() {
+    clearTimeout(reconnectTimer);
+    reconnectTimer = setTimeout(connect, reconnectDelay);
+    reconnectDelay = Math.min(reconnectDelay * 2, 30000);
+  }
+
+  function safeParse(s) { try { return JSON.parse(s); } catch { return null; } }
+
+  connect();
 })();
 
 // ────────────────────────────────────────────────────────────────────────
