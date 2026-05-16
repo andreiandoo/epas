@@ -2768,6 +2768,13 @@ class EventResource extends Resource
                                                     ->visible(fn (SGet $get) => ($get('../../display_template') ?? 'standard') === 'leisure_venue')
                                                     ->columnSpan(6),
 
+                                                // ── POS visibility flag — produsul apare DOAR in POS, ascuns de pe pagina publica ──
+                                                Forms\Components\Toggle::make('meta.pos_only')
+                                                    ->label($t('🏪 Doar pentru vânzare POS (ascuns online)', '🏪 POS-only (hidden online)'))
+                                                    ->helperText($t('Produsul apare DOAR în /organizator/leisure-pos și în aplicația mobilă. Este ascuns de pe pagina publică ambilet.ro.', 'Product appears ONLY in the POS panel and mobile app. Hidden from the public site.'))
+                                                    ->visible(fn (SGet $get) => ($get('../../display_template') ?? 'standard') === 'leisure_venue')
+                                                    ->columnSpan(6),
+
                                                 // ── F8: Marker bilet copil (pentru distincție în asociere acces adult_only) ──
                                                 Forms\Components\Toggle::make('meta.is_child_ticket')
                                                     ->label($t('🧒 Bilet copil (gratuit)', '🧒 Child ticket (free)'))

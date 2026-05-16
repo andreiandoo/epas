@@ -716,6 +716,14 @@ class LeisureController extends BaseController
             'customer.email' => 'nullable|email|max:120',
             'customer.phone' => 'nullable|string|max:30',
             'customer.vehicle_plate' => 'nullable|string|max:20',
+            // Date firma (opțional) — pentru emitere factură pe persoană juridică
+            'company.name' => 'nullable|string|max:200',
+            'company.cui' => 'nullable|string|max:30',
+            'company.reg_no' => 'nullable|string|max:60',
+            'company.address' => 'nullable|string|max:255',
+            'company.iban' => 'nullable|string|max:34',
+            'company.contact_person' => 'nullable|string|max:120',
+            'generate_invoice' => 'nullable|boolean',
             'payment_method' => 'required|in:cash,card,invoice',
         ]);
 
@@ -960,7 +968,7 @@ class LeisureController extends BaseController
                 'payment_reference' => 'pos-' . $paymentMethod,
                 'paid_at' => $paymentMethod === 'invoice' ? null : $now,
                 'source' => 'pos',
-                'meta' => [
+                'meta' => array_merge([
                     'pos' => true,
                     'payment_method' => $paymentMethod,
                     'visit_date' => $visitDate,
@@ -970,7 +978,18 @@ class LeisureController extends BaseController
                     'commission_rate' => $commissionRate,
                     'commission_fixed' => $commissionFixed,
                     'commission_mode' => $commissionMode,
-                ],
+                ], (!empty($validated['company']['cui']) || !empty($validated['company']['name'])) ? [
+                    // Date firma client (pentru factura B2B). Doar daca operatorul le-a introdus.
+                    'company_billing' => array_filter([
+                        'name' => $validated['company']['name'] ?? null,
+                        'cui' => $validated['company']['cui'] ?? null,
+                        'reg_no' => $validated['company']['reg_no'] ?? null,
+                        'address' => $validated['company']['address'] ?? null,
+                        'iban' => $validated['company']['iban'] ?? null,
+                        'contact_person' => $validated['company']['contact_person'] ?? null,
+                    ], fn ($v) => $v !== null && $v !== ''),
+                    'invoice_requested' => !empty($validated['generate_invoice']),
+                ] : []),
             ]);
 
             foreach ($items as $it) {
@@ -1191,6 +1210,8 @@ class LeisureController extends BaseController
                 'email' => $order->customer_email,
                 'phone' => $order->customer_phone,
             ],
+            'company_billing' => is_array($order->meta['company_billing'] ?? null) ? $order->meta['company_billing'] : null,
+            'invoice_requested' => (bool) ($order->meta['invoice_requested'] ?? false),
             'issuer' => $issuer,
             'items' => array_map(function ($it) {
                 $baseName = is_array($it['ticket_type']->name) ? ($it['ticket_type']->name['ro'] ?? reset($it['ticket_type']->name)) : $it['ticket_type']->name;
@@ -1208,6 +1229,85 @@ class LeisureController extends BaseController
                 ];
             }, $items),
             'tickets' => $issued,
+        ]);
+    }
+
+    /**
+     * POST /marketplace-client/organizer/orders/{order}/generate-invoice
+     *
+     * Genereaza factura B2B pentru o comanda POS care a fost emisa cu date firma.
+     * Foloseste order.meta.company_billing (CUI, denumire, adresa) ca destinatar
+     * si datele organizatorului (primary issuer) ca emitent.
+     *
+     * Faza 1: marcam invoice_status='requested' + invoice_number generat secvential.
+     * Faza 2 (TODO): genereaza PDF + integrare e-Factura ANAF prin EFacturaService.
+     */
+    public function generateInvoice(Request $request, int $order): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+        $marketplace = $organizer->marketplaceClient;
+
+        $orderModel = Order::query()
+            ->where('id', $order)
+            ->where('marketplace_client_id', $marketplace->id)
+            ->where('marketplace_organizer_id', $organizer->id)
+            ->first();
+
+        if (!$orderModel) {
+            return $this->error('Order not found', 404);
+        }
+
+        $meta = is_array($orderModel->meta) ? $orderModel->meta : [];
+        $company = $meta['company_billing'] ?? null;
+
+        if (!is_array($company) || (empty($company['cui']) && empty($company['name']))) {
+            return $this->error('Comanda nu are date firmă pentru emiterea unei facturi.', 422);
+        }
+
+        // Daca s-a generat deja o factura, returnam datele existente.
+        if (!empty($meta['invoice_number'])) {
+            return $this->success([
+                'order_id' => $orderModel->id,
+                'invoice_number' => $meta['invoice_number'],
+                'invoice_status' => $meta['invoice_status'] ?? 'requested',
+                'invoice_url' => $meta['invoice_url'] ?? null,
+                'already_generated' => true,
+            ]);
+        }
+
+        // Numar factura secvential per organizator (POS-INV-{NNNN})
+        $lastInvOrder = Order::query()
+            ->where('marketplace_organizer_id', $organizer->id)
+            ->whereRaw("meta->>'invoice_number' IS NOT NULL")
+            ->orderByDesc('id')
+            ->first();
+        $nextNumber = 1;
+        if ($lastInvOrder && !empty($lastInvOrder->meta['invoice_number'])) {
+            $nextNumber = ((int) preg_replace('/\D/', '', $lastInvOrder->meta['invoice_number'])) + 1;
+        }
+        $invoiceNumber = 'POS-INV-' . str_pad((string) $nextNumber, 6, '0', STR_PAD_LEFT);
+
+        $issuer = $organizer->getIssuerData('primary') ?? [];
+
+        $meta['invoice_number'] = $invoiceNumber;
+        $meta['invoice_status'] = 'requested';
+        $meta['invoice_issued_at'] = Carbon::now()->toIso8601String();
+        $meta['invoice_issuer'] = $issuer;
+        // invoice_url va fi populat de un job care genereaza PDF + trimite la e-Factura.
+        // Pentru moment, link catre detaliul comenzii in panou admin.
+        $meta['invoice_url'] = null;
+
+        $orderModel->meta = $meta;
+        $orderModel->save();
+
+        return $this->success([
+            'order_id' => $orderModel->id,
+            'invoice_number' => $invoiceNumber,
+            'invoice_status' => 'requested',
+            'invoice_url' => null,
+            'company_billing' => $company,
+            'issuer' => $issuer,
+            'message' => 'Factura ' . $invoiceNumber . ' a fost înregistrată. Generarea PDF + transmitere la ANAF e-Factura se procesează automat.',
         ]);
     }
 
@@ -1286,7 +1386,7 @@ class LeisureController extends BaseController
             'team_member_id' => 'nullable|integer|exists:marketplace_organizer_team_members,id',
             'start_at' => 'required|date',
             'end_at' => 'required|date|after:start_at',
-            'role' => 'required|in:gate_scanner,sales_operator,shift_manager,accountant,operator_boats,operator_pontoon,field_seller',
+            'role' => 'required|in:gate_scanner,sales_operator,shift_manager,accountant,operator_boats,operator_pontoon,operator_pontoon_rental,operator_sled,operator_tow_validation,admin_mobile,field_seller',
             'gate' => 'nullable|string|max:32',
             'notes' => 'nullable|string|max:500',
         ]);
@@ -1327,7 +1427,7 @@ class LeisureController extends BaseController
             'team_member_id' => 'nullable|integer|exists:marketplace_organizer_team_members,id',
             'start_at' => 'nullable|date',
             'end_at' => 'nullable|date|after:start_at',
-            'role' => 'nullable|in:gate_scanner,sales_operator,shift_manager,accountant,operator_boats,operator_pontoon,field_seller',
+            'role' => 'nullable|in:gate_scanner,sales_operator,shift_manager,accountant,operator_boats,operator_pontoon,operator_pontoon_rental,operator_sled,operator_tow_validation,admin_mobile,field_seller',
             'gate' => 'nullable|string|max:32',
             'notes' => 'nullable|string|max:500',
         ]);
@@ -1565,6 +1665,7 @@ class LeisureController extends BaseController
             'package_outputs', 'badge', 'color', 'variants', 'addons',
             'slots_config', 'physical_inventory',
             'pos_price', 'is_child_ticket', 'access_requirement', 'blocked_time_ranges',
+            'pos_only',
         ];
         $filtered = array_intersect_key($meta, array_flip($allowed));
 
@@ -1611,6 +1712,9 @@ class LeisureController extends BaseController
         }
         if (isset($filtered['is_child_ticket'])) {
             $filtered['is_child_ticket'] = (bool) $filtered['is_child_ticket'];
+        }
+        if (isset($filtered['pos_only'])) {
+            $filtered['pos_only'] = (bool) $filtered['pos_only'];
         }
         if (isset($filtered['access_requirement'])) {
             $val = $filtered['access_requirement'];
@@ -1715,6 +1819,7 @@ class LeisureController extends BaseController
             'slots_config' => is_array($t->meta['slots_config'] ?? null) ? $t->meta['slots_config'] : null,
             'physical_inventory' => is_array($t->meta['physical_inventory'] ?? null) ? $t->meta['physical_inventory'] : null,
             'pos_price' => isset($t->meta['pos_price']) && $t->meta['pos_price'] !== '' ? (float) $t->meta['pos_price'] : null,
+            'pos_only' => (bool) ($t->meta['pos_only'] ?? false),
             'is_child_ticket' => (bool) ($t->meta['is_child_ticket'] ?? false),
             'access_requirement' => in_array($t->meta['access_requirement'] ?? null, ['none', 'any', 'adult_only'], true)
                 ? $t->meta['access_requirement']
@@ -2225,6 +2330,21 @@ class LeisureController extends BaseController
         $now = Carbon::now();
         $teamMemberId = $request->query('team_member_id');
 
+        // Determina team_member curent (din token name = "team-member-{id}").
+        $currentTeamMember = null;
+        if (!$teamMemberId) {
+            $tokenName = $request->user()->currentAccessToken()->name ?? '';
+            if (str_starts_with($tokenName, 'team-member-')) {
+                $teamMemberId = (int) str_replace('team-member-', '', $tokenName);
+            }
+        }
+        if ($teamMemberId) {
+            $currentTeamMember = MarketplaceOrganizerTeamMember::find($teamMemberId);
+            if ($currentTeamMember && $currentTeamMember->marketplace_organizer_id !== $organizer->id) {
+                $currentTeamMember = null;
+            }
+        }
+
         $query = LeisureShift::query()
             ->where('marketplace_organizer_id', $organizer->id)
             ->where('start_at', '<=', $now)
@@ -2235,6 +2355,12 @@ class LeisureController extends BaseController
         }
 
         $shifts = $query->orderByDesc('start_at')->get();
+
+        // Fallback: daca nu exista shift activ, foloseste leisure_role static al team_member-ului.
+        $fallbackRole = null;
+        if ($shifts->isEmpty() && $currentTeamMember && $currentTeamMember->leisure_role) {
+            $fallbackRole = $this->leisureRoleToShiftRole($currentTeamMember->leisure_role);
+        }
 
         return $this->success([
             'now' => $now->toIso8601String(),
@@ -2247,7 +2373,34 @@ class LeisureController extends BaseController
                 'end_at' => $s->end_at->toIso8601String(),
                 'allowed_features' => $this->featuresForRole($s->role),
             ])->values(),
+            'fallback_role' => $fallbackRole,
+            'fallback_features' => $fallbackRole ? $this->featuresForRole($fallbackRole) : [],
+            'team_member' => $currentTeamMember ? [
+                'id' => (string) $currentTeamMember->id,
+                'name' => $currentTeamMember->name,
+                'role' => $currentTeamMember->role,
+                'leisure_role' => $currentTeamMember->leisure_role,
+            ] : null,
         ]);
+    }
+
+    /**
+     * Mapeaza leisure_role (din team_members) la role (din leisure_shifts) astfel
+     * incat mobile app foloseste acelasi switch.
+     */
+    protected function leisureRoleToShiftRole(?string $leisureRole): ?string
+    {
+        return match ($leisureRole) {
+            'check_in'           => 'gate_scanner',
+            'rental_boats'       => 'operator_boats',
+            'rental_pontoon'     => 'operator_pontoon_rental',
+            'validation_pontoon' => 'operator_pontoon',
+            'rental_sled'        => 'operator_sled',
+            'validation_tow'     => 'operator_tow_validation',
+            'pos_cashier'        => 'sales_operator',
+            'admin_mobile'       => 'admin_mobile',
+            default              => null,
+        };
     }
 
     /**
@@ -2261,7 +2414,11 @@ class LeisureController extends BaseController
             'shift_manager' => ['pos', 'checkin', 'reports', 'team'],
             'accountant' => ['reports', 'finance'],
             'operator_boats' => ['boat_rentals', 'checkin', 'pos'],
-            'operator_pontoon' => ['pontoon_sales', 'checkin', 'pos'],
+            'operator_pontoon' => ['pontoon_validation', 'checkin'],
+            'operator_pontoon_rental' => ['pontoon_rental', 'pos'],
+            'operator_sled' => ['sled_rentals', 'pos'],
+            'operator_tow_validation' => ['tow_validation', 'checkin'],
+            'admin_mobile' => ['pos', 'checkin', 'reports', 'boat_rentals', 'pontoon_validation', 'pontoon_rental', 'sled_rentals', 'tow_validation'],
             'field_seller' => ['pos_mobile', 'checkin'],
             default => [],
         };

@@ -60,6 +60,7 @@ class TeamController extends BaseController
                 'name' => $member->name,
                 'email' => $member->email,
                 'role' => $member->role,
+                'leisure_role' => $member->leisure_role,
                 'permissions' => $member->getEffectivePermissions(),
                 'gate_id' => $member->gate_id,
                 'status' => $member->status,
@@ -109,6 +110,7 @@ class TeamController extends BaseController
             'email' => 'required|email|max:255',
             'password' => 'required|string|min:8|max:100',
             'role' => 'required|in:admin,manager,staff',
+            'leisure_role' => 'nullable|in:check_in,rental_boats,rental_pontoon,validation_pontoon,rental_sled,validation_tow,pos_cashier,admin_mobile',
             'permissions' => 'nullable|array',
             'permissions.*' => 'in:events,orders,reports,team,checkin',
             'gate_id' => 'nullable|integer',
@@ -159,6 +161,7 @@ class TeamController extends BaseController
             'email' => $validated['email'],
             'password' => $hashedPassword,
             'role' => $validated['role'],
+            'leisure_role' => $validated['leisure_role'] ?? null,
             'permissions' => $permissions,
             'gate_id' => $validated['gate_id'] ?? null,
             'status' => 'active',
@@ -203,6 +206,7 @@ class TeamController extends BaseController
                 'name' => $member->name,
                 'email' => $member->email,
                 'role' => $member->role,
+                'leisure_role' => $member->leisure_role,
                 'permissions' => $member->getEffectivePermissions(),
                 'gate_id' => $member->gate_id,
                 'status' => $member->status,
@@ -226,6 +230,7 @@ class TeamController extends BaseController
         $validated = $request->validate([
             'member_id' => 'required|string',
             'role' => 'sometimes|in:admin,manager,staff',
+            'leisure_role' => 'nullable|in:check_in,rental_boats,rental_pontoon,validation_pontoon,rental_sled,validation_tow,pos_cashier,admin_mobile',
             'permissions' => 'nullable|array',
             'permissions.*' => 'in:events,orders,reports,team,checkin',
             'gate_id' => 'nullable|integer',
@@ -261,6 +266,10 @@ class TeamController extends BaseController
             $updates['gate_id'] = $validated['gate_id'];
         }
 
+        if ($request->has('leisure_role')) {
+            $updates['leisure_role'] = $validated['leisure_role'] ?? null;
+        }
+
         if (!empty($updates)) {
             $member->update($updates);
         }
@@ -288,6 +297,7 @@ class TeamController extends BaseController
                 'name' => $member->name,
                 'email' => $member->email,
                 'role' => $member->role,
+                'leisure_role' => $member->leisure_role,
                 'permissions' => $member->getEffectivePermissions(),
                 'gate_id' => $member->gate_id,
                 'status' => $member->status,

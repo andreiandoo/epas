@@ -257,6 +257,7 @@ class AuthController extends BaseController
                 'name' => $authenticatedMember->name,
                 'email' => $authenticatedMember->email,
                 'role' => $authenticatedMember->role,
+                'leisure_role' => $authenticatedMember->leisure_role,
                 'permissions' => $authenticatedMember->getEffectivePermissions(),
             ];
 
@@ -362,6 +363,7 @@ class AuthController extends BaseController
             'name' => $targetMember->name,
             'email' => $targetMember->email,
             'role' => $targetMember->role,
+            'leisure_role' => $targetMember->leisure_role,
             'permissions' => $targetMember->getEffectivePermissions(),
         ];
 
@@ -406,6 +408,7 @@ class AuthController extends BaseController
                     'name' => $teamMember->name,
                     'email' => $teamMember->email,
                     'role' => $teamMember->role,
+                    'leisure_role' => $teamMember->leisure_role,
                     'permissions' => $teamMember->getEffectivePermissions(),
                 ];
 

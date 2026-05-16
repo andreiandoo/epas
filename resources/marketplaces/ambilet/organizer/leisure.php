@@ -297,6 +297,10 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                             <input id="pr-f-child" type="checkbox" class="w-4 h-4 accent-primary">
                             <span>🧒 Bilet copil (gratuit)</span>
                         </label>
+                        <label class="flex items-center gap-2 text-sm" title="Cand e bifat, produsul apare DOAR in POS si este ascuns de pe pagina publica.">
+                            <input id="pr-f-pos-only" type="checkbox" class="w-4 h-4 accent-primary">
+                            <span>🏪 Doar pentru vânzare POS (ascuns online)</span>
+                        </label>
                     </div>
                     <!-- F6: Asociere acces (vizibil doar pentru rental/activity) -->
                     <label id="pr-f-access-req-wrap" class="block md:col-span-2 hidden">
@@ -1100,6 +1104,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         $('pr-f-access-req').value = p?.access_requirement || 'none';
         $('pr-f-child').checked = p ? !!p.is_child_ticket : false;
         $('pr-f-pos-price').value = (p?.pos_price !== undefined && p?.pos_price !== null) ? p.pos_price : '';
+        $('pr-f-pos-only').checked = p ? !!(p.pos_only ?? p?.meta?.pos_only) : false;
         // F10: blocked time ranges
         renderBlockRows(Array.isArray(p?.blocked_time_ranges) ? p.blocked_time_ranges : (Array.isArray(p?.meta?.blocked_time_ranges) ? p.meta.blocked_time_ranges : []));
         $('pr-f-delete').classList.toggle('hidden', !p);
@@ -1400,6 +1405,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 unit_label: $('pr-f-unit').value.trim() || null,
                 image: $('pr-f-image').value.trim() || null,
                 pos_price: $('pr-f-pos-price').value !== '' ? parseFloat($('pr-f-pos-price').value) : null,
+                pos_only: $('pr-f-pos-only').checked,
                 is_child_ticket: $('pr-f-child').checked,
                 access_requirement: $('pr-f-access-req').value || 'none',
                 blocked_time_ranges: collectBlockedRanges(),

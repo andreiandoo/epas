@@ -15,6 +15,7 @@ class MarketplaceOrganizerTeamMember extends Model
         'email',
         'password',
         'role',
+        'leisure_role',
         'permissions',
         'gate_id',
         'status',
@@ -22,6 +23,28 @@ class MarketplaceOrganizerTeamMember extends Model
         'invite_expires_at',
         'invite_sent_at',
         'accepted_at',
+    ];
+
+    public const LEISURE_ROLES = [
+        'check_in',           // operator check-in (gate scanner)
+        'rental_boats',       // operator inchiriere barci
+        'rental_pontoon',     // operator inchiriere vaporas
+        'validation_pontoon', // operator validare bilete vaporas
+        'rental_sled',        // operator inchiriere sanii
+        'validation_tow',     // operator validare tractari
+        'pos_cashier',        // operator fix casa POS
+        'admin_mobile',       // membru admin — scan + vanzare prin app mobila
+    ];
+
+    public const LEISURE_ROLE_LABELS = [
+        'check_in'           => 'Operator check-in',
+        'rental_boats'       => 'Operator închiriere bărci',
+        'rental_pontoon'     => 'Operator închiriere vaporaș',
+        'validation_pontoon' => 'Operator validare bilete vaporaș',
+        'rental_sled'        => 'Operator închiriere sănii',
+        'validation_tow'     => 'Operator validare tractări',
+        'pos_cashier'        => 'Operator fix casă POS',
+        'admin_mobile'       => 'Membru admin (scan + vânzare mobilă)',
     ];
 
     protected $hidden = [

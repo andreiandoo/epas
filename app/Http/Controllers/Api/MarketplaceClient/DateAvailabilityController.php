@@ -99,6 +99,8 @@ class DateAvailabilityController extends BaseController
             ->filter(function ($tt) {
                 if ($tt->is_entry_ticket) return false;
                 if (!empty($tt->meta['is_invitation'] ?? false)) return false;
+                // Leisure: produsele marcate "POS only" sunt ascunse de pe pagina publica.
+                if (!empty($tt->meta['pos_only'] ?? false)) return false;
                 return true;
             });
 
