@@ -194,6 +194,21 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                         <option value="staff">Staff</option>
                     </select>
                 </div>
+                <div id="leisure-role-section" class="hidden">
+                    <label class="block mb-1.5 text-sm font-medium text-secondary">🌊 Rol operator (leisure)</label>
+                    <select name="leisure_role" class="w-full px-4 py-2.5 text-sm border rounded-lg border-border focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none">
+                        <option value="">— Fără rol leisure —</option>
+                        <option value="check_in">Operator check-in</option>
+                        <option value="rental_boats">Operator închiriere bărci</option>
+                        <option value="rental_pontoon">Operator închiriere vaporaș</option>
+                        <option value="validation_pontoon">Operator validare bilete vaporaș</option>
+                        <option value="rental_sled">Operator închiriere sănii</option>
+                        <option value="validation_tow">Operator validare tractări</option>
+                        <option value="pos_cashier">Operator fix casă POS</option>
+                        <option value="admin_mobile">Membru admin (scan + vânzare mobilă)</option>
+                    </select>
+                    <p class="mt-1 text-[11px] text-muted">Determină ce ecran vede operatorul în aplicația mobilă când nu are turnetă activă.</p>
+                </div>
                 <div id="permissions-section" class="hidden">
                     <label class="block mb-2 text-sm font-medium text-secondary">Permisiuni</label>
                     <div class="space-y-2">
@@ -252,6 +267,21 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                         <option value="manager">Manager</option>
                         <option value="staff">Staff</option>
                     </select>
+                </div>
+                <div id="edit-leisure-role-section" class="hidden">
+                    <label class="block mb-1.5 text-sm font-medium text-secondary">🌊 Rol operator (leisure)</label>
+                    <select name="leisure_role" id="edit-leisure-role" class="w-full px-4 py-2.5 text-sm border rounded-lg border-border focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none">
+                        <option value="">— Fără rol leisure —</option>
+                        <option value="check_in">Operator check-in</option>
+                        <option value="rental_boats">Operator închiriere bărci</option>
+                        <option value="rental_pontoon">Operator închiriere vaporaș</option>
+                        <option value="validation_pontoon">Operator validare bilete vaporaș</option>
+                        <option value="rental_sled">Operator închiriere sănii</option>
+                        <option value="validation_tow">Operator validare tractări</option>
+                        <option value="pos_cashier">Operator fix casă POS</option>
+                        <option value="admin_mobile">Membru admin (scan + vânzare mobilă)</option>
+                    </select>
+                    <p class="mt-1 text-[11px] text-muted">Determină ce ecran vede operatorul în aplicația mobilă când nu are turnetă activă.</p>
                 </div>
                 <div id="edit-permissions-section">
                     <label class="block mb-2 text-sm font-medium text-secondary">Permisiuni</label>
@@ -333,6 +363,17 @@ const TeamManager = {
         // Setup role change handlers
         document.querySelector('select[name="role"]').addEventListener('change', this.handleRoleChange.bind(this));
         document.querySelector('#edit-role').addEventListener('change', this.handleEditRoleChange.bind(this));
+
+        // Detect daca organizatorul are evenimente leisure → arata leisure_role dropdown
+        try {
+            const ev = await AmbiletAPI.get('/organizer/events');
+            const events = ev.data || ev || [];
+            const hasLeisure = (Array.isArray(events) ? events : []).some(e => (e.display_template || 'standard') === 'leisure_venue');
+            if (hasLeisure) {
+                document.getElementById('leisure-role-section').classList.remove('hidden');
+                document.getElementById('edit-leisure-role-section').classList.remove('hidden');
+            }
+        } catch (e) { /* ignore — show defaults */ }
 
         // Load team data
         await this.loadTeam();
@@ -576,6 +617,7 @@ const TeamManager = {
             name: formData.get('name'),
             email: formData.get('email'),
             role: formData.get('role'),
+            leisure_role: formData.get('leisure_role') || null,
             permissions: formData.getAll('permissions[]')
         };
 
@@ -607,6 +649,10 @@ const TeamManager = {
 
         document.getElementById('edit-member-id').value = memberId;
         document.getElementById('edit-role').value = member.role;
+
+        // Set leisure_role (poate fi null)
+        const leisureRoleSel = document.getElementById('edit-leisure-role');
+        if (leisureRoleSel) leisureRoleSel.value = member.leisure_role || '';
 
         // Set permissions
         const permissions = member.permissions || [];
@@ -650,6 +696,7 @@ const TeamManager = {
         const data = {
             member_id: formData.get('member_id'),
             role: formData.get('role'),
+            leisure_role: formData.get('leisure_role') || null,
             permissions: formData.getAll('permissions[]')
         };
 

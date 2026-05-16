@@ -71,6 +71,31 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     </div>
                 </details>
 
+                <!-- Date firma (opțional — pentru factura B2B) -->
+                <details id="lv-company-section" class="px-5 py-3 border-t border-border text-sm">
+                    <summary class="cursor-pointer font-medium text-secondary flex items-center gap-2">
+                        <span>🏢 Date firmă (opțional)</span>
+                        <span class="text-[10px] text-muted font-normal">Pentru factură pe persoană juridică</span>
+                    </summary>
+                    <div class="mt-3 space-y-2">
+                        <input id="lv-co-name" type="text" placeholder="Denumire firmă" class="w-full px-2 py-1.5 text-sm border border-border rounded">
+                        <div class="grid grid-cols-2 gap-2">
+                            <input id="lv-co-cui" type="text" placeholder="CUI / CIF (ex: RO12345678)" class="px-2 py-1.5 text-sm border border-border rounded">
+                            <input id="lv-co-reg" type="text" placeholder="Nr. Reg. Com. (ex: J40/123/2024)" class="px-2 py-1.5 text-sm border border-border rounded">
+                        </div>
+                        <input id="lv-co-address" type="text" placeholder="Sediu (adresă completă)" class="w-full px-2 py-1.5 text-sm border border-border rounded">
+                        <div class="grid grid-cols-2 gap-2">
+                            <input id="lv-co-iban" type="text" placeholder="IBAN (opțional)" class="px-2 py-1.5 text-sm border border-border rounded">
+                            <input id="lv-co-contact" type="text" placeholder="Persoană contact" class="px-2 py-1.5 text-sm border border-border rounded">
+                        </div>
+                        <label class="flex items-center gap-2 mt-2 text-xs">
+                            <input id="lv-co-invoice" type="checkbox" class="w-4 h-4 accent-primary">
+                            <span class="text-secondary font-medium">📄 Generează factură fiscală după finalizare</span>
+                        </label>
+                        <p class="text-[10px] text-muted leading-snug">💡 Datele firmei sunt salvate pe comandă. Facturarea se generează la pasul 2 după emiterea biletelor.</p>
+                    </div>
+                </details>
+
                 <!-- Plată -->
                 <div class="px-5 py-4 border-t border-border space-y-2">
                     <p class="text-xs uppercase tracking-wider text-muted font-semibold">Metodă plată</p>
@@ -118,11 +143,19 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         $('lv-loading').classList.add('hidden');
         $('lv-grid').classList.remove('hidden');
         $('lv-grid').classList.add('grid');
-        if (!types.length) {
-            $('lv-grid').innerHTML = '<p class="col-span-3 text-center text-muted py-8">Nu există tipuri de bilete configurate.</p>';
+        // Filtreaza la nivel UI: aratam DOAR produsele bifate "Doar pentru vanzare POS".
+        // Backward compat: produsele cu pos_price setat sunt si ele acceptate (gating implicit).
+        const posTypes = (types || []).filter(t => {
+            const meta = t.meta || {};
+            const isPosOnly = !!meta.pos_only;
+            const hasPosPrice = (t.pos_price !== null && t.pos_price !== undefined && t.pos_price !== '');
+            return isPosOnly || hasPosPrice;
+        });
+        if (!posTypes.length) {
+            $('lv-grid').innerHTML = '<p class="col-span-3 text-center text-muted py-8">Nicio bilet/serviciu marcat pentru POS. Bifează „Doar pentru vânzare POS" pe produsele de la <a href="/organizator/leisure" class="text-primary underline">/organizator/leisure</a>.</p>';
             return;
         }
-        $('lv-grid').innerHTML = types.map(t => {
+        $('lv-grid').innerHTML = posTypes.map(t => {
             const cat = t.service_category || 'access';
             const color = CAT_COLOR[cat] || 'slate';
             const variants = Array.isArray(t.variants) ? t.variants : [];
@@ -431,6 +464,17 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 addons: addonList.length > 0 ? addonList : undefined,
             };
         });
+        // Date firma — incluse doar daca operatorul a introdus CUI sau Denumire
+        const hasCompanyData = !!($('lv-co-cui').value.trim() || $('lv-co-name').value.trim());
+        const companyData = hasCompanyData ? {
+            name: $('lv-co-name').value.trim() || null,
+            cui: $('lv-co-cui').value.trim() || null,
+            reg_no: $('lv-co-reg').value.trim() || null,
+            address: $('lv-co-address').value.trim() || null,
+            iban: $('lv-co-iban').value.trim() || null,
+            contact_person: $('lv-co-contact').value.trim() || null,
+        } : null;
+
         const body = {
             date: $('lv-visit-date').value || new Date().toISOString().slice(0,10),
             items,
@@ -440,6 +484,8 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 phone: $('lv-cphone').value || null,
                 vehicle_plate: $('lv-cplate').value || null,
             },
+            ...(companyData ? { company: companyData } : {}),
+            generate_invoice: $('lv-co-invoice').checked,
             payment_method: payment,
         };
 
@@ -453,12 +499,26 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 window.print();
                 $('lv-receipt').classList.add('hidden');
             }, 200);
+            // Daca operatorul a cerut factura si exista date firma → ofera-i butonul de generare
+            const orderId = data?.order?.id;
+            const wantsInvoice = !!(data?.invoice_requested && data?.company_billing && orderId);
+            if (wantsInvoice) {
+                showInvoiceAction(orderId, data.company_billing);
+            }
+
             // Reset coș
             cart = {};
             $('lv-cname').value = '';
             $('lv-cemail').value = '';
             $('lv-cphone').value = '';
             $('lv-cplate').value = '';
+            $('lv-co-name').value = '';
+            $('lv-co-cui').value = '';
+            $('lv-co-reg').value = '';
+            $('lv-co-address').value = '';
+            $('lv-co-iban').value = '';
+            $('lv-co-contact').value = '';
+            $('lv-co-invoice').checked = false;
             renderCart();
             renderGrid();
         } catch (e) {
@@ -469,6 +529,57 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             $('lv-checkout').textContent = 'Finalizează';
             $('lv-checkout').disabled = Object.keys(cart).length === 0;
         }
+    }
+
+    function showInvoiceAction(orderId, company) {
+        // Banner persistent care invita operatorul sa genereze factura pentru aceasta comanda.
+        let banner = document.getElementById('lv-invoice-banner');
+        if (!banner) {
+            banner = document.createElement('div');
+            banner.id = 'lv-invoice-banner';
+            banner.className = 'mb-4 p-4 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center gap-3 print:hidden';
+            const main = document.querySelector('main');
+            if (main) main.insertBefore(banner, main.firstChild);
+        }
+        const coName = (company && company.name) ? company.name : 'firmă';
+        const coCui = (company && company.cui) ? company.cui : '';
+        banner.innerHTML = `
+            <div class="text-2xl">📄</div>
+            <div class="flex-1 text-sm">
+                <p class="font-semibold text-emerald-900">Comandă emisă cu date firmă</p>
+                <p class="text-xs text-emerald-800 mt-0.5">${coName}${coCui ? ' · CUI ' + coCui : ''}</p>
+            </div>
+            <button id="lv-inv-gen" class="px-3 py-2 text-sm font-semibold bg-primary text-white rounded-lg hover:bg-primary-dark">Generează factură</button>
+            <button id="lv-inv-dismiss" class="px-2 py-2 text-xs text-emerald-800 hover:bg-emerald-100 rounded">✕</button>
+        `;
+        banner.querySelector('#lv-inv-dismiss').addEventListener('click', () => banner.remove());
+        banner.querySelector('#lv-inv-gen').addEventListener('click', async () => {
+            const btn = banner.querySelector('#lv-inv-gen');
+            btn.disabled = true;
+            btn.textContent = 'Se generează...';
+            try {
+                const res = await AmbiletAPI.post(`/organizer/orders/${orderId}/generate-invoice`, {});
+                const inv = res.data || {};
+                if (inv.invoice_url) {
+                    window.open(inv.invoice_url, '_blank');
+                }
+                btn.textContent = '✓ ' + (inv.invoice_number || 'Factură înregistrată');
+                btn.classList.remove('bg-primary');
+                btn.classList.add('bg-emerald-600');
+                if (inv.message) {
+                    const msg = document.createElement('p');
+                    msg.className = 'text-xs text-emerald-800 mt-1 w-full';
+                    msg.textContent = inv.message;
+                    banner.appendChild(msg);
+                }
+                setTimeout(() => banner.remove(), 8000);
+            } catch (e) {
+                console.error('[leisure-pos] invoice gen failed', e);
+                btn.disabled = false;
+                btn.textContent = 'Generează factură';
+                alert('Eroare la generarea facturii: ' + (e?.message || 'necunoscut'));
+            }
+        });
     }
 
     window.addEventListener('load', async () => {

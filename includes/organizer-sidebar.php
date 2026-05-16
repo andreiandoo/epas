@@ -82,8 +82,8 @@ $currentPage = $currentPage ?? getCurrentPage();
             🛶 Curse bărci
         </a>
         <a data-org-show="leisure" href="/organizator/leisure-boats" style="display:none" class="sidebar-link <?= $currentPage === 'leisure_boats' ? 'active' : '' ?> items-center gap-3 px-4 py-3 m-2 rounded-xl text-sm font-medium group text-white">
-            <svg class="w-5 h-5 text-muted group-hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 17l4-4 4 4m-4-4v4m4-4l4-4m-4 4v4M3 21h18"/></svg>
-            Bărci & QR
+            <svg class="w-5 h-5 text-muted group-hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-1.41-1.41L10 14.17l-3.59-3.58L5 12l5 5z M3 21h18"/></svg>
+            🧰 Gestiune
         </a>
         <a data-org-show="leisure" href="/organizator/echipa" style="display:none" class="sidebar-link <?= $currentPage === 'team' ? 'active' : '' ?> items-center gap-3 px-4 py-3 m-2 rounded-xl text-sm font-medium group text-white">
             <svg class="w-5 h-5 text-muted group-hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857m0 0a5.002 5.002 0 00-9.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>

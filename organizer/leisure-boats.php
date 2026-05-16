@@ -1,6 +1,6 @@
 <?php
 require_once dirname(__DIR__) . '/includes/config.php';
-$pageTitle = 'Bărci & QR-uri';
+$pageTitle = 'Gestiune — inventar fizic & QR';
 $bodyClass = 'min-h-screen flex bg-slate-100';
 $currentPage = 'leisure_boats';
 $cssBundle = 'organizer';
@@ -20,18 +20,42 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
     <main class="flex-1 p-4 lg:p-8">
         <div class="mb-6 flex flex-wrap items-center justify-between gap-3 print:hidden">
             <div>
-                <h1 class="text-2xl font-bold text-secondary lg:text-3xl">🛶 Bărci & QR-uri</h1>
-                <p class="mt-1 text-sm text-muted">Lista unităților fizice (bărci/kayak-uri) și QR-uri printabile pentru fiecare.</p>
+                <h1 class="text-2xl font-bold text-secondary lg:text-3xl">🧰 Gestiune — inventar fizic</h1>
+                <p class="mt-1 text-sm text-muted">Unitățile fizice ale produselor (bărci, sănii, kayak-uri, vaporașe). QR-uri printabile pentru fiecare unitate.</p>
             </div>
             <div class="flex items-center gap-2">
-                <select id="lv-tt-select" class="px-3 py-2 text-sm border border-border rounded-lg bg-white"></select>
-                <button id="lv-sync-btn" class="px-3 py-2 text-sm font-medium bg-white border border-border rounded-lg hover:bg-slate-50">🔄 Sincronizează</button>
-                <button id="lv-print-btn" class="px-3 py-2 text-sm font-semibold bg-primary text-white rounded-lg">🖨 Print QR-uri</button>
+                <select id="lv-tt-select" class="px-3 py-2 text-sm border border-border rounded-lg bg-white hidden"></select>
+                <button id="lv-sync-btn" class="px-3 py-2 text-sm font-medium bg-white border border-border rounded-lg hover:bg-slate-50 hidden">🔄 Sincronizează</button>
+                <button id="lv-print-btn" class="px-3 py-2 text-sm font-semibold bg-primary text-white rounded-lg hidden">🖨 Print QR-uri</button>
             </div>
         </div>
 
         <div id="lv-error" class="hidden mb-4 p-4 bg-rose-50 border border-rose-200 rounded-xl text-sm text-rose-900 print:hidden"></div>
         <div id="lv-loading" class="p-8 text-center print:hidden"><div class="inline-block w-6 h-6 border-2 rounded-full border-primary border-t-transparent animate-spin"></div></div>
+
+        <!-- Empty state: nu există produse cu inventar fizic activat -->
+        <div id="lv-empty" class="hidden p-6 bg-white border border-border rounded-2xl print:hidden">
+            <div class="flex items-start gap-4">
+                <div class="text-4xl">📦</div>
+                <div class="flex-1">
+                    <h2 class="text-lg font-bold text-secondary mb-2">Nu există produse cu inventar fizic activat</h2>
+                    <p class="text-sm text-muted mb-4">Pentru a gestiona bărci, sănii, kayak-uri sau alte unități fizice, trebuie să activezi <strong>inventarul fizic</strong> pe produs.</p>
+                    <ol class="text-sm text-secondary list-decimal list-inside space-y-1.5 mb-4">
+                        <li>Mergi la <a href="/organizator/leisure" class="text-primary font-medium underline">Setări leisure</a></li>
+                        <li>Editează un produs de tip <em>Închiriere</em> sau <em>Activitate</em></li>
+                        <li>Activează „Inventar fizic limitat" și setează numărul de unități</li>
+                        <li>Revino aici și apasă „Sincronizează" pentru a genera QR-urile</li>
+                    </ol>
+                    <a href="/organizator/leisure" class="inline-block px-4 py-2 text-sm font-semibold bg-primary text-white rounded-lg">⚙ Mergi la Setări produse</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Info bar — produsul curent + cum se procedează -->
+        <div id="lv-info-bar" class="hidden mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-900 print:hidden flex items-center gap-3">
+            <span>ℹ️</span>
+            <span id="lv-info-text"></span>
+        </div>
 
         <!-- Lista bărci -->
         <div id="lv-print-area">
@@ -61,12 +85,13 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         const res = await AmbiletAPI.get('/organizer/events');
         const events = res.data || [];
         const leisure = events.filter(e => (e.display_template || 'standard') === 'leisure_venue');
-        if (leisure.length === 0) throw new Error('Nu există event leisure.');
+        if (leisure.length === 0) throw new Error('Nu există un eveniment de tip Locație de agrement.');
         currentEventId = leisure[0].id;
     }
     async function loadProducts() {
         const res = await AmbiletAPI.get(`/organizer/events/${currentEventId}/leisure/config`);
         const all = res.data?.ticket_types || [];
+        // Suport multi-produs: orice produs cu physical_inventory.enabled apare in dropdown.
         rentalTypes = all.filter(t => t.physical_inventory && t.physical_inventory.enabled);
         const sel = $('lv-tt-select');
         sel.innerHTML = '';
@@ -79,10 +104,22 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         });
         if (rentalTypes.length > 0) currentTtId = rentalTypes[0].id;
     }
+    function updateInfoBar() {
+        const tt = rentalTypes.find(t => t.id === currentTtId);
+        if (!tt) { $('lv-info-bar').classList.add('hidden'); return; }
+        const name = typeof tt.name === 'string' ? tt.name : (tt.name?.ro || 'Produs');
+        const count = tt.physical_inventory?.count || 0;
+        $('lv-info-text').innerHTML = `Produs activ: <strong>${name}</strong> · Configurat pentru <strong>${count}</strong> unități. Apasă <em>Sincronizează</em> ca să generezi/aliniezi unitățile cu QR-uri.`;
+        $('lv-info-bar').classList.remove('hidden');
+    }
     async function loadBoats() {
-        if (!currentTtId) return;
+        // ALWAYS hide loading at the end — even pentru early returns
         $('lv-loading').classList.remove('hidden');
         $('lv-boats-grid').innerHTML = '';
+        if (!currentTtId) {
+            $('lv-loading').classList.add('hidden');
+            return;
+        }
         try {
             const res = await AmbiletAPI.get(`/organizer/events/${currentEventId}/leisure/boats`, { ticket_type_id: currentTtId });
             renderBoats(res.data?.boats || []);
@@ -96,7 +133,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
     function renderBoats(boats) {
         const grid = $('lv-boats-grid');
         if (!boats.length) {
-            grid.innerHTML = '<p class="col-span-full text-center text-muted py-8">Nicio barcă. Apasă Sincronizează ca să le generezi din meta.physical_inventory.count.</p>';
+            grid.innerHTML = '<div class="col-span-full p-6 bg-amber-50 border border-amber-200 rounded-xl text-center"><p class="text-sm text-amber-900 mb-3">Nu există încă unități pentru acest produs.</p><p class="text-xs text-amber-700">Apasă <strong>🔄 Sincronizează</strong> sus pentru a genera unitățile + QR-urile bazate pe „Inventar fizic" din Setări produs.</p></div>';
             return;
         }
         grid.innerHTML = boats.map(b => {
@@ -126,20 +163,53 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             alert('Eroare: ' + (e?.message || ''));
         }
     }
+    function showEmptyState() {
+        $('lv-empty').classList.remove('hidden');
+        $('lv-tt-select').classList.add('hidden');
+        $('lv-sync-btn').classList.add('hidden');
+        $('lv-print-btn').classList.add('hidden');
+        $('lv-info-bar').classList.add('hidden');
+    }
+    function showToolbar() {
+        $('lv-empty').classList.add('hidden');
+        $('lv-tt-select').classList.remove('hidden');
+        $('lv-sync-btn').classList.remove('hidden');
+        $('lv-print-btn').classList.remove('hidden');
+    }
+
     window.addEventListener('load', async () => {
         let retries = 0;
         while (typeof AmbiletAPI === 'undefined' && retries < 10) { await new Promise(r => setTimeout(r, 100)); retries++; }
-        if (typeof AmbiletAPI === 'undefined') return;
+        if (typeof AmbiletAPI === 'undefined') {
+            $('lv-loading').classList.add('hidden');
+            $('lv-error').textContent = 'API indisponibil.';
+            $('lv-error').classList.remove('hidden');
+            return;
+        }
         try {
             await loadEvent();
             await loadProducts();
-            await loadBoats();
         } catch (e) {
+            $('lv-loading').classList.add('hidden');
             $('lv-error').textContent = e.message || 'Eroare';
             $('lv-error').classList.remove('hidden');
             return;
         }
-        $('lv-tt-select').addEventListener('change', e => { currentTtId = parseInt(e.target.value, 10); loadBoats(); });
+        // Empty state: niciun produs cu inventar fizic activat
+        if (!rentalTypes.length) {
+            $('lv-loading').classList.add('hidden');
+            showEmptyState();
+            return;
+        }
+        showToolbar();
+        updateInfoBar();
+        await loadBoats();
+
+        $('lv-tt-select').addEventListener('change', e => {
+            currentTtId = parseInt(e.target.value, 10);
+            updateInfoBar();
+            loadBoats();
+        });
         $('lv-sync-btn').addEventListener('click', syncBoats);
         $('lv-print-btn').addEventListener('click', () => window.print());
     });
