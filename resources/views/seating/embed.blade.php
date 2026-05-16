@@ -452,12 +452,16 @@ const statusEl = document.getElementById('status-line');
         wssPort: REVERB.port,
         forceTLS: REVERB.scheme === 'https',
         enabledTransports: REVERB.scheme === 'https' ? ['wss'] : ['ws'],
-        disableStats: true,
+        enableStats: false,
         cluster: 'mt1', // ignored by Reverb but required by Pusher
       };
       // Reverb behind a sub-path proxy (e.g. nginx /reverb/ → 8080).
-      // Pusher JS prepends this: wss://{host}{path}/app/{key}.
-      if (REVERB.path) pusherOpts.path = REVERB.path;
+      // Pusher 8.x reads `wsPath`, not `path` — set both to cover other clients.
+      // Result URL: wss://{host}{wsPath}/app/{key}.
+      if (REVERB.path) {
+        pusherOpts.wsPath = REVERB.path;
+        pusherOpts.path = REVERB.path;
+      }
       const pusher = new Pusher(REVERB.app_key, pusherOpts);
       pusher.connection.bind('connected', () => {
         statusEl.textContent = '● real-time';

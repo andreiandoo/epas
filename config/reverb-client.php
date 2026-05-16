@@ -27,8 +27,10 @@ return [
     // Public port (usually 443 when nginx terminates TLS).
     'port' => (int) env('REVERB_PORT_PUBLIC', env('REVERB_PORT', 8080)),
 
-    // 'https' / 'wss' for TLS, 'http' / 'ws' for plaintext.
-    'scheme' => env('REVERB_SCHEME', 'https'),
+    // Public scheme — defaults to https since nginx terminates TLS in
+    // front of Reverb. The internal REVERB_SCHEME (used by the daemon)
+    // can stay 'http' for the loopback proxy.
+    'scheme' => env('REVERB_SCHEME_PUBLIC', 'https'),
 
     // Optional sub-path when nginx routes e.g. /reverb/ → 127.0.0.1:8080.
     // Empty string = root.
