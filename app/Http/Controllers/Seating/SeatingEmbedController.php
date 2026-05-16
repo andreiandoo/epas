@@ -255,6 +255,11 @@ class SeatingEmbedController extends Controller
             'host' => env('REVERB_HOST_PUBLIC', env('REVERB_HOST', null)),
             'port' => (int) env('REVERB_PORT_PUBLIC', env('REVERB_PORT', 8080)),
             'scheme' => env('REVERB_SCHEME', 'https'),
+            // Path prefix when Reverb is reverse-proxied under a sub-path
+            // (e.g. nginx routes `/reverb/` → `127.0.0.1:8080`). Pusher JS
+            // prepends this to the WS URL: wss://{host}{path}/app/{key}.
+            // Empty string = root.
+            'path' => env('REVERB_PATH_PUBLIC', ''),
         ];
     }
 

@@ -446,7 +446,7 @@ const statusEl = document.getElementById('status-line');
   pusherScript.src = 'https://js.pusher.com/8.4/pusher.min.js';
   pusherScript.onload = () => {
     try {
-      const pusher = new Pusher(REVERB.app_key, {
+      const pusherOpts = {
         wsHost: REVERB.host,
         wsPort: REVERB.port,
         wssPort: REVERB.port,
@@ -454,7 +454,11 @@ const statusEl = document.getElementById('status-line');
         enabledTransports: REVERB.scheme === 'https' ? ['wss'] : ['ws'],
         disableStats: true,
         cluster: 'mt1', // ignored by Reverb but required by Pusher
-      });
+      };
+      // Reverb behind a sub-path proxy (e.g. nginx /reverb/ → 8080).
+      // Pusher JS prepends this: wss://{host}{path}/app/{key}.
+      if (REVERB.path) pusherOpts.path = REVERB.path;
+      const pusher = new Pusher(REVERB.app_key, pusherOpts);
       pusher.connection.bind('connected', () => {
         statusEl.textContent = '● real-time';
         statusEl.classList.add('connected');
