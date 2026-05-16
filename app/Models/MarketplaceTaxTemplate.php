@@ -1160,33 +1160,41 @@ class MarketplaceTaxTemplate extends Model
                 : '';
 
             // Discount aggregate for the decont template (section 1c).
-            // Sum the per-row discount stored on the payout snapshot — same
-            // value the payout-ticket-breakdown blade renders per ticket
-            // type. Then look up the promo codes that produced those
-            // discounts on the underlying orders. Promo source can sit in
-            // three places depending on legacy/origin: order.promo_code
-            // string, order.promo_code_id → MarketplacePromoCode->code,
-            // or meta.promo_code.code (older WP imports). "—" fallback
-            // when the discount exists but no code is attached (e.g.
-            // imported orders with manual reductions).
+            // Try the snapshot first (new SalesBreakdownService stores
+            // discount per row), fall back to summing order.discount_amount
+            // for legacy payouts whose snapshot pre-dates that field. The
+            // promo codes themselves always come from the underlying orders
+            // — source can sit in three places depending on legacy/origin:
+            // order.promo_code string, order.promo_code_id → promo_codes
+            // table, or meta.promo_code.code (older WP imports). Orders
+            // with a discount but no code surface as "reducere manuală".
             $totalDiscountAmount = 0.0;
             foreach ($ticketBreakdown as $item) {
                 $totalDiscountAmount += (float) ($item['discount'] ?? 0);
             }
             $promoCodes = [];
             $orderHasNonCodeDiscount = false;
+            $fallbackDiscountFromOrders = 0.0;
             if ($payout->event_id) {
-                $orders = \App\Models\Order::query()
+                $ordersQ = \App\Models\Order::query()
                     ->where(fn ($q) => $q->where('event_id', $payout->event_id)
                                           ->orWhere('marketplace_event_id', $payout->event_id))
                     ->whereIn('status', ['paid', 'confirmed', 'completed'])
                     ->where(function ($q) {
                         $q->where('discount_amount', '>', 0)
                           ->orWhere('promo_discount', '>', 0);
-                    })
-                    ->get(['id', 'promo_code', 'promo_code_id', 'meta', 'discount_amount']);
+                    });
+                if ($payout->period_start) {
+                    $ordersQ->where('created_at', '>=', $payout->period_start->copy()->startOfDay());
+                }
+                if ($payout->period_end) {
+                    $ordersQ->where('created_at', '<=', $payout->period_end->copy()->endOfDay());
+                }
+                $orders = $ordersQ->get(['id', 'promo_code', 'promo_code_id', 'meta', 'discount_amount']);
 
                 foreach ($orders as $o) {
+                    $fallbackDiscountFromOrders += (float) ($o->discount_amount ?? 0);
+
                     $code = trim((string) ($o->promo_code ?? ''));
                     if ($code === '' && $o->promo_code_id) {
                         // No Eloquent model for plain promo_codes table — go via DB.
@@ -1204,7 +1212,23 @@ class MarketplaceTaxTemplate extends Model
                     }
                 }
             }
+            // Use the snapshot total when it has signal; else fall back to the
+            // order-derived sum so legacy payouts (snapshot pre-dates per-row
+            // discount) still render the right number.
+            if ($totalDiscountAmount <= 0 && $fallbackDiscountFromOrders > 0) {
+                $totalDiscountAmount = $fallbackDiscountFromOrders;
+            }
             $variables['total_discount_amount'] = number_format($totalDiscountAmount, 2);
+
+            // payout_amount is the bottom-line "valoarea de achitat" row in
+            // the decont PDF. payout_net_amount (used at row 1a) is gross
+            // before discount, so 1c can show the discount separately. The
+            // final payable amount must take the discount out — without
+            // this the PDF total ignores section 1c entirely.
+            if ($totalDiscountAmount > 0) {
+                $payoutAmountAfterDiscount = max(0.0, $payoutAmount - $totalDiscountAmount);
+                $variables['payout_amount'] = number_format($payoutAmountAfterDiscount, 2);
+            }
             // Sortat după număr de utilizări desc, "COD (xN)" format.
             arsort($promoCodes);
             $codeStrings = [];
