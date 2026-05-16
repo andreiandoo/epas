@@ -8,7 +8,7 @@ import { colors, getRoleConfig } from '../theme/colors';
 
 export default function HubScreen({ navigation }) {
   const { user, logout } = useAuth();
-  const { activeShift, activeEvent, loading, error, refresh } = useShift();
+  const { activeShift, fallbackRole, effectiveRole, activeEvent, loading, error, refresh } = useShift();
 
   useEffect(() => {
     refresh();
@@ -16,16 +16,21 @@ export default function HubScreen({ navigation }) {
     return () => clearInterval(interval);
   }, [refresh]);
 
-  const role = activeShift?.role || null;
+  const role = effectiveRole;
   const cfg = role ? getRoleConfig(role) : null;
+  const isFallback = !activeShift && !!fallbackRole;
 
   const screenForRole = {
     operator_boats: 'BoatsOperator',
-    operator_pontoon: 'PontoonOperator',
+    operator_pontoon: 'Checkin',                // validare bilete vaporas
+    operator_pontoon_rental: 'PontoonOperator', // inchirieri vaporas
+    operator_sled: 'POS',                       // inchirieri sanii (POS pentru emitere)
+    operator_tow_validation: 'Checkin',         // validare tractari (scaneaza biletele addon)
     sales_operator: 'POS',
     gate_scanner: 'Checkin',
     field_seller: 'FieldOperator',
-    shift_manager: 'POS', // managerul poate face POS oricum
+    shift_manager: 'POS',                       // managerul poate face POS oricum
+    admin_mobile: 'POS',                        // admin: deschide POS, are acces global din meniu
   };
 
   function goToActiveScreen() {
@@ -58,12 +63,12 @@ export default function HubScreen({ navigation }) {
         </View>
       )}
 
-      {!loading && !activeShift && (
+      {!loading && !role && (
         <View style={styles.warningCard}>
-          <Text style={styles.warningTitle}>⚠️ Nu există turnetă activă</Text>
+          <Text style={styles.warningTitle}>⚠️ Nu există rol asignat</Text>
           <Text style={styles.warningText}>
-            Managerul nu a setat un rol pentru contul tău în acest interval.
-            Contactează-l ca să-ți aloce o turnetă (operator bărci, vaporașe, POS, check-in sau teren).
+            Nu ai turnetă activă și nu ți s-a asignat un rol operator în {'\n'}
+            /organizator/echipa. Contactează managerul ca să-ți aloce un rol.
           </Text>
           <TouchableOpacity style={styles.button} onPress={refresh}>
             <Text style={styles.buttonText}>🔄 Verifică din nou</Text>
@@ -71,17 +76,22 @@ export default function HubScreen({ navigation }) {
         </View>
       )}
 
-      {!loading && activeShift && cfg && (
+      {!loading && role && cfg && (
         <View style={[styles.roleCard, { borderColor: cfg.accent }]}>
-          <Text style={styles.roleLabel}>Rol activ acum</Text>
+          <Text style={styles.roleLabel}>{isFallback ? 'Rol asignat (static)' : 'Rol activ acum'}</Text>
           <Text style={styles.roleEmoji}>{cfg.emoji}</Text>
           <Text style={styles.roleTitle}>{cfg.label}</Text>
-          {activeShift.gate && (
+          {activeShift?.gate && (
             <Text style={styles.muted}>Poartă: {activeShift.gate}</Text>
           )}
-          <Text style={styles.shiftTime}>
-            {fmtShift(activeShift.start_at)} → {fmtShift(activeShift.end_at)}
-          </Text>
+          {activeShift && (
+            <Text style={styles.shiftTime}>
+              {fmtShift(activeShift.start_at)} → {fmtShift(activeShift.end_at)}
+            </Text>
+          )}
+          {isFallback && (
+            <Text style={styles.muted}>Fără turnetă activă acum — rolul vine din /organizator/echipa</Text>
+          )}
           <TouchableOpacity style={[styles.bigButton, { backgroundColor: cfg.accent }]} onPress={goToActiveScreen}>
             <Text style={styles.bigButtonText}>Deschide panou rol →</Text>
           </TouchableOpacity>

@@ -44,13 +44,17 @@ export const colors = {
 };
 
 export const roleColors = {
-  operator_boats:   { accent: '#22D3EE', emoji: '🛶', label: 'Operator bărci' },
-  operator_pontoon: { accent: '#0891B2', emoji: '🚤', label: 'Operator vaporașe' },
-  sales_operator:   { accent: '#5BB17F', emoji: '💳', label: 'Operator POS' },
-  gate_scanner:     { accent: '#B89968', emoji: '✅', label: 'Operator check-in' },
-  field_seller:     { accent: '#A78BFA', emoji: '📱', label: 'Operator teren' },
-  shift_manager:    { accent: '#FBBF24', emoji: '👤', label: 'Manager schimb' },
-  accountant:       { accent: '#94A3B8', emoji: '📊', label: 'Contabil' },
+  operator_boats:           { accent: '#22D3EE', emoji: '🛶', label: 'Operator închiriere bărci' },
+  operator_pontoon:         { accent: '#0891B2', emoji: '🎫', label: 'Operator validare bilete vaporaș' },
+  operator_pontoon_rental:  { accent: '#06B6D4', emoji: '🚤', label: 'Operator închiriere vaporaș' },
+  operator_sled:            { accent: '#60A5FA', emoji: '🛷', label: 'Operator închiriere sănii' },
+  operator_tow_validation:  { accent: '#F59E0B', emoji: '🪢', label: 'Operator validare tractări' },
+  sales_operator:           { accent: '#5BB17F', emoji: '💳', label: 'Operator POS (fix casă)' },
+  gate_scanner:             { accent: '#B89968', emoji: '✅', label: 'Operator check-in' },
+  field_seller:             { accent: '#A78BFA', emoji: '📱', label: 'Operator teren' },
+  shift_manager:            { accent: '#FBBF24', emoji: '👤', label: 'Manager schimb' },
+  accountant:               { accent: '#94A3B8', emoji: '📊', label: 'Contabil' },
+  admin_mobile:             { accent: '#FBBF24', emoji: '⭐', label: 'Membru admin (scan + vânzare)' },
 };
 
 export function getRoleConfig(role) {

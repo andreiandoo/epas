@@ -24,7 +24,15 @@ export default function POSScreen({ navigation }) {
     if (!eventId) return;
     try {
       const cfg = await fetchLeisureConfig(eventId);
-      setTypes(cfg.data?.ticket_types || []);
+      const all = cfg.data?.ticket_types || [];
+      // Filtreaza: doar produse marcate "Doar pentru vanzare POS" sau cu pret POS setat.
+      const posTypes = all.filter(t => {
+        const meta = t.meta || {};
+        const isPosOnly = !!meta.pos_only;
+        const hasPosPrice = (t.pos_price !== null && t.pos_price !== undefined && t.pos_price !== '');
+        return isPosOnly || hasPosPrice;
+      });
+      setTypes(posTypes);
     } catch (e) {
       console.warn('[POS] load', e);
     } finally {
