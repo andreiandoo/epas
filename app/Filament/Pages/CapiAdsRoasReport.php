@@ -212,9 +212,13 @@ class CapiAdsRoasReport extends Page
             ->whereBetween('orders.created_at', [$start, $end])
             ->whereIn('orders.status', ['paid', 'confirmed', 'completed'])
             ->where(function ($q) {
-                // jsonb ? 'key' is an index-friendly key-existence check;
-                // way faster than LIKE on the serialized text form.
-                $q->whereRaw("(orders.meta::jsonb ? 'fbclid' OR orders.meta::jsonb ? 'fbc')")
+                // Strict text LIKE on the serialized JSON. We deliberately
+                // avoid `meta::jsonb ? 'key'` because some legacy rows have
+                // meta values that aren't valid JSON, and the cast throws
+                // a 500 for the whole page. The patterns include the trailing
+                // colon so we don't accidentally match a value containing
+                // the literal text "fbclid".
+                $q->whereRaw("orders.meta IS NOT NULL AND (orders.meta::text LIKE '%\"fbclid\":%' OR orders.meta::text LIKE '%\"fbc\":%')")
                     ->orWhereExists(function ($sub) {
                         $sub->select(DB::raw(1))
                             ->from('core_customer_events')
