@@ -1716,6 +1716,13 @@ Route::prefix('marketplace-client/organizer')->middleware(['throttle:120,1', 'ma
         Route::get('/events/{event}/seating-map', [OrganizerEventsController::class, 'seatingMap'])
             ->name('api.marketplace-client.organizer.events.seating-map');
 
+        // Mint a signed URL for the mobile WebView to load the canvas-based
+        // seating widget (replaces the slow react-native-svg implementation).
+        // The route itself stays Sanctum-protected — only the rendered embed
+        // page is publicly reachable, and it's bound to event_id by HMAC.
+        Route::post('/seating/embed-token', [\App\Http\Controllers\Seating\SeatingEmbedController::class, 'issueToken'])
+            ->name('api.marketplace-client.organizer.seating.embed-token');
+
         // Event form helpers (categories, genres, venues)
         Route::get('/event-categories', [OrganizerEventsController::class, 'categories'])
             ->name('api.marketplace-client.organizer.event-categories');
@@ -1869,6 +1876,11 @@ Route::prefix('marketplace-client/organizer')->middleware(['throttle:120,1', 'ma
         // F11 — Active shift pentru rolul curent
         Route::get('/me/active-shift', [OrganizerLeisureController::class, 'myActiveShift'])
             ->name('api.marketplace-client.organizer.me.active-shift');
+
+        // POS — Generare factura B2B dupa o vanzare POS cu date firma
+        Route::post('/orders/{order}/generate-invoice', [OrganizerLeisureController::class, 'generateInvoice'])
+            ->whereNumber('order')
+            ->name('api.marketplace-client.organizer.orders.generate-invoice');
 
         // Organizer Documents (Cerere avizare, Declaratie impozite)
         Route::get('/documents', [OrganizerDocumentController::class, 'index'])
@@ -2548,6 +2560,11 @@ Route::prefix('marketplace-client/venue-owner')->middleware(['throttle:120,1', '
         Route::get('/events/{event}/sales-breakdown', [VenueOwnerOrdersController::class, 'salesBreakdown'])
             ->whereNumber('event')
             ->name('api.marketplace-client.venue-owner.events.sales-breakdown');
+
+        // Seating embed-token (same as organizer; venue owner can scan +
+        // sell from the same canvas-based widget).
+        Route::post('/seating/embed-token', [\App\Http\Controllers\Seating\SeatingEmbedController::class, 'issueToken'])
+            ->name('api.marketplace-client.venue-owner.seating.embed-token');
 
         Route::get('/notes', [VenueOwnerNotesController::class, 'index'])
             ->name('api.marketplace-client.venue-owner.notes.index');

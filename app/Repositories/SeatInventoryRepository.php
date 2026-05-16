@@ -2,7 +2,9 @@
 
 namespace App\Repositories;
 
+use App\Events\Seating\SeatStatusChanged;
 use App\Models\Seating\EventSeat;
+use App\Models\Seating\EventSeatingLayout;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -54,7 +56,7 @@ class SeatInventoryRepository
         string $fromStatus,
         string $toStatus
     ): int {
-        return EventSeat::where('event_seating_id', $eventSeatingId)
+        $affected = EventSeat::where('event_seating_id', $eventSeatingId)
             ->whereIn('seat_uid', $seatUids)
             ->where('status', $fromStatus)
             ->update([
@@ -62,6 +64,42 @@ class SeatInventoryRepository
                 'version' => DB::raw('version + 1'),
                 'last_change_at' => now(),
             ]);
+
+        // Broadcast each successfully-transitioned seat so the browser canvas
+        // widget AND mobile WebView see the change in real time. When >0 rows
+        // changed AND BROADCAST_CONNECTION is configured (default 'null' is
+        // a no-op), Echo subscribers on event.{eventId}.seats receive the
+        // payload within a few hundred ms.
+        if ($affected > 0) {
+            $this->broadcastStatusChange($eventSeatingId, $seatUids, $toStatus);
+        }
+
+        return $affected;
+    }
+
+    /**
+     * Translate event_seating_id → core events.id for the channel name, then
+     * fire the SeatStatusChanged broadcast. Failures are swallowed (logged
+     * but never bubble up) so a flaky broadcast driver can't break a sale.
+     */
+    protected function broadcastStatusChange(int $eventSeatingId, array $seatUids, string $toStatus): void
+    {
+        try {
+            $eventId = EventSeatingLayout::where('id', $eventSeatingId)->value('event_id');
+            if (!$eventId) {
+                return;
+            }
+            $payload = array_map(
+                fn ($uid) => ['seat_uid' => $uid, 'status' => $toStatus],
+                array_values($seatUids)
+            );
+            event(new SeatStatusChanged((int) $eventId, $payload));
+        } catch (\Throwable $e) {
+            \Log::warning('Seat broadcast failed', [
+                'event_seating_id' => $eventSeatingId,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     /**

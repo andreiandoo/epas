@@ -21,6 +21,7 @@ use App\Http\Controllers\Admin\TicketCustomizerController;
 use App\Http\Controllers\Tenant\TicketCustomizerController as TenantTicketCustomizerController;
 use App\Http\Controllers\Marketplace\TicketCustomizerController as MarketplaceTicketCustomizerController;
 use App\Http\Controllers\ApplePayVerificationController;
+use App\Http\Controllers\Seating\SeatingEmbedController;
 
 Route::pattern('locale', 'en|ro|de|fr|es');
 
@@ -678,3 +679,12 @@ Route::prefix('web-templates')->middleware('throttle:60,1')->group(function () {
         ->where('token', '[A-Za-z0-9\-]{6,20}')
         ->name('web-template.customized-preview');
 });
+
+// ──────────────────────────────────────────────────────────────────────
+// Seating embed for the mobile WebView. Token is HMAC-signed, so the
+// route itself doesn't need session/sanctum — the controller validates
+// the signature and the event_id binding before serving the page.
+// ──────────────────────────────────────────────────────────────────────
+Route::get('/seating/embed/{event}', [SeatingEmbedController::class, 'show'])
+    ->whereNumber('event')
+    ->name('seating.embed.show');

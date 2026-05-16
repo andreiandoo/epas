@@ -315,6 +315,23 @@ class OrdersController extends BaseController
                         'version' => DB::raw('version + 1'),
                     ]);
 
+                // Real-time push so the browser canvas widget and mobile
+                // WebView turn these seats red instantly without polling.
+                // Bypasses SeatInventoryRepository because the loop above
+                // already did a raw bulk update — broadcast inline.
+                try {
+                    $payload = array_map(
+                        fn ($uid) => ['seat_uid' => $uid, 'status' => 'sold'],
+                        array_values($seatUids)
+                    );
+                    event(new \App\Events\Seating\SeatStatusChanged((int) $event->id, $payload));
+                } catch (\Throwable $e) {
+                    Log::warning('Seat sold broadcast failed', [
+                        'event_id' => $event->id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+
                 // Clean up any seat holds for these seats
                 \App\Models\Seating\SeatHold::where('event_seating_id', $layout->id)
                     ->whereIn('seat_uid', $seatUids)
