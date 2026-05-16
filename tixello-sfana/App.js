@@ -2,7 +2,7 @@
 // Navigation simplificat: Login → Hub (rol-based) → ecrane operator.
 import React, { useEffect, useState } from 'react';
 import { View, Text, ActivityIndicator, StatusBar } from 'react-native';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, DarkTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
@@ -73,8 +73,10 @@ export default function App() {
         <ShiftProvider>
           <NavigationContainer
             theme={{
+              ...DarkTheme,
               dark: true,
               colors: {
+                ...DarkTheme.colors,
                 primary: colors.primary,
                 background: colors.background,
                 card: colors.surface,
