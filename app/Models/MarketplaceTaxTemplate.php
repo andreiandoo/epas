@@ -265,6 +265,8 @@ class MarketplaceTaxTemplate extends Model
             '{{total_refunded_amount}}' => 'Valoarea totală bilete returnate (lei)',
             '{{total_refunded_commission}}' => 'Comision returnat pentru biletele rambursate (lei)',
             '{{refunded_tickets_breakdown_label}}' => 'Detaliu bilete returnate (ex: 120lei*1)',
+            '{{total_discount_amount}}' => 'Total discounturi aplicate (lei)',
+            '{{promo_codes_used}}' => 'Coduri promo folosite (ex: " — coduri: SUMMER25 (x3), VIP10")',
         ],
         'Payout - Bilete Pretipărite' => [
             '{{payout_preprinted_ticket_fee}}' => 'Taxă per bilet pretipărit (lei/buc)',
@@ -1155,6 +1157,65 @@ class MarketplaceTaxTemplate extends Model
             $variables['total_refunded_commission'] = number_format($refundCommissionReturned, 2);
             $variables['refunded_tickets_breakdown_label'] = !empty($refundedBreakdownParts)
                 ? ' (' . implode('+', $refundedBreakdownParts) . ')'
+                : '';
+
+            // Discount aggregate for the decont template (section 1c).
+            // Sum the per-row discount stored on the payout snapshot — same
+            // value the payout-ticket-breakdown blade renders per ticket
+            // type. Then look up the promo codes that produced those
+            // discounts on the underlying orders. Promo source can sit in
+            // three places depending on legacy/origin: order.promo_code
+            // string, order.promo_code_id → MarketplacePromoCode->code,
+            // or meta.promo_code.code (older WP imports). "—" fallback
+            // when the discount exists but no code is attached (e.g.
+            // imported orders with manual reductions).
+            $totalDiscountAmount = 0.0;
+            foreach ($ticketBreakdown as $item) {
+                $totalDiscountAmount += (float) ($item['discount'] ?? 0);
+            }
+            $promoCodes = [];
+            $orderHasNonCodeDiscount = false;
+            if ($payout->event_id) {
+                $orders = \App\Models\Order::query()
+                    ->where(fn ($q) => $q->where('event_id', $payout->event_id)
+                                          ->orWhere('marketplace_event_id', $payout->event_id))
+                    ->whereIn('status', ['paid', 'confirmed', 'completed'])
+                    ->where(function ($q) {
+                        $q->where('discount_amount', '>', 0)
+                          ->orWhere('promo_discount', '>', 0);
+                    })
+                    ->get(['id', 'promo_code', 'promo_code_id', 'meta', 'discount_amount']);
+
+                foreach ($orders as $o) {
+                    $code = trim((string) ($o->promo_code ?? ''));
+                    if ($code === '' && $o->promo_code_id) {
+                        // No Eloquent model for plain promo_codes table — go via DB.
+                        $code = trim((string) (\Illuminate\Support\Facades\DB::table('promo_codes')
+                            ->where('id', $o->promo_code_id)
+                            ->value('code') ?: ''));
+                    }
+                    if ($code === '' && is_array($o->meta ?? null)) {
+                        $code = trim((string) ($o->meta['promo_code']['code'] ?? ''));
+                    }
+                    if ($code !== '') {
+                        $promoCodes[$code] = ($promoCodes[$code] ?? 0) + 1;
+                    } else {
+                        $orderHasNonCodeDiscount = true;
+                    }
+                }
+            }
+            $variables['total_discount_amount'] = number_format($totalDiscountAmount, 2);
+            // Sortat după număr de utilizări desc, "COD (xN)" format.
+            arsort($promoCodes);
+            $codeStrings = [];
+            foreach ($promoCodes as $code => $count) {
+                $codeStrings[] = $count > 1 ? "{$code} (x{$count})" : $code;
+            }
+            if ($orderHasNonCodeDiscount) {
+                $codeStrings[] = 'reducere manuală';
+            }
+            $variables['promo_codes_used'] = !empty($codeStrings)
+                ? ' — coduri: ' . implode(', ', $codeStrings)
                 : '';
 
             // Preprinted tickets (physical tickets sent by courier)
