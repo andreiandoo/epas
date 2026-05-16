@@ -57,12 +57,11 @@ class BackfillCoreCustomersFromOrdersCommand extends Command
 
         $created = 0;
         $enriched = 0;
-        $linkedFbclid = 0;
         $skipped = 0;
 
         $query->select(['id', 'customer_email', 'customer_name', 'customer_phone', 'meta', 'paid_at', 'created_at'])
             ->orderBy('id')
-            ->chunk(500, function ($orders) use (&$created, &$enriched, &$linkedFbclid, &$skipped) {
+            ->chunk(500, function ($orders) use (&$created, &$enriched, &$skipped) {
                 foreach ($orders as $order) {
                     $email = mb_strtolower(trim((string) $order->customer_email));
                     if ($email === '') { $skipped++; continue; }
@@ -106,35 +105,25 @@ class BackfillCoreCustomersFromOrdersCommand extends Command
                         }
                     }
 
-                    if (!$customer->last_fbclid && $ip && $purchasedAt) {
-                        $event = DB::table('core_customer_events')
-                            ->where('ip_address', $ip)
-                            ->whereNotNull('fbclid')
-                            ->where('occurred_at', '<=', $purchasedAt)
-                            ->where('occurred_at', '>=', $purchasedAt->copy()->subDays(60))
-                            ->orderByDesc('occurred_at')
-                            ->first(['fbclid', 'visitor_id', 'occurred_at']);
-
-                        if ($event) {
-                            $patch = ['last_fbclid' => mb_substr((string) $event->fbclid, 0, 255)];
-                            if (!$customer->visitor_id && $event->visitor_id) {
-                                $patch['visitor_id'] = $event->visitor_id;
-                            }
-                            $customer->update($patch);
-                            $linkedFbclid++;
-                        }
-                    }
+                    // IP-based fbclid match disabled. On Ambilet the
+                    // ip_address stored in order.meta is the payment-gateway
+                    // (Netopia) proxy IP, not the buyer's real IP — so
+                    // matching produced false attributions (e.g. 66/145
+                    // orders on org 340 all shared 46.102.249.156).
+                    // Forward attribution is the only reliable path; it
+                    // comes from thank-you.js sending email + cookie _fbc
+                    // in the purchase payload, which the controller writes
+                    // straight onto core_customers.last_fbclid.
                 }
                 $this->line(sprintf(
-                    '  processed batch — created %d / enriched %d / linked-fbclid %d / skipped %d so far',
-                    $created, $enriched, $linkedFbclid, $skipped
+                    '  processed batch — created %d / enriched %d / skipped %d so far',
+                    $created, $enriched, $skipped
                 ));
             });
 
         $this->info("Done.");
         $this->line("  created core_customer rows: {$created}");
         $this->line("  enriched existing rows:     {$enriched}");
-        $this->line("  rows now carrying fbclid:   {$linkedFbclid}");
         $this->line("  skipped (no email):         {$skipped}");
 
         return self::SUCCESS;
