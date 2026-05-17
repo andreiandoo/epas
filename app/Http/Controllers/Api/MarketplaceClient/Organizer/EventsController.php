@@ -3400,12 +3400,33 @@ class EventsController extends BaseController
             $daysUntil = (int) now()->startOfDay()->diffInDays($eventDateTime->startOfDay(), false);
         }
 
+        // Mobile categorization helper. The mobile app's categorizeEvent() only
+        // looks at `event_date || starts_at`, so a multi-day/range event whose
+        // start is in the past gets mistakenly marked 'past' even while still
+        // running (and the scanner shows "Eveniment s-a încheiat"). When today
+        // is inside [start_date .. end_date], expose `event_date` = NOW so the
+        // app categorizes it as live/today and check-in stays available.
+        $eventDateForMobile = null;
+        $sd = $event->start_date;
+        $ed = $event->end_date ?? $sd;
+        if ($sd && $ed && !$event->is_cancelled && !$event->is_postponed) {
+            $rangeStart = Carbon::parse($sd->format('Y-m-d') . ' 00:00:00');
+            $rangeEnd = Carbon::parse($ed->format('Y-m-d') . ' 23:59:59');
+            $now = Carbon::now();
+            if ($now->greaterThanOrEqualTo($rangeStart)
+                && $now->lessThanOrEqualTo($rangeEnd)
+                && !$now->isSameDay($sd)) {
+                $eventDateForMobile = Carbon::now()->format('Y-m-d\TH:i:s');
+            }
+        }
+
         return [
             'id' => $event->id,
             'name' => $this->getLocalizedTitle($event),
             'slug' => $event->slug,
             'starts_at' => $this->getStartsAt($event),
             'ends_at' => $this->getEndsAt($event),
+            'event_date' => $eventDateForMobile,
             'venue_id' => $event->venue_id,
             'venue_name' => $venueName,
             'venue_address' => $event->venue?->address ?? $event->address ?? null,
