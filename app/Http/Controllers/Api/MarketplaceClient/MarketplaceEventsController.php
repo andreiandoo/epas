@@ -96,30 +96,43 @@ class MarketplaceEventsController extends BaseController
                 ->where('slug', $cityParam)
                 ->first();
 
+            // Diacritic-insensitive city pattern. The /events/cities
+            // endpoint groups venue.city values after stripping
+            // diacritics (so "București" + "Bucuresti" + "BUCUREȘTI"
+            // collapse into one bucket), so the events list MUST do
+            // the same comparison or its count diverges from what the
+            // city-filter dropdown advertises. Postgres LIKE / ILIKE
+            // are accent-sensitive, so we strip diacritics on both
+            // sides via translate().
+            $needle = static::normalizeCityNeedle($cityParam);
+
             if ($marketplaceCity) {
-                // Match events by marketplace_city_id OR by venue city name
                 $cityName = $marketplaceCity->getTranslation('name', $language)
                     ?: (is_array($marketplaceCity->name)
                         ? ($marketplaceCity->name['ro'] ?? $marketplaceCity->name['en'] ?? reset($marketplaceCity->name))
                         : $marketplaceCity->name);
+                $needle = static::normalizeCityNeedle($cityName);
 
-                $query->where(function ($q) use ($marketplaceCity, $cityName) {
+                $query->where(function ($q) use ($marketplaceCity, $needle) {
                     $q->where('marketplace_city_id', $marketplaceCity->id)
-                        ->orWhereHas('venue', function ($vq) use ($cityName) {
-                            $vq->where('city', 'like', "%{$cityName}%");
+                        ->orWhereHas('venue', function ($vq) use ($needle) {
+                            $vq->whereRaw(static::cityMatchSql(), ['%' . $needle . '%']);
                         });
                 });
             } else {
-                // Fallback: try matching by name (replace hyphens with spaces for slug-like input)
-                $cityName = str_replace('-', ' ', $cityParam);
-                $query->where(function ($q) use ($cityParam, $cityName) {
-                    $q->whereHas('marketplaceCity', function ($mq) use ($cityParam, $cityName) {
-                        $mq->where('name->ro', 'like', "%{$cityName}%")
-                            ->orWhere('name->en', 'like', "%{$cityName}%")
+                // Fallback: hyphen-to-space slug variant + diacritic-stripped
+                // name. The marketplaceCity name comparison still uses ilike on
+                // JSON (case-insensitive but accent-sensitive) — fine for the
+                // canonical seed cities; venue.city is the source of truth and
+                // gets the full translate()-based match.
+                $cityNameLoose = str_replace('-', ' ', $cityParam);
+                $query->where(function ($q) use ($cityParam, $cityNameLoose, $needle) {
+                    $q->whereHas('marketplaceCity', function ($mq) use ($cityParam, $cityNameLoose) {
+                        $mq->where('name->ro', 'ilike', "%{$cityNameLoose}%")
+                            ->orWhere('name->en', 'ilike', "%{$cityNameLoose}%")
                             ->orWhere('slug', $cityParam);
-                    })->orWhereHas('venue', function ($vq) use ($cityParam, $cityName) {
-                        $vq->where('city', 'like', "%{$cityParam}%")
-                            ->orWhere('city', 'like', "%{$cityName}%");
+                    })->orWhereHas('venue', function ($vq) use ($needle) {
+                        $vq->whereRaw(static::cityMatchSql(), ['%' . $needle . '%']);
                     });
                 });
             }
@@ -2007,6 +2020,31 @@ class MarketplaceEventsController extends BaseController
                     ->where('event_date', '<', $today);
             });
         });
+    }
+
+    /**
+     * Lowercase + strip Romanian diacritics from a city name so server
+     * input ("București", "BUCUREȘTI", "bucuresti") all normalize to a
+     * common form ("bucuresti") for accent-insensitive comparison.
+     * Mirrors the PHP grouping key used by cities() above.
+     */
+    protected static function normalizeCityNeedle(string $s): string
+    {
+        return strtr(mb_strtolower(trim($s)), [
+            'ă' => 'a', 'â' => 'a', 'î' => 'i', 'ș' => 's', 'ş' => 's', 'ț' => 't', 'ţ' => 't',
+        ]);
+    }
+
+    /**
+     * Returns the raw SQL fragment that strips diacritics + lowercases
+     * a venue.city value on the DB side so a city LIKE pattern
+     * matches "Bucuresti", "București", "BUCUREȘTI" alike. Postgres
+     * translate() handles the diacritic→ASCII map; LOWER() handles
+     * case. Pair with a normalized needle from normalizeCityNeedle().
+     */
+    protected static function cityMatchSql(): string
+    {
+        return "LOWER(translate(city, 'ăâîșşțţĂÂÎȘŞȚŢ', 'aaisstaaiisstt')) LIKE ?";
     }
 
     private function applyUpcomingFilter($query): void
