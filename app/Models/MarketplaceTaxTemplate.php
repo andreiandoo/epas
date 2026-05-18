@@ -182,8 +182,12 @@ class MarketplaceTaxTemplate extends Model
             '{{total_tickets_sold}}' => 'Total Tickets Sold',
             '{{total_sales_value}}' => 'Total Sales Value',
             '{{music_stamp_value}}' => 'Valoare timbru muzical (2% din vânzări)',
-            '{{taxable_income}}' => 'Încasări supuse impozitului (vânzări - timbru muzical)',
-            '{{tax_due}}' => 'Impozit datorat (cotă registry × încasări supuse impozitului)',
+            '{{humanitarian_amount}}' => 'Sume cedate în scopuri umanitare (default 0)',
+            '{{taxable_income}}' => 'Încasări supuse impozitului (col 5 = 2 - 3 - 4)',
+            '{{tax_due}}' => 'Impozit datorat (col 7 = col 5 × cotă registry)',
+            '{{tax_paid}}' => 'Impozit plătit (default 0)',
+            '{{tax_difference_to_receive}}' => 'Diferență de primit (col 9 = max(0, plătit - datorat))',
+            '{{tax_difference_to_pay}}' => 'Diferență de plătit (col 10 = max(0, datorat - plătit))',
             '{{tax_situation_table_rows}}' => 'Rânduri tabel "Situația biletelor" (Page 2 — un rând per tip × preț, inclusiv variante reduse)',
             '{{tax_situation_total_tickets}}' => 'Total bilete vândute pentru tabel Situația',
             '{{tax_situation_total_value}}' => 'Total valoare pentru tabel Situația',
@@ -959,16 +963,35 @@ class MarketplaceTaxTemplate extends Model
                 $musicStampValue += round($totalSalesValue * 2 / 100, 2);
             }
 
-            // Încasări supuse impozitului = total vânzări - taxe aplicate
-            $taxableIncome = round($totalSalesValue - $musicStampValue, 2);
+            // Col 4 — Sume cedate in scopuri umanitare. No system field yet,
+            // defaults to 0. Surfaces as a variable so the template can
+            // reference it consistently with the other columns.
+            $humanitarianAmount = 0.0;
 
-            // Impozit datorat = cota tax registry * încasări supuse impozitului
+            // Încasări supuse impozitului = total vânzări - taxe aplicate - umanitare
+            // (col 5 = col 2 - col 3 - col 4)
+            $taxableIncome = round($totalSalesValue - $musicStampValue - $humanitarianAmount, 2);
+
+            // Impozit datorat = cota tax registry * încasări supuse impozitului (col 7 = col 5 × col 6)
             $taxRate = $taxRegistry?->tax_rate !== null ? (float) $taxRegistry->tax_rate : 0;
             $taxDue = round($taxableIncome * $taxRate / 100, 2);
 
+            // Col 8 — Impozit plătit. No payment-tracking system yet, default 0.
+            // Col 9 — Diferență de primit (= max(0, plătit - datorat)) shows
+            //   what the registry owes back when payments exceed the due amount.
+            // Col 10 — Diferență de plătit (= max(0, datorat - plătit)) shows
+            //   the outstanding amount the organizer still owes.
+            $taxPaid = 0.0;
+            $taxDifferenceToReceive = max(0.0, round($taxPaid - $taxDue, 2));
+            $taxDifferenceToPay = max(0.0, round($taxDue - $taxPaid, 2));
+
             $variables['music_stamp_value'] = number_format($musicStampValue, 2);
+            $variables['humanitarian_amount'] = number_format($humanitarianAmount, 2);
             $variables['taxable_income'] = number_format($taxableIncome, 2);
             $variables['tax_due'] = number_format($taxDue, 2);
+            $variables['tax_paid'] = number_format($taxPaid, 2);
+            $variables['tax_difference_to_receive'] = number_format($taxDifferenceToReceive, 2);
+            $variables['tax_difference_to_pay'] = number_format($taxDifferenceToPay, 2);
 
             // Tax-situation table rows for page 2 of monthly tax declarations
             // ("Situatia biletelor si abonamentelor la spectacole, vandute").
