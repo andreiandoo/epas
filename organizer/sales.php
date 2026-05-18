@@ -38,7 +38,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                         <label class="label">Status</label>
                         <select id="filter-status" class="w-full input" onchange="loadOrders()">
                             <option value="">Toate statusurile</option>
-                            <option value="completed">Finalizate</option>
+                            <option value="completed" selected>Finalizate</option>
                             <option value="pending">În așteptare</option>
                             <option value="failed">Eșuate</option>
                             <option value="expired">Expirate</option>
