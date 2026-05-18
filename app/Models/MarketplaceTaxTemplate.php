@@ -1002,10 +1002,42 @@ class MarketplaceTaxTemplate extends Model
             //
             // Skips invitations (price=0) — not declarable income.
             //
-            // Series cells: full-price rows show the parent ticket type's
-            // series range; reduced rows show "{type name} - {promo code}"
-            // in the "de la" cell and leave "pana la" blank since the
-            // physical codes are shared with the parent.
+            // Series convention (Phase A — fabricated on the fly):
+            //  - Full-price row: numbers continue from the ticket type's
+            //    series_start. A type allocated GA001-GA100 with 64 sold at
+            //    full price shows "GA001" .. "GA064" (NOT the full allocation
+            //    end GA100 — only what was sold).
+            //  - Reduced row: fabricated series "{prefix}-{CODE}" with its
+            //    own counter starting at 001. Same type with 3 sold via
+            //    HAILAQFEEL shows "GA-HAILAQFEEL!001" .. "GA-HAILAQFEEL!003".
+            //  - Fallback (no parent series defined): cells show type name +
+            //    code label.
+            // Numbers for promo rows are a fiscal accounting artifact — no
+            // physical tickets correspond. PV distrugere accounts for unsold
+            // against the parent series only.
+            $buildSplitSeriesRange = function (string $seriesStart, string $codeSuffix, int $qtyInTier): array {
+                if ($qtyInTier <= 0 || $seriesStart === '') {
+                    return ['', ''];
+                }
+                if (!preg_match('/^(.*?)(\d+)$/', $seriesStart, $sm)) {
+                    return [$seriesStart, $seriesStart];
+                }
+                $prefix = trim($sm[1]);
+                $startNum = (int) $sm[2];
+                $padLen = strlen($sm[2]);
+                $effectivePrefix = $codeSuffix === ''
+                    ? $prefix
+                    : ($prefix !== '' ? $prefix . '-' . $codeSuffix : $codeSuffix);
+                // Full-price row continues the parent numbering; promo rows
+                // start a fabricated counter at 1.
+                $firstNum = $codeSuffix === '' ? $startNum : 1;
+                $lastNum = $firstNum + $qtyInTier - 1;
+                return [
+                    $effectivePrefix . str_pad((string) $firstNum, $padLen, '0', STR_PAD_LEFT),
+                    $effectivePrefix . str_pad((string) $lastNum, $padLen, '0', STR_PAD_LEFT),
+                ];
+            };
+
             $taxSituationRowsHtml = '';
             $taxSituationTotalQty = 0;
             $taxSituationTotalValue = 0.0;
@@ -1041,28 +1073,28 @@ class MarketplaceTaxTemplate extends Model
                     $price = (float) ($row['price'] ?? 0);
                     $total = $price * $qty;
 
-                    // Resolve parent series range from the ticket type row.
+                    // Resolve parent series start from the ticket type row.
                     $seriesStart = '';
-                    $seriesEnd = '';
                     if ($ttId) {
                         $ttRow = $event->ticketTypes->firstWhere('id', $ttId);
                         if ($ttRow) {
                             $seriesStart = (string) ($ttRow->series_start ?? '');
-                            $seriesEnd = (string) ($ttRow->series_end ?? '');
                         }
                     }
 
+                    // Suffix for fabricated promo series — uppercased code
+                    // (e.g. "HAILAQFEEL!"), or "RED" for intrinsic discounts.
+                    $codeSuffix = '';
                     if ($isReduced) {
-                        // Reduced row — same physical codes as parent, just
-                        // sold at a different price. Show type + code in "de
-                        // la", blank "pana la".
-                        $deLa = $ttName . ($promoCode !== '' ? ' - ' . $promoCode : ' (redus)');
+                        $codeSuffix = $promoCode !== '' ? strtoupper($promoCode) : 'RED';
+                    }
+                    [$deLa, $panaLa] = $buildSplitSeriesRange($seriesStart, $codeSuffix, $qty);
+
+                    // Fallback when the ticket type has no series defined —
+                    // show name + code label so the row stays meaningful.
+                    if ($deLa === '' && $panaLa === '') {
+                        $deLa = $ttName . ($isReduced ? ' - ' . ($promoCode ?: 'redus') : '');
                         $panaLa = '';
-                    } else {
-                        // Full-price row — show parent series range. Falls
-                        // back to type name when series_start/end are missing.
-                        $deLa = $seriesStart !== '' ? $ttName . ' (' . $seriesStart . ')' : $ttName;
-                        $panaLa = $seriesEnd;
                     }
 
                     $taxSituationTotalQty += $qty;
