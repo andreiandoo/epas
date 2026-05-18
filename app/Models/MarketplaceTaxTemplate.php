@@ -170,8 +170,13 @@ class MarketplaceTaxTemplate extends Model
             '{{event_manifestation_type}}' => 'Tip manifestare (ex: "Manifestare Muzicală", "Manifestare - Altele")',
             '{{ticket_types_table}}' => 'Ticket Types Table (with names, prices, available, sold)',
             '{{ticket_types_series}}' => 'Ticket Types with Series (Name: START - END)',
-            '{{ticket_types_rows}}' => 'Ticket Types Table Rows (name, stock, price, value, series)',
+            '{{ticket_types_rows}}' => 'Ticket Types Table Rows (legacy — name, stock, price, value, series; uses quota_total for every row)',
             '{{ticket_types_total_row}}' => 'Ticket Types Total Row (TOTAL, stock, X, value, X)',
+            '{{ticket_types_with_series_rows}}' => 'Phase B: Cerere avizare rânduri din EventTicketTypePromoSeries (qty_allocated respectă usage_limit pe coduri; un rând per (tip × cod) inclusiv coupons + RED + parent)',
+            '{{ticket_types_with_series_total_tickets_qty}}' => 'Phase B: Total qty alocată pentru rândurile non-abonament',
+            '{{ticket_types_with_series_total_tickets_value}}' => 'Phase B: Total valoare alocată pentru rândurile non-abonament',
+            '{{ticket_types_with_series_total_subscriptions_qty}}' => 'Phase B: Total qty alocată pentru abonamente',
+            '{{ticket_types_with_series_total_subscriptions_value}}' => 'Phase B: Total valoare alocată pentru abonamente',
             '{{total_tickets_for_sale}}' => 'Total Tickets For Sale (cumulative — abonamente + bilete)',
             '{{total_value_for_sale}}' => 'Total Value of Tickets For Sale (cumulative)',
             '{{total_subscriptions_for_sale}}' => 'Total Abonamente — only is_subscription tickets (line 1 of form)',
@@ -1180,6 +1185,166 @@ class MarketplaceTaxTemplate extends Model
             $variables['unsold_subscriptions_rows'] = $unsoldSubscriptionsRowsHtml;
             $variables['total_unsold_subscriptions'] = $totalUnsoldSubscriptions;
             $variables['total_unsold_subscriptions_value'] = number_format($totalUnsoldSubscriptionsValue, 2);
+
+            // === Phase B: ticket_types_with_series_rows ===
+            // Cerere de avizare generator backed by EventTicketTypePromoSeries.
+            // Emits one row per active allocation (parent + RED + each
+            // applicable promo / coupon). qty per row uses the PERSISTED
+            // qty_allocated (which respects usage_limit / max_uses_total on
+            // discount codes) rather than the legacy ticket_types_rows that
+            // hard-coded quota_total for every row.
+            //
+            // Reduced-tier prices are computed at render time by looking up
+            // the discount source (MarketplaceOrganizerPromoCode for
+            // 'organizer_promo', Coupon\CouponCode for 'coupon', or the
+            // ticket type's discount_percent for 'intrinsic_red').
+            //
+            // Series ranges use the persisted series_prefix + qty so the
+            // cerere avizare allocations stay consistent with the
+            // declaratie impozite tax_situation_table_rows.
+            $ttsRowsHtml = '';
+            $ttsTotalTicketsQty = 0;
+            $ttsTotalTicketsValue = 0.0;
+            $ttsTotalSubscriptionsQty = 0;
+            $ttsTotalSubscriptionsValue = 0.0;
+
+            if ($event) {
+                $eventTtIds = $event->ticketTypes->pluck('id');
+
+                // Auto-sync on first access — same pattern as tax_situation_table_rows.
+                try {
+                    $hasAlloc = \App\Models\EventTicketTypePromoSeries::query()
+                        ->whereIn('ticket_type_id', $eventTtIds)
+                        ->exists();
+                    if (!$hasAlloc) {
+                        app(\App\Services\Marketplace\SeriesAllocator::class)->syncForEvent($event);
+                    }
+                } catch (\Throwable $e) {
+                    // Non-fatal — fall through to a possibly empty allocation list.
+                }
+
+                try {
+                    $allocations = app(\App\Services\Marketplace\SeriesAllocator::class)
+                        ->getForEvent($event);
+                } catch (\Throwable $e) {
+                    $allocations = collect();
+                }
+
+                // Bulk-preload discount sources by uppercased code for fast
+                // unit-price resolution per row.
+                $orgPromosByCode = collect();
+                $couponsByCode = collect();
+                if ($event->marketplace_client_id) {
+                    try {
+                        $orgPromosByCode = \App\Models\MarketplaceOrganizerPromoCode::query()
+                            ->where('marketplace_client_id', $event->marketplace_client_id)
+                            ->get(['id', 'code', 'type', 'value'])
+                            ->keyBy(fn ($p) => strtoupper((string) $p->code));
+                    } catch (\Throwable $e) {}
+                    try {
+                        $couponsByCode = \App\Models\Coupon\CouponCode::query()
+                            ->where('marketplace_client_id', $event->marketplace_client_id)
+                            ->get(['id', 'code', 'discount_type', 'discount_value'])
+                            ->keyBy(fn ($c) => strtoupper((string) $c->code));
+                    } catch (\Throwable $e) {}
+                }
+
+                foreach ($allocations as $alloc) {
+                    $qty = (int) $alloc->qty_allocated;
+                    if ($qty <= 0) continue; // Skip stale / zeroed rows.
+
+                    $ttRow = $alloc->ticketType;
+                    if (!$ttRow) continue;
+
+                    // Skip invitations + non-declarable types — same filter as
+                    // the legacy ticket_types_rows.
+                    if (isset($ttRow->is_declarable) && $ttRow->is_declarable === false) continue;
+                    $ttRowMeta = is_array($ttRow->meta ?? null) ? $ttRow->meta : [];
+                    $isInvitation = ($ttRow->name === 'Invitatie') || ($ttRowMeta['is_invitation'] ?? false);
+                    if ($isInvitation) continue;
+
+                    $basePrice = (float) ($ttRow->display_price ?? $ttRow->price ?? 0);
+                    $unitPrice = $basePrice;
+                    $rowLabel = (string) ($ttRow->name ?? '');
+                    $isSubscription = (bool) ($ttRow->is_subscription ?? false);
+
+                    if ($alloc->is_intrinsic_red) {
+                        $percent = (float) ($ttRow->discount_percent ?? 0);
+                        if ($percent > 0) {
+                            $unitPrice = max(0.0, $basePrice - ($basePrice * $percent / 100));
+                        }
+                        $rowLabel .= ' - RED';
+                    } elseif ($alloc->discount_source === 'organizer_promo') {
+                        $codeKey = strtoupper((string) ($alloc->discount_code ?? ''));
+                        $promo = $orgPromosByCode->get($codeKey);
+                        if ($promo) {
+                            $unitPrice = match($promo->type) {
+                                'percentage' => max(0.0, $basePrice - ($basePrice * (float) $promo->value / 100)),
+                                'fixed'      => max(0.0, $basePrice - (float) $promo->value),
+                                default      => $basePrice,
+                            };
+                        }
+                        $rowLabel .= ' - ' . $alloc->discount_code;
+                    } elseif ($alloc->discount_source === 'coupon') {
+                        $codeKey = strtoupper((string) ($alloc->discount_code ?? ''));
+                        $coupon = $couponsByCode->get($codeKey);
+                        if ($coupon) {
+                            $unitPrice = match($coupon->discount_type) {
+                                'percentage' => max(0.0, $basePrice - ($basePrice * (float) $coupon->discount_value / 100)),
+                                'fixed'      => max(0.0, $basePrice - (float) $coupon->discount_value),
+                                default      => $basePrice,
+                            };
+                        }
+                        $rowLabel .= ' - ' . $alloc->discount_code;
+                    }
+
+                    // Series range from persisted prefix. Parent rows
+                    // continue the parent series_start numbering; reduced
+                    // rows start a fresh fabricated counter at 1.
+                    $padLen = 3;
+                    if ($ttRow->series_start && preg_match('/^.*?(\d+)$/', (string) $ttRow->series_start, $sm)) {
+                        $padLen = strlen($sm[1]);
+                    }
+                    $startNum = 1;
+                    if (((string) ($alloc->discount_code ?? '')) === '' && !$alloc->is_intrinsic_red) {
+                        if ($ttRow->series_start && preg_match('/^.*?(\d+)$/', (string) $ttRow->series_start, $sm2)) {
+                            $startNum = (int) $sm2[1];
+                        }
+                    }
+                    $endNum = $startNum + max(0, $qty - 1);
+                    $seriesFrom = ((string) $alloc->series_prefix) . str_pad((string) $startNum, $padLen, '0', STR_PAD_LEFT);
+                    $seriesTo = ((string) $alloc->series_prefix) . str_pad((string) $endNum, $padLen, '0', STR_PAD_LEFT);
+                    $seriesDisplay = $startNum === $endNum
+                        ? $seriesFrom
+                        : $seriesFrom . ' &gt; ' . $seriesTo;
+
+                    $rowValue = $qty * $unitPrice;
+                    if ($isSubscription) {
+                        $ttsTotalSubscriptionsQty += $qty;
+                        $ttsTotalSubscriptionsValue += $rowValue;
+                    } else {
+                        $ttsTotalTicketsQty += $qty;
+                        $ttsTotalTicketsValue += $rowValue;
+                    }
+
+                    // Match the existing ticket_types_rows column layout so
+                    // the new variable can drop into the same template
+                    // structure (5 cells: name, qty, price, value, series).
+                    $ttsRowsHtml .= '<tr>'
+                        . '<td class="left-align">' . htmlspecialchars($rowLabel) . '</td>'
+                        . '<td>' . $qty . '</td>'
+                        . '<td>' . number_format($unitPrice, 2) . '</td>'
+                        . '<td>' . number_format($rowValue, 2) . '</td>'
+                        . '<td><span class="underline-blue">' . $seriesDisplay . '</span></td>'
+                        . '</tr>';
+                }
+            }
+
+            $variables['ticket_types_with_series_rows'] = $ttsRowsHtml;
+            $variables['ticket_types_with_series_total_tickets_qty'] = $ttsTotalTicketsQty;
+            $variables['ticket_types_with_series_total_tickets_value'] = number_format($ttsTotalTicketsValue, 2);
+            $variables['ticket_types_with_series_total_subscriptions_qty'] = $ttsTotalSubscriptionsQty;
+            $variables['ticket_types_with_series_total_subscriptions_value'] = number_format($ttsTotalSubscriptionsValue, 2);
         }
 
         // Order variables

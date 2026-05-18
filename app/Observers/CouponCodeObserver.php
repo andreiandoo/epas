@@ -49,22 +49,54 @@ class CouponCodeObserver
         }
     }
 
+    public function saved(CouponCode $coupon): void
+    {
+        // Phase B series allocations — keep event_ticket_type_promo_series
+        // rows in sync when a coupon's discount info / applicability /
+        // usage limits change. Scoped to events in applicable_events to
+        // keep the sync bounded; "all events" coupons (empty array) rely
+        // on first-access auto-sync inside the tax-template generator.
+        $this->syncTouchedEvents($coupon);
+    }
+
     public function deleted(CouponCode $coupon): void
     {
-        if ($coupon->source !== 'organizer') {
-            return;
+        if ($coupon->source === 'organizer') {
+            try {
+                MarketplaceOrganizerPromoCode::where('marketplace_client_id', $coupon->marketplace_client_id)
+                    ->where('code', $coupon->code)
+                    ->delete();
+            } catch (\Throwable $e) {
+                Log::warning('CouponCodeObserver: failed to propagate delete to mkt_promo_codes', [
+                    'coupon_id' => $coupon->id,
+                    'code' => $coupon->code,
+                    'error' => $e->getMessage(),
+                ]);
+            }
         }
 
+        $this->syncTouchedEvents($coupon);
+    }
+
+    private function syncTouchedEvents(CouponCode $coupon): void
+    {
         try {
-            MarketplaceOrganizerPromoCode::where('marketplace_client_id', $coupon->marketplace_client_id)
-                ->where('code', $coupon->code)
-                ->delete();
+            $eventIds = is_array($coupon->applicable_events)
+                ? array_filter(array_map('intval', $coupon->applicable_events))
+                : [];
+            if (empty($eventIds)) {
+                // "All events" scope — too expensive to fan out to every
+                // event of the marketplace_client. Fresh events auto-sync
+                // on first tax-template access; bulk backfill is done via
+                // `php artisan series:sync`.
+                return;
+            }
+            $allocator = app(\App\Services\Marketplace\SeriesAllocator::class);
+            foreach (\App\Models\Event::whereIn('id', $eventIds)->with('ticketTypes')->get() as $event) {
+                $allocator->syncForEvent($event);
+            }
         } catch (\Throwable $e) {
-            Log::warning('CouponCodeObserver: failed to propagate delete to mkt_promo_codes', [
-                'coupon_id' => $coupon->id,
-                'code' => $coupon->code,
-                'error' => $e->getMessage(),
-            ]);
+            Log::warning('[SeriesAllocator] coupon sync failed for coupon ' . $coupon->id . ': ' . $e->getMessage());
         }
     }
 }
