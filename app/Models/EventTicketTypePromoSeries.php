@@ -57,15 +57,26 @@ class EventTicketTypePromoSeries extends Model
     }
 
     /**
-     * Build the auto-derived prefix for a tier. Empty parent series_start
-     * falls back to "" so callers can pick a sensible default (e.g. the
-     * type name) when no series is configured on the ticket type.
+     * Build the auto-derived prefix for a tier.
+     *
+     * The returned prefix always ends with the separator that joins to
+     * the sequence number (typically "-"), so the caller can do
+     * $prefix . str_pad($n, ...) and get a properly-formed identifier
+     * for both parent and promo tiers:
+     *   parent  series_start="AMB-4399-10543-001" → "AMB-4399-10543-"
+     *   promo                                      → "AMB-4399-10543-HAILAQFEEL!-"
+     *
+     * Empty parent series_start falls back to "" so callers can pick a
+     * sensible default (e.g. the type name) when no series is configured.
      */
     public static function derivePrefix(string $parentSeriesStart, ?string $promoCode, bool $isIntrinsicRed): string
     {
+        // Split parent series_start into "base prefix" + trailing number.
+        // The base keeps its trailing separator so parent rows can append
+        // a padded number directly.
         $base = '';
         if ($parentSeriesStart !== '' && preg_match('/^(.*?)(\d+)$/', $parentSeriesStart, $m)) {
-            $base = trim($m[1]);
+            $base = $m[1];
         }
 
         $suffix = '';
@@ -78,6 +89,12 @@ class EventTicketTypePromoSeries extends Model
         if ($suffix === '') {
             return $base;
         }
-        return $base !== '' ? $base . '-' . $suffix : $suffix;
+
+        // For promo / RED tiers, drop the trailing dash from the base
+        // (so we don't get "AMB--HAILAQFEEL!"), append the suffix, then
+        // restore a trailing dash so the caller-side number concatenation
+        // stays uniform with parent rows.
+        $baseNoTrailingDash = rtrim($base, '-');
+        return ($baseNoTrailingDash !== '' ? $baseNoTrailingDash . '-' : '') . $suffix . '-';
     }
 }
