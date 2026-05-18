@@ -1215,11 +1215,14 @@ class MarketplaceEventsController extends BaseController
         $client = $this->requireClient($request);
         $language = $client->language ?? 'ro';
 
-        // Get cities from venues of events
+        // Match the index() filters exactly so the dropdown count
+        // matches what the user actually sees in the events list.
+        // Previously this excluded cancelled events but DIDN'T filter
+        // by is_published — the dropdown ended up counting unpublished
+        // events, causing București to show "(40)" while only 10
+        // matching events rendered on the page.
         $query = Event::where('marketplace_client_id', $client->id)
-            ->where(function ($q) {
-                $q->whereNull('is_cancelled')->orWhere('is_cancelled', false);
-            });
+            ->where('is_published', true);
 
         $this->applyUpcomingFilter($query);
 
@@ -1231,12 +1234,20 @@ class MarketplaceEventsController extends BaseController
             });
         }
 
-        // Filter by category if provided
+        // Filter by category if provided. Mirror index() — resolve the
+        // category (matches by slug, partial slug, or name) and include
+        // child categories, instead of the previous strict slug-only
+        // whereHas which missed some events.
         if ($request->has('category')) {
-            $categorySlug = $request->category;
-            $query->whereHas('marketplaceEventCategory', function ($q) use ($categorySlug) {
-                $q->where('slug', $categorySlug);
-            });
+            $category = $this->resolveCategory($client->id, $request->category);
+            if ($category) {
+                $categoryIds = collect([$category->id])
+                    ->merge($category->children()->pluck('id'))
+                    ->all();
+                $query->whereIn('marketplace_event_category_id', $categoryIds);
+            } else {
+                $query->whereRaw('1 = 0');
+            }
         }
 
         // Normalize Romanian diacritics for grouping
