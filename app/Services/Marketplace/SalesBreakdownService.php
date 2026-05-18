@@ -58,7 +58,7 @@ class SalesBreakdownService
      *   }>
      * }
      */
-    public function build(Event $event, ?Carbon $periodStart = null, ?Carbon $periodEnd = null, bool $excludePos = false, string $dateColumn = 'created_at'): array
+    public function build(Event $event, ?Carbon $periodStart = null, ?Carbon $periodEnd = null, bool $excludePos = false, string $dateColumn = 'created_at', bool $splitByPrice = false): array
     {
         $eventId = $event->id;
 
@@ -138,7 +138,19 @@ class SalesBreakdownService
             $orderIncluded = 0.0;
             $ttSlices = [];
 
-            foreach ($orderTickets->groupBy('ticket_type_id') as $ttId => $group) {
+            // When splitByPrice is enabled, split each ticket_type into one slice
+            // per distinct unit price (ticket.price). That way Categoria III sold
+            // at two price tiers (e.g. 37 at 60 + 3 at 48 due to sale_price) shows
+            // as two breakdown rows. The legacy single-slice-per-type behaviour is
+            // preserved when splitByPrice=false.
+            $sliceGroups = $splitByPrice
+                ? $orderTickets->groupBy(function ($t) {
+                    return $t->ticket_type_id . '|' . number_format((float) ($t->price ?? 0), 4, '.', '');
+                })
+                : $orderTickets->groupBy('ticket_type_id');
+
+            foreach ($sliceGroups as $sliceKey => $group) {
+                $ttId = (int) ($group->first()->ticket_type_id ?? 0);
                 $tt = $group->first()->ticketType;
                 if (!$tt) continue;
 
@@ -164,8 +176,13 @@ class SalesBreakdownService
                 $commission = $commPerTicket * $validCount;
                 $mode = $effective['mode'];
 
-                $ttSlices[$ttId] = [
+                // Composite accumulator key — same as $sliceKey when splitByPrice,
+                // otherwise just the ttId (legacy shape).
+                $accumKey = $splitByPrice ? (string) $sliceKey : (string) $ttId;
+
+                $ttSlices[$accumKey] = [
                     'tt' => $tt,
+                    'ticket_type_id' => $ttId,
                     'valid_count' => $validCount,
                     'gross' => $gross,
                     'unit_price' => $unitPrice,
@@ -226,7 +243,7 @@ class SalesBreakdownService
                 $extrasValid = ($insurance + $surcharge) * $ratio;
             }
 
-            foreach ($ttSlices as $ttId => $slice) {
+            foreach ($ttSlices as $accumKey => $slice) {
                 $sliceDiscount = 0.0;
                 if ($discountRate !== null) {
                     $sliceDiscount = $slice['gross'] * $discountRate;
@@ -245,9 +262,11 @@ class SalesBreakdownService
                 }
                 if ($sliceNet < 0) $sliceNet = 0.0;
 
-                if (!isset($perType[$ttId])) {
-                    $perType[$ttId] = [
+                if (!isset($perType[$accumKey])) {
+                    $perType[$accumKey] = [
                         'tt' => $slice['tt'],
+                        'ticket_type_id' => $slice['ticket_type_id'],
+                        'unit_price' => $slice['unit_price'],
                         'valid_count' => 0,
                         'gross' => 0.0,
                         'commission' => 0.0,
@@ -261,12 +280,12 @@ class SalesBreakdownService
                         'commission_fixed' => $slice['commission_fixed'],
                     ];
                 }
-                $perType[$ttId]['valid_count'] += $slice['valid_count'];
-                $perType[$ttId]['gross'] += $slice['gross'];
-                $perType[$ttId]['commission'] += $slice['commission'];
-                $perType[$ttId]['discount'] += $sliceDiscount;
-                $perType[$ttId]['extras'] += $sliceExtras;
-                $perType[$ttId]['net'] += $sliceNet;
+                $perType[$accumKey]['valid_count'] += $slice['valid_count'];
+                $perType[$accumKey]['gross'] += $slice['gross'];
+                $perType[$accumKey]['commission'] += $slice['commission'];
+                $perType[$accumKey]['discount'] += $sliceDiscount;
+                $perType[$accumKey]['extras'] += $sliceExtras;
+                $perType[$accumKey]['net'] += $sliceNet;
             }
 
             $sumValidGross += $orderValidGross;
@@ -281,15 +300,21 @@ class SalesBreakdownService
         $totalRevenue = $sumValidGross + $sumOnTop + $sumExtrasValid;
 
         $finalPerType = [];
-        foreach ($perType as $ttId => $d) {
+        foreach ($perType as $accumKey => $d) {
             $qty = (int) $d['valid_count'];
             $gross = (float) $d['gross'];
-            $effectivePrice = $qty > 0 ? round($gross / $qty, 2) : 0.0;
+            $ttId = (int) $d['ticket_type_id'];
+            // When splitByPrice, all tickets in a slice share the same unit_price
+            // by construction (it's part of the accumKey). Otherwise fall back to
+            // the legacy weighted-average from gross/qty.
+            $effectivePrice = $splitByPrice
+                ? round((float) $d['unit_price'], 2)
+                : ($qty > 0 ? round($gross / $qty, 2) : 0.0);
             $weightedCommissionPerTicket = $qty > 0 ? round($d['commission'] / $qty, 4) : 0.0;
 
-            $finalPerType[$ttId] = [
+            $finalPerType[$accumKey] = [
                 'tt' => $d['tt'],
-                'ticket_type_id' => (int) $ttId,
+                'ticket_type_id' => $ttId,
                 'ticket_type_name' => (string) ($d['tt']->name ?? ''),
                 'qty' => $qty,
                 'price' => $effectivePrice,
@@ -325,7 +350,11 @@ class SalesBreakdownService
      */
     public function buildForPayout(Event $event, ?Carbon $periodStart = null, ?Carbon $periodEnd = null): array
     {
-        $breakdown = $this->build($event, $periodStart, $periodEnd);
+        // splitByPrice=true so each ticket type can appear multiple times in the
+        // breakdown, once per distinct unit price sold during the period
+        // (handles sale_price reductions producing two-tier rows like Categoria
+        // III x37 @ 60 + Categoria III x3 @ 48).
+        $breakdown = $this->build($event, $periodStart, $periodEnd, splitByPrice: true);
 
         return collect($breakdown['per_type'])->values()->map(function (array $row) {
             // Strip the TicketType model — Eloquent objects don't survive JSON casting cleanly.

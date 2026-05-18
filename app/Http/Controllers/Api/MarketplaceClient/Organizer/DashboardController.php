@@ -306,10 +306,16 @@ class DashboardController extends BaseController
             ->whereNotIn('status', ['cancelled', 'refunded', 'void'])
             ->count();
 
-        // Net revenue = sum of ticket base prices (without commission)
+        // Net revenue = sum of ticket base prices (without commission), with
+        // per-ticket promo discount allocations subtracted via getEffectivePrice().
+        // We iterate in PHP rather than SUM in SQL because Ticket::getEffectivePrice()
+        // also handles the legacy proportional fallback (orders without per-ticket
+        // meta.discount_amount).
         $netRevenue = (float) \App\Models\Ticket::whereIn('order_id', $statsOrderIds)
             ->whereIn('status', ['valid', 'used'])
-            ->sum('price');
+            ->with(['order:id,discount_amount,subtotal'])
+            ->get(['id', 'order_id', 'price', 'meta'])
+            ->sum(fn ($t) => $t->getEffectivePrice());
 
         $stats = [
             'total_revenue' => $netRevenue,
@@ -344,10 +350,17 @@ class DashboardController extends BaseController
             $eventName = $order->event?->name ?? $order->marketplaceEvent?->name;
             $eventId = $order->event_id ?? $order->marketplace_event_id;
 
-            // Net total = sum of ticket base prices for this order
-            $ticketPriceSum = $order->tickets
-                ->whereIn('status', ['valid', 'used'])
-                ->sum('price');
+            // Pre-set the order relation on each ticket so getEffectivePrice()
+            // can read order.discount_amount / subtotal for legacy fallback
+            // without triggering N+1.
+            $order->tickets->each(fn ($t) => $t->setRelation('order', $order));
+
+            // Net total = sum of ticket base prices for this order, with
+            // per-ticket promo discount applied (sale_price already baked in).
+            $validTickets = $order->tickets->whereIn('status', ['valid', 'used']);
+            $ticketPriceSum = $validTickets->sum(fn ($t) => $t->getEffectivePrice());
+            $ticketOriginalSum = (float) $validTickets->sum('price');
+            $ticketDiscountSum = round($ticketOriginalSum - $ticketPriceSum, 2);
 
             // Per-ticket seat detail for seated events. Non-seated tickets
             // get null entries which the UI filters out so general-admission
@@ -403,6 +416,16 @@ class DashboardController extends BaseController
                 'seats' => $seats,
                 'promo_code' => $promoCode,
                 'promo_discount' => $promoDiscount,
+                // Discount details surfaced under the Valoare column when a
+                // reduction was applied (either via promo code or per-ticket
+                // intrinsic sale_price). original_value is the pre-discount sum
+                // of ticket prices; discount_amount is what was knocked off
+                // across all valid tickets of the order.
+                'discount_info' => $ticketDiscountSum > 0.01 ? [
+                    'code' => $promoCode,
+                    'discount_amount' => $ticketDiscountSum,
+                    'original_value' => round($ticketOriginalSum, 2),
+                ] : null,
                 'currency' => $order->currency ?? 'RON',
                 'created_at' => $order->created_at->toIso8601String(),
                 'paid_at' => $order->paid_at?->toIso8601String(),
@@ -469,7 +492,7 @@ class DashboardController extends BaseController
             fputcsv($handle, [
                 'Data', 'Comanda', 'Status', 'Client', 'Telefon',
                 'Tip bilet', 'Cod bilet', 'Sectiune', 'Rand', 'Loc',
-                'Net bilet', 'Cod reducere',
+                'Net bilet', 'Valoare finala bilet', 'Reducere aplicata', 'Cod reducere',
             ], escape: '\\');
 
             foreach ($orders as $order) {
@@ -491,11 +514,15 @@ class DashboardController extends BaseController
                         $customer,
                         $phone,
                         '-', '', '', '', '',
-                        '0.00',
+                        '0.00', '0.00', '0.00',
                         $promoCode,
                     ], escape: '\\');
                     continue;
                 }
+
+                // Pre-attach order on tickets so getEffectivePrice's fallback
+                // (proportional via order.discount_amount/subtotal) avoids N+1.
+                $order->tickets->each(fn ($t) => $t->setRelation('order', $order));
 
                 foreach ($order->tickets as $ticket) {
                     $type = $ticket->marketplaceTicketType?->name ?? $ticket->ticketType?->name ?? '-';
@@ -503,6 +530,10 @@ class DashboardController extends BaseController
                     // Net = price minus baked-in commission for included
                     // / POS orders; equals price for on_top orders.
                     // See Ticket::getNetPrice() for the resolution table.
+                    // Valoare finala bilet = ce a platit clientul efectiv pe
+                    // acest bilet, dupa orice reducere (cod promo sau sale_price).
+                    $finalValue = $ticket->getEffectivePrice();
+                    $discountApplied = $ticket->getDiscountAmount();
                     fputcsv($handle, [
                         $createdAt,
                         $order->order_number,
@@ -515,6 +546,8 @@ class DashboardController extends BaseController
                         $details['row_label'] ?? '',
                         $details['seat_number'] ?? '',
                         number_format($ticket->getNetPrice(), 2, '.', ''),
+                        number_format($finalValue, 2, '.', ''),
+                        number_format($discountApplied, 2, '.', ''),
                         $promoCode,
                     ], escape: '\\');
                 }

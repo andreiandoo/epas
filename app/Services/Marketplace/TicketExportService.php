@@ -30,6 +30,7 @@ class TicketExportService
             'Valoare comanda',
             'Valoare bruta bilet',
             'Valoare neta bilet',
+            'Valoare finala bilet',
             'Comision bilet',
             'Status comanda',
             'A folosit cod reducere',
@@ -51,7 +52,7 @@ class TicketExportService
                 'ticketType:id,name,event_id,price_cents,sale_price_cents,commission_type,commission_rate,commission_fixed,commission_mode',
                 'ticketType.event:id,title,marketplace_organizer_id',
                 'ticketType.event.marketplaceOrganizer:id,name',
-                'order:id,order_number,total,status,promo_code,promo_discount,discount_amount,customer_email,customer_name,created_at',
+                'order:id,order_number,total,subtotal,status,promo_code,promo_discount,discount_amount,customer_email,customer_name,created_at',
             ])
             ->orderBy('id')
             ->chunk(500, function ($tickets) use ($handle) {
@@ -73,6 +74,12 @@ class TicketExportService
 
                     [$gross, $net, $commission] = $this->computeTicketAmounts($tt);
 
+                    // Final value AFTER any discount applied at checkout
+                    // (per-ticket meta.discount_amount, or proportional fallback
+                    // for legacy orders without meta). Reflects what the
+                    // customer actually paid for THIS specific ticket.
+                    $finalValue = $ticket->getEffectivePrice();
+
                     // Resolve seat info per ticket. For non-seated tickets
                     // getSeatDetails() returns null and the columns stay empty.
                     $seat = $ticket->getSeatDetails() ?? [];
@@ -91,6 +98,7 @@ class TicketExportService
                         $order ? number_format((float) $order->total, 2, '.', '') : '',
                         $gross !== null ? number_format($gross, 2, '.', '') : '',
                         $net !== null ? number_format($net, 2, '.', '') : '',
+                        number_format($finalValue, 2, '.', ''),
                         $commission !== null ? number_format($commission, 2, '.', '') : '',
                         $order?->status ?? '',
                         $hasDiscount,
