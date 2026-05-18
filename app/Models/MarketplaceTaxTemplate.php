@@ -184,6 +184,9 @@ class MarketplaceTaxTemplate extends Model
             '{{music_stamp_value}}' => 'Valoare timbru muzical (2% din vânzări)',
             '{{taxable_income}}' => 'Încasări supuse impozitului (vânzări - timbru muzical)',
             '{{tax_due}}' => 'Impozit datorat (cotă registry × încasări supuse impozitului)',
+            '{{tax_situation_table_rows}}' => 'Rânduri tabel "Situația biletelor" (Page 2 — un rând per tip × preț, inclusiv variante reduse)',
+            '{{tax_situation_total_tickets}}' => 'Total bilete vândute pentru tabel Situația',
+            '{{tax_situation_total_value}}' => 'Total valoare pentru tabel Situația',
             '{{total_sales_currency}}' => 'Sales Currency',
             '{{unsold_tickets_rows}}' => 'PV Distrugere: rânduri bilete nevândute (exclude abonamente)',
             '{{total_unsold_tickets}}' => 'PV Distrugere: total bilete nevândute (exclude abonamente)',
@@ -900,6 +903,22 @@ class MarketplaceTaxTemplate extends Model
             $variables['total_non_subscription_value_for_sale'] = number_format($totalNonSubscriptionValueForSale, 2);
             $variables['total_tickets_available'] = $totalAvailable;
             $variables['total_tickets_sold'] = $totalSold;
+            // Subtract discounts applied across the event's paid orders so
+            // total_sales_value reflects what was actually collected, not the
+            // catalog (price * qty_sold) gross. Cascades into music_stamp_value
+            // and taxable_income below. Lifetime sum — matches the existing
+            // quota_sold-based totalSalesValue scope (no period filter).
+            if ($event) {
+                $eventDiscountSum = (float) \App\Models\Order::query()
+                    ->where(fn ($q) => $q->where('event_id', $event->id)
+                                          ->orWhere('marketplace_event_id', $event->id))
+                    ->whereIn('status', ['paid', 'confirmed', 'completed'])
+                    ->where('source', '!=', 'external_import')
+                    ->sum('discount_amount');
+                if ($eventDiscountSum > 0) {
+                    $totalSalesValue = max(0.0, $totalSalesValue - $eventDiscountSum);
+                }
+            }
             $variables['total_sales_value'] = number_format($totalSalesValue, 2);
             $variables['total_sales_currency'] = $currency;
 
@@ -950,6 +969,96 @@ class MarketplaceTaxTemplate extends Model
             $variables['music_stamp_value'] = number_format($musicStampValue, 2);
             $variables['taxable_income'] = number_format($taxableIncome, 2);
             $variables['tax_due'] = number_format($taxDue, 2);
+
+            // Tax-situation table rows for page 2 of monthly tax declarations
+            // ("Situatia biletelor si abonamentelor la spectacole, vandute").
+            // One row per actual (ticket_type, effective_price) sales group —
+            // reduced-price tickets surface on separate lines from the parent
+            // full-price row. Sourced from SalesBreakdownService so promo
+            // codes naturally produce their own rows.
+            //
+            // Skips invitations (price=0) — not declarable income.
+            //
+            // Series cells: full-price rows show the parent ticket type's
+            // series range; reduced rows show "{type name} - {promo code}"
+            // in the "de la" cell and leave "pana la" blank since the
+            // physical codes are shared with the parent.
+            $taxSituationRowsHtml = '';
+            $taxSituationTotalQty = 0;
+            $taxSituationTotalValue = 0.0;
+            if ($event) {
+                try {
+                    $splitRows = app(\App\Services\Marketplace\SalesBreakdownService::class)
+                        ->buildPayoutSplitTable($event, null, null, excludePos: true);
+                } catch (\Throwable $e) {
+                    $splitRows = [];
+                }
+                // Filter out invitations (effective_price <= 0 — they have no
+                // catalog value to declare).
+                $splitRows = array_values(array_filter($splitRows, function ($r) {
+                    return (float) ($r['price'] ?? 0) > 0;
+                }));
+                // Sort: type name (alpha), non-reduced before reduced, price desc.
+                usort($splitRows, function ($a, $b) {
+                    $cmp = strcmp((string) ($a['ticket_type_name'] ?? ''), (string) ($b['ticket_type_name'] ?? ''));
+                    if ($cmp !== 0) return $cmp;
+                    $aRed = (bool) ($a['is_reduced'] ?? false);
+                    $bRed = (bool) ($b['is_reduced'] ?? false);
+                    if ($aRed !== $bRed) return $aRed ? 1 : -1;
+                    return (float) ($b['price'] ?? 0) <=> (float) ($a['price'] ?? 0);
+                });
+
+                $rowNum = 1;
+                foreach ($splitRows as $row) {
+                    $ttId = $row['ticket_type_id'] ?? null;
+                    $ttName = (string) ($row['ticket_type_name'] ?? '');
+                    $isReduced = (bool) ($row['is_reduced'] ?? false);
+                    $promoCode = (string) ($row['promo_code'] ?? '');
+                    $qty = (int) ($row['qty'] ?? 0);
+                    $price = (float) ($row['price'] ?? 0);
+                    $total = $price * $qty;
+
+                    // Resolve parent series range from the ticket type row.
+                    $seriesStart = '';
+                    $seriesEnd = '';
+                    if ($ttId) {
+                        $ttRow = $event->ticketTypes->firstWhere('id', $ttId);
+                        if ($ttRow) {
+                            $seriesStart = (string) ($ttRow->series_start ?? '');
+                            $seriesEnd = (string) ($ttRow->series_end ?? '');
+                        }
+                    }
+
+                    if ($isReduced) {
+                        // Reduced row — same physical codes as parent, just
+                        // sold at a different price. Show type + code in "de
+                        // la", blank "pana la".
+                        $deLa = $ttName . ($promoCode !== '' ? ' - ' . $promoCode : ' (redus)');
+                        $panaLa = '';
+                    } else {
+                        // Full-price row — show parent series range. Falls
+                        // back to type name when series_start/end are missing.
+                        $deLa = $seriesStart !== '' ? $ttName . ' (' . $seriesStart . ')' : $ttName;
+                        $panaLa = $seriesEnd;
+                    }
+
+                    $taxSituationTotalQty += $qty;
+                    $taxSituationTotalValue += $total;
+
+                    $taxSituationRowsHtml .= '<tr>'
+                        . '<td style="border:1px solid #000; padding:3px 4px; text-align:center;">' . $rowNum . '</td>'
+                        . '<td style="border:1px solid #000; padding:3px 4px; text-align:center;">' . htmlspecialchars($deLa) . '</td>'
+                        . '<td style="border:1px solid #000; padding:3px 4px; text-align:center;">' . htmlspecialchars($panaLa) . '</td>'
+                        . '<td style="border:1px solid #000; padding:3px 4px; text-align:right;">' . $qty . '</td>'
+                        . '<td style="border:1px solid #000; padding:3px 4px; text-align:right;">' . number_format($price, 2) . '</td>'
+                        . '<td style="border:1px solid #000; padding:3px 4px; text-align:right;">' . number_format($total, 2) . '</td>'
+                        . '</tr>';
+                    $rowNum++;
+                }
+            }
+            $variables['tax_situation_table_rows'] = $taxSituationRowsHtml;
+            $variables['tax_situation_total_tickets'] = $taxSituationTotalQty;
+            $variables['tax_situation_total_value'] = number_format($taxSituationTotalValue, 2);
 
             // PV Distrugere variables — unsold tickets (excluding subscriptions)
             $variables['unsold_tickets_rows'] = $unsoldRowsHtml;
