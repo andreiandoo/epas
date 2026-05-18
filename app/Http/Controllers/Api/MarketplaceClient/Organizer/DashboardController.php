@@ -497,7 +497,7 @@ class DashboardController extends BaseController
             fputcsv($handle, [
                 'Data', 'Comanda', 'Status', 'Client', 'Telefon',
                 'Tip bilet', 'Cod bilet', 'Sectiune', 'Rand', 'Loc',
-                'Net bilet', 'Valoare finala bilet', 'Reducere aplicata', 'Cod reducere',
+                'Pret bilet', 'Dupa reducere', 'Reducere aplicata', 'Cod reducere',
             ], escape: '\\');
 
             foreach ($orders as $order) {
