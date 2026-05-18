@@ -1099,16 +1099,52 @@ class MarketplaceTaxTemplate extends Model
             $ticketBreakdown = $payout->ticket_breakdown ?? [];
             $totalTicketsSold = 0;
             $totalTicketsRefunded = 0;
-            foreach ($ticketBreakdown as $item) {
-                $ttId = $item['ticket_type_id'] ?? null;
-                if ($ttId && isset($posTypeIdsSet[$ttId])) {
-                    continue;
+
+            // Use the split table (per ticket_type x effective_price + invitations)
+            // for the breakdown label so reduced rows show their actual paid price
+            // alongside the regular rows: (50lei*62+40lei*2+...). The snapshot
+            // aggregate (one row per type with weighted avg price) hides this
+            // detail, which makes tax reports inaccurate when promos apply.
+            $splitRows = [];
+            if ($payout->event_id) {
+                $eventForSplit = ($events ?? collect())->first() ?? \App\Models\Event::find($payout->event_id);
+                if ($eventForSplit) {
+                    try {
+                        $splitRows = app(\App\Services\Marketplace\SalesBreakdownService::class)
+                            ->buildPayoutSplitTable($eventForSplit, $payout->period_start, $payout->period_end);
+                    } catch (\Throwable $e) {
+                        $splitRows = [];
+                    }
                 }
-                $price = (float) ($item['price'] ?? $item['unit_price'] ?? 0);
-                $qty = (int) ($item['quantity'] ?? $item['tickets'] ?? $item['qty'] ?? 0);
-                $totalTicketsSold += $qty;
-                if ($qty > 0 && $price > 0) {
+            }
+
+            if (!empty($splitRows)) {
+                foreach ($splitRows as $row) {
+                    $ttId = $row['ticket_type_id'] ?? null;
+                    if ($ttId && isset($posTypeIdsSet[$ttId])) continue;
+                    $price = (float) ($row['price'] ?? 0);
+                    $qty = (int) ($row['qty'] ?? 0);
+                    if ($qty <= 0) continue;
+                    $totalTicketsSold += $qty;
+                    // Invitations and any other zero-priced rows still go into
+                    // the label as "0lei*N" so the breakdown sums to the qty
+                    // total displayed in 1b.
                     $breakdownParts[] = $formatPrice($price) . 'lei*' . $qty;
+                }
+            } else {
+                // Fallback: snapshot aggregate (legacy payouts whose event is
+                // gone, or split table failed to compute).
+                foreach ($ticketBreakdown as $item) {
+                    $ttId = $item['ticket_type_id'] ?? null;
+                    if ($ttId && isset($posTypeIdsSet[$ttId])) {
+                        continue;
+                    }
+                    $price = (float) ($item['price'] ?? $item['unit_price'] ?? 0);
+                    $qty = (int) ($item['quantity'] ?? $item['tickets'] ?? $item['qty'] ?? 0);
+                    $totalTicketsSold += $qty;
+                    if ($qty > 0 && $price > 0) {
+                        $breakdownParts[] = $formatPrice($price) . 'lei*' . $qty;
+                    }
                 }
             }
             $variables['tickets_breakdown_label'] = !empty($breakdownParts) ? ' (' . implode('+', $breakdownParts) . ')' : '';
@@ -1229,14 +1265,16 @@ class MarketplaceTaxTemplate extends Model
             }
             $variables['total_discount_amount'] = number_format($totalDiscountAmount, 2);
 
-            // payout_amount is the bottom-line "valoarea de achitat" row in
-            // the decont PDF. payout_net_amount (used at row 1a) is gross
-            // before discount, so 1c can show the discount separately. The
-            // final payable amount must take the discount out — without
-            // this the PDF total ignores section 1c entirely.
+            // Both row 1a (payout_net_amount) and the final payable
+            // (payout_amount) are now post-discount. The breakdown label at
+            // 1b lists each effective-price tier separately, so the gross
+            // sum implied by the label already excludes discounts — no need
+            // for a separate row 1c. Removing that row keeps the document
+            // internally consistent without a discount-aware deduction line.
             if ($totalDiscountAmount > 0) {
                 $payoutAmountAfterDiscount = max(0.0, $payoutAmount - $totalDiscountAmount);
                 $variables['payout_amount'] = number_format($payoutAmountAfterDiscount, 2);
+                $variables['payout_net_amount'] = number_format($payoutAmountAfterDiscount, 2);
             }
             // Sortat după număr de utilizări desc, "COD (xN)" format.
             arsort($promoCodes);

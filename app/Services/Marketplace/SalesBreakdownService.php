@@ -447,19 +447,34 @@ class SalesBreakdownService
 
         $tickets = Ticket::where(fn ($q) => $q->where('event_id', $eventId)->orWhere('marketplace_event_id', $eventId))
             ->whereIn('status', ['valid', 'used'])
-            ->whereHas('order', function ($q) use ($periodStart, $periodEnd, $excludePos, $dateColumn) {
-                $q->whereIn('status', ['paid', 'confirmed', 'completed'])
-                    ->where('source', '!=', 'external_import');
-                if ($excludePos) {
-                    $q->where('source', '!=', 'pos_app')
-                      ->where('source', '!=', 'test_order');
-                }
-                if ($periodStart) {
-                    $q->where($dateColumn, '>=', $periodStart->copy()->startOfDay());
-                }
-                if ($periodEnd) {
-                    $q->where($dateColumn, '<=', $periodEnd->copy()->endOfDay());
-                }
+            ->where(function ($outer) use ($periodStart, $periodEnd, $excludePos, $dateColumn) {
+                $outer->whereHas('order', function ($q) use ($periodStart, $periodEnd, $excludePos, $dateColumn) {
+                    $q->whereIn('status', ['paid', 'confirmed', 'completed'])
+                        ->where('source', '!=', 'external_import');
+                    if ($excludePos) {
+                        $q->where('source', '!=', 'pos_app')
+                          ->where('source', '!=', 'test_order');
+                    }
+                    if ($periodStart) {
+                        $q->where($dateColumn, '>=', $periodStart->copy()->startOfDay());
+                    }
+                    if ($periodEnd) {
+                        $q->where($dateColumn, '<=', $periodEnd->copy()->endOfDay());
+                    }
+                });
+                // Invitations have order_id=NULL — include them so the split
+                // table mirrors the aggregate (which we already fixed to
+                // surface invitations). Period bounds anchor on tickets.created_at
+                // because there's no order date to use.
+                $outer->orWhere(function ($q2) use ($periodStart, $periodEnd) {
+                    $q2->whereNull('order_id');
+                    if ($periodStart) {
+                        $q2->where('created_at', '>=', $periodStart->copy()->startOfDay());
+                    }
+                    if ($periodEnd) {
+                        $q2->where('created_at', '<=', $periodEnd->copy()->endOfDay());
+                    }
+                });
             })
             ->with(['ticketType'])
             ->get(['id', 'order_id', 'ticket_type_id', 'price', 'meta']);
