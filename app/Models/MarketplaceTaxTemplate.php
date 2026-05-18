@@ -1024,14 +1024,16 @@ class MarketplaceTaxTemplate extends Model
                     // Non-fatal — fall back to the on-the-fly derivation below.
                 }
 
-                // Index persisted allocations by (ticket_type_id, promo_code_id, is_intrinsic_red).
+                // Index persisted allocations by (ticket_type_id, discount_code, is_intrinsic_red).
+                // discount_code is the universal lookup — empty string for
+                // parent rows, the code value for promo / coupon tiers.
                 $allocationByKey = [];
                 try {
                     $allocations = \App\Models\EventTicketTypePromoSeries::query()
                         ->whereIn('ticket_type_id', $event->ticketTypes->pluck('id'))
                         ->get();
                     foreach ($allocations as $a) {
-                        $key = $a->ticket_type_id . '|' . ($a->promo_code_id ?? 'NULL') . '|' . ($a->is_intrinsic_red ? 'RED' : 'STD');
+                        $key = $a->ticket_type_id . '|' . ((string) ($a->discount_code ?? '')) . '|' . ($a->is_intrinsic_red ? 'RED' : 'STD');
                         $allocationByKey[$key] = $a;
                     }
                 } catch (\Throwable $e) {
@@ -1082,27 +1084,6 @@ class MarketplaceTaxTemplate extends Model
                     ];
                 };
 
-                // Resolve the promo_code_id for a given split row by looking
-                // it up on MarketplaceOrganizerPromoCode (since buildPayoutSplitTable
-                // only gives us the code string, not the id).
-                $promoIdByCode = [];
-                try {
-                    $codes = collect($splitRows)
-                        ->pluck('promo_code')
-                        ->filter()
-                        ->unique()
-                        ->values()
-                        ->all();
-                    if (!empty($codes)) {
-                        $promoIdByCode = \App\Models\MarketplaceOrganizerPromoCode::query()
-                            ->whereIn('code', $codes)
-                            ->pluck('id', 'code')
-                            ->all();
-                    }
-                } catch (\Throwable $e) {
-                    $promoIdByCode = [];
-                }
-
                 $rowNum = 1;
                 foreach ($splitRows as $row) {
                     $ttId = $row['ticket_type_id'] ?? null;
@@ -1116,9 +1097,11 @@ class MarketplaceTaxTemplate extends Model
                     $deLa = '';
                     $panaLa = '';
 
-                    // Look up persisted allocation for the matching tier.
-                    $promoId = $promoCode !== '' ? ($promoIdByCode[$promoCode] ?? null) : null;
-                    $allocKey = $ttId . '|' . ($promoId ?? 'NULL') . '|' . ($isReduced && $promoId === null ? 'RED' : 'STD');
+                    // Look up persisted allocation by discount_code (universal
+                    // key across organizer promos + coupons + parent).
+                    $lookupCode = $isReduced ? ($promoCode !== '' ? $promoCode : 'RED') : '';
+                    $isRedTier = $isReduced && $promoCode === '';
+                    $allocKey = $ttId . '|' . $lookupCode . '|' . ($isRedTier ? 'RED' : 'STD');
                     $allocation = $allocationByKey[$allocKey] ?? null;
 
                     if ($allocation && $allocation->series_prefix !== '') {
@@ -1136,11 +1119,11 @@ class MarketplaceTaxTemplate extends Model
                                 }
                             }
                         }
-                        // Parent (non-reduced) rows continue the existing
-                        // numbering from series_start. Promo / RED rows
-                        // start a fresh counter from 1.
+                        // Parent (non-reduced, no code) rows continue the
+                        // existing numbering from series_start. Promo /
+                        // coupon / RED rows start a fresh counter from 1.
                         $startNum = 1;
-                        if (!$isReduced && $allocation->promo_code_id === null && !$allocation->is_intrinsic_red) {
+                        if (!$isReduced && ($allocation->discount_code ?? '') === '' && !$allocation->is_intrinsic_red) {
                             if ($seriesStart !== '' && preg_match('/^.*?(\d+)$/', $seriesStart, $m)) {
                                 $startNum = (int) $m[1];
                             }

@@ -23,6 +23,8 @@ class EventTicketTypePromoSeries extends Model
         'marketplace_event_id',
         'ticket_type_id',
         'promo_code_id',
+        'discount_code',
+        'discount_source',
         'is_intrinsic_red',
         'series_prefix',
         'qty_allocated',
