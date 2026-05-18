@@ -547,29 +547,76 @@ class OrderResource extends Resource
                         ->color('danger')
                         ->requiresConfirmation()
                         ->modalHeading('Rambursare comenzi selectate')
-                        ->modalDescription('Comenzile deja rambursate sau neplătite vor fi ignorate.')
-                        ->form([
-                            \Filament\Forms\Components\Radio::make('refund_variant')
-                                ->label('Tip rambursare aplicat la TOATE comenzile selectate')
-                                ->options([
-                                    'face_only' => 'Ramburs fără comision (comisionul rămâne la organizator)',
-                                    'with_commission' => 'Ramburs total (clientul primește toată suma, inclusiv comisionul)',
-                                ])
-                                ->default('face_only')
-                                ->required()
-                                ->inline(false),
-                            \Filament\Forms\Components\Select::make('reason_category')
-                                ->label('Motiv')
-                                ->options([
-                                    'event_cancelled' => 'Eveniment anulat',
-                                    'event_postponed' => 'Eveniment amânat',
-                                    'personal_reason' => 'Motiv personal client',
-                                    'duplicate_purchase' => 'Achiziție duplicat',
-                                    'technical_issue' => 'Problemă tehnică',
-                                    'other' => 'Alt motiv',
-                                ])
-                                ->nullable(),
-                        ])
+                        ->modalDescription('Comenzile deja rambursate sau neplătite vor fi ignorate. Pentru rambursare parțială (selectează bilete individuale), folosește butonul Rambursare de pe pagina comenzii.')
+                        ->form(function (\Illuminate\Database\Eloquent\Collection $records) {
+                            // Detect orders that carry tickets across more than
+                            // one event — bulk-refunding them would refund the
+                            // tickets for other events too, which the admin
+                            // probably did NOT intend when bulk-refunding from
+                            // a per-event filter. Surface them up front so the
+                            // admin can either skip them automatically (toggle
+                            // on, default) or proceed knowingly (toggle off).
+                            $orderIds = $records->pluck('id')->all();
+                            $multiEventOrderIds = empty($orderIds) ? [] : \DB::table('tickets')
+                                ->whereIn('order_id', $orderIds)
+                                ->whereNotNull('event_id')
+                                ->select('order_id')
+                                ->groupBy('order_id')
+                                ->havingRaw('COUNT(DISTINCT event_id) > 1')
+                                ->pluck('order_id')
+                                ->all();
+                            $multiEventOrders = $records->whereIn('id', $multiEventOrderIds);
+                            $multiEventCount = $multiEventOrders->count();
+
+                            $schema = [
+                                \Filament\Forms\Components\Radio::make('refund_variant')
+                                    ->label('Tip rambursare aplicat la TOATE comenzile selectate')
+                                    ->options([
+                                        'face_only' => 'Ramburs fără comision (comisionul rămâne la organizator)',
+                                        'with_commission' => 'Ramburs total (clientul primește toată suma, inclusiv comisionul)',
+                                    ])
+                                    ->default('face_only')
+                                    ->required()
+                                    ->inline(false),
+                                \Filament\Forms\Components\Select::make('reason_category')
+                                    ->label('Motiv')
+                                    ->options([
+                                        'event_cancelled' => 'Eveniment anulat',
+                                        'event_postponed' => 'Eveniment amânat',
+                                        'personal_reason' => 'Motiv personal client',
+                                        'duplicate_purchase' => 'Achiziție duplicat',
+                                        'technical_issue' => 'Problemă tehnică',
+                                        'other' => 'Alt motiv',
+                                    ])
+                                    ->nullable(),
+                            ];
+
+                            if ($multiEventCount > 0) {
+                                $list = $multiEventOrders
+                                    ->map(fn ($o) => $o->order_number ?? ('#' . $o->id))
+                                    ->take(20)
+                                    ->implode(', ');
+                                if ($multiEventCount > 20) {
+                                    $list .= ', + încă ' . ($multiEventCount - 20);
+                                }
+                                $warningHtml = '<div style="padding:12px 14px;border:1px solid #f59e0b;background:#fffbeb;border-radius:8px;color:#92400e;">'
+                                    . '<div style="font-weight:600;margin-bottom:6px;">⚠️ ' . $multiEventCount . ' comand' . ($multiEventCount === 1 ? 'ă conține' : 'i conțin') . ' bilete la mai multe evenimente</div>'
+                                    . '<div style="font-size:12px;margin-bottom:6px;">Rambursarea în bulk a acestor comenzi va rambursa și biletele aferente celorlalte evenimente, nu doar cele din filtrul curent. Bifează opțiunea de mai jos pentru a le sări peste sau dezbifează ca să le incluzi forțat.</div>'
+                                    . '<div style="font-size:12px;font-family:monospace;color:#78350f;">' . e($list) . '</div>'
+                                    . '</div>';
+                                array_unshift($schema, \Filament\Forms\Components\Placeholder::make('multi_event_warning')
+                                    ->hiddenLabel()
+                                    ->content(new \Illuminate\Support\HtmlString($warningHtml)));
+                                $schema[] = \Filament\Forms\Components\Toggle::make('skip_multi_event')
+                                    ->label('Omite comenzile cu bilete la mai multe evenimente')
+                                    ->helperText('Recomandat. Dezactivează doar dacă vrei să rambursezi forțat și biletele lor de pe alte evenimente.')
+                                    ->default(true);
+                                $schema[] = \Filament\Forms\Components\Hidden::make('_multi_event_ids')
+                                    ->default(implode(',', $multiEventOrderIds));
+                            }
+
+                            return $schema;
+                        })
                         ->action(function (\Illuminate\Database\Eloquent\Collection $records, array $data) {
                             $refundService = app(\App\Services\PaymentRefundService::class);
                             $refundCommission = ($data['refund_variant'] ?? 'face_only') === 'with_commission';
@@ -583,11 +630,24 @@ class OrderResource extends Resource
                             ];
                             $reason = $reasonLabels[$data['reason_category'] ?? ''] ?? 'Rambursare bulk';
                             $reasonCat = $data['reason_category'] ?? null;
+
+                            // Apply the multi-event skip if the admin left
+                            // the toggle on (default true).
+                            $skipIds = [];
+                            if (!empty($data['skip_multi_event']) && !empty($data['_multi_event_ids'])) {
+                                $skipIds = array_filter(array_map('intval', explode(',', $data['_multi_event_ids'])));
+                            }
+
                             $success = 0;
                             $failed = 0;
                             $skipped = 0;
+                            $skippedMultiEvent = 0;
 
                             foreach ($records as $order) {
+                                if (in_array($order->id, $skipIds, true)) {
+                                    $skippedMultiEvent++;
+                                    continue;
+                                }
                                 if (in_array($order->status, ['refunded', 'partially_refunded'])) {
                                     $skipped++;
                                     continue;
@@ -608,6 +668,7 @@ class OrderResource extends Resource
                             $msg = "{$success} comenzi rambursate ({$variantLabel}).";
                             if ($failed > 0) $msg .= " {$failed} eșuate.";
                             if ($skipped > 0) $msg .= " {$skipped} ignorate (deja rambursate sau neplătite).";
+                            if ($skippedMultiEvent > 0) $msg .= " {$skippedMultiEvent} sărite (bilete pe mai multe evenimente).";
                             \Filament\Notifications\Notification::make()
                                 ->title($msg)
                                 ->color($failed > 0 ? 'warning' : 'success')
