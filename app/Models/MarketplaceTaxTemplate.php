@@ -1024,18 +1024,30 @@ class MarketplaceTaxTemplate extends Model
             $variables['payout_gross_amount'] = number_format($payoutGross, 2);
             $variables['payout_commission_amount'] = number_format($payoutCommission, 2);
 
-            // Commission percentage: use per-ticket rate if available, then organizer rate, then calculate from amounts
+            // Commission percentage shown in the section-1 header. Skip
+            // invitation/fixed-only/zero rows when scanning the breakdown —
+            // invitations carry commission_rate=null and would short-circuit
+            // the lookup to 0%, even though paid tickets do have a real rate.
             $commissionPercent = null;
             $ticketBreakdownForRate = $payout->ticket_breakdown ?? [];
             if (!empty($ticketBreakdownForRate)) {
-                // Get commission from first ticket type in breakdown
-                $firstItem = $ticketBreakdownForRate[0] ?? [];
-                $commissionPercent = $firstItem['commission_rate'] ?? $firstItem['commission_percent'] ?? null;
+                foreach ($ticketBreakdownForRate as $item) {
+                    $rate = $item['commission_rate'] ?? $item['commission_percent'] ?? null;
+                    if ($rate !== null && (float) $rate > 0) {
+                        $commissionPercent = $rate;
+                        break;
+                    }
+                }
             }
             if ($commissionPercent === null && $event) {
-                // Try per-ticket-type commission from DB
-                $firstTt = $event->ticketTypes()->first();
-                if ($firstTt && $firstTt->commission_rate) {
+                // Try per-ticket-type commission from DB — pick first type
+                // with a non-zero rate (invitation types and fixed-only
+                // types have commission_rate=null and must be skipped).
+                $firstTt = $event->ticketTypes()
+                    ->whereNotNull('commission_rate')
+                    ->where('commission_rate', '>', 0)
+                    ->first();
+                if ($firstTt) {
                     $commissionPercent = $firstTt->commission_rate;
                 }
             }
