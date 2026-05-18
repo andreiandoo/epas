@@ -101,7 +101,7 @@ class ImportFestivalExternalTickets extends Page
 
         $separator = $this->detectSeparator($path);
         $handle = fopen($path, 'r');
-        $header = fgetcsv($handle, 0, $separator);
+        $header = fgetcsv($handle, 0, $separator, '"', '\\');
         $header = array_map('trim', $header);
         $this->csvHeaders = $header;
 
@@ -116,7 +116,7 @@ class ImportFestivalExternalTickets extends Page
         // Read preview rows + count total
         $preview = [];
         $count = 0;
-        while (($row = fgetcsv($handle, 0, $separator)) !== false) {
+        while (($row = fgetcsv($handle, 0, $separator, '"', '\\')) !== false) {
             $count++;
             if (count($preview) < 5) {
                 $preview[] = array_combine($header, array_pad($row, count($header), ''));
@@ -147,14 +147,14 @@ class ImportFestivalExternalTickets extends Page
         $separator = $this->detectSeparator($path);
 
         $handle = fopen($path, 'r');
-        $header = fgetcsv($handle, 0, $separator);
+        $header = fgetcsv($handle, 0, $separator, '"', '\\');
         $header = array_map('trim', $header);
 
         $imported = 0;
         $skipped = 0;
         $errors = 0;
 
-        while (($row = fgetcsv($handle, 0, $separator)) !== false) {
+        while (($row = fgetcsv($handle, 0, $separator, '"', '\\')) !== false) {
             $data = array_combine($header, array_pad($row, count($header), ''));
 
             $barcode = trim($data[$this->col_barcode] ?? '');

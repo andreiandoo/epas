@@ -32,7 +32,7 @@ class ImportWpPasswordHashesCommand extends Command
         }
 
         // Read header
-        $header = fgetcsv($handle);
+        $header = fgetcsv($handle, 0, ',', '"', '\\');
         if (!$header) {
             $this->error('Empty CSV file');
             return self::FAILURE;
@@ -55,7 +55,7 @@ class ImportWpPasswordHashesCommand extends Command
         $alreadyHasPassword = 0;
         $row = 0;
 
-        while (($data = fgetcsv($handle)) !== false) {
+        while (($data = fgetcsv($handle, 0, ',', '"', '\\')) !== false) {
             $row++;
             $email = trim($data[$emailCol] ?? '');
             $wpHash = trim($data[$passCol] ?? '');

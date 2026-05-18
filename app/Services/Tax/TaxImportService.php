@@ -67,7 +67,7 @@ class TaxImportService
         $headers = null;
         $rowNum = 0;
 
-        while (($data = fgetcsv($handle)) !== false) {
+        while (($data = fgetcsv($handle, 0, ',', '"', '\\')) !== false) {
             $rowNum++;
 
             // Skip empty rows

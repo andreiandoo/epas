@@ -105,12 +105,12 @@ class ImportExternalTickets extends Page
         }
 
         $handle = fopen($path, 'r');
-        $header = fgetcsv($handle, 0, ',');
+        $header = fgetcsv($handle, 0, ',', '"', '\\');
 
         // Try semicolon separator if only 1 column detected
         if (count($header) <= 1) {
             rewind($handle);
-            $header = fgetcsv($handle, 0, ';');
+            $header = fgetcsv($handle, 0, ';', '"', '\\');
         }
 
         $header = array_map('trim', $header);
@@ -127,7 +127,7 @@ class ImportExternalTickets extends Page
         // Read preview rows + count total
         $preview = [];
         $count = 0;
-        while (($row = fgetcsv($handle, 0, count($header) > 1 ? ',' : ';')) !== false) {
+        while (($row = fgetcsv($handle, 0, count($header) > 1 ? ',' : ';', '"', '\\')) !== false) {
             $count++;
             if (count($preview) < 5) {
                 $preview[] = array_combine($header, array_pad($row, count($header), ''));
@@ -158,14 +158,14 @@ class ImportExternalTickets extends Page
         $separator = $this->detectSeparator($path);
 
         $handle = fopen($path, 'r');
-        $header = fgetcsv($handle, 0, $separator);
+        $header = fgetcsv($handle, 0, $separator, '"', '\\');
         $header = array_map('trim', $header);
 
         $imported = 0;
         $skipped = 0;
         $errors = 0;
 
-        while (($row = fgetcsv($handle, 0, $separator)) !== false) {
+        while (($row = fgetcsv($handle, 0, $separator, '"', '\\')) !== false) {
             $data = array_combine($header, array_pad($row, count($header), ''));
 
             $barcode = trim($data[$this->col_barcode] ?? '');

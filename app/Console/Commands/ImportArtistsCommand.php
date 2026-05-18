@@ -32,7 +32,7 @@ class ImportArtistsCommand extends Command
         }
 
         $handle = fopen($file, 'r');
-        $header = fgetcsv($handle);
+        $header = fgetcsv($handle, 0, ',', '"', '\\');
 
         if ($header === false || !in_array('name', $header)) {
             $this->error("Invalid CSV format. Must have at least a 'name' column.");
@@ -43,7 +43,7 @@ class ImportArtistsCommand extends Command
         $updated = 0;
         $skipped = 0;
 
-        while (($row = fgetcsv($handle)) !== false) {
+        while (($row = fgetcsv($handle, 0, ',', '"', '\\')) !== false) {
             // Ensure row has same number of columns as header
             if (count($row) < count($header)) {
                 $row = array_pad($row, count($header), '');

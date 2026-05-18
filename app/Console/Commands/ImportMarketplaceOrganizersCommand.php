@@ -25,7 +25,7 @@ class ImportMarketplaceOrganizersCommand extends Command
         $this->info("Importing marketplace organizers from {$file}...");
 
         $handle = fopen($file, 'r');
-        $header = fgetcsv($handle);
+        $header = fgetcsv($handle, 0, ',', '"', '\\');
 
         if ($header === false || !in_array('email', $header)) {
             $this->error("Invalid CSV format. Must have at least an 'email' column.");
@@ -36,7 +36,7 @@ class ImportMarketplaceOrganizersCommand extends Command
         $updated = 0;
         $skipped = 0;
 
-        while (($row = fgetcsv($handle)) !== false) {
+        while (($row = fgetcsv($handle, 0, ',', '"', '\\')) !== false) {
             $data = array_combine($header, $row);
 
             if (empty($data['email'])) {

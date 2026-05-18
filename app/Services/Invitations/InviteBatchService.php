@@ -160,7 +160,7 @@ class InviteBatchService
         }
 
         // Skip header row
-        fgetcsv($handle);
+        fgetcsv($handle, 0, ',', '"', '\\');
 
         // Get unused invites
         $availableInvites = $batch->invites()
@@ -170,7 +170,7 @@ class InviteBatchService
 
         $inviteIndex = 0;
 
-        while (($data = fgetcsv($handle)) !== false) {
+        while (($data = fgetcsv($handle, 0, ',', '"', '\\')) !== false) {
             $row++;
 
             try {

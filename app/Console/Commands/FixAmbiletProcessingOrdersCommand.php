@@ -45,7 +45,7 @@ class FixAmbiletProcessingOrdersCommand extends Command
 
             $this->info('Scanning: ' . basename($file));
             $handle = fopen($file, 'r');
-            $header = fgetcsv($handle);
+            $header = fgetcsv($handle, 0, ',', '"', '\\');
 
             $statusIdx    = array_search('order_status', $header);
             $wpIdIdx      = array_search('wp_order_id', $header);
@@ -59,7 +59,7 @@ class FixAmbiletProcessingOrdersCommand extends Command
             }
 
             $found = 0;
-            while (($row = fgetcsv($handle)) !== false) {
+            while (($row = fgetcsv($handle, 0, ',', '"', '\\')) !== false) {
                 if (count($row) <= max($statusIdx, $wpIdIdx)) {
                     continue;
                 }

@@ -27,7 +27,7 @@ class ImportVenuesCommand extends Command
         $this->info("Importing venues from {$file}...");
 
         $handle = fopen($file, 'r');
-        $header = fgetcsv($handle);
+        $header = fgetcsv($handle, 0, ',', '"', '\\');
 
         if ($header === false || !in_array('name', $header)) {
             $this->error("Invalid CSV format. Must have at least a 'name' column.");
@@ -37,7 +37,7 @@ class ImportVenuesCommand extends Command
         $imported = 0;
         $skipped = 0;
 
-        while (($row = fgetcsv($handle)) !== false) {
+        while (($row = fgetcsv($handle, 0, ',', '"', '\\')) !== false) {
             $data = array_combine($header, $row);
 
             // Skip if name is empty

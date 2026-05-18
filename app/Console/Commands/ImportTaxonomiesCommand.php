@@ -39,7 +39,7 @@ class ImportTaxonomiesCommand extends Command
         $this->info("Importing {$type} from {$file}...");
 
         $handle = fopen($file, 'r');
-        $header = fgetcsv($handle);
+        $header = fgetcsv($handle, 0, ',', '"', '\\');
 
         if ($header === false || !in_array('name', $header)) {
             $this->error("Invalid CSV format. Must have at least a 'name' column.");
@@ -52,9 +52,9 @@ class ImportTaxonomiesCommand extends Command
 
         // First pass: Import all items without parent relationships
         rewind($handle);
-        fgetcsv($handle); // Skip header
+        fgetcsv($handle, 0, ',', '"', '\\'); // Skip header
 
-        while (($row = fgetcsv($handle)) !== false) {
+        while (($row = fgetcsv($handle, 0, ',', '"', '\\')) !== false) {
             $data = array_combine($header, $row);
 
             // Skip if name is empty
@@ -84,9 +84,9 @@ class ImportTaxonomiesCommand extends Command
 
         // Second pass: Update parent relationships
         rewind($handle);
-        fgetcsv($handle); // Skip header
+        fgetcsv($handle, 0, ',', '"', '\\'); // Skip header
 
-        while (($row = fgetcsv($handle)) !== false) {
+        while (($row = fgetcsv($handle, 0, ',', '"', '\\')) !== false) {
             $data = array_combine($header, $row);
 
             if (empty($data['name']) || empty($data['parent_slug'])) {

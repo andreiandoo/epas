@@ -24,7 +24,7 @@ class ImportWpCouponOrdersCommand extends Command
         }
 
         $handle = fopen($file, 'r');
-        $header = fgetcsv($handle);
+        $header = fgetcsv($handle, 0, ',', '"', '\\');
         $header = array_map('trim', array_map('strtolower', $header));
 
         $wpOrderIdCol = array_search('wp_order_id', $header);
@@ -44,7 +44,7 @@ class ImportWpCouponOrdersCommand extends Command
         $ticketsFixed = 0;
         $row = 0;
 
-        while (($data = fgetcsv($handle)) !== false) {
+        while (($data = fgetcsv($handle, 0, ',', '"', '\\')) !== false) {
             $row++;
             $wpOrderId = trim($data[$wpOrderIdCol] ?? '');
             $couponCodes = trim($data[$couponCol] ?? '');

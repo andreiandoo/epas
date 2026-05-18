@@ -31,11 +31,11 @@ class FixAmbiletTicketTypeCommissionsCommand extends Command
             return 1;
         }
 
-        fgetcsv($handle); // skip header
+        fgetcsv($handle, 0, ',', '"', '\\'); // skip header
 
         $updated = $skipped = $notFound = 0;
 
-        while (($row = fgetcsv($handle)) !== false) {
+        while (($row = fgetcsv($handle, 0, ',', '"', '\\')) !== false) {
             $wpProductId = trim($row[0] ?? '');
             $feeAmount   = trim($row[1] ?? '');
             $minQty      = trim($row[2] ?? '');

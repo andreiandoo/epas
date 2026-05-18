@@ -154,7 +154,7 @@ class ImportVenues extends Page implements HasForms
         rewind($handle);
         $delimiter = (substr_count($firstLine, ';') > substr_count($firstLine, ',')) ? ';' : ',';
 
-        $header = fgetcsv($handle, 0, $delimiter);
+        $header = fgetcsv($handle, 0, $delimiter, '"', '\\');
 
         // Strip UTF-8 BOM from first column if present (Excel adds this)
         if ($header && isset($header[0])) {
@@ -175,7 +175,7 @@ class ImportVenues extends Page implements HasForms
 
         // Parse all rows upfront
         $allRows = [];
-        while (($row = fgetcsv($handle, 0, $delimiter)) !== false) {
+        while (($row = fgetcsv($handle, 0, $delimiter, '"', '\\')) !== false) {
             if (count($row) < count($header)) {
                 $row = array_pad($row, count($header), '');
             }

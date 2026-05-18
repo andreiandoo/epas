@@ -70,9 +70,9 @@ class ImportAmbiletOrdersCommand extends Command
             $this->info('Processing: ' . basename($file));
 
             $handle = fopen($file, 'r');
-            $header = fgetcsv($handle);
+            $header = fgetcsv($handle, 0, ',', '"', '\\');
 
-            while (($row = fgetcsv($handle)) !== false) {
+            while (($row = fgetcsv($handle, 0, ',', '"', '\\')) !== false) {
                 $data      = array_combine($header, $row);
                 $wpOrderId = $data['wp_order_id'];
 

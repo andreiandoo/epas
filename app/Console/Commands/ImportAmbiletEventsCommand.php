@@ -67,10 +67,10 @@ class ImportAmbiletEventsCommand extends Command
         }
 
         $handle  = fopen($file, 'r');
-        $header  = fgetcsv($handle);
+        $header  = fgetcsv($handle, 0, ',', '"', '\\');
         $created = $skipped = $failed = 0;
 
-        while (($row = fgetcsv($handle)) !== false) {
+        while (($row = fgetcsv($handle, 0, ',', '"', '\\')) !== false) {
             if (count($row) !== count($header)) {
                 $this->warn('Skipping malformed row (column count mismatch): ' . implode(',', array_slice($row, 0, 3)));
                 $failed++;

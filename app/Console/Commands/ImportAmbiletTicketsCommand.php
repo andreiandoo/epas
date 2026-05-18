@@ -53,8 +53,8 @@ class ImportAmbiletTicketsCommand extends Command
         $this->info('Loading order item map...');
         $itemToOrderId = [];
         $fh = fopen($orderItemMapFile, 'r');
-        fgetcsv($fh); // skip header
-        while (($r = fgetcsv($fh)) !== false) {
+        fgetcsv($fh, 0, ',', '"', '\\'); // skip header
+        while (($r = fgetcsv($fh, 0, ',', '"', '\\')) !== false) {
             $itemToOrderId[$r[0]] = $r[1]; // order_item_id => wp_order_id
         }
         fclose($fh);
@@ -71,10 +71,10 @@ class ImportAmbiletTicketsCommand extends Command
         }
 
         $handle  = fopen($file, 'r');
-        $header  = fgetcsv($handle);
+        $header  = fgetcsv($handle, 0, ',', '"', '\\');
         $created = $skipped = $failed = $noOrder = 0;
 
-        while (($row = fgetcsv($handle)) !== false) {
+        while (($row = fgetcsv($handle, 0, ',', '"', '\\')) !== false) {
             $data       = array_combine($header, $row);
             $wpTicketId = $data['wp_ticket_id'];
 
@@ -101,7 +101,7 @@ class ImportAmbiletTicketsCommand extends Command
             }
 
             // Parse check-in from PHP serialized data.
-            // fgetcsv() already unescapes doubled quotes ("" → ") inside CSV fields.
+            // The fgetcsv call already unescapes doubled quotes ("" → ") inside CSV fields.
             $checkedInAt = null;
             $checkinRaw  = $this->n($data['checkin_data']);
             if ($checkinRaw) {

@@ -46,7 +46,7 @@ class FixAmbiletOrphanTicketTypesCommand extends Command
         $this->info('Indexing ticket_instances.csv...');
         $byWpTicket = [];
         $fh         = fopen($csvFile, 'r');
-        $header     = fgetcsv($fh);
+        $header     = fgetcsv($fh, 0, ',', '"', '\\');
         $colMap     = array_flip($header);
         $needed     = ['wp_ticket_id', 'wp_event_id', 'wp_product_id'];
         foreach ($needed as $c) {
@@ -56,7 +56,7 @@ class FixAmbiletOrphanTicketTypesCommand extends Command
                 return 1;
             }
         }
-        while (($row = fgetcsv($fh)) !== false) {
+        while (($row = fgetcsv($fh, 0, ',', '"', '\\')) !== false) {
             $wpTicket = $row[$colMap['wp_ticket_id']] ?? null;
             if (!$wpTicket) {
                 continue;

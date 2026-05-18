@@ -56,9 +56,9 @@ class FixAmbiletOrderStatusesCommand extends Command
 
             $this->info('Scanning: ' . basename($file));
             $handle = fopen($file, 'r');
-            $header = fgetcsv($handle);
+            $header = fgetcsv($handle, 0, ',', '"', '\\');
 
-            while (($row = fgetcsv($handle)) !== false) {
+            while (($row = fgetcsv($handle, 0, ',', '"', '\\')) !== false) {
                 if (count($row) !== count($header)) {
                     continue;
                 }

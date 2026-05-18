@@ -52,10 +52,10 @@ class ImportAmbiletTicketTypesCommand extends Command
         }
 
         $handle  = fopen($file, 'r');
-        $header  = fgetcsv($handle);
+        $header  = fgetcsv($handle, 0, ',', '"', '\\');
         $created = $skipped = $failed = 0;
 
-        while (($row = fgetcsv($handle)) !== false) {
+        while (($row = fgetcsv($handle, 0, ',', '"', '\\')) !== false) {
             $data        = array_combine($header, $row);
             $wpProductId = $data['wp_product_id'];
 

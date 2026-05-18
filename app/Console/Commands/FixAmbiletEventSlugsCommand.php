@@ -37,7 +37,7 @@ class FixAmbiletEventSlugsCommand extends Command
 
         // Read CSV
         $handle = fopen($file, 'r');
-        $headers = fgetcsv($handle);
+        $headers = fgetcsv($handle, 0, ',', '"', '\\');
 
         $slugCol    = array_search('wp_slug', $headers);
         $wpIdCol    = array_search('wp_event_id', $headers);
@@ -50,7 +50,7 @@ class FixAmbiletEventSlugsCommand extends Command
 
         // Collect all slugs from CSV
         $csvSlugs = [];
-        while (($row = fgetcsv($handle)) !== false) {
+        while (($row = fgetcsv($handle, 0, ',', '"', '\\')) !== false) {
             $wpId = trim($row[$wpIdCol]);
             $slug = trim($row[$slugCol]);
             if ($wpId && $slug) {

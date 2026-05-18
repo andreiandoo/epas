@@ -138,9 +138,9 @@ class FixAmbiletTicketTypeAvailabilityCommand extends Command
     {
         $map = [];
         $handle = fopen($file, 'r');
-        fgetcsv($handle); // skip header
+        fgetcsv($handle, 0, ',', '"', '\\'); // skip header
 
-        while (($row = fgetcsv($handle)) !== false) {
+        while (($row = fgetcsv($handle, 0, ',', '"', '\\')) !== false) {
             $wpEventId = $row[0] ?? '';
             $serialized = $row[1] ?? '';
 
@@ -166,9 +166,9 @@ class FixAmbiletTicketTypeAvailabilityCommand extends Command
     {
         $map = [];
         $handle = fopen($file, 'r');
-        $header = fgetcsv($handle);
+        $header = fgetcsv($handle, 0, ',', '"', '\\');
 
-        while (($row = fgetcsv($handle)) !== false) {
+        while (($row = fgetcsv($handle, 0, ',', '"', '\\')) !== false) {
             if (count($row) < 2) continue;
 
             $wpProductId = $row[0] ?? '';

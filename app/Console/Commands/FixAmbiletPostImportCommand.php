@@ -86,8 +86,8 @@ class FixAmbiletPostImportCommand extends Command
             $processingWpIds = [];
             foreach ($files as $file) {
                 $handle = fopen($file, 'r');
-                $header = fgetcsv($handle);
-                while (($row = fgetcsv($handle)) !== false) {
+                $header = fgetcsv($handle, 0, ',', '"', '\\');
+                while (($row = fgetcsv($handle, 0, ',', '"', '\\')) !== false) {
                     $data = array_combine($header, $row);
                     $status = trim($data['order_status'] ?? '', '"');
                     if (stripos($status, 'processing') !== false) {
@@ -164,8 +164,8 @@ class FixAmbiletPostImportCommand extends Command
         $registeredEmails = [];
         foreach ($files as $file) {
             $handle = fopen($file, 'r');
-            $header = fgetcsv($handle);
-            while (($row = fgetcsv($handle)) !== false) {
+            $header = fgetcsv($handle, 0, ',', '"', '\\');
+            while (($row = fgetcsv($handle, 0, ',', '"', '\\')) !== false) {
                 $data   = array_combine($header, $row);
                 $wpUserId = (int) ($data['customer_wp_user_id'] ?? 0);
                 if ($wpUserId > 0) {
