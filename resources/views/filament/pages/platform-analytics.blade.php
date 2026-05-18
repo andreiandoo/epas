@@ -70,9 +70,9 @@
                     <div class="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-700 last:border-0">
                         <div>
                             <span class="font-medium text-gray-900 dark:text-white">{{ $source['source'] }}</span>
-                            <span class="text-xs text-gray-500 ml-2">{{ number_format($source['visitors']) }} visitors</span>
+                            <span class="text-xs text-gray-500 ml-2">{{ number_format($source['visitors'] ?? 0) }} visitors</span>
                         </div>
-                        <span class="text-sm font-semibold text-gray-700 dark:text-gray-300">{{ number_format($source['sessions']) }}</span>
+                        <span class="text-sm font-semibold text-gray-700 dark:text-gray-300">{{ number_format($source['sessions'] ?? 0) }}</span>
                     </div>
                 @empty
                     <p class="text-gray-500 dark:text-gray-400 text-center py-4">No traffic data</p>
@@ -90,9 +90,9 @@
                     <div class="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-700 last:border-0">
                         <div>
                             <span class="font-medium text-gray-900 dark:text-white">{{ $stat['source'] }}</span>
-                            <span class="text-xs text-gray-500 ml-2">{{ number_format($stat['conversions']) }} sales</span>
+                            <span class="text-xs text-gray-500 ml-2">{{ number_format($stat['conversions'] ?? 0) }} sales</span>
                         </div>
-                        <span class="text-sm font-semibold text-green-600 dark:text-green-400">${{ number_format($stat['revenue'], 2) }}</span>
+                        <span class="text-sm font-semibold text-green-600 dark:text-green-400">${{ number_format($stat['revenue'] ?? 0, 2) }}</span>
                     </div>
                 @empty
                     <p class="text-gray-500 dark:text-gray-400 text-center py-4">No conversion data</p>
@@ -153,8 +153,8 @@
                             <span class="text-xs text-gray-500 block">{{ $account['account_name'] }}</span>
                         </div>
                         <div class="text-right">
-                            <span class="block font-semibold text-gray-900 dark:text-white">{{ number_format($account['conversions']) }} conversions</span>
-                            <span class="text-sm text-green-600 dark:text-green-400">${{ number_format($account['revenue'], 2) }}</span>
+                            <span class="block font-semibold text-gray-900 dark:text-white">{{ number_format($account['conversions'] ?? 0) }} conversions</span>
+                            <span class="text-sm text-green-600 dark:text-green-400">${{ number_format($account['revenue'] ?? 0, 2) }}</span>
                         </div>
                         <span class="ml-2 px-2 py-1 text-xs rounded-full {{ $account['token_status'] === 'valid' ? 'bg-green-100 text-green-800' : ($account['token_status'] === 'expiring' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800') }}">
                             {{ ucfirst($account['token_status']) }}
@@ -180,7 +180,7 @@
                 @forelse($recentConversions as $conversion)
                     <div class="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-700 last:border-0">
                         <div>
-                            <span class="font-medium text-gray-900 dark:text-white">${{ number_format($conversion['value'], 2) }}</span>
+                            <span class="font-medium text-gray-900 dark:text-white">${{ number_format($conversion['value'] ?? 0, 2) }}</span>
                             <span class="text-xs text-gray-500 block">{{ $conversion['customer'] }}</span>
                         </div>
                         <div class="text-right">
@@ -208,9 +208,9 @@
                         <div class="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-700 last:border-0">
                             <div>
                                 <span class="font-medium text-gray-900 dark:text-white">{{ $tenant['tenant_name'] }}</span>
-                                <span class="text-xs text-gray-500 ml-2">{{ number_format($tenant['purchases']) }} sales</span>
+                                <span class="text-xs text-gray-500 ml-2">{{ number_format($tenant['purchases'] ?? 0) }} sales</span>
                             </div>
-                            <span class="text-sm font-semibold text-green-600 dark:text-green-400">${{ number_format($tenant['revenue'], 2) }}</span>
+                            <span class="text-sm font-semibold text-green-600 dark:text-green-400">${{ number_format($tenant['revenue'] ?? 0, 2) }}</span>
                         </div>
                     @endforeach
                 </div>
@@ -241,7 +241,7 @@
                             <span class="font-medium text-gray-900 dark:text-white capitalize">{{ $device['device_type'] ?? 'Unknown' }}</span>
                         </div>
                         <div class="text-right">
-                            <span class="font-semibold text-gray-900 dark:text-white">{{ number_format($device['count']) }}</span>
+                            <span class="font-semibold text-gray-900 dark:text-white">{{ number_format($device['count'] ?? 0) }}</span>
                             <span class="text-xs text-gray-500 ml-1">({{ $percentage }}%)</span>
                         </div>
                     </div>
@@ -263,7 +263,7 @@
                             <span class="text-lg mr-2">{{ country_flag($geo['country_code'] ?? '') }}</span>
                             <span class="font-medium text-gray-900 dark:text-white">{{ $geo['country_name'] ?? $geo['country_code'] }}</span>
                         </div>
-                        <span class="text-sm font-semibold text-gray-700 dark:text-gray-300">{{ number_format($geo['visitors']) }}</span>
+                        <span class="text-sm font-semibold text-gray-700 dark:text-gray-300">{{ number_format($geo['visitors'] ?? 0) }}</span>
                     </div>
                 @empty
                     <p class="text-gray-500 dark:text-gray-400 text-center py-4">No geo data</p>
@@ -283,7 +283,7 @@
                             <span class="font-medium text-gray-900 dark:text-white text-sm truncate max-w-[200px]" title="{{ $page['page_url'] }}">
                                 {{ $page['page_title'] ?: $page['page_url'] }}
                             </span>
-                            <span class="text-sm font-semibold text-gray-700 dark:text-gray-300">{{ number_format($page['views']) }}</span>
+                            <span class="text-sm font-semibold text-gray-700 dark:text-gray-300">{{ number_format($page['views'] ?? 0) }}</span>
                         </div>
                         <span class="text-xs text-gray-500 truncate block max-w-full">{{ $page['page_url'] }}</span>
                     </div>

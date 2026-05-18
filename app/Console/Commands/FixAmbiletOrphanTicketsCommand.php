@@ -39,8 +39,11 @@ class FixAmbiletOrphanTicketsCommand extends Command
         $this->info('Loading ticket→order CSV...');
         $ticketToWpOrder = [];
         $fh     = fopen($csvFile, 'r');
-        $header = fgetcsv($fh);
-        while (($row = fgetcsv($fh)) !== false) {
+        // Explicit $escape to silence PHP 8.4 deprecation. Keeps the
+        // historical backslash escape behavior so CSV parsing matches
+        // earlier runs of this import.
+        $header = fgetcsv($fh, 0, ',', '"', '\\');
+        while (($row = fgetcsv($fh, 0, ',', '"', '\\')) !== false) {
             if (count($row) < 2) {
                 continue;
             }
