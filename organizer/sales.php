@@ -40,6 +40,9 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                             <option value="">Toate statusurile</option>
                             <option value="completed">Finalizate</option>
                             <option value="pending">În așteptare</option>
+                            <option value="failed">Eșuate</option>
+                            <option value="expired">Expirate</option>
+                            <option value="cancelled">Anulate</option>
                             <option value="refunded">Rambursate</option>
                         </select>
                     </div>
