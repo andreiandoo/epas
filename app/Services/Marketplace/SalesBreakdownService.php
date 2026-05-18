@@ -71,19 +71,36 @@ class SalesBreakdownService
 
         $tickets = Ticket::where(fn ($q) => $q->where('event_id', $eventId)->orWhere('marketplace_event_id', $eventId))
             ->whereIn('status', ['valid', 'used'])
-            ->whereHas('order', function ($q) use ($periodStart, $periodEnd, $excludePos, $dateColumn) {
-                $q->whereIn('status', ['paid', 'confirmed', 'completed'])
-                    ->where('source', '!=', 'external_import');
-                if ($excludePos) {
-                    $q->where('source', '!=', 'pos_app')
-                      ->where('source', '!=', 'test_order');
-                }
-                if ($periodStart) {
-                    $q->where($dateColumn, '>=', $periodStart->copy()->startOfDay());
-                }
-                if ($periodEnd) {
-                    $q->where($dateColumn, '<=', $periodEnd->copy()->endOfDay());
-                }
+            ->where(function ($outer) use ($periodStart, $periodEnd, $excludePos, $dateColumn) {
+                // Normal flow: ticket tied to a paid/confirmed/completed order
+                $outer->whereHas('order', function ($q) use ($periodStart, $periodEnd, $excludePos, $dateColumn) {
+                    $q->whereIn('status', ['paid', 'confirmed', 'completed'])
+                        ->where('source', '!=', 'external_import');
+                    if ($excludePos) {
+                        $q->where('source', '!=', 'pos_app')
+                          ->where('source', '!=', 'test_order');
+                    }
+                    if ($periodStart) {
+                        $q->where($dateColumn, '>=', $periodStart->copy()->startOfDay());
+                    }
+                    if ($periodEnd) {
+                        $q->where($dateColumn, '<=', $periodEnd->copy()->endOfDay());
+                    }
+                });
+                // Invitations have no order_id. They were silently dropped by
+                // whereHas above before this branch was added — which made
+                // the "Invitatie" row disappear from the payout breakdown
+                // after a recalc. Period bounds apply to tickets.created_at
+                // instead since there's no order date to anchor on.
+                $outer->orWhere(function ($q2) use ($periodStart, $periodEnd) {
+                    $q2->whereNull('order_id');
+                    if ($periodStart) {
+                        $q2->where('created_at', '>=', $periodStart->copy()->startOfDay());
+                    }
+                    if ($periodEnd) {
+                        $q2->where('created_at', '<=', $periodEnd->copy()->endOfDay());
+                    }
+                });
             })
             ->with(['ticketType'])
             ->get(['id', 'order_id', 'ticket_type_id', 'price']);
@@ -129,6 +146,36 @@ class SalesBreakdownService
         $sumExtrasValid = 0.0;
 
         foreach ($tickets->groupBy('order_id') as $orderId => $orderTickets) {
+            // Invitation tickets have no order. Emit them as zero-value
+            // slices grouped by ticket_type so the Invitatie row stays
+            // visible on the payout breakdown even after a recalc.
+            if (!$orderId) {
+                foreach ($orderTickets->groupBy('ticket_type_id') as $invTtId => $invGroup) {
+                    $invTt = $invGroup->first()->ticketType;
+                    if (!$invTt) continue;
+                    $invKey = (string) $invTtId;
+                    if (!isset($perType[$invKey])) {
+                        $perType[$invKey] = [
+                            'tt' => $invTt,
+                            'ticket_type_id' => (int) $invTtId,
+                            'unit_price' => 0.0,
+                            'valid_count' => 0,
+                            'gross' => 0.0,
+                            'commission' => 0.0,
+                            'commission_per_ticket' => 0.0,
+                            'discount' => 0.0,
+                            'extras' => 0.0,
+                            'net' => 0.0,
+                            'mode' => 'included',
+                            'commission_type' => null,
+                            'commission_rate' => null,
+                            'commission_fixed' => null,
+                        ];
+                    }
+                    $perType[$invKey]['valid_count'] += $invGroup->count();
+                }
+                continue;
+            }
             $order = $ordersById->get($orderId);
             if (!$order) continue;
 
@@ -350,11 +397,10 @@ class SalesBreakdownService
      */
     public function buildForPayout(Event $event, ?Carbon $periodStart = null, ?Carbon $periodEnd = null): array
     {
-        // splitByPrice=true so each ticket type can appear multiple times in the
-        // breakdown, once per distinct unit price sold during the period
-        // (handles sale_price reductions producing two-tier rows like Categoria
-        // III x37 @ 60 + Categoria III x3 @ 48).
-        $breakdown = $this->build($event, $periodStart, $periodEnd, splitByPrice: true);
+        // Aggregate per ticket type. The "split by price tier + promo" view
+        // is produced by buildPayoutSplitTable() and rendered as a second
+        // table below this one.
+        $breakdown = $this->build($event, $periodStart, $periodEnd);
 
         return collect($breakdown['per_type'])->values()->map(function (array $row) {
             // Strip the TicketType model — Eloquent objects don't survive JSON casting cleanly.
@@ -365,6 +411,190 @@ class SalesBreakdownService
             $row['unit_price'] = $row['price'];
             return $row;
         })->all();
+    }
+
+    /**
+     * Per-(ticket_type, unit_price, promo_code) split table for the payout
+     * "Detalii bilete" view. Each row is one price tier of one type, with a
+     * "(redus)" name suffix and a Tip reducere label when the row corresponds
+     * to a promo-coded purchase. Read on-demand from the blade — no JSON
+     * snapshot.
+     *
+     * @return array<int, array{
+     *   ticket_type_id: int,
+     *   ticket_type_name: string,
+     *   display_name: string,
+     *   is_reduced: bool,
+     *   price: float,
+     *   qty: int,
+     *   gross: float,
+     *   commission_per_ticket: float,
+     *   commission_amount: float,
+     *   commission_mode: string,
+     *   commission_type: string|null,
+     *   commission_rate: float|null,
+     *   commission_fixed: float|null,
+     *   net: float,
+     *   promo_code: string|null,
+     *   promo_label: string
+     * }>
+     */
+    public function buildPayoutSplitTable(Event $event, ?Carbon $periodStart = null, ?Carbon $periodEnd = null, bool $excludePos = true, string $dateColumn = 'created_at'): array
+    {
+        $eventId = $event->id;
+        $allowedColumns = ['created_at', 'paid_at'];
+        $dateColumn = in_array($dateColumn, $allowedColumns, true) ? $dateColumn : 'created_at';
+
+        $tickets = Ticket::where(fn ($q) => $q->where('event_id', $eventId)->orWhere('marketplace_event_id', $eventId))
+            ->whereIn('status', ['valid', 'used'])
+            ->whereHas('order', function ($q) use ($periodStart, $periodEnd, $excludePos, $dateColumn) {
+                $q->whereIn('status', ['paid', 'confirmed', 'completed'])
+                    ->where('source', '!=', 'external_import');
+                if ($excludePos) {
+                    $q->where('source', '!=', 'pos_app')
+                      ->where('source', '!=', 'test_order');
+                }
+                if ($periodStart) {
+                    $q->where($dateColumn, '>=', $periodStart->copy()->startOfDay());
+                }
+                if ($periodEnd) {
+                    $q->where($dateColumn, '<=', $periodEnd->copy()->endOfDay());
+                }
+            })
+            ->with(['ticketType'])
+            ->get(['id', 'order_id', 'ticket_type_id', 'price', 'meta']);
+
+        if ($tickets->isEmpty()) {
+            return [];
+        }
+
+        $orderIds = $tickets->pluck('order_id')->filter()->unique()->values();
+        $ordersById = Order::whereIn('id', $orderIds)->get(['id', 'discount_amount', 'subtotal', 'promo_code', 'meta'])->keyBy('id');
+
+        $defaultRate = (float) (
+            $event->commission_rate
+            ?? $event->marketplaceOrganizer?->commission_rate
+            ?? $event->tenant?->commission_rate
+            ?? $event->marketplaceClient?->commission_rate
+            ?? 5
+        );
+        $defaultMode = $event->commission_mode
+            ?? $event->marketplaceOrganizer?->default_commission_mode
+            ?? $event->marketplaceClient?->commission_mode
+            ?? 'included';
+
+        $currency = $event->currency ?? 'RON';
+
+        // Group key: ticket_type_id | rounded_effective_price | promo_code
+        // (empty when no code). Within a group all tickets share unit price
+        // AND promo origin, so each is one distinct table row.
+        $groups = [];
+        foreach ($tickets as $t) {
+            $order = $ordersById->get($t->order_id);
+            // Set the order relation so getEffectivePrice picks up the
+            // proportional fallback for legacy orders without per-ticket meta.
+            if ($order) $t->setRelation('order', $order);
+
+            $effective = round($t->getEffectivePrice(), 2);
+            $orderMeta = $order && is_array($order->meta) ? $order->meta : [];
+            $promoData = $orderMeta['promo_code'] ?? null;
+            $promoCode = is_array($promoData) ? trim((string) ($promoData['code'] ?? '')) : '';
+            if ($promoCode === '') {
+                $promoCode = trim((string) ($orderMeta['coupon_code'] ?? $order?->promo_code ?? ''));
+            }
+            // We only treat a row as "reduced" when a promo code actually
+            // touched THIS ticket (its meta.discount_amount > 0 in modern
+            // checkout, or the legacy proportional path lowered its price).
+            $ticketDiscount = round((float) ($t->price ?? 0) - $effective, 2);
+            $hasPromoOnThisTicket = $ticketDiscount > 0.01;
+
+            // Group key excludes the code when this specific ticket didn't
+            // benefit from a discount — that way a mixed-eligibility order
+            // doesn't drag the un-discounted tickets into a "(redus)" row.
+            $effectiveCode = $hasPromoOnThisTicket ? $promoCode : '';
+
+            $key = $t->ticket_type_id . '|' . number_format($effective, 4, '.', '') . '|' . $effectiveCode;
+
+            if (!isset($groups[$key])) {
+                $groups[$key] = [
+                    'tt' => $t->ticketType,
+                    'ticket_type_id' => (int) $t->ticket_type_id,
+                    'unit_price' => $effective,
+                    'promo_code' => $effectiveCode,
+                    'promo_meta' => $hasPromoOnThisTicket && $promoData ? $promoData : null,
+                    'is_reduced' => $hasPromoOnThisTicket,
+                    'qty' => 0,
+                ];
+            }
+            $groups[$key]['qty']++;
+        }
+
+        $rows = [];
+        foreach ($groups as $g) {
+            $tt = $g['tt'];
+            if (!$tt) continue;
+            $qty = (int) $g['qty'];
+            $unitPrice = (float) $g['unit_price'];
+
+            $commPerTicket = (float) $tt->calculateCommission($unitPrice, $defaultRate, $defaultMode);
+            $effectiveCommission = $tt->getEffectiveCommission($defaultRate, $defaultMode);
+            $commissionAmount = $commPerTicket * $qty;
+            $mode = $effectiveCommission['mode'];
+            $isOnTop = in_array($mode, ['on_top', 'added_on_top'], true);
+
+            $gross = $unitPrice * $qty + ($isOnTop ? $commissionAmount : 0);
+            $net = $gross - $commissionAmount;
+
+            // Pretty promo label for the Tip reducere column.
+            $promoLabel = '-';
+            if ($g['is_reduced']) {
+                $pm = $g['promo_meta'];
+                $codeStr = $g['promo_code'] !== '' ? 'cod: ' . $g['promo_code'] : 'redus';
+                if (is_array($pm)) {
+                    $type = $pm['type'] ?? null;
+                    $val = $pm['value'] ?? null;
+                    if ($type === 'percentage' && $val !== null) {
+                        $promoLabel = $codeStr . ' (-' . rtrim(rtrim(number_format((float) $val, 2, '.', ''), '0'), '.') . '%)';
+                    } elseif ($type === 'fixed' && $val !== null) {
+                        $promoLabel = $codeStr . ' (-' . number_format((float) $val, 2, '.', '') . ' ' . $currency . ')';
+                    } else {
+                        $promoLabel = $codeStr;
+                    }
+                } else {
+                    $promoLabel = $codeStr;
+                }
+            }
+
+            $rows[] = [
+                'ticket_type_id' => $g['ticket_type_id'],
+                'ticket_type_name' => (string) ($tt->name ?? ''),
+                'display_name' => (string) ($tt->name ?? '') . ($g['is_reduced'] ? ' (redus)' : ''),
+                'is_reduced' => $g['is_reduced'],
+                'price' => round($unitPrice, 2),
+                'qty' => $qty,
+                'gross' => round($gross, 2),
+                'commission_per_ticket' => round($commPerTicket, 4),
+                'commission_amount' => round($commissionAmount, 2),
+                'commission_mode' => (string) $mode,
+                'commission_type' => $effectiveCommission['type'] ?? null,
+                'commission_rate' => isset($effectiveCommission['rate']) ? (float) $effectiveCommission['rate'] : null,
+                'commission_fixed' => isset($effectiveCommission['fixed']) ? (float) $effectiveCommission['fixed'] : null,
+                'net' => round($net, 2),
+                'promo_code' => $g['promo_code'] !== '' ? $g['promo_code'] : null,
+                'promo_label' => $promoLabel,
+            ];
+        }
+
+        // Sort: by type name (alphabetic), then non-reduced before reduced,
+        // then by price desc — mirrors the user's mock layout.
+        usort($rows, function ($a, $b) {
+            $cmp = strcmp($a['ticket_type_name'], $b['ticket_type_name']);
+            if ($cmp !== 0) return $cmp;
+            if ($a['is_reduced'] !== $b['is_reduced']) return $a['is_reduced'] ? 1 : -1;
+            return $b['price'] <=> $a['price'];
+        });
+
+        return $rows;
     }
 
     /**

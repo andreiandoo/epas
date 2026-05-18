@@ -52,7 +52,7 @@ class TicketExportService
                 'ticketType:id,name,event_id,price_cents,sale_price_cents,commission_type,commission_rate,commission_fixed,commission_mode',
                 'ticketType.event:id,title,marketplace_organizer_id',
                 'ticketType.event.marketplaceOrganizer:id,name',
-                'order:id,order_number,total,subtotal,status,promo_code,promo_discount,discount_amount,customer_email,customer_name,created_at',
+                'order:id,order_number,total,subtotal,status,promo_code,promo_discount,discount_amount,meta,customer_email,customer_name,created_at',
             ])
             ->orderBy('id')
             ->chunk(500, function ($tickets) use ($handle) {
@@ -68,7 +68,15 @@ class TicketExportService
 
                     $orgName = $organizer?->name ?? '';
 
-                    $promoCode = $order?->promo_code;
+                    // Marketplace checkout stores the applied promo as
+                    // order.meta.promo_code.code; the orders.promo_code column
+                    // is only written by the tenant-side flow. Read both and
+                    // pick whichever has a value.
+                    $orderMeta = is_array($order?->meta) ? $order->meta : [];
+                    $promoCode = $orderMeta['promo_code']['code']
+                        ?? $orderMeta['coupon_code']
+                        ?? $order?->promo_code
+                        ?: null;
                     $discountAmount = (float) ($order?->discount_amount ?? $order?->promo_discount ?? 0);
                     $hasDiscount = (!empty($promoCode) || $discountAmount > 0) ? 1 : 0;
 

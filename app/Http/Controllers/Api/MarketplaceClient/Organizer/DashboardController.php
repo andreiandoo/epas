@@ -383,11 +383,16 @@ class DashboardController extends BaseController
                 ->all();
 
             // Promo / discount fields surfaced on the Vanzari row's
-            // Valoare column. promo_discount is the per-promo amount we
-            // care about for display; discount_amount can include other
-            // sources (gift card, manual adjustments) and would mislead
-            // the operator into thinking the promo gave the full discount.
-            $promoCode = trim((string) ($order->promo_code ?? '')) ?: null;
+            // Valoare column. Marketplace checkout writes the code to
+            // order.meta.promo_code.code; orders.promo_code (column) is
+            // only set by the tenant-side flow. Pull from either source.
+            $orderMeta = is_array($order->meta) ? $order->meta : [];
+            $promoCode = trim((string) (
+                $orderMeta['promo_code']['code']
+                ?? $orderMeta['coupon_code']
+                ?? $order->promo_code
+                ?? ''
+            )) ?: null;
             $promoDiscount = (float) ($order->promo_discount ?? 0);
 
             return [
@@ -499,10 +504,17 @@ class DashboardController extends BaseController
                 $customer = $order->marketplaceCustomer?->full_name ?? $order->customer_name ?? '-';
                 $phone = $order->marketplaceCustomer?->phone ?? $order->customer_phone ?? '-';
                 $createdAt = $order->created_at->format('Y-m-d H:i');
-                // Promo code used on the order (stored as plain string on
-                // the order row, separate from the relationship to the
-                // promo_code_id). Empty when no discount was applied.
-                $promoCode = trim((string) ($order->promo_code ?? '')) ?: '';
+                // Marketplace checkout stores the applied promo as
+                // order.meta.promo_code.code; the orders.promo_code column
+                // is only written by the tenant-side flow. Pick first that
+                // has a value so the column reliably shows the code.
+                $orderMeta = is_array($order->meta) ? $order->meta : [];
+                $promoCode = trim((string) (
+                    $orderMeta['promo_code']['code']
+                    ?? $orderMeta['coupon_code']
+                    ?? $order->promo_code
+                    ?? ''
+                ));
 
                 if ($order->tickets->isEmpty()) {
                     // Order without tickets — emit one row so the order is

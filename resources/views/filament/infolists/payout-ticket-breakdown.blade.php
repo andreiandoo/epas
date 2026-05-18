@@ -2,6 +2,22 @@
     $record = $getRecord();
     $breakdown = $record->ticket_breakdown ?? [];
     $currency = $record->currency ?? 'RON';
+
+    // Second table: per-(type × unit price × promo code) split, computed
+    // on-the-fly so the snapshot stays an aggregate. Includes the promo
+    // label per row and a "(redus)" name suffix when applicable.
+    $splitRows = [];
+    if ($record->event_id) {
+        $splitEvent = $record->event ?? \App\Models\Event::find($record->event_id);
+        if ($splitEvent) {
+            try {
+                $splitRows = app(\App\Services\Marketplace\SalesBreakdownService::class)
+                    ->buildPayoutSplitTable($splitEvent, $record->period_start, $record->period_end);
+            } catch (\Throwable $e) {
+                $splitRows = [];
+            }
+        }
+    }
     // Fallback for legacy payouts whose snapshot pre-dates per-row discount.
     // New payouts (built by SalesBreakdownService) carry `discount` and
     // `extras` directly on each row, so this map only matters as a fallback.
@@ -164,6 +180,92 @@
 </div>
 @else
     <p class="text-sm text-gray-500 dark:text-gray-400">Nu sunt detalii bilete disponibile.</p>
+@endif
+
+@if(!empty($splitRows))
+<div class="overflow-x-auto mt-6 border-t border-gray-200 dark:border-gray-700 pt-4">
+    <div class="px-3 mb-2 flex items-center gap-2">
+        <x-heroicon-o-tag class="w-4 h-4 text-emerald-500" />
+        <h4 class="text-sm font-semibold text-gray-900 dark:text-white">Defalcare pe nivel de preț</h4>
+        <span class="text-xs text-gray-500">fiecare tip de bilet împărțit pe preț unitar și cod de reducere</span>
+    </div>
+    <table class="w-full text-sm">
+        <thead>
+            <tr class="border-b border-gray-200 dark:border-gray-700">
+                <th class="text-left py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Tip bilet</th>
+                <th class="text-right py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Preț</th>
+                <th class="text-right py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Qty</th>
+                <th class="text-right py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Total brut</th>
+                <th class="text-right py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Comision</th>
+                <th class="text-right py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Net bilete</th>
+                <th class="text-left py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Tip reducere</th>
+                <th class="text-right py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Mod comision</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+            @php
+                $splitTotalQty = 0;
+                $splitTotalGross = 0;
+                $splitTotalCommission = 0;
+                $splitTotalNet = 0;
+            @endphp
+            @foreach($splitRows as $sr)
+                @php
+                    $sCommType = $sr['commission_type'] ?? null;
+                    $sCommRate = $sr['commission_rate'] ?? null;
+                    $sCommFixed = $sr['commission_fixed'] ?? null;
+                    $sRateLabel = match (true) {
+                        $sCommType === 'percentage' && $sCommRate !== null
+                            => $sCommRate . '%',
+                        $sCommType === 'fixed' && $sCommFixed !== null
+                            => number_format((float) $sCommFixed, 2) . ' ' . $currency,
+                        $sCommType === 'both' && ($sCommRate !== null || $sCommFixed !== null)
+                            => trim(
+                                ($sCommRate !== null ? $sCommRate . '%' : '')
+                                . ($sCommRate !== null && $sCommFixed !== null ? ' + ' : '')
+                                . ($sCommFixed !== null ? number_format((float) $sCommFixed, 2) . ' ' . $currency : '')
+                            ),
+                        $sCommRate !== null => $sCommRate . '%',
+                        default => '',
+                    };
+                    $sCommissionLabel = match($sr['commission_mode'] ?? '') {
+                        'added_on_top', 'on_top' => 'Peste preț' . ($sRateLabel ? " ({$sRateLabel})" : ''),
+                        'included' => 'Inclus' . ($sRateLabel ? " ({$sRateLabel})" : ''),
+                        default => $sr['commission_mode'] ?? '',
+                    };
+                    $splitTotalQty += $sr['qty'];
+                    $splitTotalGross += $sr['gross'];
+                    $splitTotalCommission += $sr['commission_amount'];
+                    $splitTotalNet += $sr['net'];
+                @endphp
+                <tr class="{{ $sr['is_reduced'] ? 'bg-emerald-50/40 dark:bg-emerald-900/10' : '' }}">
+                    <td class="py-2 px-3 font-medium text-gray-900 dark:text-white">
+                        {{ $sr['display_name'] }}
+                    </td>
+                    <td class="py-2 px-3 text-right text-gray-600 dark:text-gray-300 font-mono">{{ number_format($sr['price'], 2) }}</td>
+                    <td class="py-2 px-3 text-right text-gray-600 dark:text-gray-300 font-semibold">{{ $sr['qty'] }}</td>
+                    <td class="py-2 px-3 text-right text-gray-600 dark:text-gray-300 font-mono">{{ number_format($sr['gross'], 2) }}</td>
+                    <td class="py-2 px-3 text-right text-red-500 dark:text-red-400 font-mono">-{{ number_format($sr['commission_amount'], 2) }}</td>
+                    <td class="py-2 px-3 text-right text-gray-900 dark:text-white font-mono font-semibold">{{ number_format($sr['net'], 2) }}</td>
+                    <td class="py-2 px-3 text-left text-xs {{ $sr['is_reduced'] ? 'text-emerald-700 dark:text-emerald-300 font-medium' : 'text-gray-400 dark:text-gray-500' }}">{{ $sr['promo_label'] }}</td>
+                    <td class="py-2 px-3 text-right text-gray-500 dark:text-gray-400 text-xs">{{ $sCommissionLabel }}</td>
+                </tr>
+            @endforeach
+        </tbody>
+        <tfoot>
+            <tr class="border-t-2 border-gray-300 dark:border-gray-600 font-semibold">
+                <td class="py-2 px-3 text-gray-900 dark:text-white">Total</td>
+                <td class="py-2 px-3"></td>
+                <td class="py-2 px-3 text-right text-gray-900 dark:text-white">{{ $splitTotalQty }}</td>
+                <td class="py-2 px-3 text-right text-gray-900 dark:text-white font-mono">{{ number_format($splitTotalGross, 2) }} {{ $currency }}</td>
+                <td class="py-2 px-3 text-right text-red-500 dark:text-red-400 font-mono">-{{ number_format($splitTotalCommission, 2) }} {{ $currency }}</td>
+                <td class="py-2 px-3 text-right text-gray-900 dark:text-white font-mono">{{ number_format($splitTotalNet, 2) }} {{ $currency }}</td>
+                <td class="py-2 px-3"></td>
+                <td class="py-2 px-3"></td>
+            </tr>
+        </tfoot>
+    </table>
+</div>
 @endif
 
 @php
