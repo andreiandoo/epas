@@ -452,12 +452,20 @@ class OrderResource extends Resource
                     ->modalHeading(fn ($record) => 'Rambursare ' . ($record->order_number ?? '#' . $record->id))
                     ->modalDescription(fn ($record) => 'Rambursare completă pentru comanda ' . ($record->order_number ?? '#' . $record->id) . '. Total: ' . number_format($record->total ?? 0, 2) . ' ' . ($record->currency ?? 'RON'))
                     ->form([
-                        \Filament\Forms\Components\Toggle::make('refund_commission')
-                            ->label('Include comisionul în rambursare')
-                            ->helperText(fn ($record) => ($record->commission_rate ?? 0) > 0
-                                ? 'Comision: ' . number_format($record->commission_rate, 1) . '%. Dacă dezactivat, comisionul va fi reținut.'
-                                : 'Fără comision configurat.')
-                            ->default(false),
+                        \Filament\Forms\Components\Radio::make('refund_variant')
+                            ->label('Tip rambursare')
+                            ->options(function ($record) {
+                                $sub = (float) ($record->subtotal ?? 0) - (float) ($record->discount_amount ?? 0);
+                                $tot = (float) ($record->total ?? 0);
+                                $cur = $record->currency ?? 'RON';
+                                return [
+                                    'face_only' => 'Ramburs fără comision — ' . number_format($sub, 2) . ' ' . $cur . ' (comisionul rămâne la organizator)',
+                                    'with_commission' => 'Ramburs total — ' . number_format($tot, 2) . ' ' . $cur . ' (inclusiv comisionul, clientul primește toată suma)',
+                                ];
+                            })
+                            ->default('face_only')
+                            ->required()
+                            ->inline(false),
                         \Filament\Forms\Components\Select::make('reason_category')
                             ->label('Motiv')
                             ->options([
@@ -472,7 +480,7 @@ class OrderResource extends Resource
                     ])
                     ->action(function ($record, array $data) {
                         $refundService = app(\App\Services\PaymentRefundService::class);
-                        $refundCommission = (bool) ($data['refund_commission'] ?? false);
+                        $refundCommission = ($data['refund_variant'] ?? 'face_only') === 'with_commission';
                         $reasonLabels = [
                             'event_cancelled' => 'Eveniment anulat',
                             'event_postponed' => 'Eveniment amânat',
@@ -539,9 +547,42 @@ class OrderResource extends Resource
                         ->color('danger')
                         ->requiresConfirmation()
                         ->modalHeading('Rambursare comenzi selectate')
-                        ->modalDescription('Se va procesa rambursarea completă (fără comision) pentru toate comenzile selectate care au status plătit/completat. Comenzile deja rambursate vor fi ignorate.')
-                        ->action(function (\Illuminate\Database\Eloquent\Collection $records) {
+                        ->modalDescription('Comenzile deja rambursate sau neplătite vor fi ignorate.')
+                        ->form([
+                            \Filament\Forms\Components\Radio::make('refund_variant')
+                                ->label('Tip rambursare aplicat la TOATE comenzile selectate')
+                                ->options([
+                                    'face_only' => 'Ramburs fără comision (comisionul rămâne la organizator)',
+                                    'with_commission' => 'Ramburs total (clientul primește toată suma, inclusiv comisionul)',
+                                ])
+                                ->default('face_only')
+                                ->required()
+                                ->inline(false),
+                            \Filament\Forms\Components\Select::make('reason_category')
+                                ->label('Motiv')
+                                ->options([
+                                    'event_cancelled' => 'Eveniment anulat',
+                                    'event_postponed' => 'Eveniment amânat',
+                                    'personal_reason' => 'Motiv personal client',
+                                    'duplicate_purchase' => 'Achiziție duplicat',
+                                    'technical_issue' => 'Problemă tehnică',
+                                    'other' => 'Alt motiv',
+                                ])
+                                ->nullable(),
+                        ])
+                        ->action(function (\Illuminate\Database\Eloquent\Collection $records, array $data) {
                             $refundService = app(\App\Services\PaymentRefundService::class);
+                            $refundCommission = ($data['refund_variant'] ?? 'face_only') === 'with_commission';
+                            $reasonLabels = [
+                                'event_cancelled' => 'Eveniment anulat',
+                                'event_postponed' => 'Eveniment amânat',
+                                'personal_reason' => 'Motiv personal client',
+                                'duplicate_purchase' => 'Achiziție duplicat',
+                                'technical_issue' => 'Problemă tehnică',
+                                'other' => 'Alt motiv',
+                            ];
+                            $reason = $reasonLabels[$data['reason_category'] ?? ''] ?? 'Rambursare bulk';
+                            $reasonCat = $data['reason_category'] ?? null;
                             $success = 0;
                             $failed = 0;
                             $skipped = 0;
@@ -555,7 +596,7 @@ class OrderResource extends Resource
                                     $skipped++;
                                     continue;
                                 }
-                                $result = $refundService->processOrderLevelRefund($order, false, 'Rambursare bulk');
+                                $result = $refundService->processOrderLevelRefund($order, $refundCommission, $reason, $reasonCat);
                                 if ($result->success || $result->requiresManual) {
                                     $success++;
                                 } else {
@@ -563,7 +604,8 @@ class OrderResource extends Resource
                                 }
                             }
 
-                            $msg = "{$success} comenzi rambursate.";
+                            $variantLabel = $refundCommission ? 'total' : 'fără comision';
+                            $msg = "{$success} comenzi rambursate ({$variantLabel}).";
                             if ($failed > 0) $msg .= " {$failed} eșuate.";
                             if ($skipped > 0) $msg .= " {$skipped} ignorate (deja rambursate sau neplătite).";
                             \Filament\Notifications\Notification::make()

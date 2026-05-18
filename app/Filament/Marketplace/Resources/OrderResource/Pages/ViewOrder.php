@@ -349,11 +349,18 @@ class ViewOrder extends ViewRecord
                 ->required(fn (Get $get) => $get('refund_type') === 'partial')
                 ->live(),
 
-            Forms\Components\Toggle::make('refund_commission')
-                ->label('Include comisionul în rambursare')
+            Forms\Components\Radio::make('refund_variant')
+                ->label('Tip rambursare')
+                ->options([
+                    'face_only' => 'Ramburs fără comision — comisionul rămâne la organizator',
+                    'with_commission' => 'Ramburs total — clientul primește toată suma, inclusiv comisionul',
+                ])
+                ->default('face_only')
+                ->required()
+                ->inline(false)
                 ->helperText(function () use ($order, $commissionByType) {
                     $totalCommission = (float) ($order->commission_amount ?? 0);
-                    if ($totalCommission <= 0) return 'Fără comision pe această comandă.';
+                    if ($totalCommission <= 0) return 'Fără comision pe această comandă — ambele variante returnează aceeași sumă.';
                     $parts = [];
                     foreach ($commissionByType as $typeName => $cd) {
                         if ($cd['rate'] > 0) {
@@ -363,10 +370,8 @@ class ViewOrder extends ViewRecord
                         }
                     }
                     return 'Comision total: ' . number_format($totalCommission, 2) . ' ' . ($order->currency ?? 'RON')
-                        . ($parts ? ' (' . implode(', ', $parts) . ')' : '')
-                        . '. Dacă dezactivat, comisionul va fi reținut.';
+                        . ($parts ? ' (' . implode(', ', $parts) . ')' : '');
                 })
-                ->default(false)
                 ->live(),
 
             Forms\Components\Placeholder::make('refund_summary')
@@ -374,7 +379,7 @@ class ViewOrder extends ViewRecord
                 ->content(function (Get $get) use ($order, $tickets, $discountRatio, $commissionByType) {
                     $refundType = $get('refund_type') ?? 'full';
                     $selectedIds = $get('ticket_ids') ?? [];
-                    $refundCommission = (bool) $get('refund_commission');
+                    $refundCommission = ($get('refund_variant') ?? 'face_only') === 'with_commission';
 
                     $refundTickets = $refundType === 'full'
                         ? $tickets
@@ -474,7 +479,7 @@ class ViewOrder extends ViewRecord
     {
         $order = $this->record;
         $refundService = app(PaymentRefundService::class);
-        $refundCommission = (bool) ($data['refund_commission'] ?? false);
+        $refundCommission = ($data['refund_variant'] ?? 'face_only') === 'with_commission';
         $reasonCategory = $data['reason_category'] ?? null;
 
         $reasonLabels = [
