@@ -103,6 +103,24 @@ class EditTaxTemplate extends EditRecord
                         })
                         ->searchable()
                         ->helperText('Opțional — selectează un decont pentru a folosi datele lui reale (bilete, comision etc).'),
+
+                    Forms\Components\Select::make('tax_registry_id')
+                        ->label('Registry fiscal')
+                        ->options(function () {
+                            $marketplace = static::getMarketplaceClient();
+                            if (!$marketplace) return [];
+                            return MarketplaceTaxRegistry::where('marketplace_client_id', $marketplace->id)
+                                ->orderBy('name')
+                                ->get()
+                                ->mapWithKeys(fn ($r) => [
+                                    $r->id => ($r->name ?? 'Registry #' . $r->id)
+                                        . ($r->commune ? ' — ' . $r->commune : '')
+                                        . ($r->tax_rate !== null ? ' (' . rtrim(rtrim(number_format((float) $r->tax_rate, 2, '.', ''), '0'), '.') . '%)' : ''),
+                                ])
+                                ->toArray();
+                        })
+                        ->searchable()
+                        ->helperText('Opțional — alege explicit registry-ul fiscal pentru test. Fallback: registry-ul evenimentului → primul registry activ al marketplace-ului.'),
                 ])
                 ->action(function (array $data) {
                     $template = $this->record->fresh();
@@ -110,9 +128,16 @@ class EditTaxTemplate extends EditRecord
                     $organizer = MarketplaceOrganizer::find($data['organizer_id']);
                     $event = !empty($data['event_id']) ? Event::with(['ticketTypes', 'venue'])->find($data['event_id']) : null;
                     $payout = !empty($data['payout_id']) ? MarketplacePayout::find($data['payout_id']) : null;
-                    // Prefer event-specific tax registry
+                    // Resolution order:
+                    //  1. Explicit picker from the modal (so the user can test
+                    //     with any registry regardless of event linkage).
+                    //  2. Event's linked registry.
+                    //  3. First active registry on the marketplace.
                     $taxRegistry = null;
-                    if ($event && $event->marketplace_tax_registry_id) {
+                    if (!empty($data['tax_registry_id'])) {
+                        $taxRegistry = MarketplaceTaxRegistry::find($data['tax_registry_id']);
+                    }
+                    if (!$taxRegistry && $event && $event->marketplace_tax_registry_id) {
                         $taxRegistry = MarketplaceTaxRegistry::find($event->marketplace_tax_registry_id);
                     }
                     if (!$taxRegistry) {

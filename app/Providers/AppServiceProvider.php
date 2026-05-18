@@ -125,6 +125,12 @@ class AppServiceProvider extends ServiceProvider
         \App\Models\FestivalEdition::observe(\App\Observers\FestivalEditionObserver::class);
         \App\Models\Coupon\CouponCode::observe(\App\Observers\CouponCodeObserver::class);
 
+        // Phase B series allocations — keep event_ticket_type_promo_series
+        // in sync when promos are created/updated/deleted.
+        \App\Models\MarketplaceOrganizerPromoCode::observe(
+            \App\Observers\MarketplaceOrganizerPromoCodeObserver::class
+        );
+
         // System-error mirroring observers: capture business-domain failures
         // (email send failure, queue job failure, payment status flips) into
         // the system_errors dashboard alongside Log:: entries.

@@ -995,61 +995,56 @@ class MarketplaceTaxTemplate extends Model
 
             // Tax-situation table rows for page 2 of monthly tax declarations
             // ("Situatia biletelor si abonamentelor la spectacole, vandute").
-            // One row per actual (ticket_type, effective_price) sales group —
-            // reduced-price tickets surface on separate lines from the parent
-            // full-price row. Sourced from SalesBreakdownService so promo
-            // codes naturally produce their own rows.
+            //
+            // Phase B: series_prefix and qty_allocated come from the persisted
+            // event_ticket_type_promo_series table (synced by
+            // SeriesAllocator + the promo observer). qty_sold for the actual
+            // declaration comes from buildPayoutSplitTable so the number
+            // reflects current live sales without depending on the
+            // refreshQtySold cache freshness. The combination keeps the
+            // series_prefix identical across cerere avizare / declaratie /
+            // PV distrugere while letting the qty column stay live.
             //
             // Skips invitations (price=0) — not declarable income.
-            //
-            // Series convention (Phase A — fabricated on the fly):
-            //  - Full-price row: numbers continue from the ticket type's
-            //    series_start. A type allocated GA001-GA100 with 64 sold at
-            //    full price shows "GA001" .. "GA064" (NOT the full allocation
-            //    end GA100 — only what was sold).
-            //  - Reduced row: fabricated series "{prefix}-{CODE}" with its
-            //    own counter starting at 001. Same type with 3 sold via
-            //    HAILAQFEEL shows "GA-HAILAQFEEL!001" .. "GA-HAILAQFEEL!003".
-            //  - Fallback (no parent series defined): cells show type name +
-            //    code label.
-            // Numbers for promo rows are a fiscal accounting artifact — no
-            // physical tickets correspond. PV distrugere accounts for unsold
-            // against the parent series only.
-            $buildSplitSeriesRange = function (string $seriesStart, string $codeSuffix, int $qtyInTier): array {
-                if ($qtyInTier <= 0 || $seriesStart === '') {
-                    return ['', ''];
-                }
-                if (!preg_match('/^(.*?)(\d+)$/', $seriesStart, $sm)) {
-                    return [$seriesStart, $seriesStart];
-                }
-                $prefix = trim($sm[1]);
-                $startNum = (int) $sm[2];
-                $padLen = strlen($sm[2]);
-                $effectivePrefix = $codeSuffix === ''
-                    ? $prefix
-                    : ($prefix !== '' ? $prefix . '-' . $codeSuffix : $codeSuffix);
-                // Full-price row continues the parent numbering; promo rows
-                // start a fabricated counter at 1.
-                $firstNum = $codeSuffix === '' ? $startNum : 1;
-                $lastNum = $firstNum + $qtyInTier - 1;
-                return [
-                    $effectivePrefix . str_pad((string) $firstNum, $padLen, '0', STR_PAD_LEFT),
-                    $effectivePrefix . str_pad((string) $lastNum, $padLen, '0', STR_PAD_LEFT),
-                ];
-            };
-
             $taxSituationRowsHtml = '';
             $taxSituationTotalQty = 0;
             $taxSituationTotalValue = 0.0;
             if ($event) {
+                // Auto-sync allocations on first access for this event so
+                // a freshly-deployed environment doesn't need a manual
+                // `php artisan series:sync` to populate Phase B data.
+                try {
+                    $hasAllocations = \App\Models\EventTicketTypePromoSeries::query()
+                        ->whereIn('ticket_type_id', $event->ticketTypes->pluck('id'))
+                        ->exists();
+                    if (!$hasAllocations) {
+                        app(\App\Services\Marketplace\SeriesAllocator::class)->syncForEvent($event);
+                    }
+                } catch (\Throwable $e) {
+                    // Non-fatal — fall back to the on-the-fly derivation below.
+                }
+
+                // Index persisted allocations by (ticket_type_id, promo_code_id, is_intrinsic_red).
+                $allocationByKey = [];
+                try {
+                    $allocations = \App\Models\EventTicketTypePromoSeries::query()
+                        ->whereIn('ticket_type_id', $event->ticketTypes->pluck('id'))
+                        ->get();
+                    foreach ($allocations as $a) {
+                        $key = $a->ticket_type_id . '|' . ($a->promo_code_id ?? 'NULL') . '|' . ($a->is_intrinsic_red ? 'RED' : 'STD');
+                        $allocationByKey[$key] = $a;
+                    }
+                } catch (\Throwable $e) {
+                    $allocationByKey = [];
+                }
+
                 try {
                     $splitRows = app(\App\Services\Marketplace\SalesBreakdownService::class)
                         ->buildPayoutSplitTable($event, null, null, excludePos: true);
                 } catch (\Throwable $e) {
                     $splitRows = [];
                 }
-                // Filter out invitations (effective_price <= 0 — they have no
-                // catalog value to declare).
+                // Skip invitations (no declarable value).
                 $splitRows = array_values(array_filter($splitRows, function ($r) {
                     return (float) ($r['price'] ?? 0) > 0;
                 }));
@@ -1063,6 +1058,51 @@ class MarketplaceTaxTemplate extends Model
                     return (float) ($b['price'] ?? 0) <=> (float) ($a['price'] ?? 0);
                 });
 
+                // Inline fallback for events that pre-date Phase B and didn't
+                // get sync'd (or for promos that aren't persisted yet because
+                // the observer fires only on save).
+                $deriveFallbackRange = function (string $seriesStart, string $codeSuffix, int $qtyInTier): array {
+                    if ($qtyInTier <= 0 || $seriesStart === '') {
+                        return ['', ''];
+                    }
+                    if (!preg_match('/^(.*?)(\d+)$/', $seriesStart, $sm)) {
+                        return [$seriesStart, $seriesStart];
+                    }
+                    $prefix = trim($sm[1]);
+                    $startNum = (int) $sm[2];
+                    $padLen = strlen($sm[2]);
+                    $effectivePrefix = $codeSuffix === ''
+                        ? $prefix
+                        : ($prefix !== '' ? $prefix . '-' . $codeSuffix : $codeSuffix);
+                    $firstNum = $codeSuffix === '' ? $startNum : 1;
+                    $lastNum = $firstNum + $qtyInTier - 1;
+                    return [
+                        $effectivePrefix . str_pad((string) $firstNum, $padLen, '0', STR_PAD_LEFT),
+                        $effectivePrefix . str_pad((string) $lastNum, $padLen, '0', STR_PAD_LEFT),
+                    ];
+                };
+
+                // Resolve the promo_code_id for a given split row by looking
+                // it up on MarketplaceOrganizerPromoCode (since buildPayoutSplitTable
+                // only gives us the code string, not the id).
+                $promoIdByCode = [];
+                try {
+                    $codes = collect($splitRows)
+                        ->pluck('promo_code')
+                        ->filter()
+                        ->unique()
+                        ->values()
+                        ->all();
+                    if (!empty($codes)) {
+                        $promoIdByCode = \App\Models\MarketplaceOrganizerPromoCode::query()
+                            ->whereIn('code', $codes)
+                            ->pluck('id', 'code')
+                            ->all();
+                    }
+                } catch (\Throwable $e) {
+                    $promoIdByCode = [];
+                }
+
                 $rowNum = 1;
                 foreach ($splitRows as $row) {
                     $ttId = $row['ticket_type_id'] ?? null;
@@ -1073,25 +1113,58 @@ class MarketplaceTaxTemplate extends Model
                     $price = (float) ($row['price'] ?? 0);
                     $total = $price * $qty;
 
-                    // Resolve parent series start from the ticket type row.
-                    $seriesStart = '';
-                    if ($ttId) {
-                        $ttRow = $event->ticketTypes->firstWhere('id', $ttId);
-                        if ($ttRow) {
-                            $seriesStart = (string) ($ttRow->series_start ?? '');
+                    $deLa = '';
+                    $panaLa = '';
+
+                    // Look up persisted allocation for the matching tier.
+                    $promoId = $promoCode !== '' ? ($promoIdByCode[$promoCode] ?? null) : null;
+                    $allocKey = $ttId . '|' . ($promoId ?? 'NULL') . '|' . ($isReduced && $promoId === null ? 'RED' : 'STD');
+                    $allocation = $allocationByKey[$allocKey] ?? null;
+
+                    if ($allocation && $allocation->series_prefix !== '') {
+                        // Determine padding from the parent series_start if
+                        // available; default to 3 digits otherwise. The split
+                        // table doesn't carry padding info on its own.
+                        $padLen = 3;
+                        $seriesStart = '';
+                        if ($ttId) {
+                            $ttRow = $event->ticketTypes->firstWhere('id', $ttId);
+                            if ($ttRow) {
+                                $seriesStart = (string) ($ttRow->series_start ?? '');
+                                if ($seriesStart !== '' && preg_match('/^.*?(\d+)$/', $seriesStart, $m)) {
+                                    $padLen = strlen($m[1]);
+                                }
+                            }
                         }
+                        // Parent (non-reduced) rows continue the existing
+                        // numbering from series_start. Promo / RED rows
+                        // start a fresh counter from 1.
+                        $startNum = 1;
+                        if (!$isReduced && $allocation->promo_code_id === null && !$allocation->is_intrinsic_red) {
+                            if ($seriesStart !== '' && preg_match('/^.*?(\d+)$/', $seriesStart, $m)) {
+                                $startNum = (int) $m[1];
+                            }
+                        }
+                        $endNum = $startNum + max(0, $qty - 1);
+                        $deLa = $allocation->series_prefix . str_pad((string) $startNum, $padLen, '0', STR_PAD_LEFT);
+                        $panaLa = $allocation->series_prefix . str_pad((string) $endNum, $padLen, '0', STR_PAD_LEFT);
+                    } else {
+                        // No persisted allocation — fall back to on-the-fly
+                        // derivation from the ticket type's series_start.
+                        $seriesStart = '';
+                        if ($ttId) {
+                            $ttRow = $event->ticketTypes->firstWhere('id', $ttId);
+                            if ($ttRow) {
+                                $seriesStart = (string) ($ttRow->series_start ?? '');
+                            }
+                        }
+                        $codeSuffix = $isReduced
+                            ? ($promoCode !== '' ? strtoupper($promoCode) : 'RED')
+                            : '';
+                        [$deLa, $panaLa] = $deriveFallbackRange($seriesStart, $codeSuffix, $qty);
                     }
 
-                    // Suffix for fabricated promo series — uppercased code
-                    // (e.g. "HAILAQFEEL!"), or "RED" for intrinsic discounts.
-                    $codeSuffix = '';
-                    if ($isReduced) {
-                        $codeSuffix = $promoCode !== '' ? strtoupper($promoCode) : 'RED';
-                    }
-                    [$deLa, $panaLa] = $buildSplitSeriesRange($seriesStart, $codeSuffix, $qty);
-
-                    // Fallback when the ticket type has no series defined —
-                    // show name + code label so the row stays meaningful.
+                    // Fallback to type name + code when nothing else resolves.
                     if ($deLa === '' && $panaLa === '') {
                         $deLa = $ttName . ($isReduced ? ' - ' . ($promoCode ?: 'redus') : '');
                         $panaLa = '';
