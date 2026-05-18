@@ -63,23 +63,43 @@ class SeriesAllocator
         // points at one of these types, OR (marketplace_event_id == event
         // AND no ticket type restriction → applies to every type of the
         // event). Same rules as the existing ticket_types_rows generator.
+        //
+        // Filtering in PHP rather than at SQL because PostgreSQL's json
+        // type has no `=` operator vs an unknown literal, and
+        // whereJsonContains() generates `column::jsonb @> $param` which
+        // also fails when $param is an unquoted integer. Scoping to the
+        // event's marketplace_client_id keeps the result set small even
+        // when an organizer has many promos.
+        $marketplaceClientId = (int) ($event->marketplace_client_id ?? 0);
         $promos = MarketplaceOrganizerPromoCode::query()
+            ->when(
+                $marketplaceClientId > 0,
+                fn ($q) => $q->where('marketplace_client_id', $marketplaceClientId)
+            )
             ->where('status', 'active')
-            ->where(function ($q) use ($ticketTypeIds, $eventId) {
-                $q->whereIn('ticket_type_id', $ticketTypeIds);
-                foreach ($ticketTypeIds as $ttId) {
-                    $q->orWhereJsonContains('applicable_ticket_type_ids', $ttId);
+            ->get()
+            ->filter(function (MarketplaceOrganizerPromoCode $promo) use ($ticketTypeIds, $eventId) {
+                // Direct single-fk match (legacy column).
+                if ($promo->ticket_type_id && in_array((int) $promo->ticket_type_id, $ticketTypeIds, true)) {
+                    return true;
                 }
-                $q->orWhere(function ($q2) use ($eventId) {
-                    $q2->where('marketplace_event_id', $eventId)
-                       ->whereNull('ticket_type_id')
-                       ->where(function ($q3) {
-                           $q3->whereNull('applicable_ticket_type_ids')
-                              ->orWhere('applicable_ticket_type_ids', '[]');
-                       });
-                });
+                // JSON array match — handled in PHP to dodge the pgsql
+                // json/jsonb operator quirks.
+                $applicable = $promo->applicable_ticket_type_ids;
+                if (is_array($applicable) && !empty($applicable)) {
+                    foreach ($applicable as $id) {
+                        if (in_array((int) $id, $ticketTypeIds, true)) {
+                            return true;
+                        }
+                    }
+                }
+                // Event-scoped promo with no ticket type restriction →
+                // applies to every type of this event.
+                $promoEventId = (int) ($promo->marketplace_event_id ?? 0);
+                $hasNoRestriction = !$promo->ticket_type_id && (empty($applicable) || $applicable === []);
+                return $promoEventId === $eventId && $hasNoRestriction;
             })
-            ->get();
+            ->values();
 
         $rowsToKeep = [];
 
