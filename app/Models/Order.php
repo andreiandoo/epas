@@ -59,6 +59,8 @@ class Order extends Model
         'refunded_at',
         'refund_amount',
         'refund_reason',
+        'refund_status',
+        'refunded_amount',
         'metadata',
     ];
 

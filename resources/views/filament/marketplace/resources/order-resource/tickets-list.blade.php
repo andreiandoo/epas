@@ -54,6 +54,7 @@
                     'pending' => 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300',
                     'cancelled' => 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300',
                     'used' => 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
+                    'refunded' => 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300',
                     default => 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
                 } }}">
                     {{ match($ticket->status) {
@@ -61,6 +62,7 @@
                         'pending' => 'In asteptare',
                         'cancelled' => 'Anulat',
                         'used' => 'Folosit',
+                        'refunded' => '↩ Rambursat',
                         default => ucfirst($ticket->status),
                     } }}
                 </span>
