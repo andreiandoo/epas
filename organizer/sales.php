@@ -339,7 +339,7 @@ function renderOrders() {
                 <td class="px-4 py-3 text-right">
                     <div class="flex flex-col items-end">
                         <span class="font-semibold text-secondary">${AmbiletUtils.formatCurrency((order.net_total ?? order.total) || 0)}</span>
-                        ${order.promo_code ? `<span class="text-xs text-emerald-600 font-medium mt-0.5">Cod: ${escHtml(order.promo_code)}${order.promo_discount > 0 ? ' (-' + AmbiletUtils.formatCurrency(order.promo_discount) + ')' : ''}</span>` : ''}
+                        ${order.discount_info ? `<span class="text-[11px] text-emerald-600 font-medium mt-0.5 leading-tight">${order.discount_info.code ? 'Cod ' + escHtml(order.discount_info.code) + ': ' : 'Redus '}-${AmbiletUtils.formatCurrency(order.discount_info.discount_amount)} (din ${AmbiletUtils.formatCurrency(order.discount_info.original_value)})</span>` : ''}
                     </div>
                 </td>
                 <td class="px-4 py-3 text-center">${statusBadge}</td>
