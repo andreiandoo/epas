@@ -519,7 +519,14 @@ class SalesBreakdownService
                 $groups[$key] = [
                     'tt' => $t->ticketType,
                     'ticket_type_id' => (int) $t->ticket_type_id,
+                    // Display price = what the customer actually paid per ticket.
                     'unit_price' => $effective,
+                    // Commission base = pre-promo line price (the catalog/sale
+                    // value of this ticket). Marketplace commission is charged
+                    // on the full ticket value, NOT the post-promo amount —
+                    // promo discount comes out of the organizer's net, not
+                    // out of the marketplace's commission.
+                    'commission_base' => (float) ($t->price ?? 0),
                     'promo_code' => $effectiveCode,
                     'promo_meta' => $hasPromoOnThisTicket && $promoData ? $promoData : null,
                     'is_reduced' => $hasPromoOnThisTicket,
@@ -535,13 +542,19 @@ class SalesBreakdownService
             if (!$tt) continue;
             $qty = (int) $g['qty'];
             $unitPrice = (float) $g['unit_price'];
+            // Calculate commission on the pre-promo price — promo discount
+            // reduces the organizer's net, not the marketplace's cut. For
+            // rows without a promo, commissionBase == unitPrice.
+            $commissionBase = (float) $g['commission_base'];
 
-            $commPerTicket = (float) $tt->calculateCommission($unitPrice, $defaultRate, $defaultMode);
+            $commPerTicket = (float) $tt->calculateCommission($commissionBase, $defaultRate, $defaultMode);
             $effectiveCommission = $tt->getEffectiveCommission($defaultRate, $defaultMode);
             $commissionAmount = $commPerTicket * $qty;
             $mode = $effectiveCommission['mode'];
             $isOnTop = in_array($mode, ['on_top', 'added_on_top'], true);
 
+            // Gross / net use the displayed unit price (post-promo) so the
+            // Net column reflects what actually reaches the organizer.
             $gross = $unitPrice * $qty + ($isOnTop ? $commissionAmount : 0);
             $net = $gross - $commissionAmount;
 
