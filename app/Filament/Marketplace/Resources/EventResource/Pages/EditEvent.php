@@ -1009,6 +1009,93 @@ class EditEvent extends EditRecord
     }
 
     /**
+     * Ensure the event has a populated EventSeatingLayout + per-seat
+     * EventSeat snapshot. Reused by allocation flow because EventSeats
+     * are otherwise lazily created (only when blocked/sold), so a click
+     * on a never-touched available seat would otherwise miss the row.
+     * Mirrors the bootstrap branch of updateSeatStatuses().
+     */
+    protected function ensureEventSeatingBootstrapped(): ?\App\Models\Seating\EventSeatingLayout
+    {
+        $event = $this->record;
+        $layoutId = $event->seating_layout_id;
+        if (!$layoutId) return null;
+
+        $eventSeating = \App\Models\Seating\EventSeatingLayout::where('event_id', $event->id)->first();
+
+        // Stale snapshot detection (layout swapped or seat UIDs regenerated)
+        if ($eventSeating) {
+            $stale = (int) $eventSeating->layout_id !== (int) $layoutId;
+            if (!$stale) {
+                // Sample 1 seat_uid from the source layout to confirm it exists in snapshot
+                $sampleUid = \App\Models\Seating\SeatingSeat::withoutGlobalScopes()
+                    ->whereHas('row.section', fn ($q) => $q->where('layout_id', $layoutId))
+                    ->whereNotNull('seat_uid')
+                    ->value('seat_uid');
+                if ($sampleUid) {
+                    $exists = \App\Models\Seating\EventSeat::where('event_seating_id', $eventSeating->id)
+                        ->where('seat_uid', $sampleUid)
+                        ->exists();
+                    if (!$exists) $stale = true;
+                }
+            }
+            if ($stale) {
+                $eventSeating->seats()->delete();
+                $eventSeating->delete();
+                $eventSeating = null;
+            }
+        }
+
+        $layout = \App\Models\Seating\SeatingLayout::withoutGlobalScopes()
+            ->with(['sections.rows.seats'])
+            ->find($layoutId);
+        if (!$layout || $layout->sections->isEmpty()) {
+            return $eventSeating; // best-effort: return whatever we had
+        }
+
+        if (!$eventSeating) {
+            $geometry = app(\App\Services\Seating\GeometryStorage::class)->generateGeometrySnapshot($layout);
+            $eventSeating = \App\Models\Seating\EventSeatingLayout::firstOrCreate(
+                ['event_id' => $event->id, 'layout_id' => $layout->id],
+                [
+                    'marketplace_client_id' => $event->marketplace_client_id ?? null,
+                    'json_geometry' => $geometry,
+                    'status' => 'active',
+                    'published_at' => now(),
+                ]
+            );
+        }
+
+        // Top-up missing EventSeat rows for any layout seat that lacks one.
+        // updateOrCreate is idempotent so this is safe to call repeatedly.
+        $existingUids = \App\Models\Seating\EventSeat::where('event_seating_id', $eventSeating->id)
+            ->pluck('seat_uid')
+            ->all();
+        $existingSet = array_flip($existingUids);
+
+        foreach ($layout->sections as $section) {
+            foreach ($section->rows as $row) {
+                foreach ($row->seats as $seat) {
+                    if (!$seat->seat_uid) continue;
+                    if (isset($existingSet[$seat->seat_uid])) continue;
+                    $baseStatus = $seat->status ?? 'active';
+                    \App\Models\Seating\EventSeat::create([
+                        'event_seating_id' => $eventSeating->id,
+                        'seat_uid' => $seat->seat_uid,
+                        'section_name' => $section->name,
+                        'row_label' => $row->label,
+                        'seat_label' => $seat->label,
+                        'status' => ($baseStatus === 'imposibil') ? 'disabled' : 'available',
+                        'version' => 1,
+                    ]);
+                }
+            }
+        }
+
+        return $eventSeating;
+    }
+
+    /**
      * Lookup info on a seat the admin just clicked: status + (if sold) the
      * ticket currently holding it. Used by the modal to show context before
      * the operator confirms allocation.
@@ -1018,7 +1105,7 @@ class EditEvent extends EditRecord
         $this->skipRender();
 
         $event = $this->record;
-        $layout = \App\Models\Seating\EventSeatingLayout::where('event_id', $event->id)->first();
+        $layout = $this->ensureEventSeatingBootstrapped();
         if (!$layout) {
             return ['ok' => false, 'error' => 'no_event_seating_layout'];
         }
@@ -1092,7 +1179,7 @@ class EditEvent extends EditRecord
             return ['ok' => false, 'error' => 'ticket_not_found', 'message' => 'Biletul nu există, e anulat sau aparține altui eveniment.'];
         }
 
-        $layout = \App\Models\Seating\EventSeatingLayout::where('event_id', $event->id)->first();
+        $layout = $this->ensureEventSeatingBootstrapped();
         if (!$layout) {
             return ['ok' => false, 'error' => 'no_layout', 'message' => 'Nu există layout de seating activ pentru acest eveniment.'];
         }
