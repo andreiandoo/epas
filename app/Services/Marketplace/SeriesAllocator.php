@@ -326,9 +326,14 @@ class SeriesAllocator
     }
 
     /**
-     * Returns true only when the promo is explicitly tied to THIS event.
-     * applies_to='all_events' is rejected unless the promo also pinned itself
-     * to this event via marketplace_event_id or a ticket type.
+     * Returns true when the promo applies to this event. The SQL layer
+     * already guarantees the promo belongs to the event's organizer (the
+     * tight scope), so any of the following counts as a match:
+     *   - applies_to='all_events' (or no event/type restriction) — applies
+     *     to every event of the organizer, including this one
+     *   - applies_to='specific_event' AND marketplace_event_id == this event
+     *   - applies_to='ticket_type' AND ticket_type matches one of this
+     *     event's types (legacy ticket_type_id or applicable_ticket_type_ids)
      */
     private function organizerPromoAppliesToEvent(MarketplaceOrganizerPromoCode $promo, int $eventId, array $ticketTypeIds): bool
     {
@@ -343,15 +348,17 @@ class SeriesAllocator
                 if (in_array((int) $id, $ticketTypeIds, true)) return true;
             }
         }
-        // Tied via specific marketplace_event_id (no type restriction).
+        // If the promo restricts to a specific event, it must be this one.
         $promoEventId = (int) ($promo->marketplace_event_id ?? 0);
         $hasNoTypeRestriction = !$promo->ticket_type_id && (empty($applicable) || $applicable === []);
-        if ($promoEventId === $eventId && $hasNoTypeRestriction) {
-            return true;
+        if ($promoEventId > 0 && $promoEventId !== $eventId) {
+            // Targets a different event of the same organizer — not for us.
+            return false;
         }
-        // applies_to='all_events' alone is REJECTED — too broad. The promo
-        // must explicitly target this event (above branches) to qualify.
-        return false;
+        // No type restriction AND no other-event restriction → applies here.
+        // Covers applies_to='all_events' (no event/type pins) and event-scoped
+        // promos with event_id matching this event.
+        return $hasNoTypeRestriction;
     }
 
     private function organizerPromoAppliesToType(MarketplaceOrganizerPromoCode $promo, TicketType $tt, int $eventId): bool
@@ -410,20 +417,27 @@ class SeriesAllocator
     }
 
     /**
-     * Returns true only when the coupon explicitly targets THIS event.
-     * Empty applicable_events (= "any event") is REJECTED — too broad.
+     * Returns true when the coupon applies to this event. The SQL layer
+     * already enforces that the coupon belongs to the event's organizer
+     * (tight scope), so within that:
+     *   - applicable_events empty → applies to every event of the organizer
+     *   - applicable_events listing event ids → must include this event
+     *   - applicable_ticket_types empty → any type of this event
+     *   - applicable_ticket_types listing ids → must overlap with this
+     *     event's ticket types
      */
     private function couponAppliesToEvent(CouponCode $coupon, int $eventId, array $ticketTypeIds): bool
     {
         $applicableEvents = is_array($coupon->applicable_events) ? array_map('intval', $coupon->applicable_events) : [];
         $applicableTypes = is_array($coupon->applicable_ticket_types) ? array_map('intval', $coupon->applicable_ticket_types) : [];
 
-        // Must explicitly include this event — empty array is rejected.
-        if (empty($applicableEvents) || !in_array($eventId, $applicableEvents, true)) {
+        // Event match: empty = "any event of the organizer" → ok; otherwise
+        // must explicitly include this event.
+        if (!empty($applicableEvents) && !in_array($eventId, $applicableEvents, true)) {
             return false;
         }
-        // Type restriction (optional). When empty applies to every type of
-        // this event; otherwise must overlap.
+        // Type match: empty = any of this event's types → ok; otherwise must
+        // overlap.
         if (empty($applicableTypes)) {
             return true;
         }
