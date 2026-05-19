@@ -69,37 +69,40 @@ class TaxRegistryResource extends Resource
                                 $set('city', null);
                             }),
 
-                        Forms\Components\Select::make('county')
-                            ->label('County')
-                            ->options(function (SGet $get) use ($locationService) {
+                        // County / City as text inputs with autocomplete
+                        // suggestions instead of strict Selects. The dataset
+                        // ships English county names ("Bucharest" not
+                        // "București") and only a curated city list per
+                        // county — both fail the implicit Select::in
+                        // validator when the user types the Romanian /
+                        // diacritic-stripped form or a town the dataset
+                        // misses. Free text accepts everything; the
+                        // datalist still suggests what's available.
+                        Forms\Components\TextInput::make('county')
+                            ->label('County / Județ')
+                            ->maxLength(255)
+                            ->live(onBlur: true)
+                            ->datalist(function (SGet $get) use ($locationService) {
                                 $country = $get('country');
                                 if (!$country) return [];
-
-                                $countryCode = $locationService->getCountryCode($country);
-                                if (!$countryCode) return [];
-
-                                return $locationService->getStates($countryCode);
+                                $code = $locationService->getCountryCode($country);
+                                if (!$code) return [];
+                                return array_values($locationService->getStates($code));
                             })
-                            ->searchable()
-                            ->live()
-                            ->afterStateUpdated(function (SSet $set) {
-                                $set('city', null);
-                            }),
+                            ->helperText('Sugestii din dataset (datalist). Poți tasta orice — București, Bucuresti, Ilfov etc.'),
 
-                        Forms\Components\Select::make('city')
-                            ->label('City')
-                            ->options(function (SGet $get) use ($locationService) {
+                        Forms\Components\TextInput::make('city')
+                            ->label('City / Oraș')
+                            ->maxLength(255)
+                            ->datalist(function (SGet $get) use ($locationService) {
                                 $country = $get('country');
                                 $county = $get('county');
                                 if (!$country || !$county) return [];
-
-                                $countryCode = $locationService->getCountryCode($country);
-                                if (!$countryCode) return [];
-
-                                return $locationService->getCities($countryCode, $county);
+                                $code = $locationService->getCountryCode($country);
+                                if (!$code) return [];
+                                return array_values($locationService->getCities($code, $county));
                             })
-                            ->searchable()
-                            ->helperText('Pentru sectoarele Bucureștiului: alege County = "Bucharest" și apoi City = "Sector 1" / "Sector 2" / etc.'),
+                            ->helperText('Pentru sectoarele Bucureștiului: County = "Bucharest" → datalist va sugera Sector 1-6.'),
 
                         Forms\Components\TextInput::make('commune')
                             ->label('Comună / Sector')
