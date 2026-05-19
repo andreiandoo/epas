@@ -173,6 +173,7 @@ class MarketplaceTaxTemplate extends Model
             '{{ticket_types_rows}}' => 'Ticket Types Table Rows (legacy — name, stock, price, value, series; uses quota_total for every row)',
             '{{ticket_types_total_row}}' => 'Ticket Types Total Row (TOTAL, stock, X, value, X)',
             '{{ticket_types_with_series_rows}}' => 'Phase B: Cerere avizare rânduri din EventTicketTypePromoSeries (qty_allocated respectă usage_limit pe coduri; un rând per (tip × cod) inclusiv coupons + RED + parent)',
+            '{{ticket_types_with_series_total_row}}' => 'Phase B: TOTAL <tr> pentru rândurile de mai sus (aceeași structură ca ticket_types_total_row)',
             '{{ticket_types_with_series_total_tickets_qty}}' => 'Phase B: Total qty alocată pentru rândurile non-abonament',
             '{{ticket_types_with_series_total_tickets_value}}' => 'Phase B: Total valoare alocată pentru rândurile non-abonament',
             '{{ticket_types_with_series_total_subscriptions_qty}}' => 'Phase B: Total qty alocată pentru abonamente',
@@ -1345,6 +1346,38 @@ class MarketplaceTaxTemplate extends Model
             $variables['ticket_types_with_series_total_tickets_value'] = number_format($ttsTotalTicketsValue, 2);
             $variables['ticket_types_with_series_total_subscriptions_qty'] = $ttsTotalSubscriptionsQty;
             $variables['ticket_types_with_series_total_subscriptions_value'] = number_format($ttsTotalSubscriptionsValue, 2);
+
+            // Build the matching TOTAL <tr> for Phase B so templates that
+            // include it as a single variable (like the cerere avizare
+            // layout) don't have to be restructured at the HTML level.
+            $ttsGrandQty = $ttsTotalTicketsQty + $ttsTotalSubscriptionsQty;
+            $ttsGrandValue = $ttsTotalTicketsValue + $ttsTotalSubscriptionsValue;
+            $ttsTotalRowHtml = '<tr class="total-row">'
+                . '<td><span class="bold">TOTAL</span></td>'
+                . '<td>' . $ttsGrandQty . '</td>'
+                . '<td>X</td>'
+                . '<td>' . number_format($ttsGrandValue, 2) . '</td>'
+                . '<td>X</td>'
+                . '</tr>';
+            $variables['ticket_types_with_series_total_row'] = $ttsTotalRowHtml;
+
+            // Auto-override the legacy variables when Phase B produced
+            // actual rows. This lets templates keep their existing
+            // {{ticket_types_total_row}} / {{total_subscriptions_for_sale}}
+            // placeholders unchanged while still benefiting from the
+            // corrected qty_allocated math (and coupon coverage) introduced
+            // by Phase B. Legacy generator output is silently replaced —
+            // both halves now align so totals match the rows displayed.
+            if ($ttsRowsHtml !== '') {
+                $variables['ticket_types_rows'] = $ttsRowsHtml;
+                $variables['ticket_types_total_row'] = $ttsTotalRowHtml;
+                $variables['total_subscriptions_for_sale'] = $ttsTotalSubscriptionsQty;
+                $variables['total_subscriptions_value_for_sale'] = number_format($ttsTotalSubscriptionsValue, 2);
+                $variables['total_non_subscription_tickets_for_sale'] = $ttsTotalTicketsQty;
+                $variables['total_non_subscription_value_for_sale'] = number_format($ttsTotalTicketsValue, 2);
+                $variables['total_tickets_for_sale'] = $ttsGrandQty;
+                $variables['total_value_for_sale'] = number_format($ttsGrandValue, 2);
+            }
         }
 
         // Order variables
