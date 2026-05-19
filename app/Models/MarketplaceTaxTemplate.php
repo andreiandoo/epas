@@ -887,6 +887,132 @@ class MarketplaceTaxTemplate extends Model
                     }
                 }
             }
+
+            // Phase B: also emit promo / coupon / RED tier unsold rows
+            // for PV distrugere. These mirror what was declared in cerere
+            // avizare (one row per allocation), so the destruction document
+            // accounts for every series the organizer declared upfront —
+            // even if those tickets are fabricated (no physical paper).
+            if ($event) {
+                try {
+                    $pvAllocations = app(\App\Services\Marketplace\SeriesAllocator::class)
+                        ->getForEvent($event);
+                } catch (\Throwable $e) {
+                    $pvAllocations = collect();
+                }
+
+                // Same discount-source lookup the cerere-avizare generator
+                // already does — we need the reduced unit price per tier
+                // to compute the unsold value. Build the lookup once.
+                $pvOrgPromosByCode = collect();
+                $pvCouponsByCode = collect();
+                if ($event->marketplace_client_id) {
+                    try {
+                        $pvOrgPromosByCode = \App\Models\MarketplaceOrganizerPromoCode::query()
+                            ->where('marketplace_client_id', $event->marketplace_client_id)
+                            ->get(['id', 'code', 'type', 'value'])
+                            ->keyBy(fn ($p) => strtoupper((string) $p->code));
+                    } catch (\Throwable $e) {}
+                    try {
+                        $pvCouponsByCode = \App\Models\Coupon\CouponCode::query()
+                            ->where('marketplace_client_id', $event->marketplace_client_id)
+                            ->get(['id', 'code', 'discount_type', 'discount_value'])
+                            ->keyBy(fn ($c) => strtoupper((string) $c->code));
+                    } catch (\Throwable $e) {}
+                }
+
+                foreach ($pvAllocations as $pvAlloc) {
+                    // Skip the parent (full-price) row — already emitted by the
+                    // main ticketTypes loop above using quota_total/quota_sold.
+                    if (($pvAlloc->discount_code ?? '') === '' && !$pvAlloc->is_intrinsic_red) {
+                        continue;
+                    }
+                    $pvQtyAllocated = (int) $pvAlloc->qty_allocated;
+                    $pvQtySold = (int) $pvAlloc->qty_sold;
+                    $pvUnsold = max(0, $pvQtyAllocated - $pvQtySold);
+                    if ($pvUnsold <= 0) continue;
+
+                    $pvTt = $pvAlloc->ticketType;
+                    if (!$pvTt) continue;
+                    $pvTtMeta = is_array($pvTt->meta ?? null) ? $pvTt->meta : [];
+                    $pvIsInvitation = ($pvTt->name === 'Invitatie') || ((bool) ($pvTtMeta['is_invitation'] ?? false));
+                    if ($pvIsInvitation) continue;
+
+                    // Reduced unit price lookup. Reused from cerere avizare.
+                    $pvBasePrice = (float) ($pvTt->display_price ?? $pvTt->price ?? 0);
+                    $pvUnitPrice = $pvBasePrice;
+                    $pvCodeLabel = '';
+
+                    if ($pvAlloc->is_intrinsic_red) {
+                        $pvPercent = (float) ($pvTt->discount_percent ?? 0);
+                        if ($pvPercent > 0) {
+                            $pvUnitPrice = max(0.0, $pvBasePrice - ($pvBasePrice * $pvPercent / 100));
+                        }
+                        $pvCodeLabel = 'RED';
+                    } elseif ($pvAlloc->discount_source === 'organizer_promo') {
+                        $pvK = strtoupper((string) ($pvAlloc->discount_code ?? ''));
+                        $pvP = $pvOrgPromosByCode->get($pvK);
+                        if ($pvP) {
+                            $pvUnitPrice = match($pvP->type) {
+                                'percentage' => max(0.0, $pvBasePrice - ($pvBasePrice * (float) $pvP->value / 100)),
+                                'fixed'      => max(0.0, $pvBasePrice - (float) $pvP->value),
+                                default      => $pvBasePrice,
+                            };
+                        }
+                        $pvCodeLabel = (string) $pvAlloc->discount_code;
+                    } elseif ($pvAlloc->discount_source === 'coupon') {
+                        $pvK = strtoupper((string) ($pvAlloc->discount_code ?? ''));
+                        $pvC = $pvCouponsByCode->get($pvK);
+                        if ($pvC) {
+                            $pvUnitPrice = match($pvC->discount_type) {
+                                'percentage' => max(0.0, $pvBasePrice - ($pvBasePrice * (float) $pvC->discount_value / 100)),
+                                'fixed'      => max(0.0, $pvBasePrice - (float) $pvC->discount_value),
+                                default      => $pvBasePrice,
+                            };
+                        }
+                        $pvCodeLabel = (string) $pvAlloc->discount_code;
+                    }
+
+                    $pvUnsoldValue = $pvUnsold * $pvUnitPrice;
+
+                    // Series range for the unsold slice = (qty_sold + 1) .. qty_allocated.
+                    $pvPadLen = 3;
+                    if ($pvTt->series_start && preg_match('/^.*?(\d+)$/', (string) $pvTt->series_start, $pvSm)) {
+                        $pvPadLen = strlen($pvSm[1]);
+                    }
+                    $pvStartUnsold = $pvQtySold + 1;
+                    $pvEndUnsold = $pvQtyAllocated;
+                    $pvSeriesDisplay = ((string) $pvAlloc->series_prefix)
+                        . str_pad((string) $pvStartUnsold, $pvPadLen, '0', STR_PAD_LEFT)
+                        . ' &mdash; ' . ((string) $pvAlloc->series_prefix)
+                        . str_pad((string) $pvEndUnsold, $pvPadLen, '0', STR_PAD_LEFT);
+
+                    $pvTicketName = htmlspecialchars(
+                        (string) ($pvTt->name ?? '') . ($pvCodeLabel !== '' ? ' - ' . $pvCodeLabel : '')
+                    );
+
+                    $pvIsSubscription = (bool) ($pvTt->is_subscription ?? false);
+
+                    $pvRowHtml = '<tr>'
+                        . '<td style="border:1.5px solid #111; padding:3px 5px; font-size:9px; text-align:center; vertical-align:middle;">' . $pvSeriesDisplay . '</td>'
+                        . '<td style="border:1.5px solid #111; padding:3px 5px; font-size:9px; text-align:center; vertical-align:middle;">' . $pvUnsold . '</td>'
+                        . '<td style="border:1.5px solid #111; padding:3px 5px; font-size:9px; text-align:center; vertical-align:middle;">' . number_format($pvUnitPrice, 2) . '</td>'
+                        . '<td style="border:1.5px solid #111; padding:3px 5px; font-size:9px; text-align:center; vertical-align:middle;">' . number_format($pvUnsoldValue, 2) . '</td>'
+                        . '<td style="border:1.5px solid #111; padding:3px 5px; font-size:9px; text-align:center; vertical-align:middle;">' . $pvTicketName . '</td>'
+                        . '</tr>';
+
+                    if ($pvIsSubscription) {
+                        $totalUnsoldSubscriptions += $pvUnsold;
+                        $totalUnsoldSubscriptionsValue += $pvUnsoldValue;
+                        $unsoldSubscriptionsRowsHtml .= $pvRowHtml;
+                    } else {
+                        $totalUnsold += $pvUnsold;
+                        $totalUnsoldValue += $pvUnsoldValue;
+                        $unsoldRowsHtml .= $pvRowHtml;
+                    }
+                }
+            }
+
             $ticketTypesHtml .= '</tbody></table>';
 
             // Total row
@@ -1052,12 +1178,30 @@ class MarketplaceTaxTemplate extends Model
                 } catch (\Throwable $e) {
                     $splitRows = [];
                 }
-                // Skip invitations (no declarable value).
-                $splitRows = array_values(array_filter($splitRows, function ($r) {
-                    return (float) ($r['price'] ?? 0) > 0;
+                // Identify invitation rows so we can render them with a
+                // special "Invitatie-01..Invitatie-N" placeholder series and
+                // keep the total bilete count aligned with the payout
+                // (which DOES include invitations). Rows with price=0 that
+                // belong to a non-invitation type fall through and don't
+                // render (likely test/edge data).
+                $ttIndex = $event->ticketTypes->keyBy('id');
+                $isInvitationRow = function ($row) use ($ttIndex) {
+                    $tt = $ttIndex->get($row['ticket_type_id'] ?? null);
+                    if (!$tt) return false;
+                    $m = is_array($tt->meta ?? null) ? $tt->meta : [];
+                    return ($tt->name === 'Invitatie') || ((bool) ($m['is_invitation'] ?? false));
+                };
+                $splitRows = array_values(array_filter($splitRows, function ($r) use ($isInvitationRow) {
+                    $price = (float) ($r['price'] ?? 0);
+                    if ($price > 0) return true;
+                    return $isInvitationRow($r);
                 }));
-                // Sort: type name (alpha), non-reduced before reduced, price desc.
-                usort($splitRows, function ($a, $b) {
+                // Sort: invitations LAST (after all priced rows), then by
+                // type name (alpha), non-reduced before reduced, price desc.
+                usort($splitRows, function ($a, $b) use ($isInvitationRow) {
+                    $aInv = $isInvitationRow($a);
+                    $bInv = $isInvitationRow($b);
+                    if ($aInv !== $bInv) return $aInv ? 1 : -1;
                     $cmp = strcmp((string) ($a['ticket_type_name'] ?? ''), (string) ($b['ticket_type_name'] ?? ''));
                     if ($cmp !== 0) return $cmp;
                     $aRed = (bool) ($a['is_reduced'] ?? false);
@@ -1102,6 +1246,29 @@ class MarketplaceTaxTemplate extends Model
 
                     $deLa = '';
                     $panaLa = '';
+
+                    // Invitations render with a placeholder series
+                    // ("Invitatie-01" .. "Invitatie-N") so the row count
+                    // shows up in the document even though invitations
+                    // carry no AMB-… series of their own. Keeps the
+                    // declaratie impozite total bilete aligned with the
+                    // payout's bilete total (which includes invitations).
+                    if ($isInvitationRow($row)) {
+                        $deLa = 'Invitatie-' . str_pad('1', 2, '0', STR_PAD_LEFT);
+                        $panaLa = 'Invitatie-' . str_pad((string) $qty, 2, '0', STR_PAD_LEFT);
+                        $taxSituationTotalQty += $qty;
+                        $taxSituationTotalValue += 0.0; // value stays 0 for free invitations
+                        $taxSituationRowsHtml .= '<tr>'
+                            . '<td style="border:1px solid #000; padding:3px 4px; text-align:center;">' . $rowNum . '</td>'
+                            . '<td style="border:1px solid #000; padding:3px 4px; text-align:center;">' . htmlspecialchars($deLa) . '</td>'
+                            . '<td style="border:1px solid #000; padding:3px 4px; text-align:center;">' . htmlspecialchars($panaLa) . '</td>'
+                            . '<td style="border:1px solid #000; padding:3px 4px; text-align:right;">' . $qty . '</td>'
+                            . '<td style="border:1px solid #000; padding:3px 4px; text-align:right;">0.00</td>'
+                            . '<td style="border:1px solid #000; padding:3px 4px; text-align:right;">0.00</td>'
+                            . '</tr>';
+                        $rowNum++;
+                        continue;
+                    }
 
                     // Look up persisted allocation by discount_code (universal
                     // key across organizer promos + coupons + parent).

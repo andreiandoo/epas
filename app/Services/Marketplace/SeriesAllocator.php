@@ -283,12 +283,17 @@ class SeriesAllocator
 
     /**
      * Load active MarketplaceOrganizerPromoCode rows that could touch the
-     * event's ticket types. Scoped to the event's marketplace_client_id and
-     * filtered in PHP to dodge pgsql json operator strictness.
+     * event's ticket types. Scoped to:
+     *   - event.marketplace_client_id (same marketplace)
+     *   - event.marketplace_organizer_id (same organizer) OR null (truly
+     *     marketplace-wide promo, not tied to any one organizer)
+     * Filtered in PHP for type-applicability checks to dodge pgsql json
+     * operator strictness.
      */
     private function loadApplicableOrganizerPromos(Event $event, array $ticketTypeIds): Collection
     {
         $marketplaceClientId = (int) ($event->marketplace_client_id ?? 0);
+        $marketplaceOrganizerId = (int) ($event->marketplace_organizer_id ?? 0);
         $eventId = $event->id;
         $now = now();
 
@@ -297,6 +302,15 @@ class SeriesAllocator
                 $marketplaceClientId > 0,
                 fn ($q) => $q->where('marketplace_client_id', $marketplaceClientId)
             )
+            // Organizer scope — exclude promos owned by other organizers
+            // even when applies_to='all_events'. A promo with no organizer
+            // (marketplace-wide) still passes.
+            ->when($marketplaceOrganizerId > 0, function ($q) use ($marketplaceOrganizerId) {
+                $q->where(function ($inner) use ($marketplaceOrganizerId) {
+                    $inner->where('marketplace_organizer_id', $marketplaceOrganizerId)
+                          ->orWhereNull('marketplace_organizer_id');
+                });
+            })
             ->where('status', 'active')
             ->where(function ($q) use ($now) {
                 $q->whereNull('expires_at')->orWhere('expires_at', '>', $now);
@@ -349,13 +363,18 @@ class SeriesAllocator
 
     /**
      * Load coupon codes for the marketplace that could apply to the event.
-     * Filters in PHP — coupon scoping uses array columns (applicable_events,
-     * applicable_ticket_types) and the empty-array-vs-null check is fragile
-     * across pgsql json operators.
+     * Same organizer scoping rule as organizer promos: a coupon owned by
+     * organizer X never applies to events of organizer Y. Marketplace-wide
+     * coupons (no organizer) still pass.
+     *
+     * Filters applicability arrays in PHP — coupon scoping uses array
+     * columns (applicable_events, applicable_ticket_types) and the
+     * empty-array-vs-null check is fragile across pgsql json operators.
      */
     private function loadApplicableCouponCodes(Event $event, array $ticketTypeIds): Collection
     {
         $marketplaceClientId = (int) ($event->marketplace_client_id ?? 0);
+        $marketplaceOrganizerId = (int) ($event->marketplace_organizer_id ?? 0);
         $eventId = $event->id;
         $now = now();
 
@@ -364,6 +383,12 @@ class SeriesAllocator
                 $marketplaceClientId > 0,
                 fn ($q) => $q->where('marketplace_client_id', $marketplaceClientId)
             )
+            ->when($marketplaceOrganizerId > 0, function ($q) use ($marketplaceOrganizerId) {
+                $q->where(function ($inner) use ($marketplaceOrganizerId) {
+                    $inner->where('marketplace_organizer_id', $marketplaceOrganizerId)
+                          ->orWhereNull('marketplace_organizer_id');
+                });
+            })
             ->where('status', 'active')
             ->where(function ($q) use ($now) {
                 $q->whereNull('expires_at')->orWhere('expires_at', '>', $now);
