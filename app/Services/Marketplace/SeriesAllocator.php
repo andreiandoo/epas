@@ -282,13 +282,17 @@ class SeriesAllocator
     }
 
     /**
-     * Load active MarketplaceOrganizerPromoCode rows that could touch the
-     * event's ticket types. Scoped to:
-     *   - event.marketplace_client_id (same marketplace)
-     *   - event.marketplace_organizer_id (same organizer) OR null (truly
-     *     marketplace-wide promo, not tied to any one organizer)
-     * Filtered in PHP for type-applicability checks to dodge pgsql json
-     * operator strictness.
+     * Load active MarketplaceOrganizerPromoCode rows that touch the event.
+     *
+     * STRICT scope — no marketplace-wide / all-events fallbacks:
+     *   - marketplace_client_id must match the event
+     *   - marketplace_organizer_id MUST equal the event's organizer.
+     *     NULL (marketplace-wide promo) is REJECTED.
+     *   - the promo must be explicitly tied to THIS event via either:
+     *       * marketplace_event_id == event.id, OR
+     *       * ticket_type_id or applicable_ticket_type_ids referencing one
+     *         of the event's ticket types
+     *   - applies_to='all_events' alone is REJECTED.
      */
     private function loadApplicableOrganizerPromos(Event $event, array $ticketTypeIds): Collection
     {
@@ -297,20 +301,18 @@ class SeriesAllocator
         $eventId = $event->id;
         $now = now();
 
+        // Without an organizer scope on the event, the "must belong to this
+        // organizer" rule cannot be satisfied → drop everything.
+        if ($marketplaceOrganizerId === 0) {
+            return collect();
+        }
+
         return MarketplaceOrganizerPromoCode::query()
             ->when(
                 $marketplaceClientId > 0,
                 fn ($q) => $q->where('marketplace_client_id', $marketplaceClientId)
             )
-            // Organizer scope — exclude promos owned by other organizers
-            // even when applies_to='all_events'. A promo with no organizer
-            // (marketplace-wide) still passes.
-            ->when($marketplaceOrganizerId > 0, function ($q) use ($marketplaceOrganizerId) {
-                $q->where(function ($inner) use ($marketplaceOrganizerId) {
-                    $inner->where('marketplace_organizer_id', $marketplaceOrganizerId)
-                          ->orWhereNull('marketplace_organizer_id');
-                });
-            })
+            ->where('marketplace_organizer_id', $marketplaceOrganizerId)
             ->where('status', 'active')
             ->where(function ($q) use ($now) {
                 $q->whereNull('expires_at')->orWhere('expires_at', '>', $now);
@@ -323,27 +325,32 @@ class SeriesAllocator
             ->values();
     }
 
+    /**
+     * Returns true only when the promo is explicitly tied to THIS event.
+     * applies_to='all_events' is rejected unless the promo also pinned itself
+     * to this event via marketplace_event_id or a ticket type.
+     */
     private function organizerPromoAppliesToEvent(MarketplaceOrganizerPromoCode $promo, int $eventId, array $ticketTypeIds): bool
     {
+        // Tied via single legacy ticket_type_id → must be one of THIS event's types.
         if ($promo->ticket_type_id && in_array((int) $promo->ticket_type_id, $ticketTypeIds, true)) {
             return true;
         }
+        // Tied via array applicable_ticket_type_ids → at least one match.
         $applicable = $promo->applicable_ticket_type_ids;
         if (is_array($applicable) && !empty($applicable)) {
             foreach ($applicable as $id) {
                 if (in_array((int) $id, $ticketTypeIds, true)) return true;
             }
         }
+        // Tied via specific marketplace_event_id (no type restriction).
         $promoEventId = (int) ($promo->marketplace_event_id ?? 0);
-        $hasNoRestriction = !$promo->ticket_type_id && (empty($applicable) || $applicable === []);
-        if ($promoEventId === $eventId && $hasNoRestriction) {
+        $hasNoTypeRestriction = !$promo->ticket_type_id && (empty($applicable) || $applicable === []);
+        if ($promoEventId === $eventId && $hasNoTypeRestriction) {
             return true;
         }
-        // applies_to=all_events with no specific event scope — touches every
-        // event under its marketplace_organizer / marketplace_client.
-        if ($promo->applies_to === 'all_events' && $hasNoRestriction) {
-            return true;
-        }
+        // applies_to='all_events' alone is REJECTED — too broad. The promo
+        // must explicitly target this event (above branches) to qualify.
         return false;
     }
 
@@ -362,14 +369,16 @@ class SeriesAllocator
     }
 
     /**
-     * Load coupon codes for the marketplace that could apply to the event.
-     * Same organizer scoping rule as organizer promos: a coupon owned by
-     * organizer X never applies to events of organizer Y. Marketplace-wide
-     * coupons (no organizer) still pass.
+     * Load coupon codes that touch the event.
      *
-     * Filters applicability arrays in PHP — coupon scoping uses array
-     * columns (applicable_events, applicable_ticket_types) and the
-     * empty-array-vs-null check is fragile across pgsql json operators.
+     * STRICT scope — same rules as organizer promos:
+     *   - marketplace_client_id must match the event
+     *   - marketplace_organizer_id MUST equal the event's organizer.
+     *     NULL (marketplace-wide coupon) is REJECTED.
+     *   - applicable_events MUST explicitly include the event id (empty
+     *     array = "any event" is REJECTED).
+     *   - applicable_ticket_types either empty (applies to all event's
+     *     types) OR overlaps with the event's ticket type ids.
      */
     private function loadApplicableCouponCodes(Event $event, array $ticketTypeIds): Collection
     {
@@ -378,17 +387,16 @@ class SeriesAllocator
         $eventId = $event->id;
         $now = now();
 
+        if ($marketplaceOrganizerId === 0) {
+            return collect();
+        }
+
         return CouponCode::query()
             ->when(
                 $marketplaceClientId > 0,
                 fn ($q) => $q->where('marketplace_client_id', $marketplaceClientId)
             )
-            ->when($marketplaceOrganizerId > 0, function ($q) use ($marketplaceOrganizerId) {
-                $q->where(function ($inner) use ($marketplaceOrganizerId) {
-                    $inner->where('marketplace_organizer_id', $marketplaceOrganizerId)
-                          ->orWhereNull('marketplace_organizer_id');
-                });
-            })
+            ->where('marketplace_organizer_id', $marketplaceOrganizerId)
             ->where('status', 'active')
             ->where(function ($q) use ($now) {
                 $q->whereNull('expires_at')->orWhere('expires_at', '>', $now);
@@ -401,21 +409,24 @@ class SeriesAllocator
             ->values();
     }
 
+    /**
+     * Returns true only when the coupon explicitly targets THIS event.
+     * Empty applicable_events (= "any event") is REJECTED — too broad.
+     */
     private function couponAppliesToEvent(CouponCode $coupon, int $eventId, array $ticketTypeIds): bool
     {
         $applicableEvents = is_array($coupon->applicable_events) ? array_map('intval', $coupon->applicable_events) : [];
         $applicableTypes = is_array($coupon->applicable_ticket_types) ? array_map('intval', $coupon->applicable_ticket_types) : [];
 
-        // Empty applicable_events means "any event" for the marketplace_client.
-        $eventMatches = empty($applicableEvents) || in_array($eventId, $applicableEvents, true);
-        if (!$eventMatches) {
+        // Must explicitly include this event — empty array is rejected.
+        if (empty($applicableEvents) || !in_array($eventId, $applicableEvents, true)) {
             return false;
         }
-        // Empty applicable_ticket_types means "any type" — applies to all.
+        // Type restriction (optional). When empty applies to every type of
+        // this event; otherwise must overlap.
         if (empty($applicableTypes)) {
             return true;
         }
-        // Otherwise the coupon must restrict to one of this event's types.
         foreach ($applicableTypes as $id) {
             if (in_array($id, $ticketTypeIds, true)) return true;
         }
