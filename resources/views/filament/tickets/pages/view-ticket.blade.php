@@ -375,6 +375,83 @@
                     </div>
                 </div>
             @endif
+
+            {{-- Seat allocation activity log (log_name='seat_allocation') --}}
+            @php
+                $seatAllocActivities = \Spatie\Activitylog\Models\Activity::query()
+                    ->where('log_name', 'seat_allocation')
+                    ->where('subject_type', \App\Models\Ticket::class)
+                    ->where('subject_id', $ticket->id)
+                    ->orderByDesc('id')
+                    ->limit(30)
+                    ->get();
+            @endphp
+            <div class="p-5 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
+                <h3 class="mb-3 text-sm font-semibold tracking-wider text-gray-400 uppercase dark:text-gray-500">
+                    Istoric alocare loc
+                </h3>
+                @if($seatAllocActivities->isEmpty())
+                    <p class="text-sm text-gray-500 dark:text-gray-400 italic">
+                        Nicio alocare manuală de loc înregistrată pentru acest bilet. Locul curent (dacă există) a fost atribuit automat la checkout.
+                    </p>
+                @else
+                    <ol class="relative border-l border-gray-200 dark:border-gray-700 ml-2">
+                        @foreach($seatAllocActivities as $act)
+                            @php
+                                $props = $act->properties ?? collect();
+                                if ($props instanceof \Illuminate\Support\Collection) $props = $props->all();
+                                $causer = null;
+                                if (!empty($act->causer_id) && !empty($act->causer_type) && class_exists($act->causer_type)) {
+                                    $causer = $act->causer_type::find($act->causer_id);
+                                }
+                                $causerName = $causer?->name ?? $causer?->full_name ?? null;
+                                $causerEmail = $causer?->email ?? null;
+                                $seatHuman = trim(
+                                    (string) ($props['section_name'] ?? '') .
+                                    (!empty($props['row_label']) ? ', Rând ' . $props['row_label'] : '') .
+                                    (!empty($props['seat_label_field']) ? ', Loc ' . $props['seat_label_field'] : '')
+                                );
+                                $actionLabel = ($props['action_type'] ?? 'allocated') === 'reassigned' ? 'Reasignare' : 'Alocare manuală';
+                                $dotColor = ($props['action_type'] ?? 'allocated') === 'reassigned' ? 'bg-amber-500' : 'bg-indigo-500';
+                            @endphp
+                            <li class="mb-4 ml-4">
+                                <div class="absolute w-2.5 h-2.5 {{ $dotColor }} rounded-full mt-1.5 -left-1.5 border border-white dark:border-gray-800"></div>
+                                <time class="text-xs font-normal leading-none text-gray-400 dark:text-gray-500">
+                                    {{ $act->created_at?->format('d.m.Y H:i') }} · {{ $causerName ?? $causerEmail ?? '— sistem —' }}
+                                </time>
+                                <p class="mt-1 text-sm text-gray-900 dark:text-gray-100">
+                                    <strong>{{ $actionLabel }}</strong>:
+                                    <span class="font-mono text-xs">{{ $props['seat_uid'] ?? '—' }}</span>
+                                    @if($seatHuman) <span class="text-gray-500 dark:text-gray-400">({{ $seatHuman }})</span> @endif
+                                    @if(!empty($props['previous_seat_uid']))
+                                        <span class="block mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                                            Loc anterior eliberat: <span class="font-mono">{{ $props['previous_seat_uid'] }}</span> (→ available)
+                                        </span>
+                                    @endif
+                                </p>
+                                @if(!empty($props['reason']))
+                                    <p class="mt-1 text-xs text-gray-600 dark:text-gray-400 italic">
+                                        Motiv: {{ $props['reason'] }}
+                                    </p>
+                                @endif
+                                @if(!empty($props['order_number']) || !empty($props['customer_email']))
+                                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                        @if(!empty($props['order_number']))
+                                            Comandă <strong>{{ $props['order_number'] }}</strong>
+                                        @endif
+                                        @if(!empty($props['customer_name']) || !empty($props['customer_email']))
+                                            · {{ $props['customer_name'] ?? '' }}
+                                            @if(!empty($props['customer_email']))
+                                                <span class="text-gray-400">({{ $props['customer_email'] }})</span>
+                                            @endif
+                                        @endif
+                                    </p>
+                                @endif
+                            </li>
+                        @endforeach
+                    </ol>
+                @endif
+            </div>
         </div>
     </div>
 </x-filament-panels::page>

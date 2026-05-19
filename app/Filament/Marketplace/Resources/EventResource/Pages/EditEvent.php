@@ -894,6 +894,449 @@ class EditEvent extends EditRecord
         return true;
     }
 
+    /**
+     * Manual seat → ticket allocation flow (from harta tab, "Aloc&259; loc" mode).
+     * Steps below return data to populate cascading selects in the modal.
+     */
+
+    /** Customers who have orders on this event (paid/completed/confirmed). */
+    public function getCustomersForEvent(): array
+    {
+        $this->skipRender();
+
+        $event = $this->record;
+        $marketplaceClientId = $event->marketplace_client_id;
+
+        $rows = \DB::table('orders')
+            ->join('tickets', 'tickets.order_id', '=', 'orders.id')
+            ->join('marketplace_customers', 'marketplace_customers.id', '=', 'orders.marketplace_customer_id')
+            ->where('orders.marketplace_client_id', $marketplaceClientId)
+            ->where('tickets.event_id', $event->id)
+            ->whereIn('orders.status', ['paid', 'completed', 'confirmed'])
+            ->select(
+                'marketplace_customers.id as id',
+                'marketplace_customers.first_name',
+                'marketplace_customers.last_name',
+                'marketplace_customers.email',
+                'marketplace_customers.phone',
+            )
+            ->distinct()
+            ->orderBy('marketplace_customers.first_name')
+            ->orderBy('marketplace_customers.last_name')
+            ->limit(2000)
+            ->get();
+
+        return $rows->map(function ($r) {
+            $name = trim(($r->first_name ?? '') . ' ' . ($r->last_name ?? ''));
+            $label = $name !== '' ? "{$name} ({$r->email})" : (string) $r->email;
+            return ['id' => (int) $r->id, 'label' => $label];
+        })->all();
+    }
+
+    /** Orders for a customer on this event. */
+    public function getOrdersForCustomer(int $customerId): array
+    {
+        $this->skipRender();
+
+        $event = $this->record;
+
+        $orders = \App\Models\Order::where('marketplace_client_id', $event->marketplace_client_id)
+            ->where('marketplace_customer_id', $customerId)
+            ->whereIn('status', ['paid', 'completed', 'confirmed'])
+            ->whereHas('tickets', fn ($q) => $q->where('event_id', $event->id))
+            ->orderByDesc('created_at')
+            ->limit(200)
+            ->get(['id', 'order_number', 'total', 'currency', 'created_at']);
+
+        return $orders->map(function ($o) use ($event) {
+            $ticketCount = \App\Models\Ticket::where('order_id', $o->id)
+                ->where('event_id', $event->id)
+                ->whereIn('status', ['valid', 'pending'])
+                ->count();
+            $when = $o->created_at?->format('d M Y H:i') ?? '—';
+            $total = number_format((float) $o->total, 2) . ' ' . ($o->currency ?? 'RON');
+            $orderNumber = $o->order_number ?: ('#' . $o->id);
+            return [
+                'id' => (int) $o->id,
+                'label' => "{$orderNumber} · {$ticketCount} bilete · {$total} · {$when}",
+            ];
+        })->all();
+    }
+
+    /**
+     * Tickets in an order on this event. When $includeAllocated is false (default),
+     * only tickets without a seat are returned. When true, returns all valid/pending
+     * tickets — but flags the ones that already have a seat so the UI can warn.
+     */
+    public function getTicketsForOrder(int $orderId, bool $includeAllocated = false): array
+    {
+        $this->skipRender();
+
+        $event = $this->record;
+
+        $tickets = \App\Models\Ticket::where('order_id', $orderId)
+            ->where('event_id', $event->id)
+            ->whereIn('status', ['valid', 'pending'])
+            ->with('ticketType:id,name')
+            ->orderBy('id')
+            ->get(['id', 'ticket_type_id', 'code', 'seat_label', 'meta', 'status']);
+
+        $out = [];
+        foreach ($tickets as $t) {
+            $currentSeatUid = $t->meta['seat_uid'] ?? null;
+            $hasSeat = !empty($currentSeatUid);
+            if ($hasSeat && !$includeAllocated) continue;
+
+            $ttName = is_array($t->ticketType?->name)
+                ? ($t->ticketType->name['ro'] ?? $t->ticketType->name['en'] ?? reset($t->ticketType->name) ?: '—')
+                : ($t->ticketType?->name ?? '—');
+
+            $label = "#{$t->id} · {$ttName}";
+            if ($hasSeat) {
+                $label .= ' · loc curent: ' . ($t->seat_label ?: $currentSeatUid);
+            }
+
+            $out[] = [
+                'id' => (int) $t->id,
+                'label' => $label,
+                'has_seat' => $hasSeat,
+                'current_seat_uid' => $currentSeatUid,
+                'current_seat_label' => $t->seat_label,
+            ];
+        }
+
+        return $out;
+    }
+
+    /**
+     * Lookup info on a seat the admin just clicked: status + (if sold) the
+     * ticket currently holding it. Used by the modal to show context before
+     * the operator confirms allocation.
+     */
+    public function getSeatAllocationContext(string $seatUid): array
+    {
+        $this->skipRender();
+
+        $event = $this->record;
+        $layout = \App\Models\Seating\EventSeatingLayout::where('event_id', $event->id)->first();
+        if (!$layout) {
+            return ['ok' => false, 'error' => 'no_event_seating_layout'];
+        }
+
+        $seat = \App\Models\Seating\EventSeat::where('event_seating_id', $layout->id)
+            ->where('seat_uid', $seatUid)
+            ->first();
+        if (!$seat) {
+            return ['ok' => false, 'error' => 'seat_not_found'];
+        }
+
+        $occupantTicket = null;
+        if (in_array($seat->status, ['sold', 'held'], true)) {
+            $t = \App\Models\Ticket::where('event_id', $event->id)
+                ->whereJsonContains('meta->seat_uid', $seatUid)
+                ->whereIn('status', ['valid', 'pending', 'used'])
+                ->orderByDesc('id')
+                ->first(['id', 'order_id', 'status', 'seat_label']);
+            if ($t) {
+                $order = \App\Models\Order::find($t->order_id);
+                $occupantTicket = [
+                    'id' => $t->id,
+                    'order_id' => $t->order_id,
+                    'order_number' => $order?->order_number ?: ('#' . $t->order_id),
+                    'customer_email' => $order?->customer_email,
+                    'customer_name' => $order?->customer_name,
+                    'status' => $t->status,
+                ];
+            }
+        }
+
+        return [
+            'ok' => true,
+            'event_seating_id' => $layout->id,
+            'seat_uid' => $seat->seat_uid,
+            'section_name' => $seat->section_name,
+            'row_label' => $seat->row_label,
+            'seat_label' => $seat->seat_label,
+            'status' => $seat->status,
+            'version' => (int) $seat->version,
+            'occupant_ticket' => $occupantTicket,
+        ];
+    }
+
+    /**
+     * Bind a seat to a ticket. Wraps in a transaction with row-level lock so
+     * concurrent admins or a checkout in progress cannot race the write.
+     * Writes activity log entry under log_name='seat_allocation'.
+     */
+    public function allocateSeatToTicket(
+        string $seatUid,
+        int $ticketId,
+        string $reason,
+        bool $overrideExistingSeat = false,
+        bool $confirmHeld = false,
+    ): array {
+        $this->skipRender();
+
+        $reason = trim(strip_tags($reason));
+        if (mb_strlen($reason) < 10) {
+            return ['ok' => false, 'error' => 'reason_too_short', 'message' => 'Motivul trebuie să aibă minim 10 caractere.'];
+        }
+
+        $event = $this->record;
+
+        $ticket = \App\Models\Ticket::where('id', $ticketId)
+            ->where('event_id', $event->id)
+            ->whereIn('status', ['valid', 'pending'])
+            ->first();
+        if (!$ticket) {
+            return ['ok' => false, 'error' => 'ticket_not_found', 'message' => 'Biletul nu există, e anulat sau aparține altui eveniment.'];
+        }
+
+        $layout = \App\Models\Seating\EventSeatingLayout::where('event_id', $event->id)->first();
+        if (!$layout) {
+            return ['ok' => false, 'error' => 'no_layout', 'message' => 'Nu există layout de seating activ pentru acest eveniment.'];
+        }
+
+        try {
+            $result = \DB::transaction(function () use ($seatUid, $ticket, $event, $layout, $reason, $overrideExistingSeat, $confirmHeld) {
+                $seat = \App\Models\Seating\EventSeat::where('event_seating_id', $layout->id)
+                    ->where('seat_uid', $seatUid)
+                    ->lockForUpdate()
+                    ->first();
+                if (!$seat) {
+                    throw new \RuntimeException('seat_not_found');
+                }
+                if ($seat->status === 'disabled') {
+                    throw new \RuntimeException('seat_disabled');
+                }
+                if ($seat->status === 'held' && !$confirmHeld) {
+                    throw new \RuntimeException('seat_held_needs_confirm');
+                }
+                if ($seat->status === 'sold') {
+                    $existingTicket = \App\Models\Ticket::where('event_id', $event->id)
+                        ->whereJsonContains('meta->seat_uid', $seatUid)
+                        ->whereIn('status', ['valid', 'pending', 'used'])
+                        ->orderByDesc('id')
+                        ->first();
+                    if ($existingTicket && $existingTicket->id !== $ticket->id) {
+                        throw new \RuntimeException('seat_already_sold_to_other_ticket:' . $existingTicket->id);
+                    }
+                    // Same ticket already has it — no-op
+                    return [
+                        'ok' => true,
+                        'noop' => true,
+                        'seat_label' => $ticket->seat_label,
+                    ];
+                }
+
+                // If ticket already has a seat → release vechi seat to 'available'
+                $oldSeatUid = $ticket->meta['seat_uid'] ?? null;
+                $releasedSeatUid = null;
+                if ($oldSeatUid && $oldSeatUid !== $seatUid) {
+                    if (!$overrideExistingSeat) {
+                        throw new \RuntimeException('ticket_has_existing_seat:' . $oldSeatUid);
+                    }
+                    $oldSeat = \App\Models\Seating\EventSeat::where('event_seating_id', $layout->id)
+                        ->where('seat_uid', $oldSeatUid)
+                        ->lockForUpdate()
+                        ->first();
+                    if ($oldSeat) {
+                        $oldSeat->status = 'available';
+                        $oldSeat->version = $oldSeat->version + 1;
+                        $oldSeat->save();
+                        $releasedSeatUid = $oldSeatUid;
+                    }
+                }
+
+                // Update ticket
+                $meta = $ticket->meta ?? [];
+                $meta['seat_uid'] = $seat->seat_uid;
+                $meta['event_seating_id'] = $layout->id;
+                $meta['section_name'] = $seat->section_name;
+                $meta['row_label'] = $seat->row_label;
+                $meta['seat_number'] = $seat->seat_label;
+                $ticket->meta = $meta;
+                $ticket->seat_label = $seat->section_name . ', Rând ' . $seat->row_label . ', Loc ' . $seat->seat_label;
+                $ticket->save();
+
+                // Update seat
+                $seatPreviousStatus = $seat->status;
+                $seat->status = 'sold';
+                $seat->version = $seat->version + 1;
+                $seat->save();
+
+                // Update order.meta.seated_items (merge/dedupe)
+                $order = \App\Models\Order::find($ticket->order_id);
+                if ($order) {
+                    $om = $order->meta ?? [];
+                    $existing = $om['seated_items'] ?? [];
+                    $matched = false;
+                    foreach ($existing as &$row) {
+                        if ((int) ($row['event_seating_id'] ?? 0) === (int) $layout->id) {
+                            $uids = $row['seat_uids'] ?? [];
+                            if (!in_array($seat->seat_uid, $uids, true)) {
+                                $uids[] = $seat->seat_uid;
+                            }
+                            // Remove the released seat_uid from this group if any
+                            if ($releasedSeatUid) {
+                                $uids = array_values(array_filter($uids, fn ($u) => $u !== $releasedSeatUid));
+                            }
+                            $row['seat_uids'] = array_values(array_unique($uids));
+                            $matched = true;
+                            break;
+                        }
+                    }
+                    unset($row);
+                    if (!$matched) {
+                        $existing[] = [
+                            'event_seating_id' => $layout->id,
+                            'seat_uids' => [$seat->seat_uid],
+                        ];
+                    }
+                    $om['seated_items'] = $existing;
+                    $order->meta = $om;
+                    $order->save();
+                }
+
+                // Activity log
+                $causer = auth()->user();
+                $orderRefreshed = $order ? $order->refresh() : null;
+                $customer = $ticket->order?->marketplaceCustomer;
+                $customerName = $customer
+                    ? trim(($customer->first_name ?? '') . ' ' . ($customer->last_name ?? ''))
+                    : ($ticket->order?->customer_name ?? null);
+
+                $titleEvent = is_array($event->title)
+                    ? ($event->title['ro'] ?? $event->title['en'] ?? reset($event->title))
+                    : $event->title;
+
+                activity('seat_allocation')
+                    ->causedBy($causer)
+                    ->performedOn($ticket)
+                    ->withProperties([
+                        'event_id' => $event->id,
+                        'event_title' => $titleEvent,
+                        'event_seating_id' => $layout->id,
+                        'seat_uid' => $seat->seat_uid,
+                        'section_name' => $seat->section_name,
+                        'row_label' => $seat->row_label,
+                        'seat_label_field' => $seat->seat_label,
+                        'seat_previous_status' => $seatPreviousStatus,
+                        'ticket_seat_label' => $ticket->seat_label,
+                        'order_id' => $ticket->order_id,
+                        'order_number' => $orderRefreshed?->order_number,
+                        'customer_id' => $ticket->order?->marketplace_customer_id,
+                        'customer_email' => $ticket->order?->customer_email,
+                        'customer_name' => $customerName,
+                        'previous_seat_uid' => $releasedSeatUid,
+                        'reason' => $reason,
+                        'action_type' => $releasedSeatUid ? 'reassigned' : 'allocated',
+                    ])
+                    ->log($releasedSeatUid
+                        ? "Loc reasignat: {$releasedSeatUid} → {$seat->seat_uid} pentru bilet #{$ticket->id}"
+                        : "Loc alocat manual: {$seat->seat_uid} pentru bilet #{$ticket->id}");
+
+                return [
+                    'ok' => true,
+                    'ticket_id' => $ticket->id,
+                    'seat_uid' => $seat->seat_uid,
+                    'seat_label' => $ticket->seat_label,
+                    'released_seat_uid' => $releasedSeatUid,
+                ];
+            });
+
+            return $result;
+        } catch (\RuntimeException $e) {
+            $msg = $e->getMessage();
+            $code = $msg;
+            $payload = null;
+            if (str_contains($msg, ':')) {
+                [$code, $payload] = explode(':', $msg, 2);
+            }
+            return ['ok' => false, 'error' => $code, 'payload' => $payload, 'message' => $this->describeSeatAllocationError($code, $payload)];
+        } catch (\Throwable $e) {
+            \Log::channel('marketplace')->error('allocateSeatToTicket failed', [
+                'event_id' => $event->id,
+                'seat_uid' => $seatUid,
+                'ticket_id' => $ticketId,
+                'error' => $e->getMessage(),
+            ]);
+            return ['ok' => false, 'error' => 'internal', 'message' => 'Eroare internă: ' . $e->getMessage()];
+        }
+    }
+
+    protected function describeSeatAllocationError(string $code, ?string $payload): string
+    {
+        return match ($code) {
+            'seat_not_found' => 'Locul selectat nu există pe această hartă.',
+            'seat_disabled' => 'Locul este dezactivat (status: disabled).',
+            'seat_held_needs_confirm' => 'Locul este în hold activ — confirmă explicit pentru a-l aloca peste.',
+            'seat_already_sold_to_other_ticket' => 'Locul este deja alocat altui bilet (#' . ($payload ?? '?') . '). Eliberează-l de acolo întâi.',
+            'ticket_has_existing_seat' => 'Biletul are deja un loc alocat (' . ($payload ?? '?') . '). Bifează "Re-asignare" pentru a-l elibera automat.',
+            default => 'Eroare: ' . $code,
+        };
+    }
+
+    /**
+     * Recent manual seat allocations on this event, formatted for the
+     * collapsible panel under the harta tab.
+     */
+    public function getRecentSeatAllocations(int $limit = 20): array
+    {
+        $this->skipRender();
+
+        $event = $this->record;
+        $activities = \Spatie\Activitylog\Models\Activity::query()
+            ->where('log_name', 'seat_allocation')
+            ->where('subject_type', \App\Models\Ticket::class)
+            ->where('properties->event_id', $event->id)
+            ->orderByDesc('id')
+            ->limit(max(1, min(100, $limit)))
+            ->get(['id', 'description', 'subject_id', 'causer_id', 'causer_type', 'properties', 'created_at']);
+
+        return $activities->map(function ($a) {
+            $props = $a->properties ?? collect();
+            if ($props instanceof \Illuminate\Support\Collection) $props = $props->all();
+
+            $causer = null;
+            if (!empty($a->causer_id) && !empty($a->causer_type) && class_exists($a->causer_type)) {
+                $causer = $a->causer_type::find($a->causer_id);
+            }
+            $causerName = $causer?->name ?? $causer?->full_name ?? null;
+            $causerEmail = $causer?->email ?? null;
+
+            $seatHuman = trim(
+                (string) ($props['section_name'] ?? '') .
+                (!empty($props['row_label']) ? ', Rând ' . $props['row_label'] : '') .
+                (!empty($props['seat_label_field']) ? ', Loc ' . $props['seat_label_field'] : '')
+            ) ?: '—';
+
+            $customerLabel = trim(($props['customer_name'] ?? '') . ' (' . ($props['customer_email'] ?? '') . ')');
+            $customerLabel = trim($customerLabel, '() ') !== '' ? $customerLabel : null;
+
+            $ticketUrl = \App\Filament\Marketplace\Resources\TicketResource::getUrl('view', ['record' => $a->subject_id]);
+            $orderUrl = !empty($props['order_id'])
+                ? \App\Filament\Marketplace\Resources\OrderResource::getUrl('edit', ['record' => $props['order_id']])
+                : null;
+
+            return [
+                'id' => (int) $a->id,
+                'when' => $a->created_at?->format('d M Y H:i'),
+                'causer_name' => $causerName,
+                'causer_email' => $causerEmail,
+                'action_label' => ($props['action_type'] ?? 'allocated') === 'reassigned' ? 'Reasignare' : 'Alocare nouă',
+                'seat_uid' => $props['seat_uid'] ?? '—',
+                'seat_human' => $seatHuman,
+                'ticket_id' => (int) $a->subject_id,
+                'ticket_url' => $ticketUrl,
+                'order_number' => $props['order_number'] ?? ('#' . ($props['order_id'] ?? '?')),
+                'order_url' => $orderUrl,
+                'customer_label' => $customerLabel,
+                'reason' => $props['reason'] ?? '',
+            ];
+        })->all();
+    }
+
     protected function mutateFormDataBeforeFill(array $data): array
     {
         // Determine the marketplace language (same logic as form())

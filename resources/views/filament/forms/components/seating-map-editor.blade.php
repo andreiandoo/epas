@@ -196,6 +196,33 @@
         mkInvite: false,
         blockSaving: false,
 
+        // ─── seat → ticket allocation state ───
+        alloc: {
+            open: false,
+            loading: false,
+            saving: false,
+            error: '',
+            successMsg: '',
+            seat: null,           // { seat_uid, section_name, row_label, seat_label, status, occupant_ticket }
+            customers: [],
+            customersLoaded: false,
+            customerId: null,
+            orders: [],
+            ordersLoading: false,
+            orderId: null,
+            tickets: [],
+            ticketsLoading: false,
+            includeAllocated: false,
+            ticketId: null,
+            reason: '',
+            confirmCheck: false,
+            confirmHeld: false,
+            overrideExisting: false,
+        },
+        recentAllocLog: [],
+        recentAllocOpen: false,
+        recentAllocLoaded: false,
+
         get zoom() { return Math.round((this.OW / this.vbW) * 100) },
 
         syncVB() {
@@ -294,6 +321,180 @@
         exitAssign() { this.mode = 'view'; },
         enterBlock() { this.mode = 'block'; this.selSeats = []; this.blockAction = 'block'; this.mkInvite = false; },
         exitBlock() { this.mode = 'view'; this.selSeats = []; },
+
+        // ─── seat → ticket allocation flow ───
+        _lw() {
+            let el = this.$el.closest('[wire\\:id]');
+            let wid = el ? el.getAttribute('wire:id') : null;
+            return (wid && window.Livewire) ? window.Livewire.find(wid) : null;
+        },
+
+        async enterAllocate() {
+            this.mode = 'allocate';
+            this.alloc.error = '';
+            this.alloc.successMsg = '';
+            if (this.alloc.customersLoaded) return;
+            let lw = this._lw();
+            if (!lw) return;
+            try {
+                let res = await lw.call('getCustomersForEvent');
+                this.alloc.customers = Array.isArray(res) ? res : [];
+                this.alloc.customersLoaded = true;
+            } catch (e) {
+                console.error('getCustomersForEvent failed', e);
+                this.alloc.error = 'Eroare la încărcarea clienților.';
+            }
+        },
+        exitAllocate() { this.mode = 'view'; this.closeAllocModal(); },
+
+        async openAllocModal(uid) {
+            this.alloc.open = true;
+            this.alloc.loading = true;
+            this.alloc.error = '';
+            this.alloc.successMsg = '';
+            this.alloc.customerId = null;
+            this.alloc.orders = [];
+            this.alloc.orderId = null;
+            this.alloc.tickets = [];
+            this.alloc.ticketId = null;
+            this.alloc.reason = '';
+            this.alloc.confirmCheck = false;
+            this.alloc.confirmHeld = false;
+            this.alloc.overrideExisting = false;
+            this.alloc.includeAllocated = false;
+
+            let lw = this._lw();
+            if (!lw) { this.alloc.loading = false; return; }
+            try {
+                let ctx = await lw.call('getSeatAllocationContext', uid);
+                if (!ctx || !ctx.ok) {
+                    this.alloc.error = 'Nu pot încărca info loc: ' + (ctx?.error || 'unknown');
+                    this.alloc.seat = null;
+                } else {
+                    this.alloc.seat = ctx;
+                }
+            } catch (e) {
+                console.error('getSeatAllocationContext failed', e);
+                this.alloc.error = 'Eroare la încărcarea locului.';
+            } finally {
+                this.alloc.loading = false;
+            }
+        },
+        closeAllocModal() {
+            this.alloc.open = false;
+            this.alloc.seat = null;
+            this.alloc.error = '';
+            this.alloc.successMsg = '';
+        },
+
+        async onAllocCustomerChange() {
+            this.alloc.orders = [];
+            this.alloc.tickets = [];
+            this.alloc.orderId = null;
+            this.alloc.ticketId = null;
+            if (!this.alloc.customerId) return;
+            this.alloc.ordersLoading = true;
+            let lw = this._lw();
+            if (!lw) { this.alloc.ordersLoading = false; return; }
+            try {
+                let res = await lw.call('getOrdersForCustomer', Number(this.alloc.customerId));
+                this.alloc.orders = Array.isArray(res) ? res : [];
+            } catch (e) {
+                console.error('getOrdersForCustomer failed', e);
+                this.alloc.error = 'Eroare la încărcarea comenzilor.';
+            } finally {
+                this.alloc.ordersLoading = false;
+            }
+        },
+        async onAllocOrderChange() {
+            this.alloc.tickets = [];
+            this.alloc.ticketId = null;
+            if (!this.alloc.orderId) return;
+            await this.refreshAllocTickets();
+        },
+        async refreshAllocTickets() {
+            this.alloc.ticketsLoading = true;
+            let lw = this._lw();
+            if (!lw) { this.alloc.ticketsLoading = false; return; }
+            try {
+                let res = await lw.call('getTicketsForOrder', Number(this.alloc.orderId), !!this.alloc.includeAllocated);
+                this.alloc.tickets = Array.isArray(res) ? res : [];
+            } catch (e) {
+                console.error('getTicketsForOrder failed', e);
+                this.alloc.error = 'Eroare la încărcarea biletelor.';
+            } finally {
+                this.alloc.ticketsLoading = false;
+            }
+        },
+
+        get allocSelectedTicket() {
+            if (!this.alloc.ticketId || !this.alloc.tickets) return null;
+            return this.alloc.tickets.find(t => Number(t.id) === Number(this.alloc.ticketId)) || null;
+        },
+        get allocCanSubmit() {
+            if (!this.alloc.seat) return false;
+            if (this.alloc.saving) return false;
+            if (!this.alloc.customerId || !this.alloc.orderId || !this.alloc.ticketId) return false;
+            if (!this.alloc.confirmCheck) return false;
+            if ((this.alloc.reason || '').trim().length < 10) return false;
+            if (this.alloc.seat.status === 'held' && !this.alloc.confirmHeld) return false;
+            if (this.allocSelectedTicket?.has_seat && !this.alloc.overrideExisting) return false;
+            return true;
+        },
+
+        async submitAllocation() {
+            if (!this.allocCanSubmit) return;
+            this.alloc.saving = true;
+            this.alloc.error = '';
+            let lw = this._lw();
+            if (!lw) { this.alloc.saving = false; return; }
+            try {
+                let res = await lw.call(
+                    'allocateSeatToTicket',
+                    this.alloc.seat.seat_uid,
+                    Number(this.alloc.ticketId),
+                    this.alloc.reason,
+                    !!this.alloc.overrideExisting,
+                    !!this.alloc.confirmHeld,
+                );
+                if (!res || !res.ok) {
+                    this.alloc.error = res?.message || ('Eroare: ' + (res?.error || 'unknown'));
+                    this.alloc.saving = false;
+                    return;
+                }
+                // Reflect in local ES map: new seat → sold; old seat (if any) → released
+                let newES = {...this.ES};
+                newES[this.alloc.seat.seat_uid] = 'sold';
+                if (res.released_seat_uid) delete newES[res.released_seat_uid];
+                this.ES = newES;
+
+                this.alloc.successMsg = 'Loc alocat: ' + res.seat_label;
+                this.alloc.saving = false;
+                // Invalidate recent activity cache so next open re-fetches
+                this.recentAllocLoaded = false;
+                if (this.recentAllocOpen) this.loadRecentAlloc();
+                // Auto-close after 1.4s
+                setTimeout(() => { if (this.alloc.successMsg) this.closeAllocModal(); }, 1400);
+            } catch (e) {
+                console.error('allocateSeatToTicket failed', e);
+                this.alloc.error = 'Eroare neașteptată: ' + (e?.message || e);
+                this.alloc.saving = false;
+            }
+        },
+
+        async loadRecentAlloc() {
+            this.recentAllocOpen = !this.recentAllocOpen;
+            if (!this.recentAllocOpen || this.recentAllocLoaded) return;
+            let lw = this._lw();
+            if (!lw) return;
+            try {
+                let res = await lw.call('getRecentSeatAllocations', 20);
+                this.recentAllocLog = Array.isArray(res) ? res : [];
+                this.recentAllocLoaded = true;
+            } catch (e) {
+                console.error('getRecentSeatAllocations failed', e);
+            }
+        },
 
         applyBlock() {
             if (!this.selSeats.length) return;
@@ -486,6 +687,7 @@
             if (!md) return;
             if (mode === 'assign' && mdRow) return;
             if (mode === 'block' && mdSeat) return;
+            if (mode === 'allocate' && mdSeat) return;
             let dx = e.clientX - mdX, dy = e.clientY - mdY;
             if (!pan && (Math.abs(dx) > 5 || Math.abs(dy) > 5)) pan = true;
             if (pan) {
@@ -506,6 +708,18 @@
                         let sc = el.closest('circle[data-seat-uid]');
                         if (sc) toggleSeat(sc.dataset.seatUid);
                     }
+                }
+            } else if (mode === 'allocate') {
+                if (!pan) {
+                    let uid = mdSeat;
+                    if (!uid) {
+                        let el = document.elementFromPoint(e.clientX, e.clientY);
+                        if (el && svg.contains(el)) {
+                            let sc = el.closest('circle[data-seat-uid]');
+                            if (sc) uid = sc.dataset.seatUid;
+                        }
+                    }
+                    if (uid) openAllocModal(uid);
                 }
             } else if (mode === 'assign' && mdRow) {
                 toggle(mdRow);
@@ -532,6 +746,11 @@
             class="px-4 py-2 text-sm font-medium rounded-lg bg-gray-700 hover:bg-gray-600 text-gray-200 border border-gray-600 transition-all">
             <svg class="w-4 h-4 inline -mt-0.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
             Blocheaz&#259; locuri
+        </button>
+        <button type="button" x-show="mode==='view'" x-on:click="enterAllocate()"
+            class="px-4 py-2 text-sm font-medium rounded-lg bg-indigo-700 hover:bg-indigo-600 text-white border border-indigo-600 transition-all">
+            <svg class="w-4 h-4 inline -mt-0.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
+            Aloc&#259; loc &rarr; bilet
         </button>
         <div class="flex items-center gap-2 ml-auto">
             <button type="button" x-on:click="zoomCenter(1.3)" class="px-2 py-1 text-xs bg-gray-700 hover:bg-gray-600 text-white rounded transition">+ Zoom</button>
@@ -586,6 +805,16 @@
         </div>
     </div>
 
+    {{-- Allocate mode toolbar (seat → ticket pairing) --}}
+    <div x-show="mode==='allocate'" x-cloak class="px-3">
+        <div class="flex flex-wrap items-center gap-3 p-3 bg-indigo-900/20 border border-indigo-700/40 rounded-lg">
+            <svg class="w-4 h-4 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <span class="text-xs text-indigo-100">Click pe un loc din hartă pentru a-l aloca unui bilet existent (re-asignare permisă pentru bilete care au deja loc).</span>
+            <button type="button" x-on:click="exitAllocate()"
+                class="ml-auto px-3 py-1.5 text-xs font-medium rounded-lg bg-green-700 hover:bg-green-600 text-white transition">Terminat</button>
+        </div>
+    </div>
+
     {{-- SVG Map --}}
     <div class="border overflow-hidden relative" style="background-color:#ffffff;border-color:#d1d5db;border-radius:0">
         <svg x-ref="svg"
@@ -593,7 +822,7 @@
             preserveAspectRatio="xMidYMid meet"
             class="w-full select-none"
             style="background-color:#ffffff;height:calc(100vh - 300px);min-height:500px;"
-            :style="pan ? 'cursor:grabbing' : (mode==='assign' ? 'cursor:crosshair' : (mode==='block' ? 'cursor:crosshair' : 'cursor:grab'))"
+            :style="pan ? 'cursor:grabbing' : (mode==='assign' ? 'cursor:crosshair' : (mode==='block' ? 'cursor:crosshair' : (mode==='allocate' ? 'cursor:crosshair' : 'cursor:grab')))"
             x-on:mousemove="hoverTip($event)"
             x-on:mouseleave="showTip = false"
         >
@@ -838,6 +1067,212 @@
                     <div x-show="summaryFor(tt.id).rows.length === 0" class="mt-1 ml-5 text-xs text-gray-600 italic">Nicio asignare</div>
                 </div>
             </template>
+        </div>
+    </div>
+
+    {{-- Recent seat allocations log (collapsible) --}}
+    <div class="border border-gray-700 rounded-lg overflow-hidden mx-3">
+        <button type="button" x-on:click="loadRecentAlloc()"
+            class="w-full flex items-center justify-between bg-gray-800/50 px-4 py-2 border-b border-gray-700 hover:bg-gray-800 transition">
+            <span class="text-sm font-medium text-gray-300">
+                <svg class="w-4 h-4 inline -mt-0.5 mr-1 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                Activitate recent&#259; aloc&#259;ri locuri
+            </span>
+            <svg class="w-4 h-4 text-gray-400 transition-transform" :class="recentAllocOpen ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+        </button>
+        <div x-show="recentAllocOpen" x-cloak class="px-4 py-3 max-h-96 overflow-y-auto">
+            <div x-show="!recentAllocLoaded" class="text-xs text-gray-500">Se &icirc;ncarc&#259;...</div>
+            <div x-show="recentAllocLoaded && recentAllocLog.length === 0" class="text-xs text-gray-500 italic">Nicio aloc&#259;re manual&#259; &icirc;nregistrat&#259; pentru acest eveniment.</div>
+            <ul class="divide-y divide-gray-800">
+                <template x-for="entry in recentAllocLog" :key="entry.id">
+                    <li class="py-2.5">
+                        <div class="flex items-start justify-between gap-3">
+                            <div class="flex-1 min-w-0">
+                                <div class="text-xs text-gray-400" x-text="entry.when + ' · ' + (entry.causer_name || entry.causer_email || '—')"></div>
+                                <div class="mt-0.5 text-sm text-gray-200">
+                                    <span x-text="entry.action_label"></span>:
+                                    <span class="font-mono" x-text="entry.seat_uid"></span>
+                                    (<span x-text="entry.seat_human"></span>)
+                                </div>
+                                <div class="mt-0.5 text-xs text-gray-500">
+                                    Bilet <a :href="entry.ticket_url" target="_blank" class="text-indigo-400 hover:underline" x-text="'#' + entry.ticket_id"></a>
+                                    · Comand&#259; <a :href="entry.order_url" target="_blank" class="text-indigo-400 hover:underline" x-text="entry.order_number"></a>
+                                    · <span x-text="entry.customer_label || '—'"></span>
+                                </div>
+                                <div class="mt-1 text-xs text-gray-400 italic truncate" :title="entry.reason" x-text="'Motiv: ' + (entry.reason || '—')"></div>
+                            </div>
+                        </div>
+                    </li>
+                </template>
+            </ul>
+        </div>
+    </div>
+
+    {{-- Seat allocation modal --}}
+    <div x-show="alloc.open" x-cloak
+         class="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60"
+         x-on:click.self="closeAllocModal()"
+         x-on:keydown.escape.window="if (alloc.open) closeAllocModal()">
+        <div class="w-full max-w-2xl bg-gray-900 border border-gray-700 rounded-xl shadow-2xl flex flex-col max-h-[90vh]">
+            <div class="px-5 py-3 border-b border-gray-700 flex items-center justify-between">
+                <div>
+                    <h3 class="text-base font-semibold text-white">
+                        Aloc&#259; loc &rarr; bilet
+                    </h3>
+                    <p class="mt-0.5 text-xs text-gray-400" x-show="alloc.seat" x-cloak>
+                        <span x-text="alloc.seat?.section_name"></span> &middot;
+                        R&#226;nd <span x-text="alloc.seat?.row_label"></span> &middot;
+                        Loc <span x-text="alloc.seat?.seat_label"></span>
+                        <span class="ml-1 font-mono text-gray-500" x-text="'(' + alloc.seat?.seat_uid + ')'"></span>
+                    </p>
+                </div>
+                <button type="button" x-on:click="closeAllocModal()" class="text-gray-400 hover:text-white">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+
+            <div class="flex-1 overflow-y-auto px-5 py-4 space-y-3">
+                <div x-show="alloc.loading" class="text-sm text-gray-400">Se &icirc;ncarc&#259;...</div>
+
+                <template x-if="alloc.seat && !alloc.loading">
+                    <div class="space-y-3">
+                        {{-- Seat status badge --}}
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs uppercase tracking-wider text-gray-500">Status curent loc:</span>
+                            <span class="px-2 py-0.5 text-xs rounded-full font-medium"
+                                :class="{
+                                    'bg-green-900/40 text-green-300': alloc.seat.status === 'available',
+                                    'bg-red-900/40 text-red-300': alloc.seat.status === 'blocked' || alloc.seat.status === 'sold',
+                                    'bg-amber-900/40 text-amber-300': alloc.seat.status === 'held',
+                                    'bg-gray-700 text-gray-300': alloc.seat.status === 'disabled',
+                                }"
+                                x-text="alloc.seat.status"></span>
+                        </div>
+
+                        {{-- Held warning --}}
+                        <div x-show="alloc.seat.status === 'held'" x-cloak class="p-3 rounded-lg bg-amber-900/20 border border-amber-700/40">
+                            <p class="text-xs text-amber-200 font-medium">
+                                &#9888; Locul este &icirc;n hold activ pentru o sesiune real&#259; (client &icirc;n cart).
+                            </p>
+                            <label class="mt-2 flex items-start gap-2 text-xs text-amber-100 cursor-pointer">
+                                <input type="checkbox" x-model="alloc.confirmHeld" class="mt-0.5 rounded border-amber-600 bg-amber-900 text-amber-500">
+                                <span>Confirm c&#259; aloc peste hold (vei prelua locul; clientul &icirc;n cart va e&#537;ua la checkout).</span>
+                            </label>
+                        </div>
+
+                        {{-- Occupant warning (sold) --}}
+                        <div x-show="alloc.seat.status === 'sold' && alloc.seat.occupant_ticket" x-cloak class="p-3 rounded-lg bg-red-900/20 border border-red-700/40">
+                            <p class="text-xs text-red-200 font-medium">
+                                &#9888; Locul este deja v&#226;ndut: bilet #<span x-text="alloc.seat.occupant_ticket?.id"></span>
+                                (comand&#259; <span x-text="alloc.seat.occupant_ticket?.order_number"></span>,
+                                <span x-text="alloc.seat.occupant_ticket?.customer_email"></span>).
+                            </p>
+                            <p class="mt-1 text-xs text-red-300">
+                                Nu se permite suprapunerea. Elibereaz&#259; locul biletului de mai sus &icirc;nt&#226;i.
+                            </p>
+                        </div>
+
+                        {{-- Customer dropdown --}}
+                        <div>
+                            <label class="block text-xs font-medium text-gray-300 mb-1">Client</label>
+                            <select x-model="alloc.customerId" x-on:change="onAllocCustomerChange()"
+                                class="w-full text-sm bg-gray-800 text-white border border-gray-700 rounded-lg px-3 py-2 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500">
+                                <option value="">— alege client —</option>
+                                <template x-for="c in alloc.customers" :key="c.id">
+                                    <option :value="c.id" x-text="c.label"></option>
+                                </template>
+                            </select>
+                            <p x-show="alloc.customers.length === 0 && alloc.customersLoaded" x-cloak class="mt-1 text-xs text-gray-500 italic">
+                                Niciun client cu comand&#259; pl&#259;tit&#259; pe acest eveniment.
+                            </p>
+                        </div>
+
+                        {{-- Order dropdown --}}
+                        <div x-show="alloc.customerId" x-cloak>
+                            <label class="block text-xs font-medium text-gray-300 mb-1">Comand&#259;</label>
+                            <select x-model="alloc.orderId" x-on:change="onAllocOrderChange()" :disabled="alloc.ordersLoading"
+                                class="w-full text-sm bg-gray-800 text-white border border-gray-700 rounded-lg px-3 py-2 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 disabled:opacity-50">
+                                <option value="">— alege comand&#259; —</option>
+                                <template x-for="o in alloc.orders" :key="o.id">
+                                    <option :value="o.id" x-text="o.label"></option>
+                                </template>
+                            </select>
+                            <p x-show="alloc.ordersLoading" class="mt-1 text-xs text-gray-500">Se &icirc;ncarc&#259;...</p>
+                        </div>
+
+                        {{-- Ticket dropdown --}}
+                        <div x-show="alloc.orderId" x-cloak>
+                            <div class="flex items-center justify-between mb-1">
+                                <label class="text-xs font-medium text-gray-300">Bilet</label>
+                                <label class="flex items-center gap-1.5 text-xs text-gray-400 cursor-pointer">
+                                    <input type="checkbox" x-model="alloc.includeAllocated"
+                                        x-on:change="refreshAllocTickets()"
+                                        class="rounded border-gray-600 bg-gray-700 text-indigo-500">
+                                    <span>Include bilete cu loc alocat (re-asignare)</span>
+                                </label>
+                            </div>
+                            <select x-model="alloc.ticketId" :disabled="alloc.ticketsLoading"
+                                class="w-full text-sm bg-gray-800 text-white border border-gray-700 rounded-lg px-3 py-2 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 disabled:opacity-50">
+                                <option value="">— alege bilet —</option>
+                                <template x-for="t in alloc.tickets" :key="t.id">
+                                    <option :value="t.id" x-text="t.label"></option>
+                                </template>
+                            </select>
+                            <p x-show="alloc.ticketsLoading" class="mt-1 text-xs text-gray-500">Se &icirc;ncarc&#259;...</p>
+                            <p x-show="!alloc.ticketsLoading && alloc.tickets.length === 0" x-cloak class="mt-1 text-xs text-gray-500 italic">
+                                <span x-show="!alloc.includeAllocated">Toate biletele din aceast&#259; comand&#259; au deja loc alocat. Bifeaz&#259; "Include bilete cu loc alocat" pentru re-asignare.</span>
+                                <span x-show="alloc.includeAllocated">Nicio bilet valid &icirc;n aceast&#259; comand&#259; pe acest eveniment.</span>
+                            </p>
+                        </div>
+
+                        {{-- Re-assign warning --}}
+                        <div x-show="allocSelectedTicket?.has_seat" x-cloak class="p-3 rounded-lg bg-amber-900/20 border border-amber-700/40">
+                            <p class="text-xs text-amber-200 font-medium">
+                                Biletul are deja loc alocat:
+                                <span class="font-mono" x-text="allocSelectedTicket?.current_seat_label || allocSelectedTicket?.current_seat_uid"></span>.
+                            </p>
+                            <label class="mt-2 flex items-start gap-2 text-xs text-amber-100 cursor-pointer">
+                                <input type="checkbox" x-model="alloc.overrideExisting" class="mt-0.5 rounded border-amber-600 bg-amber-900 text-amber-500">
+                                <span>Re-asignare: elibereaz&#259; locul vechi (devine <strong>available</strong>) &#537;i atribuie cel nou.</span>
+                            </label>
+                        </div>
+
+                        {{-- Reason --}}
+                        <div>
+                            <label class="block text-xs font-medium text-gray-300 mb-1">
+                                Motiv aloc&#259;rii <span class="text-red-400">*</span>
+                                <span class="ml-1 text-gray-500">(min 10 caractere, vizibil &icirc;n log)</span>
+                            </label>
+                            <textarea x-model="alloc.reason" rows="3" maxlength="500"
+                                placeholder="Ex: Locurile alese de client n-au fost propagate la checkout. Confirmat telefonic c&#259; dore&#537;te B-20."
+                                class="w-full text-sm bg-gray-800 text-white border border-gray-700 rounded-lg px-3 py-2 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"></textarea>
+                            <p class="mt-1 text-xs text-gray-500" x-text="(alloc.reason || '').length + ' / 500'"></p>
+                        </div>
+
+                        {{-- Confirmation checkbox --}}
+                        <label class="flex items-start gap-2 text-xs text-gray-300 cursor-pointer">
+                            <input type="checkbox" x-model="alloc.confirmCheck" class="mt-0.5 rounded border-gray-600 bg-gray-700 text-indigo-500">
+                            <span>Am verificat c&#259; biletul apar&#539;ine clientului corect &#537;i locul ales este cel solicitat.</span>
+                        </label>
+                    </div>
+                </template>
+
+                {{-- Error --}}
+                <div x-show="alloc.error" x-cloak class="p-3 rounded-lg bg-red-900/30 border border-red-700/50 text-sm text-red-200" x-text="alloc.error"></div>
+
+                {{-- Success --}}
+                <div x-show="alloc.successMsg" x-cloak class="p-3 rounded-lg bg-green-900/30 border border-green-700/50 text-sm text-green-200" x-text="alloc.successMsg"></div>
+            </div>
+
+            <div class="px-5 py-3 border-t border-gray-700 flex items-center justify-end gap-2">
+                <button type="button" x-on:click="closeAllocModal()"
+                    class="px-3 py-1.5 text-sm rounded-lg bg-gray-700 hover:bg-gray-600 text-gray-200 transition">Anuleaz&#259;</button>
+                <button type="button" x-on:click="submitAllocation()" :disabled="!allocCanSubmit"
+                    class="px-4 py-1.5 text-sm font-medium rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white transition disabled:opacity-40 disabled:cursor-not-allowed">
+                    <span x-show="!alloc.saving">Aloc&#259;</span>
+                    <span x-show="alloc.saving" class="animate-pulse">Se salveaz&#259;...</span>
+                </button>
+            </div>
         </div>
     </div>
 
