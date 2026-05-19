@@ -47,6 +47,13 @@ class OrderResource extends Resource
             $query->where('marketplace_customer_id', $customerId);
         }
 
+        // Filter by event from URL query param so tab badges + page count
+        // match the filtered list. Without this the header would show
+        // global totals while the table only shows orders for the event.
+        if ($eventId = request()->query('event_id')) {
+            $query->whereHas('tickets', fn ($q) => $q->where('event_id', $eventId));
+        }
+
         return $query;
     }
 
@@ -242,10 +249,40 @@ class OrderResource extends Resource
                     ->schema([
                         Forms\Components\TextInput::make('order_number')
                             ->disabled(),
-                        Forms\Components\Select::make('customer_id')
-                            ->relationship('customer', 'email')
-                            ->searchable()
-                            ->preload(),
+                        Forms\Components\Select::make('marketplace_customer_id')
+                            ->label('Client')
+                            ->relationship(
+                                name: 'marketplaceCustomer',
+                                titleAttribute: 'email',
+                                modifyQueryUsing: function (Builder $query) {
+                                    $marketplace = static::getMarketplaceClient();
+                                    if ($marketplace) {
+                                        $query->where('marketplace_client_id', $marketplace->id);
+                                    }
+                                    return $query;
+                                },
+                            )
+                            ->getOptionLabelFromRecordUsing(function ($record) {
+                                $name = trim(($record->first_name ?? '') . ' ' . ($record->last_name ?? ''));
+                                return $name !== ''
+                                    ? "{$name} ({$record->email})"
+                                    : $record->email;
+                            })
+                            ->searchable(['email', 'first_name', 'last_name', 'phone'])
+                            ->preload()
+                            ->helperText('Caută după email, nume sau telefon. Lista include doar clienții acestui marketplace.'),
+                        Forms\Components\TextInput::make('customer_email')
+                            ->label('Email comandă')
+                            ->email()
+                            ->maxLength(255)
+                            ->helperText('Adresa la care s-au trimis biletele/confirmările. Editabilă pentru a corecta greșeli de introducere (ex: prefix www.).'),
+                        Forms\Components\TextInput::make('customer_name')
+                            ->label('Nume comandă')
+                            ->maxLength(255),
+                        Forms\Components\TextInput::make('customer_phone')
+                            ->label('Telefon comandă')
+                            ->tel()
+                            ->maxLength(50),
                         Forms\Components\Select::make('status')
                             ->options([
                                 'pending' => 'Pending',

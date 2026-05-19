@@ -88,12 +88,25 @@ class PublicShareLinkController extends BaseController
             $link->saveQuietly();
         }
 
-        // Build event payload by merging cached ticket_data with current
-        // event metadata (title, venue, date) — those move less often so
-        // we re-query each load for accuracy. Falls back to cached
-        // ticket_data when API isn't available.
+        // Build event payload by merging fresh ticket_data with current
+        // event metadata (title, venue, date). The snapshot on the link
+        // is refreshed each call (min 5s interval to absorb bursts) so
+        // the public view never serves stale sold/total/revenue numbers.
         $eventIds = $link->event_ids ?? [];
         $cachedTicketData = $link->ticket_data ?? [];
+
+        $staleAfterSec = 5;
+        $updatedAt = $link->ticket_data_updated_at;
+        $isStale = !$updatedAt || $updatedAt->lt(now()->subSeconds($staleAfterSec));
+        if ($isStale || empty($cachedTicketData)) {
+            $cachedTicketData = MarketplaceShareLink::computeFreshTicketStats(
+                $eventIds,
+                $link->marketplace_organizer_id,
+            );
+            $link->ticket_data = $cachedTicketData;
+            $link->ticket_data_updated_at = now();
+            $link->saveQuietly();
+        }
 
         $events = Event::whereIn('id', $eventIds)
             ->with(['venue'])

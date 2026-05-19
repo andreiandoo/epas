@@ -218,53 +218,7 @@ class ShareLinkController extends BaseController
      */
     protected function fetchTicketTotals(MarketplaceOrganizer $organizer, array $eventIds): array
     {
-        $validStatuses = ['paid', 'confirmed', 'completed'];
-        $result = [];
-
-        $events = Event::whereIn('id', $eventIds)
-            ->where('marketplace_organizer_id', $organizer->id)
-            ->with(['ticketTypes'])
-            ->get();
-
-        foreach ($events as $event) {
-            $sold = Ticket::where('event_id', $event->id)
-                ->whereHas('order', fn ($q) => $q->whereIn('status', $validStatuses))
-                ->whereIn('status', ['valid', 'used'])
-                ->count();
-            $total = 0;
-            foreach ($event->ticketTypes as $tt) {
-                $q = (int) ($tt->quota_total ?? 0);
-                if ($q < 0) { $total = -1; break; }
-                $total += $q;
-            }
-            $revenue = (float) Ticket::where('event_id', $event->id)
-                ->whereHas('order', fn ($q) => $q->whereIn('status', $validStatuses))
-                ->whereIn('status', ['valid', 'used'])
-                ->sum('price');
-
-            $result[(string) $event->id] = [
-                'sold' => $sold,
-                'total' => $total,
-                'revenue_net' => round($revenue, 2),
-                'currency' => 'RON',
-                'ticket_types' => $event->ticketTypes->map(function ($tt) use ($validStatuses) {
-                    $sold = Ticket::where('ticket_type_id', $tt->id)
-                        ->whereHas('order', fn ($q) => $q->whereIn('status', $validStatuses))
-                        ->whereIn('status', ['valid', 'used'])
-                        ->count();
-                    $name = is_array($tt->name)
-                        ? ($tt->name['ro'] ?? $tt->name['en'] ?? reset($tt->name) ?: 'Bilet')
-                        : ($tt->name ?? 'Bilet');
-                    return [
-                        'name' => $name,
-                        'sold' => $sold,
-                        'total' => (int) ($tt->quota_total ?? 0),
-                    ];
-                })->values()->all(),
-            ];
-        }
-
-        return $result;
+        return MarketplaceShareLink::computeFreshTicketStats($eventIds, $organizer->id);
     }
 
     /**
