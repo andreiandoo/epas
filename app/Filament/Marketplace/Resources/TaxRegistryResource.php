@@ -98,12 +98,14 @@ class TaxRegistryResource extends Resource
 
                                 return $locationService->getCities($countryCode, $county);
                             })
-                            ->searchable(),
+                            ->searchable()
+                            ->helperText('Pentru sectoarele Bucureștiului: alege County = "Bucharest" și apoi City = "Sector 1" / "Sector 2" / etc.'),
 
                         Forms\Components\TextInput::make('commune')
-                            ->label('Comună')
+                            ->label('Comună / Sector')
                             ->maxLength(255)
-                            ->placeholder('ex: Comuna Berceni'),
+                            ->placeholder('ex: Comuna Berceni, sau Sector 1 dacă City nu acoperă cazul')
+                            ->helperText('Câmp liber pentru subdiviziuni (comune, sectoare etc.) care nu apar în lista City.'),
 
                         Forms\Components\TextInput::make('name')
                             ->label('Name')
@@ -129,8 +131,8 @@ class TaxRegistryResource extends Resource
 
                         Forms\Components\TextInput::make('phone')
                             ->label('Phone')
-                            ->tel()
-                            ->maxLength(50),
+                            ->maxLength(255)
+                            ->placeholder('ex: 021 318 03 40 / 0312 256 411 (poate conține mai multe numere, fax, etc.)'),
 
                         Forms\Components\TextInput::make('email')
                             ->label('Email')

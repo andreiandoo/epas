@@ -106,12 +106,30 @@ class EditTaxTemplate extends EditRecord
 
                     Forms\Components\Select::make('tax_registry_id')
                         ->label('Registry fiscal')
-                        ->options(function () {
+                        ->searchable()
+                        ->getSearchResultsUsing(function (string $search) {
                             $marketplace = static::getMarketplaceClient();
                             if (!$marketplace) return [];
+
+                            // Diacritic + case insensitive normalisation so
+                            // "bucuresti", "BUCURESTI", "București", "BUCUREȘTI"
+                            // all match the same registry rows.
+                            $normalize = fn (?string $s) => $s === null
+                                ? ''
+                                : mb_strtolower(\Illuminate\Support\Str::ascii($s));
+                            $needle = $normalize($search);
+
                             return MarketplaceTaxRegistry::where('marketplace_client_id', $marketplace->id)
                                 ->orderBy('name')
                                 ->get()
+                                ->filter(function ($r) use ($needle, $normalize) {
+                                    if ($needle === '') return true;
+                                    $haystack = $normalize($r->name)
+                                        . '|' . $normalize($r->commune)
+                                        . '|' . $normalize($r->city)
+                                        . '|' . $normalize($r->county);
+                                    return str_contains($haystack, $needle);
+                                })
                                 ->mapWithKeys(fn ($r) => [
                                     $r->id => ($r->name ?? 'Registry #' . $r->id)
                                         . ($r->commune ? ' — ' . $r->commune : '')
@@ -119,8 +137,14 @@ class EditTaxTemplate extends EditRecord
                                 ])
                                 ->toArray();
                         })
-                        ->searchable()
-                        ->helperText('Opțional — alege explicit registry-ul fiscal pentru test. Fallback: registry-ul evenimentului → primul registry activ al marketplace-ului.'),
+                        ->getOptionLabelUsing(function ($value): ?string {
+                            $r = MarketplaceTaxRegistry::find($value);
+                            if (!$r) return null;
+                            return ($r->name ?? 'Registry #' . $r->id)
+                                . ($r->commune ? ' — ' . $r->commune : '')
+                                . ($r->tax_rate !== null ? ' (' . rtrim(rtrim(number_format((float) $r->tax_rate, 2, '.', ''), '0'), '.') . '%)' : '');
+                        })
+                        ->helperText('Opțional — alege explicit registry-ul fiscal pentru test. Caută după nume, comună, oraș sau județ (case + diacritic insensitive). Fallback: registry-ul evenimentului → primul registry activ al marketplace-ului.'),
                 ])
                 ->action(function (array $data) {
                     $template = $this->record->fresh();
