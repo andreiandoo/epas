@@ -90,7 +90,7 @@
                 <div class="flex items-center justify-between gap-4 px-4 py-3 transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50">
                     <div class="flex-1 min-w-0">
                         <div class="flex flex-wrap items-center gap-2">
-                            <a href="{{ route('filament.marketplace.resources.artist-accounts.edit', $artistAccount->id) }}" class="text-sm font-medium text-gray-900 truncate dark:text-white hover:text-violet-600 dark:hover:text-violet-400">
+                            <a href="{{ route('filament.marketplace.resources.artist-accounts.view', $artistAccount->id) }}" class="text-sm font-medium text-gray-900 truncate dark:text-white hover:text-violet-600 dark:hover:text-violet-400">
                                 {{ $artistName }}
                             </a>
                             <span class="inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium rounded bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300">În review</span>
@@ -104,7 +104,7 @@
                             <span class="text-gray-400">Înregistrat {{ $artistAccount->created_at->diffForHumans() }}</span>
                         </div>
                     </div>
-                    <a href="{{ route('filament.marketplace.resources.artist-accounts.edit', $artistAccount->id) }}" class="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-violet-700 bg-violet-100 hover:bg-violet-200 dark:text-violet-300 dark:bg-violet-900/40 dark:hover:bg-violet-900/60 rounded-lg transition-colors">
+                    <a href="{{ route('filament.marketplace.resources.artist-accounts.view', $artistAccount->id) }}" class="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-violet-700 bg-violet-100 hover:bg-violet-200 dark:text-violet-300 dark:bg-violet-900/40 dark:hover:bg-violet-900/60 rounded-lg transition-colors">
                         <x-heroicon-o-eye class="w-3.5 h-3.5" />
                         Revizuieste
                     </a>
