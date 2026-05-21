@@ -10,6 +10,8 @@ use Filament\Schemas\Schema;
 use Filament\Schemas\Components as SC;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Filament\Actions\Action;
+use Filament\Actions\EditAction;
 use Illuminate\Database\Eloquent\Builder;
 
 class TenantTaxRegistryResource extends Resource
@@ -90,9 +92,9 @@ class TenantTaxRegistryResource extends Resource
                 Tables\Columns\IconColumn::make('is_default')->boolean()->label('Implicită'),
                 Tables\Columns\IconColumn::make('is_active')->boolean()->label('Activă'),
             ])
-            ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\Action::make('makeDefault')
+            ->recordActions([
+                EditAction::make(),
+                Action::make('makeDefault')
                     ->label('Setează ca implicită')
                     ->visible(fn ($record) => ! $record->is_default)
                     ->icon('heroicon-o-star')

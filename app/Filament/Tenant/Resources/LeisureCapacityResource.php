@@ -11,6 +11,10 @@ use Filament\Schemas\Schema;
 use Filament\Schemas\Components as SC;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Filament\Actions\Action;
+use Filament\Actions\EditAction;
+use Filament\Actions\BulkAction;
+use Filament\Actions\BulkActionGroup;
 use Illuminate\Database\Eloquent\Builder;
 
 class LeisureCapacityResource extends Resource
@@ -163,25 +167,27 @@ class LeisureCapacityResource extends Resource
                 Tables\Filters\TernaryFilter::make('is_closed')
                     ->label('Închis'),
             ])
-            ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\Action::make('toggleClosed')
+            ->recordActions([
+                EditAction::make(),
+                Action::make('toggleClosed')
                     ->label(fn ($record) => $record->is_closed ? 'Redeschide' : 'Închide')
                     ->icon('heroicon-o-lock-closed')
                     ->color(fn ($record) => $record->is_closed ? 'success' : 'warning')
                     ->action(fn ($record) => $record->update(['is_closed' => ! $record->is_closed])),
             ])
-            ->bulkActions([
-                Tables\Actions\BulkAction::make('close')
-                    ->label('Închide')
-                    ->icon('heroicon-o-lock-closed')
-                    ->color('warning')
-                    ->action(fn ($records) => $records->each->update(['is_closed' => true])),
-                Tables\Actions\BulkAction::make('reopen')
-                    ->label('Redeschide')
-                    ->icon('heroicon-o-lock-open')
-                    ->color('success')
-                    ->action(fn ($records) => $records->each->update(['is_closed' => false])),
+            ->toolbarActions([
+                BulkActionGroup::make([
+                    BulkAction::make('close')
+                        ->label('Închide')
+                        ->icon('heroicon-o-lock-closed')
+                        ->color('warning')
+                        ->action(fn ($records) => $records->each->update(['is_closed' => true])),
+                    BulkAction::make('reopen')
+                        ->label('Redeschide')
+                        ->icon('heroicon-o-lock-open')
+                        ->color('success')
+                        ->action(fn ($records) => $records->each->update(['is_closed' => false])),
+                ]),
             ]);
     }
 

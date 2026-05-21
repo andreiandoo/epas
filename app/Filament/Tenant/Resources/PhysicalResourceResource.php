@@ -10,6 +10,10 @@ use Filament\Schemas\Schema;
 use Filament\Schemas\Components as SC;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Filament\Actions\Action;
+use Filament\Actions\EditAction;
+use Filament\Actions\BulkAction;
+use Filament\Actions\BulkActionGroup;
 use Illuminate\Database\Eloquent\Builder;
 
 class PhysicalResourceResource extends Resource
@@ -77,7 +81,6 @@ class PhysicalResourceResource extends Resource
                         ->label('Bilete asociate (whitelist)')
                         ->helperText('Lasă gol pentru a permite orice bilet de tip rental al acestui tenant.')
                         ->multiple()
-                        ->relationship('tenant', 'name') // placeholder; real impl below
                         ->options(function () {
                             $tenantId = auth()->user()?->tenant?->id;
                             return \App\Models\TicketType::query()
@@ -111,8 +114,7 @@ class PhysicalResourceResource extends Resource
                 Tables\Columns\TextColumn::make('qr_code')
                     ->label('QR')
                     ->copyable()
-                    ->fontFamily('mono')
-                    ->size(Tables\Columns\TextColumn\TextColumnSize::Small),
+                    ->fontFamily('mono'),
                 Tables\Columns\TextColumn::make('status')
                     ->badge()
                     ->color(fn ($state) => match ($state) {
@@ -142,19 +144,21 @@ class PhysicalResourceResource extends Resource
                         'retired' => 'Scoasă din uz',
                     ]),
             ])
-            ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\Action::make('printQr')
+            ->recordActions([
+                EditAction::make(),
+                Action::make('printQr')
                     ->label('Print QR')
                     ->icon('heroicon-o-printer')
                     ->url(fn ($record) => route('leisure.qr-print', ['ids' => [$record->id]]))
                     ->openUrlInNewTab(),
             ])
-            ->bulkActions([
-                Tables\Actions\BulkAction::make('printQrBulk')
-                    ->label('Print QR codes')
-                    ->icon('heroicon-o-printer')
-                    ->action(fn ($records) => redirect()->route('leisure.qr-print', ['ids' => $records->pluck('id')->toArray()])),
+            ->toolbarActions([
+                BulkActionGroup::make([
+                    BulkAction::make('printQrBulk')
+                        ->label('Print QR codes')
+                        ->icon('heroicon-o-printer')
+                        ->action(fn ($records) => redirect()->route('leisure.qr-print', ['ids' => $records->pluck('id')->toArray()])),
+                ]),
             ]);
     }
 

@@ -7,6 +7,7 @@ use App\Models\Leisure\ResourceRental;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Filament\Actions\Action;
 use Illuminate\Database\Eloquent\Builder;
 
 class ResourceRentalResource extends Resource
@@ -97,8 +98,8 @@ class ResourceRentalResource extends Resource
                     ->label('Active depășite')
                     ->query(fn (Builder $q) => $q->whereNull('ended_at')->where('planned_end_at', '<', now())),
             ])
-            ->actions([
-                Tables\Actions\Action::make('forceEnd')
+            ->recordActions([
+                Action::make('forceEnd')
                     ->label('Forțează închidere')
                     ->icon('heroicon-o-stop-circle')
                     ->color('danger')

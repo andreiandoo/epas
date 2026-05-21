@@ -35,6 +35,21 @@ class EventResource extends Resource
     protected static ?int $navigationSort = 2;
 
     /**
+     * Hide "My Events" from sidebar for leisure tenants — they don't run
+     * events, they run a physical location. The Event row still exists in
+     * the DB (we'll surface it through a Location-style multi-tab page in a
+     * follow-up), so this only affects the sidebar.
+     */
+    public static function shouldRegisterNavigation(): bool
+    {
+        $tenant = auth()->user()?->tenant;
+        $type = $tenant?->tenant_type instanceof \App\Enums\TenantType
+            ? $tenant->tenant_type->value
+            : (string) $tenant?->tenant_type;
+        return $type !== 'leisure';
+    }
+
+    /**
      * Navigation badge showing hosted events count
      */
     public static function getNavigationBadge(): ?string

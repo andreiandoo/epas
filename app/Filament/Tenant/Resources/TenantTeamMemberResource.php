@@ -11,6 +11,8 @@ use Filament\Schemas\Schema;
 use Filament\Schemas\Components as SC;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Filament\Actions\Action;
+use Filament\Actions\EditAction;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Hash;
 
@@ -151,9 +153,9 @@ class TenantTeamMemberResource extends Resource
                     'active' => 'Activ', 'pending' => 'Pending', 'inactive' => 'Inactiv',
                 ]),
             ])
-            ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\Action::make('toggleStatus')
+            ->recordActions([
+                EditAction::make(),
+                Action::make('toggleStatus')
                     ->label(fn ($record) => $record->status === 'active' ? 'Dezactivează' : 'Activează')
                     ->icon('heroicon-o-power')
                     ->color(fn ($record) => $record->status === 'active' ? 'warning' : 'success')

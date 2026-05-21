@@ -24,6 +24,18 @@ class CashlessDashboard extends Page
 
     protected string $view = 'filament.tenant.pages.cashless.dashboard';
 
+    public static function shouldRegisterNavigation(): bool
+    {
+        $tenant = auth()->user()?->tenant;
+        if (! $tenant) {
+            return false;
+        }
+        return $tenant->microservices()
+            ->where('slug', 'cashless')
+            ->wherePivot('is_active', true)
+            ->exists();
+    }
+
     public ?int $editionId = null;
 
     public function mount(): void
