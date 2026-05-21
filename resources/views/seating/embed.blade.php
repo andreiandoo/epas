@@ -619,12 +619,12 @@ function updateFooter() {
   }
 
   // Build the per-seat detail list. One row per seat: type name +
-  // position (row + seat number) + price + delete affordance.
+  // position (section + row + seat number) + price + delete affordance.
   selectedListEl.classList.remove('hidden');
   selectedListEl.innerHTML = '';
   let total = 0;
   for (const e of list) {
-    const { seat, row } = e;
+    const { seat, row, section } = e;
     const tt = findTicketType(seat.ticket_type_id || PRESELECTED_TT);
     const ttName = tt?.name || 'Bilet';
     const ttColor = tt?.color || seat.ticket_type_color || '#10B981';
@@ -632,7 +632,7 @@ function updateFooter() {
     total += price;
 
     const seatNum = seat.label ?? seat.seat_number ?? seat.seat_label ?? '';
-    const sectionName = section.name || '';
+    const sectionName = section?.name || '';
     const div = document.createElement('div');
     div.className = 'sel-row';
     div.innerHTML =
