@@ -142,14 +142,18 @@ export default function SeatingMapScreen({ visible, eventId, ticketTypeId, onCon
               domStorageEnabled
               startInLoadingState
               setSupportMultipleWindows={false}
-              androidLayerType="hardware"
+              // NOTE: avoid androidLayerType="hardware" — on some devices
+              // it eats canvas touch dispatch. Default (software) is fine
+              // for our flat canvas and keeps taps reliable.
               // Critical for canvas touches on Android — stop the WebView
               // from interpreting drags as native scrolls and swallowing
-              // pointer events before the canvas sees them.
+              // touch events before the canvas sees them.
               scrollEnabled={false}
               nestedScrollEnabled={false}
               overScrollMode="never"
               scalesPageToFit={false}
+              setBuiltInZoomControls={false}
+              setDisplayZoomControls={false}
               renderLoading={() => (
                 <View style={styles.center}>
                   <ActivityIndicator size="large" color={colors.purple} />
