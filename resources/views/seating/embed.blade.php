@@ -11,6 +11,7 @@
     margin: 0; padding: 0; height: 100%; background: #0a0a14; color: #fff;
     font-family: -apple-system, Roboto, system-ui, sans-serif; overflow: hidden;
     user-select: none; -webkit-user-select: none; touch-action: none;
+    overscroll-behavior: none;
   }
   #wrap { display: flex; flex-direction: column; height: 100vh; }
   #legend {
@@ -31,7 +32,17 @@
     flex: 1; position: relative; overflow: hidden;
     background: linear-gradient(180deg, #0a0a14 0%, #0f0f1f 100%);
   }
-  #seat-canvas { position: absolute; top: 0; left: 0; transform-origin: 0 0; }
+  /* Explicit 100% size so the canvas exists in the DOM with non-zero
+     bounds even before fitToContainer() runs — Android WebView ignores
+     pointer events on zero-sized elements. touch-action:none stops the
+     browser from interpreting drags as scrolls. */
+  #seat-canvas {
+    position: absolute; top: 0; left: 0;
+    width: 100%; height: 100%;
+    transform-origin: 0 0;
+    touch-action: none;
+    -webkit-tap-highlight-color: transparent;
+  }
   #footer {
     flex-shrink: 0; background: #0f0f1f;
     border-top: 1px solid rgba(255,255,255,0.08);
@@ -59,7 +70,14 @@
     font-size: 18px; font-weight: 700; cursor: pointer; flex-shrink: 0;
   }
   #totals-row {
-    flex-shrink: 0; padding: 12px 16px;
+    flex-shrink: 0;
+    padding: 12px 16px;
+    /* Phone gesture nav / home indicator inset. env() returns the OS
+       inset on iOS / modern Android; max() ensures a baseline 12px so
+       the buttons don't sit flush against the bottom edge. The WebView
+       container in SeatingMapScreen.js also pads the bottom by
+       insets.bottom as a belt-and-braces fallback. */
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
     border-top: 1px solid rgba(255,255,255,0.08);
     display: flex; gap: 10px; align-items: center;
   }
@@ -210,18 +228,19 @@ function paint() {
   roundedRect(ctx, 0, 0, cw, ch, 8);
   ctx.fill();
 
-  // Section pass: outlines, decorative free-text, and section names.
-  // Respects designer metadata:
-  //   section.metadata.show_label       — explicit show/hide of section name
-  //   section.metadata.shape === 'text' — render as free text (decorative)
-  //                                       with admin-set font/color/size
-  //   section.metadata.text / fontSize / fontFamily / fontWeight / color / opacity
+  // Section pass — three rendering modes:
+  //   1. Decorative `shape === 'text'`: styled free text, no outline.
+  //   2. Empty section (no rows/seats): outline + name (structural labels
+  //      like Scenă, Bar, Intrare).
+  //   3. Seated section: nothing extra — seats themselves are the visual.
+  //      No outline, no name. Names overlap the seats which is ugly.
   for (const section of SEATING.sections) {
     const sx = section.x || 0, sy = section.y || 0;
     const sw = section.width || 100, sh = section.height || 100;
     const meta = section.metadata || {};
+    const hasSeats = (section.rows || []).some(r => (r.seats || []).length > 0);
 
-    // Decorative text element — no outline, just the styled text.
+    // Decorative text element — admin-styled font/color/size/rotation.
     if (meta.shape === 'text' && meta.text) {
       ctx.save();
       ctx.globalAlpha = meta.opacity != null ? Number(meta.opacity) : 1;
@@ -232,7 +251,6 @@ function paint() {
       ctx.font = `${fWeight} ${fSize}px ${fFam}`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      // Support rotation if set on the section.
       if (section.rotation) {
         ctx.translate(sx + sw / 2, sy + sh / 2);
         ctx.rotate((section.rotation * Math.PI) / 180);
@@ -244,35 +262,34 @@ function paint() {
       continue;
     }
 
-    // Standard seated section — faint outline.
+    // Seated section — render seats only (handled in the seat pass below).
+    // Skip outline and name entirely.
+    if (hasSeats) continue;
+
+    // Empty section — structural label (Scenă, Bar, Intrare). Outline +
+    // name centered. Respects metadata.show_label === false to fully hide
+    // even an empty section if the admin asked for it.
     ctx.strokeStyle = 'rgba(139,92,246,0.18)';
     ctx.lineWidth = 1;
     ctx.strokeRect(sx, sy, sw, sh);
 
-    // Section name: respect explicit show_label flag; fall back to "show
-    // only if section has no seats" so legacy layouts still display
-    // structural labels (stage, bar, entrance).
-    const hasSeats = (section.rows || []).some(r => (r.seats || []).length > 0);
-    const showSectionName = meta.show_label === true
-      || (meta.show_label !== false && !hasSeats);
-    if (showSectionName && section.name) {
+    if (meta.show_label !== false && section.name) {
       ctx.fillStyle = 'rgba(255,255,255,0.75)';
       ctx.font = 'bold 14px system-ui';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      const labelPos = meta.label_position || 'inside';
-      const ny = labelPos === 'outside' ? sy - 8 : sy + sh / 2;
-      ctx.fillText(section.name, sx + sw / 2, ny);
+      ctx.fillText(section.name, sx + sw / 2, sy + sh / 2);
     }
   }
 
   // Row labels — respect both per-section auto_show_row_labels and
   // per-row metadata.show_label. Position from row.metadata.label_position
-  // (default 'left').
-  const zoomLetsLabelsShow = view.scale > 0.5;
+  // (default 'left'). Generous clearance (seatR + 14) so the text doesn't
+  // bleed into the leftmost/rightmost seat of the row.
+  const zoomLetsLabelsShow = view.scale > 0.35;
   if (zoomLetsLabelsShow) {
-    ctx.fillStyle = 'rgba(255,255,255,0.7)';
-    ctx.font = '700 9px system-ui';
+    ctx.fillStyle = 'rgba(255,255,255,0.75)';
+    ctx.font = '700 10px system-ui';
     ctx.textBaseline = 'middle';
     for (const section of SEATING.sections) {
       const secMeta = section.metadata || {};
@@ -291,13 +308,14 @@ function paint() {
           if ((s.x || 0) > (right.x || 0)) right = s;
         }
         const pos = rowMeta.label_position || 'left';
+        const gap = seatR + 14; // big enough that "Rând A" sits clear
         let lx, ly;
         if (pos === 'right') {
-          lx = sx + (right.x || 0) + seatR + 4;
+          lx = sx + (right.x || 0) + gap;
           ly = sy + (right.y || 0);
           ctx.textAlign = 'left';
         } else {
-          lx = sx + (left.x || 0) - seatR - 4;
+          lx = sx + (left.x || 0) - gap;
           ly = sy + (left.y || 0);
           ctx.textAlign = 'right';
         }
@@ -306,9 +324,12 @@ function paint() {
     }
   }
 
-  // Seats + seat numbers. Lower threshold than row labels — numbers
-  // need a slightly larger zoom to stay legible inside the seat circle.
-  const showSeatNumbers = view.scale > 0.9;
+  // Seats + seat numbers. The threshold guards against unreadable text
+  // on far-out zoom; numbers fade in as the user pinches in. Effective
+  // text size = max(7, r*0.85) * view.scale, so at scale 0.4 with r=7
+  // we get ~2.4px → too small; at 0.7 we get ~4px → starts being
+  // useful; at 1.0+ it's clean.
+  const showSeatNumbers = view.scale > 0.5;
   for (const entry of seatIndex.values()) {
     const { seat, absX, absY, r } = entry;
     ctx.beginPath();
@@ -355,7 +376,11 @@ function fitToContainer() {
   const sy = h / SEATING.canvas.height;
   view.scale = Math.min(sx, sy) * 0.95;
   view.minScale = view.scale * 0.5;
-  view.maxScale = view.scale * 8;
+  // Guarantee at least 4× absolute scale even on huge canvases — needed
+  // so the user can always zoom enough to read seat numbers (threshold
+  // 0.5). Otherwise on a 4000-px canvas in a 400-px viewport the
+  // initial fit is 0.095 and 8× of that is still only 0.76.
+  view.maxScale = Math.max(4.0, view.scale * 10);
   // Center
   view.tx = (w - SEATING.canvas.width * view.scale) / 2;
   view.ty = (h - SEATING.canvas.height * view.scale) / 2;
