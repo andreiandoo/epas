@@ -120,14 +120,53 @@ class LeisureDemoSeeder extends Seeder
 
     /**
      * Intersect attribute array with the set of columns that actually exist on
-     * the table AND are NOT generated/computed. Generated columns (e.g.
-     * tenant_microservices.is_active in prod) refuse explicit inserts.
+     * the table AND are NOT generated/computed. Also flattens array values
+     * destined for scalar columns (string/text/varchar): some envs store
+     * Translatable fields as plain VARCHAR rather than JSONB, so passing
+     * `['ro' => '...']` would blow up. We pick the 'ro' translation if
+     * present, otherwise the first value.
      */
     private function writableAttrs(string $table, array $attrs): array
     {
         $cols = Schema::getColumnListing($table);
         $writable = array_diff($cols, $this->generatedColumns($table));
-        return array_intersect_key($attrs, array_flip($writable));
+        $filtered = array_intersect_key($attrs, array_flip($writable));
+
+        $types = $this->columnTypes($table);
+        foreach ($filtered as $col => $value) {
+            if (! is_array($value)) {
+                continue;
+            }
+            $type = $types[$col] ?? null;
+            // JSON/JSONB columns accept arrays directly via Eloquent casts.
+            if ($type && in_array($type, ['json', 'jsonb'], true)) {
+                continue;
+            }
+            // Scalar column with array payload — flatten translations.
+            $filtered[$col] = $value['ro'] ?? $value['en'] ?? reset($value) ?: null;
+        }
+        return $filtered;
+    }
+
+    /** @return array<string,string> column_name => data_type */
+    private function columnTypes(string $table): array
+    {
+        try {
+            $driver = DB::connection()->getDriverName();
+        } catch (\Throwable) {
+            return [];
+        }
+        if ($driver !== 'pgsql') {
+            return [];
+        }
+        try {
+            return DB::table('information_schema.columns')
+                ->where('table_name', $table)
+                ->pluck('data_type', 'column_name')
+                ->toArray();
+        } catch (\Throwable) {
+            return [];
+        }
     }
 
     private function createOwnerUser(): User
@@ -363,20 +402,14 @@ class LeisureDemoSeeder extends Seeder
 
     private function createEvent(Tenant $tenant): Event
     {
-        // Idempotency: look up by JSON path on slug.ro (works on Postgres
-        // and MySQL 5.7+; falls back to raw LIKE if neither is available).
+        // Idempotency: match on a guaranteed-scalar column. display_template
+        // is a string, schema-stable; one leisure_venue event per demo tenant
+        // is the desired invariant anyway.
         $existing = Event::query()
             ->where('tenant_id', $tenant->id)
-            ->where(function ($q) {
-                $driver = $q->getConnection()->getDriverName();
-                if ($driver === 'pgsql') {
-                    $q->whereRaw("slug->>'ro' = ?", ['aquapark-splash-vara-2026']);
-                } elseif ($driver === 'mysql') {
-                    $q->whereRaw("JSON_EXTRACT(slug, '$.ro') = ?", ['aquapark-splash-vara-2026']);
-                } else {
-                    $q->where('slug', 'like', '%aquapark-splash-vara-2026%');
-                }
-            })
+            ->when(Schema::hasColumn('events', 'display_template'),
+                fn ($q) => $q->where('display_template', 'leisure_venue'))
+            ->orderBy('id')
             ->first();
         if ($existing) {
             return $existing;
