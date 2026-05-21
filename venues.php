@@ -28,7 +28,7 @@ include __DIR__ . '/includes/header.php';
 
 <!-- Main Content -->
 <main class="max-w-6xl px-6 py-10 mx-auto">
-    <!-- Featured Venues -->
+    <!-- Featured Venues  -->
     <section class="mb-12">
         <div class="flex items-center justify-between mb-6">
             <h2 class="text-2xl font-bold text-secondary flex items-center gap-2.5">
@@ -39,7 +39,7 @@ include __DIR__ . '/includes/header.php';
             </h2>
         </div>
 
-        <div id="featuredVenues" class="grid grid-cols-2 gap-6">
+        <div id="featuredVenues" class="grid grid-cols-2 gap-6 mobile:grid-cols-1">
             <!-- Skeleton -->
             <div class="relative overflow-hidden bg-gray-200 rounded-2xl aspect-video animate-pulse"></div>
             <div class="relative overflow-hidden bg-gray-200 rounded-2xl aspect-video animate-pulse"></div>
@@ -364,7 +364,7 @@ const VenuesPage = {
             <a href="/locatie/${v.slug}" class="relative overflow-hidden rounded-2xl aspect-video group">
                 <img src="${v.image}" alt="${v.name}" class="object-cover w-full h-full transition-transform duration-500 group-hover:scale-105" loading="lazy">
                 <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
-                <div class="absolute bottom-0 left-0 right-0 p-7">
+                <div class="absolute bottom-0 left-0 right-0 p-7 mobile:p-4">
                     <span class="inline-block px-3 py-1.5 bg-primary rounded-md text-xs font-bold text-white uppercase tracking-wider mb-3">${v.type}</span>
                     <h3 class="mb-2 text-2xl font-extrabold text-white">${v.name}</h3>
                     <div class="flex items-center gap-1.5 text-base text-white/80 mb-3">
