@@ -3339,7 +3339,17 @@ class EventResource extends Resource
                                                 Forms\Components\Toggle::make('has_sale')
                                                     ->label($t('Activează reducere', 'Enable Sale Discount'))
                                                     ->live()
-                                                    ->partiallyRenderAfterStateUpdated()
+                                                    // No partiallyRenderAfterStateUpdated() — sibling
+                                                    // fields (price, discount_percent, sales_start_at,
+                                                    // sales_end_at, sale_stock) use visible(fn => $get('has_sale')),
+                                                    // so toggling the switch must re-render the whole
+                                                    // section so those closures re-evaluate. Without
+                                                    // this the conditional fields never appear for a
+                                                    // ticket type that has no pre-existing sale data,
+                                                    // and the toggle silently reverts on refresh
+                                                    // because dehydrated(false) means the toggle
+                                                    // state is rebuilt from data fields that the
+                                                    // user could never fill in.
                                                     ->default(false)
                                                     ->dehydrated(false)
                                                     ->afterStateHydrated(function ($state, SSet $set, SGet $get) {
