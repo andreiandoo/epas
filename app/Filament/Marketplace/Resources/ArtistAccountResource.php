@@ -491,6 +491,16 @@ class ArtistAccountResource extends Resource
      * states where it makes sense, so the row UI never shows a button that
      * would error out.
      */
+    /**
+     * Public wrapper exposed so the View page (and any future bulk
+     * lifecycle UI) can render the same approve/reject/suspend stack
+     * defined here. Internal callers still use buildRecordActions().
+     */
+    public static function getRecordActionsForPage(): array
+    {
+        return static::buildRecordActions();
+    }
+
     protected static function buildRecordActions(): array
     {
         return [

@@ -10,12 +10,13 @@ class ViewArtistAccount extends ViewRecord
     protected static string $resource = ArtistAccountResource::class;
 
     /**
-     * The lifecycle actions live in the table row, not on the View page —
-     * keeps the source of truth in one place. We intentionally don't add
-     * header actions here; admins approve/reject from the list view.
+     * Expose the same lifecycle actions (Aprobă / Respinge / Suspendă /
+     * Reactivează) as the table row. Each action's own ->visible() closure
+     * gates by status, so the header only shows what makes sense for the
+     * current record.
      */
     protected function getHeaderActions(): array
     {
-        return [];
+        return ArtistAccountResource::getRecordActionsForPage();
     }
 }

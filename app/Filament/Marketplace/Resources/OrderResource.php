@@ -285,11 +285,17 @@ class OrderResource extends Resource
                             ->maxLength(50),
                         Forms\Components\Select::make('status')
                             ->options([
-                                'pending' => 'Pending',
-                                'confirmed' => 'Confirmed',
-                                'cancelled' => 'Cancelled',
-                                'refunded' => 'Refunded',
+                                'pending' => 'În așteptare',
+                                'paid' => 'Plătit',
+                                'confirmed' => 'Confirmat',
+                                'completed' => 'Finalizat',
+                                'cancelled' => 'Anulat',
+                                'refunded' => 'Rambursat',
+                                'partially_refunded' => 'Rambursat parțial',
+                                'failed' => 'Eșuat',
+                                'expired' => 'Expirat',
                             ])
+                            ->native(false)
                             ->required(),
                         Forms\Components\TextInput::make('total')
                             ->numeric()
