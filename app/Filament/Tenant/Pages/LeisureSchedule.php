@@ -7,6 +7,7 @@ use App\Models\Leisure\TenantTeamMemberShift;
 use Carbon\Carbon;
 use Carbon\CarbonImmutable;
 use Filament\Pages\Page;
+use Illuminate\Support\Facades\Schema;
 
 class LeisureSchedule extends Page
 {
@@ -59,6 +60,20 @@ class LeisureSchedule extends Page
             $days[] = $d;
         }
 
+        // Bail out gracefully if migrations haven't run yet on this env.
+        if (! Schema::hasTable('tenant_team_members') || ! Schema::hasTable('tenant_team_member_shifts')) {
+            return [
+                'weekStart' => $start,
+                'weekEnd' => $end,
+                'days' => $days,
+                'members' => collect(),
+                'shifts' => collect(),
+                'totalsByMember' => [],
+                'leisureRoles' => TenantTeamMember::LEISURE_ROLES,
+                'migrationMissing' => true,
+            ];
+        }
+
         $members = TenantTeamMember::query()
             ->where('tenant_id', $tenantId)
             ->where('status', TenantTeamMember::STATUS_ACTIVE)
@@ -70,7 +85,10 @@ class LeisureSchedule extends Page
             ->whereBetween('shift_date', [$start->toDateString(), $end->toDateString()])
             ->get()
             ->groupBy(function ($s) {
-                return $s->tenant_team_member_id . '|' . $s->shift_date->toDateString();
+                $date = $s->shift_date instanceof \DateTimeInterface
+                    ? $s->shift_date->format('Y-m-d')
+                    : (string) $s->shift_date;
+                return $s->tenant_team_member_id . '|' . $date;
             });
 
         $totalsByMember = [];
@@ -92,6 +110,7 @@ class LeisureSchedule extends Page
             'shifts' => $shifts,
             'totalsByMember' => $totalsByMember,
             'leisureRoles' => TenantTeamMember::LEISURE_ROLES,
+            'migrationMissing' => false,
         ];
     }
 }

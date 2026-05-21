@@ -1,5 +1,16 @@
 <x-filament-panels::page>
     <div class="space-y-4">
+        @if (! empty($migrationMissing))
+            <div class="p-4 rounded-xl border-2 border-amber-500 bg-amber-50 dark:bg-amber-900/30">
+                <div class="font-bold text-amber-700 dark:text-amber-300">Migrare incompletă</div>
+                <div class="text-sm text-amber-700 dark:text-amber-200 mt-2">
+                    Tabelele <code class="font-mono">tenant_team_members</code> sau
+                    <code class="font-mono">tenant_team_member_shifts</code> nu există încă. Rulează:
+                </div>
+                <pre class="mt-2 px-3 py-2 rounded bg-amber-100 dark:bg-amber-800 text-xs font-mono">cd epas && php artisan migrate</pre>
+            </div>
+        @endif
+
         <div class="flex flex-wrap items-center gap-3 p-4 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
             <button wire:click="previousWeek" class="fi-btn px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-700">← Săpt. precedentă</button>
             <button wire:click="thisWeek" class="fi-btn px-3 py-2 rounded-lg bg-emerald-100 dark:bg-emerald-900 text-emerald-800 dark:text-emerald-200">Săpt. curentă</button>
@@ -47,7 +58,15 @@
                                         @forelse ($cellShifts as $shift)
                                             <div class="mb-1 px-2 py-1 rounded text-xs bg-violet-100 dark:bg-violet-900 text-violet-800 dark:text-violet-200">
                                                 <div class="font-semibold">
-                                                    {{ \Carbon\Carbon::parse($shift->start_time)->format('H:i') }} – {{ \Carbon\Carbon::parse($shift->end_time)->format('H:i') }}
+                                                    @php
+                                                        $startStr = $shift->start_time instanceof \DateTimeInterface
+                                                            ? $shift->start_time->format('H:i')
+                                                            : substr((string) $shift->start_time, 0, 5);
+                                                        $endStr = $shift->end_time instanceof \DateTimeInterface
+                                                            ? $shift->end_time->format('H:i')
+                                                            : substr((string) $shift->end_time, 0, 5);
+                                                    @endphp
+                                                    {{ $startStr }} – {{ $endStr }}
                                                 </div>
                                                 @if ($shift->position)
                                                     <div class="text-[10px] opacity-80">{{ $leisureRoles[$shift->position] ?? $shift->position }}</div>

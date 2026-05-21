@@ -39,7 +39,11 @@ class PhysicalResourceResource extends Resource
     public static function getEloquentQuery(): Builder
     {
         $tenantId = auth()->user()?->tenant?->id;
-        return parent::getEloquentQuery()->where('tenant_id', $tenantId);
+        $q = parent::getEloquentQuery()->where('tenant_id', $tenantId);
+        if (\Illuminate\Support\Facades\Schema::hasColumn('physical_resources', 'physical_resource_type_id')) {
+            $q->with('type:id,name,icon,color,slug,linked_ticket_type_ids');
+        }
+        return $q;
     }
 
     public static function form(Schema $schema): Schema
@@ -129,7 +133,6 @@ class PhysicalResourceResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
-            ->modifyQueryUsing(fn (Builder $q) => $q->with('type:id,name,icon,color,slug,linked_ticket_type_ids'))
             ->defaultSort('name')
             ->columns([
                 Tables\Columns\TextColumn::make('type.icon')->label('')->size('lg'),

@@ -52,9 +52,13 @@ class TicketTypeResource extends Resource
             ? auth()->user()->tenant->tenant_type->value
             : (string) auth()->user()?->tenant?->tenant_type) === 'leisure';
 
-        return $schema
-            ->components([
-                SC\Section::make('Ticket Type Details')
+        return $schema->components([
+            SC\Grid::make(4)->schema([
+                // ========== COLOANA STÂNGĂ (3/4) — conținut principal ==========
+                SC\Group::make()
+                    ->columnSpan(3)
+                    ->schema([
+                SC\Section::make('Date produs')
                     ->schema([
                         Forms\Components\Select::make('event_id')
                             ->relationship('event', modifyQueryUsing: function (Builder $query) {
@@ -69,26 +73,8 @@ class TicketTypeResource extends Resource
                             ->required()
                             ->maxLength(255),
                         Forms\Components\Textarea::make('description')
-                            ->rows(3),
-                        Forms\Components\TextInput::make('price')
-                            ->numeric()
-                            ->required()
-                            ->prefix('€'),
-                        Forms\Components\Select::make('currency')
-                            ->options([
-                                'EUR' => 'EUR',
-                                'RON' => 'RON',
-                                'USD' => 'USD',
-                            ])
-                            ->default('EUR'),
-                        Forms\Components\TextInput::make('available_quantity')
-                            ->numeric()
-                            ->required(),
-                        Forms\Components\TextInput::make('max_per_order')
-                            ->numeric()
-                            ->default(10),
-                        Forms\Components\Toggle::make('is_active')
-                            ->default(true),
+                            ->rows(3)
+                            ->columnSpanFull(),
                     ])->columns(2),
 
                 // ──────────────────────────────────────────────────────────────
@@ -310,51 +296,7 @@ class TicketTypeResource extends Resource
                             ->defaultItems(0),
                     ]),
 
-                SC\Section::make('Leisure: Prețuri per canal')
-                    ->description('Setează prețul (în cenți) pentru fiecare canal de vânzare. Lasă gol pentru a folosi prețul implicit.')
-                    ->icon('heroicon-o-currency-dollar')
-                    ->visible(fn () => $isLeisureTenant() && (auth()->user()?->tenant?->features['leisure']['channel_pricing']['enabled'] ?? false))
-                    ->columns(2)
-                    ->schema([
-                        Forms\Components\TextInput::make('channel_pricing.online')
-                            ->label('Online (cenți)')
-                            ->numeric()
-                            ->placeholder('ex: 1000 = 10 RON'),
-                        Forms\Components\TextInput::make('channel_pricing.pos_fixed')
-                            ->label('POS (punct fix) (cenți)')
-                            ->numeric()
-                            ->placeholder('ex: 1200 = 12 RON'),
-                        Forms\Components\TextInput::make('channel_pricing.pos_mobile')
-                            ->label('POS (mobil) (cenți)')
-                            ->numeric()
-                            ->placeholder('ex: 1100 = 11 RON'),
-                        Forms\Components\TextInput::make('channel_pricing.embed')
-                            ->label('Embed widget (cenți)')
-                            ->numeric(),
-                        Forms\Components\TextInput::make('channel_pricing.partner_app')
-                            ->label('Aplicație parteneri (cenți)')
-                            ->numeric(),
-                    ]),
-
-                SC\Section::make('Leisure: Societate emitentă')
-                    ->description('Selectează CIF-ul care emite factura pentru acest produs. Activ doar dacă tenant-ul are flag-ul Multi-societate.')
-                    ->icon('heroicon-o-building-library')
-                    ->visible(fn () => $isLeisureTenant() && (auth()->user()?->tenant?->features['leisure']['multi_society']['enabled'] ?? false))
-                    ->schema([
-                        Forms\Components\Select::make('tenant_tax_registry_id')
-                            ->label('Societatea emitentă')
-                            ->options(function () {
-                                $tenantId = auth()->user()?->tenant?->id;
-                                return \App\Models\Leisure\TenantTaxRegistry::query()
-                                    ->where('tenant_id', $tenantId)
-                                    ->where('is_active', true)
-                                    ->get()
-                                    ->mapWithKeys(fn ($r) => [$r->id => "{$r->company_name} ({$r->cui})"]);
-                            })
-                            ->helperText('Lasă gol pentru a folosi societatea implicită.'),
-                    ]),
-
-                SC\Section::make('Leisure: Descriere produs & Termeni')
+                SC\Section::make('Descriere produs & Termeni')
                     ->icon('heroicon-o-document-text')
                     ->visible($isLeisureTenant)
                     ->collapsed()
@@ -366,7 +308,94 @@ class TicketTypeResource extends Resource
                             ->label('Termeni de utilizare')
                             ->helperText('Apar la confirmarea biletului. Reguli de utilizare, restricții etc.'),
                     ]),
-            ]);
+                    ]),
+
+                // ========== COLOANA DREAPTĂ (1/4) — sidebar ==========
+                SC\Group::make()
+                    ->columnSpan(1)
+                    ->schema([
+                        SC\Section::make('Status')
+                            ->schema([
+                                Forms\Components\Toggle::make('is_active')
+                                    ->label('Activ')
+                                    ->default(true)
+                                    ->inline(false),
+                            ]),
+
+                        SC\Section::make('Preț de bază')
+                            ->schema([
+                                Forms\Components\TextInput::make('price')
+                                    ->numeric()
+                                    ->required()
+                                    ->prefix(fn ($get) => $get('currency') ?? 'RON'),
+                                Forms\Components\Select::make('currency')
+                                    ->options([
+                                        'RON' => 'RON',
+                                        'EUR' => 'EUR',
+                                        'USD' => 'USD',
+                                    ])
+                                    ->default('RON'),
+                            ]),
+
+                        SC\Section::make('Limite comandă')
+                            ->schema([
+                                Forms\Components\TextInput::make('available_quantity')
+                                    ->label('Cantitate disponibilă')
+                                    ->numeric()
+                                    ->required(),
+                                Forms\Components\TextInput::make('max_per_order')
+                                    ->label('Max / comandă')
+                                    ->numeric()
+                                    ->default(10),
+                            ]),
+
+                        SC\Section::make('Prețuri per canal')
+                            ->description('Cenți. Gol = preț de bază.')
+                            ->visible(fn () => $isLeisureTenant() && (auth()->user()?->tenant?->features['leisure']['channel_pricing']['enabled'] ?? false))
+                            ->collapsed()
+                            ->schema([
+                                Forms\Components\TextInput::make('channel_pricing.online')
+                                    ->label('Online')
+                                    ->numeric()
+                                    ->suffix('cents'),
+                                Forms\Components\TextInput::make('channel_pricing.pos_fixed')
+                                    ->label('POS fix')
+                                    ->numeric()
+                                    ->suffix('cents'),
+                                Forms\Components\TextInput::make('channel_pricing.pos_mobile')
+                                    ->label('POS mobil')
+                                    ->numeric()
+                                    ->suffix('cents'),
+                                Forms\Components\TextInput::make('channel_pricing.embed')
+                                    ->label('Embed')
+                                    ->numeric()
+                                    ->suffix('cents'),
+                                Forms\Components\TextInput::make('channel_pricing.partner_app')
+                                    ->label('App parteneri')
+                                    ->numeric()
+                                    ->suffix('cents'),
+                            ]),
+
+                        SC\Section::make('Societate emitentă')
+                            ->visible(fn () => $isLeisureTenant() && (auth()->user()?->tenant?->features['leisure']['multi_society']['enabled'] ?? false))
+                            ->collapsed()
+                            ->schema([
+                                Forms\Components\Select::make('tenant_tax_registry_id')
+                                    ->label('CIF')
+                                    ->options(function () {
+                                        $tenantId = auth()->user()?->tenant?->id;
+                                        return \App\Models\Leisure\TenantTaxRegistry::query()
+                                            ->where('tenant_id', $tenantId)
+                                            ->where('is_active', true)
+                                            ->get()
+                                            ->mapWithKeys(fn ($r) => [$r->id => "{$r->company_name} ({$r->cui})"]);
+                                    })
+                                    ->placeholder('Implicită')
+                                    ->helperText('Gol = societatea default.'),
+                            ]),
+                    ]),
+            ]),
+        ]);
     }
 
     public static function table(Table $table): Table
