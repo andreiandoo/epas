@@ -398,7 +398,11 @@ const pastEventStyles = StyleSheet.create({
 });
 
 export default function ReportsScreen() {
-  const { eventStats, ticketTypes, selectedEvent, groupedEvents, selectEvent } = useEvent();
+  // Reports show ALL ticket types (not just POS / is_entry_ticket=true) —
+  // organizers want to see total revenue + gate performance across every
+  // tier they sell. SalesScreen still uses the POS-filtered `ticketTypes`.
+  const { eventStats, ticketTypes: posTicketTypes, allTicketTypes, selectedEvent, groupedEvents, selectEvent } = useEvent();
+  const ticketTypes = (allTicketTypes && allTicketTypes.length > 0) ? allTicketTypes : posTicketTypes;
   const [dashboardData, setDashboardData] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
 
