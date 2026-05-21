@@ -370,15 +370,21 @@ class OrdersController extends BaseController
                 ]);
             }
 
-            // Auto-confirm POS cash orders and invitations immediately.
-            // Use raw DB update to avoid triggering OrderObserver::updated() which
-            // calls trackPurchaseConversion inside the transaction. That method writes
-            // to a UUID column with a non-UUID value, causing PostgreSQL to abort the
-            // entire transaction (25P02 cascade).
+            // Auto-confirm POS cash / card orders and invitations immediately.
+            // Card here means "physical card POS terminal" — the operator
+            // manually confirms inside the app that the money was collected,
+            // so from the order's perspective it's already paid. Card-NFC /
+            // Stripe tap stays out (those still need the payment_url flow).
+            // Use raw DB update to avoid triggering OrderObserver::updated()
+            // which calls trackPurchaseConversion inside the transaction.
+            // That method writes to a UUID column with a non-UUID value,
+            // causing PostgreSQL to abort the entire transaction (25P02
+            // cascade).
             $paymentMethod = $request->input('payment_method');
             $source = $request->input('source', 'marketplace');
             $isInvitation = (bool) $request->input('is_invitation', false);
-            if (($paymentMethod === 'cash' || $isInvitation) && $source === 'pos_app') {
+            $isOfflinePos = in_array($paymentMethod, ['cash', 'card'], true);
+            if (($isOfflinePos || $isInvitation) && $source === 'pos_app') {
                 DB::table('orders')->where('id', $order->id)->update([
                     'status' => 'confirmed',
                     'payment_status' => $isInvitation ? 'free' : 'paid',

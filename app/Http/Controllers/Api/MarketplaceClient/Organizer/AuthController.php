@@ -1247,6 +1247,13 @@ class AuthController extends BaseController
                 'widget_terms' => $organizer->settings['widget_terms'] ?? '',
                 'widget_privacy' => $organizer->settings['widget_privacy'] ?? '',
             ],
+
+            // Mobile POS feature flags — surfaced to the app so it can
+            // show / hide optional buttons (Card prin NFC, etc.) without
+            // a separate /me endpoint round-trip.
+            'mobile_settings' => [
+                'card_nfc_enabled' => (bool) ($organizer->service_settings['mobile_card_nfc_enabled'] ?? false),
+            ],
         ];
     }
 

@@ -260,6 +260,56 @@
             line-height: 1.4;
         }
 
+        .account-toggle {
+            display: flex;
+            background: #f3f4f6;
+            border-radius: 10px;
+            padding: 4px;
+            margin-bottom: 18px;
+            gap: 4px;
+        }
+        .account-tab {
+            flex: 1;
+            border: 0;
+            background: transparent;
+            color: #6b7280;
+            font-size: 13px;
+            font-weight: 600;
+            padding: 9px 12px;
+            border-radius: 7px;
+            cursor: pointer;
+            transition: background 0.15s, color 0.15s;
+        }
+        .account-tab.active {
+            background: #fff;
+            color: #7c3aed;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+        .account-login-panel {
+            background: #f5f3ff;
+            border: 1px solid #ddd6fe;
+            border-radius: 12px;
+            padding: 18px;
+            margin-bottom: 16px;
+            text-align: center;
+        }
+        .account-login-text {
+            color: #4c1d95;
+            font-size: 13px;
+            margin: 0 0 14px;
+            line-height: 1.5;
+        }
+        .account-login-hint {
+            color: #6b7280;
+            font-size: 12px;
+            margin: 12px 0 0;
+        }
+        .account-login-hint a {
+            color: #7c3aed;
+            font-weight: 600;
+            text-decoration: none;
+        }
+
         .alert {
             padding: 10px 14px;
             border-radius: 8px;
@@ -344,6 +394,13 @@
                         🎁 Completează datele și câștigă <strong>100 puncte AmBilet</strong> pe care le poți folosi ca reducere la orice eveniment viitor!
                     </div>
 
+                    {{-- Logged-in-customer shortcut. Hidden by default; JS reveals
+                         it when localStorage has an AmBilet customer session,
+                         replacing the manual form path with a one-click pairing. --}}
+                    <button type="button" class="btn btn-points" id="btn-link-account" style="display:none;">
+                        Atașează biletele la contul <span id="link-account-name"></span>
+                    </button>
+
                     <button type="button" class="btn btn-points" id="btn-show-form">
                         Completează și câștigă 100 puncte
                     </button>
@@ -358,7 +415,31 @@
                     <div class="step-dot inactive" id="dot2">2</div>
                 </div>
 
-                <div class="points-badge" style="text-align:center;">
+                {{-- Account-mode toggle — pick between filling the form
+                     manually (gain 100 points as a new customer) and using
+                     an existing AmBilet account (skip the form entirely
+                     once logged in). --}}
+                <div class="account-toggle">
+                    <button type="button" class="account-tab active" data-mode="new" id="tab-new">Sunt client nou</button>
+                    <button type="button" class="account-tab" data-mode="existing" id="tab-existing">Am cont AmBilet</button>
+                </div>
+
+                {{-- Panel shown when the visitor picks 'Am cont AmBilet' AND
+                     isn't already logged in. JS hides this if it detects a
+                     customer token in localStorage (auto-pair takes over). --}}
+                <div id="account-login-panel" class="account-login-panel" style="display:none;">
+                    <p class="account-login-text">
+                        Conectează-te la contul tău AmBilet — biletele se atașează automat și apar în secțiunea „Biletele mele".
+                    </p>
+                    <a href="/login?redirect=/claim/{{ $claim->token }}" class="btn btn-primary">
+                        Conectare la contul AmBilet
+                    </a>
+                    <p class="account-login-hint">
+                        Nu ai cont? <a href="/register?redirect=/claim/{{ $claim->token }}">Crează unul în 30 secunde →</a>
+                    </p>
+                </div>
+
+                <div class="points-badge" id="new-customer-badge" style="text-align:center;">
                     🎁 Completează formularul și primești <strong>100 puncte AmBilet</strong> — le poți folosi ca reducere la orice eveniment viitor!
                 </div>
 
@@ -456,6 +537,24 @@
     const TOKEN = @json($claim->token);
     const CSRF = document.querySelector('meta[name="csrf-token"]').content;
 
+    // ─── Logged-in AmBilet customer detection ──────────────────────────
+    // AmbiletAuth (assets/js/auth.js) stores the customer session in
+    // localStorage under these keys. We don't import the script here
+    // (this page is standalone), we just read the storage directly.
+    const ambiletCustomerToken = (() => {
+        try {
+            if (localStorage.getItem('ambilet_user_type') !== 'customer') return null;
+            return localStorage.getItem('ambilet_customer_token') || null;
+        } catch { return null; }
+    })();
+    const ambiletCustomerData = (() => {
+        try {
+            const raw = localStorage.getItem('ambilet_customer_data');
+            return raw ? JSON.parse(raw) : null;
+        } catch { return null; }
+    })();
+    const isLoggedInCustomer = !!(ambiletCustomerToken && ambiletCustomerData);
+
     function showError(containerId, msg) {
         const el = document.getElementById(containerId);
         el.textContent = msg;
@@ -483,13 +582,20 @@
     }
 
     async function postJson(url, data) {
+        const headers = {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'X-CSRF-TOKEN': CSRF,
+        };
+        // Attach the AmBilet customer Sanctum token whenever the visitor
+        // is logged in. The backend pairs the order to that customer
+        // regardless of what the form said.
+        if (ambiletCustomerToken) {
+            headers['Authorization'] = 'Bearer ' + ambiletCustomerToken;
+        }
         const res = await fetch(url, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                'X-CSRF-TOKEN': CSRF,
-            },
+            headers,
             body: JSON.stringify(data),
         });
         const json = await res.json();
@@ -506,6 +612,89 @@
             document.getElementById('step-options').style.display = 'none';
             document.getElementById('step-required').style.display = 'block';
         });
+    }
+
+    // ─── Logged-in customer: surface the one-click pairing button ──────
+    if (isLoggedInCustomer) {
+        const linkBtn = document.getElementById('btn-link-account');
+        const linkName = document.getElementById('link-account-name');
+        if (linkBtn && linkName) {
+            const displayName = ambiletCustomerData.first_name
+                || ambiletCustomerData.email
+                || 'tău';
+            linkName.textContent = displayName;
+            linkBtn.style.display = '';
+            // Hide the "Completează datele" CTA — the account shortcut
+            // is the natural path for a logged-in user.
+            if (btnShowForm) btnShowForm.style.display = 'none';
+
+            linkBtn.addEventListener('click', async function() {
+                linkBtn.disabled = true;
+                const orig = linkBtn.innerHTML;
+                linkBtn.innerHTML = '<span class="spinner"></span> Se atașează...';
+                try {
+                    const resp = await postJson('/claim/' + TOKEN + '/step1', {
+                        first_name: ambiletCustomerData.first_name || '',
+                        last_name: ambiletCustomerData.last_name || '',
+                        email: ambiletCustomerData.email,
+                    });
+                    if (resp.success) {
+                        // Skip step-options and step-required entirely.
+                        document.getElementById('step-options').style.display = 'none';
+                        document.getElementById('step-required').style.display = 'none';
+                        // Land on the optional details step so the user can
+                        // top up their profile (phone / city / dob) if they
+                        // want — or skip.
+                        document.getElementById('step-optional').style.display = 'block';
+                    } else {
+                        throw new Error(resp.message || 'Nu s-a putut atașa contul');
+                    }
+                } catch (err) {
+                    alert(err.message || 'Eroare la atașarea contului');
+                    linkBtn.disabled = false;
+                    linkBtn.innerHTML = orig;
+                }
+            });
+        }
+    }
+
+    // ─── Account mode toggle inside step-required ──────────────────────
+    const tabNew = document.getElementById('tab-new');
+    const tabExisting = document.getElementById('tab-existing');
+    const loginPanel = document.getElementById('account-login-panel');
+    const newBadge = document.getElementById('new-customer-badge');
+    const formReqEl = document.getElementById('form-required');
+
+    function setMode(mode) {
+        if (mode === 'existing') {
+            tabNew.classList.remove('active');
+            tabExisting.classList.add('active');
+            if (loginPanel) loginPanel.style.display = '';
+            if (newBadge) newBadge.style.display = 'none';
+            if (formReqEl) formReqEl.style.display = 'none';
+        } else {
+            tabNew.classList.add('active');
+            tabExisting.classList.remove('active');
+            if (loginPanel) loginPanel.style.display = 'none';
+            if (newBadge) newBadge.style.display = '';
+            if (formReqEl) formReqEl.style.display = '';
+        }
+    }
+    if (tabNew && tabExisting) {
+        tabNew.addEventListener('click', () => setMode('new'));
+        tabExisting.addEventListener('click', () => setMode('existing'));
+    }
+
+    // If the visitor is already logged in but lands on the form path
+    // (rare — they'd usually use the account shortcut on step-options),
+    // pre-fill the form so they only need to confirm.
+    if (isLoggedInCustomer) {
+        const fi = document.getElementById('first_name');
+        const li = document.getElementById('last_name');
+        const ei = document.getElementById('email');
+        if (fi && !fi.value) fi.value = ambiletCustomerData.first_name || '';
+        if (li && !li.value) li.value = ambiletCustomerData.last_name || '';
+        if (ei && !ei.value) ei.value = ambiletCustomerData.email || '';
     }
 
     // Step 1 form

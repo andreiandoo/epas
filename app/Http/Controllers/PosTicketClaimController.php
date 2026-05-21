@@ -86,11 +86,23 @@ class PosTicketClaimController extends Controller
             ], 422);
         }
 
+        // If the buyer is logged into their AmBilet customer account, the
+        // JS forwards their Sanctum bearer token. Trust the authoritative
+        // customer record over whatever was typed in the form — that's
+        // how the QR-scan-then-log-in pairing works.
+        $loggedInCustomer = $this->resolveLoggedInCustomer($request);
+
         $validated = $request->validate([
-            'first_name' => 'required|string|max:255',
-            'last_name' => 'required|string|max:255',
-            'email' => 'required|email|max:255',
+            'first_name' => $loggedInCustomer ? 'nullable|string|max:255' : 'required|string|max:255',
+            'last_name' => $loggedInCustomer ? 'nullable|string|max:255' : 'required|string|max:255',
+            'email' => $loggedInCustomer ? 'nullable|email|max:255' : 'required|email|max:255',
         ]);
+
+        if ($loggedInCustomer) {
+            $validated['first_name'] = $loggedInCustomer->first_name ?: ($validated['first_name'] ?? '');
+            $validated['last_name'] = $loggedInCustomer->last_name ?: ($validated['last_name'] ?? '');
+            $validated['email'] = $loggedInCustomer->email;
+        }
 
         $order = $claim->order()->with(['tickets.ticketType', 'event', 'marketplaceClient'])->first();
 
@@ -103,9 +115,13 @@ class PosTicketClaimController extends Controller
 
         $client = $order->marketplaceClient;
 
-        // Find or create MarketplaceCustomer
-        $customer = null;
-        if ($client) {
+        // Find or create MarketplaceCustomer. When the bearer token
+        // resolved a logged-in customer, prefer that record — even if a
+        // different email is also present for this marketplace, the
+        // logged-in identity wins (pairing is the whole point of the
+        // login flow).
+        $customer = $loggedInCustomer;
+        if (!$customer && $client) {
             $customer = MarketplaceCustomer::where('email', $validated['email'])
                 ->where('marketplace_client_id', $client->id)
                 ->first();
@@ -138,12 +154,16 @@ class PosTicketClaimController extends Controller
         }
         $order->update($updateData);
 
-        // Update all tickets on this order with attendee info
+        // Update all tickets on this order with attendee info. Also stamp
+        // marketplace_customer_id on each ticket so the customer dashboard's
+        // tickets list resolves them whether it joins through Order or
+        // queries tickets directly.
         $fullName = $validated['first_name'] . ' ' . $validated['last_name'];
         foreach ($order->tickets as $ticket) {
             $ticket->update([
                 'attendee_name' => $fullName,
                 'attendee_email' => $validated['email'],
+                'marketplace_customer_id' => $customer?->id,
             ]);
         }
 
@@ -169,8 +189,35 @@ class PosTicketClaimController extends Controller
         return response()->json([
             'success' => true,
             'step' => 'optional',
+            'paired_with_account' => $loggedInCustomer !== null,
             'message' => 'Datele au fost salvate! Biletele vor fi trimise pe email.',
         ]);
+    }
+
+    /**
+     * Resolve the logged-in MarketplaceCustomer from the request's Bearer
+     * token, if any. Returns null when the token is missing, invalid, or
+     * tied to a non-customer account (organizer / artist tokens are skipped).
+     */
+    protected function resolveLoggedInCustomer(Request $request): ?MarketplaceCustomer
+    {
+        $bearer = $request->bearerToken();
+        if (!$bearer) {
+            return null;
+        }
+        try {
+            $tokenModel = \Laravel\Sanctum\PersonalAccessToken::findToken($bearer);
+        } catch (\Throwable $e) {
+            return null;
+        }
+        if (!$tokenModel) {
+            return null;
+        }
+        $tokenable = $tokenModel->tokenable;
+        if (!$tokenable instanceof MarketplaceCustomer) {
+            return null;
+        }
+        return $tokenable;
     }
 
     /**

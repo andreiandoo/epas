@@ -708,6 +708,12 @@ class OrganizerResource extends Resource
                                         ->default(true)
                                         ->afterStateHydrated(fn ($component, $state) => $component->state($state ?? true))
                                         ->helperText('Permite organizatorului să comande servicii de creare campanii'),
+
+                                    Forms\Components\Toggle::make('service_settings.mobile_card_nfc_enabled')
+                                        ->label('Card prin NFC (mobile POS)')
+                                        ->default(false)
+                                        ->afterStateHydrated(fn ($component, $state) => $component->state((bool) $state))
+                                        ->helperText('Adaugă în aplicația mobilă un buton "Card prin NFC" (plată Stripe Tap). Lasă oprit dacă organizatorul nu are NFC configurat — flow-ul normal Card POS (cu confirmare manuală) rămâne disponibil oricum.'),
                                 ])
                                 ->columns(2),
 

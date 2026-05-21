@@ -237,10 +237,10 @@ class OrdersController extends BaseController
                 }
             }
 
-            // Auto-confirm cash sales — same rule the organizer endpoint
-            // applies for source='pos_app'. Raw DB updates to bypass
+            // Auto-confirm cash + card POS sales (operator confirms in app
+            // that the money was collected). Raw DB updates to bypass
             // OrderObserver (matches MarketplaceOrdersController::create).
-            if ($payment === 'cash') {
+            if (in_array($payment, ['cash', 'card'], true)) {
                 DB::table('orders')->where('id', $order->id)->update([
                     'status' => 'confirmed',
                     'payment_status' => 'paid',
