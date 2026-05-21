@@ -166,7 +166,7 @@ include __DIR__ . '/includes/header.php';
 
             <!-- ─── EVENTS (primary CTA) ─── -->
             <section class="overflow-hidden bg-white rounded-2xl venue-card-shadow">
-                <div class="px-5 pt-6 pb-4 border-b md:px-6 border-slate-100">
+                <div id="eventsSectionHeader" class="px-5 pt-6 pb-4 border-b md:px-6 border-slate-100">
                     <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
                         <div class="flex items-center gap-3">
                             <div class="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10">
@@ -321,11 +321,18 @@ include __DIR__ . '/includes/header.php';
                 <div class="absolute w-32 h-32 rounded-full -top-8 -right-8 bg-white/10"></div>
                 <div class="absolute w-32 h-32 rounded-full -bottom-10 -left-10 bg-white/5"></div>
                 <div class="relative">
-                    <div class="flex items-center justify-center w-10 h-10 mb-3 rounded-lg bg-white/20">
+                    <div class="flex items-center justify-center w-10 h-10 mb-3 rounded-lg bg-white/20 mobile:hidden">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
                     </div>
-                    <h3 class="mb-1 text-lg font-bold">Organizezi un eveniment?</h3>
-                    <p class="mb-4 text-sm text-white/85">Contactează echipa locației pentru disponibilitate și tarife.</p>
+                    <div class="">
+                        <div class="flex items-center gap-x-2">
+                            <div class="items-center justify-center hidden w-10 h-10 mb-3 rounded-lg mobile:flex bg-white/20">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                            </div>
+                            <h3 class="mb-1 text-lg font-bold">Organizezi un eveniment?</h3>
+                        </div>
+                        <p class="mb-4 text-sm text-white/85">Contactează echipa locației pentru disponibilitate și tarife.</p>
+                    </div>
                     <button type="button" onclick="VenuePage.openContactModal()" class="w-full block bg-white text-primary text-center py-2.5 rounded-lg text-sm font-bold hover:bg-slate-100 transition" aria-label="Contactează locația">
                         Contactează locația →
                     </button>
