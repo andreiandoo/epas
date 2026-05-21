@@ -8,6 +8,7 @@ import {
   Modal,
 } from 'react-native';
 import { WebView } from 'react-native-webview';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../theme/colors';
 import { issueSeatingEmbedToken } from '../api/seating';
 
@@ -38,6 +39,7 @@ import { issueSeatingEmbedToken } from '../api/seating';
  *   onClose        — () => void
  */
 export default function SeatingMapScreen({ visible, eventId, ticketTypeId, onConfirm, onClose }) {
+  const insets = useSafeAreaInsets();
   const [embedUrl, setEmbedUrl] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -102,7 +104,11 @@ export default function SeatingMapScreen({ visible, eventId, ticketTypeId, onCon
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
-      <View style={styles.container}>
+      {/* paddingBottom = insets.bottom so the WebView's footer (Anulează /
+          Confirmă) sits above the phone's gesture nav. Without this the
+          buttons land under the home indicator on Android 10+ and any
+          tap is consumed by the system back gesture instead. */}
+      <View style={[styles.container, { paddingBottom: insets.bottom, paddingTop: insets.top }]}>
         {/* Native header — keep the back button outside the WebView so the
             user can always escape even if the page is mid-load. */}
         <View style={styles.header}>
@@ -137,6 +143,13 @@ export default function SeatingMapScreen({ visible, eventId, ticketTypeId, onCon
               startInLoadingState
               setSupportMultipleWindows={false}
               androidLayerType="hardware"
+              // Critical for canvas touches on Android — stop the WebView
+              // from interpreting drags as native scrolls and swallowing
+              // pointer events before the canvas sees them.
+              scrollEnabled={false}
+              nestedScrollEnabled={false}
+              overScrollMode="never"
+              scalesPageToFit={false}
               renderLoading={() => (
                 <View style={styles.center}>
                   <ActivityIndicator size="large" color={colors.purple} />
@@ -160,7 +173,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 8,
     paddingVertical: 10,
-    paddingTop: 44,
     backgroundColor: '#0f0f1f',
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255,255,255,0.08)',
