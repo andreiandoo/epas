@@ -115,8 +115,19 @@ class LeisureDemoSeeder extends Seeder
      */
     private function userAttrs(array $attrs): array
     {
-        $existing = Schema::getColumnListing('users');
-        return array_intersect_key($attrs, array_flip($existing));
+        return $this->writableAttrs('users', $attrs);
+    }
+
+    /**
+     * Intersect attribute array with the set of columns that actually exist on
+     * the table AND are NOT generated/computed. Generated columns (e.g.
+     * tenant_microservices.is_active in prod) refuse explicit inserts.
+     */
+    private function writableAttrs(string $table, array $attrs): array
+    {
+        $cols = Schema::getColumnListing($table);
+        $writable = array_diff($cols, $this->generatedColumns($table));
+        return array_intersect_key($attrs, array_flip($writable));
     }
 
     private function createOwnerUser(): User
@@ -182,9 +193,7 @@ class LeisureDemoSeeder extends Seeder
                 ],
             ],
         ];
-        $cols = Schema::getColumnListing('tenants');
-        $attrs = array_intersect_key($desired, array_flip($cols));
-
+        $attrs = $this->writableAttrs('tenants', $desired);
         $tenant = Tenant::firstOrCreate(['slug' => self::TENANT_SLUG], $attrs);
 
         // Link owner to tenant (only if the column exists on this schema).
@@ -200,22 +209,57 @@ class LeisureDemoSeeder extends Seeder
         $slugs = TenantType::Leisure->defaultMicroserviceSlugs();
         $microservices = \App\Models\Microservice::whereIn('slug', $slugs)->get();
 
+        // is_active is a GENERATED column on some envs (derived from status);
+        // exclude any generated/unwritable columns so we never INSERT into them.
+        $pivotCols = Schema::getColumnListing('tenant_microservices');
+        $generatedCols = $this->generatedColumns('tenant_microservices');
+        $writableCols = array_values(array_diff($pivotCols, $generatedCols));
+
         foreach ($microservices as $ms) {
             $exists = DB::table('tenant_microservices')
                 ->where('tenant_id', $tenant->id)
                 ->where('microservice_id', $ms->id)
                 ->exists();
-            if (! $exists) {
-                DB::table('tenant_microservices')->insert([
-                    'tenant_id' => $tenant->id,
-                    'microservice_id' => $ms->id,
-                    'status' => 'active',
-                    'is_active' => true,
-                    'activated_at' => now(),
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]);
+            if ($exists) {
+                continue;
             }
+            $row = [
+                'tenant_id' => $tenant->id,
+                'microservice_id' => $ms->id,
+                'status' => 'active',
+                'is_active' => true,
+                'activated_at' => now(),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ];
+            $row = array_intersect_key($row, array_flip($writableCols));
+            DB::table('tenant_microservices')->insert($row);
+        }
+    }
+
+    /**
+     * Return the list of generated/virtual columns on a Postgres table — these
+     * cannot be inserted into. On MySQL/sqlite we return an empty list.
+     */
+    private function generatedColumns(string $table): array
+    {
+        try {
+            $driver = DB::connection()->getDriverName();
+        } catch (\Throwable) {
+            return [];
+        }
+
+        if ($driver !== 'pgsql') {
+            return [];
+        }
+        try {
+            return DB::table('information_schema.columns')
+                ->where('table_name', $table)
+                ->whereIn('is_generated', ['ALWAYS', 'BY DEFAULT'])
+                ->pluck('column_name')
+                ->toArray();
+        } catch (\Throwable) {
+            return [];
         }
     }
 
@@ -357,8 +401,7 @@ class LeisureDemoSeeder extends Seeder
             'is_published' => true,
             'display_template' => 'leisure_venue',
         ];
-        $cols = Schema::getColumnListing('events');
-        return Event::create(array_intersect_key($desired, array_flip($cols)));
+        return Event::create($this->writableAttrs('events', $desired));
     }
 
     /** @return array<string, TicketType> */
@@ -570,7 +613,6 @@ class LeisureDemoSeeder extends Seeder
             ['first_name' => 'Elena', 'last_name' => 'Vasilescu', 'email' => 'elena.vasilescu@example.com', 'city' => 'Iasi', 'phone' => '+40700000106'],
         ];
 
-        $existing = Schema::getColumnListing('customers');
         $out = [];
         foreach ($defs as $i => $d) {
             $attrs = array_merge($d, [
@@ -579,8 +621,10 @@ class LeisureDemoSeeder extends Seeder
                 'full_name' => $d['first_name'] . ' ' . $d['last_name'],
                 'country' => 'RO',
             ]);
-            $filtered = array_intersect_key($attrs, array_flip($existing));
-            $out[] = Customer::firstOrCreate(['email' => $d['email']], $filtered);
+            $out[] = Customer::firstOrCreate(
+                ['email' => $d['email']],
+                $this->writableAttrs('customers', $attrs)
+            );
         }
         return $out;
     }
@@ -636,9 +680,7 @@ class LeisureDemoSeeder extends Seeder
                 'created_at' => $createdAt,
                 'updated_at' => $createdAt,
             ];
-            $orderCols = Schema::getColumnListing('orders');
-            $orderAttrs = array_intersect_key($orderAttrs, array_flip($orderCols));
-            $order = Order::create($orderAttrs);
+            $order = Order::create($this->writableAttrs('orders', $orderAttrs));
 
             // Generate the actual tickets so /operator check-in has things to scan.
             for ($t = 0; $t < $qty; $t++) {
