@@ -99,6 +99,12 @@ class TicketType extends Model
         'tenant_tax_registry_id',
         // Leisure tenant (E6): prețuri per canal de vânzare
         'channel_pricing',
+        // Leisure tenant: capacity & schedule defaults (E2 refactor)
+        'leisure_default_daily_capacity',
+        'leisure_schedule_open_time',
+        'leisure_schedule_close_time',
+        'leisure_schedule_days',
+        'leisure_slot_duration_minutes',
     ];
 
     protected $casts = [
@@ -133,6 +139,11 @@ class TicketType extends Model
         'leisure_overtime_interval_minutes' => 'integer',
         // Leisure tenant (E6) — { online: 1000, pos_fixed: 1200, pos_mobile: 1100 }
         'channel_pricing' => 'array',
+        'leisure_default_daily_capacity' => 'integer',
+        'leisure_schedule_open_time' => 'datetime:H:i:s',
+        'leisure_schedule_close_time' => 'datetime:H:i:s',
+        'leisure_schedule_days' => 'array',
+        'leisure_slot_duration_minutes' => 'integer',
     ];
 
     protected $appends = [

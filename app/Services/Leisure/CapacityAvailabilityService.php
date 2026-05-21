@@ -6,6 +6,7 @@ use App\Models\Leisure\TicketTypeCapacity;
 use App\Models\TicketType;
 use Carbon\CarbonImmutable;
 use DateTimeInterface;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
@@ -189,5 +190,48 @@ class CapacityAvailabilityService
             return 'limited';
         }
         return 'available';
+    }
+
+    /**
+     * Effective capacity for a ticket type on a given date, taking into
+     * account TicketType.leisure_default_daily_capacity + schedule_days,
+     * with optional override from a TicketTypeCapacity row. Returns null
+     * if the day is outside the configured schedule (closed by default).
+     */
+    public function defaultCapacityFor(TicketType $ticketType, DateTimeInterface $date): ?int
+    {
+        $scheduleDays = $ticketType->leisure_schedule_days;
+        if (is_array($scheduleDays) && ! empty($scheduleDays)) {
+            $weekday = (int) $date->format('N');
+            if (! in_array($weekday, array_map('intval', $scheduleDays), true)) {
+                return null;
+            }
+        }
+        return $ticketType->leisure_default_daily_capacity;
+    }
+
+    /**
+     * For time-based rentals, derive the implicit hourly slots from
+     * TicketType.leisure_schedule_open_time / close_time / slot_duration.
+     * Returns an array of [start, end] HH:MM strings.
+     */
+    public function deriveSlotsFor(TicketType $ticketType): array
+    {
+        $open = $ticketType->leisure_schedule_open_time;
+        $close = $ticketType->leisure_schedule_close_time;
+        $duration = (int) ($ticketType->leisure_slot_duration_minutes ?? 0);
+        if (! $open || ! $close || $duration <= 0) {
+            return [];
+        }
+        $start = CarbonImmutable::parse($open->format('H:i:s'));
+        $end = CarbonImmutable::parse($close->format('H:i:s'));
+        $slots = [];
+        for ($cur = $start; $cur->addMinutes($duration)->lessThanOrEqualTo($end); $cur = $cur->addMinutes($duration)) {
+            $slots[] = [
+                $cur->format('H:i'),
+                $cur->addMinutes($duration)->format('H:i'),
+            ];
+        }
+        return $slots;
     }
 }

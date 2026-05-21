@@ -16,10 +16,26 @@ class TicketTypeResource extends Resource
 {
     protected static ?string $model = TicketType::class;
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-ticket';
-    protected static \UnitEnum|string|null $navigationGroup = 'Content';
-    protected static ?int $navigationSort = 3;
-    protected static ?string $navigationLabel = 'Ticket Types';
-    protected static bool $shouldRegisterNavigation = false;
+    protected static \UnitEnum|string|null $navigationGroup = 'Leisure';
+    protected static ?int $navigationSort = 5;
+
+    public static function getNavigationLabel(): string
+    {
+        $type = auth()->user()?->tenant?->tenant_type;
+        $value = $type instanceof \App\Enums\TenantType ? $type->value : (string) $type;
+        return $value === 'leisure' ? 'Produse & Bilete' : 'Ticket Types';
+    }
+
+    /**
+     * Show in sidebar only for leisure tenants — for other tenant types
+     * ticket types are managed through their parent Event edit page.
+     */
+    public static function shouldRegisterNavigation(): bool
+    {
+        $type = auth()->user()?->tenant?->tenant_type;
+        $value = $type instanceof \App\Enums\TenantType ? $type->value : (string) $type;
+        return $value === 'leisure';
+    }
 
     public static function getEloquentQuery(): Builder
     {
@@ -116,6 +132,43 @@ class TicketTypeResource extends Resource
                         Forms\Components\Toggle::make('requires_access_ticket')
                             ->label('Necesită bilet de acces')
                             ->helperText('Serviciul poate fi cumpărat doar împreună cu un bilet acces valid pentru aceeași zi.'),
+                    ]),
+
+                SC\Section::make('Leisure: Disponibilitate generală')
+                    ->description('Stoc maximal pe zi și programul săptămânal. Excepțiile (zile închise / capacități modificate punctual) se setează separat la "Excepții capacități".')
+                    ->icon('heroicon-o-calendar-days')
+                    ->visible($isLeisureTenant)
+                    ->columns(2)
+                    ->schema([
+                        Forms\Components\TextInput::make('leisure_default_daily_capacity')
+                            ->label('Capacitate / zi')
+                            ->numeric()
+                            ->minValue(0)
+                            ->placeholder('ex: 500')
+                            ->helperText('Stocul implicit pentru fiecare zi din program. Gol = nelimitat.'),
+                        Forms\Components\CheckboxList::make('leisure_schedule_days')
+                            ->label('Zile de funcționare')
+                            ->options([
+                                1 => 'Luni', 2 => 'Marți', 3 => 'Miercuri', 4 => 'Joi',
+                                5 => 'Vineri', 6 => 'Sâmbătă', 7 => 'Duminică',
+                            ])
+                            ->columns(7)
+                            ->helperText('Gol = toate zilele.')
+                            ->columnSpanFull(),
+                        Forms\Components\TimePicker::make('leisure_schedule_open_time')
+                            ->label('Ora deschidere')
+                            ->seconds(false)
+                            ->placeholder('09:00'),
+                        Forms\Components\TimePicker::make('leisure_schedule_close_time')
+                            ->label('Ora închidere')
+                            ->seconds(false)
+                            ->placeholder('20:00'),
+                        Forms\Components\TextInput::make('leisure_slot_duration_minutes')
+                            ->label('Durată slot (minute)')
+                            ->numeric()
+                            ->placeholder('ex: 60 pentru sloturi orare')
+                            ->helperText('Pentru rental pe timp: cât durează un slot. Gol = capacitate zilnică simplă.')
+                            ->columnSpanFull(),
                     ]),
 
                 SC\Section::make('Leisure: Variante durată (rentals)')

@@ -29,6 +29,7 @@ class PhysicalResource extends Model
 
     protected $fillable = [
         'tenant_id',
+        'physical_resource_type_id',
         'resource_type',
         'name',
         'label',
@@ -46,6 +47,11 @@ class PhysicalResource extends Model
     public function tenant(): BelongsTo
     {
         return $this->belongsTo(Tenant::class);
+    }
+
+    public function type(): BelongsTo
+    {
+        return $this->belongsTo(PhysicalResourceType::class, 'physical_resource_type_id');
     }
 
     public function rentals(): HasMany

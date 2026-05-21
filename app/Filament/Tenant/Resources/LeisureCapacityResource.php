@@ -21,12 +21,12 @@ class LeisureCapacityResource extends Resource
 {
     protected static ?string $model = TicketTypeCapacity::class;
 
-    protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-calendar-days';
+    protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-no-symbol';
     protected static \UnitEnum|string|null $navigationGroup = 'Leisure';
     protected static ?int $navigationSort = 20;
-    protected static ?string $navigationLabel = 'Capacități';
-    protected static ?string $modelLabel = 'Capacitate';
-    protected static ?string $pluralModelLabel = 'Capacități';
+    protected static ?string $navigationLabel = 'Excepții capacități';
+    protected static ?string $modelLabel = 'Excepție';
+    protected static ?string $pluralModelLabel = 'Excepții capacități';
 
     public static function shouldRegisterNavigation(): bool
     {
@@ -48,7 +48,8 @@ class LeisureCapacityResource extends Resource
     public static function form(Schema $schema): Schema
     {
         return $schema->components([
-            SC\Section::make('Capacitate')
+            SC\Section::make('Excepție capacitate')
+                ->description('Modifică capacitatea pentru o zi/slot specific. Restul zilelor folosesc valorile default din Produse & Bilete → Disponibilitate generală.')
                 ->columns(2)
                 ->schema([
                     Forms\Components\Select::make('ticket_type_id')

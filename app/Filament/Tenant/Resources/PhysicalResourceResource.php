@@ -23,9 +23,9 @@ class PhysicalResourceResource extends Resource
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-cube';
     protected static \UnitEnum|string|null $navigationGroup = 'Leisure';
     protected static ?int $navigationSort = 30;
-    protected static ?string $navigationLabel = 'Inventar fizic';
-    protected static ?string $modelLabel = 'Resursă fizică';
-    protected static ?string $pluralModelLabel = 'Resurse fizice';
+    protected static ?string $navigationLabel = 'Inventar (unități)';
+    protected static ?string $modelLabel = 'Unitate';
+    protected static ?string $pluralModelLabel = 'Unități inventar';
 
     public static function shouldRegisterNavigation(): bool
     {
@@ -45,27 +45,48 @@ class PhysicalResourceResource extends Resource
     public static function form(Schema $schema): Schema
     {
         return $schema->components([
-            SC\Section::make('Resursă fizică')
+            SC\Section::make('Unitate fizică')
+                ->description('Un echipament individual din inventar. Pentru categorii (Kayak, Bicicletă etc.) folosește "Tipuri resurse".')
                 ->columns(2)
                 ->schema([
-                    Forms\Components\TextInput::make('resource_type')
-                        ->label('Tip resursă')
-                        ->placeholder('ex: boat, kayak, bike, sled, locker')
-                        ->required(),
+                    Forms\Components\Select::make('physical_resource_type_id')
+                        ->label('Tip')
+                        ->relationship('type', 'name', fn ($q) => $q->where('tenant_id', auth()->user()?->tenant?->id))
+                        ->searchable()
+                        ->preload()
+                        ->required()
+                        ->live()
+                        ->createOptionForm([
+                            Forms\Components\TextInput::make('name')->required(),
+                        ])
+                        ->createOptionUsing(function (array $data) {
+                            $tenantId = auth()->user()?->tenant?->id;
+                            $type = \App\Models\Leisure\PhysicalResourceType::create([
+                                'tenant_id' => $tenantId,
+                                'name' => $data['name'],
+                                'slug' => \App\Models\Leisure\PhysicalResourceType::generateSlug($data['name'], $tenantId),
+                                'is_active' => true,
+                            ]);
+                            return $type->id;
+                        })
+                        ->afterStateUpdated(function ($state, \Filament\Schemas\Components\Utilities\Set $set) {
+                            // Pre-fill the legacy resource_type string and the linked-tickets array from the type defaults.
+                            if (! $state) return;
+                            $type = \App\Models\Leisure\PhysicalResourceType::find($state);
+                            if ($type) {
+                                $set('resource_type', $type->slug);
+                                $set('linked_ticket_type_ids', $type->linked_ticket_type_ids);
+                            }
+                        }),
 
                     Forms\Components\TextInput::make('name')
                         ->label('Nume (afișat operatorilor)')
-                        ->placeholder('ex: Barca Roșie #3')
+                        ->placeholder('ex: Kayak Roșu #1')
                         ->required(),
 
                     Forms\Components\TextInput::make('label')
                         ->label('Etichetă vizuală')
-                        ->placeholder('ex: ROȘIE-03'),
-
-                    Forms\Components\TextInput::make('qr_code')
-                        ->label('QR Code')
-                        ->disabled(fn ($context) => $context !== 'create')
-                        ->helperText('Generat automat la creare. NU îl modifica după ce ai printat.'),
+                        ->placeholder('ex: RED-01'),
 
                     Forms\Components\Select::make('status')
                         ->options([
@@ -77,9 +98,16 @@ class PhysicalResourceResource extends Resource
                         ->default('available')
                         ->required(),
 
+                    Forms\Components\TextInput::make('qr_code')
+                        ->label('QR Code')
+                        ->disabled(fn ($context) => $context !== 'create')
+                        ->helperText('Generat automat la creare. NU îl modifica după ce ai printat.'),
+
+                    Forms\Components\Hidden::make('resource_type'),
+
                     Forms\Components\Select::make('linked_ticket_type_ids')
-                        ->label('Bilete asociate (whitelist)')
-                        ->helperText('Lasă gol pentru a permite orice bilet de tip rental al acestui tenant.')
+                        ->label('Bilete asociate (override pe această unitate)')
+                        ->helperText('Default-uri vin din tipul de resursă. Modifică doar dacă vrei comportament diferit pentru această unitate.')
                         ->multiple()
                         ->options(function () {
                             $tenantId = auth()->user()?->tenant?->id;
@@ -88,7 +116,8 @@ class PhysicalResourceResource extends Resource
                                 ->whereIn('service_category', ['rental', 'activity'])
                                 ->pluck('name', 'id');
                         })
-                        ->searchable(),
+                        ->searchable()
+                        ->columnSpanFull(),
 
                     Forms\Components\KeyValue::make('meta')
                         ->label('Atribute (size, color, condition)')
@@ -100,11 +129,14 @@ class PhysicalResourceResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
-            ->defaultSort('resource_type')
+            ->modifyQueryUsing(fn (Builder $q) => $q->with('type:id,name,icon,color,slug,linked_ticket_type_ids'))
+            ->defaultSort('name')
             ->columns([
-                Tables\Columns\TextColumn::make('resource_type')
+                Tables\Columns\TextColumn::make('type.icon')->label('')->size('lg'),
+                Tables\Columns\TextColumn::make('type.name')
                     ->label('Tip')
-                    ->badge(),
+                    ->badge()
+                    ->color(fn ($record) => $record->type?->color ? null : 'gray'),
                 Tables\Columns\TextColumn::make('name')
                     ->searchable()
                     ->sortable(),
@@ -130,12 +162,9 @@ class PhysicalResourceResource extends Resource
                     ->toggleable(),
             ])
             ->filters([
-                Tables\Filters\SelectFilter::make('resource_type')
-                    ->options(fn () => PhysicalResource::query()
-                        ->where('tenant_id', auth()->user()?->tenant?->id)
-                        ->distinct()
-                        ->pluck('resource_type', 'resource_type')
-                        ->toArray()),
+                Tables\Filters\SelectFilter::make('physical_resource_type_id')
+                    ->label('Tip resursă')
+                    ->relationship('type', 'name', fn ($q) => $q->where('tenant_id', auth()->user()?->tenant?->id)),
                 Tables\Filters\SelectFilter::make('status')
                     ->options([
                         'available' => 'Disponibilă',
@@ -143,6 +172,71 @@ class PhysicalResourceResource extends Resource
                         'maintenance' => 'Mentenanță',
                         'retired' => 'Scoasă din uz',
                     ]),
+            ])
+            ->headerActions([
+                Action::make('bulkAdd')
+                    ->label('Adaugă în bulk')
+                    ->icon('heroicon-o-squares-plus')
+                    ->color('success')
+                    ->modalHeading('Adaugă mai multe unități deodată')
+                    ->modalDescription('Generează N unități pentru un tip de resursă, cu nume auto-numerotate și QR-uri unice.')
+                    ->modalSubmitActionLabel('Generează')
+                    ->form([
+                        Forms\Components\Select::make('type_id')
+                            ->label('Tip resursă')
+                            ->options(fn () => \App\Models\Leisure\PhysicalResourceType::where('tenant_id', auth()->user()?->tenant?->id)
+                                ->where('is_active', true)
+                                ->pluck('name', 'id'))
+                            ->required()
+                            ->searchable(),
+                        Forms\Components\TextInput::make('count')
+                            ->label('Câte unități')
+                            ->numeric()->minValue(1)->maxValue(200)
+                            ->default(5)
+                            ->required(),
+                        Forms\Components\TextInput::make('name_prefix')
+                            ->label('Prefix nume')
+                            ->placeholder('ex: Kayak Roșu #')
+                            ->helperText('Numele final = prefix + index începând de la "start_index".')
+                            ->required(),
+                        Forms\Components\TextInput::make('start_index')
+                            ->label('Index pornire')
+                            ->numeric()->default(1)->minValue(1)
+                            ->required(),
+                        Forms\Components\Select::make('status')
+                            ->options([
+                                'available' => 'Disponibilă',
+                                'maintenance' => 'Mentenanță',
+                            ])
+                            ->default('available'),
+                    ])
+                    ->action(function (array $data) {
+                        $tenantId = auth()->user()?->tenant?->id;
+                        $type = \App\Models\Leisure\PhysicalResourceType::find($data['type_id']);
+                        if (! $type || $type->tenant_id !== $tenantId) {
+                            \Filament\Notifications\Notification::make()->danger()->title('Tip invalid')->send();
+                            return;
+                        }
+                        $created = 0;
+                        for ($i = 0; $i < (int) $data['count']; $i++) {
+                            $idx = (int) $data['start_index'] + $i;
+                            PhysicalResource::create([
+                                'tenant_id' => $tenantId,
+                                'physical_resource_type_id' => $type->id,
+                                'resource_type' => $type->slug,
+                                'name' => $data['name_prefix'] . $idx,
+                                'label' => strtoupper(\Illuminate\Support\Str::slug($type->slug)) . '-' . str_pad((string) $idx, 2, '0', STR_PAD_LEFT),
+                                'qr_code' => PhysicalResource::generateQrCode($tenantId, $type->slug),
+                                'status' => $data['status'] ?? 'available',
+                                'linked_ticket_type_ids' => $type->linked_ticket_type_ids,
+                            ]);
+                            $created++;
+                        }
+                        \Filament\Notifications\Notification::make()
+                            ->success()->title("Am adăugat {$created} unități")
+                            ->body("Tip: {$type->name}")
+                            ->send();
+                    }),
             ])
             ->recordActions([
                 EditAction::make(),

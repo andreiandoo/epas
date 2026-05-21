@@ -23,6 +23,13 @@ class EditTenantTeamMember extends EditRecord
         if ($newName && $this->record->user && $this->record->user->name !== $newName) {
             $this->record->user->update(['name' => $newName]);
         }
+
+        // Optional password reset.
+        $newPassword = $this->data['initial_password'] ?? null;
+        if ($newPassword && $this->record->user) {
+            $this->record->user->update(['password' => \Illuminate\Support\Facades\Hash::make($newPassword)]);
+        }
+
         return $data;
     }
 }

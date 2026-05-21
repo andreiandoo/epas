@@ -63,11 +63,14 @@ class TenantTeamMemberResource extends Resource
                         ->afterStateHydrated(fn ($component, $record) => $component->state($record?->user?->email))
                         ->helperText('Adresa de login. Operatorul folosește acest email + parola pentru a accesa /operator.'),
                     Forms\Components\TextInput::make('initial_password')
-                        ->label('Parolă inițială')
+                        ->label(fn ($context) => $context === 'create' ? 'Parolă inițială' : 'Parolă nouă (opțional)')
                         ->password()
+                        ->revealable()
                         ->dehydrated(false)
-                        ->visible(fn ($context) => $context === 'create')
-                        ->helperText('Operatorul va putea schimba parola după primul login.'),
+                        ->minLength(6)
+                        ->helperText(fn ($context) => $context === 'create'
+                            ? 'Operatorul folosește acest email + această parolă pentru /operator.'
+                            : 'Lasă gol pentru a păstra parola existentă. Completează dacă vrei să o resetezi.'),
                 ]),
 
             SC\Section::make('Drepturi')
@@ -124,6 +127,38 @@ class TenantTeamMemberResource extends Resource
                         ->label('Note interne')
                         ->rows(2)
                         ->columnSpanFull(),
+                ]),
+
+            SC\Section::make('Program / Pontaj')
+                ->description('Schimburi planificate. Apar în pagina "Pontaj" pentru vedere săptămânală.')
+                ->icon('heroicon-o-calendar')
+                ->collapsed(fn ($record) => $record === null)
+                ->schema([
+                    Forms\Components\Repeater::make('shifts')
+                        ->label('')
+                        ->relationship('shifts')
+                        ->schema([
+                            Forms\Components\DatePicker::make('shift_date')->label('Data')->required(),
+                            Forms\Components\TimePicker::make('start_time')->label('Start')->seconds(false)->required(),
+                            Forms\Components\TimePicker::make('end_time')->label('Sfârșit')->seconds(false)->required(),
+                            Forms\Components\Select::make('position')
+                                ->label('Poziție')
+                                ->options(TenantTeamMember::LEISURE_ROLES)
+                                ->placeholder('Folosește rolul implicit'),
+                            Forms\Components\TextInput::make('location')->label('Locație / Gate'),
+                            Forms\Components\Textarea::make('notes')->label('Notă')->rows(1)->columnSpanFull(),
+                        ])
+                        ->columns(3)
+                        ->collapsible()
+                        ->itemLabel(fn (array $state) => trim(
+                            ($state['shift_date'] ?? '?') . ' ' .
+                            ($state['start_time'] ?? '') . '-' . ($state['end_time'] ?? '')
+                        ))
+                        ->defaultItems(0)
+                        ->mutateRelationshipDataBeforeCreateUsing(function (array $data) {
+                            $data['tenant_id'] = auth()->user()?->tenant?->id;
+                            return $data;
+                        }),
                 ]),
         ]);
     }
