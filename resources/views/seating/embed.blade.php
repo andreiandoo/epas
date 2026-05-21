@@ -346,12 +346,15 @@ function paint() {
       ctx.stroke();
     }
 
-    if (showSeatNumbers && seat.seat_number != null) {
+    // GeometryStorage emits the seat number as `label` (not seat_number).
+    // Fall back to seat_number / seat_label for any older snapshot.
+    const seatNum = seat.label ?? seat.seat_number ?? seat.seat_label;
+    if (showSeatNumbers && seatNum != null && seatNum !== '') {
       ctx.fillStyle = '#fff';
       ctx.font = `700 ${Math.max(7, r * 0.95)}px system-ui`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(String(seat.seat_number), absX, absY);
+      ctx.fillText(String(seatNum), absX, absY);
     }
   }
 
@@ -628,14 +631,19 @@ function updateFooter() {
     const price = Number(seat.price || 0);
     total += price;
 
+    const seatNum = seat.label ?? seat.seat_number ?? seat.seat_label ?? '';
+    const sectionName = section.name || '';
     const div = document.createElement('div');
     div.className = 'sel-row';
     div.innerHTML =
       '<span class="sel-dot" style="background:' + ttColor + '"></span>' +
       '<div class="sel-info">' +
         '<div class="sel-name">' + escapeHtml(ttName) + '</div>' +
-        '<div class="sel-pos">Rând ' + escapeHtml(String(row.label || '')) +
-          ' · Loc ' + escapeHtml(String(seat.seat_number || '')) + '</div>' +
+        '<div class="sel-pos">' +
+          (sectionName ? escapeHtml(sectionName) + ' · ' : '') +
+          'Rând ' + escapeHtml(String(row.label || '')) +
+          ' · Loc ' + escapeHtml(String(seatNum)) +
+        '</div>' +
       '</div>' +
       '<span class="sel-price">' + price.toFixed(2) + ' RON</span>' +
       '<span class="sel-remove" data-uid="' + escapeHtml(seat.seat_uid) + '">×</span>';
@@ -679,7 +687,9 @@ confirmBtn.addEventListener('click', () => {
       seat_uid: seat.seat_uid,
       section_name: section.name,
       row_label: row.label,
-      seat_label: seat.seat_number,
+      // Geometry stores the seat number as `label`. Older payloads may
+      // have used seat_number / seat_label — keep them as fallbacks.
+      seat_label: seat.label ?? seat.seat_number ?? seat.seat_label ?? '',
       ticket_type_id: ttId,
       price: seat.price || 0,
     });
