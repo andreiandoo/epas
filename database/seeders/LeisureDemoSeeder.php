@@ -19,6 +19,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 /**
@@ -106,69 +107,88 @@ class LeisureDemoSeeder extends Seeder
         }
     }
 
+    /**
+     * Live schemas don't always have first_name/last_name/phone/role/tenant_id —
+     * those columns are added by tenant-system migrations that may not have run
+     * on every environment. We filter the attribute array against the actual
+     * users-table columns so the seeder is portable across schema variants.
+     */
+    private function userAttrs(array $attrs): array
+    {
+        $existing = Schema::getColumnListing('users');
+        return array_intersect_key($attrs, array_flip($existing));
+    }
+
     private function createOwnerUser(): User
     {
+        $attrs = $this->userAttrs([
+            'name' => 'Andrei Demo',
+            'first_name' => 'Andrei',
+            'last_name' => 'Demo',
+            'password' => Hash::make('aquasplash'),
+            'role' => 'tenant',
+            'phone' => '+40700000001',
+        ]);
+        // Hash::make may have been filtered out if there's no password column
+        // (extremely unlikely), so ensure it survives.
+        if (! isset($attrs['password'])) {
+            $attrs['password'] = Hash::make('aquasplash');
+        }
         return User::firstOrCreate(
             ['email' => self::OWNER_EMAIL],
-            [
-                'name' => 'Andrei Demo',
-                'first_name' => 'Andrei',
-                'last_name' => 'Demo',
-                'password' => Hash::make('aquasplash'),
-                'role' => 'tenant',
-                'phone' => '+40700000001',
-            ]
+            $attrs
         );
     }
 
     private function createTenant(User $owner): Tenant
     {
-        $tenant = Tenant::firstOrCreate(
-            ['slug' => self::TENANT_SLUG],
-            [
-                'name' => 'Aquapark Splash Demo SRL',
-                'public_name' => 'Aquapark Splash',
-                'tenant_type' => TenantType::Leisure,
-                'status' => 'active',
-                'plan' => '1percent',
-                'owner_id' => $owner->id,
-                'locale' => 'ro',
-                'currency' => 'RON',
-                'country' => 'RO',
-                'state' => 'Brasov',
-                'city' => 'Brasov',
-                'postal_code' => '500001',
-                'address' => 'Strada Demo nr. 1',
-                'company_name' => 'Aquapark Splash Demo SRL',
-                'cui' => 'RO99999991',
-                'reg_com' => 'J08/9991/2024',
-                'bank_account' => 'RO00DEMO0000000000099991',
-                'bank_name' => 'BCR',
-                'commission_mode' => 'included',
-                'commission_rate' => 1.0,
-                'work_method' => 'exclusive',
-                'onboarding_completed' => true,
-                'onboarding_completed_at' => now(),
-                // Override the observer defaults — enable ALL leisure features
-                // so the demo exercises every gated UI section.
-                'features' => [
-                    'leisure' => [
-                        'enabled' => true,
-                        'rentals' => ['enabled' => true],
-                        'pos' => ['enabled' => true],
-                        'time_slots' => ['enabled' => true],
-                        'physical_inventory' => ['enabled' => true],
-                        'multi_society' => ['enabled' => true],
-                        'channel_pricing' => ['enabled' => true],
-                        'embed' => ['enabled' => true],
-                        'crm' => ['enabled' => true],
-                    ],
+        $desired = [
+            'name' => 'Aquapark Splash Demo SRL',
+            'public_name' => 'Aquapark Splash',
+            'tenant_type' => TenantType::Leisure,
+            'status' => 'active',
+            'plan' => '1percent',
+            'owner_id' => $owner->id,
+            'locale' => 'ro',
+            'currency' => 'RON',
+            'country' => 'RO',
+            'state' => 'Brasov',
+            'city' => 'Brasov',
+            'postal_code' => '500001',
+            'address' => 'Strada Demo nr. 1',
+            'company_name' => 'Aquapark Splash Demo SRL',
+            'cui' => 'RO99999991',
+            'reg_com' => 'J08/9991/2024',
+            'bank_account' => 'RO00DEMO0000000000099991',
+            'bank_name' => 'BCR',
+            'commission_mode' => 'included',
+            'commission_rate' => 1.0,
+            'work_method' => 'exclusive',
+            'onboarding_completed' => true,
+            'onboarding_completed_at' => now(),
+            // Override the observer defaults — enable ALL leisure features
+            // so the demo exercises every gated UI section.
+            'features' => [
+                'leisure' => [
+                    'enabled' => true,
+                    'rentals' => ['enabled' => true],
+                    'pos' => ['enabled' => true],
+                    'time_slots' => ['enabled' => true],
+                    'physical_inventory' => ['enabled' => true],
+                    'multi_society' => ['enabled' => true],
+                    'channel_pricing' => ['enabled' => true],
+                    'embed' => ['enabled' => true],
+                    'crm' => ['enabled' => true],
                 ],
-            ]
-        );
+            ],
+        ];
+        $cols = Schema::getColumnListing('tenants');
+        $attrs = array_intersect_key($desired, array_flip($cols));
 
-        // Link owner to tenant.
-        if ($owner->tenant_id !== $tenant->id) {
+        $tenant = Tenant::firstOrCreate(['slug' => self::TENANT_SLUG], $attrs);
+
+        // Link owner to tenant (only if the column exists on this schema).
+        if (Schema::hasColumn('users', 'tenant_id') && $owner->tenant_id !== $tenant->id) {
             $owner->update(['tenant_id' => $tenant->id]);
         }
 
@@ -261,14 +281,14 @@ class LeisureDemoSeeder extends Seeder
             $email = "{$key}@aquasplash.demo";
             $user = User::firstOrCreate(
                 ['email' => $email],
-                [
+                $this->userAttrs([
                     'name' => ucfirst($key) . ' Demo',
                     'first_name' => ucfirst($key),
                     'last_name' => 'Demo',
                     'password' => Hash::make(self::OPERATOR_PASSWORD),
                     'role' => 'tenant',
                     'tenant_id' => $tenant->id,
-                ]
+                ]) + ['password' => Hash::make(self::OPERATOR_PASSWORD)]
             );
 
             $out[$key] = TenantTeamMember::firstOrCreate(
@@ -299,8 +319,20 @@ class LeisureDemoSeeder extends Seeder
 
     private function createEvent(Tenant $tenant): Event
     {
-        $existing = Event::where('tenant_id', $tenant->id)
-            ->where('slug', json_encode(['ro' => 'aquapark-splash-vara-2026']))
+        // Idempotency: look up by JSON path on slug.ro (works on Postgres
+        // and MySQL 5.7+; falls back to raw LIKE if neither is available).
+        $existing = Event::query()
+            ->where('tenant_id', $tenant->id)
+            ->where(function ($q) {
+                $driver = $q->getConnection()->getDriverName();
+                if ($driver === 'pgsql') {
+                    $q->whereRaw("slug->>'ro' = ?", ['aquapark-splash-vara-2026']);
+                } elseif ($driver === 'mysql') {
+                    $q->whereRaw("JSON_EXTRACT(slug, '$.ro') = ?", ['aquapark-splash-vara-2026']);
+                } else {
+                    $q->where('slug', 'like', '%aquapark-splash-vara-2026%');
+                }
+            })
             ->first();
         if ($existing) {
             return $existing;
@@ -310,7 +342,7 @@ class LeisureDemoSeeder extends Seeder
         $descTranslations = ['ro' => 'Bilete de acces, parcare, kayak și tururi ghidate. Toate într-un singur loc.'];
         $shortTranslations = ['ro' => 'Aquapark + rentals + parcare.'];
 
-        return Event::create([
+        $desired = [
             'tenant_id' => $tenant->id,
             'title' => $titleTranslations,
             'slug' => ['ro' => 'aquapark-splash-vara-2026'],
@@ -324,7 +356,9 @@ class LeisureDemoSeeder extends Seeder
             'status' => 'published',
             'is_published' => true,
             'display_template' => 'leisure_venue',
-        ]);
+        ];
+        $cols = Schema::getColumnListing('events');
+        return Event::create(array_intersect_key($desired, array_flip($cols)));
     }
 
     /** @return array<string, TicketType> */
@@ -536,17 +570,17 @@ class LeisureDemoSeeder extends Seeder
             ['first_name' => 'Elena', 'last_name' => 'Vasilescu', 'email' => 'elena.vasilescu@example.com', 'city' => 'Iasi', 'phone' => '+40700000106'],
         ];
 
+        $existing = Schema::getColumnListing('customers');
         $out = [];
         foreach ($defs as $i => $d) {
-            $out[] = Customer::firstOrCreate(
-                ['email' => $d['email']],
-                array_merge($d, [
-                    'tenant_id' => $tenant->id,
-                    'primary_tenant_id' => $tenant->id,
-                    'full_name' => $d['first_name'] . ' ' . $d['last_name'],
-                    'country' => 'RO',
-                ])
-            );
+            $attrs = array_merge($d, [
+                'tenant_id' => $tenant->id,
+                'primary_tenant_id' => $tenant->id,
+                'full_name' => $d['first_name'] . ' ' . $d['last_name'],
+                'country' => 'RO',
+            ]);
+            $filtered = array_intersect_key($attrs, array_flip($existing));
+            $out[] = Customer::firstOrCreate(['email' => $d['email']], $filtered);
         }
         return $out;
     }
@@ -581,13 +615,13 @@ class LeisureDemoSeeder extends Seeder
                 continue;
             }
 
-            $order = Order::create([
+            $orderAttrs = [
                 'tenant_id' => $tenant->id,
                 'event_id' => $event->id,
                 'customer_id' => $customer->id,
                 'customer_email' => $customer->email,
-                'customer_name' => $customer->first_name . ' ' . $customer->last_name,
-                'customer_phone' => $customer->phone,
+                'customer_name' => trim(($customer->first_name ?? '') . ' ' . ($customer->last_name ?? '')) ?: $customer->email,
+                'customer_phone' => $customer->phone ?? null,
                 'order_number' => $orderNumber,
                 'status' => 'paid',
                 'payment_status' => 'paid',
@@ -601,7 +635,10 @@ class LeisureDemoSeeder extends Seeder
                 'source' => 'demo',
                 'created_at' => $createdAt,
                 'updated_at' => $createdAt,
-            ]);
+            ];
+            $orderCols = Schema::getColumnListing('orders');
+            $orderAttrs = array_intersect_key($orderAttrs, array_flip($orderCols));
+            $order = Order::create($orderAttrs);
 
             // Generate the actual tickets so /operator check-in has things to scan.
             for ($t = 0; $t < $qty; $t++) {
