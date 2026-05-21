@@ -6,6 +6,7 @@ return [
     App\Providers\Filament\TenantPanelProvider::class,
     App\Providers\Filament\MarketplacePanelProvider::class,
     App\Providers\Filament\VendorPanelProvider::class,
+    App\Providers\Filament\OperatorPanelProvider::class,
     App\Providers\SeatingServiceProvider::class,
     App\Providers\MicroservicesServiceProvider::class,
 ];

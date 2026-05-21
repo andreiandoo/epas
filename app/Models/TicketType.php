@@ -95,6 +95,10 @@ class TicketType extends Model
         'leisure_is_overtime_chargeable',
         'leisure_overtime_surcharge_cents',
         'leisure_overtime_interval_minutes',
+        // Leisure tenant (E5): emitent fiscal per-produs (multi-society)
+        'tenant_tax_registry_id',
+        // Leisure tenant (E6): prețuri per canal de vânzare
+        'channel_pricing',
     ];
 
     protected $casts = [
@@ -127,6 +131,8 @@ class TicketType extends Model
         'leisure_is_overtime_chargeable' => 'boolean',
         'leisure_overtime_surcharge_cents' => 'integer',
         'leisure_overtime_interval_minutes' => 'integer',
+        // Leisure tenant (E6) — { online: 1000, pos_fixed: 1200, pos_mobile: 1100 }
+        'channel_pricing' => 'array',
     ];
 
     protected $appends = [

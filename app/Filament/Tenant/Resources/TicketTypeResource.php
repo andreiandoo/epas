@@ -257,6 +257,50 @@ class TicketTypeResource extends Resource
                             ->defaultItems(0),
                     ]),
 
+                SC\Section::make('Leisure: Prețuri per canal')
+                    ->description('Setează prețul (în cenți) pentru fiecare canal de vânzare. Lasă gol pentru a folosi prețul implicit.')
+                    ->icon('heroicon-o-currency-dollar')
+                    ->visible(fn () => $isLeisureTenant() && (auth()->user()?->tenant?->features['leisure']['channel_pricing']['enabled'] ?? false))
+                    ->columns(2)
+                    ->schema([
+                        Forms\Components\TextInput::make('channel_pricing.online')
+                            ->label('Online (cenți)')
+                            ->numeric()
+                            ->placeholder('ex: 1000 = 10 RON'),
+                        Forms\Components\TextInput::make('channel_pricing.pos_fixed')
+                            ->label('POS (punct fix) (cenți)')
+                            ->numeric()
+                            ->placeholder('ex: 1200 = 12 RON'),
+                        Forms\Components\TextInput::make('channel_pricing.pos_mobile')
+                            ->label('POS (mobil) (cenți)')
+                            ->numeric()
+                            ->placeholder('ex: 1100 = 11 RON'),
+                        Forms\Components\TextInput::make('channel_pricing.embed')
+                            ->label('Embed widget (cenți)')
+                            ->numeric(),
+                        Forms\Components\TextInput::make('channel_pricing.partner_app')
+                            ->label('Aplicație parteneri (cenți)')
+                            ->numeric(),
+                    ]),
+
+                SC\Section::make('Leisure: Societate emitentă')
+                    ->description('Selectează CIF-ul care emite factura pentru acest produs. Activ doar dacă tenant-ul are flag-ul Multi-societate.')
+                    ->icon('heroicon-o-building-library')
+                    ->visible(fn () => $isLeisureTenant() && (auth()->user()?->tenant?->features['leisure']['multi_society']['enabled'] ?? false))
+                    ->schema([
+                        Forms\Components\Select::make('tenant_tax_registry_id')
+                            ->label('Societatea emitentă')
+                            ->options(function () {
+                                $tenantId = auth()->user()?->tenant?->id;
+                                return \App\Models\Leisure\TenantTaxRegistry::query()
+                                    ->where('tenant_id', $tenantId)
+                                    ->where('is_active', true)
+                                    ->get()
+                                    ->mapWithKeys(fn ($r) => [$r->id => "{$r->company_name} ({$r->cui})"]);
+                            })
+                            ->helperText('Lasă gol pentru a folosi societatea implicită.'),
+                    ]),
+
                 SC\Section::make('Leisure: Descriere produs & Termeni')
                     ->icon('heroicon-o-document-text')
                     ->visible($isLeisureTenant)

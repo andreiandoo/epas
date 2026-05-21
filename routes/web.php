@@ -696,3 +696,10 @@ Route::get('/seating/embed/{event}', [SeatingEmbedController::class, 'show'])
 Route::get('/leisure/qr-print', [\App\Http\Controllers\Leisure\QrPrintController::class, 'show'])
     ->middleware(['auth'])
     ->name('leisure.qr-print');
+
+// ─────────────────────────────────────────────────────────────────────────
+// Leisure: embed widget iframe target (E11).
+// Public — gated server-side on tenant_type=leisure + features.embed.enabled.
+// ─────────────────────────────────────────────────────────────────────────
+Route::get('/embed/leisure/{tenantSlug}', [\App\Http\Controllers\Leisure\EmbedController::class, 'show'])
+    ->name('leisure.embed.show');
