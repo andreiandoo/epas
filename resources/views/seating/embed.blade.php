@@ -189,11 +189,14 @@ function seatColor(seat) {
 
 function isSeatSelectable(seat) {
   if (seat.status !== 'available') return false;
-  // If a ticket type was pre-selected, only allow seats of that type. POS
-  // operators picking one ticket type at a time keep things unambiguous.
-  if (PRESELECTED_TT && seat.ticket_type_id && Number(seat.ticket_type_id) !== Number(PRESELECTED_TT)) {
-    return false;
-  }
+  // Any available seat is selectable, regardless of which ticket type
+  // the buyer initially picked in SalesScreen. Each tapped seat enters
+  // the cart with ITS OWN ticket type / price — the cart groups them
+  // automatically at confirm time. This matches the legacy SVG screen
+  // behavior and removes the 'cannot select' confusion that the
+  // per-type filter caused. PRESELECTED_TT stays around as a hint
+  // (e.g. could be used to highlight matching seats in the future)
+  // but no longer restricts selection.
   return true;
 }
 
@@ -403,18 +406,10 @@ let lastSingle = null;
 let movedDuringTap = false;
 let mouseDown = false;
 
-// Debug overlay — shows the last few events the canvas saw so we can
-// diagnose 'tap doesn't select' issues on real devices.
-const dbgEl = document.createElement('div');
-dbgEl.id = 'touch-debug';
-dbgEl.style.cssText = 'position:absolute;top:10px;left:10px;right:10px;background:rgba(0,0,0,0.75);color:#10b981;font:11px/1.4 monospace;padding:6px 10px;border-radius:6px;pointer-events:none;z-index:11;max-height:80px;overflow:hidden;white-space:pre-wrap;word-break:break-all';
-wrap.appendChild(dbgEl);
-const dbgLines = [];
-function debugFlash(msg) {
-  dbgLines.unshift(msg);
-  if (dbgLines.length > 4) dbgLines.length = 4;
-  dbgEl.textContent = dbgLines.join('\n');
-}
+// Touch-event diagnostic overlay was here during debugging; removed
+// once the cross-ticket-type selection issue was fixed. Re-enable by
+// pasting back the createElement + debugFlash helper if needed.
+function debugFlash(_msg) { /* no-op */ }
 
 function pageXYFromTouch(t) {
   // clientX/Y is what we want — relative to the viewport (canvas is
