@@ -55,26 +55,16 @@ class PhysicalResourceResource extends Resource
                 ->schema([
                     Forms\Components\Select::make('physical_resource_type_id')
                         ->label('Tip')
-                        ->relationship('type', 'name', fn ($q) => $q->where('tenant_id', auth()->user()?->tenant?->id))
+                        ->options(fn () => \App\Models\Leisure\PhysicalResourceType::query()
+                            ->where('tenant_id', auth()->user()?->tenant?->id)
+                            ->orderBy('name')
+                            ->pluck('name', 'id')
+                            ->toArray())
                         ->searchable()
                         ->preload()
                         ->required()
                         ->live()
-                        ->createOptionForm([
-                            Forms\Components\TextInput::make('name')->required(),
-                        ])
-                        ->createOptionUsing(function (array $data) {
-                            $tenantId = auth()->user()?->tenant?->id;
-                            $type = \App\Models\Leisure\PhysicalResourceType::create([
-                                'tenant_id' => $tenantId,
-                                'name' => $data['name'],
-                                'slug' => \App\Models\Leisure\PhysicalResourceType::generateSlug($data['name'], $tenantId),
-                                'is_active' => true,
-                            ]);
-                            return $type->id;
-                        })
                         ->afterStateUpdated(function ($state, \Filament\Schemas\Components\Utilities\Set $set) {
-                            // Pre-fill the legacy resource_type string and the linked-tickets array from the type defaults.
                             if (! $state) return;
                             $type = \App\Models\Leisure\PhysicalResourceType::find($state);
                             if ($type) {
@@ -135,12 +125,13 @@ class PhysicalResourceResource extends Resource
         return $table
             ->defaultSort('name')
             ->columns([
-                Tables\Columns\TextColumn::make('type.icon')->label(''),
                 Tables\Columns\TextColumn::make('type.name')
                     ->label('Tip')
                     ->badge()
-                    ->color(fn ($record) => $record->type?->color ? null : 'gray'),
+                    ->placeholder('—')
+                    ->sortable(),
                 Tables\Columns\TextColumn::make('name')
+                    ->label('Nume')
                     ->searchable()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('label')
@@ -149,25 +140,27 @@ class PhysicalResourceResource extends Resource
                 Tables\Columns\TextColumn::make('qr_code')
                     ->label('QR')
                     ->copyable()
-                    ->fontFamily('mono'),
+                    ->fontFamily('mono')
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('status')
+                    ->label('Status')
                     ->badge()
-                    ->color(fn ($state) => match ($state) {
+                    ->color(fn (string $state): string => match ($state) {
                         'available' => 'success',
                         'in_use' => 'info',
                         'maintenance' => 'warning',
                         'retired' => 'gray',
                         default => 'gray',
                     }),
-                Tables\Columns\TextColumn::make('activeRental.started_at')
-                    ->label('Rental început')
-                    ->dateTime('d.m H:i')
-                    ->toggleable(),
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('physical_resource_type_id')
                     ->label('Tip resursă')
-                    ->relationship('type', 'name', fn ($q) => $q->where('tenant_id', auth()->user()?->tenant?->id)),
+                    ->options(fn () => \App\Models\Leisure\PhysicalResourceType::query()
+                        ->where('tenant_id', auth()->user()?->tenant?->id)
+                        ->orderBy('name')
+                        ->pluck('name', 'id')
+                        ->toArray()),
                 Tables\Filters\SelectFilter::make('status')
                     ->options([
                         'available' => 'Disponibilă',
