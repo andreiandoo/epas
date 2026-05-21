@@ -991,9 +991,26 @@ class EditEvent extends EditRecord
                 ? ($t->ticketType->name['ro'] ?? $t->ticketType->name['en'] ?? reset($t->ticketType->name) ?: '—')
                 : ($t->ticketType?->name ?? '—');
 
+            // Detect duplicate-allocation incidents: if another valid
+            // ticket on this event has the same seat_uid in its meta,
+            // the operator is likely untangling an overlap and needs
+            // to know that re-assignment will NOT release the old seat.
+            $sharedTicketIds = [];
+            if ($hasSeat) {
+                $sharedTicketIds = \App\Models\Ticket::where('event_id', $event->id)
+                    ->where('id', '!=', $t->id)
+                    ->whereJsonContains('meta->seat_uid', $currentSeatUid)
+                    ->whereIn('status', ['valid', 'pending', 'used'])
+                    ->pluck('id')
+                    ->all();
+            }
+
             $label = "#{$t->id} · {$ttName}";
             if ($hasSeat) {
                 $label .= ' · loc curent: ' . ($t->seat_label ?: $currentSeatUid);
+                if (count($sharedTicketIds) > 0) {
+                    $label .= ' · ⚠ suprapunere cu ' . count($sharedTicketIds) . ' bilet(e)';
+                }
             }
 
             $out[] = [
@@ -1002,6 +1019,7 @@ class EditEvent extends EditRecord
                 'has_seat' => $hasSeat,
                 'current_seat_uid' => $currentSeatUid,
                 'current_seat_label' => $t->seat_label,
+                'seat_shared_with_ticket_ids' => array_map('intval', $sharedTicketIds),
             ];
         }
 
@@ -1216,21 +1234,48 @@ class EditEvent extends EditRecord
                     ];
                 }
 
-                // If ticket already has a seat → release vechi seat to 'available'
+                // If ticket already has a seat → potentially release old seat.
+                // BUT: in duplicate-allocation incidents (two tickets bought the
+                // same seat — what this tool is often used to untangle), other
+                // valid tickets may still reference the same seat_uid. In that
+                // case we MUST keep EventSeat.status='sold' so the legitimate
+                // owner's display stays correct; we only unbind this ticket
+                // from the seat (clear its meta below). The EventSeat is the
+                // single source of truth for the map, so flipping it would
+                // visually "free" a seat someone else still holds.
                 $oldSeatUid = $ticket->meta['seat_uid'] ?? null;
                 $releasedSeatUid = null;
+                $oldSeatStatusOutcome = null; // 'released_to_available' | 'kept_sold_other_ticket_holds'
+                $oldSeatOtherTickets = 0;
                 if ($oldSeatUid && $oldSeatUid !== $seatUid) {
                     if (!$overrideExistingSeat) {
                         throw new \RuntimeException('ticket_has_existing_seat:' . $oldSeatUid);
                     }
+
+                    $oldSeatOtherTickets = \App\Models\Ticket::where('event_id', $event->id)
+                        ->where('id', '!=', $ticket->id)
+                        ->whereJsonContains('meta->seat_uid', $oldSeatUid)
+                        ->whereIn('status', ['valid', 'pending', 'used'])
+                        ->count();
+
                     $oldSeat = \App\Models\Seating\EventSeat::where('event_seating_id', $layout->id)
                         ->where('seat_uid', $oldSeatUid)
                         ->lockForUpdate()
                         ->first();
                     if ($oldSeat) {
-                        $oldSeat->status = 'available';
-                        $oldSeat->version = $oldSeat->version + 1;
-                        $oldSeat->save();
+                        if ($oldSeatOtherTickets === 0) {
+                            $oldSeat->status = 'available';
+                            $oldSeat->version = $oldSeat->version + 1;
+                            $oldSeat->save();
+                            $oldSeatStatusOutcome = 'released_to_available';
+                        } else {
+                            // Another valid ticket still holds this seat —
+                            // keep EventSeat sold; just bump version so any
+                            // cached client refreshes.
+                            $oldSeat->version = $oldSeat->version + 1;
+                            $oldSeat->save();
+                            $oldSeatStatusOutcome = 'kept_sold_other_ticket_holds';
+                        }
                         $releasedSeatUid = $oldSeatUid;
                     }
                 }
@@ -1316,11 +1361,15 @@ class EditEvent extends EditRecord
                         'customer_email' => $ticket->order?->customer_email,
                         'customer_name' => $customerName,
                         'previous_seat_uid' => $releasedSeatUid,
+                        'previous_seat_status_outcome' => $oldSeatStatusOutcome,
+                        'previous_seat_other_tickets_count' => $oldSeatOtherTickets,
                         'reason' => $reason,
                         'action_type' => $releasedSeatUid ? 'reassigned' : 'allocated',
                     ])
                     ->log($releasedSeatUid
-                        ? "Loc reasignat: {$releasedSeatUid} → {$seat->seat_uid} pentru bilet #{$ticket->id}"
+                        ? ($oldSeatStatusOutcome === 'kept_sold_other_ticket_holds'
+                            ? "Loc reasignat: {$releasedSeatUid} → {$seat->seat_uid} pentru bilet #{$ticket->id} (vechiul loc rămâne sold — încă deținut de {$oldSeatOtherTickets} alt(e) bilet(e))"
+                            : "Loc reasignat: {$releasedSeatUid} → {$seat->seat_uid} pentru bilet #{$ticket->id} (vechiul loc eliberat)")
                         : "Loc alocat manual: {$seat->seat_uid} pentru bilet #{$ticket->id}");
 
                 return [
@@ -1329,6 +1378,8 @@ class EditEvent extends EditRecord
                     'seat_uid' => $seat->seat_uid,
                     'seat_label' => $ticket->seat_label,
                     'released_seat_uid' => $releasedSeatUid,
+                    'previous_seat_status_outcome' => $oldSeatStatusOutcome,
+                    'previous_seat_other_tickets_count' => $oldSeatOtherTickets,
                 ];
             });
 

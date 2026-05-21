@@ -462,13 +462,24 @@
                     this.alloc.saving = false;
                     return;
                 }
-                // Reflect in local ES map: new seat → sold; old seat (if any) → released
+                // Reflect in local ES map: new seat → sold; old seat → only
+                // delete locally if backend actually released it. In overlap
+                // scenarios (another ticket still holds it) the old seat stays
+                // sold on the map and we must NOT delete it from ES.
                 let newES = {...this.ES};
                 newES[this.alloc.seat.seat_uid] = 'sold';
-                if (res.released_seat_uid) delete newES[res.released_seat_uid];
+                if (res.released_seat_uid && res.previous_seat_status_outcome === 'released_to_available') {
+                    delete newES[res.released_seat_uid];
+                }
                 this.ES = newES;
 
-                this.alloc.successMsg = 'Loc alocat: ' + res.seat_label;
+                let suffix = '';
+                if (res.previous_seat_status_outcome === 'kept_sold_other_ticket_holds') {
+                    suffix = ' (locul vechi rămâne sold — încă deținut de ' + (res.previous_seat_other_tickets_count || 0) + ' alt bilet)';
+                } else if (res.previous_seat_status_outcome === 'released_to_available') {
+                    suffix = ' (locul vechi eliberat)';
+                }
+                this.alloc.successMsg = 'Loc alocat: ' + res.seat_label + suffix;
                 this.alloc.saving = false;
                 // Invalidate recent activity cache so next open re-fetches
                 this.recentAllocLoaded = false;
@@ -1231,9 +1242,21 @@
                                 Biletul are deja loc alocat:
                                 <span class="font-mono" x-text="allocSelectedTicket?.current_seat_label || allocSelectedTicket?.current_seat_uid"></span>.
                             </p>
+                            {{-- Normal case: no shared seat. Old seat goes back to 'available'. --}}
+                            <p x-show="(allocSelectedTicket?.seat_shared_with_ticket_ids || []).length === 0" class="mt-1 text-xs text-amber-300">
+                                La re-asignare locul vechi devine <strong>available</strong> &#537;i va putea fi cump&#259;rat din nou.
+                            </p>
+                            {{-- Overlap case: another ticket still holds the same seat. --}}
+                            <p x-show="(allocSelectedTicket?.seat_shared_with_ticket_ids || []).length > 0" x-cloak class="mt-1 text-xs text-amber-300">
+                                <strong>Aten&#539;ie suprapunere:</strong> locul curent este &#539;inut &#537;i de
+                                <span x-text="(allocSelectedTicket?.seat_shared_with_ticket_ids || []).length"></span>
+                                alt(e) bilet(e)
+                                (#<span x-text="(allocSelectedTicket?.seat_shared_with_ticket_ids || []).join(', #')"></span>).
+                                Re-asignarea <strong>NU</strong> va elibera locul vechi pe hart&#259; (r&#259;m&#226;ne sold pentru cel&#259;lalt bilet) &#8212; doar &icirc;l scoate de pe biletul curent.
+                            </p>
                             <label class="mt-2 flex items-start gap-2 text-xs text-amber-100 cursor-pointer">
                                 <input type="checkbox" x-model="alloc.overrideExisting" class="mt-0.5 rounded border-amber-600 bg-amber-900 text-amber-500">
-                                <span>Re-asignare: elibereaz&#259; locul vechi (devine <strong>available</strong>) &#537;i atribuie cel nou.</span>
+                                <span>Re-asignare: scoate locul vechi de pe acest bilet &#537;i atribuie cel nou.</span>
                             </label>
                         </div>
 
