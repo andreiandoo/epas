@@ -27,6 +27,7 @@ class DatabaseSeeder extends Seeder
             WebTemplateDemoSeeder::class,
             FacebookCapiIntegrationMicroserviceSeeder::class,
             CustomerAudienceSegmentsSeeder::class,
+            LeisureMicroservicesSeeder::class,
         ]);
     }
 }

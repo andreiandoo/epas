@@ -88,6 +88,13 @@ class TicketType extends Model
         'usage_terms',
         // Leisure venue: serviciul poate fi cumparat doar cu un bilet acces valid pe aceeasi zi
         'requires_access_ticket',
+        // Leisure tenant (E1): variante durata pentru rentals + pricing rules pe zi + sezoane
+        'leisure_duration_variants',
+        'leisure_pricing_rules',
+        'leisure_seasons',
+        'leisure_is_overtime_chargeable',
+        'leisure_overtime_surcharge_cents',
+        'leisure_overtime_interval_minutes',
     ];
 
     protected $casts = [
@@ -113,6 +120,13 @@ class TicketType extends Model
         'commission_rate'  => 'decimal:2',
         'commission_fixed' => 'decimal:2',
         'perks' => 'array',
+        // Leisure tenant (E1)
+        'leisure_duration_variants' => 'array',
+        'leisure_pricing_rules' => 'array',
+        'leisure_seasons' => 'array',
+        'leisure_is_overtime_chargeable' => 'boolean',
+        'leisure_overtime_surcharge_cents' => 'integer',
+        'leisure_overtime_interval_minutes' => 'integer',
     ];
 
     protected $appends = [
@@ -535,5 +549,47 @@ class TicketType extends Model
         if ($tenantId) {
             $activity->properties = $activity->properties->put('tenant_id', $tenantId);
         }
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Leisure tenant helpers (E1)                                         */
+    /* ------------------------------------------------------------------ */
+
+    /**
+     * Does this ticket type behave as a rental — has duration variants
+     * or is categorized as a rental/activity service?
+     */
+    public function isLeisureRental(): bool
+    {
+        return in_array($this->service_category, ['rental', 'activity'], true)
+            && filled($this->leisure_duration_variants);
+    }
+
+    /**
+     * Normalized duration variants collection. Each entry has:
+     *   duration_minutes (int|null), label (string|null), price_multiplier (float)
+     * Empty array if none configured.
+     */
+    public function getDurationVariantsCollection(): \Illuminate\Support\Collection
+    {
+        return collect($this->leisure_duration_variants ?? [])
+            ->map(fn ($v) => (object) array_merge([
+                'duration_minutes' => null,
+                'label' => null,
+                'price_multiplier' => 1.0,
+            ], (array) $v));
+    }
+
+    /**
+     * Default duration in minutes for this rental ticket.
+     * Falls back to service_duration_minutes if no variants exist.
+     */
+    public function getDefaultDurationMinutes(): ?int
+    {
+        $variants = $this->getDurationVariantsCollection();
+        if ($variants->isNotEmpty()) {
+            return $variants->first()->duration_minutes;
+        }
+        return $this->service_duration_minutes;
     }
 }

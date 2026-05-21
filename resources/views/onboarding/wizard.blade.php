@@ -802,6 +802,31 @@
                                     >
                                 </div>
 
+                                <!-- Leisure venue -->
+                                <div x-show="formData.tenant_type === 'leisure'">
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label class="block text-sm font-medium text-white/80 mb-2">Numele locatiei de agrement *</label>
+                                            <input
+                                                type="text"
+                                                x-model="formData.entity_name"
+                                                class="w-full px-4 py-3 dark-input rounded-lg"
+                                                placeholder="ex: Aquapark Splash, Castelul X, Lacul Y"
+                                            >
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium text-white/80 mb-2">Orasul *</label>
+                                            <input
+                                                type="text"
+                                                x-model="formData.entity_city"
+                                                class="w-full px-4 py-3 dark-input rounded-lg"
+                                                placeholder="ex: Brasov"
+                                            >
+                                        </div>
+                                    </div>
+                                    <p class="text-xs text-white/60 mt-2">Locatie de agrement (parc, aquapark, castel, camping, lac etc.) — vinzi bilete de acces si/sau servicii (rentals, parcare, ghid etc.)</p>
+                                </div>
+
                                 <span x-show="errors.entity_name" class="text-red-400 text-sm mt-1 block" x-text="errors.entity_name"></span>
                             </div>
 
@@ -1680,7 +1705,8 @@
                         'opera': '🎭',
                         'theater': '🎭',
                         'museum': '🏛️',
-                        'festival': '🎪'
+                        'festival': '🎪',
+                        'leisure': '🌳'
                     };
                     return icons[value] || '📋';
                 },
@@ -1716,6 +1742,7 @@
                         'theater': ['analytics', 'crm', 'door-sales', 'ticket-customizer', 'efactura'],
                         'museum': ['analytics', 'crm', 'door-sales', 'ticket-customizer'],
                         'festival': ['analytics', 'crm', 'shop', 'door-sales', 'affiliate-tracking', 'efactura'],
+                        'leisure': ['analytics', 'crm', 'door-sales', 'efactura', 'accounting', 'leisure-core', 'leisure-pos', 'leisure-rentals', 'leisure-multi-society', 'leisure-embed'],
                     };
 
                     const slugs = defaults[tenantType] || [];

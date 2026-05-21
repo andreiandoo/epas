@@ -96,6 +96,7 @@ class AppServiceProvider extends ServiceProvider
         }
 
         // Register observers
+        \App\Models\Tenant::observe(\App\Observers\TenantObserver::class);
         \App\Models\Invoice::observe(\App\Observers\InvoiceObserver::class);
         \App\Models\Artist::observe(\App\Observers\ArtistObserver::class);
         \App\Models\Order::observe(\App\Observers\OrderObserver::class);

@@ -3560,3 +3560,18 @@ Route::prefix('cashless/client')->middleware(['throttle:60,1', 'auth:sanctum', '
     Route::post('/voucher/redeem', [App\Http\Controllers\Api\Cashless\ClientController::class, 'redeemVoucher'])
         ->name('api.cashless.client.voucher');
 });
+
+
+// ─────────────────────────────────────────────────────────────────────────
+// Leisure tenant public API (E2). Read-only, cacheable, rate-limited per IP.
+// Used by calendar picker / embed widget on the tenant's public site.
+// ─────────────────────────────────────────────────────────────────────────
+Route::prefix('leisure')->middleware(['throttle:60,1'])->group(function () {
+    Route::get('tenants/{tenant:slug}/ticket-types/{ticketType}/availability',
+        [App\Http\Controllers\Api\Leisure\AvailabilityController::class, 'month'])
+        ->name('api.leisure.availability.month');
+
+    Route::get('tenants/{tenant:slug}/ticket-types/{ticketType}/slots',
+        [App\Http\Controllers\Api\Leisure\AvailabilityController::class, 'slots'])
+        ->name('api.leisure.availability.slots');
+});

@@ -688,3 +688,11 @@ Route::prefix('web-templates')->middleware('throttle:60,1')->group(function () {
 Route::get('/seating/embed/{event}', [SeatingEmbedController::class, 'show'])
     ->whereNumber('event')
     ->name('seating.embed.show');
+
+// ─────────────────────────────────────────────────────────────────────────
+// Leisure: QR-code printable page for physical inventory (E3).
+// Auth-required. Tenant scoping is enforced in the controller.
+// ─────────────────────────────────────────────────────────────────────────
+Route::get('/leisure/qr-print', [\App\Http\Controllers\Leisure\QrPrintController::class, 'show'])
+    ->middleware(['auth'])
+    ->name('leisure.qr-print');

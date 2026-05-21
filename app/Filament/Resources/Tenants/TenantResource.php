@@ -1150,6 +1150,72 @@ class TenantResource extends Resource
                                 ->visible(fn ($record) => $record !== null),
                         ]),
 
+                    // TAB: Leisure (only for tenant_type=leisure)
+                    SC\Tabs\Tab::make('Leisure')
+                        ->icon('heroicon-o-sun')
+                        ->visible(fn (callable $get) => (
+                            $get('tenant_type') instanceof \App\Enums\TenantType
+                                ? $get('tenant_type')->value
+                                : (string) $get('tenant_type')
+                        ) === 'leisure')
+                        ->schema([
+                            SC\Section::make('Feature Flags')
+                                ->description('Activează / dezactivează module leisure pentru acest tenant. Modificările se aplică instant.')
+                                ->schema([
+                                    Forms\Components\Toggle::make('features.leisure.enabled')
+                                        ->label('Leisure activat')
+                                        ->helperText('Master toggle — dezactivat ascunde toate feature-urile leisure din admin.')
+                                        ->default(true),
+                                    Forms\Components\Toggle::make('features.leisure.rentals.enabled')
+                                        ->label('Rentals (închirieri cu durată variabilă)')
+                                        ->helperText('Bărci, kayak, biciclete etc. cu cronometru și surcharge depășire.'),
+                                    Forms\Components\Toggle::make('features.leisure.pos.enabled')
+                                        ->label('POS la fața locului')
+                                        ->helperText('Vânzare bilete la casă cu chitanță termică.'),
+                                    Forms\Components\Toggle::make('features.leisure.time_slots.enabled')
+                                        ->label('Capacity pe slot orar')
+                                        ->helperText('Permite stoc pe sloturi orare (ex: 10:00-11:00) pe lângă stocul pe zi.'),
+                                    Forms\Components\Toggle::make('features.leisure.physical_inventory.enabled')
+                                        ->label('Inventar fizic cu QR')
+                                        ->helperText('Tracking individual al echipamentelor (bărci numerotate, kayak-uri etc.) cu QR codes printabile.'),
+                                    Forms\Components\Toggle::make('features.leisure.multi_society.enabled')
+                                        ->label('Multi-societate')
+                                        ->helperText('Emite facturi pe mai multe CIF-uri / SRL-uri sub același tenant.'),
+                                    Forms\Components\Toggle::make('features.leisure.channel_pricing.enabled')
+                                        ->label('Prețuri per canal')
+                                        ->helperText('Preț diferit online vs POS fix vs POS mobil.'),
+                                    Forms\Components\Toggle::make('features.leisure.embed.enabled')
+                                        ->label('Embed widget')
+                                        ->helperText('Snippet JS pentru integrare pe website-ul propriu al tenant-ului.'),
+                                    Forms\Components\Toggle::make('features.leisure.crm.enabled')
+                                        ->label('CRM activat'),
+                                ])
+                                ->columns(2),
+
+                            SC\Section::make('Operațiuni')
+                                ->description('Resursele leisure se gestionează din meniul lateral după ce salvezi tenant-ul. Vor apărea: Capacities, Physical Resources, Rentals, Team Members.')
+                                ->schema([
+                                    Forms\Components\Placeholder::make('leisure_next_steps')
+                                        ->label('')
+                                        ->content(fn ($record) => $record
+                                            ? new \Illuminate\Support\HtmlString(
+                                                '<div class="text-sm text-gray-600 dark:text-gray-300 space-y-2">'
+                                                . '<p><strong>Pașii următori după salvare:</strong></p>'
+                                                . '<ol class="list-decimal list-inside space-y-1">'
+                                                . '<li>Crează primul eveniment / locație leisure</li>'
+                                                . '<li>Definește tipurile de bilete (acces, parking, rentals)</li>'
+                                                . '<li>Setează capacități pe zi sau pe sloturi orare</li>'
+                                                . '<li>Configurează inventarul fizic (dacă ai rentals)</li>'
+                                                . '<li>Invită operatori în echipă</li>'
+                                                . '</ol>'
+                                                . '</div>'
+                                            )
+                                            : 'Salvează tenant-ul mai întâi.'
+                                        ),
+                                ])
+                                ->visible(fn ($record) => $record !== null),
+                        ]),
+
                     // TAB 7: Email & Settings
                     SC\Tabs\Tab::make('Email & Settings')
                         ->icon('heroicon-o-cog-6-tooth')

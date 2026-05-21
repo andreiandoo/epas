@@ -16,6 +16,7 @@ enum TenantType: string
     case Theater = 'theater';
     case Museum = 'museum';
     case Festival = 'festival';
+    case Leisure = 'leisure';
 
     public function label(): string
     {
@@ -32,6 +33,7 @@ enum TenantType: string
             self::Theater => 'Theater',
             self::Museum => 'Museum',
             self::Festival => 'Festival',
+            self::Leisure => 'Leisure Venue',
         };
     }
 
@@ -95,6 +97,42 @@ enum TenantType: string
                 'affiliate-tracking',
                 'efactura',
             ],
+            self::Leisure => [
+                'analytics',
+                'crm',
+                'door-sales',
+                'efactura',
+                'accounting',
+                'leisure-core',
+                'leisure-pos',
+                'leisure-rentals',
+                'leisure-multi-society',
+                'leisure-embed',
+            ],
+        };
+    }
+
+    /**
+     * Default feature flags applied to tenants of this type on creation.
+     * Stored in tenants.features JSON column.
+     */
+    public function defaultFeatures(): array
+    {
+        return match ($this) {
+            self::Leisure => [
+                'leisure' => [
+                    'enabled' => true,
+                    'rentals' => ['enabled' => true],
+                    'pos' => ['enabled' => true],
+                    'time_slots' => ['enabled' => false],
+                    'physical_inventory' => ['enabled' => true],
+                    'multi_society' => ['enabled' => false],
+                    'channel_pricing' => ['enabled' => false],
+                    'embed' => ['enabled' => false],
+                    'crm' => ['enabled' => true],
+                ],
+            ],
+            default => [],
         };
     }
 }
