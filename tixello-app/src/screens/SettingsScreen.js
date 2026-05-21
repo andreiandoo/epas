@@ -13,6 +13,7 @@ import { useAuth } from '../context/AuthContext';
 import { useEvent } from '../context/EventContext';
 import { useApp } from '../context/AppContext';
 import { getVenueGates } from '../api/gates';
+import { apiPut } from '../api/client';
 
 function Toggle({ value, onPress }) {
   const translateX = useRef(new Animated.Value(value ? 22 : 2)).current;
@@ -174,6 +175,34 @@ export default function SettingsScreen({ onShowGateManager, onShowStaffAssignmen
     return () => { cancelled = true; };
   }, [selectedEvent?.venue_id]);
 
+  // POS Card prin NFC — local mirror so the toggle UI is responsive.
+  // Backend lives at PUT /organizer/mobile-settings; the value is read
+  // from user.mobile_settings.card_nfc_enabled which /me populates.
+  const [nfcEnabled, setNfcEnabled] = useState(
+    !!user?.mobile_settings?.card_nfc_enabled
+  );
+  const [nfcSaving, setNfcSaving] = useState(false);
+
+  useEffect(() => {
+    setNfcEnabled(!!user?.mobile_settings?.card_nfc_enabled);
+  }, [user?.mobile_settings?.card_nfc_enabled]);
+
+  const handleToggleNfc = useCallback(async () => {
+    if (nfcSaving) return;
+    const next = !nfcEnabled;
+    setNfcEnabled(next);
+    setNfcSaving(true);
+    try {
+      await apiPut('/organizer/mobile-settings', { card_nfc_enabled: next });
+      // SalesScreen reads from user.mobile_settings directly — for the
+      // change to propagate immediately the AuthContext would need a
+      // refetch hook. Operator can also just reopen the Sales tab.
+    } catch (e) {
+      setNfcEnabled(!next); // rollback
+    }
+    setNfcSaving(false);
+  }, [nfcEnabled, nfcSaving]);
+
   const staffName = isVenueOwner
     ? (venueOwner?.name || venueOwner?.tenant?.public_name || 'Venue owner')
     : (isTeamMember ? (user?.team_member?.name || 'Membru Echipă') : (user?.name || user?.public_name || 'Organizator'));
@@ -235,6 +264,35 @@ export default function SettingsScreen({ onShowGateManager, onShowStaffAssignmen
           </>
         )}
       </View>
+
+      {/* Vânzare POS — admin / owner only (the operator who decides
+          whether the legacy Stripe Tap button shows up in Sales). */}
+      {isAdmin && (
+        <>
+          <SectionHeader title="Vânzare POS" />
+          <View style={styles.sectionCard}>
+            <SettingRow
+              label="Card prin NFC (Stripe Tap)"
+              right={<Toggle value={nfcEnabled} onPress={handleToggleNfc} />}
+            />
+            <View style={styles.divider} />
+            <View style={styles.offlineInfoBox}>
+              <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+                <Path
+                  d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10zM12 16v-4M12 8h.01"
+                  stroke={colors.cyan}
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </Svg>
+              <Text style={styles.offlineInfoText}>
+                Adaugă în ecranul Vânzare un buton „Card prin NFC" (plată Stripe Tap). Dezactivat = doar Numerar și Card POS.
+              </Text>
+            </View>
+          </View>
+        </>
+      )}
 
       {/* Offline Mode Section (not relevant for venue owners — no check-in flow) */}
       {!isVenueOwner && (

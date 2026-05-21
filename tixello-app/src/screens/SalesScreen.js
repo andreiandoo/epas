@@ -280,7 +280,9 @@ function TicketTypeCard({ ticket, onAdd }) {
         {isSoldOut ? (
           <Text style={styles.soldOutText}>Epuizat</Text>
         ) : isSeated ? (
-          <Text style={styles.ticketAvailable}>Alege locuri pe harta</Text>
+          <Text style={styles.ticketAvailable}>
+            {ticket.available} {ticket.available === 1 ? 'loc disponibil' : 'locuri disponibile'} · alege pe hartă
+          </Text>
         ) : (
           <Text style={styles.ticketAvailable}>{ticket.available} disponibile</Text>
         )}
@@ -342,7 +344,14 @@ function RecentSaleItem({ sale, onShowQR }) {
 
 // ─── Cart Item Row ────────────────────────────────────────────────────────────
 
-function CartItemRow({ item, onUpdateQuantity, hideControls }) {
+function CartItemRow({ item, onUpdateQuantity, hideControls, seats }) {
+  // When the order has seats, list each seat's section / row / number
+  // under the ticket type so the operator knows exactly what's in the
+  // cart. `seats` is the subset of selectedSeatDetails for this row's
+  // ticket_type_id.
+  const seatsForRow = Array.isArray(seats)
+    ? seats.filter(s => String(s.ticket_type_id) === String(item.id))
+    : [];
   return (
     <View style={styles.cartItem}>
       <View style={[styles.cartItemColorBar, { backgroundColor: item.color }]} />
@@ -351,6 +360,17 @@ function CartItemRow({ item, onUpdateQuantity, hideControls }) {
         <Text style={styles.cartItemPrice}>
           {hideControls ? `${item.quantity} ${item.quantity === 1 ? 'loc' : 'locuri'}` : `${formatCurrency(item.price)} fiecare`}
         </Text>
+        {seatsForRow.length > 0 && (
+          <View style={styles.cartSeatList}>
+            {seatsForRow.map((s, idx) => (
+              <Text key={s.seat_uid || idx} style={styles.cartSeatText} numberOfLines={1}>
+                {[s.section_name, s.row_label ? `Rând ${s.row_label}` : null, s.seat_label ? `Loc ${s.seat_label}` : null]
+                  .filter(Boolean)
+                  .join(' · ')}
+              </Text>
+            ))}
+          </View>
+        )}
       </View>
       {!hideControls && (
         <View style={styles.quantityControls}>
@@ -403,6 +423,10 @@ export default function SalesScreen({ navigation }) {
   const [showSeatingMap, setShowSeatingMap] = useState(false);
   const [seatingMapTicketTypeId, setSeatingMapTicketTypeId] = useState(null);
   const [selectedSeatUids, setSelectedSeatUids] = useState([]);
+  // Full seat metadata (section / row / seat label / price / ticket type).
+  // Used by the cart row renderer to show "Secțiunea X · Rând Y · Loc Z"
+  // under each ticket type group.
+  const [selectedSeatDetails, setSelectedSeatDetails] = useState([]);
   const [qrReplaySale, setQrReplaySale] = useState(null); // sale object for QR re-display
 
   // 'Card prin NFC' (legacy Stripe Tap) — only surface when the organizer
@@ -659,6 +683,7 @@ export default function SalesScreen({ navigation }) {
     setBuyerEmail('');
     setLastOrderData(null);
     setSelectedSeatUids([]);
+    setSelectedSeatDetails([]);
     setSeatingMapTicketTypeId(null);
     setActiveView('tickets');
   };
@@ -698,6 +723,7 @@ export default function SalesScreen({ navigation }) {
       return merged;
     });
     setSelectedSeatUids(prev => [...prev, ...seatingResult.seatUids]);
+    setSelectedSeatDetails(prev => [...prev, ...(seatingResult.selectedSeats || [])]);
     setShowSeatingMap(false);
     setSeatingMapTicketTypeId(null);
     setActiveView('cart');
@@ -752,6 +778,7 @@ export default function SalesScreen({ navigation }) {
                 // Go back to seating map for seated events
                 setCartItems([]);
                 setSelectedSeatUids([]);
+                setSelectedSeatDetails([]);
                 setShowSeatingMap(true);
               }
               setActiveView('tickets');
@@ -781,6 +808,7 @@ export default function SalesScreen({ navigation }) {
                 item={item}
                 onUpdateQuantity={selectedSeatUids.length > 0 ? () => {} : updateQuantity}
                 hideControls={selectedSeatUids.length > 0}
+                seats={selectedSeatDetails}
               />
             ))}
           </View>
@@ -1713,6 +1741,16 @@ const styles = StyleSheet.create({
   cartItemPrice: {
     fontSize: 12,
     color: colors.textTertiary,
+  },
+  cartSeatList: {
+    marginTop: 6,
+    gap: 2,
+  },
+  cartSeatText: {
+    fontSize: 11,
+    color: colors.purple,
+    fontWeight: '600',
+    letterSpacing: 0.2,
   },
   quantityControls: {
     flexDirection: 'row',
