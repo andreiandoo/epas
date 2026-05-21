@@ -403,18 +403,17 @@ let lastSingle = null;
 let movedDuringTap = false;
 let mouseDown = false;
 
-// Tiny debug overlay — flashes the last event type the canvas saw.
-// Helpful for verifying touches actually reach the page on real devices.
+// Debug overlay — shows the last few events the canvas saw so we can
+// diagnose 'tap doesn't select' issues on real devices.
 const dbgEl = document.createElement('div');
 dbgEl.id = 'touch-debug';
-dbgEl.style.cssText = 'position:absolute;top:10px;left:10px;background:rgba(0,0,0,0.6);color:#10b981;font:10px/1 monospace;padding:4px 8px;border-radius:6px;pointer-events:none;z-index:11;opacity:0;transition:opacity 0.2s';
+dbgEl.style.cssText = 'position:absolute;top:10px;left:10px;right:10px;background:rgba(0,0,0,0.75);color:#10b981;font:11px/1.4 monospace;padding:6px 10px;border-radius:6px;pointer-events:none;z-index:11;max-height:80px;overflow:hidden;white-space:pre-wrap;word-break:break-all';
 wrap.appendChild(dbgEl);
-let dbgTimer = null;
+const dbgLines = [];
 function debugFlash(msg) {
-  dbgEl.textContent = msg;
-  dbgEl.style.opacity = '1';
-  clearTimeout(dbgTimer);
-  dbgTimer = setTimeout(() => { dbgEl.style.opacity = '0'; }, 600);
+  dbgLines.unshift(msg);
+  if (dbgLines.length > 4) dbgLines.length = 4;
+  dbgEl.textContent = dbgLines.join('\n');
 }
 
 function pageXYFromTouch(t) {
@@ -536,6 +535,8 @@ canvas.addEventListener('wheel', (e) => {
 
 function handleTap(clientX, clientY) {
   const rect = canvas.getBoundingClientRect();
+  // Convert viewport-CSS-pixel coords into the layout's own coordinate
+  // system (the one seats were drawn in via ctx.translate + ctx.scale).
   const x = (clientX - rect.left - view.tx) / view.scale;
   const y = (clientY - rect.top - view.ty) / view.scale;
 
@@ -543,16 +544,31 @@ function handleTap(clientX, clientY) {
   // simple grid spatial index keyed by (floor(x/cellSize), floor(y/cellSize)).
   let hit = null;
   let bestDist = Infinity;
+  let nearestDist = Infinity;
+  let nearestUid = null;
   for (const entry of seatIndex.values()) {
     const dx = x - entry.absX;
     const dy = y - entry.absY;
     const d2 = dx * dx + dy * dy;
     const r = entry.r * 1.6; // generous hit radius for thumbs
+    if (d2 < nearestDist) {
+      nearestDist = d2;
+      nearestUid = entry.seat.seat_uid;
+    }
     if (d2 < r * r && d2 < bestDist) {
       hit = entry;
       bestDist = d2;
     }
   }
+  // Diagnostic: show tap math + nearest-seat distance. Lets the user
+  // tell at a glance whether the conversion is wildly off (e.g. drift
+  // factor of ~10 means dpr handling is off; consistent small offset
+  // means rect.top is wrong).
+  debugFlash(
+    'tap ' + Math.round(x) + ',' + Math.round(y) +
+    ' near=' + (nearestUid || '?') +
+    ' d=' + Math.round(Math.sqrt(nearestDist))
+  );
   if (!hit) return;
   toggleSeat(hit);
 }
@@ -561,9 +577,22 @@ function toggleSeat(entry) {
   const { seat, section, row } = entry;
   if (selectedSeats.has(seat.seat_uid)) {
     selectedSeats.delete(seat.seat_uid);
+    debugFlash('deselect ' + seat.seat_uid);
   } else {
-    if (!isSeatSelectable(seat)) return;
+    if (!isSeatSelectable(seat)) {
+      // Most common reasons a hit gets rejected:
+      //   - seat.status !== 'available' (held / sold / blocked)
+      //   - PRESELECTED_TT mismatches seat.ticket_type_id
+      debugFlash(
+        'blocked ' + seat.seat_uid +
+        ' status=' + (seat.status || '?') +
+        ' tt=' + (seat.ticket_type_id || 'none') +
+        ' need=' + (PRESELECTED_TT || 'any')
+      );
+      return;
+    }
     selectedSeats.add(seat.seat_uid);
+    debugFlash('select ' + seat.seat_uid);
   }
   requestPaint();
   updateFooter();
