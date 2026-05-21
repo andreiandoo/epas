@@ -281,7 +281,11 @@ const VenuePage = {
         if (skeleton) skeleton.remove();
 
         this.setText(this.elements.venueName, venue.name);
-        this.setText(this.elements.venueLocation, [venue.address || '', venue.city].filter(Boolean).join(' · ') || venue.city || '');
+        // City is rendered separately in its own pill — keep this slot
+        // strictly for the street address so the header doesn't repeat the
+        // city twice. Fall back to city only when no address exists, so
+        // empty venues still display something useful.
+        this.setText(this.elements.venueLocation, venue.address || venue.city || '');
 
         // Category badge
         const catBadge = document.getElementById('venueCategoryBadge');
@@ -624,8 +628,15 @@ const VenuePage = {
 
     renderEventsSubheader(events) {
         const el = document.getElementById('eventsSubheader');
+        // The header block contains the "Evenimente viitoare" title +
+        // "Vezi toate" link + filter tabs. When there are zero events,
+        // the empty-state card already says "Nu există evenimente
+        // viitoare", so the header would be redundant — hide it entirely.
+        const headerBlock = document.getElementById('eventsSectionHeader');
+        const hasEvents = !!(events && events.length);
+        if (headerBlock) headerBlock.classList.toggle('hidden', !hasEvents);
         if (!el) return;
-        if (!events || events.length === 0) {
+        if (!hasEvents) {
             el.textContent = 'Niciun eveniment programat';
             return;
         }

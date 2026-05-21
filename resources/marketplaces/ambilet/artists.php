@@ -31,8 +31,8 @@ require_once __DIR__ . '/includes/head.php';
     <div class="absolute rounded-full -top-24 -right-24 w-96 h-96 bg-primary/20 blur-3xl"></div>
     <div class="absolute rounded-full -bottom-32 -left-24 w-80 h-80 bg-primary/15 blur-3xl"></div>
     <div class="relative z-10 px-4 mx-auto text-center max-w-7xl">
-        <h1 class="mb-4 text-4xl font-extrabold text-white">Artisti</h1>
-        <p class="text-lg leading-relaxed text-white/90">Descopera artistii tai preferati si nu rata urmatoarele lor concerte si evenimente in Romania.</p>
+        <h1 class="mb-4 text-4xl font-extrabold text-white">Artiști</h1>
+        <p class="text-lg leading-relaxed text-white/90">Descoperă artiștii tăi preferați și nu rata următoarele lor concerte și evenimente în România.</p>
     </div>
 </section>
 
@@ -40,13 +40,13 @@ require_once __DIR__ . '/includes/head.php';
 <section class="hidden px-4 -mt-7">
     <div class="max-w-2xl mx-auto">
         <div class="relative z-10 flex items-center gap-2 p-2 bg-white shadow-xl rounded-2xl">
-            <input type="text" id="artistSearch" placeholder="Cauta un artist..." class="flex-1 px-5 py-4 text-base border-0 outline-none text-secondary placeholder-muted">
-            <button onclick="ArtistsPage.search()" class="flex items-center gap-2 px-6 py-4 font-semibold text-white transition-all btn-primary bg-primary rounded-xl hover:shadow-lg"  aria-label="Cauta artist">
+            <input type="text" id="artistSearch" placeholder="Caută un artist..." class="flex-1 px-5 py-4 text-base border-0 outline-none text-secondary placeholder-muted">
+            <button onclick="ArtistsPage.search()" class="flex items-center gap-2 px-6 py-4 font-semibold text-white transition-all btn-primary bg-primary rounded-xl hover:shadow-lg"  aria-label="Caută artist">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <circle cx="11" cy="11" r="8"/>
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35"/>
                 </svg>
-                Cauta
+                Caută
             </button>
         </div>
     </div>
@@ -62,7 +62,7 @@ require_once __DIR__ . '/includes/head.php';
                 <svg class="w-7 h-7 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
                 </svg>
-                Artisti populari
+                Artiști populari
             </h2>
         </div>
         <div class="grid grid-cols-2 gap-6 lg:grid-cols-4" id="featuredGrid">
@@ -123,7 +123,7 @@ require_once __DIR__ . '/includes/head.php';
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
             </svg>
-            Toti
+            Toți
             <span class="px-2 py-0.5 text-xs font-bold rounded-full <?= empty($genreFilter) ? 'bg-white/20' : 'bg-black/5' ?>" id="countAll">--</span>
         </button>
         <button class="genre-tab flex items-center gap-2 px-5 py-3 text-sm font-medium rounded-full transition-all <?= $genreFilter === 'pop' ? 'bg-primary text-white' : 'bg-white border border-border text-muted hover:text-secondary' ?>" data-genre="pop">
@@ -169,13 +169,13 @@ require_once __DIR__ . '/includes/head.php';
 
     <!-- Results Info -->
     <div class="flex flex-row items-center justify-between gap-4 mb-6 lg:flex-col lg:items-start">
-        <span class="text-sm text-muted">Se afiseaza <strong class="text-secondary" id="resultsCount">--</strong> artisti</span>
+        <span class="text-sm text-muted">Se afișează <strong class="text-secondary" id="resultsCount">--</strong> artiști</span>
         <select id="sortSelect" class="px-4 py-3 pr-10 text-sm font-medium bg-white border appearance-none cursor-pointer rounded-xl border-border text-secondary focus:outline-none focus:ring-2 focus:ring-primary/20" style="background-image: url('data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2716%27 height=%2716%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27%2394A3B8%27 stroke-width=%272%27%3E%3Cpath d=%27M6 9l6 6 6-6%27/%3E%3C/svg%3E'); background-repeat: no-repeat; background-position: right 0.75rem center;">
             <option value="popular" <?= $sortBy === 'popular' ? 'selected' : '' ?>>Cei mai populari</option>
-            <option value="events" <?= $sortBy === 'events' ? 'selected' : '' ?>>Dupa evenimente</option>
-            <option value="followers" <?= $sortBy === 'followers' ? 'selected' : '' ?>>Dupa urmaritori</option>
+            <option value="events" <?= $sortBy === 'events' ? 'selected' : '' ?>>După evenimente</option>
+            <option value="followers" <?= $sortBy === 'followers' ? 'selected' : '' ?>>După urmăritori</option>
             <option value="name" <?= $sortBy === 'name' ? 'selected' : '' ?>>Alfabetic</option>
-            <option value="recent" <?= $sortBy === 'recent' ? 'selected' : '' ?>>Adaugati recent</option>
+            <option value="recent" <?= $sortBy === 'recent' ? 'selected' : '' ?>>Adăugați recent</option>
         </select>
     </div>
 

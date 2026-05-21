@@ -28,7 +28,7 @@ include __DIR__ . '/includes/header.php';
 
 <!-- Main Content -->
 <main class="max-w-6xl px-6 py-10 mx-auto">
-    <!-- Featured Venues -->
+    <!-- Featured Venues  -->
     <section class="mb-12">
         <div class="flex items-center justify-between mb-6">
             <h2 class="text-2xl font-bold text-secondary flex items-center gap-2.5">
@@ -39,7 +39,7 @@ include __DIR__ . '/includes/header.php';
             </h2>
         </div>
 
-        <div id="featuredVenues" class="grid grid-cols-2 gap-6">
+        <div id="featuredVenues" class="grid grid-cols-2 gap-6 mobile:grid-cols-1">
             <!-- Skeleton -->
             <div class="relative overflow-hidden bg-gray-200 rounded-2xl aspect-video animate-pulse"></div>
             <div class="relative overflow-hidden bg-gray-200 rounded-2xl aspect-video animate-pulse"></div>
@@ -56,8 +56,25 @@ include __DIR__ . '/includes/header.php';
             </svg>
             <input type="text" id="venuesSearchInput" placeholder="Caută locații..." class="w-full py-3.5 pl-12 pr-5 bg-white border border-border rounded-xl text-base focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
         </div>
-        <!-- Selects row: scrollable on mobile, flex-wrap on desktop -->
-        <div class="flex items-center gap-3 pb-1 overflow-x-auto lg:flex-wrap scrollbar-hide mobile:-mx-6 mobile:px-6">
+
+        <!-- Mobile filter trigger row -->
+        <div class="flex items-center justify-between gap-3 lg:hidden">
+            <button type="button" onclick="openVenueFiltersDrawer()" class="flex items-center gap-2 px-4 py-2.5 text-sm font-medium bg-white border border-border rounded-xl shadow-sm" aria-label="Deschide filtrele">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/></svg>
+                Filtre
+                <span id="venueMobileFilterCount" class="hidden px-2 py-0.5 text-xs font-bold text-white rounded-full bg-primary">0</span>
+            </button>
+            <select id="sortFilterMobile" class="flex-shrink min-w-0 py-2.5 pl-4 pr-9 bg-white border border-border rounded-xl text-sm font-medium text-secondary cursor-pointer appearance-none bg-[url('data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%2216%22%20height%3D%2216%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%2394A3B8%22%20stroke-width%3D%222%22%3E%3Cpath%20d%3D%22M6%209l6%206%206-6%22/%3E%3C/svg%3E')] bg-no-repeat bg-[right_12px_center]" aria-label="Sortează locațiile">
+                <option value="">Sortare</option>
+                <option value="popular">Cele mai populare</option>
+                <option value="events">După evenimente</option>
+                <option value="capacity">După capacitate</option>
+                <option value="name">Alfabetic</option>
+            </select>
+        </div>
+
+        <!-- Desktop filters row (hidden on mobile) -->
+        <div class="hidden lg:flex flex-wrap items-center gap-3">
             <select id="cityFilter" class="flex-shrink-0 py-3 pl-4 pr-10 bg-white border border-border rounded-xl text-sm font-medium text-secondary cursor-pointer hover:border-muted focus:outline-none focus:border-primary transition-all appearance-none bg-[url('data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%2216%22%20height%3D%2216%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%2394A3B8%22%20stroke-width%3D%222%22%3E%3Cpath%20d%3D%22M6%209l6%206%206-6%22/%3E%3C/svg%3E')] bg-no-repeat bg-[right_14px_center]">
                 <option value="">Toate orașele</option>
             </select>
@@ -77,6 +94,80 @@ include __DIR__ . '/includes/header.php';
             </select>
         </div>
     </div>
+
+    <!-- Mobile Filters Drawer -->
+    <div id="venueFiltersBackdrop" class="fixed inset-0 z-[105] transition-opacity duration-300 bg-black/50 backdrop-blur-sm lg:hidden" style="opacity: 0; visibility: hidden;" onclick="closeVenueFiltersDrawer()"></div>
+    <div id="venueFiltersDrawer" class="fixed bottom-0 left-0 right-0 z-[110] overflow-hidden transition-transform duration-300 bg-white lg:hidden rounded-t-3xl max-h-[85vh]" style="transform: translateY(100%);">
+        <div class="sticky top-0 z-10 flex items-center justify-between p-4 bg-white border-b border-gray-200">
+            <h2 class="text-lg font-bold text-gray-900">Filtre</h2>
+            <button type="button" onclick="closeVenueFiltersDrawer()" aria-label="Închide filtrele" class="flex items-center justify-center w-10 h-10 transition-colors bg-gray-100 rounded-full hover:bg-gray-200">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+        </div>
+        <div class="p-4 space-y-4 overflow-y-auto max-h-[60vh]">
+            <div>
+                <label class="block mb-2 text-sm font-medium text-gray-700">Oraș</label>
+                <select id="cityFilterMobile" class="w-full px-4 py-3 text-sm font-medium border border-gray-200 bg-gray-50 rounded-xl">
+                    <option value="">Toate orașele</option>
+                </select>
+            </div>
+            <div>
+                <label class="block mb-2 text-sm font-medium text-gray-700">Capacitate</label>
+                <select id="capacityFilterMobile" class="w-full px-4 py-3 text-sm font-medium border border-gray-200 bg-gray-50 rounded-xl">
+                    <option value="">Orice capacitate</option>
+                    <option value="small">Sub 500</option>
+                    <option value="medium">500 - 2.000</option>
+                    <option value="large">2.000 - 10.000</option>
+                    <option value="xlarge">Peste 10.000</option>
+                </select>
+            </div>
+        </div>
+        <div class="flex gap-3 p-4 border-t border-gray-200 bg-gray-50">
+            <button type="button" onclick="clearVenueFilters(); closeVenueFiltersDrawer();" class="flex-1 px-4 py-3 text-sm font-medium text-gray-700 transition-colors bg-white border border-gray-200 rounded-xl hover:bg-gray-50" aria-label="Șterge filtre">
+                Șterge filtre
+            </button>
+            <button type="button" onclick="applyVenueFilters(); closeVenueFiltersDrawer();" class="flex-1 px-4 py-3 text-sm font-bold text-white transition-colors rounded-xl bg-primary hover:bg-primary-dark" aria-label="Aplică filtre">
+                Aplică filtre
+            </button>
+        </div>
+    </div>
+
+    <script>
+    function openVenueFiltersDrawer() {
+        document.getElementById('venueFiltersBackdrop').style.opacity = '1';
+        document.getElementById('venueFiltersBackdrop').style.visibility = 'visible';
+        document.getElementById('venueFiltersDrawer').style.transform = 'translateY(0)';
+        document.body.style.overflow = 'hidden';
+        // Mirror current desktop values into mobile inputs
+        const cityM = document.getElementById('cityFilterMobile');
+        const capM = document.getElementById('capacityFilterMobile');
+        if (cityM) cityM.value = document.getElementById('cityFilter')?.value || '';
+        if (capM) capM.value = document.getElementById('capacityFilter')?.value || '';
+    }
+    function closeVenueFiltersDrawer() {
+        document.getElementById('venueFiltersBackdrop').style.opacity = '0';
+        document.getElementById('venueFiltersBackdrop').style.visibility = 'hidden';
+        document.getElementById('venueFiltersDrawer').style.transform = 'translateY(100%)';
+        document.body.style.overflow = '';
+    }
+    function applyVenueFilters() {
+        const city = document.getElementById('cityFilter');
+        const cap = document.getElementById('capacityFilter');
+        if (city) city.value = document.getElementById('cityFilterMobile')?.value || '';
+        if (cap) cap.value = document.getElementById('capacityFilterMobile')?.value || '';
+        // Trigger change so the page filter reloads + badge updates
+        city?.dispatchEvent(new Event('change'));
+        cap?.dispatchEvent(new Event('change'));
+    }
+    function clearVenueFilters() {
+        ['cityFilter', 'capacityFilter', 'sortFilter', 'cityFilterMobile', 'capacityFilterMobile', 'sortFilterMobile'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.value = '';
+        });
+        const city = document.getElementById('cityFilter');
+        city?.dispatchEvent(new Event('change'));
+    }
+    </script>
 
     <!-- Category Tabs (populated by JS from API) -->
     <div id="categoryTabs" class="flex items-center gap-3 pb-2 mb-8 overflow-x-auto lg:flex-wrap scrollbar-hide snap-x snap-mandatory mobile:pl-1 mobile:-mr-6">
@@ -176,6 +267,7 @@ const VenuesPage = {
         this.buildCityDropdown();
         this.bindEvents();
         this.applyUrlFilters();
+        this.updateMobileFilterBadge();
         this.filterVenues();
     },
 
@@ -216,9 +308,39 @@ const VenuesPage = {
         const debounce = (fn, ms) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
 
         document.getElementById('venuesSearchInput')?.addEventListener('input', debounce(() => this.filterVenues(), 300));
-        document.getElementById('cityFilter')?.addEventListener('change', () => this.filterVenues());
-        document.getElementById('capacityFilter')?.addEventListener('change', () => this.filterVenues());
+        document.getElementById('cityFilter')?.addEventListener('change', () => { this.filterVenues(); this.updateMobileFilterBadge(); });
+        document.getElementById('capacityFilter')?.addEventListener('change', () => { this.filterVenues(); this.updateMobileFilterBadge(); });
         document.getElementById('sortFilter')?.addEventListener('change', () => this.filterVenues());
+
+        // Mobile sort mirrors desktop — change one, fire the other so the
+        // shared filter pipeline keeps a single source of truth.
+        const sortMobile = document.getElementById('sortFilterMobile');
+        if (sortMobile) {
+            sortMobile.addEventListener('change', () => {
+                const desktop = document.getElementById('sortFilter');
+                if (desktop) {
+                    desktop.value = sortMobile.value;
+                    desktop.dispatchEvent(new Event('change'));
+                }
+            });
+        }
+    },
+
+    // Show a "n" badge on the mobile "Filtre" button whenever city or
+    // capacity is set, so users see at a glance that filters are active
+    // even while the drawer is closed.
+    updateMobileFilterBadge() {
+        const badge = document.getElementById('venueMobileFilterCount');
+        if (!badge) return;
+        const city = document.getElementById('cityFilter')?.value || '';
+        const cap = document.getElementById('capacityFilter')?.value || '';
+        const count = (city ? 1 : 0) + (cap ? 1 : 0);
+        if (count > 0) {
+            badge.textContent = count;
+            badge.classList.remove('hidden');
+        } else {
+            badge.classList.add('hidden');
+        }
     },
 
     bindCategoryTabs() {
@@ -330,19 +452,24 @@ const VenuesPage = {
 
     buildCityDropdown() {
         const select = document.getElementById('cityFilter');
-        if (!select) return;
+        const selectMobile = document.getElementById('cityFilterMobile');
+        if (!select && !selectMobile) return;
 
         // Extract unique cities, sorted alphabetically
         const cities = [...new Set(this.venues.map(v => v.location).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'ro'));
 
-        // Keep "Toate orașele" and add real cities
-        select.innerHTML = '<option value="">Toate orașele</option>';
-        cities.forEach(city => {
-            const opt = document.createElement('option');
-            opt.value = city;
-            opt.textContent = city;
-            select.appendChild(opt);
-        });
+        const fill = (sel) => {
+            if (!sel) return;
+            sel.innerHTML = '<option value="">Toate orașele</option>';
+            cities.forEach(city => {
+                const opt = document.createElement('option');
+                opt.value = city;
+                opt.textContent = city;
+                sel.appendChild(opt);
+            });
+        };
+        fill(select);
+        fill(selectMobile);
     },
 
     renderFeatured() {
@@ -361,20 +488,21 @@ const VenuesPage = {
         if (section) section.style.display = '';
 
         container.innerHTML = featured.map(v => `
-            <a href="/locatie/${v.slug}" class="relative overflow-hidden rounded-2xl aspect-video group">
+            <a href="/locatie/${v.slug}" class="relative block overflow-hidden rounded-2xl aspect-video group">
                 <img src="${v.image}" alt="${v.name}" class="object-cover w-full h-full transition-transform duration-500 group-hover:scale-105" loading="lazy">
-                <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
-                <div class="absolute bottom-0 left-0 right-0 p-7">
-                    <span class="inline-block px-3 py-1.5 bg-primary rounded-md text-xs font-bold text-white uppercase tracking-wider mb-3">${v.type}</span>
-                    <h3 class="mb-2 text-2xl font-extrabold text-white">${v.name}</h3>
-                    <div class="flex items-center gap-1.5 text-base text-white/80 mb-3">
-                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <div class="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent"></div>
+                ${v.eventsCount > 0 ? `<span class="absolute top-3 right-3 px-2.5 py-1 bg-primary rounded-md text-xs font-bold text-white shadow-lg">${v.eventsCount} evenimente</span>` : ''}
+                <div class="absolute bottom-0 left-0 right-0 p-7 mobile:p-4">
+                    <span class="inline-block px-3 py-1.5 mobile:px-2 bg-primary rounded-md text-xs font-bold text-white uppercase tracking-wider mb-3">${v.type}</span>
+                    <h3 class="mb-2 text-2xl mobile:text-lg font-extrabold text-white leading-tight">${v.name}</h3>
+                    <div class="flex items-center gap-1.5 text-base mobile:text-sm text-white/85">
+                        <svg class="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
                             <circle cx="12" cy="10" r="3"/>
                         </svg>
-                        ${v.location}
+                        <span class="truncate">${v.location}</span>
                     </div>
-                    <div class="flex gap-5">
+                    <div class="flex gap-5 mt-3 mobile:hidden">
                         <span class="flex items-center gap-1.5 text-sm text-white/80">
                             <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
