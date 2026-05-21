@@ -389,10 +389,11 @@ export default function SalesScreen({ navigation }) {
   const [showTicketList, setShowTicketList] = useState(false);
   const [activeView, setActiveView] = useState('tickets'); // 'tickets' | 'cart'
   const [cartItems, setCartItems] = useState([]);
-  const [paymentMethod, setPaymentMethod] = useState(null); // 'tap' | 'cash'
+  const [paymentMethod, setPaymentMethod] = useState(null); // 'tap' | 'card' | 'cash'
   const [isProcessing, setIsProcessing] = useState(false);
   const [showPaymentSuccess, setShowPaymentSuccess] = useState(false);
   const [showEmailCapture, setShowEmailCapture] = useState(false);
+  const [showCardConfirm, setShowCardConfirm] = useState(false); // POS card collect-confirm modal
   const [buyerEmail, setBuyerEmail] = useState('');
   const [sendingEmail, setSendingEmail] = useState(false);
   const [lastPaymentAmount, setLastPaymentAmount] = useState(0);
@@ -403,6 +404,10 @@ export default function SalesScreen({ navigation }) {
   const [seatingMapTicketTypeId, setSeatingMapTicketTypeId] = useState(null);
   const [selectedSeatUids, setSelectedSeatUids] = useState([]);
   const [qrReplaySale, setQrReplaySale] = useState(null); // sale object for QR re-display
+
+  // 'Card prin NFC' (legacy Stripe Tap) — only surface when the organizer
+  // has enabled it from Filament (service_settings.mobile_card_nfc_enabled).
+  const cardNfcEnabled = !!user?.mobile_settings?.card_nfc_enabled;
 
   // Check if current event has seating
   const hasSeating = selectedEvent?.has_seating === true;
@@ -552,7 +557,8 @@ export default function SalesScreen({ navigation }) {
       if (response.success) {
         const orderData = response.data?.order || null;
 
-        // For card payments, check if Stripe payment_url is available
+        // Stripe Tap (NFC) needs payment_url; card / cash do not (those
+        // are auto-confirmed server-side).
         if (method === 'tap' && !orderData?.payment_url) {
           alert('Plata prin Stripe nu este disponibilă momentan. Folosiți plata cu numerar.');
           setIsProcessing(false);
@@ -564,12 +570,10 @@ export default function SalesScreen({ navigation }) {
         setShowPaymentSuccess(true);
         setLastOrderData(orderData);
 
-        // Record the sale locally and generate claim URL for cash
         const saleDescription = cartItems
           .map((item) => `${item.quantity}x ${item.name}`)
           .join(', ');
 
-        // We need to read claimUrl from the response since setState is async
         const saleRecord = {
           id: Date.now(),
           method: method,
@@ -581,8 +585,10 @@ export default function SalesScreen({ navigation }) {
           eventId: selectedEvent?.id,
         };
 
-        // For cash sales, attach claim URL if generated
-        if (method === 'cash' && orderData?.id) {
+        // Cash + Card (POS terminal confirm) both qualify for the QR
+        // claim flow — the customer scans to receive tickets by email.
+        const isOfflinePosSale = method === 'cash' || method === 'card';
+        if (isOfflinePosSale && orderData?.id) {
           try {
             const claimResponse = await apiPost(`/orders/${orderData.id}/generate-claim-url`);
             if (claimResponse.success && claimResponse.data?.claim_url) {
@@ -597,20 +603,22 @@ export default function SalesScreen({ navigation }) {
 
         addSale(saleRecord);
 
-        // Only add scan records if auto-confirm is enabled (immediate check-in)
-        // When disabled, cash tickets are sold but NOT checked-in — they need scanning later
-        if (method === 'cash' && autoConfirmValid) {
+        // Auto check-in records — only when autoConfirmValid is on and
+        // the sale was a cash / card (offline) POS one. Stripe tap
+        // tickets are confirmed by the payment webhook, not here.
+        if (isOfflinePosSale && autoConfirmValid) {
+          const methodLabel = method === 'cash' ? 'Numerar' : 'Card';
           cartItems.forEach((item) => {
             for (let i = 0; i < item.quantity; i++) {
               addScan({
                 id: Date.now() + Math.random(),
                 type: 'valid',
-                name: `POS Numerar`,
+                name: `POS ${methodLabel}`,
                 ticketType: item.name,
                 time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                code: `pos-cash-${orderData?.id || Date.now()}-${i}`,
+                code: `pos-${method}-${orderData?.id || Date.now()}-${i}`,
                 eventId: selectedEvent?.id,
-                source: 'pos_cash',
+                source: `pos_${method}`,
               });
             }
           });
@@ -629,8 +637,10 @@ export default function SalesScreen({ navigation }) {
   };
 
   const finishPayment = async (skipEmail = false) => {
-    // Auto check-in tickets only when autoConfirmValid is enabled
-    if (skipEmail && lastOrderData?.id && paymentMethod === 'cash' && autoConfirmValid) {
+    // Auto check-in tickets only when autoConfirmValid is enabled. Both
+    // cash and card (POS-terminal-confirmed) qualify — same flow.
+    const isOfflinePos = paymentMethod === 'cash' || paymentMethod === 'card';
+    if (skipEmail && lastOrderData?.id && isOfflinePos && autoConfirmValid) {
       try {
         await apiPost(`/orders/${lastOrderData.id}/pos-complete`, {
           auto_checkin: true,
@@ -809,40 +819,36 @@ export default function SalesScreen({ navigation }) {
               Metodă de Plată
             </Text>
 
-            {/* Plată Card */}
+            {/* Card (POS card terminal — operator confirms the money was
+                collected via the intermediate modal). Same backend flow as
+                cash: order auto-confirmed, tickets valid, QR claim. */}
             <TouchableOpacity
               style={[
                 styles.paymentButton,
-                paymentMethod === 'tap' && styles.paymentButtonActive,
+                paymentMethod === 'card' && styles.paymentButtonActive,
               ]}
-              onPress={() => !isProcessing && processPayment('tap')}
+              onPress={() => !isProcessing && setShowCardConfirm(true)}
               activeOpacity={0.7}
               disabled={isProcessing}
             >
-              {isProcessing && paymentMethod === 'tap' ? (
+              {isProcessing && paymentMethod === 'card' ? (
                 <ActivityIndicator size="small" color={colors.purple} />
               ) : (
                 <View style={styles.paymentButtonContent}>
-                  <View style={styles.paymentButtonLeft}>
-                    <CreditCardIcon
-                      size={22}
-                      color={paymentMethod === 'tap' ? colors.purple : colors.textSecondary}
-                    />
-                    <ContactlessIcon
-                      size={16}
-                      color={paymentMethod === 'tap' ? colors.purple : colors.textTertiary}
-                    />
-                  </View>
+                  <CreditCardIcon
+                    size={22}
+                    color={paymentMethod === 'card' ? colors.purple : colors.textSecondary}
+                  />
                   <View style={styles.paymentButtonText}>
                     <Text
                       style={[
                         styles.paymentMethodName,
-                        paymentMethod === 'tap' && styles.paymentMethodNameActive,
+                        paymentMethod === 'card' && styles.paymentMethodNameActive,
                       ]}
                     >
-                      Plată Card
+                      Card
                     </Text>
-                    <Text style={styles.paymentPoweredBy}>Furnizat de Stripe</Text>
+                    <Text style={styles.paymentPoweredBy}>Terminal POS card</Text>
                   </View>
                 </View>
               )}
@@ -880,8 +886,85 @@ export default function SalesScreen({ navigation }) {
               )}
             </TouchableOpacity>
 
+            {/* Card prin NFC — legacy Stripe Tap flow. Hidden by default
+                and only surfaces when the organizer toggles it on from
+                Filament (service_settings.mobile_card_nfc_enabled). */}
+            {cardNfcEnabled && (
+              <TouchableOpacity
+                style={[
+                  styles.paymentButton,
+                  paymentMethod === 'tap' && styles.paymentButtonActive,
+                ]}
+                onPress={() => !isProcessing && processPayment('tap')}
+                activeOpacity={0.7}
+                disabled={isProcessing}
+              >
+                {isProcessing && paymentMethod === 'tap' ? (
+                  <ActivityIndicator size="small" color={colors.purple} />
+                ) : (
+                  <View style={styles.paymentButtonContent}>
+                    <View style={styles.paymentButtonLeft}>
+                      <CreditCardIcon
+                        size={22}
+                        color={paymentMethod === 'tap' ? colors.purple : colors.textSecondary}
+                      />
+                      <ContactlessIcon
+                        size={16}
+                        color={paymentMethod === 'tap' ? colors.purple : colors.textTertiary}
+                      />
+                    </View>
+                    <View style={styles.paymentButtonText}>
+                      <Text
+                        style={[
+                          styles.paymentMethodName,
+                          paymentMethod === 'tap' && styles.paymentMethodNameActive,
+                        ]}
+                      >
+                        Card prin NFC
+                      </Text>
+                      <Text style={styles.paymentPoweredBy}>Furnizat de Stripe</Text>
+                    </View>
+                  </View>
+                )}
+              </TouchableOpacity>
+            )}
+
           </View>
         </ScrollView>
+
+        {/* Card confirmation modal — the operator presses Confirm only
+            after the customer's transaction has cleared on the POS
+            terminal. Same backend treatment as cash. */}
+        <Modal visible={showCardConfirm} transparent animationType="fade" onRequestClose={() => setShowCardConfirm(false)}>
+          <View style={styles.modalBackdrop}>
+            <View style={styles.cardConfirmCard}>
+              <Text style={styles.cardConfirmTitle}>Confirmă încasare card</Text>
+              <Text style={styles.cardConfirmText}>
+                Verifică pe terminalul POS card că suma a fost încasată cu succes, apoi apasă Confirmă.
+              </Text>
+              <Text style={styles.cardConfirmAmount}>{formatCurrency(total)}</Text>
+              <View style={styles.cardConfirmButtons}>
+                <TouchableOpacity
+                  style={styles.cardConfirmCancel}
+                  onPress={() => setShowCardConfirm(false)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.cardConfirmCancelText}>Anulează</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.cardConfirmOk}
+                  onPress={() => {
+                    setShowCardConfirm(false);
+                    processPayment('card');
+                  }}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.cardConfirmOkText}>Confirmă încasarea</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
 
         {/* Payment Success Overlay */}
         {showPaymentSuccess && (
@@ -1727,6 +1810,71 @@ const styles = StyleSheet.create({
   paymentButtonActive: {
     borderColor: colors.purpleBorder,
     backgroundColor: colors.purpleBg,
+  },
+  // Card-confirm modal (POS card terminal "money collected" confirmation).
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  cardConfirmCard: {
+    backgroundColor: '#1E1E2E',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 24,
+    width: '100%',
+    maxWidth: 380,
+  },
+  cardConfirmTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: colors.textPrimary,
+    marginBottom: 8,
+  },
+  cardConfirmText: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    lineHeight: 20,
+    marginBottom: 14,
+  },
+  cardConfirmAmount: {
+    fontSize: 26,
+    fontWeight: '800',
+    color: colors.green,
+    textAlign: 'center',
+    marginBottom: 18,
+  },
+  cardConfirmButtons: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  cardConfirmCancel: {
+    flex: 1,
+    paddingVertical: 13,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+  },
+  cardConfirmCancelText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.textSecondary,
+  },
+  cardConfirmOk: {
+    flex: 1.4,
+    paddingVertical: 13,
+    borderRadius: 10,
+    backgroundColor: colors.green,
+    alignItems: 'center',
+  },
+  cardConfirmOkText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.white,
   },
   paymentButtonContent: {
     flexDirection: 'row',
