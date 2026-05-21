@@ -3587,15 +3587,25 @@ class EventsController extends BaseController
                     ->whereNotNull('checked_in_at')
                     ->count();
 
-                // Available count — for seated events, count real
+                // Available count — for seated events, try to count real
                 // event_seats with status='available' that map to this
-                // ticket type (via the row / section pivots). For
-                // non-seated events, fall back to quota - sold.
+                // ticket type (via the row / section pivots). On ANY
+                // error, fall back to the simple quota - sold math so a
+                // broken seat count never blanks the ticket list.
                 $hasSeats = (bool) $tt->hasSeatingAssigned();
+                $defaultAvailable = $tt->quota_total ? max(0, $tt->quota_total - $validTickets) : 0;
+                $available = $defaultAvailable;
                 if ($hasSeats && $event->seating_layout_id) {
-                    $available = $this->countAvailableSeatsForTicketType($tt, $event);
-                } else {
-                    $available = $tt->quota_total ? max(0, $tt->quota_total - $validTickets) : 0;
+                    try {
+                        $available = $this->countAvailableSeatsForTicketType($tt, $event);
+                    } catch (\Throwable $e) {
+                        \Log::warning('countAvailableSeatsForTicketType failed', [
+                            'ticket_type_id' => $tt->id,
+                            'event_id' => $event->id,
+                            'error' => $e->getMessage(),
+                        ]);
+                        $available = $defaultAvailable;
+                    }
                 }
 
                 return [
@@ -3653,17 +3663,28 @@ class EventsController extends BaseController
             return 0;
         }
 
+        // event_seats column is `section_name` (not `section_code`).
+        // Build the predicate manually so the first clause is a regular
+        // where (not orWhere) — Laravel's grammar emits cleaner SQL.
         $query = \App\Models\Seating\EventSeat::where('event_seating_id', $layout->id)
             ->where('status', 'available')
             ->where(function ($q) use ($sectionNames, $rowPairs) {
+                $first = true;
                 if (!empty($sectionNames)) {
-                    $q->orWhereIn('section_code', $sectionNames);
+                    $q->whereIn('section_name', $sectionNames);
+                    $first = false;
                 }
                 foreach ($rowPairs as [$secName, $rowLabel]) {
-                    $q->orWhere(function ($qq) use ($secName, $rowLabel) {
-                        $qq->where('section_code', $secName)
+                    $clause = function ($qq) use ($secName, $rowLabel) {
+                        $qq->where('section_name', $secName)
                            ->where('row_label', $rowLabel);
-                    });
+                    };
+                    if ($first) {
+                        $q->where($clause);
+                        $first = false;
+                    } else {
+                        $q->orWhere($clause);
+                    }
                 }
             });
 
