@@ -390,46 +390,77 @@ function fitToContainer() {
 window.addEventListener('resize', fitToContainer);
 
 // ────────────────────────────────────────────────────────────────────────
-// Gestures — pinch + pan + tap. Pure pointer events, no library.
+// Gestures — touch + mouse + wheel. We use touch events (not pointer
+// events) because Android WebView delivers touches reliably while
+// pointer-event capture flakes on some devices (the user reported taps
+// not registering at all, while raw pinch worked). Mouse events handle
+// desktop. Wheel handles desktop zoom (added in the next listener).
 // ────────────────────────────────────────────────────────────────────────
-const pointers = new Map();
+const touches = new Map(); // identifier → {x, y}
 let lastDist = 0;
 let lastCenter = null;
 let lastSingle = null;
 let movedDuringTap = false;
+let mouseDown = false;
 
-canvas.addEventListener('pointerdown', (e) => {
-  canvas.setPointerCapture(e.pointerId);
-  pointers.set(e.pointerId, { x: e.clientX, y: e.clientY, startX: e.clientX, startY: e.clientY });
-  if (pointers.size === 1) {
-    lastSingle = { x: e.clientX, y: e.clientY };
+// Tiny debug overlay — flashes the last event type the canvas saw.
+// Helpful for verifying touches actually reach the page on real devices.
+const dbgEl = document.createElement('div');
+dbgEl.id = 'touch-debug';
+dbgEl.style.cssText = 'position:absolute;top:10px;left:10px;background:rgba(0,0,0,0.6);color:#10b981;font:10px/1 monospace;padding:4px 8px;border-radius:6px;pointer-events:none;z-index:11;opacity:0;transition:opacity 0.2s';
+wrap.appendChild(dbgEl);
+let dbgTimer = null;
+function debugFlash(msg) {
+  dbgEl.textContent = msg;
+  dbgEl.style.opacity = '1';
+  clearTimeout(dbgTimer);
+  dbgTimer = setTimeout(() => { dbgEl.style.opacity = '0'; }, 600);
+}
+
+function pageXYFromTouch(t) {
+  // clientX/Y is what we want — relative to the viewport (canvas is
+  // position: absolute filling the wrap).
+  return { x: t.clientX, y: t.clientY };
+}
+
+function onTouchStart(e) {
+  // Prevent the WebView from interpreting this as a scroll candidate.
+  if (e.cancelable) e.preventDefault();
+  debugFlash('touchstart ' + e.changedTouches.length);
+  for (const t of e.changedTouches) {
+    touches.set(t.identifier, pageXYFromTouch(t));
+  }
+  if (touches.size === 1) {
+    lastSingle = [...touches.values()][0];
     movedDuringTap = false;
-  } else if (pointers.size === 2) {
-    const [a, b] = [...pointers.values()];
+  } else if (touches.size === 2) {
+    const [a, b] = [...touches.values()];
     lastDist = Math.hypot(a.x - b.x, a.y - b.y);
     lastCenter = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
   }
-});
+}
 
-canvas.addEventListener('pointermove', (e) => {
-  const p = pointers.get(e.pointerId);
-  if (!p) return;
-  p.x = e.clientX; p.y = e.clientY;
-
-  if (pointers.size === 1 && lastSingle) {
-    const dx = e.clientX - lastSingle.x;
-    const dy = e.clientY - lastSingle.y;
+function onTouchMove(e) {
+  if (e.cancelable) e.preventDefault();
+  for (const t of e.changedTouches) {
+    if (touches.has(t.identifier)) {
+      touches.set(t.identifier, pageXYFromTouch(t));
+    }
+  }
+  if (touches.size === 1 && lastSingle) {
+    const t = [...touches.values()][0];
+    const dx = t.x - lastSingle.x;
+    const dy = t.y - lastSingle.y;
     if (Math.abs(dx) > 4 || Math.abs(dy) > 4) movedDuringTap = true;
     view.tx += dx; view.ty += dy;
-    lastSingle = { x: e.clientX, y: e.clientY };
+    lastSingle = t;
     requestPaint();
-  } else if (pointers.size === 2) {
-    const [a, b] = [...pointers.values()];
+  } else if (touches.size === 2) {
+    const [a, b] = [...touches.values()];
     const dist = Math.hypot(a.x - b.x, a.y - b.y);
     const center = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
-    const factor = dist / lastDist;
+    const factor = dist / (lastDist || dist);
     const newScale = Math.max(view.minScale, Math.min(view.maxScale, view.scale * factor));
-    // Zoom around the pinch center
     const k = newScale / view.scale;
     view.tx = center.x - (center.x - view.tx) * k;
     view.ty = center.y - (center.y - view.ty) * k;
@@ -438,21 +469,51 @@ canvas.addEventListener('pointermove', (e) => {
     lastCenter = center;
     requestPaint();
   }
-});
+}
 
-canvas.addEventListener('pointerup', (e) => {
-  const p = pointers.get(e.pointerId);
-  if (p && pointers.size === 1 && !movedDuringTap) {
+function onTouchEnd(e) {
+  if (e.cancelable) e.preventDefault();
+  debugFlash('touchend (drag=' + movedDuringTap + ')');
+  for (const t of e.changedTouches) {
+    touches.delete(t.identifier);
+  }
+  if (touches.size === 0 && !movedDuringTap && lastSingle) {
+    handleTap(lastSingle.x, lastSingle.y);
+  }
+  if (touches.size < 2) lastDist = 0;
+  lastSingle = touches.size === 1 ? [...touches.values()][0] : null;
+}
+
+// Register on both canvas and wrap so even if pointer-events somehow
+// reroutes off the canvas, the wrap still catches the touch.
+canvas.addEventListener('touchstart', onTouchStart, { passive: false });
+canvas.addEventListener('touchmove', onTouchMove, { passive: false });
+canvas.addEventListener('touchend', onTouchEnd, { passive: false });
+canvas.addEventListener('touchcancel', onTouchEnd, { passive: false });
+
+// Mouse events for desktop (no touch).
+canvas.addEventListener('mousedown', (e) => {
+  mouseDown = true;
+  lastSingle = { x: e.clientX, y: e.clientY };
+  movedDuringTap = false;
+});
+canvas.addEventListener('mousemove', (e) => {
+  if (!mouseDown || !lastSingle) return;
+  const dx = e.clientX - lastSingle.x;
+  const dy = e.clientY - lastSingle.y;
+  if (Math.abs(dx) > 4 || Math.abs(dy) > 4) movedDuringTap = true;
+  view.tx += dx; view.ty += dy;
+  lastSingle = { x: e.clientX, y: e.clientY };
+  requestPaint();
+});
+canvas.addEventListener('mouseup', (e) => {
+  if (mouseDown && !movedDuringTap) {
     handleTap(e.clientX, e.clientY);
   }
-  pointers.delete(e.pointerId);
-  if (pointers.size < 2) lastDist = 0;
-  lastSingle = pointers.size === 1 ? [...pointers.values()][0] : null;
+  mouseDown = false;
+  lastSingle = null;
 });
-
-canvas.addEventListener('pointercancel', (e) => {
-  pointers.delete(e.pointerId);
-});
+canvas.addEventListener('mouseleave', () => { mouseDown = false; lastSingle = null; });
 
 // Desktop wheel-zoom (and mac trackpad pinch, which fires wheel with
 // ctrlKey). Anchored on the cursor so users zoom where they're looking.
