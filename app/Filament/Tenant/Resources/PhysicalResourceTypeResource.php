@@ -108,7 +108,7 @@ class PhysicalResourceTypeResource extends Resource
         return $table
             ->defaultSort('name')
             ->columns([
-                Tables\Columns\TextColumn::make('icon')->label('')->size('lg'),
+                Tables\Columns\TextColumn::make('icon')->label(''),
                 Tables\Columns\ImageColumn::make('image_url')->label('Img')->circular(),
                 Tables\Columns\TextColumn::make('name')->searchable()->sortable()
                     ->description(fn ($record) => $record->description),
