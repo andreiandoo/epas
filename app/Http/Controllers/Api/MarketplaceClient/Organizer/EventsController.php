@@ -3587,8 +3587,16 @@ class EventsController extends BaseController
                     ->whereNotNull('checked_in_at')
                     ->count();
 
-                // Available = total capacity minus valid sold tickets
-                $available = $tt->quota_total ? max(0, $tt->quota_total - $validTickets) : 0;
+                // Available count — for seated events, count real
+                // event_seats with status='available' that map to this
+                // ticket type (via the row / section pivots). For
+                // non-seated events, fall back to quota - sold.
+                $hasSeats = (bool) $tt->hasSeatingAssigned();
+                if ($hasSeats && $event->seating_layout_id) {
+                    $available = $this->countAvailableSeatsForTicketType($tt, $event);
+                } else {
+                    $available = $tt->quota_total ? max(0, $tt->quota_total - $validTickets) : 0;
+                }
 
                 return [
                     'id' => $tt->id,
@@ -3604,7 +3612,7 @@ class EventsController extends BaseController
                     'status' => $tt->status === 'active' ? 'on_sale' : $tt->status,
                     'is_visible' => $tt->status === 'active',
                     'is_entry_ticket' => (bool) ($tt->is_entry_ticket ?? false),
-                    'has_seats' => (bool) $tt->hasSeatingAssigned(),
+                    'has_seats' => $hasSeats,
                     'color' => $tt->color ?? null,
                     'checked_in' => $checkedIn,
                 ];
@@ -3612,6 +3620,54 @@ class EventsController extends BaseController
             'has_seating' => (bool) $event->seating_layout_id,
             'created_at' => $event->created_at?->toIso8601String(),
         ];
+    }
+
+    /**
+     * Count available seats (status='available') in event_seats for the
+     * latest published event seating layout, filtered to seats whose
+     * (section_code, row_label) matches one of the ticket type's row or
+     * section assignments. Returns 0 when nothing maps. Used by the
+     * mobile SalesScreen to show "X locuri disponibile" per seated
+     * ticket type without making a second seating-map round-trip.
+     */
+    protected function countAvailableSeatsForTicketType(TicketType $tt, Event $event): int
+    {
+        $layout = \App\Models\Seating\EventSeatingLayout::where('event_id', $event->id)
+            ->published()
+            ->latest('published_at')
+            ->first();
+
+        if (!$layout) {
+            return 0;
+        }
+
+        $sectionNames = $tt->seatingSections()->pluck('name')->all();
+        $rowPairs = $tt->seatingRows()
+            ->with('section:id,name')
+            ->get()
+            ->filter(fn ($r) => $r->section)
+            ->map(fn ($r) => [$r->section->name, $r->label])
+            ->all();
+
+        if (empty($sectionNames) && empty($rowPairs)) {
+            return 0;
+        }
+
+        $query = \App\Models\Seating\EventSeat::where('event_seating_id', $layout->id)
+            ->where('status', 'available')
+            ->where(function ($q) use ($sectionNames, $rowPairs) {
+                if (!empty($sectionNames)) {
+                    $q->orWhereIn('section_code', $sectionNames);
+                }
+                foreach ($rowPairs as [$secName, $rowLabel]) {
+                    $q->orWhere(function ($qq) use ($secName, $rowLabel) {
+                        $qq->where('section_code', $secName)
+                           ->where('row_label', $rowLabel);
+                    });
+                }
+            });
+
+        return (int) $query->count();
     }
 
     /**

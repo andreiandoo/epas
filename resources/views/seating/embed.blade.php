@@ -327,12 +327,12 @@ function paint() {
     }
   }
 
-  // Seats + seat numbers. The threshold guards against unreadable text
-  // on far-out zoom; numbers fade in as the user pinches in. Effective
-  // text size = max(7, r*0.85) * view.scale, so at scale 0.4 with r=7
-  // we get ~2.4px → too small; at 0.7 we get ~4px → starts being
-  // useful; at 1.0+ it's clean.
-  const showSeatNumbers = view.scale > 0.5;
+  // Seat numbers — always drawn. They're tiny at low zoom (naturally
+  // hard to read) and crisp once the user pinches in, but they're
+  // always visible so the operator can pick a specific seat without
+  // guessing. Performance is fine: even 5000 fillText calls per paint
+  // are <10ms on modern devices.
+  const showSeatNumbers = true;
   for (const entry of seatIndex.values()) {
     const { seat, absX, absY, r } = entry;
     ctx.beginPath();

@@ -507,6 +507,35 @@ class AuthController extends BaseController
     }
 
     /**
+     * Toggle mobile-only feature flags (POS Card prin NFC etc.) from the
+     * mobile app's Settings screen. Writes to service_settings — separate
+     * column from `settings` (widget) so the toggles don't bleed into the
+     * embeddable widget config.
+     */
+    public function updateMobileSettings(Request $request): JsonResponse
+    {
+        $organizer = $request->user();
+
+        if (!$organizer instanceof MarketplaceOrganizer) {
+            return $this->error('Unauthorized', 401);
+        }
+
+        $validated = $request->validate([
+            'card_nfc_enabled' => 'nullable|boolean',
+        ]);
+
+        $existing = $organizer->service_settings ?? [];
+        if (array_key_exists('card_nfc_enabled', $validated)) {
+            $existing['mobile_card_nfc_enabled'] = (bool) $validated['card_nfc_enabled'];
+        }
+        $organizer->update(['service_settings' => $existing]);
+
+        return $this->success([
+            'organizer' => $this->formatOrganizer($organizer->fresh()),
+        ], 'Mobile settings updated');
+    }
+
+    /**
      * Upload a widget image (logo, hero, background)
      */
     public function uploadWidgetImage(Request $request): JsonResponse
