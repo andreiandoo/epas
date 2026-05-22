@@ -22,12 +22,12 @@ return [
     |   SUPPORT_ALLOWED_CUSTOMER_IDS=*
     */
     'allowed_opener_ids' => [
+        // Default: open to everyone ('*' wildcard). Override via .env if
+        // we ever need to roll the gate back to a beta cohort, e.g.:
+        //   SUPPORT_ALLOWED_ORGANIZER_IDS=1,136
         'organizer' => array_values(array_filter(array_map(
             'trim',
-            // Default beta testers (override via SUPPORT_ALLOWED_ORGANIZER_IDS in .env):
-            //   1   — nastase.ai+organizator@gmail.com (internal QA)
-            //   136 — dana@promusicevents.ro
-            explode(',', env('SUPPORT_ALLOWED_ORGANIZER_IDS', '1,136'))
+            explode(',', env('SUPPORT_ALLOWED_ORGANIZER_IDS', '*'))
         ))),
         'customer' => array_values(array_filter(array_map(
             'trim',
