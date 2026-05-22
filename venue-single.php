@@ -408,6 +408,12 @@ include __DIR__ . '/includes/header.php';
             </button>
         </div>
         <form id="contactVenueForm" onsubmit="VenuePage.submitContactForm(event)" class="p-6 space-y-4">
+            <!-- Honeypot — hidden from humans, auto-filled by bots. Backend
+                 silently drops submissions where this carries a value. -->
+            <div style="position:absolute; left:-9999px; top:-9999px; width:1px; height:1px; overflow:hidden;" aria-hidden="true">
+                <label for="venue_website_url">Website (nu completați)</label>
+                <input type="text" name="website_url" id="venue_website_url" tabindex="-1" autocomplete="off" value="">
+            </div>
             <div class="grid grid-cols-2 gap-4">
                 <div>
                     <label class="block mb-1 text-sm font-medium text-secondary">Numele tău</label>

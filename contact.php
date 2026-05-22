@@ -91,6 +91,13 @@ require_once __DIR__ . '/includes/header.php';
             <p class="text-[15px] text-gray-500 mb-8">Completează formularul de mai jos și te vom contacta în cel mai scurt timp.</p>
 
             <form id="contactForm">
+                <!-- Honeypot field — hidden from humans, auto-filled by bots.
+                     Server-side check silently drops submissions with this filled. -->
+                <div style="position:absolute; left:-9999px; top:-9999px; width:1px; height:1px; overflow:hidden;" aria-hidden="true">
+                    <label for="website_url">Website (nu completați)</label>
+                    <input type="text" name="website_url" id="website_url" tabindex="-1" autocomplete="off" value="">
+                </div>
+
                 <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
                     <div class="form-group">
                         <label class="block mb-2 text-sm font-semibold text-gray-900">Nume <span class="text-primary">*</span></label>
@@ -400,6 +407,10 @@ const ContactPage = {
                     subject: data.subject,
                     order_id: data.orderId || '',
                     message: data.message,
+                    // Honeypot — invisible field that bots auto-fill; humans
+                    // never see it. Backend drops the submission silently when
+                    // this carries a value.
+                    website_url: data.website_url || '',
                 });
 
                 if (!res || !res.success) {
