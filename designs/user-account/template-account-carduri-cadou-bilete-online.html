@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#1B1714" />
+  <meta name="robots" content="noindex, follow, noarchive, max-image-preview:large" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;0,9..144,900;1,9..144,500&family=Hanken+Grotesk:wght@400;500;600;700;800&family=Spline+Sans+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: { extend: {
+        colors: {
+          paper:'#F4EFE3','paper-2':'#EBE2CF','paper-3':'#E2D7BF',
+          ink:'#1B1714','ink-2':'#2E2820','ink-soft':'#5A4F41',
+          vermilion:'#E84527','vermilion-d':'#C5371C',
+          forest:'#1E4A3D','forest-l':'#2E6553',
+          ochre:'#DA9A33',sky:'#2C5F8A',mint:'#D7E8D3',rose:'#F2C7B8'
+        },
+        fontFamily: {
+          display:['Fraunces','Georgia','serif'],
+          sans:['"Hanken Grotesk"','system-ui','sans-serif'],
+          mono:['"Spline Sans Mono"','ui-monospace','monospace']
+        },
+        boxShadow:{ ticket:'0 28px 60px -36px rgba(27,23,20,.58)' }
+      }}
+    }
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <style>
+    :root { --paper:#F4EFE3; }
+    html { scroll-behavior:smooth; }
+    body { background:#F4EFE3; color:#1B1714; font-feature-settings:"ss01","cv01"; }
+    .font-display { font-optical-sizing:auto; font-variation-settings:"SOFT" 0,"WONK" 1; letter-spacing:-.018em; }
+    .grain::after{ content:""; position:fixed; inset:0; z-index:60; pointer-events:none; opacity:.05;
+      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); mix-blend-mode:multiply; }
+    .ticket{ position:relative; isolation:isolate; }
+    .ticket .perf{ position:absolute; top:0; bottom:0; left:var(--perf,68%); width:0; border-left:2px dashed rgba(27,23,20,.28); }
+    .ticket .notch{ position:absolute; left:var(--perf,68%); width:18px; height:18px; border-radius:9999px; background:var(--punch,#F4EFE3); transform:translateX(-50%); border:2px dashed rgba(27,23,20,.18); }
+    .ticket .notch.top{ top:-9px; } .ticket .notch.bot{ bottom:-9px; }
+    .stamp{ border:2px solid currentColor; border-radius:9999px; }
+    .underline-wobble{ background-image:linear-gradient(currentColor,currentColor); background-size:100% 2px; background-repeat:no-repeat; background-position:0 100%; transition:background-size .3s; }
+    .underline-wobble:hover{ background-size:0% 2px; }
+    .field{ width:100%; border:2px solid rgba(27,23,20,.16); background:rgba(255,255,255,.28); border-radius:1rem; padding:.85rem 1rem; outline:none; transition:border-color .2s, box-shadow .2s, background .2s; }
+    .field:focus{ border-color:#E84527; box-shadow:0 0 0 4px rgba(232,69,39,.12); background:#F4EFE3; }
+    .nav-active{ background:#1B1714; color:#F4EFE3; }
+    .nav-link{ display:flex; align-items:center; gap:.75rem; padding:.75rem .9rem; border-radius:1rem; font-weight:700; transition:background .2s,color .2s,transform .2s; }
+    .nav-link:hover{ background:rgba(27,23,20,.07); transform:translateX(2px); }
+    .nav-active:hover{ background:#1B1714; color:#F4EFE3; }
+    .soft-card{ border:2px solid rgba(27,23,20,.12); background:rgba(235,226,207,.65); border-radius:1.5rem; }
+    .no-bar::-webkit-scrollbar{ display:none; } .no-bar{ -ms-overflow-style:none; scrollbar-width:none; }
+    [x-cloak]{ display:none!important; }
+    @media (prefers-reduced-motion: reduce){ html{scroll-behavior:auto;} *{animation:none!important;transition:none!important;} }
+  </style>
+
+  <title>Carduri cadou — bilete.online</title>
+  <meta name="description" content="Vezi cardurile cadou cumpărate sau primite, soldul disponibil, codurile, statusul și opțiunile de retrimitere." />
+  <link rel="canonical" href="https://bilete.online/cont/gift" />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Carduri cadou — bilete.online" />
+  <meta property="og:description" content="Vezi cardurile cadou cumpărate sau primite, soldul disponibil, codurile, statusul și opțiunile de retrimitere." />
+</head>
+<body class="grain font-sans antialiased selection:bg-vermilion selection:text-paper" x-data="accountShell()">
+
+<script>
+function baseAccountData(){
+  return {
+    user:{name:'Andrei N.', initials:'AN', email:'andrei@example.ro', points:1240, activeTickets:5},
+    money(v){ return new Intl.NumberFormat('ro-RO',{style:'currency',currency:'RON',maximumFractionDigits:2}).format(v); },
+    dateFmt(d){ return d; }
+  }
+}
+function accountShell(){ return baseAccountData(); }
+</script>
+
+  <header class="sticky top-0 z-50 bg-paper/95 backdrop-blur-md border-b border-ink/10">
+    <div class="bg-ink text-paper/80 text-[11px] sm:text-xs font-mono tracking-wider">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 h-8 flex items-center justify-between">
+        <span class="flex items-center gap-2"><span class="inline-block w-1.5 h-1.5 rounded-full bg-vermilion"></span> CONT CLIENT · bilete.online</span>
+        <a href="/ajutor" class="text-ochre underline-wobble">Ai nevoie de ajutor?</a>
+      </div>
+    </div>
+    <nav class="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
+      <a href="/" class="flex items-center gap-2.5 group shrink-0" aria-label="bilete.online">
+        <span class="relative grid place-items-center w-9 h-9 bg-vermilion text-paper rounded-md rotate-[-4deg] group-hover:rotate-[4deg] transition-transform duration-300 shadow-[0_6px_14px_-6px_rgba(232,69,39,.9)]">
+          <svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M3 9a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2 2 2 0 0 0 0 4 2 2 0 0 1-2 2H5a2 2 0 0 1-2-2 2 2 0 0 0 0-4Z"/><path d="M9 7v10" stroke-dasharray="2 2"/></svg>
+        </span>
+        <span class="font-display text-xl font-bold tracking-tight">bilete<span class="text-vermilion">.</span>online</span>
+      </a>
+      <div class="flex items-center gap-3">
+        <a href="/cos" class="hidden sm:inline-flex rounded-full border-2 border-ink px-4 py-2 text-sm font-bold hover:bg-ink hover:text-paper transition">Coș</a>
+        <div class="flex items-center gap-2 rounded-full bg-paper-2 border-2 border-ink/10 pl-1 pr-3 py-1">
+          <span class="grid place-items-center w-8 h-8 rounded-full bg-forest text-paper text-sm font-bold" x-text="user.initials"></span>
+          <span class="hidden sm:inline text-sm font-bold" x-text="user.name"></span>
+        </div>
+      </div>
+    </nav>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 py-8 lg:py-10">
+    <div class="lg:hidden mb-5">
+      <label class="block text-xs font-mono tracking-[.18em] text-ink-soft mb-2">MENIU CONT</label>
+      <select class="field" onchange="window.location.href=this.value">
+        <option value="/cont/dashboard" >Dashboard</option>
+<option value="/cont/biletele-mele" >Biletele mele</option>
+<option value="/cont/comenzile-mele" >Comenzile mele</option>
+<option value="/cont/punctele-mele" >Punctele mele</option>
+<option value="/cont/carduri-cadou" selected>Carduri cadou</option>
+<option value="/cont/recenziile-mele" >Recenziile mele</option>
+<option value="/cont/setari" >Setări</option>
+      </select>
+    </div>
+
+    <div class="grid lg:grid-cols-[280px_1fr] gap-8 items-start">
+      <aside class="hidden lg:block sticky top-28">
+        <div class="ticket bg-paper border-2 border-ink rounded-3xl overflow-hidden shadow-ticket" style="--perf:100%">
+          <div class="p-5 bg-ink text-paper">
+            <div class="flex items-center gap-3">
+              <span class="grid place-items-center w-12 h-12 rounded-full bg-vermilion text-paper text-lg font-bold" x-text="user.initials"></span>
+              <div>
+                <p class="font-display text-2xl font-bold leading-none" x-text="user.name"></p>
+                <p class="text-xs font-mono text-paper/50" x-text="user.email"></p>
+              </div>
+            </div>
+            <div class="mt-5 grid grid-cols-2 gap-2">
+              <div class="rounded-2xl bg-paper/10 p-3">
+                <p class="text-[10px] font-mono text-paper/45">PUNCTE</p>
+                <p class="font-display text-2xl font-bold" x-text="user.points"></p>
+              </div>
+              <div class="rounded-2xl bg-paper/10 p-3">
+                <p class="text-[10px] font-mono text-paper/45">BILETE</p>
+                <p class="font-display text-2xl font-bold" x-text="user.activeTickets"></p>
+              </div>
+            </div>
+          </div>
+          <nav class="p-3 space-y-1" aria-label="Meniu cont">
+            <a href="/cont/dashboard" class="nav-link "><svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M3 13h8V3H3v10Zm10 8h8V11h-8v10ZM3 21h8v-6H3v6Zm10-12h8V3h-8v6Z"/></svg><span>Dashboard</span></a>
+<a href="/cont/biletele-mele" class="nav-link "><svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M3 9a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2 2 2 0 0 0 0 4 2 2 0 0 1-2 2H5a2 2 0 0 1-2-2 2 2 0 0 0 0-4Z"/><path d="M9 7v10" stroke-dasharray="2 2"/></svg><span>Biletele mele</span></a>
+<a href="/cont/comenzile-mele" class="nav-link "><svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M7 3h10l2 4v14H5V7l2-4Z"/><path d="M7 7h10M9 12h6M9 16h6"/></svg><span>Comenzile mele</span></a>
+<a href="/cont/punctele-mele" class="nav-link "><svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M8 11l4-4 4 4"/></svg><span>Punctele mele</span></a>
+<a href="/cont/carduri-cadou" class="nav-link nav-active"><svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M20 12v9H4v-9M2 7h20v5H2zM12 22V7m0 0S9.5 2 7 4s5 3 5 3Zm0 0s2.5-5 5-3-5 3-5 3Z"/></svg><span>Carduri cadou</span></a>
+<a href="/cont/recenziile-mele" class="nav-link "><svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.9"><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2L12 17.3 6.4 20.2 7.5 14 3 9.6l6.2-.9L12 3Z"/></svg><span>Recenziile mele</span></a>
+<a href="/cont/setari" class="nav-link "><svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1l2-1.5-2-3.5-2.4 1a7 7 0 0 0-1.7-1l-.3-2.5h-4l-.3 2.5a7 7 0 0 0-1.7 1l-2.4-1-2 3.5L4.1 11a7 7 0 0 0 0 2l-2 1.5 2 3.5 2.4-1a7 7 0 0 0 1.7 1l.3 2.5h4l.3-2.5a7 7 0 0 0 1.7-1l2.4 1 2-3.5-2-1.5c.1-.3.1-.7.1-1Z"/></svg><span>Setări</span></a>
+          </nav>
+          <div class="p-4 border-t-2 border-dashed border-ink/15">
+            <a href="/logout" class="block text-sm font-bold text-vermilion underline-wobble">Deconectare</a>
+          </div>
+        </div>
+      </aside>
+
+      <section>
+        
+<header class="flex flex-wrap items-end justify-between gap-5">
+  <div>
+    <p class="stamp inline-flex px-3 py-1 text-xs font-mono tracking-[.18em] text-vermilion">CARDURI CADOU</p>
+    <h1 class="mt-4 font-display text-5xl sm:text-6xl font-bold leading-[.95]">Cardurile tale cadou</h1>
+    <p class="mt-4 text-lg text-ink-soft max-w-2xl">Carduri cumpărate, primite, sold disponibil, status și opțiuni de trimitere sau descărcare.</p>
+  </div>
+  <a href="/card-cadou" class="rounded-full bg-vermilion text-paper px-6 py-4 font-bold hover:bg-vermilion-d transition">Cumpără card cadou</a>
+</header>
+
+<section class="mt-8 grid md:grid-cols-2 gap-5">
+  <template x-for="card in giftCards" :key="card.code">
+    <article class="ticket rounded-3xl overflow-hidden border-2 border-ink shadow-ticket" :class="card.status==='Activ' ? 'bg-ink text-paper' : 'bg-paper'" style="--perf:100%">
+      <div class="relative p-7 min-h-[250px]">
+        <div class="absolute inset-0 opacity-20" style="background-image:radial-gradient(currentColor 1px, transparent 1.4px);background-size:16px 16px"></div>
+        <div class="relative">
+          <p class="font-mono text-xs tracking-[.18em] opacity-60">GIFT CARD · bilete.online</p>
+          <h2 class="mt-4 font-display text-5xl font-bold" x-text="money(card.balance)"></h2>
+          <p class="mt-2 opacity-70" x-text="'Sold inițial: ' + money(card.initial)"></p>
+          <div class="mt-8 flex items-center justify-between gap-4">
+            <div><p class="text-xs font-mono opacity-60">COD</p><p class="font-bold tracking-widest" x-text="card.code"></p></div>
+            <span class="rounded-full px-3 py-1 text-xs font-bold" :class="card.status==='Activ' ? 'bg-ochre text-ink' : 'bg-ink text-paper'" x-text="card.status"></span>
+          </div>
+        </div>
+      </div>
+      <div class="relative p-5 border-t-2 border-dashed" :class="card.status==='Activ' ? 'border-paper/20 bg-paper text-ink' : 'border-ink/15 bg-paper-2/70'">
+        <p class="text-sm text-ink-soft" x-text="'Destinatar: ' + card.recipient"></p>
+        <p class="text-sm text-ink-soft" x-text="'Valabil până la: ' + card.expires"></p>
+        <div class="mt-4 flex flex-wrap gap-2">
+          <button class="rounded-full bg-vermilion text-paper px-4 py-2.5 font-bold hover:bg-vermilion-d transition">Descarcă</button>
+          <button class="rounded-full border-2 border-ink px-4 py-2.5 font-bold hover:bg-ink hover:text-paper transition">Retrimite</button>
+        </div>
+      </div>
+    </article>
+  </template>
+</section>
+<script>
+function accountShell(){
+  return {
+    ...baseAccountData(),
+    giftCards:[
+      {code:'GIFT-8K2M',initial:250,balance:180,status:'Activ',recipient:'Maria',expires:'22 mai 2027'},
+      {code:'GIFT-3P9Q',initial:100,balance:0,status:'Folosit',recipient:'Andrei',expires:'10 februarie 2027'}
+    ]
+  }
+}
+</script>
+
+      </section>
+    </div>
+  </main>
+
+  <footer class="max-w-7xl mx-auto px-4 sm:px-6 py-10 border-t border-ink/10 text-sm text-ink-soft">
+    <div class="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
+      <p>© 2026 bilete.online · Cont client</p>
+      <div class="flex gap-4">
+        <a class="hover:text-vermilion" href="/termeni-si-conditii">Termeni</a>
+        <a class="hover:text-vermilion" href="/politica-de-confidentialitate">Confidențialitate</a>
+        <a class="hover:text-vermilion" href="/ajutor">Suport</a>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>

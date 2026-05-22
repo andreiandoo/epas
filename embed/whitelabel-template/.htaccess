@@ -1,0 +1,28 @@
+# Whitelabel Site — URL Routing
+RewriteEngine On
+
+# Event detail: /{slug} (catches any slug that's not a file/dir/known route)
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^checkout/?$ checkout.php [L]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^cos/?$ checkout.php [L]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^multumim/?$ thank-you.php [L,QSA]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^terms/?$ terms.php [L]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^privacy/?$ privacy.php [L]
+
+# Event slug catch-all (MUST be last — catches /{event-slug})
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^([a-z0-9][a-z0-9-]*)/?$ event.php?slug=$1 [L,QSA]

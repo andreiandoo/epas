@@ -1,0 +1,4530 @@
+﻿<?php
+/**
+ * API Proxy for bilete.online Marketplace
+ *
+ * This proxy handles all API requests to the core Tixello API,
+ * keeping the API key hidden from the client.
+ *
+ * Endpoints:
+ * Public:
+ * - GET /api/proxy.php?action=search&q=query
+ * - GET /api/proxy.php?action=events&category=slug
+ * - GET /api/proxy.php?action=event&slug=event-slug
+ * - GET /api/proxy.php?action=venues
+ * - GET /api/proxy.php?action=artists
+ * - POST /api/proxy.php?action=cart (body: cart data)
+ *
+ * Customer Auth:
+ * - POST /api/proxy.php?action=customer.login
+ * - POST /api/proxy.php?action=customer.register
+ * - POST /api/proxy.php?action=customer.logout
+ * - GET /api/proxy.php?action=customer.me
+ * - PUT /api/proxy.php?action=customer.profile
+ * - PUT /api/proxy.php?action=customer.settings
+ * - GET /api/proxy.php?action=customer.orders
+ * - GET /api/proxy.php?action=customer.tickets
+ * - GET /api/proxy.php?action=customer.stats
+ */
+
+// Prevent direct execution without action
+header('Content-Type: application/json; charset=utf-8');
+header('Access-Control-Allow-Origin: *');
+header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
+header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Session-ID, X-Auto-Refresh');
+
+// Handle preflight
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(200);
+    exit;
+}
+
+// Load config (contains API_KEY and API_BASE_URL)
+require_once dirname(__DIR__) . '/includes/config.php';
+
+// ==================== FILE-BASED CACHE SYSTEM ====================
+class ApiCache {
+    private static $cacheDir;
+    private static $enabled = true;
+
+    // Cache TTL in seconds by action pattern
+    private static $ttlMap = [
+        // Very long cache (24 hours) - truly static content
+        'categories' => 86400,
+        'event-categories' => 86400,
+        'event-types' => 86400,
+        'venue-categories' => 86400,
+        'locations.regions' => 86400,
+        'locations.cities.alphabet' => 86400,
+        'artists.alphabet' => 86400,
+
+        // Long cache (6 hours) - rarely changing
+        'event-genres' => 21600,
+        'artists.genre-counts' => 21600,
+        'locations.stats' => 21600,
+
+        // Medium cache (30 minutes) - content that changes occasionally
+        'events.featured' => 1800,
+        'events.cities' => 1800,
+        'venues.featured' => 1800,
+        'artists.featured' => 1800,
+        'artists.trending' => 1800,
+        'locations.cities.featured' => 1800,
+        'cities' => 1800,
+
+        // Short cache â€” events use 30s for near-instant visibility of newly published events
+        'events' => 30,
+        'venues' => 300,
+        'artists' => 300,
+        'organizers' => 300,
+        'organizer' => 300,
+
+        // Single item views need quick updates. Event detail is NOT cached
+        // because its payload bundles per-seat statuses for seated events;
+        // caching makes seats selected/held in one tab invisible to another
+        // for up to the TTL, breaking concurrent seat selection.
+        'event' => 0,
+        'venue' => 60,
+        'artist' => 60,
+
+        // Very short cache (2 minutes) - search results
+        'search' => 120,
+    ];
+
+    public static function init() {
+        self::$cacheDir = dirname(__DIR__) . '/cache/api';
+        if (!is_dir(self::$cacheDir)) {
+            @mkdir(self::$cacheDir, 0755, true);
+        }
+        // Disable cache if directory not writable
+        if (!is_writable(self::$cacheDir)) {
+            self::$enabled = false;
+        }
+    }
+
+    public static function getCacheKey($action, $params) {
+        // Create unique cache key from action and all GET params
+        $key = $action . '_' . md5(serialize($params));
+        return preg_replace('/[^a-zA-Z0-9_-]/', '_', $key);
+    }
+
+    public static function getTtl($action) {
+        // Check for exact match first
+        if (isset(self::$ttlMap[$action])) {
+            return self::$ttlMap[$action];
+        }
+        // Check for prefix match (e.g., 'events' matches 'events.featured')
+        foreach (self::$ttlMap as $pattern => $ttl) {
+            if (strpos($action, $pattern) === 0) {
+                return $ttl;
+            }
+        }
+        return 0; // No caching for unknown actions
+    }
+
+    public static function get($action, $params) {
+        if (!self::$enabled) return null;
+
+        $ttl = self::getTtl($action);
+        if ($ttl === 0) return null;
+
+        $cacheKey = self::getCacheKey($action, $params);
+        $cacheFile = self::$cacheDir . '/' . $cacheKey . '.json';
+
+        if (!file_exists($cacheFile)) return null;
+
+        $mtime = filemtime($cacheFile);
+        $age = time() - $mtime;
+
+        // Stale-while-revalidate: serve stale up to 10x TTL if refresh fails
+        // Mark as stale so caller knows to refresh in background
+        if ($age > $ttl) {
+            if ($age > $ttl * 10) {
+                @unlink($cacheFile);
+                return null; // Too stale, delete
+            }
+            // Serve stale â€” caller should refresh
+        }
+
+        $data = @file_get_contents($cacheFile);
+        if ($data === false) return null;
+
+        $cached = json_decode($data, true);
+        if (!$cached || !isset($cached['response'])) return null;
+
+        return $cached;
+    }
+
+    public static function set($action, $params, $response, $statusCode) {
+        if (!self::$enabled) return;
+
+        $ttl = self::getTtl($action);
+        if ($ttl === 0) return;
+
+        // Only cache successful responses
+        if ($statusCode < 200 || $statusCode >= 300) return;
+
+        $cacheKey = self::getCacheKey($action, $params);
+        $cacheFile = self::$cacheDir . '/' . $cacheKey . '.json';
+
+        $data = json_encode([
+            'response' => $response,
+            'statusCode' => $statusCode,
+            'cached_at' => time()
+        ]);
+
+        @file_put_contents($cacheFile, $data, LOCK_EX);
+    }
+
+    public static function isCacheable($action, $method, $requiresAuth) {
+        // Only cache GET requests
+        if ($method !== 'GET') return false;
+
+        // Don't cache authenticated requests
+        if ($requiresAuth) return false;
+
+        // Preview mode bypasses all caching
+        if (!empty($_GET['preview'])) return false;
+
+        // Check if we have a TTL for this action
+        return self::getTtl($action) > 0;
+    }
+}
+
+ApiCache::init();
+
+// ==================== SHARE LINK LOCAL STORAGE ====================
+
+function shareLinksFile() {
+    $dir = dirname(__DIR__) . '/data';
+    if (!is_dir($dir)) {
+        @mkdir($dir, 0755, true);
+    }
+    $file = $dir . '/share-links.json';
+    if (!file_exists($file)) {
+        file_put_contents($file, '{}', LOCK_EX);
+    }
+    return $file;
+}
+
+function loadShareLinks() {
+    $file = shareLinksFile();
+    $data = @json_decode(file_get_contents($file), true);
+    return is_array($data) ? $data : [];
+}
+
+function saveShareLinks($links) {
+    $file = shareLinksFile();
+    file_put_contents($file, json_encode($links, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE), LOCK_EX);
+}
+
+function generateShareCode($length = 10) {
+    $chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+    $code = '';
+    for ($i = 0; $i < $length; $i++) {
+        $code .= $chars[random_int(0, strlen($chars) - 1)];
+    }
+    return $code;
+}
+
+// ==================== RATE LIMITING ====================
+
+function getRateLimitDir() {
+    $dir = dirname(__DIR__) . '/data/rate-limits';
+    if (!is_dir($dir)) {
+        @mkdir($dir, 0755, true);
+    }
+    return $dir;
+}
+
+/**
+ * Simple file-based rate limiter.
+ * Returns true if the request is allowed, false if rate limit exceeded.
+ */
+function checkRateLimit($key, $maxRequests = 30, $windowSeconds = 60) {
+    $dir = getRateLimitDir();
+    $file = $dir . '/' . md5($key) . '.json';
+
+    $now = time();
+    $data = [];
+
+    if (file_exists($file)) {
+        $data = @json_decode(@file_get_contents($file), true) ?: [];
+    }
+
+    // Remove expired entries
+    $data = array_filter($data, fn($ts) => $ts > ($now - $windowSeconds));
+
+    if (count($data) >= $maxRequests) {
+        return false;
+    }
+
+    $data[] = $now;
+    @file_put_contents($file, json_encode(array_values($data)), LOCK_EX);
+    return true;
+}
+
+/**
+ * Brute-force protection for password attempts.
+ * Returns true if attempt is allowed, false if locked out.
+ * Locks out for $lockoutSeconds after $maxAttempts failures within $windowSeconds.
+ */
+function checkBruteForce($code, $maxAttempts = 5, $windowSeconds = 300, $lockoutSeconds = 600) {
+    $dir = getRateLimitDir();
+    $file = $dir . '/bf_' . md5($code) . '.json';
+
+    $now = time();
+    $data = ['attempts' => [], 'locked_until' => 0];
+
+    if (file_exists($file)) {
+        $data = @json_decode(@file_get_contents($file), true) ?: $data;
+    }
+
+    // Check if currently locked out
+    if (($data['locked_until'] ?? 0) > $now) {
+        return false;
+    }
+
+    // Clean expired attempts
+    $data['attempts'] = array_filter($data['attempts'] ?? [], fn($ts) => $ts > ($now - $windowSeconds));
+
+    if (count($data['attempts']) >= $maxAttempts) {
+        // Trigger lockout
+        $data['locked_until'] = $now + $lockoutSeconds;
+        @file_put_contents($file, json_encode($data), LOCK_EX);
+        return false;
+    }
+
+    return true;
+}
+
+/**
+ * Record a failed password attempt.
+ */
+function recordFailedAttempt($code, $windowSeconds = 300) {
+    $dir = getRateLimitDir();
+    $file = $dir . '/bf_' . md5($code) . '.json';
+
+    $now = time();
+    $data = ['attempts' => [], 'locked_until' => 0];
+
+    if (file_exists($file)) {
+        $data = @json_decode(@file_get_contents($file), true) ?: $data;
+    }
+
+    $data['attempts'] = array_filter($data['attempts'] ?? [], fn($ts) => $ts > ($now - $windowSeconds));
+    $data['attempts'][] = $now;
+    @file_put_contents($file, json_encode($data), LOCK_EX);
+}
+
+/**
+ * Clear failed attempts after successful auth.
+ */
+function clearFailedAttempts($code) {
+    $dir = getRateLimitDir();
+    $file = $dir . '/bf_' . md5($code) . '.json';
+    if (file_exists($file)) {
+        @unlink($file);
+    }
+}
+
+function authenticateOrganizer() {
+    $authHeader = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
+    if (!$authHeader && isset($_SERVER['REDIRECT_HTTP_AUTHORIZATION'])) {
+        $authHeader = $_SERVER['REDIRECT_HTTP_AUTHORIZATION'];
+    }
+    if (!$authHeader) {
+        http_response_code(401);
+        echo json_encode(['error' => 'Authentication required']);
+        exit;
+    }
+
+    // Validate token against core API
+    $url = API_BASE_URL . '/organizer/me';
+    $context = stream_context_create([
+        'http' => [
+            'method' => 'GET',
+            'header' => implode("\r\n", [
+                'Content-Type: application/json',
+                'X-API-Key: ' . API_KEY,
+                'Accept: application/json',
+                'Authorization: ' . $authHeader
+            ]),
+            'timeout' => 10,
+            'ignore_errors' => true
+        ]
+    ]);
+    $response = @file_get_contents($url, false, $context);
+    if (!$response) {
+        http_response_code(401);
+        echo json_encode(['error' => 'Authentication failed']);
+        exit;
+    }
+    $data = json_decode($response, true);
+    $orgId = $data['data']['id'] ?? $data['data']['organizer']['id'] ?? $data['id'] ?? null;
+    if (!$orgId) {
+        http_response_code(401);
+        echo json_encode(['error' => 'Invalid token']);
+        exit;
+    }
+    return (int)$orgId;
+}
+
+function fetchEventsForShareLink($eventIds, $storedTicketData = []) {
+    // The dedicated share-stats endpoint is authoritative â€” it counts the
+    // same valid/used tickets as the organizer dashboard, including
+    // ticket types the public /events/{id} payload filters out (inactive,
+    // entry, invitation). $storedTicketData is kept as a last-resort
+    // fallback if the upstream call ever fails.
+    $results = [];
+    foreach ($eventIds as $eventId) {
+        $id = (int)$eventId;
+        if ($id <= 0) continue;
+
+        $entry = fetchShareStatsForEvent($id);
+
+        if ($entry === null) {
+            // Upstream failed â€” fall back to stale snapshot so the page is
+            // at least populated. Better to show old numbers than nothing.
+            $entry = buildShareLinkFallbackEntry($id, $storedTicketData);
+            if ($entry === null) continue;
+        }
+
+        $results[] = $entry;
+    }
+    return $results;
+}
+
+function fetchShareStatsForEvent($id) {
+    $url = API_BASE_URL . '/events/' . (int)$id . '/share-stats';
+    $context = stream_context_create([
+        'http' => [
+            'method' => 'GET',
+            'header' => implode("\r\n", [
+                'Content-Type: application/json',
+                'X-API-Key: ' . API_KEY,
+                'Accept: application/json'
+            ]),
+            'timeout' => 10,
+            'ignore_errors' => true
+        ]
+    ]);
+    $response = @file_get_contents($url, false, $context);
+    if (!$response) return null;
+
+    $responseData = json_decode($response, true);
+    if (!$responseData || empty($responseData['data'])) return null;
+
+    $data = $responseData['data'];
+    $event = $data['event'] ?? [];
+    $stats = $data['stats'] ?? [];
+    $ticketTypes = $data['ticket_types'] ?? [];
+
+    $startsAt = $event['starts_at'] ?? '';
+    $startTime = '';
+    if ($startsAt && strpos($startsAt, 'T') !== false) {
+        $startTime = substr(explode('T', $startsAt)[1] ?? '', 0, 5);
+    }
+
+    return [
+        'id' => $event['id'] ?? (int)$id,
+        'title' => $event['title'] ?? '',
+        'venue_name' => $event['venue_name'] ?? '',
+        'city' => $event['city'] ?? '',
+        'start_date' => $startsAt,
+        'start_time' => $startTime,
+        'end_date' => $event['ends_at'] ?? '',
+        'end_time' => '',
+        'status' => $event['status'] ?? '',
+        'ticket_types' => array_map(function($tt) {
+            $total = (int)($tt['total'] ?? 0);
+            $sold = (int)($tt['sold'] ?? 0);
+            $available = array_key_exists('available', $tt) && $tt['available'] !== null
+                ? (int)$tt['available']
+                : ($total < 0 ? PHP_INT_MAX : max(0, $total - $sold));
+            return [
+                'id' => $tt['id'] ?? null,
+                'name' => $tt['name'] ?? '',
+                'total' => $total,
+                'sold' => $sold,
+                'available' => $available,
+                'price' => (float)($tt['price'] ?? 0),
+            ];
+        }, $ticketTypes),
+        'tickets_total' => (int)($stats['tickets_total'] ?? 0),
+        'tickets_sold' => (int)($stats['tickets_sold'] ?? 0),
+        'revenue_net' => (float)($stats['revenue_net'] ?? 0),
+        'currency' => $stats['currency'] ?? 'RON',
+    ];
+}
+
+function buildShareLinkFallbackEntry($id, $storedTicketData) {
+    $stored = $storedTicketData[$id] ?? $storedTicketData[(string)$id] ?? null;
+    if (!$stored || empty($stored['ticket_types'])) return null;
+
+    $ticketTypes = array_map(function($stt) {
+        $total = (int)($stt['total'] ?? 0);
+        return [
+            'id' => $stt['id'] ?? null,
+            'name' => $stt['name'] ?? '',
+            'total' => $total,
+            'sold' => 0,
+            'available' => $total < 0 ? PHP_INT_MAX : max(0, $total),
+            'price' => 0.0,
+        ];
+    }, $stored['ticket_types']);
+
+    return [
+        'id' => (int)$id,
+        'title' => '',
+        'venue_name' => '',
+        'city' => '',
+        'start_date' => '',
+        'start_time' => '',
+        'end_date' => '',
+        'end_time' => '',
+        'status' => '',
+        'ticket_types' => $ticketTypes,
+        'tickets_total' => array_sum(array_column($ticketTypes, 'total')),
+        'tickets_sold' => 0,
+        'revenue_net' => 0.0,
+        'currency' => 'RON',
+    ];
+}
+
+function fetchTicketTotalsWithAuth($eventIds, $authHeader) {
+    $result = [];
+    foreach ($eventIds as $eventId) {
+        $id = (int)$eventId;
+        if ($id <= 0) continue;
+
+        // Use the organizer endpoint which returns quantity + quantity_sold
+        $url = API_BASE_URL . '/organizer/events/' . $id;
+        $context = stream_context_create([
+            'http' => [
+                'method' => 'GET',
+                'header' => implode("\r\n", [
+                    'Content-Type: application/json',
+                    'X-API-Key: ' . API_KEY,
+                    'Accept: application/json',
+                    'Authorization: ' . $authHeader
+                ]),
+                'timeout' => 10,
+                'ignore_errors' => true
+            ]
+        ]);
+        $response = @file_get_contents($url, false, $context);
+        if (!$response) continue;
+
+        $responseData = json_decode($response, true);
+        $data = $responseData['data'] ?? $responseData;
+        $event = $data['event'] ?? $data;
+        $ticketTypes = $data['ticket_types'] ?? $event['ticket_types'] ?? [];
+
+        $result[$id] = [
+            'ticket_types' => array_map(function($tt) {
+                return [
+                    'id' => $tt['id'] ?? null,
+                    'name' => $tt['name'] ?? '',
+                    'total' => (int)($tt['quantity'] ?? $tt['quota_total'] ?? $tt['total'] ?? 0),
+                ];
+            }, $ticketTypes),
+        ];
+    }
+    return $result;
+}
+
+/**
+ * Fetch participants for events using organizer auth.
+ * Returns array keyed by event ID with participant lists.
+ */
+function fetchParticipantsWithAuth($eventIds, $authHeader) {
+    $result = [];
+    foreach ($eventIds as $eventId) {
+        $id = (int)$eventId;
+        if ($id <= 0) continue;
+
+        $url = API_BASE_URL . '/organizer/events/' . $id . '/participants?per_page=100';
+        $context = stream_context_create([
+            'http' => [
+                'method' => 'GET',
+                'header' => implode("\r\n", [
+                    'Content-Type: application/json',
+                    'X-API-Key: ' . API_KEY,
+                    'Accept: application/json',
+                    'Authorization: ' . $authHeader
+                ]),
+                'timeout' => 15,
+                'ignore_errors' => true
+            ]
+        ]);
+        $response = @file_get_contents($url, false, $context);
+        if (!$response) continue;
+
+        $responseData = json_decode($response, true);
+        $participants = $responseData['data']['participants'] ?? $responseData['data'] ?? [];
+
+        if (!is_array($participants)) continue;
+
+        $result[$id] = array_map(function($p) {
+            // API returns customer data nested under 'customer' key
+            $customer = $p['customer'] ?? [];
+            return [
+                'name' => $customer['name'] ?? $p['name'] ?? '',
+                'phone' => $customer['phone'] ?? $p['phone'] ?? '',
+                'ticket_type' => $p['ticket_type'] ?? '',
+                'seat_label' => $p['seat_label'] ?? null,
+                'checked_in' => !empty($p['checked_in_at']),
+                'order_date' => $p['purchased_at'] ?? $p['order_date'] ?? '',
+            ];
+        }, $participants);
+    }
+    return $result;
+}
+
+// Rate limiting (simple IP-based, file-based to avoid session locks)
+$ip = $_SERVER['REMOTE_ADDR'];
+$rateLimit = 300; // requests per minute
+$rateWindow = 60; // seconds
+$rateKey = 'rate_' . md5($ip);
+$rateFile = dirname(__DIR__) . '/data/rate-limits/' . $rateKey . '.json';
+
+if (!is_dir(dirname($rateFile))) {
+    @mkdir(dirname($rateFile), 0755, true);
+}
+
+$now = time();
+$rateData = ['count' => 0, 'start' => $now];
+if (file_exists($rateFile)) {
+    $raw = @file_get_contents($rateFile);
+    if ($raw) {
+        $decoded = @json_decode($raw, true);
+        if (is_array($decoded)) $rateData = $decoded;
+    }
+}
+if ($now - ($rateData['start'] ?? 0) > $rateWindow) {
+    $rateData = ['count' => 0, 'start' => $now];
+}
+$rateData['count']++;
+
+if ($rateData['count'] > $rateLimit) {
+    http_response_code(429);
+    echo json_encode(['error' => 'Too many requests. Please try again later.']);
+    exit;
+}
+
+@file_put_contents($rateFile, json_encode($rateData), LOCK_EX);
+
+// Session: only start for actions that need it (cart, auth, checkout)
+// Public browsing endpoints skip session entirely â€” major perf win
+$actionForSession = $_GET['action'] ?? '';
+$needsSession = str_starts_with($actionForSession, 'cart')
+    || str_starts_with($actionForSession, 'checkout')
+    || str_starts_with($actionForSession, 'customer.')
+    || str_starts_with($actionForSession, 'organizer.')
+    || str_contains($actionForSession, 'login')
+    || str_contains($actionForSession, 'register')
+    || str_contains($actionForSession, 'password')
+    || $actionForSession === 'orders.pay'
+    || $actionForSession === 'orders.status'
+    || $actionForSession === 'checkout';
+
+$sessionIdForHeader = '';
+if ($needsSession) {
+    session_start();
+    $sessionIdForHeader = session_id();
+    session_write_close();
+} else {
+    // Generate stable pseudo-session ID from client fingerprint (for cart tracking across calls)
+    $sessionIdForHeader = $_COOKIE[session_name()] ?? hash('sha256', ($_SERVER['REMOTE_ADDR'] ?? '') . ($_SERVER['HTTP_USER_AGENT'] ?? ''));
+}
+
+// Get action
+$action = $_GET['action'] ?? '';
+
+if (!$action) {
+    http_response_code(400);
+    echo json_encode(['error' => 'Missing action parameter']);
+    exit;
+}
+
+// Build API endpoint based on action
+$endpoint = '';
+$method = 'GET';
+$body = null;
+$requiresAuth = false;
+// Per-action override for the upstream cURL timeout (seconds). Default 15
+// is fine for most calls, but a few endpoints do synchronous heavy work
+// (PDF batch render, ZIP generation) and must be allowed more time.
+$customTimeout = null;
+
+switch ($action) {
+    case 'public.contact':
+        // Visitor contact form on /contact. POST-only â€” relays the message
+        // to the marketplace's contact_email via Tixello's marketplace
+        // transport.
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/contact';
+        break;
+
+    case 'search':
+        $query = $_GET['q'] ?? '';
+        $limit = min((int)($_GET['limit'] ?? 10), 50);
+        if (strlen($query) < 2) {
+            echo json_encode(['events' => [], 'artists' => [], 'locations' => []]);
+            exit;
+        }
+        $endpoint = '/search?' . http_build_query(['q' => $query, 'limit' => $limit]);
+        break;
+
+    case 'events':
+        $params = [];
+        if (isset($_GET['category'])) $params['category'] = $_GET['category'];
+        if (isset($_GET['city'])) $params['city'] = $_GET['city'];
+        if (isset($_GET['region'])) $params['region'] = $_GET['region'];
+        if (isset($_GET['genre'])) $params['genre'] = $_GET['genre'];
+        if (isset($_GET['artist'])) $params['artist'] = $_GET['artist'];
+        if (isset($_GET['venue'])) $params['venue'] = $_GET['venue'];
+        if (isset($_GET['search'])) $params['search'] = $_GET['search'];
+        if (isset($_GET['date'])) $params['date_filter'] = $_GET['date'];
+        if (isset($_GET['date_filter'])) $params['date_filter'] = $_GET['date_filter'];
+        if (isset($_GET['min_price'])) $params['min_price'] = (int)$_GET['min_price'];
+        if (isset($_GET['max_price'])) $params['max_price'] = (int)$_GET['max_price'];
+        if (isset($_GET['featured'])) $params['featured'] = $_GET['featured'];
+        if (isset($_GET['featured_only'])) $params['featured_only'] = $_GET['featured_only'];
+        if (isset($_GET['promoted'])) $params['promoted'] = $_GET['promoted'];
+        if (isset($_GET['recommended'])) $params['recommended'] = $_GET['recommended'];
+        if (isset($_GET['page'])) $params['page'] = (int)$_GET['page'];
+        if (isset($_GET['per_page'])) $params['per_page'] = min((int)$_GET['per_page'], 50);
+        if (isset($_GET['limit'])) $params['limit'] = min((int)$_GET['limit'], 50);
+        if (isset($_GET['sort'])) $params['sort'] = $_GET['sort'];
+        if (isset($_GET['time_scope'])) $params['time_scope'] = $_GET['time_scope'];
+        $endpoint = '/events?' . http_build_query($params);
+        break;
+
+    case 'event':
+        $slug = $_GET['slug'] ?? '';
+        if (!$slug) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing event slug']);
+            exit;
+        }
+        $params = [];
+        if (isset($_GET['preview'])) $params['preview'] = $_GET['preview'];
+        $endpoint = '/events/' . urlencode($slug) . ($params ? '?' . http_build_query($params) : '');
+        break;
+
+    case 'tour.show':
+        $slug = $_GET['slug'] ?? '';
+        if (!$slug) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing tour slug']);
+            exit;
+        }
+        $params = [];
+        if (isset($_GET['locale'])) $params['locale'] = $_GET['locale'];
+        $endpoint = '/tours/' . urlencode($slug) . ($params ? '?' . http_build_query($params) : '');
+        break;
+
+    case 'event.dateAvailability':
+        $slug = $_GET['slug'] ?? '';
+        if (!$slug) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing event slug']);
+            exit;
+        }
+        $params = [];
+        if (isset($_GET['date'])) $params['date'] = $_GET['date'];
+        if (isset($_GET['month'])) $params['month'] = $_GET['month'];
+        // Forward preview flag pentru evenimente draft (is_published=false)
+        if (isset($_GET['preview'])) $params['preview'] = $_GET['preview'];
+        $endpoint = '/marketplace-events/' . urlencode($slug) . '/date-availability?' . http_build_query($params);
+        break;
+
+    case 'event.slotAvailability':
+        $slug = $_GET['slug'] ?? '';
+        if (!$slug) { http_response_code(400); echo json_encode(['error' => 'Missing event slug']); exit; }
+        $params = [];
+        foreach (['ticket_type_id', 'date'] as $k) if (isset($_GET[$k])) $params[$k] = $_GET[$k];
+        $endpoint = '/marketplace-events/' . urlencode($slug) . '/slot-availability?' . http_build_query($params);
+        break;
+
+    case 'event.resourceAvailability':
+        $slug = $_GET['slug'] ?? '';
+        if (!$slug) { http_response_code(400); echo json_encode(['error' => 'Missing event slug']); exit; }
+        $params = [];
+        foreach (['ticket_type_id', 'date', 'start_time', 'duration_minutes'] as $k) if (isset($_GET[$k])) $params[$k] = $_GET[$k];
+        $endpoint = '/marketplace-events/' . urlencode($slug) . '/resource-availability?' . http_build_query($params);
+        break;
+
+    case 'tracking.organizer-scripts':
+        $organizerId = $_GET['organizer_id'] ?? '';
+        if (!$organizerId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing organizer_id']);
+            exit;
+        }
+        $endpoint = '/tracking/organizer/' . urlencode($organizerId) . '/scripts';
+        break;
+
+    case 'event.track-view':
+        $slug = $_GET['slug'] ?? '';
+        if (!$slug) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing event slug']);
+            exit;
+        }
+        $method = 'POST';
+        $body = file_get_contents('php://input'); // Forward UTM parameters and tracking data
+        $endpoint = '/events/' . urlencode($slug) . '/track-view';
+        break;
+
+    case 'event.toggle-interest':
+        $slug = $_GET['slug'] ?? '';
+        if (!$slug) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing event slug']);
+            exit;
+        }
+        $method = 'POST';
+        $endpoint = '/events/' . urlencode($slug) . '/toggle-interest';
+        $requiresAuth = true; // Forward auth token if available
+        break;
+
+    case 'event.check-interest':
+        $slug = $_GET['slug'] ?? '';
+        if (!$slug) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing event slug']);
+            exit;
+        }
+        $endpoint = '/events/' . urlencode($slug) . '/check-interest';
+        $requiresAuth = true; // Forward auth token if available
+        break;
+
+    case 'event.verify-password':
+        $slug = $_GET['slug'] ?? '';
+        if (!$slug) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing event slug']);
+            exit;
+        }
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/events/' . urlencode($slug) . '/verify-password';
+        $cacheTTL = 0; // Never cache password verification
+        break;
+
+    case 'events.featured':
+        $params = [];
+        if (isset($_GET['type'])) $params['type'] = $_GET['type'];
+        if (isset($_GET['category'])) $params['category'] = $_GET['category'];
+        if (isset($_GET['require_image'])) $params['require_image'] = $_GET['require_image'];
+        if (isset($_GET['limit'])) $params['limit'] = min((int)$_GET['limit'], 50);
+        $endpoint = '/events/featured?' . http_build_query($params);
+        break;
+
+    case 'events.cities':
+        $params = [];
+        if (isset($_GET['category'])) $params['category'] = $_GET['category'];
+        if (isset($_GET['genre'])) $params['genre'] = $_GET['genre'];
+        if (isset($_GET['city'])) $params['city'] = $_GET['city'];
+        $endpoint = '/events/cities' . ($params ? '?' . http_build_query($params) : '');
+        break;
+
+    case 'venues':
+        $params = [];
+        if (isset($_GET['city'])) $params['city'] = $_GET['city'];
+        if (isset($_GET['category'])) $params['category'] = $_GET['category'];
+        if (isset($_GET['search'])) $params['search'] = $_GET['search'];
+        if (isset($_GET['sort'])) $params['sort'] = $_GET['sort'];
+        if (isset($_GET['page'])) $params['page'] = (int)$_GET['page'];
+        if (isset($_GET['per_page'])) $params['per_page'] = min((int)$_GET['per_page'], 50);
+        $endpoint = '/venues' . ($params ? '?' . http_build_query($params) : '');
+        break;
+
+    case 'venue':
+        $slug = $_GET['slug'] ?? '';
+        if (!$slug) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing venue slug']);
+            exit;
+        }
+        $endpoint = '/venues/' . urlencode($slug);
+        break;
+
+    // ==================== ARTISTS ====================
+
+    case 'artists':
+        $params = [];
+        if (isset($_GET['genre'])) $params['genre'] = $_GET['genre'];
+        if (isset($_GET['type'])) $params['type'] = $_GET['type'];
+        if (isset($_GET['city'])) $params['city'] = $_GET['city'];
+        if (isset($_GET['letter'])) $params['letter'] = $_GET['letter'];
+        if (isset($_GET['search'])) $params['search'] = $_GET['search'];
+        if (isset($_GET['featured'])) $params['featured'] = $_GET['featured'];
+        if (isset($_GET['with_events'])) $params['with_events'] = $_GET['with_events'];
+        if (isset($_GET['sort'])) $params['sort'] = $_GET['sort'];
+        if (isset($_GET['order'])) $params['order'] = $_GET['order'];
+        if (isset($_GET['page'])) $params['page'] = (int)$_GET['page'];
+        if (isset($_GET['per_page'])) $params['per_page'] = min((int)$_GET['per_page'], 50);
+        // Support 'limit' as alias for 'per_page'
+        if (isset($_GET['limit']) && !isset($_GET['per_page'])) $params['per_page'] = min((int)$_GET['limit'], 50);
+        $endpoint = '/artists' . ($params ? '?' . http_build_query($params) : '');
+        break;
+
+    case 'artists.featured':
+        $params = [];
+        if (isset($_GET['limit'])) $params['limit'] = min((int)$_GET['limit'], 20);
+        $endpoint = '/artists/featured' . ($params ? '?' . http_build_query($params) : '');
+        break;
+
+    case 'artists.trending':
+        $params = [];
+        if (isset($_GET['limit'])) $params['limit'] = min((int)$_GET['limit'], 20);
+        $endpoint = '/artists/trending' . ($params ? '?' . http_build_query($params) : '');
+        break;
+
+    case 'artists.genre-counts':
+        $endpoint = '/artists/genre-counts';
+        break;
+
+    case 'artists.alphabet':
+        $endpoint = '/artists/alphabet';
+        break;
+
+    case 'artist':
+        $slug = $_GET['slug'] ?? '';
+        if (!$slug) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing artist slug']);
+            exit;
+        }
+        $params = [];
+        if (isset($_GET['tour_slug'])) $params['tour_slug'] = $_GET['tour_slug'];
+        $endpoint = '/artists/' . urlencode($slug) . ($params ? '?' . http_build_query($params) : '');
+        break;
+
+    case 'artist.events':
+        $slug = $_GET['slug'] ?? '';
+        if (!$slug) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing artist slug']);
+            exit;
+        }
+        $params = [];
+        if (isset($_GET['filter'])) $params['filter'] = $_GET['filter']; // 'upcoming' or 'past'
+        if (isset($_GET['page'])) $params['page'] = (int)$_GET['page'];
+        if (isset($_GET['per_page'])) $params['per_page'] = min((int)$_GET['per_page'], 50);
+        $endpoint = '/artists/' . urlencode($slug) . '/events' . ($params ? '?' . http_build_query($params) : '');
+        break;
+    case "artist.toggle-favorite":
+        $slug = $_GET["slug"] ?? "";
+        if (!$slug) {
+            http_response_code(400);
+            echo json_encode(["error" => "Missing artist slug"]);
+            exit;
+        }
+        $method = "POST";
+        $endpoint = "/artists/" . urlencode($slug) . "/toggle-favorite";
+        $requiresAuth = true;
+        break;
+
+    case "artist.check-favorite":
+        $slug = $_GET["slug"] ?? "";
+        if (!$slug) {
+            http_response_code(400);
+            echo json_encode(["error" => "Missing artist slug"]);
+            exit;
+        }
+        $endpoint = "/artists/" . urlencode($slug) . "/check-favorite";
+        $requiresAuth = true;
+        break;
+
+    case "venue.toggle-favorite":
+        $slug = $_GET["slug"] ?? "";
+        if (!$slug) {
+            http_response_code(400);
+            echo json_encode(["error" => "Missing venue slug"]);
+            exit;
+        }
+        $method = "POST";
+        $endpoint = "/venues/" . urlencode($slug) . "/toggle-favorite";
+        $requiresAuth = true;
+        break;
+
+    case "venue.check-favorite":
+        $slug = $_GET["slug"] ?? "";
+        if (!$slug) {
+            http_response_code(400);
+            echo json_encode(["error" => "Missing venue slug"]);
+            exit;
+        }
+        $endpoint = "/venues/" . urlencode($slug) . "/check-favorite";
+        $requiresAuth = true;
+        break;
+
+    case "customer.favorites.artists":
+        $endpoint = "/customer/favorites/artists";
+        $requiresAuth = true;
+        break;
+
+    case "customer.favorites.venues":
+        $endpoint = "/customer/favorites/venues";
+        $requiresAuth = true;
+        break;
+
+    case "customer.favorites.summary":
+        $endpoint = "/customer/favorites/summary";
+        $requiresAuth = true;
+        break;
+
+    case 'categories':
+        // Use marketplace-events/categories which has the correct implementation
+        $endpoint = '/marketplace-events/categories';
+        break;
+
+    case 'event-categories':
+        $params = [];
+        if (isset($_GET['featured'])) $params['featured'] = $_GET['featured'];
+        $endpoint = '/event-categories' . ($params ? '?' . http_build_query($params) : '');
+        break;
+
+    case 'event-types':
+        $endpoint = '/event-types';
+        break;
+
+    case 'event-genres':
+        $params = [];
+        if (isset($_GET['category'])) $params['category'] = $_GET['category'];
+        if (isset($_GET['event_type_ids'])) $params['event_type_ids'] = $_GET['event_type_ids'];
+        $endpoint = '/event-genres' . ($params ? '?' . http_build_query($params) : '');
+        break;
+
+    case 'subgenres':
+        $params = [];
+        if (isset($_GET['genre'])) $params['parent'] = $_GET['genre'];
+        $endpoint = '/event-genres' . ($params ? '?' . http_build_query($params) : '');
+        break;
+
+    case 'event-category':
+        $slug = $_GET['slug'] ?? '';
+        if (!$slug) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing category slug']);
+            exit;
+        }
+        $endpoint = '/event-categories/' . urlencode($slug);
+        break;
+
+    case 'cities':
+        $params = [];
+        if (isset($_GET['genre'])) $params['genre'] = $_GET['genre'];
+        if (isset($_GET['category'])) $params['category'] = $_GET['category'];
+        if (isset($_GET['per_page'])) $params['per_page'] = (int)$_GET['per_page'];
+        if (isset($_GET['search'])) $params['search'] = $_GET['search'];
+        $endpoint = '/marketplace-events/cities' . ($params ? '?' . http_build_query($params) : '');
+        break;
+
+    // ==================== ORGANIZERS (PUBLIC) ====================
+
+    case 'organizers':
+        $params = [];
+        if (isset($_GET['search'])) $params['search'] = $_GET['search'];
+        if (isset($_GET['verified'])) $params['verified'] = $_GET['verified'];
+        if (isset($_GET['with_events'])) $params['with_events'] = $_GET['with_events'];
+        if (isset($_GET['sort'])) $params['sort'] = $_GET['sort'];
+        if (isset($_GET['page'])) $params['page'] = (int)$_GET['page'];
+        if (isset($_GET['per_page'])) $params['per_page'] = min((int)$_GET['per_page'], 50);
+        $endpoint = '/marketplace-events/organizers' . ($params ? '?' . http_build_query($params) : '');
+        break;
+
+    case 'organizer':
+        $slug = $_GET['slug'] ?? '';
+        if (!$slug) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing organizer slug']);
+            exit;
+        }
+        $endpoint = '/marketplace-events/organizers/' . urlencode($slug);
+        break;
+
+    case 'organizer.contact':
+        $slug = $_GET['slug'] ?? '';
+        if (!$slug) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing organizer slug']);
+            exit;
+        }
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/marketplace-events/organizers/' . urlencode($slug) . '/contact';
+        break;
+
+    // ==================== LOCATIONS ====================
+
+    case 'locations.stats':
+        $endpoint = '/locations/stats';
+        break;
+
+    case 'locations.cities.featured':
+        $endpoint = '/locations/cities/featured';
+        break;
+
+    case 'locations.cities.alphabet':
+        $endpoint = '/locations/cities/alphabet';
+        break;
+
+    case 'locations.cities':
+        $params = [];
+        if (isset($_GET['letter'])) $params['letter'] = $_GET['letter'];
+        if (isset($_GET['search'])) $params['search'] = $_GET['search'];
+        if (isset($_GET['sort'])) $params['sort'] = $_GET['sort'];
+        if (isset($_GET['page'])) $params['page'] = (int)$_GET['page'];
+        if (isset($_GET['per_page'])) $params['per_page'] = min((int)$_GET['per_page'], 50);
+        $endpoint = '/locations/cities' . ($params ? '?' . http_build_query($params) : '');
+        break;
+
+    case 'locations.regions':
+        $endpoint = '/locations/regions';
+        break;
+
+    case 'locations.region':
+        $identifier = $_GET['id'] ?? $_GET['slug'] ?? '';
+        if (!$identifier) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing region identifier']);
+            exit;
+        }
+        $endpoint = '/locations/regions/' . urlencode($identifier);
+        break;
+
+    case 'locations.city':
+        $identifier = $_GET['id'] ?? $_GET['slug'] ?? '';
+        if (!$identifier) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing city identifier']);
+            exit;
+        }
+        $endpoint = '/locations/cities/' . urlencode($identifier);
+        break;
+
+    // ==================== VENUES ====================
+
+    case 'venues.featured':
+        $endpoint = '/venues/featured';
+        break;
+
+    case 'venue-categories':
+        $endpoint = '/venue-categories';
+        break;
+
+    case 'venue-category':
+        $slug = $_GET['slug'] ?? '';
+        if (!$slug) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing venue category slug']);
+            exit;
+        }
+        $endpoint = '/venue-categories/' . urlencode($slug);
+        break;
+
+    case 'cart':
+        $method = $_SERVER['REQUEST_METHOD'];
+        if ($method === 'DELETE') {
+            $endpoint = '/customer/cart';
+        } else {
+            $endpoint = '/customer/cart';
+        }
+        break;
+
+    case 'cart.items.add':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/customer/cart/items';
+        break;
+
+    case 'cart.items.add-with-seats':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/customer/cart/items/with-seats';
+        break;
+
+    case 'cart.items.manage':
+        $method = $_SERVER['REQUEST_METHOD'];
+        $body = file_get_contents('php://input');
+        $itemKey = $_GET['item_key'] ?? '';
+        $endpoint = '/customer/cart/items/' . urlencode($itemKey);
+        break;
+
+    case 'cart.seats.release':
+        $method = 'DELETE';
+        $body = file_get_contents('php://input');
+        $endpoint = '/customer/cart/seats';
+        break;
+
+    case 'cart.promo-code':
+        $method = $_SERVER['REQUEST_METHOD'];
+        $body = file_get_contents('php://input');
+        $endpoint = '/customer/cart/promo-code';
+        break;
+
+    case 'promo-codes.validate':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/promo-codes/validate';
+        break;
+
+    case 'checkout.features':
+        $endpoint = '/checkout/features';
+        break;
+
+    case 'checkout':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/customer/checkout';
+        break;
+
+    case 'orders.pay':
+        $orderId = $_GET['id'] ?? '';
+        if (!$orderId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing order ID']);
+            exit;
+        }
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/orders/' . urlencode($orderId) . '/pay';
+        break;
+
+    case 'orders.status':
+        $orderId = $_GET['id'] ?? '';
+        if (!$orderId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing order ID']);
+            exit;
+        }
+        $method = 'GET';
+        $endpoint = '/orders/' . urlencode($orderId) . '/payment-status';
+        break;
+
+    // ==================== NEWSLETTER ====================
+
+    case 'newsletter.subscribe':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/customer/newsletter/subscribe';
+        break;
+
+    // ==================== CUSTOMER AUTH ====================
+
+    case 'customer.register':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/customer/register';
+        break;
+
+    case 'customer.login':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/customer/login';
+        break;
+
+    case 'customer.logout':
+        $method = 'POST';
+        $endpoint = '/customer/logout';
+        $requiresAuth = true;
+        break;
+
+    case 'customer.me':
+        $method = 'GET';
+        $endpoint = '/customer/me';
+        $requiresAuth = true;
+        break;
+
+    case 'customer.profile':
+        $method = 'PUT';
+        $body = file_get_contents('php://input');
+        $endpoint = '/customer/profile';
+        $requiresAuth = true;
+        break;
+
+    case 'customer.password':
+        $method = 'PUT';
+        $body = file_get_contents('php://input');
+        $endpoint = '/customer/password';
+        $requiresAuth = true;
+        break;
+
+    case 'customer.account':
+        $method = 'DELETE';
+        $body = file_get_contents('php://input');
+        $endpoint = '/customer/account';
+        $requiresAuth = true;
+        break;
+
+    case 'customer.settings':
+        $method = 'PUT';
+        $body = file_get_contents('php://input');
+        $endpoint = '/customer/settings';
+        $requiresAuth = true;
+        break;
+
+    case 'customer.avatar':
+        $method = 'POST';
+        $endpoint = '/customer/avatar';
+        $requiresAuth = true;
+        $isFileUpload = true;
+        break;
+
+    case 'customer.profile-data':
+        $method = 'GET';
+        $endpoint = '/customer/profile-data';
+        $requiresAuth = true;
+        break;
+
+    case 'order-confirmation':
+        $method = 'GET';
+        $orderId = $_GET['id'] ?? '';
+        if (!$orderId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing order ID']);
+            exit;
+        }
+        $endpoint = '/orders/' . urlencode($orderId);
+        // No auth required â€” uses marketplace API key only
+        break;
+
+    case 'order.download-tickets-pdf':
+        $method = 'GET';
+        $orderRef = $_GET['order'] ?? '';
+        if (!$orderRef) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing order reference']);
+            exit;
+        }
+        $endpoint = '/tickets/download-pdf?order=' . urlencode($orderRef);
+        $rawResponse = true;
+        // No auth required â€” uses marketplace API key + order reference
+        break;
+
+    case 'ticket.download-pdf':
+        $method = 'GET';
+        $ticketId = $_GET['id'] ?? '';
+        if (!$ticketId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing ticket ID']);
+            exit;
+        }
+        $endpoint = '/tickets/' . urlencode($ticketId) . '/download';
+        $rawResponse = true;
+        break;
+
+    case 'customer.orders':
+        $method = 'GET';
+        $params = [];
+        if (isset($_GET['status'])) $params['status'] = $_GET['status'];
+        if (isset($_GET['upcoming'])) $params['upcoming'] = $_GET['upcoming'];
+        if (isset($_GET['page'])) $params['page'] = (int)$_GET['page'];
+        if (isset($_GET['per_page'])) $params['per_page'] = min((int)$_GET['per_page'], 50);
+        $endpoint = '/customer/orders' . ($params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    case 'customer.order':
+        $method = 'GET';
+        $orderId = $_GET['id'] ?? '';
+        if (!$orderId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing order ID']);
+            exit;
+        }
+        $endpoint = '/customer/orders/' . urlencode($orderId);
+        $requiresAuth = true;
+        break;
+
+    case 'customer.tickets':
+        $method = 'GET';
+        $endpoint = '/customer/tickets';
+        $requiresAuth = true;
+        break;
+
+    case 'customer.stats':
+        $method = 'GET';
+        $endpoint = '/customer/stats';
+        $requiresAuth = true;
+        break;
+
+    case 'customer.smart-suggestions':
+        $method = 'GET';
+        $endpoint = '/customer/smart-suggestions';
+        $requiresAuth = true;
+        break;
+
+    case 'customer.forgot-password':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/customer/forgot-password';
+        break;
+
+    case 'customer.reset-password':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/customer/reset-password';
+        break;
+
+    case 'customer.verify-email':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/customer/verify-email';
+        break;
+
+    case 'customer.resend-verification':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/customer/resend-verification';
+        break;
+
+    // ==================== CUSTOMER STATS & DASHBOARD ====================
+
+    case 'customer.stats.dashboard':
+        $method = 'GET';
+        $endpoint = '/customer/stats';
+        $requiresAuth = true;
+        break;
+
+    case 'customer.upcoming-events':
+        $method = 'GET';
+        $params = [];
+        if (isset($_GET['limit'])) $params['limit'] = min((int)$_GET['limit'], 20);
+        $endpoint = '/customer/stats/upcoming-events' . ($params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    // ==================== CUSTOMER TICKETS ====================
+
+    case 'customer.tickets.all':
+        $method = 'GET';
+        $params = [];
+        if (isset($_GET['filter'])) $params['filter'] = $_GET['filter']; // upcoming, past, all
+        if (isset($_GET['page'])) $params['page'] = (int)$_GET['page'];
+        if (isset($_GET['per_page'])) $params['per_page'] = min((int)$_GET['per_page'], 50);
+        $endpoint = '/customer/tickets/all' . ($params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    case 'customer.ticket':
+        $ticketId = $_GET['id'] ?? '';
+        if (!$ticketId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing ticket ID']);
+            exit;
+        }
+        $method = 'GET';
+        $endpoint = '/customer/tickets/' . urlencode($ticketId);
+        $requiresAuth = true;
+        break;
+
+    // ==================== CUSTOMER REVIEWS ====================
+
+    case 'customer.reviews':
+        $method = 'GET';
+        $params = [];
+        if (isset($_GET['page'])) $params['page'] = (int)$_GET['page'];
+        if (isset($_GET['per_page'])) $params['per_page'] = min((int)$_GET['per_page'], 50);
+        $endpoint = '/customer/reviews' . ($params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    case 'customer.reviews.to-write':
+        $method = 'GET';
+        $params = [];
+        if (isset($_GET['page'])) $params['page'] = (int)$_GET['page'];
+        if (isset($_GET['per_page'])) $params['per_page'] = min((int)$_GET['per_page'], 50);
+        $endpoint = '/customer/reviews/events-to-review' . ($params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    case 'customer.review.store':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/customer/reviews';
+        $requiresAuth = true;
+        break;
+
+    case 'customer.review.show':
+        $reviewId = $_GET['id'] ?? '';
+        if (!$reviewId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing review ID']);
+            exit;
+        }
+        $method = 'GET';
+        $endpoint = '/customer/reviews/' . urlencode($reviewId);
+        $requiresAuth = true;
+        break;
+
+    case 'customer.review.update':
+        $reviewId = $_GET['id'] ?? '';
+        if (!$reviewId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing review ID']);
+            exit;
+        }
+        $method = 'PUT';
+        $body = file_get_contents('php://input');
+        $endpoint = '/customer/reviews/' . urlencode($reviewId);
+        $requiresAuth = true;
+        break;
+
+    case 'customer.review.delete':
+        $reviewId = $_GET['id'] ?? '';
+        if (!$reviewId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing review ID']);
+            exit;
+        }
+        $method = 'DELETE';
+        $endpoint = '/customer/reviews/' . urlencode($reviewId);
+        $requiresAuth = true;
+        break;
+
+    // ==================== CUSTOMER WATCHLIST ====================
+
+    case 'customer.watchlist':
+        $method = 'GET';
+        $params = [];
+        if (isset($_GET['page'])) $params['page'] = (int)$_GET['page'];
+        if (isset($_GET['per_page'])) $params['per_page'] = min((int)$_GET['per_page'], 50);
+        $endpoint = '/customer/watchlist' . ($params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    case 'customer.watchlist.add':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/customer/watchlist';
+        $requiresAuth = true;
+        break;
+
+    case 'customer.watchlist.update':
+        $watchlistId = $_GET['id'] ?? '';
+        if (!$watchlistId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing watchlist ID']);
+            exit;
+        }
+        $method = 'PUT';
+        $body = file_get_contents('php://input');
+        $endpoint = '/customer/watchlist/' . urlencode($watchlistId);
+        $requiresAuth = true;
+        break;
+
+    case 'customer.watchlist.remove':
+        $watchlistId = $_GET['id'] ?? '';
+        if (!$watchlistId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing watchlist ID']);
+            exit;
+        }
+        $method = 'DELETE';
+        $endpoint = '/customer/watchlist/' . urlencode($watchlistId);
+        $requiresAuth = true;
+        break;
+
+    case 'customer.watchlist.check':
+        $method = 'GET';
+        $params = [];
+        if (isset($_GET['event_id'])) $params['event_id'] = $_GET['event_id'];
+        $endpoint = '/customer/watchlist/check' . ($params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    // ==================== CUSTOMER REWARDS & GAMIFICATION ====================
+
+    case 'customer.rewards':
+        $method = 'GET';
+        $endpoint = '/customer/rewards';
+        $requiresAuth = true;
+        break;
+
+    case 'customer.rewards.history':
+        $method = 'GET';
+        $params = [];
+        if (isset($_GET['type'])) $params['type'] = $_GET['type']; // earned, spent, all
+        if (isset($_GET['page'])) $params['page'] = (int)$_GET['page'];
+        if (isset($_GET['per_page'])) $params['per_page'] = min((int)$_GET['per_page'], 50);
+        $endpoint = '/customer/rewards/history' . ($params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    case 'customer.badges':
+        $method = 'GET';
+        $endpoint = '/customer/rewards/badges';
+        $requiresAuth = true;
+        break;
+
+    case 'customer.rewards.available':
+        $method = 'GET';
+        $params = [];
+        if (isset($_GET['page'])) $params['page'] = (int)$_GET['page'];
+        if (isset($_GET['per_page'])) $params['per_page'] = min((int)$_GET['per_page'], 50);
+        $endpoint = '/customer/rewards/available' . ($params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    case 'customer.rewards.redeem':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/customer/rewards/redeem';
+        $requiresAuth = true;
+        break;
+
+    case 'customer.rewards.redemptions':
+        $method = 'GET';
+        $params = [];
+        if (isset($_GET['status'])) $params['status'] = $_GET['status'];
+        if (isset($_GET['page'])) $params['page'] = (int)$_GET['page'];
+        if (isset($_GET['per_page'])) $params['per_page'] = min((int)$_GET['per_page'], 50);
+        $endpoint = '/customer/rewards/redemptions' . ($params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    // ==================== CUSTOMER NOTIFICATIONS ====================
+
+    case 'customer.notifications':
+        $method = 'GET';
+        $params = [];
+        if (isset($_GET['unread_only'])) $params['unread_only'] = $_GET['unread_only'];
+        if (isset($_GET['type'])) $params['type'] = $_GET['type'];
+        if (isset($_GET['page'])) $params['page'] = (int)$_GET['page'];
+        if (isset($_GET['per_page'])) $params['per_page'] = min((int)$_GET['per_page'], 50);
+        $endpoint = '/customer/notifications' . ($params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    case 'customer.notifications.unread-count':
+        $method = 'GET';
+        $endpoint = '/customer/notifications/unread-count';
+        $requiresAuth = true;
+        break;
+
+    case 'customer.notifications.read':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/customer/notifications/mark-read';
+        $requiresAuth = true;
+        break;
+
+    case 'customer.notification.delete':
+        $notificationId = $_GET['id'] ?? '';
+        if (!$notificationId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing notification ID']);
+            exit;
+        }
+        $method = 'DELETE';
+        $endpoint = '/customer/notifications/' . urlencode($notificationId);
+        $requiresAuth = true;
+        break;
+
+    case 'customer.notifications.settings':
+        $method = 'GET';
+        $endpoint = '/customer/notifications/settings';
+        $requiresAuth = true;
+        break;
+
+    case 'customer.notifications.settings.update':
+        $method = 'PUT';
+        $body = file_get_contents('php://input');
+        $endpoint = '/customer/notifications/settings';
+        $requiresAuth = true;
+        break;
+
+    // ==================== CUSTOMER REFERRALS ====================
+
+    case 'customer.referrals':
+        $method = 'GET';
+        $endpoint = '/customer/referrals';
+        $requiresAuth = true;
+        break;
+
+    case 'customer.referrals.regenerate':
+        $method = 'POST';
+        $endpoint = '/customer/referrals/regenerate-code';
+        $requiresAuth = true;
+        break;
+
+    case 'customer.referrals.track-click':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/customer/referrals/track-click';
+        break;
+
+    case 'customer.referrals.leaderboard':
+        $method = 'GET';
+        $params = [];
+        if (isset($_GET['period'])) $params['period'] = $_GET['period']; // week, month, all
+        if (isset($_GET['limit'])) $params['limit'] = min((int)$_GET['limit'], 100);
+        $endpoint = '/customer/referrals/leaderboard' . ($params ? '?' . http_build_query($params) : '');
+        break;
+
+    case 'customer.referrals.claim-rewards':
+        $method = 'POST';
+        $endpoint = '/customer/referrals/claim-rewards';
+        $requiresAuth = true;
+        break;
+
+    case 'customer.referrals.validate':
+        $method = 'GET';
+        $params = [];
+        if (isset($_GET['code'])) $params['code'] = $_GET['code'];
+        $endpoint = '/customer/referrals/validate' . ($params ? '?' . http_build_query($params) : '');
+        break;
+
+    // ==================== CUSTOMER REFUNDS ====================
+
+    case 'customer.refunds.reasons':
+        $method = 'GET';
+        $endpoint = '/customer/refunds/reasons';
+        $requiresAuth = true;
+        break;
+
+    case 'customer.refunds.check-eligibility':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/customer/refunds/check-eligibility';
+        $requiresAuth = true;
+        break;
+
+    case 'customer.transfers.direct':
+        // Instant customer-to-customer ticket transfer used by the
+        // /cont/bilete UI on both bilete.online and tics.
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/customer/transfers/direct';
+        $requiresAuth = true;
+        break;
+
+    case 'customer.refunds':
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $method = 'POST';
+            $body = file_get_contents('php://input');
+            $endpoint = '/customer/refunds';
+        } else {
+            $method = 'GET';
+            $params = [];
+            if (isset($_GET['page'])) $params['page'] = (int)$_GET['page'];
+            if (isset($_GET['per_page'])) $params['per_page'] = min((int)$_GET['per_page'], 50);
+            $endpoint = '/customer/refunds' . ($params ? '?' . http_build_query($params) : '');
+        }
+        $requiresAuth = true;
+        break;
+
+    case 'customer.refund.show':
+        $refundId = $_GET['id'] ?? '';
+        if (!$refundId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing refund ID']);
+            exit;
+        }
+        $method = 'GET';
+        $endpoint = '/customer/refunds/' . urlencode($refundId);
+        $requiresAuth = true;
+        break;
+
+    case 'customer.refund.cancel':
+        $refundId = $_GET['id'] ?? '';
+        if (!$refundId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing refund ID']);
+            exit;
+        }
+        $method = 'POST';
+        $endpoint = '/customer/refunds/' . urlencode($refundId) . '/cancel';
+        $requiresAuth = true;
+        break;
+
+    // ==================== ORGANIZER AUTH ====================
+
+    case 'organizer.register':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/organizer/register';
+        break;
+
+    case 'organizer.login':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/organizer/login';
+        break;
+
+    case 'organizer.logout':
+        $method = 'POST';
+        $endpoint = '/organizer/logout';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.me':
+        $method = 'GET';
+        $endpoint = '/organizer/me';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.profile':
+        $method = 'PUT';
+        $body = file_get_contents('php://input');
+        $endpoint = '/organizer/profile';
+        $requiresAuth = true;
+        break;
+
+    // ===== LEISURE VENUE (organizer-side) =====
+    case 'organizer.event.leisure.config':
+        $eventId = (int) ($_GET['event'] ?? 0);
+        if (!$eventId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing event id']);
+            exit;
+        }
+        $endpoint = '/organizer/events/' . $eventId . '/leisure/config';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.event.leisure.reports.by-issuer':
+        $eventId = (int) ($_GET['event'] ?? 0);
+        if (!$eventId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing event id']);
+            exit;
+        }
+        $params = [];
+        if (isset($_GET['from'])) $params['from'] = $_GET['from'];
+        if (isset($_GET['to'])) $params['to'] = $_GET['to'];
+        $endpoint = '/organizer/events/' . $eventId . '/leisure/reports/by-issuer'
+            . ($params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.event.leisure.venue-config':
+        $eventId = (int) ($_GET['event'] ?? 0);
+        if (!$eventId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing event id']);
+            exit;
+        }
+        $method = 'PUT';
+        $body = file_get_contents('php://input');
+        $endpoint = '/organizer/events/' . $eventId . '/leisure/venue-config';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.event.leisure.participants':
+        $eventId = (int) ($_GET['event'] ?? 0);
+        if (!$eventId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing event id']);
+            exit;
+        }
+        $params = [];
+        if (isset($_GET['from'])) $params['from'] = $_GET['from'];
+        if (isset($_GET['to'])) $params['to'] = $_GET['to'];
+        if (isset($_GET['search'])) $params['search'] = $_GET['search'];
+        if (isset($_GET['page'])) $params['page'] = (int) $_GET['page'];
+        if (isset($_GET['per_page'])) $params['per_page'] = (int) $_GET['per_page'];
+        $endpoint = '/organizer/events/' . $eventId . '/leisure/participants'
+            . ($params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.event.leisure.sales-timeline':
+        $eventId = (int) ($_GET['event'] ?? 0);
+        if (!$eventId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing event id']);
+            exit;
+        }
+        $params = [];
+        if (isset($_GET['from'])) $params['from'] = $_GET['from'];
+        if (isset($_GET['to'])) $params['to'] = $_GET['to'];
+        if (isset($_GET['group_by'])) $params['group_by'] = $_GET['group_by'];
+        $endpoint = '/organizer/events/' . $eventId . '/leisure/sales-timeline'
+            . ($params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.event.leisure.dashboard.live':
+        $eventId = (int) ($_GET['event'] ?? 0);
+        if (!$eventId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing event id']);
+            exit;
+        }
+        $endpoint = '/organizer/events/' . $eventId . '/leisure/dashboard/live';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.event.leisure.raport':
+        $eventId = (int) ($_GET['event'] ?? 0);
+        if (!$eventId) { http_response_code(400); echo json_encode(['error' => 'Missing event id']); exit; }
+        $params = [];
+        if (isset($_GET['from'])) $params['from'] = $_GET['from'];
+        if (isset($_GET['to'])) $params['to'] = $_GET['to'];
+        $endpoint = '/organizer/events/' . $eventId . '/leisure/raport'
+            . ($params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.event.leisure.pos-sale':
+        $eventId = (int) ($_GET['event'] ?? 0);
+        if (!$eventId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing event id']);
+            exit;
+        }
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/organizer/events/' . $eventId . '/leisure/pos-sale';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.event.leisure.shifts.collection':
+        $eventId = (int) ($_GET['event'] ?? 0);
+        if (!$eventId) { http_response_code(400); echo json_encode(['error' => 'Missing event id']); exit; }
+        $method = $_SERVER['REQUEST_METHOD'];
+        $body = in_array($method, ['POST','PUT','PATCH']) ? file_get_contents('php://input') : null;
+        $params = [];
+        if (isset($_GET['week'])) $params['week'] = $_GET['week'];
+        $endpoint = '/organizer/events/' . $eventId . '/leisure/shifts'
+            . ($method === 'GET' && $params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.event.leisure.shifts.item':
+        $eventId = (int) ($_GET['event'] ?? 0);
+        $shiftId = (int) ($_GET['shift'] ?? 0);
+        if (!$eventId || !$shiftId) { http_response_code(400); echo json_encode(['error' => 'Missing event/shift id']); exit; }
+        $method = $_SERVER['REQUEST_METHOD'];
+        $body = in_array($method, ['POST','PUT','PATCH']) ? file_get_contents('php://input') : null;
+        $endpoint = '/organizer/events/' . $eventId . '/leisure/shifts/' . $shiftId;
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.event.leisure.products.collection':
+        $eventId = (int) ($_GET['event'] ?? 0);
+        if (!$eventId) { http_response_code(400); echo json_encode(['error' => 'Missing event id']); exit; }
+        $method = $_SERVER['REQUEST_METHOD'];
+        $body = in_array($method, ['POST','PUT','PATCH']) ? file_get_contents('php://input') : null;
+        $endpoint = '/organizer/events/' . $eventId . '/leisure/products';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.event.leisure.products.item':
+        $eventId = (int) ($_GET['event'] ?? 0);
+        $productId = (int) ($_GET['product'] ?? 0);
+        if (!$eventId || !$productId) { http_response_code(400); echo json_encode(['error' => 'Missing event/product id']); exit; }
+        $method = $_SERVER['REQUEST_METHOD'];
+        $body = in_array($method, ['POST','PUT','PATCH']) ? file_get_contents('php://input') : null;
+        $endpoint = '/organizer/events/' . $eventId . '/leisure/products/' . $productId;
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.venue-gates.collection':
+        $venueId = (int) ($_GET['venue'] ?? 0);
+        if (!$venueId) { http_response_code(400); echo json_encode(['error' => 'Missing venue id']); exit; }
+        $method = $_SERVER['REQUEST_METHOD'];
+        $body = in_array($method, ['POST','PUT','PATCH']) ? file_get_contents('php://input') : null;
+        $endpoint = '/organizer/venues/' . $venueId . '/gates';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.venue-gates.item':
+        $venueId = (int) ($_GET['venue'] ?? 0);
+        $gateId = (int) ($_GET['gate'] ?? 0);
+        if (!$venueId || !$gateId) { http_response_code(400); echo json_encode(['error' => 'Missing venue/gate id']); exit; }
+        $method = $_SERVER['REQUEST_METHOD'];
+        $body = in_array($method, ['POST','PUT','PATCH']) ? file_get_contents('php://input') : null;
+        $endpoint = '/organizer/venues/' . $venueId . '/gates/' . $gateId;
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.event.leisure.products.reorder':
+        $eventId = (int) ($_GET['event'] ?? 0);
+        if (!$eventId) { http_response_code(400); echo json_encode(['error' => 'Missing event id']); exit; }
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/organizer/events/' . $eventId . '/leisure/products/reorder';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.event.leisure.boats':
+        $eventId = (int) ($_GET['event'] ?? 0);
+        if (!$eventId) { http_response_code(400); echo json_encode(['error' => 'Missing event id']); exit; }
+        $params = [];
+        if (isset($_GET['ticket_type_id'])) $params['ticket_type_id'] = (int) $_GET['ticket_type_id'];
+        $endpoint = '/organizer/events/' . $eventId . '/leisure/boats' . ($params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.event.leisure.boats.sync':
+        $eventId = (int) ($_GET['event'] ?? 0);
+        if (!$eventId) { http_response_code(400); echo json_encode(['error' => 'Missing event id']); exit; }
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/organizer/events/' . $eventId . '/leisure/boats/sync';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.event.leisure.rentals.active':
+        $eventId = (int) ($_GET['event'] ?? 0);
+        if (!$eventId) { http_response_code(400); echo json_encode(['error' => 'Missing event id']); exit; }
+        $params = [];
+        if (isset($_GET['ticket_type_id'])) $params['ticket_type_id'] = (int) $_GET['ticket_type_id'];
+        $endpoint = '/organizer/events/' . $eventId . '/leisure/active-rentals' . ($params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.event.leisure.rentals.start':
+        $eventId = (int) ($_GET['event'] ?? 0);
+        if (!$eventId) { http_response_code(400); echo json_encode(['error' => 'Missing event id']); exit; }
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/organizer/events/' . $eventId . '/leisure/boat-rentals/start';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.event.leisure.rentals.end':
+        $eventId = (int) ($_GET['event'] ?? 0);
+        $rentalId = (int) ($_GET['rental'] ?? 0);
+        if (!$eventId || !$rentalId) { http_response_code(400); echo json_encode(['error' => 'Missing event/rental id']); exit; }
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/organizer/events/' . $eventId . '/leisure/boat-rentals/' . $rentalId . '/end';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.event.leisure.rentals.finalize':
+        $eventId = (int) ($_GET['event'] ?? 0);
+        $rentalId = (int) ($_GET['rental'] ?? 0);
+        if (!$eventId || !$rentalId) { http_response_code(400); echo json_encode(['error' => 'Missing event/rental id']); exit; }
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/organizer/events/' . $eventId . '/leisure/boat-rentals/' . $rentalId . '/finalize';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.me.active-shift':
+        $params = [];
+        if (isset($_GET['team_member_id'])) $params['team_member_id'] = (int) $_GET['team_member_id'];
+        $endpoint = '/organizer/me/active-shift' . ($params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.password':
+        $method = 'PUT';
+        $body = file_get_contents('php://input');
+        $endpoint = '/organizer/password';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.settings':
+        $method = 'PUT';
+        $body = file_get_contents('php://input');
+        $endpoint = '/organizer/settings';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.widget-image':
+        $method = 'POST';
+        // Forward multipart form data
+        $endpoint = '/organizer/widget-image';
+        $requiresAuth = true;
+        $isMultipart = true;
+        break;
+
+    case 'organizer.forgot-password':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/organizer/forgot-password';
+        break;
+
+    case 'organizer.reset-password':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/organizer/reset-password';
+        break;
+
+    case 'organizer.validate-invite':
+        $method = 'GET';
+        $params = [];
+        if (isset($_GET['token'])) $params['token'] = $_GET['token'];
+        if (isset($_GET['email'])) $params['email'] = $_GET['email'];
+        $endpoint = '/organizer/team/validate-invite?' . http_build_query($params);
+        break;
+
+    case 'organizer.accept-invite':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/organizer/team/accept-invite';
+        break;
+
+    case 'organizer.verify-email':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/organizer/verify-email';
+        break;
+
+    case 'organizer.resend-verification':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/organizer/resend-verification';
+        break;
+
+    // ==================== ARTIST ACCOUNT AUTH ====================
+
+    case 'artist.register':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/artist/register';
+        break;
+
+    case 'artist.login':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/artist/login';
+        break;
+
+    case 'artist.logout':
+        $method = 'POST';
+        $endpoint = '/artist/logout';
+        $requiresAuth = true;
+        break;
+
+    case 'artist.me':
+        $method = 'GET';
+        $endpoint = '/artist/me';
+        $requiresAuth = true;
+        break;
+
+    case 'artist.forgot-password':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/artist/forgot-password';
+        break;
+
+    case 'artist.reset-password':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/artist/reset-password';
+        break;
+
+    case 'artist.verify-email':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/artist/verify-email';
+        break;
+
+    case 'artist.resend-verification':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/artist/resend-verification';
+        break;
+
+    case 'artist.check-claim':
+        // Public read â€” used by the artist-single page to decide whether to
+        // render the "RevendicÄƒ profilul" button or a "Profil verificat" badge.
+        $artistSlug = $_GET['slug'] ?? '';
+        if (!$artistSlug) {
+            http_response_code(400);
+            echo json_encode(['success' => false, 'error' => 'Missing artist slug']);
+            exit;
+        }
+        $method = 'GET';
+        $endpoint = '/artist/check-claim/' . urlencode($artistSlug);
+        break;
+
+    case 'artist.search':
+        // Public picker for the register page â€” narrows to artists that are
+        // partners of THIS marketplace and flags already-claimed ones.
+        $method = 'GET';
+        $params = [];
+        if (isset($_GET['q'])) $params['q'] = $_GET['q'];
+        $endpoint = '/artist/search' . (!empty($params) ? '?' . http_build_query($params) : '');
+        break;
+
+    // Artist self-service (Etapa 4) â€” all require auth.
+
+    case 'artist.dashboard':
+        $method = 'GET';
+        $endpoint = '/artist/dashboard';
+        $requiresAuth = true;
+        break;
+
+    // Note: action name is `artist.account.events` (NOT `artist.events`) â€”
+    // there's a pre-existing `artist.events` case earlier in this file that
+    // serves the public artist's events list (slug-required) for the
+    // /artist/{slug} page. PHP switches match first-hit, so reusing the
+    // same action name would always route to the public handler and 400
+    // with "Missing artist slug".
+    case 'artist.account.events':
+        $method = 'GET';
+        $params = [];
+        if (isset($_GET['filter'])) $params['filter'] = $_GET['filter'];
+        if (isset($_GET['per_page'])) $params['per_page'] = $_GET['per_page'];
+        if (isset($_GET['page'])) $params['page'] = $_GET['page'];
+        $endpoint = '/artist/events' . (!empty($params) ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    case 'artist.profile':
+        // GET to fetch, PUT to update â€” branch on the inbound HTTP method
+        // so we don't need separate action strings for the same resource.
+        $requiresAuth = true;
+        $endpoint = '/artist/profile';
+        if ($_SERVER['REQUEST_METHOD'] === 'PUT') {
+            $method = 'PUT';
+            $body = file_get_contents('php://input');
+        } else {
+            $method = 'GET';
+        }
+        break;
+
+    case 'artist.profile.image':
+        $method = 'POST';
+        $endpoint = '/artist/profile/image';
+        $requiresAuth = true;
+        $isMultipart = true;
+        break;
+
+    case 'artist.profile.taxonomies':
+        $method = 'GET';
+        $endpoint = '/artist/profile/taxonomies';
+        $requiresAuth = true;
+        break;
+
+    case 'artist.profile.refresh-social-stats':
+        $method = 'POST';
+        $endpoint = '/artist/profile/refresh-social-stats';
+        $requiresAuth = true;
+        break;
+
+    case 'artist.account':
+        // GET / PUT / DELETE on the same resource path.
+        $requiresAuth = true;
+        $endpoint = '/artist/account';
+        $reqMethod = $_SERVER['REQUEST_METHOD'];
+        if ($reqMethod === 'PUT') {
+            $method = 'PUT';
+            $body = file_get_contents('php://input');
+        } elseif ($reqMethod === 'DELETE') {
+            $method = 'DELETE';
+            $body = file_get_contents('php://input');
+        } else {
+            $method = 'GET';
+        }
+        break;
+
+    case 'artist.account.password':
+        $method = 'PUT';
+        $body = file_get_contents('php://input');
+        $endpoint = '/artist/account/password';
+        $requiresAuth = true;
+        break;
+
+    // Extended Artist (microservice opt-in: Fan CRM, Booking, EPK, Tour)
+    case 'artist.extended-artist.status':
+        $method = 'GET';
+        $endpoint = '/artist/extended-artist/status';
+        $requiresAuth = true;
+        break;
+
+    case 'artist.extended-artist.pricing':
+        $method = 'GET';
+        $endpoint = '/artist/extended-artist/pricing';
+        $requiresAuth = true;
+        break;
+
+    case 'artist.extended-artist.start-trial':
+        $method = 'POST';
+        $body = file_get_contents('php://input') ?: '{}';
+        $endpoint = '/artist/extended-artist/start-trial';
+        $requiresAuth = true;
+        break;
+
+    case 'artist.extended-artist.subscribe':
+        $method = 'POST';
+        $body = file_get_contents('php://input') ?: '{}';
+        $endpoint = '/artist/extended-artist/subscribe';
+        $requiresAuth = true;
+        break;
+
+    case 'artist.extended-artist.cancel':
+        $method = 'POST';
+        $body = file_get_contents('php://input') ?: '{}';
+        $endpoint = '/artist/extended-artist/cancel';
+        $requiresAuth = true;
+        break;
+
+    // Smart EPK editor (artist-side) â€” toate au requiresAuth
+    case 'artist.epk':
+        $method = 'GET';
+        $endpoint = '/artist/epk';
+        $requiresAuth = true;
+        break;
+
+    case 'artist.epk.variant.create':
+        $method = 'POST';
+        $body = file_get_contents('php://input') ?: '{}';
+        $endpoint = '/artist/epk/variants';
+        $requiresAuth = true;
+        break;
+
+    case 'artist.epk.variant.update':
+        $method = 'PATCH';
+        $body = file_get_contents('php://input') ?: '{}';
+        $variantId = (int) ($_GET['id'] ?? 0);
+        if ($variantId <= 0) { http_response_code(400); echo json_encode(['error' => 'Missing variant id']); exit; }
+        $endpoint = '/artist/epk/variants/' . $variantId;
+        $requiresAuth = true;
+        break;
+
+    case 'artist.epk.variant.delete':
+        $method = 'DELETE';
+        $variantId = (int) ($_GET['id'] ?? 0);
+        if ($variantId <= 0) { http_response_code(400); echo json_encode(['error' => 'Missing variant id']); exit; }
+        $endpoint = '/artist/epk/variants/' . $variantId;
+        $requiresAuth = true;
+        break;
+
+    case 'artist.epk.variant.activate':
+        $method = 'POST';
+        $body = '{}';
+        $variantId = (int) ($_GET['id'] ?? 0);
+        if ($variantId <= 0) { http_response_code(400); echo json_encode(['error' => 'Missing variant id']); exit; }
+        $endpoint = '/artist/epk/variants/' . $variantId . '/activate';
+        $requiresAuth = true;
+        break;
+
+    case 'artist.epk.variant.clone':
+        $method = 'POST';
+        $body = '{}';
+        $variantId = (int) ($_GET['id'] ?? 0);
+        if ($variantId <= 0) { http_response_code(400); echo json_encode(['error' => 'Missing variant id']); exit; }
+        $endpoint = '/artist/epk/variants/' . $variantId . '/clone';
+        $requiresAuth = true;
+        break;
+
+    case 'artist.epk.variant.upload':
+        $method = 'POST';
+        $variantId = (int) ($_GET['id'] ?? 0);
+        if ($variantId <= 0) { http_response_code(400); echo json_encode(['error' => 'Missing variant id']); exit; }
+        $endpoint = '/artist/epk/variants/' . $variantId . '/upload';
+        $requiresAuth = true;
+        $isMultipart = true;
+        break;
+
+    case 'artist.epk.variant.delete_image':
+        $method = 'DELETE';
+        $body = file_get_contents('php://input') ?: '{}';
+        $variantId = (int) ($_GET['id'] ?? 0);
+        if ($variantId <= 0) { http_response_code(400); echo json_encode(['error' => 'Missing variant id']); exit; }
+        $endpoint = '/artist/epk/variants/' . $variantId . '/upload';
+        $requiresAuth = true;
+        break;
+
+    case 'artist.epk.variant.upload_rider':
+        $method = 'POST';
+        $variantId = (int) ($_GET['id'] ?? 0);
+        if ($variantId <= 0) { http_response_code(400); echo json_encode(['error' => 'Missing variant id']); exit; }
+        $endpoint = '/artist/epk/variants/' . $variantId . '/upload-rider';
+        $requiresAuth = true;
+        $isMultipart = true;
+        break;
+
+    case 'artist.epk.variant.qr':
+        $method = 'GET';
+        $variantId = (int) ($_GET['id'] ?? 0);
+        if ($variantId <= 0) { http_response_code(400); echo json_encode(['error' => 'Missing variant id']); exit; }
+        $endpoint = '/artist/epk/variants/' . $variantId . '/qr';
+        $requiresAuth = true;
+        $rawResponse = true; // PNG binary
+        break;
+
+    case 'artist.epk.variant.pdf':
+        $method = 'GET';
+        $variantId = (int) ($_GET['id'] ?? 0);
+        if ($variantId <= 0) { http_response_code(400); echo json_encode(['error' => 'Missing variant id']); exit; }
+        $endpoint = '/artist/epk/variants/' . $variantId . '/pdf';
+        $requiresAuth = true;
+        $rawResponse = true; // PDF binary stream
+        break;
+
+    // EPK rider lead capture (PUBLIC â€” vizitator anonim, nu requiresAuth).
+    // API_BASE_URL = .../api/marketplace-client â€” endpoint-ul "/epk/rider-request"
+    // se rezolvÄƒ la /api/marketplace-client/epk/rider-request (vezi route la nivel routes/api.php).
+    case 'epk.rider_request':
+        $method = 'POST';
+        $body = file_get_contents('php://input') ?: '{}';
+        $endpoint = '/epk/rider-request';
+        $requiresAuth = false;
+        break;
+
+    // Fan CRM (Modulul 1 din Extended Artist) â€” 13 actions
+    case 'artist.fan-crm.overview':
+        $method = 'GET';
+        $endpoint = '/artist/fan-crm/overview';
+        $requiresAuth = true;
+        break;
+
+    case 'artist.fan-crm.map':
+        $method = 'GET';
+        $endpoint = '/artist/fan-crm/map';
+        $requiresAuth = true;
+        break;
+
+    case 'artist.fan-crm.segments':
+        $method = 'GET';
+        $endpoint = '/artist/fan-crm/segments';
+        $requiresAuth = true;
+        break;
+
+    case 'artist.fan-crm.segment.create':
+        $method = 'POST';
+        $body = file_get_contents('php://input') ?: '{}';
+        $endpoint = '/artist/fan-crm/segments';
+        $requiresAuth = true;
+        break;
+
+    case 'artist.fan-crm.segment.update':
+        $method = 'PATCH';
+        $body = file_get_contents('php://input') ?: '{}';
+        $segId = (int) ($_GET['id'] ?? 0);
+        if ($segId <= 0) { http_response_code(400); echo json_encode(['error' => 'Missing segment id']); exit; }
+        $endpoint = '/artist/fan-crm/segments/' . $segId;
+        $requiresAuth = true;
+        break;
+
+    case 'artist.fan-crm.segment.delete':
+        $method = 'DELETE';
+        $segId = (int) ($_GET['id'] ?? 0);
+        if ($segId <= 0) { http_response_code(400); echo json_encode(['error' => 'Missing segment id']); exit; }
+        $endpoint = '/artist/fan-crm/segments/' . $segId;
+        $requiresAuth = true;
+        break;
+
+    case 'artist.fan-crm.segment.preview':
+        $method = 'GET';
+        $segId = (int) ($_GET['id'] ?? 0);
+        if ($segId <= 0) { http_response_code(400); echo json_encode(['error' => 'Missing segment id']); exit; }
+        $endpoint = '/artist/fan-crm/segments/' . $segId . '/preview';
+        $requiresAuth = true;
+        break;
+
+    case 'artist.fan-crm.fans':
+        $method = 'GET';
+        $params = [];
+        foreach (['search', 'segment', 'custom_segment_id', 'page', 'per_page'] as $k) {
+            if (isset($_GET[$k]) && $_GET[$k] !== '') $params[$k] = $_GET[$k];
+        }
+        $endpoint = '/artist/fan-crm/fans' . (!empty($params) ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    case 'artist.fan-crm.fans.export':
+        $method = 'GET';
+        $params = [];
+        foreach (['search', 'segment', 'custom_segment_id'] as $k) {
+            if (isset($_GET[$k]) && $_GET[$k] !== '') $params[$k] = $_GET[$k];
+        }
+        $endpoint = '/artist/fan-crm/fans/export' . (!empty($params) ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        $rawResponse = true; // CSV stream
+        break;
+
+    case 'artist.fan-crm.cohort':
+        $method = 'GET';
+        $endpoint = '/artist/fan-crm/cohort';
+        $requiresAuth = true;
+        break;
+
+    case 'artist.fan-crm.demographics':
+        $method = 'GET';
+        $endpoint = '/artist/fan-crm/demographics';
+        $requiresAuth = true;
+        break;
+
+    case 'artist.fan-crm.compare':
+        $method = 'GET';
+        $params = [];
+        foreach (['type', 'a_id', 'b_id'] as $k) {
+            if (isset($_GET[$k]) && $_GET[$k] !== '') $params[$k] = $_GET[$k];
+        }
+        $endpoint = '/artist/fan-crm/compare' . (!empty($params) ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    case 'artist.fan-crm.vip':
+        $method = 'GET';
+        $params = [];
+        if (isset($_GET['limit'])) $params['limit'] = $_GET['limit'];
+        $endpoint = '/artist/fan-crm/vip' . (!empty($params) ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    // Tour Optimizer (Modulul 3 din Extended Artist) â€” 8 actions
+    case 'artist.tour.opportunities':
+        $method = 'GET';
+        $endpoint = '/artist/tour/opportunities';
+        $requiresAuth = true;
+        break;
+
+    case 'artist.tour.predictions':
+        $method = 'GET';
+        $endpoint = '/artist/tour/predictions';
+        $requiresAuth = true;
+        break;
+
+    case 'artist.tour.venues':
+        $method = 'GET';
+        $params = [];
+        if (isset($_GET['city']) && $_GET['city'] !== '') $params['city'] = $_GET['city'];
+        if (isset($_GET['q']) && $_GET['q'] !== '') $params['q'] = $_GET['q'];
+        $endpoint = '/artist/tour/venues' . (!empty($params) ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    case 'artist.tour.cities-list':
+        $method = 'GET';
+        $endpoint = '/artist/tour/cities-list';
+        $requiresAuth = true;
+        break;
+
+    case 'artist.tour.optimize':
+        $method = 'POST';
+        $body = file_get_contents('php://input') ?: '{}';
+        $endpoint = '/artist/tour/optimize';
+        $requiresAuth = true;
+        break;
+
+    case 'artist.tour.scenarios':
+        $method = 'GET';
+        $endpoint = '/artist/tour/scenarios';
+        $requiresAuth = true;
+        break;
+
+    case 'artist.tour.scenario.save':
+        $method = 'POST';
+        $body = file_get_contents('php://input') ?: '{}';
+        $endpoint = '/artist/tour/scenarios';
+        $requiresAuth = true;
+        break;
+
+    case 'artist.tour.scenario.update':
+        $method = 'PATCH';
+        $body = file_get_contents('php://input') ?: '{}';
+        $tsId = (int) ($_GET['id'] ?? 0);
+        if ($tsId <= 0) { http_response_code(400); echo json_encode(['error' => 'Missing scenario id']); exit; }
+        $endpoint = '/artist/tour/scenarios/' . $tsId;
+        $requiresAuth = true;
+        break;
+
+    case 'artist.tour.scenario.delete':
+        $method = 'DELETE';
+        $tsId = (int) ($_GET['id'] ?? 0);
+        if ($tsId <= 0) { http_response_code(400); echo json_encode(['error' => 'Missing scenario id']); exit; }
+        $endpoint = '/artist/tour/scenarios/' . $tsId;
+        $requiresAuth = true;
+        break;
+
+    case 'artist.tour.scenarios.compare':
+        $method = 'GET';
+        $params = [];
+        foreach (['a', 'b'] as $k) {
+            if (isset($_GET[$k]) && $_GET[$k] !== '') $params[$k] = $_GET[$k];
+        }
+        $endpoint = '/artist/tour/scenarios/compare' . (!empty($params) ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    // Booking Marketplace (Modulul 4 din Extended Artist) â€” 12 acÈ›iuni
+    case 'artist.booking.listing':
+        $method = 'GET';
+        $endpoint = '/artist/booking/listing';
+        $requiresAuth = true;
+        break;
+
+    case 'artist.booking.listing.update':
+        $method = 'PATCH';
+        $body = file_get_contents('php://input') ?: '{}';
+        $endpoint = '/artist/booking/listing';
+        $requiresAuth = true;
+        break;
+
+    case 'artist.booking.inbox':
+        $method = 'GET';
+        $params = [];
+        foreach (['status', 'search', 'page'] as $k) {
+            if (isset($_GET[$k]) && $_GET[$k] !== '') $params[$k] = $_GET[$k];
+        }
+        $endpoint = '/artist/booking/inbox' . (!empty($params) ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    case 'artist.booking.request.show':
+        $method = 'GET';
+        $bid = (int) ($_GET['id'] ?? 0);
+        if ($bid <= 0) { http_response_code(400); echo json_encode(['error' => 'Missing request id']); exit; }
+        $endpoint = '/artist/booking/requests/' . $bid;
+        $requiresAuth = true;
+        break;
+
+    case 'artist.booking.request.message':
+        $method = 'POST';
+        $body = file_get_contents('php://input') ?: '{}';
+        $bid = (int) ($_GET['id'] ?? 0);
+        if ($bid <= 0) { http_response_code(400); echo json_encode(['error' => 'Missing request id']); exit; }
+        $endpoint = '/artist/booking/requests/' . $bid . '/messages';
+        $requiresAuth = true;
+        break;
+
+    case 'artist.booking.request.accept':
+        $method = 'POST';
+        $body = file_get_contents('php://input') ?: '{}';
+        $bid = (int) ($_GET['id'] ?? 0);
+        if ($bid <= 0) { http_response_code(400); echo json_encode(['error' => 'Missing request id']); exit; }
+        $endpoint = '/artist/booking/requests/' . $bid . '/accept';
+        $requiresAuth = true;
+        break;
+
+    case 'artist.booking.request.reject':
+        $method = 'POST';
+        $body = file_get_contents('php://input') ?: '{}';
+        $bid = (int) ($_GET['id'] ?? 0);
+        if ($bid <= 0) { http_response_code(400); echo json_encode(['error' => 'Missing request id']); exit; }
+        $endpoint = '/artist/booking/requests/' . $bid . '/reject';
+        $requiresAuth = true;
+        break;
+
+    case 'artist.booking.contracts':
+        $method = 'GET';
+        $endpoint = '/artist/booking/contracts';
+        $requiresAuth = true;
+        break;
+
+    case 'artist.booking.calendar':
+        $method = 'GET';
+        $params = [];
+        foreach (['from', 'to'] as $k) {
+            if (isset($_GET[$k]) && $_GET[$k] !== '') $params[$k] = $_GET[$k];
+        }
+        $endpoint = '/artist/booking/calendar' . (!empty($params) ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    case 'artist.booking.calendar.add':
+        $method = 'POST';
+        $body = file_get_contents('php://input') ?: '{}';
+        $endpoint = '/artist/booking/calendar';
+        $requiresAuth = true;
+        break;
+
+    case 'artist.booking.calendar.remove':
+        $method = 'DELETE';
+        $cid = (int) ($_GET['id'] ?? 0);
+        if ($cid <= 0) { http_response_code(400); echo json_encode(['error' => 'Missing calendar id']); exit; }
+        $endpoint = '/artist/booking/calendar/' . $cid;
+        $requiresAuth = true;
+        break;
+
+    case 'artist.booking.kpis':
+        $method = 'GET';
+        $endpoint = '/artist/booking/kpis';
+        $requiresAuth = true;
+        break;
+
+    case 'artist.booking.ical-token':
+        $method = 'GET';
+        $endpoint = '/artist/booking/ical-token';
+        $requiresAuth = true;
+        break;
+
+    case 'artist.booking.ical-token.regenerate':
+        $method = 'POST';
+        $body = '{}';
+        $endpoint = '/artist/booking/ical-token/regenerate';
+        $requiresAuth = true;
+        break;
+
+    // Public Booking â€” form submit + guest conversation (no artist auth, doar X-API-Key)
+    case 'public.booking.status':
+        $method = 'GET';
+        $slug = preg_replace('/[^a-z0-9-]/i', '', $_GET['slug'] ?? '');
+        if (!$slug) { http_response_code(400); echo json_encode(['error' => 'Missing slug']); exit; }
+        $endpoint = '/public/artist/' . $slug . '/booking-status';
+        $requiresAuth = false;
+        break;
+
+    case 'public.booking.submit':
+        $method = 'POST';
+        $body = file_get_contents('php://input') ?: '{}';
+        $slug = preg_replace('/[^a-z0-9-]/i', '', $_GET['slug'] ?? '');
+        if (!$slug) { http_response_code(400); echo json_encode(['error' => 'Missing slug']); exit; }
+        $endpoint = '/public/artist/' . $slug . '/booking-request';
+        $requiresAuth = false;
+        break;
+
+    case 'public.booking.conversation.view':
+        $method = 'GET';
+        $token = preg_replace('/[^A-Za-z0-9]/', '', $_GET['token'] ?? '');
+        if (!$token) { http_response_code(400); echo json_encode(['error' => 'Missing token']); exit; }
+        $endpoint = '/public/booking/conversation/' . $token;
+        $requiresAuth = false;
+        break;
+
+    case 'public.booking.conversation.post':
+        $method = 'POST';
+        $body = file_get_contents('php://input') ?: '{}';
+        $token = preg_replace('/[^A-Za-z0-9]/', '', $_GET['token'] ?? '');
+        if (!$token) { http_response_code(400); echo json_encode(['error' => 'Missing token']); exit; }
+        $endpoint = '/public/booking/conversation/' . $token . '/messages';
+        $requiresAuth = false;
+        break;
+
+    case 'organizer.payout-details':
+        $method = 'PUT';
+        $body = file_get_contents('php://input');
+        $endpoint = '/organizer/payout-details';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.verify-cui':
+        // Call ANAF public API directly (no auth required)
+        $inputBody = file_get_contents('php://input');
+        $inputData = json_decode($inputBody, true);
+
+        $cui = $inputData['cui'] ?? '';
+        if (!$cui) {
+            http_response_code(400);
+            echo json_encode(['error' => 'CUI is required']);
+            exit;
+        }
+
+        // Clean CUI - remove 'RO' prefix if present and any non-numeric characters
+        $cui = preg_replace('/[^0-9]/', '', preg_replace('/^RO/i', '', $cui));
+
+        if (empty($cui)) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Invalid CUI format']);
+            exit;
+        }
+
+        // Prepare ANAF API request using cURL for better reliability
+        // ANAF API endpoint v9
+        $anafUrl = 'https://webservicesp.anaf.ro/api/PlatitorTvaRest/v9/tva';
+        $anafBody = json_encode([
+            ['cui' => (int)$cui, 'data' => date('Y-m-d')]
+        ]);
+
+        $ch = curl_init($anafUrl);
+        curl_setopt_array($ch, [
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => $anafBody,
+            CURLOPT_HTTPHEADER => [
+                'Content-Type: application/json',
+                'Accept: application/json'
+            ],
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT => 15,
+            CURLOPT_SSL_VERIFYPEER => false,
+            CURLOPT_SSL_VERIFYHOST => false,
+            CURLOPT_FOLLOWLOCATION => true
+        ]);
+
+        $anafResponse = curl_exec($ch);
+        $curlError = curl_error($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($anafResponse === false || !empty($curlError)) {
+            http_response_code(503);
+            echo json_encode(['error' => 'ANAF service unavailable: ' . $curlError]);
+            exit;
+        }
+
+        $anafData = json_decode($anafResponse, true);
+
+        // Check for ANAF API errors
+        if (!$anafData) {
+            http_response_code(502);
+            echo json_encode(['error' => 'Invalid response from ANAF API', 'debug' => substr($anafResponse, 0, 500)]);
+            exit;
+        }
+
+        // ANAF returns 'found' array for found companies and 'notFound' for not found
+        if (!isset($anafData['found']) || empty($anafData['found'])) {
+            // Check if it's in notFound
+            if (isset($anafData['notFound']) && !empty($anafData['notFound'])) {
+                http_response_code(404);
+                echo json_encode(['error' => 'Compania nu a fost gasita in baza de date ANAF. Verifica CUI-ul.']);
+                exit;
+            }
+            // Return more info about what went wrong
+            http_response_code(404);
+            echo json_encode([
+                'error' => 'Compania nu a fost gasita sau CUI invalid',
+                'anaf_response' => $anafData
+            ]);
+            exit;
+        }
+
+        // Extract company data from ANAF response
+        $company = $anafData['found'][0];
+        $dateGen = $company['date_generale'] ?? [];
+        $adresa = $company['adresa_sediu_social'] ?? [];
+        $tva = $company['inregistrare_scop_Tva'] ?? [];
+
+        // Build normalized response (matching frontend expected format)
+        $result = [
+            'success' => true,
+            'data' => [
+                'cui' => $dateGen['cui'] ?? $cui,
+                'company_name' => $dateGen['denumire'] ?? '',
+                'address' => trim(sprintf(
+                    '%s %s %s',
+                    $adresa['sdenumire_Strada'] ?? '',
+                    $adresa['snumar_Strada'] ?? '',
+                    $adresa['sdetalii_Adresa'] ?? ''
+                )),
+                'city' => $adresa['sdenumire_Localitate'] ?? '',
+                'county' => $adresa['sdenumire_Judet'] ?? '',
+                'zip' => $adresa['scod_Postal'] ?? '',
+                'reg_com' => $dateGen['nrRegCom'] ?? '',
+                'vat_payer' => !empty($tva['scpTVA']),
+                'status' => $dateGen['stare_inregistrare'] ?? '',
+                'phone' => $dateGen['telefon'] ?? '',
+                'fax' => $dateGen['fax'] ?? ''
+            ]
+        ];
+
+        http_response_code(200);
+        echo json_encode($result);
+        exit;
+
+    case 'organizer.contract':
+        $method = 'GET';
+        $endpoint = '/organizer/contract';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.contract.download':
+        $method = 'GET';
+        $endpoint = '/organizer/contract/download';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.documents.upload':
+        $method = 'POST';
+        $endpoint = '/organizer/documents/upload';
+        $requiresAuth = true;
+        $isMultipart = true;
+        break;
+
+    // ==================== ORGANIZER NOTIFICATIONS ====================
+
+    case 'organizer.notifications':
+        $method = 'GET';
+        $params = [];
+        if (isset($_GET['per_page'])) $params['per_page'] = min((int)$_GET['per_page'], 50);
+        if (isset($_GET['read'])) $params['read'] = $_GET['read'];
+        if (isset($_GET['type'])) $params['type'] = $_GET['type'];
+        if (isset($_GET['page'])) $params['page'] = (int)$_GET['page'];
+        $endpoint = '/organizer/notifications' . ($params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.notifications.unread-count':
+        $method = 'GET';
+        $endpoint = '/organizer/notifications/unread-count';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.notifications.mark-read':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/organizer/notifications/mark-read';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.notifications.mark-all-read':
+        $method = 'POST';
+        $endpoint = '/organizer/notifications/mark-all-read';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.notifications.types':
+        $method = 'GET';
+        $endpoint = '/organizer/notifications/types';
+        $requiresAuth = true;
+        break;
+
+    // ==================== ORGANIZER SUPPORT TICKETS ====================
+    // Beta-gated server-side via config('support.allowed_opener_ids.organizer').
+    // The core API returns 403 for organizers not on the allow-list.
+
+    case 'organizer.support.departments':
+        $method = 'GET';
+        $params = [];
+        if (isset($_GET['lang'])) $params['lang'] = $_GET['lang'];
+        $endpoint = '/organizer/support/departments' . ($params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.support.tickets':
+        // The frontend's getProxyAction() resolves both GET (list) and POST
+        // (create) to this same action, so dispatch on REQUEST_METHOD here
+        // (matches the pattern used by 'organizer.events' & friends).
+        $method = $_SERVER['REQUEST_METHOD'];
+        $requiresAuth = true;
+        if ($method === 'POST') {
+            $endpoint = '/organizer/support/tickets';
+            $isMultipart = true;
+        } else {
+            $params = [];
+            if (isset($_GET['per_page'])) $params['per_page'] = min((int)$_GET['per_page'], 50);
+            if (isset($_GET['page'])) $params['page'] = (int)$_GET['page'];
+            if (isset($_GET['status'])) $params['status'] = $_GET['status'];
+            if (isset($_GET['lang'])) $params['lang'] = $_GET['lang'];
+            $endpoint = '/organizer/support/tickets' . ($params ? '?' . http_build_query($params) : '');
+        }
+        break;
+
+    case 'organizer.support.tickets.show':
+        $method = 'GET';
+        $id = (int)($_GET['id'] ?? 0);
+        if ($id <= 0) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing ticket id']);
+            exit;
+        }
+        $endpoint = '/organizer/support/tickets/' . $id;
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.support.tickets.reply':
+        $method = 'POST';
+        $id = (int)($_GET['id'] ?? 0);
+        if ($id <= 0) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing ticket id']);
+            exit;
+        }
+        $endpoint = '/organizer/support/tickets/' . $id . '/messages';
+        $requiresAuth = true;
+        $isMultipart = true;
+        break;
+
+    case 'organizer.support.tickets.close':
+        $method = 'POST';
+        $id = (int)($_GET['id'] ?? 0);
+        if ($id <= 0) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing ticket id']);
+            exit;
+        }
+        $endpoint = '/organizer/support/tickets/' . $id . '/close';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.support.tickets.reopen':
+        $method = 'POST';
+        $id = (int)($_GET['id'] ?? 0);
+        if ($id <= 0) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing ticket id']);
+            exit;
+        }
+        $endpoint = '/organizer/support/tickets/' . $id . '/reopen';
+        $requiresAuth = true;
+        break;
+
+    // ==================== ORGANIZER DASHBOARD ====================
+
+    case 'organizer.dashboard':
+        $method = 'GET';
+        $endpoint = '/organizer/dashboard';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.dashboard.timeline':
+        $method = 'GET';
+        $params = [];
+        if (isset($_GET['period'])) $params['period'] = $_GET['period'];
+        if (isset($_GET['start_date'])) $params['start_date'] = $_GET['start_date'];
+        if (isset($_GET['end_date'])) $params['end_date'] = $_GET['end_date'];
+        $endpoint = '/organizer/dashboard/timeline' . ($params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.dashboard.sales-timeline':
+        $method = 'GET';
+        $params = [];
+        if (isset($_GET['from_date'])) $params['from_date'] = $_GET['from_date'];
+        if (isset($_GET['to_date'])) $params['to_date'] = $_GET['to_date'];
+        if (isset($_GET['group_by'])) $params['group_by'] = $_GET['group_by'];
+        if (isset($_GET['event_id'])) $params['event_id'] = $_GET['event_id'];
+        $endpoint = '/organizer/dashboard/sales-timeline' . ($params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    // ==================== ORGANIZER EVENTS ====================
+
+    case 'organizer.events':
+        $method = $_SERVER['REQUEST_METHOD'];
+        if ($method === 'POST') {
+            $body = file_get_contents('php://input');
+        } else {
+            $params = [];
+            if (isset($_GET['status'])) $params['status'] = $_GET['status'];
+            if (isset($_GET['page'])) $params['page'] = (int)$_GET['page'];
+            if (isset($_GET['per_page'])) $params['per_page'] = min((int)$_GET['per_page'], 50);
+        }
+        $endpoint = '/organizer/events' . (!empty($params) ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.event':
+        $eventId = $_GET['event_id'] ?? '';
+        if (!$eventId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing event_id parameter']);
+            exit;
+        }
+        $method = $_SERVER['REQUEST_METHOD'];
+        if ($method === 'PUT') {
+            $body = file_get_contents('php://input');
+        }
+        // DELETE method is supported for draft/rejected events
+        $endpoint = '/organizer/events/' . urlencode($eventId);
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.event.images':
+        $eventId = $_GET['event_id'] ?? '';
+        if (!$eventId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing event_id parameter']);
+            exit;
+        }
+        $method = 'POST';
+        $endpoint = '/organizer/events/' . urlencode($eventId) . '/images';
+        $requiresAuth = true;
+        $isFileUpload = true;
+        break;
+
+    case 'organizer.event.submit':
+        $eventId = $_GET['event_id'] ?? '';
+        if (!$eventId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing event_id parameter']);
+            exit;
+        }
+        $method = 'POST';
+        $endpoint = '/organizer/events/' . urlencode($eventId) . '/submit';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.event.cancel':
+        $eventId = $_GET['event_id'] ?? '';
+        if (!$eventId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing event_id parameter']);
+            exit;
+        }
+        $method = 'POST';
+        $endpoint = '/organizer/events/' . urlencode($eventId) . '/cancel';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.event.status':
+        $eventId = $_GET['event_id'] ?? '';
+        if (!$eventId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing event_id parameter']);
+            exit;
+        }
+        $method = 'PATCH';
+        $body = file_get_contents('php://input');
+        $endpoint = '/organizer/events/' . urlencode($eventId) . '/status';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.event.seating-map':
+        $eventId = $_GET['event_id'] ?? '';
+        if (!$eventId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing event_id parameter']);
+            exit;
+        }
+        $method = 'GET';
+        $endpoint = '/organizer/events/' . urlencode($eventId) . '/seating-map';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.event-categories':
+        $method = 'GET';
+        $endpoint = '/organizer/event-categories';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.event-genres':
+        $method = 'GET';
+        $params = [];
+        if (isset($_GET['type_ids'])) {
+            $params['type_ids'] = is_array($_GET['type_ids']) ? $_GET['type_ids'] : explode(',', $_GET['type_ids']);
+        }
+        $endpoint = '/organizer/event-genres' . ($params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.venues':
+        $method = 'GET';
+        $params = [];
+        if (isset($_GET['search'])) $params['search'] = $_GET['search'];
+        $endpoint = '/organizer/venues' . ($params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.artists':
+        $method = $_SERVER['REQUEST_METHOD'];
+        if ($method === 'POST') {
+            $body = file_get_contents('php://input');
+        } else {
+            $params = [];
+            if (isset($_GET['search'])) $params['search'] = $_GET['search'];
+        }
+        $endpoint = '/organizer/artists' . (!empty($params) ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.event.analytics':
+        $eventId = $_GET['event_id'] ?? '';
+        if (!$eventId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing event_id parameter']);
+            exit;
+        }
+        $method = 'GET';
+        $params = [];
+        if (isset($_GET['period'])) $params['period'] = $_GET['period'];
+        if (isset($_GET['start_date'])) $params['start_date'] = $_GET['start_date'];
+        if (isset($_GET['end_date'])) $params['end_date'] = $_GET['end_date'];
+        $endpoint = '/organizer/events/' . urlencode($eventId) . '/analytics' . ($params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.event.report.export':
+        $eventId = $_GET['event_id'] ?? '';
+        if (!$eventId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing event_id parameter']);
+            exit;
+        }
+        $method = 'GET';
+        $endpoint = '/organizer/events/' . urlencode($eventId) . '/report/export';
+        $requiresAuth = true;
+        $rawResponse = true; // PDF binary stream
+        break;
+
+    case 'organizer.event.goals':
+        $eventId = $_GET['event_id'] ?? '';
+        if (!$eventId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing event_id parameter']);
+            exit;
+        }
+        $method = $_SERVER['REQUEST_METHOD'];
+        if ($method === 'POST') {
+            $body = file_get_contents('php://input');
+        }
+        $endpoint = '/organizer/events/' . urlencode($eventId) . '/goals';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.event.goal':
+        $eventId = $_GET['event_id'] ?? '';
+        $goalId = $_GET['goal_id'] ?? '';
+        if (!$eventId || !$goalId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing event_id or goal_id parameter']);
+            exit;
+        }
+        $method = $_SERVER['REQUEST_METHOD'];
+        if ($method === 'PUT') {
+            $body = file_get_contents('php://input');
+        }
+        $endpoint = '/organizer/events/' . urlencode($eventId) . '/goals/' . urlencode($goalId);
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.event.milestones':
+        $eventId = $_GET['event_id'] ?? '';
+        if (!$eventId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing event_id parameter']);
+            exit;
+        }
+        $method = $_SERVER['REQUEST_METHOD'];
+        if ($method === 'POST') {
+            $body = file_get_contents('php://input');
+        }
+        $endpoint = '/organizer/events/' . urlencode($eventId) . '/milestones';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.event.milestone':
+        $eventId = $_GET['event_id'] ?? '';
+        $milestoneId = $_GET['milestone_id'] ?? '';
+        if (!$eventId || !$milestoneId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing event_id or milestone_id parameter']);
+            exit;
+        }
+        $method = $_SERVER['REQUEST_METHOD'];
+        if ($method === 'PUT') {
+            $body = file_get_contents('php://input');
+        }
+        $endpoint = '/organizer/events/' . urlencode($eventId) . '/milestones/' . urlencode($milestoneId);
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.event.participants':
+        $eventId = $_GET['event_id'] ?? '';
+        if (!$eventId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing event_id parameter']);
+            exit;
+        }
+        $method = 'GET';
+        $params = [];
+        if (isset($_GET['page'])) $params['page'] = (int)$_GET['page'];
+        if (isset($_GET['per_page'])) $params['per_page'] = min((int)$_GET['per_page'], 100);
+        if (isset($_GET['search'])) $params['search'] = $_GET['search'];
+        if (isset($_GET['status'])) $params['status'] = $_GET['status'];
+        $endpoint = '/organizer/events/' . urlencode($eventId) . '/participants' . ($params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.event.participants.export':
+        $eventId = $_GET['event_id'] ?? '';
+        if (!$eventId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing event_id parameter']);
+            exit;
+        }
+        $method = 'GET';
+        $endpoint = '/organizer/events/' . urlencode($eventId) . '/participants/export';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.event.checkin':
+        $eventId = $_GET['event_id'] ?? '';
+        $barcode = $_GET['barcode'] ?? '';
+        if (!$eventId || !$barcode) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing event_id or barcode parameter']);
+            exit;
+        }
+        $method = $_SERVER['REQUEST_METHOD'];
+        $endpoint = '/organizer/events/' . urlencode($eventId) . '/check-in/' . urlencode($barcode);
+        $requiresAuth = true;
+        break;
+
+    // ==================== ORGANIZER ORDERS ====================
+
+    case 'organizer.orders':
+        $method = 'GET';
+        $params = [];
+        if (isset($_GET['event_id'])) $params['event_id'] = $_GET['event_id'];
+        if (isset($_GET['status'])) $params['status'] = $_GET['status'];
+        if (isset($_GET['search'])) $params['search'] = $_GET['search'];
+        if (isset($_GET['from_date'])) $params['from_date'] = $_GET['from_date'];
+        if (isset($_GET['to_date'])) $params['to_date'] = $_GET['to_date'];
+        if (isset($_GET['page'])) $params['page'] = (int)$_GET['page'];
+        if (isset($_GET['per_page'])) $params['per_page'] = min((int)$_GET['per_page'], 100);
+        if (isset($_GET['sort_by'])) $params['sort_by'] = $_GET['sort_by'];
+        if (isset($_GET['sort_dir'])) $params['sort_dir'] = $_GET['sort_dir'];
+        $endpoint = '/organizer/orders' . ($params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    // ==================== ORGANIZER SERVICES (EXTRA SERVICES / PROMOVARE) ====================
+
+    case 'organizer.services.pricing':
+        $method = 'GET';
+        $endpoint = '/organizer/services/pricing';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.services.stats':
+        $method = 'GET';
+        $endpoint = '/organizer/services/stats';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.services.types':
+        $method = 'GET';
+        $endpoint = '/organizer/services/types';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.services.email-audiences':
+        $method = 'GET';
+        $params = [];
+        foreach (['audience_type', 'event_id', 'age_min', 'age_max', 'gender'] as $k) {
+            if (isset($_GET[$k])) $params[$k] = $_GET[$k];
+        }
+        foreach (['cities', 'categories', 'genres'] as $k) {
+            if (isset($_GET[$k])) $params[$k] = $_GET[$k];
+        }
+        $endpoint = '/organizer/services/email-audiences' . ($params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.services.orders':
+        $method = $_SERVER['REQUEST_METHOD'];
+        if ($method === 'POST') {
+            $body = file_get_contents('php://input');
+            $endpoint = '/organizer/services/orders';
+        } else {
+            $params = [];
+            foreach (['status', 'type', 'event_id', 'page', 'per_page'] as $k) {
+                if (isset($_GET[$k])) $params[$k] = $_GET[$k];
+            }
+            $endpoint = '/organizer/services/orders' . ($params ? '?' . http_build_query($params) : '');
+        }
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.services.orders.show':
+        $uuid = $_GET['uuid'] ?? '';
+        $method = 'GET';
+        $endpoint = "/organizer/services/orders/{$uuid}";
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.services.orders.pay':
+        $uuid = $_GET['uuid'] ?? '';
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = "/organizer/services/orders/{$uuid}/pay";
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.services.orders.cancel':
+        $uuid = $_GET['uuid'] ?? '';
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = "/organizer/services/orders/{$uuid}/cancel";
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.services.orders.tracking-pixels':
+        $uuid = $_GET['uuid'] ?? '';
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = "/organizer/services/orders/{$uuid}/tracking-pixels";
+        $requiresAuth = true;
+        break;
+
+    // ==================== ORGANIZER FINANCE ====================
+
+    case 'organizer.balance':
+        $method = 'GET';
+        $endpoint = '/organizer/balance';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.finance':
+        $method = 'GET';
+        $endpoint = '/organizer/finance';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.transactions':
+        $method = 'GET';
+        $params = [];
+        if (isset($_GET['type'])) $params['type'] = $_GET['type'];
+        if (isset($_GET['page'])) $params['page'] = (int)$_GET['page'];
+        if (isset($_GET['per_page'])) $params['per_page'] = min((int)$_GET['per_page'], 50);
+        $endpoint = '/organizer/transactions' . ($params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.payouts':
+        $method = $_SERVER['REQUEST_METHOD'];
+        if ($method === 'POST') {
+            $body = file_get_contents('php://input');
+        } else {
+            $params = [];
+            if (isset($_GET['status'])) $params['status'] = $_GET['status'];
+            if (isset($_GET['page'])) $params['page'] = (int)$_GET['page'];
+            if (isset($_GET['per_page'])) $params['per_page'] = min((int)$_GET['per_page'], 50);
+        }
+        $endpoint = '/organizer/payouts' . (!empty($params) ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.payout':
+        $payoutId = $_GET['payout_id'] ?? '';
+        if (!$payoutId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing payout_id parameter']);
+            exit;
+        }
+        $method = $_SERVER['REQUEST_METHOD']; // DELETE for canceling
+        $endpoint = '/organizer/payouts/' . urlencode($payoutId);
+        $requiresAuth = true;
+        break;
+
+    // ==================== ORGANIZER NOTIFICATIONS ====================
+
+    case 'organizer.notifications':
+        $method = 'GET';
+        $params = [];
+        if (isset($_GET['unread_only'])) $params['unread_only'] = $_GET['unread_only'];
+        if (isset($_GET['read'])) $params['read'] = $_GET['read'];
+        if (isset($_GET['type'])) $params['type'] = $_GET['type'];
+        if (isset($_GET['page'])) $params['page'] = (int)$_GET['page'];
+        if (isset($_GET['per_page'])) $params['per_page'] = min((int)$_GET['per_page'], 50);
+        $endpoint = '/organizer/notifications' . ($params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.notifications.unread-count':
+        $method = 'GET';
+        $endpoint = '/organizer/notifications/unread-count';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.notifications.recent':
+        $method = 'GET';
+        $endpoint = '/organizer/notifications/recent';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.notifications.read':
+        $notificationId = $_GET['id'] ?? '';
+        if (!$notificationId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing notification id']);
+            exit;
+        }
+        $method = 'POST';
+        $endpoint = '/organizer/notifications/' . urlencode($notificationId) . '/read';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.notifications.read-all':
+        $method = 'POST';
+        $endpoint = '/organizer/notifications/read-all';
+        $requiresAuth = true;
+        break;
+
+    // ==================== ORGANIZER PROMO CODES ====================
+
+    case 'organizer.promo-codes':
+        $method = $_SERVER['REQUEST_METHOD'];
+        if ($method === 'POST') {
+            $body = file_get_contents('php://input');
+        } else {
+            $params = [];
+            if (isset($_GET['event_id'])) $params['event_id'] = $_GET['event_id'];
+            if (isset($_GET['status'])) $params['status'] = $_GET['status'];
+            if (isset($_GET['page'])) $params['page'] = (int)$_GET['page'];
+            if (isset($_GET['per_page'])) $params['per_page'] = min((int)$_GET['per_page'], 50);
+        }
+        $endpoint = '/organizer/promo-codes' . (!empty($params) ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.promo-code':
+        $codeId = $_GET['code_id'] ?? '';
+        if (!$codeId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing code_id parameter']);
+            exit;
+        }
+        $method = $_SERVER['REQUEST_METHOD']; // PUT for update, DELETE for delete
+        if ($method === 'PUT') {
+            $body = file_get_contents('php://input');
+        }
+        $endpoint = '/organizer/promo-codes/' . urlencode($codeId);
+        $requiresAuth = true;
+        break;
+
+    // ==================== ORGANIZER TEAM ====================
+
+    case 'organizer.team':
+        $method = $_SERVER['REQUEST_METHOD'];
+        if ($method === 'POST') {
+            $body = file_get_contents('php://input');
+        }
+        $endpoint = '/organizer/team';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.team.member':
+        $memberId = $_GET['member_id'] ?? '';
+        if (!$memberId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing member_id parameter']);
+            exit;
+        }
+        $method = $_SERVER['REQUEST_METHOD'];
+        if ($method === 'PUT') {
+            $body = file_get_contents('php://input');
+        }
+        $endpoint = '/organizer/team/' . urlencode($memberId);
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.team.invite':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/organizer/team/invite';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.team.update':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/organizer/team/update';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.team.remove':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/organizer/team/remove';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.team.resend-invite':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/organizer/team/resend-invite';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.team.resend-all-invites':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/organizer/team/resend-all-invites';
+        $requiresAuth = true;
+        break;
+
+    // ==================== ORGANIZER API KEY ====================
+
+    case 'organizer.api-key':
+        $method = $_SERVER['REQUEST_METHOD'];
+        if ($method === 'POST') {
+            $body = file_get_contents('php://input');
+        }
+        $endpoint = '/organizer/api-key';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.api-key.regenerate':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/organizer/api-key/regenerate';
+        $requiresAuth = true;
+        break;
+
+    // ==================== ORGANIZER BANK ACCOUNTS ====================
+
+    case 'organizer.bank-accounts':
+        $method = $_SERVER['REQUEST_METHOD'];
+        if ($method === 'POST') {
+            $body = file_get_contents('php://input');
+        }
+        $endpoint = '/organizer/bank-accounts';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.bank-account.delete':
+        $accountId = $_GET['account_id'] ?? '';
+        if (!$accountId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing account_id parameter']);
+            exit;
+        }
+        // Suporta atat DELETE (sterge cont) cat si PUT (update issuing_company)
+        $method = $_SERVER['REQUEST_METHOD'] === 'PUT' ? 'PUT' : 'DELETE';
+        if ($method === 'PUT') $body = file_get_contents('php://input');
+        $endpoint = '/organizer/bank-accounts/' . urlencode($accountId);
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.bank-account.primary':
+        $accountId = $_GET['account_id'] ?? '';
+        if (!$accountId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing account_id parameter']);
+            exit;
+        }
+        $method = 'POST';
+        $endpoint = '/organizer/bank-accounts/' . urlencode($accountId) . '/primary';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.bank-account.update':
+        $accountId = $_GET['account_id'] ?? '';
+        if (!$accountId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing account_id parameter']);
+            exit;
+        }
+        $method = 'PUT';
+        $body = file_get_contents('php://input');
+        $endpoint = '/organizer/bank-accounts/' . urlencode($accountId);
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.webhook':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/organizer/webhook';
+        $requiresAuth = true;
+        break;
+
+    // ==================== ORGANIZER PARTICIPANTS (ALL EVENTS) ====================
+
+    case 'organizer.participants':
+        $method = 'GET';
+        $params = [];
+        if (isset($_GET['event_id'])) $params['event_id'] = $_GET['event_id'];
+        if (isset($_GET['checked_in'])) $params['checked_in'] = $_GET['checked_in'];
+        if (isset($_GET['search'])) $params['search'] = $_GET['search'];
+        if (isset($_GET['page'])) $params['page'] = (int)$_GET['page'];
+        if (isset($_GET['per_page'])) $params['per_page'] = min((int)$_GET['per_page'], 100);
+        $endpoint = '/organizer/participants' . ($params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.orders.export':
+        $method = 'GET';
+        $params = [];
+        if (isset($_GET['event_id'])) $params['event_id'] = $_GET['event_id'];
+        if (isset($_GET['status'])) $params['status'] = $_GET['status'];
+        if (isset($_GET['from_date'])) $params['from_date'] = $_GET['from_date'];
+        if (isset($_GET['to_date'])) $params['to_date'] = $_GET['to_date'];
+        $endpoint = '/organizer/orders/export' . ($params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        $rawResponse = true;
+        break;
+
+    case 'organizer.participants.export':
+        $method = 'GET';
+        $params = [];
+        if (isset($_GET['event_id'])) $params['event_id'] = $_GET['event_id'];
+        $endpoint = '/organizer/participants/export' . ($params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        $rawResponse = true;
+        break;
+
+    case 'organizer.participants.checkin':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/organizer/participants/checkin';
+        $requiresAuth = true;
+        break;
+
+    // ==================== ORGANIZER BILLING / INVOICES ====================
+
+    case 'organizer.invoices':
+        $method = 'GET';
+        $params = [];
+        if (isset($_GET['page'])) $params['page'] = (int)$_GET['page'];
+        if (isset($_GET['per_page'])) $params['per_page'] = min((int)$_GET['per_page'], 100);
+        if (isset($_GET['status'])) $params['status'] = $_GET['status'];
+        $endpoint = '/organizer/invoices' . ($params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.invoice':
+        $method = 'GET';
+        $invoiceId = $_GET['invoice_id'] ?? '';
+        if (!$invoiceId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing invoice_id parameter']);
+            exit;
+        }
+        $endpoint = '/organizer/invoices/' . urlencode($invoiceId);
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.invoice.pdf':
+        $method = 'GET';
+        $invoiceId = $_GET['invoice_id'] ?? '';
+        if (!$invoiceId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing invoice_id parameter']);
+            exit;
+        }
+        $endpoint = '/organizer/invoices/' . urlencode($invoiceId) . '/pdf';
+        $requiresAuth = true;
+        $rawResponse = true;
+        break;
+
+    case 'organizer.invoices.export':
+        $method = 'GET';
+        $params = [];
+        if (isset($_GET['status'])) $params['status'] = $_GET['status'];
+        $endpoint = '/organizer/invoices/export' . ($params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        $rawResponse = true;
+        break;
+
+    case 'organizer.billing-info':
+        $method = $_SERVER['REQUEST_METHOD'] === 'PUT' ? 'PUT' : 'GET';
+        if ($method === 'PUT') {
+            $body = file_get_contents('php://input');
+        }
+        $endpoint = '/organizer/billing-info';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.payment-methods':
+        $method = 'GET';
+        $endpoint = '/organizer/payment-methods';
+        $requiresAuth = true;
+        break;
+
+    // ==================== ORGANIZER DOCUMENTS ====================
+
+    case 'organizer.documents':
+        $method = 'GET';
+        $params = [];
+        if (isset($_GET['event_id'])) $params['event_id'] = $_GET['event_id'];
+        if (isset($_GET['type'])) $params['type'] = $_GET['type'];
+        $endpoint = '/organizer/documents' . ($params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.documents.events':
+        $method = 'GET';
+        $endpoint = '/organizer/documents/events';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.documents.for-event':
+        $method = 'GET';
+        $eventId = $_GET['event_id'] ?? '';
+        $endpoint = '/organizer/documents/event/' . $eventId;
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.documents.generate':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/organizer/documents/generate';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.documents.download':
+        $method = 'GET';
+        $documentId = $_GET['document_id'] ?? '';
+        $endpoint = '/organizer/documents/' . $documentId . '/download';
+        $requiresAuth = true;
+        break;
+
+    // ============================================
+    // Organizer invitations (self-service PDF invite generation)
+    // GET    /organizer/invitations               list batches (filter by event_id)
+    // POST   /organizer/invitations               create batch with recipients + render PDFs
+    // GET    /organizer/invitations/{batch}       show batch + invite list
+    // POST   /organizer/invitations/{batch}/generate  re-render PDFs
+    // DELETE /organizer/invitations/{batch}       delete empty draft batch
+    // Note: /download (ZIP) and /csv-template (CSV) are served via direct fetch
+    // from the frontend so the binary body isn't re-encoded by the proxy layer.
+    // ============================================
+
+    case 'organizer.invitations':
+        $method = $_SERVER['REQUEST_METHOD'];
+        if ($method === 'POST') {
+            $body = file_get_contents('php://input');
+            $endpoint = '/organizer/invitations';
+            // PDF batch is rendered synchronously after the DB transaction
+            // commits. With watermarks + QR codes a few dozen invites can
+            // easily exceed the default 15s budget. Without this override
+            // the proxy aborts, the UI shows "Generarea a eÈ™uat", but
+            // Laravel finishes the render and the batch lands in the
+            // organizer's "Serii" list anyway â€” confusing both sides.
+            $customTimeout = 120;
+        } else {
+            $qs = http_build_query(array_intersect_key($_GET, array_flip(['event_id', 'status', 'per_page', 'page'])));
+            $endpoint = '/organizer/invitations' . ($qs ? '?' . $qs : '');
+        }
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.invitations.show':
+        $method = $_SERVER['REQUEST_METHOD'];
+        $batchId = $_GET['batch_id'] ?? '';
+        $endpoint = '/organizer/invitations/' . $batchId;
+        if ($method === 'POST') {
+            $body = file_get_contents('php://input');
+        }
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.invitations.generate':
+        $method = 'POST';
+        $batchId = $_GET['batch_id'] ?? '';
+        $body = file_get_contents('php://input');
+        $endpoint = '/organizer/invitations/' . $batchId . '/generate';
+        $requiresAuth = true;
+        // Re-rendering the whole batch can take long for large batches.
+        $customTimeout = 120;
+        break;
+
+    case 'organizer.invitations.delete-invites':
+        $method = 'DELETE';
+        $batchId = $_GET['batch_id'] ?? '';
+        $body = file_get_contents('php://input');
+        $endpoint = '/organizer/invitations/' . $batchId . '/invites';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.invitations.download':
+        $method = 'GET';
+        $batchId = $_GET['batch_id'] ?? '';
+        $endpoint = '/organizer/invitations/' . $batchId . '/download';
+        $requiresAuth = true;
+        $rawResponse = true;
+        break;
+
+    case 'organizer.invitations.download-invite':
+        $method = 'GET';
+        $batchId = $_GET['batch_id'] ?? '';
+        $inviteId = $_GET['invite_id'] ?? '';
+        $endpoint = '/organizer/invitations/' . $batchId . '/invites/' . $inviteId . '/download';
+        $requiresAuth = true;
+        $rawResponse = true;
+        break;
+
+    case 'organizer.invitations.csv-template':
+        $method = 'GET';
+        $endpoint = '/organizer/invitations/csv-template';
+        $requiresAuth = true;
+        $rawResponse = true;
+        break;
+
+    case 'organizer.invitations.hold-seats':
+        // POST pre-holds seats for the organizer's seat picker (10-min TTL).
+        // DELETE releases a pre-hold (modal closed / seat deselected).
+        // The final store() call re-confirms every seat atomically, so
+        // pre-holds are only a UX hint â€” not a correctness requirement.
+        $method = $_SERVER['REQUEST_METHOD'];
+        $body = file_get_contents('php://input');
+        $endpoint = '/organizer/invitations/hold-seats';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.documents.view':
+        $method = 'GET';
+        $documentId = $_GET['document_id'] ?? '';
+        $endpoint = '/organizer/documents/' . $documentId . '/view';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.documents.regenerate':
+        $method = 'POST';
+        $documentId = $_GET['document_id'] ?? '';
+        if (!$documentId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing document_id parameter']);
+            exit;
+        }
+        $endpoint = '/organizer/documents/' . $documentId . '/regenerate';
+        $requiresAuth = true;
+        break;
+
+    // ==================== ORGANIZER SHARE LINKS (LOCAL) ====================
+
+    case 'organizer.share-links':
+        // DB-backed: forwards to Laravel /organizer/share-links so the
+        // links survive deploy cycles. File-backed loadShareLinks() etc.
+        // are kept for legacy fallback only â€” never read here.
+        $method = $_SERVER['REQUEST_METHOD'] === 'POST' ? 'POST' : 'GET';
+        if ($method === 'POST') {
+            $body = file_get_contents('php://input');
+            $endpoint = '/organizer/share-links';
+        } else {
+            $endpoint = '/organizer/share-links';
+        }
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.share-links.legacy_unused':
+        $orgId = authenticateOrganizer();
+        $allLinks = loadShareLinks();
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            // Create new share link
+            $input = json_decode(file_get_contents('php://input'), true);
+            if (!$input || empty($input['event_ids'])) {
+                http_response_code(400);
+                echo json_encode(['error' => 'event_ids is required']);
+                exit;
+            }
+
+            // Validate event_ids - must be array of positive integers
+            $eventIds = [];
+            foreach ((array)$input['event_ids'] as $eid) {
+                $parsed = (int)$eid;
+                if ($parsed > 0) $eventIds[] = $parsed;
+            }
+            if (empty($eventIds)) {
+                http_response_code(400);
+                echo json_encode(['error' => 'Invalid event_ids']);
+                exit;
+            }
+            if (count($eventIds) > 20) {
+                http_response_code(400);
+                echo json_encode(['error' => 'Maximum 20 events per share link']);
+                exit;
+            }
+
+            // Limit share links per organizer
+            $orgLinks = array_filter($allLinks, fn($l) => ($l['organizer_id'] ?? 0) === $orgId);
+            if (count($orgLinks) >= 50) {
+                http_response_code(400);
+                echo json_encode(['error' => 'Maximum 50 share links per organizer']);
+                exit;
+            }
+
+            // Generate unique code
+            $code = generateShareCode();
+            $attempts = 0;
+            while (isset($allLinks[$code]) && $attempts < 10) {
+                $code = generateShareCode();
+                $attempts++;
+            }
+
+            $name = trim(strip_tags($input['name'] ?? ''));
+            if (mb_strlen($name) > 100) $name = mb_substr($name, 0, 100);
+
+            // Optional password protection
+            $password = trim($input['password'] ?? '');
+            $passwordHash = $password ? password_hash($password, PASSWORD_BCRYPT) : null;
+
+            // Cache ticket totals using organizer's auth (for sold/total display)
+            $authHeader = $_SERVER['HTTP_AUTHORIZATION'] ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? '';
+            $ticketData = $authHeader ? fetchTicketTotalsWithAuth($eventIds, $authHeader) : [];
+
+            // Show participants flag
+            $showParticipants = !empty($input['show_participants']);
+            $participantsData = [];
+            if ($showParticipants && $authHeader) {
+                $participantsData = fetchParticipantsWithAuth($eventIds, $authHeader);
+            }
+            // Show revenue flag â€” new links default to FALSE (must opt in
+            // via the modal checkbox). Pre-existing links that pre-date
+            // this key default to TRUE on the read path (see share-link.data
+            // below) so their historical behavior of showing the revenue
+            // card is preserved.
+            $showRevenue = !empty($input['show_revenue']);
+
+            $link = [
+                'code' => $code,
+                'organizer_id' => $orgId,
+                'name' => $name ?: 'Link #' . (count($orgLinks) + 1),
+                'event_ids' => array_values(array_unique($eventIds)),
+                'is_active' => true,
+                'created_at' => date('c'),
+                'access_count' => 0,
+                'last_accessed_at' => null,
+                'password_hash' => $passwordHash,
+                'has_password' => !empty($passwordHash),
+                'show_participants' => $showParticipants,
+                'show_revenue' => $showRevenue,
+                'ticket_data' => $ticketData,
+                'participants_data' => $participantsData,
+                'ticket_data_updated_at' => date('c'),
+            ];
+
+            $allLinks[$code] = $link;
+            saveShareLinks($allLinks);
+
+            // Strip sensitive data before returning
+            $safeLink = $link;
+            unset($safeLink['password_hash'], $safeLink['ticket_data']);
+            echo json_encode([
+                'success' => true,
+                'data' => $safeLink,
+                'url' => SITE_URL . '/view/' . $code
+            ]);
+        } else {
+            // List organizer's share links
+            $orgLinks = array_values(array_filter($allLinks, fn($l) => ($l['organizer_id'] ?? 0) === $orgId));
+            // Sort by created_at descending
+            usort($orgLinks, fn($a, $b) => strcmp($b['created_at'] ?? '', $a['created_at'] ?? ''));
+            // Strip sensitive data before sending to frontend
+            $orgLinks = array_map(function($l) {
+                unset($l['password_hash'], $l['ticket_data']);
+                return $l;
+            }, $orgLinks);
+            echo json_encode(['success' => true, 'data' => ['links' => $orgLinks]]);
+        }
+        exit;
+
+    case 'organizer.share-link':
+        // DB-backed forwarder. Validate code shape locally so we don't
+        // hammer the API with junk.
+        $code = $_GET['code'] ?? '';
+        if (!$code || !preg_match('/^[A-Za-z0-9]{6,20}$/', $code)) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Invalid share link code']);
+            exit;
+        }
+        $verb = strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');
+        $method = in_array($verb, ['GET', 'PUT', 'DELETE'], true) ? $verb : 'GET';
+        if (in_array($method, ['PUT', 'DELETE'], true) || $method === 'POST') {
+            $body = file_get_contents('php://input');
+        }
+        $endpoint = '/organizer/share-links/' . urlencode($code);
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.share-link.legacy_unused':
+        $orgId = authenticateOrganizer();
+        $code = $_GET['code'] ?? '';
+
+        if (!$code || !preg_match('/^[A-Za-z0-9]{6,20}$/', $code)) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Invalid share link code']);
+            exit;
+        }
+
+        $allLinks = loadShareLinks();
+
+        if (!isset($allLinks[$code]) || ($allLinks[$code]['organizer_id'] ?? 0) !== $orgId) {
+            http_response_code(404);
+            echo json_encode(['error' => 'Share link not found']);
+            exit;
+        }
+
+        $method = $_SERVER['REQUEST_METHOD'];
+
+        if ($method === 'DELETE') {
+            unset($allLinks[$code]);
+            saveShareLinks($allLinks);
+            echo json_encode(['success' => true, 'message' => 'Share link deleted']);
+        } elseif ($method === 'PUT') {
+            $input = json_decode(file_get_contents('php://input'), true);
+            if (isset($input['name'])) {
+                $name = trim(strip_tags($input['name']));
+                if (mb_strlen($name) > 100) $name = mb_substr($name, 0, 100);
+                $allLinks[$code]['name'] = $name;
+            }
+            if (isset($input['event_ids'])) {
+                $eventIds = [];
+                foreach ((array)$input['event_ids'] as $eid) {
+                    $parsed = (int)$eid;
+                    if ($parsed > 0) $eventIds[] = $parsed;
+                }
+                if (!empty($eventIds) && count($eventIds) <= 20) {
+                    $allLinks[$code]['event_ids'] = array_values(array_unique($eventIds));
+                    // Refresh cached ticket totals with new event list
+                    $authHeader = $_SERVER['HTTP_AUTHORIZATION'] ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? '';
+                    if ($authHeader) {
+                        $allLinks[$code]['ticket_data'] = fetchTicketTotalsWithAuth($eventIds, $authHeader);
+                        $allLinks[$code]['ticket_data_updated_at'] = date('c');
+                    }
+                }
+            }
+            if (isset($input['is_active'])) {
+                $allLinks[$code]['is_active'] = (bool)$input['is_active'];
+            }
+            if (array_key_exists('password', $input)) {
+                $pw = trim($input['password'] ?? '');
+                if ($pw === '') {
+                    // Remove password
+                    $allLinks[$code]['password_hash'] = null;
+                    $allLinks[$code]['has_password'] = false;
+                } else {
+                    $allLinks[$code]['password_hash'] = password_hash($pw, PASSWORD_BCRYPT);
+                    $allLinks[$code]['has_password'] = true;
+                }
+            }
+            if (isset($input['show_participants'])) {
+                $allLinks[$code]['show_participants'] = (bool)$input['show_participants'];
+            }
+            if (isset($input['show_revenue'])) {
+                $allLinks[$code]['show_revenue'] = (bool)$input['show_revenue'];
+            }
+            // Refresh participant + ticket data on demand
+            if (!empty($input['refresh_data'])) {
+                $authHeader = $_SERVER['HTTP_AUTHORIZATION'] ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? '';
+                $evIds = $allLinks[$code]['event_ids'] ?? [];
+                if ($authHeader && !empty($evIds)) {
+                    $allLinks[$code]['ticket_data'] = fetchTicketTotalsWithAuth($evIds, $authHeader);
+                    if (!empty($allLinks[$code]['show_participants'])) {
+                        $allLinks[$code]['participants_data'] = fetchParticipantsWithAuth($evIds, $authHeader);
+                    }
+                    $allLinks[$code]['ticket_data_updated_at'] = date('c');
+                }
+            }
+            saveShareLinks($allLinks);
+            $safeLink = $allLinks[$code];
+            unset($safeLink['password_hash'], $safeLink['ticket_data'], $safeLink['participants_data']);
+            echo json_encode(['success' => true, 'data' => $safeLink]);
+        } else {
+            $safeLink = $allLinks[$code];
+            unset($safeLink['password_hash'], $safeLink['ticket_data'], $safeLink['participants_data']);
+            echo json_encode(['success' => true, 'data' => $safeLink]);
+        }
+        exit;
+
+    case 'share-link.data':
+        // Public DB-backed forwarder. Auth NOT required â€” the URL code
+        // is the access token. POST body carries the password for
+        // protected links; the Laravel controller handles rate limit
+        // and brute-force lockouts.
+        $code = $_GET['code'] ?? '';
+        if (!$code || !preg_match('/^[A-Za-z0-9]{6,20}$/', $code)) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Invalid code']);
+            exit;
+        }
+        $verb = strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');
+        $method = $verb === 'POST' ? 'POST' : 'GET';
+        if ($method === 'POST') {
+            $body = file_get_contents('php://input');
+        }
+        $endpoint = '/share/' . urlencode($code) . '/data';
+        $requiresAuth = false;
+        break;
+
+    case 'share-link.data.legacy_unused':
+        $code = $_GET['code'] ?? '';
+
+        if (!$code || !preg_match('/^[A-Za-z0-9]{6,20}$/', $code)) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Invalid code']);
+            exit;
+        }
+
+        // Rate limit: 30 requests per minute per IP
+        $clientIp = $_SERVER['HTTP_X_FORWARDED_FOR'] ?? $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+        $clientIp = explode(',', $clientIp)[0]; // Take first IP if multiple
+        if (!checkRateLimit('share_' . $clientIp, 30, 60)) {
+            http_response_code(429);
+            echo json_encode(['error' => 'Too many requests. Please try again later.']);
+            exit;
+        }
+
+        $allLinks = loadShareLinks();
+
+        if (!isset($allLinks[$code])) {
+            http_response_code(404);
+            echo json_encode(['error' => 'Link not found']);
+            exit;
+        }
+
+        $link = $allLinks[$code];
+
+        if (!($link['is_active'] ?? true)) {
+            http_response_code(410);
+            echo json_encode(['error' => 'This link is no longer active']);
+            exit;
+        }
+
+        // Password protection check
+        if (!empty($link['password_hash'])) {
+            // Brute-force protection: max 5 failed attempts per 5 minutes, lockout for 10 minutes
+            if (!checkBruteForce($code)) {
+                http_response_code(429);
+                echo json_encode(['error' => 'too_many_attempts', 'message' => 'Prea multe incercari. Incearca din nou mai tarziu.']);
+                exit;
+            }
+
+            // Accept password via POST body only (not GET to avoid logging passwords in URLs)
+            $inputData = json_decode(file_get_contents('php://input'), true);
+            $providedPassword = $inputData['password'] ?? '';
+
+            if (!$providedPassword) {
+                http_response_code(401);
+                echo json_encode(['error' => 'password_required', 'message' => 'Acest link necesita o parola']);
+                exit;
+            }
+
+            if (!password_verify($providedPassword, $link['password_hash'])) {
+                recordFailedAttempt($code);
+                http_response_code(403);
+                echo json_encode(['error' => 'invalid_password', 'message' => 'Parola introdusa este incorecta']);
+                exit;
+            }
+
+            // Successful auth â€” clear failed attempts
+            clearFailedAttempts($code);
+        }
+
+        // Update access stats (only on first load, not auto-refresh â€” check header)
+        $isAutoRefresh = ($_SERVER['HTTP_X_AUTO_REFRESH'] ?? '') === '1';
+        if (!$isAutoRefresh) {
+            $allLinks[$code]['access_count'] = ($allLinks[$code]['access_count'] ?? 0) + 1;
+            $allLinks[$code]['last_accessed_at'] = date('c');
+            saveShareLinks($allLinks);
+        }
+
+        // Fetch event data from core API, merging stored ticket totals
+        $storedTicketData = $link['ticket_data'] ?? [];
+        $events = fetchEventsForShareLink($link['event_ids'] ?? [], $storedTicketData);
+
+        // show_revenue: existing links from before this feature shipped
+        // (no key in JSON) default to TRUE so their view doesn't suddenly
+        // hide the "Incasari nete" card the organizer was already
+        // expecting. New links explicitly set the flag at create time.
+        $showRevenue = array_key_exists('show_revenue', $link)
+            ? (bool) $link['show_revenue']
+            : true;
+
+        // Strip revenue from event payloads when hidden so a custom client
+        // can't read it off the wire. View.php also reads show_revenue
+        // and gates UI on it.
+        if (!$showRevenue) {
+            $events = array_map(function ($ev) {
+                if (is_array($ev)) {
+                    unset($ev['revenue_net']);
+                }
+                return $ev;
+            }, $events);
+        }
+
+        $responseData = [
+            'events' => $events,
+            'show_participants' => !empty($link['show_participants']),
+            'show_revenue' => $showRevenue,
+            'updated_at' => date('c'),
+        ];
+
+        // Include cached participant data if enabled
+        if (!empty($link['show_participants']) && !empty($link['participants_data'])) {
+            $responseData['participants'] = $link['participants_data'];
+        }
+
+        echo json_encode([
+            'success' => true,
+            'data' => $responseData,
+        ]);
+        exit;
+
+    default:
+        http_response_code(400);
+        echo json_encode(['error' => 'Unknown action: ' . $action]);
+        exit;
+}
+
+// Check cache for GET requests (before making API call)
+$useCache = ApiCache::isCacheable($action, $method, $requiresAuth);
+if ($useCache) {
+    $cached = ApiCache::get($action, $_GET);
+    if ($cached) {
+        // Return cached response
+        http_response_code($cached['statusCode']);
+        header('X-Cache: HIT');
+        echo $cached['response'];
+        exit;
+    }
+}
+
+// TEMP DIAGNOSTIC for support ticket store: write the raw incoming
+// request shape + chosen branch to the marketplace error log so we
+// can see why upstream is responding with the listing payload instead
+// of a created ticket. Remove once support.tickets.store is healthy.
+if (($_GET['action'] ?? '') === 'organizer.support.tickets.store') {
+    @error_log('[support-store-diag] action=' . ($_GET['action'] ?? '')
+        . ' incoming_method=' . ($_SERVER['REQUEST_METHOD'] ?? '')
+        . ' computed_method=' . ($method ?? '')
+        . ' endpoint=' . ($endpoint ?? '')
+        . ' isMultipart=' . (!empty($isMultipart) ? '1' : '0')
+        . ' isFileUpload=' . (!empty($isFileUpload) ? '1' : '0')
+        . ' post_keys=' . implode(',', array_keys($_POST))
+        . ' files_keys=' . implode(',', array_keys($_FILES))
+        . ' content_type=' . ($_SERVER['CONTENT_TYPE'] ?? ''));
+}
+
+// Handle multipart/form-data forward via cURL.
+// Triggers for any endpoint flagged as multipart even when $_FILES is empty
+// â€” otherwise the raw multipart body would be sent through the JSON handler
+// below with the wrong Content-Type, and Laravel wouldn't parse the fields.
+if (!empty($isFileUpload) || !empty($isMultipart)) {
+    $url = API_BASE_URL . $endpoint;
+    $curlHeaders = [
+        'X-API-Key: ' . API_KEY,
+        'Accept: application/json',
+        'User-Agent: bilete.online Marketplace/1.0',
+        'X-Session-ID: ' . $sessionIdForHeader,
+    ];
+
+    if ($requiresAuth) {
+        $authHeader = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
+        if (!$authHeader && isset($_SERVER['REDIRECT_HTTP_AUTHORIZATION'])) {
+            $authHeader = $_SERVER['REDIRECT_HTTP_AUTHORIZATION'];
+        }
+        if ($authHeader) {
+            $curlHeaders[] = 'Authorization: ' . $authHeader;
+        }
+    }
+
+    $postFields = [];
+    // Flatten nested POST fields (e.g. meta[url]) so multipart cURL
+    // forwards them with the same bracket notation Laravel parses back
+    // into the request->input('meta.url').
+    $flatten = function (array $src, string $prefix = '') use (&$flatten, &$postFields) {
+        foreach ($src as $k => $v) {
+            $key = $prefix === '' ? (string) $k : $prefix . '[' . $k . ']';
+            if (is_array($v)) {
+                $flatten($v, $key);
+            } else {
+                $postFields[$key] = $v;
+            }
+        }
+    };
+    $flatten($_POST);
+    foreach ($_FILES as $key => $file) {
+        // Single-file upload: $file['error'] is an int.
+        if (!is_array($file['error'])) {
+            if ($file['error'] === UPLOAD_ERR_OK) {
+                $postFields[$key] = new CURLFile(
+                    $file['tmp_name'],
+                    $file['type'],
+                    $file['name']
+                );
+            }
+            continue;
+        }
+        // Array upload (e.g. attachments[]): $_FILES[$key]['error'] is an
+        // array. Re-emit each one as $key[index] so Laravel re-parses
+        // them as a normal array of UploadedFile.
+        foreach ($file['error'] as $i => $err) {
+            if ($err !== UPLOAD_ERR_OK) continue;
+            $postFields[$key . '[' . $i . ']'] = new CURLFile(
+                $file['tmp_name'][$i],
+                $file['type'][$i] ?? 'application/octet-stream',
+                $file['name'][$i] ?? 'file'
+            );
+        }
+    }
+
+    $ch = curl_init($url);
+    curl_setopt_array($ch, [
+        CURLOPT_POST => true,
+        CURLOPT_POSTFIELDS => $postFields,
+        CURLOPT_HTTPHEADER => $curlHeaders,
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_TIMEOUT => 30,
+    ]);
+
+    $response = curl_exec($ch);
+    $statusCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $sentBytes = curl_getinfo($ch, CURLINFO_SIZE_UPLOAD);
+    curl_close($ch);
+
+    if (($_GET['action'] ?? '') === 'organizer.support.tickets.store') {
+        @error_log('[support-store-diag] AFTER curl_exec'
+            . ' status=' . $statusCode
+            . ' upload_bytes=' . $sentBytes
+            . ' postFields_keys=' . implode(',', array_keys($postFields))
+            . ' resp_first_120=' . substr((string) $response, 0, 120));
+        // Also expose to browser DevTools so I can debug without server logs.
+        header('X-Proxy-Diag-Upstream-Status: ' . $statusCode);
+        header('X-Proxy-Diag-Upstream-Url: ' . $url);
+        header('X-Proxy-Diag-Upload-Bytes: ' . $sentBytes);
+        header('X-Proxy-Diag-Post-Keys: ' . implode(',', array_keys($postFields)));
+        header('X-Proxy-Diag-Files-Keys: ' . implode(',', array_keys($_FILES)));
+    }
+
+    http_response_code($statusCode ?: 500);
+    echo $response ?: json_encode(['error' => 'Upload failed']);
+    exit;
+}
+
+// Make the actual API request
+$url = API_BASE_URL . $endpoint;
+
+// Build headers
+$acceptHeader = (!empty($rawResponse)) ? '*/*' : 'application/json';
+$headers = [
+    'Content-Type: application/json',
+    'X-API-Key: ' . API_KEY,
+    'Accept: ' . $acceptHeader,
+    'User-Agent: bilete.online Marketplace/1.0',
+    'X-Session-ID: ' . $sessionIdForHeader  // Pass session ID for cart/checkout functionality
+];
+
+// Forward X-Auto-Refresh through to the upstream (share-link.data uses
+// this to skip the access_count bump on background polls).
+if (!empty($_SERVER['HTTP_X_AUTO_REFRESH'])) {
+    $headers[] = 'X-Auto-Refresh: ' . $_SERVER['HTTP_X_AUTO_REFRESH'];
+}
+
+// Forward Authorization header for authenticated requests
+if ($requiresAuth) {
+    $authHeader = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
+    if (!$authHeader && isset($_SERVER['REDIRECT_HTTP_AUTHORIZATION'])) {
+        $authHeader = $_SERVER['REDIRECT_HTTP_AUTHORIZATION'];
+    }
+    // For raw responses (PDF/export opened via window.open), accept token as query param
+    if (!$authHeader && !empty($rawResponse) && isset($_GET['token'])) {
+        $authHeader = 'Bearer ' . $_GET['token'];
+    }
+    if ($authHeader) {
+        $headers[] = 'Authorization: ' . $authHeader;
+    }
+}
+
+// Use curl (file_get_contents requires allow_url_fopen which may be disabled)
+$ch = curl_init($url);
+$curlHeaders = [];
+foreach ($headers as $h) {
+    $curlHeaders[] = $h;
+}
+$upstreamContentDisposition = '';
+// Lift PHP's own execution time so it doesn't kill the script before the
+// upstream cURL call returns when we deliberately raised the cURL budget.
+if ($customTimeout && $customTimeout > 25) {
+    @set_time_limit($customTimeout + 30);
+}
+curl_setopt_array($ch, [
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_TIMEOUT => $customTimeout ?? 15,
+    // Connect through Cloudflare path; bumped from 3 to 10 because CF
+    // TLS+TCP handshake occasionally pushes past the old budget.
+    // Direct-to-origin (CURLOPT_RESOLVE) was tried but blocked by the
+    // network path between the bilete.online and core.tixello.com hosts
+    // â€” only the CF route works for this server-to-server hop.
+    CURLOPT_CONNECTTIMEOUT => 10,
+    CURLOPT_HTTPHEADER => $curlHeaders,
+    CURLOPT_FOLLOWLOCATION => true,
+    CURLOPT_SSL_VERIFYPEER => true,
+    CURLOPT_ENCODING => '', // Accept gzip/deflate (smaller response, faster)
+    CURLOPT_HEADERFUNCTION => function ($ch, $header) use (&$upstreamContentDisposition) {
+        if (stripos($header, 'Content-Disposition:') === 0) {
+            $upstreamContentDisposition = trim($header);
+        }
+        return strlen($header);
+    },
+]);
+
+if ($method === 'POST') {
+    curl_setopt($ch, CURLOPT_POST, true);
+    if ($body) curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
+} elseif ($method === 'PUT') {
+    curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'PUT');
+    if ($body) curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
+} elseif ($method === 'DELETE') {
+    curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'DELETE');
+    if ($body) curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
+} elseif ($method === 'PATCH') {
+    curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'PATCH');
+    if ($body) curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
+}
+
+$response = curl_exec($ch);
+$statusCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+$curlError = curl_error($ch);
+curl_close($ch);
+
+if ($response === false || $statusCode === 0) {
+    error_log("[proxy.php] CURL ERROR: {$method} {$url} => {$curlError}");
+    $response = false;
+    $statusCode = 502;
+}
+
+// Debug log for non-2xx responses
+if ($statusCode >= 400) {
+    error_log("[proxy.php] API ERROR: {$method} {$url} => HTTP {$statusCode} | action={$action} | response=" . substr($response ?: '(empty)', 0, 500));
+}
+
+// Store in cache if cacheable
+if ($useCache && $response !== false) {
+    ApiCache::set($action, $_GET, $response, $statusCode);
+    header('X-Cache: MISS');
+}
+
+http_response_code($statusCode);
+
+// Browser Cache-Control headers â€” allows browsers to cache GET responses
+// Preview mode always gets no-store
+if ($method === 'GET' && $statusCode >= 200 && $statusCode < 300 && !$requiresAuth && empty($_GET['preview'])) {
+    $browserTtl = match(true) {
+        // Static/rarely changing content â€” 1 day browser cache
+        in_array($action, ['categories', 'event-categories', 'event-genres', 'venue-categories', 'locations.regions', 'locations.stats']) => 86400,
+        // Events â€” 30s browser cache for near-instant visibility of newly published events
+        $action === 'events' => 30,
+        // Other listings â€” 5 min browser cache
+        in_array($action, ['events.featured', 'venues', 'venues.featured', 'artists', 'organizers', 'locations.cities']) => 300,
+        // Single items â€” 2 min browser cache
+        str_starts_with($action, 'event') || str_starts_with($action, 'venue') || str_starts_with($action, 'artist') || str_starts_with($action, 'organizer') => 120,
+        // Search â€” 1 min
+        $action === 'search' => 60,
+        // Default â€” no browser cache (cart, auth, checkout, etc.)
+        default => 0,
+    };
+    if ($browserTtl > 0) {
+        header("Cache-Control: public, max-age={$browserTtl}, stale-while-revalidate=60");
+    } else {
+        header('Cache-Control: no-store');
+    }
+} else {
+    header('Cache-Control: no-store');
+}
+
+// For raw responses (PDF, CSV, ZIP, exports), forward headers from upstream via curl
+if (!empty($rawResponse) && $response !== false && $statusCode >= 200 && $statusCode < 300) {
+    // DetecteazÄƒ PDF tolerand orice garbage scapat Ã®nainte de %PDF (PHP warnings,
+    // BOM, whitespace) â€” re-aliniem response-ul la signature.
+    $pdfPos = strpos($response ?? '', '%PDF');
+    if ($pdfPos !== false && $pdfPos < 1024) {
+        if ($pdfPos > 0) {
+            $response = substr($response, $pdfPos);
+        }
+        header('Content-Type: application/pdf');
+        if (!empty($upstreamContentDisposition)) {
+            header($upstreamContentDisposition);
+        } else {
+            header('Content-Disposition: attachment; filename="document.pdf"');
+        }
+        header('Content-Length: ' . strlen($response));
+    } elseif (str_starts_with($response, "\x89PNG\r\n\x1a\n")) {
+        header('Content-Type: image/png');
+        header('Cache-Control: public, max-age=86400');
+        header('Content-Length: ' . strlen($response));
+    } elseif (str_starts_with($response, "PK\x03\x04") || str_starts_with($response, "PK\x05\x06")) {
+        // ZIP archive (local file header or empty-archive end-of-central-dir signature)
+        header('Content-Type: application/zip');
+        if (!empty($upstreamContentDisposition)) {
+            header($upstreamContentDisposition);
+        } else {
+            header('Content-Disposition: attachment; filename="archive.zip"');
+        }
+        header('Content-Length: ' . strlen($response));
+    } elseif (!empty($upstreamContentDisposition) || str_starts_with($response, "\xEF\xBB\xBF") || str_starts_with($response, 'Ticket ID,') || str_starts_with($response, 'Comanda,') || str_starts_with($response, 'first_name,')) {
+        header('Content-Type: text/csv; charset=UTF-8');
+        if (!empty($upstreamContentDisposition)) {
+            header($upstreamContentDisposition);
+        } else {
+            header('Content-Disposition: attachment; filename="export.csv"');
+        }
+        header('Content-Length: ' . strlen($response));
+    }
+}
+
+if ($response === false) {
+    echo json_encode(['error' => 'API request failed']);
+} else {
+    echo $response;
+}

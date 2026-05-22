@@ -1,0 +1,1 @@
+document.addEventListener("alpine:init",function(){window.Alpine.store("catalog",{query:"",category:"all"})});
