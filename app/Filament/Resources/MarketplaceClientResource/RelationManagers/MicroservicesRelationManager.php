@@ -20,7 +20,9 @@ class MicroservicesRelationManager extends RelationManager
 
     protected static ?string $title = 'Microservices';
 
-    protected static ?string $recordTitleAttribute = 'name';
+    // See PaymentMethodsRelationManager comment — Microservice::name is a
+    // translatable JSON array; use the flat string accessor instead.
+    protected static ?string $recordTitleAttribute = 'display_label';
 
     public function form(Schema $schema): Schema
     {
@@ -45,7 +47,7 @@ class MicroservicesRelationManager extends RelationManager
     public function table(Table $table): Table
     {
         return $table
-            ->recordTitleAttribute('name')
+            ->recordTitleAttribute('display_label')
             ->modifyQueryUsing(fn ($query) => $query->where('category', '!=', 'payment'))
             ->columns([
                 Tables\Columns\ImageColumn::make('icon_image')

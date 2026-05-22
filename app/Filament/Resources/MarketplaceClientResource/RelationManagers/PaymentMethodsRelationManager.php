@@ -20,7 +20,10 @@ class PaymentMethodsRelationManager extends RelationManager
 
     protected static ?string $title = 'Payment Methods';
 
-    protected static ?string $recordTitleAttribute = 'name';
+    // `name` on Microservice is a translatable JSON array, which Filament 4's
+    // strict-typed Table::getRecordTitle() rejects. Use the model's flat
+    // `display_label` accessor (defined on App\Models\Microservice) instead.
+    protected static ?string $recordTitleAttribute = 'display_label';
 
     /**
      * Build dynamic form fields based on the microservice's settings_schema
@@ -113,7 +116,7 @@ class PaymentMethodsRelationManager extends RelationManager
     public function table(Table $table): Table
     {
         return $table
-            ->recordTitleAttribute('name')
+            ->recordTitleAttribute('display_label')
             ->modifyQueryUsing(fn ($query) => $query->where('category', 'payment'))
             ->columns([
                 Tables\Columns\ImageColumn::make('icon_image')

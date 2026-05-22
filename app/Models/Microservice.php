@@ -55,6 +55,35 @@ class Microservice extends Model
         'metadata' => 'array',
     ];
 
+    /**
+     * Flat string version of the translatable `name` field. Filament 4's
+     * Table::getRecordTitle() enforces a `string` return type, so binding
+     * `$recordTitleAttribute` directly to `name` (which is `array` cast)
+     * throws a TypeError on AttachAction option lists and similar. This
+     * accessor gives Filament + any other consumer a safe string fallback.
+     *
+     * Resolution order: Romanian (canonical for this project) → English →
+     * first non-empty translation → empty string.
+     */
+    public function getDisplayLabelAttribute(): string
+    {
+        $name = $this->getAttributeFromArray('name');
+        if (is_string($name)) {
+            $decoded = json_decode($name, true);
+            $name = is_array($decoded) ? $decoded : $name;
+        }
+        if (is_array($name)) {
+            foreach (['ro', 'en'] as $locale) {
+                if (!empty($name[$locale])) {
+                    return (string) $name[$locale];
+                }
+            }
+            $first = collect($name)->filter()->first();
+            return $first !== null ? (string) $first : '';
+        }
+        return (string) ($name ?? '');
+    }
+
     public function tenants(): BelongsToMany
     {
         return $this->belongsToMany(Tenant::class, 'tenant_microservices')
