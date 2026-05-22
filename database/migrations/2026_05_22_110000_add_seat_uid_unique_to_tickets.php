@@ -49,10 +49,13 @@ return new class extends Migration
 
             // Pre-check: detect existing duplicates BEFORE creating the
             // unique index. The index creation would otherwise fail with
-            // a confusing pgsql error and roll back the entire migration.
-            // If duplicates exist, abort with an actionable message listing
-            // each (event_id, seat_uid) collision so the operator can
-            // resolve them (cancel one of the tickets / refund) and re-run.
+            // a confusing pgsql error mid-migration. If duplicates exist
+            // we LOG a warning + SKIP the CREATE UNIQUE INDEX step but
+            // the migration is still marked as run. The column + backfill
+            // succeed regardless; the application-side cleanup fix and
+            // hold extension don't depend on the unique index. To install
+            // the index later (after resolving the duplicates), run:
+            //   php artisan tickets:install-seat-unique-index
             $duplicates = DB::select(<<<SQL
                 SELECT event_id, seat_uid, COUNT(*) AS dup_count,
                        array_agg(id ORDER BY id) AS ticket_ids
@@ -65,18 +68,21 @@ return new class extends Migration
             SQL);
 
             if (!empty($duplicates)) {
-                $msg = "Cannot create unique seat_uid index — existing duplicates detected.\n";
-                $msg .= "Resolve each conflict below (cancel/refund one of the tickets), then re-run migrate.\n\n";
+                $items = [];
                 foreach ($duplicates as $d) {
-                    $msg .= sprintf(
-                        "  event_id=%d seat_uid=%s tickets=%s (count=%d)\n",
+                    $items[] = sprintf(
+                        'event=%d seat=%s tickets=%s',
                         $d->event_id,
                         $d->seat_uid,
-                        is_string($d->ticket_ids) ? $d->ticket_ids : json_encode($d->ticket_ids),
-                        $d->dup_count
+                        is_string($d->ticket_ids) ? $d->ticket_ids : json_encode($d->ticket_ids)
                     );
                 }
-                throw new \RuntimeException($msg);
+                \Illuminate\Support\Facades\Log::warning(
+                    '[SeatUidMigration] Skipping CREATE UNIQUE INDEX — existing duplicates detected. '
+                    . 'Run `php artisan tickets:install-seat-unique-index` after resolving each conflict. '
+                    . 'Conflicts: ' . implode(' | ', $items)
+                );
+                return; // skip index creation, migration succeeds
             }
 
             // Partial unique index — only enforces uniqueness when the
