@@ -104,7 +104,7 @@ class MarketplaceCityIntentsSeeder extends Seeder
                 'h1_template' => ['ro' => 'Ce să faci în weekend în {city_name}'],
                 'meta_description_template' => ['ro' => 'Cele mai bune activități de weekend în {city_name}. Rezervi online, intri cu QR.'],
                 'intro_copy' => ['ro' => 'Weekend-ul e scurt — alege rapid din activitățile disponibile sâmbătă și duminică.'],
-                'seo_copy' => ['ro' => 'Selecția de weekend pentru {city_name}: activitățile potrivite pentru o ieșire cu prietenii, familia sau copiii. Programe verificate, bilete cu QR, comision 1% pentru organizatori.'],
+                'seo_copy' => ['ro' => 'Selecția de weekend pentru {city_name}: activitățile potrivite pentru o ieșire cu prietenii, familia sau copiii. Programe verificate, bilete cu QR, comision 2% pentru organizatori.'],
                 'filter_rule_json' => ['all' => [
                     ['type' => 'in_city', 'param' => '$city'],
                     ['type' => 'has_session_this_weekend'],
