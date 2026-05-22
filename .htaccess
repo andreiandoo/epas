@@ -541,6 +541,24 @@ RewriteCond %{REQUEST_URI} ^/api/ [NC]
 RewriteRule ^ - [L]
 
 # ============================================
+# CITY × INTENT SEO PAGES
+# /{city}/{intent-slug} → city-intent.php
+# /{intent-slug} (single segment) → city-intent.php (global landing)
+# Intent slugs are constrained to start with `activitati-` so they don't
+# collide with city / category / event single-segment routes.
+# ============================================
+
+# 2-segment: /{city}/{activitati-*}
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^([a-z][a-z0-9-]{1,50})/(activitati-[a-z0-9-]{1,80})/?$ city-intent.php?city=$1&intent=$2 [L,QSA]
+
+# 1-segment global intent landing: /activitati-*
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(activitati-[a-z0-9-]{1,80})/?$ city-intent.php?intent=$1 [L,QSA]
+
+# ============================================
 # DYNAMIC CITY PAGES - catch-all for city slugs (city.php)
 # Must come AFTER all other explicit routes
 # ============================================
