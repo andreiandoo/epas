@@ -58,12 +58,22 @@ class CleanupExpiredOrders extends Command
                     continue;
                 }
 
-                // Check if any of these seats are still held or sold
+                // Check if any of these seats are still 'held'. We do NOT
+                // count 'sold' seats — a sold seat on a different order is
+                // legitimately taken; this stale-cleanup pass must never
+                // touch it (same bug as the main path, see processOrders).
+                $ownTicketIds = $order->tickets()->pluck('id')->all();
                 $stuckCount = 0;
                 foreach ($seatInfo as $item) {
                     $stuckCount += EventSeat::where('event_seating_id', $item['event_seating_id'])
                         ->whereIn('seat_uid', $item['seat_uids'])
-                        ->whereIn('status', ['held', 'sold'])
+                        ->where('status', 'held')
+                        ->where(function ($q) use ($ownTicketIds) {
+                            $q->whereNull('sold_to_ticket_id');
+                            if (!empty($ownTicketIds)) {
+                                $q->orWhereIn('sold_to_ticket_id', $ownTicketIds);
+                            }
+                        })
                         ->count();
                 }
 
@@ -82,7 +92,13 @@ class CleanupExpiredOrders extends Command
                 foreach ($seatInfo as $item) {
                     $released = EventSeat::where('event_seating_id', $item['event_seating_id'])
                         ->whereIn('seat_uid', $item['seat_uids'])
-                        ->whereIn('status', ['held', 'sold'])
+                        ->where('status', 'held')
+                        ->where(function ($q) use ($ownTicketIds) {
+                            $q->whereNull('sold_to_ticket_id');
+                            if (!empty($ownTicketIds)) {
+                                $q->orWhereIn('sold_to_ticket_id', $ownTicketIds);
+                            }
+                        })
                         ->update([
                             'status' => 'available',
                             'version' => DB::raw('version + 1'),
@@ -91,6 +107,7 @@ class CleanupExpiredOrders extends Command
 
                     SeatHold::where('event_seating_id', $item['event_seating_id'])
                         ->whereIn('seat_uid', $item['seat_uids'])
+                        ->where('expires_at', '<', now())
                         ->delete();
 
                     if ($released > 0) {
@@ -131,24 +148,50 @@ class CleanupExpiredOrders extends Command
             try {
                 DB::transaction(function () use ($order) {
                     // 1. Release seats back to available
+                    //
+                    // CRITICAL: only release seats currently in 'held' status.
+                    // The previous behaviour ALSO released 'sold' seats — that
+                    // caused double-booking when one customer created several
+                    // rapid checkout attempts on the same seats: paid order's
+                    // seats got wiped back to 'available' the moment its
+                    // sibling (same session, same seats, never paid) orders
+                    // hit their expiry. See incident on event 4482 / seats
+                    // S228-4-16..19 (Catalina paid 172971 @ 13:12:30; cleanup
+                    // of expired 172969+172970 at 13:26 flipped seats back to
+                    // 'available'; Laura then bought the same seats @ 13:49).
+                    //
+                    // Additional guard: even if a seat is somehow in 'held'
+                    // status with sold_to_ticket_id set (legacy/stale data),
+                    // don't release it if the sold ticket isn't ours.
+                    $ownTicketIds = $order->tickets()->pluck('id')->all();
+
                     $seatInfo = $this->extractSeatInfo($order);
                     foreach ($seatInfo as $item) {
                         $eventSeatingId = $item['event_seating_id'];
                         $seatUids = $item['seat_uids'];
 
-                        // Release seats that are held OR sold (old orders used confirmPurchase in checkout)
                         $released = EventSeat::where('event_seating_id', $eventSeatingId)
                             ->whereIn('seat_uid', $seatUids)
-                            ->whereIn('status', ['held', 'sold'])
+                            ->where('status', 'held')
+                            ->where(function ($q) use ($ownTicketIds) {
+                                $q->whereNull('sold_to_ticket_id');
+                                if (!empty($ownTicketIds)) {
+                                    $q->orWhereIn('sold_to_ticket_id', $ownTicketIds);
+                                }
+                            })
                             ->update([
                                 'status' => 'available',
                                 'version' => DB::raw('version + 1'),
                                 'last_change_at' => now(),
                             ]);
 
-                        // Clean up any remaining hold records
+                        // Only delete SeatHold rows that are themselves
+                        // expired. Active holds (in-checkout customers on
+                        // different sessions) stay untouched. releaseExpiredHolds
+                        // cron also covers this, but defense-in-depth here.
                         SeatHold::where('event_seating_id', $eventSeatingId)
                             ->whereIn('seat_uid', $seatUids)
+                            ->where('expires_at', '<', now())
                             ->delete();
 
                         if ($released > 0) {
