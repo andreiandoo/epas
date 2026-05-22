@@ -1,0 +1,653 @@
+﻿/**
+ * Leisure Venue page â€” calendar + ticket selector + parking form.
+ * Depends on: BileteOnlineAPI, BileteOnlineCart (from scripts.php)
+ */
+(function () {
+    'use strict';
+
+    const DATA = window.__LEISURE_VENUE__;
+    if (!DATA) return;
+
+    const SLUG = DATA.slug;
+    const EVENT = DATA.event;
+    const CONFIG = DATA.venue_config || {};
+    const ISSUERS = DATA.issuers || {};
+    const MAX_ADVANCE = DATA.max_advance_days || 90;
+    const PRICING_RULES = CONFIG.pricing_rules || [];
+    const CLOSED_DATES = CONFIG.closed_dates || [];
+    const SCHEDULE = CONFIG.operating_schedule || {};
+
+    // Romanian labels
+    const CATEGORY_LABEL = {
+        access: 'Bilete acces', parking: 'Parcare', rental: 'ÃŽnchirieri',
+        activity: 'ActivitÄƒÈ›i', extra: 'Alte produse',
+    };
+
+    function formatDuration(minutes) {
+        if (!minutes) return '';
+        if (minutes < 60) return minutes + ' min';
+        if (minutes % 1440 === 0) return (minutes / 1440) + (minutes === 1440 ? ' zi' : ' zile');
+        if (minutes % 60 === 0) return (minutes / 60) + (minutes === 60 ? ' orÄƒ' : ' ore');
+        return minutes + ' min';
+    }
+
+    // Returns list of access ticket type IDs (service_category=access) â€” used for
+    // requires_access_ticket validation: a "linked" service can only be added
+    // if the cart already has at least 1 access ticket for the same day.
+    function accessTicketIds() {
+        if (!dateTickets) return [];
+        return dateTickets.filter(t => (t.service_category || 'access') === 'access').map(t => t.id);
+    }
+
+    function hasAccessTicketInCart() {
+        const accessIds = accessTicketIds();
+        return accessIds.some(id => (quantities[id] || 0) > 0);
+    }
+
+    // Months in Romanian
+    const MONTHS_RO = ['Ianuarie', 'Februarie', 'Martie', 'Aprilie', 'Mai', 'Iunie',
+        'Iulie', 'August', 'Septembrie', 'Octombrie', 'Noiembrie', 'Decembrie'];
+
+    // State
+    let currentMonth = new Date();
+    currentMonth.setDate(1);
+    let selectedDate = null;
+    let monthCache = {};     // { 'YYYY-MM': { dates: { 'YYYY-MM-DD': { status, min_price } } } }
+    let dateTickets = null;  // ticket types for selected date
+    let quantities = {};     // { ticketTypeId: qty }
+    let vehicleInfo = {};    // { ticketTypeId: { license_plate } }
+    let tourSlotSelections = {}; // { ticketTypeId: slotTime }
+    let currentSeason = null;
+    let pastLastEntry = false;
+
+    // DOM refs
+    const $calDays = document.getElementById('cal-days');
+    const $calLabel = document.getElementById('cal-month-label');
+    const $calPrev = document.getElementById('cal-prev');
+    const $calNext = document.getElementById('cal-next');
+    const $noDate = document.getElementById('no-date-placeholder');
+    const $loading = document.getElementById('tickets-loading');
+    const $groups = document.getElementById('ticket-groups');
+    const $summary = document.getElementById('cart-summary');
+    const $summaryItems = document.getElementById('cart-items-summary');
+    const $totalEl = document.getElementById('cart-total');
+    const $addBtn = document.getElementById('add-to-cart-btn');
+    const $dateBar = document.getElementById('selected-date-bar');
+    const $dateLabel = document.getElementById('selected-date-label');
+    const $mobileBar = document.getElementById('mobile-bottom-bar');
+    const $mobileTotalEl = document.getElementById('mobile-total-amount');
+    const $mobileAddBtn = document.getElementById('mobile-add-to-cart-btn');
+
+    // ========== Calendar ==========
+
+    function renderCalendar() {
+        const year = currentMonth.getFullYear();
+        const month = currentMonth.getMonth();
+        $calLabel.textContent = MONTHS_RO[month] + ' ' + year;
+
+        const firstDay = new Date(year, month, 1);
+        let startDow = firstDay.getDay(); // 0=Sun
+        startDow = startDow === 0 ? 6 : startDow - 1; // Convert to Mon=0
+
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const maxDate = new Date();
+        maxDate.setDate(maxDate.getDate() + MAX_ADVANCE);
+
+        const monthKey = year + '-' + String(month + 1).padStart(2, '0');
+        const monthData = monthCache[monthKey]?.dates || {};
+
+        let html = '';
+
+        // Empty cells before first day
+        for (let i = 0; i < startDow; i++) {
+            html += '<div class="p-2"></div>';
+        }
+
+        for (let d = 1; d <= daysInMonth; d++) {
+            const dateStr = year + '-' + String(month + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+            const dateObj = new Date(year, month, d);
+            const isPast = dateObj < today;
+            const isFuture = dateObj > maxDate;
+            const isSelected = selectedDate === dateStr;
+            const dayData = monthData[dateStr] || {};
+            const status = dayData.status || (isPast ? 'past' : 'available');
+
+            let cls = 'relative flex items-center justify-center w-full aspect-square rounded-lg text-sm font-medium transition cursor-pointer ';
+            let dotColor = '';
+            let clickable = true;
+
+            if (isSelected) {
+                cls += 'bg-primary text-white ring-2 ring-primary ring-offset-2';
+            } else if (isPast || status === 'past') {
+                cls += 'text-gray-300 cursor-default';
+                clickable = false;
+            } else if (isFuture) {
+                cls += 'text-gray-300 cursor-default';
+                clickable = false;
+            } else if (status === 'closed') {
+                cls += 'text-gray-400 bg-gray-50 cursor-default';
+                dotColor = 'bg-gray-300';
+                clickable = false;
+            } else if (status === 'sold_out') {
+                cls += 'text-red-400 bg-red-50 cursor-default';
+                dotColor = 'bg-red-500';
+                clickable = false;
+            } else if (status === 'limited') {
+                cls += 'text-secondary hover:bg-amber-50';
+                dotColor = 'bg-amber-500';
+            } else {
+                cls += 'text-secondary hover:bg-green-50';
+                dotColor = 'bg-green-500';
+            }
+
+            html += '<div class="' + cls + '"' +
+                (clickable ? ' data-date="' + dateStr + '"' : '') +
+                '>' + d;
+            if (dotColor && !isSelected) {
+                html += '<span class="absolute bottom-1 w-1.5 h-1.5 rounded-full ' + dotColor + '"></span>';
+            }
+            html += '</div>';
+        }
+
+        $calDays.innerHTML = html;
+
+        // Bind click handlers
+        $calDays.querySelectorAll('[data-date]').forEach(el => {
+            el.addEventListener('click', () => selectDate(el.dataset.date));
+        });
+    }
+
+    async function fetchMonthAvailability(monthStr) {
+        if (monthCache[monthStr]) return monthCache[monthStr];
+
+        try {
+            const resp = await BileteOnlineAPI.get(`/marketplace-events/${SLUG}/date-availability`, { month: monthStr });
+            if (resp && resp.dates) {
+                monthCache[monthStr] = resp;
+                return resp;
+            }
+        } catch (e) {
+            console.warn('Failed to fetch month availability:', e);
+        }
+        return { dates: {} };
+    }
+
+    async function loadMonth() {
+        const year = currentMonth.getFullYear();
+        const month = currentMonth.getMonth();
+        const monthStr = year + '-' + String(month + 1).padStart(2, '0');
+
+        // Render immediately with cached data (or no data)
+        renderCalendar();
+
+        // Fetch and re-render
+        await fetchMonthAvailability(monthStr);
+        renderCalendar();
+
+        // Prefetch next month
+        const nextMonth = new Date(year, month + 1, 1);
+        const nextStr = nextMonth.getFullYear() + '-' + String(nextMonth.getMonth() + 1).padStart(2, '0');
+        fetchMonthAvailability(nextStr);
+    }
+
+    $calPrev.addEventListener('click', () => {
+        currentMonth.setMonth(currentMonth.getMonth() - 1);
+        loadMonth();
+    });
+
+    $calNext.addEventListener('click', () => {
+        currentMonth.setMonth(currentMonth.getMonth() + 1);
+        loadMonth();
+    });
+
+    // ========== Date Selection & Ticket Loading ==========
+
+    async function selectDate(dateStr) {
+        selectedDate = dateStr;
+        quantities = {};
+        vehicleInfo = {};
+        tourSlotSelections = {};
+        dateTickets = null;
+        currentSeason = null;
+        pastLastEntry = false;
+
+        // Update calendar highlight
+        renderCalendar();
+
+        // Show date bar
+        const d = new Date(dateStr + 'T00:00:00');
+        const dayNames = ['DuminicÄƒ', 'Luni', 'MarÈ›i', 'Miercuri', 'Joi', 'Vineri', 'SÃ¢mbÄƒtÄƒ'];
+        $dateLabel.textContent = dayNames[d.getDay()] + ', ' + d.getDate() + ' ' + MONTHS_RO[d.getMonth()] + ' ' + d.getFullYear();
+        $dateBar.classList.remove('hidden');
+
+        // Show loading
+        $noDate.classList.add('hidden');
+        $groups.classList.add('hidden');
+        $summary.classList.add('hidden');
+        $mobileBar.classList.add('hidden');
+        $loading.classList.remove('hidden');
+
+        try {
+            const resp = await BileteOnlineAPI.get(`/marketplace-events/${SLUG}/date-availability`, { date: dateStr });
+            if (!resp || !resp.is_open) {
+                $loading.classList.add('hidden');
+                $noDate.classList.remove('hidden');
+                const reason = resp?.reason === 'closed' ? 'LocaÈ›ia este Ã®nchisÄƒ Ã®n aceastÄƒ zi.' : 'AceastÄƒ datÄƒ nu este disponibilÄƒ.';
+                $noDate.innerHTML = '<p class="text-gray-500">' + reason + '</p>';
+                return;
+            }
+
+            currentSeason = resp.season || null;
+            pastLastEntry = resp.past_last_entry || false;
+
+            // Show last entry warning
+            if (pastLastEntry) {
+                $loading.classList.add('hidden');
+                $noDate.classList.remove('hidden');
+                const lastEntry = resp.operating_hours?.last_entry || '';
+                $noDate.innerHTML = '<div class="text-center"><p class="text-amber-600 font-semibold">Ultima intrare a fost la ' + escHtml(lastEntry) + '</p><p class="text-gray-500 text-sm mt-1">VÃ¢nzarea online pentru astÄƒzi s-a Ã®ncheiat. SelecteazÄƒ o altÄƒ datÄƒ.</p></div>';
+                return;
+            }
+
+            dateTickets = resp.ticket_types || [];
+            renderTicketSelector();
+        } catch (e) {
+            console.error('Failed to load date availability:', e);
+            $loading.classList.add('hidden');
+            $noDate.classList.remove('hidden');
+            $noDate.innerHTML = '<p class="text-red-500">Eroare la Ã®ncÄƒrcarea disponibilitÄƒÈ›ii. ÃŽncearcÄƒ din nou.</p>';
+        }
+    }
+
+    document.getElementById('change-date-btn')?.addEventListener('click', () => {
+        // Scroll to calendar
+        document.getElementById('cal-grid')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+
+    // ========== Ticket Selector ==========
+
+    function renderTicketSelector() {
+        $loading.classList.add('hidden');
+
+        if (!dateTickets || dateTickets.length === 0) {
+            $groups.classList.add('hidden');
+            $noDate.classList.remove('hidden');
+            $noDate.innerHTML = '<p class="text-gray-500">Nu existÄƒ bilete disponibile pentru aceastÄƒ datÄƒ.</p>';
+            return;
+        }
+
+        // Group ticket types by issuing_company â†’ service_category.
+        // Top-level visual sections per issuer (PRINCIPALA / SECUNDARA when both exist),
+        // sub-grouped by service_category. Falls back to single section "Bilete" when
+        // ISSUERS map is not provided (legacy events).
+        const hasMultiIssuer = ISSUERS && ISSUERS.secondary;
+        const issuerOrder = hasMultiIssuer ? ['primary', 'secondary'] : ['primary'];
+
+        const grouped = {}; // { issuer: { category: [tickets] } }
+        dateTickets.forEach(tt => {
+            const issuer = tt.issuing_company || 'primary';
+            const category = tt.service_category || 'access';
+            if (!grouped[issuer]) grouped[issuer] = {};
+            if (!grouped[issuer][category]) grouped[issuer][category] = [];
+            grouped[issuer][category].push(tt);
+        });
+
+        let html = '';
+
+        for (const issuer of issuerOrder) {
+            const categories = grouped[issuer];
+            if (!categories || Object.keys(categories).length === 0) continue;
+
+            const issuerData = ISSUERS[issuer] || {};
+            const issuerName = issuerData.name || (issuer === 'secondary' ? 'Servicii conexe' : 'Bilete');
+            const issuerBadge = hasMultiIssuer
+                ? (issuer === 'secondary'
+                    ? '<span class="ml-2 px-2 py-0.5 text-[10px] font-bold tracking-wider rounded text-amber-700 bg-amber-100">SOCIETATE SECUNDARÄ‚</span>'
+                    : '<span class="ml-2 px-2 py-0.5 text-[10px] font-bold tracking-wider rounded text-primary bg-primary/10">SOCIETATE PRINCIPALÄ‚</span>')
+                : '';
+
+            // Order categories: access first, then others
+            const catOrder = ['access', 'parking', 'rental', 'activity', 'extra'];
+            const sortedCategories = catOrder.filter(c => categories[c]).concat(
+                Object.keys(categories).filter(c => !catOrder.includes(c))
+            );
+
+            for (const category of sortedCategories) {
+                const tickets = categories[category];
+                const groupName = CATEGORY_LABEL[category] || (tickets[0]?.group || 'Bilete');
+
+                html += '<div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">';
+                html += '<div class="px-5 py-3 bg-gray-50 border-b border-gray-100 flex items-center flex-wrap gap-1">';
+                html += '<h3 class="text-sm font-bold text-secondary uppercase tracking-wide">' + escHtml(groupName) + '</h3>';
+                if (hasMultiIssuer) html += issuerBadge;
+                html += '</div>';
+                html += '<div class="divide-y divide-gray-50">';
+
+            tickets.forEach(tt => {
+                const available = tt.available;
+                const isUnavailable = available !== null && available <= 0;
+                const min = tt.min_per_order || 1;
+                const max = tt.max_per_order || 10;
+                const maxAllowed = available !== null ? Math.min(max, available) : max;
+                const qty = quantities[tt.id] || 0;
+
+                // Validate requires_access_ticket: blocheaza adaugarea daca nu e
+                // bilet acces in cos pentru aceeasi zi.
+                const linkedNeedsAccess = !!tt.requires_access_ticket && (tt.service_category || 'access') !== 'access';
+                const accessMissing = linkedNeedsAccess && !hasAccessTicketInCart();
+
+                html += '<div class="px-5 py-4 flex items-center gap-4' + (isUnavailable ? ' opacity-50' : '') + '">';
+
+                // Info
+                html += '<div class="flex-1 min-w-0">';
+                html += '<div class="font-semibold text-secondary flex items-center gap-2 flex-wrap">';
+                html += '<span>' + escHtml(tt.name) + '</span>';
+                if (tt.service_duration_minutes) {
+                    html += '<span class="px-2 py-0.5 text-[10px] font-bold rounded bg-blue-50 text-blue-700">' + escHtml(formatDuration(tt.service_duration_minutes)) + '</span>';
+                }
+                if (linkedNeedsAccess) {
+                    html += '<span class="px-2 py-0.5 text-[10px] font-bold rounded bg-amber-50 text-amber-700">NecesitÄƒ bilet acces</span>';
+                }
+                html += '</div>';
+                if (tt.description) {
+                    html += '<div class="text-xs text-gray-500 mt-0.5">' + escHtml(tt.description) + '</div>';
+                }
+                if (min > 1) {
+                    html += '<div class="text-xs text-amber-600 mt-0.5">Minim ' + min + ' bilete</div>';
+                }
+                if (tt.product_description || tt.usage_terms) {
+                    html += '<button class="lv-toggle-details mt-1 text-[11px] font-medium text-primary hover:underline" data-tt="' + tt.id + '" type="button">Detalii â†’</button>';
+                }
+                html += '</div>';
+
+                // Price
+                html += '<div class="text-right shrink-0 mr-4">';
+                if (tt.base_price !== tt.effective_price) {
+                    html += '<div class="text-xs text-gray-400 line-through">' + formatPrice(tt.base_price) + '</div>';
+                }
+                html += '<div class="font-bold text-primary">' + formatPrice(tt.effective_price) + ' <span class="text-xs font-normal text-gray-400">' + (tt.currency || 'RON') + '</span></div>';
+                html += '</div>';
+
+                // Quantity selector
+                if (isUnavailable) {
+                    html += '<div class="text-sm font-medium text-red-500 shrink-0">Sold out</div>';
+                } else {
+                    const plusDisabled = (qty >= maxAllowed) || (qty === 0 && accessMissing);
+                    html += '<div class="flex items-center gap-2 shrink-0">';
+                    html += '<button class="qty-btn w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 transition disabled:opacity-30" data-tt="' + tt.id + '" data-dir="-1"' + (qty <= 0 ? ' disabled' : '') + '>âˆ’</button>';
+                    html += '<span class="qty-val w-8 text-center font-semibold text-secondary tabular-nums" data-tt="' + tt.id + '">' + qty + '</span>';
+                    html += '<button class="qty-btn w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 transition disabled:opacity-30" data-tt="' + tt.id + '" data-dir="1"' + (plusDisabled ? ' disabled' : '') + '>+</button>';
+                    html += '</div>';
+                }
+
+                html += '</div>';
+
+                // Access-required warning when service is selected without an access ticket
+                if (linkedNeedsAccess && qty > 0 && !hasAccessTicketInCart()) {
+                    html += '<div class="px-5 pb-3 -mt-2"><div class="text-xs font-medium text-red-600 flex items-center gap-1.5"><svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>AdaugÄƒ mai Ã®ntÃ¢i un bilet de acces pentru aceastÄƒ zi.</div></div>';
+                }
+
+                // Hidden details (product_description + usage_terms)
+                if (tt.product_description || tt.usage_terms) {
+                    html += '<div class="lv-details px-5 pb-4 -mt-2 hidden text-sm text-gray-600" data-details-tt="' + tt.id + '">';
+                    if (tt.product_description) {
+                        html += '<div class="prose prose-sm max-w-none">' + tt.product_description + '</div>';
+                    }
+                    if (tt.usage_terms) {
+                        html += '<div class="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs">';
+                        html += '<div class="font-bold text-amber-900 mb-1 uppercase tracking-wide">CondiÈ›ii de utilizare</div>';
+                        html += '<div class="prose prose-sm max-w-none text-amber-900">' + tt.usage_terms + '</div>';
+                        html += '</div>';
+                    }
+                    html += '</div>';
+                }
+
+                // Tour slot selector
+                if (tt.has_tour_slots && tt.tour_slots && qty > 0) {
+                    const selectedSlot = tourSlotSelections[tt.id] || '';
+                    html += '<div class="px-5 pb-3">';
+                    html += '<label class="text-xs font-medium text-gray-500 mb-1 block">Alege ora plecÄƒrii grupului:</label>';
+                    html += '<div class="flex flex-wrap gap-2">';
+                    tt.tour_slots.forEach(slot => {
+                        const isSelected = selectedSlot === slot.time;
+                        const cls = isSelected
+                            ? 'bg-primary text-white border-primary'
+                            : (slot.available ? 'bg-white text-secondary border-gray-200 hover:border-primary' : 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed');
+                        html += '<button class="tour-slot-btn px-3 py-1.5 text-sm font-medium border rounded-lg transition ' + cls + '"'
+                            + ' data-tt="' + tt.id + '" data-time="' + slot.time + '"'
+                            + (slot.available ? '' : ' disabled') + '>'
+                            + slot.time + '</button>';
+                    });
+                    html += '</div></div>';
+                }
+
+                // Parking: license plate input
+                if (tt.requires_vehicle_info && qty > 0) {
+                    for (let i = 0; i < qty; i++) {
+                        const key = tt.id + '_' + i;
+                        const val = vehicleInfo[key]?.license_plate || '';
+                        html += '<div class="px-5 pb-3 flex items-center gap-2">';
+                        html += '<svg class="w-4 h-4 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"/></svg>';
+                        html += '<input type="text" class="vehicle-plate flex-1 px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 uppercase" placeholder="Nr. Ã®nmatriculare (ex: B-123-XYZ)" data-tt="' + tt.id + '" data-idx="' + i + '" value="' + escHtml(val) + '">';
+                        html += '</div>';
+                    }
+                }
+            });
+
+                html += '</div></div>';
+            } // end category loop
+        } // end issuer loop
+
+        $groups.innerHTML = html;
+        $groups.classList.remove('hidden');
+
+        // Bind details toggle
+        $groups.querySelectorAll('.lv-toggle-details').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const ttId = btn.dataset.tt;
+                const panel = $groups.querySelector('[data-details-tt="' + ttId + '"]');
+                if (!panel) return;
+                const isHidden = panel.classList.toggle('hidden');
+                btn.textContent = isHidden ? 'Detalii â†’' : 'Ascunde detalii';
+            });
+        });
+
+        // Bind quantity buttons
+        $groups.querySelectorAll('.qty-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const ttId = parseInt(btn.dataset.tt);
+                const dir = parseInt(btn.dataset.dir);
+                changeQuantity(ttId, dir);
+            });
+        });
+
+        // Bind tour slot buttons
+        $groups.querySelectorAll('.tour-slot-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const ttId = parseInt(btn.dataset.tt);
+                tourSlotSelections[ttId] = btn.dataset.time;
+                renderTicketSelector();
+            });
+        });
+
+        // Bind vehicle plate inputs
+        $groups.querySelectorAll('.vehicle-plate').forEach(input => {
+            input.addEventListener('input', () => {
+                const key = input.dataset.tt + '_' + input.dataset.idx;
+                if (!vehicleInfo[key]) vehicleInfo[key] = {};
+                vehicleInfo[key].license_plate = input.value.toUpperCase().trim();
+            });
+        });
+
+        updateSummary();
+    }
+
+    function changeQuantity(ttId, dir) {
+        const tt = dateTickets.find(t => t.id === ttId);
+        if (!tt) return;
+
+        const min = tt.min_per_order || 1;
+        const max = tt.max_per_order || 10;
+        const maxAllowed = tt.available !== null ? Math.min(max, tt.available) : max;
+        let qty = quantities[ttId] || 0;
+
+        qty += dir;
+
+        // Enforce min_per_order: if going from 0 to positive, jump to min
+        if (dir > 0 && qty < min) qty = min;
+        // If going down below min, go to 0
+        if (dir < 0 && qty < min) qty = 0;
+        // Cap at max
+        if (qty > maxAllowed) qty = maxAllowed;
+        if (qty < 0) qty = 0;
+
+        quantities[ttId] = qty;
+
+        // Clean up vehicle info for removed parking slots
+        if (tt.requires_vehicle_info) {
+            for (let i = qty; i < 20; i++) {
+                delete vehicleInfo[ttId + '_' + i];
+            }
+        }
+
+        renderTicketSelector();
+    }
+
+    // ========== Summary & Cart ==========
+
+    function updateSummary() {
+        const items = [];
+        let total = 0;
+
+        dateTickets?.forEach(tt => {
+            const qty = quantities[tt.id] || 0;
+            if (qty > 0) {
+                const lineTotal = qty * tt.effective_price;
+                total += lineTotal;
+                items.push({ tt, qty, lineTotal });
+            }
+        });
+
+        if (items.length === 0) {
+            $summary.classList.add('hidden');
+            $mobileBar.classList.add('hidden');
+            $addBtn.disabled = true;
+            if ($mobileAddBtn) $mobileAddBtn.disabled = true;
+            return;
+        }
+
+        // Validate: parking tickets need license plates, tour tickets need slot,
+        // services with requires_access_ticket need an access ticket in cart.
+        let valid = true;
+        items.forEach(item => {
+            if (item.tt.requires_vehicle_info) {
+                for (let i = 0; i < item.qty; i++) {
+                    const plate = vehicleInfo[item.tt.id + '_' + i]?.license_plate;
+                    if (!plate || plate.length < 3) valid = false;
+                }
+            }
+            if (item.tt.has_tour_slots && !tourSlotSelections[item.tt.id]) {
+                valid = false;
+            }
+            if (item.tt.requires_access_ticket && (item.tt.service_category || 'access') !== 'access') {
+                if (!hasAccessTicketInCart()) valid = false;
+            }
+        });
+
+        // Render items
+        $summaryItems.innerHTML = items.map(item =>
+            '<div class="flex justify-between text-gray-600">' +
+            '<span>' + item.qty + 'Ã— ' + escHtml(item.tt.name) + '</span>' +
+            '<span class="font-medium">' + formatPrice(item.lineTotal) + ' ' + (item.tt.currency || 'RON') + '</span>' +
+            '</div>'
+        ).join('');
+
+        $totalEl.textContent = formatPrice(total) + ' RON';
+        $summary.classList.remove('hidden');
+
+        // Mobile bar
+        $mobileTotalEl.textContent = formatPrice(total) + ' RON';
+        $mobileBar.classList.remove('hidden');
+
+        $addBtn.disabled = !valid;
+        if ($mobileAddBtn) $mobileAddBtn.disabled = !valid;
+    }
+
+    function addToCart() {
+        if (!selectedDate || !dateTickets) return;
+
+        dateTickets.forEach(tt => {
+            const qty = quantities[tt.id] || 0;
+            if (qty <= 0) return;
+
+            // Build vehicle_info for parking
+            let vInfo = null;
+            if (tt.requires_vehicle_info) {
+                const plates = [];
+                for (let i = 0; i < qty; i++) {
+                    plates.push(vehicleInfo[tt.id + '_' + i]?.license_plate || '');
+                }
+                vInfo = { license_plates: plates };
+            }
+
+            // Tour slot
+            const tourSlot = tt.has_tour_slots ? tourSlotSelections[tt.id] : null;
+
+            // Add to BileteOnlineCart with meta
+            if (typeof BileteOnlineCart !== 'undefined' && BileteOnlineCart.addItem) {
+                BileteOnlineCart.addItem(
+                    {
+                        id: EVENT.id,
+                        title: EVENT.name,
+                        slug: EVENT.slug,
+                        image: EVENT.image,
+                        visit_date: selectedDate,
+                    },
+                    {
+                        id: tt.id,
+                        name: tt.name + (tourSlot ? ' (' + tourSlot + ')' : ''),
+                        price: tt.effective_price,
+                        originalPrice: tt.base_price !== tt.effective_price ? tt.base_price : null,
+                        min_per_order: tt.min_per_order,
+                        max_per_order: tt.max_per_order,
+                        is_parking: tt.is_parking,
+                        requires_vehicle_info: tt.requires_vehicle_info,
+                    },
+                    qty,
+                    {
+                        visit_date: selectedDate,
+                        vehicle_info: vInfo,
+                        tour_slot_time: tourSlot,
+                    }
+                );
+            }
+        });
+
+        // Redirect to cart
+        window.location.href = '/cos';
+    }
+
+    $addBtn?.addEventListener('click', addToCart);
+    $mobileAddBtn?.addEventListener('click', addToCart);
+
+    // ========== Utils ==========
+
+    function formatPrice(val) {
+        return parseFloat(val).toFixed(2).replace(/\.00$/, '').replace('.', ',');
+    }
+
+    function escHtml(str) {
+        if (!str) return '';
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+    }
+
+    // ========== Init ==========
+
+    loadMonth();
+
+})();

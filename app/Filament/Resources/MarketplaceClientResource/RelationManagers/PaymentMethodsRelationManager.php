@@ -185,7 +185,7 @@ class PaymentMethodsRelationManager extends RelationManager
                 AttachAction::make()
                     ->label('Add Payment Method')
                     ->preloadRecordSelect()
-                    ->recordSelectOptionsQuery(fn ($query) => $query->where('category', 'payment')->where('is_active', true))
+                    ->recordSelectOptionsQuery(fn ($query) => $query->where('microservices.category', 'payment')->where('microservices.is_active', true))
                     ->form(fn (AttachAction $action): array => [
                         $action->getRecordSelect()
                             ->label('Payment Method')
@@ -259,7 +259,7 @@ class PaymentMethodsRelationManager extends RelationManager
                 AttachAction::make()
                     ->label('Add First Payment Method')
                     ->preloadRecordSelect()
-                    ->recordSelectOptionsQuery(fn ($query) => $query->where('category', 'payment')->where('is_active', true)),
+                    ->recordSelectOptionsQuery(fn ($query) => $query->where('microservices.category', 'payment')->where('microservices.is_active', true)),
             ]);
     }
 }

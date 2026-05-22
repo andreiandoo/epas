@@ -1,0 +1,754 @@
+﻿/**
+ * bilete.online - Shopping Cart Manager
+ * Handles cart operations with localStorage persistence
+ */
+
+const BileteOnlineCart = {
+    // Storage key
+    STORAGE_KEY: 'bileteonline_cart',
+    PROMO_KEY: 'bileteonline_cart_promo',
+    RESERVATION_KEY: 'bileteonline_cart_reservation',
+
+    /**
+     * Get cart from localStorage
+     */
+    getCart() {
+        const cart = localStorage.getItem(this.STORAGE_KEY);
+        return cart ? JSON.parse(cart) : { items: [], updatedAt: null };
+    },
+
+    /**
+     * Save cart to localStorage
+     */
+    saveCart(cart) {
+        cart.updatedAt = new Date().toISOString();
+        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(cart));
+
+        // Dispatch cart update event
+        window.dispatchEvent(new CustomEvent('bileteonline:cart:update', {
+            detail: { cart, itemCount: this.getItemCount() }
+        }));
+    },
+
+    /**
+     * Add item to cart
+     */
+    addItem(eventId, eventData, ticketTypeId, ticketTypeData, quantity = 1, meta = null) {
+        // Support alternative signature: addItem(eventData, ticketTypeData, quantity, meta)
+        if (typeof eventId === 'object' && eventId !== null) {
+            meta = ticketTypeId; // 4th arg
+            quantity = ticketTypeData || 1; // 3rd arg
+            ticketTypeData = eventData; // 2nd arg
+            eventData = eventId; // 1st arg
+            ticketTypeId = ticketTypeData.id;
+            eventId = eventData.id;
+        }
+        const cart = this.getCart();
+        const perfId = eventData.performance_id || 0;
+        const visitDate = meta?.visit_date || eventData.visit_date || '';
+        const itemKey = `${eventId}_${ticketTypeId}${perfId ? '_' + perfId : ''}${visitDate ? '_' + visitDate : ''}`;
+
+        // Find existing item
+        const existingIndex = cart.items.findIndex(item => item.key === itemKey);
+
+        if (existingIndex >= 0) {
+            // Update quantity
+            cart.items[existingIndex].quantity += quantity;
+        } else {
+            // Add new item
+            cart.items.push({
+                key: itemKey,
+                eventId,
+                event: {
+                    id: eventData.id,
+                    title: eventData.title,
+                    slug: eventData.slug,
+                    date: eventData.start_date,
+                    time: eventData.start_time,
+                    image: eventData.image || eventData.featured_image,
+                    venue: eventData.venue,
+                    city: eventData.venue?.city,
+                    taxes: eventData.taxes || [],
+                    target_price: eventData.target_price || null,
+                    commission_rate: eventData.commission_rate || 5,
+                    commission_mode: eventData.commission_mode || 'included',
+                    preview_token: eventData.preview_token || null,
+                    performance_id: eventData.performance_id || null,
+                    performance_date: eventData.performance_date || null,
+                    performance_time: eventData.performance_time || null,
+                    performance_label: eventData.performance_label || null
+                },
+                ticketTypeId,
+                ticketType: {
+                    id: ticketTypeData.id,
+                    name: ticketTypeData.name,
+                    price: ticketTypeData.price,
+                    originalPrice: ticketTypeData.original_price,
+                    description: ticketTypeData.description,
+                    min_per_order: ticketTypeData.min_per_order || 1,
+                    max_per_order: ticketTypeData.max_per_order || 10,
+                    commission: ticketTypeData.commission || null, // Per-ticket commission settings
+                    is_refundable: ticketTypeData.is_refundable || false,
+                    is_parking: ticketTypeData.is_parking || false,
+                    requires_vehicle_info: ticketTypeData.requires_vehicle_info || false
+                },
+                quantity,
+                meta: meta || null,
+                addedAt: new Date().toISOString()
+            });
+        }
+
+        this.saveCart(cart);
+
+        // Start/reset reservation timer when adding items
+        this.startReservationTimer();
+
+        this.showNotification(`${ticketTypeData.name} adÄƒugat Ã®n coÈ™!`);
+
+        // CAPI AddToCart (Layer B bridge â€” backend forwards to Meta Graph API)
+        try {
+            if (window.EPASTracking && typeof EPASTracking.trackAddToCart === 'function') {
+                EPASTracking.trackAddToCart(
+                    eventId,
+                    ticketTypeId,
+                    quantity,
+                    ticketTypeData.price || 0,
+                    'RON',
+                    {
+                        marketplace_event_id: eventId,
+                        content_name: ticketTypeData.name || null,
+                    }
+                );
+            }
+        } catch (e) {
+            // Tracking must never break cart logic
+        }
+
+        return cart;
+    },
+
+    /**
+     * Update item quantity
+     */
+    updateQuantity(itemKey, quantity) {
+        const cart = this.getCart();
+        const index = cart.items.findIndex(item => item.key === itemKey);
+
+        if (index >= 0) {
+            if (quantity <= 0) {
+                // Remove item if quantity is 0 or less; release seats first
+                const [removed] = cart.items.splice(index, 1);
+                this._releaseItemSeats(removed);
+            } else {
+                cart.items[index].quantity = quantity;
+            }
+            this.saveCart(cart);
+        }
+
+        return cart;
+    },
+
+    /**
+     * Release held seats for a cart item via API (best-effort).
+     * Silently skips items without seats and never throws â€” local cart
+     * mutation must proceed even if the network call fails.
+     */
+    _releaseItemSeats(item) {
+        if (!item || !item.seat_uids || item.seat_uids.length === 0 || !item.event_seating_id) {
+            return Promise.resolve();
+        }
+        if (typeof BileteOnlineAPI === 'undefined' || !BileteOnlineAPI.delete) {
+            return Promise.resolve();
+        }
+        return BileteOnlineAPI.delete('/cart/seats', {
+            event_seating_id: item.event_seating_id,
+            seat_uids: item.seat_uids
+        }).catch(function(error) {
+            console.warn('[BileteOnlineCart] Failed to release seats (cleanup job will handle):', error);
+        });
+    },
+
+    /**
+     * Remove item from cart. Releases any held seats via API before mutating storage.
+     */
+    removeItem(itemKey) {
+        const cart = this.getCart();
+        const index = cart.items.findIndex(item => item.key === itemKey);
+
+        if (index >= 0) {
+            const removed = cart.items.splice(index, 1)[0];
+            this._releaseItemSeats(removed);
+            this.saveCart(cart);
+            this.showNotification(`${removed.ticketType.name} eliminat din coÈ™`);
+        }
+
+        return cart;
+    },
+
+    /**
+     * Clear entire cart. Releases all held seats unless skipRelease is set
+     * (used after a successful checkout where seats are already sold).
+     */
+    clearCart(options = {}) {
+        if (!options.skipRelease) {
+            const current = this.getCart();
+            (current.items || []).forEach(item => this._releaseItemSeats(item));
+        }
+
+        const cart = { items: [], updatedAt: new Date().toISOString() };
+        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(cart));
+        localStorage.removeItem(this.PROMO_KEY);
+        localStorage.removeItem(this.RESERVATION_KEY);
+        // Also clear cart_end_time used by cart.php
+        localStorage.removeItem('cart_end_time');
+
+        window.dispatchEvent(new CustomEvent('bileteonline:cart:clear'));
+        window.dispatchEvent(new CustomEvent('bileteonline:cart:update', {
+            detail: { cart, itemCount: 0 }
+        }));
+
+        return cart;
+    },
+
+    /**
+     * Get total number of items in cart
+     */
+    getItemCount() {
+        const cart = this.getCart();
+        return cart.items.reduce((total, item) => total + item.quantity, 0);
+    },
+
+    /**
+     * Calculate cart subtotal
+     */
+    getSubtotal() {
+        const cart = this.getCart();
+        return cart.items.reduce((total, item) => {
+            return total + (item.ticketType.price * item.quantity);
+        }, 0);
+    },
+
+    /**
+     * Calculate total savings (from discounted tickets)
+     */
+    getSavings() {
+        const cart = this.getCart();
+        return cart.items.reduce((total, item) => {
+            if (item.ticketType.originalPrice && item.ticketType.originalPrice > item.ticketType.price) {
+                return total + ((item.ticketType.originalPrice - item.ticketType.price) * item.quantity);
+            }
+            return total;
+        }, 0);
+    },
+
+    /**
+     * Get savings with ticket names for display message
+     * Returns { amount: number, ticketNames: string[] }
+     */
+    getSavingsWithTickets() {
+        const cart = this.getCart();
+        let totalSavings = 0;
+        const ticketNames = [];
+
+        cart.items.forEach(item => {
+            if (item.ticketType.originalPrice && item.ticketType.originalPrice > item.ticketType.price) {
+                totalSavings += (item.ticketType.originalPrice - item.ticketType.price) * item.quantity;
+                ticketNames.push(item.ticketType.name);
+            }
+        });
+
+        return {
+            amount: totalSavings,
+            ticketNames: [...new Set(ticketNames)] // Remove duplicates
+        };
+    },
+
+    /**
+     * Get ALL taxes from cart items (stored when adding to cart from event page)
+     * Returns taxes from first cart item or empty array if not available
+     */
+    getTaxes() {
+        const items = this.getItems();
+        if (items.length > 0 && items[0].event?.taxes?.length > 0) {
+            // Return ALL active taxes (both included in price and added on top)
+            return items[0].event.taxes.filter(t => t.is_active !== false);
+        }
+        return [];
+    },
+
+    /**
+     * Calculate total taxes based on configured taxes
+     */
+    getTotalTaxes() {
+        const subtotal = this.getSubtotal();
+        const taxes = this.getTaxes();
+        let totalTaxes = 0;
+
+        taxes.forEach(tax => {
+            if (!tax.is_active) return;
+            if (tax.value_type === 'percent') {
+                totalTaxes += subtotal * (tax.value / 100);
+            } else if (tax.value_type === 'fixed') {
+                totalTaxes += tax.value * this.getItemCount();
+            }
+        });
+
+        return totalTaxes;
+    },
+
+    /**
+     * Calculate Red Cross tax (legacy method for backwards compatibility)
+     * @deprecated Use getTotalTaxes() instead
+     */
+    getRedCrossTax() {
+        return this.getTotalTaxes();
+    },
+
+    /**
+     * Calculate commission for a single ticket type
+     * @param {Object} item - Cart item with ticketType and event data
+     * @returns {Object} Commission details: { amount, rate, fixed, mode, type }
+     */
+    calculateItemCommission(item) {
+        const basePrice = item.ticketType.price || 0;
+        const commission = item.ticketType.commission;
+
+        // If ticket has per-ticket commission settings
+        if (commission && commission.type) {
+            let amount = 0;
+            switch (commission.type) {
+                case 'percentage':
+                    amount = basePrice * ((commission.rate || 0) / 100);
+                    break;
+                case 'fixed':
+                    amount = commission.fixed || 0;
+                    break;
+                case 'both':
+                    amount = (basePrice * ((commission.rate || 0) / 100)) + (commission.fixed || 0);
+                    break;
+            }
+            return {
+                amount: amount,
+                rate: commission.rate || 0,
+                fixed: commission.fixed || 0,
+                mode: commission.mode || 'included',
+                type: commission.type
+            };
+        }
+
+        // Fall back to event-level commission
+        const eventRate = item.event?.commission_rate || 5;
+        const eventMode = item.event?.commission_mode || 'included';
+        return {
+            amount: basePrice * (eventRate / 100),
+            rate: eventRate,
+            fixed: 0,
+            mode: eventMode,
+            type: 'percentage'
+        };
+    },
+
+    /**
+     * Calculate total commission for all items in cart
+     * @returns {number} Total commission amount
+     */
+    getTotalCommission() {
+        const cart = this.getCart();
+        return cart.items.reduce((total, item) => {
+            const commission = this.calculateItemCommission(item);
+            return total + (commission.amount * item.quantity);
+        }, 0);
+    },
+
+    /**
+     * Get commission breakdown by item for reporting
+     * @returns {Array} Array of { item, commission, quantity, total }
+     */
+    getCommissionBreakdown() {
+        const cart = this.getCart();
+        return cart.items.map(item => {
+            const commission = this.calculateItemCommission(item);
+            return {
+                ticketName: item.ticketType.name,
+                eventTitle: item.event.title,
+                basePrice: item.ticketType.price,
+                commission: commission,
+                quantity: item.quantity,
+                totalCommission: commission.amount * item.quantity
+            };
+        });
+    },
+
+    /**
+     * Calculate points to be earned
+     */
+    getPointsEarned() {
+        return Math.floor(this.getSubtotal() * BILETEONLINE_CONFIG.POINTS_PER_CURRENCY);
+    },
+
+    /**
+     * Get applied promo code
+     */
+    getPromoCode() {
+        const promo = localStorage.getItem(this.PROMO_KEY);
+        return promo ? JSON.parse(promo) : null;
+    },
+
+    /**
+     * Apply promo code
+     */
+    async applyPromoCode(code) {
+        const cart = this.getCart();
+        if (cart.items.length === 0) {
+            return { success: false, message: 'CoÈ™ul este gol' };
+        }
+
+        try {
+            // Get first event ID for validation (simplified)
+            const eventId = cart.items[0].eventId;
+            const subtotal = this.getSubtotal();
+            const ticketCount = this.getItemCount();
+
+            // Build cart items with ticket_type_id for ticket-type-specific discounts
+            const items = cart.items.map(item => ({
+                event_id: item.eventId,
+                ticket_type_id: item.ticketTypeId,
+                quantity: item.quantity,
+                unit_price: item.ticketType?.price || 0,
+                total: (item.ticketType?.price || 0) * item.quantity
+            }));
+
+            const response = await BileteOnlineAPI.validatePromoCode(
+                code,
+                eventId,
+                subtotal,
+                ticketCount,
+                BileteOnlineAuth.getCustomerData()?.email,
+                items
+            );
+
+            if (response.success) {
+                // Use the backend-calculated discount amount (respects ticket type restrictions)
+                const discountData = response.data.discount || {};
+                const promoCode = response.data.promo_code || {};
+                const promoData = {
+                    code: code,
+                    type: response.data.discount_type || promoCode.type,
+                    value: response.data.discount_value || promoCode.value,
+                    discountAmount: discountData.amount || response.data.discount_amount || 0,
+                    appliedToLabel: promoCode.applied_to_label || null,
+                    appliedAt: new Date().toISOString()
+                };
+
+                localStorage.setItem(this.PROMO_KEY, JSON.stringify(promoData));
+
+                window.dispatchEvent(new CustomEvent('bileteonline:cart:promo', {
+                    detail: { promo: promoData }
+                }));
+
+                this.showNotification(`Cod promoÈ›ional "${code}" aplicat cu succes!`, 'success');
+                return { success: true, promo: promoData };
+            }
+
+            return { success: false, message: response.message || 'Cod invalid' };
+        } catch (error) {
+            return { success: false, message: error.message };
+        }
+    },
+
+    /**
+     * Remove promo code
+     */
+    removePromoCode() {
+        localStorage.removeItem(this.PROMO_KEY);
+
+        window.dispatchEvent(new CustomEvent('bileteonline:cart:promo', {
+            detail: { promo: null }
+        }));
+
+        this.showNotification('Cod promoÈ›ional eliminat');
+    },
+
+    /**
+     * Get discount amount from promo code
+     */
+    getPromoDiscount() {
+        const promo = this.getPromoCode();
+        if (!promo) return 0;
+
+        // Use the backend-calculated discount amount (respects ticket type restrictions)
+        if (promo.discountAmount !== undefined && promo.discountAmount !== null) {
+            return parseFloat(promo.discountAmount) || 0;
+        }
+
+        // Fallback: recalculate (only for old stored promos without discountAmount)
+        const subtotal = this.getSubtotal();
+        if (promo.type === 'percentage') {
+            return subtotal * (promo.value / 100);
+        }
+        return Math.min(promo.value, subtotal);
+    },
+
+    /**
+     * Calculate grand total
+     */
+    getTotal() {
+        const subtotal = this.getSubtotal();
+        const tax = this.getRedCrossTax();
+        const discount = this.getPromoDiscount();
+
+        return Math.max(0, subtotal + tax - discount);
+    },
+
+    /**
+     * Get cart summary
+     */
+    getSummary() {
+        const savingsInfo = this.getSavingsWithTickets();
+        return {
+            items: this.getCart().items,
+            itemCount: this.getItemCount(),
+            subtotal: this.getSubtotal(),
+            savings: savingsInfo.amount,
+            savingsTicketNames: savingsInfo.ticketNames,
+            taxes: this.getTaxes(),
+            totalTaxes: this.getTotalTaxes(),
+            redCrossTax: this.getRedCrossTax(), // Legacy support
+            promoCode: this.getPromoCode(),
+            promoDiscount: this.getPromoDiscount(),
+            total: this.getTotal(),
+            pointsEarned: this.getPointsEarned(),
+            totalCommission: this.getTotalCommission(),
+            commissionBreakdown: this.getCommissionBreakdown()
+        };
+    },
+
+    // ==================== RESERVATION TIMER ====================
+
+    /**
+     * Start reservation timer
+     */
+    startReservationTimer() {
+        const expiresAt = new Date(Date.now() + BILETEONLINE_CONFIG.CART_RESERVATION_MINUTES * 60 * 1000);
+        localStorage.setItem(this.RESERVATION_KEY, expiresAt.toISOString());
+
+        // Also set cart_end_time for global timer bar compatibility
+        localStorage.setItem('cart_end_time', expiresAt.getTime().toString());
+
+        window.dispatchEvent(new CustomEvent('bileteonline:cart:reservation', {
+            detail: { expiresAt: expiresAt.toISOString() }
+        }));
+
+        return expiresAt;
+    },
+
+    /**
+     * Get reservation expiry time
+     */
+    getReservationExpiry() {
+        const expiry = localStorage.getItem(this.RESERVATION_KEY);
+        return expiry ? new Date(expiry) : null;
+    },
+
+    /**
+     * Check if reservation is expired
+     */
+    isReservationExpired() {
+        const expiry = this.getReservationExpiry();
+        if (!expiry) return true;
+        return new Date() >= expiry;
+    },
+
+    /**
+     * Get remaining reservation time in seconds
+     */
+    getRemainingTime() {
+        const expiry = this.getReservationExpiry();
+        if (!expiry) return 0;
+
+        const remaining = Math.max(0, expiry.getTime() - Date.now());
+        return Math.floor(remaining / 1000);
+    },
+
+    /**
+     * Format remaining time as MM:SS
+     */
+    formatRemainingTime() {
+        const seconds = this.getRemainingTime();
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    },
+
+    /**
+     * Clear reservation
+     */
+    clearReservation() {
+        localStorage.removeItem(this.RESERVATION_KEY);
+    },
+
+    // ==================== UI HELPERS ====================
+
+    /**
+     * Show notification toast
+     */
+    showNotification(message, type = 'info') {
+        window.dispatchEvent(new CustomEvent('bileteonline:notification', {
+            detail: { message, type }
+        }));
+    },
+
+    /**
+     * Update cart badge in header
+     */
+    updateCartBadge() {
+        const count = this.getItemCount();
+        const badges = document.querySelectorAll('[data-cart-count]');
+
+        badges.forEach(badge => {
+            badge.textContent = count;
+            badge.style.display = count > 0 ? '' : 'none';
+        });
+    },
+
+    /**
+     * Check if cart has items from multiple events
+     */
+    hasMultipleEvents() {
+        const cart = this.getCart();
+        const eventIds = new Set(cart.items.map(item => item.eventId));
+        return eventIds.size > 1;
+    },
+
+    /**
+     * Get items grouped by event
+     */
+    getItemsByEvent() {
+        const cart = this.getCart();
+        const grouped = {};
+
+        cart.items.forEach(item => {
+            if (!grouped[item.eventId]) {
+                grouped[item.eventId] = {
+                    event: item.event,
+                    items: []
+                };
+            }
+            grouped[item.eventId].items.push(item);
+        });
+
+        return grouped;
+    },
+
+    /**
+     * Initialize cart (call on page load)
+     */
+    init() {
+        // Update cart badge
+        this.updateCartBadge();
+
+        // Listen for storage changes (multi-tab sync)
+        window.addEventListener('storage', (e) => {
+            if (e.key === this.STORAGE_KEY) {
+                this.updateCartBadge();
+                window.dispatchEvent(new CustomEvent('bileteonline:cart:sync', {
+                    detail: { cart: this.getCart() }
+                }));
+            }
+        });
+
+        // Listen for cart updates
+        window.addEventListener('bileteonline:cart:update', () => {
+            this.updateCartBadge();
+        });
+
+        // Check reservation expiry on load and clear if expired
+        if (this.getItemCount() > 0 && this.isReservationExpired()) {
+            this.handleReservationExpired();
+        }
+
+        // Start periodic check for reservation expiry (every 5 seconds)
+        this.startExpiryCheck();
+    },
+
+    /**
+     * Handle cart reservation expiration
+     */
+    handleReservationExpired() {
+        const hadItems = this.getItemCount() > 0;
+
+        // Clear the cart
+        this.clearCart();
+
+        // Dispatch specific expiration event for UI updates
+        window.dispatchEvent(new CustomEvent('bileteonline:cart:expired', {
+            detail: { hadItems }
+        }));
+
+        // Show notification to user
+        if (hadItems) {
+            this.showNotification('Timpul de rezervare a expirat. CoÈ™ul a fost golit.', 'warning');
+        }
+
+        console.log('Cart reservation expired - cart cleared');
+    },
+
+    /**
+     * Start periodic check for reservation expiry
+     */
+    startExpiryCheck() {
+        // Clear any existing interval
+        if (this._expiryCheckInterval) {
+            clearInterval(this._expiryCheckInterval);
+        }
+
+        // Check every 5 seconds
+        this._expiryCheckInterval = setInterval(() => {
+            if (this.getItemCount() > 0 && this.isReservationExpired()) {
+                this.handleReservationExpired();
+            }
+        }, 5000);
+    },
+
+    /**
+     * Stop periodic expiry check
+     */
+    stopExpiryCheck() {
+        if (this._expiryCheckInterval) {
+            clearInterval(this._expiryCheckInterval);
+            this._expiryCheckInterval = null;
+        }
+    },
+
+    /**
+     * Get cart items array (alias for CartPage compatibility)
+     */
+    getItems() {
+        return this.getCart().items || [];
+    },
+
+    /**
+     * Save items array (alias for CartPage compatibility)
+     */
+    save(items) {
+        const cart = { items: items, updatedAt: new Date().toISOString() };
+        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(cart));
+
+        // Dispatch cart update event
+        window.dispatchEvent(new CustomEvent('bileteonline:cart:update', {
+            detail: { cart, itemCount: items.reduce((sum, item) => sum + (item.quantity || 1), 0) }
+        }));
+    },
+
+    /**
+     * Alias for clearCart (CartPage compatibility)
+     */
+    clear(options = {}) {
+        return this.clearCart(options);
+    }
+};
+
+// Initialize on DOM ready
+document.addEventListener('DOMContentLoaded', () => {
+    BileteOnlineCart.init();
+});

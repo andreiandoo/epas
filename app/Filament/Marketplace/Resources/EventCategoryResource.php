@@ -29,7 +29,7 @@ class EventCategoryResource extends Resource
 
     protected static ?string $navigationLabel = 'Event Categories';
 
-    protected static ?string $navigationParentItem = 'Events';
+    protected static ?string $navigationParentItem = 'Evenimente';
 
     protected static ?int $navigationSort = 4;
 
