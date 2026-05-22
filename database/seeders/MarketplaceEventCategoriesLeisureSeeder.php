@@ -88,7 +88,7 @@ class MarketplaceEventCategoriesLeisureSeeder extends Seeder
             [
                 'slug' => 'escape-rooms',
                 'emoji' => '🔐',
-                'color' => 'vermilion',
+                'color' => '#E84527',
                 'featured' => true,
                 'name' => ['ro' => 'Escape rooms', 'en' => 'Escape Rooms'],
                 'children' => [
@@ -106,7 +106,7 @@ class MarketplaceEventCategoriesLeisureSeeder extends Seeder
             [
                 'slug' => 'muzee-expozitii',
                 'emoji' => '🏛️',
-                'color' => 'forest',
+                'color' => '#1E4A3D',
                 'featured' => true,
                 'name' => ['ro' => 'Muzee & expoziții', 'en' => 'Museums & Exhibitions'],
                 'children' => [
@@ -125,7 +125,7 @@ class MarketplaceEventCategoriesLeisureSeeder extends Seeder
             [
                 'slug' => 'parcuri-de-distractii',
                 'emoji' => '🎡',
-                'color' => 'sky',
+                'color' => '#2C5F8A',
                 'featured' => true,
                 'name' => ['ro' => 'Parcuri de distracții', 'en' => 'Amusement Parks'],
                 'children' => [
@@ -142,7 +142,7 @@ class MarketplaceEventCategoriesLeisureSeeder extends Seeder
             [
                 'slug' => 'parcuri-de-aventura',
                 'emoji' => '🧗',
-                'color' => 'ochre',
+                'color' => '#DA9A33',
                 'featured' => true,
                 'name' => ['ro' => 'Parcuri de aventură', 'en' => 'Adventure Parks'],
                 'children' => [
@@ -159,7 +159,7 @@ class MarketplaceEventCategoriesLeisureSeeder extends Seeder
             [
                 'slug' => 'natura-outdoor',
                 'emoji' => '🌲',
-                'color' => 'forest',
+                'color' => '#1E4A3D',
                 'name' => ['ro' => 'Natură & outdoor', 'en' => 'Nature & Outdoor'],
                 'children' => [
                     'Rezervații naturale',
@@ -176,7 +176,7 @@ class MarketplaceEventCategoriesLeisureSeeder extends Seeder
             [
                 'slug' => 'acvarii-zoo-animale',
                 'emoji' => '🐠',
-                'color' => 'sky',
+                'color' => '#2C5F8A',
                 'name' => ['ro' => 'Acvarii, zoo & animale', 'en' => 'Aquariums, Zoos & Animals'],
                 'children' => [
                     'Acvarii',
@@ -190,7 +190,7 @@ class MarketplaceEventCategoriesLeisureSeeder extends Seeder
             [
                 'slug' => 'ateliere-experiente-creative',
                 'emoji' => '🎨',
-                'color' => 'vermilion',
+                'color' => '#E84527',
                 'name' => ['ro' => 'Ateliere & experiențe creative', 'en' => 'Workshops & Creative Experiences'],
                 'children' => [
                     'Ateliere pentru copii',
@@ -207,7 +207,7 @@ class MarketplaceEventCategoriesLeisureSeeder extends Seeder
             [
                 'slug' => 'tururi-experiente-turistice',
                 'emoji' => '🗺️',
-                'color' => 'ochre',
+                'color' => '#DA9A33',
                 'name' => ['ro' => 'Tururi & experiențe turistice', 'en' => 'Tours & Tourist Experiences'],
                 'children' => [
                     'Tururi ghidate urbane',
@@ -223,7 +223,7 @@ class MarketplaceEventCategoriesLeisureSeeder extends Seeder
             [
                 'slug' => 'educatie-invatare-experientiala',
                 'emoji' => '🔬',
-                'color' => 'forest',
+                'color' => '#1E4A3D',
                 'name' => ['ro' => 'Educație & învățare experiențială', 'en' => 'Education & Experiential Learning'],
                 'children' => [
                     'Activități educative',
@@ -240,7 +240,7 @@ class MarketplaceEventCategoriesLeisureSeeder extends Seeder
             [
                 'slug' => 'familie-copii',
                 'emoji' => '👨‍👩‍👧',
-                'color' => 'ochre',
+                'color' => '#DA9A33',
                 'name' => ['ro' => 'Familie & copii', 'en' => 'Family & Kids'],
                 'children' => [
                     'Activități pentru copii',
@@ -258,7 +258,7 @@ class MarketplaceEventCategoriesLeisureSeeder extends Seeder
             [
                 'slug' => 'corporate-grupuri',
                 'emoji' => '💼',
-                'color' => 'sky',
+                'color' => '#2C5F8A',
                 'name' => ['ro' => 'Corporate & grupuri', 'en' => 'Corporate & Groups'],
                 'children' => [
                     'Team building',
@@ -275,7 +275,7 @@ class MarketplaceEventCategoriesLeisureSeeder extends Seeder
             [
                 'slug' => 'cultura-arta',
                 'emoji' => '🎭',
-                'color' => 'vermilion',
+                'color' => '#E84527',
                 'name' => ['ro' => 'Cultură & artă', 'en' => 'Culture & Arts'],
                 'children' => [
                     'Muzee',
