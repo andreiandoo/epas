@@ -72,6 +72,14 @@ class BookingPublicController extends Controller
      */
     public function submitRequest(Request $request, string $slug): JsonResponse
     {
+        // Honeypot — hidden form input that bots auto-fill. Silent success
+        // response so the bot can't tell the submission was dropped.
+        if (!empty(trim((string) $request->input('website_url', '')))) {
+            return response()->json([
+                'message' => 'Cererea a fost trimisă cu succes. Verifică emailul pentru confirmare.',
+            ]);
+        }
+
         $artist = Artist::where('slug', $slug)->first();
         if (!$artist) {
             return response()->json(['error' => 'Artist not found'], 404);

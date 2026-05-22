@@ -505,6 +505,12 @@ class VenuesController extends BaseController
     {
         $client = $this->requireClient($request);
 
+        // Honeypot — hidden form input that bots auto-fill. Returning
+        // success keeps the bot from learning the filter exists.
+        if (!empty(trim((string) $request->input('website_url', '')))) {
+            return $this->success(['message' => 'Mesajul tău a fost trimis cu succes.']);
+        }
+
         $venue = Venue::query()
             ->whereHas('marketplaceClients', fn ($q) => $q->where('marketplace_client_id', $client->id))
             ->where('slug', $slug)

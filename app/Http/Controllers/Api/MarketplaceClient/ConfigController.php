@@ -53,6 +53,13 @@ class ConfigController extends BaseController
     {
         $client = $this->requireClient($request);
 
+        // Honeypot — hidden input on the form bots auto-fill. Silently
+        // return success so the bot can't tell its submission was dropped
+        // (returning an error would let smart bots learn the filter).
+        if (!empty(trim((string) $request->input('website_url', '')))) {
+            return $this->success(['message' => 'Mesajul a fost trimis cu succes.']);
+        }
+
         if (empty($client->contact_email) || !filter_var($client->contact_email, FILTER_VALIDATE_EMAIL)) {
             return $this->error(
                 'Adresa de contact a marketplace-ului nu este configurată. Contactează administratorul.',

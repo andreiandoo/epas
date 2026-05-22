@@ -218,6 +218,9 @@
                 conditions,
                 initial_message: fd.get('initial_message'),
                 consent: fd.get('consent') ? true : false,
+                // Honeypot — hidden field bots auto-fill. Server drops
+                // submissions silently when it carries a value.
+                website_url: fd.get('website_url') || '',
             };
 
             this.submitBtn.disabled = true;

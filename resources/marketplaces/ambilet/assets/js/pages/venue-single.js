@@ -1089,11 +1089,15 @@ const VenuePage = {
         if (errorEl) errorEl.classList.add('hidden');
         if (successEl) successEl.classList.add('hidden');
 
+        const hpField = form.querySelector('[name="website_url"]');
         const data = {
             name: form.querySelector('[name="name"]').value.trim(),
             email: form.querySelector('[name="email"]').value.trim(),
             subject: form.querySelector('[name="subject"]').value.trim(),
-            message: form.querySelector('[name="message"]').value.trim()
+            message: form.querySelector('[name="message"]').value.trim(),
+            // Honeypot — hidden field that bots auto-fill; humans never see
+            // it. Server drops the submission silently when it carries a value.
+            website_url: hpField ? hpField.value : ''
         };
 
         try {

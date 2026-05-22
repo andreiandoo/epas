@@ -386,6 +386,12 @@ require_once __DIR__ . '/includes/header.php';
         </div>
 
         <form id="bookingRequestForm" class="p-6 space-y-4">
+            <!-- Honeypot — hidden from humans, auto-filled by bots. Backend
+                 silently drops submissions where this carries a value. -->
+            <div style="position:absolute; left:-9999px; top:-9999px; width:1px; height:1px; overflow:hidden;" aria-hidden="true">
+                <label for="artist_website_url">Website (nu completați)</label>
+                <input type="text" name="website_url" id="artist_website_url" tabindex="-1" autocomplete="off" value="">
+            </div>
             <!-- Contact -->
             <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
                 <div>
