@@ -1,4 +1,4 @@
-﻿/**
+/**
  * bilete.online - Footer Component
  * Site footer with links and info
  */

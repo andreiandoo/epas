@@ -1,4 +1,4 @@
-﻿/**
+/**
  * bilete.online - Category Page Controller
  * Handles category/event type listing page with genre filtering
  *

@@ -1,4 +1,4 @@
-﻿const CheckoutPage = {
+const CheckoutPage = {
     items: [],
     taxes: [],
     insurance: null,

@@ -1,4 +1,4 @@
-﻿/**
+/**
  * bilete.online - API Client
  * Wrapper for fetch with automatic authentication and error handling
  */

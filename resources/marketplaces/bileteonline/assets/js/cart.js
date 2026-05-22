@@ -1,4 +1,4 @@
-﻿/**
+/**
  * bilete.online - Shopping Cart Manager
  * Handles cart operations with localStorage persistence
  */

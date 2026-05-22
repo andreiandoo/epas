@@ -1,4 +1,4 @@
-﻿/**
+/**
  * bilete.online - Pagination Component
  * Unified pagination for all listing pages
  *

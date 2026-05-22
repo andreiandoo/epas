@@ -1,4 +1,4 @@
-﻿/**
+/**
  * bilete.online - Search Results Page Controller
  * Handles the full search results page functionality
  */

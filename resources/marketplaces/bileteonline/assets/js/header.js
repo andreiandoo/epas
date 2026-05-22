@@ -1,4 +1,4 @@
-﻿(function() {
+(function() {
     // ==================== CONFIGURATION ====================
     const SEARCH_MIN_CHARS = 2;
     const SEARCH_DEBOUNCE_MS = 300;

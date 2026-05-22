@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Tracking Scripts Loader
  *

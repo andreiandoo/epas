@@ -1,4 +1,4 @@
-﻿/**
+/**
  * bilete.online - Genre Page Controller
  * Handles genre listing page with subgenre filtering, featured artists, and events grouped by month
  *

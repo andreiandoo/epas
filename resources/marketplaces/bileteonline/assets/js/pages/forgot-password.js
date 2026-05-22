@@ -1,4 +1,4 @@
-﻿const ForgotPage = {
+const ForgotPage = {
     async submit(event) {
         event.preventDefault();
         const email = document.getElementById('emailInput').value;

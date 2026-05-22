@@ -1,4 +1,4 @@
-﻿/**
+/**
  * bilete.online - Event Single Page Controller
  * Handles event detail page with ticket selection, cart, and related events
  *

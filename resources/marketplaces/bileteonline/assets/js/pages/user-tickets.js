@@ -1,4 +1,4 @@
-﻿const UserTickets = {
+const UserTickets = {
     tickets: { upcoming: [], past: [] },
     qrCodes: {}, // Cache generated QR codes
 

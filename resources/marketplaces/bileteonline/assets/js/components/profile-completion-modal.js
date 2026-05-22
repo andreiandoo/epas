@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Profile Completion Modal â€” Sequential Interest Profiling
  *
  * Two flows:

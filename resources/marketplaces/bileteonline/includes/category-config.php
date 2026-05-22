@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * bilete.online - Centralized Category & Genre Configuration
  *

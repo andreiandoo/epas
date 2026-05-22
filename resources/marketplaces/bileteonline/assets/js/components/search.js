@@ -1,4 +1,4 @@
-﻿/**
+/**
  * bilete.online - Search Component
  * Handles the header search overlay functionality
  */

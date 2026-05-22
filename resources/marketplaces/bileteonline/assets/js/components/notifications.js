@@ -1,4 +1,4 @@
-﻿/**
+/**
  * bilete.online - Toast Notifications Component
  * Displays toast notifications for user feedback
  */

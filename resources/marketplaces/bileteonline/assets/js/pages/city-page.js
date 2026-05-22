@@ -1,4 +1,4 @@
-﻿/**
+/**
  * bilete.online - City Page Controller
  * Handles city detail page with events listing
  *

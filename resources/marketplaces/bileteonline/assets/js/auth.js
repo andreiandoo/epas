@@ -1,4 +1,4 @@
-﻿/**
+/**
  * bilete.online - Authentication Manager
  * Handles customer and organizer authentication state
  */

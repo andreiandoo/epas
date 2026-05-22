@@ -1,4 +1,4 @@
-﻿/**
+/**
  * bilete.online - Event Card Component
  * Unified event card rendering for all pages
  *

@@ -1,4 +1,4 @@
-﻿// 3D Poster Stack Carousel Module
+// 3D Poster Stack Carousel Module
 const HeroSlider = {
     events: [],
     currentIndex: 0,

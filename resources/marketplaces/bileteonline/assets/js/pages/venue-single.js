@@ -1,4 +1,4 @@
-﻿/**
+/**
  * bilete.online - Venue Single Page Controller
  * Populates the layout defined in venue-single.php. Handles events list
  * (with category filter tabs), stats tiles, about + amenities block,

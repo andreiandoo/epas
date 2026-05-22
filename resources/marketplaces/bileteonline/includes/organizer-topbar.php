@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Organizer Dashboard Top Header Bar
  */

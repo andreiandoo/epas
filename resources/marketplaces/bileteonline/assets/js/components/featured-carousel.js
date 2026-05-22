@@ -1,4 +1,4 @@
-﻿/**
+/**
  * bilete.online - Featured Events Carousel Component
  * Displays general featured events in an infinite auto-scrolling carousel
  * Supports drag/swipe interaction

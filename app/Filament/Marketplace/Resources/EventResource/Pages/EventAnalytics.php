@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 namespace App\Filament\Marketplace\Resources\EventResource\Pages;
 

@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Notification Poller Component
  * Polls for new organizer notifications and plays sound when new ones arrive
  */

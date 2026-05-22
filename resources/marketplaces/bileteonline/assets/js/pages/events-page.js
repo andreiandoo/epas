@@ -1,4 +1,4 @@
-﻿/**
+/**
  * bilete.online - Events Page Controller
  * Handles main events listing page with filtering, sorting, search
  * Events are grouped by month for better organization

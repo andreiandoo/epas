@@ -1,4 +1,4 @@
-﻿const CartPage = {
+const CartPage = {
     timerInterval: null,
     endTime: null,
     appliedPromo: null,

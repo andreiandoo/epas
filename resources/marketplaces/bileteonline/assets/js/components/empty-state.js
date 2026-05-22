@@ -1,4 +1,4 @@
-﻿/**
+/**
  * bilete.online - Empty State Component
  * Reusable empty/error state displays for all pages
  *

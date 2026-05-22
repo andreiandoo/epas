@@ -1,4 +1,4 @@
-﻿/**
+/**
  * bilete.online - Data Transformer
  * Normalizes API responses to consistent data structures
  */

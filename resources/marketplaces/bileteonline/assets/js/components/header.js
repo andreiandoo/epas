@@ -1,4 +1,4 @@
-﻿/**
+/**
  * bilete.online - Header Component
  * Dynamic header with navigation, cart, and user menu
  */

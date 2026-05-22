@@ -1,4 +1,4 @@
-﻿/**
+/**
  * bilete.online - Configuration
  * Marketplace client for Tixello
  *

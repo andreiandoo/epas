@@ -1,4 +1,4 @@
-﻿const ThankYouPage = {
+const ThankYouPage = {
     order: null,
 
     async init() {

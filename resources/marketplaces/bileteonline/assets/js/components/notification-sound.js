@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Notification Sound Component
  * Uses Web Audio API to generate a pleasant notification sound
  */

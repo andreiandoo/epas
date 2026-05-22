@@ -1,4 +1,4 @@
-﻿function toggleOrder(btn) {
+function toggleOrder(btn) {
     const card = btn.closest('.order-card');
     card.classList.toggle('expanded');
 }

@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Leisure Venue page â€” calendar + ticket selector + parking form.
  * Depends on: BileteOnlineAPI, BileteOnlineCart (from scripts.php)
  */

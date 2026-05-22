@@ -1,4 +1,4 @@
-﻿document.addEventListener('DOMContentLoaded', function () {
+document.addEventListener('DOMContentLoaded', function () {
     // Phone field: only allow digits, +, spaces
     const phoneInput = document.getElementById('phone');
     if (phoneInput) {
