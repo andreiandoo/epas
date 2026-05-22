@@ -112,10 +112,19 @@ class PaymentController extends BaseController
                 ],
             ]);
 
-            // Update order with payment reference
+            // Update order with payment reference + timestamp the moment the
+            // customer was handed off to the processor. The timestamp lands
+            // in meta.payment_initiated_at so the order timeline can show
+            // "Trimis la procesatorul de plată" — and so operators can
+            // tell at a glance whether a stuck pending order ever made it
+            // past the checkout button (vs sitting idle in the cart).
+            $existingMeta = is_array($order->meta) ? $order->meta : [];
+            $existingMeta['payment_initiated_at'] = now()->toIso8601String();
+            $existingMeta['payment_initiated_processor'] = $processorType;
             $order->update([
                 'payment_reference' => $paymentData['reference'] ?? $paymentData['payment_id'] ?? null,
                 'payment_processor' => $processorType,
+                'meta' => $existingMeta,
             ]);
 
             // Customer is now being handed off to the payment processor.

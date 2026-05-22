@@ -2103,6 +2103,21 @@ class OrderResource extends Resource
             ]);
         }
 
+        // Payment initiated — the moment the customer clicked Plătește and
+        // we generated the processor redirect URL. Surfaces whether a
+        // pending order ever actually reached the Netopia screen, vs the
+        // customer abandoning before that.
+        $paymentInitiatedAt = $record->meta['payment_initiated_at'] ?? null;
+        if ($paymentInitiatedAt) {
+            $processorLabel = $record->meta['payment_initiated_processor'] ?? $record->payment_processor ?? 'procesatorul de plată';
+            $events->push([
+                'status' => 'info',
+                'text' => 'Trimis către ' . $processorLabel . ' pentru plată',
+                'time' => \Carbon\Carbon::parse($paymentInitiatedAt),
+                'subtext' => 'Clientul a apăsat Plătește și a primit link-ul de redirect.',
+            ]);
+        }
+
         // Payment processed (if paid/completed/refunded — was paid before refund)
         if (in_array($record->status, ['paid', 'confirmed', 'completed', 'refunded', 'partially_refunded'])) {
             $paidAt = $record->paid_at ?? $record->meta['paid_at'] ?? $record->created_at->addMinutes(2);

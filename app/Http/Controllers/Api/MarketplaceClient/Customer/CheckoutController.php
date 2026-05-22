@@ -449,6 +449,68 @@ class CheckoutController extends BaseController
                 }
             }
 
+            // Idempotency guard: same customer + overlapping seats + still
+            // in pending state → return the existing order instead of
+            // creating a duplicate. This prevents the 4-pending-orders
+            // pattern we kept seeing: customer clicks Cumpără multiple
+            // times (slow page, back button, retries) and each click
+            // historically created a fresh order with the same seats.
+            //
+            // The check requires at least one seat overlap with an active
+            // pending order. General-admission carts (no seat_uids) skip
+            // this guard since the same customer can legitimately place
+            // two separate non-seated orders.
+            // $isAutoConfirmed isn't set yet at this point; only $isTestOrder
+            // is available. We dedupe both real and free-order flows — only
+            // test orders skip the guard since QA may need rapid duplicate
+            // inserts for the same seats.
+            if (!empty($seatedItemsMeta) && !$isTestOrder) {
+                $allRequestedSeatUids = collect($seatedItemsMeta)
+                    ->flatMap(fn ($i) => $i['seat_uids'] ?? [])
+                    ->filter()
+                    ->unique()
+                    ->values()
+                    ->all();
+                if (!empty($allRequestedSeatUids)) {
+                    $existingPending = Order::where('marketplace_customer_id', $customer->id)
+                        ->where('marketplace_client_id', $client->id)
+                        ->where('status', 'pending')
+                        ->where(function ($q) {
+                            $q->whereNull('expires_at')->orWhere('expires_at', '>', now());
+                        })
+                        ->where('created_at', '>=', now()->subHour())
+                        ->orderByDesc('created_at')
+                        ->get(['id', 'order_number', 'total', 'currency', 'meta', 'created_at', 'expires_at']);
+
+                    foreach ($existingPending as $candidate) {
+                        $candidateSeatedItems = is_array($candidate->meta)
+                            ? ($candidate->meta['seated_items'] ?? [])
+                            : [];
+                        $candidateSeatUids = collect($candidateSeatedItems)
+                            ->flatMap(fn ($i) => $i['seat_uids'] ?? [])
+                            ->filter()
+                            ->all();
+                        $overlap = array_intersect($allRequestedSeatUids, $candidateSeatUids);
+                        if (!empty($overlap)) {
+                            Log::channel('marketplace')->warning('Checkout: rejecting duplicate order for same customer + seats', [
+                                'customer_id' => $customer->id,
+                                'existing_order_id' => $candidate->id,
+                                'overlap_seat_uids' => array_values($overlap),
+                                'requested_seat_uids' => $allRequestedSeatUids,
+                            ]);
+                            return $this->success([
+                                'order_id' => $candidate->id,
+                                'order_number' => $candidate->order_number,
+                                'total' => (float) $candidate->total,
+                                'currency' => $candidate->currency,
+                                'duplicate' => true,
+                                'message' => 'Ai deja o comandă în așteptare pentru aceste locuri. Te trimitem la plata existentă.',
+                            ], 'Existing pending order returned');
+                        }
+                    }
+                }
+            }
+
             // Apply discount from promo code
             $discount = 0;
             $promoCode = null;
