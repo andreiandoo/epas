@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * API Proxy for bilete.online Marketplace
  *

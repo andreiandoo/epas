@@ -1,4 +1,4 @@
-﻿    <!-- Core Scripts -->
+    <!-- Core Scripts -->
     <script>
         // Public config only - sensitive data kept server-side
         window.BILETEONLINE = {
