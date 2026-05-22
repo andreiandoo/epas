@@ -1,10 +1,11 @@
-<?php
+﻿<?php
 
 namespace App\Filament\Vendor\Resources;
 
 use App\Filament\Vendor\Resources\StaffResource\Pages;
 use App\Models\VendorEmployee;
 use Filament\Forms;
+use Filament\Schemas\Components as SC;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables;
@@ -45,7 +46,7 @@ class StaffResource extends Resource
         $employee = Auth::guard('vendor_employee')->user();
 
         return $schema->schema([
-            Forms\Components\Section::make('Employee Details')->schema([
+            SC\Section::make('Employee Details')->schema([
                 Forms\Components\TextInput::make('name')
                     ->required()
                     ->maxLength(255),

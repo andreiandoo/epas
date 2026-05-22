@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 namespace App\Filament\Vendor\Resources;
 
@@ -7,6 +7,7 @@ use App\Filament\Vendor\Resources\ProductResource\Pages;
 use App\Models\VendorProduct;
 use App\Models\VendorProductCategory;
 use Filament\Forms;
+use Filament\Schemas\Components as SC;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables;
@@ -44,7 +45,7 @@ class ProductResource extends Resource
         $employee = Auth::guard('vendor_employee')->user();
 
         return $schema->schema([
-            Forms\Components\Section::make('Product Details')->schema([
+            SC\Section::make('Product Details')->schema([
                 Forms\Components\TextInput::make('name')
                     ->required()
                     ->maxLength(255),
@@ -66,7 +67,7 @@ class ProductResource extends Resource
                     ->maxLength(100),
             ])->columns(2),
 
-            Forms\Components\Section::make('Pricing')->schema([
+            SC\Section::make('Pricing')->schema([
                 Forms\Components\TextInput::make('price_cents')
                     ->label('Price (cents)')
                     ->numeric()
@@ -93,7 +94,7 @@ class ProductResource extends Resource
                     ->helperText('Recycling tax per item'),
             ])->columns(2),
 
-            Forms\Components\Section::make('Details')->schema([
+            SC\Section::make('Details')->schema([
                 Forms\Components\TextInput::make('weight_volume')
                     ->label('Weight/Volume')
                     ->numeric(),

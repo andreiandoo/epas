@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 namespace App\Filament\Resources;
 
@@ -9,6 +9,7 @@ use Filament\Actions\BulkAction;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\ViewAction;
 use Filament\Forms;
+use Filament\Schemas\Components as SC;
 use Filament\Infolists;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
@@ -34,7 +35,7 @@ class MarketplacePayoutResource extends Resource
     {
         return $schema
             ->components([
-                Forms\Components\Section::make('Payout Details')
+                SC\Section::make('Payout Details')
                     ->schema([
                         Forms\Components\Select::make('marketplace_client_id')
                             ->relationship('marketplaceClient', 'name')
@@ -63,14 +64,14 @@ class MarketplacePayoutResource extends Resource
                     ])
                     ->columns(2),
 
-                Forms\Components\Section::make('Admin Notes')
+                SC\Section::make('Admin Notes')
                     ->schema([
                         Forms\Components\Textarea::make('admin_notes')
                             ->rows(3)
                             ->columnSpanFull(),
                     ]),
 
-                Forms\Components\Section::make('Payment Details')
+                SC\Section::make('Payment Details')
                     ->schema([
                         Forms\Components\TextInput::make('payment_reference')
                             ->label('Payment Reference')
@@ -89,7 +90,7 @@ class MarketplacePayoutResource extends Resource
                     ->columns(2)
                     ->visible(fn ($record) => $record?->isProcessing() || $record?->isCompleted()),
 
-                Forms\Components\Section::make('Rejection')
+                SC\Section::make('Rejection')
                     ->schema([
                         Forms\Components\Textarea::make('rejection_reason')
                             ->rows(2)

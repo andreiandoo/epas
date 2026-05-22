@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 namespace App\Filament\Resources\MarketplaceClientResource\RelationManagers;
 
@@ -9,6 +9,7 @@ use Filament\Actions\DetachAction;
 use Filament\Actions\DetachBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Forms;
+use Filament\Schemas\Components as SC;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Schemas\Schema;
 use Filament\Tables;
@@ -75,7 +76,7 @@ class PaymentMethodsRelationManager extends RelationManager
     {
         return $schema
             ->components([
-                Forms\Components\Section::make('Status & Settings')
+                SC\Section::make('Status & Settings')
                     ->schema([
                         Forms\Components\Toggle::make('is_active')
                             ->label('Active')
@@ -98,7 +99,7 @@ class PaymentMethodsRelationManager extends RelationManager
                     ])
                     ->columns(2),
 
-                Forms\Components\Section::make('Payment Gateway Settings')
+                SC\Section::make('Payment Gateway Settings')
                     ->description('Configure the payment gateway credentials and options')
                     ->schema(function ($record) {
                         if ($record) {

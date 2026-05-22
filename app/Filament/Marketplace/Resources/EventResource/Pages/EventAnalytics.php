@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 namespace App\Filament\Marketplace\Resources\EventResource\Pages;
 
@@ -18,6 +18,7 @@ use App\Services\Analytics\RedisAnalyticsService;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Forms;
+use Filament\Schemas\Components as SC;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
 use Filament\Schemas\Components as SC;
@@ -671,7 +672,7 @@ class EventAnalytics extends Page implements HasForms
             Forms\Components\DatePicker::make('deadline')
                 ->label('Deadline (Optional)'),
 
-            Forms\Components\Section::make('Alerts')
+            SC\Section::make('Alerts')
                 ->schema([
                     Forms\Components\CheckboxList::make('alert_thresholds')
                         ->label('Alert at milestones')

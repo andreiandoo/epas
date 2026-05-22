@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 namespace App\Filament\Marketplace\Pages;
 
@@ -15,6 +15,7 @@ use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Forms;
+use Filament\Schemas\Components as SC;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
 use Filament\Notifications\Notification;
@@ -313,7 +314,7 @@ class OrganizerEventAnalytics extends Page implements HasForms
                 ->rows(2)
                 ->columnSpanFull(),
 
-            Forms\Components\Section::make('UTM Parameters')
+            SC\Section::make('UTM Parameters')
                 ->description('Auto-generated if left empty')
                 ->collapsible()
                 ->collapsed()
@@ -543,7 +544,7 @@ class OrganizerEventAnalytics extends Page implements HasForms
             Forms\Components\DatePicker::make('deadline')
                 ->label('Deadline (Optional)'),
 
-            Forms\Components\Section::make('Alerts')
+            SC\Section::make('Alerts')
                 ->schema([
                     Forms\Components\CheckboxList::make('alert_thresholds')
                         ->label('Alert at milestones')
