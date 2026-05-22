@@ -863,6 +863,12 @@ class CheckoutController extends BaseController
                         'status' => $isAutoConfirmed ? 'valid' : 'pending',
                         'price' => $isTestOrder ? 0 : $item['unit_price'],
                         'seat_label' => $seatLabel,
+                        // Denormalised seat_uid for the partial unique index
+                        // (migration 2026_05_22_110000). Kept in sync with
+                        // meta.seat_uid so the DB can enforce the
+                        // no-double-booking invariant. Null for general
+                        // admission tickets.
+                        'seat_uid' => $seatUid ?? null,
                         'attendee_name' => $beneficiary['name'] ?? null,
                         'attendee_email' => $beneficiary['email'] ?? null,
                         'meta' => !empty($ticketMeta) ? $ticketMeta : null,

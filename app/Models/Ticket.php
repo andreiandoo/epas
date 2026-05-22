@@ -24,6 +24,7 @@ class Ticket extends Model
         'status',
         'refund_status',
         'seat_label',
+        'seat_uid',
         'price',
         'attendee_name',
         'attendee_email',
