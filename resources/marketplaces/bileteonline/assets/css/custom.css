@@ -252,6 +252,50 @@ body {
     background: #EBE2CF;
 }
 
+/* ---- Editorial prose blocks ----
+   Used by homepage SEO copy + city-intent.php SEO body. Slightly looser
+   line-height + spaced paragraphs/headings. Links inherit color from the
+   parent (.text-vermilion etc.) and use underline-wobble on hover. */
+.prose-custom h2,
+.proseish h2 {
+    font-family: Fraunces, Georgia, serif;
+    font-size: 2.25rem;
+    line-height: 1.05;
+    font-weight: 800;
+    margin-top: 2.2rem;
+    margin-bottom: .8rem;
+    letter-spacing: -.018em;
+}
+
+.prose-custom h3,
+.proseish h3 {
+    font-size: 1.25rem;
+    font-weight: 800;
+    margin-top: 1.5rem;
+    margin-bottom: .5rem;
+}
+
+.prose-custom p,
+.proseish p {
+    color: #5A4F41;
+    margin: .75rem 0;
+    line-height: 1.75;
+}
+
+.prose-custom ul,
+.proseish ul {
+    color: #5A4F41;
+    margin: .75rem 0;
+    padding-left: 1.25rem;
+    list-style: disc;
+    line-height: 1.75;
+}
+
+.prose-custom a,
+.proseish a {
+    color: #E84527;
+}
+
 /* ---- Alpine cloak ---- */
 [x-cloak] {
     display: none !important;

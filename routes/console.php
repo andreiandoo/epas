@@ -13,6 +13,14 @@ Schedule::command('events:mark-ended')
     ->everyFiveMinutes()
     ->timezone('Europe/Bucharest');
 
+// Recompute intent landing-page aggregates (cheapest_price_cents, next_session_at,
+// has_session_today/_tomorrow/_this_weekend). Hourly is enough — temporal flags
+// shift at most once per day at midnight; pricing updates flow through earlier
+// on demand if an organizer edits ticket types (a future observer can short-circuit).
+Schedule::command('events:refresh-intent-aggregates')
+    ->hourly()
+    ->timezone('Europe/Bucharest');
+
 // Expire ticket type sale discounts when sales_end_at passes (every minute)
 Schedule::command('ticket-types:expire-sales')
     ->everyMinute()

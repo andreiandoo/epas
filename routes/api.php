@@ -1421,6 +1421,13 @@ Route::prefix('marketplace-client')->middleware(['throttle:120,1', 'marketplace.
         ->name('api.marketplace-client.events.toggle-interest');
     Route::get('/events/{event}/check-interest', [MarketplaceEventsController::class, 'checkInterest'])
         ->name('api.marketplace-client.events.check-interest');
+
+    // City × Intent SEO landing pages (bilete.online style /{city}/{intent})
+    Route::get('/intents/{intent}/events', [\App\Http\Controllers\Api\MarketplaceClient\IntentEventsController::class, 'index'])
+        ->name('api.marketplace-client.intents.global');
+    Route::get('/intents/{intent}/cities/{city}/events', [\App\Http\Controllers\Api\MarketplaceClient\IntentEventsController::class, 'index'])
+        ->name('api.marketplace-client.intents.city');
+
 // Artist/Venue Favorites (uses CustomerFavoritesController)
     Route::post("/artists/{artist}/toggle-favorite", [CustomerFavoritesController::class, "toggleArtist"])
         ->name("api.marketplace-client.artists.toggle-favorite");

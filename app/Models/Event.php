@@ -119,6 +119,23 @@ class Event extends Model
         // leisure venue
         'display_template',
         'venue_config',
+
+        // intent attributes (manual flags set by organizer for SEO landing pages)
+        'is_indoor',
+        'is_outdoor',
+        'is_kid_friendly',
+        'is_accessible',
+        'is_weather_sensitive',
+        'min_age',
+        'max_age',
+        'audience_tags',
+
+        // intent aggregates (recomputed by events:refresh-intent-aggregates)
+        'cheapest_price_cents',
+        'next_session_at',
+        'has_session_today',
+        'has_session_tomorrow',
+        'has_session_this_weekend',
     ];
 
     protected $casts = [
@@ -171,6 +188,23 @@ class Event extends Model
         'target_price'      => 'decimal:2',
         'views_count'       => 'integer',
         'interested_count'  => 'integer',
+
+        // intent attributes
+        'is_indoor'             => 'bool',
+        'is_outdoor'            => 'bool',
+        'is_kid_friendly'       => 'bool',
+        'is_accessible'         => 'bool',
+        'is_weather_sensitive'  => 'bool',
+        'min_age'               => 'integer',
+        'max_age'               => 'integer',
+        'audience_tags'         => 'array',
+
+        // intent aggregates
+        'cheapest_price_cents'      => 'integer',
+        'next_session_at'           => 'datetime',
+        'has_session_today'         => 'bool',
+        'has_session_tomorrow'      => 'bool',
+        'has_session_this_weekend'  => 'bool',
     ];
 
     /**
