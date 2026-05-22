@@ -449,21 +449,21 @@ class CheckoutController extends BaseController
                 }
             }
 
-            // Idempotency guard: same customer + overlapping seats + still
-            // in pending state → return the existing order instead of
-            // creating a duplicate. This prevents the 4-pending-orders
-            // pattern we kept seeing: customer clicks Cumpără multiple
-            // times (slow page, back button, retries) and each click
-            // historically created a fresh order with the same seats.
+            // Two-phase guard against duplicate pending orders from the same
+            // customer for the same event:
             //
-            // The check requires at least one seat overlap with an active
-            // pending order. General-admission carts (no seat_uids) skip
-            // this guard since the same customer can legitimately place
-            // two separate non-seated orders.
-            // $isAutoConfirmed isn't set yet at this point; only $isTestOrder
-            // is available. We dedupe both real and free-order flows — only
-            // test orders skip the guard since QA may need rapid duplicate
-            // inserts for the same seats.
+            // Phase 1 (dedupe — same seats):
+            //   Customer re-clicks Cumpără on the same seats. Return the
+            //   existing pending order, do NOT create a new one.
+            //
+            // Phase 2 (auto-cancel — different seats, same event):
+            //   Customer switches seats and tries again. Cancel the
+            //   previous pending order(s) for this event so the customer
+            //   only ever has 1 active pending order per (customer, event).
+            //   Releases the old seats automatically.
+            //
+            // Test orders (source=test_order) skip both guards — QA may
+            // need rapid duplicate inserts.
             if (!empty($seatedItemsMeta) && !$isTestOrder) {
                 $allRequestedSeatUids = collect($seatedItemsMeta)
                     ->flatMap(fn ($i) => $i['seat_uids'] ?? [])
@@ -471,7 +471,18 @@ class CheckoutController extends BaseController
                     ->unique()
                     ->values()
                     ->all();
-                if (!empty($allRequestedSeatUids)) {
+
+                // Resolve event ids touched by the new cart (each processed
+                // item carries its own event reference; the order's
+                // event_id is null for multi-event flows).
+                $newEventIds = collect($processedItems)
+                    ->map(fn ($pi) => $pi['event']?->id ?? $pi['marketplace_event']?->id)
+                    ->filter()
+                    ->unique()
+                    ->values()
+                    ->all();
+
+                if (!empty($allRequestedSeatUids) && !empty($newEventIds)) {
                     $existingPending = Order::where('marketplace_customer_id', $customer->id)
                         ->where('marketplace_client_id', $client->id)
                         ->where('status', 'pending')
@@ -479,9 +490,14 @@ class CheckoutController extends BaseController
                             $q->whereNull('expires_at')->orWhere('expires_at', '>', now());
                         })
                         ->where('created_at', '>=', now()->subHour())
+                        ->where(function ($q) use ($newEventIds) {
+                            $q->whereIn('event_id', $newEventIds)
+                              ->orWhereIn('marketplace_event_id', $newEventIds);
+                        })
                         ->orderByDesc('created_at')
-                        ->get(['id', 'order_number', 'total', 'currency', 'meta', 'created_at', 'expires_at']);
+                        ->get(['id', 'order_number', 'total', 'currency', 'meta', 'event_id', 'marketplace_event_id', 'created_at', 'expires_at']);
 
+                    $ordersToCancel = [];
                     foreach ($existingPending as $candidate) {
                         $candidateSeatedItems = is_array($candidate->meta)
                             ? ($candidate->meta['seated_items'] ?? [])
@@ -491,8 +507,10 @@ class CheckoutController extends BaseController
                             ->filter()
                             ->all();
                         $overlap = array_intersect($allRequestedSeatUids, $candidateSeatUids);
+
                         if (!empty($overlap)) {
-                            Log::channel('marketplace')->warning('Checkout: rejecting duplicate order for same customer + seats', [
+                            // Phase 1: same seats → return existing order.
+                            Log::channel('marketplace')->warning('Checkout: dedupe — same customer + overlapping seats', [
                                 'customer_id' => $customer->id,
                                 'existing_order_id' => $candidate->id,
                                 'overlap_seat_uids' => array_values($overlap),
@@ -507,6 +525,79 @@ class CheckoutController extends BaseController
                                 'message' => 'Ai deja o comandă în așteptare pentru aceste locuri. Te trimitem la plata existentă.',
                             ], 'Existing pending order returned');
                         }
+
+                        // Phase 2: different seats, same event → queue for
+                        // cancellation. We collect first then cancel after
+                        // the loop so a thrown error halfway doesn't leave
+                        // half-cancelled state visible to the customer.
+                        $ordersToCancel[] = $candidate;
+                    }
+
+                    // Phase 2 execute: cancel + release seats for each
+                    // queued previous order. Wrapped in a transaction so
+                    // either all cancellations succeed or none.
+                    if (!empty($ordersToCancel)) {
+                        DB::transaction(function () use ($ordersToCancel, $customer) {
+                            foreach ($ordersToCancel as $oldOrder) {
+                                $oldSeatedItems = is_array($oldOrder->meta)
+                                    ? ($oldOrder->meta['seated_items'] ?? [])
+                                    : [];
+                                $releasedSeats = 0;
+                                $ownTicketIds = \App\Models\Ticket::where('order_id', $oldOrder->id)->pluck('id')->all();
+
+                                foreach ($oldSeatedItems as $item) {
+                                    if (empty($item['event_seating_id']) || empty($item['seat_uids'])) continue;
+                                    // Release ONLY held seats — never sold
+                                    // ones (same defensive guard as the
+                                    // cleanup cron fix).
+                                    $releasedSeats += \App\Models\Seating\EventSeat::query()
+                                        ->where('event_seating_id', $item['event_seating_id'])
+                                        ->whereIn('seat_uid', $item['seat_uids'])
+                                        ->where('status', 'held')
+                                        ->where(function ($q) use ($ownTicketIds) {
+                                            $q->whereNull('sold_to_ticket_id');
+                                            if (!empty($ownTicketIds)) {
+                                                $q->orWhereIn('sold_to_ticket_id', $ownTicketIds);
+                                            }
+                                        })
+                                        ->update([
+                                            'status' => 'available',
+                                            'version' => DB::raw('version + 1'),
+                                            'last_change_at' => now(),
+                                        ]);
+
+                                    // Drop only this order's own holds (keep
+                                    // active holds of other in-checkout
+                                    // sessions intact, even if they happened
+                                    // to be on the same seats — those will
+                                    // re-grab via the available state we just
+                                    // restored).
+                                    \App\Models\Seating\SeatHold::where('event_seating_id', $item['event_seating_id'])
+                                        ->whereIn('seat_uid', $item['seat_uids'])
+                                        ->where('expires_at', '<=', now()->addMinutes(60))
+                                        ->delete();
+                                }
+
+                                // Cancel pending tickets of the old order.
+                                \App\Models\Ticket::where('order_id', $oldOrder->id)
+                                    ->where('status', 'pending')
+                                    ->update(['status' => 'cancelled']);
+
+                                // Mark order cancelled. Don't touch quota_sold
+                                // — pending tickets never decremented it on
+                                // checkout (only paid/valid tickets do).
+                                $oldOrder->update([
+                                    'status' => 'cancelled',
+                                    'payment_status' => 'cancelled',
+                                ]);
+
+                                Log::channel('marketplace')->info('Checkout: auto-cancelled previous pending order for same customer/event with different seats', [
+                                    'customer_id' => $customer->id,
+                                    'cancelled_order_id' => $oldOrder->id,
+                                    'released_seat_count' => $releasedSeats,
+                                ]);
+                            }
+                        });
                     }
                 }
             }
