@@ -118,6 +118,33 @@ class PaymentController extends BaseController
                 'payment_processor' => $processorType,
             ]);
 
+            // Customer is now being handed off to the payment processor.
+            // Extend seat holds + order expiry by 30 minutes so the seats
+            // don't get auto-released while the user is fighting with 3DS
+            // SMS, Apple Pay biometrics, or a slow bank gateway. This
+            // window only kicks in once we hand off — never for orders
+            // that were created but never proceeded to payment.
+            $paymentInProgressWindow = now()->addMinutes(45); // 15 (initial) + 30 (extension)
+            $seatedItems = is_array($order->meta) ? ($order->meta['seated_items'] ?? []) : [];
+            if (!empty($seatedItems)) {
+                $extendedSeatCount = 0;
+                foreach ($seatedItems as $seatedItem) {
+                    if (empty($seatedItem['event_seating_id']) || empty($seatedItem['seat_uids'])) {
+                        continue;
+                    }
+                    $extendedSeatCount += \App\Models\Seating\SeatHold::query()
+                        ->where('event_seating_id', $seatedItem['event_seating_id'])
+                        ->whereIn('seat_uid', $seatedItem['seat_uids'])
+                        ->update(['expires_at' => $paymentInProgressWindow]);
+                }
+                $order->update(['expires_at' => $paymentInProgressWindow]);
+                Log::channel('marketplace')->info('Payment initiate: extended seat holds for payment-in-progress window', [
+                    'order_id' => $order->id,
+                    'extended_until' => $paymentInProgressWindow->toIso8601String(),
+                    'extended_seat_count' => $extendedSeatCount,
+                ]);
+            }
+
             Log::channel('marketplace')->info('Payment initiated for marketplace order', [
                 'order_id' => $order->id,
                 'client_id' => $client->id,
