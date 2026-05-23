@@ -509,10 +509,10 @@
             },
             drawDecorativeSection(section, sectionDraggable) {
                 const metadata = section.metadata || {};
-                // Default to 'rect' so zones saved via the "Add Decorative Zone"
-                // modal (which leaves metadata empty) actually render. Without
-                // this, the polygon branch is taken but has no points and draws
-                // nothing.
+                // Default to rect so zones saved via the Add Decorative Zone
+                // modal (which leaves metadata empty) actually render. The
+                // polygon branch would otherwise be taken but has no points
+                // and would silently draw nothing.
                 const shape = metadata.shape || 'rect';
                 const opacity = parseFloat(metadata.opacity) || 0.3;
                 const color = section.background_color || section.color_hex || '#10B981';
