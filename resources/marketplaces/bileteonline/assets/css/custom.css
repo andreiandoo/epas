@@ -211,6 +211,50 @@ body {
     transform: translateX(2px);
 }
 
+/* ---- Soft card (editorial cards on how-it-works / for-venues / gift-card) ---- */
+.soft-card {
+    border: 2px solid rgba(27, 23, 20, .12);
+    background: rgba(235, 226, 207, .65);
+    border-radius: 1.5rem;
+}
+
+/* ---- Floaty animation (decorative card hover-bob on landing pages) ---- */
+@keyframes floaty {
+    0%, 100% { transform: translateY(0) rotate(-2deg); }
+    50%      { transform: translateY(-10px) rotate(1deg); }
+}
+
+.floaty {
+    animation: floaty 7s ease-in-out infinite;
+}
+
+/* ---- Pulsing progress bar (for-venues dashboard mockup) ---- */
+@keyframes pulsebar {
+    0%, 100% { width: 36%; }
+    50%      { width: 82%; }
+}
+
+.pulsebar {
+    animation: pulsebar 6s ease-in-out infinite;
+}
+
+/* ---- Editorial form field (demo form on for-venues / contact) ---- */
+.field {
+    width: 100%;
+    border: 2px solid rgba(27, 23, 20, .16);
+    background: rgba(255, 255, 255, .28);
+    border-radius: 1rem;
+    padding: .85rem 1rem;
+    outline: none;
+    transition: border-color .2s, box-shadow .2s, background .2s;
+}
+
+.field:focus {
+    border-color: #E84527;
+    box-shadow: 0 0 0 4px rgba(232, 69, 39, .12);
+    background: #F4EFE3;
+}
+
 /* ---- Reusable decorative backgrounds ----
    Pulled out of inline style attributes so the markup stays semantic.
    These are pattern overlays — placed inside container; container controls
@@ -308,7 +352,9 @@ body {
 
     .marquee,
     .foil,
-    .scanline {
+    .scanline,
+    .floaty,
+    .pulsebar {
         animation: none !important;
     }
 
