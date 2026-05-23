@@ -221,3 +221,20 @@ if (!function_exists('navMbUcfirst')) {
         return mb_strtoupper(mb_substr($s, 0, 1, $enc), $enc) . mb_substr($s, 1, null, $enc);
     }
 }
+
+if (!function_exists('navBuildUrl')) {
+    /**
+     * Build a URL preserving current filter state, with selective overrides
+     * (and a list of keys to clear). Always strips `slug` (set by .htaccess
+     * rewrite) and `page` (reset pagination when filters change).
+     *
+     * navBuildUrl('escape-rooms', $_GET, ['city' => 'cluj-napoca'])
+     *   → "/escape-rooms?city=cluj-napoca&q=...&sort=..."
+     */
+    function navBuildUrl(string $slug, array $get, array $override = [], array $omit = []): string {
+        $params = array_merge($get, $override);
+        foreach ($omit as $k) unset($params[$k]);
+        unset($params['slug'], $params['page']);
+        return '/' . $slug . ($params ? '?' . http_build_query($params) : '');
+    }
+}

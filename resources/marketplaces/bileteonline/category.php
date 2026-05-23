@@ -68,11 +68,24 @@ $cityFilter = isset($_GET['city']) && preg_match('/^[a-z][a-z0-9-]+$/', $_GET['c
 $searchQuery = isset($_GET['q']) ? trim($_GET['q']) : '';
 $searchQuery = mb_substr($searchQuery, 0, 80); // hard cap
 
-$apiCacheKey = "category_events_{$slug}_" . ($cityFilter ?? 'all') . '_' . md5($searchQuery) . "_p{$pageNum}";
-$eventsResp = api_cached($apiCacheKey, function () use ($slug, $cityFilter, $searchQuery, $pageNum) {
+// Price filter — single max_price chip (whitelisted values to keep cache key small + DOS-safe)
+$priceMaxAllowed = [50, 100, 200, 500];
+$maxPrice = (isset($_GET['max_price']) && in_array((int) $_GET['max_price'], $priceMaxAllowed, true))
+    ? (int) $_GET['max_price']
+    : null;
+
+// Sort — whitelisted server-side values matching what MarketplaceEventsController supports
+$sortAllowed = ['recommended', 'price_asc', 'price_desc', 'name_asc', 'date_asc'];
+$sort = (isset($_GET['sort']) && in_array($_GET['sort'], $sortAllowed, true)) ? $_GET['sort'] : 'recommended';
+
+$apiCacheKey = "category_events_{$slug}_" . ($cityFilter ?? 'all') . '_' . md5($searchQuery) . "_mp{$maxPrice}_s{$sort}_p{$pageNum}";
+$eventsResp = api_cached($apiCacheKey, function () use ($slug, $cityFilter, $searchQuery, $maxPrice, $sort, $pageNum) {
     $params = ['category' => $slug, 'page' => $pageNum, 'per_page' => 24, 'time_scope' => 'upcoming'];
     if ($cityFilter) $params['city'] = $cityFilter;
     if ($searchQuery !== '') $params['search'] = $searchQuery;
+    if ($maxPrice !== null) $params['max_price'] = $maxPrice;
+    // Don't send `recommended` — let the API use its default (date_asc for upcoming)
+    if ($sort !== 'recommended') $params['sort'] = $sort;
     return api_get('/events', $params);
 }, 300);
 
@@ -94,6 +107,19 @@ if ($cityFilter) {
     if (!$cityLabel) $cityLabel = ucwords(str_replace('-', ' ', $cityFilter));
     $activeChips[] = ['label' => $cityLabel, 'key' => 'city', 'remove_qs' => navResetQueryString($_GET, ['city'])];
 }
+if ($maxPrice !== null) {
+    $activeChips[] = ['label' => 'Sub ' . $maxPrice . ' lei', 'key' => 'max_price', 'remove_qs' => navResetQueryString($_GET, ['max_price'])];
+}
+if ($sort !== 'recommended') {
+    $sortLabels = [
+        'price_asc' => 'Preț crescător',
+        'price_desc' => 'Preț descrescător',
+        'name_asc' => 'Alfabetic',
+        'date_asc' => 'Data evenimentului',
+    ];
+    $activeChips[] = ['label' => 'Sortat: ' . ($sortLabels[$sort] ?? $sort), 'key' => 'sort', 'remove_qs' => navResetQueryString($_GET, ['sort'])];
+}
+
 
 // ============================================================
 // SEO
@@ -314,6 +340,11 @@ include __DIR__ . '/includes/header.php';
 
         <!-- DESKTOP filter pills -->
         <form method="get" action="/<?= htmlspecialchars($slug, ENT_QUOTES) ?>" class="hidden lg:flex items-center gap-3" @click.outside="open=null">
+            <?php // Preserve current filter state across form submission ?>
+            <?php if ($cityFilter): ?><input type="hidden" name="city" value="<?= htmlspecialchars($cityFilter, ENT_QUOTES) ?>"><?php endif; ?>
+            <?php if ($maxPrice !== null): ?><input type="hidden" name="max_price" value="<?= $maxPrice ?>"><?php endif; ?>
+            <?php if ($sort !== 'recommended'): ?><input type="hidden" name="sort" value="<?= htmlspecialchars($sort, ENT_QUOTES) ?>"><?php endif; ?>
+
             <!-- search -->
             <div class="relative flex-1 max-w-xs">
                 <svg viewBox="0 0 24 24" class="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-soft" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
@@ -321,16 +352,57 @@ include __DIR__ . '/includes/header.php';
             </div>
 
             <!-- Oraș dropdown -->
+            <?php
+            $cityLabel = 'Oraș';
+            if ($cityFilter) {
+                foreach ($featuredCities as $c) { if ($c['slug'] === $cityFilter) { $cityLabel = $c['label']; break; } }
+                if ($cityLabel === 'Oraș') $cityLabel = ucwords(str_replace('-', ' ', $cityFilter));
+            }
+            ?>
             <div class="relative">
-                <button type="button" @click="open = open==='city' ? null : 'city'" :class="'<?= $cityFilter ? 'border-ink bg-ink text-paper' : 'border-ink/15 bg-paper hover:border-ink' ?>'.split(' ')" class="<?= $cityFilter ? 'border-ink bg-ink text-paper' : 'border-ink/15 bg-paper hover:border-ink' ?> flex items-center gap-2 px-4 py-2.5 rounded-full border-2 text-[15px] font-500 transition">
-                    <span><?= $cityFilter ? htmlspecialchars($activeChips[count($activeChips) - 1]['label'] ?? 'Oraș') : 'Oraș' ?></span>
+                <button type="button" @click="open = open==='city' ? null : 'city'" class="<?= $cityFilter ? 'border-ink bg-ink text-paper' : 'border-ink/15 bg-paper hover:border-ink' ?> flex items-center gap-2 px-4 py-2.5 rounded-full border-2 text-[15px] font-500 transition">
+                    <span><?= htmlspecialchars($cityLabel) ?></span>
                     <svg :class="open==='city' && 'rotate-180'" class="w-3.5 h-3.5 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
                 </button>
                 <div x-show="open==='city'" x-cloak x-transition class="absolute left-0 top-[calc(100%+10px)] z-50 w-60 bg-paper border-2 border-ink rounded-2xl shadow-2xl p-2 max-h-72 overflow-y-auto">
-                    <a href="/<?= htmlspecialchars($slug, ENT_QUOTES) ?><?= $searchQuery !== '' ? '?q=' . urlencode($searchQuery) : '' ?>" class="block w-full text-left px-3 py-2 rounded-lg text-[15px] hover:bg-paper-2 transition <?= !$cityFilter ? 'bg-ink text-paper' : '' ?>">Toate orașele</a>
+                    <a href="<?= htmlspecialchars(navBuildUrl($slug, $_GET, [], ['city']), ENT_QUOTES) ?>" class="block w-full text-left px-3 py-2 rounded-lg text-[15px] hover:bg-paper-2 transition <?= !$cityFilter ? 'bg-ink text-paper' : '' ?>">Toate orașele</a>
                     <?php foreach ($featuredCities as $c): ?>
-                        <a href="/<?= htmlspecialchars($slug, ENT_QUOTES) ?>?city=<?= htmlspecialchars($c['slug'], ENT_QUOTES) ?><?= $searchQuery !== '' ? '&q=' . urlencode($searchQuery) : '' ?>" class="block w-full text-left px-3 py-2 rounded-lg text-[15px] hover:bg-paper-2 transition <?= $cityFilter === $c['slug'] ? 'bg-ink text-paper' : '' ?>">
+                        <a href="<?= htmlspecialchars(navBuildUrl($slug, $_GET, ['city' => $c['slug']]), ENT_QUOTES) ?>" class="block w-full text-left px-3 py-2 rounded-lg text-[15px] hover:bg-paper-2 transition <?= $cityFilter === $c['slug'] ? 'bg-ink text-paper' : '' ?>">
                             <?= htmlspecialchars($c['label']) ?>
+                        </a>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+
+            <!-- Preț (max) dropdown -->
+            <div class="relative">
+                <button type="button" @click="open = open==='price' ? null : 'price'" class="<?= $maxPrice !== null ? 'border-ink bg-ink text-paper' : 'border-ink/15 bg-paper hover:border-ink' ?> flex items-center gap-2 px-4 py-2.5 rounded-full border-2 text-[15px] font-500 transition">
+                    <span><?= $maxPrice !== null ? 'Sub ' . $maxPrice . ' lei' : 'Preț' ?></span>
+                    <svg :class="open==='price' && 'rotate-180'" class="w-3.5 h-3.5 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+                </button>
+                <div x-show="open==='price'" x-cloak x-transition class="absolute left-0 top-[calc(100%+10px)] z-50 w-56 bg-paper border-2 border-ink rounded-2xl shadow-2xl p-2">
+                    <a href="<?= htmlspecialchars(navBuildUrl($slug, $_GET, [], ['max_price']), ENT_QUOTES) ?>" class="block w-full text-left px-3 py-2 rounded-lg text-[15px] hover:bg-paper-2 transition <?= $maxPrice === null ? 'bg-ink text-paper' : '' ?>">Orice preț</a>
+                    <?php foreach ($priceMaxAllowed as $cap): ?>
+                        <a href="<?= htmlspecialchars(navBuildUrl($slug, $_GET, ['max_price' => $cap]), ENT_QUOTES) ?>" class="block w-full text-left px-3 py-2 rounded-lg text-[15px] hover:bg-paper-2 transition <?= $maxPrice === $cap ? 'bg-ink text-paper' : '' ?>">Sub <?= $cap ?> lei</a>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+
+            <!-- Sortare -->
+            <div class="relative">
+                <button type="button" @click="open = open==='sort' ? null : 'sort'" class="<?= $sort !== 'recommended' ? 'border-ink bg-ink text-paper' : 'border-ink/15 bg-paper hover:border-ink' ?> flex items-center gap-2 px-4 py-2.5 rounded-full border-2 text-[15px] font-500 transition">
+                    <span>
+                        <?php
+                        $sortLabels = ['recommended' => 'Recomandate', 'price_asc' => 'Preț ↑', 'price_desc' => 'Preț ↓', 'name_asc' => 'Alfabetic', 'date_asc' => 'Dată'];
+                        echo htmlspecialchars($sortLabels[$sort] ?? 'Sortare');
+                        ?>
+                    </span>
+                    <svg :class="open==='sort' && 'rotate-180'" class="w-3.5 h-3.5 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+                </button>
+                <div x-show="open==='sort'" x-cloak x-transition class="absolute right-0 top-[calc(100%+10px)] z-50 w-52 bg-paper border-2 border-ink rounded-2xl shadow-2xl p-2">
+                    <?php foreach ($sortLabels as $value => $label): ?>
+                        <a href="<?= htmlspecialchars(navBuildUrl($slug, $_GET, $value === 'recommended' ? [] : ['sort' => $value], $value === 'recommended' ? ['sort'] : []), ENT_QUOTES) ?>" class="block w-full text-left px-3 py-2 rounded-lg text-[15px] hover:bg-paper-2 transition <?= $sort === $value ? 'bg-ink text-paper' : '' ?>">
+                            <?= htmlspecialchars($label) ?>
                         </a>
                     <?php endforeach; ?>
                 </div>
@@ -346,10 +418,12 @@ include __DIR__ . '/includes/header.php';
 
         <!-- MOBILE: search + filter button -->
         <form method="get" action="/<?= htmlspecialchars($slug, ENT_QUOTES) ?>" class="lg:hidden flex items-center gap-2">
+            <?php if ($cityFilter): ?><input type="hidden" name="city" value="<?= htmlspecialchars($cityFilter, ENT_QUOTES) ?>"><?php endif; ?>
+            <?php if ($maxPrice !== null): ?><input type="hidden" name="max_price" value="<?= $maxPrice ?>"><?php endif; ?>
+            <?php if ($sort !== 'recommended'): ?><input type="hidden" name="sort" value="<?= htmlspecialchars($sort, ENT_QUOTES) ?>"><?php endif; ?>
             <div class="relative flex-1">
                 <svg viewBox="0 0 24 24" class="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-soft" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
                 <input name="q" type="search" value="<?= htmlspecialchars($searchQuery, ENT_QUOTES) ?>" placeholder="Caută…" class="w-full bg-paper border-2 border-ink/15 focus:border-ink rounded-full pl-10 pr-4 py-2.5 text-[15px] focus:outline-none" />
-                <?php if ($cityFilter): ?><input type="hidden" name="city" value="<?= htmlspecialchars($cityFilter, ENT_QUOTES) ?>"><?php endif; ?>
             </div>
             <button type="button" @click="sheet=true" class="relative shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-full border-2 border-ink font-600 text-sm">
                 <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 5h18M6 12h12M10 19h4"/></svg>
@@ -482,15 +556,44 @@ include __DIR__ . '/includes/header.php';
                     <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
                 </button>
             </div>
-            <div class="p-5">
-                <p class="font-mono text-[10px] tracking-wider text-ink-soft mb-3">ORAȘ</p>
-                <div class="flex flex-wrap gap-2">
-                    <a href="/<?= htmlspecialchars($slug, ENT_QUOTES) ?><?= $searchQuery !== '' ? '?q=' . urlencode($searchQuery) : '' ?>" class="px-3.5 py-2 rounded-full border-2 text-sm font-500 transition <?= !$cityFilter ? 'bg-ink text-paper border-ink' : 'border-ink/15' ?>">Toate</a>
-                    <?php foreach ($featuredCities as $c): ?>
-                        <a href="/<?= htmlspecialchars($slug, ENT_QUOTES) ?>?city=<?= htmlspecialchars($c['slug'], ENT_QUOTES) ?><?= $searchQuery !== '' ? '&q=' . urlencode($searchQuery) : '' ?>" class="px-3.5 py-2 rounded-full border-2 text-sm font-500 transition <?= $cityFilter === $c['slug'] ? 'bg-ink text-paper border-ink' : 'border-ink/15' ?>">
-                            <?= htmlspecialchars($c['label']) ?>
-                        </a>
-                    <?php endforeach; ?>
+            <div class="p-5 space-y-6">
+                <div>
+                    <p class="font-mono text-[10px] tracking-wider text-ink-soft mb-3">ORAȘ</p>
+                    <div class="flex flex-wrap gap-2">
+                        <a href="<?= htmlspecialchars(navBuildUrl($slug, $_GET, [], ['city']), ENT_QUOTES) ?>" class="px-3.5 py-2 rounded-full border-2 text-sm font-500 transition <?= !$cityFilter ? 'bg-ink text-paper border-ink' : 'border-ink/15' ?>">Toate</a>
+                        <?php foreach ($featuredCities as $c): ?>
+                            <a href="<?= htmlspecialchars(navBuildUrl($slug, $_GET, ['city' => $c['slug']]), ENT_QUOTES) ?>" class="px-3.5 py-2 rounded-full border-2 text-sm font-500 transition <?= $cityFilter === $c['slug'] ? 'bg-ink text-paper border-ink' : 'border-ink/15' ?>">
+                                <?= htmlspecialchars($c['label']) ?>
+                            </a>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+
+                <div>
+                    <p class="font-mono text-[10px] tracking-wider text-ink-soft mb-3">PREȚ MAXIM</p>
+                    <div class="flex flex-wrap gap-2">
+                        <a href="<?= htmlspecialchars(navBuildUrl($slug, $_GET, [], ['max_price']), ENT_QUOTES) ?>" class="px-3.5 py-2 rounded-full border-2 text-sm font-500 transition <?= $maxPrice === null ? 'bg-ink text-paper border-ink' : 'border-ink/15' ?>">Orice</a>
+                        <?php foreach ($priceMaxAllowed as $cap): ?>
+                            <a href="<?= htmlspecialchars(navBuildUrl($slug, $_GET, ['max_price' => $cap]), ENT_QUOTES) ?>" class="px-3.5 py-2 rounded-full border-2 text-sm font-500 transition <?= $maxPrice === $cap ? 'bg-ink text-paper border-ink' : 'border-ink/15' ?>">Sub <?= $cap ?> lei</a>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+
+                <div>
+                    <p class="font-mono text-[10px] tracking-wider text-ink-soft mb-3">SORTARE</p>
+                    <div class="flex flex-wrap gap-2">
+                        <?php
+                        $mobileSortLabels = ['recommended' => 'Recomandate', 'price_asc' => 'Preț ↑', 'price_desc' => 'Preț ↓', 'name_asc' => 'Alfabetic', 'date_asc' => 'Dată'];
+                        foreach ($mobileSortLabels as $value => $label):
+                            $url = $value === 'recommended'
+                                ? navBuildUrl($slug, $_GET, [], ['sort'])
+                                : navBuildUrl($slug, $_GET, ['sort' => $value]);
+                        ?>
+                            <a href="<?= htmlspecialchars($url, ENT_QUOTES) ?>" class="px-3.5 py-2 rounded-full border-2 text-sm font-500 transition <?= $sort === $value ? 'bg-ink text-paper border-ink' : 'border-ink/15' ?>">
+                                <?= htmlspecialchars($label) ?>
+                            </a>
+                        <?php endforeach; ?>
+                    </div>
                 </div>
             </div>
         </div>
