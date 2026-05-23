@@ -561,14 +561,16 @@ RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^(activitati-[a-z0-9-]{1,80})/?$ city-intent.php?intent=$1 [L,QSA]
 
 # ============================================
-# CATEGORY / CITY DISPATCHER - single-segment catch-all
+# SINGLE-SEGMENT URL DISPATCHER (category OR city OR 404)
 # Must come AFTER all other explicit routes (organizator/*, cont/*, /cos, etc.)
-# category.php is the resolver: tries category API first, falls through to
-# city.php if not a category, then 404 if not a city either.
+# slug.php is the resolver: queries the API, then includes category.php
+# (if slug matches a category) or city.php (if slug matches a city) or
+# 404.php (if neither). category.php and city.php each remain directly
+# accessible via ?slug=X for debugging.
 # ============================================
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^([a-z][a-z0-9-]{1,80})/?$ category.php?slug=$1 [L,QSA]
+RewriteRule ^([a-z][a-z0-9-]{1,80})/?$ slug.php?slug=$1 [L,QSA]
 
 # ============================================
 # FALLBACK: Remove .php extension from URLs
