@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>Card cadou pentru experiențe — bilete.online</title>
+  <meta name="description" content="Cumpără un card cadou bilete.online și oferă experiențe, nu obiecte: escape rooms, muzee, parcuri, ateliere, natură și activități pentru familie." />
+  <meta name="keywords" content="card cadou experiențe, voucher cadou activități, card cadou bilete, cadou escape room, cadou muzeu, cadou familie, experiențe cadou România" />
+  <meta name="robots" content="index, follow, max-image-preview:large" />
+  <link rel="canonical" href="https://bilete.online/card-cadou" />
+  <meta name="theme-color" content="#1B1714" />
+
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="bilete.online" />
+  <meta property="og:title" content="Card cadou pentru experiențe — bilete.online" />
+  <meta property="og:description" content="Dăruiește activități: escape rooms, muzee, parcuri, ateliere și experiențe locale. Card cadou livrat pe email." />
+  <meta property="og:url" content="https://bilete.online/card-cadou" />
+  <meta property="og:locale" content="ro_RO" />
+  <meta name="twitter:card" content="summary_large_image" />
+
+  <script type="application/ld+json">
+  {
+    "@context":"https://schema.org",
+    "@type":"Product",
+    "name":"Card cadou bilete.online",
+    "description":"Card cadou digital pentru activități, experiențe și bilete disponibile pe bilete.online.",
+    "brand":{"@type":"Brand","name":"bilete.online"},
+    "category":"Gift Card",
+    "url":"https://bilete.online/card-cadou",
+    "offers":{
+      "@type":"AggregateOffer",
+      "priceCurrency":"RON",
+      "lowPrice":"50",
+      "highPrice":"1000",
+      "availability":"https://schema.org/InStock"
+    }
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context":"https://schema.org",
+    "@type":"BreadcrumbList",
+    "itemListElement":[
+      {"@type":"ListItem","position":1,"name":"Acasă","item":"https://bilete.online/"},
+      {"@type":"ListItem","position":2,"name":"Card cadou","item":"https://bilete.online/card-cadou"}
+    ]
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context":"https://schema.org",
+    "@type":"FAQPage",
+    "mainEntity":[
+      {"@type":"Question","name":"Cum se livrează cardul cadou?","acceptedAnswer":{"@type":"Answer","text":"Cardul cadou este livrat digital pe email, către cumpărător sau direct către destinatar, în funcție de opțiunea aleasă."}},
+      {"@type":"Question","name":"Unde poate fi folosit cardul cadou?","acceptedAnswer":{"@type":"Answer","text":"Cardul cadou poate fi folosit pentru activitățile eligibile disponibile pe bilete.online, conform regulamentului cardurilor cadou."}},
+      {"@type":"Question","name":"Pot folosi cardul cadou parțial?","acceptedAnswer":{"@type":"Answer","text":"Da, dacă soldul cardului este mai mare decât valoarea comenzii, diferența rămâne disponibilă până la expirarea cardului."}},
+      {"@type":"Question","name":"Pot programa trimiterea cardului cadou?","acceptedAnswer":{"@type":"Answer","text":"Da, cardul poate fi trimis imediat sau programat pentru o dată aleasă, dacă această opțiune este activă în checkout."}}
+    ]
+  }
+  </script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;0,9..144,900;1,9..144,500&family=Hanken+Grotesk:wght@400;500;600;700;800&family=Spline+Sans+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: { extend: {
+        colors: {
+          paper:'#F4EFE3','paper-2':'#EBE2CF','paper-3':'#E2D7BF',
+          ink:'#1B1714','ink-2':'#2E2820','ink-soft':'#5A4F41',
+          vermilion:'#E84527','vermilion-d':'#C5371C',
+          forest:'#1E4A3D','forest-l':'#2E6553',
+          ochre:'#DA9A33',sky:'#2C5F8A',mint:'#D7E8D3',rose:'#F2C7B8'
+        },
+        fontFamily: {
+          display:['Fraunces','Georgia','serif'],
+          sans:['"Hanken Grotesk"','system-ui','sans-serif'],
+          mono:['"Spline Sans Mono"','ui-monospace','monospace']
+        },
+        boxShadow:{ ticket:'0 28px 60px -36px rgba(27,23,20,.58)', deep:'0 42px 90px -48px rgba(27,23,20,.75)' }
+      }}
+    }
+  </script>
+
+  <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+  <style>
+    :root { --paper:#F4EFE3; }
+    html { scroll-behavior:smooth; }
+    body { background:#F4EFE3; color:#1B1714; font-feature-settings:"ss01","cv01"; }
+    .font-display { font-optical-sizing:auto; font-variation-settings:"SOFT" 0,"WONK" 1; letter-spacing:-.018em; }
+    .grain::after{ content:""; position:fixed; inset:0; z-index:60; pointer-events:none; opacity:.05; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); mix-blend-mode:multiply; }
+    .ticket{ position:relative; isolation:isolate; }
+    .ticket .perf{ position:absolute; top:0; bottom:0; left:var(--perf,68%); width:0; border-left:2px dashed rgba(27,23,20,.28); }
+    .ticket .notch{ position:absolute; left:var(--perf,68%); width:18px; height:18px; border-radius:9999px; background:var(--punch,#F4EFE3); transform:translateX(-50%); border:2px dashed rgba(27,23,20,.18); }
+    .ticket .notch.top{ top:-9px; } .ticket .notch.bot{ bottom:-9px; }
+    .stamp{ border:2px solid currentColor; border-radius:9999px; }
+    .underline-wobble{ background-image:linear-gradient(currentColor,currentColor); background-size:100% 2px; background-repeat:no-repeat; background-position:0 100%; transition:background-size .3s; }
+    .underline-wobble:hover{ background-size:0% 2px; }
+    .field{ width:100%; border:2px solid rgba(27,23,20,.16); background:rgba(255,255,255,.28); border-radius:1rem; padding:.85rem 1rem; outline:none; transition:border-color .2s, box-shadow .2s, background .2s; }
+    .field:focus{ border-color:#E84527; box-shadow:0 0 0 4px rgba(232,69,39,.12); background:#F4EFE3; }
+    .soft-card{ border:2px solid rgba(27,23,20,.12); background:rgba(235,226,207,.65); border-radius:1.5rem; }
+    @keyframes floaty { 0%,100%{ transform:translateY(0) rotate(-2deg); } 50%{ transform:translateY(-10px) rotate(1deg); } }
+    .floaty{ animation:floaty 7s ease-in-out infinite; }
+    @keyframes shine { 0%{ transform:translateX(-120%) rotate(20deg); } 100%{ transform:translateX(240%) rotate(20deg); } }
+    .shine::after{ content:""; position:absolute; inset:-40% auto -40% 0; width:34%; background:linear-gradient(90deg,transparent,rgba(255,255,255,.45),transparent); animation:shine 5.5s ease-in-out infinite; }
+    [x-cloak]{ display:none!important; }
+    @media (prefers-reduced-motion: reduce){ html{scroll-behavior:auto;} .floaty,.shine::after{animation:none!important;} *{transition:none!important;} }
+  </style>
+</head>
+
+<body class="grain font-sans antialiased selection:bg-vermilion selection:text-paper" x-data="giftCardPage()">
+
+<header x-data="{open:false, scrolled:false}" x-init="window.addEventListener('scroll',()=>scrolled=window.scrollY>20)" class="sticky top-0 z-50">
+  <div class="bg-ink text-paper/80 text-[11px] sm:text-xs font-mono tracking-wider">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 h-8 flex items-center justify-between">
+      <span class="flex items-center gap-2"><span class="inline-block w-1.5 h-1.5 rounded-full bg-vermilion animate-pulse"></span> CADOURI · EXPERIENȚE · ACTIVITĂȚI</span>
+      <span class="hidden sm:flex items-center gap-4"><a href="/regulament-carduri-cadou" class="text-ochre underline-wobble">Regulament card cadou</a><span class="text-paper/40">operat de <a href="https://tixello.ro" class="text-ochre underline-wobble">Tixello</a></span></span>
+    </div>
+  </div>
+
+  <div :class="scrolled ? 'bg-paper/95 backdrop-blur-md border-b border-ink/10 shadow-[0_10px_30px_-22px_rgba(27,23,20,.6)]' : 'bg-paper/70 backdrop-blur-sm border-b border-ink/5'" class="transition-all duration-300">
+    <nav class="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
+      <a href="/" class="flex items-center gap-2.5 group shrink-0" aria-label="bilete.online">
+        <span class="relative grid place-items-center w-9 h-9 bg-vermilion text-paper rounded-md rotate-[-4deg] group-hover:rotate-[4deg] transition-transform duration-300 shadow-[0_6px_14px_-6px_rgba(232,69,39,.9)]">
+          <svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2 2 2 0 0 0 0 4 2 2 0 0 1-2 2H5a2 2 0 0 1-2-2 2 2 0 0 0 0-4Z"/><path d="M9 7v10" stroke-dasharray="2 2"/></svg>
+        </span>
+        <span class="font-display text-xl font-bold tracking-tight">bilete<span class="text-vermilion">.</span>online</span>
+      </a>
+      <div class="hidden lg:flex items-center gap-1 text-[15px] font-medium">
+        <a href="/categorii" class="px-3 py-2 rounded-full hover:bg-ink/5 transition">Categorii</a>
+        <a href="/orase" class="px-3 py-2 rounded-full hover:bg-ink/5 transition">Orașe</a>
+        <a href="/cum-functioneaza" class="px-3 py-2 rounded-full hover:bg-ink/5 transition">Cum funcționează</a>
+        <a href="/card-cadou" aria-current="page" class="px-3 py-2 rounded-full bg-ink text-paper transition">Card cadou</a>
+        <a href="/pentru-locatii" class="px-3 py-2 rounded-full hover:bg-ink/5 transition">Pentru locații</a>
+      </div>
+      <div class="flex items-center gap-2">
+        <a href="/voucher" class="hidden sm:inline-flex rounded-full border-2 border-ink px-4 py-2 text-sm font-bold hover:bg-ink hover:text-paper transition">Verifică voucher</a>
+        <a href="#cumpara" class="hidden sm:inline-flex rounded-full bg-vermilion text-paper px-4 py-2 text-sm font-bold hover:bg-vermilion-d transition">Cumpără</a>
+        <button @click="open=!open" class="lg:hidden grid place-items-center w-10 h-10 rounded-md border border-ink/15" aria-label="Meniu">
+          <svg x-show="!open" viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+          <svg x-show="open" x-cloak viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6 6 18"/></svg>
+        </button>
+      </div>
+    </nav>
+    <div x-show="open" x-cloak x-transition.origin.top class="lg:hidden border-t border-ink/10 bg-paper px-5 py-5 text-lg font-medium">
+      <a href="/categorii" class="block py-2">Categorii</a>
+      <a href="/orase" class="block py-2">Orașe</a>
+      <a href="/cum-functioneaza" class="block py-2">Cum funcționează</a>
+      <a href="/card-cadou" class="block py-2 text-vermilion font-bold">Card cadou</a>
+      <a href="#cumpara" class="block mt-3 px-4 py-3 rounded-full bg-vermilion text-paper text-center font-bold">Cumpără card cadou</a>
+    </div>
+  </div>
+</header>
+
+<main>
+
+  <!-- HERO -->
+  <section class="relative overflow-hidden border-b-2 border-ink">
+    <div class="absolute inset-0 bg-[radial-gradient(circle_at_80%_16%,rgba(232,69,39,.28),transparent_30%),radial-gradient(circle_at_15%_75%,rgba(218,154,51,.26),transparent_30%),radial-gradient(circle_at_48%_44%,rgba(30,74,61,.16),transparent_34%)]"></div>
+    <div class="relative max-w-7xl mx-auto px-4 sm:px-6 pt-14 sm:pt-20 pb-16 sm:pb-24">
+      <nav class="flex items-center gap-2 text-sm text-ink-soft" aria-label="Breadcrumb">
+        <a href="/" class="hover:text-vermilion">Acasă</a><span>/</span><span class="text-ink">Card cadou</span>
+      </nav>
+
+      <div class="mt-8 grid lg:grid-cols-[1fr_.92fr] gap-12 items-center">
+        <div>
+          <p class="stamp inline-flex px-3 py-1 text-xs font-mono tracking-[.18em] text-vermilion bg-paper/70">CARD CADOU DIGITAL · EXPERIENȚE · BILETE QR</p>
+          <h1 class="mt-6 font-display text-6xl sm:text-8xl lg:text-[6.8rem] font-bold leading-[.82]">Dăruiește ceva de făcut.</h1>
+          <p class="mt-6 max-w-2xl text-xl sm:text-2xl text-ink-soft leading-relaxed">
+            Un card cadou bilete.online nu obligă pe nimeni să aleagă un obiect. Îi lași să aleagă o experiență: escape room, muzeu, parc, atelier, natură sau o ieșire de weekend.
+          </p>
+          <div class="mt-8 flex flex-wrap gap-3">
+            <a href="#cumpara" class="rounded-full bg-vermilion text-paper px-6 py-4 font-bold text-lg hover:bg-vermilion-d transition">Cumpără card cadou</a>
+            <a href="#cum-functioneaza" class="rounded-full border-2 border-ink px-6 py-4 font-bold text-lg hover:bg-ink hover:text-paper transition">Cum funcționează</a>
+          </div>
+          <div class="mt-10 grid grid-cols-3 gap-3 max-w-2xl">
+            <div class="rounded-2xl bg-paper/75 border border-ink/10 p-4"><p class="font-mono text-[10px] tracking-[.18em] text-ink-soft">LIVRARE</p><p class="font-display text-3xl font-bold">email</p></div>
+            <div class="rounded-2xl bg-paper/75 border border-ink/10 p-4"><p class="font-mono text-[10px] tracking-[.18em] text-ink-soft">VALORI</p><p class="font-display text-3xl font-bold">flex</p></div>
+            <div class="rounded-2xl bg-paper/75 border border-ink/10 p-4"><p class="font-mono text-[10px] tracking-[.18em] text-ink-soft">FOLOSIRE</p><p class="font-display text-3xl font-bold">online</p></div>
+          </div>
+        </div>
+
+        <div class="relative min-h-[600px]">
+          <div class="absolute inset-x-8 top-10 bottom-8 rounded-[2.4rem] bg-ink rotate-[3deg] shadow-deep"></div>
+          <div class="ticket shine absolute inset-x-0 top-0 mx-auto max-w-[520px] min-h-[350px] rounded-[2rem] border-2 border-ink bg-vermilion text-paper overflow-hidden shadow-deep rotate-[-3deg]" style="--perf:100%">
+            <div class="absolute inset-0 opacity-20" style="background-image:radial-gradient(#fff 1px,transparent 1.4px);background-size:16px 16px"></div>
+            <div class="relative p-8 sm:p-10 min-h-[350px] flex flex-col justify-between">
+              <div>
+                <div class="flex items-center justify-between gap-4">
+                  <p class="font-mono text-xs tracking-[.22em] text-paper/65">GIFT CARD</p>
+                  <p class="font-mono text-xs text-paper/65">bilete.online</p>
+                </div>
+                <p class="mt-10 font-display text-7xl sm:text-8xl font-bold leading-none" x-text="money(amount)"></p>
+                <p class="mt-4 text-paper/75 text-lg">pentru <strong x-text="recipient || 'cineva care merită o ieșire bună'"></strong></p>
+              </div>
+              <div class="flex items-end justify-between gap-4">
+                <div>
+                  <p class="font-mono text-[10px] tracking-[.18em] text-paper/55">COD EXEMPLU</p>
+                  <p class="font-mono tracking-[.25em] text-lg">GIFT-2026-WOW</p>
+                </div>
+                <div class="w-16 h-16 rounded-2xl bg-paper text-ink grid place-items-center rotate-6">
+                  <svg viewBox="0 0 24 24" class="w-8 h-8" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 12v9H4v-9M2 7h20v5H2zM12 22V7m0 0S9.5 2 7 4s5 3 5 3Zm0 0s2.5-5 5-3-5 3-5 3Z"/></svg>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="floaty absolute left-0 bottom-28 w-60 rounded-3xl border-2 border-ink bg-paper p-5 shadow-deep rotate-[5deg]">
+            <p class="font-mono text-[10px] tracking-[.18em] text-ink-soft">MESAJ PERSONALIZAT</p>
+            <p class="mt-2 font-display text-2xl font-bold">„Alege o experiență care te scoate din casă.”</p>
+          </div>
+
+          <div class="floaty absolute right-0 bottom-6 w-64 rounded-3xl border-2 border-ink bg-forest text-paper p-5 shadow-deep rotate-[-5deg]" style="animation-delay:-2.3s">
+            <p class="font-mono text-[10px] tracking-[.18em] text-paper/50">SE POATE FOLOSI LA</p>
+            <div class="mt-3 flex flex-wrap gap-2 text-xs font-bold">
+              <span class="rounded-full bg-paper text-ink px-3 py-1">escape rooms</span>
+              <span class="rounded-full bg-paper/10 px-3 py-1">muzee</span>
+              <span class="rounded-full bg-paper/10 px-3 py-1">parcuri</span>
+              <span class="rounded-full bg-paper/10 px-3 py-1">ateliere</span>
+              <span class="rounded-full bg-paper/10 px-3 py-1">natură</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- WHY -->
+  <section class="max-w-7xl mx-auto px-4 sm:px-6 py-16">
+    <div class="grid lg:grid-cols-[.8fr_1.2fr] gap-10 items-start">
+      <div class="lg:sticky lg:top-28">
+        <p class="stamp inline-flex px-3 py-1 text-xs font-mono tracking-[.18em] text-vermilion">DE CE</p>
+        <h2 class="mt-5 font-display text-5xl sm:text-6xl font-bold leading-[.9]">Un cadou care nu rămâne pe raft.</h2>
+        <p class="mt-5 text-lg text-ink-soft leading-relaxed">Cardul cadou este perfect când nu știi exact ce activitate ar prefera cineva, dar știi sigur că i-ar prinde bine o ieșire, o experiență sau un moment memorabil.</p>
+      </div>
+      <div class="grid md:grid-cols-2 gap-4">
+        <article class="soft-card p-6"><h3 class="font-display text-3xl font-bold">Libertate de alegere</h3><p class="mt-2 text-ink-soft">Destinatarul alege orașul, categoria, data și activitatea potrivită.</p></article>
+        <article class="soft-card p-6 bg-mint"><h3 class="font-display text-3xl font-bold">Livrare rapidă</h3><p class="mt-2 text-ink-soft">Cardul poate fi livrat digital pe email, imediat sau programat.</p></article>
+        <article class="soft-card p-6"><h3 class="font-display text-3xl font-bold">Mesaj personalizat</h3><p class="mt-2 text-ink-soft">Adaugi un mesaj care transformă cardul într-un cadou personal.</p></article>
+        <article class="soft-card p-6 bg-ink text-paper"><h3 class="font-display text-3xl font-bold">Sold reutilizabil</h3><p class="mt-2 text-paper/60">Dacă nu se folosește integral, soldul poate rămâne disponibil conform regulamentului.</p></article>
+      </div>
+    </div>
+  </section>
+
+  <!-- CONFIGURATOR -->
+  <section id="cumpara" class="border-y-2 border-ink bg-paper-2/60">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-16 sm:py-20">
+      <div class="grid lg:grid-cols-[1fr_460px] gap-8 items-start">
+        <div>
+          <p class="stamp inline-flex px-3 py-1 text-xs font-mono tracking-[.18em] text-vermilion">CONFIGURATOR</p>
+          <h2 class="mt-5 font-display text-5xl sm:text-6xl font-bold leading-[.9]">Construiește cardul cadou.</h2>
+          <p class="mt-5 text-lg text-ink-soft leading-relaxed max-w-2xl">Alege valoarea, destinatarul, mesajul și momentul livrării. În implementarea reală, acest formular se conectează la coș și checkout.</p>
+
+          <form class="mt-8 rounded-[2rem] border-2 border-ink bg-paper p-6 sm:p-8 shadow-ticket">
+            <div class="grid sm:grid-cols-2 gap-4">
+              <label>
+                <span class="block mb-1.5 text-sm font-bold">Valoare card</span>
+                <select class="field" x-model.number="amount">
+                  <option :value="50">50 lei</option>
+                  <option :value="100">100 lei</option>
+                  <option :value="150">150 lei</option>
+                  <option :value="250">250 lei</option>
+                  <option :value="500">500 lei</option>
+                  <option :value="1000">1000 lei</option>
+                </select>
+              </label>
+              <label>
+                <span class="block mb-1.5 text-sm font-bold">Pentru cine este?</span>
+                <input class="field" x-model="recipient" placeholder="ex. Maria, Alex, Ana și Vlad" />
+              </label>
+              <label>
+                <span class="block mb-1.5 text-sm font-bold">Email destinatar</span>
+                <input class="field" type="email" placeholder="destinatar@example.ro" />
+              </label>
+              <label>
+                <span class="block mb-1.5 text-sm font-bold">Când se trimite?</span>
+                <select class="field" x-model="delivery">
+                  <option value="now">Imediat după cumpărare</option>
+                  <option value="scheduled">La o dată aleasă</option>
+                  <option value="me">Îl trimit eu mai târziu</option>
+                </select>
+              </label>
+              <label x-show="delivery==='scheduled'" x-collapse>
+                <span class="block mb-1.5 text-sm font-bold">Data trimiterii</span>
+                <input class="field" type="date" />
+              </label>
+              <label>
+                <span class="block mb-1.5 text-sm font-bold">Design</span>
+                <select class="field" x-model="theme">
+                  <option value="vermilion">Wow / surpriză</option>
+                  <option value="forest">Natură / calm</option>
+                  <option value="ochre">Sărbătoare</option>
+                  <option value="ink">Premium</option>
+                </select>
+              </label>
+              <label class="sm:col-span-2">
+                <span class="block mb-1.5 text-sm font-bold">Mesaj personalizat</span>
+                <textarea class="field min-h-32" x-model="message" maxlength="180" placeholder="Scrie un mesaj scurt pentru destinatar."></textarea>
+                <span class="mt-1 block text-xs text-ink-soft" x-text="message.length + '/180 caractere'"></span>
+              </label>
+            </div>
+
+            <div class="mt-6 rounded-2xl bg-mint border border-forest/20 p-4">
+              <p class="font-bold text-forest">Ce primește destinatarul?</p>
+              <p class="mt-1 text-sm text-ink-soft">Un email cu cardul cadou, cod unic, mesajul tău și link direct către activitățile eligibile.</p>
+            </div>
+
+            <div class="mt-6 flex flex-wrap gap-3">
+              <button type="button" class="rounded-full bg-vermilion text-paper px-6 py-4 font-bold hover:bg-vermilion-d transition">Adaugă în coș</button>
+              <button type="button" class="rounded-full border-2 border-ink px-6 py-4 font-bold hover:bg-ink hover:text-paper transition">Previzualizează</button>
+            </div>
+          </form>
+        </div>
+
+        <aside class="lg:sticky lg:top-28">
+          <div class="ticket rounded-[2rem] border-2 border-ink overflow-hidden shadow-deep"
+               :class="{
+                 'bg-vermilion text-paper': theme==='vermilion',
+                 'bg-forest text-paper': theme==='forest',
+                 'bg-ochre text-ink': theme==='ochre',
+                 'bg-ink text-paper': theme==='ink'
+               }"
+               style="--perf:100%">
+            <div class="relative min-h-[520px] p-8 flex flex-col justify-between">
+              <div class="absolute inset-0 opacity-20" style="background-image:radial-gradient(currentColor 1px,transparent 1.4px);background-size:16px 16px"></div>
+              <div class="relative">
+                <div class="flex items-center justify-between gap-4">
+                  <p class="font-mono text-xs tracking-[.22em] opacity-65">GIFT CARD</p>
+                  <p class="font-mono text-xs opacity-65">bilete.online</p>
+                </div>
+                <p class="mt-12 font-display text-7xl font-bold leading-none" x-text="money(amount)"></p>
+                <p class="mt-4 text-lg opacity-75">pentru <strong x-text="recipient || 'cineva drag'"></strong></p>
+                <div class="mt-8 rounded-3xl bg-white/12 border border-white/15 p-5">
+                  <p class="font-display text-2xl font-bold" x-text="message || 'Alege o experiență care te scoate din casă.'"></p>
+                </div>
+              </div>
+
+              <div class="relative flex items-end justify-between gap-4">
+                <div>
+                  <p class="font-mono text-[10px] tracking-[.18em] opacity-60">COD CARD</p>
+                  <p class="font-mono tracking-[.25em] text-lg">GIFT-2026-WOW</p>
+                </div>
+                <div class="w-20 h-20 rounded-2xl bg-paper text-ink grid place-items-center rotate-6">
+                  <svg viewBox="0 0 24 24" class="w-10 h-10" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 12v9H4v-9M2 7h20v5H2zM12 22V7m0 0S9.5 2 7 4s5 3 5 3Zm0 0s2.5-5 5-3-5 3-5 3Z"/></svg>
+                </div>
+              </div>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section id="cum-functioneaza" class="max-w-7xl mx-auto px-4 sm:px-6 py-16 sm:py-20">
+    <div class="max-w-3xl">
+      <p class="stamp inline-flex px-3 py-1 text-xs font-mono tracking-[.18em] text-vermilion">CUM FUNCȚIONEAZĂ</p>
+      <h2 class="mt-5 font-display text-5xl sm:text-6xl font-bold leading-[.9]">Din cadou în bilet, în câțiva pași.</h2>
+    </div>
+    <div class="mt-10 grid md:grid-cols-4 gap-4">
+      <article class="rounded-3xl border-2 border-ink bg-paper p-6">
+        <p class="font-display text-5xl font-bold text-vermilion">1</p>
+        <h3 class="mt-3 font-display text-2xl font-bold">Alegi valoarea</h3>
+        <p class="mt-2 text-ink-soft">Selectezi suma potrivită sau o valoare personalizată.</p>
+      </article>
+      <article class="rounded-3xl border-2 border-ink bg-paper p-6">
+        <p class="font-display text-5xl font-bold text-vermilion">2</p>
+        <h3 class="mt-3 font-display text-2xl font-bold">Scrii mesajul</h3>
+        <p class="mt-2 text-ink-soft">Adaugi numele destinatarului și o urare personală.</p>
+      </article>
+      <article class="rounded-3xl border-2 border-ink bg-paper p-6">
+        <p class="font-display text-5xl font-bold text-vermilion">3</p>
+        <h3 class="mt-3 font-display text-2xl font-bold">Îl trimiți</h3>
+        <p class="mt-2 text-ink-soft">Cardul ajunge pe email imediat sau la data aleasă.</p>
+      </article>
+      <article class="rounded-3xl border-2 border-ink bg-ink text-paper p-6">
+        <p class="font-display text-5xl font-bold text-ochre">4</p>
+        <h3 class="mt-3 font-display text-2xl font-bold">Ei aleg experiența</h3>
+        <p class="mt-2 text-paper/60">Codul se folosește în coș sau checkout pentru activități eligibile.</p>
+      </article>
+    </div>
+  </section>
+
+  <!-- USE CASES -->
+  <section class="border-y-2 border-ink bg-ink text-paper">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-16 sm:py-20">
+      <div class="grid lg:grid-cols-[.9fr_1.1fr] gap-10 items-start">
+        <div>
+          <p class="stamp inline-flex px-3 py-1 text-xs font-mono tracking-[.18em] text-ochre">PENTRU CE OCAZII</p>
+          <h2 class="mt-5 font-display text-5xl sm:text-6xl font-bold leading-[.9]">Când nu vrei încă un cadou generic.</h2>
+          <p class="mt-5 text-lg text-paper/60 leading-relaxed">Cardul cadou funcționează pentru oameni diferiți pentru că nu presupune că știi exact ce vor. Le dai opțiuni, nu o alegere forțată.</p>
+        </div>
+        <div class="grid sm:grid-cols-2 gap-4">
+          <article class="rounded-3xl bg-paper/10 border border-paper/10 p-5"><h3 class="font-display text-3xl font-bold">Zi de naștere</h3><p class="mt-2 text-paper/60">Pentru cineva care preferă amintiri în loc de obiecte.</p></article>
+          <article class="rounded-3xl bg-paper/10 border border-paper/10 p-5"><h3 class="font-display text-3xl font-bold">Cuplu</h3><p class="mt-2 text-paper/60">O ieșire în doi: muzeu, atelier, escape room sau tur.</p></article>
+          <article class="rounded-3xl bg-paper/10 border border-paper/10 p-5"><h3 class="font-display text-3xl font-bold">Familie</h3><p class="mt-2 text-paper/60">Activități pentru copii, weekenduri și vacanțe.</p></article>
+          <article class="rounded-3xl bg-paper/10 border border-paper/10 p-5"><h3 class="font-display text-3xl font-bold">Corporate</h3><p class="mt-2 text-paper/60">Cadouri pentru echipe, clienți sau parteneri.</p></article>
+          <article class="rounded-3xl bg-paper/10 border border-paper/10 p-5"><h3 class="font-display text-3xl font-bold">Last minute</h3><p class="mt-2 text-paper/60">Cadou digital, rapid, fără livrare fizică.</p></article>
+          <article class="rounded-3xl bg-paper/10 border border-paper/10 p-5"><h3 class="font-display text-3xl font-bold">Mulțumesc</h3><p class="mt-2 text-paper/60">Un gest elegant pentru cineva care a ajutat.</p></article>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ELIGIBLE ACTIVITIES -->
+  <section class="max-w-7xl mx-auto px-4 sm:px-6 py-16 sm:py-20">
+    <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-5">
+      <div>
+        <p class="stamp inline-flex px-3 py-1 text-xs font-mono tracking-[.18em] text-vermilion">ACTIVITĂȚI ELIGIBILE</p>
+        <h2 class="mt-5 font-display text-5xl sm:text-6xl font-bold leading-[.9]">La ce se poate folosi?</h2>
+        <p class="mt-5 text-lg text-ink-soft max-w-3xl">Cardul cadou poate fi folosit pentru activitățile eligibile din platformă. În implementare, eligibilitatea se poate controla per activitate, categorie, locație sau campanie.</p>
+      </div>
+      <a href="/categorii" class="rounded-full bg-ink text-paper px-6 py-4 font-bold hover:bg-vermilion transition">Vezi toate categoriile</a>
+    </div>
+
+    <div class="mt-10 grid md:grid-cols-3 lg:grid-cols-6 gap-4">
+      <a href="/escape-rooms" class="rounded-3xl border-2 border-ink/15 bg-paper-2/70 p-5 hover:border-ink transition"><p class="text-3xl">🕵️</p><h3 class="mt-3 font-display text-2xl font-bold">Escape rooms</h3></a>
+      <a href="/muzee" class="rounded-3xl border-2 border-ink/15 bg-paper-2/70 p-5 hover:border-ink transition"><p class="text-3xl">🖼️</p><h3 class="mt-3 font-display text-2xl font-bold">Muzee</h3></a>
+      <a href="/parcuri-de-distractii" class="rounded-3xl border-2 border-ink/15 bg-paper-2/70 p-5 hover:border-ink transition"><p class="text-3xl">🎡</p><h3 class="mt-3 font-display text-2xl font-bold">Parcuri</h3></a>
+      <a href="/natura" class="rounded-3xl border-2 border-ink/15 bg-paper-2/70 p-5 hover:border-ink transition"><p class="text-3xl">🌲</p><h3 class="mt-3 font-display text-2xl font-bold">Natură</h3></a>
+      <a href="/ateliere" class="rounded-3xl border-2 border-ink/15 bg-paper-2/70 p-5 hover:border-ink transition"><p class="text-3xl">🎨</p><h3 class="mt-3 font-display text-2xl font-bold">Ateliere</h3></a>
+      <a href="/activitati-copii" class="rounded-3xl border-2 border-ink/15 bg-paper-2/70 p-5 hover:border-ink transition"><p class="text-3xl">👨‍👩‍👧</p><h3 class="mt-3 font-display text-2xl font-bold">Familie</h3></a>
+    </div>
+  </section>
+
+  <!-- BALANCE / TRUST -->
+  <section class="border-y-2 border-ink bg-paper-2/70">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-16">
+      <div class="grid lg:grid-cols-[1fr_1fr] gap-8 items-center">
+        <div>
+          <p class="stamp inline-flex px-3 py-1 text-xs font-mono tracking-[.18em] text-vermilion">GESTIONARE SOLD</p>
+          <h2 class="mt-5 font-display text-5xl sm:text-6xl font-bold leading-[.9]">Cod unic. Sold clar. Folosire simplă.</h2>
+          <p class="mt-5 text-lg text-ink-soft leading-relaxed">Destinatarul introduce codul în coș sau checkout. Dacă valoarea comenzii este mai mică decât soldul disponibil, diferența poate rămâne pe card, conform regulamentului.</p>
+        </div>
+        <div class="ticket bg-paper border-2 border-ink rounded-[2rem] overflow-hidden shadow-ticket" style="--perf:100%">
+          <div class="p-6 sm:p-8">
+            <p class="font-mono text-xs tracking-[.18em] text-ink-soft">VERIFICARE CARD</p>
+            <h3 class="mt-3 font-display text-4xl font-bold">GIFT-2026-WOW</h3>
+            <div class="mt-6 grid grid-cols-2 gap-4">
+              <div class="rounded-2xl bg-mint border border-forest/20 p-4"><p class="text-sm text-ink-soft">Sold disponibil</p><p class="font-display text-4xl font-bold">180 lei</p></div>
+              <div class="rounded-2xl bg-paper-2 border border-ink/10 p-4"><p class="text-sm text-ink-soft">Valabil până la</p><p class="font-display text-4xl font-bold">2027</p></div>
+            </div>
+            <a href="/voucher" class="mt-6 inline-flex rounded-full bg-vermilion text-paper px-6 py-4 font-bold hover:bg-vermilion-d transition">Verifică un card</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section class="max-w-5xl mx-auto px-4 sm:px-6 py-16 sm:py-20" x-data="{open:0}">
+    <div class="text-center max-w-3xl mx-auto">
+      <p class="stamp inline-flex px-3 py-1 text-xs font-mono tracking-[.18em] text-vermilion">FAQ</p>
+      <h2 class="mt-5 font-display text-5xl sm:text-6xl font-bold leading-[.9]">Întrebări frecvente</h2>
+    </div>
+
+    <div class="mt-10 space-y-3">
+      <template x-for="(faq,index) in faqs" :key="faq.q">
+        <article class="rounded-3xl border-2 border-ink bg-paper overflow-hidden">
+          <button @click="open=open===index?null:index" class="w-full text-left p-5 sm:p-6 flex items-center justify-between gap-4">
+            <span class="font-display text-2xl sm:text-3xl font-bold" x-text="faq.q"></span>
+            <span class="text-3xl font-bold" x-text="open===index?'−':'+'"></span>
+          </button>
+          <div x-show="open===index" x-collapse class="px-5 sm:px-6 pb-6 text-ink-soft leading-relaxed" x-text="faq.a"></div>
+        </article>
+      </template>
+    </div>
+  </section>
+
+  <!-- FINAL CTA -->
+  <section class="max-w-7xl mx-auto px-4 sm:px-6 pb-16 sm:pb-20">
+    <div class="relative overflow-hidden rounded-[2rem] border-2 border-ink bg-vermilion text-paper p-8 sm:p-12">
+      <div class="absolute inset-0 opacity-15" style="background-image:radial-gradient(#fff 1px,transparent 1.4px);background-size:15px 15px"></div>
+      <div class="relative grid lg:grid-cols-[1fr_auto] gap-8 items-center">
+        <div>
+          <p class="font-mono text-xs tracking-[.2em] text-paper/60">CADOU DIGITAL</p>
+          <h2 class="mt-3 font-display text-5xl sm:text-6xl font-bold leading-[.9]">Trimite o experiență, nu încă un obiect.</h2>
+          <p class="mt-4 max-w-2xl text-paper/75 text-lg">Alege valoarea, scrie mesajul și lasă destinatarul să aleagă activitatea potrivită.</p>
+        </div>
+        <a href="#cumpara" class="rounded-full bg-paper text-ink px-6 py-4 font-bold text-center hover:bg-ink hover:text-paper transition">Cumpără card cadou</a>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="border-t-2 border-ink bg-ink text-paper">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 py-12 grid md:grid-cols-4 gap-8">
+    <div class="md:col-span-2">
+      <p class="font-display text-3xl font-bold">bilete<span class="text-vermilion">.</span>online</p>
+      <p class="mt-3 max-w-lg text-paper/65">Bilete pentru activități, experiențe și locuri unde chiar mergi să faci ceva. Rezervi online, primești QR, intri rapid.</p>
+    </div>
+    <nav>
+      <p class="font-mono text-xs tracking-[.2em] text-paper/40 mb-3">CADOURI</p>
+      <a class="block py-1.5 text-paper/70 hover:text-ochre" href="/card-cadou">Card cadou</a>
+      <a class="block py-1.5 text-paper/70 hover:text-ochre" href="/voucher">Verifică voucher</a>
+      <a class="block py-1.5 text-paper/70 hover:text-ochre" href="/regulament-carduri-cadou">Regulament carduri cadou</a>
+    </nav>
+    <nav>
+      <p class="font-mono text-xs tracking-[.2em] text-paper/40 mb-3">AJUTOR</p>
+      <a class="block py-1.5 text-paper/70 hover:text-ochre" href="/ajutor">Centru de ajutor</a>
+      <a class="block py-1.5 text-paper/70 hover:text-ochre" href="/contact">Contact</a>
+      <a class="block py-1.5 text-paper/70 hover:text-ochre" href="/termeni-si-conditii">Termeni</a>
+    </nav>
+  </div>
+  <div class="border-t border-paper/10 py-4 text-center text-xs font-mono text-paper/40">© 2026 bilete.online · operat de Tixello</div>
+</footer>
+
+<script>
+function giftCardPage(){
+  return {
+    amount:250,
+    recipient:'',
+    delivery:'now',
+    theme:'vermilion',
+    message:'',
+    faqs:[
+      {q:'Cum se livrează cardul cadou?', a:'Cardul cadou este livrat digital pe email, fie către tine, fie direct către destinatar, în funcție de opțiunea aleasă.'},
+      {q:'Unde poate fi folosit?', a:'Poate fi folosit pentru activitățile eligibile de pe bilete.online: escape rooms, muzee, parcuri, ateliere, natură și alte experiențe listate.'},
+      {q:'Poate fi folosit parțial?', a:'Da. Dacă soldul cardului este mai mare decât valoarea comenzii, diferența poate rămâne disponibilă până la expirarea cardului, conform regulamentului.'},
+      {q:'Pot programa trimiterea?', a:'Da, cardul poate fi trimis imediat sau programat pentru o dată aleasă, dacă această opțiune este activă în checkout.'},
+      {q:'Pot cumpăra carduri cadou pentru companie?', a:'Da. Pentru volume mai mari sau cadouri corporate, poți folosi formularul de contact sau o pagină dedicată comenzilor bulk.'}
+    ],
+    money(v){
+      return new Intl.NumberFormat('ro-RO',{style:'currency',currency:'RON',maximumFractionDigits:0}).format(v);
+    }
+  }
+}
+</script>
+
+</body>
+</html>

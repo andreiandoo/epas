@@ -244,10 +244,10 @@ RewriteRule ^organizator/(dashboard|events|settings|analytics|tickets|orders|pay
 # Legacy: redirect /organizer/* to /organizator/*
 RewriteRule ^organizer/(dashboard|events|settings|analytics|tickets|orders|payouts|team|support|finance|help|participants|promo|sales|reports|email|documents|notifications)/?$ /organizator/$1 [R=301,L,QSA]
 
-# "Listează-ți locația" landing page
+# "Listează-ți locația" landing page (bilete.online — static editorial template)
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^pentru-locatii/?$ organizer/landing.php [L]
+RewriteRule ^pentru-locatii/?$ pentru-locatii.php [L]
 
 # Generic public organizer profile - keep LAST in /organizator/* block
 RewriteCond %{REQUEST_FILENAME} !-f
@@ -449,7 +449,7 @@ RewriteRule ^gdpr/?$ gdpr.php [L]
 
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^card-cadou/?$ gift-cards.php [L]
+RewriteRule ^card-cadou/?$ card-cadou.php [L]
 
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d

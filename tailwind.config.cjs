@@ -22,6 +22,8 @@ module.exports = {
         'forest-l':   '#2E6553',
         ochre:        '#DA9A33',
         sky:          '#2C5F8A',
+        mint:         '#D7E8D3',
+        rose:         '#F2C7B8',
         // Legacy semantic tokens kept for existing JS code (auth, cart, etc.)
         // mapped to the new palette so old class names still render.
         primary:      '#E84527',
@@ -56,6 +58,7 @@ module.exports = {
         'card-cta': '0 22px 50px -32px rgba(27,23,20,.7)',
         'header-scroll': '0 10px 30px -22px rgba(27,23,20,.6)',
         'mega': '0 40px 80px -40px rgba(27,23,20,.7)',
+        'deep': '0 42px 90px -48px rgba(27,23,20,.75)',
       },
     },
     screens: {
@@ -105,9 +108,9 @@ module.exports = {
     'max-w-none', 'max-w-md', 'max-w-7xl',
     'invisible', 'visible',
     // Alpine x-bind colors used in category cards / experience tiles
-    'bg-vermilion', 'bg-vermilion-d', 'bg-forest', 'bg-forest-l', 'bg-ochre', 'bg-sky', 'bg-ink', 'bg-ink-2', 'bg-paper', 'bg-paper-2', 'bg-paper-3',
-    'text-vermilion', 'text-vermilion-d', 'text-forest', 'text-forest-l', 'text-ochre', 'text-sky', 'text-ink', 'text-ink-2', 'text-ink-soft', 'text-paper',
-    'border-vermilion', 'border-forest', 'border-ochre', 'border-sky', 'border-ink', 'border-paper',
+    'bg-vermilion', 'bg-vermilion-d', 'bg-forest', 'bg-forest-l', 'bg-ochre', 'bg-sky', 'bg-ink', 'bg-ink-2', 'bg-paper', 'bg-paper-2', 'bg-paper-3', 'bg-mint', 'bg-rose',
+    'text-vermilion', 'text-vermilion-d', 'text-forest', 'text-forest-l', 'text-ochre', 'text-sky', 'text-ink', 'text-ink-2', 'text-ink-soft', 'text-paper', 'text-mint', 'text-rose',
+    'border-vermilion', 'border-forest', 'border-ochre', 'border-sky', 'border-ink', 'border-paper', 'border-mint', 'border-rose',
     'from-vermilion', 'to-vermilion-d', 'from-forest-l', 'to-forest', 'from-sky', 'to-ink', 'from-ochre',
     'hover:bg-vermilion', 'hover:bg-vermilion-d', 'hover:bg-ink', 'hover:bg-ink-2', 'hover:bg-paper-2',
     'hover:text-paper', 'hover:text-vermilion', 'hover:border-vermilion',
