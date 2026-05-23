@@ -4068,24 +4068,31 @@ const EventPage = {
             // Render seats using actual x/y coordinates from the layout
             if (section.rows) {
                 section.rows.forEach(function(row) {
-                    if (!row.seats || row.seats.length === 0) return;
-
-                    // Draw table shape if this row is a table
+                    // Draw table shape FIRST — table rows in the current data
+                    // model have seats_count=0 (chairs are stored as sibling
+                    // rows in the same section). The previous early-return on
+                    // empty seats meant tables never painted on the public
+                    // map. Color/opacity bumped from #6B7280 / 0.25 / 0.5 to
+                    // #94A3B8 / 0.45 / 0.85 so tables read as real objects on
+                    // a white background.
                     if (row.is_table) {
-                        var tableColor2 = section.background_color || '#6B7280';
+                        var tableColor2 = section.background_color || section.color_hex || '#94A3B8';
                         var tcx2 = section.x + (row.center_x || 0);
                         var tcy2 = section.y + (row.center_y || 0);
 
                         if (row.table_type === 'round') {
                             var tr2 = row.radius || 30;
-                            svg += '<circle cx="' + tcx2 + '" cy="' + tcy2 + '" r="' + tr2 + '" fill="' + tableColor2 + '" fill-opacity="0.25" stroke="' + tableColor2 + '" stroke-width="1.5" stroke-opacity="0.5"/>';
+                            svg += '<circle cx="' + tcx2 + '" cy="' + tcy2 + '" r="' + tr2 + '" fill="' + tableColor2 + '" fill-opacity="0.45" stroke="' + tableColor2 + '" stroke-width="1.5" stroke-opacity="0.85"/>';
                         } else {
                             var tw2 = row.table_width || 80;
                             var th2 = row.table_height || 30;
-                            svg += '<rect x="' + (tcx2 - tw2/2) + '" y="' + (tcy2 - th2/2) + '" width="' + tw2 + '" height="' + th2 + '" rx="4" fill="' + tableColor2 + '" fill-opacity="0.25" stroke="' + tableColor2 + '" stroke-width="1.5" stroke-opacity="0.5"/>';
+                            svg += '<rect x="' + (tcx2 - tw2/2) + '" y="' + (tcy2 - th2/2) + '" width="' + tw2 + '" height="' + th2 + '" rx="4" fill="' + tableColor2 + '" fill-opacity="0.45" stroke="' + tableColor2 + '" stroke-width="1.5" stroke-opacity="0.85"/>';
                         }
-                        svg += '<text x="' + tcx2 + '" y="' + (tcy2 + 4) + '" text-anchor="middle" font-size="10" font-weight="700" fill="rgba(0,0,0,0.4)" class="pointer-events-none select-none">' + row.label + '</text>';
+                        svg += '<text x="' + tcx2 + '" y="' + (tcy2 + 4) + '" text-anchor="middle" font-size="10" font-weight="700" fill="rgba(0,0,0,0.55)" class="pointer-events-none select-none">' + row.label + '</text>';
                     }
+
+                    // Nothing more to draw for a row with no seats.
+                    if (!row.seats || row.seats.length === 0) return;
 
                     // Row-based ticket type lookup (keep original order — first assigned type determines color)
                     var ticketTypesForRow = self.rowToTicketTypeMap[row.id] || [];
