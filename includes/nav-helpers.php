@@ -146,3 +146,95 @@ function navGetCityBySlug(string $slug): ?array
     // LocationsController::city() wraps the city in data.city
     return $resp['data']['city'] ?? $resp['data'] ?? null;
 }
+
+// ============================================================
+// Shared formatting helpers used by category.php / city.php / city-intent.php
+// Declared once here so each render template can be included multiple times
+// from a dispatcher without "Cannot redeclare function" fatals.
+// ============================================================
+
+if (!function_exists('navFormatPriceCents')) {
+    /**
+     * Format an integer price-in-cents into a human-readable lei string.
+     * null → "—" (unknown/uncomputed), 0 → "Gratuit", >0 → "1.230 lei".
+     */
+    function navFormatPriceCents(?int $cents): string {
+        if ($cents === null) return '—';
+        if ($cents === 0) return 'Gratuit';
+        return number_format($cents / 100, 0, ',', '.') . ' lei';
+    }
+}
+
+if (!function_exists('navEventTitle')) {
+    /**
+     * Pull a flat translated title from an event payload that may have
+     * `title` as either string or {ro:..., en:...} array.
+     */
+    function navEventTitle(array $ev, string $locale = 'ro'): string {
+        if (is_array($ev['title'] ?? null)) {
+            return $ev['title'][$locale] ?? $ev['title']['ro'] ?? $ev['title']['en'] ?? reset($ev['title']);
+        }
+        return $ev['title'] ?? 'Activitate';
+    }
+}
+
+if (!function_exists('navEventCity')) {
+    /**
+     * Pull the city label for an event, preferring marketplace_city.name
+     * (translatable) over venue.city (plain string).
+     */
+    function navEventCity(array $ev, string $locale = 'ro'): string {
+        $c = $ev['marketplace_city'] ?? null;
+        if ($c && is_array($c['name'] ?? null)) {
+            return $c['name'][$locale] ?? $c['name']['ro'] ?? '';
+        }
+        return $ev['venue']['city'] ?? '';
+    }
+}
+
+if (!function_exists('navEventCategoryLabel')) {
+    function navEventCategoryLabel(array $ev, string $locale = 'ro'): string {
+        $c = $ev['marketplace_event_category'] ?? null;
+        if ($c && is_array($c['name'] ?? null)) {
+            return $c['name'][$locale] ?? $c['name']['ro'] ?? '';
+        }
+        return '';
+    }
+}
+
+if (!function_exists('navResetQueryString')) {
+    /**
+     * Build a query string from $_GET-like array, omitting the given keys
+     * (and always omitting `slug` since .htaccess injects it). Returns
+     * "?k=v&..." or "" if no params remain.
+     */
+    function navResetQueryString(array $get, array $omit): string {
+        $kept = array_diff_key($get, array_flip($omit));
+        unset($kept['slug']);
+        return $kept ? '?' . http_build_query($kept) : '';
+    }
+}
+
+if (!function_exists('navMbUcfirst')) {
+    function navMbUcfirst(string $s, string $enc = 'UTF-8'): string {
+        if ($s === '') return '';
+        return mb_strtoupper(mb_substr($s, 0, 1, $enc), $enc) . mb_substr($s, 1, null, $enc);
+    }
+}
+
+if (!function_exists('navBuildUrl')) {
+    /**
+     * Build a URL preserving current filter state, with selective overrides
+     * (and a list of keys to clear). Always strips `slug` (set by .htaccess
+     * rewrite) and `page` (reset pagination when filters change).
+     *
+     * navBuildUrl('escape-rooms', $_GET, ['city' => 'cluj-napoca'])
+     *   → "/escape-rooms?city=cluj-napoca&q=...&sort=..."
+     */
+    function navBuildUrl(string $slug, array $get, array $override = [], array $omit = []): string {
+        $params = array_merge($get, $override);
+        foreach ($omit as $k) unset($params[$k]);
+        unset($params['slug'], $params['page']);
+        return '/' . $slug . ($params ? '?' . http_build_query($params) : '');
+    }
+}

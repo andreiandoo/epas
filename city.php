@@ -119,24 +119,6 @@ $structuredData[] = [
 
 include __DIR__ . '/includes/head.php';
 include __DIR__ . '/includes/header.php';
-
-// Helpers
-function _cityFormatPrice(?int $cents): string {
-    if ($cents === null) return '—';
-    if ($cents === 0) return 'Gratuit';
-    return number_format($cents / 100, 0, ',', '.') . ' lei';
-}
-function _cityEvTitle(array $ev): string {
-    if (is_array($ev['title'] ?? null)) {
-        return $ev['title']['ro'] ?? $ev['title']['en'] ?? reset($ev['title']);
-    }
-    return $ev['title'] ?? 'Activitate';
-}
-function _cityEvCategory(array $ev): string {
-    $c = $ev['marketplace_event_category'] ?? null;
-    if ($c && is_array($c['name'] ?? null)) return $c['name']['ro'] ?? '';
-    return '';
-}
 ?>
 
 <!-- ============================== HERO ============================== -->
@@ -351,11 +333,11 @@ function _cityEvCategory(array $ev): string {
         <?php else: ?>
             <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
                 <?php foreach ($events as $ev):
-                    $evTitle = _cityEvTitle($ev);
-                    $evCat = _cityEvCategory($ev);
+                    $evTitle = navEventTitle($ev);
+                    $evCat = navEventCategoryLabel($ev);
                     $evSlug = $ev['slug'] ?? '';
                     $evCover = $ev['cover_image_url'] ?? $ev['image_url'] ?? '';
-                    $evPrice = _cityFormatPrice($ev['cheapest_price_cents'] ?? null);
+                    $evPrice = navFormatPriceCents($ev['cheapest_price_cents'] ?? null);
                 ?>
                     <article class="ticket ticket-lift group bg-paper border-2 border-ink rounded-2xl overflow-hidden flex flex-col" style="--perf:100%">
                         <a href="/bilete/<?= htmlspecialchars($evSlug, ENT_QUOTES) ?>" class="block">
