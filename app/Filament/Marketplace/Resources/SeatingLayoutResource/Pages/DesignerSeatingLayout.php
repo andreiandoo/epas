@@ -338,6 +338,19 @@ class DesignerSeatingLayout extends Page
                         $data['metadata'] = json_decode($data['metadata'], true);
                     }
 
+                    // Ensure the renderer knows what shape to draw. Without
+                    // this, both the admin canvas and the public map default
+                    // to 'polygon' and silently render nothing because there
+                    // are no points.
+                    $meta = is_array($data['metadata'] ?? null) ? $data['metadata'] : [];
+                    if (empty($meta['shape'])) {
+                        $meta['shape'] = 'rect';
+                    }
+                    if (!isset($meta['opacity'])) {
+                        $meta['opacity'] = 0.3;
+                    }
+                    $data['metadata'] = $meta;
+
                     $zone = SeatingSection::create($data);
 
                     $this->reloadSections();
@@ -3394,7 +3407,11 @@ class DesignerSeatingLayout extends Page
             'background_color' => '#9333EA',
             'corner_radius' => 0,
             'metadata' => [
-                'shape' => 'polygon',
+                // 'rect' is the actual shape the operator wants from this
+                // quick action (a rectangular zone). 'polygon' was a bug —
+                // the renderer needs metadata.points for polygons and there
+                // are none here, so nothing drew.
+                'shape' => 'rect',
                 'opacity' => 0.3,
             ],
         ]);

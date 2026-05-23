@@ -1904,6 +1904,11 @@ class MarketplaceEventsController extends BaseController
                 'seat_color' => $section->seat_color,
                 'background_color' => $section->background_color,
                 'corner_radius' => $section->corner_radius,
+                'background_image' => $section->background_image
+                    ? (str_starts_with($section->background_image, 'http')
+                        ? $section->background_image
+                        : Storage::disk('public')->url($section->background_image))
+                    : null,
                 'x' => $section->x_position,
                 'y' => $section->y_position,
                 'width' => $section->width,

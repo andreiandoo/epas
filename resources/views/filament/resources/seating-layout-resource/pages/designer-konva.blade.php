@@ -509,7 +509,11 @@
             },
             drawDecorativeSection(section, sectionDraggable) {
                 const metadata = section.metadata || {};
-                const shape = metadata.shape || 'polygon';
+                // Default to 'rect' so zones saved via the "Add Decorative Zone"
+                // modal (which leaves metadata empty) actually render. Without
+                // this, the polygon branch is taken but has no points and draws
+                // nothing.
+                const shape = metadata.shape || 'rect';
                 const opacity = parseFloat(metadata.opacity) || 0.3;
                 const color = section.background_color || section.color_hex || '#10B981';
                 const isSelected = this.selectedSection === section.id;
@@ -524,7 +528,48 @@
                     name: 'section-shape'
                 });
 
-                if (shape === 'polygon' && metadata.points) {
+                if (shape === 'rect') {
+                    // Decorative rectangle (stage, dance floor, VIP lounge).
+                    // Geometry comes from top-level section fields.
+                    const rectW = section.width || 100;
+                    const rectH = section.height || 60;
+                    const cornerR = section.corner_radius || metadata.corner_radius || 0;
+
+                    const rectShape = new Konva.Rect({
+                        x: 0,
+                        y: 0,
+                        width: rectW,
+                        height: rectH,
+                        cornerRadius: cornerR,
+                        fill: color,
+                        opacity: opacity,
+                        stroke: isSelected ? '#FFD700' : color,
+                        strokeWidth: isSelected ? 3 : 1.5,
+                        strokeScaleEnabled: false,
+                        name: 'rect-shape'
+                    });
+                    group.add(rectShape);
+
+                    const labelText = metadata.label || section.name;
+                    if (labelText) {
+                        const labelFontSize = Math.max(11, Math.min(18, Math.round(Math.min(rectW, rectH) * 0.18)));
+                        const label = new Konva.Text({
+                            x: 0,
+                            y: (rectH / 2) - (labelFontSize / 2),
+                            width: rectW,
+                            text: labelText,
+                            fontSize: labelFontSize,
+                            fontFamily: 'Arial',
+                            fontStyle: 'bold',
+                            align: 'center',
+                            fill: '#1f2937',
+                            opacity: 0.85,
+                            listening: false,
+                            name: 'section-label'
+                        });
+                        group.add(label);
+                    }
+                } else if (shape === 'polygon' && metadata.points) {
                     // Draw polygon from stored points
                     // Points are stored as absolute coordinates, convert to relative
                     const points = metadata.points;

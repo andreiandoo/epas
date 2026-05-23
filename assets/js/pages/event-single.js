@@ -3583,13 +3583,37 @@ const EventPage = {
      */
     renderDecorativeSectionSvg(section) {
         var metadata = section.metadata || {};
-        var shape = metadata.shape || 'polygon';
+        // Default to 'rect' so zones saved via the "Add Decorative Zone" modal
+        // (which leaves metadata empty) render as the rectangle the operator
+        // sees in the designer, instead of dropping into the polygon branch
+        // and silently producing no SVG when metadata.points is missing.
+        var shape = metadata.shape || 'rect';
         var opacity = parseFloat(metadata.opacity) || 0.3;
         var color = section.background_color || section.color_hex || '#10B981';
 
         var svg = '';
 
-        if (shape === 'polygon' && metadata.points) {
+        if (shape === 'rect') {
+            // Decorative rectangle (stage, dance floor, VIP lounge, etc.).
+            // Geometry comes from the top-level section fields, not metadata.
+            var rectW = section.width || 100;
+            var rectH = section.height || 60;
+            var cornerR = section.corner_radius || metadata.corner_radius || 0;
+            var bgImage = section.background_image || metadata.background_image || null;
+
+            svg += '<g transform="translate(' + section.x + ',' + section.y + ')">';
+            svg += '<rect x="0" y="0" width="' + rectW + '" height="' + rectH + '" rx="' + cornerR + '" ry="' + cornerR + '" fill="' + color + '" fill-opacity="' + opacity + '" stroke="' + color + '" stroke-width="1.5" stroke-opacity="0.7"/>';
+            if (bgImage) {
+                svg += '<image href="' + bgImage + '" x="0" y="0" width="' + rectW + '" height="' + rectH + '" preserveAspectRatio="xMidYMid slice" opacity="0.9"/>';
+            }
+            var labelText = metadata.label || section.name;
+            if (labelText) {
+                var labelFontSize = Math.max(11, Math.min(18, Math.round(Math.min(rectW, rectH) * 0.18)));
+                svg += '<text x="' + (rectW / 2) + '" y="' + (rectH / 2) + '" text-anchor="middle" dominant-baseline="central" font-size="' + labelFontSize + '" font-family="Arial" font-weight="600" fill="#1f2937" opacity="0.85" class="pointer-events-none select-none">' + labelText + '</text>';
+            }
+            svg += '</g>';
+
+        } else if (shape === 'polygon' && metadata.points) {
             // Draw filled polygon from stored points
             var points = metadata.points;
             var minX = section.x;
@@ -3789,22 +3813,27 @@ const EventPage = {
                 section.rows.forEach(function(row) {
                     if (!row.seats || row.seats.length === 0) return;
 
-                    // Draw table shape if this row is a table
+                    // Draw table shape if this row is a table.
+                    // Color fallback was '#6B7280' at 0.25 fill / 0.5 stroke —
+                    // nearly invisible on white. Bumped to a medium slate at
+                    // 0.45 fill / 0.85 stroke so tables read as physical
+                    // objects on the public map even without a per-section
+                    // background_color set.
                     if (row.is_table) {
-                        var tableColor = section.background_color || '#6B7280';
+                        var tableColor = section.background_color || section.color_hex || '#94A3B8';
                         var tcx = section.x + (row.center_x || 0);
                         var tcy = section.y + (row.center_y || 0);
 
                         if (row.table_type === 'round') {
                             var tr = row.radius || 30;
-                            svg += '<circle cx="' + tcx + '" cy="' + tcy + '" r="' + tr + '" fill="' + tableColor + '" fill-opacity="0.25" stroke="' + tableColor + '" stroke-width="1.5" stroke-opacity="0.5"/>';
+                            svg += '<circle cx="' + tcx + '" cy="' + tcy + '" r="' + tr + '" fill="' + tableColor + '" fill-opacity="0.45" stroke="' + tableColor + '" stroke-width="1.5" stroke-opacity="0.85"/>';
                         } else {
                             var tw = row.table_width || 80;
                             var th = row.table_height || 30;
-                            svg += '<rect x="' + (tcx - tw/2) + '" y="' + (tcy - th/2) + '" width="' + tw + '" height="' + th + '" rx="4" fill="' + tableColor + '" fill-opacity="0.25" stroke="' + tableColor + '" stroke-width="1.5" stroke-opacity="0.5"/>';
+                            svg += '<rect x="' + (tcx - tw/2) + '" y="' + (tcy - th/2) + '" width="' + tw + '" height="' + th + '" rx="4" fill="' + tableColor + '" fill-opacity="0.45" stroke="' + tableColor + '" stroke-width="1.5" stroke-opacity="0.85"/>';
                         }
                         // Table label
-                        svg += '<text x="' + tcx + '" y="' + (tcy + 4) + '" text-anchor="middle" font-size="10" font-weight="700" fill="rgba(0,0,0,0.4)" class="pointer-events-none select-none">' + row.label + '</text>';
+                        svg += '<text x="' + tcx + '" y="' + (tcy + 4) + '" text-anchor="middle" font-size="10" font-weight="700" fill="rgba(0,0,0,0.55)" class="pointer-events-none select-none">' + row.label + '</text>';
                     }
 
                     // Row labels aligned on section-wide left/right columns (opt-out via metadata)
