@@ -1,11 +1,10 @@
 <?php
 /**
- * Single category landing — /{category-slug}
+ * Single category landing — /{category-slug}.
  *
- * Doubles as a single-segment URL resolver: if the slug doesn't match an
- * active event category, falls through to city.php (which resolves to a
- * marketplace city or 404). This lets the .htaccess have a single generic
- * route for /{slug} without hardcoding a category whitelist.
+ * Pure render: expects $_GET['slug'] (or `$slug` already set by an
+ * including script — e.g. slug.php dispatcher). If the slug isn't a real
+ * category we 404 here — city resolution lives in slug.php, not here.
  */
 
 $pageCacheTTL = 300;
@@ -14,7 +13,7 @@ require_once __DIR__ . '/includes/config.php';
 require_once __DIR__ . '/includes/api.php';
 require_once __DIR__ . '/includes/nav-helpers.php';
 
-$slug = $_GET['slug'] ?? '';
+$slug = $slug ?? ($_GET['slug'] ?? '');
 
 if (!preg_match('/^[a-z][a-z0-9-]+$/', $slug)) {
     http_response_code(404);
@@ -22,16 +21,10 @@ if (!preg_match('/^[a-z][a-z0-9-]+$/', $slug)) {
     exit;
 }
 
-$category = navGetCategoryBySlug($slug);
+// Reuse pre-fetched data if slug.php already loaded it; else fetch now.
+$category = $category ?? navGetCategoryBySlug($slug);
 
 if (!$category) {
-    // Not a category. Try city.php if it exists (it will resolve to city
-    // or 404). If city.php hasn't been built yet, fall back to a generic
-    // 404 here so the resolver chain stays clean.
-    if (file_exists(__DIR__ . '/city.php')) {
-        require __DIR__ . '/city.php';
-        return;
-    }
     http_response_code(404);
     require __DIR__ . '/404.php';
     exit;

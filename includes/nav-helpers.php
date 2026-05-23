@@ -128,3 +128,21 @@ function navGetCategoryBySlug(string $slug): ?array
     }
     return $resp['data'];
 }
+
+/**
+ * Fetch a single city by slug. Returns the full city payload (with
+ * description, cover, lat/lng, region, county, events_count) or null.
+ */
+function navGetCityBySlug(string $slug): ?array
+{
+    $cacheKey = 'city_full_' . $slug;
+    $resp = api_cached($cacheKey, function () use ($slug) {
+        return api_get('/locations/cities/' . urlencode($slug));
+    }, 300);
+
+    if (!is_array($resp) || empty($resp['success'])) {
+        return null;
+    }
+    // LocationsController::city() wraps the city in data.city
+    return $resp['data']['city'] ?? $resp['data'] ?? null;
+}
