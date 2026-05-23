@@ -19,31 +19,17 @@
 if (!defined('BILETEONLINE_ROOT')) {
     require_once __DIR__ . '/config.php';
 }
+require_once __DIR__ . '/nav-helpers.php';
 
 $currentPage = $currentPage ?? '';
 $bodyClass = $bodyClass ?? '';
 $skipMainTag = $skipMainTag ?? false;
 
-// Default mega-menu categories — pages or PHP API wiring can override.
-$navCategories = $navCategories ?? [
-    ['label' => 'Escape rooms',       'href' => '/escape-rooms',         'count' => '210 camere · toată țara', 'accent' => 'vermilion', 'icon' => 'M7 14a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm2-3h10m-3-2v4'],
-    ['label' => 'Parcuri de distracții', 'href' => '/parcuri-de-distractii', 'count' => '48 parcuri',           'accent' => 'sky',       'icon' => 'M12 2v20M5 8l7 4 7-4M5 16l7-4 7 4'],
-    ['label' => 'Muzee & expoziții',  'href' => '/muzee',                 'count' => '320 muzee & planetarii', 'accent' => 'forest',    'icon' => 'M3 21h18M5 21V9l7-5 7 5v12M9 21v-6h6v6'],
-    ['label' => 'Parcuri de aventură','href' => '/parcuri-aventura',      'count' => '76 trasee & tiroliene',  'accent' => 'ochre',     'icon' => 'M12 2 4 22h16L12 2Zm0 7-3 8m3-8 3 8'],
-    ['label' => 'Acvarii & grădini zoo','href' => '/acvarii-zoo',         'count' => '54 locații',             'accent' => 'sky',       'icon' => 'M2 12c4-5 16-5 20 0-4 5-16 5-20 0Zm10 0h.01M18 8c2 1 2 7 0 8'],
-    ['label' => 'Experiențe & ateliere','href' => '/experiente',          'count' => '190 ateliere',           'accent' => 'vermilion', 'icon' => 'M14 4 4 14l-2 8 8-2L20 10m-6-6 6 6m-6-6 2-2 6 6-2 2'],
-];
-
-$navCities = $navCities ?? [
-    ['label' => 'București',    'href' => '/bucuresti'],
-    ['label' => 'Cluj-Napoca',  'href' => '/cluj-napoca'],
-    ['label' => 'Brașov',       'href' => '/brasov'],
-    ['label' => 'Timișoara',    'href' => '/timisoara'],
-    ['label' => 'Iași',         'href' => '/iasi'],
-    ['label' => 'Constanța',    'href' => '/constanta'],
-    ['label' => 'Sibiu',        'href' => '/sibiu'],
-    ['label' => 'Oradea',       'href' => '/oradea'],
-];
+// Mega menu data pulled from the marketplace API via cached helpers.
+// Pages can override $navCategories / $navCities before include if they want
+// to render a different set (e.g. cross-link nav on /categorii itself).
+$navCategories = $navCategories ?? navGetCategories(6);
+$navCities = $navCities ?? navGetCities(8);
 
 // Accent → Tailwind class map (allowlist, safelisted in tailwind.config.cjs)
 $accentMap = [
@@ -121,8 +107,14 @@ $accentMap = [
                                     $a = $accentMap[$cat['accent']] ?? $accentMap['vermilion'];
                                 ?>
                                 <a href="<?= htmlspecialchars($cat['href'], ENT_QUOTES) ?>" @click="mega=false" class="mega-link group flex items-start gap-3 p-3 rounded-xl hover:bg-paper-2">
-                                    <span class="grid place-items-center w-10 h-10 rounded-lg <?= $a['icon'] ?> shrink-0 <?= $a['hover'] ?> transition-colors">
-                                        <svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="<?= htmlspecialchars($cat['icon'], ENT_QUOTES) ?>"/></svg>
+                                    <span class="grid place-items-center w-10 h-10 rounded-lg <?= $a['icon'] ?> shrink-0 <?= $a['hover'] ?> transition-colors text-xl leading-none" aria-hidden="true">
+                                        <?php if (!empty($cat['icon_emoji'])): ?>
+                                            <?= htmlspecialchars($cat['icon_emoji']) ?>
+                                        <?php elseif (!empty($cat['icon'])): ?>
+                                            <svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.7"><path d="<?= htmlspecialchars($cat['icon'], ENT_QUOTES) ?>"/></svg>
+                                        <?php else: ?>
+                                            🎫
+                                        <?php endif; ?>
                                     </span>
                                     <span>
                                         <span class="block font-600 leading-tight"><?= htmlspecialchars($cat['label']) ?></span>
