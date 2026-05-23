@@ -21,11 +21,13 @@ RewriteRule ^bilete/([a-z0-9-]+)/?$ event.php?slug=$1 [L,QSA]
 # Legacy: redirect /event/slug to /bilete/slug
 RewriteRule ^event/([a-z0-9-]+)/?$ /bilete/$1 [R=301,L,QSA]
 
-# Category pages - leisure categories
-# escape-rooms / parcuri-de-distractii / muzee / parcuri-aventura / acvarii-zoo / experiente
-RewriteCond %{REQUEST_FILENAME} !-f
-RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^(escape-rooms|parcuri-de-distractii|muzee|parcuri-aventura|acvarii-zoo|experiente|ateliere|planetarii)/?$ category.php?slug=$1 [L,QSA]
+# Category & city single-segment URLs.
+# Both `/escape-rooms` (category) and `/bucuresti` (city) match `^[a-z][a-z0-9-]+$`.
+# category.php is the resolver — it queries the API; if the slug matches a
+# category, it renders the category page; otherwise it falls through to
+# city.php (which renders a city page or returns 404 if neither matches).
+# Defined further down in the catch-all section to allow named routes
+# (organizator/*, cont/*, cos, finalizare, etc.) to claim their paths first.
 
 # Legacy: redirect /category/slug to /slug
 RewriteRule ^category/([a-z0-9-]+)/?$ /$1 [R=301,L,QSA]
@@ -559,14 +561,14 @@ RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^(activitati-[a-z0-9-]{1,80})/?$ city-intent.php?intent=$1 [L,QSA]
 
 # ============================================
-# DYNAMIC CITY PAGES - catch-all for city slugs (city.php)
-# Must come AFTER all other explicit routes
+# CATEGORY / CITY DISPATCHER - single-segment catch-all
+# Must come AFTER all other explicit routes (organizator/*, cont/*, /cos, etc.)
+# category.php is the resolver: tries category API first, falls through to
+# city.php if not a category, then 404 if not a city either.
 # ============================================
-
-# Single-segment slug → city.php (handles city slugs like /bucuresti, /cluj-napoca, /brasov)
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^([a-z][a-z0-9-]{1,50})/?$ city.php?slug=$1 [L,QSA]
+RewriteRule ^([a-z][a-z0-9-]{1,80})/?$ category.php?slug=$1 [L,QSA]
 
 # ============================================
 # FALLBACK: Remove .php extension from URLs
