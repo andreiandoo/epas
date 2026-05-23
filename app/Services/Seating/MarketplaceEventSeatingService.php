@@ -551,6 +551,106 @@ class MarketplaceEventSeatingService
         return $updated;
     }
 
+    /**
+     * Add missing event_seats rows from the current base layout WITHOUT
+     * touching existing rows. Use when an admin added rows/seats to a layout
+     * AFTER the per-event snapshot was already created — the snapshot keeps
+     * working for the seats it knows about, but new seats in the layout
+     * never get an event_seats record, so the booking endpoint can't find
+     * them and customers see them as "unavailable" while the public map
+     * defaults the unknown UIDs to "available" (the divergence that bit us
+     * on event 4360 / layout 14).
+     *
+     * The destructive recreate path in getOrCreateEventSeatingByEventId()
+     * would also work, but it deletes existing rows and resurrects 'sold'
+     * status from tickets meta — risky on a live event with active orders.
+     * This method is purely additive: layout UID exists, event_seats row
+     * missing → insert as 'available' (or 'disabled' if base seat is
+     * marked 'imposibil'). Existing rows are left alone.
+     *
+     * Returns ['added' => N, 'existing' => M, 'orphan_in_event_seats' => K]
+     * where orphan = event_seats UIDs no longer present in the layout
+     * (informational only — we never delete them, since a sold ticket may
+     * reference a UID that was later removed from the layout).
+     */
+    public function syncMissingSeatsFromLayout(int $eventSeatingId): array
+    {
+        $eventSeating = EventSeatingLayout::find($eventSeatingId);
+        if (!$eventSeating || !$eventSeating->layout_id) {
+            return ['added' => 0, 'existing' => 0, 'orphan_in_event_seats' => 0, 'error' => 'event_seating not found or has no layout_id'];
+        }
+
+        $layout = SeatingLayout::withoutGlobalScopes()
+            ->with(['sections.rows.seats'])
+            ->find($eventSeating->layout_id);
+
+        if (!$layout) {
+            return ['added' => 0, 'existing' => 0, 'orphan_in_event_seats' => 0, 'error' => 'source layout not found'];
+        }
+
+        $existingUids = EventSeat::where('event_seating_id', $eventSeatingId)
+            ->pluck('seat_uid')
+            ->all();
+        $existingUidSet = array_flip($existingUids);
+
+        $added = 0;
+        $existing = 0;
+        $layoutUidSet = [];
+
+        DB::transaction(function () use ($layout, $eventSeating, $eventSeatingId, &$added, &$existing, &$layoutUidSet, $existingUidSet) {
+            foreach ($layout->sections as $section) {
+                foreach ($section->rows as $row) {
+                    foreach ($row->seats as $seat) {
+                        $layoutUidSet[$seat->seat_uid] = true;
+
+                        if (isset($existingUidSet[$seat->seat_uid])) {
+                            $existing++;
+                            continue;
+                        }
+
+                        $baseStatus = $seat->status ?? 'active';
+                        $eventSeatStatus = ($baseStatus === 'imposibil') ? 'disabled' : 'available';
+
+                        EventSeat::create([
+                            'event_seating_id' => $eventSeatingId,
+                            'seat_uid' => $seat->seat_uid,
+                            'section_name' => $section->name,
+                            'row_label' => $row->label,
+                            'seat_label' => $seat->label,
+                            'status' => $eventSeatStatus,
+                            'version' => 1,
+                        ]);
+                        $added++;
+                    }
+                }
+            }
+        });
+
+        // Orphans: in event_seats but not in current layout. Informational
+        // only — we don't delete because a sold ticket may still reference
+        // such a UID (e.g. seat removed from layout AFTER the sale).
+        $orphan = 0;
+        foreach ($existingUids as $uid) {
+            if (!isset($layoutUidSet[$uid])) {
+                $orphan++;
+            }
+        }
+
+        Log::info('MarketplaceEventSeatingService: syncMissingSeatsFromLayout completed', [
+            'event_seating_id' => $eventSeatingId,
+            'layout_id' => $eventSeating->layout_id,
+            'added' => $added,
+            'existing' => $existing,
+            'orphan_in_event_seats' => $orphan,
+        ]);
+
+        return [
+            'added' => $added,
+            'existing' => $existing,
+            'orphan_in_event_seats' => $orphan,
+        ];
+    }
+
     public function blockSeatsByLocation(int $eventSeatingId, string $sectionName, string $rowLabel, array $seatLabels): int
     {
         return EventSeat::where('event_seating_id', $eventSeatingId)
