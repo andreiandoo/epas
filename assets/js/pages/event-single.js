@@ -3811,14 +3811,12 @@ const EventPage = {
             // Render seats using actual x/y coordinates
             if (section.rows) {
                 section.rows.forEach(function(row) {
-                    if (!row.seats || row.seats.length === 0) return;
-
-                    // Draw table shape if this row is a table.
-                    // Color fallback was '#6B7280' at 0.25 fill / 0.5 stroke —
-                    // nearly invisible on white. Bumped to a medium slate at
-                    // 0.45 fill / 0.85 stroke so tables read as physical
-                    // objects on the public map even without a per-section
-                    // background_color set.
+                    // Draw table shape if this row is a table. Must run BEFORE
+                    // the empty-seats early return below: in the current data
+                    // model, a "table" row carries the table geometry and zero
+                    // seats — the surrounding chairs are stored as separate
+                    // sibling rows. If we bail on empty seats we never paint
+                    // the table.
                     if (row.is_table) {
                         var tableColor = section.background_color || section.color_hex || '#94A3B8';
                         var tcx = section.x + (row.center_x || 0);
@@ -3835,6 +3833,9 @@ const EventPage = {
                         // Table label
                         svg += '<text x="' + tcx + '" y="' + (tcy + 4) + '" text-anchor="middle" font-size="10" font-weight="700" fill="rgba(0,0,0,0.55)" class="pointer-events-none select-none">' + row.label + '</text>';
                     }
+
+                    // Nothing more to draw for a row with no seats.
+                    if (!row.seats || row.seats.length === 0) return;
 
                     // Row labels aligned on section-wide left/right columns (opt-out via metadata)
                     if (!row.is_table && autoShowRowLabels2) {
