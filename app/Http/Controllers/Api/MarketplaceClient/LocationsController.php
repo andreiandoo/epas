@@ -457,6 +457,9 @@ class LocationsController extends BaseController
                 'name' => $city->name[$lang] ?? $city->name['ro'] ?? array_values((array)$city->name)[0] ?? '',
                 'slug' => $city->slug,
                 'description' => isset($city->description[$lang]) ? $city->description[$lang] : ($city->description['ro'] ?? null),
+                'seo_body_title' => isset($city->seo_body_title[$lang]) ? $city->seo_body_title[$lang] : ($city->seo_body_title['ro'] ?? null),
+                'seo_body' => isset($city->seo_body[$lang]) ? $city->seo_body[$lang] : ($city->seo_body['ro'] ?? null),
+                'faqs' => $city->faqs ?? [],
                 'image' => $city->image_full_url,
                 'cover_image' => $city->cover_image_full_url,
                 'region' => $city->region ? [

@@ -190,6 +190,62 @@ class EventCategoryResource extends Resource
                                     ]),
                             ])->columnSpanFull(),
                     ])->columns(3),
+
+                SC\Section::make('SEO Body — "Tot ce trebuie să știi"')
+                    ->description('Titlu + corp rich-text afișat sub listingul de activități pe pagina categoriei.')
+                    ->collapsed()
+                    ->schema([
+                        SC\Tabs::make('SEO Body Translations')
+                            ->tabs([
+                                SC\Tabs\Tab::make('Română')
+                                    ->schema([
+                                        Forms\Components\TextInput::make('seo_body_title.ro')
+                                            ->label('Titlu (RO)')
+                                            ->placeholder('Tot ce trebuie să știi despre escape rooms')
+                                            ->maxLength(190),
+                                        Forms\Components\RichEditor::make('seo_body.ro')
+                                            ->label('Corp text (RO)')
+                                            ->placeholder('Scrie aici despre categorie — explicații, sfaturi, recomandări. Poți folosi titluri, liste, link-uri, bold etc.')
+                                            ->toolbarButtons(['bold', 'italic', 'link', 'h2', 'h3', 'bulletList', 'orderedList', 'blockquote', 'undo', 'redo'])
+                                            ->columnSpanFull(),
+                                    ]),
+                                SC\Tabs\Tab::make('English')
+                                    ->schema([
+                                        Forms\Components\TextInput::make('seo_body_title.en')
+                                            ->label('Title (EN)')
+                                            ->maxLength(190),
+                                        Forms\Components\RichEditor::make('seo_body.en')
+                                            ->label('Body (EN)')
+                                            ->toolbarButtons(['bold', 'italic', 'link', 'h2', 'h3', 'bulletList', 'orderedList', 'blockquote', 'undo', 'redo'])
+                                            ->columnSpanFull(),
+                                    ]),
+                            ])->columnSpanFull(),
+                    ])->columns(1),
+
+                SC\Section::make('Întrebări frecvente (FAQs)')
+                    ->description('Lista de întrebări + răspunsuri afișată sub corpul SEO și inclusă ca FAQPage JSON-LD pentru rich SERP. Doar limba primară (RO).')
+                    ->collapsed()
+                    ->schema([
+                        Forms\Components\Repeater::make('faqs')
+                            ->label(false)
+                            ->schema([
+                                Forms\Components\TextInput::make('q')
+                                    ->label('Întrebare')
+                                    ->required()
+                                    ->maxLength(200),
+                                Forms\Components\Textarea::make('a')
+                                    ->label('Răspuns')
+                                    ->required()
+                                    ->rows(3),
+                            ])
+                            ->columns(1)
+                            ->reorderable()
+                            ->collapsible()
+                            ->cloneable()
+                            ->itemLabel(fn (array $state): ?string => $state['q'] ?? null)
+                            ->addActionLabel('Adaugă întrebare')
+                            ->columnSpanFull(),
+                    ])->columns(1),
             ]) ->columns(1);
     }
 

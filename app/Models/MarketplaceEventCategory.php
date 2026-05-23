@@ -15,7 +15,7 @@ class MarketplaceEventCategory extends Model
 
     protected $table = 'marketplace_event_categories';
 
-    public array $translatable = ['name', 'description', 'meta_title', 'meta_description'];
+    public array $translatable = ['name', 'description', 'meta_title', 'meta_description', 'seo_body_title', 'seo_body'];
 
     protected $fillable = [
         'marketplace_client_id',
@@ -29,6 +29,9 @@ class MarketplaceEventCategory extends Model
         'color',
         'meta_title',
         'meta_description',
+        'seo_body_title',
+        'seo_body',
+        'faqs',
         'sort_order',
         'is_visible',
         'is_featured',
@@ -41,6 +44,9 @@ class MarketplaceEventCategory extends Model
         'description' => 'array',
         'meta_title' => 'array',
         'meta_description' => 'array',
+        'seo_body_title' => 'array',
+        'seo_body' => 'array',
+        'faqs' => 'array',
         'is_visible' => 'boolean',
         'is_featured' => 'boolean',
         'event_type_ids' => 'array',

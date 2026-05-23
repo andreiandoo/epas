@@ -102,6 +102,9 @@ class CategoriesController extends BaseController
                 'color' => $category->color,
                 'meta_title' => $category->getTranslation('meta_title', $language),
                 'meta_description' => $category->getTranslation('meta_description', $language),
+                'seo_body_title' => $category->getTranslation('seo_body_title', $language),
+                'seo_body' => $category->getTranslation('seo_body', $language),
+                'faqs' => $category->faqs ?? [],
                 'event_count' => $this->countUpcomingEventsForCategory($category),
                 'is_featured' => $category->is_featured,
                 'parent' => $category->parent ? [

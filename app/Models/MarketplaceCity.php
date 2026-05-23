@@ -15,7 +15,7 @@ class MarketplaceCity extends Model
 
     protected $table = 'marketplace_cities';
 
-    public array $translatable = ['name', 'description'];
+    public array $translatable = ['name', 'description', 'seo_body_title', 'seo_body'];
 
     protected $fillable = [
         'marketplace_client_id',
@@ -24,6 +24,9 @@ class MarketplaceCity extends Model
         'name',
         'slug',
         'description',
+        'seo_body_title',
+        'seo_body',
+        'faqs',
         'country',
         'latitude',
         'longitude',
@@ -43,6 +46,9 @@ class MarketplaceCity extends Model
     protected $casts = [
         'name' => 'array',
         'description' => 'array',
+        'seo_body_title' => 'array',
+        'seo_body' => 'array',
+        'faqs' => 'array',
         'latitude' => 'decimal:7',
         'longitude' => 'decimal:7',
         'is_visible' => 'boolean',

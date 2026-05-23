@@ -224,6 +224,62 @@ class CityResource extends Resource
                                     ]),
                             ])->columnSpanFull(),
                     ]),
+
+                SC\Section::make('SEO Body — "Tot ce trebuie să știi"')
+                    ->description('Titlu + corp rich-text afișat în ghidul local al orașului.')
+                    ->collapsed()
+                    ->schema([
+                        SC\Tabs::make('SEO Body Translations')
+                            ->tabs([
+                                SC\Tabs\Tab::make('Română')
+                                    ->schema([
+                                        Forms\Components\TextInput::make('seo_body_title.ro')
+                                            ->label('Titlu (RO)')
+                                            ->placeholder('Ce să faci în București: idei pentru weekend, familie sau o zi liberă')
+                                            ->maxLength(190),
+                                        Forms\Components\RichEditor::make('seo_body.ro')
+                                            ->label('Corp text (RO)')
+                                            ->placeholder('Despre oraș — recomandări, ce să faci, ghid local. Poți folosi titluri, liste, link-uri, bold.')
+                                            ->toolbarButtons(['bold', 'italic', 'link', 'h2', 'h3', 'bulletList', 'orderedList', 'blockquote', 'undo', 'redo'])
+                                            ->columnSpanFull(),
+                                    ]),
+                                SC\Tabs\Tab::make('English')
+                                    ->schema([
+                                        Forms\Components\TextInput::make('seo_body_title.en')
+                                            ->label('Title (EN)')
+                                            ->maxLength(190),
+                                        Forms\Components\RichEditor::make('seo_body.en')
+                                            ->label('Body (EN)')
+                                            ->toolbarButtons(['bold', 'italic', 'link', 'h2', 'h3', 'bulletList', 'orderedList', 'blockquote', 'undo', 'redo'])
+                                            ->columnSpanFull(),
+                                    ]),
+                            ])->columnSpanFull(),
+                    ])->columns(1),
+
+                SC\Section::make('Întrebări frecvente (FAQs)')
+                    ->description('Lista de FAQs afișată pe pagina orașului + inclusă ca FAQPage JSON-LD pentru rich SERP. Doar limba primară (RO).')
+                    ->collapsed()
+                    ->schema([
+                        Forms\Components\Repeater::make('faqs')
+                            ->label(false)
+                            ->schema([
+                                Forms\Components\TextInput::make('q')
+                                    ->label('Întrebare')
+                                    ->required()
+                                    ->maxLength(200),
+                                Forms\Components\Textarea::make('a')
+                                    ->label('Răspuns')
+                                    ->required()
+                                    ->rows(3),
+                            ])
+                            ->columns(1)
+                            ->reorderable()
+                            ->collapsible()
+                            ->cloneable()
+                            ->itemLabel(fn (array $state): ?string => $state['q'] ?? null)
+                            ->addActionLabel('Adaugă întrebare')
+                            ->columnSpanFull(),
+                    ])->columns(1),
             ]);
     }
 

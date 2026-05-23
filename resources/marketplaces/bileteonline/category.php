@@ -51,6 +51,13 @@ $metaDescription = navFlatName($category['meta_description'] ?? '') ?: ($catDesc
 $parent = $category['parent'] ?? null;
 $children = $category['children'] ?? [];
 
+// Admin-managed SEO body (RichEditor HTML) + custom FAQs. Both optional —
+// frontend falls back to generic copy / generated FAQ when unset.
+$seoBodyTitle = navFlatName($category['seo_body_title'] ?? '');
+$seoBodyHtml = navFlatName($category['seo_body'] ?? '');
+$adminFaqs = $category['faqs'] ?? [];
+if (!is_array($adminFaqs)) $adminFaqs = [];
+
 // Accent → Tailwind classes (safelisted)
 $accentMap = [
     'vermilion' => ['bg' => 'bg-vermilion', 'bg-light' => 'bg-vermilion/10', 'text' => 'text-vermilion', 'bg-dark' => 'bg-vermilion-d', 'gradient' => 'from-vermilion to-vermilion-d', 'border' => 'border-vermilion'],
@@ -96,6 +103,18 @@ if (!is_array($events)) $events = [];
 // Featured cities for filter dropdown
 $featuredCities = navGetCities(30);
 
+// Resolve city label for the hero "în {location}" line when a city filter is active.
+$heroLocation = 'România';
+if ($cityFilter) {
+    foreach ($featuredCities as $c) {
+        if ($c['slug'] === $cityFilter) { $heroLocation = $c['label']; break; }
+    }
+    if ($heroLocation === 'România') {
+        // Featured cities list didn't include this slug — best-effort prettify.
+        $heroLocation = ucwords(str_replace('-', ' ', $cityFilter));
+    }
+}
+
 // Active filter chips for UI
 $activeChips = [];
 if ($searchQuery !== '') {
@@ -122,10 +141,18 @@ if ($sort !== 'recommended') {
 
 
 // ============================================================
-// SEO
+// SEO — city-filtered view gets a city-aware title/description so users
+// see the right context in tabs + social shares. Canonical stays on the
+// clean /{slug} URL so Google consolidates filtered views into the parent
+// landing rather than indexing thin variants.
 // ============================================================
-$pageTitleRaw = $metaTitle;
-$pageDescription = $metaDescription;
+if ($cityFilter) {
+    $pageTitleRaw = $catName . ' în ' . $heroLocation . ' — bilete & rezervări online | bilete.online';
+    $pageDescription = 'Activități ' . mb_strtolower($catName) . ' în ' . $heroLocation . '. Rezervi online cu QR, intri rapid.';
+} else {
+    $pageTitleRaw = $metaTitle;
+    $pageDescription = $metaDescription;
+}
 $canonicalUrl = SITE_URL . '/' . $slug;
 $ogImage = $catImage ? (str_starts_with($catImage, 'http') ? $catImage : STORAGE_URL . '/' . ltrim($catImage, '/')) : (SITE_URL . '/assets/images/og-default.jpg');
 $currentPage = 'category';
@@ -171,29 +198,34 @@ if (!empty($itemListElements)) {
     ];
 }
 
-// Generic per-category FAQ (no admin-editable yet — could move to DB later)
-$faqItems = [
-    [
-        'q' => 'Cât costă bilete pentru ' . mb_strtolower($catName) . '?',
-        'a' => 'Prețurile încep de la valoarea afișată pe fiecare card și diferă în funcție de operator, dificultate sau durată. Vezi prețul exact pe pagina activității înainte de rezervare.',
-    ],
-    [
-        'q' => 'Cum primesc biletul după rezervare?',
-        'a' => 'Imediat după plată primești biletul cu cod QR pe email și în contul tău bilete.online. La intrare prezinți codul QR de pe telefon — fără tipărire obligatorie.',
-    ],
-    [
-        'q' => 'Pot anula sau reprograma rezervarea?',
-        'a' => 'Politica de anulare e stabilită de fiecare operator și e afișată clar pe pagina activității, înainte de plată. Verifică condițiile concrete pe locul unde rezervi.',
-    ],
-    [
-        'q' => navMbUcfirst($catName) . ' sunt disponibile tot anul?',
-        'a' => 'Majoritatea activităților funcționează pe tot parcursul anului, cu intervale orare zilnice. Programul exact apare pe pagina fiecărei locații înainte să selectezi data.',
-    ],
-    [
-        'q' => 'Pot plăti cu un card cadou bilete.online?',
-        'a' => 'Da. Cardurile cadou bilete.online se pot folosi la orice activitate de pe platformă, inclusiv cele din categoria ' . mb_strtolower($catName) . '.',
-    ],
-];
+// FAQ items: prefer admin-set ones, fallback to generic auto-generated.
+if (!empty($adminFaqs)) {
+    $faqItems = array_values(array_filter($adminFaqs, fn ($f) => !empty($f['q']) && !empty($f['a'])));
+}
+if (empty($faqItems ?? null)) {
+    $faqItems = [
+        [
+            'q' => 'Cât costă bilete pentru ' . mb_strtolower($catName) . '?',
+            'a' => 'Prețurile încep de la valoarea afișată pe fiecare card și diferă în funcție de operator, dificultate sau durată. Vezi prețul exact pe pagina activității înainte de rezervare.',
+        ],
+        [
+            'q' => 'Cum primesc biletul după rezervare?',
+            'a' => 'Imediat după plată primești biletul cu cod QR pe email și în contul tău bilete.online. La intrare prezinți codul QR de pe telefon — fără tipărire obligatorie.',
+        ],
+        [
+            'q' => 'Pot anula sau reprograma rezervarea?',
+            'a' => 'Politica de anulare e stabilită de fiecare operator și e afișată clar pe pagina activității, înainte de plată. Verifică condițiile concrete pe locul unde rezervi.',
+        ],
+        [
+            'q' => navMbUcfirst($catName) . ' sunt disponibile tot anul?',
+            'a' => 'Majoritatea activităților funcționează pe tot parcursul anului, cu intervale orare zilnice. Programul exact apare pe pagina fiecărei locații înainte să selectezi data.',
+        ],
+        [
+            'q' => 'Pot plăti cu un card cadou bilete.online?',
+            'a' => 'Da. Cardurile cadou bilete.online se pot folosi la orice activitate de pe platformă, inclusiv cele din categoria ' . mb_strtolower($catName) . '.',
+        ],
+    ];
+}
 
 $structuredData[] = [
     '@context' => 'https://schema.org',
@@ -237,7 +269,7 @@ include __DIR__ . '/includes/header.php';
                 <h1 class="font-display text-[clamp(2.6rem,6vw,4.6rem)] font-700 leading-[0.92]">
                     <?php if ($catIcon): ?><span class="inline-block align-middle mr-2"><?= htmlspecialchars($catIcon) ?></span><?php endif; ?>
                     <?= htmlspecialchars($catName) ?><br>
-                    <span class="ital <?= $ac['text'] ?>">în România</span>
+                    <span class="ital <?= $ac['text'] ?>">în <?= htmlspecialchars($heroLocation) ?></span>
                 </h1>
 
                 <p class="mt-6 text-lg text-ink-soft max-w-2xl leading-relaxed">
@@ -606,10 +638,19 @@ include __DIR__ . '/includes/header.php';
 
         <div>
             <h2 class="font-display text-[clamp(1.8rem,4vw,2.8rem)] font-700 leading-[1] mb-6">
-                Tot ce trebuie să știi despre <span class="ital <?= $ac['text'] ?>"><?= htmlspecialchars(mb_strtolower($catName)) ?></span>
+                <?php if ($seoBodyTitle): ?>
+                    <?= htmlspecialchars($seoBodyTitle) ?>
+                <?php else: ?>
+                    Tot ce trebuie să știi despre <span class="ital <?= $ac['text'] ?>"><?= htmlspecialchars(mb_strtolower($catName)) ?></span>
+                <?php endif; ?>
             </h2>
 
-            <?php if ($catDescription): ?>
+            <?php if ($seoBodyHtml): ?>
+                <?php // Admin RichEditor HTML — emit as-is, only allow the editor's whitelisted tags. ?>
+                <div class="prose-custom text-ink-soft leading-relaxed text-[17px] max-w-2xl">
+                    <?= strip_tags($seoBodyHtml, '<p><h2><h3><h4><strong><em><b><i><u><a><ul><ol><li><blockquote><br><span>') ?>
+                </div>
+            <?php elseif ($catDescription): ?>
                 <div class="space-y-4 text-ink-soft leading-relaxed text-[17px] max-w-2xl">
                     <?php foreach (preg_split('/\n\s*\n/', trim($catDescription)) as $paragraph): ?>
                         <p><?= nl2br(htmlspecialchars($paragraph)) ?></p>

@@ -34,6 +34,11 @@ if (!$cityData) {
 // ============================================================
 $cityName = navFlatName($cityData['name'] ?? '');
 $cityDescription = navFlatName($cityData['description'] ?? '');
+$citySeoTitle = navFlatName($cityData['seo_body_title'] ?? '');
+$citySeoHtml = navFlatName($cityData['seo_body'] ?? '');
+$cityFaqs = $cityData['faqs'] ?? [];
+if (!is_array($cityFaqs)) $cityFaqs = [];
+$cityFaqs = array_values(array_filter($cityFaqs, fn ($f) => !empty($f['q']) && !empty($f['a'])));
 $cityCover = $cityData['cover_image'] ?? $cityData['cover_image_url'] ?? null;
 $cityImage = $cityData['image'] ?? $cityData['image_url'] ?? null;
 $countyName = is_array($cityData['county'] ?? null)
@@ -46,14 +51,32 @@ $eventCount = (int) ($cityData['events_count'] ?? 0);
 $lat = $cityData['latitude'] ?? null;
 $lng = $cityData['longitude'] ?? null;
 
-// Pagination + filter
+// Pagination + filter parsing
 $pageNum = max(1, (int) ($_GET['page'] ?? 1));
 $categoryFilter = isset($_GET['category']) && preg_match('/^[a-z][a-z0-9-]+$/', $_GET['category']) ? $_GET['category'] : null;
+$searchQuery = isset($_GET['q']) ? mb_substr(trim($_GET['q']), 0, 80) : '';
+
+// Price filter — whitelisted (same set as category page)
+$priceMaxAllowed = [50, 100, 200, 500];
+$maxPrice = (isset($_GET['max_price']) && in_array((int) $_GET['max_price'], $priceMaxAllowed, true))
+    ? (int) $_GET['max_price']
+    : null;
+
+// Sort — whitelisted to API-supported values
+$sortAllowed = ['recommended', 'price_asc', 'price_desc', 'name_asc', 'date_asc'];
+$sort = (isset($_GET['sort']) && in_array($_GET['sort'], $sortAllowed, true)) ? $_GET['sort'] : 'recommended';
+
+// Fetch parent categories for quick-link grid + filter dropdown (max 12)
+$topCategories = navGetCategories(12);
 
 // Fetch events for this city
-$eventsResp = api_cached("city_events_{$slug}_" . ($categoryFilter ?? 'all') . "_p{$pageNum}", function () use ($slug, $categoryFilter, $pageNum) {
+$apiCacheKey = "city_events_{$slug}_" . ($categoryFilter ?? 'all') . '_' . md5($searchQuery) . "_mp{$maxPrice}_s{$sort}_p{$pageNum}";
+$eventsResp = api_cached($apiCacheKey, function () use ($slug, $categoryFilter, $searchQuery, $maxPrice, $sort, $pageNum) {
     $params = ['city' => $slug, 'page' => $pageNum, 'per_page' => 18, 'time_scope' => 'upcoming'];
     if ($categoryFilter) $params['category'] = $categoryFilter;
+    if ($searchQuery !== '') $params['search'] = $searchQuery;
+    if ($maxPrice !== null) $params['max_price'] = $maxPrice;
+    if ($sort !== 'recommended') $params['sort'] = $sort;
     return api_get('/events', $params);
 }, 300);
 
@@ -61,8 +84,24 @@ $events = $eventsResp['data'] ?? [];
 $pagination = $eventsResp['meta'] ?? ['current_page' => 1, 'last_page' => 1, 'total' => count($events)];
 if (!is_array($events)) $events = [];
 
-// Fetch parent categories for quick-link grid (max 8)
-$topCategories = navGetCategories(8);
+// Active filter chips
+$activeChips = [];
+if ($searchQuery !== '') {
+    $activeChips[] = ['label' => '„' . $searchQuery . '"', 'remove_qs' => navResetQueryString($_GET, ['q'])];
+}
+if ($categoryFilter) {
+    $catLabel = '';
+    foreach ($topCategories as $c) { if ($c['slug'] === $categoryFilter) { $catLabel = $c['label']; break; } }
+    if (!$catLabel) $catLabel = ucwords(str_replace('-', ' ', $categoryFilter));
+    $activeChips[] = ['label' => $catLabel, 'remove_qs' => navResetQueryString($_GET, ['category'])];
+}
+if ($maxPrice !== null) {
+    $activeChips[] = ['label' => 'Sub ' . $maxPrice . ' lei', 'remove_qs' => navResetQueryString($_GET, ['max_price'])];
+}
+if ($sort !== 'recommended') {
+    $sortLabels = ['price_asc' => 'Preț crescător', 'price_desc' => 'Preț descrescător', 'name_asc' => 'Alfabetic', 'date_asc' => 'Data evenimentului'];
+    $activeChips[] = ['label' => 'Sortat: ' . ($sortLabels[$sort] ?? $sort), 'remove_qs' => navResetQueryString($_GET, ['sort'])];
+}
 
 // ============================================================
 // SEO setup
@@ -116,6 +155,19 @@ $structuredData[] = [
         'itemListElement' => $itemListElements,
     ],
 ];
+
+// FAQPage JSON-LD when admin set FAQs for this city
+if (!empty($cityFaqs)) {
+    $structuredData[] = [
+        '@context' => 'https://schema.org',
+        '@type' => 'FAQPage',
+        'mainEntity' => array_map(fn ($f) => [
+            '@type' => 'Question',
+            'name' => $f['q'],
+            'acceptedAnswer' => ['@type' => 'Answer', 'text' => $f['a']],
+        ], $cityFaqs),
+    ];
+}
 
 include __DIR__ . '/includes/head.php';
 include __DIR__ . '/includes/header.php';
@@ -299,7 +351,7 @@ include __DIR__ . '/includes/header.php';
 <?php endif; ?>
 
 <!-- ============================== EVENTS LISTING ============================== -->
-<section id="activitati" class="bg-paper-2/70 border-y border-ink/10">
+<section id="activitati" x-data="cityFilters()" class="bg-paper-2/70 border-y border-ink/10">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 py-16 lg:py-20">
 
         <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
@@ -310,11 +362,157 @@ include __DIR__ . '/includes/header.php';
                 </h2>
                 <p class="mt-3 text-ink-soft max-w-2xl">
                     <?= (int) ($pagination['total'] ?? 0) ?> <?= ($pagination['total'] ?? 0) === 1 ? 'activitate disponibilă' : 'activități disponibile' ?>
-                    <?php if ($categoryFilter): ?>
-                        · filtrate după categorie
-                        <a href="/<?= htmlspecialchars($slug, ENT_QUOTES) ?>" class="text-vermilion underline-wobble">șterge filtrul</a>
-                    <?php endif; ?>
                 </p>
+            </div>
+        </div>
+
+        <!-- FILTER TOOLBAR -->
+        <div class="sticky top-24 z-40 -mx-4 sm:-mx-6 px-4 sm:px-6 py-4 bg-paper/95 backdrop-blur-md border-y border-ink/10 mb-6">
+            <!-- DESKTOP -->
+            <form method="get" action="/<?= htmlspecialchars($slug, ENT_QUOTES) ?>" class="hidden lg:flex items-center gap-3" @click.outside="open=null">
+                <?php if ($categoryFilter): ?><input type="hidden" name="category" value="<?= htmlspecialchars($categoryFilter, ENT_QUOTES) ?>"><?php endif; ?>
+                <?php if ($maxPrice !== null): ?><input type="hidden" name="max_price" value="<?= $maxPrice ?>"><?php endif; ?>
+                <?php if ($sort !== 'recommended'): ?><input type="hidden" name="sort" value="<?= htmlspecialchars($sort, ENT_QUOTES) ?>"><?php endif; ?>
+
+                <div class="relative flex-1 max-w-xs">
+                    <svg viewBox="0 0 24 24" class="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-soft" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+                    <input name="q" type="search" value="<?= htmlspecialchars($searchQuery, ENT_QUOTES) ?>" placeholder="Caută în <?= htmlspecialchars($cityName, ENT_QUOTES) ?>…" class="w-full bg-paper border-2 border-ink/15 focus:border-ink rounded-full pl-10 pr-4 py-2.5 text-[15px] focus:outline-none transition-colors" />
+                </div>
+
+                <!-- Categorie -->
+                <?php
+                $catFilterLabel = 'Categorie';
+                if ($categoryFilter) {
+                    foreach ($topCategories as $c) { if ($c['slug'] === $categoryFilter) { $catFilterLabel = $c['label']; break; } }
+                    if ($catFilterLabel === 'Categorie') $catFilterLabel = ucwords(str_replace('-', ' ', $categoryFilter));
+                }
+                ?>
+                <div class="relative">
+                    <button type="button" @click="open = open==='cat' ? null : 'cat'" class="<?= $categoryFilter ? 'border-ink bg-ink text-paper' : 'border-ink/15 bg-paper hover:border-ink' ?> flex items-center gap-2 px-4 py-2.5 rounded-full border-2 text-[15px] font-500 transition">
+                        <span><?= htmlspecialchars($catFilterLabel) ?></span>
+                        <svg :class="open==='cat' && 'rotate-180'" class="w-3.5 h-3.5 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+                    </button>
+                    <div x-show="open==='cat'" x-cloak x-transition class="absolute left-0 top-[calc(100%+10px)] z-50 w-64 bg-paper border-2 border-ink rounded-2xl shadow-2xl p-2 max-h-80 overflow-y-auto">
+                        <a href="<?= htmlspecialchars(navBuildUrl($slug, $_GET, [], ['category']), ENT_QUOTES) ?>" class="block w-full text-left px-3 py-2 rounded-lg text-[15px] hover:bg-paper-2 transition <?= !$categoryFilter ? 'bg-ink text-paper' : '' ?>">Toate categoriile</a>
+                        <?php foreach ($topCategories as $c): ?>
+                            <a href="<?= htmlspecialchars(navBuildUrl($slug, $_GET, ['category' => $c['slug']]), ENT_QUOTES) ?>" class="block w-full text-left px-3 py-2 rounded-lg text-[15px] hover:bg-paper-2 transition <?= $categoryFilter === $c['slug'] ? 'bg-ink text-paper' : '' ?>">
+                                <?php if (!empty($c['icon_emoji'])): ?><span class="mr-1"><?= htmlspecialchars($c['icon_emoji']) ?></span><?php endif; ?>
+                                <?= htmlspecialchars($c['label']) ?>
+                            </a>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+
+                <!-- Preț -->
+                <div class="relative">
+                    <button type="button" @click="open = open==='price' ? null : 'price'" class="<?= $maxPrice !== null ? 'border-ink bg-ink text-paper' : 'border-ink/15 bg-paper hover:border-ink' ?> flex items-center gap-2 px-4 py-2.5 rounded-full border-2 text-[15px] font-500 transition">
+                        <span><?= $maxPrice !== null ? 'Sub ' . $maxPrice . ' lei' : 'Preț' ?></span>
+                        <svg :class="open==='price' && 'rotate-180'" class="w-3.5 h-3.5 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+                    </button>
+                    <div x-show="open==='price'" x-cloak x-transition class="absolute left-0 top-[calc(100%+10px)] z-50 w-56 bg-paper border-2 border-ink rounded-2xl shadow-2xl p-2">
+                        <a href="<?= htmlspecialchars(navBuildUrl($slug, $_GET, [], ['max_price']), ENT_QUOTES) ?>" class="block w-full text-left px-3 py-2 rounded-lg text-[15px] hover:bg-paper-2 transition <?= $maxPrice === null ? 'bg-ink text-paper' : '' ?>">Orice preț</a>
+                        <?php foreach ($priceMaxAllowed as $cap): ?>
+                            <a href="<?= htmlspecialchars(navBuildUrl($slug, $_GET, ['max_price' => $cap]), ENT_QUOTES) ?>" class="block w-full text-left px-3 py-2 rounded-lg text-[15px] hover:bg-paper-2 transition <?= $maxPrice === $cap ? 'bg-ink text-paper' : '' ?>">Sub <?= $cap ?> lei</a>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+
+                <!-- Sortare -->
+                <div class="relative">
+                    <?php $sortLabels = ['recommended' => 'Recomandate', 'price_asc' => 'Preț ↑', 'price_desc' => 'Preț ↓', 'name_asc' => 'Alfabetic', 'date_asc' => 'Dată']; ?>
+                    <button type="button" @click="open = open==='sort' ? null : 'sort'" class="<?= $sort !== 'recommended' ? 'border-ink bg-ink text-paper' : 'border-ink/15 bg-paper hover:border-ink' ?> flex items-center gap-2 px-4 py-2.5 rounded-full border-2 text-[15px] font-500 transition">
+                        <span><?= htmlspecialchars($sortLabels[$sort] ?? 'Sortare') ?></span>
+                        <svg :class="open==='sort' && 'rotate-180'" class="w-3.5 h-3.5 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+                    </button>
+                    <div x-show="open==='sort'" x-cloak x-transition class="absolute right-0 top-[calc(100%+10px)] z-50 w-52 bg-paper border-2 border-ink rounded-2xl shadow-2xl p-2">
+                        <?php foreach ($sortLabels as $value => $label): ?>
+                            <a href="<?= htmlspecialchars($value === 'recommended' ? navBuildUrl($slug, $_GET, [], ['sort']) : navBuildUrl($slug, $_GET, ['sort' => $value]), ENT_QUOTES) ?>" class="block w-full text-left px-3 py-2 rounded-lg text-[15px] hover:bg-paper-2 transition <?= $sort === $value ? 'bg-ink text-paper' : '' ?>">
+                                <?= htmlspecialchars($label) ?>
+                            </a>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+
+                <button type="submit" class="px-5 py-2.5 rounded-full bg-vermilion text-paper font-600 hover:bg-vermilion-d transition-colors">Caută</button>
+            </form>
+
+            <!-- MOBILE -->
+            <form method="get" action="/<?= htmlspecialchars($slug, ENT_QUOTES) ?>" class="lg:hidden flex items-center gap-2">
+                <?php if ($categoryFilter): ?><input type="hidden" name="category" value="<?= htmlspecialchars($categoryFilter, ENT_QUOTES) ?>"><?php endif; ?>
+                <?php if ($maxPrice !== null): ?><input type="hidden" name="max_price" value="<?= $maxPrice ?>"><?php endif; ?>
+                <?php if ($sort !== 'recommended'): ?><input type="hidden" name="sort" value="<?= htmlspecialchars($sort, ENT_QUOTES) ?>"><?php endif; ?>
+                <div class="relative flex-1">
+                    <svg viewBox="0 0 24 24" class="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-soft" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+                    <input name="q" type="search" value="<?= htmlspecialchars($searchQuery, ENT_QUOTES) ?>" placeholder="Caută…" class="w-full bg-paper border-2 border-ink/15 focus:border-ink rounded-full pl-10 pr-4 py-2.5 text-[15px] focus:outline-none" />
+                </div>
+                <button type="button" @click="sheet=true" class="relative shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-full border-2 border-ink font-600 text-sm">
+                    <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 5h18M6 12h12M10 19h4"/></svg>
+                    Filtre
+                    <?php if (!empty($activeChips)): ?><span class="grid place-items-center w-5 h-5 rounded-full bg-vermilion text-paper text-[11px] font-700"><?= count($activeChips) ?></span><?php endif; ?>
+                </button>
+            </form>
+
+            <!-- active chips -->
+            <?php if (!empty($activeChips)): ?>
+                <div class="flex flex-wrap items-center gap-2 mt-3">
+                    <?php foreach ($activeChips as $ch): ?>
+                        <a href="/<?= htmlspecialchars($slug, ENT_QUOTES) ?><?= htmlspecialchars($ch['remove_qs'], ENT_QUOTES) ?>" class="group flex items-center gap-1.5 pl-3 pr-2 py-1 rounded-full bg-paper-2 border border-ink/15 text-sm hover:border-ink transition">
+                            <span><?= htmlspecialchars($ch['label']) ?></span>
+                            <svg class="w-3.5 h-3.5 text-ink-soft group-hover:text-vermilion" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+                        </a>
+                    <?php endforeach; ?>
+                    <a href="/<?= htmlspecialchars($slug, ENT_QUOTES) ?>" class="text-sm font-600 text-vermilion underline-wobble ml-1">Șterge tot</a>
+                </div>
+            <?php endif; ?>
+        </div>
+
+        <!-- MOBILE FILTER SHEET -->
+        <div x-show="sheet" x-cloak class="lg:hidden fixed inset-0 z-[70]" @keydown.escape.window="sheet=false">
+            <div x-show="sheet" x-transition.opacity class="absolute inset-0 bg-ink/50" @click="sheet=false"></div>
+            <div x-show="sheet"
+                 x-transition:enter="transition ease-out duration-300" x-transition:enter-start="translate-y-full" x-transition:enter-end="translate-y-0"
+                 x-transition:leave="transition ease-in duration-200" x-transition:leave-start="translate-y-0" x-transition:leave-end="translate-y-full"
+                 class="absolute bottom-0 inset-x-0 bg-paper rounded-t-3xl border-t-2 border-ink max-h-[88vh] overflow-y-auto">
+                <div class="sticky top-0 bg-paper flex items-center justify-between px-5 py-4 border-b border-ink/10">
+                    <h2 class="font-display text-xl font-700">Filtre</h2>
+                    <button @click="sheet=false" class="grid place-items-center w-9 h-9 rounded-full border-2 border-ink/15" aria-label="Închide">
+                        <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+                    </button>
+                </div>
+                <div class="p-5 space-y-6">
+                    <div>
+                        <p class="font-mono text-[10px] tracking-wider text-ink-soft mb-3">CATEGORIE</p>
+                        <div class="flex flex-wrap gap-2">
+                            <a href="<?= htmlspecialchars(navBuildUrl($slug, $_GET, [], ['category']), ENT_QUOTES) ?>" class="px-3.5 py-2 rounded-full border-2 text-sm font-500 transition <?= !$categoryFilter ? 'bg-ink text-paper border-ink' : 'border-ink/15' ?>">Toate</a>
+                            <?php foreach ($topCategories as $c): ?>
+                                <a href="<?= htmlspecialchars(navBuildUrl($slug, $_GET, ['category' => $c['slug']]), ENT_QUOTES) ?>" class="px-3.5 py-2 rounded-full border-2 text-sm font-500 transition <?= $categoryFilter === $c['slug'] ? 'bg-ink text-paper border-ink' : 'border-ink/15' ?>">
+                                    <?= htmlspecialchars($c['label']) ?>
+                                </a>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+                    <div>
+                        <p class="font-mono text-[10px] tracking-wider text-ink-soft mb-3">PREȚ MAXIM</p>
+                        <div class="flex flex-wrap gap-2">
+                            <a href="<?= htmlspecialchars(navBuildUrl($slug, $_GET, [], ['max_price']), ENT_QUOTES) ?>" class="px-3.5 py-2 rounded-full border-2 text-sm font-500 transition <?= $maxPrice === null ? 'bg-ink text-paper border-ink' : 'border-ink/15' ?>">Orice</a>
+                            <?php foreach ($priceMaxAllowed as $cap): ?>
+                                <a href="<?= htmlspecialchars(navBuildUrl($slug, $_GET, ['max_price' => $cap]), ENT_QUOTES) ?>" class="px-3.5 py-2 rounded-full border-2 text-sm font-500 transition <?= $maxPrice === $cap ? 'bg-ink text-paper border-ink' : 'border-ink/15' ?>">Sub <?= $cap ?> lei</a>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+                    <div>
+                        <p class="font-mono text-[10px] tracking-wider text-ink-soft mb-3">SORTARE</p>
+                        <div class="flex flex-wrap gap-2">
+                            <?php foreach (['recommended' => 'Recomandate', 'price_asc' => 'Preț ↑', 'price_desc' => 'Preț ↓', 'name_asc' => 'Alfabetic', 'date_asc' => 'Dată'] as $value => $label):
+                                $url = $value === 'recommended' ? navBuildUrl($slug, $_GET, [], ['sort']) : navBuildUrl($slug, $_GET, ['sort' => $value]);
+                            ?>
+                                <a href="<?= htmlspecialchars($url, ENT_QUOTES) ?>" class="px-3.5 py-2 rounded-full border-2 text-sm font-500 transition <?= $sort === $value ? 'bg-ink text-paper border-ink' : 'border-ink/15' ?>">
+                                    <?= htmlspecialchars($label) ?>
+                                </a>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -377,9 +575,11 @@ include __DIR__ . '/includes/header.php';
 
             <!-- pagination -->
             <?php if (($pagination['last_page'] ?? 1) > 1): ?>
-                <nav class="mt-10 flex justify-center gap-2" aria-label="Pagini">
+                <nav class="mt-10 flex justify-center gap-2 flex-wrap" aria-label="Pagini">
                     <?php
-                    $base = '/' . $slug . ($categoryFilter ? '?category=' . urlencode($categoryFilter) . '&' : '?');
+                    $baseQs = $_GET;
+                    unset($baseQs['slug'], $baseQs['page']);
+                    $baseLink = '/' . $slug . ($baseQs ? '?' . http_build_query($baseQs) . '&' : '?');
                     $current = (int) ($pagination['current_page'] ?? 1);
                     $last = (int) ($pagination['last_page'] ?? 1);
                     $start = max(1, $current - 3);
@@ -387,19 +587,25 @@ include __DIR__ . '/includes/header.php';
                     $start = max(1, $end - 6);
                     ?>
                     <?php if ($current > 1): ?>
-                        <a href="<?= htmlspecialchars($base) ?>page=<?= $current - 1 ?>" class="px-4 py-2 rounded-full border-2 border-ink/20 hover:border-ink font-600 text-sm">‹ Anterior</a>
+                        <a href="<?= htmlspecialchars($baseLink) ?>page=<?= $current - 1 ?>" class="px-4 py-2 rounded-full border-2 border-ink/20 hover:border-ink font-600 text-sm">‹ Anterior</a>
                     <?php endif; ?>
                     <?php for ($p = $start; $p <= $end; $p++): ?>
-                        <a href="<?= htmlspecialchars($base) ?>page=<?= $p ?>" class="px-4 py-2 rounded-full border-2 font-600 text-sm <?= $p === $current ? 'bg-ink text-paper border-ink' : 'border-ink/20 hover:border-ink' ?>"><?= $p ?></a>
+                        <a href="<?= htmlspecialchars($baseLink) ?>page=<?= $p ?>" class="px-4 py-2 rounded-full border-2 font-600 text-sm <?= $p === $current ? 'bg-ink text-paper border-ink' : 'border-ink/20 hover:border-ink' ?>"><?= $p ?></a>
                     <?php endfor; ?>
                     <?php if ($current < $last): ?>
-                        <a href="<?= htmlspecialchars($base) ?>page=<?= $current + 1 ?>" class="px-4 py-2 rounded-full border-2 border-ink/20 hover:border-ink font-600 text-sm">Următor ›</a>
+                        <a href="<?= htmlspecialchars($baseLink) ?>page=<?= $current + 1 ?>" class="px-4 py-2 rounded-full border-2 border-ink/20 hover:border-ink font-600 text-sm">Următor ›</a>
                     <?php endif; ?>
                 </nav>
             <?php endif; ?>
         <?php endif; ?>
     </div>
 </section>
+
+<script>
+document.addEventListener('alpine:init', () => {
+    Alpine.data('cityFilters', () => ({ open: null, sheet: false }));
+});
+</script>
 
 <!-- ============================== EDITORIAL + CROSS-LINKS ============================== -->
 <section id="ghid-local" class="max-w-7xl mx-auto px-4 sm:px-6 py-20 lg:py-28">
@@ -408,21 +614,31 @@ include __DIR__ . '/includes/header.php';
         <article class="max-w-3xl">
             <p class="font-mono text-xs tracking-[.2em] text-vermilion mb-3">GHID LOCAL</p>
             <h2 class="font-display text-[clamp(2.1rem,4vw,4rem)] font-700 leading-[0.92] mb-7">
-                Ce să faci în <?= htmlspecialchars($cityName) ?>: idei pentru weekend, familie sau o zi liberă.
+                <?php if ($citySeoTitle): ?>
+                    <?= htmlspecialchars($citySeoTitle) ?>
+                <?php else: ?>
+                    Ce să faci în <?= htmlspecialchars($cityName) ?>: idei pentru weekend, familie sau o zi liberă.
+                <?php endif; ?>
             </h2>
 
-            <div class="space-y-5 text-[17px] leading-relaxed text-ink-soft">
-                <?php if ($cityDescription): ?>
-                    <p><?= nl2br(htmlspecialchars($cityDescription)) ?></p>
-                <?php else: ?>
+            <?php if ($citySeoHtml): ?>
+                <div class="prose-custom text-[17px] leading-relaxed text-ink-soft">
+                    <?= strip_tags($citySeoHtml, '<p><h2><h3><h4><strong><em><b><i><u><a><ul><ol><li><blockquote><br><span>') ?>
+                </div>
+            <?php else: ?>
+                <div class="space-y-5 text-[17px] leading-relaxed text-ink-soft">
+                    <?php if ($cityDescription): ?>
+                        <p><?= nl2br(htmlspecialchars($cityDescription)) ?></p>
+                    <?php else: ?>
+                        <p>
+                            <?= htmlspecialchars($cityName) ?> oferă o gamă largă de activități pentru weekend sau o zi liberă: poți combina o plimbare în centru cu un escape room, o vizită la muzee, o activitate pentru copii sau o ieșire de aventură în apropiere.
+                        </p>
+                    <?php endif; ?>
                     <p>
-                        <?= htmlspecialchars($cityName) ?> oferă o gamă largă de activități pentru weekend sau o zi liberă: poți combina o plimbare în centru cu un escape room, o vizită la muzee, o activitate pentru copii sau o ieșire de aventură în apropiere.
+                        Această pagină adună activitățile disponibile în oraș și în zona apropiată, cu informații utile despre preț, durată, public potrivit și disponibilitate. După plată, biletul ajunge pe email cu cod QR și poate fi scanat direct la intrare.
                     </p>
-                <?php endif; ?>
-                <p>
-                    Această pagină adună activitățile disponibile în oraș și în zona apropiată, cu informații utile despre preț, durată, public potrivit și disponibilitate. După plată, biletul ajunge pe email cu cod QR și poate fi scanat direct la intrare.
-                </p>
-            </div>
+                </div>
+            <?php endif; ?>
 
             <!-- Local search crosslinks -->
             <?php if (!empty($topCategories)): ?>
@@ -450,6 +666,28 @@ include __DIR__ . '/includes/header.php';
                     <a href="/<?= htmlspecialchars($slug, ENT_QUOTES) ?>/activitati-romantice" class="px-3.5 py-1.5 rounded-full bg-paper-2 border border-ink/10 text-sm hover:bg-ink hover:text-paper transition">💞 romantice</a>
                 </div>
             </div>
+
+            <!-- FAQ from admin (if any) -->
+            <?php if (!empty($cityFaqs)): ?>
+            <div class="mt-10" x-data="{ active: 0 }">
+                <h3 class="font-display text-3xl font-700 mb-5">Întrebări frecvente despre <?= htmlspecialchars($cityName) ?></h3>
+                <div class="space-y-3">
+                    <?php foreach ($cityFaqs as $i => $f): ?>
+                        <div class="border-2 border-ink rounded-xl overflow-hidden bg-paper">
+                            <button type="button" @click="active = active === <?= $i ?> ? null : <?= $i ?>" :aria-expanded="active === <?= $i ?>" class="w-full flex items-center justify-between gap-4 text-left px-5 py-4">
+                                <span class="font-600 text-[16px]"><?= htmlspecialchars($f['q']) ?></span>
+                                <span class="shrink-0 grid place-items-center w-7 h-7 rounded-full border-2 border-ink transition-transform duration-300" :class="active === <?= $i ?> && 'rotate-45 bg-vermilion border-vermilion text-paper'">
+                                    <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+                                </span>
+                            </button>
+                            <div x-show="active === <?= $i ?>" x-collapse x-cloak>
+                                <p class="px-5 pb-5 text-ink-soft leading-relaxed"><?= htmlspecialchars($f['a']) ?></p>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+            <?php endif; ?>
         </article>
 
         <!-- Sidebar: city snapshot + nearby cities -->
