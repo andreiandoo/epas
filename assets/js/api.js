@@ -153,6 +153,9 @@ const AmbiletAPI = {
         if (endpoint.match(/\/customer\/orders\/[\w-]+$/)) return 'customer.order';
         if (endpoint === '/customer/orders' || endpoint.includes('/customer/orders?')) return 'customer.orders';
 
+        // Customer ticket transfers
+        if (endpoint === '/customer/transfers/direct') return 'customer.transfers.direct';
+
         // Customer refunds
         if (endpoint.includes('/customer/refunds/reasons')) return 'customer.refunds.reasons';
         if (endpoint.includes('/customer/refunds/check-eligibility')) return 'customer.refunds.check-eligibility';
@@ -405,6 +408,7 @@ const AmbiletAPI = {
         if (endpoint === '/organizer/me/active-shift') return 'organizer.me.active-shift';
 
         if (endpoint.match(/\/organizer\/events\/\d+\/analytics/)) return 'organizer.event.analytics';
+        if (endpoint.match(/\/organizer\/events\/\d+\/staff-report/)) return 'organizer.event.staff-report';
         if (endpoint.match(/\/organizer\/events\/\d+\/goals\/\d+$/)) return 'organizer.event.goal';
         if (endpoint.match(/\/organizer\/events\/\d+\/goals$/)) return 'organizer.event.goals';
         if (endpoint.match(/\/organizer\/events\/\d+\/milestones\/\d+$/)) return 'organizer.event.milestone';
@@ -704,6 +708,12 @@ const AmbiletAPI = {
                 return `event_id=${encodeURIComponent(eventId)}&${endpoint.substring(queryStart + 1)}`;
             }
             return `event_id=${encodeURIComponent(eventId)}`;
+        }
+
+        // Organizer event staff report - extract event ID
+        const organizerEventStaffReportMatch = endpoint.match(/\/organizer\/events\/(\d+)\/staff-report/);
+        if (organizerEventStaffReportMatch) {
+            return `event_id=${encodeURIComponent(organizerEventStaffReportMatch[1])}`;
         }
 
         // Organizer event goals - extract event ID and optional goal ID
