@@ -21,6 +21,15 @@ Schedule::command('events:refresh-intent-aggregates')
     ->hourly()
     ->timezone('Europe/Bucharest');
 
+// Same pattern for the Activities module. Real-time updates flow through
+// ActivityVariantObserver; this scheduled run is a fallback so cheapest_price_cents
+// can't drift if a raw DB::update or bulk import bypasses the observer.
+// (Activated marketplaces only; the command iterates Activity::query() which is
+// empty for marketplaces that haven't enabled the microservice — zero work there.)
+Schedule::command('activities:refresh-intent-aggregates')
+    ->hourly()
+    ->timezone('Europe/Bucharest');
+
 // Expire ticket type sale discounts when sales_end_at passes (every minute)
 Schedule::command('ticket-types:expire-sales')
     ->everyMinute()

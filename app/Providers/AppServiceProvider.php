@@ -126,6 +126,12 @@ class AppServiceProvider extends ServiceProvider
         \App\Models\FestivalEdition::observe(\App\Observers\FestivalEditionObserver::class);
         \App\Models\Coupon\CouponCode::observe(\App\Observers\CouponCodeObserver::class);
 
+        // Activities module — keep activity.cheapest_price_cents in sync after every
+        // variant write. The scheduled command (activities:refresh-intent-aggregates,
+        // hourly) is a belt-and-braces fallback for the case where this observer
+        // misses a save (e.g. raw DB::update from a future bulk import).
+        \App\Models\ActivityVariant::observe(\App\Observers\ActivityVariantObserver::class);
+
         // Phase B series allocations — keep event_ticket_type_promo_series
         // in sync when promos are created/updated/deleted.
         \App\Models\MarketplaceOrganizerPromoCode::observe(
