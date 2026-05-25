@@ -618,11 +618,21 @@ class ListPayouts extends ListRecords
                 // event-edit "Vânzări" tab, so Net final on the decont matches Net on
                 // the event page exactly. Reads actual paid prices per ticket and
                 // allocates discounts + extras (insurance, cultural-card surcharge).
-                $periodStart = $event?->created_at;
-                $periodEnd = $event?->event_date ?? now();
+                //
+                // periodStart is the previous payout's created_at (or event creation
+                // when this is the first payout). exactBounds=true so the cut at
+                // periodStart is strict — orders whose created_at equals the previous
+                // payout's created_at belong to that one, not this new one. Without
+                // this, consecutive payouts on the same event would re-include the
+                // same tickets in their ticket_breakdown snapshot.
+                $organizerId = (int) $data['marketplace_organizer_id'];
+                $periodStart = $event
+                    ? MarketplacePayout::resolveNextPeriodStart($event->id, $organizerId, $event)
+                    : null;
+                $periodEnd = now();
                 $service = app(\App\Services\Marketplace\SalesBreakdownService::class);
-                $ticketBreakdown = $event ? $service->buildForPayout($event, $periodStart, $periodEnd) : [];
-                $summary = $event ? $service->summarizeForPayout($event, $periodStart, $periodEnd) : [
+                $ticketBreakdown = $event ? $service->buildForPayout($event, $periodStart, $periodEnd, exactBounds: true) : [];
+                $summary = $event ? $service->summarizeForPayout($event, $periodStart, $periodEnd, exactBounds: true) : [
                     'commission_mode' => 'included',
                     'commission_amount' => 0.0,
                     'gross_amount' => (float) ($data['gross_amount'] ?? 0),
@@ -637,8 +647,10 @@ class ListPayouts extends ListRecords
                     'event_id' => $data['event_id'],
                     'amount' => (float) $data['net_amount'],
                     'currency' => 'RON',
-                    'period_start' => $event?->created_at?->toDateString(),
-                    'period_end' => $event?->event_date?->toDateString() ?? now()->toDateString(),
+                    // Save the SAME bounds we used for the slice so the
+                    // displayed "period" and the actual snapshot agree.
+                    'period_start' => $periodStart?->toDateString() ?? $event?->created_at?->toDateString(),
+                    'period_end' => $periodEnd?->toDateString() ?? now()->toDateString(),
                     'gross_amount' => (float) $data['gross_amount'],
                     'commission_amount' => (float) ($data['commission_amount'] ?? 0),
                     'discount_amount' => (float) ($data['discount_amount'] ?? 0),

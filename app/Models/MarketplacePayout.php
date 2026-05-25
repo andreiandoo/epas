@@ -57,6 +57,35 @@ class MarketplacePayout extends Model
         return $this->commission_mode === 'added_on_top';
     }
 
+    /**
+     * Compute the datetime where a new payout's slice should begin so it
+     * does NOT overlap with any prior payout for the same event/organizer.
+     *
+     * Returns the latest active payout's created_at if one exists, else the
+     * event's created_at. The caller passes this to SalesBreakdownService
+     * with exactBounds=true so the ">" comparison is strict — orders whose
+     * created_at equals the previous payout's created_at belong to that
+     * payout, not this new one.
+     *
+     * Skips cancelled/rejected payouts so their slice is recoverable by the
+     * next valid payout.
+     */
+    public static function resolveNextPeriodStart(int $eventId, int $organizerId, \App\Models\Event $event): ?\Carbon\Carbon
+    {
+        $lastPrior = static::query()
+            ->where('event_id', $eventId)
+            ->where('marketplace_organizer_id', $organizerId)
+            ->whereIn('status', ['pending', 'approved', 'processing', 'completed'])
+            ->orderByDesc('created_at')
+            ->first(['id', 'created_at']);
+
+        if ($lastPrior && $lastPrior->created_at) {
+            return $lastPrior->created_at;
+        }
+
+        return $event->created_at ? \Carbon\Carbon::parse($event->created_at) : null;
+    }
+
     protected $casts = [
         'amount' => 'decimal:2',
         'gross_amount' => 'decimal:2',

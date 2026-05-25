@@ -58,7 +58,7 @@ class SalesBreakdownService
      *   }>
      * }
      */
-    public function build(Event $event, ?Carbon $periodStart = null, ?Carbon $periodEnd = null, bool $excludePos = false, string $dateColumn = 'created_at', bool $splitByPrice = false): array
+    public function build(Event $event, ?Carbon $periodStart = null, ?Carbon $periodEnd = null, bool $excludePos = false, string $dateColumn = 'created_at', bool $splitByPrice = false, bool $exactBounds = false): array
     {
         $eventId = $event->id;
 
@@ -69,11 +69,18 @@ class SalesBreakdownService
         $allowedColumns = ['created_at', 'paid_at'];
         $dateColumn = in_array($dateColumn, $allowedColumns, true) ? $dateColumn : 'created_at';
 
+        // exactBounds = true: use the Carbon datetimes as-is (precise to the
+        // second). Use this when slicing payouts so consecutive payouts on
+        // the same day don't overlap — the new payout's periodStart is the
+        // previous payout's created_at, and we need a strict cut at that
+        // moment. Legacy date-range queries (event-edit Vânzări tab, sales
+        // report) keep the startOfDay/endOfDay behaviour because they pass
+        // dates, not datetimes.
         $tickets = Ticket::where(fn ($q) => $q->where('event_id', $eventId)->orWhere('marketplace_event_id', $eventId))
             ->whereIn('status', ['valid', 'used'])
-            ->where(function ($outer) use ($periodStart, $periodEnd, $excludePos, $dateColumn) {
+            ->where(function ($outer) use ($periodStart, $periodEnd, $excludePos, $dateColumn, $exactBounds) {
                 // Normal flow: ticket tied to a paid/confirmed/completed order
-                $outer->whereHas('order', function ($q) use ($periodStart, $periodEnd, $excludePos, $dateColumn) {
+                $outer->whereHas('order', function ($q) use ($periodStart, $periodEnd, $excludePos, $dateColumn, $exactBounds) {
                     $q->whereIn('status', ['paid', 'confirmed', 'completed'])
                         ->where('source', '!=', 'external_import');
                     if ($excludePos) {
@@ -81,10 +88,16 @@ class SalesBreakdownService
                           ->where('source', '!=', 'test_order');
                     }
                     if ($periodStart) {
-                        $q->where($dateColumn, '>=', $periodStart->copy()->startOfDay());
+                        // exactBounds uses '>' so the new payout doesn't
+                        // re-include orders already in the previous one
+                        // (whose created_at = this payout's periodStart).
+                        $operator = $exactBounds ? '>' : '>=';
+                        $bound = $exactBounds ? $periodStart : $periodStart->copy()->startOfDay();
+                        $q->where($dateColumn, $operator, $bound);
                     }
                     if ($periodEnd) {
-                        $q->where($dateColumn, '<=', $periodEnd->copy()->endOfDay());
+                        $bound = $exactBounds ? $periodEnd : $periodEnd->copy()->endOfDay();
+                        $q->where($dateColumn, '<=', $bound);
                     }
                 });
                 // Invitations have no order_id. They were silently dropped by
@@ -92,13 +105,16 @@ class SalesBreakdownService
                 // the "Invitatie" row disappear from the payout breakdown
                 // after a recalc. Period bounds apply to tickets.created_at
                 // instead since there's no order date to anchor on.
-                $outer->orWhere(function ($q2) use ($periodStart, $periodEnd) {
+                $outer->orWhere(function ($q2) use ($periodStart, $periodEnd, $exactBounds) {
                     $q2->whereNull('order_id');
                     if ($periodStart) {
-                        $q2->where('created_at', '>=', $periodStart->copy()->startOfDay());
+                        $operator = $exactBounds ? '>' : '>=';
+                        $bound = $exactBounds ? $periodStart : $periodStart->copy()->startOfDay();
+                        $q2->where('created_at', $operator, $bound);
                     }
                     if ($periodEnd) {
-                        $q2->where('created_at', '<=', $periodEnd->copy()->endOfDay());
+                        $bound = $exactBounds ? $periodEnd : $periodEnd->copy()->endOfDay();
+                        $q2->where('created_at', '<=', $bound);
                     }
                 });
             })
@@ -395,12 +411,14 @@ class SalesBreakdownService
      *
      * @return array<int, array<string, mixed>>
      */
-    public function buildForPayout(Event $event, ?Carbon $periodStart = null, ?Carbon $periodEnd = null): array
+    public function buildForPayout(Event $event, ?Carbon $periodStart = null, ?Carbon $periodEnd = null, bool $exactBounds = false): array
     {
         // Aggregate per ticket type. The "split by price tier + promo" view
         // is produced by buildPayoutSplitTable() and rendered as a second
-        // table below this one.
-        $breakdown = $this->build($event, $periodStart, $periodEnd);
+        // table below this one. exactBounds plumbs through to build() so the
+        // payout slice respects strict datetime boundaries (no overlap with
+        // the previous payout when periods touch).
+        $breakdown = $this->build($event, $periodStart, $periodEnd, excludePos: false, dateColumn: 'created_at', splitByPrice: false, exactBounds: $exactBounds);
 
         return collect($breakdown['per_type'])->values()->map(function (array $row) {
             // Strip the TicketType model — Eloquent objects don't survive JSON casting cleanly.
@@ -439,7 +457,7 @@ class SalesBreakdownService
      *   promo_label: string
      * }>
      */
-    public function buildPayoutSplitTable(Event $event, ?Carbon $periodStart = null, ?Carbon $periodEnd = null, bool $excludePos = true, string $dateColumn = 'created_at'): array
+    public function buildPayoutSplitTable(Event $event, ?Carbon $periodStart = null, ?Carbon $periodEnd = null, bool $excludePos = true, string $dateColumn = 'created_at', bool $exactBounds = false): array
     {
         $eventId = $event->id;
         $allowedColumns = ['created_at', 'paid_at'];
@@ -447,8 +465,8 @@ class SalesBreakdownService
 
         $tickets = Ticket::where(fn ($q) => $q->where('event_id', $eventId)->orWhere('marketplace_event_id', $eventId))
             ->whereIn('status', ['valid', 'used'])
-            ->where(function ($outer) use ($periodStart, $periodEnd, $excludePos, $dateColumn) {
-                $outer->whereHas('order', function ($q) use ($periodStart, $periodEnd, $excludePos, $dateColumn) {
+            ->where(function ($outer) use ($periodStart, $periodEnd, $excludePos, $dateColumn, $exactBounds) {
+                $outer->whereHas('order', function ($q) use ($periodStart, $periodEnd, $excludePos, $dateColumn, $exactBounds) {
                     $q->whereIn('status', ['paid', 'confirmed', 'completed'])
                         ->where('source', '!=', 'external_import');
                     if ($excludePos) {
@@ -456,23 +474,29 @@ class SalesBreakdownService
                           ->where('source', '!=', 'test_order');
                     }
                     if ($periodStart) {
-                        $q->where($dateColumn, '>=', $periodStart->copy()->startOfDay());
+                        $operator = $exactBounds ? '>' : '>=';
+                        $bound = $exactBounds ? $periodStart : $periodStart->copy()->startOfDay();
+                        $q->where($dateColumn, $operator, $bound);
                     }
                     if ($periodEnd) {
-                        $q->where($dateColumn, '<=', $periodEnd->copy()->endOfDay());
+                        $bound = $exactBounds ? $periodEnd : $periodEnd->copy()->endOfDay();
+                        $q->where($dateColumn, '<=', $bound);
                     }
                 });
                 // Invitations have order_id=NULL — include them so the split
                 // table mirrors the aggregate (which we already fixed to
                 // surface invitations). Period bounds anchor on tickets.created_at
                 // because there's no order date to use.
-                $outer->orWhere(function ($q2) use ($periodStart, $periodEnd) {
+                $outer->orWhere(function ($q2) use ($periodStart, $periodEnd, $exactBounds) {
                     $q2->whereNull('order_id');
                     if ($periodStart) {
-                        $q2->where('created_at', '>=', $periodStart->copy()->startOfDay());
+                        $operator = $exactBounds ? '>' : '>=';
+                        $bound = $exactBounds ? $periodStart : $periodStart->copy()->startOfDay();
+                        $q2->where('created_at', $operator, $bound);
                     }
                     if ($periodEnd) {
-                        $q2->where('created_at', '<=', $periodEnd->copy()->endOfDay());
+                        $bound = $exactBounds ? $periodEnd : $periodEnd->copy()->endOfDay();
+                        $q2->where('created_at', '<=', $bound);
                     }
                 });
             })
@@ -635,9 +659,9 @@ class SalesBreakdownService
      *
      * @return array{commission_mode: string, commission_amount: float, gross_amount: float, net_amount: float}
      */
-    public function summarizeForPayout(Event $event, ?Carbon $periodStart = null, ?Carbon $periodEnd = null): array
+    public function summarizeForPayout(Event $event, ?Carbon $periodStart = null, ?Carbon $periodEnd = null, bool $exactBounds = false): array
     {
-        $breakdown = $this->build($event, $periodStart, $periodEnd);
+        $breakdown = $this->build($event, $periodStart, $periodEnd, excludePos: false, dateColumn: 'created_at', splitByPrice: false, exactBounds: $exactBounds);
 
         $modes = collect($breakdown['per_type'])->pluck('commission_mode')->filter()->unique()->values();
         if ($modes->count() === 1) {

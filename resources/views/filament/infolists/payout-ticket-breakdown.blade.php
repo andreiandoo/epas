@@ -6,13 +6,36 @@
     // Second table: per-(type × unit price × promo code) split, computed
     // on-the-fly so the snapshot stays an aggregate. Includes the promo
     // label per row and a "(redus)" name suffix when applicable.
+    //
+    // Period bounds are derived from PAYOUT TIMESTAMPS, not the saved
+    // period_start/period_end (which were historically set to the event's
+    // lifetime, causing consecutive payouts to show identical splits):
+    //   • periodStart = previous active payout's created_at (event creation
+    //     when this is the first payout)
+    //   • periodEnd   = this payout's created_at
+    // exactBounds=true so the "> previous_created_at" cut is strict — orders
+    // created at the previous payout's timestamp belong to that payout, not
+    // this one.
     $splitRows = [];
     if ($record->event_id) {
         $splitEvent = $record->event ?? \App\Models\Event::find($record->event_id);
         if ($splitEvent) {
             try {
+                $previousPayout = \App\Models\MarketplacePayout::query()
+                    ->where('event_id', $record->event_id)
+                    ->where('marketplace_organizer_id', $record->marketplace_organizer_id)
+                    ->where('id', '!=', $record->id)
+                    ->where('created_at', '<', $record->created_at)
+                    ->whereIn('status', ['pending', 'approved', 'processing', 'completed'])
+                    ->orderByDesc('created_at')
+                    ->first(['id', 'created_at']);
+
+                $splitStart = $previousPayout?->created_at
+                    ?? ($splitEvent->created_at ? \Illuminate\Support\Carbon::parse($splitEvent->created_at) : null);
+                $splitEnd = \Illuminate\Support\Carbon::parse($record->created_at);
+
                 $splitRows = app(\App\Services\Marketplace\SalesBreakdownService::class)
-                    ->buildPayoutSplitTable($splitEvent, $record->period_start, $record->period_end);
+                    ->buildPayoutSplitTable($splitEvent, $splitStart, $splitEnd, true, 'created_at', true);
             } catch (\Throwable $e) {
                 $splitRows = [];
             }

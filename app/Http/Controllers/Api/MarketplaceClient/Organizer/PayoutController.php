@@ -380,24 +380,32 @@ class PayoutController extends BaseController
         try {
             DB::beginTransaction();
 
-            // Calculate breakdown from completed orders in this period
-            $lastPayoutQuery = $organizer->payouts()
-                ->whereIn('status', ['completed'])
-                ->orderByDesc('period_end');
-
-            if ($eventId) {
-                $lastPayoutQuery->where('event_id', $eventId);
-            }
-
-            $lastPayout = $lastPayoutQuery->first();
-
-            $periodStart = $lastPayout
-                ? $lastPayout->period_end->addDay()
-                : $organizer->created_at->toDateString();
-            $periodEnd = now()->toDateString();
-
-            // Get commission rate from event if specified, otherwise use organizer's
+            // Calculate breakdown using the strict-datetime resolver so
+            // consecutive payouts don't overlap. For per-event payouts this
+            // also picks up pending/approved/processing priors (the old
+            // status='completed' filter missed in-flight payouts and
+            // re-included their tickets).
             $event = $eventId ? Event::find($eventId) : null;
+            if ($event) {
+                $periodStartCarbon = MarketplacePayout::resolveNextPeriodStart($eventId, $organizer->id, $event);
+            } else {
+                // Organizer-level payout (all events) — fall back to the
+                // legacy period_end-based resolver. Per-event slicing isn't
+                // applicable here because the payout spans every event.
+                $lastPayout = $organizer->payouts()
+                    ->whereIn('status', ['completed'])
+                    ->orderByDesc('period_end')
+                    ->first();
+                $periodStartCarbon = $lastPayout?->period_end?->copy()->addDay()
+                    ?? \Illuminate\Support\Carbon::parse($organizer->created_at);
+            }
+            $periodEndCarbon = now();
+
+            $periodStart = $periodStartCarbon->toDateString();
+            $periodEnd = $periodEndCarbon->toDateString();
+
+            // Get commission rate from event if specified, otherwise use organizer's.
+            // $event was already resolved above for the period calculation.
             $commissionRate = $event
                 ? $event->getEffectiveCommissionRate()
                 : $organizer->getEffectiveCommissionRate();
@@ -428,14 +436,17 @@ class PayoutController extends BaseController
             // Build the ticket breakdown via SalesBreakdownService (same source of
             // truth as the event-edit "Vânzări" tab). Only when scoped to a
             // specific event — period payouts span all events of the organizer
-            // and would need a different aggregation.
+            // and would need a different aggregation. exactBounds=true so the
+            // cut at periodStart is strict and consecutive payouts don't
+            // re-include the previous payout's tickets.
             $ticketBreakdown = null;
             if ($event) {
                 $service = app(\App\Services\Marketplace\SalesBreakdownService::class);
                 $rows = $service->buildForPayout(
                     $event,
-                    \Illuminate\Support\Carbon::parse($periodStart),
-                    \Illuminate\Support\Carbon::parse($periodEnd)
+                    $periodStartCarbon,
+                    $periodEndCarbon,
+                    exactBounds: true
                 );
                 $ticketBreakdown = !empty($rows) ? $rows : null;
             }

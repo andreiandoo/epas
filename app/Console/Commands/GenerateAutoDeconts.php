@@ -157,27 +157,26 @@ class GenerateAutoDeconts extends Command
             $commissionAmount = $grossAmount - $netAmount;
         }
 
-        // Determine period
-        $lastPayout = MarketplacePayout::where('marketplace_organizer_id', $organizer->id)
-            ->where('event_id', $event->id)
-            ->where('status', 'completed')
-            ->orderByDesc('period_end')
-            ->first();
+        // Determine period using the strict-datetime resolver so consecutive
+        // payouts don't re-include the same tickets. Includes pending +
+        // approved + processing prior payouts (not just completed) since
+        // anything not yet rejected has already claimed its slice.
+        $periodStartCarbon = MarketplacePayout::resolveNextPeriodStart($event->id, $organizer->id, $event);
+        $periodEndCarbon = now();
 
-        $periodStart = $lastPayout
-            ? $lastPayout->period_end->addDay()->toDateString()
-            : $event->created_at->toDateString();
-
-        $periodEnd = now()->toDateString();
+        $periodStart = $periodStartCarbon?->toDateString() ?? $event->created_at->toDateString();
+        $periodEnd = $periodEndCarbon->toDateString();
 
         // Single source of truth for the per-ticket-type breakdown (same logic
         // as the event-edit "Vânzări" tab). Reads actual paid prices (not
         // catalog), allocates discounts/extras, derives commission_mode.
+        // exactBounds=true so the cut at periodStart is strict (>, not >=).
         $service = app(\App\Services\Marketplace\SalesBreakdownService::class);
         $ticketBreakdown = $service->buildForPayout(
             $event,
-            \Illuminate\Support\Carbon::parse($periodStart),
-            \Illuminate\Support\Carbon::parse($periodEnd)
+            $periodStartCarbon,
+            $periodEndCarbon,
+            exactBounds: true
         );
 
         MarketplacePayout::create([
