@@ -286,6 +286,10 @@ RewriteRule ^organizator/vanzari/?$ organizer/sales.php [L]
 
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^organizator/raport-staff/?$ organizer/raport-staff.php [L]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^organizator/panou/?$ organizer/dashboard.php [L]
 
 RewriteCond %{REQUEST_FILENAME} !-f
