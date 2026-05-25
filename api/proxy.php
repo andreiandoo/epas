@@ -726,6 +726,53 @@ switch ($action) {
         $endpoint = '/tours/' . urlencode($slug) . ($params ? '?' . http_build_query($params) : '');
         break;
 
+    // ============================================================
+    // Activities module — gated server-side by activities-module microservice
+    // ============================================================
+    case 'activities':
+        $params = [];
+        foreach (['city', 'category', 'search', 'sort', 'max_price_ron', 'page', 'per_page', 'locale'] as $k) {
+            if (isset($_GET[$k])) $params[$k] = $_GET[$k];
+        }
+        $endpoint = '/activities' . ($params ? '?' . http_build_query($params) : '');
+        break;
+
+    case 'activity':
+        $slug = $_GET['slug'] ?? '';
+        if (!$slug) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing activity slug']);
+            exit;
+        }
+        $params = [];
+        if (isset($_GET['locale'])) $params['locale'] = $_GET['locale'];
+        $endpoint = '/activities/' . urlencode($slug) . ($params ? '?' . http_build_query($params) : '');
+        break;
+
+    case 'activity.slots':
+        $slug = $_GET['slug'] ?? '';
+        if (!$slug) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing activity slug']);
+            exit;
+        }
+        $params = [];
+        if (isset($_GET['date'])) $params['date'] = $_GET['date'];
+        $endpoint = '/activities/' . urlencode($slug) . '/slots' . ($params ? '?' . http_build_query($params) : '');
+        break;
+
+    case 'activity.available-dates':
+        $slug = $_GET['slug'] ?? '';
+        if (!$slug) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing activity slug']);
+            exit;
+        }
+        $params = [];
+        if (isset($_GET['days'])) $params['days'] = $_GET['days'];
+        $endpoint = '/activities/' . urlencode($slug) . '/available-dates' . ($params ? '?' . http_build_query($params) : '');
+        break;
+
     case 'event.dateAvailability':
         $slug = $_GET['slug'] ?? '';
         if (!$slug) {
