@@ -436,11 +436,20 @@ class EventResource extends Resource
                                         // produced revenue (paid/confirmed/completed). Otherwise tickets stuck as
                                         // `valid` in failed/pending orders inflate this count without contributing to
                                         // Venituri/Net (which already filter by these statuses in SalesBreakdownService).
+                                        // Standalone invitations (order_id = null, meta.is_invitation = true) are
+                                        // also included — they're emitted directly via /organizator/invitatii and
+                                        // would otherwise be missing from the Bilete counter even though they show
+                                        // up in the per-ticket-type breakdown below.
                                         $ticketsSold = \App\Models\Ticket::where(fn($q) => $q->where('event_id', $eventId)->orWhere('marketplace_event_id', $eventId))
                                             ->whereIn('status', ['valid', 'used'])
-                                            ->whereHas('order', fn($q) => $q
-                                                ->where('source', '!=', 'external_import')
-                                                ->whereIn('status', ['paid', 'confirmed', 'completed']))
+                                            ->where(function ($q) {
+                                                $q->whereHas('order', fn($oq) => $oq
+                                                    ->where('source', '!=', 'external_import')
+                                                    ->whereIn('status', ['paid', 'confirmed', 'completed']))
+                                                ->orWhere(fn ($iq) => $iq
+                                                    ->whereNull('order_id')
+                                                    ->where('meta->is_invitation', true));
+                                            })
                                             ->count();
 
                                         $totalCapacity = $record->general_quota ?? $record->capacity ?? $record->ticketTypes->sum(fn ($tt) => $tt->capacity ?? 0) ?? 0;
@@ -467,11 +476,21 @@ class EventResource extends Resource
                                         // since cancelled tickets in failed/abandoned orders are still operationally
                                         // relevant even though they never produced revenue.
                                         $eventId = $record->id;
+                                        // Base query: tickets that either have a non-external order, or are
+                                        // standalone invitations (order_id=null + meta.is_invitation=true).
+                                        // Standalone invitations should appear in Valid count but never in
+                                        // Anulate/Rambursate (those are order-status driven).
                                         $ticketsQuery = \App\Models\Ticket::where(fn ($q) => $q->where('event_id', $eventId)->orWhere('marketplace_event_id', $eventId))
-                                            ->whereHas('order', fn($q) => $q->where('source', '!=', 'external_import'));
+                                            ->where(function ($q) {
+                                                $q->whereHas('order', fn($oq) => $oq->where('source', '!=', 'external_import'))
+                                                  ->orWhere(fn ($iq) => $iq->whereNull('order_id')->where('meta->is_invitation', true));
+                                            });
                                         $ticketCountValid = (clone $ticketsQuery)
                                             ->whereIn('status', ['valid', 'used'])
-                                            ->whereHas('order', fn($q) => $q->whereIn('status', ['paid', 'confirmed', 'completed']))
+                                            ->where(function ($q) {
+                                                $q->whereHas('order', fn($oq) => $oq->whereIn('status', ['paid', 'confirmed', 'completed']))
+                                                  ->orWhere(fn ($iq) => $iq->whereNull('order_id')->where('meta->is_invitation', true));
+                                            })
                                             ->count();
                                         $ticketCountCancelled = (clone $ticketsQuery)->where('status', 'cancelled')->count();
                                         $ticketCountRefunded = (clone $ticketsQuery)->whereIn('status', ['refunded', 'void'])->count();
