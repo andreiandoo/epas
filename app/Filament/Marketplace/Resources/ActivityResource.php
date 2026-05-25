@@ -52,6 +52,8 @@ class ActivityResource extends Resource
 
     protected static ?int $navigationSort = 5;
 
+    protected static ?string $maxContentWidth = 'full';
+
     /**
      * Gate the whole resource by the `activities-module` microservice.
      * Until a super-admin or marketplace admin flips it on, this resource
@@ -653,12 +655,12 @@ class ActivityResource extends Resource
                                     ->hiddenLabel()
                                     ->content(function (?\App\Models\Activity $record) use ($marketplace) {
                                         if (! $record || ! $record->exists) {
-                                            return new \Illuminate\Support\HtmlString('<span class="text-gray-500 text-xs">Salvează pentru a previzualiza.</span>');
+                                            return new \Illuminate\Support\HtmlString('<span class="text-xs text-gray-500">Salvează pentru a previzualiza.</span>');
                                         }
                                         $activityMarketplace = $record->marketplaceClient ?? $marketplace;
                                         $domain = $activityMarketplace?->domain;
                                         if (! $domain) {
-                                            return new \Illuminate\Support\HtmlString('<span class="text-warning-600 text-xs">Niciun domeniu marketplace configurat.</span>');
+                                            return new \Illuminate\Support\HtmlString('<span class="text-xs text-warning-600">Niciun domeniu marketplace configurat.</span>');
                                         }
                                         $domain = preg_replace('#^(https?:?/?/?|//)#i', '', $domain);
                                         $domain = ltrim($domain, '/');
@@ -691,7 +693,7 @@ class ActivityResource extends Resource
                                         if (! $record || ! $record->exists) return null;
                                         if ($record->is_published) {
                                             return new \Illuminate\Support\HtmlString(
-                                                '<span class="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-green-500/20 text-green-400 ring-1 ring-inset ring-green-500/30">●  LIVE</span>'
+                                                '<span class="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold text-green-400 rounded-full bg-green-500/20 ring-1 ring-inset ring-green-500/30">●  LIVE</span>'
                                             );
                                         }
                                         return new \Illuminate\Support\HtmlString(
