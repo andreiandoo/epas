@@ -743,7 +743,7 @@ class ActivityResource extends Resource
                     ]), // end Group 1/4
 
             ]), // end Grid(4)
-        ]);
+        ])->columns(1);
     }
 
     public static function table(Table $table): Table
