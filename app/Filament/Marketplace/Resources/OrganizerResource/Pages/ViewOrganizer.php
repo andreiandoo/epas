@@ -2,13 +2,17 @@
 
 namespace App\Filament\Marketplace\Resources\OrganizerResource\Pages;
 
+use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 use App\Filament\Marketplace\Resources\OrganizerResource;
+use App\Filament\Marketplace\Resources\ActivityResource;
 use App\Filament\Marketplace\Resources\EventResource;
 use Filament\Actions;
 use Filament\Resources\Pages\ViewRecord;
 
 class ViewOrganizer extends ViewRecord
 {
+    use HasMarketplaceContext;
+
     protected static string $resource = OrganizerResource::class;
 
     protected function getHeaderActions(): array
@@ -38,6 +42,22 @@ class ViewOrganizer extends ViewRecord
                 ->icon('heroicon-o-plus')
                 ->color('gray')
                 ->url(fn () => EventResource::getUrl('create', ['organizer' => $record->id])),
+
+            // Activities module — only shown when the marketplace has the
+            // `activities-module` microservice active.
+            Actions\Action::make('view_activities')
+                ->label('View Activities')
+                ->icon('heroicon-o-rocket-launch')
+                ->color('gray')
+                ->visible(fn () => static::marketplaceHasMicroservice('activities-module'))
+                ->url(fn () => ActivityResource::getUrl('index', ['tableFilters[marketplace_organizer_id][value]' => $record->id])),
+
+            Actions\Action::make('create_activity')
+                ->label('Create Activity')
+                ->icon('heroicon-o-plus')
+                ->color('gray')
+                ->visible(fn () => static::marketplaceHasMicroservice('activities-module'))
+                ->url(fn () => ActivityResource::getUrl('create', ['organizer' => $record->id])),
 
             Actions\Action::make('view_contract')
                 ->label('Vezi Contract')

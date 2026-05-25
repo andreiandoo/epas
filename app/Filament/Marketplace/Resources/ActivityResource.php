@@ -63,6 +63,22 @@ class ActivityResource extends Resource
     }
 
     /**
+     * Sidebar counter — same UX as EventResource. Hidden when the
+     * microservice is off (counter on a hidden item makes no sense).
+     */
+    public static function getNavigationBadge(): ?string
+    {
+        if (! static::marketplaceHasMicroservice('activities-module')) {
+            return null;
+        }
+        $marketplace = static::getMarketplaceClient();
+        if (! $marketplace) {
+            return null;
+        }
+        return (string) static::getEloquentQuery()->count();
+    }
+
+    /**
      * Hide from sidebar when microservice is off (canAccess already gates
      * URL access — this just keeps the menu clean).
      */
@@ -626,6 +642,39 @@ class ActivityResource extends Resource
                 SC\Group::make()
                     ->columnSpan(1)
                     ->schema([
+                        // Preview button — opens the public /activitate/{slug} page in a new
+                        // tab. Hidden until the record is saved (we need a slug + a domain
+                        // resolved from the marketplace). Same Placeholder + HtmlString
+                        // pattern as EventResource's preview block for visual consistency.
+                        SC\Section::make('Acțiuni')
+                            ->visible(fn (?\App\Models\Activity $record) => $record && $record->exists)
+                            ->schema([
+                                Forms\Components\Placeholder::make('preview_link')
+                                    ->hiddenLabel()
+                                    ->content(function (?\App\Models\Activity $record) use ($marketplace) {
+                                        if (! $record || ! $record->exists) {
+                                            return new \Illuminate\Support\HtmlString('<span class="text-gray-500 text-xs">Salvează pentru a previzualiza.</span>');
+                                        }
+                                        $activityMarketplace = $record->marketplaceClient ?? $marketplace;
+                                        $domain = $activityMarketplace?->domain;
+                                        if (! $domain) {
+                                            return new \Illuminate\Support\HtmlString('<span class="text-warning-600 text-xs">Niciun domeniu marketplace configurat.</span>');
+                                        }
+                                        $domain = preg_replace('#^(https?:?/?/?|//)#i', '', $domain);
+                                        $domain = ltrim($domain, '/');
+                                        $protocol = str_contains($domain, 'localhost') ? 'http' : 'https';
+                                        $url = $protocol . '://' . $domain . '/activitate/' . $record->slug;
+
+                                        return new \Illuminate\Support\HtmlString(
+                                            '<a href="' . e($url) . '" target="_blank" class="inline-flex items-center justify-center gap-2 w-full px-4 py-2.5 text-sm font-semibold text-white rounded-lg bg-primary-600 hover:bg-primary-500 transition-colors shadow-sm">' .
+                                            '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>' .
+                                            'Previzualizare' .
+                                            '</a>'
+                                        );
+                                    }),
+                            ])
+                            ->columns(1),
+
                         SC\Section::make('Status')
                             ->schema([
                                 Forms\Components\Toggle::make('is_published')
@@ -710,7 +759,42 @@ class ActivityResource extends Resource
 
                 Tables\Columns\TextColumn::make("title.{$lang}")
                     ->label('Titlu')
-                    ->searchable()
+                    // Diacritic-insensitive + case-insensitive search across title (RO+EN)
+                    // and short_description. On PostgreSQL we use `translate()` to strip
+                    // Romanian diacritics from the DB value, then `LOWER` for case folding.
+                    // The needle gets the same treatment in PHP before being bound, so
+                    // both sides of the comparison are normalised the same way.
+                    ->searchable(query: function ($query, string $search) {
+                        if ($search === '') {
+                            return $query;
+                        }
+
+                        // Strip diacritics + lowercase on the PHP side. Same characters
+                        // listed as in the SQL translate() so the symmetry holds.
+                        $needle = '%' . mb_strtolower(strtr($search, [
+                            'ș' => 's', 'Ș' => 's', 'ş' => 's', 'Ş' => 's',
+                            'ț' => 't', 'Ț' => 't', 'ţ' => 't', 'Ţ' => 't',
+                            'ă' => 'a', 'Ă' => 'a',
+                            'â' => 'a', 'Â' => 'a',
+                            'î' => 'i', 'Î' => 'i',
+                        ])) . '%';
+
+                        // pg_translate args: in-chars vs out-chars (1:1 mapping).
+                        $inChars  = 'șȘşŞțȚţŢăĂâÂîÎ';
+                        $outChars = 'sssstttaaaaaiI';
+
+                        $cols = ["title->>'ro'", "title->>'en'", "short_description->>'ro'"];
+                        $query->where(function ($q) use ($cols, $needle, $inChars, $outChars) {
+                            foreach ($cols as $col) {
+                                $q->orWhereRaw(
+                                    "LOWER(translate(COALESCE({$col}, ''), ?, ?)) LIKE ?",
+                                    [$inChars, $outChars, $needle]
+                                );
+                            }
+                        });
+
+                        return $query;
+                    })
                     ->sortable()
                     ->wrap()
                     ->limit(60),

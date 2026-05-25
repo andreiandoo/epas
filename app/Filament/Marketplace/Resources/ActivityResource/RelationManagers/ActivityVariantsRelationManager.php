@@ -65,27 +65,41 @@ class ActivityVariantsRelationManager extends RelationManager
                     Forms\Components\TextInput::make('sku')
                         ->label('SKU')
                         ->maxLength(64)
-                        ->placeholder('opțional'),
+                        ->placeholder('opțional')
+                        ->columnSpanFull(),
                 ])
-                ->columns(2),
+                ->columns(1),
 
-            SC\Section::make('Preț & capacitate')
+            SC\Section::make('Preț')
                 ->schema([
+                    // Storage column is `price_cents` (integer, bani). Admin types in
+                    // the value as absolute RON ("95" or "94.50"). formatStateUsing
+                    // converts on form load, dehydrateStateUsing converts back on
+                    // save — DB stays in cents, no schema change needed.
                     Forms\Components\TextInput::make('price_cents')
-                        ->label('Preț (bani)')
+                        ->label('Preț')
                         ->numeric()
                         ->required()
                         ->default(0)
                         ->minValue(0)
-                        ->suffix('bani')
-                        ->helperText('Stocat în bani. Ex: 9500 = 95,00 RON.'),
+                        ->step(0.01)
+                        ->suffix('lei')
+                        ->helperText('Suma în lei. Ex: 95 sau 94.50.')
+                        ->formatStateUsing(fn ($state) => $state !== null ? round($state / 100, 2) : null)
+                        ->dehydrateStateUsing(fn ($state) => $state !== null && $state !== '' ? (int) round(((float) $state) * 100) : null)
+                        ->columnSpanFull(),
 
                     Forms\Components\Select::make('currency')
                         ->label('Monedă')
                         ->options(['RON' => 'RON', 'EUR' => 'EUR'])
                         ->default('RON')
-                        ->required(),
+                        ->required()
+                        ->columnSpanFull(),
+                ])
+                ->columns(1),
 
+            SC\Section::make('Capacitate & comandă')
+                ->schema([
                     Forms\Components\TextInput::make('capacity_share')
                         ->label('Locuri ocupate / unitate')
                         ->numeric()
@@ -93,33 +107,43 @@ class ActivityVariantsRelationManager extends RelationManager
                         ->minValue(1)
                         ->maxValue(50)
                         ->required()
-                        ->helperText('1 = o persoană. Pentru "Grup 4 persoane" → 4.'),
+                        ->helperText('1 = o persoană. Pentru "Grup 4 persoane" → 4.')
+                        ->columnSpanFull(),
 
+                    Forms\Components\TextInput::make('min_per_order')
+                        ->label('Minim per comandă')
+                        ->numeric()
+                        ->default(0)
+                        ->minValue(0)
+                        ->columnSpanFull(),
+
+                    Forms\Components\TextInput::make('max_per_order')
+                        ->label('Maxim per comandă')
+                        ->numeric()
+                        ->default(10)
+                        ->minValue(1)
+                        ->columnSpanFull(),
+                ])
+                ->columns(1),
+
+            SC\Section::make('Vârstă')
+                ->schema([
                     Forms\Components\TextInput::make('min_age')
                         ->label('Vârsta minimă')
                         ->numeric()
                         ->minValue(0)
-                        ->maxValue(99),
+                        ->maxValue(99)
+                        ->columnSpanFull(),
 
                     Forms\Components\TextInput::make('max_age')
                         ->label('Vârsta maximă')
                         ->numeric()
                         ->minValue(0)
-                        ->maxValue(99),
-
-                    Forms\Components\TextInput::make('min_per_order')
-                        ->label('Min. per comandă')
-                        ->numeric()
-                        ->default(0)
-                        ->minValue(0),
-
-                    Forms\Components\TextInput::make('max_per_order')
-                        ->label('Max. per comandă')
-                        ->numeric()
-                        ->default(10)
-                        ->minValue(1),
+                        ->maxValue(99)
+                        ->columnSpanFull(),
                 ])
-                ->columns(3),
+                ->columns(1)
+                ->collapsed(),
 
             SC\Section::make('Comision (override)')
                 ->description('Lasă gol pentru a moșteni comisionul de la organizator / marketplace.')
@@ -132,27 +156,31 @@ class ActivityVariantsRelationManager extends RelationManager
                             'fixed' => 'Sumă fixă',
                             'both' => 'Procent + sumă fixă',
                         ])
-                        ->placeholder('Moștenește'),
+                        ->placeholder('Moștenește')
+                        ->columnSpanFull(),
                     Forms\Components\TextInput::make('commission_rate')
                         ->label('Procent (%)')
                         ->numeric()
                         ->minValue(0)
                         ->maxValue(100)
-                        ->step(0.01),
+                        ->step(0.01)
+                        ->columnSpanFull(),
                     Forms\Components\TextInput::make('commission_fixed')
                         ->label('Sumă fixă (RON)')
                         ->numeric()
                         ->minValue(0)
-                        ->step(0.01),
+                        ->step(0.01)
+                        ->columnSpanFull(),
                     Forms\Components\Select::make('commission_mode')
                         ->label('Mod aplicare')
                         ->options([
                             'included' => 'Inclus în preț',
                             'added_on_top' => 'Adăugat peste preț',
                         ])
-                        ->placeholder('Moștenește'),
+                        ->placeholder('Moștenește')
+                        ->columnSpanFull(),
                 ])
-                ->columns(2),
+                ->columns(1),
 
             SC\Section::make('Detalii suplimentare')
                 ->collapsed()
@@ -164,18 +192,21 @@ class ActivityVariantsRelationManager extends RelationManager
 
                     Forms\Components\Toggle::make('is_active')
                         ->label('Activă')
-                        ->default(true),
+                        ->default(true)
+                        ->columnSpanFull(),
 
                     Forms\Components\Toggle::make('is_refundable')
                         ->label('Refundabilă')
-                        ->default(true),
+                        ->default(true)
+                        ->columnSpanFull(),
 
                     Forms\Components\TextInput::make('sort_order')
                         ->label('Ordine afișare')
                         ->numeric()
-                        ->default(0),
+                        ->default(0)
+                        ->columnSpanFull(),
                 ])
-                ->columns(3),
+                ->columns(1),
         ]);
     }
 
