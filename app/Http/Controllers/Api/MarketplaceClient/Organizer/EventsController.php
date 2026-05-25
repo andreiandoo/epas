@@ -2664,6 +2664,100 @@ class EventsController extends BaseController
             $totals[$paymentBucket] += $orderTicketRevenue;
         }
 
+        // ── Standalone invitations (no marketplace order) ──
+        // The InviteBatch flow creates Ticket rows with order_id = null for
+        // every invitation. They don't fit any staff member's bucket — but
+        // they should still appear in the report so totals match the events
+        // dashboard. Group them by emitter: batches with
+        // marketplace_organizer_id are issued by the organizer's own admin
+        // ("Invitații – organizator"); batches without are issued by the
+        // marketplace operator ("Invitații – admin marketplace").
+        $standaloneTickets = \App\Models\Ticket::query()
+            ->where('event_id', $eventId)
+            ->whereNull('order_id')
+            ->whereIn('status', ['valid', 'used'])
+            ->where('meta->is_invitation', true)
+            ->with('ticketType:id,name')
+            ->get(['id', 'ticket_type_id', 'price', 'meta', 'created_at']);
+
+        if ($standaloneTickets->isNotEmpty()) {
+            $batchIds = $standaloneTickets
+                ->pluck('meta.invite_batch_id')
+                ->filter()
+                ->unique()
+                ->map(fn ($v) => (int) $v)
+                ->all();
+            $batchById = !empty($batchIds)
+                ? \App\Models\InviteBatch::whereIn('id', $batchIds)
+                    ->get(['id', 'marketplace_organizer_id'])
+                    ->keyBy('id')
+                : collect();
+
+            foreach ($standaloneTickets as $t) {
+                $batchId = isset($t->meta['invite_batch_id'])
+                    ? (int) $t->meta['invite_batch_id']
+                    : null;
+                $batch = $batchId ? ($batchById[$batchId] ?? null) : null;
+                $isOrganizerInvite = $batch && $batch->marketplace_organizer_id;
+                $label = $isOrganizerInvite
+                    ? 'Invitații – organizator'
+                    : 'Invitații – admin marketplace';
+
+                if (!isset($buckets[$label])) {
+                    $buckets[$label] = [
+                        'name' => $label,
+                        'is_online' => false,
+                        'is_invitation_bucket' => true,
+                        'orders' => 0,
+                        'tickets' => 0,
+                        'revenue' => 0.0,
+                        'cash' => 0.0,
+                        'card' => 0.0,
+                        'online' => 0.0,
+                        'ticket_types' => [],
+                        'first_sale_at' => null,
+                        'last_sale_at' => null,
+                    ];
+                }
+                $bucket =& $buckets[$label];
+                $bucket['tickets'] += 1;
+                // revenue stays 0 — invitations are free
+                $ts = $t->created_at;
+                $tsIso = $ts?->toIso8601String();
+                if ($tsIso) {
+                    if (!$bucket['first_sale_at'] || $tsIso < $bucket['first_sale_at']) {
+                        $bucket['first_sale_at'] = $tsIso;
+                    }
+                    if (!$bucket['last_sale_at'] || $tsIso > $bucket['last_sale_at']) {
+                        $bucket['last_sale_at'] = $tsIso;
+                    }
+                }
+
+                $ttId = $t->ticket_type_id ?? 0;
+                $ttName = is_array($t->ticketType?->name)
+                    ? ($t->ticketType->name['ro']
+                        ?? $t->ticketType->name['en']
+                        ?? reset($t->ticketType->name)
+                        ?? '—')
+                    : ($t->ticketType?->name ?? '—');
+                if (!isset($bucket['ticket_types'][$ttId])) {
+                    $bucket['ticket_types'][$ttId] = [
+                        'id' => $ttId,
+                        'name' => $ttName,
+                        'count' => 0,
+                        'amount' => 0.0,
+                    ];
+                }
+                $bucket['ticket_types'][$ttId]['count'] += 1;
+                unset($bucket);
+            }
+
+            // Roll standalone-invitation ticket counts into the overall
+            // totals so summary cards reflect them too. Revenue stays at
+            // zero (these are free).
+            $totals['tickets'] += $standaloneTickets->count();
+        }
+
         // Convert ticket_types maps to ordered arrays
         $staff = array_map(function ($b) {
             $b['ticket_types'] = array_values($b['ticket_types']);

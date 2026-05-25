@@ -237,12 +237,13 @@ function renderReport(data) {
     const tbody = document.getElementById('staff-table-body');
     tbody.innerHTML = staff.map((s, idx) => {
         const onlineBadge = s.is_online ? '<span class="ml-2 inline-flex items-center px-2 py-0.5 text-[10px] font-semibold uppercase rounded-full bg-violet-100 text-violet-700">Online</span>' : '';
+        const invitationBadge = s.is_invitation_bucket ? '<span class="ml-2 inline-flex items-center px-2 py-0.5 text-[10px] font-semibold uppercase rounded-full bg-rose-100 text-rose-700">Invitație</span>' : '';
         const firstSale = s.first_sale_at ? new Date(s.first_sale_at).toLocaleString('ro-RO', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' }) : '—';
         const lastSale = s.last_sale_at ? new Date(s.last_sale_at).toLocaleString('ro-RO', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' }) : '—';
         return `
             <tr class="text-sm hover:bg-gray-50/50">
                 <td class="px-6 py-4">
-                    <div class="font-semibold text-secondary">${escapeHtml(s.name)}${onlineBadge}</div>
+                    <div class="font-semibold text-secondary">${escapeHtml(s.name)}${onlineBadge}${invitationBadge}</div>
                     <div class="text-xs text-gray-500">${firstSale} → ${lastSale}</div>
                 </td>
                 <td class="px-3 py-4 text-right text-secondary">${(s.orders || 0).toLocaleString('ro-RO')}</td>
