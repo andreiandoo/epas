@@ -1106,6 +1106,11 @@ function renderEvents(events) {
         // Finance button (emerald — money/sales)
         const financeButton = isAwaitingApproval ? '' : `<a href="/organizator/sold?event=${event.id}" class="border border-solid btn btn-sm bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100 hover:border-emerald-300 hover:text-emerald-800" title="Finanțe"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg> Vânzări</a>`;
 
+        // Staff report button (teal — staff sales breakdown). Only shown
+        // for ended events — the report aggregates POS operator sales
+        // post-event, so it's not useful while sales are still ongoing.
+        const staffReportButton = (isAwaitingApproval || !isEnded) ? '' : `<a href="/organizator/raport-staff?event=${event.id}" class="border border-solid btn btn-sm bg-teal-50 text-teal-700 border-teal-200 hover:bg-teal-100 hover:border-teal-300 hover:text-teal-800" title="Raport staff"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg> Raport staff</a>`;
+
         // Participants button (cyan — attendees / check-in list)
         const participantsButton = isAwaitingApproval ? '' : `<a href="/organizator/participanti?event=${event.id}" class="border border-solid btn btn-sm bg-cyan-50 text-cyan-700 border-cyan-200 hover:bg-cyan-100 hover:border-cyan-300 hover:text-cyan-800" title="Participanți"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>Participanți</a>`;
 
@@ -1154,6 +1159,7 @@ function renderEvents(events) {
                             ${invitationsButton}
                             ${documentsButton}
                             ${financeButton}
+                            ${staffReportButton}
                             ${participantsButton}
                             ${analyticsButton}
                             ${promoteButton}

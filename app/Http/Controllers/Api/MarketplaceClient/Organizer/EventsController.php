@@ -2437,6 +2437,205 @@ class EventsController extends BaseController
     }
 
     /**
+     * Per-staff-member sales report for a single event.
+     * Aggregates orders attributed to each POS operator (via
+     * order.meta.sold_by) and the residual "Online" bucket for sales that
+     * came through the public marketplace without a sold_by tag. Each
+     * bucket carries: order count, ticket count, gross revenue, payment
+     * method split (cash / card / online), and per-ticket-type breakdown.
+     */
+    public function staffReport(Request $request, int $eventId): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+
+        $event = Event::where('id', $eventId)
+            ->where('marketplace_organizer_id', $organizer->id)
+            ->where('marketplace_client_id', $organizer->marketplace_client_id)
+            ->first();
+
+        if (!$event) {
+            return $this->error('Event not found', 404);
+        }
+
+        $validStatuses = ['paid', 'confirmed', 'completed'];
+
+        // Pull all qualifying orders + their tickets in one shot. We then
+        // do the bucketing in PHP because grouping by a JSON path AND
+        // joining ticket_types in SQL is awkward across drivers — and the
+        // dataset is bounded by 1 event's order count (rarely > a few
+        // thousand even on the biggest organizers).
+        $orders = \App\Models\Order::query()
+            ->where('marketplace_client_id', $organizer->marketplace_client_id)
+            ->whereIn('status', $validStatuses)
+            ->whereHas('tickets', fn ($q) => $q->where('event_id', $eventId))
+            ->with([
+                'tickets' => function ($q) use ($eventId) {
+                    $q->where('event_id', $eventId)
+                        ->whereIn('status', ['valid', 'used'])
+                        ->with('ticketType:id,name');
+                },
+            ])
+            ->orderBy('created_at')
+            ->get();
+
+        $buckets = []; // keyed by operator label
+        $totals = [
+            'orders' => 0,
+            'tickets' => 0,
+            'revenue' => 0.0,
+            'cash' => 0.0,
+            'card' => 0.0,
+            'online' => 0.0,
+        ];
+        $ticketTypeTotals = []; // [tt_id => ['name'=>..,'count'=>..,'amount'=>..]]
+
+        foreach ($orders as $order) {
+            $tickets = $order->tickets;
+            if ($tickets->isEmpty()) continue;
+
+            $meta = is_array($order->meta) ? $order->meta : [];
+            $soldBy = trim((string) ($meta['sold_by'] ?? ''));
+            $source = $order->source ?? 'marketplace';
+
+            // Bucketing rule: operator name if present; otherwise group
+            // online sales (public marketplace) into a single "Online" row
+            // so the organizer can see how much came through the website
+            // vs. each POS operator.
+            $label = $soldBy !== '' ? $soldBy : 'Online';
+
+            // Payment method bucket (cash vs card vs online):
+            //   - meta.payment_method='cash' → cash
+            //   - meta.payment_method in ['card','tap'] → card (physical POS)
+            //   - everything else (no meta.payment_method) → online card
+            $paymentMethodMeta = strtolower((string) ($meta['payment_method'] ?? ''));
+            $paymentBucket = match (true) {
+                $paymentMethodMeta === 'cash' => 'cash',
+                in_array($paymentMethodMeta, ['card', 'tap'], true) => 'card',
+                default => 'online',
+            };
+
+            $orderTicketRevenue = (float) $tickets->sum('price');
+
+            if (!isset($buckets[$label])) {
+                $buckets[$label] = [
+                    'name' => $label,
+                    'is_online' => $soldBy === '',
+                    'orders' => 0,
+                    'tickets' => 0,
+                    'revenue' => 0.0,
+                    'cash' => 0.0,
+                    'card' => 0.0,
+                    'online' => 0.0,
+                    'ticket_types' => [],
+                    'first_sale_at' => null,
+                    'last_sale_at' => null,
+                ];
+            }
+            $bucket =& $buckets[$label];
+            $bucket['orders'] += 1;
+            $bucket['tickets'] += $tickets->count();
+            $bucket['revenue'] += $orderTicketRevenue;
+            $bucket[$paymentBucket] += $orderTicketRevenue;
+
+            $ts = $order->paid_at ?? $order->created_at;
+            $tsIso = $ts?->toIso8601String();
+            if ($tsIso) {
+                if (!$bucket['first_sale_at'] || $tsIso < $bucket['first_sale_at']) {
+                    $bucket['first_sale_at'] = $tsIso;
+                }
+                if (!$bucket['last_sale_at'] || $tsIso > $bucket['last_sale_at']) {
+                    $bucket['last_sale_at'] = $tsIso;
+                }
+            }
+
+            foreach ($tickets as $t) {
+                $ttId = $t->ticket_type_id ?? 0;
+                $ttName = is_array($t->ticketType?->name)
+                    ? ($t->ticketType->name['ro']
+                        ?? $t->ticketType->name['en']
+                        ?? reset($t->ticketType->name)
+                        ?? '—')
+                    : ($t->ticketType?->name ?? '—');
+
+                if (!isset($bucket['ticket_types'][$ttId])) {
+                    $bucket['ticket_types'][$ttId] = [
+                        'id' => $ttId,
+                        'name' => $ttName,
+                        'count' => 0,
+                        'amount' => 0.0,
+                    ];
+                }
+                $bucket['ticket_types'][$ttId]['count'] += 1;
+                $bucket['ticket_types'][$ttId]['amount'] += (float) ($t->price ?? 0);
+
+                if (!isset($ticketTypeTotals[$ttId])) {
+                    $ticketTypeTotals[$ttId] = [
+                        'id' => $ttId,
+                        'name' => $ttName,
+                        'count' => 0,
+                        'amount' => 0.0,
+                    ];
+                }
+                $ticketTypeTotals[$ttId]['count'] += 1;
+                $ticketTypeTotals[$ttId]['amount'] += (float) ($t->price ?? 0);
+            }
+            unset($bucket);
+
+            $totals['orders'] += 1;
+            $totals['tickets'] += $tickets->count();
+            $totals['revenue'] += $orderTicketRevenue;
+            $totals[$paymentBucket] += $orderTicketRevenue;
+        }
+
+        // Convert ticket_types maps to ordered arrays
+        $staff = array_map(function ($b) {
+            $b['ticket_types'] = array_values($b['ticket_types']);
+            usort($b['ticket_types'], fn ($a, $z) => $z['count'] <=> $a['count']);
+            // Round monetary values
+            foreach (['revenue', 'cash', 'card', 'online'] as $k) {
+                $b[$k] = round($b[$k], 2);
+            }
+            foreach ($b['ticket_types'] as &$tt) {
+                $tt['amount'] = round($tt['amount'], 2);
+            }
+            unset($tt);
+            return $b;
+        }, array_values($buckets));
+
+        // Sort: highest revenue first (online bucket may or may not lead;
+        // organizer wants to see top earners at a glance).
+        usort($staff, fn ($a, $b) => $b['revenue'] <=> $a['revenue']);
+
+        $ticketTypeTotals = array_values($ticketTypeTotals);
+        usort($ticketTypeTotals, fn ($a, $b) => $b['count'] <=> $a['count']);
+        foreach ($ticketTypeTotals as &$tt) {
+            $tt['amount'] = round($tt['amount'], 2);
+        }
+        unset($tt);
+
+        foreach (['revenue', 'cash', 'card', 'online'] as $k) {
+            $totals[$k] = round($totals[$k], 2);
+        }
+
+        $title = is_array($event->title)
+            ? ($event->title['ro'] ?? $event->title['en'] ?? reset($event->title))
+            : $event->title;
+
+        return $this->success([
+            'event' => [
+                'id' => $event->id,
+                'title' => $title,
+                'date' => $event->event_date?->format('Y-m-d')
+                    ?? $event->range_start_date?->format('Y-m-d'),
+                'currency' => 'RON',
+            ],
+            'totals' => $totals,
+            'ticket_types_overall' => $ticketTypeTotals,
+            'staff' => $staff,
+        ]);
+    }
+
+    /**
      * Get available event categories for the marketplace
      */
     public function categories(Request $request): JsonResponse
