@@ -2451,6 +2451,7 @@ class EventsController extends BaseController
         $event = Event::where('id', $eventId)
             ->where('marketplace_organizer_id', $organizer->id)
             ->where('marketplace_client_id', $organizer->marketplace_client_id)
+            ->with('ticketTypes:id,name,event_id')
             ->first();
 
         if (!$event) {
@@ -2478,6 +2479,20 @@ class EventsController extends BaseController
             ->orderBy('created_at')
             ->get();
 
+        // Pre-cache User lookups for venue_owner_user_id resolution. Avoids
+        // N+1 queries when many POS operators exist for the event.
+        $venueOwnerUserIds = $orders
+            ->pluck('meta.venue_owner_user_id')
+            ->filter()
+            ->unique()
+            ->map(fn ($v) => (int) $v)
+            ->all();
+        $userById = !empty($venueOwnerUserIds)
+            ? \App\Models\User::whereIn('id', $venueOwnerUserIds)
+                ->get(['id', 'name', 'first_name', 'last_name', 'email'])
+                ->keyBy('id')
+            : collect();
+
         $buckets = []; // keyed by operator label
         $totals = [
             'orders' => 0,
@@ -2497,29 +2512,66 @@ class EventsController extends BaseController
             $soldBy = trim((string) ($meta['sold_by'] ?? ''));
             $source = $order->source ?? 'marketplace';
 
-            // Bucketing rule: operator name if present; otherwise group
-            // online sales (public marketplace) into a single "Online" row
-            // so the organizer can see how much came through the website
-            // vs. each POS operator.
-            $label = $soldBy !== '' ? $soldBy : 'Online';
+            // Operator label resolution:
+            //   1. venue_owner_user_id from meta → look up real user name
+            //      (this is the only place per-individual data lives for
+            //      venue-owner POS sales).
+            //   2. meta.sold_by — set by both venue-owner POS ("Venue: X")
+            //      and organizer POS (whatever the mobile app sends).
+            //   3. fallback to "Online" for public marketplace orders.
+            $venueOwnerUserId = isset($meta['venue_owner_user_id'])
+                ? (int) $meta['venue_owner_user_id']
+                : null;
+            $label = null;
+            if ($venueOwnerUserId && isset($userById[$venueOwnerUserId])) {
+                $u = $userById[$venueOwnerUserId];
+                $userName = trim(($u->first_name ?? '') . ' ' . ($u->last_name ?? ''));
+                if ($userName === '') $userName = $u->name ?? $u->email ?? '';
+                $label = $userName !== '' ? $userName : null;
+            }
+            if (!$label) $label = $soldBy !== '' ? $soldBy : 'Online';
 
-            // Payment method bucket (cash vs card vs online):
-            //   - meta.payment_method='cash' → cash
-            //   - meta.payment_method in ['card','tap'] → card (physical POS)
-            //   - everything else (no meta.payment_method) → online card
-            $paymentMethodMeta = strtolower((string) ($meta['payment_method'] ?? ''));
-            $paymentBucket = match (true) {
-                $paymentMethodMeta === 'cash' => 'cash',
-                in_array($paymentMethodMeta, ['card', 'tap'], true) => 'card',
-                default => 'online',
-            };
+            // Source identifies *where* the sale came from. This is the only
+            // signal we can trust:
+            //   - 'venue_owner_pos' / 'pos_app' → physical POS (cash or card)
+            //   - everything else (marketplace / null) → public website sale
+            //     paid via Netopia (counted as online, regardless of which
+            //     card the customer used).
+            $isPos = in_array($source, ['pos_app', 'venue_owner_pos'], true);
+
+            // Payment method bucket for the staff report:
+            //   - Online (public marketplace orders): always 'online'.
+            //   - POS orders: distinguish cash vs card via meta or via the
+            //     customer_name pattern set by the controllers
+            //     ("POS Numerar" → cash, "POS Card" → card). meta.payment_method
+            //     is also checked in case future POS code writes it.
+            //   - POS default → 'cash' (matches venue_owner_pos controller
+            //     default when no flag is passed).
+            $paymentBucket = 'online';
+            if ($isPos) {
+                $payMeta = strtolower((string) ($meta['payment_method'] ?? ''));
+                $custName = strtolower((string) ($order->customer_name ?? ''));
+                if ($payMeta === 'cash' || str_contains($custName, 'numerar')) {
+                    $paymentBucket = 'cash';
+                } elseif (in_array($payMeta, ['card', 'tap'], true)
+                    || str_contains($custName, 'card')
+                ) {
+                    $paymentBucket = 'card';
+                } else {
+                    // No explicit signal; the controller default for cash
+                    // POS is cash, so attribute it there. Wrong attribution
+                    // can be cleaned up later by the POS app storing
+                    // meta.payment_method explicitly.
+                    $paymentBucket = 'cash';
+                }
+            }
 
             $orderTicketRevenue = (float) $tickets->sum('price');
 
             if (!isset($buckets[$label])) {
                 $buckets[$label] = [
                     'name' => $label,
-                    'is_online' => $soldBy === '',
+                    'is_online' => !$isPos,
                     'orders' => 0,
                     'tickets' => 0,
                     'revenue' => 0.0,
@@ -2605,6 +2657,23 @@ class EventsController extends BaseController
         // Sort: highest revenue first (online bucket may or may not lead;
         // organizer wants to see top earners at a glance).
         usort($staff, fn ($a, $b) => $b['revenue'] <=> $a['revenue']);
+
+        // Backfill any of the event's ticket types that had zero sales so
+        // the overall table shows the full lineup. Otherwise organizers
+        // miss the fact that a tier sold nothing — which is exactly the
+        // info they need for next-event planning.
+        foreach ($event->ticketTypes as $tt) {
+            if (isset($ticketTypeTotals[$tt->id])) continue;
+            $name = is_array($tt->name)
+                ? ($tt->name['ro'] ?? $tt->name['en'] ?? reset($tt->name) ?? '—')
+                : ($tt->name ?? '—');
+            $ticketTypeTotals[$tt->id] = [
+                'id' => $tt->id,
+                'name' => $name,
+                'count' => 0,
+                'amount' => 0.0,
+            ];
+        }
 
         $ticketTypeTotals = array_values($ticketTypeTotals);
         usort($ticketTypeTotals, fn ($a, $b) => $b['count'] <=> $a['count']);

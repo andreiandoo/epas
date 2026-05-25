@@ -79,8 +79,9 @@ $eventId = $_GET['event'] ?? null;
             <!-- Summary Cards -->
             <div class="grid grid-cols-2 gap-4 lg:grid-cols-5 report-section">
                 <div class="p-4 bg-white border border-gray-100 shadow-sm rounded-2xl">
-                    <div class="text-xs font-medium text-gray-500 uppercase">Venituri totale</div>
+                    <div class="text-xs font-medium text-gray-500 uppercase">Venituri din bilete</div>
                     <div id="sum-revenue" class="mt-1 text-2xl font-bold text-secondary">0 lei</div>
+                    <div class="mt-1 text-[10px] leading-tight text-gray-400">Fără asigurări / taxe online — vezi Vânzări pentru gross-ul total.</div>
                 </div>
                 <div class="p-4 bg-white border border-gray-100 shadow-sm rounded-2xl">
                     <div class="text-xs font-medium text-gray-500 uppercase">Bilete vândute</div>
