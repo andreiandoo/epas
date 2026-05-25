@@ -356,11 +356,25 @@ class MarketplaceEventsController extends BaseController
         if ($sort === 'date') {
             $sort = $defaultSort;
         }
-        // Effective date for sorting: postponed events use postponed_date
-        // when set, so they sort alongside other future-dated events instead
-        // of stuck at their original (now-stale) date.
-        $effectiveDateExpr = "COALESCE(CASE WHEN is_postponed = true THEN postponed_date END, event_date)";
-        $effectiveStartTimeExpr = "COALESCE(CASE WHEN is_postponed = true THEN postponed_start_time END, start_time)";
+        // Effective date for sorting. Resolution order:
+        //  1. postponed_date — if the event is postponed, that's the date
+        //     attendees will see and the date the event will actually run on.
+        //  2. range_start_date — duration_mode='range' (festivals etc.) leave
+        //     event_date NULL; Postgres sorts NULLs last under ASC, pushing
+        //     festivals past all dated single-day events. Fall through to the
+        //     range start so a 30 May festival sorts with other 30 May events.
+        //  3. event_date — the canonical single-day / multi-day field.
+        // For start_time we follow the same chain.
+        $effectiveDateExpr = "COALESCE("
+            . "CASE WHEN is_postponed = true THEN postponed_date END, "
+            . "CASE WHEN duration_mode = 'range' THEN range_start_date END, "
+            . "event_date"
+            . ")";
+        $effectiveStartTimeExpr = "COALESCE("
+            . "CASE WHEN is_postponed = true THEN postponed_start_time END, "
+            . "CASE WHEN duration_mode = 'range' THEN range_start_time END, "
+            . "start_time"
+            . ")";
 
         switch ($sort) {
             case 'date_desc':
