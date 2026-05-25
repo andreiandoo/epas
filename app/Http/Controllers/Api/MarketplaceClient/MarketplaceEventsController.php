@@ -408,13 +408,103 @@ class MarketplaceEventsController extends BaseController
                 break;
         }
 
-        // Pagination
-        $perPage = min((int) $request->input('per_page', 20), 100);
-        $events = $query->paginate($perPage);
+        // Pagination — smart, grouped by month.
+        // Each page contains ≥24 events AND ≥2 distinct months, with months
+        // never split across pages. Triggered only when no explicit per_page
+        // is requested AND the sort key is one of the date-based ones (so
+        // popularity / price / name still get standard paging).
+        $smartPagingSorts = ['date_asc', 'date_desc'];
+        $explicitPerPage = $request->filled('per_page');
+        $smartPaging = !$explicitPerPage && in_array($sort, $smartPagingSorts, true);
+
+        if ($smartPaging) {
+            $events = $this->paginateByMonth(
+                $query,
+                $effectiveDateExpr,
+                (int) $request->input('page', 1),
+                24,
+                2,
+                $sort === 'date_desc'
+            );
+        } else {
+            $perPage = min((int) $request->input('per_page', 20), 100);
+            $events = $query->paginate($perPage);
+        }
 
         return $this->paginated($events, function ($event) use ($language, $client) {
             return $this->formatEvent($event, $language, $client);
         });
+    }
+
+    /**
+     * Smart pagination grouped by calendar month of the effective event date.
+     * Pages keep months intact and contain at least $minPerPage events and
+     * $minMonths distinct months. The last page may fall short of those
+     * minimums (no more data to pad it).
+     */
+    protected function paginateByMonth(
+        $query,
+        string $effectiveDateExpr,
+        int $page,
+        int $minPerPage,
+        int $minMonths,
+        bool $descending = false,
+    ): \Illuminate\Pagination\LengthAwarePaginator {
+        // Snapshot the filtered query without any ordering for the month
+        // count pass. clone preserves WHERE clauses; reorder() drops the
+        // orderByRaw added above so GROUP BY can run cleanly.
+        $countQuery = (clone $query)->reorder();
+
+        $direction = $descending ? 'DESC' : 'ASC';
+        $monthBuckets = $countQuery
+            ->selectRaw("DATE_TRUNC('month', {$effectiveDateExpr}) as month_start, COUNT(*) as cnt")
+            ->groupByRaw("DATE_TRUNC('month', {$effectiveDateExpr})")
+            ->orderByRaw("DATE_TRUNC('month', {$effectiveDateExpr}) NULLS LAST")
+            ->get()
+            // Apply direction in PHP to keep NULL handling consistent across
+            // engines (Postgres NULLS LAST default differs by direction).
+            ->sortBy(fn ($r) => $r->month_start, SORT_REGULAR, $descending)
+            ->values();
+
+        // Walk buckets to compute per-page offset/limit ranges.
+        $pages = [];
+        $accum = ['offset' => 0, 'limit' => 0, 'months' => 0];
+        $cursorOffset = 0;
+        foreach ($monthBuckets as $bucket) {
+            $accum['limit'] += (int) $bucket->cnt;
+            $accum['months'] += 1;
+            if ($accum['limit'] >= $minPerPage && $accum['months'] >= $minMonths) {
+                $pages[] = $accum;
+                $cursorOffset += $accum['limit'];
+                $accum = ['offset' => $cursorOffset, 'limit' => 0, 'months' => 0];
+            }
+        }
+        if ($accum['limit'] > 0) {
+            $pages[] = $accum;
+        }
+
+        $totalEvents = (int) $monthBuckets->sum('cnt');
+        $totalPages = max(1, count($pages));
+        $clampedPage = max(1, min($page, $totalPages));
+        $pageDef = $pages[$clampedPage - 1] ?? ['offset' => 0, 'limit' => 0];
+
+        $items = $pageDef['limit'] > 0
+            ? $query->offset($pageDef['offset'])->limit($pageDef['limit'])->get()->all()
+            : [];
+
+        // Synthesize per_page so the standard paginator's lastPage()
+        // (ceil(total / per_page)) matches our actual page count.
+        $syntheticPerPage = $totalEvents > 0
+            ? (int) max(1, ceil($totalEvents / $totalPages))
+            : max(1, $minPerPage);
+
+        return new \Illuminate\Pagination\LengthAwarePaginator(
+            $items,
+            $totalEvents,
+            $syntheticPerPage,
+            $clampedPage,
+            ['path' => request()->url()]
+        );
     }
 
     /**
