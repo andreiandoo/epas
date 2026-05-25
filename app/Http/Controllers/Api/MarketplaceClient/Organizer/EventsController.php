@@ -2479,8 +2479,13 @@ class EventsController extends BaseController
             ->orderBy('created_at')
             ->get();
 
-        // Pre-cache User lookups for venue_owner_user_id resolution. Avoids
-        // N+1 queries when many POS operators exist for the event.
+        // Pre-cache User + TeamMember lookups for per-individual labels.
+        // Three possible meta keys captured on past + future orders:
+        //   - meta.team_member_id (organizer POS, set by OrdersController
+        //     from the Sanctum token name "team-member-{id}")
+        //   - meta.venue_owner_user_id (venue_owner POS — links to User)
+        //   - meta.sold_by (string label, fallback only)
+        // We bulk-fetch both tables once to avoid N+1 in the loop.
         $venueOwnerUserIds = $orders
             ->pluck('meta.venue_owner_user_id')
             ->filter()
@@ -2490,6 +2495,18 @@ class EventsController extends BaseController
         $userById = !empty($venueOwnerUserIds)
             ? \App\Models\User::whereIn('id', $venueOwnerUserIds)
                 ->get(['id', 'name', 'first_name', 'last_name', 'email'])
+                ->keyBy('id')
+            : collect();
+
+        $teamMemberIds = $orders
+            ->pluck('meta.team_member_id')
+            ->filter()
+            ->unique()
+            ->map(fn ($v) => (int) $v)
+            ->all();
+        $teamMemberById = !empty($teamMemberIds)
+            ? \App\Models\MarketplaceOrganizerTeamMember::whereIn('id', $teamMemberIds)
+                ->get(['id', 'name', 'email'])
                 ->keyBy('id')
             : collect();
 
@@ -2512,18 +2529,26 @@ class EventsController extends BaseController
             $soldBy = trim((string) ($meta['sold_by'] ?? ''));
             $source = $order->source ?? 'marketplace';
 
-            // Operator label resolution:
-            //   1. venue_owner_user_id from meta → look up real user name
-            //      (this is the only place per-individual data lives for
-            //      venue-owner POS sales).
-            //   2. meta.sold_by — set by both venue-owner POS ("Venue: X")
-            //      and organizer POS (whatever the mobile app sends).
-            //   3. fallback to "Online" for public marketplace orders.
+            // Operator label resolution (most specific → least specific):
+            //   1. meta.team_member_id (organizer POS) → look up team member
+            //      name in marketplace_organizer_team_members.
+            //   2. meta.venue_owner_user_id (venue-owner POS) → look up User.
+            //   3. meta.sold_by — whatever string the mobile app passed.
+            //   4. fallback "Online" for non-POS sales.
+            $teamMemberId = isset($meta['team_member_id'])
+                ? (int) $meta['team_member_id']
+                : null;
             $venueOwnerUserId = isset($meta['venue_owner_user_id'])
                 ? (int) $meta['venue_owner_user_id']
                 : null;
             $label = null;
-            if ($venueOwnerUserId && isset($userById[$venueOwnerUserId])) {
+            if ($teamMemberId && isset($teamMemberById[$teamMemberId])) {
+                $tm = $teamMemberById[$teamMemberId];
+                $tmName = trim((string) ($tm->name ?? ''));
+                if ($tmName === '') $tmName = (string) ($tm->email ?? '');
+                $label = $tmName !== '' ? $tmName : null;
+            }
+            if (!$label && $venueOwnerUserId && isset($userById[$venueOwnerUserId])) {
                 $u = $userById[$venueOwnerUserId];
                 $userName = trim(($u->first_name ?? '') . ' ' . ($u->last_name ?? ''));
                 if ($userName === '') $userName = $u->name ?? $u->email ?? '';

@@ -184,6 +184,39 @@ class OrdersController extends BaseController
             $isOnTop = in_array($commissionMode, ['on_top', 'added_on_top']) && $posSource !== 'pos_app';
             $total = $isOnTop ? $subtotal + $commissionAmount : $subtotal;
 
+            // POS operators authenticate with a Sanctum token named
+            // "team-member-{id}" (see Organizer/AuthController). Capture
+            // that id on the order so the staff report can later show who
+            // sold what — without requiring the mobile app to ship a new
+            // version that includes sold_by per individual.
+            $teamMemberId = null;
+            $teamMemberName = null;
+            try {
+                $tokenName = $request->user()?->currentAccessToken()?->name ?? '';
+                if (is_string($tokenName) && str_starts_with($tokenName, 'team-member-')) {
+                    $teamMemberId = (int) str_replace('team-member-', '', $tokenName);
+                    $teamMember = \App\Models\MarketplaceOrganizerTeamMember::find($teamMemberId);
+                    if ($teamMember) {
+                        $teamMemberName = $teamMember->name ?? $teamMember->email ?? null;
+                    } else {
+                        $teamMemberId = null;
+                    }
+                }
+            } catch (\Throwable $e) {
+                // Best-effort — never block the sale if token introspection fails.
+                $teamMemberId = null;
+            }
+
+            $orderMeta = [
+                'marketplace_client' => $client->name,
+                'ip_address' => $request->ip(),
+                'sold_by' => $request->input('sold_by'),
+            ];
+            if ($teamMemberId) {
+                $orderMeta['team_member_id'] = $teamMemberId;
+                $orderMeta['team_member_name'] = $teamMemberName;
+            }
+
             // Create order — disable activity logging and ticket sync inside this transaction
             // to avoid any side-effect queries that could abort the PostgreSQL transaction.
             // Insert order directly via DB to avoid all model events (OrderObserver,
@@ -207,11 +240,7 @@ class OrdersController extends BaseController
                 'customer_name' => $customer->first_name . ' ' . $customer->last_name,
                 'customer_phone' => $customer->phone,
                 'expires_at' => now()->addMinutes(15),
-                'meta' => json_encode([
-                    'marketplace_client' => $client->name,
-                    'ip_address' => $request->ip(),
-                    'sold_by' => $request->input('sold_by'),
-                ]),
+                'meta' => json_encode($orderMeta),
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
