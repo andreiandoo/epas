@@ -489,8 +489,13 @@ const AmbiletEventCard = {
             return AmbiletDataTransformer.normalizeEvent(apiEvent);
         }
 
-        // Fallback: basic normalization
-        const rawDate = apiEvent.starts_at || apiEvent.event_date || apiEvent.start_date || apiEvent.date;
+        // Fallback: basic normalization. Postponed events use postponed_date
+        // as primary so cards/listings show the new date rather than the
+        // original (often-stale) one. The badge logic below still surfaces
+        // the postponed status separately.
+        const rawDate = (apiEvent.is_postponed && apiEvent.postponed_date)
+            ? apiEvent.postponed_date
+            : (apiEvent.starts_at || apiEvent.event_date || apiEvent.start_date || apiEvent.date);
         const date = rawDate ? new Date(rawDate) : null;
 
         // Extract venue - handle both object format and flat fields

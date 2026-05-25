@@ -15,8 +15,14 @@ const AmbiletDataTransformer = {
     normalizeEvent(apiEvent) {
         if (!apiEvent) return null;
 
-        // Extract date - handle multiple field name variations
-        const rawDate = apiEvent.starts_at || apiEvent.event_date || apiEvent.start_date || apiEvent.date;
+        // Extract date - handle multiple field name variations.
+        // Postponed events: prefer postponed_date so listings/cards show the
+        // new date instead of the original (now stale) one. Falls back to the
+        // usual chain when not postponed or when postponed_date is missing.
+        const isPostponedRaw = !!apiEvent.is_postponed;
+        const rawDate = (isPostponedRaw && apiEvent.postponed_date)
+            ? apiEvent.postponed_date
+            : (apiEvent.starts_at || apiEvent.event_date || apiEvent.start_date || apiEvent.date);
         const eventDate = rawDate ? new Date(rawDate) : null;
 
         // Extract title - handle variations

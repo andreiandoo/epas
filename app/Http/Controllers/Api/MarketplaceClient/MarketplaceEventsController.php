@@ -356,9 +356,16 @@ class MarketplaceEventsController extends BaseController
         if ($sort === 'date') {
             $sort = $defaultSort;
         }
+        // Effective date for sorting: postponed events use postponed_date
+        // when set, so they sort alongside other future-dated events instead
+        // of stuck at their original (now-stale) date.
+        $effectiveDateExpr = "COALESCE(CASE WHEN is_postponed = true THEN postponed_date END, event_date)";
+        $effectiveStartTimeExpr = "COALESCE(CASE WHEN is_postponed = true THEN postponed_start_time END, start_time)";
+
         switch ($sort) {
             case 'date_desc':
-                $query->orderBy('event_date', 'desc')->orderBy('start_time', 'desc');
+                $query->orderByRaw("{$effectiveDateExpr} DESC")
+                      ->orderByRaw("{$effectiveStartTimeExpr} DESC");
                 break;
             case 'price_asc':
                 $query->orderByRaw('COALESCE((SELECT MIN(CASE WHEN sale_price_cents > 0 THEN sale_price_cents ELSE price_cents END) FROM ticket_types WHERE ticket_types.event_id = events.id AND ticket_types.status = ?), 999999999) ASC', ['active']);
@@ -373,7 +380,7 @@ class MarketplaceEventsController extends BaseController
                 $query->orderBy("title->{$language}", 'desc');
                 break;
             case 'popularity':
-                $query->orderBy('views_count', 'desc')->orderBy('event_date', 'asc');
+                $query->orderBy('views_count', 'desc')->orderByRaw("{$effectiveDateExpr} ASC");
                 break;
             case 'newest':
             case 'latest':
@@ -382,7 +389,8 @@ class MarketplaceEventsController extends BaseController
                 break;
             case 'date_asc':
             default:
-                $query->orderBy('event_date', 'asc')->orderBy('start_time', 'asc');
+                $query->orderByRaw("{$effectiveDateExpr} ASC")
+                      ->orderByRaw("{$effectiveStartTimeExpr} ASC");
                 break;
         }
 
@@ -2101,6 +2109,16 @@ class MarketplaceEventsController extends BaseController
             ->orWhere(function ($q2) use ($today) {
                 $q2->where('duration_mode', 'multi_day')
                     ->where('event_date', '>=', $today);
+            })
+            // Postponed events: always include when postponed_date is in the
+            // future, regardless of the (now-stale) original event_date. The
+            // original date is typically already past when an organizer
+            // postpones, so the standard date filters above would exclude
+            // the event from upcoming listings — but the event IS upcoming.
+            ->orWhere(function ($q2) use ($today) {
+                $q2->where('is_postponed', true)
+                    ->whereNotNull('postponed_date')
+                    ->where('postponed_date', '>=', $today);
             });
         });
     }

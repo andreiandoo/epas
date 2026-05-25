@@ -548,6 +548,20 @@ class Event extends Model
      */
     public function getEffectiveEndDatetime(): ?\Carbon\Carbon
     {
+        // Postponed events: the "effective" end is the new postponed date +
+        // postponed_end_time (or postponed_start_time as cutoff). This makes
+        // isPast()/isUpcoming()/MarkEndedEvents skip postponed events whose
+        // new date is still in the future, even if the original event_date
+        // is past.
+        if ($this->is_postponed && $this->postponed_date) {
+            $time = $this->postponed_end_time
+                ?? $this->postponed_start_time
+                ?? '23:59';
+            return \Carbon\Carbon::parse(
+                $this->postponed_date->format('Y-m-d') . ' ' . $time
+            );
+        }
+
         $endDate = $this->end_date;
         $endTime = match ($this->duration_mode) {
             'single_day' => $this->end_time,

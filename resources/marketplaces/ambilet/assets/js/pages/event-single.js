@@ -874,6 +874,19 @@ const EventPage = {
         const now = new Date();
         const durationMode = e.duration_mode || 'single_day';
 
+        // Postponed events are never "ended" while a new future date is set.
+        // The original date is already past in many real cases (operator
+        // postpones AFTER the original date had to be missed), but the event
+        // still exists at the new date — showing the "ended" banner would be
+        // wrong. The postponed banner already conveys the right state.
+        if (e.is_postponed && e.postponed_date) {
+            const postDateStr = e.postponed_date.length > 10
+                ? e.postponed_date
+                : e.postponed_date + 'T' + (e.postponed_end_time || e.postponed_start_time || '23:59');
+            const postDate = new Date(postDateStr);
+            if (!isNaN(postDate.getTime()) && postDate >= now) return false;
+        }
+
         // If ends_at is explicitly set, use it
         if (e.end_date) {
             const endDate = new Date(e.end_date);
@@ -1113,6 +1126,13 @@ const EventPage = {
             displayStartTime = selPerf.start_time || null;
             displayDoorsTime = selPerf.door_time || null;
         }
+        // Postponed events override times with the new postponed_start_time /
+        // postponed_door_time so the "Start: HH:MM" line stays consistent with
+        // the new date shown in the date pills above.
+        if (e.is_postponed && e.postponed_date) {
+            if (e.postponed_start_time) displayStartTime = e.postponed_start_time;
+            if (e.postponed_door_time) displayDoorsTime = e.postponed_door_time;
+        }
         document.getElementById(this.elements.eventTime).innerHTML = displayStartTime
             ? '<span class="text-muted">Start:</span> ' + displayStartTime : '';
         document.getElementById(this.elements.eventDoors).innerHTML = displayDoorsTime
@@ -1274,6 +1294,19 @@ const EventPage = {
                 }
             }
 
+            // Original date — extracted from the event's data BEFORE renderDate
+            // overrides the visible date pills with postponed_date. Used in the
+            // banner so attendees see "din data de X" → "now Y" context.
+            let originalDateText = '';
+            const originalDateRaw = e.start_date || e.date || e.range_start_date
+                || (e.multi_slots && e.multi_slots.length > 0 ? e.multi_slots[0].date : null);
+            if (originalDateRaw) {
+                const origDate = new Date(originalDateRaw);
+                if (!isNaN(origDate.getTime())) {
+                    originalDateText = origDate.getDate() + ' ' + months[origDate.getMonth()] + ' ' + origDate.getFullYear();
+                }
+            }
+
             alertHtml = `
                 <div id="event-status-alert" class="p-4 mb-6 border-l-4 border-orange-500 bg-orange-50 rounded-r-xl">
                     <div class="flex items-start gap-3">
@@ -1281,7 +1314,7 @@ const EventPage = {
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
                         </svg>
                         <div>
-                            <h3 class="font-bold text-orange-800">Eveniment amânat</h3>
+                            <h3 class="font-bold text-orange-800">Eveniment amânat${originalDateText ? ' din data de ' + originalDateText : ''}</h3>
                             ${e.postponed_reason ? '<div class="mt-1 text-sm text-orange-700 prose prose-sm prose-orange max-w-none">' + e.postponed_reason + '</div>' : ''}
                             ${newDateText ? '<p class="mt-2 text-sm font-semibold text-orange-800">Noua dată: ' + newDateText + '</p>' : '<p class="mt-2 text-sm text-orange-600">Noua dată va fi anunțată în curând.</p>'}
                         </div>
@@ -1320,6 +1353,22 @@ const EventPage = {
         const months = ['Ian', 'Feb', 'Mar', 'Apr', 'Mai', 'Iun', 'Iul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
         const weekdays = ['Duminica', 'Luni', 'Marti', 'Miercuri', 'Joi', 'Vineri', 'Sambata'];
         const durationMode = e.duration_mode || 'single_day';
+
+        // Postponed events: display the new date in the subtitle slot.
+        // The status banner above the title already shows the postponement
+        // notice with original-date context, so the date pills here just
+        // need to reflect the current/effective event date.
+        if (e.is_postponed && e.postponed_date) {
+            const newDate = new Date(e.postponed_date);
+            if (!isNaN(newDate.getTime())) {
+                document.getElementById(this.elements.eventDay).textContent = newDate.getDate();
+                document.getElementById(this.elements.eventMonth).textContent = months[newDate.getMonth()];
+                document.getElementById(this.elements.eventWeekday).textContent = weekdays[newDate.getDay()];
+                document.getElementById(this.elements.eventDateFull).textContent =
+                    newDate.getDate() + ' ' + months[newDate.getMonth()] + ' ' + newDate.getFullYear();
+                return;
+            }
+        }
 
         if (durationMode === 'range' && e.range_start_date && e.range_end_date) {
             // Festival/Range mode - show start and end dates
