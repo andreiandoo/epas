@@ -696,6 +696,11 @@ class Invitations extends Page
                             ],
                         ],
                     ]);
+
+                    // Keep the Invitatie ticket type's quota_sold in sync —
+                    // this flow bypasses checkout (no order is created) so
+                    // quota_sold isn't incremented automatically.
+                    $invitationTicketType->increment('quota_sold');
                 }
 
             } catch (\Exception $e) {

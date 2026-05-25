@@ -128,6 +128,10 @@ class BackfillInvitationTickets extends Command
                         ],
                     ],
                 ]);
+                // Keep the Invitatie ticket type's quota_sold in sync —
+                // invitation tickets don't go through checkout so quota_sold
+                // isn't incremented automatically.
+                $ticketType->increment('quota_sold');
                 $createdTickets++;
             }
         }

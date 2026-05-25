@@ -875,6 +875,15 @@ class InvitationsController extends BaseController
                         'seat_label' => $canonicalLabel,
                         'meta' => $ticketMeta,
                     ]);
+
+                    // Keep the Invitatie ticket type's quota_sold in lockstep
+                    // with the number of valid invitation tickets. The standard
+                    // sales path increments quota_sold during checkout; this
+                    // flow doesn't go through checkout so we have to do it
+                    // explicitly. Without this the staff report / Vânzări
+                    // dashboard read a stale quota_sold while the underlying
+                    // tickets table is correct, producing confusing counts.
+                    $invitationTicketType->increment('quota_sold');
                 }
 
                 $rendered++;
