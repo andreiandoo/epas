@@ -86,490 +86,613 @@ class ActivityResource extends Resource
     public static function form(Schema $schema): Schema
     {
         $marketplace = static::getMarketplaceClient();
+        $lang = $marketplace?->language ?? 'ro';
+
+        // Reused select option callbacks — keep the Detalii + Locație tabs lean.
+        $organizerOptions = fn () => MarketplaceOrganizer::where('marketplace_client_id', $marketplace?->id)
+            ->orderBy('name')
+            ->pluck('name', 'id')
+            ->toArray();
+
+        $venueOptions = fn () => Venue::where('marketplace_client_id', $marketplace?->id)
+            ->orderBy('id')
+            ->get()
+            ->mapWithKeys(fn ($v) => [
+                $v->id => ($v->getTranslation('name', 'ro') ?? $v->getTranslation('name', 'en') ?? 'Venue #'.$v->id)
+                    . ($v->city ? ' — '.$v->city : ''),
+            ])
+            ->toArray();
+
+        $cityOptions = fn () => MarketplaceCity::where('marketplace_client_id', $marketplace?->id)
+            ->orderBy('sort_order')
+            ->get()
+            ->mapWithKeys(fn ($c) => [$c->id => $c->name[$lang] ?? $c->name['en'] ?? $c->slug])
+            ->toArray();
+
+        $categoryOptions = fn () => MarketplaceCategory::where('marketplace_client_id', $marketplace?->id)
+            ->whereNull('parent_id')
+            ->orderBy('sort_order')
+            ->get()
+            ->mapWithKeys(fn ($c) => [$c->id => $c->name[$lang] ?? $c->name['en'] ?? $c->slug])
+            ->toArray();
+
+        $subcategoryOptions = function (\Filament\Schemas\Components\Utilities\Get $get) use ($marketplace, $lang) {
+            $parentId = $get('marketplace_category_id');
+            if (! $parentId) return [];
+            return MarketplaceCategory::where('marketplace_client_id', $marketplace?->id)
+                ->where('parent_id', $parentId)
+                ->orderBy('sort_order')
+                ->get()
+                ->mapWithKeys(fn ($c) => [$c->id => $c->name[$lang] ?? $c->name['en'] ?? $c->slug])
+                ->toArray();
+        };
 
         return $schema->schema([
             Forms\Components\Hidden::make('marketplace_client_id')
                 ->default($marketplace?->id),
 
-            // ============================================================
-            // 1. IDENTITATE + MEDIA
-            // ============================================================
-            SC\Section::make('Identitate')
-                ->description('Nume, slug, descrieri și imagini afișate pe pagina publică.')
-                ->schema([
-                    SC\Tabs::make('Title Translations')
-                        ->tabs([
-                            SC\Tabs\Tab::make('Română')
-                                ->schema([
-                                    Forms\Components\TextInput::make('title.ro')
-                                        ->label('Titlu (RO)')
-                                        ->required()
-                                        ->maxLength(190)
-                                        ->live(onBlur: true)
-                                        ->afterStateUpdated(function ($state, \Filament\Schemas\Components\Utilities\Set $set, \Filament\Schemas\Components\Utilities\Get $get) {
-                                            if ($state && ! $get('slug')) {
-                                                $set('slug', Str::slug($state));
-                                            }
-                                        }),
-                                    Forms\Components\TextInput::make('subtitle.ro')
-                                        ->label('Subtitlu (RO)')
-                                        ->maxLength(190),
-                                    Forms\Components\Textarea::make('short_description.ro')
-                                        ->label('Descriere scurtă (RO)')
-                                        ->rows(2)
-                                        ->maxLength(280),
-                                    Forms\Components\RichEditor::make('description.ro')
-                                        ->label('Descriere completă (RO)')
-                                        ->toolbarButtons(['bold', 'italic', 'link', 'h2', 'h3', 'bulletList', 'orderedList', 'blockquote', 'undo', 'redo'])
-                                        ->columnSpanFull(),
-                                ]),
-                            SC\Tabs\Tab::make('English')
-                                ->schema([
-                                    Forms\Components\TextInput::make('title.en')
-                                        ->label('Title (EN)')
-                                        ->maxLength(190),
-                                    Forms\Components\TextInput::make('subtitle.en')
-                                        ->label('Subtitle (EN)')
-                                        ->maxLength(190),
-                                    Forms\Components\Textarea::make('short_description.en')
-                                        ->label('Short description (EN)')
-                                        ->rows(2)
-                                        ->maxLength(280),
-                                    Forms\Components\RichEditor::make('description.en')
-                                        ->label('Description (EN)')
-                                        ->toolbarButtons(['bold', 'italic', 'link', 'h2', 'h3', 'bulletList', 'orderedList', 'blockquote', 'undo', 'redo'])
-                                        ->columnSpanFull(),
-                                ]),
-                        ])->columnSpanFull(),
+            SC\Grid::make(4)->schema([
 
-                    Forms\Components\TextInput::make('slug')
-                        ->label('Slug')
-                        ->required()
-                        ->maxLength(191)
-                        ->rule('alpha_dash')
-                        ->placeholder('auto-generate din titlu RO')
-                        ->helperText('Folosit în URL public: /activitate/{slug}'),
+                // ============================================================
+                // COLOANA STÂNGĂ (3/4) — TABS
+                // ============================================================
+                SC\Group::make()
+                    ->columnSpan(3)
+                    ->schema([
+                        SC\Tabs::make('ActivityTabs')
+                            ->persistTabInQueryString()
+                            ->tabs([
 
-                    Forms\Components\FileUpload::make('cover_image_url')
-                        ->label('Imagine de copertă')
-                        ->image()
-                        ->disk('public')
-                        ->directory('activities/covers')
-                        ->visibility('public'),
+                                // ====================================================
+                                // TAB 1: DETALII (titlu, slug, descrieri, media)
+                                // ====================================================
+                                SC\Tabs\Tab::make('Detalii')
+                                    ->key('detalii')
+                                    ->icon('heroicon-o-document-text')
+                                    ->schema([
+                                        SC\Section::make('Conținut text')
+                                            ->schema([
+                                                SC\Tabs::make('Text Translations')
+                                                    ->tabs([
+                                                        SC\Tabs\Tab::make('Română')
+                                                            ->schema([
+                                                                Forms\Components\TextInput::make('title.ro')
+                                                                    ->label('Titlu (RO)')
+                                                                    ->required()
+                                                                    ->maxLength(190)
+                                                                    ->live(onBlur: true)
+                                                                    ->afterStateUpdated(function ($state, \Filament\Schemas\Components\Utilities\Set $set, \Filament\Schemas\Components\Utilities\Get $get) {
+                                                                        if ($state && ! $get('slug')) {
+                                                                            $set('slug', Str::slug($state));
+                                                                        }
+                                                                    }),
+                                                                Forms\Components\TextInput::make('subtitle.ro')
+                                                                    ->label('Subtitlu (RO)')
+                                                                    ->maxLength(190),
+                                                                Forms\Components\Textarea::make('short_description.ro')
+                                                                    ->label('Descriere scurtă (RO)')
+                                                                    ->rows(2)
+                                                                    ->maxLength(280)
+                                                                    ->helperText('Apare în carduri de listing și în meta description.'),
+                                                                Forms\Components\RichEditor::make('description.ro')
+                                                                    ->label('Descriere completă (RO)')
+                                                                    ->toolbarButtons(['bold', 'italic', 'link', 'h2', 'h3', 'bulletList', 'orderedList', 'blockquote', 'undo', 'redo'])
+                                                                    ->columnSpanFull(),
+                                                            ]),
+                                                        SC\Tabs\Tab::make('English')
+                                                            ->schema([
+                                                                Forms\Components\TextInput::make('title.en')
+                                                                    ->label('Title (EN)')
+                                                                    ->maxLength(190),
+                                                                Forms\Components\TextInput::make('subtitle.en')
+                                                                    ->label('Subtitle (EN)')
+                                                                    ->maxLength(190),
+                                                                Forms\Components\Textarea::make('short_description.en')
+                                                                    ->label('Short description (EN)')
+                                                                    ->rows(2)
+                                                                    ->maxLength(280),
+                                                                Forms\Components\RichEditor::make('description.en')
+                                                                    ->label('Description (EN)')
+                                                                    ->toolbarButtons(['bold', 'italic', 'link', 'h2', 'h3', 'bulletList', 'orderedList', 'blockquote', 'undo', 'redo'])
+                                                                    ->columnSpanFull(),
+                                                            ]),
+                                                    ])
+                                                    ->columnSpanFull(),
 
-                    Forms\Components\FileUpload::make('hero_image_url')
-                        ->label('Imagine hero (pagină publică)')
-                        ->image()
-                        ->disk('public')
-                        ->directory('activities/heroes')
-                        ->visibility('public'),
+                                                Forms\Components\TextInput::make('slug')
+                                                    ->label('Slug')
+                                                    ->required()
+                                                    ->maxLength(191)
+                                                    ->rule('alpha_dash')
+                                                    ->placeholder('auto-generate din titlu RO')
+                                                    ->helperText('URL public: /activitate/{slug}')
+                                                    ->columnSpanFull(),
+                                            ])
+                                            ->columns(1),
 
-                    Forms\Components\TagsInput::make('gallery')
-                        ->label('Galerie (URL-uri imagini)')
-                        ->placeholder('https://...')
-                        ->columnSpanFull(),
-                ])
-                ->columns(2),
+                                        SC\Section::make('Media')
+                                            ->description('Imagini afișate pe pagina publică a activității.')
+                                            ->schema([
+                                                Forms\Components\FileUpload::make('cover_image_url')
+                                                    ->label('Imagine de copertă (card listing)')
+                                                    ->image()
+                                                    ->disk('public')
+                                                    ->directory('activities/covers')
+                                                    ->visibility('public'),
 
-            // ============================================================
-            // 2. LOCAȚIE + CATEGORIE
-            // ============================================================
-            SC\Section::make('Locație și categorie')
-                ->description('Unde se desfășoară activitatea și unde apare în meniurile publice.')
-                ->schema([
-                    Forms\Components\Select::make('marketplace_organizer_id')
-                        ->label('Organizator (locație)')
-                        ->options(function () use ($marketplace) {
-                            return MarketplaceOrganizer::where('marketplace_client_id', $marketplace?->id)
-                                ->orderBy('name')
-                                ->pluck('name', 'id')
-                                ->toArray();
-                        })
-                        ->searchable()
-                        ->preload(),
+                                                Forms\Components\FileUpload::make('hero_image_url')
+                                                    ->label('Imagine hero (pagina activității)')
+                                                    ->image()
+                                                    ->disk('public')
+                                                    ->directory('activities/heroes')
+                                                    ->visibility('public'),
 
-                    Forms\Components\Select::make('venue_id')
-                        ->label('Locație fizică (venue)')
-                        ->options(function () use ($marketplace) {
-                            return Venue::where('marketplace_client_id', $marketplace?->id)
-                                ->orderBy('id')
-                                ->get()
-                                ->mapWithKeys(fn ($v) => [
-                                    $v->id => ($v->getTranslation('name', 'ro') ?? $v->getTranslation('name', 'en') ?? 'Venue #'.$v->id)
-                                        . ($v->city ? ' — '.$v->city : ''),
-                                ])
-                                ->toArray();
-                        })
-                        ->searchable()
-                        ->preload(),
+                                                Forms\Components\TagsInput::make('gallery')
+                                                    ->label('Galerie (URL-uri imagini)')
+                                                    ->placeholder('https://...')
+                                                    ->columnSpanFull(),
+                                            ])
+                                            ->columns(2),
+                                    ]),
 
-                    Forms\Components\Select::make('marketplace_city_id')
-                        ->label('Oraș')
-                        ->options(function () use ($marketplace) {
-                            $lang = $marketplace?->language ?? 'ro';
-                            return MarketplaceCity::where('marketplace_client_id', $marketplace?->id)
-                                ->orderBy('sort_order')
-                                ->get()
-                                ->mapWithKeys(fn ($c) => [$c->id => $c->name[$lang] ?? $c->name['en'] ?? $c->slug])
-                                ->toArray();
-                        })
-                        ->searchable()
-                        ->preload(),
+                                // ====================================================
+                                // TAB 2: LOCAȚIE & CATEGORII
+                                // ====================================================
+                                SC\Tabs\Tab::make('Locație')
+                                    ->key('locatie')
+                                    ->icon('heroicon-o-map-pin')
+                                    ->schema([
+                                        SC\Section::make('Organizator & venue')
+                                            ->schema([
+                                                Forms\Components\Select::make('marketplace_organizer_id')
+                                                    ->label('Organizator (locație)')
+                                                    ->options($organizerOptions)
+                                                    ->searchable()
+                                                    ->preload(),
 
-                    Forms\Components\Select::make('marketplace_category_id')
-                        ->label('Categorie principală')
-                        ->options(function () use ($marketplace) {
-                            $lang = $marketplace?->language ?? 'ro';
-                            return MarketplaceCategory::where('marketplace_client_id', $marketplace?->id)
-                                ->whereNull('parent_id')
-                                ->orderBy('sort_order')
-                                ->get()
-                                ->mapWithKeys(fn ($c) => [$c->id => $c->name[$lang] ?? $c->name['en'] ?? $c->slug])
-                                ->toArray();
-                        })
-                        ->searchable()
-                        ->preload()
-                        ->live()
-                        ->afterStateUpdated(fn (\Filament\Schemas\Components\Utilities\Set $set) => $set('marketplace_subcategory_id', null)),
+                                                Forms\Components\Select::make('venue_id')
+                                                    ->label('Locație fizică (venue)')
+                                                    ->options($venueOptions)
+                                                    ->searchable()
+                                                    ->preload(),
+                                            ])
+                                            ->columns(2),
 
-                    Forms\Components\Select::make('marketplace_subcategory_id')
-                        ->label('Subcategorie')
-                        ->options(function (\Filament\Schemas\Components\Utilities\Get $get) use ($marketplace) {
-                            $parentId = $get('marketplace_category_id');
-                            if (! $parentId) {
-                                return [];
-                            }
-                            $lang = $marketplace?->language ?? 'ro';
-                            return MarketplaceCategory::where('marketplace_client_id', $marketplace?->id)
-                                ->where('parent_id', $parentId)
-                                ->orderBy('sort_order')
-                                ->get()
-                                ->mapWithKeys(fn ($c) => [$c->id => $c->name[$lang] ?? $c->name['en'] ?? $c->slug])
-                                ->toArray();
-                        })
-                        ->searchable(),
+                                        SC\Section::make('Geo & taxonomie')
+                                            ->schema([
+                                                Forms\Components\Select::make('marketplace_city_id')
+                                                    ->label('Oraș')
+                                                    ->options($cityOptions)
+                                                    ->searchable()
+                                                    ->preload(),
 
-                    Forms\Components\Textarea::make('meeting_point')
-                        ->label('Punct de întâlnire / instrucțiuni de acces')
-                        ->rows(2)
-                        ->placeholder('ex: Recepția mall-ului, etajul 2, lângă scara rulantă')
-                        ->columnSpanFull(),
-                ])
-                ->columns(2),
+                                                Forms\Components\Select::make('marketplace_category_id')
+                                                    ->label('Categorie principală')
+                                                    ->options($categoryOptions)
+                                                    ->searchable()
+                                                    ->preload()
+                                                    ->live()
+                                                    ->afterStateUpdated(fn (\Filament\Schemas\Components\Utilities\Set $set) => $set('marketplace_subcategory_id', null)),
 
-            // ============================================================
-            // 3. PROGRAM ȘI SLOTURI
-            // ============================================================
-            SC\Section::make('Program și sloturi')
-                ->description('Cum se generează sloturile rezervabile din program + durată + buffer.')
-                ->schema([
-                    Forms\Components\TextInput::make('duration_minutes')
-                        ->label('Durată sesiune (minute)')
-                        ->numeric()
-                        ->default(60)
-                        ->minValue(5)
-                        ->maxValue(1440)
-                        ->required()
-                        ->helperText('Cât durează o sesiune individuală.'),
+                                                Forms\Components\Select::make('marketplace_subcategory_id')
+                                                    ->label('Subcategorie')
+                                                    ->options($subcategoryOptions)
+                                                    ->searchable(),
 
-                    Forms\Components\TextInput::make('slot_interval_minutes')
-                        ->label('Interval între sloturi (minute)')
-                        ->numeric()
-                        ->default(60)
-                        ->minValue(5)
-                        ->maxValue(1440)
-                        ->required()
-                        ->helperText('La cât timp pornește următorul slot. Ex: 60 = slot la fiecare oră.'),
+                                                Forms\Components\Textarea::make('meeting_point')
+                                                    ->label('Punct de întâlnire')
+                                                    ->rows(3)
+                                                    ->placeholder('ex: Recepția mall-ului, etajul 2, lângă scara rulantă')
+                                                    ->columnSpanFull(),
+                                            ])
+                                            ->columns(3),
+                                    ]),
 
-                    Forms\Components\TextInput::make('buffer_minutes')
-                        ->label('Buffer între sesiuni (minute)')
-                        ->numeric()
-                        ->default(0)
-                        ->minValue(0)
-                        ->maxValue(120)
-                        ->helperText('Timp de curățenie/reset.'),
+                                // ====================================================
+                                // TAB 3: PROGRAM & SLOTURI
+                                // ====================================================
+                                SC\Tabs\Tab::make('Program')
+                                    ->key('program')
+                                    ->icon('heroicon-o-clock')
+                                    ->schema([
+                                        SC\Section::make('Slot-uri')
+                                            ->description('Cum se generează intervalele rezervabile din programul săptămânal.')
+                                            ->schema([
+                                                Forms\Components\TextInput::make('duration_minutes')
+                                                    ->label('Durată sesiune (min)')
+                                                    ->numeric()
+                                                    ->default(60)
+                                                    ->minValue(5)
+                                                    ->maxValue(1440)
+                                                    ->required(),
 
-                    Forms\Components\TextInput::make('capacity_per_slot')
-                        ->label('Capacitate per slot')
-                        ->numeric()
-                        ->default(1)
-                        ->minValue(1)
-                        ->maxValue(1000)
-                        ->required()
-                        ->helperText('Câți oameni încap în același slot.'),
+                                                Forms\Components\TextInput::make('slot_interval_minutes')
+                                                    ->label('Interval start slot-uri (min)')
+                                                    ->numeric()
+                                                    ->default(60)
+                                                    ->minValue(5)
+                                                    ->maxValue(1440)
+                                                    ->required()
+                                                    ->helperText('Ex: 60 = slot la fiecare oră.'),
 
-                    SC\Section::make('Program săptămânal')
-                        ->description('Adaugă intervale de funcționare. Mai multe intervale pe aceeași zi sunt OK (ex: 10-14 + 17-22).')
-                        ->schema([
-                            Forms\Components\Repeater::make('schedules')
-                                ->relationship()
-                                ->label(false)
-                                ->schema([
-                                    Forms\Components\Select::make('day_of_week')
-                                        ->label('Ziua')
-                                        ->options([
-                                            1 => 'Luni',
-                                            2 => 'Marți',
-                                            3 => 'Miercuri',
-                                            4 => 'Joi',
-                                            5 => 'Vineri',
-                                            6 => 'Sâmbătă',
-                                            7 => 'Duminică',
-                                        ])
-                                        ->required(),
-                                    Forms\Components\TimePicker::make('open_time')
-                                        ->label('Deschis')
-                                        ->seconds(false)
-                                        ->required(),
-                                    Forms\Components\TimePicker::make('close_time')
-                                        ->label('Închis')
-                                        ->seconds(false)
-                                        ->required(),
-                                    Forms\Components\Toggle::make('is_active')
-                                        ->label('Activ')
-                                        ->default(true)
-                                        ->inline(false),
-                                ])
-                                ->columns(4)
-                                ->reorderable(false)
-                                ->collapsible()
-                                ->itemLabel(function (array $state): ?string {
-                                    $days = [1 => 'Lu', 2 => 'Ma', 3 => 'Mi', 4 => 'Jo', 5 => 'Vi', 6 => 'Sâ', 7 => 'Du'];
-                                    $d = $state['day_of_week'] ?? null;
-                                    $open = $state['open_time'] ?? '';
-                                    $close = $state['close_time'] ?? '';
-                                    return $d ? ($days[$d] ?? '?') . " · {$open} – {$close}" : null;
-                                })
-                                ->addActionLabel('Adaugă interval'),
-                        ])
-                        ->columnSpanFull()
-                        ->columns(1),
+                                                Forms\Components\TextInput::make('buffer_minutes')
+                                                    ->label('Buffer între slot-uri (min)')
+                                                    ->numeric()
+                                                    ->default(0)
+                                                    ->minValue(0)
+                                                    ->maxValue(120),
 
-                    SC\Section::make('Excepții (zile speciale)')
-                        ->description('Override pentru sărbători, închideri ad-hoc, ore speciale.')
-                        ->collapsed()
-                        ->schema([
-                            Forms\Components\Repeater::make('scheduleExceptions')
-                                ->relationship()
-                                ->label(false)
-                                ->schema([
-                                    Forms\Components\DatePicker::make('exception_date')
-                                        ->label('Data')
-                                        ->required(),
-                                    Forms\Components\Toggle::make('is_closed')
-                                        ->label('Închis')
-                                        ->default(true)
-                                        ->live(),
-                                    Forms\Components\TimePicker::make('open_time')
-                                        ->label('Deschis (dacă nu e închis)')
-                                        ->seconds(false)
-                                        ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => ! $get('is_closed')),
-                                    Forms\Components\TimePicker::make('close_time')
-                                        ->label('Închis (dacă nu e închis)')
-                                        ->seconds(false)
-                                        ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => ! $get('is_closed')),
-                                    Forms\Components\TextInput::make('reason')
-                                        ->label('Motiv')
-                                        ->maxLength(190)
-                                        ->columnSpanFull(),
-                                ])
-                                ->columns(4)
-                                ->collapsible()
-                                ->itemLabel(function (array $state): ?string {
-                                    $date = $state['exception_date'] ?? null;
-                                    $closed = ! empty($state['is_closed']);
-                                    return $date ? "{$date} · " . ($closed ? 'închis' : 'program special') : null;
-                                })
-                                ->addActionLabel('Adaugă excepție'),
-                        ])
-                        ->columnSpanFull()
-                        ->columns(1),
-                ])
-                ->columns(4),
+                                                Forms\Components\TextInput::make('capacity_per_slot')
+                                                    ->label('Capacitate per slot')
+                                                    ->numeric()
+                                                    ->default(1)
+                                                    ->minValue(1)
+                                                    ->maxValue(1000)
+                                                    ->required(),
+                                            ])
+                                            ->columns(4),
 
-            // ============================================================
-            // 4. CONSTRAINTS REZERVARE
-            // ============================================================
-            SC\Section::make('Constraints rezervare')
-                ->description('Cât în avans poate rezerva un client.')
-                ->schema([
-                    Forms\Components\TextInput::make('min_participants')
-                        ->label('Minim participanți / rezervare')
-                        ->numeric()
-                        ->default(1)
-                        ->minValue(1),
+                                        SC\Section::make('Program săptămânal')
+                                            ->description('Adaugă intervale de funcționare. Mai multe intervale pe aceeași zi sunt OK (ex: 10-14 + 17-22).')
+                                            ->schema([
+                                                Forms\Components\Repeater::make('schedules')
+                                                    ->relationship()
+                                                    ->label(false)
+                                                    ->schema([
+                                                        Forms\Components\Select::make('day_of_week')
+                                                            ->label('Ziua')
+                                                            ->options([
+                                                                1 => 'Luni', 2 => 'Marți', 3 => 'Miercuri',
+                                                                4 => 'Joi', 5 => 'Vineri', 6 => 'Sâmbătă', 7 => 'Duminică',
+                                                            ])
+                                                            ->required(),
+                                                        Forms\Components\TimePicker::make('open_time')
+                                                            ->label('Deschis')
+                                                            ->seconds(false)
+                                                            ->required(),
+                                                        Forms\Components\TimePicker::make('close_time')
+                                                            ->label('Închis')
+                                                            ->seconds(false)
+                                                            ->required(),
+                                                        Forms\Components\Toggle::make('is_active')
+                                                            ->label('Activ')
+                                                            ->default(true)
+                                                            ->inline(false),
+                                                    ])
+                                                    ->columns(4)
+                                                    ->reorderable(false)
+                                                    ->collapsible()
+                                                    ->itemLabel(function (array $state): ?string {
+                                                        $days = [1 => 'Lu', 2 => 'Ma', 3 => 'Mi', 4 => 'Jo', 5 => 'Vi', 6 => 'Sâ', 7 => 'Du'];
+                                                        $d = $state['day_of_week'] ?? null;
+                                                        $open = $state['open_time'] ?? '';
+                                                        $close = $state['close_time'] ?? '';
+                                                        return $d ? ($days[$d] ?? '?') . " · {$open} – {$close}" : null;
+                                                    })
+                                                    ->addActionLabel('Adaugă interval'),
+                                            ])
+                                            ->columns(1),
 
-                    Forms\Components\TextInput::make('max_participants')
-                        ->label('Maxim participanți / rezervare')
-                        ->numeric()
-                        ->default(10)
-                        ->minValue(1),
+                                        SC\Section::make('Excepții (zile speciale)')
+                                            ->description('Override pentru sărbători, închideri ad-hoc, ore speciale.')
+                                            ->collapsed()
+                                            ->schema([
+                                                Forms\Components\Repeater::make('scheduleExceptions')
+                                                    ->relationship()
+                                                    ->label(false)
+                                                    ->schema([
+                                                        Forms\Components\DatePicker::make('exception_date')
+                                                            ->label('Data')
+                                                            ->required(),
+                                                        Forms\Components\Toggle::make('is_closed')
+                                                            ->label('Închis')
+                                                            ->default(true)
+                                                            ->live(),
+                                                        Forms\Components\TimePicker::make('open_time')
+                                                            ->label('Deschis (dacă nu e închis)')
+                                                            ->seconds(false)
+                                                            ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => ! $get('is_closed')),
+                                                        Forms\Components\TimePicker::make('close_time')
+                                                            ->label('Închis (dacă nu e închis)')
+                                                            ->seconds(false)
+                                                            ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => ! $get('is_closed')),
+                                                        Forms\Components\TextInput::make('reason')
+                                                            ->label('Motiv')
+                                                            ->maxLength(190)
+                                                            ->columnSpanFull(),
+                                                    ])
+                                                    ->columns(4)
+                                                    ->collapsible()
+                                                    ->itemLabel(function (array $state): ?string {
+                                                        $date = $state['exception_date'] ?? null;
+                                                        $closed = ! empty($state['is_closed']);
+                                                        return $date ? "{$date} · " . ($closed ? 'închis' : 'program special') : null;
+                                                    })
+                                                    ->addActionLabel('Adaugă excepție'),
+                                            ])
+                                            ->columns(1),
+                                    ]),
 
-                    Forms\Components\TextInput::make('booking_lead_time_hours')
-                        ->label('Timp minim înainte de slot (ore)')
-                        ->numeric()
-                        ->default(2)
-                        ->minValue(0)
-                        ->helperText('Ex: 2 = nu se poate rezerva cu mai puțin de 2 ore înainte.'),
+                                // ====================================================
+                                // TAB 4: REZERVARE & CONȚINUT
+                                // ====================================================
+                                SC\Tabs\Tab::make('Rezervare')
+                                    ->key('rezervare')
+                                    ->icon('heroicon-o-ticket')
+                                    ->schema([
+                                        SC\Section::make('Constraints rezervare')
+                                            ->schema([
+                                                Forms\Components\TextInput::make('min_participants')
+                                                    ->label('Minim participanți / rezervare')
+                                                    ->numeric()
+                                                    ->default(1)
+                                                    ->minValue(1),
 
-                    Forms\Components\TextInput::make('booking_max_advance_days')
-                        ->label('Maxim avans (zile)')
-                        ->numeric()
-                        ->default(60)
-                        ->minValue(1)
-                        ->helperText('Cât în avans se poate rezerva.'),
+                                                Forms\Components\TextInput::make('max_participants')
+                                                    ->label('Maxim participanți / rezervare')
+                                                    ->numeric()
+                                                    ->default(10)
+                                                    ->minValue(1),
 
-                    Forms\Components\Textarea::make('cancellation_policy')
-                        ->label('Politică de anulare')
-                        ->rows(3)
-                        ->placeholder('ex: Anularea cu minim 24h înainte aduce refund integral.')
-                        ->columnSpanFull(),
-                ])
-                ->columns(2),
+                                                Forms\Components\TextInput::make('booking_lead_time_hours')
+                                                    ->label('Timp minim înainte de slot (ore)')
+                                                    ->numeric()
+                                                    ->default(2)
+                                                    ->minValue(0)
+                                                    ->helperText('Ex: 2 = nu se poate rezerva cu mai puțin de 2h înainte.'),
 
-            // ============================================================
-            // 5. CONȚINUT SEO + FAQs
-            // ============================================================
-            SC\Section::make('Conținut SEO + FAQs')
-                ->description('Body editorial + întrebări frecvente. Apar pe pagina publică și în JSON-LD FAQPage.')
-                ->collapsed()
-                ->schema([
-                    SC\Tabs::make('SEO Body Translations')
-                        ->tabs([
-                            SC\Tabs\Tab::make('Română')
-                                ->schema([
-                                    Forms\Components\TextInput::make('seo_body_title.ro')
-                                        ->label('Titlu corp SEO (RO)')
-                                        ->maxLength(190),
-                                    Forms\Components\RichEditor::make('seo_body.ro')
-                                        ->label('Corp text (RO)')
-                                        ->toolbarButtons(['bold', 'italic', 'link', 'h2', 'h3', 'bulletList', 'orderedList', 'blockquote', 'undo', 'redo'])
-                                        ->columnSpanFull(),
-                                ]),
-                            SC\Tabs\Tab::make('English')
-                                ->schema([
-                                    Forms\Components\TextInput::make('seo_body_title.en')
-                                        ->label('SEO body title (EN)')
-                                        ->maxLength(190),
-                                    Forms\Components\RichEditor::make('seo_body.en')
-                                        ->label('Body (EN)')
-                                        ->toolbarButtons(['bold', 'italic', 'link', 'h2', 'h3', 'bulletList', 'orderedList', 'blockquote', 'undo', 'redo'])
-                                        ->columnSpanFull(),
-                                ]),
-                        ])->columnSpanFull(),
+                                                Forms\Components\TextInput::make('booking_max_advance_days')
+                                                    ->label('Maxim avans (zile)')
+                                                    ->numeric()
+                                                    ->default(60)
+                                                    ->minValue(1)
+                                                    ->helperText('Cât în avans se poate rezerva.'),
+                                            ])
+                                            ->columns(4),
 
-                    Forms\Components\Repeater::make('faqs')
-                        ->label('Întrebări frecvente')
-                        ->schema([
-                            Forms\Components\TextInput::make('q')
-                                ->label('Întrebare')
-                                ->required()
-                                ->maxLength(200),
-                            Forms\Components\Textarea::make('a')
-                                ->label('Răspuns')
-                                ->required()
-                                ->rows(3),
-                        ])
-                        ->columns(1)
-                        ->reorderable()
-                        ->collapsible()
-                        ->cloneable()
-                        ->itemLabel(fn (array $state): ?string => $state['q'] ?? null)
-                        ->addActionLabel('Adaugă întrebare')
-                        ->columnSpanFull(),
+                                        SC\Section::make('Conținut pagină')
+                                            ->schema([
+                                                Forms\Components\Textarea::make('cancellation_policy')
+                                                    ->label('Politică de anulare')
+                                                    ->rows(3)
+                                                    ->placeholder('ex: Anularea cu minim 24h înainte aduce refund integral.')
+                                                    ->columnSpanFull(),
 
-                    SC\Tabs::make('Meta SEO')
-                        ->tabs([
-                            SC\Tabs\Tab::make('Română')
-                                ->schema([
-                                    Forms\Components\TextInput::make('seo.title_ro')
-                                        ->label('Meta title (RO)')
-                                        ->maxLength(70),
-                                    Forms\Components\Textarea::make('seo.description_ro')
-                                        ->label('Meta description (RO)')
-                                        ->rows(2)
-                                        ->maxLength(160),
-                                ]),
-                            SC\Tabs\Tab::make('English')
-                                ->schema([
-                                    Forms\Components\TextInput::make('seo.title_en')
-                                        ->label('Meta title (EN)')
-                                        ->maxLength(70),
-                                    Forms\Components\Textarea::make('seo.description_en')
-                                        ->label('Meta description (EN)')
-                                        ->rows(2)
-                                        ->maxLength(160),
-                                ]),
-                        ])->columnSpanFull(),
-                ])
-                ->columns(1),
+                                                Forms\Components\TagsInput::make('included_items')
+                                                    ->label('Incluse')
+                                                    ->placeholder('Acces 60 min, instructor, băutură…')
+                                                    ->columnSpanFull(),
 
-            // ============================================================
-            // 6. FLAGS + AUDIENCE
-            // ============================================================
-            SC\Section::make('Flag-uri și audiență')
-                ->description('Caracteristici care alimentează filtrele de intenție și listing-urile featured.')
-                ->collapsed()
-                ->schema([
-                    Forms\Components\Toggle::make('is_published')
-                        ->label('Publicat')
-                        ->helperText('Doar activitățile publicate apar pe site.')
-                        ->default(false),
+                                                Forms\Components\TagsInput::make('not_included')
+                                                    ->label('Neincluse')
+                                                    ->placeholder('Transport, masă…')
+                                                    ->columnSpanFull(),
 
-                    Forms\Components\Toggle::make('is_featured')->label('Promovat'),
-                    Forms\Components\Toggle::make('is_homepage_featured')->label('Featured pe homepage'),
-                    Forms\Components\Toggle::make('is_category_featured')->label('Featured pe pagina de categorie'),
-                    Forms\Components\Toggle::make('is_city_featured')->label('Featured pe pagina de oraș'),
+                                                Forms\Components\TagsInput::make('requirements')
+                                                    ->label('Cerințe')
+                                                    ->placeholder('Minim 14 ani, pantofi sport…')
+                                                    ->columnSpanFull(),
+                                            ])
+                                            ->columns(1),
+                                    ]),
 
-                    Forms\Components\Toggle::make('is_indoor')->label('Indoor'),
-                    Forms\Components\Toggle::make('is_outdoor')->label('Outdoor'),
-                    Forms\Components\Toggle::make('is_kid_friendly')->label('Potrivit copiilor'),
-                    Forms\Components\Toggle::make('is_accessible')->label('Accesibil persoanelor cu dizabilități'),
-                    Forms\Components\Toggle::make('is_weather_sensitive')->label('Depinde de vreme'),
+                                // ====================================================
+                                // TAB 5: SEO + FAQ
+                                // ====================================================
+                                SC\Tabs\Tab::make('SEO')
+                                    ->key('seo')
+                                    ->icon('heroicon-o-magnifying-glass')
+                                    ->schema([
+                                        SC\Section::make('Meta SEO')
+                                            ->description('Apar în <title> și meta description pe pagina publică.')
+                                            ->schema([
+                                                SC\Tabs::make('Meta Translations')
+                                                    ->tabs([
+                                                        SC\Tabs\Tab::make('Română')
+                                                            ->schema([
+                                                                Forms\Components\TextInput::make('seo.title_ro')
+                                                                    ->label('Meta title (RO)')
+                                                                    ->maxLength(70),
+                                                                Forms\Components\Textarea::make('seo.description_ro')
+                                                                    ->label('Meta description (RO)')
+                                                                    ->rows(2)
+                                                                    ->maxLength(160),
+                                                            ]),
+                                                        SC\Tabs\Tab::make('English')
+                                                            ->schema([
+                                                                Forms\Components\TextInput::make('seo.title_en')
+                                                                    ->label('Meta title (EN)')
+                                                                    ->maxLength(70),
+                                                                Forms\Components\Textarea::make('seo.description_en')
+                                                                    ->label('Meta description (EN)')
+                                                                    ->rows(2)
+                                                                    ->maxLength(160),
+                                                            ]),
+                                                    ])
+                                                    ->columnSpanFull(),
+                                            ]),
 
-                    Forms\Components\TextInput::make('age_min')
-                        ->label('Vârsta minimă')
-                        ->numeric()
-                        ->minValue(0)
-                        ->maxValue(99),
-                    Forms\Components\TextInput::make('age_max')
-                        ->label('Vârsta maximă')
-                        ->numeric()
-                        ->minValue(0)
-                        ->maxValue(99),
+                                        SC\Section::make('Corp SEO (rich text)')
+                                            ->description('Body editorial afișat sub conținutul principal — inclus pentru SEO long-tail.')
+                                            ->collapsed()
+                                            ->schema([
+                                                SC\Tabs::make('SEO Body Translations')
+                                                    ->tabs([
+                                                        SC\Tabs\Tab::make('Română')
+                                                            ->schema([
+                                                                Forms\Components\TextInput::make('seo_body_title.ro')
+                                                                    ->label('Titlu corp (RO)')
+                                                                    ->maxLength(190),
+                                                                Forms\Components\RichEditor::make('seo_body.ro')
+                                                                    ->label('Corp text (RO)')
+                                                                    ->toolbarButtons(['bold', 'italic', 'link', 'h2', 'h3', 'bulletList', 'orderedList', 'blockquote', 'undo', 'redo'])
+                                                                    ->columnSpanFull(),
+                                                            ]),
+                                                        SC\Tabs\Tab::make('English')
+                                                            ->schema([
+                                                                Forms\Components\TextInput::make('seo_body_title.en')
+                                                                    ->label('Body title (EN)')
+                                                                    ->maxLength(190),
+                                                                Forms\Components\RichEditor::make('seo_body.en')
+                                                                    ->label('Body (EN)')
+                                                                    ->toolbarButtons(['bold', 'italic', 'link', 'h2', 'h3', 'bulletList', 'orderedList', 'blockquote', 'undo', 'redo'])
+                                                                    ->columnSpanFull(),
+                                                            ]),
+                                                    ])
+                                                    ->columnSpanFull(),
+                                            ]),
 
-                    Forms\Components\Select::make('difficulty_level')
-                        ->label('Dificultate')
-                        ->options([
-                            'easy' => 'Ușor',
-                            'medium' => 'Mediu',
-                            'hard' => 'Greu',
-                            'expert' => 'Expert',
-                        ])
-                        ->placeholder('—'),
+                                        SC\Section::make('Întrebări frecvente (FAQ)')
+                                            ->description('Apar pe pagină + emise ca FAQPage JSON-LD pentru rich SERP.')
+                                            ->schema([
+                                                Forms\Components\Repeater::make('faqs')
+                                                    ->label(false)
+                                                    ->schema([
+                                                        Forms\Components\TextInput::make('q')
+                                                            ->label('Întrebare')
+                                                            ->required()
+                                                            ->maxLength(200),
+                                                        Forms\Components\Textarea::make('a')
+                                                            ->label('Răspuns')
+                                                            ->required()
+                                                            ->rows(3),
+                                                    ])
+                                                    ->columns(1)
+                                                    ->reorderable()
+                                                    ->collapsible()
+                                                    ->cloneable()
+                                                    ->itemLabel(fn (array $state): ?string => $state['q'] ?? null)
+                                                    ->addActionLabel('Adaugă întrebare')
+                                                    ->columnSpanFull(),
+                                            ]),
+                                    ]),
 
-                    Forms\Components\TagsInput::make('languages_offered')
-                        ->label('Limbi disponibile')
-                        ->placeholder('ro, en, hu, de…')
-                        ->columnSpanFull(),
+                                // ====================================================
+                                // TAB 6: AUDIENȚĂ & FILTRE INTENȚIE
+                                // ====================================================
+                                SC\Tabs\Tab::make('Audiență')
+                                    ->key('audienta')
+                                    ->icon('heroicon-o-users')
+                                    ->schema([
+                                        SC\Section::make('Caracteristici activitate')
+                                            ->description('Alimentează filtrele de intenție pe pagini de oraș și categorie.')
+                                            ->schema([
+                                                Forms\Components\Toggle::make('is_indoor')->label('Indoor'),
+                                                Forms\Components\Toggle::make('is_outdoor')->label('Outdoor'),
+                                                Forms\Components\Toggle::make('is_kid_friendly')->label('Potrivit copiilor'),
+                                                Forms\Components\Toggle::make('is_accessible')->label('Accesibil dizabilități'),
+                                                Forms\Components\Toggle::make('is_weather_sensitive')->label('Depinde de vreme'),
+                                            ])
+                                            ->columns(5),
 
-                    Forms\Components\TagsInput::make('included_items')
-                        ->label('Incluse')
-                        ->placeholder('Acces 60 min, instructor, băutură…')
-                        ->columnSpanFull(),
+                                        SC\Section::make('Audiență & limbi')
+                                            ->schema([
+                                                Forms\Components\TextInput::make('age_min')
+                                                    ->label('Vârsta minimă')
+                                                    ->numeric()
+                                                    ->minValue(0)
+                                                    ->maxValue(99),
 
-                    Forms\Components\TagsInput::make('not_included')
-                        ->label('Neincluse')
-                        ->placeholder('Transport, masă…')
-                        ->columnSpanFull(),
+                                                Forms\Components\TextInput::make('age_max')
+                                                    ->label('Vârsta maximă')
+                                                    ->numeric()
+                                                    ->minValue(0)
+                                                    ->maxValue(99),
 
-                    Forms\Components\TagsInput::make('requirements')
-                        ->label('Cerințe')
-                        ->placeholder('Minim 14 ani, pantofi sport…')
-                        ->columnSpanFull(),
-                ])
-                ->columns(3),
-        ])->columns(1);
+                                                Forms\Components\Select::make('difficulty_level')
+                                                    ->label('Dificultate')
+                                                    ->options([
+                                                        'easy' => 'Ușor',
+                                                        'medium' => 'Mediu',
+                                                        'hard' => 'Greu',
+                                                        'expert' => 'Expert',
+                                                    ])
+                                                    ->placeholder('—'),
+
+                                                Forms\Components\TagsInput::make('languages_offered')
+                                                    ->label('Limbi disponibile')
+                                                    ->placeholder('ro, en, hu, de…')
+                                                    ->columnSpanFull(),
+                                            ])
+                                            ->columns(3),
+                                    ]),
+
+                            ]), // end Tabs
+                    ]), // end Group 3/4
+
+                // ============================================================
+                // COLOANA DREAPTĂ (1/4) — SIDEBAR STATUS + PROMOVARE
+                // ============================================================
+                SC\Group::make()
+                    ->columnSpan(1)
+                    ->schema([
+                        SC\Section::make('Status')
+                            ->schema([
+                                Forms\Components\Toggle::make('is_published')
+                                    ->label('Publicat')
+                                    ->helperText('Activitățile publicate apar pe site-ul public.')
+                                    ->onIcon('heroicon-m-eye')
+                                    ->offIcon('heroicon-m-eye-slash')
+                                    ->default(false),
+
+                                Forms\Components\Placeholder::make('status_badge')
+                                    ->hiddenLabel()
+                                    ->visible(fn (?\App\Models\Activity $record) => $record && $record->exists)
+                                    ->content(function (?\App\Models\Activity $record) {
+                                        if (! $record || ! $record->exists) return null;
+                                        if ($record->is_published) {
+                                            return new \Illuminate\Support\HtmlString(
+                                                '<span class="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-green-500/20 text-green-400 ring-1 ring-inset ring-green-500/30">●  LIVE</span>'
+                                            );
+                                        }
+                                        return new \Illuminate\Support\HtmlString(
+                                            '<span class="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-amber-500/20 text-amber-400 ring-1 ring-inset ring-amber-500/30">●  DRAFT</span>'
+                                        );
+                                    }),
+                            ])
+                            ->columns(1),
+
+                        SC\Section::make('Promovare')
+                            ->description('Cum apare în listing-uri.')
+                            ->schema([
+                                Forms\Components\Toggle::make('is_featured')
+                                    ->label('Promovat')
+                                    ->onIcon('heroicon-m-sparkles')
+                                    ->offIcon('heroicon-m-sparkles'),
+                                Forms\Components\Toggle::make('is_homepage_featured')->label('Pe homepage'),
+                                Forms\Components\Toggle::make('is_category_featured')->label('Pe pagina categoriei'),
+                                Forms\Components\Toggle::make('is_city_featured')->label('Pe pagina orașului'),
+                            ])
+                            ->collapsible()
+                            ->columns(1),
+
+                        SC\Section::make('Statistici')
+                            ->visible(fn (?\App\Models\Activity $record) => $record && $record->exists)
+                            ->schema([
+                                Forms\Components\Placeholder::make('cheapest_price_display')
+                                    ->label('De la')
+                                    ->content(fn (?\App\Models\Activity $record) => $record?->cheapest_price_cents
+                                        ? number_format($record->cheapest_price_cents / 100, 0, ',', '.') . ' lei'
+                                        : 'Adaugă variante de preț'),
+
+                                Forms\Components\Placeholder::make('views_display')
+                                    ->label('Vizualizări')
+                                    ->content(fn (?\App\Models\Activity $record) => number_format((int) ($record?->views_count ?? 0), 0, ',', '.')),
+
+                                Forms\Components\Placeholder::make('created_at_display')
+                                    ->label('Creat')
+                                    ->content(fn (?\App\Models\Activity $record) => $record?->created_at?->isoFormat('D MMM Y, HH:mm')),
+
+                                Forms\Components\Placeholder::make('updated_at_display')
+                                    ->label('Modificat')
+                                    ->content(fn (?\App\Models\Activity $record) => $record?->updated_at?->isoFormat('D MMM Y, HH:mm')),
+                            ])
+                            ->collapsible()
+                            ->columns(1),
+                    ]), // end Group 1/4
+
+            ]), // end Grid(4)
+        ]);
     }
 
     public static function table(Table $table): Table
