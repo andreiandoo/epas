@@ -1442,6 +1442,22 @@ Route::prefix('marketplace-client')->middleware(['throttle:120,1', 'marketplace.
     Route::get('/tours/{slug}', [\App\Http\Controllers\Api\MarketplaceClient\ToursController::class, 'show'])
         ->name('api.marketplace-client.tours.show');
 
+    // Activities (public): module gated per marketplace by `activities-module`
+    // microservice. Read endpoints return rows directly — marketplaces that
+    // haven't activated have no rows, so this is a no-op there. Write
+    // endpoints (booking creation) land in A5.
+    Route::get('/activities', [\App\Http\Controllers\Api\MarketplaceClient\ActivitiesController::class, 'index'])
+        ->name('api.marketplace-client.activities.index');
+    Route::get('/activities/{slug}', [\App\Http\Controllers\Api\MarketplaceClient\ActivitiesController::class, 'show'])
+        ->where('slug', '[a-z0-9-]+')
+        ->name('api.marketplace-client.activities.show');
+    Route::get('/activities/{slug}/slots', [\App\Http\Controllers\Api\MarketplaceClient\ActivitiesController::class, 'slots'])
+        ->where('slug', '[a-z0-9-]+')
+        ->name('api.marketplace-client.activities.slots');
+    Route::get('/activities/{slug}/available-dates', [\App\Http\Controllers\Api\MarketplaceClient\ActivitiesController::class, 'availableDates'])
+        ->where('slug', '[a-z0-9-]+')
+        ->name('api.marketplace-client.activities.available-dates');
+
     // List favorites
     Route::get("/customer/favorites/artists", [CustomerFavoritesController::class, "listArtists"])
         ->name("api.marketplace-client.favorites.artists");

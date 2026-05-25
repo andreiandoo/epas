@@ -21,6 +21,13 @@ RewriteRule ^bilete/([a-z0-9-]+)/?$ event.php?slug=$1 [L,QSA]
 # Legacy: redirect /event/slug to /bilete/slug
 RewriteRule ^event/([a-z0-9-]+)/?$ /bilete/$1 [R=301,L,QSA]
 
+# Activity detail pages — /activitate/{slug}. Distinct from /bilete (events).
+# Gated server-side by the API: marketplaces without `activities-module`
+# microservice active have no rows, so any slug returns 404 there.
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^activitate/([a-z0-9-]+)/?$ activitate.php?slug=$1 [L,QSA]
+
 # Category & city single-segment URLs.
 # Both `/escape-rooms` (category) and `/bucuresti` (city) match `^[a-z][a-z0-9-]+$`.
 # category.php is the resolver — it queries the API; if the slug matches a
