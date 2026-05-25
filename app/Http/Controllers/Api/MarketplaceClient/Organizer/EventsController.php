@@ -2683,10 +2683,42 @@ class EventsController extends BaseController
         // organizer wants to see top earners at a glance).
         usort($staff, fn ($a, $b) => $b['revenue'] <=> $a['revenue']);
 
-        // Backfill any of the event's ticket types that had zero sales so
-        // the overall table shows the full lineup. Otherwise organizers
-        // miss the fact that a tier sold nothing — which is exactly the
-        // info they need for next-event planning.
+        // Rebuild ticket_types_overall directly from the tickets table so
+        // it matches the marketplace dashboard's "Tip bilet" panel. The
+        // order-based aggregation above misses standalone invitations
+        // (created via InviteBatch without a marketplace order) and any
+        // other ticket emitted outside the standard checkout path. The
+        // staff-bucket breakdowns above are intentionally orders-based
+        // (only orders have a staff member), but the overall lineup
+        // should reflect total tickets in circulation.
+        $allTickets = \App\Models\Ticket::query()
+            ->where('event_id', $eventId)
+            ->whereIn('status', ['valid', 'used'])
+            ->with('ticketType:id,name')
+            ->get(['id', 'ticket_type_id', 'price', 'status']);
+
+        $ticketTypeTotals = [];
+        foreach ($allTickets as $t) {
+            $ttId = $t->ticket_type_id ?? 0;
+            $ttName = is_array($t->ticketType?->name)
+                ? ($t->ticketType->name['ro']
+                    ?? $t->ticketType->name['en']
+                    ?? reset($t->ticketType->name)
+                    ?? '—')
+                : ($t->ticketType?->name ?? '—');
+            if (!isset($ticketTypeTotals[$ttId])) {
+                $ticketTypeTotals[$ttId] = [
+                    'id' => $ttId,
+                    'name' => $ttName,
+                    'count' => 0,
+                    'amount' => 0.0,
+                ];
+            }
+            $ticketTypeTotals[$ttId]['count'] += 1;
+            $ticketTypeTotals[$ttId]['amount'] += (float) ($t->price ?? 0);
+        }
+        // Backfill ticket types that have zero tickets — keeps the full
+        // event lineup visible for planning.
         foreach ($event->ticketTypes as $tt) {
             if (isset($ticketTypeTotals[$tt->id])) continue;
             $name = is_array($tt->name)
