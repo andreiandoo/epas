@@ -76,12 +76,19 @@ $eventId = $_GET['event'] ?? null;
 
         <!-- Content -->
         <div id="content-state" class="hidden space-y-6">
+            <!-- Disclaimer banner -->
+            <div class="flex items-start gap-3 p-4 border bg-blue-50/60 border-blue-100 rounded-2xl">
+                <svg class="flex-none w-5 h-5 mt-0.5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <div class="text-xs leading-relaxed text-blue-900">
+                    Valorile din această pagină reprezintă <strong>încasările absolute</strong> per membru staff și per metodă de plată (cash POS, card POS, online). Din ele <strong>NU</strong> sunt scăzute comisioane, taxe, asigurări sau alte costuri. Pentru valori nete (după comision platformă, asigurări etc) consultă pagina <a href="/organizator/sold?event=<?= htmlspecialchars($eventId ?? '') ?>" class="font-semibold underline hover:text-blue-700">Vânzări</a>.
+                </div>
+            </div>
+
             <!-- Summary Cards -->
             <div class="grid grid-cols-2 gap-4 lg:grid-cols-5 report-section">
                 <div class="p-4 bg-white border border-gray-100 shadow-sm rounded-2xl">
                     <div class="text-xs font-medium text-gray-500 uppercase">Venituri din bilete</div>
                     <div id="sum-revenue" class="mt-1 text-2xl font-bold text-secondary">0 lei</div>
-                    <div class="mt-1 text-[10px] leading-tight text-gray-400">Fără asigurări / taxe online — vezi Vânzări pentru gross-ul total.</div>
                 </div>
                 <div class="p-4 bg-white border border-gray-100 shadow-sm rounded-2xl">
                     <div class="text-xs font-medium text-gray-500 uppercase">Bilete vândute</div>
@@ -114,7 +121,7 @@ $eventId = $_GET['event'] ?? null;
                                 <th class="px-6 py-3">Membru staff</th>
                                 <th class="px-3 py-3 text-right">Comenzi</th>
                                 <th class="px-3 py-3 text-right">Bilete</th>
-                                <th class="px-3 py-3 text-right">Cash</th>
+                                <th class="px-3 py-3 text-right">Cash POS</th>
                                 <th class="px-3 py-3 text-right">Card POS</th>
                                 <th class="px-3 py-3 text-right">Online</th>
                                 <th class="px-3 py-3 text-right">Total</th>
