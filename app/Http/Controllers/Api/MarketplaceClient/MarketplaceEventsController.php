@@ -410,12 +410,19 @@ class MarketplaceEventsController extends BaseController
 
         // Pagination — smart, grouped by month.
         // Each page contains ≥24 events AND ≥2 distinct months, with months
-        // never split across pages. Triggered only when no explicit per_page
-        // is requested AND the sort key is one of the date-based ones (so
-        // popularity / price / name still get standard paging).
+        // never split across pages. Triggered for any date-based sort
+        // (date_asc / date_desc) regardless of per_page — the existing
+        // frontend callers pass per_page=24 to mean "page size around 24",
+        // which smart paging already satisfies as its minimum. Popularity /
+        // price / name sorts keep standard paginate() since month grouping
+        // is meaningless for those orderings.
+        //
+        // Opt-out: pass `paging=flat` (or `flat_paging=1`) to force standard
+        // paginate() even for date sorts. API consumers that need a strict
+        // per_page contract use this.
         $smartPagingSorts = ['date_asc', 'date_desc'];
-        $explicitPerPage = $request->filled('per_page');
-        $smartPaging = !$explicitPerPage && in_array($sort, $smartPagingSorts, true);
+        $optOut = $request->input('paging') === 'flat' || $request->boolean('flat_paging');
+        $smartPaging = !$optOut && in_array($sort, $smartPagingSorts, true);
 
         if ($smartPaging) {
             $events = $this->paginateByMonth(
