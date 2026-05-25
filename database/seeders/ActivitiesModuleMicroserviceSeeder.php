@@ -84,7 +84,7 @@ class ActivitiesModuleMicroserviceSeeder extends Seeder
                     ],
                 ], JSON_UNESCAPED_UNICODE),
                 'category' => 'commerce',
-                'status' => 'beta',
+                'is_active' => true,
                 'metadata' => json_encode([
                     'endpoints' => [
                         'GET /api/marketplace/activities',
@@ -119,7 +119,7 @@ class ActivitiesModuleMicroserviceSeeder extends Seeder
             ]
         );
 
-        $this->command->info("✓ Activities Module microservice metadata seeded (slug: activities-module, status: beta)");
+        $this->command->info("✓ Activities Module microservice metadata seeded (slug: activities-module, is_active: true)");
         $this->command->line('  Activate per marketplace via /admin/microservices or the marketplace_client_microservices pivot.');
     }
 }
