@@ -1936,9 +1936,21 @@ const EventPage = {
         var self = this;
         var targetPrice = this.event.target_price ? parseFloat(this.event.target_price) : null;
 
-        // Check if event is cancelled, postponed, or sold out - disable all ticket purchasing
+        // Check if event is cancelled, postponed, or sold out - disable all ticket purchasing.
+        // Postponed events: a "postponement" only blocks sales when the new
+        // date isn't determined yet (or has already passed). When the
+        // organizer has set a future postponed_date, the event is just
+        // rescheduled — tickets must remain on sale, otherwise customers
+        // can't buy for the new date. The orange "Eveniment amânat din data
+        // de X" banner above the title already conveys the context.
         var eventIsCancelled = this.event.is_cancelled || false;
         var eventIsPostponed = this.event.is_postponed || false;
+        if (eventIsPostponed && this.event.postponed_date) {
+            var _pd = new Date(this.event.postponed_date);
+            if (!isNaN(_pd.getTime()) && _pd >= new Date()) {
+                eventIsPostponed = false;
+            }
+        }
         var eventIsSoldOut = this.event.is_sold_out || false;
         var eventDisabled = eventIsCancelled || eventIsPostponed || eventIsSoldOut;
 
