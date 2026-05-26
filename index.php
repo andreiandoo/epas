@@ -50,6 +50,27 @@ foreach ((is_array($rawActivities) ? $rawActivities : []) as $a) {
     ];
 }
 
+// Filter chips for "Experiențe de pus în calendar". Building them PHP-side
+// (rather than hardcoding) ensures slugs match what the cards actually
+// carry — otherwise filtering would silently fail. We only surface chips
+// for categories that actually have at least one card in $homeActivities,
+// so the user doesn't click a category and see empty results.
+$catSlugCountFromActivities = [];
+foreach ($homeActivities as $a) {
+    if (! empty($a['cat'])) {
+        $catSlugCountFromActivities[$a['cat']] = ($catSlugCountFromActivities[$a['cat']] ?? 0) + 1;
+    }
+}
+$homeFilterChips = [['v' => 'all', 'l' => 'Toate']];
+foreach ($homeCategories as $cat) {
+    $slug = ltrim($cat['url'] ?? '', '/');
+    if (! isset($catSlugCountFromActivities[$slug])) continue; // skip empty
+    $homeFilterChips[] = [
+        'v' => $slug,
+        'l' => $cat['t'] ?? $slug,
+    ];
+}
+
 // =========================================================================
 // SEO
 // =========================================================================
@@ -357,7 +378,7 @@ include __DIR__ . '/includes/header.php';
 
     <!-- filter chips bound to global store -->
     <div class="flex gap-2 overflow-x-auto no-bar pb-4 mb-8" role="tablist" aria-label="Filtrează după categorie">
-        <template x-for="f in [{v:'all',l:'Toate'},{v:'escape',l:'Escape rooms'},{v:'parc',l:'Parcuri distracții'},{v:'muzeu',l:'Muzee'},{v:'aventura',l:'Aventură'},{v:'acvariu',l:'Acvarii &amp; zoo'},{v:'atelier',l:'Ateliere'}]">
+        <template x-for='f in <?= json_encode($homeFilterChips, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>'>
             <button type="button" @click="$store.catalog.category=f.v" :aria-pressed="$store.catalog.category===f.v"
                     :class="$store.catalog.category===f.v ? 'bg-ink text-paper border-ink' : 'bg-transparent border-ink/20 hover:border-ink'"
                     class="shrink-0 px-4 py-2 rounded-full border-2 text-sm font-600 transition-colors duration-200" x-text="f.l"></button>

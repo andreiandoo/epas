@@ -113,7 +113,14 @@ $difficultyLabels = [
 
 // Bootstrap Alpine state.
 $bookingBootstrap = [
+    'activity_id'       => (int) ($activity['id'] ?? 0),
     'slug'              => $activity['slug'],
+    'title'             => $activity['title'] ?? '',
+    'cover_image'       => $activity['cover_image_url'] ?? ($activity['hero_image_url'] ?? null),
+    'venue_name'        => $activity['venue']['name']    ?? null,
+    'venue_city'        => $activity['city']['name']     ?? ($activity['venue']['city'] ?? null),
+    'organizer_id'      => (int) ($activity['organizer']['id'] ?? 0) ?: null,
+    'duration_minutes'  => (int) ($activity['duration_minutes'] ?? 0) ?: null,
     'variants'          => array_map(fn ($v) => [
         'id'             => $v['id'],
         'name'           => $v['name'],
@@ -822,7 +829,14 @@ function activityPage(bootstrap) {
     maxDate.setDate(maxDate.getDate() + (bootstrap.window.max_advance_days || 60));
 
     return {
+        activityId: bootstrap.activity_id,
         slug: bootstrap.slug,
+        title: bootstrap.title,
+        coverImage: bootstrap.cover_image,
+        venueName: bootstrap.venue_name,
+        venueCity: bootstrap.venue_city,
+        organizerId: bootstrap.organizer_id,
+        durationMinutes: bootstrap.duration_minutes,
         variants: bootstrap.variants,
         window: bootstrap.window,
         gallery: bootstrap.gallery || [],
@@ -915,8 +929,56 @@ function activityPage(bootstrap) {
         prevImage() { this.galleryIndex = (this.galleryIndex - 1 + this.gallery.length) % this.gallery.length; },
 
         submitBooking() {
-            // A5 wires this to the cart + checkout pipeline. Friendly placeholder for now.
-            alert('Rezervările online pentru activități vor fi disponibile în curând.\n\nData: ' + this.selectedDate + '\nSlot: ' + this.selectedSlot + '\nTotal: ' + this.money(this.totalCents));
+            if (! this.canSubmit) return;
+            if (typeof BileteOnlineCart === 'undefined' || typeof BileteOnlineCart.addActivityItem !== 'function') {
+                // Hard fallback if cart.js isn't loaded yet — page reload usually fixes this
+                alert('Coșul nu este încărcat. Reîncarcă pagina și încearcă din nou.');
+                return;
+            }
+
+            const slot = this.currentSlot;
+            if (! slot) return;
+
+            const activityData = {
+                id: this.activityId,
+                slug: this.slug,
+                title: this.title,
+                image: this.coverImage,
+                venue: this.venueName,
+                city: this.venueCity,
+                organizer_id: this.organizerId,
+                duration_minutes: this.durationMinutes,
+            };
+
+            // Push one cart line per variant that has at least one participant.
+            // Same (activity, slot, variant) → one cart line; counts roll up.
+            let pushed = 0;
+            for (const variant of this.variants) {
+                const qty = this.quantities[variant.id] || 0;
+                if (qty <= 0) continue;
+
+                BileteOnlineCart.addActivityItem(
+                    activityData,
+                    {
+                        id: variant.id,
+                        name: variant.name,
+                        price_cents: variant.price_cents,
+                        capacity_share: variant.capacity_share || 1,
+                    },
+                    {
+                        date: this.selectedDate,
+                        start_time: slot.start_time,
+                        end_time: slot.end_time,
+                    },
+                    qty
+                );
+                pushed++;
+            }
+
+            if (pushed === 0) return;
+
+            // Redirect to cart so the user can review + continue to checkout.
+            window.location.href = '/cos';
         },
     };
 }

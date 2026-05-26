@@ -92,10 +92,14 @@ $accentMap = [
                 <a @mouseenter="mega=false" href="/pentru-locatii" class="px-3 py-2 rounded-full hover:bg-ink/5 transition"<?= $currentPage === 'pentru-locatii' ? ' aria-current="page"' : '' ?>>Pentru locații</a>
 
                 <!-- ============ MEGA PANEL ============ -->
+                <!-- top-[5.5rem] = sits flush right below the nav row (top strip 2rem + nav 4rem - 0.5rem overlap)
+                     so mouse can move from "Explorează" into the panel without losing hover. Also captures
+                     mouseenter on the panel itself to keep `mega=true` while pointer is inside. -->
                 <div x-show="mega" x-cloak
+                     @mouseenter="mega=true"
                      x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 -translate-y-2" x-transition:enter-end="opacity-100 translate-y-0"
                      x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
-                     class="fixed left-1/2 -translate-x-1/2 top-24 w-[min(1080px,calc(100vw-2rem))] grain"
+                     class="fixed left-1/2 -translate-x-1/2 top-[5.5rem] pt-2 w-[min(1080px,calc(100vw-2rem))] grain"
                      role="menu" aria-label="Categorii și orașe">
                     <div class="bg-paper border-2 border-ink rounded-2xl shadow-mega overflow-hidden grid grid-cols-12">
 
