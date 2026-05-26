@@ -248,9 +248,15 @@ class ActivityResource extends Resource
                             fn (Builder $query) => $query->where('marketplace_client_id', $marketplace?->id)
                         )
                         ->getOptionLabelFromRecordUsing(function ($rec) use ($lang) {
-                            $title = is_array($rec->title)
+                            // Filament can hand us null here when the value stored in the
+                            // pivot points to an activity that no longer matches the
+                            // marketplace-scoped modifier closure (or was soft-deleted).
+                            // Without this guard we 500 on `$rec->title` access.
+                            if (! $rec) return null;
+
+                            $title = is_array($rec->title ?? null)
                                 ? ($rec->title[$lang] ?? $rec->title['en'] ?? $rec->slug)
-                                : (string) ($rec->title ?? $rec->slug);
+                                : (string) ($rec->title ?? $rec->slug ?? '');
                             $organizer = $rec->organizer?->name ?? null;
                             return $organizer ? "{$title} — {$organizer}" : $title;
                         })
