@@ -117,6 +117,14 @@ class ActivitiesController extends BaseController
                 'schedules',
                 'scheduleExceptions',
                 'variants' => fn ($q) => $q->where('is_active', true)->orderBy('sort_order'),
+                // Cross-sell — only published siblings + their basic display info.
+                // Capped at 6 in the controller transform; pulling more here is
+                // cheap (single JOIN) so we can decide cap downstream.
+                'relatedActivities' => fn ($q) => $q
+                    ->where('is_published', true)
+                    ->orderBy('activity_related.sort_order'),
+                'relatedActivities.city:id,name,slug',
+                'relatedActivities.category:id,name,slug,parent_id',
             ])
             ->first();
 
@@ -326,6 +334,27 @@ class ActivitiesController extends BaseController
                     'body'        => $this->translate($activity->seo_body, $locale),
                 ],
                 'faqs' => (array) ($activity->faqs ?? []),
+                // Cross-sell shortlist (capped at 6) for the "Other experiences" rail.
+                'related' => $activity->relatedActivities
+                    ->take(6)
+                    ->map(fn (Activity $rel) => [
+                        'id' => $rel->id,
+                        'slug' => $rel->slug,
+                        'title' => $this->translate($rel->title, $locale),
+                        'cover_image_url' => $this->resolveStorageUrl($rel->cover_image_url),
+                        'cheapest_price_cents' => $rel->cheapest_price_cents,
+                        'duration_minutes' => (int) $rel->duration_minutes,
+                        'city' => $rel->city ? [
+                            'slug' => $rel->city->slug,
+                            'name' => $this->translate($rel->city->name, $locale),
+                        ] : null,
+                        'category' => $rel->category ? [
+                            'slug' => $rel->category->slug,
+                            'name' => $this->translate($rel->category->name, $locale),
+                        ] : null,
+                    ])
+                    ->values()
+                    ->all(),
             ]
         );
     }

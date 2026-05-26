@@ -132,6 +132,11 @@ class AppServiceProvider extends ServiceProvider
         // misses a save (e.g. raw DB::update from a future bulk import).
         \App\Models\ActivityVariant::observe(\App\Observers\ActivityVariantObserver::class);
 
+        // Activity-level observer — auto-syncs Conexiuni siblings for activities
+        // sharing the same organizer (Conexiuni tab on the admin form). Only
+        // fires on create + on organizer change; manual links survive.
+        \App\Models\Activity::observe(\App\Observers\ActivityObserver::class);
+
         // Phase B series allocations — keep event_ticket_type_promo_series
         // in sync when promos are created/updated/deleted.
         \App\Models\MarketplaceOrganizerPromoCode::observe(

@@ -20,7 +20,7 @@ class CreateActivity extends CreateRecord
     protected function mutateFormDataBeforeCreate(array $data): array
     {
         $data['marketplace_client_id'] = static::getMarketplaceClient()?->id;
-        return $data;
+        return ActivityResource::autoFillSeo($data);
     }
 
     protected function getRedirectUrl(): string

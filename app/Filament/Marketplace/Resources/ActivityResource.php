@@ -21,6 +21,7 @@ use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 /**
@@ -99,6 +100,111 @@ class ActivityResource extends Resource
 
         return parent::getEloquentQuery()
             ->where('marketplace_client_id', $marketplace?->id);
+    }
+
+    /**
+     * Fill any empty SEO fields from the activity's Detalii + Locație values.
+     * Called from CreateActivity::mutateFormDataBeforeCreate and
+     * EditActivity::mutateFormDataBeforeSave — admin overrides survive
+     * because we only ever touch empty strings/null.
+     *
+     * FAQs are NEVER auto-populated (per task brief — keep them manual).
+     *
+     * Sources:
+     *   seo.title_{ro,en}        ← title.{ro,en} (+ " — bilete.online")
+     *   seo.description_{ro,en}  ← short_description.{ro,en} or fallback
+     *   seo_body_title.{ro,en}   ← "Despre {title}" / "About {title}"
+     *   seo_body.{ro,en}         ← short HTML built from title + city + organizer
+     */
+    public static function autoFillSeo(array $data): array
+    {
+        $titleRo = data_get($data, 'title.ro');
+        $titleEn = data_get($data, 'title.en');
+        $shortRo = data_get($data, 'short_description.ro');
+        $shortEn = data_get($data, 'short_description.en');
+
+        // Resolve city + organizer names for richer copy.
+        $cityName = null;
+        if ($cityId = $data['marketplace_city_id'] ?? null) {
+            $city = MarketplaceCity::find($cityId);
+            $cityName = $city ? ($city->name['ro'] ?? $city->name['en'] ?? null) : null;
+        }
+        $organizerName = null;
+        if ($orgId = $data['marketplace_organizer_id'] ?? null) {
+            $organizer = MarketplaceOrganizer::find($orgId);
+            $organizerName = $organizer?->name;
+        }
+
+        $seo = is_array($data['seo'] ?? null) ? $data['seo'] : [];
+
+        // Meta title — RO + EN. Pad with " — bilete.online" to fit ~60-70 chars.
+        if (empty($seo['title_ro']) && $titleRo) {
+            $seo['title_ro'] = mb_substr($titleRo . ($cityName ? ' în ' . $cityName : '') . ' — bilete.online', 0, 70);
+        }
+        if (empty($seo['title_en']) && $titleEn) {
+            $seo['title_en'] = mb_substr($titleEn . ($cityName ? ' in ' . $cityName : '') . ' — bilete.online', 0, 70);
+        }
+
+        // Meta description — use short_description as-is; fall back to a
+        // generic line built from title + city + organizer.
+        if (empty($seo['description_ro'])) {
+            $seo['description_ro'] = mb_substr(
+                $shortRo
+                    ?: trim(($titleRo ?? 'Activitate')
+                        . ($cityName ? ' în ' . $cityName : '')
+                        . ($organizerName ? ' organizată de ' . $organizerName : '')
+                        . '. Rezervă online cu QR instant.'),
+                0,
+                160
+            );
+        }
+        if (empty($seo['description_en'])) {
+            $seo['description_en'] = mb_substr(
+                $shortEn
+                    ?: trim(($titleEn ?? 'Activity')
+                        . ($cityName ? ' in ' . $cityName : '')
+                        . ($organizerName ? ' by ' . $organizerName : '')
+                        . '. Book online, instant QR ticket.'),
+                0,
+                160
+            );
+        }
+        $data['seo'] = $seo;
+
+        // SEO body title — translatable JSON.
+        $bodyTitle = is_array($data['seo_body_title'] ?? null) ? $data['seo_body_title'] : [];
+        if (empty($bodyTitle['ro']) && $titleRo) {
+            $bodyTitle['ro'] = 'Despre ' . $titleRo;
+        }
+        if (empty($bodyTitle['en']) && $titleEn) {
+            $bodyTitle['en'] = 'About ' . $titleEn;
+        }
+        $data['seo_body_title'] = $bodyTitle;
+
+        // SEO body — translatable JSON. Compose a short editorial paragraph
+        // from the structured fields. Admin can rewrite in the SEO tab.
+        $body = is_array($data['seo_body'] ?? null) ? $data['seo_body'] : [];
+        if (empty($body['ro']) && $titleRo) {
+            $parts = [];
+            $parts[] = '<p>' . e($titleRo) . ($cityName ? ' este o experiență disponibilă în ' . e($cityName) : '') . ($organizerName ? ', oferită de ' . e($organizerName) : '') . '.</p>';
+            if ($shortRo) {
+                $parts[] = '<p>' . e($shortRo) . '</p>';
+            }
+            $parts[] = '<p>Rezervă online — primești biletul cu QR pe email și în cont, gata de scanat la intrare.</p>';
+            $body['ro'] = implode('', $parts);
+        }
+        if (empty($body['en']) && $titleEn) {
+            $parts = [];
+            $parts[] = '<p>' . e($titleEn) . ($cityName ? ' is an experience available in ' . e($cityName) : '') . ($organizerName ? ', operated by ' . e($organizerName) : '') . '.</p>';
+            if ($shortEn) {
+                $parts[] = '<p>' . e($shortEn) . '</p>';
+            }
+            $parts[] = '<p>Book online — get a QR-coded ticket by email and in your account, ready to scan at the door.</p>';
+            $body['en'] = implode('', $parts);
+        }
+        $data['seo_body'] = $body;
+
+        return $data;
     }
 
     public static function form(Schema $schema): Schema
@@ -586,7 +692,287 @@ class ActivityResource extends Resource
                                     ]),
 
                                 // ====================================================
-                                // TAB 6: AUDIENȚĂ & FILTRE INTENȚIE
+                                // TAB 6: CONEXIUNI (cross-sell / upsell related activities)
+                                // ====================================================
+                                SC\Tabs\Tab::make('Conexiuni')
+                                    ->key('conexiuni')
+                                    ->icon('heroicon-o-link')
+                                    ->schema([
+                                        SC\Section::make('Activități conectate')
+                                            ->description('Apar ca recomandări pe pagina publică a activității (cross-sell / upsell). Activitățile aceluiași organizator se conectează automat. Poți adăuga și manual.')
+                                            ->visible(fn (?\App\Models\Activity $record) => $record && $record->exists)
+                                            ->schema([
+                                                Forms\Components\Select::make('relatedActivities')
+                                                    ->label('Activități')
+                                                    ->relationship(
+                                                        'relatedActivities',
+                                                        'slug',
+                                                        fn (Builder $q, ?\App\Models\Activity $record) => $q
+                                                            ->where('marketplace_client_id', $marketplace?->id)
+                                                            ->when($record, fn ($qq) => $qq->where('activities.id', '<>', $record->id))
+                                                    )
+                                                    ->getOptionLabelFromRecordUsing(function (Activity $rec) use ($lang) {
+                                                        $title = is_array($rec->title)
+                                                            ? ($rec->title[$lang] ?? $rec->title['en'] ?? $rec->slug)
+                                                            : (string) ($rec->title ?? $rec->slug);
+                                                        $organizer = $rec->organizer?->name;
+                                                        return $organizer ? "{$title} — {$organizer}" : $title;
+                                                    })
+                                                    ->multiple()
+                                                    ->preload()
+                                                    ->searchable()
+                                                    ->columnSpanFull()
+                                                    ->helperText('Activitățile sincronizate automat din organizator au sursa "auto" în pivot. Cele adăugate manual aici primesc "manual".')
+                                                    // Filament's default belongsToMany sync would replace all
+                                                    // rows on every save, wiping the `source` column metadata.
+                                                    // We override saveRelationshipsUsing to preserve auto rows
+                                                    // (those exist for a reason — observer-derived siblings),
+                                                    // only touch manual ones, and set source='manual' on any
+                                                    // newly selected ID. Bidirectional mirror is maintained.
+                                                    ->saveRelationshipsUsing(function ($component, $state) {
+                                                        /** @var \App\Models\Activity $record */
+                                                        $record = $component->getRecord();
+                                                        if (! $record) return;
+
+                                                        $selected = collect($state ?? [])->map(fn ($v) => (int) $v)->filter()->unique()->values();
+
+                                                        $existing = DB::table('activity_related')
+                                                            ->where('activity_id', $record->id)
+                                                            ->get()
+                                                            ->keyBy('related_activity_id');
+
+                                                        // Adds: any selected id not currently linked → insert as 'manual'.
+                                                        foreach ($selected as $relId) {
+                                                            if (! isset($existing[$relId])) {
+                                                                DB::table('activity_related')->insert([
+                                                                    'activity_id' => $record->id,
+                                                                    'related_activity_id' => $relId,
+                                                                    'source' => 'manual',
+                                                                    'sort_order' => 0,
+                                                                    'created_at' => now(),
+                                                                    'updated_at' => now(),
+                                                                ]);
+                                                                // Mirror back so the related activity also lists this one.
+                                                                DB::table('activity_related')->insertOrIgnore([[
+                                                                    'activity_id' => $relId,
+                                                                    'related_activity_id' => $record->id,
+                                                                    'source' => 'manual',
+                                                                    'sort_order' => 0,
+                                                                    'created_at' => now(),
+                                                                    'updated_at' => now(),
+                                                                ]]);
+                                                            }
+                                                        }
+
+                                                        // Removes: any existing link not in selection → delete.
+                                                        // (Note: this includes auto rows. If the admin removes an
+                                                        // auto sibling, observer won't put it back because observer
+                                                        // only fires on activity CREATE, not on edits like this.)
+                                                        foreach ($existing as $relId => $row) {
+                                                            if (! $selected->contains($relId)) {
+                                                                DB::table('activity_related')
+                                                                    ->where('activity_id', $record->id)
+                                                                    ->where('related_activity_id', $relId)
+                                                                    ->delete();
+                                                                DB::table('activity_related')
+                                                                    ->where('activity_id', $relId)
+                                                                    ->where('related_activity_id', $record->id)
+                                                                    ->delete();
+                                                            }
+                                                        }
+                                                    }),
+
+                                                Forms\Components\Placeholder::make('connections_legend')
+                                                    ->hiddenLabel()
+                                                    ->visible(fn (?\App\Models\Activity $record) => $record && $record->exists)
+                                                    ->content(function (?\App\Models\Activity $record) use ($lang) {
+                                                        if (! $record || ! $record->exists) return null;
+
+                                                        $rows = DB::table('activity_related')
+                                                            ->join('activities', 'activities.id', '=', 'activity_related.related_activity_id')
+                                                            ->where('activity_related.activity_id', $record->id)
+                                                            ->select('activities.id', 'activities.title', 'activities.slug', 'activity_related.source')
+                                                            ->orderBy('activity_related.sort_order')
+                                                            ->orderBy('activities.id')
+                                                            ->get();
+
+                                                        if ($rows->isEmpty()) {
+                                                            return new \Illuminate\Support\HtmlString('<p class="text-sm text-gray-500">Nicio conexiune încă. Adaugă activități organizatorului sau alege manual aici.</p>');
+                                                        }
+
+                                                        $html = '<div class="space-y-2">';
+                                                        foreach ($rows as $r) {
+                                                            $titleArr = is_string($r->title) ? json_decode($r->title, true) : (array) $r->title;
+                                                            $title = $titleArr[$lang] ?? $titleArr['en'] ?? $r->slug;
+                                                            $badgeClass = $r->source === 'auto'
+                                                                ? 'bg-sky-500/20 text-sky-400 ring-sky-500/30'
+                                                                : 'bg-emerald-500/20 text-emerald-400 ring-emerald-500/30';
+                                                            $badgeLabel = $r->source === 'auto' ? 'Auto' : 'Manual';
+                                                            $html .= '<div class="flex items-center gap-2 text-sm">' .
+                                                                '<span class="inline-flex items-center px-2 py-0.5 text-xs font-semibold rounded-full ring-1 ring-inset ' . $badgeClass . '">' . $badgeLabel . '</span>' .
+                                                                '<span class="font-medium">' . e($title) . '</span>' .
+                                                                '</div>';
+                                                        }
+                                                        $html .= '</div>';
+
+                                                        return new \Illuminate\Support\HtmlString($html);
+                                                    }),
+                                            ])
+                                            ->columns(1),
+
+                                        SC\Section::make('Activități conectate')
+                                            ->visible(fn (?\App\Models\Activity $record) => ! $record || ! $record->exists)
+                                            ->schema([
+                                                Forms\Components\Placeholder::make('save_first_for_connections')
+                                                    ->hiddenLabel()
+                                                    ->content(new \Illuminate\Support\HtmlString('<p class="text-sm text-gray-500">Salvează activitatea pentru a putea adăuga conexiuni.</p>')),
+                                            ]),
+                                    ]),
+
+                                // ====================================================
+                                // TAB 7: VÂNZĂRI (placeholder until A5 wires bookings)
+                                // ====================================================
+                                SC\Tabs\Tab::make('Vânzări')
+                                    ->key('vanzari')
+                                    ->icon('heroicon-o-chart-bar')
+                                    ->schema([
+                                        SC\Section::make('Sumar rezervări')
+                                            ->visible(fn (?\App\Models\Activity $record) => $record && $record->exists)
+                                            ->schema([
+                                                Forms\Components\Placeholder::make('sales_summary')
+                                                    ->hiddenLabel()
+                                                    ->content(function (?\App\Models\Activity $record) {
+                                                        if (! $record || ! $record->exists) return null;
+
+                                                        // Aggregate over activity_bookings — table exists from A1.
+                                                        // A5 will start populating it; until then we render an empty state.
+                                                        $stats = DB::table('activity_bookings')
+                                                            ->where('activity_id', $record->id)
+                                                            ->whereNull('deleted_at')
+                                                            ->selectRaw('
+                                                                COUNT(*) AS total_bookings,
+                                                                SUM(CASE WHEN status IN (\'paid\', \'confirmed\', \'checked_in\') THEN 1 ELSE 0 END) AS confirmed_bookings,
+                                                                SUM(CASE WHEN status = \'pending_payment\' THEN 1 ELSE 0 END) AS pending_bookings,
+                                                                SUM(CASE WHEN status = \'cancelled\' THEN 1 ELSE 0 END) AS cancelled_bookings,
+                                                                SUM(CASE WHEN status IN (\'paid\', \'confirmed\', \'checked_in\') THEN total_cents ELSE 0 END) AS revenue_cents,
+                                                                SUM(CASE WHEN status IN (\'paid\', \'confirmed\', \'checked_in\') THEN participants_count ELSE 0 END) AS total_participants
+                                                            ')
+                                                            ->first();
+
+                                                        $totalBookings = (int) ($stats->total_bookings ?? 0);
+                                                        $confirmedBookings = (int) ($stats->confirmed_bookings ?? 0);
+                                                        $pendingBookings = (int) ($stats->pending_bookings ?? 0);
+                                                        $cancelledBookings = (int) ($stats->cancelled_bookings ?? 0);
+                                                        $revenueCents = (int) ($stats->revenue_cents ?? 0);
+                                                        $totalParticipants = (int) ($stats->total_participants ?? 0);
+
+                                                        $revenueDisplay = number_format($revenueCents / 100, 0, ',', '.') . ' lei';
+
+                                                        $html = '<div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-2">';
+                                                        $tile = function (string $label, string $value, string $tone = 'primary') {
+                                                            $bg = match ($tone) {
+                                                                'success' => 'bg-success-500/10 text-success-400 ring-success-500/30',
+                                                                'warning' => 'bg-warning-500/10 text-warning-400 ring-warning-500/30',
+                                                                'danger'  => 'bg-danger-500/10 text-danger-400 ring-danger-500/30',
+                                                                default   => 'bg-primary-500/10 text-primary-400 ring-primary-500/30',
+                                                            };
+                                                            return '<div class="rounded-xl ring-1 ring-inset px-4 py-3 ' . $bg . '">' .
+                                                                '<p class="text-xs uppercase tracking-wider font-semibold opacity-75">' . e($label) . '</p>' .
+                                                                '<p class="mt-1 text-2xl font-bold">' . e($value) . '</p>' .
+                                                                '</div>';
+                                                        };
+
+                                                        $html .= $tile('Total rezervări', (string) $totalBookings);
+                                                        $html .= $tile('Confirmate', (string) $confirmedBookings, 'success');
+                                                        $html .= $tile('În așteptare', (string) $pendingBookings, 'warning');
+                                                        $html .= $tile('Anulate', (string) $cancelledBookings, 'danger');
+                                                        $html .= '</div>';
+
+                                                        $html .= '<div class="grid grid-cols-2 gap-3 mt-3">';
+                                                        $html .= $tile('Venit (confirmate)', $revenueDisplay, 'success');
+                                                        $html .= $tile('Participanți (confirmate)', (string) $totalParticipants);
+                                                        $html .= '</div>';
+
+                                                        if ($totalBookings === 0) {
+                                                            $html .= '<p class="mt-4 text-sm text-gray-500">Nu există rezervări încă. Vor apărea aici imediat ce clienții încep să rezerve.</p>';
+                                                        }
+
+                                                        return new \Illuminate\Support\HtmlString($html);
+                                                    }),
+                                            ]),
+
+                                        SC\Section::make('Ultimele rezervări')
+                                            ->visible(fn (?\App\Models\Activity $record) => $record && $record->exists)
+                                            ->collapsed()
+                                            ->schema([
+                                                Forms\Components\Placeholder::make('recent_bookings')
+                                                    ->hiddenLabel()
+                                                    ->content(function (?\App\Models\Activity $record) {
+                                                        if (! $record || ! $record->exists) return null;
+
+                                                        $rows = DB::table('activity_bookings')
+                                                            ->where('activity_id', $record->id)
+                                                            ->whereNull('deleted_at')
+                                                            ->orderByDesc('created_at')
+                                                            ->limit(20)
+                                                            ->get([
+                                                                'id', 'booking_date', 'slot_start_time', 'slot_end_time',
+                                                                'participants_count', 'status', 'total_cents', 'confirmation_code', 'created_at',
+                                                            ]);
+
+                                                        if ($rows->isEmpty()) {
+                                                            return new \Illuminate\Support\HtmlString('<p class="text-sm text-gray-500">Nicio rezervare încă.</p>');
+                                                        }
+
+                                                        $statusBadge = [
+                                                            'pending_payment' => '<span class="inline-flex px-2 py-0.5 text-xs font-semibold rounded-full bg-amber-500/20 text-amber-400 ring-1 ring-inset ring-amber-500/30">În plată</span>',
+                                                            'paid'            => '<span class="inline-flex px-2 py-0.5 text-xs font-semibold rounded-full bg-green-500/20 text-green-400 ring-1 ring-inset ring-green-500/30">Plătită</span>',
+                                                            'confirmed'       => '<span class="inline-flex px-2 py-0.5 text-xs font-semibold rounded-full bg-emerald-500/20 text-emerald-400 ring-1 ring-inset ring-emerald-500/30">Confirmată</span>',
+                                                            'cancelled'       => '<span class="inline-flex px-2 py-0.5 text-xs font-semibold rounded-full bg-rose-500/20 text-rose-400 ring-1 ring-inset ring-rose-500/30">Anulată</span>',
+                                                            'checked_in'     => '<span class="inline-flex px-2 py-0.5 text-xs font-semibold rounded-full bg-sky-500/20 text-sky-400 ring-1 ring-inset ring-sky-500/30">Check-in</span>',
+                                                            'no_show'        => '<span class="inline-flex px-2 py-0.5 text-xs font-semibold rounded-full bg-gray-500/20 text-gray-400 ring-1 ring-inset ring-gray-500/30">No-show</span>',
+                                                        ];
+
+                                                        $html = '<div class="overflow-x-auto"><table class="w-full text-sm"><thead class="text-xs uppercase tracking-wider opacity-60"><tr>' .
+                                                            '<th class="px-2 py-1 text-left">Cod</th>' .
+                                                            '<th class="px-2 py-1 text-left">Data slot</th>' .
+                                                            '<th class="px-2 py-1 text-left">Interval</th>' .
+                                                            '<th class="px-2 py-1 text-center">Persoane</th>' .
+                                                            '<th class="px-2 py-1 text-right">Total</th>' .
+                                                            '<th class="px-2 py-1 text-left">Status</th>' .
+                                                            '</tr></thead><tbody>';
+
+                                                        foreach ($rows as $r) {
+                                                            $dt = $r->booking_date instanceof \DateTimeInterface ? $r->booking_date->format('d.m.Y') : (string) $r->booking_date;
+                                                            $start = is_string($r->slot_start_time) ? substr($r->slot_start_time, 0, 5) : ($r->slot_start_time?->format('H:i') ?? '');
+                                                            $end = is_string($r->slot_end_time) ? substr($r->slot_end_time, 0, 5) : ($r->slot_end_time?->format('H:i') ?? '');
+                                                            $total = number_format(((int) $r->total_cents) / 100, 0, ',', '.') . ' lei';
+                                                            $html .= '<tr class="border-t border-gray-500/10">' .
+                                                                '<td class="px-2 py-2 font-mono text-xs">' . e($r->confirmation_code) . '</td>' .
+                                                                '<td class="px-2 py-2">' . e($dt) . '</td>' .
+                                                                '<td class="px-2 py-2 font-mono">' . e($start . '–' . $end) . '</td>' .
+                                                                '<td class="px-2 py-2 text-center">' . (int) $r->participants_count . '</td>' .
+                                                                '<td class="px-2 py-2 text-right font-semibold">' . e($total) . '</td>' .
+                                                                '<td class="px-2 py-2">' . ($statusBadge[$r->status] ?? e($r->status)) . '</td>' .
+                                                                '</tr>';
+                                                        }
+                                                        $html .= '</tbody></table></div>';
+
+                                                        return new \Illuminate\Support\HtmlString($html);
+                                                    }),
+                                            ]),
+
+                                        SC\Section::make('Vânzări')
+                                            ->visible(fn (?\App\Models\Activity $record) => ! $record || ! $record->exists)
+                                            ->schema([
+                                                Forms\Components\Placeholder::make('save_first_for_sales')
+                                                    ->hiddenLabel()
+                                                    ->content(new \Illuminate\Support\HtmlString('<p class="text-sm text-gray-500">Salvează activitatea pentru a vedea rezervările.</p>')),
+                                            ]),
+                                    ]),
+
+                                // ====================================================
+                                // TAB 8: AUDIENȚĂ & FILTRE INTENȚIE
                                 // ====================================================
                                 SC\Tabs\Tab::make('Audiență')
                                     ->key('audienta')
@@ -644,10 +1030,13 @@ class ActivityResource extends Resource
                 SC\Group::make()
                     ->columnSpan(1)
                     ->schema([
-                        // Preview button — opens the public /activitate/{slug} page in a new
-                        // tab. Hidden until the record is saved (we need a slug + a domain
-                        // resolved from the marketplace). Same Placeholder + HtmlString
-                        // pattern as EventResource's preview block for visual consistency.
+                        // Acțiuni — Preview + Delete grouped together. Preview opens the
+                        // public /activitate/{slug} in a new tab; Delete is moved here
+                        // from the page header so both actions are visible in the sticky
+                        // sidebar. Both rendered via Placeholder + HtmlString to stay in
+                        // sync with EventResource's preview pattern. Delete goes through
+                        // a confirm dialog (delete-record Livewire wire) so we don't
+                        // accidentally bypass Filament's existing UX.
                         SC\Section::make('Acțiuni')
                             ->visible(fn (?\App\Models\Activity $record) => $record && $record->exists)
                             ->schema([
@@ -674,6 +1063,34 @@ class ActivityResource extends Resource
                                             '</a>'
                                         );
                                     }),
+
+                                // Delete via embedded Filament action (uses the framework's
+                                // built-in confirm modal + record delete pipeline + redirect
+                                // to the list view). Visible only when the record exists.
+                                SC\Actions::make([
+                                    \Filament\Actions\Action::make('deleteActivity')
+                                        ->label('Șterge activitatea')
+                                        ->icon('heroicon-o-trash')
+                                        ->color('danger')
+                                        ->size('lg')
+                                        ->requiresConfirmation()
+                                        ->modalHeading('Șterge activitatea?')
+                                        ->modalDescription('Această acțiune este ireversibilă. Toate variantele, programul, excepțiile și rezervările asociate vor fi șterse împreună cu activitatea.')
+                                        ->modalSubmitActionLabel('Da, șterge')
+                                        ->action(function (?\App\Models\Activity $record) {
+                                            if ($record && $record->exists) {
+                                                $record->delete();
+                                            }
+
+                                            \Filament\Notifications\Notification::make()
+                                                ->title('Activitate ștearsă.')
+                                                ->success()
+                                                ->send();
+
+                                            redirect(ActivityResource::getUrl('index'));
+                                        }),
+                                ])
+                                    ->fullWidth(),
                             ])
                             ->columns(1),
 

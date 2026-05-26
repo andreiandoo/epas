@@ -6,6 +6,7 @@ use App\Support\Translatable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
@@ -222,6 +223,27 @@ class Activity extends Model
     public function bookings(): HasMany
     {
         return $this->hasMany(ActivityBooking::class);
+    }
+
+    /**
+     * Cross-sell / upsell connections shown on the public detail page.
+     *
+     * Auto + manual entries are stored in the same pivot, distinguished by
+     * `source`. The pivot is bidirectional — both A→B and B→A rows are
+     * stored separately so neither side has to union on read. The observer
+     * is responsible for keeping the directions in sync on insert.
+     */
+    public function relatedActivities(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            Activity::class,
+            'activity_related',
+            'activity_id',
+            'related_activity_id'
+        )
+            ->withPivot(['source', 'sort_order'])
+            ->withTimestamps()
+            ->orderBy('activity_related.sort_order');
     }
 
     // ============================================================
