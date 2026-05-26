@@ -1758,10 +1758,12 @@ class MarketplaceTaxTemplate extends Model
             }
             // Refunded tickets aggregate for the decont template (filling
             // section 2 — "Taxe pentru bilete returnate"). Sourced from
-            // MarketplaceRefundItem rows whose request actually paid out
-            // (refunded / partially_refunded), restricted to orders for
-            // this payout's event so deconts on multi-event marketplaces
-            // don't leak refunds across events.
+            // MarketplaceRefundItem rows attached to refund_requests that
+            // are EXPLICITLY LINKED to this payout via
+            // marketplace_refund_requests.marketplace_payout_id. Previously
+            // every event refund leaked into every payout's PDF — now each
+            // refund appears on AT MOST one decont (the one the operator
+            // assigned it to in the manual modal / edit-tickets action).
             $refundCount = 0;
             $refundFaceTotal = 0.0;
             $refundCommissionReturned = 0.0;
@@ -1770,10 +1772,7 @@ class MarketplaceTaxTemplate extends Model
                 $refundItems = \App\Models\MarketplaceRefundItem::query()
                     ->whereHas('refundRequest', function ($q) use ($payout) {
                         $q->whereIn('status', ['refunded', 'partially_refunded'])
-                          ->whereHas('order', function ($q2) use ($payout) {
-                              $q2->where(fn ($q3) => $q3->where('event_id', $payout->event_id)
-                                                          ->orWhere('marketplace_event_id', $payout->event_id));
-                          });
+                          ->where('marketplace_payout_id', $payout->id);
                     })
                     ->where('status', 'refunded')
                     ->get();

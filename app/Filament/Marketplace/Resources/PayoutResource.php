@@ -242,7 +242,10 @@ class PayoutResource extends Resource
                             ->icon('heroicon-o-document-text')
                             ->description(fn ($record) => 'Sumele de mai jos reflectă DOAR biletele incluse în decontul ' . ($record->reference ?? '#' . $record->id))
                             ->schema([
-                                // Header cards: Brut / Comision / Discount / Net for this payout
+                                // Header cards: Brut / Comision / (Discount+Extras) /
+                                // Refund / Net for this payout. Refund card is
+                                // only included when refund_amount > 0 to keep
+                                // the layout compact for the common case.
                                 Infolists\Components\TextEntry::make('this_payout_header')
                                     ->label('')
                                     ->getStateUsing(fn () => '—')
@@ -252,12 +255,23 @@ class PayoutResource extends Resource
                                         $com = (float) ($totals['online']['commission'] + $totals['pos']['commission']);
                                         $disc = (float) ($totals['online']['discount'] + $totals['pos']['discount']);
                                         $extras = (float) ($totals['online']['extras'] + $totals['pos']['extras']);
-                                        $net = (float) ($totals['online']['net'] + $totals['pos']['net']);
+                                        $ticketNet = (float) ($totals['online']['net'] + $totals['pos']['net']);
+                                        $refund = (float) ($record->refund_amount ?? 0);
+                                        $finalNet = $ticketNet - $refund;
 
                                         $fmt = fn ($v) => number_format($v, 2, ',', '.') . ' RON';
+                                        $hasRefund = $refund > 0.01;
+                                        $cols = $hasRefund ? 5 : 4;
+
+                                        $refundCard = $hasRefund
+                                            ? "<div style='padding:12px;border:1px solid #fecaca;border-radius:8px;background:#fff5f5;'>"
+                                                . "<div style='font-size:10px;color:#888;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;'>Rambursări incluse</div>"
+                                                . "<div style='font-size:16px;font-weight:700;color:#b91c1c;'>-{$fmt($refund)}</div>"
+                                                . "</div>"
+                                            : '';
 
                                         return new \Illuminate\Support\HtmlString("
-                                        <div style='display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:16px;'>
+                                        <div style='display:grid; grid-template-columns:repeat({$cols},1fr); gap:8px; margin-bottom:16px;'>
                                             <div style='padding:12px;border:1px solid #e5e7eb;border-radius:8px;background:#f9fafb;'>
                                                 <div style='font-size:10px;color:#888;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;'>Brut</div>
                                                 <div style='font-size:16px;font-weight:700;color:#1a1a2e;'>{$fmt($brut)}</div>
@@ -270,9 +284,10 @@ class PayoutResource extends Resource
                                                 <div style='font-size:10px;color:#888;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;'>Discount + Extras</div>
                                                 <div style='font-size:16px;font-weight:700;color:#92400e;'>-{$fmt($disc + $extras)}</div>
                                             </div>
+                                            {$refundCard}
                                             <div style='padding:12px;border:1px solid #059669;border-radius:8px;background:#f0fdf4;'>
-                                                <div style='font-size:10px;color:#059669;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;'>Net decont</div>
-                                                <div style='font-size:16px;font-weight:700;color:#059669;'>{$fmt($net)}</div>
+                                                <div style='font-size:10px;color:#059669;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;'>Net de plată</div>
+                                                <div style='font-size:16px;font-weight:700;color:#059669;'>{$fmt($finalNet)}</div>
                                             </div>
                                         </div>
                                         ");

@@ -28,6 +28,7 @@ class MarketplacePayout extends Model
         'gross_amount',
         'commission_amount',
         'discount_amount',
+        'refund_amount',
         'fees_amount',
         'adjustments_amount',
         'adjustments_note',
@@ -230,6 +231,7 @@ class MarketplacePayout extends Model
         'gross_amount' => 'decimal:2',
         'commission_amount' => 'decimal:2',
         'discount_amount' => 'decimal:2',
+        'refund_amount' => 'decimal:2',
         'fees_amount' => 'decimal:2',
         'adjustments_amount' => 'decimal:2',
         'period_start' => 'date',
@@ -303,6 +305,63 @@ class MarketplacePayout extends Model
     public function event(): BelongsTo
     {
         return $this->belongsTo(Event::class);
+    }
+
+    /**
+     * MarketplaceRefundRequests explicitly attached to THIS payout (the
+     * operator picked them in the manual modal / edit-tickets action).
+     * Each linked refund's amount is deducted from this payout's net,
+     * and the refund appears in this payout's PDF document instead of
+     * being treated as an unaccounted-for event-level deduction.
+     */
+    public function includedRefunds(): HasMany
+    {
+        return $this->hasMany(MarketplaceRefundRequest::class, 'marketplace_payout_id')
+            ->whereIn('status', [
+                MarketplaceRefundRequest::STATUS_REFUNDED,
+                MarketplaceRefundRequest::STATUS_PARTIALLY_REFUNDED,
+            ]);
+    }
+
+    /**
+     * Sync the set of refunds linked to this payout. Pass the FULL list of
+     * refund_request IDs that should be linked — anything currently linked
+     * but not in the list is unlinked (set to null), and anything in the
+     * list not yet linked is linked. Recomputes refund_amount from the
+     * face_value of the linked refund items.
+     *
+     * Returns the new refund_amount total so the caller can adjust
+     * payout.amount accordingly.
+     */
+    public function syncIncludedRefunds(array $refundIds): float
+    {
+        $refundIds = array_values(array_unique(array_filter(array_map('intval', $refundIds))));
+
+        // 1. Unlink refunds currently linked to this payout but no longer wanted.
+        MarketplaceRefundRequest::where('marketplace_payout_id', $this->id)
+            ->whereNotIn('id', $refundIds ?: [0])
+            ->update(['marketplace_payout_id' => null]);
+
+        // 2. Link the requested refunds to this payout. We deliberately allow
+        //    re-linking refunds that were attached to ANOTHER payout — the
+        //    operator may be redistributing. The other payout's refund_amount
+        //    becomes stale until its own syncIncludedRefunds runs.
+        if (!empty($refundIds)) {
+            MarketplaceRefundRequest::whereIn('id', $refundIds)
+                ->update(['marketplace_payout_id' => $this->id]);
+        }
+
+        // 3. Recompute refund_amount: sum of face_value across the linked
+        //    refund items (canonical per-ticket refund value).
+        $total = (float) MarketplaceRefundItem::query()
+            ->join('marketplace_refund_requests as rr', 'rr.id', '=', 'marketplace_refund_items.refund_request_id')
+            ->where('rr.marketplace_payout_id', $this->id)
+            ->where('marketplace_refund_items.status', 'refunded')
+            ->sum('marketplace_refund_items.face_value');
+
+        $this->update(['refund_amount' => round($total, 2)]);
+
+        return round($total, 2);
     }
 
     public function invoice(): \Illuminate\Database\Eloquent\Relations\HasOne

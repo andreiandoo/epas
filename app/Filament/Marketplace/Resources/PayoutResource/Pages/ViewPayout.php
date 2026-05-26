@@ -165,9 +165,15 @@ class ViewPayout extends ViewRecord
                         ->values()
                         ->all();
 
+                    // Refunds already linked to this payout — pre-checked.
+                    $linkedRefundIds = \App\Models\MarketplaceRefundRequest::where('marketplace_payout_id', $this->record->id)
+                        ->pluck('id')
+                        ->all();
+
                     return [
                         'payout_tickets' => $rows,
                         'net_amount' => (float) $this->record->amount,
+                        'included_refund_ids' => $linkedRefundIds,
                     ];
                 })
                 ->form([
@@ -266,11 +272,59 @@ class ViewPayout extends ViewRecord
                         ->live()
                         ->columnSpanFull(),
 
+                    // Refund picker — operator chooses which refunds for this
+                    // event are accounted for IN this payout. Selected refund
+                    // amounts are deducted from the payout's net (visible in
+                    // the live preview) and the refunds appear in this payout's
+                    // PDF document. Available refunds = event refunds in
+                    // refunded/partially_refunded status that aren't linked
+                    // to ANOTHER payout (currently linked to this one or to
+                    // nothing — operator can re-toggle freely).
+                    \Filament\Forms\Components\CheckboxList::make('included_refund_ids')
+                        ->label('Rambursări incluse în acest decont')
+                        ->helperText('Bifează rambursările care intră în decontul curent — valoarea lor se scade din suma de plată și apar în documentul PDF.')
+                        ->options(function () {
+                            $event = $this->record->event;
+                            if (!$event) return [];
+
+                            return \App\Models\MarketplaceRefundRequest::query()
+                                ->whereIn('status', [
+                                    \App\Models\MarketplaceRefundRequest::STATUS_REFUNDED,
+                                    \App\Models\MarketplaceRefundRequest::STATUS_PARTIALLY_REFUNDED,
+                                ])
+                                ->where(function ($q) use ($event) {
+                                    $q->whereHas('order', function ($q2) use ($event) {
+                                        $q2->where('event_id', $event->id)
+                                            ->orWhere('marketplace_event_id', $event->id);
+                                    });
+                                })
+                                ->where(function ($q) {
+                                    // Show refunds that are unlinked OR already on this payout.
+                                    $q->whereNull('marketplace_payout_id')
+                                        ->orWhere('marketplace_payout_id', $this->record->id);
+                                })
+                                ->orderByDesc('completed_at')
+                                ->get(['id', 'reference', 'approved_amount', 'completed_at'])
+                                ->mapWithKeys(fn ($r) => [
+                                    $r->id => sprintf(
+                                        '%s · %s RON · %s',
+                                        $r->reference,
+                                        number_format((float) $r->approved_amount, 2),
+                                        $r->completed_at?->format('d.m.Y') ?? '—'
+                                    ),
+                                ])
+                                ->all();
+                        })
+                        ->live()
+                        ->columns(1)
+                        ->bulkToggleable()
+                        ->columnSpanFull(),
+
                     // Live preview — re-renders whenever payout_tickets state
-                    // changes (the repeater is live, so any qty edit refreshes
-                    // this placeholder). Shows running totals against the
-                    // desired net so the operator confirms the scaling worked
-                    // before submitting.
+                    // OR included_refund_ids change. Shows ticket totals,
+                    // refund deduction, and the final amount paid to the
+                    // organizer (ticket_net − refund_deduction) compared
+                    // against the desired net.
                     \Filament\Forms\Components\Placeholder::make('live_preview')
                         ->label('')
                         ->content(function (\Filament\Schemas\Components\Utilities\Get $get) {
@@ -289,24 +343,45 @@ class ViewPayout extends ViewRecord
                                 $gross += $qty * $unit + ($isOnTop ? $qty * $commPer : 0);
                                 $commission += $qty * $commPer;
                             }
-                            $net = $gross - $commission;
+                            $ticketNet = $gross - $commission;
 
-                            $diff = $targetNet - $net;
+                            $refundIds = $get('included_refund_ids') ?? [];
+                            $refundIds = is_array($refundIds) ? array_values(array_filter($refundIds)) : [];
+                            $refundCount = count($refundIds);
+                            $refundTotal = 0.0;
+                            if (!empty($refundIds)) {
+                                $refundTotal = (float) \App\Models\MarketplaceRefundItem::query()
+                                    ->whereIn('refund_request_id', $refundIds)
+                                    ->where('status', 'refunded')
+                                    ->sum('face_value');
+                            }
+
+                            $finalNet = $ticketNet - $refundTotal;
+                            $diff = $targetNet - $finalNet;
                             $diffSign = $diff > 0.01 ? '+' : ($diff < -0.01 ? '' : '');
                             $diffColor = abs($diff) < 0.5 ? '#059669' : '#d97706';
                             $diffLabel = abs($diff) < 0.5
                                 ? '✓ identic cu Sumă netă dorită'
                                 : "{$diffSign}" . number_format($diff, 2) . ' RON față de Sumă netă dorită (' . number_format($targetNet, 2) . ' RON)';
 
+                            $refundLine = $refundCount > 0
+                                ? '<div style="margin-top:6px;padding-top:6px;border-top:1px dashed #93c5fd;display:grid;grid-template-columns:repeat(4,1fr);gap:8px;">'
+                                    . '<div><div style="font-size:10px;color:#666;">Net bilete</div><div style="font-family:monospace;font-weight:600;">' . number_format($ticketNet, 2) . ' RON</div></div>'
+                                    . '<div><div style="font-size:10px;color:#666;">Rambursări (' . $refundCount . ')</div><div style="font-family:monospace;font-weight:600;color:#b91c1c;">-' . number_format($refundTotal, 2) . ' RON</div></div>'
+                                    . '<div style="grid-column:span 2 / span 2;"><div style="font-size:10px;color:#059669;text-transform:uppercase;">Final de plată</div><div style="font-family:monospace;font-weight:700;font-size:16px;color:#059669;">' . number_format($finalNet, 2) . ' RON</div></div>'
+                                    . '</div>'
+                                : '';
+
                             return new \Illuminate\Support\HtmlString(
                                 '<div style="padding:12px;border:2px solid #3b82f6;border-radius:8px;background:#eff6ff;margin-top:8px;">'
-                                . '<div style="font-size:10px;color:#1e40af;text-transform:uppercase;font-weight:600;margin-bottom:6px;">Preview live (din cantitățile de mai sus)</div>'
+                                . '<div style="font-size:10px;color:#1e40af;text-transform:uppercase;font-weight:600;margin-bottom:6px;">Preview live</div>'
                                 . '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;">'
                                 . '<div><div style="font-size:10px;color:#666;">Total bilete</div><div style="font-family:monospace;font-weight:600;">' . $totalQty . '</div></div>'
                                 . '<div><div style="font-size:10px;color:#666;">Brut</div><div style="font-family:monospace;font-weight:600;">' . number_format($gross, 2) . ' RON</div></div>'
                                 . '<div><div style="font-size:10px;color:#666;">Comision</div><div style="font-family:monospace;font-weight:600;color:#b91c1c;">-' . number_format($commission, 2) . ' RON</div></div>'
-                                . '<div><div style="font-size:10px;color:#666;">Net</div><div style="font-family:monospace;font-weight:700;color:#059669;">' . number_format($net, 2) . ' RON</div></div>'
+                                . '<div><div style="font-size:10px;color:#666;">Net bilete</div><div style="font-family:monospace;font-weight:700;color:' . ($refundCount > 0 ? '#374151' : '#059669') . ';">' . number_format($ticketNet, 2) . ' RON</div></div>'
                                 . '</div>'
+                                . $refundLine
                                 . '<div style="margin-top:6px;font-size:11px;color:' . $diffColor . ';font-weight:500;">' . $diffLabel . '</div>'
                                 . '</div>'
                             );
@@ -323,16 +398,33 @@ class ViewPayout extends ViewRecord
 
                     $payoutTickets = $data['payout_tickets'] ?? [];
                     $enteredNet = (float) ($data['net_amount'] ?? 0);
+                    $includedRefundIds = is_array($data['included_refund_ids'] ?? null) ? $data['included_refund_ids'] : [];
 
                     if (empty($payoutTickets)) {
                         Notification::make()->title('Lista de bilete goală')->body('Adaugă cel puțin un rând cu qty > 0.')->warning()->send();
                         return;
                     }
 
+                    // The interpretation of "Sumă netă dorită" when refunds
+                    // are selected: it's the FINAL net (after refund
+                    // deduction). So the ticket-only target = entered + refund_total.
+                    // Without this adjustment, the proportional scaler would
+                    // overshoot — it would drop ticket qtys to hit
+                    // enteredNet from ticket_net alone, then subtract refunds
+                    // on top, leaving the operator below their target.
+                    $refundTotal = !empty($includedRefundIds)
+                        ? (float) \App\Models\MarketplaceRefundItem::query()
+                            ->whereIn('refund_request_id', $includedRefundIds)
+                            ->where('status', 'refunded')
+                            ->sum('face_value')
+                        : 0.0;
+
+                    $ticketTarget = $enteredNet > 0 ? $enteredNet + $refundTotal : null;
+
                     $built = \App\Models\MarketplacePayout::buildBreakdownFromSelection(
                         $payoutTickets,
                         $event,
-                        $enteredNet > 0 ? $enteredNet : null
+                        $ticketTarget
                     );
 
                     if (empty($built['rows'])) {
@@ -341,17 +433,26 @@ class ViewPayout extends ViewRecord
                     }
 
                     $oldAmount = (float) $this->record->amount;
-                    $newAmount = $enteredNet > 0 ? round($enteredNet, 2) : $built['totals']['net'];
+                    $ticketNet = $built['totals']['net'];
+                    $newAmount = round($ticketNet - $refundTotal, 2);
                     $delta = round($oldAmount - $newAmount, 2);
 
-                    \Illuminate\Support\Facades\DB::transaction(function () use ($built, $newAmount, $delta) {
+                    \Illuminate\Support\Facades\DB::transaction(function () use ($built, $newAmount, $delta, $includedRefundIds, $refundTotal) {
                         $this->record->update([
                             'ticket_breakdown' => $built['rows'],
                             'commission_mode' => $built['commission_mode'],
                             'amount' => $newAmount,
                             'gross_amount' => $built['totals']['gross'],
                             'commission_amount' => $built['totals']['commission'],
+                            'refund_amount' => $refundTotal,
                         ]);
+
+                        // Update the FK on refund_requests so the linkage
+                        // table reflects the new selection. Refunds removed
+                        // here become unattached (available for another
+                        // payout to claim); refunds added are claimed by
+                        // this one.
+                        $this->record->syncIncludedRefunds($includedRefundIds);
 
                         // Adjust the organizer's reserved (pending) balance so
                         // available_balance reflects the corrected request.

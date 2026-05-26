@@ -421,6 +421,48 @@ class ListPayouts extends ListRecords
                     ->visible(fn (Get $get) => $get('event_id') !== null && $get('has_balance'))
                     ->columnSpanFull(),
 
+                // Refund picker — operator chooses which event refunds are
+                // accounted for IN this new payout. Each checked refund's
+                // amount is deducted from the payout's net (the operator
+                // sees this in the form totals after clicking Recalculează).
+                // Only unattached refunds appear here — refunds already
+                // linked to another payout are filtered out.
+                Forms\Components\CheckboxList::make('included_refund_ids')
+                    ->label('Rambursări incluse în acest decont')
+                    ->helperText('Bifează rambursările care intră în decontul curent. Valoarea lor se scade din suma de plată și apar în documentul PDF.')
+                    ->options(function (Get $get) {
+                        $eventId = $get('event_id');
+                        if (!$eventId) return [];
+
+                        return \App\Models\MarketplaceRefundRequest::query()
+                            ->whereIn('status', [
+                                \App\Models\MarketplaceRefundRequest::STATUS_REFUNDED,
+                                \App\Models\MarketplaceRefundRequest::STATUS_PARTIALLY_REFUNDED,
+                            ])
+                            ->where(function ($q) use ($eventId) {
+                                $q->whereHas('order', function ($q2) use ($eventId) {
+                                    $q2->where('event_id', $eventId)
+                                        ->orWhere('marketplace_event_id', $eventId);
+                                });
+                            })
+                            ->whereNull('marketplace_payout_id')
+                            ->orderByDesc('completed_at')
+                            ->get(['id', 'reference', 'approved_amount', 'completed_at'])
+                            ->mapWithKeys(fn ($r) => [
+                                $r->id => sprintf(
+                                    '%s · %s RON · %s',
+                                    $r->reference,
+                                    number_format((float) $r->approved_amount, 2),
+                                    $r->completed_at?->format('d.m.Y') ?? '—'
+                                ),
+                            ])
+                            ->all();
+                    })
+                    ->columns(1)
+                    ->bulkToggleable()
+                    ->visible(fn (Get $get) => $get('event_id') !== null && $get('has_balance'))
+                    ->columnSpanFull(),
+
                 // Recalculate button
                 \Filament\Schemas\Components\Actions::make([
                     \Filament\Actions\Action::make('recalculate_payout')
@@ -638,17 +680,34 @@ class ListPayouts extends ListRecords
 
                 $payoutTicketsInput = $data['payout_tickets'] ?? [];
                 $enteredNet = (float) ($data['net_amount'] ?? 0);
+                $includedRefundIds = is_array($data['included_refund_ids'] ?? null) ? $data['included_refund_ids'] : [];
+
+                // Sum refund face_value for the selected refunds. The
+                // entered net is the FINAL amount paid to the organizer,
+                // so the ticket-only target before refund deduction is
+                // enteredNet + refund_total. buildBreakdownFromSelection
+                // scales ticket qtys to that ticket target, then we
+                // subtract refund_total to get back to the operator's
+                // entered net.
+                $refundTotal = !empty($includedRefundIds)
+                    ? (float) \App\Models\MarketplaceRefundItem::query()
+                        ->whereIn('refund_request_id', $includedRefundIds)
+                        ->where('status', 'refunded')
+                        ->sum('face_value')
+                    : 0.0;
 
                 if ($event && !empty($payoutTicketsInput)) {
+                    $ticketTarget = $enteredNet > 0 ? $enteredNet + $refundTotal : null;
                     $built = MarketplacePayout::buildBreakdownFromSelection(
                         $payoutTicketsInput,
                         $event,
-                        $enteredNet > 0 ? $enteredNet : null
+                        $ticketTarget
                     );
                     $ticketBreakdown = $built['rows'];
                     $finalGross = $built['totals']['gross'];
                     $finalCommission = $built['totals']['commission'];
-                    $finalNet = $enteredNet > 0 ? $enteredNet : $built['totals']['net'];
+                    $ticketNet = $built['totals']['net'];
+                    $finalNet = round($ticketNet - $refundTotal, 2);
                     $commissionMode = $built['commission_mode'];
                 } else {
                     // Refund-only or zero-selection payout: persist the manually
@@ -673,6 +732,7 @@ class ListPayouts extends ListRecords
                     'gross_amount' => round($finalGross, 2),
                     'commission_amount' => round($finalCommission, 2),
                     'discount_amount' => (float) ($data['discount_amount'] ?? 0),
+                    'refund_amount' => round($refundTotal, 2),
                     'fees_amount' => (float) ($data['fees_amount'] ?? 0),
                     'adjustments_amount' => 0,
                     'status' => 'approved',
@@ -685,6 +745,15 @@ class ListPayouts extends ListRecords
                     'commission_mode' => $commissionMode,
                     'invoice_recipient_type' => $commissionMode === 'added_on_top' ? 'general_client' : 'organizer',
                 ]);
+
+                // Link refunds to this payout AFTER it's created so the FK
+                // points at a real id. syncIncludedRefunds also recomputes
+                // refund_amount from the actual linked rows (defensive — in
+                // case some refund_id became stale between option-render
+                // and submit).
+                if (!empty($includedRefundIds)) {
+                    $payout->syncIncludedRefunds($includedRefundIds);
+                }
 
                 // Generate decont document immediately based on commission mode
                 try {

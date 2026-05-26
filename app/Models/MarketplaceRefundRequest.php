@@ -19,6 +19,7 @@ class MarketplaceRefundRequest extends Model
         'marketplace_customer_id',
         'marketplace_event_id',
         'order_id',
+        'marketplace_payout_id',
         'reference',
         'type',
         'reason',
@@ -160,6 +161,17 @@ class MarketplaceRefundRequest extends Model
     public function order(): BelongsTo
     {
         return $this->belongsTo(Order::class);
+    }
+
+    /**
+     * The MarketplacePayout this refund was accounted for in, if any.
+     * When set, the refund's amount has been deducted from that payout's
+     * net amount and the refund appears on that payout's PDF document.
+     * Null = refund stands on its own (reduces future available balance).
+     */
+    public function payout(): BelongsTo
+    {
+        return $this->belongsTo(MarketplacePayout::class, 'marketplace_payout_id');
     }
 
     public function processedBy(): BelongsTo

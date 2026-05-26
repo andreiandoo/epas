@@ -293,23 +293,21 @@
 @endif
 
 @php
-    // Refunds attached to orders for this event. Pulled live from
-    // marketplace_refund_items so the section reflects the current state
-    // even if the payout snapshot was generated before a refund happened.
-    // Grouped per ticket type with totals; commission-refunded marker
-    // tells the operator whether the platform returned the on-top
-    // commission too (relevant for accounting).
+    // Refunds accounted for IN THIS payout — i.e. linked via
+    // marketplace_refund_requests.marketplace_payout_id = $record->id.
+    // The page used to show every refund for the event, which made the
+    // section misleading on payouts that hadn't claimed any refunds and
+    // duplicated refund visibility across multiple payouts of the same
+    // event. Each refund now appears on AT MOST one payout — the one
+    // it's linked to.
     $eventId = $record->event_id ?? null;
     $refundRows = [];
     $refundTotals = ['qty' => 0, 'face' => 0.0, 'commission' => 0.0, 'net' => 0.0];
     if ($eventId) {
         $refundItems = \App\Models\MarketplaceRefundItem::query()
-            ->whereHas('refundRequest', function ($q) use ($eventId) {
+            ->whereHas('refundRequest', function ($q) use ($record) {
                 $q->whereIn('status', ['refunded', 'partially_refunded'])
-                    ->whereHas('order', function ($q2) use ($eventId) {
-                        $q2->where(fn ($q3) => $q3->where('event_id', $eventId)
-                                                  ->orWhere('marketplace_event_id', $eventId));
-                    });
+                    ->where('marketplace_payout_id', $record->id);
             })
             ->where('status', 'refunded')
             ->with('ticketType:id,name')
