@@ -10,6 +10,25 @@ const CartPage = {
         this.setupTimer();
         this.loadExistingPromo();
         this.render();
+
+        // Re-render when AmbiletCart re-validates the promo against new
+        // cart contents. The qty-change path (CartPage.updateQuantity)
+        // calls AmbiletCart.save() → saveCart() → revalidatePromoCode()
+        // asynchronously, so by the time this.render() runs the local
+        // discount snapshot is still stale. The async revalidate
+        // dispatches `ambilet:cart:promo` when it lands; we re-render
+        // then so the total updates with the fresh value.
+        const onPromoChanged = () => {
+            const promo = AmbiletCart.getPromoCode();
+            if (promo) {
+                this.appliedPromo = promo.code;
+            } else {
+                this.appliedPromo = null;
+            }
+            this.render();
+        };
+        window.addEventListener('ambilet:cart:promo', onPromoChanged);
+        window.addEventListener('ambilet:cart:update', () => this.render());
     },
 
     /**
@@ -262,7 +281,7 @@ const CartPage = {
                     '<div class="flex items-center justify-between mt-1 mobile:hidden">' +
                         '<div class="relative inline-block tooltip-trigger">' +
                             '<div class="flex items-center gap-2">' +
-                                '<span class="inline-flex items-center px-2 py-1 text-sm font-semibold text-secondary">' + ticketTypeName +
+                                '<span class="inline-flex items-center py-1 text-sm font-semibold text-secondary">' + ticketTypeName +
                                     (hasDiscount ? ' <span class="discount-badge text-white text-[10px] font-bold py-0.5 px-1.5 rounded-full ml-1">-' + discountPercent + '%</span>' : '') +
                                 '</span>' +
                                 '<svg class="w-4 h-4 text-muted cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>' +
@@ -497,9 +516,29 @@ const CartPage = {
             }
         });
 
-        // Total = base prices + commission (no other taxes)
+        // Total = base prices + commission (no other taxes).
+        // Read the live discount from AmbiletCart every time we render
+        // instead of relying on this.discount, which used to cache the
+        // value at apply-time and went stale after any qty change. The
+        // single source of truth is AmbiletCart.getPromoDiscount() —
+        // it already clamps against subtotal and reflects the latest
+        // backend revalidation result.
         const subtotalWithCommission = baseSubtotal + totalCommission;
-        let total = subtotalWithCommission - this.discount;
+        let liveDiscount = 0;
+        try {
+            liveDiscount = (typeof AmbiletCart !== 'undefined' && typeof AmbiletCart.getPromoDiscount === 'function')
+                ? AmbiletCart.getPromoDiscount()
+                : (this.discount || 0);
+        } catch (e) {
+            liveDiscount = this.discount || 0;
+        }
+        // Defensive clamp — the discount must never exceed the displayed
+        // subtotal (with commission), otherwise the total would go
+        // negative and the cart would silently zero out.
+        if (liveDiscount > subtotalWithCommission) liveDiscount = subtotalWithCommission;
+        // Keep this.discount in sync for callers that still read it.
+        this.discount = liveDiscount;
+        let total = subtotalWithCommission - liveDiscount;
         const points = Math.floor(total / 10);
 
         // Update DOM
@@ -556,10 +595,12 @@ const CartPage = {
 
         document.getElementById('totalPrice').textContent = AmbiletUtils.formatCurrency(total);
 
-        // Discount row
-        if (this.discount > 0) {
+        // Discount row — use the live value computed above (liveDiscount)
+        // so a stale this.discount can't show a non-zero amount when the
+        // promo has been revalidated to 0 / removed.
+        if (liveDiscount > 0) {
             document.getElementById('discountRow').classList.remove('hidden');
-            document.getElementById('discountAmount').textContent = `-${AmbiletUtils.formatCurrency(this.discount)}`;
+            document.getElementById('discountAmount').textContent = `-${AmbiletUtils.formatCurrency(liveDiscount)}`;
         } else {
             document.getElementById('discountRow').classList.add('hidden');
         }

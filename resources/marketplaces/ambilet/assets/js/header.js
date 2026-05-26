@@ -533,17 +533,20 @@
         // more than the subtotal even if a snapshot is stale.
         if (promoDiscount > subtotal) promoDiscount = subtotal;
 
+        // Toggle via inline `display` because `[hidden]` is outranked
+        // by the row's `flex` class in CSS specificity, which would
+        // leave the row visible with stale placeholder text even when
+        // there's no promo.
         if (promo && promoDiscount > 0 && items.length > 0) {
-            if (cartDiscountRow) cartDiscountRow.hidden = false;
+            if (cartDiscountRow) cartDiscountRow.style.display = 'flex';
             if (cartDiscountAmount) cartDiscountAmount.textContent = '-' + promoDiscount.toLocaleString('ro-RO', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' lei';
             if (cartDiscountCode) cartDiscountCode.textContent = promo.code || '';
-            if (cartTotalRow) cartTotalRow.hidden = false;
+            if (cartTotalRow) cartTotalRow.style.display = 'flex';
             if (cartTotalEl) cartTotalEl.textContent = Math.max(0, subtotal - promoDiscount).toLocaleString('ro-RO', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' lei';
-            // Spacer collapses when total row takes its place.
             if (cartSpacer) cartSpacer.classList.add('hidden');
         } else {
-            if (cartDiscountRow) cartDiscountRow.hidden = true;
-            if (cartTotalRow) cartTotalRow.hidden = true;
+            if (cartDiscountRow) cartDiscountRow.style.display = 'none';
+            if (cartTotalRow) cartTotalRow.style.display = 'none';
             if (cartSpacer) cartSpacer.classList.remove('hidden');
         }
 

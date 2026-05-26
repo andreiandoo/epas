@@ -53,6 +53,20 @@ const CheckoutPage = {
         document.getElementById('checkout-loading').classList.add('hidden');
         document.getElementById('checkout-form').classList.remove('hidden');
         document.getElementById('summary-section').classList.remove('hidden');
+
+        // The cart drawer (header.js) can change quantities while the
+        // user is on /finalizare. Each mutation triggers AmbiletCart's
+        // revalidate, which fires `ambilet:cart:promo` (and the cart
+        // itself fires `ambilet:cart:update`). Refresh items + summary
+        // so the price box stays in sync without requiring a full
+        // page reload.
+        const refresh = () => {
+            this.items = AmbiletCart.getItems();
+            this.renderBeneficiaries();
+            this.renderSummary();
+        };
+        window.addEventListener('ambilet:cart:update', refresh);
+        window.addEventListener('ambilet:cart:promo', refresh);
     },
 
     async loadCheckoutFeatures() {
