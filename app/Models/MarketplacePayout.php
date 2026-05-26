@@ -561,7 +561,15 @@ class MarketplacePayout extends Model
     // =========================================
 
     /**
-     * Approve the payout request
+     * Approve the payout request.
+     *
+     * Does NOT auto-notify the organizer. Admin uses the explicit
+     * "Trimite decont prin email" / "Notifică organizator (in-app)"
+     * actions on the payout page to decide when (or whether) to notify
+     * — same pattern as document generation. The status transitions
+     * that DO still auto-notify (processing / completed / rejected)
+     * remain untouched because those represent real money movement
+     * the organizer must be aware of regardless of admin intent.
      */
     public function approve(int $userId): void
     {
@@ -570,8 +578,6 @@ class MarketplacePayout extends Model
             'approved_by' => $userId,
             'approved_at' => now(),
         ]);
-
-        $this->notifyOrganizer('approved');
     }
 
     /**
