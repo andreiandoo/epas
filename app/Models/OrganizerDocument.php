@@ -34,6 +34,21 @@ class OrganizerDocument extends Model
     ];
 
     /**
+     * When set to true, the auto-notification on create is skipped. The
+     * admin-side decont actions (Generează / Regenerează / Editează bilete
+     * decontate / Recalculează snapshot) set this flag so the organizer
+     * isn't pinged every time we regenerate a PDF for internal review —
+     * the admin decides explicitly when the document is final and the
+     * organizer should be notified, via the "Trimite decont prin email"
+     * or "Notifică organizator" actions on the payout page.
+     *
+     * Static (not per-instance) so it survives across the
+     * MarketplacePayoutObserver → OrganizerDocument::create call chain
+     * without threading a flag through reflection.
+     */
+    public static bool $skipNotificationOnCreate = false;
+
+    /**
      * Boot the model
      */
     protected static function boot()
@@ -41,6 +56,9 @@ class OrganizerDocument extends Model
         parent::boot();
 
         static::created(function ($document) {
+            if (self::$skipNotificationOnCreate) {
+                return;
+            }
             try {
                 OrganizerNotificationService::notifyDocumentGenerated($document);
             } catch (\Exception $e) {

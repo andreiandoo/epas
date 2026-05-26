@@ -588,20 +588,6 @@ class ViewPayout extends ViewRecord
                     ->visible(fn () => $this->record->decontDocument?->file_path !== null)
                     ->url(fn () => $this->record->decontDocument?->download_url, shouldOpenInNewTab: true),
 
-                Actions\Action::make('send_decont')
-                    ->label('Trimite decont')
-                    ->icon('heroicon-o-envelope')
-                    ->form([
-                        Forms\Components\TextInput::make('email')
-                            ->label('Adresa email')
-                            ->email()
-                            ->required()
-                            ->default(fn () => $this->record->organizer?->billing_email ?? $this->record->organizer?->email),
-                    ])
-                    ->action(function (array $data) {
-                        $this->sendDocumentByEmail($this->record->decontDocument, $data['email'], 'Decont');
-                    }),
-
                 Actions\Action::make('regenerate_decont')
                     ->label('Regenerează decont')
                     ->icon('heroicon-o-arrow-path')
@@ -624,6 +610,45 @@ class ViewPayout extends ViewRecord
                 ->icon('heroicon-o-document-text')
                 ->color('info')
                 ->button()
+                ->visible(fn () => $this->record->decontDocument !== null && !in_array($this->record->status, ['rejected', 'cancelled'])),
+
+            // ========== EXPLICIT NOTIFY ORGANIZER ==========
+            // Admin-controlled notification paths. The automatic in-app
+            // notification on document creation has been disabled (see
+            // OrganizerDocument::$skipNotificationOnCreate) — these two
+            // actions let the admin notify the organizer manually when
+            // the decont is ready to share.
+            Actions\Action::make('send_decont_email')
+                ->label('Trimite decont prin email')
+                ->icon('heroicon-o-paper-airplane')
+                ->color('success')
+                ->form([
+                    Forms\Components\TextInput::make('email')
+                        ->label('Adresa email destinatar')
+                        ->email()
+                        ->required()
+                        ->default(fn () => $this->record->organizer?->billing_email ?? $this->record->organizer?->email),
+                ])
+                ->action(function (array $data) {
+                    $this->sendDocumentByEmail($this->record->decontDocument, $data['email'], 'Decont');
+                })
+                ->visible(fn () => $this->record->decontDocument !== null && !in_array($this->record->status, ['rejected', 'cancelled'])),
+
+            Actions\Action::make('notify_organizer_inapp')
+                ->label('Notifică organizator (in-app)')
+                ->icon('heroicon-o-bell-alert')
+                ->color('gray')
+                ->requiresConfirmation()
+                ->modalHeading('Notifică organizator')
+                ->modalDescription('Se va crea o notificare în panoul organizatorului ("Document generat: Decont Drepturi"). Nu se trimite email — pentru email folosește acțiunea separată.')
+                ->action(function () {
+                    try {
+                        \App\Services\OrganizerNotificationService::notifyDocumentGenerated($this->record->decontDocument);
+                        Notification::make()->title('Notificare in-app trimisă')->success()->send();
+                    } catch (\Throwable $e) {
+                        Notification::make()->title('Eroare')->body($e->getMessage())->danger()->send();
+                    }
+                })
                 ->visible(fn () => $this->record->decontDocument !== null && !in_array($this->record->status, ['rejected', 'cancelled'])),
 
             // ========== GENERATE INVOICE (when decont exists but no invoice) ==========
@@ -1070,6 +1095,14 @@ class ViewPayout extends ViewRecord
         $method = new \ReflectionMethod($observer, 'generateDecont');
         $method->setAccessible(true);
 
+        // Admin-triggered generation must NOT auto-notify the organizer.
+        // The admin decides when the document is final and the organizer
+        // should be notified, via the separate "Trimite decont prin email"
+        // or "Notifică organizator" actions on this page. Without this
+        // flag, every regenerate created an in-app notification spam in
+        // the organizer's bell icon.
+        \App\Models\OrganizerDocument::$skipNotificationOnCreate = true;
+
         try {
             $method->invoke($observer, $this->record);
         } catch (\Throwable $e) {
@@ -1084,6 +1117,10 @@ class ViewPayout extends ViewRecord
                 ->persistent()
                 ->send();
             return;
+        } finally {
+            // Always reset so subsequent (organizer-side) document
+            // generations notify normally.
+            \App\Models\OrganizerDocument::$skipNotificationOnCreate = false;
         }
 
         // Reload the relationship to see if a decont was actually created.
@@ -1093,6 +1130,7 @@ class ViewPayout extends ViewRecord
         if ($decont) {
             Notification::make()
                 ->title($isRegeneration ? 'Decont regenerat' : 'Decont generat')
+                ->body('Notificare automată suprimată. Folosește "Trimite decont prin email" sau "Notifică organizator" când vrei să anunți organizatorul.')
                 ->success()
                 ->send();
             $this->redirect(PayoutResource::getUrl('view', ['record' => $this->record]));
