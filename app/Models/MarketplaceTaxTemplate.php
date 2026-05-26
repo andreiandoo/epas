@@ -1697,54 +1697,39 @@ class MarketplaceTaxTemplate extends Model
             $totalTicketsSold = 0;
             $totalTicketsRefunded = 0;
 
-            // Use the split table (per ticket_type x effective_price + invitations)
-            // for the breakdown label so reduced rows show their actual paid price
-            // alongside the regular rows: (50lei*62+40lei*2+...). The snapshot
-            // aggregate (one row per type with weighted avg price) hides this
-            // detail, which makes tax reports inaccurate when promos apply.
-            $splitRows = [];
-            if ($payout->event_id) {
-                $eventForSplit = ($events ?? collect())->first() ?? \App\Models\Event::find($payout->event_id);
-                if ($eventForSplit) {
-                    try {
-                        $splitRows = app(\App\Services\Marketplace\SalesBreakdownService::class)
-                            ->buildPayoutSplitTable($eventForSplit, $payout->period_start, $payout->period_end);
-                    } catch (\Throwable $e) {
-                        $splitRows = [];
-                    }
+            // Source: ticket_breakdown JSON (the operator's actual selection
+            // after the edit-tickets action). Previously this used
+            // SalesBreakdownService::buildPayoutSplitTable with period
+            // bounds, which re-queried the DB and returned every ticket sold
+            // in that window — including the rows the operator removed when
+            // they shrank a decont to a subset. The label and totals are
+            // now in lock-step with the per-payout snapshot used everywhere
+            // else.
+            foreach ($ticketBreakdown as $item) {
+                $ttId = $item['ticket_type_id'] ?? null;
+                if ($ttId && isset($posTypeIdsSet[$ttId])) {
+                    continue;
                 }
+                $price = (float) ($item['price'] ?? $item['unit_price'] ?? 0);
+                $qty = (int) ($item['quantity'] ?? $item['tickets'] ?? $item['qty'] ?? 0);
+                if ($qty <= 0) continue;
+                $totalTicketsSold += $qty;
+                // Zero-priced rows (invitations) still emit as "0lei*N" so
+                // 1b's qty total matches the qty in the label.
+                $breakdownParts[] = $formatPrice($price) . 'lei*' . $qty;
             }
 
-            if (!empty($splitRows)) {
-                foreach ($splitRows as $row) {
-                    $ttId = $row['ticket_type_id'] ?? null;
-                    if ($ttId && isset($posTypeIdsSet[$ttId])) continue;
-                    $price = (float) ($row['price'] ?? 0);
-                    $qty = (int) ($row['qty'] ?? 0);
-                    if ($qty <= 0) continue;
-                    $totalTicketsSold += $qty;
-                    // Invitations and any other zero-priced rows still go into
-                    // the label as "0lei*N" so the breakdown sums to the qty
-                    // total displayed in 1b.
-                    $breakdownParts[] = $formatPrice($price) . 'lei*' . $qty;
-                }
+            // Wrap every 5 parts with <br> so multi-type deconts don't blow
+            // the PDF page width. processTemplate substitutes the value as
+            // raw HTML (preg_replace, no escaping), so <br> renders as a
+            // real line break in DomPDF.
+            if (empty($breakdownParts)) {
+                $variables['tickets_breakdown_label'] = '';
             } else {
-                // Fallback: snapshot aggregate (legacy payouts whose event is
-                // gone, or split table failed to compute).
-                foreach ($ticketBreakdown as $item) {
-                    $ttId = $item['ticket_type_id'] ?? null;
-                    if ($ttId && isset($posTypeIdsSet[$ttId])) {
-                        continue;
-                    }
-                    $price = (float) ($item['price'] ?? $item['unit_price'] ?? 0);
-                    $qty = (int) ($item['quantity'] ?? $item['tickets'] ?? $item['qty'] ?? 0);
-                    $totalTicketsSold += $qty;
-                    if ($qty > 0 && $price > 0) {
-                        $breakdownParts[] = $formatPrice($price) . 'lei*' . $qty;
-                    }
-                }
+                $chunks = array_chunk($breakdownParts, 5);
+                $joined = implode('<br>+ ', array_map(fn ($chunk) => implode('+', $chunk), $chunks));
+                $variables['tickets_breakdown_label'] = ' (' . $joined . ')';
             }
-            $variables['tickets_breakdown_label'] = !empty($breakdownParts) ? ' (' . implode('+', $breakdownParts) . ')' : '';
             // Use breakdown qty (from this decont) over total event sold
             if ($totalTicketsSold > 0) {
                 $variables['total_tickets_sold'] = $totalTicketsSold;
@@ -1871,6 +1856,21 @@ class MarketplaceTaxTemplate extends Model
                 $payoutAmountAfterDiscount = max(0.0, $payoutAmount - $totalDiscountAmount);
                 $variables['payout_amount'] = number_format($payoutAmountAfterDiscount, 2);
                 $variables['payout_net_amount'] = number_format($payoutAmountAfterDiscount, 2);
+            }
+
+            // Apply refund + advance deductions to the FINAL payable line
+            // (payout_amount = row E in the decont template, formula
+            // "E = A - B - C - D"). Row 1a (payout_net_amount) and row 2a
+            // (total_refunded_amount) stay independent — A and B are
+            // separate inputs and the template adds them up itself. Without
+            // this override the PDF would show E = ticket_net (= A),
+            // ignoring the refund the operator linked to this payout.
+            $refundDeduction = (float) ($payout->refund_amount ?? 0);
+            $advanceDeduction = (float) ($payout->payout_method['advance_amount'] ?? 0);
+            if ($refundDeduction > 0 || $advanceDeduction > 0) {
+                $currentPayoutAmount = (float) str_replace(',', '', $variables['payout_amount'] ?? '0');
+                $finalAmount = max(0.0, $currentPayoutAmount - $refundDeduction - $advanceDeduction);
+                $variables['payout_amount'] = number_format($finalAmount, 2);
             }
             // Sortat după număr de utilizări desc, "COD (xN)" format.
             arsort($promoCodes);
