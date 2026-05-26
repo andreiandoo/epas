@@ -139,16 +139,28 @@ class ViewPayout extends ViewRecord
                 ->visible(fn () => in_array($this->record->status, ['pending', 'approved', 'processing'])
                     && !empty($this->record->event_id))
                 ->modalHeading('Editează biletele incluse în decont')
-                ->modalDescription('Setezi exact ce bilete intră în acest decont. Sumele payout-ului se recalculează din bilete. Dacă tastezi un net_amount diferit de suma rândurilor, cantitățile sunt scalate proporțional ca să se potrivească.')
+                ->modalDescription(new \Illuminate\Support\HtmlString(
+                    'Setezi exact ce bilete intră în acest decont. Sumele payout-ului se recalculează din bilete.<br>'
+                    . '<strong>Live preview</strong>: pe măsură ce schimbi qty-uri vezi totalul jos. '
+                    . 'Sau tastează o sumă în "Sumă netă dorită" și apasă "Distribuie proporțional" ca să scalezi automat toate cantitățile.'
+                ))
                 ->modalWidth('5xl')
                 ->fillForm(function () {
+                    // Filter POS rows out of the pre-fill — they belong to the
+                    // organizer's cash POS app and never to a marketplace
+                    // decont. The saved breakdown may contain them as a
+                    // legacy artefact from the pre-POS-filter write code.
+                    $posTypeIdSet = array_flip($this->record->getPosTicketTypeIds() ?: []);
+
                     $rows = collect($this->record->ticket_breakdown ?? [])
+                        ->filter(fn ($r) => !isset($posTypeIdSet[$r['ticket_type_id'] ?? null]))
                         ->map(fn ($r) => [
                             'ticket_type_id' => (int) ($r['ticket_type_id'] ?? 0),
                             'ticket_type_name' => (string) ($r['ticket_type_name'] ?? ''),
                             'qty' => (int) ($r['qty'] ?? $r['quantity'] ?? 0),
                             'unit_price' => (float) ($r['price'] ?? $r['unit_price'] ?? 0),
                             'commission_per_ticket' => (float) ($r['commission_per_ticket'] ?? 0),
+                            'commission_mode' => (string) ($r['commission_mode'] ?? 'included'),
                         ])
                         ->values()
                         ->all();
@@ -159,16 +171,67 @@ class ViewPayout extends ViewRecord
                     ];
                 })
                 ->form([
+                    // Snapshot of the payout's currently-stored amounts so the
+                    // operator can compare against the live preview below.
                     \Filament\Forms\Components\Placeholder::make('current_state')
-                        ->label('Stare curentă')
+                        ->label('Stare curentă (înainte de modificări)')
                         ->content(fn () => new \Illuminate\Support\HtmlString(
-                            '<div class="text-sm space-y-1">'
-                            . '<div><span class="text-gray-500">Brut salvat:</span> <span class="font-mono">' . number_format((float) $this->record->gross_amount, 2) . ' RON</span></div>'
-                            . '<div><span class="text-gray-500">Comision salvat:</span> <span class="font-mono">' . number_format((float) $this->record->commission_amount, 2) . ' RON</span></div>'
-                            . '<div><span class="text-gray-500">Net salvat:</span> <span class="font-mono font-semibold">' . number_format((float) $this->record->amount, 2) . ' RON</span></div>'
+                            '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">'
+                            . '<div style="padding:8px;border:1px solid #e5e7eb;border-radius:6px;background:#f9fafb;"><div style="font-size:10px;color:#888;text-transform:uppercase;">Brut salvat</div><div style="font-family:monospace;font-weight:600;">' . number_format((float) $this->record->gross_amount, 2) . ' RON</div></div>'
+                            . '<div style="padding:8px;border:1px solid #e5e7eb;border-radius:6px;background:#f9fafb;"><div style="font-size:10px;color:#888;text-transform:uppercase;">Comision salvat</div><div style="font-family:monospace;font-weight:600;color:#b91c1c;">-' . number_format((float) $this->record->commission_amount, 2) . ' RON</div></div>'
+                            . '<div style="padding:8px;border:1px solid #059669;border-radius:6px;background:#f0fdf4;"><div style="font-size:10px;color:#059669;text-transform:uppercase;">Net salvat</div><div style="font-family:monospace;font-weight:700;color:#059669;">' . number_format((float) $this->record->amount, 2) . ' RON</div></div>'
                             . '</div>'
                         ))
                         ->columnSpanFull(),
+
+                    // desired amount + redistribute button on one row
+                    \Filament\Schemas\Components\Grid::make(3)->schema([
+                        \Filament\Forms\Components\TextInput::make('net_amount')
+                            ->label('Sumă netă dorită')
+                            ->helperText('Modifică pentru a redistribui — apoi apasă pe Distribuie proporțional.')
+                            ->numeric()
+                            ->minValue(0)
+                            ->suffix('RON')
+                            ->live(onBlur: true)
+                            ->columnSpan(2),
+                        \Filament\Schemas\Components\Actions::make([
+                            \Filament\Actions\Action::make('distribute_proportionally')
+                                ->label('Distribuie proporțional')
+                                ->icon('heroicon-o-arrows-right-left')
+                                ->color('primary')
+                                ->size('sm')
+                                ->action(function (\Filament\Schemas\Components\Utilities\Get $get, \Filament\Schemas\Components\Utilities\Set $set) {
+                                    $target = (float) ($get('net_amount') ?? 0);
+                                    if ($target <= 0) {
+                                        Notification::make()->title('Sumă invalidă')->body('Introdu mai întâi suma netă dorită.')->warning()->send();
+                                        return;
+                                    }
+                                    $tickets = $get('payout_tickets') ?? [];
+                                    // Compute current net sum from row data
+                                    $currentNet = 0.0;
+                                    foreach ($tickets as $t) {
+                                        $qty = (int) ($t['qty'] ?? 0);
+                                        $unit = (float) ($t['unit_price'] ?? 0);
+                                        $commPer = (float) ($t['commission_per_ticket'] ?? 0);
+                                        $isOnTop = in_array($t['commission_mode'] ?? 'included', ['added_on_top', 'on_top'], true);
+                                        $g = $qty * $unit + ($isOnTop ? $qty * $commPer : 0);
+                                        $c = $qty * $commPer;
+                                        $currentNet += $g - $c;
+                                    }
+                                    if ($currentNet <= 0.01) {
+                                        Notification::make()->title('Nu pot scala')->body('Cantitățile actuale sumează 0; setează măcar un qty înainte de redistribuire.')->warning()->send();
+                                        return;
+                                    }
+                                    $scale = $target / $currentNet;
+                                    foreach ($tickets as &$t) {
+                                        $t['qty'] = max(0, (int) round((int) ($t['qty'] ?? 0) * $scale));
+                                    }
+                                    unset($t);
+                                    $set('payout_tickets', $tickets);
+                                    Notification::make()->title('Scalat')->body('Factor: ' . number_format($scale, 3) . '. Verifică cantitățile noi în preview-ul de mai jos.')->success()->send();
+                                }),
+                        ])->columnSpan(1)->extraAttributes(['class' => 'flex items-end pb-6']),
+                    ]),
 
                     \Filament\Forms\Components\Repeater::make('payout_tickets')
                         ->label('Bilete incluse')
@@ -177,6 +240,8 @@ class ViewPayout extends ViewRecord
                             \Filament\Forms\Components\Hidden::make('ticket_type_id'),
                             \Filament\Forms\Components\Hidden::make('unit_price'),
                             \Filament\Forms\Components\Hidden::make('commission_per_ticket'),
+                            \Filament\Forms\Components\Hidden::make('commission_mode'),
+                            \Filament\Forms\Components\Hidden::make('ticket_type_name'),
                             \Filament\Forms\Components\Placeholder::make('row_label')
                                 ->hiddenLabel()
                                 ->content(fn (\Filament\Schemas\Components\Utilities\Get $get) => new \Illuminate\Support\HtmlString(
@@ -191,21 +256,62 @@ class ViewPayout extends ViewRecord
                                 ->numeric()
                                 ->minValue(0)
                                 ->suffix('bilete')
+                                ->live(onBlur: true)
                                 ->columnSpan(1),
-                            \Filament\Forms\Components\Hidden::make('ticket_type_name'),
                         ])
                         ->columns(3)
                         ->reorderable(false)
                         ->addable(false)
                         ->deletable(true)
+                        ->live()
                         ->columnSpanFull(),
 
-                    \Filament\Forms\Components\TextInput::make('net_amount')
-                        ->label('Sumă netă dorită')
-                        ->helperText('Lasă suma calculată din bilete sau introdu o valoare proprie. Dacă diferă, cantitățile se scalează proporțional la salvare.')
-                        ->numeric()
-                        ->minValue(0)
-                        ->suffix('RON'),
+                    // Live preview — re-renders whenever payout_tickets state
+                    // changes (the repeater is live, so any qty edit refreshes
+                    // this placeholder). Shows running totals against the
+                    // desired net so the operator confirms the scaling worked
+                    // before submitting.
+                    \Filament\Forms\Components\Placeholder::make('live_preview')
+                        ->label('')
+                        ->content(function (\Filament\Schemas\Components\Utilities\Get $get) {
+                            $tickets = $get('payout_tickets') ?? [];
+                            $targetNet = (float) ($get('net_amount') ?? 0);
+                            $totalQty = 0;
+                            $gross = 0.0;
+                            $commission = 0.0;
+                            foreach ($tickets as $t) {
+                                $qty = (int) ($t['qty'] ?? 0);
+                                if ($qty <= 0) continue;
+                                $unit = (float) ($t['unit_price'] ?? 0);
+                                $commPer = (float) ($t['commission_per_ticket'] ?? 0);
+                                $isOnTop = in_array($t['commission_mode'] ?? 'included', ['added_on_top', 'on_top'], true);
+                                $totalQty += $qty;
+                                $gross += $qty * $unit + ($isOnTop ? $qty * $commPer : 0);
+                                $commission += $qty * $commPer;
+                            }
+                            $net = $gross - $commission;
+
+                            $diff = $targetNet - $net;
+                            $diffSign = $diff > 0.01 ? '+' : ($diff < -0.01 ? '' : '');
+                            $diffColor = abs($diff) < 0.5 ? '#059669' : '#d97706';
+                            $diffLabel = abs($diff) < 0.5
+                                ? '✓ identic cu Sumă netă dorită'
+                                : "{$diffSign}" . number_format($diff, 2) . ' RON față de Sumă netă dorită (' . number_format($targetNet, 2) . ' RON)';
+
+                            return new \Illuminate\Support\HtmlString(
+                                '<div style="padding:12px;border:2px solid #3b82f6;border-radius:8px;background:#eff6ff;margin-top:8px;">'
+                                . '<div style="font-size:10px;color:#1e40af;text-transform:uppercase;font-weight:600;margin-bottom:6px;">Preview live (din cantitățile de mai sus)</div>'
+                                . '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;">'
+                                . '<div><div style="font-size:10px;color:#666;">Total bilete</div><div style="font-family:monospace;font-weight:600;">' . $totalQty . '</div></div>'
+                                . '<div><div style="font-size:10px;color:#666;">Brut</div><div style="font-family:monospace;font-weight:600;">' . number_format($gross, 2) . ' RON</div></div>'
+                                . '<div><div style="font-size:10px;color:#666;">Comision</div><div style="font-family:monospace;font-weight:600;color:#b91c1c;">-' . number_format($commission, 2) . ' RON</div></div>'
+                                . '<div><div style="font-size:10px;color:#666;">Net</div><div style="font-family:monospace;font-weight:700;color:#059669;">' . number_format($net, 2) . ' RON</div></div>'
+                                . '</div>'
+                                . '<div style="margin-top:6px;font-size:11px;color:' . $diffColor . ';font-weight:500;">' . $diffLabel . '</div>'
+                                . '</div>'
+                            );
+                        })
+                        ->columnSpanFull(),
                 ])
                 ->action(function (array $data) {
                     $event = $this->record->event;
