@@ -18,7 +18,14 @@ const AmbiletCart = {
     },
 
     /**
-     * Save cart to localStorage
+     * Save cart to localStorage.
+     *
+     * Every cart mutation funnels through here. Triggers a best-effort
+     * promo revalidation so the stored discountAmount tracks the new
+     * cart contents — covers internal callers (addItem / updateQuantity
+     * / removeItem) AND any external code that mutates via the `save()`
+     * alias (CartPage). Also dispatches `ambilet:cart:update` so any
+     * mounted cart UI re-renders.
      */
     saveCart(cart) {
         cart.updatedAt = new Date().toISOString();
@@ -28,6 +35,16 @@ const AmbiletCart = {
         window.dispatchEvent(new CustomEvent('ambilet:cart:update', {
             detail: { cart, itemCount: this.getItemCount() }
         }));
+
+        // Revalidate any applied promo against the new cart contents.
+        // Skip when called during revalidatePromoCode itself (the only
+        // place that touches the PROMO_KEY without also rewriting cart
+        // items, so we'd never recurse here — defensive check anyway).
+        try {
+            if (typeof this.revalidatePromoCode === 'function') {
+                this.revalidatePromoCode().catch(function () { /* best effort */ });
+            }
+        } catch (e) { /* never break the save */ }
     },
 
     /**
@@ -99,12 +116,8 @@ const AmbiletCart = {
         }
 
         this.saveCart(cart);
-
-        // Adding items can also flip a promo from valid → invalid (e.g.,
-        // applicable_ticket_types restriction now matches more lines so
-        // discount grows, or a min-subtotal threshold now applies). Same
-        // re-validation as updateQuantity / removeItem.
-        this.revalidatePromoCode().catch(function () { /* best effort */ });
+        // saveCart triggers revalidatePromoCode internally — see its
+        // doc comment.
 
         // Start/reset reservation timer when adding items
         this.startReservationTimer();
@@ -149,15 +162,7 @@ const AmbiletCart = {
                 cart.items[index].quantity = quantity;
             }
             this.saveCart(cart);
-            // Stored promo discount is a snapshot taken at apply-time. If
-            // we don't re-validate after a quantity change, a 50%-off code
-            // applied on 4 tickets keeps its absolute lei value when the
-            // user later drops to 2 tickets — that frozen amount can wipe
-            // out the entire remaining subtotal. Re-validate against the
-            // backend so the discount tracks the current cart contents
-            // (and gets removed cleanly if the new cart no longer meets
-            // the code's restrictions).
-            this.revalidatePromoCode().catch(function () { /* best effort */ });
+            // saveCart triggers revalidatePromoCode internally.
         }
 
         return cart;
@@ -194,16 +199,10 @@ const AmbiletCart = {
             const removed = cart.items.splice(index, 1)[0];
             this._releaseItemSeats(removed);
             this.saveCart(cart);
+            // saveCart triggers revalidatePromoCode internally. When
+            // the cart becomes empty, revalidate detects that and drops
+            // the stored promo automatically.
             this.showNotification(`${removed.ticketType.name} eliminat din coș`);
-            // Cart composition changed → promo restrictions / amount may
-            // no longer apply. Same rationale as updateQuantity above.
-            if (cart.items.length > 0) {
-                this.revalidatePromoCode().catch(function () { /* best effort */ });
-            } else {
-                // Empty cart — drop the promo so it isn't applied on the
-                // next item the user adds.
-                localStorage.removeItem(this.PROMO_KEY);
-            }
         }
 
         return cart;
@@ -849,16 +848,13 @@ const AmbiletCart = {
     },
 
     /**
-     * Save items array (alias for CartPage compatibility)
+     * Save items array (alias for CartPage compatibility).
+     * Routes through saveCart() so the revalidation hook fires for
+     * external callers (CartPage.updateQuantity / removeItem) that
+     * write via this entry point.
      */
     save(items) {
-        const cart = { items: items, updatedAt: new Date().toISOString() };
-        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(cart));
-
-        // Dispatch cart update event
-        window.dispatchEvent(new CustomEvent('ambilet:cart:update', {
-            detail: { cart, itemCount: items.reduce((sum, item) => sum + (item.quantity || 1), 0) }
-        }));
+        this.saveCart({ items: items, updatedAt: new Date().toISOString() });
     },
 
     /**

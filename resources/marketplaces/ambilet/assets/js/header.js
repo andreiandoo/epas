@@ -420,6 +420,18 @@
         try {
             localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cart));
             updateCartUI();
+            // Promo discount snapshot (stored on PROMO_KEY) is frozen at
+            // apply-time. Any cart mutation needs to re-validate against
+            // the new contents so a 50%-off code applied on 4 tickets
+            // doesn't keep its absolute lei value when the user drops to
+            // 2 tickets. AmbiletCart's revalidate hits the backend, then
+            // dispatches `ambilet:cart:promo` which we listen for below
+            // to re-render the drawer with the fresh discount.
+            try {
+                if (window.AmbiletCart && typeof window.AmbiletCart.revalidatePromoCode === 'function') {
+                    window.AmbiletCart.revalidatePromoCode().catch(function () { /* best effort */ });
+                }
+            } catch (e) { /* never break the save */ }
         } catch (e) {}
     }
 
@@ -493,6 +505,47 @@
         }
 
         cartSubtotal.textContent = subtotal.toLocaleString('ro-RO', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' lei';
+
+        // Promo discount line — read the live discount from AmbiletCart
+        // (single source of truth, re-validated on every cart mutation).
+        // Hide the discount row entirely when no promo is applied so the
+        // footer doesn't show a stale "0 lei" reduction.
+        var cartDiscountRow = document.getElementById('cartDiscountRow');
+        var cartDiscountAmount = document.getElementById('cartDiscountAmount');
+        var cartDiscountCode = document.getElementById('cartDiscountCode');
+        var cartTotalRow = document.getElementById('cartTotalRow');
+        var cartTotalEl = document.getElementById('cartTotal');
+        var cartSpacer = document.getElementById('cartSpacer');
+
+        var promo = null;
+        var promoDiscount = 0;
+        if (window.AmbiletCart) {
+            try {
+                promo = typeof window.AmbiletCart.getPromoCode === 'function'
+                    ? window.AmbiletCart.getPromoCode()
+                    : null;
+                promoDiscount = typeof window.AmbiletCart.getPromoDiscount === 'function'
+                    ? window.AmbiletCart.getPromoDiscount()
+                    : 0;
+            } catch (e) { /* ignore */ }
+        }
+        // Defensive clamp — never let the displayed discount wipe out
+        // more than the subtotal even if a snapshot is stale.
+        if (promoDiscount > subtotal) promoDiscount = subtotal;
+
+        if (promo && promoDiscount > 0 && items.length > 0) {
+            if (cartDiscountRow) cartDiscountRow.hidden = false;
+            if (cartDiscountAmount) cartDiscountAmount.textContent = '-' + promoDiscount.toLocaleString('ro-RO', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' lei';
+            if (cartDiscountCode) cartDiscountCode.textContent = promo.code || '';
+            if (cartTotalRow) cartTotalRow.hidden = false;
+            if (cartTotalEl) cartTotalEl.textContent = Math.max(0, subtotal - promoDiscount).toLocaleString('ro-RO', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' lei';
+            // Spacer collapses when total row takes its place.
+            if (cartSpacer) cartSpacer.classList.add('hidden');
+        } else {
+            if (cartDiscountRow) cartDiscountRow.hidden = true;
+            if (cartTotalRow) cartTotalRow.hidden = true;
+            if (cartSpacer) cartSpacer.classList.remove('hidden');
+        }
 
         if (items.length === 0) {
             cartEmpty.classList.remove('hidden');
@@ -621,6 +674,9 @@
     requestAnimationFrame(function() { updateCartUI(); });
 
     window.addEventListener('ambilet:cart:update', function() { updateCartUI(); });
+    // Promo state changes (apply / remove / revalidate) come on a
+    // dedicated event — same UI refresh.
+    window.addEventListener('ambilet:cart:promo', function() { updateCartUI(); });
     window.addEventListener('ambilet:cart:expired', function() { closeCartDrawer(); updateCartUI(); });
     window.addEventListener('ambilet:cart:clear', function() { updateCartUI(); });
 
