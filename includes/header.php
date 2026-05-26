@@ -753,19 +753,21 @@ $ambiletBackendDown = isBackendUnreachable();
             <span id="cartSubtotal" class="text-base font-semibold text-gray-900">0 lei</span>
         </div>
 
-        <!-- Promo discount (hidden until a promo is applied) -->
-        <div id="cartDiscountRow" class="flex items-center justify-between mb-2" hidden>
+        <!-- Promo discount (display:none until a promo is applied — we
+             toggle via inline style because Tailwind's `flex` class
+             outranks the [hidden] attribute on specificity). -->
+        <div id="cartDiscountRow" class="flex items-center justify-between mb-2" style="display:none">
             <span class="text-sm text-gray-600">
                 Reducere
                 <span id="cartDiscountCode" class="ml-1 inline-flex items-center px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded bg-emerald-100 text-emerald-700"></span>
             </span>
-            <span id="cartDiscountAmount" class="text-sm font-semibold text-emerald-600">-0 lei</span>
+            <span id="cartDiscountAmount" class="text-sm font-semibold text-emerald-600"></span>
         </div>
 
         <!-- Grand total (shown only when discount applied; otherwise subtotal covers it) -->
-        <div id="cartTotalRow" class="flex items-center justify-between pt-2 mb-4 border-t border-gray-200" hidden>
+        <div id="cartTotalRow" class="flex items-center justify-between pt-2 mb-4 border-t border-gray-200" style="display:none">
             <span class="text-gray-700">Total de plată</span>
-            <span id="cartTotal" class="text-lg font-bold text-primary">0 lei</span>
+            <span id="cartTotal" class="text-lg font-bold text-primary"></span>
         </div>
         <div id="cartSpacer" class="mb-4"></div>
 
