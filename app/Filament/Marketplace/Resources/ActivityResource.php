@@ -247,15 +247,16 @@ class ActivityResource extends Resource
                             'slug',
                             fn (Builder $query) => $query->where('marketplace_client_id', $marketplace?->id)
                         )
-                        ->getOptionLabelFromRecordUsing(function ($rec) use ($lang) {
-                            // Filament can hand us null here when the value stored in the
-                            // pivot points to an activity that no longer matches the
-                            // marketplace-scoped modifier closure (or was soft-deleted).
-                            // Without this guard we 500 on `$rec->title` access.
-                            if (! $rec) return null;
+                        ->getOptionLabelFromRecordUsing(function ($rec) use ($lang): string {
+                            // Filament's getOptionLabelFromRecord() has a strict `string`
+                            // return type, so we must return a string here even when the
+                            // record is missing — null returns 500 the page. We:
+                            //   - return '' for null records (orphan pivot rows)
+                            //   - defensively null-coalesce title/slug
+                            if (! $rec) return '';
 
                             $title = is_array($rec->title ?? null)
-                                ? ($rec->title[$lang] ?? $rec->title['en'] ?? $rec->slug)
+                                ? ($rec->title[$lang] ?? $rec->title['en'] ?? ($rec->slug ?? ''))
                                 : (string) ($rec->title ?? $rec->slug ?? '');
                             $organizer = $rec->organizer?->name ?? null;
                             return $organizer ? "{$title} — {$organizer}" : $title;
