@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- ===================== SEO CORE ===================== -->
+  <title>Întrebări frecvente — bilete.online</title>
+  <meta name="description" content="Răspunsuri la întrebări frecvente despre bilete.online: comenzi, bilete QR, plăți, taxe, retururi, protecție bilet, puncte bonus, carduri cadou, cont client și locații partenere." />
+  <meta name="keywords" content="FAQ bilete.online, întrebări frecvente bilete, bilete QR, recuperare comandă, retur bilete, protecție bilet, puncte bonus, card cadou, suport bilete" />
+  <meta name="robots" content="index, follow, max-image-preview:large" />
+  <link rel="canonical" href="https://bilete.online/faqs" />
+  <meta name="theme-color" content="#1B1714" />
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="bilete.online" />
+  <meta property="og:title" content="Întrebări frecvente — bilete.online" />
+  <meta property="og:description" content="Găsește rapid răspunsuri despre comenzi, bilete, plăți, retururi, puncte bonus, carduri cadou și locații." />
+  <meta property="og:url" content="https://bilete.online/faqs" />
+  <meta property="og:locale" content="ro_RO" />
+  <meta name="twitter:card" content="summary_large_image" />
+
+  <!-- ===================== STRUCTURED DATA ===================== -->
+  <script type="application/ld+json">
+  {
+    "@context":"https://schema.org",
+    "@type":"FAQPage",
+    "name":"Întrebări frecvente bilete.online",
+    "url":"https://bilete.online/faqs",
+    "mainEntity":[
+      {
+        "@type":"Question",
+        "name":"Când primesc biletele după plată?",
+        "acceptedAnswer":{"@type":"Answer","text":"Biletele sunt emise după confirmarea plății și sunt trimise pe email. Dacă ai cont, le găsești și în zona Biletele mele."}
+      },
+      {
+        "@type":"Question",
+        "name":"Trebuie să printez biletul?",
+        "acceptedAnswer":{"@type":"Answer","text":"În mod normal nu. Poți arăta codul QR de pe telefon, cu excepția cazurilor în care pagina activității menționează altă regulă."}
+      },
+      {
+        "@type":"Question",
+        "name":"Ce fac dacă nu am primit biletele?",
+        "acceptedAnswer":{"@type":"Answer","text":"Verifică folderul Spam sau Promotions, apoi folosește pagina de recuperare comandă cu emailul și numărul comenzii."}
+      },
+      {
+        "@type":"Question",
+        "name":"Pot cere retur pentru bilete?",
+        "acceptedAnswer":{"@type":"Answer","text":"Returul depinde de politica activității, statusul biletului și eventualele opțiuni cumpărate, cum ar fi protecția bilet."}
+      },
+      {
+        "@type":"Question",
+        "name":"Cum funcționează punctele bonus?",
+        "acceptedAnswer":{"@type":"Answer","text":"La comenzile eligibile primești puncte bonus care pot fi folosite ulterior în comenzi, conform regulilor programului de loialitate."}
+      }
+    ]
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context":"https://schema.org",
+    "@type":"BreadcrumbList",
+    "itemListElement":[
+      {"@type":"ListItem","position":1,"name":"Acasă","item":"https://bilete.online/"},
+      {"@type":"ListItem","position":2,"name":"Întrebări frecvente","item":"https://bilete.online/faqs"}
+    ]
+  }
+  </script>
+
+  <!-- ===================== FONTS ===================== -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;0,9..144,900;1,9..144,500&family=Hanken+Grotesk:wght@400;500;600;700;800&family=Spline+Sans+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+
+  <!-- ===================== TAILWIND ===================== -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: { extend: {
+        colors: {
+          paper:'#F4EFE3','paper-2':'#EBE2CF','paper-3':'#E2D7BF',
+          ink:'#1B1714','ink-2':'#2E2820','ink-soft':'#5A4F41',
+          vermilion:'#E84527','vermilion-d':'#C5371C',
+          forest:'#1E4A3D','forest-l':'#2E6553',
+          ochre:'#DA9A33',sky:'#2C5F8A',mint:'#D7E8D3',rose:'#F2C7B8'
+        },
+        fontFamily: {
+          display:['Fraunces','Georgia','serif'],
+          sans:['"Hanken Grotesk"','system-ui','sans-serif'],
+          mono:['"Spline Sans Mono"','ui-monospace','monospace']
+        },
+        boxShadow:{ ticket:'0 28px 60px -36px rgba(27,23,20,.58)', deep:'0 42px 90px -48px rgba(27,23,20,.75)' }
+      }}
+    }
+  </script>
+
+  <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+  <style>
+    :root { --paper:#F4EFE3; }
+    html { scroll-behavior:smooth; }
+    body { background:#F4EFE3; color:#1B1714; font-feature-settings:"ss01","cv01"; }
+    .font-display { font-optical-sizing:auto; font-variation-settings:"SOFT" 0,"WONK" 1; letter-spacing:-.018em; }
+    .grain::after{ content:""; position:fixed; inset:0; z-index:60; pointer-events:none; opacity:.05; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); mix-blend-mode:multiply; }
+    .ticket{ position:relative; isolation:isolate; }
+    .ticket .perf{ position:absolute; top:0; bottom:0; left:var(--perf,68%); width:0; border-left:2px dashed rgba(27,23,20,.28); }
+    .ticket .notch{ position:absolute; left:var(--perf,68%); width:18px; height:18px; border-radius:9999px; background:var(--punch,#F4EFE3); transform:translateX(-50%); border:2px dashed rgba(27,23,20,.18); }
+    .ticket .notch.top{ top:-9px; } .ticket .notch.bot{ bottom:-9px; }
+    .stamp{ border:2px solid currentColor; border-radius:9999px; }
+    .underline-wobble{ background-image:linear-gradient(currentColor,currentColor); background-size:100% 2px; background-repeat:no-repeat; background-position:0 100%; transition:background-size .3s; }
+    .underline-wobble:hover{ background-size:0% 2px; }
+    .field{ width:100%; border:2px solid rgba(27,23,20,.16); background:rgba(255,255,255,.28); border-radius:1rem; padding:.85rem 1rem; outline:none; transition:border-color .2s, box-shadow .2s, background .2s; }
+    .field:focus{ border-color:#E84527; box-shadow:0 0 0 4px rgba(232,69,39,.12); background:#F4EFE3; }
+    .soft-card{ border:2px solid rgba(27,23,20,.12); background:rgba(235,226,207,.65); border-radius:1.5rem; }
+    @keyframes floaty { 0%,100%{ transform:translateY(0) rotate(-2deg); } 50%{ transform:translateY(-10px) rotate(1deg); } }
+    .floaty{ animation:floaty 7s ease-in-out infinite; }
+    @keyframes pulseDot { 0%,100%{ transform:scale(1); opacity:.55; } 50%{ transform:scale(1.35); opacity:1; } }
+    .pulse-dot{ animation:pulseDot 2.4s ease-in-out infinite; }
+    [x-cloak]{ display:none!important; }
+    @media (prefers-reduced-motion: reduce){ html{scroll-behavior:auto;} .floaty,.pulse-dot{animation:none!important;} *{transition:none!important;} }
+  </style>
+</head>
+
+<body class="grain font-sans antialiased selection:bg-vermilion selection:text-paper" x-data="faqPage()">
+
+<header x-data="{open:false, scrolled:false}" x-init="window.addEventListener('scroll',()=>scrolled=window.scrollY>20)" class="sticky top-0 z-50">
+  <div class="bg-ink text-paper/80 text-[11px] sm:text-xs font-mono tracking-wider">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 h-8 flex items-center justify-between">
+      <span class="flex items-center gap-2"><span class="inline-block w-1.5 h-1.5 rounded-full bg-vermilion pulse-dot"></span> FAQ · SUPORT · SELF-SERVICE</span>
+      <span class="hidden sm:flex items-center gap-4"><a href="/recuperare-comanda" class="text-ochre underline-wobble">Recuperează comanda</a><span class="text-paper/40">operat de <a href="https://tixello.ro" class="text-ochre underline-wobble">Tixello</a></span></span>
+    </div>
+  </div>
+
+  <div :class="scrolled ? 'bg-paper/95 backdrop-blur-md border-b border-ink/10 shadow-[0_10px_30px_-22px_rgba(27,23,20,.6)]' : 'bg-paper/70 backdrop-blur-sm border-b border-ink/5'" class="transition-all duration-300">
+    <nav class="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
+      <a href="/" class="flex items-center gap-2.5 group shrink-0" aria-label="bilete.online">
+        <span class="relative grid place-items-center w-9 h-9 bg-vermilion text-paper rounded-md rotate-[-4deg] group-hover:rotate-[4deg] transition-transform duration-300 shadow-[0_6px_14px_-6px_rgba(232,69,39,.9)]">
+          <svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2 2 2 0 0 0 0 4 2 2 0 0 1-2 2H5a2 2 0 0 1-2-2 2 2 0 0 0 0-4Z"/><path d="M9 7v10" stroke-dasharray="2 2"/></svg>
+        </span>
+        <span class="font-display text-xl font-bold tracking-tight">bilete<span class="text-vermilion">.</span>online</span>
+      </a>
+
+      <div class="hidden lg:flex items-center gap-1 text-[15px] font-medium">
+        <a href="/categorii" class="px-3 py-2 rounded-full hover:bg-ink/5 transition">Categorii</a>
+        <a href="/orase" class="px-3 py-2 rounded-full hover:bg-ink/5 transition">Orașe</a>
+        <a href="/ghiduri" class="px-3 py-2 rounded-full hover:bg-ink/5 transition">Ghiduri</a>
+        <a href="/ajutor" aria-current="page" class="px-3 py-2 rounded-full bg-ink text-paper transition">Ajutor</a>
+        <a href="/contact" class="px-3 py-2 rounded-full hover:bg-ink/5 transition">Contact</a>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <a href="/contact" class="hidden sm:inline-flex rounded-full border-2 border-ink px-4 py-2 text-sm font-bold hover:bg-ink hover:text-paper transition">Contact</a>
+        <a href="/recuperare-comanda" class="hidden sm:inline-flex rounded-full bg-vermilion text-paper px-4 py-2 text-sm font-bold hover:bg-vermilion-d transition">Recuperează</a>
+        <button @click="open=!open" class="lg:hidden grid place-items-center w-10 h-10 rounded-md border border-ink/15" aria-label="Meniu">
+          <svg x-show="!open" viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+          <svg x-show="open" x-cloak viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6 6 18"/></svg>
+        </button>
+      </div>
+    </nav>
+
+    <div x-show="open" x-cloak x-transition.origin.top class="lg:hidden border-t border-ink/10 bg-paper px-5 py-5 text-lg font-medium">
+      <a href="/categorii" class="block py-2">Categorii</a>
+      <a href="/orase" class="block py-2">Orașe</a>
+      <a href="/ghiduri" class="block py-2">Ghiduri</a>
+      <a href="/ajutor" class="block py-2 text-vermilion font-bold">Ajutor</a>
+      <a href="/contact" class="block py-2">Contact</a>
+      <a href="/recuperare-comanda" class="block mt-3 px-4 py-3 rounded-full bg-vermilion text-paper text-center font-bold">Recuperează comanda</a>
+    </div>
+  </div>
+</header>
+
+<main>
+
+  <!-- HERO -->
+  <section class="relative overflow-hidden border-b-2 border-ink">
+    <div class="absolute inset-0 bg-[radial-gradient(circle_at_82%_14%,rgba(232,69,39,.24),transparent_30%),radial-gradient(circle_at_16%_72%,rgba(30,74,61,.22),transparent_34%),radial-gradient(circle_at_50%_44%,rgba(218,154,51,.18),transparent_30%)]"></div>
+
+    <div class="relative max-w-7xl mx-auto px-4 sm:px-6 pt-14 sm:pt-20 pb-16 sm:pb-24">
+      <nav class="flex items-center gap-2 text-sm text-ink-soft" aria-label="Breadcrumb">
+        <a href="/" class="hover:text-vermilion">Acasă</a><span>/</span><span class="text-ink">Întrebări frecvente</span>
+      </nav>
+
+      <div class="mt-8 grid lg:grid-cols-[1fr_.88fr] gap-12 items-center">
+        <div>
+          <p class="stamp inline-flex px-3 py-1 text-xs font-mono tracking-[.18em] text-vermilion bg-paper/70">FAQ · COMENZI · BILETE · LOCAȚII</p>
+          <h1 class="mt-6 font-display text-6xl sm:text-8xl lg:text-[6.4rem] font-bold leading-[.82]">
+            Răspunsuri rapide, fără ping-pong cu suportul.
+          </h1>
+          <p class="mt-6 max-w-2xl text-xl sm:text-2xl text-ink-soft leading-relaxed">
+            Găsește răspunsuri despre comenzi, bilete QR, plăți, taxe, retururi, protecție bilet, puncte bonus, carduri cadou, cont client și acces pentru locații.
+          </p>
+
+          <div class="mt-8 max-w-2xl">
+            <label class="sr-only" for="faq-search">Caută în întrebări frecvente</label>
+            <div class="relative">
+              <input id="faq-search" class="field text-lg pr-14" x-model="search" placeholder="Caută: bilete, retur, voucher, puncte, plată..." />
+              <span class="absolute right-4 top-1/2 -translate-y-1/2 text-ink-soft">
+                <svg viewBox="0 0 24 24" class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+              </span>
+            </div>
+          </div>
+
+          <div class="mt-6 flex flex-wrap gap-2">
+            <template x-for="chip in quickChips" :key="chip.key">
+              <button @click="activeCategory=chip.key" class="rounded-full bg-paper/70 border border-ink/10 px-4 py-2 font-bold hover:bg-ink hover:text-paper transition" x-text="chip.label"></button>
+            </template>
+          </div>
+        </div>
+
+        <div class="relative min-h-[560px]">
+          <div class="absolute inset-x-8 top-10 bottom-8 rounded-[2.4rem] bg-ink rotate-[2deg] shadow-deep"></div>
+
+          <div class="absolute top-0 left-0 right-0 mx-auto max-w-[540px] ticket bg-paper border-2 border-ink rounded-[2rem] overflow-hidden shadow-deep rotate-[-2deg]" style="--perf:100%">
+            <div class="p-6 sm:p-8">
+              <p class="font-mono text-xs tracking-[.18em] text-ink-soft">HELP ROUTER</p>
+              <h2 class="mt-3 font-display text-4xl font-bold leading-none">Cele mai rapide rezolvări.</h2>
+
+              <div class="mt-7 grid gap-3">
+                <a href="/recuperare-comanda" class="rounded-3xl bg-vermilion text-paper p-5 flex items-center justify-between hover:bg-vermilion-d transition">
+                  <div><p class="font-display text-2xl font-bold">Nu găsesc biletele</p><p class="text-paper/70 text-sm">recuperare comandă</p></div><span class="text-3xl">🎟️</span>
+                </a>
+                <a href="/cerere-retur" class="rounded-3xl bg-paper-2 border border-ink/10 p-5 flex items-center justify-between hover:border-ink transition">
+                  <div><p class="font-display text-2xl font-bold">Vreau retur</p><p class="text-ink-soft text-sm">cerere / status</p></div><span class="text-3xl">↩️</span>
+                </a>
+                <a href="/voucher" class="rounded-3xl bg-mint border border-forest/20 p-5 flex items-center justify-between hover:border-forest transition">
+                  <div><p class="font-display text-2xl font-bold">Am un card cadou</p><p class="text-ink-soft text-sm">verificare sold / cod</p></div><span class="text-3xl">🎁</span>
+                </a>
+              </div>
+            </div>
+          </div>
+
+          <div class="floaty absolute left-0 bottom-20 w-60 rounded-3xl border-2 border-ink bg-paper p-5 shadow-deep rotate-[-5deg]">
+            <p class="font-mono text-[10px] tracking-[.18em] text-ink-soft">FAQ SEO</p>
+            <p class="mt-2 font-display text-2xl font-bold">întrebări pe categorii</p>
+            <p class="mt-2 text-sm text-ink-soft">comenzi, retur, puncte, locații</p>
+          </div>
+
+          <div class="floaty absolute right-0 bottom-0 w-64 rounded-3xl border-2 border-ink bg-ink text-paper p-5 shadow-deep rotate-[5deg]" style="animation-delay:-2.3s">
+            <p class="font-mono text-[10px] tracking-[.18em] text-paper/45">SELF-SERVICE</p>
+            <p class="mt-2 font-display text-3xl font-bold">rapid</p>
+            <p class="mt-1 text-paper/60 text-sm">recuperare, voucher, retur, contact</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAST ACTIONS -->
+  <section class="max-w-7xl mx-auto px-4 sm:px-6 py-14">
+    <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <a href="/recuperare-comanda" class="rounded-3xl border-2 border-ink bg-paper p-6 hover:-translate-y-1 transition shadow-ticket">
+        <p class="text-3xl">🎟️</p>
+        <h2 class="mt-4 font-display text-3xl font-bold">Recuperează comanda</h2>
+        <p class="mt-2 text-ink-soft">Găsește biletele după email și număr comandă.</p>
+      </a>
+      <a href="/cerere-retur" class="rounded-3xl border-2 border-ink bg-paper p-6 hover:-translate-y-1 transition shadow-ticket">
+        <p class="text-3xl">↩️</p>
+        <h2 class="mt-4 font-display text-3xl font-bold">Cerere retur</h2>
+        <p class="mt-2 text-ink-soft">Verifică politica și trimite o cerere structurată.</p>
+      </a>
+      <a href="/voucher" class="rounded-3xl border-2 border-ink bg-paper p-6 hover:-translate-y-1 transition shadow-ticket">
+        <p class="text-3xl">🎁</p>
+        <h2 class="mt-4 font-display text-3xl font-bold">Verifică voucher</h2>
+        <p class="mt-2 text-ink-soft">Vezi soldul și validitatea cardului cadou.</p>
+      </a>
+      <a href="/contact" class="rounded-3xl border-2 border-ink bg-ink text-paper p-6 hover:-translate-y-1 transition shadow-ticket">
+        <p class="text-3xl">✉️</p>
+        <h2 class="mt-4 font-display text-3xl font-bold">Contact suport</h2>
+        <p class="mt-2 text-paper/60">Nu ai găsit răspunsul? Scrie-ne.</p>
+      </a>
+    </div>
+  </section>
+
+  <!-- FAQ LIST -->
+  <section class="border-y-2 border-ink bg-paper-2/65">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-16 sm:py-20">
+      <div class="grid lg:grid-cols-[300px_1fr] gap-8 items-start">
+        <aside class="lg:sticky lg:top-28">
+          <div class="rounded-[2rem] border-2 border-ink bg-paper p-5 shadow-ticket">
+            <p class="font-mono text-xs tracking-[.18em] text-ink-soft">CATEGORII FAQ</p>
+            <div class="mt-4 space-y-2">
+              <template x-for="category in categories" :key="category.key">
+                <button @click="activeCategory=category.key"
+                        :class="activeCategory===category.key ? 'bg-ink text-paper' : 'bg-paper-2 text-ink hover:bg-ink/5'"
+                        class="w-full rounded-2xl px-4 py-3 text-left font-bold transition flex items-center justify-between gap-3">
+                  <span x-text="category.label"></span>
+                  <span class="text-xs opacity-60" x-text="category.count"></span>
+                </button>
+              </template>
+            </div>
+
+            <div class="mt-5 rounded-2xl bg-mint border border-forest/20 p-4">
+              <p class="font-bold text-forest">Nu știi unde se încadrează?</p>
+              <p class="mt-1 text-sm text-ink-soft">Caută după cuvinte simple: „QR”, „retur”, „voucher”, „taxă”, „nume bilet”.</p>
+            </div>
+          </div>
+        </aside>
+
+        <section>
+          <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+            <div>
+              <p class="font-mono text-xs tracking-[.18em] text-ink-soft">ÎNTREBĂRI</p>
+              <h2 class="mt-2 font-display text-5xl font-bold leading-none" x-text="currentCategoryTitle()"></h2>
+            </div>
+            <p class="text-ink-soft" x-text="filteredFaqs().length + ' întrebări afișate'"></p>
+          </div>
+
+          <div class="mt-6 space-y-3" x-data="{open:null}">
+            <template x-for="(faq,index) in filteredFaqs()" :key="faq.q">
+              <article class="rounded-3xl border-2 border-ink bg-paper overflow-hidden shadow-ticket">
+                <button @click="open=open===index?null:index" class="w-full text-left p-5 sm:p-6 flex items-start justify-between gap-4">
+                  <span>
+                    <span class="block font-mono text-[10px] tracking-[.18em] text-vermilion" x-text="faq.categoryLabel"></span>
+                    <span class="mt-1 block font-display text-2xl sm:text-3xl font-bold leading-none" x-text="faq.q"></span>
+                  </span>
+                  <span class="text-3xl font-bold shrink-0" x-text="open===index?'−':'+'"></span>
+                </button>
+                <div x-show="open===index" x-collapse class="px-5 sm:px-6 pb-6">
+                  <p class="text-ink-soft leading-relaxed text-lg" x-text="faq.a"></p>
+                  <template x-if="faq.links && faq.links.length">
+                    <div class="mt-4 flex flex-wrap gap-2">
+                      <template x-for="link in faq.links" :key="link.url">
+                        <a :href="link.url" class="rounded-full bg-paper-2 border border-ink/10 px-4 py-2 text-sm font-bold hover:bg-ink hover:text-paper transition" x-text="link.label"></a>
+                      </template>
+                    </div>
+                  </template>
+                </div>
+              </article>
+            </template>
+          </div>
+        </section>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION EXPLAINERS -->
+  <section class="max-w-7xl mx-auto px-4 sm:px-6 py-16 sm:py-20">
+    <div class="grid lg:grid-cols-[.85fr_1.15fr] gap-10 items-start">
+      <div class="lg:sticky lg:top-28">
+        <p class="stamp inline-flex px-3 py-1 text-xs font-mono tracking-[.18em] text-vermilion">STRUCTURĂ SUPORT</p>
+        <h2 class="mt-5 font-display text-5xl sm:text-6xl font-bold leading-[.9]">Un FAQ bun trebuie să reducă cererile de suport.</h2>
+        <p class="mt-5 text-lg text-ink-soft leading-relaxed">Pagina de FAQ nu este doar conținut informativ. Este o zonă de self-service care trimite utilizatorul către acțiunea potrivită înainte să ajungă la contact.</p>
+      </div>
+
+      <div class="grid sm:grid-cols-2 gap-4">
+        <article class="soft-card p-6"><p class="font-mono text-xs tracking-[.18em] text-vermilion">CLIENT</p><h3 class="mt-3 font-display text-3xl font-bold">Întrebări despre bilete</h3><p class="mt-2 text-ink-soft">Emiterea biletelor, QR, beneficiari, download PDF, calendar.</p></article>
+        <article class="soft-card p-6 bg-mint"><p class="font-mono text-xs tracking-[.18em] text-forest">COMERCIAL</p><h3 class="mt-3 font-display text-3xl font-bold">Plăți, taxe, puncte</h3><p class="mt-2 text-ink-soft">Metode de plată, comisioane, procesare, puncte bonus, carduri cadou.</p></article>
+        <article class="soft-card p-6"><p class="font-mono text-xs tracking-[.18em] text-vermilion">POST-CUMPĂRARE</p><h3 class="mt-3 font-display text-3xl font-bold">Retururi și protecție bilet</h3><p class="mt-2 text-ink-soft">Politici, condiții, status cerere și opțiuni de flexibilitate.</p></article>
+        <article class="soft-card p-6 bg-ink text-paper"><p class="font-mono text-xs tracking-[.18em] text-ochre">B2B</p><h3 class="mt-3 font-display text-3xl font-bold">Locații și organizatori</h3><p class="mt-2 text-paper/60">Listare locație, dashboard, bilete QR, comenzi și scanare.</p></article>
+      </div>
+    </div>
+  </section>
+
+  <!-- STILL NEED HELP -->
+  <section class="border-y-2 border-ink bg-ink text-paper">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-16">
+      <div class="grid lg:grid-cols-[1fr_1fr] gap-10 items-center">
+        <div>
+          <p class="stamp inline-flex px-3 py-1 text-xs font-mono tracking-[.18em] text-ochre">SUPORT</p>
+          <h2 class="mt-5 font-display text-5xl sm:text-6xl font-bold leading-[.9]">Nu ai găsit răspunsul?</h2>
+          <p class="mt-5 text-lg text-paper/60 leading-relaxed">Folosește pagina de contact și alege motivul corect. Pentru comenzi, include emailul folosit, numărul comenzii și numele activității.</p>
+        </div>
+
+        <div class="ticket bg-paper text-ink rounded-[2rem] overflow-hidden shadow-deep" style="--perf:100%">
+          <div class="p-6 border-b-2 border-dashed border-ink/15">
+            <p class="font-mono text-xs tracking-[.18em] text-ink-soft">CONTACT ROUTER</p>
+            <h3 class="mt-2 font-display text-4xl font-bold">Trimite-ne contextul corect</h3>
+          </div>
+          <div class="p-6 space-y-3">
+            <a href="/contact?motiv=comanda" class="block rounded-2xl bg-paper-2 border border-ink/10 p-4 hover:border-ink transition"><strong>Problemă cu o comandă</strong><br><span class="text-sm text-ink-soft">bilete, QR, email, plată</span></a>
+            <a href="/contact?motiv=retur" class="block rounded-2xl bg-paper-2 border border-ink/10 p-4 hover:border-ink transition"><strong>Retur sau rambursare</strong><br><span class="text-sm text-ink-soft">eligibilitate, status, protecție bilet</span></a>
+            <a href="/contact?motiv=locatie" class="block rounded-2xl bg-paper-2 border border-ink/10 p-4 hover:border-ink transition"><strong>Locație / organizator</strong><br><span class="text-sm text-ink-soft">listare, demo, dashboard</span></a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FINAL CTA -->
+  <section class="max-w-7xl mx-auto px-4 sm:px-6 py-16 sm:py-20">
+    <div class="relative overflow-hidden rounded-[2rem] border-2 border-ink bg-vermilion text-paper p-8 sm:p-12">
+      <div class="absolute inset-0 opacity-15" style="background-image:radial-gradient(#fff 1px,transparent 1.4px);background-size:15px 15px"></div>
+      <div class="relative grid lg:grid-cols-[1fr_auto] gap-8 items-center">
+        <div>
+          <p class="font-mono text-xs tracking-[.2em] text-paper/60">HELP CENTER</p>
+          <h2 class="mt-3 font-display text-5xl sm:text-6xl font-bold leading-[.9]">Rezolvă rapid. Apoi mergi la activitate.</h2>
+          <p class="mt-4 max-w-2xl text-paper/75 text-lg">FAQ-ul trebuie să îți scurteze drumul: răspuns, acțiune, bilet, acces.</p>
+        </div>
+        <div class="flex flex-col sm:flex-row lg:flex-col gap-3">
+          <a href="/recuperare-comanda" class="rounded-full bg-paper text-ink px-6 py-4 font-bold text-center hover:bg-ink hover:text-paper transition">Recuperează comanda</a>
+          <a href="/contact" class="rounded-full border-2 border-paper/60 px-6 py-4 font-bold text-center hover:bg-paper hover:text-ink transition">Contact suport</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="border-t-2 border-ink bg-ink text-paper">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 py-12 grid md:grid-cols-4 gap-8">
+    <div class="md:col-span-2">
+      <p class="font-display text-3xl font-bold">bilete<span class="text-vermilion">.</span>online</p>
+      <p class="mt-3 max-w-lg text-paper/65">Bilete pentru activități, experiențe și locuri unde chiar mergi să faci ceva. Rezervi online, primești QR, intri rapid.</p>
+    </div>
+    <nav>
+      <p class="font-mono text-xs tracking-[.2em] text-paper/40 mb-3">AJUTOR</p>
+      <a class="block py-1.5 text-paper/70 hover:text-ochre" href="/faqs">FAQ</a>
+      <a class="block py-1.5 text-paper/70 hover:text-ochre" href="/recuperare-comanda">Recuperare comandă</a>
+      <a class="block py-1.5 text-paper/70 hover:text-ochre" href="/cerere-retur">Cerere retur</a>
+      <a class="block py-1.5 text-paper/70 hover:text-ochre" href="/contact">Contact</a>
+    </nav>
+    <nav>
+      <p class="font-mono text-xs tracking-[.2em] text-paper/40 mb-3">PLATFORMĂ</p>
+      <a class="block py-1.5 text-paper/70 hover:text-ochre" href="/categorii">Categorii</a>
+      <a class="block py-1.5 text-paper/70 hover:text-ochre" href="/orase">Orașe</a>
+      <a class="block py-1.5 text-paper/70 hover:text-ochre" href="/locatii">Locații</a>
+      <a class="block py-1.5 text-paper/70 hover:text-ochre" href="/pentru-locatii">Pentru locații</a>
+    </nav>
+  </div>
+  <div class="border-t border-paper/10 py-4 text-center text-xs font-mono text-paper/40">© 2026 bilete.online · operat de Tixello</div>
+</footer>
+
+<script>
+function faqPage(){
+  return {
+    search:'',
+    activeCategory:'all',
+    quickChips:[
+      {label:'Bilete QR',key:'tickets'},
+      {label:'Retururi',key:'refunds'},
+      {label:'Plăți',key:'payments'},
+      {label:'Puncte',key:'bonus'},
+      {label:'Locații',key:'venues'}
+    ],
+    categories:[
+      {key:'all',label:'Toate',count:32},
+      {key:'orders',label:'Comenzi',count:6},
+      {key:'tickets',label:'Bilete & QR',count:7},
+      {key:'payments',label:'Plăți & taxe',count:6},
+      {key:'refunds',label:'Retururi',count:5},
+      {key:'bonus',label:'Puncte & carduri cadou',count:5},
+      {key:'account',label:'Cont client',count:4},
+      {key:'venues',label:'Locații',count:5}
+    ],
+    faqs:[
+      {
+        category:'orders',
+        categoryLabel:'Comenzi',
+        q:'Când primesc biletele după plată?',
+        a:'Biletele sunt emise după confirmarea plății și sunt trimise pe email. Dacă ai cont, le găsești și în zona Biletele mele.',
+        links:[{label:'Biletele mele',url:'/cont/biletele-mele'},{label:'Recuperează comanda',url:'/recuperare-comanda'}]
+      },
+      {
+        category:'orders',
+        categoryLabel:'Comenzi',
+        q:'Ce fac dacă nu am primit emailul de confirmare?',
+        a:'Verifică folderele Spam, Promotions sau Updates. Apoi folosește pagina de recuperare comandă cu emailul folosit la checkout și numărul comenzii, dacă îl ai.',
+        links:[{label:'Recuperare comandă',url:'/recuperare-comanda'}]
+      },
+      {
+        category:'tickets',
+        categoryLabel:'Bilete & QR',
+        q:'Trebuie să printez biletul?',
+        a:'În mod normal nu. Poți arăta codul QR de pe telefon. Dacă o locație cere altceva, această informație trebuie afișată pe pagina activității și în bilet.'
+      },
+      {
+        category:'tickets',
+        categoryLabel:'Bilete & QR',
+        q:'Pot pune nume diferite pe bilete?',
+        a:'Da. În checkout poți alege dacă biletele au același beneficiar sau dacă fiecare bilet are nume diferit. Este util pentru grupuri, cadouri și comenzi corporate.'
+      },
+      {
+        category:'tickets',
+        categoryLabel:'Bilete & QR',
+        q:'Ce se întâmplă dacă QR-ul nu se scanează?',
+        a:'Personalul locației poate verifica biletul după cod, număr comandă sau datele beneficiarului, în funcție de procedura locației. Contactează suportul dacă problema persistă.'
+      },
+      {
+        category:'payments',
+        categoryLabel:'Plăți & taxe',
+        q:'Ce metode de plată sunt disponibile?',
+        a:'Checkout-ul poate include card, Apple Pay, Google Pay, Revolut Pay și RoPay, în funcție de metodele active pentru platformă și procesator.'
+      },
+      {
+        category:'payments',
+        categoryLabel:'Plăți & taxe',
+        q:'De ce apar comisioane separate în coș?',
+        a:'Comisioanele platformei și eventualele taxe de procesare sunt afișate separat pentru transparență. Totalul final este calculat înainte de confirmarea plății.'
+      },
+      {
+        category:'payments',
+        categoryLabel:'Plăți & taxe',
+        q:'Ce fac dacă plata a eșuat, dar banii par blocați?',
+        a:'Unele plăți pot apărea temporar ca autorizări în contul bancar. Dacă plata nu este confirmată, comanda nu se emite. Verifică statusul comenzii sau contactează suportul cu detaliile plății.',
+        links:[{label:'Contact suport',url:'/contact?motiv=plata'}]
+      },
+      {
+        category:'refunds',
+        categoryLabel:'Retururi',
+        q:'Pot cere retur pentru bilete?',
+        a:'Returul depinde de politica activității, de statusul biletului, de momentul solicitării și de eventualele opțiuni cumpărate, cum ar fi protecția bilet.',
+        links:[{label:'Cerere retur',url:'/cerere-retur'}]
+      },
+      {
+        category:'refunds',
+        categoryLabel:'Retururi',
+        q:'Ce este protecția bilet?',
+        a:'Protecția bilet este o opțiune suplimentară care poate oferi flexibilitate în cazul în care nu mai poți ajunge. Condițiile exacte trebuie afișate în checkout și în regulament.'
+      },
+      {
+        category:'refunds',
+        categoryLabel:'Retururi',
+        q:'Cât durează rambursarea?',
+        a:'Durata depinde de procesatorul de plată, banca emitentă și statusul cererii. După aprobarea returului, rambursarea poate dura câteva zile lucrătoare.'
+      },
+      {
+        category:'bonus',
+        categoryLabel:'Puncte & carduri cadou',
+        q:'Cum funcționează punctele bonus?',
+        a:'La comenzile eligibile primești puncte bonus. Acestea apar în cont după confirmarea comenzii și pot fi folosite ulterior, conform regulilor programului de loialitate.',
+        links:[{label:'Punctele mele',url:'/cont/punctele-mele'}]
+      },
+      {
+        category:'bonus',
+        categoryLabel:'Puncte & carduri cadou',
+        q:'Pot folosi punctele bonus în aceeași comandă?',
+        a:'În mod normal, punctele se câștigă după confirmarea unei comenzi și se folosesc la comenzi viitoare. Regula exactă depinde de configurarea programului.'
+      },
+      {
+        category:'bonus',
+        categoryLabel:'Puncte & carduri cadou',
+        q:'Cum verific un card cadou?',
+        a:'Poți verifica soldul și validitatea unui card cadou sau voucher în pagina dedicată de verificare cod.',
+        links:[{label:'Verifică voucher',url:'/voucher'}]
+      },
+      {
+        category:'account',
+        categoryLabel:'Cont client',
+        q:'Mi se poate crea cont automat după checkout?',
+        a:'Da. Checkout-ul poate permite plasarea comenzii fără cont și crearea automată a contului, urmând ca tu să setezi ulterior parola.'
+      },
+      {
+        category:'account',
+        categoryLabel:'Cont client',
+        q:'Unde găsesc comenzile și biletele mele?',
+        a:'În contul client, în secțiunile Biletele mele și Comenzile mele. Acolo poți vedea statusuri, PDF-uri, QR-uri și istoricul comenzilor.',
+        links:[{label:'Contul meu',url:'/cont/dashboard'}]
+      },
+      {
+        category:'venues',
+        categoryLabel:'Locații',
+        q:'Cum listez o locație pe bilete.online?',
+        a:'Accesează pagina Pentru locații și trimite detaliile despre locație, oraș, tipul activităților și cum vinzi acum biletele.',
+        links:[{label:'Pentru locații',url:'/pentru-locatii'}]
+      },
+      {
+        category:'venues',
+        categoryLabel:'Locații',
+        q:'O locație poate avea mai multe activități?',
+        a:'Da. O locație poate avea o pagină principală și mai multe activități: camere de escape room, tururi, ateliere, pachete, bilete de acces sau expoziții.'
+      },
+      {
+        category:'venues',
+        categoryLabel:'Locații',
+        q:'Cum se face check-in-ul la intrare?',
+        a:'Biletele pot fi emise cu QR unic, iar staff-ul locației le poate scana pentru validare și controlul accesului.'
+      }
+    ],
+    currentCategoryTitle(){
+      const found = this.categories.find(c => c.key === this.activeCategory);
+      return found ? found.label : 'Toate';
+    },
+    filteredFaqs(){
+      const q = this.search.toLowerCase().trim();
+      return this.faqs.filter(faq => {
+        const matchesCategory = this.activeCategory === 'all' || faq.category === this.activeCategory;
+        const blob = JSON.stringify(faq).toLowerCase();
+        const matchesSearch = !q || blob.includes(q);
+        return matchesCategory && matchesSearch;
+      });
+    }
+  }
+}
+</script>
+
+</body>
+</html>
