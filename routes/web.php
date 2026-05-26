@@ -445,6 +445,12 @@ Route::get('/claim/{token}/download', [\App\Http\Controllers\PosTicketClaimContr
 Route::get('/gate', [\App\Http\Controllers\Public\GateController::class, 'show'])
     ->name('gate.scanner');
 
+// Activities check-in scanner (A6) — sibling of /gate but for the
+// activity flow: confirmation_code OR ticket code/barcode resolves to an
+// ActivityBooking and flips status to checked_in.
+Route::get('/gate-activitati', [\App\Http\Controllers\Public\GateActivityController::class, 'show'])
+    ->name('gate.scanner.activity');
+
 // Android APK Download
 Route::get('/download-android', function () {
     // Prefer new filename, fall back to legacy filename for backwards compat

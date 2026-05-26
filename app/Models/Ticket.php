@@ -76,6 +76,11 @@ class Ticket extends Model
         return $this->belongsTo(MarketplaceEvent::class);
     }
 
+    public function activityBooking(): BelongsTo
+    {
+        return $this->belongsTo(ActivityBooking::class);
+    }
+
     public function performance(): BelongsTo
     {
         return $this->belongsTo(Performance::class);

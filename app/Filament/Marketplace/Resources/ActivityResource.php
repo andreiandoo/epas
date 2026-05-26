@@ -1470,6 +1470,7 @@ class ActivityResource extends Resource
     {
         return [
             RelationManagers\ActivityVariantsRelationManager::class,
+            RelationManagers\BookingsRelationManager::class,
         ];
     }
 

@@ -1727,6 +1727,18 @@ Route::prefix('marketplace-client/organizer')->middleware(['throttle:120,1', 'ma
         Route::post('/participants/checkin', [OrganizerEventsController::class, 'checkInByCode'])
             ->name('api.marketplace-client.organizer.participants.checkin');
 
+        // Activity bookings check-in (A6).
+        // Codes can be a confirmation_code (10-char alphanumeric on the
+        // ActivityBooking) OR a tickets.code / tickets.barcode value.
+        // Same response shape as the event flavour so the gate-scanner UI
+        // can talk to either with one client.
+        Route::get('/activity-bookings/lookup/{code}', [\App\Http\Controllers\Api\MarketplaceClient\Organizer\ActivityCheckInController::class, 'lookup'])
+            ->name('api.marketplace-client.organizer.activity-bookings.lookup');
+        Route::post('/activity-bookings/check-in/{code}', [\App\Http\Controllers\Api\MarketplaceClient\Organizer\ActivityCheckInController::class, 'checkIn'])
+            ->name('api.marketplace-client.organizer.activity-bookings.check-in');
+        Route::delete('/activity-bookings/check-in/{code}', [\App\Http\Controllers\Api\MarketplaceClient\Organizer\ActivityCheckInController::class, 'undoCheckIn'])
+            ->name('api.marketplace-client.organizer.activity-bookings.check-in.undo');
+
         // Participants / Check-in (Per event)
         Route::get('/events/{event}/participants', [OrganizerEventsController::class, 'participants'])
             ->name('api.marketplace-client.organizer.events.participants');
