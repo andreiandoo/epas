@@ -143,6 +143,17 @@ class ViewPayout extends ViewRecord
                     'Setezi exact ce bilete intră în acest decont. Sumele payout-ului se recalculează din bilete.<br>'
                     . '<strong>Live preview</strong>: pe măsură ce schimbi qty-uri vezi totalul jos. '
                     . 'Sau tastează o sumă în "Sumă netă dorită" și apasă "Distribuie proporțional" ca să scalezi automat toate cantitățile.'
+                    // Inline-actions hack: flatten the Filament Repeater item
+                    // so the auto-rendered delete icon (normally stacked above
+                    // the schema as a header bar) sits on the same row, to the
+                    // right of the qty input. The .ep-inline-actions class is
+                    // applied to the Repeater via extraAttributes below.
+                    . '<style>'
+                    . '.ep-inline-actions .fi-fo-repeater-item.fi-fo-repeater-item-has-header { display: flex; flex-direction: row; align-items: center; gap: 0.5rem; }'
+                    . '.ep-inline-actions .fi-fo-repeater-item.fi-fo-repeater-item-has-header > .fi-fo-repeater-item-content { flex: 1; padding: 0.5rem 0.75rem; }'
+                    . '.ep-inline-actions .fi-fo-repeater-item.fi-fo-repeater-item-has-header > .fi-fo-repeater-item-header { order: 2; flex: 0 0 auto; padding: 0 0.75rem; background: transparent !important; border: none !important; }'
+                    . '.ep-inline-actions .fi-fo-repeater-item-header-end-actions { margin: 0; }'
+                    . '</style>'
                 ))
                 ->modalWidth('5xl')
                 ->fillForm(function () {
@@ -183,7 +194,7 @@ class ViewPayout extends ViewRecord
                         ->label('Stare curentă (înainte de modificări)')
                         ->content(fn () => new \Illuminate\Support\HtmlString(
                             '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">'
-                            . '<div style="padding:8px;border:1px solid #e5e7eb;border-radius:6px;background:#f9fafb;"><div style="font-size:10px;color:#888;text-transform:uppercase;">Brut salvat</div><div style="font-family:monospace;font-weight:600;">' . number_format((float) $this->record->gross_amount, 2) . ' RON</div></div>'
+                            . '<div style="padding:8px;border:1px solid #e5e7eb;border-radius:6px;background:#f9fafb;"><div style="font-size:10px;color:#888;text-transform:uppercase;">Brut salvat</div><div style="font-family:monospace;font-weight:600;color:#111827;">' . number_format((float) $this->record->gross_amount, 2) . ' RON</div></div>'
                             . '<div style="padding:8px;border:1px solid #e5e7eb;border-radius:6px;background:#f9fafb;"><div style="font-size:10px;color:#888;text-transform:uppercase;">Comision salvat</div><div style="font-family:monospace;font-weight:600;color:#b91c1c;">-' . number_format((float) $this->record->commission_amount, 2) . ' RON</div></div>'
                             . '<div style="padding:8px;border:1px solid #059669;border-radius:6px;background:#f0fdf4;"><div style="font-size:10px;color:#059669;text-transform:uppercase;">Net salvat</div><div style="font-family:monospace;font-weight:700;color:#059669;">' . number_format((float) $this->record->amount, 2) . ' RON</div></div>'
                             . '</div>'
@@ -242,6 +253,7 @@ class ViewPayout extends ViewRecord
                     \Filament\Forms\Components\Repeater::make('payout_tickets')
                         ->label('Bilete incluse')
                         ->helperText('Modifică cantitățile per tip de bilet. Rândurile cu qty=0 se elimină la salvare.')
+                        ->extraAttributes(['class' => 'ep-inline-actions'])
                         ->schema([
                             \Filament\Forms\Components\Hidden::make('ticket_type_id'),
                             \Filament\Forms\Components\Hidden::make('unit_price'),
@@ -256,7 +268,7 @@ class ViewPayout extends ViewRecord
                                     . '<span class="text-xs text-gray-400 ml-2">' . number_format((float) ($get('unit_price') ?? 0), 2) . ' RON/bilet · comision ' . number_format((float) ($get('commission_per_ticket') ?? 0), 2) . ' RON/bilet</span>'
                                     . '</div>'
                                 ))
-                                ->columnSpan(2),
+                                ->columnSpan(3),
                             \Filament\Forms\Components\TextInput::make('qty')
                                 ->hiddenLabel()
                                 ->numeric()
@@ -265,7 +277,7 @@ class ViewPayout extends ViewRecord
                                 ->live(onBlur: true)
                                 ->columnSpan(1),
                         ])
-                        ->columns(3)
+                        ->columns(4)
                         ->reorderable(false)
                         ->addable(false)
                         ->deletable(true)
@@ -366,7 +378,7 @@ class ViewPayout extends ViewRecord
 
                             $refundLine = $refundCount > 0
                                 ? '<div style="margin-top:6px;padding-top:6px;border-top:1px dashed #93c5fd;display:grid;grid-template-columns:repeat(4,1fr);gap:8px;">'
-                                    . '<div><div style="font-size:10px;color:#666;">Net bilete</div><div style="font-family:monospace;font-weight:600;">' . number_format($ticketNet, 2) . ' RON</div></div>'
+                                    . '<div><div style="font-size:10px;color:#666;">Net bilete</div><div style="font-family:monospace;font-weight:600;color:#111827;">' . number_format($ticketNet, 2) . ' RON</div></div>'
                                     . '<div><div style="font-size:10px;color:#666;">Rambursări (' . $refundCount . ')</div><div style="font-family:monospace;font-weight:600;color:#b91c1c;">-' . number_format($refundTotal, 2) . ' RON</div></div>'
                                     . '<div style="grid-column:span 2 / span 2;"><div style="font-size:10px;color:#059669;text-transform:uppercase;">Final de plată</div><div style="font-family:monospace;font-weight:700;font-size:16px;color:#059669;">' . number_format($finalNet, 2) . ' RON</div></div>'
                                     . '</div>'
@@ -376,10 +388,10 @@ class ViewPayout extends ViewRecord
                                 '<div style="padding:12px;border:2px solid #3b82f6;border-radius:8px;background:#eff6ff;margin-top:8px;">'
                                 . '<div style="font-size:10px;color:#1e40af;text-transform:uppercase;font-weight:600;margin-bottom:6px;">Preview live</div>'
                                 . '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;">'
-                                . '<div><div style="font-size:10px;color:#666;">Total bilete</div><div style="font-family:monospace;font-weight:600;">' . $totalQty . '</div></div>'
-                                . '<div><div style="font-size:10px;color:#666;">Brut</div><div style="font-family:monospace;font-weight:600;">' . number_format($gross, 2) . ' RON</div></div>'
+                                . '<div><div style="font-size:10px;color:#666;">Total bilete</div><div style="font-family:monospace;font-weight:600;color:#111827;">' . $totalQty . '</div></div>'
+                                . '<div><div style="font-size:10px;color:#666;">Brut</div><div style="font-family:monospace;font-weight:600;color:#111827;">' . number_format($gross, 2) . ' RON</div></div>'
                                 . '<div><div style="font-size:10px;color:#666;">Comision</div><div style="font-family:monospace;font-weight:600;color:#b91c1c;">-' . number_format($commission, 2) . ' RON</div></div>'
-                                . '<div><div style="font-size:10px;color:#666;">Net bilete</div><div style="font-family:monospace;font-weight:700;color:' . ($refundCount > 0 ? '#374151' : '#059669') . ';">' . number_format($ticketNet, 2) . ' RON</div></div>'
+                                . '<div><div style="font-size:10px;color:#666;">Net bilete</div><div style="font-family:monospace;font-weight:700;color:' . ($refundCount > 0 ? '#111827' : '#059669') . ';">' . number_format($ticketNet, 2) . ' RON</div></div>'
                                 . '</div>'
                                 . $refundLine
                                 . '<div style="margin-top:6px;font-size:11px;color:' . $diffColor . ';font-weight:500;">' . $diffLabel . '</div>'
