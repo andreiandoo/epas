@@ -352,25 +352,40 @@ class ViewOrder extends ViewRecord
             Forms\Components\Radio::make('refund_variant')
                 ->label('Tip rambursare')
                 ->options([
-                    'face_only' => 'Ramburs fără comision — comisionul rămâne la organizator',
-                    'with_commission' => 'Ramburs total — clientul primește toată suma, inclusiv comisionul',
+                    'face_only' => 'Doar valoare bilete — clientul primește doar prețul biletului. Comisionul rămâne la marketplace + organizator.',
+                    'with_commission' => 'Bilete + comision — clientul primește prețul biletului + comisionul. Asigurarea și taxa procesare card NU se rambursează.',
                 ])
                 ->default('face_only')
                 ->required()
                 ->inline(false)
                 ->helperText(function () use ($order, $commissionByType) {
                     $totalCommission = (float) ($order->commission_amount ?? 0);
-                    if ($totalCommission <= 0) return 'Fără comision pe această comandă — ambele variante returnează aceeași sumă.';
-                    $parts = [];
-                    foreach ($commissionByType as $typeName => $cd) {
-                        if ($cd['rate'] > 0) {
-                            $parts[] = "{$typeName}: {$cd['rate']}%";
-                        } elseif ($cd['amount_per_unit'] > 0) {
-                            $parts[] = "{$typeName}: " . number_format($cd['amount_per_unit'], 2) . " lei fix";
+                    $processingFee = (float) round(((int) ($order->processing_fee_cents ?? 0)) / 100, 2);
+                    $hasInsurance = (float) ($order->meta['insurance_amount'] ?? 0) > 0;
+                    $insurance = (float) ($order->meta['insurance_amount'] ?? 0);
+
+                    $notes = [];
+                    if ($totalCommission > 0) {
+                        $parts = [];
+                        foreach ($commissionByType as $typeName => $cd) {
+                            if ($cd['rate'] > 0) {
+                                $parts[] = "{$typeName}: {$cd['rate']}%";
+                            } elseif ($cd['amount_per_unit'] > 0) {
+                                $parts[] = "{$typeName}: " . number_format($cd['amount_per_unit'], 2) . " lei fix";
+                            }
                         }
+                        $notes[] = 'Comision total: ' . number_format($totalCommission, 2) . ' ' . ($order->currency ?? 'RON')
+                            . ($parts ? ' (' . implode(', ', $parts) . ')' : '');
                     }
-                    return 'Comision total: ' . number_format($totalCommission, 2) . ' ' . ($order->currency ?? 'RON')
-                        . ($parts ? ' (' . implode(', ', $parts) . ')' : '');
+                    if ($hasInsurance) {
+                        $notes[] = 'Asigurare ' . number_format($insurance, 2) . ' ' . ($order->currency ?? 'RON') . ' — NU se rambursează indiferent de varianta aleasă.';
+                    }
+                    if ($processingFee > 0) {
+                        $notes[] = 'Taxă procesare card ' . number_format($processingFee, 2) . ' ' . ($order->currency ?? 'RON') . ' — pierdută către procesator (Stripe nu rambursează taxa proprie chiar și pe refund complet).';
+                    }
+                    return empty($notes)
+                        ? 'Fără comision, asigurare sau taxe pe această comandă — ambele variante returnează aceeași sumă.'
+                        : implode(' · ', $notes);
                 })
                 ->live(),
 
