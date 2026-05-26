@@ -430,7 +430,16 @@ class SalesBreakdownService
         // table below this one. exactBounds plumbs through to build() so the
         // payout slice respects strict datetime boundaries (no overlap with
         // the previous payout when periods touch).
-        $breakdown = $this->build($event, $periodStart, $periodEnd, excludePos: false, dateColumn: 'created_at', splitByPrice: false, exactBounds: $exactBounds);
+        //
+        // excludePos=true: POS tickets (sold via the organizer's mobile cash
+        // POS app) NEVER belong to a marketplace decont. The organizer
+        // already collected those funds at the door; the marketplace bills
+        // their commission separately. Same goes for test_order /
+        // external_import sources. Without this filter ticket_breakdown
+        // includes POS rows, the modal repeater shows POS lines, and the
+        // gross/net totals don't match the "Sold disponibil" card (which
+        // already excludes POS).
+        $breakdown = $this->build($event, $periodStart, $periodEnd, excludePos: true, dateColumn: 'created_at', splitByPrice: false, exactBounds: $exactBounds);
 
         return collect($breakdown['per_type'])->values()->map(function (array $row) {
             // Strip the TicketType model — Eloquent objects don't survive JSON casting cleanly.
@@ -673,7 +682,9 @@ class SalesBreakdownService
      */
     public function summarizeForPayout(Event $event, ?Carbon $periodStart = null, ?Carbon $periodEnd = null, bool $exactBounds = false): array
     {
-        $breakdown = $this->build($event, $periodStart, $periodEnd, excludePos: false, dateColumn: 'created_at', splitByPrice: false, exactBounds: $exactBounds);
+        // Same excludePos=true rule as buildForPayout — see the comment
+        // there. POS tickets never belong to a marketplace decont.
+        $breakdown = $this->build($event, $periodStart, $periodEnd, excludePos: true, dateColumn: 'created_at', splitByPrice: false, exactBounds: $exactBounds);
 
         $modes = collect($breakdown['per_type'])->pluck('commission_mode')->filter()->unique()->values();
         if ($modes->count() === 1) {

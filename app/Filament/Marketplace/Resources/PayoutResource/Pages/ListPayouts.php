@@ -265,7 +265,15 @@ class ListPayouts extends ListRecords
                 \Filament\Schemas\Components\Grid::make(3)->schema([
                     Forms\Components\TextInput::make('desired_net_amount')
                         ->label('Cât vrei să decontezi?')
-                        ->helperText('Introdu suma netă dorită, apoi apasă pe Distribuie automat.')
+                        ->helperText(function (Get $get) {
+                            $eventId = $get('event_id');
+                            if (!$eventId) return 'Introdu suma netă dorită, apoi apasă pe Distribuie automat.';
+                            $event = Event::with(['marketplaceOrganizer'])->find($eventId);
+                            if (!$event) return 'Introdu suma netă dorită, apoi apasă pe Distribuie automat.';
+                            $balance = self::calculateEventFinancials($event)['balance'];
+                            $fmt = number_format($balance, 2, ',', '.');
+                            return "Pentru un decont integral ({$fmt} RON), nu introduce nimic aici — biletele și sumele sunt deja pre-completate, doar trimite formul. Completează acest câmp DOAR pentru un decont parțial.";
+                        })
                         ->numeric()
                         ->minValue(0)
                         ->suffix('RON')
@@ -1099,9 +1107,26 @@ class ListPayouts extends ListRecords
         $commissionMode = $event->getEffectiveCommissionMode();
         $commissionRate = $event->getEffectiveCommissionRate();
 
-        // Get sold ticket counts per type
+        // Get sold ticket counts per type — EXCLUDE pos_app + test_order +
+        // external_import. POS tickets are direct cash sales the organizer
+        // collected at the door (no marketplace commission, no money flows
+        // through us), test orders never settled, and external imports
+        // pre-date the marketplace. Including them here makes the modal's
+        // ticket counts and the "Sold disponibil" card (which already
+        // excludes POS via calculateEventBalance -> excludePos:true)
+        // disagree, which is what made operators distrust the form.
+        // Invitations (order_id NULL) are still counted with qty=0 cost so
+        // they show up as a line but don't add to the payout amount.
         $ticketCounts = \App\Models\Ticket::whereHas('ticketType', fn ($q) => $q->where('event_id', $event->id))
             ->whereIn('status', ['valid', 'used'])
+            ->where(function ($q) {
+                $q->whereHas('order', function ($q2) {
+                    $q2->whereIn('status', ['paid', 'confirmed', 'completed'])
+                        ->where('source', '!=', 'external_import')
+                        ->where('source', '!=', 'pos_app')
+                        ->where('source', '!=', 'test_order');
+                })->orWhereNull('order_id');
+            })
             ->select('ticket_type_id', \DB::raw('COUNT(*) as cnt'))
             ->groupBy('ticket_type_id')
             ->pluck('cnt', 'ticket_type_id')
@@ -1188,8 +1213,19 @@ class ListPayouts extends ListRecords
     {
         $commissionRate = $event->getEffectiveCommissionRate();
 
+        // Same POS exclusion as populatePayoutTicketsFromEvent — see the
+        // comment there for the full rationale. The payouts generated from
+        // the "Evenimente încheiate" modal must NOT include POS tickets.
         $ticketCounts = \App\Models\Ticket::whereHas('ticketType', fn ($q) => $q->where('event_id', $event->id))
             ->whereIn('status', ['valid', 'used'])
+            ->where(function ($q) {
+                $q->whereHas('order', function ($q2) {
+                    $q2->whereIn('status', ['paid', 'confirmed', 'completed'])
+                        ->where('source', '!=', 'external_import')
+                        ->where('source', '!=', 'pos_app')
+                        ->where('source', '!=', 'test_order');
+                })->orWhereNull('order_id');
+            })
             ->select('ticket_type_id', \DB::raw('COUNT(*) as cnt'))
             ->groupBy('ticket_type_id')
             ->pluck('cnt', 'ticket_type_id')
