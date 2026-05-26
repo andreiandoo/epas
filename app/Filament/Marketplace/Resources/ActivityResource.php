@@ -22,6 +22,7 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema as DBSchema;
 use Illuminate\Support\Str;
 
 /**
@@ -698,9 +699,25 @@ class ActivityResource extends Resource
                                     ->key('conexiuni')
                                     ->icon('heroicon-o-link')
                                     ->schema([
+                                        // Guard — if the activity_related table hasn't been migrated yet,
+                                        // surface a clear instruction instead of letting Filament 500 when
+                                        // it tries to populate the Select::relationship from a missing table.
+                                        SC\Section::make('Migrare lipsă')
+                                            ->visible(fn () => ! DBSchema::hasTable('activity_related'))
+                                            ->schema([
+                                                Forms\Components\Placeholder::make('migrate_required')
+                                                    ->hiddenLabel()
+                                                    ->content(new \Illuminate\Support\HtmlString(
+                                                        '<div class="p-4 rounded-xl ring-1 ring-inset ring-warning-500/30 bg-warning-500/10 text-warning-400 text-sm">' .
+                                                        '<p class="font-semibold mb-1">Tabela <code>activity_related</code> nu există încă.</p>' .
+                                                        '<p>Rulează pe prod: <code>php artisan migrate</code>. După aceea reîncarcă această pagină ca să poți gestiona conexiunile între activități.</p>' .
+                                                        '</div>'
+                                                    )),
+                                            ]),
+
                                         SC\Section::make('Activități conectate')
                                             ->description('Apar ca recomandări pe pagina publică a activității (cross-sell / upsell). Activitățile aceluiași organizator se conectează automat. Poți adăuga și manual.')
-                                            ->visible(fn (?\App\Models\Activity $record) => $record && $record->exists)
+                                            ->visible(fn (?\App\Models\Activity $record) => $record && $record->exists && DBSchema::hasTable('activity_related'))
                                             ->schema([
                                                 Forms\Components\Select::make('relatedActivities')
                                                     ->label('Activități')
@@ -821,7 +838,7 @@ class ActivityResource extends Resource
                                             ->columns(1),
 
                                         SC\Section::make('Activități conectate')
-                                            ->visible(fn (?\App\Models\Activity $record) => ! $record || ! $record->exists)
+                                            ->visible(fn (?\App\Models\Activity $record) => (! $record || ! $record->exists) && DBSchema::hasTable('activity_related'))
                                             ->schema([
                                                 Forms\Components\Placeholder::make('save_first_for_connections')
                                                     ->hiddenLabel()
