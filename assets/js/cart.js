@@ -522,6 +522,20 @@ const AmbiletCart = {
                 total: (item.ticketType?.price || 0) * item.quantity
             }));
 
+            // TEMP DEBUG — log the exact payload sent to the backend so we
+            // can verify the items array carries the post-mutation
+            // quantities and totals. User reported a revalidate ran but
+            // backend kept returning the old discount.
+            try {
+                console.log('[Revalidate] →', {
+                    code: promo.code,
+                    eventId: eventId,
+                    subtotal: subtotal,
+                    ticketCount: ticketCount,
+                    items: items,
+                });
+            } catch (e) {}
+
             const response = await AmbiletAPI.validatePromoCode(
                 promo.code,
                 eventId,
@@ -530,6 +544,10 @@ const AmbiletCart = {
                 (typeof AmbiletAuth !== 'undefined' ? AmbiletAuth.getCustomerData()?.email : null),
                 items
             );
+
+            try {
+                console.log('[Revalidate] ←', response);
+            } catch (e) {}
 
             if (response && response.success) {
                 const discountData = response.data?.discount || {};
