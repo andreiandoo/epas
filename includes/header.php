@@ -748,10 +748,26 @@ $ambiletBackendDown = isBackendUnreachable();
     <!-- Footer with Total and Buttons -->
     <div id="cartFooter" class="flex-shrink-0 hidden p-4 border-t border-gray-200 bg-gray-50">
         <!-- Subtotal -->
-        <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center justify-between mb-2">
             <span class="text-gray-600">Subtotal</span>
-            <span id="cartSubtotal" class="text-lg font-bold text-gray-900">0 lei</span>
+            <span id="cartSubtotal" class="text-base font-semibold text-gray-900">0 lei</span>
         </div>
+
+        <!-- Promo discount (hidden until a promo is applied) -->
+        <div id="cartDiscountRow" class="flex items-center justify-between mb-2" hidden>
+            <span class="text-sm text-gray-600">
+                Reducere
+                <span id="cartDiscountCode" class="ml-1 inline-flex items-center px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded bg-emerald-100 text-emerald-700"></span>
+            </span>
+            <span id="cartDiscountAmount" class="text-sm font-semibold text-emerald-600">-0 lei</span>
+        </div>
+
+        <!-- Grand total (shown only when discount applied; otherwise subtotal covers it) -->
+        <div id="cartTotalRow" class="flex items-center justify-between pt-2 mb-4 border-t border-gray-200" hidden>
+            <span class="text-gray-700">Total de plată</span>
+            <span id="cartTotal" class="text-lg font-bold text-primary">0 lei</span>
+        </div>
+        <div id="cartSpacer" class="mb-4"></div>
 
         <!-- Action Buttons -->
         <div class="space-y-2">
