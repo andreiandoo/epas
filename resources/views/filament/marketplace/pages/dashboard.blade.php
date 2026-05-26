@@ -227,42 +227,52 @@
             </div>
 
             <div class="overflow-auto max-h-[70vh] bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700" wire:key="daily-report-{{ $dailyReportDate }}">
-                <table class="w-full text-xs border-separate border-spacing-0">
-                    <thead class="text-gray-500 dark:text-gray-400">
-                        {{-- Group row — each th individually sticky for cross-browser reliability --}}
+                <table class="text-xs border-separate border-spacing-0" style="width: 100%; table-layout: fixed;">
+                    {{-- Explicit column widths so max-width on td actually clips the event name --}}
+                    <colgroup>
+                        <col style="width: 300px;">
+                        <col style="width: 180px;">
+                        <col><col><col><col>
+                        <col><col><col><col>
+                    </colgroup>
+                    <thead class="text-gray-700 dark:text-gray-200">
+                        {{-- Group row — sticky to top of scroll container --}}
                         <tr>
-                            <th rowspan="2" style="position: sticky; top: 0; z-index: 20;" class="px-3 py-2 font-medium text-left bg-gray-100 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">Eveniment</th>
-                            <th rowspan="2" style="position: sticky; top: 0; z-index: 20;" class="px-3 py-2 font-medium text-left bg-gray-100 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">Locație</th>
-                            <th colspan="4" style="position: sticky; top: 0; z-index: 20;" class="px-3 py-2 font-semibold text-center text-indigo-700 dark:text-indigo-300 bg-indigo-100 dark:bg-indigo-900/60 border-b border-l border-gray-200 dark:border-gray-700">Azi</th>
-                            <th colspan="4" style="position: sticky; top: 0; z-index: 20;" class="px-3 py-2 font-semibold text-center text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-900/60 border-b border-l border-gray-200 dark:border-gray-700">Total</th>
+                            <th rowspan="2" style="position: sticky; top: 0; z-index: 20;" class="px-3 py-2 font-semibold text-left text-gray-700 dark:text-gray-200 bg-gray-200 dark:bg-gray-900 border-b border-gray-300 dark:border-gray-700">Eveniment</th>
+                            <th rowspan="2" style="position: sticky; top: 0; z-index: 20;" class="px-3 py-2 font-semibold text-left text-gray-700 dark:text-gray-200 bg-gray-200 dark:bg-gray-900 border-b border-gray-300 dark:border-gray-700">Locație</th>
+                            <th colspan="4" style="position: sticky; top: 0; z-index: 20; background-color: #4f46e5;" class="px-3 py-2 font-bold text-center text-white border-b border-l border-gray-300 dark:border-gray-700">Azi</th>
+                            <th colspan="4" style="position: sticky; top: 0; z-index: 20; background-color: #059669;" class="px-3 py-2 font-bold text-center text-white border-b border-l border-gray-300 dark:border-gray-700">Total</th>
                         </tr>
                         {{-- Sub-header row — sticky just under the group row --}}
                         <tr>
-                            <th style="position: sticky; top: 34px; z-index: 10;" class="px-3 py-2 font-medium text-right whitespace-nowrap bg-indigo-50 dark:bg-indigo-950/50 border-b border-l border-gray-200 dark:border-gray-700">Cmd.</th>
-                            <th style="position: sticky; top: 34px; z-index: 10;" class="px-3 py-2 font-medium text-right whitespace-nowrap bg-indigo-50 dark:bg-indigo-950/50 border-b border-gray-200 dark:border-gray-700">Bilete</th>
-                            <th style="position: sticky; top: 34px; z-index: 10;" class="px-3 py-2 font-medium text-right whitespace-nowrap bg-indigo-50 dark:bg-indigo-950/50 border-b border-gray-200 dark:border-gray-700">Vânzări</th>
-                            <th style="position: sticky; top: 34px; z-index: 10;" class="px-3 py-2 font-medium text-right whitespace-nowrap bg-indigo-50 dark:bg-indigo-950/50 border-b border-gray-200 dark:border-gray-700">Comisioane</th>
-                            <th style="position: sticky; top: 34px; z-index: 10;" class="px-3 py-2 font-medium text-right whitespace-nowrap bg-emerald-50 dark:bg-emerald-950/50 border-b border-l border-gray-200 dark:border-gray-700">Cmd.</th>
-                            <th style="position: sticky; top: 34px; z-index: 10;" class="px-3 py-2 font-medium text-right whitespace-nowrap bg-emerald-50 dark:bg-emerald-950/50 border-b border-gray-200 dark:border-gray-700">Bilete</th>
-                            <th style="position: sticky; top: 34px; z-index: 10;" class="px-3 py-2 font-medium text-right whitespace-nowrap bg-emerald-50 dark:bg-emerald-950/50 border-b border-gray-200 dark:border-gray-700">Vânzări</th>
-                            <th style="position: sticky; top: 34px; z-index: 10;" class="px-3 py-2 font-medium text-right whitespace-nowrap bg-emerald-50 dark:bg-emerald-950/50 border-b border-gray-200 dark:border-gray-700">Comisioane</th>
+                            <th style="position: sticky; top: 34px; z-index: 10; background-color: #c7d2fe;" class="px-3 py-2 font-semibold text-right text-indigo-900 whitespace-nowrap border-b border-l border-gray-300 dark:border-gray-700">Cmd.</th>
+                            <th style="position: sticky; top: 34px; z-index: 10; background-color: #c7d2fe;" class="px-3 py-2 font-semibold text-right text-indigo-900 whitespace-nowrap border-b border-gray-300 dark:border-gray-700">Bilete</th>
+                            <th style="position: sticky; top: 34px; z-index: 10; background-color: #c7d2fe;" class="px-3 py-2 font-semibold text-right text-indigo-900 whitespace-nowrap border-b border-gray-300 dark:border-gray-700">Vânzări</th>
+                            <th style="position: sticky; top: 34px; z-index: 10; background-color: #c7d2fe;" class="px-3 py-2 font-semibold text-right text-indigo-900 whitespace-nowrap border-b border-gray-300 dark:border-gray-700">Comisioane</th>
+                            <th style="position: sticky; top: 34px; z-index: 10; background-color: #a7f3d0;" class="px-3 py-2 font-semibold text-right text-emerald-900 whitespace-nowrap border-b border-l border-gray-300 dark:border-gray-700">Cmd.</th>
+                            <th style="position: sticky; top: 34px; z-index: 10; background-color: #a7f3d0;" class="px-3 py-2 font-semibold text-right text-emerald-900 whitespace-nowrap border-b border-gray-300 dark:border-gray-700">Bilete</th>
+                            <th style="position: sticky; top: 34px; z-index: 10; background-color: #a7f3d0;" class="px-3 py-2 font-semibold text-right text-emerald-900 whitespace-nowrap border-b border-gray-300 dark:border-gray-700">Vânzări</th>
+                            <th style="position: sticky; top: 34px; z-index: 10; background-color: #a7f3d0;" class="px-3 py-2 font-semibold text-right text-emerald-900 whitespace-nowrap border-b border-gray-300 dark:border-gray-700">Comisioane</th>
                         </tr>
                     </thead>
                     <tbody>
                         @forelse($dailyEventReport as $row)
-                            <tr class="text-gray-700 dark:text-gray-300 transition-colors hover:bg-indigo-50 dark:hover:bg-gray-700/60">
-                                <td class="px-3 py-2 max-w-[300px] border-b border-gray-100 dark:border-gray-700">
+                            {{-- No hover bg change — Filament's panel hover styles produce
+                                 a white-on-white row in dark mode. Plain row stays readable. --}}
+                            <tr class="text-gray-700 dark:text-gray-300">
+                                <td style="max-width: 300px;" class="px-3 py-2 border-b border-gray-100 dark:border-gray-700 overflow-hidden">
                                     <a href="{{ $row['event_edit_url'] }}" target="_blank"
-                                       class="block truncate text-gray-900 dark:text-white hover:text-indigo-600 dark:hover:text-indigo-400 hover:underline"
-                                       title="{{ $row['event_name'] }} ({{ $row['event_date_label'] }})">
+                                       class="block text-gray-900 dark:text-white hover:text-indigo-600 dark:hover:text-indigo-400 hover:underline"
+                                       title="{{ $row['event_name'] }} ({{ $row['event_date_label'] }})"
+                                       style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                                         <span class="font-medium">{{ $row['event_name'] }}</span>
                                         <span class="font-normal text-gray-400 dark:text-gray-500 text-[11px]">({{ $row['event_date_label'] }})</span>
                                     </a>
                                 </td>
-                                <td class="px-3 py-2 border-b border-gray-100 dark:border-gray-700">
-                                    <div class="text-gray-900 dark:text-gray-100">{{ $row['venue_name'] }}</div>
+                                <td class="px-3 py-2 border-b border-gray-100 dark:border-gray-700 overflow-hidden">
+                                    <div class="text-gray-900 dark:text-gray-100 truncate" title="{{ $row['venue_name'] }}{{ $row['venue_city'] ? ' — ' . $row['venue_city'] : '' }}">{{ $row['venue_name'] }}</div>
                                     @if($row['venue_city'])
-                                        <div class="text-[10px] text-gray-400 dark:text-gray-500">{{ $row['venue_city'] }}</div>
+                                        <div class="text-[10px] text-gray-400 dark:text-gray-500 truncate">{{ $row['venue_city'] }}</div>
                                     @endif
                                 </td>
                                 <td class="px-3 py-2 text-right tabular-nums border-b border-l border-gray-100 dark:border-gray-700">{{ number_format($row['orders_day']) }}</td>

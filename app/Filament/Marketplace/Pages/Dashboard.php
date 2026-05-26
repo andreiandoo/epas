@@ -237,7 +237,7 @@ class Dashboard extends Page
             $isToday = $reqDate === $maxDate;
             $ttl = $isToday ? 60 : 900;
             $dailyEventReport = Cache::remember(
-                "mp_dash_daily_evt_v2_{$marketplaceId}_{$reqDate}",
+                "mp_dash_daily_evt_v3_{$marketplaceId}_{$reqDate}",
                 $ttl,
                 fn () => $this->computeDailyEventReport($marketplaceId, $reqDate)
             );
@@ -595,7 +595,7 @@ class Dashboard extends Page
         // Revenue (excl refunded)
         $totalSales = (float) Order::where($orderScope)
             ->whereIn('orders.status', $allStatuses)
-            ->whereNotIn('orders.source', ['test_order', 'external_import'])
+            ->whereNotIn('orders.source', ['test_order', 'external_import', 'legacy_import'])
             ->whereBetween('orders.created_at', [$monthStart, $monthEnd])
             ->selectRaw("SUM(CASE WHEN orders.status = 'refunded' THEN 0 ELSE orders.total END) as revenue")
             ->value('revenue') ?? 0;
@@ -635,7 +635,7 @@ class Dashboard extends Page
         // Orders this month (paid + confirmed + completed + refunded, excl cancelled)
         $monthOrders = Order::where($orderScope)
             ->whereIn('orders.status', ['paid', 'confirmed', 'completed', 'refunded'])
-            ->whereNotIn('orders.source', ['test_order', 'external_import'])
+            ->whereNotIn('orders.source', ['test_order', 'external_import', 'legacy_import'])
             ->whereBetween('orders.created_at', [$monthStart, $monthEnd])
             ->count();
 
@@ -770,7 +770,7 @@ class Dashboard extends Page
         };
 
         $orderStats = Order::where($orderScope)
-            ->whereNotIn('orders.source', ['test_order', 'external_import'])
+            ->whereNotIn('orders.source', ['test_order', 'external_import', 'legacy_import'])
             ->whereBetween('orders.created_at', [$todayStart, $todayEnd])
             ->selectRaw('COUNT(*) as total_orders')
             ->selectRaw("SUM(CASE WHEN status IN ('paid','confirmed','completed') THEN 1 ELSE 0 END) as paid_orders")
@@ -859,7 +859,7 @@ class Dashboard extends Page
 
         $dayRows = Order::where($orderScope)
             ->whereIn('orders.status', $paidStatuses)
-            ->whereNotIn('orders.source', ['test_order', 'external_import'])
+            ->whereNotIn('orders.source', ['test_order', 'external_import', 'legacy_import'])
             ->whereBetween('orders.created_at', [$dayStart, $dayEnd])
             ->where(function ($q) {
                 // Skip orders that aren't linked to any event — they
@@ -881,13 +881,19 @@ class Dashboard extends Page
 
         $eventIds = $dayRows->keys()->map(fn ($v) => (int) $v)->all();
 
-        // Step 2 — same-day ticket counts per event (join through
-        // ticket_types so we land on the event id directly).
+        // Step 2 — same-day ticket counts per event. Join through
+        // ticket_types to land on the event id, and join through orders
+        // so the parent order's status / source filters apply too. This
+        // protects against tickets that are still marked 'valid' on the
+        // ticket row but whose order was cancelled/refunded/imported.
         $dayTicketCounts = Ticket::join('ticket_types', 'tickets.ticket_type_id', '=', 'ticket_types.id')
             ->join('events', 'ticket_types.event_id', '=', 'events.id')
+            ->join('orders', 'tickets.order_id', '=', 'orders.id')
             ->where('events.marketplace_client_id', $marketplaceId)
             ->whereIn('events.id', $eventIds)
             ->whereIn('tickets.status', ['valid', 'used'])
+            ->whereIn('orders.status', $paidStatuses)
+            ->whereNotIn('orders.source', ['test_order', 'external_import', 'legacy_import'])
             ->whereBetween('tickets.created_at', [$dayStart, $dayEnd])
             ->selectRaw('events.id as eid, COUNT(*) as cnt')
             ->groupBy('events.id')
@@ -901,7 +907,7 @@ class Dashboard extends Page
         $eventIdsList = implode(',', $eventIdsInt);
         $totalRows = Order::where($orderScope)
             ->whereIn('orders.status', $paidStatuses)
-            ->whereNotIn('orders.source', ['test_order', 'external_import'])
+            ->whereNotIn('orders.source', ['test_order', 'external_import', 'legacy_import'])
             ->whereRaw("COALESCE(marketplace_event_id, event_id) IN ({$eventIdsList})")
             ->selectRaw('COALESCE(marketplace_event_id, event_id) as eid')
             ->selectRaw('COUNT(*) as orders_count')
@@ -913,9 +919,12 @@ class Dashboard extends Page
 
         $totalTicketCounts = Ticket::join('ticket_types', 'tickets.ticket_type_id', '=', 'ticket_types.id')
             ->join('events', 'ticket_types.event_id', '=', 'events.id')
+            ->join('orders', 'tickets.order_id', '=', 'orders.id')
             ->where('events.marketplace_client_id', $marketplaceId)
             ->whereIn('events.id', $eventIds)
             ->whereIn('tickets.status', ['valid', 'used'])
+            ->whereIn('orders.status', $paidStatuses)
+            ->whereNotIn('orders.source', ['test_order', 'external_import', 'legacy_import'])
             ->selectRaw('events.id as eid, COUNT(*) as cnt')
             ->groupBy('events.id')
             ->pluck('cnt', 'eid');
