@@ -7,22 +7,24 @@ require_once __DIR__ . '/includes/config.php';
 require_once __DIR__ . '/includes/api.php';
 
 // =========================================================================
-// DATA — categorii parinte din DB + activitati publicate
+// DATA — venue categories (locations) + activitati publicate
 // =========================================================================
-// Top-level categories (parent_id IS NULL) for the "Alege-ți genul de aventură"
-// grid AND the footer CATEGORII column. Cached 10 min — categories rarely change.
-$categoriesResp = api_cached('home_top_categories', fn () => api_get('/events/categories', ['parent_only' => 1, 'per_page' => 12]), 600);
-$rawCategories = $categoriesResp['data'] ?? [];
+// "Alege-ți genul de aventură" pulls VENUE categories (marketplace_venue_categories
+// table) — these exist as a flat top-level list regardless of activity volume.
+// Using /events/categories filters out categories with no published events,
+// which gave an empty grid here because we only have activities, not events.
+$categoriesResp = api_cached('home_venue_categories', fn () => api_get('/venue-categories'), 600);
+$rawCategories = $categoriesResp['data']['categories'] ?? [];
 $homeCategories = [];
 foreach ((is_array($rawCategories) ? $rawCategories : []) as $c) {
-    if (! empty($c['parent_id'])) continue; // parent only
     $homeCategories[] = [
         't'     => $c['name'] ?? $c['slug'] ?? '',
         'd'     => $c['description'] ?? '',
-        'url'   => '/' . ($c['slug'] ?? ''),
-        'count' => isset($c['event_count']) ? (int) $c['event_count'] . ' opțiuni' : '',
-        'c'     => $c['color_palette'] ?? 'vermilion',
-        'emoji' => $c['icon_emoji'] ?? '🎯',
+        'url'   => '/locatii?categorie=' . ($c['slug'] ?? ''),
+        'count' => isset($c['venues_count']) && (int) $c['venues_count'] > 0 ? (int) $c['venues_count'] . ' locații' : '',
+        'icon'  => $c['icon'] ?? null,   // heroicon class string (e.g. 'heroicon-o-sun')
+        'image' => $c['image'] ?? null,
+        'color' => $c['color'] ?? null,
     ];
 }
 
@@ -224,43 +226,78 @@ include __DIR__ . '/includes/header.php';
         <p class="text-ink-soft max-w-sm">Fiecare categorie are propria sa pagină dedicată, optimizată să fie găsită exact când cineva caută în Google.</p>
     </div>
 
-    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-        <?php
-        // Color palette rotation — gives each card a unique tone without
-        // requiring the seeder to encode it. Maps cycle: vermilion → forest → sky → ochre.
-        $palette = ['vermilion', 'forest', 'sky', 'ochre'];
-        $paletteClasses = [
-            'vermilion' => 'bg-gradient-to-br from-vermilion to-vermilion-d',
-            'forest'    => 'bg-gradient-to-br from-forest-l to-forest',
-            'sky'       => 'bg-gradient-to-br from-sky to-ink',
-            'ochre'     => 'bg-gradient-to-br from-ochre to-vermilion-d',
-        ];
-        foreach ($homeCategories as $idx => $cat):
-            $tone = $palette[$idx % count($palette)];
-            $bgClass = $paletteClasses[$tone];
-            ?>
-            <a href="<?= htmlspecialchars($cat['url']) ?>" class="ticket ticket-lift group bg-paper border-2 border-ink rounded-2xl overflow-hidden" style="--perf:100%">
-                <div class="duotone h-40 flex items-end p-5 <?= $bgClass ?> text-paper relative">
-                    <div class="grid-tex"></div>
-                    <span class="absolute right-4 top-4 text-4xl"><?= htmlspecialchars($cat['emoji']) ?></span>
-                    <?php if (! empty($cat['count'])): ?>
-                        <span class="relative font-mono text-[10px] text-paper/80 tracking-wider"><?= htmlspecialchars(strtoupper($cat['count'])) ?></span>
-                    <?php endif; ?>
-                </div>
-                <div class="p-5 flex items-start justify-between gap-3">
-                    <div>
-                        <h3 class="font-display text-2xl font-700 leading-tight"><?= htmlspecialchars($cat['t']) ?></h3>
-                        <?php if (! empty($cat['d'])): ?>
-                            <p class="text-sm text-ink-soft mt-1.5"><?= htmlspecialchars(mb_substr(strip_tags($cat['d']), 0, 110)) ?></p>
+    <?php if (empty($homeCategories)): ?>
+        <div class="rounded-2xl border-2 border-ink bg-paper-2 p-8 text-center">
+            <p class="font-display text-xl font-700">Niciun gen de activitate configurat încă.</p>
+            <p class="mt-2 text-ink-soft">Admin: adaugă categorii de locații pentru a popula această secțiune.</p>
+        </div>
+    <?php else: ?>
+        <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            <?php
+            // Color palette rotation — gives each card a unique tone without
+            // requiring the seeder to encode it. Maps cycle: vermilion → forest → sky → ochre.
+            $palette = ['vermilion', 'forest', 'sky', 'ochre'];
+            $paletteClasses = [
+                'vermilion' => 'bg-gradient-to-br from-vermilion to-vermilion-d',
+                'forest'    => 'bg-gradient-to-br from-forest-l to-forest',
+                'sky'       => 'bg-gradient-to-br from-sky to-ink',
+                'ochre'     => 'bg-gradient-to-br from-ochre to-vermilion-d',
+            ];
+            // Map heroicon name fragments → emoji glyphs (rough but functional)
+            // so we don't have to ship the heroicon SVG library on the frontend.
+            $heroToEmoji = [
+                'sun'                  => '☀️',
+                'building-storefront'  => '🏪',
+                'building-library'     => '🏛️',
+                'globe-europe-africa'  => '🌍',
+                'globe-alt'            => '🌐',
+                'cube-transparent'     => '🪟',
+                'sparkles'             => '✨',
+                'map-pin'              => '📍',
+                'home'                 => '🏠',
+                'rocket-launch'        => '🚀',
+                'fire'                 => '🔥',
+                'puzzle-piece'         => '🧩',
+            ];
+            $emojiFromIcon = function ($icon) use ($heroToEmoji): string {
+                if (! $icon) return '🎯';
+                foreach ($heroToEmoji as $needle => $glyph) {
+                    if (str_contains($icon, $needle)) return $glyph;
+                }
+                return '🎯';
+            };
+
+            foreach ($homeCategories as $idx => $cat):
+                $tone = $palette[$idx % count($palette)];
+                $bgClass = $paletteClasses[$tone];
+                $emoji = $emojiFromIcon($cat['icon'] ?? null);
+                ?>
+                <a href="<?= htmlspecialchars($cat['url']) ?>" class="ticket ticket-lift group bg-paper border-2 border-ink rounded-2xl overflow-hidden" style="--perf:100%">
+                    <div class="duotone h-40 flex items-end p-5 <?= $bgClass ?> text-paper relative">
+                        <?php if (! empty($cat['image'])): ?>
+                            <img src="<?= htmlspecialchars($cat['image']) ?>" alt="<?= htmlspecialchars($cat['t']) ?>" class="absolute inset-0 w-full h-full object-cover opacity-60 mix-blend-multiply" loading="lazy">
+                        <?php endif; ?>
+                        <div class="grid-tex"></div>
+                        <span class="absolute right-4 top-4 text-4xl"><?= $emoji ?></span>
+                        <?php if (! empty($cat['count'])): ?>
+                            <span class="relative font-mono text-[10px] text-paper/80 tracking-wider"><?= htmlspecialchars(strtoupper($cat['count'])) ?></span>
                         <?php endif; ?>
                     </div>
-                    <span class="shrink-0 grid place-items-center w-9 h-9 rounded-full border-2 border-ink group-hover:bg-vermilion group-hover:border-vermilion group-hover:text-paper transition-colors duration-300">
-                        <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M7 17 17 7M9 7h8v8"/></svg>
-                    </span>
-                </div>
-            </a>
-        <?php endforeach; ?>
-    </div>
+                    <div class="p-5 flex items-start justify-between gap-3">
+                        <div>
+                            <h3 class="font-display text-2xl font-700 leading-tight"><?= htmlspecialchars($cat['t']) ?></h3>
+                            <?php if (! empty($cat['d'])): ?>
+                                <p class="text-sm text-ink-soft mt-1.5"><?= htmlspecialchars(mb_substr(strip_tags($cat['d']), 0, 110)) ?></p>
+                            <?php endif; ?>
+                        </div>
+                        <span class="shrink-0 grid place-items-center w-9 h-9 rounded-full border-2 border-ink group-hover:bg-vermilion group-hover:border-vermilion group-hover:text-paper transition-colors duration-300">
+                            <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M7 17 17 7M9 7h8v8"/></svg>
+                        </span>
+                    </div>
+                </a>
+            <?php endforeach; ?>
+        </div>
+    <?php endif; ?>
 </section>
 
 <!-- ====================================================== CUM FUNCȚIONEAZĂ ====================================================== -->

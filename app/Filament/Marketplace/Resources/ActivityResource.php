@@ -438,7 +438,7 @@ class ActivityResource extends Resource
                                                             // inputs would sit flush against the panel border. Adding
                                                             // p-4 sm:p-6 + gap-4 produces the same breathing room the
                                                             // rest of the form has inside Sections.
-                                                            ->extraAttributes(['class' => 'p-4 sm:p-6 flex flex-col gap-4'])
+                                                            ->extraAttributes(['style' => 'padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem;'])
                                                             ->schema([
                                                                 Forms\Components\TextInput::make('title.ro')
                                                                     ->label('Titlu (RO)')
@@ -464,7 +464,7 @@ class ActivityResource extends Resource
                                                                     ->columnSpanFull(),
                                                             ]),
                                                         SC\Tabs\Tab::make('English')
-                                                            ->extraAttributes(['class' => 'p-4 sm:p-6 flex flex-col gap-4'])
+                                                            ->extraAttributes(['style' => 'padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem;'])
                                                             ->schema([
                                                                 Forms\Components\TextInput::make('title.en')
                                                                     ->label('Title (EN)')
@@ -1175,85 +1175,134 @@ class ActivityResource extends Resource
                             ->collapsible()
                             ->columns(1),
 
-                        // Read-only details panel — surfaces organizer + venue info
-                        // straight in the sidebar so the admin doesn't have to jump
-                        // back to the Locație tab to glance at contact details. Same
-                        // pattern as EventResource sidebar; visible only on edit.
+                        // Organizator — rich quick-info card identical in shape to
+                        // EventResource sidebar. Surfaces avatar + clickable name +
+                        // email + status badges + commission + activity counts +
+                        // total revenue, all in one compact block. Visible only on
+                        // edit AND when an organizer is set on the activity.
                         SC\Section::make('Organizator')
+                            ->icon('heroicon-o-building-office-2')
+                            ->compact()
                             ->visible(fn (?\App\Models\Activity $record) => $record && $record->exists && $record->marketplace_organizer_id)
                             ->schema([
-                                Forms\Components\Placeholder::make('organizer_name')
-                                    ->label('Nume')
-                                    ->content(fn (?\App\Models\Activity $record) => $record?->organizer?->name ?? '—'),
-
-                                Forms\Components\Placeholder::make('organizer_contact')
-                                    ->label('Contact')
-                                    ->content(fn (?\App\Models\Activity $record) => $record?->organizer?->contact_name ?? '—'),
-
-                                Forms\Components\Placeholder::make('organizer_email')
-                                    ->label('Email')
-                                    ->content(fn (?\App\Models\Activity $record) => $record?->organizer?->email
-                                        ? new \Illuminate\Support\HtmlString('<a href="mailto:' . e($record->organizer->email) . '" class="text-primary-600 hover:underline">' . e($record->organizer->email) . '</a>')
-                                        : '—'),
-
-                                Forms\Components\Placeholder::make('organizer_phone')
-                                    ->label('Telefon')
-                                    ->content(fn (?\App\Models\Activity $record) => $record?->organizer?->phone
-                                        ? new \Illuminate\Support\HtmlString('<a href="tel:' . e($record->organizer->phone) . '" class="text-primary-600 hover:underline">' . e($record->organizer->phone) . '</a>')
-                                        : '—'),
-
-                                Forms\Components\Placeholder::make('organizer_link')
+                                Forms\Components\Placeholder::make('organizer_quick_info')
                                     ->hiddenLabel()
-                                    ->content(function (?\App\Models\Activity $record) {
-                                        if (! $record?->organizer) return null;
-                                        $url = OrganizerResource::getUrl('edit', ['record' => $record->organizer->id]);
-                                        return new \Illuminate\Support\HtmlString(
-                                            '<a href="' . e($url) . '" class="inline-flex items-center gap-1 text-sm font-semibold text-primary-600 hover:text-primary-500">' .
-                                            'Deschide organizatorul →' .
-                                            '</a>'
-                                        );
-                                    }),
-                            ])
-                            ->collapsible()
-                            ->columns(1),
+                                    ->content(function (?\App\Models\Activity $record) use ($marketplace) {
+                                        if (! $record || ! $record->marketplace_organizer_id) return '';
 
+                                        $organizer = MarketplaceOrganizer::find($record->marketplace_organizer_id);
+                                        if (! $organizer) return '';
+
+                                        // Commission resolution mirrors EventResource: organizer-level
+                                        // override falls back to the marketplace default.
+                                        $commissionRate = $organizer->commission_rate ?? $marketplace?->commission_rate ?? 5;
+                                        $commissionMode = $organizer->default_commission_mode ?? $marketplace?->commission_mode ?? 'included';
+                                        $commissionModeLabel = $commissionMode === 'included' ? 'inclus' : 'peste';
+
+                                        $statusBadge = match ($organizer->status) {
+                                            'active'    => '<span class="text-green-600">Activ</span>',
+                                            'pending'   => '<span class="text-yellow-600">În așteptare</span>',
+                                            'suspended' => '<span class="text-red-600">Suspendat</span>',
+                                            default     => e((string) $organizer->status),
+                                        };
+                                        $verifiedBadge = $organizer->verified_at
+                                            ? '<span class="text-green-600">✓ Verificat</span>'
+                                            : '<span class="text-gray-500">Neverificat</span>';
+
+                                        // Activity-specific revenue + count (parallel to total_events
+                                        // accessor on the organizer model, but scoped to activities).
+                                        $activitiesCount = \DB::table('activities')
+                                            ->where('marketplace_organizer_id', $organizer->id)
+                                            ->whereNull('deleted_at')
+                                            ->count();
+                                        $activitiesRevenueCents = \DB::table('activity_bookings')
+                                            ->join('activities', 'activities.id', '=', 'activity_bookings.activity_id')
+                                            ->where('activities.marketplace_organizer_id', $organizer->id)
+                                            ->whereIn('activity_bookings.status', ['paid', 'confirmed', 'checked_in'])
+                                            ->whereNull('activity_bookings.deleted_at')
+                                            ->sum('activity_bookings.total_cents');
+
+                                        $eventsCount = (int) ($organizer->total_events ?? 0);
+                                        $eventsRevenue = number_format((float) ($organizer->total_revenue ?? 0), 2, ',', '.');
+                                        $activitiesRevenue = number_format($activitiesRevenueCents / 100, 2, ',', '.');
+
+                                        $organizerUrl = e(OrganizerResource::getUrl('view', ['record' => $organizer->id]));
+                                        $organizerEditUrl = e(OrganizerResource::getUrl('edit', ['record' => $organizer->id]));
+                                        $organizerName = e($organizer->name);
+                                        $email = e($organizer->email);
+                                        $phone = e($organizer->phone ?? '');
+                                        $initials = strtoupper(mb_substr($organizer->name, 0, 2));
+
+                                        $html = '<div class="text-sm space-y-0">';
+                                        // Header block — avatar + name link + email
+                                        $html .= '<div class="flex items-center gap-3 pb-3">';
+                                        $html .= '<div class="flex items-center justify-center w-10 h-10 text-xs font-bold text-white rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 shrink-0">' . e($initials) . '</div>';
+                                        $html .= '<div class="min-w-0">';
+                                        $html .= '<a href="' . $organizerUrl . '" target="_blank" class="font-semibold text-primary-600 hover:underline block truncate">' . $organizerName . '</a>';
+                                        $html .= '<div class="text-xs text-gray-500 truncate">' . $email . '</div>';
+                                        $html .= '</div>';
+                                        $html .= '</div>';
+
+                                        // Stat rows
+                                        $row = fn ($l, $v) => '<div class="flex justify-between py-1.5 border-t border-gray-700/30"><span class="text-gray-500">' . $l . '</span><span class="font-medium">' . $v . '</span></div>';
+                                        $html .= $row('Status', $statusBadge . ' · ' . $verifiedBadge);
+                                        $html .= $row('Comision (' . $commissionModeLabel . ')', e((string) $commissionRate) . '%');
+                                        if ($phone) {
+                                            $html .= $row('Telefon', '<a href="tel:' . $phone . '" class="hover:underline">' . $phone . '</a>');
+                                        }
+                                        $html .= $row('Activități', (string) $activitiesCount);
+                                        $html .= $row('Vânzări activități', $activitiesRevenue . ' lei');
+                                        if ($eventsCount > 0) {
+                                            $html .= $row('Evenimente', (string) $eventsCount);
+                                            $html .= $row('Vânzări evenimente', $eventsRevenue . ' RON');
+                                        }
+
+                                        // Action links
+                                        $html .= '<div class="flex gap-2 pt-3 mt-1 border-t border-gray-700/30">';
+                                        $html .= '<a href="' . $organizerUrl . '" target="_blank" class="inline-flex items-center gap-1 text-xs font-semibold text-primary-600 hover:text-primary-500">Detalii →</a>';
+                                        $html .= '<a href="' . $organizerEditUrl . '" target="_blank" class="inline-flex items-center gap-1 text-xs font-semibold text-gray-500 hover:text-gray-400 ml-auto">Editează →</a>';
+                                        $html .= '</div>';
+
+                                        $html .= '</div>';
+
+                                        return new \Illuminate\Support\HtmlString($html);
+                                    }),
+                            ]),
+
+                        // Locație fizică — same compact panel pattern for venue info.
                         SC\Section::make('Locație fizică')
+                            ->icon('heroicon-o-map-pin')
+                            ->compact()
                             ->visible(fn (?\App\Models\Activity $record) => $record && $record->exists && $record->venue_id)
                             ->schema([
-                                Forms\Components\Placeholder::make('venue_name')
-                                    ->label('Venue')
+                                Forms\Components\Placeholder::make('venue_quick_info')
+                                    ->hiddenLabel()
                                     ->content(function (?\App\Models\Activity $record) use ($lang) {
                                         $v = $record?->venue;
-                                        if (! $v) return '—';
-                                        return is_array($v->name)
+                                        if (! $v) return '';
+
+                                        $name = is_array($v->name)
                                             ? ($v->name[$lang] ?? $v->name['en'] ?? '—')
                                             : ($v->name ?? '—');
-                                    }),
+                                        $addressParts = array_filter([$v->address, $v->city, $v->state]);
+                                        $address = $addressParts ? implode(', ', $addressParts) : null;
+                                        $mapsUrl = ($v->lat && $v->lng)
+                                            ? 'https://maps.google.com/?q=' . urlencode($v->lat . ',' . $v->lng)
+                                            : null;
 
-                                Forms\Components\Placeholder::make('venue_address')
-                                    ->label('Adresă')
-                                    ->content(function (?\App\Models\Activity $record) {
-                                        $v = $record?->venue;
-                                        if (! $v) return '—';
-                                        $parts = array_filter([$v->address, $v->city, $v->state]);
-                                        return $parts ? implode(', ', $parts) : '—';
-                                    }),
+                                        $html = '<div class="text-sm space-y-2">';
+                                        $html .= '<p class="font-semibold">' . e($name) . '</p>';
+                                        if ($address) {
+                                            $html .= '<p class="text-gray-500">' . e($address) . '</p>';
+                                        }
+                                        if ($mapsUrl) {
+                                            $html .= '<a href="' . e($mapsUrl) . '" target="_blank" class="inline-flex items-center gap-1 text-xs font-semibold text-primary-600 hover:text-primary-500 pt-1">Vezi pe Google Maps →</a>';
+                                        }
+                                        $html .= '</div>';
 
-                                Forms\Components\Placeholder::make('venue_map_link')
-                                    ->hiddenLabel()
-                                    ->content(function (?\App\Models\Activity $record) {
-                                        $v = $record?->venue;
-                                        if (! $v || ! $v->lat || ! $v->lng) return null;
-                                        $url = 'https://maps.google.com/?q=' . urlencode($v->lat . ',' . $v->lng);
-                                        return new \Illuminate\Support\HtmlString(
-                                            '<a href="' . e($url) . '" target="_blank" class="inline-flex items-center gap-1 text-sm font-semibold text-primary-600 hover:text-primary-500">' .
-                                            'Vezi pe Google Maps →' .
-                                            '</a>'
-                                        );
+                                        return new \Illuminate\Support\HtmlString($html);
                                     }),
-                            ])
-                            ->collapsible()
-                            ->columns(1),
+                            ]),
 
                         SC\Section::make('Statistici')
                             ->visible(fn (?\App\Models\Activity $record) => $record && $record->exists)

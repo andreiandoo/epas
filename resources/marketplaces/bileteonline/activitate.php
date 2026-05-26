@@ -134,17 +134,47 @@ $bookingBootstrap = [
     'gallery' => array_map(fn ($url) => ['src' => $url, 'alt' => $activity['title']], $activity['gallery'] ?? []),
 ];
 
-// Pre-render related/similar cards as PHP (cleaner than Alpine x-for for server-side data).
-// Merge admin-managed cross-sell (Conexiuni tab) with auto recommendations
-// (same organizer → same city+category → same city). Dedupe by id, cap at 6.
-$relatedRaw = array_merge($activity['related'] ?? [], $activity['recommended'] ?? []);
-$seen = [];
-$related = [];
-foreach ($relatedRaw as $card) {
-    if (! isset($card['id']) || isset($seen[$card['id']])) continue;
-    $seen[$card['id']] = true;
-    $related[] = $card;
-    if (count($related) >= 6) break;
+// Three independent recommendation rails — only rendered when ≥1 card each.
+// Admin-managed Conexiuni (`related`) is shown first as its own section if set.
+$rails = [];
+if (! empty($activity['related'])) {
+    $rails[] = [
+        'kicker' => 'CONEXIUNI MANUALE',
+        'title'  => 'Te-ar putea interesa',
+        'subtitle' => null,
+        'cards'  => $activity['related'],
+    ];
+}
+$recs = $activity['recommendations'] ?? [];
+$organizerName = $activity['organizer']['name'] ?? null;
+$cityName = $activity['city']['name'] ?? null;
+$categoryName = $activity['category']['name'] ?? null;
+
+if (! empty($recs['same_organizer'])) {
+    $rails[] = [
+        'kicker' => 'DE LA ACEEAȘI LOCAȚIE',
+        'title'  => $organizerName ? 'Alte experiențe de la ' . $organizerName : 'Alte experiențe ale acestui organizator',
+        'subtitle' => null,
+        'cards'  => $recs['same_organizer'],
+    ];
+}
+if (! empty($recs['same_city_same_cat'])) {
+    $rails[] = [
+        'kicker' => 'ACTIVITĂȚI SIMILARE',
+        'title'  => $cityName && $categoryName
+            ? "{$categoryName} în {$cityName}"
+            : 'Activități similare în acest oraș',
+        'subtitle' => null,
+        'cards'  => $recs['same_city_same_cat'],
+    ];
+}
+if (! empty($recs['same_city'])) {
+    $rails[] = [
+        'kicker' => 'ÎN ACELAȘI ORAȘ',
+        'title'  => $cityName ? "Alte experiențe în {$cityName}" : 'Alte experiențe în acest oraș',
+        'subtitle' => null,
+        'cards'  => $recs['same_city'],
+    ];
 }
 
 include __DIR__ . '/includes/head.php';
@@ -593,13 +623,13 @@ include __DIR__ . '/includes/header.php';
                 </section>
             <?php endif; ?>
 
-            <!-- related activities (cross-sell) -->
-            <?php if (! empty($related)): ?>
+            <!-- recommendation rails — 3 separate sections, each only when it has cards -->
+            <?php foreach ($rails as $rail): ?>
                 <section class="scroll-mt-40">
                     <div class="flex items-end justify-between gap-4 mb-6">
                         <div>
-                            <p class="font-mono text-[11px] tracking-[.22em] text-vermilion">ÎȚI POATE PLĂCEA</p>
-                            <h2 class="font-display text-4xl sm:text-5xl font-700 leading-none mt-2">Alte experiențe</h2>
+                            <p class="font-mono text-[11px] tracking-[.22em] text-vermilion"><?= htmlspecialchars($rail['kicker']) ?></p>
+                            <h2 class="font-display text-3xl sm:text-4xl font-700 leading-tight mt-2"><?= htmlspecialchars($rail['title']) ?></h2>
                         </div>
                         <?php if (! empty($activity['city'])): ?>
                             <a href="/<?= htmlspecialchars($activity['city']['slug']) ?>" class="hidden sm:inline-flex text-vermilion font-700 underline-wobble">Vezi toate din <?= htmlspecialchars($activity['city']['name']) ?> →</a>
@@ -607,7 +637,7 @@ include __DIR__ . '/includes/header.php';
                     </div>
 
                     <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                        <?php foreach ($related as $rel): ?>
+                        <?php foreach ($rail['cards'] as $rel): ?>
                             <a href="/activitate/<?= htmlspecialchars($rel['slug']) ?>"
                                class="ticket ticket-lift bg-paper border-2 border-ink rounded-3xl overflow-hidden group">
                                 <div class="h-40 relative overflow-hidden bg-paper-2">
@@ -632,7 +662,7 @@ include __DIR__ . '/includes/header.php';
                         <?php endforeach; ?>
                     </div>
                 </section>
-            <?php endif; ?>
+            <?php endforeach; ?>
         </div>
 
         <!-- RIGHT BOOKING SIDEBAR -->

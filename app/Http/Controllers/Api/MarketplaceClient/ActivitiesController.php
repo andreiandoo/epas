@@ -340,26 +340,35 @@ class ActivitiesController extends BaseController
                     ->map(fn (Activity $rel) => $this->relatedCardPayload($rel, $locale))
                     ->values()
                     ->all(),
-                // Auto-computed recommendations layered by priority:
-                //   1. Other activities by the same organizer
+                // Three independent rails on the public page, each rendered only
+                // when it has ≥1 result:
+                //   1. Same organizer (excl. self + already-linked)
                 //   2. Same city + same category
                 //   3. Same city + any other category
-                // Capped at 6 total, deduped against `related` and self.
-                'recommended' => $this->buildRecommendations($activity, $locale, 6),
+                'recommendations' => $this->buildRecommendationTiers($activity, $locale, 6),
             ]
         );
     }
 
     /**
-     * Build auto-recommendations for the public detail page in priority order:
-     *   1. Same organizer (excluding self)
-     *   2. Same city + same category
-     *   3. Same city + any other category
-     * Each tier appends to the result; we cap at $cap total, dedupe by id, and
-     * skip activities already linked via the admin-managed Conexiuni pivot
-     * (those show up under `related` already — no point duplicating).
+     * Build the three independent recommendation rails for the public page.
+     *
+     *   same_organizer       — other activities by the same operator
+     *   same_city_same_cat   — same city, same category (siblings)
+     *   same_city            — same city, any other category
+     *
+     * Each tier is capped at $perTier. Tiers don't share items: anything
+     * surfaced in tier N is excluded from tier N+1, plus self and admin-
+     * managed Conexiuni links are excluded everywhere. The PHP page only
+     * renders a section when the array isn't empty — empty tiers go silent.
+     *
+     * @return array{
+     *   same_organizer: array<int, array>,
+     *   same_city_same_cat: array<int, array>,
+     *   same_city: array<int, array>,
+     * }
      */
-    private function buildRecommendations(Activity $activity, string $locale, int $cap = 6): array
+    private function buildRecommendationTiers(Activity $activity, string $locale, int $perTier = 6): array
     {
         $excluded = collect([$activity->id])
             ->merge($activity->relatedActivities->pluck('id'))
@@ -373,45 +382,48 @@ class ActivitiesController extends BaseController
             ->whereNotIn('id', $excluded)
             ->with(['city:id,name,slug', 'category:id,name,slug,parent_id']);
 
-        $collected = collect();
+        $tiers = [
+            'same_organizer'     => collect(),
+            'same_city_same_cat' => collect(),
+            'same_city'          => collect(),
+        ];
 
         // Tier 1: same organizer
         if ($activity->marketplace_organizer_id) {
-            $tier1 = (clone $base)
+            $tiers['same_organizer'] = (clone $base)
                 ->where('marketplace_organizer_id', $activity->marketplace_organizer_id)
-                ->limit($cap)
+                ->limit($perTier)
                 ->get();
-            $collected = $collected->concat($tier1);
         }
 
-        // Tier 2: same city + same category (excluding tier 1 ids)
-        if ($collected->count() < $cap && $activity->marketplace_city_id && $activity->marketplace_category_id) {
-            $remaining = $cap - $collected->count();
-            $tier2 = (clone $base)
+        // Running exclusion set — anything in earlier tiers shouldn't repeat.
+        $seenIds = $tiers['same_organizer']->pluck('id')->all();
+
+        // Tier 2: same city + same category
+        if ($activity->marketplace_city_id && $activity->marketplace_category_id) {
+            $tiers['same_city_same_cat'] = (clone $base)
                 ->where('marketplace_city_id', $activity->marketplace_city_id)
                 ->where('marketplace_category_id', $activity->marketplace_category_id)
-                ->whereNotIn('id', $collected->pluck('id')->all())
-                ->limit($remaining)
+                ->whereNotIn('id', $seenIds)
+                ->limit($perTier)
                 ->get();
-            $collected = $collected->concat($tier2);
+            $seenIds = array_merge($seenIds, $tiers['same_city_same_cat']->pluck('id')->all());
         }
 
-        // Tier 3: same city + any category
-        if ($collected->count() < $cap && $activity->marketplace_city_id) {
-            $remaining = $cap - $collected->count();
-            $tier3 = (clone $base)
+        // Tier 3: same city + any other category
+        if ($activity->marketplace_city_id) {
+            $tiers['same_city'] = (clone $base)
                 ->where('marketplace_city_id', $activity->marketplace_city_id)
-                ->whereNotIn('id', $collected->pluck('id')->all())
-                ->limit($remaining)
+                ->whereNotIn('id', $seenIds)
+                ->limit($perTier)
                 ->get();
-            $collected = $collected->concat($tier3);
         }
 
-        return $collected
-            ->take($cap)
-            ->map(fn (Activity $rel) => $this->relatedCardPayload($rel, $locale))
-            ->values()
-            ->all();
+        return [
+            'same_organizer'     => $tiers['same_organizer']->map(fn (Activity $rel) => $this->relatedCardPayload($rel, $locale))->values()->all(),
+            'same_city_same_cat' => $tiers['same_city_same_cat']->map(fn (Activity $rel) => $this->relatedCardPayload($rel, $locale))->values()->all(),
+            'same_city'          => $tiers['same_city']->map(fn (Activity $rel) => $this->relatedCardPayload($rel, $locale))->values()->all(),
+        ];
     }
 
     /**
