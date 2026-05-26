@@ -521,15 +521,21 @@ class EventResource extends Resource
                                         $totalRevenuePos = $breakdown['total_revenue_pos'] ?? 0;
                                         $totalCommissionOnline = $breakdown['total_commission_online'] ?? $totalCommission;
                                         $totalCommissionPos = $breakdown['total_commission_pos'] ?? 0;
+                                        $totalNetOnline = $breakdown['total_net_online'] ?? $totalNet;
+                                        $totalNetPos = $breakdown['total_net_pos'] ?? 0;
                                         $revenueFormatted = number_format($totalRevenue, 2, ',', '.');
                                         $netLabel = $t('Net (RON)', 'Net (RON)');
                                         $commissionLabel = $t('Comisioane (RON)', 'Commissions (RON)');
                                         $extrasLabel = $t('Taxe / Asigurări (RON)', 'Fees / Insurance (RON)');
                                         $discountLabel = $t('Discounturi (RON)', 'Discounts (RON)');
                                         $posSalesLabel = $t('Vânzări POS (RON)', 'POS Sales (RON)');
-                                        $onlineCommissionLabel = $t('Online', 'Online');
-                                        $posCommissionLabel = $t('POS', 'POS');
+                                        $onlineLabel = $t('Online', 'Online');
+                                        $posLabel = $t('POS', 'POS');
+                                        $netSubLabel = $t('Net', 'Net');
+                                        $commissionSubLabel = $t('Comision', 'Commission');
                                         $netFormatted = number_format($totalNet, 2, ',', '.');
+                                        $netOnlineFormatted = number_format($totalNetOnline, 2, ',', '.');
+                                        $netPosFormatted = number_format($totalNetPos, 2, ',', '.');
                                         $commissionFormatted = number_format($totalCommission, 2, ',', '.');
                                         $commissionOnlineFormatted = number_format($totalCommissionOnline, 2, ',', '.');
                                         $commissionPosFormatted = number_format($totalCommissionPos, 2, ',', '.');
@@ -566,18 +572,44 @@ class EventResource extends Resource
                                                 <div class='p-3 text-center bg-gray-800 rounded-lg'>
                                                     <div class='text-2xl font-bold text-emerald-300'>{$netFormatted}</div>
                                                     <div class='text-xs text-gray-400'>{$netLabel}</div>
+                                                    <div class='flex justify-between gap-2 pt-3 mt-3 text-[10px] text-gray-400 border-t border-gray-700'>
+                                                        <span class='flex flex-col items-start'>
+                                                            <span class='uppercase tracking-wider text-gray-500'>{$onlineLabel}</span>
+                                                            <span class='font-semibold text-emerald-300 text-xs'>{$netOnlineFormatted}</span>
+                                                        </span>
+                                                        <span class='flex flex-col items-end'>
+                                                            <span class='uppercase tracking-wider text-gray-500'>{$posLabel}</span>
+                                                            <span class='font-semibold text-indigo-300 text-xs'>{$netPosFormatted}</span>
+                                                        </span>
+                                                    </div>
                                                 </div>
                                                 <div class='p-3 text-center bg-gray-800 rounded-lg'>
                                                     <div class='text-2xl font-bold text-sky-400'>{$commissionFormatted}</div>
                                                     <div class='text-xs text-gray-400'>{$commissionLabel}</div>
-                                                    <div class='flex justify-between gap-2 pt-1.5 mt-1.5 text-[10px] text-gray-400 border-t border-gray-700'>
-                                                        <span><span class='text-gray-500'>{$onlineCommissionLabel}:</span> <span class='font-semibold text-sky-300'>{$commissionOnlineFormatted}</span></span>
-                                                        <span><span class='text-gray-500'>{$posCommissionLabel}:</span> <span class='font-semibold text-indigo-300'>{$commissionPosFormatted}</span></span>
+                                                    <div class='flex justify-between gap-2 pt-3 mt-3 text-[10px] text-gray-400 border-t border-gray-700'>
+                                                        <span class='flex flex-col items-start'>
+                                                            <span class='uppercase tracking-wider text-gray-500'>{$onlineLabel}</span>
+                                                            <span class='font-semibold text-sky-300 text-xs'>{$commissionOnlineFormatted}</span>
+                                                        </span>
+                                                        <span class='flex flex-col items-end'>
+                                                            <span class='uppercase tracking-wider text-gray-500'>{$posLabel}</span>
+                                                            <span class='font-semibold text-indigo-300 text-xs'>{$commissionPosFormatted}</span>
+                                                        </span>
                                                     </div>
                                                 </div>
                                                 <div class='p-3 text-center bg-gray-800 rounded-lg'>
                                                     <div class='text-2xl font-bold text-indigo-300'>{$posSalesFormatted}</div>
                                                     <div class='text-xs text-gray-400'>{$posSalesLabel}</div>
+                                                    <div class='flex justify-between gap-2 pt-3 mt-3 text-[10px] text-gray-400 border-t border-gray-700'>
+                                                        <span class='flex flex-col items-start'>
+                                                            <span class='uppercase tracking-wider text-gray-500'>{$netSubLabel}</span>
+                                                            <span class='font-semibold text-emerald-300 text-xs'>{$netPosFormatted}</span>
+                                                        </span>
+                                                        <span class='flex flex-col items-end'>
+                                                            <span class='uppercase tracking-wider text-gray-500'>{$commissionSubLabel}</span>
+                                                            <span class='font-semibold text-sky-300 text-xs'>{$commissionPosFormatted}</span>
+                                                        </span>
+                                                    </div>
                                                 </div>
                                             </div>
                                             <div class='mt-3'>
@@ -5762,6 +5794,7 @@ class EventResource extends Resource
 
         $totalRevenuePos = max(0.0, (float) $breakdown['total_revenue'] - (float) $onlineBreakdown['total_revenue']);
         $totalCommissionPos = max(0.0, (float) $breakdown['total_commission'] - (float) $onlineBreakdown['total_commission']);
+        $totalNetPos = max(0.0, (float) $breakdown['total_net'] - (float) $onlineBreakdown['total_net']);
 
         $legacyPerType = [];
         foreach ($breakdown['per_type'] as $ttId => $row) {
@@ -5781,8 +5814,10 @@ class EventResource extends Resource
             'total_discount' => $breakdown['total_discount'],
             'total_revenue_online' => $onlineBreakdown['total_revenue'],
             'total_commission_online' => $onlineBreakdown['total_commission'],
+            'total_net_online' => $onlineBreakdown['total_net'],
             'total_revenue_pos' => round($totalRevenuePos, 2),
             'total_commission_pos' => round($totalCommissionPos, 2),
+            'total_net_pos' => round($totalNetPos, 2),
             'per_type' => $legacyPerType,
         ];
     }
