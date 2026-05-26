@@ -371,9 +371,25 @@
 {{-- Move topbar before .fi-main for marketplace panel --}}
 @if($isMarketplacePanel || $isAdminPanel)
 <script>
-// Topbar positioning — move into .fi-main-ctn before .fi-main
+// Topbar positioning + dedupe.
+// The topbar is registered via the `panels::page.start` render hook,
+// which places it INSIDE the page wrapper. We move it OUT into
+// .fi-main-ctn (before .fi-main) so it can be sticky across page
+// scroll. But Livewire morphs (after a save / form action) re-render
+// the page wrapper without firing `livewire:navigated`, so a fresh
+// copy of the topbar appears in its original DOM location while the
+// moved copy persists — hence the duplicate the user reported.
+//
+// Fix: keep the event-based pass for initial loads + Livewire full
+// navigations, AND watch the DOM with a MutationObserver scoped to
+// .fi-main-ctn so any subsequent insertion of a second topbar is
+// caught and deduped immediately, regardless of which Livewire event
+// fires (livewire:morphed / livewire:update / livewire:effect / etc).
 (function() {
+    let scheduled = false;
+
     function setupTopbar() {
+        scheduled = false;
         // Keep only the first topbar, remove duplicates
         const topbars = document.querySelectorAll('.fi-custom-topbar');
         for (let i = 1; i < topbars.length; i++) {
@@ -391,13 +407,54 @@
         }
     }
 
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', setupTopbar);
-    } else {
-        setupTopbar();
+    function scheduleSetup() {
+        // Coalesce bursts of mutations into a single dedupe pass per
+        // animation frame so we don't spend cycles during big morphs.
+        if (scheduled) return;
+        scheduled = true;
+        requestAnimationFrame(setupTopbar);
     }
 
-    document.addEventListener('livewire:navigated', setupTopbar);
+    function installObserver() {
+        const mainCtn = document.querySelector('.fi-main-ctn');
+        if (!mainCtn) return false;
+        const observer = new MutationObserver(function (mutations) {
+            for (const m of mutations) {
+                for (const node of m.addedNodes) {
+                    if (!(node instanceof HTMLElement)) continue;
+                    if (node.classList?.contains('fi-custom-topbar')
+                        || node.querySelector?.('.fi-custom-topbar')
+                    ) {
+                        scheduleSetup();
+                        return;
+                    }
+                }
+            }
+        });
+        observer.observe(mainCtn, { childList: true, subtree: true });
+        return true;
+    }
+
+    function boot() {
+        setupTopbar();
+        if (!installObserver()) {
+            // .fi-main-ctn not in DOM yet — retry on next frame until it
+            // shows up (Filament hydrates async on some panels).
+            requestAnimationFrame(boot);
+        }
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', boot);
+    } else {
+        boot();
+    }
+
+    // Belt-and-braces: still listen for the common Livewire / nav
+    // events. The observer covers most cases but these are cheap.
+    document.addEventListener('livewire:navigated', scheduleSetup);
+    document.addEventListener('livewire:morphed', scheduleSetup);
+    document.addEventListener('livewire:update', scheduleSetup);
 })();
 </script>
 @endif

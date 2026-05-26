@@ -45,6 +45,23 @@ class CityIntentResource extends Resource
         return parent::getEloquentQuery()->where('marketplace_client_id', $marketplaceClientId);
     }
 
+    /**
+     * City Intents only make sense for marketplaces that have the
+     * activities-module microservice active — without activities to
+     * group, the funnel is empty. Match the gate pattern used by
+     * ActivityResource so the resource stays in lockstep with its
+     * parent feature.
+     */
+    public static function canAccess(): bool
+    {
+        return static::marketplaceHasMicroservice('activities-module');
+    }
+
+    public static function shouldRegisterNavigation(): bool
+    {
+        return static::marketplaceHasMicroservice('activities-module');
+    }
+
     public static function form(Schema $schema): Schema
     {
         $marketplace = static::getMarketplaceClient();

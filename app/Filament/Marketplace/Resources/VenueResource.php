@@ -192,7 +192,7 @@ class VenueResource extends Resource
 
                             SC\Actions::make([
                                 Action::make('add_as_partner')
-                                    ->label('Adaugă ca partener')
+                                    ->label(fn () => 'Preia în biblioteca ' . ($marketplace?->public_name ?? $marketplace?->name ?? 'marketplace'))
                                     ->icon('heroicon-o-plus-circle')
                                     ->color('success')
                                     ->size('lg')
@@ -204,7 +204,7 @@ class VenueResource extends Resource
                                         return $venue && !$venue->isInMarketplace($marketplace?->id ?? 0);
                                     })
                                     ->requiresConfirmation()
-                                    ->modalHeading('Adaugă locație ca partener')
+                                    ->modalHeading(fn () => 'Preia locația în biblioteca ' . ($marketplace?->public_name ?? $marketplace?->name ?? 'marketplace'))
                                     ->modalDescription('Această locație va fi adăugată în lista ta de locații partenere. Vei putea să o folosești pentru evenimentele tale.')
                                     ->action(function (SGet $get) use ($marketplace) {
                                         $venueId = $get('search_existing_venue');
