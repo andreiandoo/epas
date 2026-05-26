@@ -186,7 +186,90 @@ const CartPage = {
         }
     },
 
+    /**
+     * Render an activity cart line. Simpler than event lines — activities
+     * sell by (slot date + start time + variant) instead of (event +
+     * ticket type), so quantity-controls double as participant-count
+     * controls and the variant's capacity_share is informational.
+     */
+    renderActivityCartItem(item, index) {
+        const itemKey = item.key || index;
+        const a = item.activity || {};
+        const v = item.variant || {};
+        const quantity = item.participants_count || item.quantity || 1;
+        const price = (typeof v.price === 'number' ? v.price : item.price) || 0;
+        const lineTotal = price * quantity;
+
+        const imgSrc = (typeof getStorageUrl === 'function' && a.image)
+            ? getStorageUrl(a.image)
+            : (a.image || '/assets/images/placeholder-activity.svg');
+
+        const title = a.title || 'Activitate';
+        const variantName = v.name || 'Bilet';
+        const slotDate = item.booking_date || '';
+        const slotStart = (item.slot_start_time || '').substring(0, 5);
+        const slotEnd = (item.slot_end_time || '').substring(0, 5);
+        const venueLine = [a.venue, a.city].filter(Boolean).join(' · ');
+
+        let formattedDate = slotDate;
+        try {
+            if (typeof BileteOnlineUtils !== 'undefined' && BileteOnlineUtils.formatDate) {
+                formattedDate = BileteOnlineUtils.formatDate(slotDate, 'medium');
+            }
+        } catch (e) { /* fall back to raw YYYY-MM-DD */ }
+
+        const slotLine = slotStart
+            ? `${formattedDate} · ${slotStart}${slotEnd ? '–' + slotEnd : ''}`
+            : formattedDate;
+
+        return '<div class="bg-paper border-2 border-ink/10 cart-item rounded-3xl" data-item-key="' + itemKey + '" data-index="' + index + '">' +
+            '<div class="flex gap-4 p-4">' +
+                '<div class="w-24 h-24 overflow-hidden rounded-2xl shrink-0 bg-paper-2 border border-ink/10 mobile:w-14 mobile:h-14">' +
+                    '<img src="' + imgSrc + '" alt="' + title + '" class="object-cover w-full h-full" loading="lazy" onerror="this.style.display=\'none\'">' +
+                '</div>' +
+                '<div class="flex-1 min-w-0">' +
+                    '<div class="flex items-start justify-between gap-3">' +
+                        '<div class="min-w-0">' +
+                            '<p class="text-[10px] font-mono tracking-[.18em] text-vermilion">ACTIVITATE</p>' +
+                            '<h3 class="font-display text-xl font-bold truncate">' + title + '</h3>' +
+                            '<p class="text-sm text-ink-soft truncate">' + slotLine + '</p>' +
+                            (venueLine ? '<p class="text-xs text-ink-soft truncate">' + venueLine + '</p>' : '') +
+                        '</div>' +
+                        '<button onclick="CartPage.removeItem(' + index + ')" aria-label="Șterge rezervarea" class="self-start p-2 rounded-full text-ink-soft hover:text-vermilion hover:bg-paper-2 transition">' +
+                            '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>' +
+                        '</button>' +
+                    '</div>' +
+                    '<div class="flex items-center justify-between gap-3 mt-3">' +
+                        '<div>' +
+                            '<span class="inline-flex items-center px-2 py-0.5 rounded-full bg-ochre/15 text-ochre text-xs font-bold">' + variantName + '</span>' +
+                        '</div>' +
+                        '<div class="flex items-center gap-2">' +
+                            '<button onclick="CartPage.updateQuantity(' + index + ', -1)" aria-label="Scade nr. participanți" class="flex items-center justify-center w-8 h-8 rounded-full bg-paper border-2 border-ink/10 hover:border-ink transition">' +
+                                '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/></svg>' +
+                            '</button>' +
+                            '<span class="w-8 font-bold text-center font-mono">' + quantity + '</span>' +
+                            '<button onclick="CartPage.updateQuantity(' + index + ', 1)" aria-label="Crește nr. participanți" class="flex items-center justify-center w-8 h-8 rounded-full bg-paper border-2 border-ink/10 hover:border-ink transition">' +
+                                '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>' +
+                            '</button>' +
+                        '</div>' +
+                        '<div class="text-right">' +
+                            '<div class="text-xs text-ink-soft font-mono">' + price.toFixed(2) + ' lei × ' + quantity + '</div>' +
+                            '<div class="font-display text-xl font-bold text-vermilion">' + lineTotal.toFixed(2) + ' lei</div>' +
+                        '</div>' +
+                    '</div>' +
+                '</div>' +
+            '</div>' +
+        '</div>';
+    },
+
     renderCartItem(item, index) {
+        // Activity items take a separate, simpler card. Event-style code
+        // below assumes a ticketType + event date — activities have a
+        // slot date + variant instead.
+        if (item.type === 'activity') {
+            return this.renderActivityCartItem(item, index);
+        }
+
         // Handle both BileteOnlineCart format and legacy format
         const itemKey = item.key || index;
         const eventImage = getStorageUrl(item.event?.image || item.event_image);

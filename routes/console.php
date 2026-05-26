@@ -88,6 +88,16 @@ Schedule::command('seating:release-expired-holds')
         // Silent success - only log if seats were released (handled in command)
     });
 
+// Release expired activity slot holds (every minute)
+// Frees pending_payment activity bookings whose held_until has passed so
+// the slot capacity is returned to the available pool for the next shopper.
+Schedule::command('activities:release-expired-holds')
+    ->everyMinute()
+    ->withoutOverlapping()
+    ->onSuccess(function () {
+        // Silent success - only logs when holds were actually released
+    });
+
 // Clean up expired pending marketplace orders (every 2 minutes)
 Schedule::command('marketplace:cleanup-expired-orders')
     ->everyTwoMinutes()

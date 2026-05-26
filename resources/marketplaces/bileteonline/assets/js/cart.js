@@ -128,6 +128,80 @@ const BileteOnlineCart = {
     },
 
     /**
+     * Add an Activity item to the cart.
+     *
+     * Activity items live alongside event items in the same cart array but
+     * carry `type: 'activity'` so cart-page.js / checkout-page.js / the
+     * backend checkout flow can branch on them. The shape matches what
+     * CheckoutController::processActivityCheckout expects.
+     *
+     * @param {Object} activityData {id, slug, title, image, venue, city, organizer_id}
+     * @param {Object} variantData  {id, name, price_cents, capacity_share}
+     * @param {Object} slotData     {date, start_time, end_time}
+     * @param {Number} participantsCount
+     */
+    addActivityItem(activityData, variantData, slotData, participantsCount = 1) {
+        const cart = this.getCart();
+
+        const date  = slotData.date || slotData.booking_date;
+        const start = slotData.start_time || slotData.slot_start_time;
+        const end   = slotData.end_time   || slotData.slot_end_time   || null;
+
+        if (!activityData?.id || !variantData?.id || !date || !start || participantsCount < 1) {
+            return cart;
+        }
+
+        const itemKey = `activity_${activityData.id}_${variantData.id}_${date}_${start}`;
+        const priceRon = typeof variantData.price === 'number'
+            ? variantData.price
+            : (variantData.price_cents ? variantData.price_cents / 100 : 0);
+
+        const existingIndex = cart.items.findIndex(it => it.key === itemKey);
+        if (existingIndex >= 0) {
+            // Same activity + slot + variant already in cart → bump count
+            cart.items[existingIndex].participants_count =
+                (cart.items[existingIndex].participants_count || 0) + participantsCount;
+            cart.items[existingIndex].quantity = cart.items[existingIndex].participants_count;
+        } else {
+            cart.items.push({
+                key: itemKey,
+                type: 'activity',
+                activity_id: activityData.id,
+                variant_id: variantData.id,
+                booking_date: date,
+                slot_start_time: start,
+                slot_end_time: end,
+                participants_count: participantsCount,
+                // legacy alias so renderers / API parsers that read .quantity work
+                quantity: participantsCount,
+                price: priceRon,
+                activity: {
+                    id: activityData.id,
+                    slug: activityData.slug || null,
+                    title: activityData.title || '',
+                    image: activityData.image || activityData.cover_image_url || null,
+                    venue: activityData.venue || null,
+                    city: activityData.city || null,
+                    organizer_id: activityData.organizer_id || null,
+                    duration_minutes: activityData.duration_minutes || null,
+                },
+                variant: {
+                    id: variantData.id,
+                    name: variantData.name || 'Bilet',
+                    price: priceRon,
+                    capacity_share: variantData.capacity_share || 1,
+                },
+                addedAt: new Date().toISOString(),
+            });
+        }
+
+        this.saveCart(cart);
+        this.startReservationTimer();
+        this.showNotification(`${variantData.name || 'Bilet'} adăugat în coș!`);
+        return cart;
+    },
+
+    /**
      * Update item quantity
      */
     updateQuantity(itemKey, quantity) {

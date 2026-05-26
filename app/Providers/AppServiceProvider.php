@@ -101,6 +101,7 @@ class AppServiceProvider extends ServiceProvider
         \App\Models\Artist::observe(\App\Observers\ArtistObserver::class);
         \App\Models\Order::observe(\App\Observers\OrderObserver::class);
         \App\Models\Order::observe(\App\Observers\FacebookCapiOrderObserver::class);
+        \App\Models\Order::observe(\App\Observers\ActivityBookingOrderObserver::class);
         \App\Models\Event::observe(\App\Observers\EventObserver::class);
         \App\Models\Event::observe(\App\Observers\MarketplaceEventObserver::class);
         \App\Models\MarketplaceCustomer::observe(\App\Observers\MarketplaceCustomerObserver::class);

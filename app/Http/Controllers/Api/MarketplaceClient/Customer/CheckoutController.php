@@ -14,7 +14,12 @@ use App\Models\Order;
 use App\Models\Ticket;
 use App\Models\Event;
 use App\Models\TicketType;
+use App\Models\Activity;
+use App\Models\ActivityBooking;
+use App\Models\ActivityVariant;
+use App\Services\Activities\SlotResolver;
 use App\Services\Seating\SeatHoldService;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -78,6 +83,41 @@ class CheckoutController extends BaseController
         if (!empty($requestItems)) {
             // Convert frontend items format to cart format
             foreach ($requestItems as $item) {
+                // Activity cart item (bilete.online activities flow). Shape:
+                //   { type: 'activity', activity: {id,slug,organizer_id},
+                //     variant: {id,name,price}, booking_date: 'YYYY-MM-DD',
+                //     slot_start_time: 'HH:MM:SS', slot_end_time: 'HH:MM:SS',
+                //     participants_count: N }
+                // We normalise into a flat row tagged type=activity so the
+                // event flow below can `continue;` past it cleanly.
+                if (($item['type'] ?? null) === 'activity') {
+                    $activityId       = $item['activity']['id']         ?? $item['activity_id']       ?? null;
+                    $variantId        = $item['variant']['id']          ?? $item['variant_id']        ?? null;
+                    $bookingDate      = $item['booking_date']           ?? null;
+                    $slotStartTime    = $item['slot_start_time']        ?? null;
+                    $slotEndTime      = $item['slot_end_time']          ?? null;
+                    $participants     = (int) ($item['participants_count'] ?? $item['quantity'] ?? 1);
+                    $variantPrice     = (float) ($item['variant']['price'] ?? $item['price'] ?? 0);
+                    $variantName      = $item['variant']['name']        ?? $item['variant_name']      ?? 'Bilet';
+
+                    if ($activityId && $variantId && $bookingDate && $slotStartTime && $participants > 0) {
+                        $cartItems[] = [
+                            'type'               => 'activity',
+                            'activity_id'        => (int) $activityId,
+                            'variant_id'         => (int) $variantId,
+                            'booking_date'       => $bookingDate,
+                            'slot_start_time'    => $slotStartTime,
+                            'slot_end_time'      => $slotEndTime,
+                            'participants_count' => $participants,
+                            // legacy alias — some downstream code reads $item['quantity']
+                            'quantity'           => $participants,
+                            'price'              => $variantPrice,
+                            'variant_name'       => $variantName,
+                        ];
+                    }
+                    continue;
+                }
+
                 // Support both new AmbiletCart format and legacy format
                 $eventId = $item['event']['id'] ?? $item['event_id'] ?? null;
                 $ticketTypeId = $item['ticketType']['id'] ?? $item['ticket_type_id'] ?? null;
@@ -129,6 +169,37 @@ class CheckoutController extends BaseController
 
         if (empty($cartItems)) {
             return $this->error('Cart is empty', 400);
+        }
+
+        // Activity-aware split. Activity items go through a dedicated flow
+        // (bookings + slot capacity instead of event ticket types). Mixed
+        // carts are rejected for v1 — the two flows touch different stock
+        // models and combining them in one transaction is footgun-prone.
+        $activityCartItems = [];
+        $eventCartItems    = [];
+        foreach ($cartItems as $ci) {
+            if (($ci['type'] ?? null) === 'activity') {
+                $activityCartItems[] = $ci;
+            } else {
+                $eventCartItems[] = $ci;
+            }
+        }
+
+        if (!empty($activityCartItems) && !empty($eventCartItems)) {
+            return $this->error(
+                'Coșul conține atât bilete la evenimente cât și rezervări pentru activități. Te rugăm să le finalizezi separat.',
+                400
+            );
+        }
+
+        if (!empty($activityCartItems)) {
+            return $this->processActivityCheckout(
+                $request,
+                $client,
+                $activityCartItems,
+                $validated,
+                $isTestOrder
+            );
         }
 
         // Validate cart items are still available
@@ -1206,6 +1277,500 @@ class CheckoutController extends BaseController
 
             return $this->error('Checkout failed: ' . $e->getMessage(), 400);
         }
+    }
+
+    /**
+     * Activity checkout flow.
+     *
+     * Mirrors the event checkout but reserves capacity on `activity_bookings`
+     * + creates one Order with `event_id=null, source=marketplace_activity`.
+     * Each cart item becomes:
+     *   - one OrderItem (line on the order)
+     *   - one ActivityBooking with status=pending_payment, held_until=+5min
+     *   - N Ticket rows (N = participants_count), each with
+     *     `activity_booking_id` set and `event_id/ticket_type_id` null
+     *
+     * Once the Order transitions to paid/confirmed (Netopia webhook,
+     * PaymentController, or auto-confirmation for test/free orders), the
+     * ActivityBookingOrderObserver flips bookings → paid (released hold
+     * = capacity permanent) and tickets → valid.
+     *
+     * If the user abandons checkout, the ReleaseExpiredActivityHoldsCommand
+     * cancels the booking ~ every minute and the slot capacity is returned.
+     *
+     * Insurance / promo codes are intentionally NOT applied in v1 — the
+     * bilete.online activities pages don't surface them yet. The flow is
+     * structurally compatible if those features are added later.
+     */
+    protected function processActivityCheckout(
+        Request $request,
+        $client,
+        array $cartItems,
+        array $validated,
+        bool $isTestOrder
+    ): JsonResponse {
+        // Validate slot availability + variant/activity state first; cheaper
+        // to fail before opening a DB transaction.
+        $validationErrors = $this->validateActivityCartItems($cartItems);
+        if (!empty($validationErrors)) {
+            Log::channel('marketplace')->info('Activity checkout validation failed', [
+                'client_id' => $client->id,
+                'cart_items' => $cartItems,
+                'errors' => $validationErrors,
+            ]);
+            return $this->error('Some activity slots are no longer available', 400, [
+                'errors' => $validationErrors,
+            ]);
+        }
+
+        try {
+            DB::beginTransaction();
+
+            // Find or create customer (same logic as event checkout).
+            $customer = MarketplaceCustomer::where('marketplace_client_id', $client->id)
+                ->where('email', $validated['customer']['email'])
+                ->first();
+
+            $autoCreatedPassword = null;
+            if (!$customer) {
+                $plainPassword = $validated['customer']['password'] ?? null;
+                $customer = MarketplaceCustomer::create([
+                    'marketplace_client_id' => $client->id,
+                    'email'      => $validated['customer']['email'],
+                    'first_name' => $validated['customer']['first_name'],
+                    'last_name'  => $validated['customer']['last_name'],
+                    'phone'      => $validated['customer']['phone'] ?? null,
+                    'password'   => $plainPassword ? Hash::make($plainPassword) : null,
+                    'status'     => 'active',
+                ]);
+                if ($plainPassword) {
+                    $autoCreatedPassword = $plainPassword;
+                }
+            } else {
+                $customer->update([
+                    'first_name' => $validated['customer']['first_name'],
+                    'last_name'  => $validated['customer']['last_name'],
+                    'phone'      => $validated['customer']['phone'] ?? $customer->phone,
+                ]);
+                if (!$customer->password && !empty($validated['customer']['password'])) {
+                    $plainPassword = $validated['customer']['password'];
+                    $customer->update(['password' => Hash::make($plainPassword)]);
+                    $autoCreatedPassword = $plainPassword;
+                }
+            }
+
+            // Process each cart item: lock the slot's current bookings,
+            // re-check remaining capacity inside the transaction, accumulate
+            // subtotal/commission, and stage the booking shape for insertion.
+            $subtotal        = 0;
+            $totalCommission = 0;
+            $stagedBookings  = [];
+            $primaryActivity = null;
+            $primaryOrganizerId = null;
+            $organizerIds    = [];
+
+            foreach ($cartItems as $item) {
+                $activity = Activity::with(['variants', 'schedules', 'scheduleExceptions'])
+                    ->find($item['activity_id']);
+                if (!$activity) {
+                    throw new \Exception("Activity not found: {$item['activity_id']}");
+                }
+
+                $variant = $activity->variants
+                    ->firstWhere('id', $item['variant_id']);
+                if (!$variant || !$variant->is_active) {
+                    throw new \Exception("Activity variant not available: {$item['variant_id']}");
+                }
+
+                $participants  = max(1, (int) $item['participants_count']);
+                $capacityShare = max(1, (int) ($variant->capacity_share ?? 1));
+                $slotConsumes  = $participants * $capacityShare;
+
+                // Lock existing bookings for this slot so two concurrent
+                // checkouts can't both pass the capacity check. The lock
+                // is held until the transaction commits or rolls back.
+                $consumed = DB::table('activity_bookings')
+                    ->where('activity_id', $activity->id)
+                    ->whereDate('booking_date', $item['booking_date'])
+                    ->where('slot_start_time', $item['slot_start_time'])
+                    ->whereIn('status', ActivityBooking::CAPACITY_CONSUMING_STATUSES)
+                    ->where(function ($q) {
+                        $q->where('status', '<>', ActivityBooking::STATUS_PENDING_PAYMENT)
+                            ->orWhereNull('held_until')
+                            ->orWhere('held_until', '>=', now());
+                    })
+                    ->whereNull('deleted_at')
+                    ->lockForUpdate()
+                    ->sum('participants_count');
+
+                $capTotal  = max(1, (int) ($activity->capacity_per_slot ?? 1));
+                $remaining = max(0, $capTotal - (int) $consumed);
+                if ($slotConsumes > $remaining) {
+                    throw new \Exception("Slotul nu mai are suficientă disponibilitate pentru această rezervare.");
+                }
+
+                // Line totals.
+                $unitPrice  = $variant->price; // float, RON
+                $lineTotal  = round($unitPrice * $participants, 2);
+                $subtotal  += $lineTotal;
+
+                // Commission — per-variant override falls back to activity's
+                // organizer default. Mirrors the event side's variant-level
+                // commission logic (kept simple for v1: use the variant
+                // rate if set, else fall back to flat 0% — payout reports
+                // recompute on read for activities anyway).
+                $commissionRate = (float) ($variant->commission_rate ?? 0);
+                $lineCommission = round($lineTotal * $commissionRate / 100, 2);
+                $totalCommission += $lineCommission;
+
+                $organizerIds[$activity->marketplace_organizer_id ?? 0] = true;
+                if (!$primaryActivity) {
+                    $primaryActivity    = $activity;
+                    $primaryOrganizerId = $activity->marketplace_organizer_id;
+                }
+
+                $variantNameRo = is_array($variant->name)
+                    ? ($variant->name['ro'] ?? $variant->name['en'] ?? array_values($variant->name)[0] ?? 'Bilet')
+                    : ($variant->name ?? 'Bilet');
+                $activityTitleRo = is_array($activity->title)
+                    ? ($activity->title['ro'] ?? $activity->title['en'] ?? array_values($activity->title)[0] ?? 'Activitate')
+                    : ($activity->title ?? 'Activitate');
+
+                $stagedBookings[] = [
+                    'activity'           => $activity,
+                    'variant'            => $variant,
+                    'booking_date'       => $item['booking_date'],
+                    'slot_start_time'    => $item['slot_start_time'],
+                    'slot_end_time'      => $item['slot_end_time'],
+                    'participants_count' => $participants,
+                    'slot_consumes'      => $slotConsumes,
+                    'unit_price'         => $unitPrice,
+                    'line_total'         => $lineTotal,
+                    'commission'         => $lineCommission,
+                    'variant_name'       => $variantNameRo,
+                    'activity_title'     => $activityTitleRo,
+                ];
+            }
+
+            // Processing fee snapshot. Kill switch = NULL payment_fees on
+            // marketplace_clients leaves fee_cents=0 (no impact on RON total).
+            $orderTotal     = $subtotal;
+            $processingFee  = [
+                'fee_cents'        => 0,
+                'pass_to_customer' => false,
+                'provider'         => null,
+                'percent_rate'     => null,
+                'fixed_cents'      => null,
+                'active'           => false,
+            ];
+            $isCardPayment  = in_array($request->input('payment_method', 'card'), ['card', 'card_cultural'], true);
+            if (!$isTestOrder && $orderTotal > 0 && $isCardPayment) {
+                $calc       = app(\App\Services\Payments\ProcessingFeeCalculator::class);
+                $cents      = (int) round($orderTotal * 100);
+                $organizer  = $primaryOrganizerId
+                    ? \App\Models\MarketplaceOrganizer::find($primaryOrganizerId)
+                    : null;
+                $processingFee = $calc->compute($client, $organizer, 'stripe', $cents);
+                if ($processingFee['pass_to_customer'] && $processingFee['fee_cents'] > 0) {
+                    $orderTotal += $processingFee['fee_cents'] / 100;
+                }
+            }
+
+            $currency        = $client->currency ?? 'RON';
+            $isMultiOrganizer = count($organizerIds) > 1;
+            $isFreeOrder     = !$isTestOrder && $orderTotal <= 0;
+            $isAutoConfirmed = $isTestOrder || $isFreeOrder;
+
+            $order = Order::create([
+                'marketplace_client_id'    => $client->id,
+                'marketplace_organizer_id' => $isMultiOrganizer ? null : $primaryOrganizerId,
+                'tenant_id'                => null,
+                'marketplace_customer_id'  => $customer->id,
+                'event_id'                 => null,
+                'marketplace_event_id'     => null,
+                'order_number'             => ($isTestOrder ? 'TEST-' : 'ACT-') . strtoupper(Str::random(8)),
+                'status'                   => $isAutoConfirmed ? 'completed' : 'pending',
+                'payment_status'           => $isTestOrder ? 'test' : ($isFreeOrder ? 'free' : 'pending'),
+                'subtotal'                 => $isTestOrder ? 0 : $subtotal,
+                'discount_amount'          => 0,
+                'commission_rate'          => 0, // commission tracked per-line in meta; aggregate not needed for activities v1
+                'commission_amount'        => $isTestOrder ? 0 : $totalCommission,
+                'total'                    => $isTestOrder ? 0 : $orderTotal,
+                'processing_fee_cents'     => $isTestOrder ? 0 : (int) ($processingFee['fee_cents'] ?? 0),
+                'processing_fee_passed'    => (bool) ($processingFee['pass_to_customer'] ?? false),
+                'processing_fee_provider'  => $processingFee['provider'] ?? null,
+                'processing_fee_percent_rate' => $processingFee['percent_rate'] ?? null,
+                'processing_fee_fixed_cents'  => $processingFee['fixed_cents'] ?? null,
+                'currency'                 => $currency,
+                'source'                   => $isTestOrder ? 'test_order' : 'marketplace_activity',
+                'customer_email'           => $customer->email,
+                'customer_name'            => $customer->first_name . ' ' . $customer->last_name,
+                'customer_phone'           => $customer->phone,
+                'expires_at'               => $isAutoConfirmed ? null : now()->addMinutes(15),
+                'paid_at'                  => $isAutoConfirmed ? now() : null,
+                'meta' => [
+                    'beneficiaries'      => $validated['beneficiaries'] ?? [],
+                    'ip_address'         => $request->ip(),
+                    'user_agent'         => $request->userAgent(),
+                    'payment_method'     => $isTestOrder ? 'test' : $request->input('payment_method', 'card'),
+                    'order_type'         => 'activity',
+                    'activity_ids'       => array_unique(array_map(fn ($b) => $b['activity']->id, $stagedBookings)),
+                    'multi_organizer'    => $isMultiOrganizer,
+                    'commission_details' => array_map(fn ($b) => [
+                        'activity'         => $b['activity_title'],
+                        'variant'          => $b['variant_name'],
+                        'participants'     => $b['participants_count'],
+                        'unit_price'       => $b['unit_price'],
+                        'line_total'       => $b['line_total'],
+                        'commission'       => $b['commission'],
+                    ], $stagedBookings),
+                ],
+            ]);
+
+            // Create bookings + order items + pending tickets.
+            // Bookings start in pending_payment with held_until = now+5min so
+            // the slot is reserved while the user is on the payment page.
+            // ActivityBookingOrderObserver flips them to paid + clears the
+            // hold when the order moves to paid/confirmed/completed.
+            $heldUntil    = $isAutoConfirmed ? null : now()->addMinutes(5);
+            $startStatus  = $isAutoConfirmed ? ActivityBooking::STATUS_PAID : ActivityBooking::STATUS_PENDING_PAYMENT;
+            $ticketStatus = $isAutoConfirmed ? 'valid' : 'pending';
+            $ticketIndex  = 0;
+
+            foreach ($stagedBookings as $idx => $b) {
+                $orderItem = $order->items()->create([
+                    'ticket_type_id' => null,
+                    'performance_id' => null,
+                    'name'           => sprintf('%s — %s', $b['activity_title'], $b['variant_name']),
+                    'quantity'       => $b['participants_count'],
+                    'unit_price'     => $b['unit_price'],
+                    'total'          => $b['line_total'],
+                    'meta' => [
+                        'activity_id'        => $b['activity']->id,
+                        'variant_id'         => $b['variant']->id,
+                        'booking_date'       => $b['booking_date'],
+                        'slot_start_time'    => $b['slot_start_time'],
+                        'slot_end_time'      => $b['slot_end_time'],
+                        'participants_count' => $b['participants_count'],
+                        'capacity_share'     => (int) ($b['variant']->capacity_share ?? 1),
+                        'order_type'         => 'activity',
+                    ],
+                ]);
+
+                $booking = ActivityBooking::create([
+                    'marketplace_client_id'   => $client->id,
+                    'activity_id'             => $b['activity']->id,
+                    'marketplace_customer_id' => $customer->id,
+                    'order_id'                => $order->id,
+                    'booking_date'            => $b['booking_date'],
+                    'slot_start_time'         => $b['slot_start_time'],
+                    'slot_end_time'           => $b['slot_end_time'],
+                    'participants_count'      => $b['slot_consumes'],
+                    'status'                  => $startStatus,
+                    'total_cents'             => (int) round($b['line_total'] * 100),
+                    'commission_cents'        => (int) round($b['commission'] * 100),
+                    'currency'                => $currency,
+                    'held_until'              => $heldUntil,
+                ]);
+
+                // Emit one ticket per participant (NOT capacity_share — capacity_share
+                // controls slot consumption, not ticket count). Group variants
+                // (capacity_share>1) still emit `participants_count` tickets.
+                for ($i = 0; $i < $b['participants_count']; $i++) {
+                    $beneficiary = $validated['beneficiaries'][$ticketIndex] ?? null;
+
+                    Ticket::create([
+                        'marketplace_client_id'    => $client->id,
+                        'tenant_id'                => null,
+                        'order_id'                 => $order->id,
+                        'order_item_id'            => $orderItem->id,
+                        'event_id'                 => null,
+                        'marketplace_event_id'     => null,
+                        'ticket_type_id'           => null,
+                        'marketplace_ticket_type_id' => null,
+                        'activity_booking_id'      => $booking->id,
+                        'performance_id'           => null,
+                        'marketplace_customer_id'  => $customer->id,
+                        'code'                     => strtoupper(Str::random(8)),
+                        'barcode'                  => Str::uuid()->toString(),
+                        'status'                   => $ticketStatus,
+                        'price'                    => $isTestOrder ? 0 : $b['unit_price'],
+                        'attendee_name'            => $beneficiary['name'] ?? null,
+                        'attendee_email'           => $beneficiary['email'] ?? null,
+                        'meta' => [
+                            'activity_id'     => $b['activity']->id,
+                            'variant_id'      => $b['variant']->id,
+                            'booking_date'    => $b['booking_date'],
+                            'slot_start_time' => $b['slot_start_time'],
+                            'slot_end_time'   => $b['slot_end_time'],
+                        ],
+                    ]);
+
+                    $ticketIndex++;
+                }
+            }
+
+            DB::commit();
+
+            // Auto-account email (same pathway as event checkout).
+            if ($autoCreatedPassword) {
+                try {
+                    $setPasswordToken = \Illuminate\Support\Str::random(64);
+                    DB::table('marketplace_password_resets')
+                        ->where('email', $customer->email)
+                        ->where('type', 'customer')
+                        ->where('marketplace_client_id', $client->id)
+                        ->delete();
+                    DB::table('marketplace_password_resets')->insert([
+                        'email'                 => $customer->email,
+                        'type'                  => 'customer',
+                        'marketplace_client_id' => $client->id,
+                        'token'                 => Hash::make($setPasswordToken),
+                        'created_at'            => now(),
+                    ]);
+                    $this->sendAccountCreatedEmail($client, $customer, $setPasswordToken);
+                } catch (\Exception $e) {
+                    Log::channel('marketplace')->warning('Activity checkout: account email failed', [
+                        'customer_id' => $customer->id,
+                        'error'       => $e->getMessage(),
+                    ]);
+                }
+            }
+
+            $primaryTitle = $primaryActivity
+                ? (is_array($primaryActivity->title)
+                    ? ($primaryActivity->title['ro'] ?? $primaryActivity->title['en'] ?? array_values($primaryActivity->title)[0] ?? 'Activitate')
+                    : $primaryActivity->title)
+                : 'Activitate';
+
+            Log::channel('marketplace')->info('Activity checkout completed', [
+                'client_id'    => $client->id,
+                'customer_id'  => $customer->id,
+                'order_id'     => $order->id,
+                'booking_count' => count($stagedBookings),
+                'total'        => (float) $order->total,
+            ]);
+
+            return $this->success([
+                'orders' => [[
+                    'id'           => $order->id,
+                    'order_number' => $order->order_number,
+                    'event'        => [
+                        'id'   => null,
+                        'name' => $primaryTitle . (count($stagedBookings) > 1 ? ' + ' . (count($stagedBookings) - 1) . ' alte' : ''),
+                    ],
+                    'subtotal'     => (float) $order->subtotal,
+                    'discount'     => 0.0,
+                    'insurance'    => 0.0,
+                    'total'        => (float) $order->total,
+                    'currency'     => $order->currency,
+                    'expires_at'   => $order->expires_at?->toIso8601String(),
+                ]],
+                'customer' => [
+                    'id'          => $customer->id,
+                    'email'       => $customer->email,
+                    'name'        => $customer->first_name . ' ' . $customer->last_name,
+                    'has_account' => $customer->password !== null,
+                ],
+                'payment_required' => (float) $order->total > 0,
+            ], 'Checkout successful', 201);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            Log::channel('marketplace')->error('Activity checkout failed', [
+                'client_id' => $client->id,
+                'error'     => $e->getMessage(),
+            ]);
+
+            return $this->error('Checkout failed: ' . $e->getMessage(), 400);
+        }
+    }
+
+    /**
+     * Lightweight pre-transaction validation for activity cart items. The
+     * authoritative re-check (with row locks) happens inside the checkout
+     * transaction; this is the "fail fast and tell the user why" pass.
+     */
+    protected function validateActivityCartItems(array $items): array
+    {
+        $errors = [];
+
+        foreach ($items as $key => $item) {
+            $activityId = $item['activity_id']   ?? null;
+            $variantId  = $item['variant_id']    ?? null;
+            $bookingDate    = $item['booking_date']    ?? null;
+            $slotStartTime  = $item['slot_start_time'] ?? null;
+            $participants   = (int) ($item['participants_count'] ?? 0);
+
+            if (!$activityId || !$variantId || !$bookingDate || !$slotStartTime || $participants <= 0) {
+                $errors[$key] = 'Rezervarea este incompletă';
+                continue;
+            }
+
+            $activity = Activity::with(['variants', 'schedules', 'scheduleExceptions'])
+                ->find($activityId);
+            if (!$activity || !$activity->is_published) {
+                $errors[$key] = 'Activitatea nu mai este disponibilă';
+                continue;
+            }
+
+            $variant = $activity->variants->firstWhere('id', $variantId);
+            if (!$variant || !$variant->is_active) {
+                $errors[$key] = 'Varianta selectată nu mai este disponibilă';
+                continue;
+            }
+
+            // min_per_order / max_per_order respected at variant level
+            if ($variant->min_per_order && $participants < $variant->min_per_order) {
+                $errors[$key] = sprintf('Minim %d persoane pentru această variantă', $variant->min_per_order);
+                continue;
+            }
+            if ($variant->max_per_order && $participants > $variant->max_per_order) {
+                $errors[$key] = sprintf('Maxim %d persoane pentru această variantă', $variant->max_per_order);
+                continue;
+            }
+
+            // Slot computation via SlotResolver — same source of truth as the
+            // public availability API, so the customer's UI and our backend
+            // can't disagree on whether a slot is bookable.
+            try {
+                $date = CarbonImmutable::parse($bookingDate);
+            } catch (\Throwable $e) {
+                $errors[$key] = 'Data rezervării este invalidă';
+                continue;
+            }
+
+            $slots = SlotResolver::slotsFor($activity, $date);
+            $startStr = strlen($slotStartTime) === 5 ? $slotStartTime . ':00' : $slotStartTime;
+            $slot = $slots->firstWhere('start_time', $startStr);
+
+            if (!$slot) {
+                $errors[$key] = 'Slotul ales nu mai există în programul activității';
+                continue;
+            }
+            if (!$slot['is_bookable']) {
+                $errors[$key] = match ($slot['unavailable_reason']) {
+                    'past'              => 'Slotul a trecut deja',
+                    'too_far_in_future' => 'Slotul este prea departe în viitor pentru rezervare',
+                    'lead_time'         => 'Slotul este prea aproape — trebuie rezervat cu mai mult timp înainte',
+                    'full'              => 'Slotul este complet ocupat',
+                    default             => 'Slotul nu poate fi rezervat',
+                };
+                continue;
+            }
+
+            $capacityShare = max(1, (int) ($variant->capacity_share ?? 1));
+            $slotConsumes  = $participants * $capacityShare;
+            if ($slotConsumes > $slot['capacity_remaining']) {
+                $errors[$key] = sprintf(
+                    'Slotul mai are doar %d locuri disponibile',
+                    (int) $slot['capacity_remaining']
+                );
+            }
+        }
+
+        return $errors;
     }
 
     /**

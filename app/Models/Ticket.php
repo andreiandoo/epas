@@ -19,6 +19,7 @@ class Ticket extends Model
         'current_owner_customer_id',
         'marketplace_event_id',
         'marketplace_ticket_type_id',
+        'activity_booking_id',
         'code',
         'barcode',
         'status',
