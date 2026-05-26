@@ -208,6 +208,152 @@ class ActivityResource extends Resource
         return $data;
     }
 
+    /**
+     * Conexiuni tab schema — built at schema construction time (not closure time)
+     * so we can skip the Select::relationship component entirely when the
+     * activity_related table doesn't exist yet. fillForm() walks every component
+     * to hydrate state regardless of visible(), so a missing pivot table would
+     * 500 the entire page even if the Section was hidden.
+     */
+    protected static function conexiuniTabSchema($marketplace, string $lang): array
+    {
+        // No table → show only the migrate instruction. No Select, no DB queries
+        // anywhere in the tab body.
+        if (! DBSchema::hasTable('activity_related')) {
+            return [
+                SC\Section::make('Migrare lipsă')
+                    ->schema([
+                        Forms\Components\Placeholder::make('migrate_required')
+                            ->hiddenLabel()
+                            ->content(new \Illuminate\Support\HtmlString(
+                                '<div class="p-4 rounded-xl ring-1 ring-inset ring-warning-500/30 bg-warning-500/10 text-warning-400 text-sm">' .
+                                '<p class="font-semibold mb-1">Tabela <code>activity_related</code> nu există încă.</p>' .
+                                '<p>Rulează pe prod: <code>php artisan migrate</code>. După aceea reîncarcă această pagină ca să poți gestiona conexiunile între activități.</p>' .
+                                '</div>'
+                            )),
+                    ]),
+            ];
+        }
+
+        return [
+            SC\Section::make('Activități conectate')
+                ->description('Apar ca recomandări pe pagina publică a activității (cross-sell / upsell). Activitățile aceluiași organizator se conectează automat. Poți adăuga și manual.')
+                ->visible(fn (?\App\Models\Activity $record) => $record && $record->exists)
+                ->schema([
+                    Forms\Components\Select::make('relatedActivities')
+                        ->label('Activități')
+                        ->relationship(
+                            'relatedActivities',
+                            'slug',
+                            fn (Builder $query) => $query->where('marketplace_client_id', $marketplace?->id)
+                        )
+                        ->getOptionLabelFromRecordUsing(function ($rec) use ($lang) {
+                            $title = is_array($rec->title)
+                                ? ($rec->title[$lang] ?? $rec->title['en'] ?? $rec->slug)
+                                : (string) ($rec->title ?? $rec->slug);
+                            $organizer = $rec->organizer?->name ?? null;
+                            return $organizer ? "{$title} — {$organizer}" : $title;
+                        })
+                        ->multiple()
+                        ->preload()
+                        ->searchable()
+                        ->columnSpanFull()
+                        ->helperText('Activitățile sincronizate automat din organizator au sursa "auto" în pivot. Cele adăugate manual aici primesc "manual".')
+                        ->saveRelationshipsUsing(function ($component, $state) {
+                            $record = $component->getRecord();
+                            if (! $record) return;
+
+                            $selected = collect($state ?? [])->map(fn ($v) => (int) $v)->filter()->unique()->values();
+
+                            $existing = DB::table('activity_related')
+                                ->where('activity_id', $record->id)
+                                ->get()
+                                ->keyBy('related_activity_id');
+
+                            foreach ($selected as $relId) {
+                                if ($relId === $record->id) continue; // never link to self
+                                if (! isset($existing[$relId])) {
+                                    DB::table('activity_related')->insert([
+                                        'activity_id' => $record->id,
+                                        'related_activity_id' => $relId,
+                                        'source' => 'manual',
+                                        'sort_order' => 0,
+                                        'created_at' => now(),
+                                        'updated_at' => now(),
+                                    ]);
+                                    DB::table('activity_related')->insertOrIgnore([[
+                                        'activity_id' => $relId,
+                                        'related_activity_id' => $record->id,
+                                        'source' => 'manual',
+                                        'sort_order' => 0,
+                                        'created_at' => now(),
+                                        'updated_at' => now(),
+                                    ]]);
+                                }
+                            }
+
+                            foreach ($existing as $relId => $row) {
+                                if (! $selected->contains($relId)) {
+                                    DB::table('activity_related')
+                                        ->where('activity_id', $record->id)
+                                        ->where('related_activity_id', $relId)
+                                        ->delete();
+                                    DB::table('activity_related')
+                                        ->where('activity_id', $relId)
+                                        ->where('related_activity_id', $record->id)
+                                        ->delete();
+                                }
+                            }
+                        }),
+
+                    Forms\Components\Placeholder::make('connections_legend')
+                        ->hiddenLabel()
+                        ->visible(fn (?\App\Models\Activity $record) => $record && $record->exists)
+                        ->content(function (?\App\Models\Activity $record) use ($lang) {
+                            if (! $record || ! $record->exists) return null;
+
+                            $rows = DB::table('activity_related')
+                                ->join('activities', 'activities.id', '=', 'activity_related.related_activity_id')
+                                ->where('activity_related.activity_id', $record->id)
+                                ->select('activities.id', 'activities.title', 'activities.slug', 'activity_related.source')
+                                ->orderBy('activity_related.sort_order')
+                                ->orderBy('activities.id')
+                                ->get();
+
+                            if ($rows->isEmpty()) {
+                                return new \Illuminate\Support\HtmlString('<p class="text-sm text-gray-500">Nicio conexiune încă. Adaugă activități organizatorului sau alege manual aici.</p>');
+                            }
+
+                            $html = '<div class="space-y-2">';
+                            foreach ($rows as $r) {
+                                $titleArr = is_string($r->title) ? json_decode($r->title, true) : (array) $r->title;
+                                $title = $titleArr[$lang] ?? $titleArr['en'] ?? $r->slug;
+                                $badgeClass = $r->source === 'auto'
+                                    ? 'bg-sky-500/20 text-sky-400 ring-sky-500/30'
+                                    : 'bg-emerald-500/20 text-emerald-400 ring-emerald-500/30';
+                                $badgeLabel = $r->source === 'auto' ? 'Auto' : 'Manual';
+                                $html .= '<div class="flex items-center gap-2 text-sm">' .
+                                    '<span class="inline-flex items-center px-2 py-0.5 text-xs font-semibold rounded-full ring-1 ring-inset ' . $badgeClass . '">' . $badgeLabel . '</span>' .
+                                    '<span class="font-medium">' . e($title) . '</span>' .
+                                    '</div>';
+                            }
+                            $html .= '</div>';
+
+                            return new \Illuminate\Support\HtmlString($html);
+                        }),
+                ])
+                ->columns(1),
+
+            SC\Section::make('Activități conectate')
+                ->visible(fn (?\App\Models\Activity $record) => ! $record || ! $record->exists)
+                ->schema([
+                    Forms\Components\Placeholder::make('save_first_for_connections')
+                        ->hiddenLabel()
+                        ->content(new \Illuminate\Support\HtmlString('<p class="text-sm text-gray-500">Salvează activitatea pentru a putea adăuga conexiuni.</p>')),
+                ]),
+        ];
+    }
+
     public static function form(Schema $schema): Schema
     {
         $marketplace = static::getMarketplaceClient();
@@ -695,156 +841,14 @@ class ActivityResource extends Resource
                                 // ====================================================
                                 // TAB 6: CONEXIUNI (cross-sell / upsell related activities)
                                 // ====================================================
+                                // Schema-time check — if activity_related migration hasn't run yet,
+                                // we don't include the Select::relationship at all (Filament's
+                                // fillForm() walks every component to load state, regardless of
+                                // visible() — so hiding the parent Section wasn't enough).
                                 SC\Tabs\Tab::make('Conexiuni')
                                     ->key('conexiuni')
                                     ->icon('heroicon-o-link')
-                                    ->schema([
-                                        // Guard — if the activity_related table hasn't been migrated yet,
-                                        // surface a clear instruction instead of letting Filament 500 when
-                                        // it tries to populate the Select::relationship from a missing table.
-                                        SC\Section::make('Migrare lipsă')
-                                            ->visible(fn () => ! DBSchema::hasTable('activity_related'))
-                                            ->schema([
-                                                Forms\Components\Placeholder::make('migrate_required')
-                                                    ->hiddenLabel()
-                                                    ->content(new \Illuminate\Support\HtmlString(
-                                                        '<div class="p-4 rounded-xl ring-1 ring-inset ring-warning-500/30 bg-warning-500/10 text-warning-400 text-sm">' .
-                                                        '<p class="font-semibold mb-1">Tabela <code>activity_related</code> nu există încă.</p>' .
-                                                        '<p>Rulează pe prod: <code>php artisan migrate</code>. După aceea reîncarcă această pagină ca să poți gestiona conexiunile între activități.</p>' .
-                                                        '</div>'
-                                                    )),
-                                            ]),
-
-                                        SC\Section::make('Activități conectate')
-                                            ->description('Apar ca recomandări pe pagina publică a activității (cross-sell / upsell). Activitățile aceluiași organizator se conectează automat. Poți adăuga și manual.')
-                                            ->visible(fn (?\App\Models\Activity $record) => $record && $record->exists && DBSchema::hasTable('activity_related'))
-                                            ->schema([
-                                                Forms\Components\Select::make('relatedActivities')
-                                                    ->label('Activități')
-                                                    ->relationship(
-                                                        'relatedActivities',
-                                                        'slug',
-                                                        fn (Builder $q, ?\App\Models\Activity $record) => $q
-                                                            ->where('marketplace_client_id', $marketplace?->id)
-                                                            ->when($record, fn ($qq) => $qq->where('activities.id', '<>', $record->id))
-                                                    )
-                                                    ->getOptionLabelFromRecordUsing(function (Activity $rec) use ($lang) {
-                                                        $title = is_array($rec->title)
-                                                            ? ($rec->title[$lang] ?? $rec->title['en'] ?? $rec->slug)
-                                                            : (string) ($rec->title ?? $rec->slug);
-                                                        $organizer = $rec->organizer?->name;
-                                                        return $organizer ? "{$title} — {$organizer}" : $title;
-                                                    })
-                                                    ->multiple()
-                                                    ->preload()
-                                                    ->searchable()
-                                                    ->columnSpanFull()
-                                                    ->helperText('Activitățile sincronizate automat din organizator au sursa "auto" în pivot. Cele adăugate manual aici primesc "manual".')
-                                                    // Filament's default belongsToMany sync would replace all
-                                                    // rows on every save, wiping the `source` column metadata.
-                                                    // We override saveRelationshipsUsing to preserve auto rows
-                                                    // (those exist for a reason — observer-derived siblings),
-                                                    // only touch manual ones, and set source='manual' on any
-                                                    // newly selected ID. Bidirectional mirror is maintained.
-                                                    ->saveRelationshipsUsing(function ($component, $state) {
-                                                        /** @var \App\Models\Activity $record */
-                                                        $record = $component->getRecord();
-                                                        if (! $record) return;
-
-                                                        $selected = collect($state ?? [])->map(fn ($v) => (int) $v)->filter()->unique()->values();
-
-                                                        $existing = DB::table('activity_related')
-                                                            ->where('activity_id', $record->id)
-                                                            ->get()
-                                                            ->keyBy('related_activity_id');
-
-                                                        // Adds: any selected id not currently linked → insert as 'manual'.
-                                                        foreach ($selected as $relId) {
-                                                            if (! isset($existing[$relId])) {
-                                                                DB::table('activity_related')->insert([
-                                                                    'activity_id' => $record->id,
-                                                                    'related_activity_id' => $relId,
-                                                                    'source' => 'manual',
-                                                                    'sort_order' => 0,
-                                                                    'created_at' => now(),
-                                                                    'updated_at' => now(),
-                                                                ]);
-                                                                // Mirror back so the related activity also lists this one.
-                                                                DB::table('activity_related')->insertOrIgnore([[
-                                                                    'activity_id' => $relId,
-                                                                    'related_activity_id' => $record->id,
-                                                                    'source' => 'manual',
-                                                                    'sort_order' => 0,
-                                                                    'created_at' => now(),
-                                                                    'updated_at' => now(),
-                                                                ]]);
-                                                            }
-                                                        }
-
-                                                        // Removes: any existing link not in selection → delete.
-                                                        // (Note: this includes auto rows. If the admin removes an
-                                                        // auto sibling, observer won't put it back because observer
-                                                        // only fires on activity CREATE, not on edits like this.)
-                                                        foreach ($existing as $relId => $row) {
-                                                            if (! $selected->contains($relId)) {
-                                                                DB::table('activity_related')
-                                                                    ->where('activity_id', $record->id)
-                                                                    ->where('related_activity_id', $relId)
-                                                                    ->delete();
-                                                                DB::table('activity_related')
-                                                                    ->where('activity_id', $relId)
-                                                                    ->where('related_activity_id', $record->id)
-                                                                    ->delete();
-                                                            }
-                                                        }
-                                                    }),
-
-                                                Forms\Components\Placeholder::make('connections_legend')
-                                                    ->hiddenLabel()
-                                                    ->visible(fn (?\App\Models\Activity $record) => $record && $record->exists)
-                                                    ->content(function (?\App\Models\Activity $record) use ($lang) {
-                                                        if (! $record || ! $record->exists) return null;
-
-                                                        $rows = DB::table('activity_related')
-                                                            ->join('activities', 'activities.id', '=', 'activity_related.related_activity_id')
-                                                            ->where('activity_related.activity_id', $record->id)
-                                                            ->select('activities.id', 'activities.title', 'activities.slug', 'activity_related.source')
-                                                            ->orderBy('activity_related.sort_order')
-                                                            ->orderBy('activities.id')
-                                                            ->get();
-
-                                                        if ($rows->isEmpty()) {
-                                                            return new \Illuminate\Support\HtmlString('<p class="text-sm text-gray-500">Nicio conexiune încă. Adaugă activități organizatorului sau alege manual aici.</p>');
-                                                        }
-
-                                                        $html = '<div class="space-y-2">';
-                                                        foreach ($rows as $r) {
-                                                            $titleArr = is_string($r->title) ? json_decode($r->title, true) : (array) $r->title;
-                                                            $title = $titleArr[$lang] ?? $titleArr['en'] ?? $r->slug;
-                                                            $badgeClass = $r->source === 'auto'
-                                                                ? 'bg-sky-500/20 text-sky-400 ring-sky-500/30'
-                                                                : 'bg-emerald-500/20 text-emerald-400 ring-emerald-500/30';
-                                                            $badgeLabel = $r->source === 'auto' ? 'Auto' : 'Manual';
-                                                            $html .= '<div class="flex items-center gap-2 text-sm">' .
-                                                                '<span class="inline-flex items-center px-2 py-0.5 text-xs font-semibold rounded-full ring-1 ring-inset ' . $badgeClass . '">' . $badgeLabel . '</span>' .
-                                                                '<span class="font-medium">' . e($title) . '</span>' .
-                                                                '</div>';
-                                                        }
-                                                        $html .= '</div>';
-
-                                                        return new \Illuminate\Support\HtmlString($html);
-                                                    }),
-                                            ])
-                                            ->columns(1),
-
-                                        SC\Section::make('Activități conectate')
-                                            ->visible(fn (?\App\Models\Activity $record) => (! $record || ! $record->exists) && DBSchema::hasTable('activity_related'))
-                                            ->schema([
-                                                Forms\Components\Placeholder::make('save_first_for_connections')
-                                                    ->hiddenLabel()
-                                                    ->content(new \Illuminate\Support\HtmlString('<p class="text-sm text-gray-500">Salvează activitatea pentru a putea adăuga conexiuni.</p>')),
-                                            ]),
-                                    ]),
+                                    ->schema(static::conexiuniTabSchema($marketplace, $lang)),
 
                                 // ====================================================
                                 // TAB 7: VÂNZĂRI (placeholder until A5 wires bookings)
