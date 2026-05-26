@@ -362,6 +362,15 @@ class SalesBreakdownService
         $totalNet = max(0.0, $sumValidGross - $sumDiscountValid - $sumIncluded - $sumExtrasValid);
         $totalRevenue = $sumValidGross + $sumOnTop + $sumExtrasValid;
 
+        // F4 — sum payment processing fees across the orders touched by this
+        // breakdown. orders.processing_fee_cents is 0 for marketplaces without
+        // payment_fees configured (kill switch), so this total stays 0 on
+        // Ambilet / Tics — reports + payouts render unchanged there.
+        $totalProcessingFeeCents = $orderIds->isEmpty()
+            ? 0
+            : (int) Order::whereIn('id', $orderIds)->sum('processing_fee_cents');
+        $totalProcessingFee = round($totalProcessingFeeCents / 100, 2);
+
         $finalPerType = [];
         foreach ($perType as $accumKey => $d) {
             $qty = (int) $d['valid_count'];
@@ -400,6 +409,9 @@ class SalesBreakdownService
             'total_commission' => round($totalCommission, 2),
             'total_extras' => round($totalExtrasCard, 2),
             'total_discount' => round($totalDiscountCard, 2),
+            // F4 — processing fee summed across orders in this period.
+            // Zero on marketplaces without payment_fees opted in (kill switch).
+            'total_processing_fee' => $totalProcessingFee,
             'per_type' => $finalPerType,
         ];
     }
