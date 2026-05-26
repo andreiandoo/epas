@@ -438,7 +438,12 @@ class ActivityResource extends Resource
                                                             // inputs would sit flush against the panel border. Adding
                                                             // p-4 sm:p-6 + gap-4 produces the same breathing room the
                                                             // rest of the form has inside Sections.
-                                                            ->extraAttributes(['style' => 'padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem;'])
+                                                            // Inline !important needed to beat epas-skin.css's
+                                                            // `.dark .fi-sc-tabs-tab { padding: 0 !important; }`.
+                                                            // Inline declarations override stylesheet declarations
+                                                            // when both use !important, since inline has higher
+                                                            // specificity.
+                                                            ->extraAttributes(['style' => 'padding: 1.5rem !important; display: flex; flex-direction: column; gap: 1rem;'])
                                                             ->schema([
                                                                 Forms\Components\TextInput::make('title.ro')
                                                                     ->label('Titlu (RO)')
@@ -464,7 +469,12 @@ class ActivityResource extends Resource
                                                                     ->columnSpanFull(),
                                                             ]),
                                                         SC\Tabs\Tab::make('English')
-                                                            ->extraAttributes(['style' => 'padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem;'])
+                                                            // Inline !important needed to beat epas-skin.css's
+                                                            // `.dark .fi-sc-tabs-tab { padding: 0 !important; }`.
+                                                            // Inline declarations override stylesheet declarations
+                                                            // when both use !important, since inline has higher
+                                                            // specificity.
+                                                            ->extraAttributes(['style' => 'padding: 1.5rem !important; display: flex; flex-direction: column; gap: 1rem;'])
                                                             ->schema([
                                                                 Forms\Components\TextInput::make('title.en')
                                                                     ->label('Title (EN)')

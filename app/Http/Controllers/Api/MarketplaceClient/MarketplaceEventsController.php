@@ -1304,36 +1304,63 @@ class MarketplaceEventsController extends BaseController
     }
 
     /**
-     * Get available categories
+     * Get available categories.
+     *
+     * Query params:
+     *   ?all=1         — return every category regardless of event count
+     *                    (used by the bilete.online homepage and footer,
+     *                     where we want to surface taxonomy even when the
+     *                     marketplace has only activities, not events)
+     *   ?parents_only=1 — return only top-level categories (parent_id IS NULL)
+     *
+     * Without these flags, behavior is unchanged: only categories that have
+     * at least one published+upcoming event are returned (so ambilet's
+     * existing "categories with events" UI keeps working as before).
      */
     public function categories(Request $request): JsonResponse
     {
         $client = $this->requireClient($request);
         $language = $client->language ?? 'ro';
+        $includeAll = $request->boolean('all');
+        $parentsOnly = $request->boolean('parents_only');
 
-        // Get categories that have published events
-        $catQuery = Event::where('marketplace_client_id', $client->id)
+        // Reusable per-category event count map. We compute it either way
+        // so the response shape stays consistent (event_count = 0 vs N).
+        $catEventQuery = Event::where('marketplace_client_id', $client->id)
             ->where('is_published', true)
             ->where(function ($q) {
                 $q->whereNull('is_cancelled')->orWhere('is_cancelled', false);
             });
-
-        $this->applyUpcomingFilter($catQuery);
-
-        $categoryIds = $catQuery->whereNotNull('marketplace_event_category_id')
+        $this->applyUpcomingFilter($catEventQuery);
+        $categoryIds = $catEventQuery->whereNotNull('marketplace_event_category_id')
             ->selectRaw('marketplace_event_category_id, COUNT(*) as event_count')
             ->groupBy('marketplace_event_category_id')
             ->pluck('event_count', 'marketplace_event_category_id');
 
-        $categories = MarketplaceEventCategory::whereIn('id', $categoryIds->keys())
+        $catsBaseQuery = MarketplaceEventCategory::query()
+            ->where('marketplace_client_id', $client->id);
+
+        if (! $includeAll) {
+            // Default mode (backward compat): only categories with events.
+            $catsBaseQuery->whereIn('id', $categoryIds->keys());
+        }
+        if ($parentsOnly) {
+            $catsBaseQuery->whereNull('parent_id');
+        }
+
+        $categories = $catsBaseQuery
             ->orderBy('sort_order')
             ->get()
             ->map(fn ($cat) => [
-                'id' => $cat->id,
-                'name' => $cat->getTranslation('name', $language),
-                'slug' => $cat->slug,
-                'icon' => $cat->icon,
-                'event_count' => $categoryIds[$cat->id] ?? 0,
+                'id'              => $cat->id,
+                'name'            => $cat->getTranslation('name', $language),
+                'slug'            => $cat->slug,
+                'icon'            => $cat->icon,
+                'icon_emoji'      => $cat->icon_emoji ?? null,
+                'color'           => $cat->color ?? null,
+                'parent_id'       => $cat->parent_id,
+                'description'     => $cat->getTranslation('description', $language),
+                'event_count'     => (int) ($categoryIds[$cat->id] ?? 0),
             ]);
 
         return $this->success(['categories' => $categories]);

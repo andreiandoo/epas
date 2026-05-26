@@ -23,32 +23,31 @@ $footerExtraJs = $footerExtraJs ?? [];
 $extraBodyEnd = $extraBodyEnd ?? '';
 $hideCookieBanner = $hideCookieBanner ?? false;
 
-// Footer categories — pull from the venue-categories endpoint so the footer
-// reflects what we actually surface on the homepage. Cached 10 min. Falls
-// back to a static list if the API is unavailable so the footer never breaks.
+// Footer categories — pulls top-level EVENT categories with all=1 so the
+// list shows up even on a marketplace that only has activities. Cached 10
+// min; static fallback if API is unreachable.
 if (! isset($footerCategories)) {
     if (! function_exists('api_cached')) {
         require_once __DIR__ . '/api.php';
     }
-    $resp = api_cached('footer_venue_categories', fn () => api_get('/venue-categories'), 600);
+    $resp = api_cached('footer_event_top_categories', fn () => api_get('/events/categories', ['all' => 1, 'parents_only' => 1]), 600);
     $rows = $resp['data']['categories'] ?? [];
     $footerCategories = [];
     foreach ((is_array($rows) ? $rows : []) as $c) {
         $footerCategories[] = [
             'label' => $c['name'] ?? $c['slug'] ?? '',
-            'href'  => '/locatii?categorie=' . ($c['slug'] ?? ''),
+            'href'  => '/' . ($c['slug'] ?? ''),
         ];
         if (count($footerCategories) >= 6) break;
     }
     if (empty($footerCategories)) {
-        // Fallback when API unreachable — keeps the footer rendering.
         $footerCategories = [
-            ['label' => 'Locații indoor',  'href' => '/locatii'],
-            ['label' => 'Locații outdoor', 'href' => '/locatii'],
-            ['label' => 'Muzee',           'href' => '/locatii'],
-            ['label' => 'Parcuri',         'href' => '/locatii'],
-            ['label' => 'Peșteri',         'href' => '/locatii'],
-            ['label' => 'Centre agrement', 'href' => '/locatii'],
+            ['label' => 'Escape rooms',         'href' => '/escape-rooms'],
+            ['label' => 'Muzee & expoziții',    'href' => '/muzee-expozitii'],
+            ['label' => 'Parcuri de distracții','href' => '/parcuri-de-distractii'],
+            ['label' => 'Parcuri de aventură',  'href' => '/parcuri-de-aventura'],
+            ['label' => 'Acvarii & grădini zoo','href' => '/acvarii-zoo-animale'],
+            ['label' => 'Ateliere & experiențe','href' => '/ateliere-experiente-creative'],
         ];
     }
 }

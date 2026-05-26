@@ -2,8 +2,11 @@
 
 namespace App\Filament\Marketplace\Resources;
 
+use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
+use App\Filament\Marketplace\Resources\ActivityResource;
 use App\Filament\Marketplace\Resources\OrganizerResource\Pages;
 use App\Filament\Marketplace\Resources\EventResource;
+use App\Models\Activity;
 use App\Models\MarketplaceOrganizer;
 use Filament\Forms;
 use Filament\Schemas\Schema;
@@ -32,6 +35,8 @@ use App\Models\Order;
 
 class OrganizerResource extends Resource
 {
+    use HasMarketplaceContext;
+
     protected static ?string $model = MarketplaceOrganizer::class;
     protected static ?string $navigationLabel = 'Organizatori';
 
@@ -977,6 +982,30 @@ class OrganizerResource extends Resource
                                                 ->content(fn (?MarketplaceOrganizer $record) => self::renderEventsList($record)),
                                         ]),
 
+                                    // Activities Stats — only when the marketplace has the
+                                    // activities-module microservice active. Mirror of the
+                                    // Events Stats block above but counts from `activities`
+                                    // + revenue from `activity_bookings` (paid/confirmed/
+                                    // checked_in only).
+                                    Section::make('Activities Stats')
+                                        ->icon('heroicon-o-rocket-launch')
+                                        ->visible(fn (?MarketplaceOrganizer $record): bool => $record !== null && self::marketplaceHasMicroservice('activities-module'))
+                                        ->schema([
+                                            Forms\Components\Placeholder::make('activities_stats')
+                                                ->hiddenLabel()
+                                                ->content(fn (?MarketplaceOrganizer $record) => self::renderActivitiesStats($record)),
+                                        ]),
+
+                                    Section::make('Listă activități')
+                                        ->icon('heroicon-o-list-bullet')
+                                        ->description('Toate activitățile organizatorului cu rezervări și venituri.')
+                                        ->visible(fn (?MarketplaceOrganizer $record): bool => $record !== null && self::marketplaceHasMicroservice('activities-module'))
+                                        ->schema([
+                                            Forms\Components\Placeholder::make('activities_list')
+                                                ->hiddenLabel()
+                                                ->content(fn (?MarketplaceOrganizer $record) => self::renderActivitiesList($record)),
+                                        ]),
+
                                 ]), // end Tab 5 (Stats)
 
                             // ── TAB 6: Mesaje ──
@@ -1685,6 +1714,138 @@ class OrganizerResource extends Resource
             . '</tr>'
             . '</thead>'
             . '<tbody>' . $rows . $footer . '</tbody>'
+            . '</table>'
+            . '</div>';
+
+        return new HtmlString($html);
+    }
+
+    /**
+     * Activities tile grid — total / published / draft / inactive variants.
+     * Parallel to renderEventsStats; only fires when the activities-module
+     * microservice is active for the marketplace (gated at the Section
+     * `visible` level too).
+     */
+    protected static function renderActivitiesStats(?MarketplaceOrganizer $record): HtmlString
+    {
+        if (! $record) return new HtmlString('');
+
+        $base = Activity::where('marketplace_organizer_id', $record->id);
+        $total = (clone $base)->count();
+        $published = (clone $base)->where('is_published', true)->count();
+        $drafts = $total - $published;
+
+        // Variants count = sum of active variants across all the organizer's activities
+        $variantsCount = DB::table('activity_variants')
+            ->join('activities', 'activities.id', '=', 'activity_variants.activity_id')
+            ->where('activities.marketplace_organizer_id', $record->id)
+            ->whereNull('activity_variants.deleted_at')
+            ->where('activity_variants.is_active', true)
+            ->count();
+
+        // Revenue + booking count from activity_bookings (paid + confirmed + checked_in)
+        $bookingStats = DB::table('activity_bookings')
+            ->join('activities', 'activities.id', '=', 'activity_bookings.activity_id')
+            ->where('activities.marketplace_organizer_id', $record->id)
+            ->whereIn('activity_bookings.status', ['paid', 'confirmed', 'checked_in'])
+            ->whereNull('activity_bookings.deleted_at')
+            ->selectRaw('COUNT(*) AS bookings, SUM(total_cents) AS revenue, SUM(commission_cents) AS commission, SUM(participants_count) AS participants')
+            ->first();
+
+        $bookings     = (int) ($bookingStats->bookings ?? 0);
+        $revenue      = number_format(((int) ($bookingStats->revenue ?? 0)) / 100, 2, ',', '.');
+        $commission   = number_format(((int) ($bookingStats->commission ?? 0)) / 100, 2, ',', '.');
+        $participants = (int) ($bookingStats->participants ?? 0);
+
+        $tile = fn ($label, $value, $color = 'white') => "
+            <div style='background: #0F172A; border-radius: 8px; padding: 12px; text-align: center;'>
+                <div style='font-size: 18px; font-weight: 700; color: {$color};'>{$value}</div>
+                <div style='font-size: 10px; color: #64748B; text-transform: uppercase;'>{$label}</div>
+            </div>
+        ";
+
+        return new HtmlString("
+            <div style='display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;'>
+                " . $tile('Total activități', $total) . "
+                " . $tile('Publicate', $published, '#10B981') . "
+                " . $tile('În draft', $drafts, '#F59E0B') . "
+                " . $tile('Variante active', $variantsCount, '#A78BFA') . "
+                " . $tile('Rezervări confirmate', $bookings, '#38BDF8') . "
+                " . $tile('Participanți', $participants, '#38BDF8') . "
+                " . $tile('Venit (lei)', $revenue, '#10B981') . "
+                " . $tile('Comision (lei)', $commission, '#EF4444') . "
+            </div>
+        ");
+    }
+
+    /**
+     * Per-activity table — count + revenue + commission for each activity the
+     * organizer owns. Mirrors renderEventsList shape but aggregates from
+     * activity_bookings instead of orders.
+     */
+    protected static function renderActivitiesList(?MarketplaceOrganizer $record): HtmlString
+    {
+        if (! $record) return new HtmlString('');
+
+        $activities = Activity::where('marketplace_organizer_id', $record->id)
+            ->with(['city:id,name,slug', 'category:id,name,slug'])
+            ->orderByDesc('updated_at')
+            ->get();
+
+        if ($activities->isEmpty()) {
+            return new HtmlString('<p style="color:#94A3B8;padding:1rem 0;">Niciun rezultat — adaugă activități pentru acest organizator.</p>');
+        }
+
+        // Single query to pull per-activity totals so we don't N+1.
+        $stats = DB::table('activity_bookings')
+            ->select('activity_id')
+            ->selectRaw('COUNT(*) AS bookings')
+            ->selectRaw("SUM(CASE WHEN status IN ('paid','confirmed','checked_in') THEN total_cents ELSE 0 END) AS revenue")
+            ->selectRaw("SUM(CASE WHEN status IN ('paid','confirmed','checked_in') THEN commission_cents ELSE 0 END) AS commission")
+            ->selectRaw("SUM(CASE WHEN status IN ('paid','confirmed','checked_in') THEN participants_count ELSE 0 END) AS participants")
+            ->whereIn('activity_id', $activities->pluck('id'))
+            ->whereNull('deleted_at')
+            ->groupBy('activity_id')
+            ->get()
+            ->keyBy('activity_id');
+
+        $rows = '';
+        foreach ($activities as $a) {
+            $title = is_array($a->title) ? ($a->title['ro'] ?? $a->title['en'] ?? $a->slug) : ($a->title ?? $a->slug);
+            $cityName = $a->city ? (is_array($a->city->name) ? ($a->city->name['ro'] ?? $a->city->name['en'] ?? $a->city->slug) : $a->city->name) : '—';
+            $catName = $a->category ? (is_array($a->category->name) ? ($a->category->name['ro'] ?? $a->category->name['en'] ?? $a->category->slug) : $a->category->name) : '—';
+            $published = $a->is_published
+                ? '<span style="background:#10B98133;color:#10B981;padding:2px 8px;border-radius:9999px;font-size:11px;">LIVE</span>'
+                : '<span style="background:#F59E0B33;color:#F59E0B;padding:2px 8px;border-radius:9999px;font-size:11px;">DRAFT</span>';
+            $s = $stats[$a->id] ?? null;
+            $bookings = (int) ($s->bookings ?? 0);
+            $revenue = number_format(((int) ($s->revenue ?? 0)) / 100, 2, ',', '.');
+            $commission = number_format(((int) ($s->commission ?? 0)) / 100, 2, ',', '.');
+            $participants = (int) ($s->participants ?? 0);
+
+            $editUrl = e(ActivityResource::getUrl('edit', ['record' => $a->id]));
+
+            $rows .= "<tr style='border-top:1px solid rgba(100,116,139,0.2);'>"
+                . "<td style='padding:8px 12px;'><a href='{$editUrl}' style='color:#60A5FA;font-weight:600;' target='_blank'>" . e($title) . "</a><div style='font-size:11px;color:#94A3B8;'>" . e($cityName) . ' · ' . e($catName) . "</div></td>"
+                . "<td style='padding:8px 12px;text-align:center;'>{$published}</td>"
+                . "<td style='padding:8px 12px;text-align:right;'>{$bookings}</td>"
+                . "<td style='padding:8px 12px;text-align:right;'>{$participants}</td>"
+                . "<td style='padding:8px 12px;text-align:right;font-weight:600;color:#10B981;'>{$revenue} lei</td>"
+                . "<td style='padding:8px 12px;text-align:right;color:#EF4444;'>{$commission} lei</td>"
+                . "</tr>";
+        }
+
+        $html = '<div style="overflow-x:auto;">'
+            . '<table style="width:100%;border-collapse:collapse;font-size:13px;color:#CBD5E1;">'
+            . '<thead><tr style="text-align:left;">'
+            . '<th style="padding:8px 12px;font-size:11px;color:#64748B;text-transform:uppercase;letter-spacing:.05em;">Activitate</th>'
+            . '<th style="padding:8px 12px;font-size:11px;color:#64748B;text-transform:uppercase;letter-spacing:.05em;text-align:center;">Status</th>'
+            . '<th style="padding:8px 12px;font-size:11px;color:#64748B;text-transform:uppercase;letter-spacing:.05em;text-align:right;">Rezervări</th>'
+            . '<th style="padding:8px 12px;font-size:11px;color:#64748B;text-transform:uppercase;letter-spacing:.05em;text-align:right;">Participanți</th>'
+            . '<th style="padding:8px 12px;font-size:11px;color:#64748B;text-transform:uppercase;letter-spacing:.05em;text-align:right;">Venit</th>'
+            . '<th style="padding:8px 12px;font-size:11px;color:#64748B;text-transform:uppercase;letter-spacing:.05em;text-align:right;">Comision</th>'
+            . '</tr></thead>'
+            . '<tbody>' . $rows . '</tbody>'
             . '</table>'
             . '</div>';
 
