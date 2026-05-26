@@ -3,44 +3,45 @@
     $breakdown = $record->ticket_breakdown ?? [];
     $currency = $record->currency ?? 'RON';
 
-    // Second table: per-(type × unit price × promo code) split, computed
-    // on-the-fly so the snapshot stays an aggregate. Includes the promo
-    // label per row and a "(redus)" name suffix when applicable.
+    // Defalcare pe nivel de preț is now DERIVED FROM ticket_breakdown JSON
+    // directly — the same source as "Detalii bilete" above. Previously it
+    // re-queried the DB by period bounds, which (a) didn't reflect what the
+    // operator actually selected for the payout, and (b) showed identical
+    // data on consecutive payouts whose period_start/end overlapped.
     //
-    // Period bounds are derived from PAYOUT TIMESTAMPS, not the saved
-    // period_start/period_end (which were historically set to the event's
-    // lifetime, causing consecutive payouts to show identical splits):
-    //   • periodStart = previous active payout's created_at (event creation
-    //     when this is the first payout)
-    //   • periodEnd   = this payout's created_at
-    // exactBounds=true so the "> previous_created_at" cut is strict — orders
-    // created at the previous payout's timestamp belong to that payout, not
-    // this one.
-    $splitRows = [];
-    if ($record->event_id) {
-        $splitEvent = $record->event ?? \App\Models\Event::find($record->event_id);
-        if ($splitEvent) {
-            try {
-                $previousPayout = \App\Models\MarketplacePayout::query()
-                    ->where('event_id', $record->event_id)
-                    ->where('marketplace_organizer_id', $record->marketplace_organizer_id)
-                    ->where('id', '!=', $record->id)
-                    ->where('created_at', '<', $record->created_at)
-                    ->whereIn('status', ['pending', 'approved', 'processing', 'completed'])
-                    ->orderByDesc('created_at')
-                    ->first(['id', 'created_at']);
+    // Each row from the breakdown becomes one split row. The promo column is
+    // left empty here — the saved breakdown aggregates by ticket type, so
+    // promo-tier granularity is lost. If we ever need promo splits, the
+    // write path needs to emit one row per (type × price × promo) tuple.
+    $splitRows = collect($breakdown)->map(function ($item) {
+        $price = (float) ($item['price'] ?? $item['unit_price'] ?? 0);
+        $qty = (int) ($item['qty'] ?? $item['quantity'] ?? $item['tickets'] ?? 0);
+        $commPerTicket = (float) ($item['commission_per_ticket'] ?? 0);
+        $itemMode = $item['commission_mode'] ?? null;
+        $isOnTop = in_array($itemMode, ['added_on_top', 'on_top'], true);
+        $commission = $commPerTicket * $qty;
+        $gross = $price * $qty + ($isOnTop ? $commission : 0);
+        $net = isset($item['net']) ? (float) $item['net'] : ($gross - $commission);
 
-                $splitStart = $previousPayout?->created_at
-                    ?? ($splitEvent->created_at ? \Illuminate\Support\Carbon::parse($splitEvent->created_at) : null);
-                $splitEnd = \Illuminate\Support\Carbon::parse($record->created_at);
-
-                $splitRows = app(\App\Services\Marketplace\SalesBreakdownService::class)
-                    ->buildPayoutSplitTable($splitEvent, $splitStart, $splitEnd, true, 'created_at', true);
-            } catch (\Throwable $e) {
-                $splitRows = [];
-            }
-        }
-    }
+        return [
+            'ticket_type_id' => $item['ticket_type_id'] ?? null,
+            'ticket_type_name' => $item['ticket_type_name'] ?? '',
+            'display_name' => $item['ticket_type_name'] ?? '',
+            'is_reduced' => false,
+            'price' => $price,
+            'qty' => $qty,
+            'gross' => round($gross, 2),
+            'commission_per_ticket' => $commPerTicket,
+            'commission_amount' => round($commission, 2),
+            'commission_mode' => $itemMode,
+            'commission_type' => $item['commission_type'] ?? null,
+            'commission_rate' => $item['commission_rate'] ?? null,
+            'commission_fixed' => $item['commission_fixed'] ?? null,
+            'net' => round($net, 2),
+            'promo_code' => null,
+            'promo_label' => '',
+        ];
+    })->sortBy('ticket_type_name')->values()->all();
     // Fallback for legacy payouts whose snapshot pre-dates per-row discount.
     // New payouts (built by SalesBreakdownService) carry `discount` and
     // `extras` directly on each row, so this map only matters as a fallback.

@@ -58,6 +58,145 @@ class MarketplacePayout extends Model
     }
 
     /**
+     * Build a ticket_breakdown JSON from an operator-selected list of
+     * (ticket_type_id, qty) rows — the same shape the manual decont modal's
+     * "Bilete pentru decont" repeater produces. This is the authoritative
+     * write path: the breakdown reflects EXACTLY what the operator chose,
+     * not a service-computed slice of the event.
+     *
+     * If $targetNet is supplied and differs from the natural net (sum of
+     * row nets), qtys are scaled proportionally so the breakdown sum
+     * matches $targetNet. This lets the operator type a custom amount
+     * (e.g. "decont 24,480 RON" out of an available 44,000 RON of tickets)
+     * without manually adjusting every row.
+     *
+     * Returns ['rows' => array, 'totals' => ['gross', 'commission', 'net'],
+     * 'commission_mode' => string|null].
+     *
+     * @param iterable $payoutTicketsInput each item: {ticket_type_id, qty,
+     *   unit_price, commission_per_ticket, ticket_type_name?}
+     * @param \App\Models\Event $event used to look up commission_mode/type
+     *   per ticket type
+     * @param float|null $targetNet operator-entered net to align breakdown to
+     */
+    public static function buildBreakdownFromSelection(iterable $payoutTicketsInput, \App\Models\Event $event, ?float $targetNet = null): array
+    {
+        $ttMap = $event->ticketTypes->keyBy('id');
+        $eventCommissionMode = $event->getEffectiveCommissionMode() ?: 'included';
+
+        // Pass 1: enrich rows with ticket type metadata, drop qty<=0
+        $rows = [];
+        foreach ($payoutTicketsInput as $item) {
+            $qty = (int) ($item['qty'] ?? 0);
+            if ($qty <= 0) continue;
+
+            $ttId = (int) ($item['ticket_type_id'] ?? 0);
+            $tt = $ttMap->get($ttId);
+            $unitPrice = (float) ($item['unit_price'] ?? 0);
+            $commPerTicket = (float) ($item['commission_per_ticket'] ?? 0);
+            $ttMode = $tt?->commission_mode ?: $eventCommissionMode;
+
+            $name = $item['ticket_type_name'] ?? null;
+            if (!$name) {
+                $name = $tt ? (is_array($tt->name) ? ($tt->name['ro'] ?? $tt->name['en'] ?? 'Unknown') : (string) $tt->name) : 'Unknown';
+            }
+
+            $rows[] = [
+                'ticket_type_id' => $ttId,
+                'ticket_type_name' => $name,
+                'qty' => $qty,
+                'unit_price' => $unitPrice,
+                'commission_per_ticket' => $commPerTicket,
+                'commission_mode' => $ttMode,
+                'commission_type' => $tt?->commission_type,
+                'commission_rate' => $tt?->commission_rate !== null ? (float) $tt->commission_rate : null,
+                'commission_fixed' => $tt?->commission_fixed !== null ? (float) $tt->commission_fixed : null,
+            ];
+        }
+
+        // Pass 2: compute initial sums
+        [$sumGross, $sumCommission, $sumNet] = self::sumBreakdownRows($rows);
+
+        // Pass 3: proportional scaling if targetNet differs noticeably
+        if ($targetNet !== null && $sumNet > 0.01 && abs($targetNet - $sumNet) > 0.5) {
+            $scale = $targetNet / $sumNet;
+            foreach ($rows as &$r) {
+                $r['qty'] = max(0, (int) round($r['qty'] * $scale));
+            }
+            unset($r);
+            $rows = array_values(array_filter($rows, fn ($r) => $r['qty'] > 0));
+            [$sumGross, $sumCommission, $sumNet] = self::sumBreakdownRows($rows);
+        }
+
+        // Pass 4: build final breakdown rows in the canonical JSON shape
+        $breakdown = [];
+        foreach ($rows as $r) {
+            $isOnTop = in_array($r['commission_mode'], ['added_on_top', 'on_top'], true);
+            $rowGross = $r['qty'] * $r['unit_price'] + ($isOnTop ? $r['qty'] * $r['commission_per_ticket'] : 0);
+            $rowComm = $r['qty'] * $r['commission_per_ticket'];
+            $rowNet = $rowGross - $rowComm;
+
+            $breakdown[] = [
+                'ticket_type_id' => $r['ticket_type_id'],
+                'ticket_type_name' => $r['ticket_type_name'],
+                'qty' => $r['qty'],
+                'quantity' => $r['qty'],
+                'price' => $r['unit_price'],
+                'unit_price' => $r['unit_price'],
+                'gross' => round($rowGross, 2),
+                'commission_per_ticket' => $r['commission_per_ticket'],
+                'commission_amount' => round($rowComm, 2),
+                'commission_mode' => $r['commission_mode'],
+                'commission_type' => $r['commission_type'],
+                'commission_rate' => $r['commission_rate'],
+                'commission_fixed' => $r['commission_fixed'],
+                'discount' => 0.0,
+                'extras' => 0.0,
+                'net' => round($rowNet, 2),
+            ];
+        }
+
+        // Derive commission_mode for the payout from the rows: dominant mode,
+        // with added_on_top winning ties (it has different downstream effects).
+        $modes = collect($rows)->pluck('commission_mode')->filter()->unique()->values();
+        if ($modes->count() === 1) {
+            $commissionMode = $modes->first();
+        } elseif ($modes->contains('added_on_top') || $modes->contains('on_top')) {
+            $commissionMode = 'added_on_top';
+        } else {
+            $commissionMode = $eventCommissionMode;
+        }
+
+        return [
+            'rows' => $breakdown,
+            'totals' => [
+                'gross' => round($sumGross, 2),
+                'commission' => round($sumCommission, 2),
+                'net' => round($sumNet, 2),
+            ],
+            'commission_mode' => $commissionMode,
+        ];
+    }
+
+    /**
+     * Sum gross/commission/net across enriched breakdown rows.
+     * Shared between buildBreakdownFromSelection passes.
+     */
+    protected static function sumBreakdownRows(array $rows): array
+    {
+        $sumGross = 0.0;
+        $sumCommission = 0.0;
+        foreach ($rows as $r) {
+            $isOnTop = in_array($r['commission_mode'] ?? null, ['added_on_top', 'on_top'], true);
+            $rowGross = $r['qty'] * $r['unit_price'] + ($isOnTop ? $r['qty'] * $r['commission_per_ticket'] : 0);
+            $rowComm = $r['qty'] * $r['commission_per_ticket'];
+            $sumGross += $rowGross;
+            $sumCommission += $rowComm;
+        }
+        return [$sumGross, $sumCommission, $sumGross - $sumCommission];
+    }
+
+    /**
      * Compute the datetime where a new payout's slice should begin so it
      * does NOT overlap with any prior payout for the same event/organizer.
      *

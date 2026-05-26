@@ -125,6 +125,148 @@ class ViewPayout extends ViewRecord
             // Recalculează și `amount` / `gross_amount` / `commission_amount`
             // la nivel de payout + ajustează balanța rezervată a organizatorului
             // ca să nu rămână bani blocați degeaba.
+            // Operator-driven edit of which tickets this payout covers.
+            // Use when the saved ticket_breakdown doesn't match reality
+            // (legacy payouts created before the breakdown-from-repeater
+            // fix), or when the admin wants to redistribute the amount
+            // across different ticket types. Saves a clean breakdown
+            // built from the operator's exact selection — same logic
+            // as the manual-decont modal.
+            Actions\Action::make('edit_ticket_selection')
+                ->label('Editează bilete decontate')
+                ->icon('heroicon-o-pencil-square')
+                ->color('primary')
+                ->visible(fn () => in_array($this->record->status, ['pending', 'approved', 'processing'])
+                    && !empty($this->record->event_id))
+                ->modalHeading('Editează biletele incluse în decont')
+                ->modalDescription('Setezi exact ce bilete intră în acest decont. Sumele payout-ului se recalculează din bilete. Dacă tastezi un net_amount diferit de suma rândurilor, cantitățile sunt scalate proporțional ca să se potrivească.')
+                ->modalWidth('5xl')
+                ->fillForm(function () {
+                    $rows = collect($this->record->ticket_breakdown ?? [])
+                        ->map(fn ($r) => [
+                            'ticket_type_id' => (int) ($r['ticket_type_id'] ?? 0),
+                            'ticket_type_name' => (string) ($r['ticket_type_name'] ?? ''),
+                            'qty' => (int) ($r['qty'] ?? $r['quantity'] ?? 0),
+                            'unit_price' => (float) ($r['price'] ?? $r['unit_price'] ?? 0),
+                            'commission_per_ticket' => (float) ($r['commission_per_ticket'] ?? 0),
+                        ])
+                        ->values()
+                        ->all();
+
+                    return [
+                        'payout_tickets' => $rows,
+                        'net_amount' => (float) $this->record->amount,
+                    ];
+                })
+                ->form([
+                    \Filament\Forms\Components\Placeholder::make('current_state')
+                        ->label('Stare curentă')
+                        ->content(fn () => new \Illuminate\Support\HtmlString(
+                            '<div class="text-sm space-y-1">'
+                            . '<div><span class="text-gray-500">Brut salvat:</span> <span class="font-mono">' . number_format((float) $this->record->gross_amount, 2) . ' RON</span></div>'
+                            . '<div><span class="text-gray-500">Comision salvat:</span> <span class="font-mono">' . number_format((float) $this->record->commission_amount, 2) . ' RON</span></div>'
+                            . '<div><span class="text-gray-500">Net salvat:</span> <span class="font-mono font-semibold">' . number_format((float) $this->record->amount, 2) . ' RON</span></div>'
+                            . '</div>'
+                        ))
+                        ->columnSpanFull(),
+
+                    \Filament\Forms\Components\Repeater::make('payout_tickets')
+                        ->label('Bilete incluse')
+                        ->helperText('Modifică cantitățile per tip de bilet. Rândurile cu qty=0 se elimină la salvare.')
+                        ->schema([
+                            \Filament\Forms\Components\Hidden::make('ticket_type_id'),
+                            \Filament\Forms\Components\Hidden::make('unit_price'),
+                            \Filament\Forms\Components\Hidden::make('commission_per_ticket'),
+                            \Filament\Forms\Components\Placeholder::make('row_label')
+                                ->hiddenLabel()
+                                ->content(fn (\Filament\Schemas\Components\Utilities\Get $get) => new \Illuminate\Support\HtmlString(
+                                    '<div class="flex items-center h-full py-2">'
+                                    . '<span class="font-medium">' . e($get('ticket_type_name') ?? '') . '</span>'
+                                    . '<span class="text-xs text-gray-400 ml-2">' . number_format((float) ($get('unit_price') ?? 0), 2) . ' RON/bilet · comision ' . number_format((float) ($get('commission_per_ticket') ?? 0), 2) . ' RON/bilet</span>'
+                                    . '</div>'
+                                ))
+                                ->columnSpan(2),
+                            \Filament\Forms\Components\TextInput::make('qty')
+                                ->hiddenLabel()
+                                ->numeric()
+                                ->minValue(0)
+                                ->suffix('bilete')
+                                ->columnSpan(1),
+                            \Filament\Forms\Components\Hidden::make('ticket_type_name'),
+                        ])
+                        ->columns(3)
+                        ->reorderable(false)
+                        ->addable(false)
+                        ->deletable(true)
+                        ->columnSpanFull(),
+
+                    \Filament\Forms\Components\TextInput::make('net_amount')
+                        ->label('Sumă netă dorită')
+                        ->helperText('Lasă suma calculată din bilete sau introdu o valoare proprie. Dacă diferă, cantitățile se scalează proporțional la salvare.')
+                        ->numeric()
+                        ->minValue(0)
+                        ->suffix('RON'),
+                ])
+                ->action(function (array $data) {
+                    $event = $this->record->event;
+                    if (!$event) {
+                        Notification::make()->title('Eroare')->body('Decontul nu este legat de un eveniment.')->danger()->send();
+                        return;
+                    }
+                    $event->loadMissing('ticketTypes');
+
+                    $payoutTickets = $data['payout_tickets'] ?? [];
+                    $enteredNet = (float) ($data['net_amount'] ?? 0);
+
+                    if (empty($payoutTickets)) {
+                        Notification::make()->title('Lista de bilete goală')->body('Adaugă cel puțin un rând cu qty > 0.')->warning()->send();
+                        return;
+                    }
+
+                    $built = \App\Models\MarketplacePayout::buildBreakdownFromSelection(
+                        $payoutTickets,
+                        $event,
+                        $enteredNet > 0 ? $enteredNet : null
+                    );
+
+                    if (empty($built['rows'])) {
+                        Notification::make()->title('Rezultat gol')->body('După scalare, niciun rând nu mai are qty > 0. Anulat.')->warning()->send();
+                        return;
+                    }
+
+                    $oldAmount = (float) $this->record->amount;
+                    $newAmount = $enteredNet > 0 ? round($enteredNet, 2) : $built['totals']['net'];
+                    $delta = round($oldAmount - $newAmount, 2);
+
+                    \Illuminate\Support\Facades\DB::transaction(function () use ($built, $newAmount, $delta) {
+                        $this->record->update([
+                            'ticket_breakdown' => $built['rows'],
+                            'commission_mode' => $built['commission_mode'],
+                            'amount' => $newAmount,
+                            'gross_amount' => $built['totals']['gross'],
+                            'commission_amount' => $built['totals']['commission'],
+                        ]);
+
+                        // Adjust the organizer's reserved (pending) balance so
+                        // available_balance reflects the corrected request.
+                        if (abs($delta) > 0.005 && $this->record->organizer) {
+                            if ($delta > 0) {
+                                $this->record->organizer->returnPendingBalance($delta);
+                            } else {
+                                $this->record->organizer->reserveBalanceForPayout(abs($delta));
+                            }
+                        }
+                    });
+
+                    Notification::make()
+                        ->title('Bilete decontate actualizate')
+                        ->body('Net: ' . number_format($newAmount, 2) . ' RON · ' . count($built['rows']) . ' tipuri de bilete · regenerează documentul PDF manual dacă e nevoie.')
+                        ->success()
+                        ->send();
+
+                    $this->redirect(PayoutResource::getUrl('view', ['record' => $this->record]));
+                }),
+
             Actions\Action::make('recalc_breakdown')
                 ->label('Recalculează snapshot bilete')
                 ->icon('heroicon-o-arrow-path-rounded-square')

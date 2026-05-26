@@ -617,50 +617,61 @@ class ListPayouts extends ListRecords
                 ];
 
                 $event = Event::find($data['event_id']);
-                // Commission mode resolution priority:
-                // 1. Ticket type level (most specific) — derived from selected tickets in this payout
-                // 2. Event > Organizer > Marketplace fallback
-                $commissionMode = null;
 
-                // Build ticket breakdown via SalesBreakdownService — same logic as the
-                // event-edit "Vânzări" tab, so Net final on the decont matches Net on
-                // the event page exactly. Reads actual paid prices per ticket and
-                // allocates discounts + extras (insurance, cultural-card surcharge).
+                // ticket_breakdown is now AUTHORITATIVELY built from what the
+                // operator selected in the "Bilete pentru decont" repeater —
+                // not from a service-computed slice of the event. The previous
+                // code overrode any operator selection with the entire event's
+                // tickets, so the saved breakdown never matched the entered
+                // amount/gross/commission (the source of all the "Detalii
+                // bilete shows 44,000 but amount is 24,480" confusion).
                 //
-                // periodStart is the previous payout's created_at (or event creation
-                // when this is the first payout). exactBounds=true so the cut at
-                // periodStart is strict — orders whose created_at equals the previous
-                // payout's created_at belong to that one, not this new one. Without
-                // this, consecutive payouts on the same event would re-include the
-                // same tickets in their ticket_breakdown snapshot.
+                // If the operator entered a net_amount that differs from the
+                // repeater's natural sum (e.g. wanted to decont a custom amount
+                // without manually rebalancing every row), qtys are scaled
+                // proportionally so the breakdown matches the entered net.
                 $organizerId = (int) $data['marketplace_organizer_id'];
                 $periodStart = $event
                     ? MarketplacePayout::resolveNextPeriodStart($event->id, $organizerId, $event)
                     : null;
                 $periodEnd = now();
-                $service = app(\App\Services\Marketplace\SalesBreakdownService::class);
-                $ticketBreakdown = $event ? $service->buildForPayout($event, $periodStart, $periodEnd, exactBounds: true) : [];
-                $summary = $event ? $service->summarizeForPayout($event, $periodStart, $periodEnd, exactBounds: true) : [
-                    'commission_mode' => 'included',
-                    'commission_amount' => 0.0,
-                    'gross_amount' => (float) ($data['gross_amount'] ?? 0),
-                    'net_amount' => (float) ($data['net_amount'] ?? 0),
-                ];
 
-                $commissionMode = $summary['commission_mode'];
+                $payoutTicketsInput = $data['payout_tickets'] ?? [];
+                $enteredNet = (float) ($data['net_amount'] ?? 0);
+
+                if ($event && !empty($payoutTicketsInput)) {
+                    $built = MarketplacePayout::buildBreakdownFromSelection(
+                        $payoutTicketsInput,
+                        $event,
+                        $enteredNet > 0 ? $enteredNet : null
+                    );
+                    $ticketBreakdown = $built['rows'];
+                    $finalGross = $built['totals']['gross'];
+                    $finalCommission = $built['totals']['commission'];
+                    $finalNet = $enteredNet > 0 ? $enteredNet : $built['totals']['net'];
+                    $commissionMode = $built['commission_mode'];
+                } else {
+                    // Refund-only or zero-selection payout: persist the manually
+                    // entered amounts without a breakdown.
+                    $ticketBreakdown = [];
+                    $finalGross = (float) ($data['gross_amount'] ?? 0);
+                    $finalCommission = (float) ($data['commission_amount'] ?? 0);
+                    $finalNet = $enteredNet;
+                    $commissionMode = $event?->getEffectiveCommissionMode() ?: 'included';
+                }
 
                 $payout = MarketplacePayout::create([
                     'marketplace_client_id' => $marketplaceAdmin->marketplace_client_id,
                     'marketplace_organizer_id' => $data['marketplace_organizer_id'],
                     'event_id' => $data['event_id'],
-                    'amount' => (float) $data['net_amount'],
+                    'amount' => round($finalNet, 2),
                     'currency' => 'RON',
                     // Save the SAME bounds we used for the slice so the
                     // displayed "period" and the actual snapshot agree.
                     'period_start' => $periodStart?->toDateString() ?? $event?->created_at?->toDateString(),
                     'period_end' => $periodEnd?->toDateString() ?? now()->toDateString(),
-                    'gross_amount' => (float) $data['gross_amount'],
-                    'commission_amount' => (float) ($data['commission_amount'] ?? 0),
+                    'gross_amount' => round($finalGross, 2),
+                    'commission_amount' => round($finalCommission, 2),
                     'discount_amount' => (float) ($data['discount_amount'] ?? 0),
                     'fees_amount' => (float) ($data['fees_amount'] ?? 0),
                     'adjustments_amount' => 0,
