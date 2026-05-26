@@ -838,6 +838,46 @@ class CheckoutController extends BaseController
                 $orderTotal += $culturalCardSurcharge;
             }
 
+            // ============================================================
+            // F3 — Payment processing fee snapshot
+            //
+            // Per F1 spec, fee = floor(subtotal * percent / 100) + fixed_cents
+            // applied on the customer-visible subtotal (ticket + commission +
+            // insurance + cultural surcharge — i.e. $orderTotal up to this
+            // point, BEFORE the fee itself).
+            //
+            // Kill switch: marketplace.payment_fees IS NULL → calculator
+            // returns all-zero, $orderTotal stays identical. Backward-compat
+            // for Ambilet / Tics is preserved.
+            // ============================================================
+            $processingFee = [
+                'fee_cents'        => 0,
+                'pass_to_customer' => false,
+                'provider'         => null,
+                'percent_rate'     => null,
+                'fixed_cents'      => null,
+                'active'           => false,
+            ];
+            $isCardPayment = in_array($request->input('payment_method', 'card'), ['card', 'card_cultural'], true);
+            // Only meaningful for paid card transactions — test orders, free
+            // orders, and non-card payments skip the snapshot entirely.
+            if (! $isTestOrder && $orderTotal > 0 && $isCardPayment) {
+                $calc = app(\App\Services\Payments\ProcessingFeeCalculator::class);
+                $subtotalCents = (int) round($orderTotal * 100);
+                $organizer = $primaryOrganizerId
+                    ? \App\Models\MarketplaceOrganizer::find($primaryOrganizerId)
+                    : null;
+                // Provider key — default 'stripe' for card payments. Marketplaces
+                // that haven't configured 'stripe' in payment_fees.providers get
+                // all-zero back from the calculator (no fee, no change to total).
+                $providerKey = 'stripe';
+                $processingFee = $calc->compute($client, $organizer, $providerKey, $subtotalCents);
+
+                if ($processingFee['pass_to_customer'] && $processingFee['fee_cents'] > 0) {
+                    $orderTotal += $processingFee['fee_cents'] / 100;
+                }
+            }
+
             $currency = isset($cart) ? $cart->currency : ($client->currency ?? 'RON');
             $isMultiEvent = count($eventIds) > 1;
 
@@ -861,6 +901,14 @@ class CheckoutController extends BaseController
                 'commission_rate' => $isTestOrder ? 0 : $avgCommissionRate,
                 'commission_amount' => $isTestOrder ? 0 : $totalCommission,
                 'total' => $isTestOrder ? 0 : $orderTotal,
+                // F3 — processing fee snapshot. Zero for marketplaces without
+                // payment_fees configured (kill switch active). Stays bit-identical
+                // to legacy behavior on Ambilet / Tics.
+                'processing_fee_cents'        => $isTestOrder ? 0 : (int) ($processingFee['fee_cents'] ?? 0),
+                'processing_fee_passed'       => (bool) ($processingFee['pass_to_customer'] ?? false),
+                'processing_fee_provider'     => $processingFee['provider'] ?? null,
+                'processing_fee_percent_rate' => $processingFee['percent_rate'] ?? null,
+                'processing_fee_fixed_cents'  => $processingFee['fixed_cents'] ?? null,
                 'currency' => $currency,
                 'source' => $isTestOrder ? 'test_order' : ($isFreeOrder ? 'marketplace_free' : 'marketplace'),
                 'customer_email' => $customer->email,
@@ -1205,12 +1253,36 @@ class CheckoutController extends BaseController
             ];
         }
 
+        // F3 — preview processing fee when the marketplace has opted in.
+        // Kill switch: payment_fees=NULL → calculator returns zero → no fee
+        // in response → frontend renders identically to legacy.
+        $paymentMethod = $request->input('payment_method', 'card');
+        $isCardPayment = in_array($paymentMethod, ['card', 'card_cultural'], true);
+        $processingFeePayload = null;
+        if ($isCardPayment) {
+            $calc = app(\App\Services\Payments\ProcessingFeeCalculator::class);
+            $feeBaseCents = (int) round(((float) $cart->total) * 100);
+            $fee = $calc->compute($client, null, 'stripe', $feeBaseCents);
+            if ($fee['active'] && $fee['pass_to_customer'] && $fee['fee_cents'] > 0) {
+                $processingFeePayload = [
+                    'amount'       => round($fee['fee_cents'] / 100, 2),
+                    'currency'     => $cart->currency,
+                    'provider'     => $fee['provider'],
+                    'percent_rate' => $fee['percent_rate'],
+                    'fixed'        => round(((int) $fee['fixed_cents']) / 100, 2),
+                    'label'        => 'Taxă procesare card',
+                ];
+            }
+        }
+        $cartTotal = (float) $cart->total + (float) ($processingFeePayload['amount'] ?? 0);
+
         return $this->success([
             'summary' => $summary,
             'cart' => [
                 'subtotal' => (float) $cart->subtotal,
                 'discount' => (float) $cart->discount,
-                'total' => (float) $cart->total,
+                'processing_fee' => $processingFeePayload,
+                'total' => $cartTotal,
                 'currency' => $cart->currency,
                 'promo_code' => $cart->promo_code ? $cart->promo_code['code'] : null,
             ],
