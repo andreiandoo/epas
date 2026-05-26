@@ -100,6 +100,12 @@ const AmbiletCart = {
 
         this.saveCart(cart);
 
+        // Adding items can also flip a promo from valid → invalid (e.g.,
+        // applicable_ticket_types restriction now matches more lines so
+        // discount grows, or a min-subtotal threshold now applies). Same
+        // re-validation as updateQuantity / removeItem.
+        this.revalidatePromoCode().catch(function () { /* best effort */ });
+
         // Start/reset reservation timer when adding items
         this.startReservationTimer();
 
@@ -143,6 +149,15 @@ const AmbiletCart = {
                 cart.items[index].quantity = quantity;
             }
             this.saveCart(cart);
+            // Stored promo discount is a snapshot taken at apply-time. If
+            // we don't re-validate after a quantity change, a 50%-off code
+            // applied on 4 tickets keeps its absolute lei value when the
+            // user later drops to 2 tickets — that frozen amount can wipe
+            // out the entire remaining subtotal. Re-validate against the
+            // backend so the discount tracks the current cart contents
+            // (and gets removed cleanly if the new cart no longer meets
+            // the code's restrictions).
+            this.revalidatePromoCode().catch(function () { /* best effort */ });
         }
 
         return cart;
@@ -180,6 +195,15 @@ const AmbiletCart = {
             this._releaseItemSeats(removed);
             this.saveCart(cart);
             this.showNotification(`${removed.ticketType.name} eliminat din coș`);
+            // Cart composition changed → promo restrictions / amount may
+            // no longer apply. Same rationale as updateQuantity above.
+            if (cart.items.length > 0) {
+                this.revalidatePromoCode().catch(function () { /* best effort */ });
+            } else {
+                // Empty cart — drop the promo so it isn't applied on the
+                // next item the user adds.
+                localStorage.removeItem(this.PROMO_KEY);
+            }
         }
 
         return cart;
@@ -457,6 +481,96 @@ const AmbiletCart = {
     },
 
     /**
+     * Re-validate the currently applied promo against the current cart
+     * state. Called after any mutation that can change the subtotal or
+     * item composition (quantity change, item removal, item add). If the
+     * backend says the code no longer applies (min tickets not met,
+     * applicable ticket types removed, etc.) we drop it cleanly and
+     * notify the user. Otherwise the stored discountAmount is refreshed
+     * so getPromoDiscount() reflects the new cart.
+     *
+     * Returns a Promise<{ updated, removed, reason }>.
+     */
+    async revalidatePromoCode() {
+        const promo = this.getPromoCode();
+        if (!promo || !promo.code) {
+            return { updated: false, removed: false };
+        }
+
+        const cart = this.getCart();
+        if (!cart.items || cart.items.length === 0) {
+            // Nothing left to validate against — drop silently.
+            localStorage.removeItem(this.PROMO_KEY);
+            window.dispatchEvent(new CustomEvent('ambilet:cart:promo', {
+                detail: { promo: null }
+            }));
+            return { updated: false, removed: true, reason: 'empty_cart' };
+        }
+
+        if (typeof AmbiletAPI === 'undefined' || !AmbiletAPI.validatePromoCode) {
+            return { updated: false, removed: false };
+        }
+
+        try {
+            const eventId = cart.items[0].eventId;
+            const subtotal = this.getSubtotal();
+            const ticketCount = this.getItemCount();
+            const items = cart.items.map(item => ({
+                event_id: item.eventId,
+                ticket_type_id: item.ticketTypeId,
+                quantity: item.quantity,
+                unit_price: item.ticketType?.price || 0,
+                total: (item.ticketType?.price || 0) * item.quantity
+            }));
+
+            const response = await AmbiletAPI.validatePromoCode(
+                promo.code,
+                eventId,
+                subtotal,
+                ticketCount,
+                (typeof AmbiletAuth !== 'undefined' ? AmbiletAuth.getCustomerData()?.email : null),
+                items
+            );
+
+            if (response && response.success) {
+                const discountData = response.data?.discount || {};
+                const promoCodePayload = response.data?.promo_code || {};
+                const newDiscount = parseFloat(discountData.amount ?? response.data?.discount_amount ?? 0) || 0;
+
+                const fresh = Object.assign({}, promo, {
+                    type: response.data?.discount_type || promoCodePayload.type || promo.type,
+                    value: response.data?.discount_value || promoCodePayload.value || promo.value,
+                    discountAmount: newDiscount,
+                    appliedToLabel: promoCodePayload.applied_to_label || promo.appliedToLabel || null,
+                    revalidatedAt: new Date().toISOString()
+                });
+
+                localStorage.setItem(this.PROMO_KEY, JSON.stringify(fresh));
+                window.dispatchEvent(new CustomEvent('ambilet:cart:promo', {
+                    detail: { promo: fresh }
+                }));
+                return { updated: true, removed: false };
+            }
+
+            // Backend rejected the code at the new cart state — drop it
+            // so the user doesn't carry an unusable code into checkout.
+            localStorage.removeItem(this.PROMO_KEY);
+            window.dispatchEvent(new CustomEvent('ambilet:cart:promo', {
+                detail: { promo: null }
+            }));
+            const msg = response?.message || 'Codul promoțional nu mai este valid pentru coșul actual';
+            this.showNotification(msg, 'info');
+            return { updated: false, removed: true, reason: msg };
+        } catch (error) {
+            // Network / unexpected — leave the stored promo in place so
+            // the user doesn't lose their code on a transient blip. The
+            // checkout endpoint validates one more time before charging.
+            console.warn('[AmbiletCart] revalidatePromoCode failed:', error);
+            return { updated: false, removed: false, reason: 'network_error' };
+        }
+    },
+
+    /**
      * Remove promo code
      */
     removePromoCode() {
@@ -470,23 +584,30 @@ const AmbiletCart = {
     },
 
     /**
-     * Get discount amount from promo code
+     * Get discount amount from promo code.
+     *
+     * Safety: the stored discountAmount was the backend's authoritative
+     * answer at apply-time (and after each cart mutation via
+     * revalidatePromoCode). Even so, defensively clamp it to the
+     * current subtotal — a stale value left over from a failed
+     * revalidation network call would otherwise wipe the cart total
+     * below zero.
      */
     getPromoDiscount() {
         const promo = this.getPromoCode();
         if (!promo) return 0;
 
-        // Use the backend-calculated discount amount (respects ticket type restrictions)
-        if (promo.discountAmount !== undefined && promo.discountAmount !== null) {
-            return parseFloat(promo.discountAmount) || 0;
-        }
-
-        // Fallback: recalculate (only for old stored promos without discountAmount)
         const subtotal = this.getSubtotal();
-        if (promo.type === 'percentage') {
-            return subtotal * (promo.value / 100);
+        let amount;
+        if (promo.discountAmount !== undefined && promo.discountAmount !== null) {
+            amount = parseFloat(promo.discountAmount) || 0;
+        } else if (promo.type === 'percentage') {
+            amount = subtotal * (promo.value / 100);
+        } else {
+            amount = Math.min(promo.value, subtotal);
         }
-        return Math.min(promo.value, subtotal);
+        // Never let the discount exceed what's actually in the cart.
+        return Math.max(0, Math.min(amount, subtotal));
     },
 
     /**
