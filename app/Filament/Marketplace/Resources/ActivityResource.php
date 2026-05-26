@@ -5,6 +5,7 @@ namespace App\Filament\Marketplace\Resources;
 use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 use App\Filament\Marketplace\Resources\ActivityResource\Pages;
 use App\Filament\Marketplace\Resources\ActivityResource\RelationManagers;
+use App\Filament\Marketplace\Resources\OrganizerResource;
 use App\Models\Activity;
 use App\Models\MarketplaceCategory;
 use App\Models\MarketplaceCity;
@@ -433,6 +434,11 @@ class ActivityResource extends Resource
                                                 SC\Tabs::make('Text Translations')
                                                     ->tabs([
                                                         SC\Tabs\Tab::make('Română')
+                                                            // The default `fi-sc-tabs-tab` panel class has no padding;
+                                                            // inputs would sit flush against the panel border. Adding
+                                                            // p-4 sm:p-6 + gap-4 produces the same breathing room the
+                                                            // rest of the form has inside Sections.
+                                                            ->extraAttributes(['class' => 'p-4 sm:p-6 flex flex-col gap-4'])
                                                             ->schema([
                                                                 Forms\Components\TextInput::make('title.ro')
                                                                     ->label('Titlu (RO)')
@@ -458,6 +464,7 @@ class ActivityResource extends Resource
                                                                     ->columnSpanFull(),
                                                             ]),
                                                         SC\Tabs\Tab::make('English')
+                                                            ->extraAttributes(['class' => 'p-4 sm:p-6 flex flex-col gap-4'])
                                                             ->schema([
                                                                 Forms\Components\TextInput::make('title.en')
                                                                     ->label('Title (EN)')
@@ -1034,12 +1041,18 @@ class ActivityResource extends Resource
                                                 Forms\Components\Select::make('difficulty_level')
                                                     ->label('Dificultate')
                                                     ->options([
-                                                        'easy' => 'Ușor',
+                                                        'easy'   => 'Ușor',
                                                         'medium' => 'Mediu',
-                                                        'hard' => 'Greu',
+                                                        'hard'   => 'Greu',
                                                         'expert' => 'Expert',
                                                     ])
-                                                    ->placeholder('—'),
+                                                    // Native:false renders Filament's custom dropdown with an X
+                                                    // clear button when a value is set. Placeholder appears as
+                                                    // a selectable "no value" row at the top of the list, so
+                                                    // admin can either click X or pick "Fără dificultate" to
+                                                    // reset back to NULL.
+                                                    ->placeholder('Fără dificultate')
+                                                    ->native(false),
 
                                                 Forms\Components\TagsInput::make('languages_offered')
                                                     ->label('Limbi disponibile')
@@ -1158,6 +1171,86 @@ class ActivityResource extends Resource
                                 Forms\Components\Toggle::make('is_homepage_featured')->label('Pe homepage'),
                                 Forms\Components\Toggle::make('is_category_featured')->label('Pe pagina categoriei'),
                                 Forms\Components\Toggle::make('is_city_featured')->label('Pe pagina orașului'),
+                            ])
+                            ->collapsible()
+                            ->columns(1),
+
+                        // Read-only details panel — surfaces organizer + venue info
+                        // straight in the sidebar so the admin doesn't have to jump
+                        // back to the Locație tab to glance at contact details. Same
+                        // pattern as EventResource sidebar; visible only on edit.
+                        SC\Section::make('Organizator')
+                            ->visible(fn (?\App\Models\Activity $record) => $record && $record->exists && $record->marketplace_organizer_id)
+                            ->schema([
+                                Forms\Components\Placeholder::make('organizer_name')
+                                    ->label('Nume')
+                                    ->content(fn (?\App\Models\Activity $record) => $record?->organizer?->name ?? '—'),
+
+                                Forms\Components\Placeholder::make('organizer_contact')
+                                    ->label('Contact')
+                                    ->content(fn (?\App\Models\Activity $record) => $record?->organizer?->contact_name ?? '—'),
+
+                                Forms\Components\Placeholder::make('organizer_email')
+                                    ->label('Email')
+                                    ->content(fn (?\App\Models\Activity $record) => $record?->organizer?->email
+                                        ? new \Illuminate\Support\HtmlString('<a href="mailto:' . e($record->organizer->email) . '" class="text-primary-600 hover:underline">' . e($record->organizer->email) . '</a>')
+                                        : '—'),
+
+                                Forms\Components\Placeholder::make('organizer_phone')
+                                    ->label('Telefon')
+                                    ->content(fn (?\App\Models\Activity $record) => $record?->organizer?->phone
+                                        ? new \Illuminate\Support\HtmlString('<a href="tel:' . e($record->organizer->phone) . '" class="text-primary-600 hover:underline">' . e($record->organizer->phone) . '</a>')
+                                        : '—'),
+
+                                Forms\Components\Placeholder::make('organizer_link')
+                                    ->hiddenLabel()
+                                    ->content(function (?\App\Models\Activity $record) {
+                                        if (! $record?->organizer) return null;
+                                        $url = OrganizerResource::getUrl('edit', ['record' => $record->organizer->id]);
+                                        return new \Illuminate\Support\HtmlString(
+                                            '<a href="' . e($url) . '" class="inline-flex items-center gap-1 text-sm font-semibold text-primary-600 hover:text-primary-500">' .
+                                            'Deschide organizatorul →' .
+                                            '</a>'
+                                        );
+                                    }),
+                            ])
+                            ->collapsible()
+                            ->columns(1),
+
+                        SC\Section::make('Locație fizică')
+                            ->visible(fn (?\App\Models\Activity $record) => $record && $record->exists && $record->venue_id)
+                            ->schema([
+                                Forms\Components\Placeholder::make('venue_name')
+                                    ->label('Venue')
+                                    ->content(function (?\App\Models\Activity $record) use ($lang) {
+                                        $v = $record?->venue;
+                                        if (! $v) return '—';
+                                        return is_array($v->name)
+                                            ? ($v->name[$lang] ?? $v->name['en'] ?? '—')
+                                            : ($v->name ?? '—');
+                                    }),
+
+                                Forms\Components\Placeholder::make('venue_address')
+                                    ->label('Adresă')
+                                    ->content(function (?\App\Models\Activity $record) {
+                                        $v = $record?->venue;
+                                        if (! $v) return '—';
+                                        $parts = array_filter([$v->address, $v->city, $v->state]);
+                                        return $parts ? implode(', ', $parts) : '—';
+                                    }),
+
+                                Forms\Components\Placeholder::make('venue_map_link')
+                                    ->hiddenLabel()
+                                    ->content(function (?\App\Models\Activity $record) {
+                                        $v = $record?->venue;
+                                        if (! $v || ! $v->lat || ! $v->lng) return null;
+                                        $url = 'https://maps.google.com/?q=' . urlencode($v->lat . ',' . $v->lng);
+                                        return new \Illuminate\Support\HtmlString(
+                                            '<a href="' . e($url) . '" target="_blank" class="inline-flex items-center gap-1 text-sm font-semibold text-primary-600 hover:text-primary-500">' .
+                                            'Vezi pe Google Maps →' .
+                                            '</a>'
+                                        );
+                                    }),
                             ])
                             ->collapsible()
                             ->columns(1),

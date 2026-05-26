@@ -4,6 +4,49 @@
  * Path: /
  */
 require_once __DIR__ . '/includes/config.php';
+require_once __DIR__ . '/includes/api.php';
+
+// =========================================================================
+// DATA — categorii parinte din DB + activitati publicate
+// =========================================================================
+// Top-level categories (parent_id IS NULL) for the "Alege-ți genul de aventură"
+// grid AND the footer CATEGORII column. Cached 10 min — categories rarely change.
+$categoriesResp = api_cached('home_top_categories', fn () => api_get('/events/categories', ['parent_only' => 1, 'per_page' => 12]), 600);
+$rawCategories = $categoriesResp['data'] ?? [];
+$homeCategories = [];
+foreach ((is_array($rawCategories) ? $rawCategories : []) as $c) {
+    if (! empty($c['parent_id'])) continue; // parent only
+    $homeCategories[] = [
+        't'     => $c['name'] ?? $c['slug'] ?? '',
+        'd'     => $c['description'] ?? '',
+        'url'   => '/' . ($c['slug'] ?? ''),
+        'count' => isset($c['event_count']) ? (int) $c['event_count'] . ' opțiuni' : '',
+        'c'     => $c['color_palette'] ?? 'vermilion',
+        'emoji' => $c['icon_emoji'] ?? '🎯',
+    ];
+}
+
+// Featured published activities for the "Experiențe de pus în calendar" rail.
+// Sorted by featured first then by cheapest_price ascending so the rail surfaces
+// promoted experiences without manual curation.
+$activitiesResp = api_cached('home_featured_activities', fn () => api_get('/activities', ['sort' => 'recent', 'per_page' => 8]), 300);
+$rawActivities = $activitiesResp['data']['items'] ?? [];
+$homeActivities = [];
+foreach ((is_array($rawActivities) ? $rawActivities : []) as $a) {
+    $cents = (int) ($a['cheapest_price_cents'] ?? 0);
+    $priceLei = $cents > 0 ? round($cents / 100) : 0;
+    $homeActivities[] = [
+        't'      => $a['title'] ?? '',
+        'city'   => $a['city']['name'] ?? '',
+        'tag'    => $a['category']['name'] ?? 'Activitate',
+        'cat'    => $a['category']['slug'] ?? 'all',
+        'price'  => $priceLei,
+        'url'    => '/activitate/' . ($a['slug'] ?? ''),
+        'img'    => $a['cover_image_url'] ?? null,
+        'c'      => 'vermilion',
+        'dur'    => isset($a['duration_minutes']) ? ((int) $a['duration_minutes']) . ' min' : '—',
+    ];
+}
 
 // =========================================================================
 // SEO
@@ -181,39 +224,42 @@ include __DIR__ . '/includes/header.php';
         <p class="text-ink-soft max-w-sm">Fiecare categorie are propria sa pagină dedicată, optimizată să fie găsită exact când cineva caută în Google.</p>
     </div>
 
-    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5"
-         x-data="{ cats:[
-             {t:'Escape Rooms', d:'Mister, ghicitori și 60 de minute pe ceas.', c:'vermilion', url:'/escape-rooms', count:'210 camere', ic:'M7 14a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm2-3h10m-3-2v4'},
-             {t:'Parcuri de distracții', d:'Roller coastere, carusele și adrenalină.', c:'sky', url:'/parcuri-de-distractii', count:'48 parcuri', ic:'M12 2v20M5 8l7 4 7-4M5 16l7-4 7 4M12 6a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z'},
-             {t:'Muzee &amp; expoziții', d:'Artă, știință și istorie de atins.', c:'forest', url:'/muzee', count:'320 muzee', ic:'M3 21h18M5 21V9l7-5 7 5v12M9 21v-6h6v6'},
-             {t:'Parcuri de aventură', d:'Tiroliene, trasee și escaladă în copaci.', c:'ochre', url:'/parcuri-aventura', count:'76 trasee', ic:'M12 2 4 22h16L12 2Zm0 7-3 8m3-8 3 8'},
-             {t:'Acvarii &amp; grădini zoo', d:'Animale, recifuri și lumi subacvatice.', c:'sky', url:'/acvarii-zoo', count:'54 locații', ic:'M2 12c4-5 16-5 20 0-4 5-16 5-20 0Zm10 0a1 1 0 1 0 .01 0M18 8c2 1 2 7 0 8'},
-             {t:'Experiențe &amp; ateliere', d:'Olărit, degustări, VR și lucruri de făcut cu mâna.', c:'vermilion', url:'/experiente', count:'190 ateliere', ic:'M14 4 4 14l-2 8 8-2L20 10m-6-6 6 6m-6-6 2-2 6 6-2 2'}
-         ] }">
-        <template x-for="(cat,i) in cats" :key="cat.t">
-            <a :href="cat.url" class="ticket ticket-lift group bg-paper border-2 border-ink rounded-2xl overflow-hidden" style="--perf:100%">
-                <div class="duotone h-40 flex items-end p-5"
-                     :class="{
-                       'bg-gradient-to-br from-vermilion to-vermilion-d text-vermilion':cat.c==='vermilion',
-                       'bg-gradient-to-br from-forest-l to-forest text-forest':cat.c==='forest',
-                       'bg-gradient-to-br from-sky to-ink text-sky':cat.c==='sky',
-                       'bg-gradient-to-br from-ochre to-vermilion-d text-ochre':cat.c==='ochre'
-                     }">
+    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+        <?php
+        // Color palette rotation — gives each card a unique tone without
+        // requiring the seeder to encode it. Maps cycle: vermilion → forest → sky → ochre.
+        $palette = ['vermilion', 'forest', 'sky', 'ochre'];
+        $paletteClasses = [
+            'vermilion' => 'bg-gradient-to-br from-vermilion to-vermilion-d',
+            'forest'    => 'bg-gradient-to-br from-forest-l to-forest',
+            'sky'       => 'bg-gradient-to-br from-sky to-ink',
+            'ochre'     => 'bg-gradient-to-br from-ochre to-vermilion-d',
+        ];
+        foreach ($homeCategories as $idx => $cat):
+            $tone = $palette[$idx % count($palette)];
+            $bgClass = $paletteClasses[$tone];
+            ?>
+            <a href="<?= htmlspecialchars($cat['url']) ?>" class="ticket ticket-lift group bg-paper border-2 border-ink rounded-2xl overflow-hidden" style="--perf:100%">
+                <div class="duotone h-40 flex items-end p-5 <?= $bgClass ?> text-paper relative">
                     <div class="grid-tex"></div>
-                    <svg viewBox="0 0 24 24" class="w-12 h-12 absolute right-4 top-4 text-paper/30 group-hover:scale-110 group-hover:rotate-6 transition-transform duration-500" fill="none" stroke="currentColor" stroke-width="1.4"><path :d="cat.ic"/></svg>
-                    <span class="relative font-mono text-[10px] text-paper/80 tracking-wider" x-text="cat.count.toUpperCase()"></span>
+                    <span class="absolute right-4 top-4 text-4xl"><?= htmlspecialchars($cat['emoji']) ?></span>
+                    <?php if (! empty($cat['count'])): ?>
+                        <span class="relative font-mono text-[10px] text-paper/80 tracking-wider"><?= htmlspecialchars(strtoupper($cat['count'])) ?></span>
+                    <?php endif; ?>
                 </div>
                 <div class="p-5 flex items-start justify-between gap-3">
                     <div>
-                        <h3 class="font-display text-2xl font-700 leading-tight" x-text="cat.t"></h3>
-                        <p class="text-sm text-ink-soft mt-1.5" x-text="cat.d"></p>
+                        <h3 class="font-display text-2xl font-700 leading-tight"><?= htmlspecialchars($cat['t']) ?></h3>
+                        <?php if (! empty($cat['d'])): ?>
+                            <p class="text-sm text-ink-soft mt-1.5"><?= htmlspecialchars(mb_substr(strip_tags($cat['d']), 0, 110)) ?></p>
+                        <?php endif; ?>
                     </div>
                     <span class="shrink-0 grid place-items-center w-9 h-9 rounded-full border-2 border-ink group-hover:bg-vermilion group-hover:border-vermilion group-hover:text-paper transition-colors duration-300">
                         <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M7 17 17 7M9 7h8v8"/></svg>
                     </span>
                 </div>
             </a>
-        </template>
+        <?php endforeach; ?>
     </div>
 </section>
 
@@ -274,27 +320,18 @@ include __DIR__ . '/includes/header.php';
 
 <!-- ====================================================== EXPERIENȚE (filtrabile) ====================================================== -->
 <section id="experiente" class="max-w-7xl mx-auto px-4 sm:px-6 py-20 lg:py-28" aria-labelledby="exp-h2"
-    x-data="{
-        items:[
-            {t:'Camera 13', city:'Cluj-Napoca', cat:'escape', tag:'Escape Room', price:60, c:'vermilion', rating:'4.9', dur:'60 min'},
-            {t:'Aripa Dinozaurilor', city:'Iași', cat:'muzeu', tag:'Muzeu', price:25, c:'forest', rating:'4.8', dur:'2 ore'},
-            {t:'Tiroliana Carpați', city:'Brașov', cat:'aventura', tag:'Parc aventură', price:90, c:'ochre', rating:'4.9', dur:'3 ore'},
-            {t:'Acvariul Mării Negre', city:'Constanța', cat:'acvariu', tag:'Acvariu', price:40, c:'sky', rating:'4.7', dur:'1.5 ore'},
-            {t:'Vulcano Adventure Park', city:'București', cat:'parc', tag:'Parc distracții', price:75, c:'sky', rating:'4.6', dur:'toată ziua'},
-            {t:'Atelier de Olărit', city:'Sibiu', cat:'atelier', tag:'Experiență', price:120, c:'vermilion', rating:'5.0', dur:'2 ore'},
-            {t:'Planetariul Stelar', city:'Timișoara', cat:'muzeu', tag:'Planetariu', price:30, c:'forest', rating:'4.8', dur:'1 oră'},
-            {t:'Labirintul Oglinzilor', city:'Oradea', cat:'escape', tag:'Escape Room', price:55, c:'ochre', rating:'4.7', dur:'45 min'}
-        ],
+    x-data='{
+        items: <?= json_encode($homeActivities, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>,
         get filtered(){
-            const q = ($store.catalog.query||'').toLowerCase().trim();
+            const q = ($store.catalog.query||"").toLowerCase().trim();
             const c = $store.catalog.category;
             return this.items.filter(it => {
-                const okCat = c==='all' || it.cat===c;
-                const okQ = !q || (it.t+' '+it.city+' '+it.tag).toLowerCase().includes(q);
+                const okCat = c==="all" || it.cat===c;
+                const okQ = !q || (it.t+" "+it.city+" "+it.tag).toLowerCase().includes(q);
                 return okCat && okQ;
             });
         }
-    }">
+    }'>
 
     <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-10">
         <div>
@@ -317,33 +354,36 @@ include __DIR__ . '/includes/header.php';
 
     <!-- grid -->
     <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        <template x-for="it in filtered" :key="it.t+it.city">
-            <article class="ticket ticket-lift group bg-paper border-2 border-ink rounded-2xl overflow-hidden flex flex-col" style="--perf:100%">
-                <div class="duotone h-32 p-4 flex items-start justify-between"
-                     :class="{
-                       'bg-gradient-to-br from-vermilion to-vermilion-d text-vermilion':it.c==='vermilion',
-                       'bg-gradient-to-br from-forest-l to-forest text-forest':it.c==='forest',
-                       'bg-gradient-to-br from-sky to-ink text-sky':it.c==='sky',
-                       'bg-gradient-to-br from-ochre to-vermilion-d text-ochre':it.c==='ochre'
-                     }">
+        <template x-for="it in filtered" :key="it.url">
+            <a :href="it.url" class="ticket ticket-lift group bg-paper border-2 border-ink rounded-2xl overflow-hidden flex flex-col" style="--perf:100%">
+                <div class="duotone h-32 p-4 flex items-start justify-between relative bg-gradient-to-br from-vermilion to-vermilion-d text-vermilion overflow-hidden">
+                    <template x-if="it.img">
+                        <img :src="it.img" :alt="it.t" class="absolute inset-0 w-full h-full object-cover mix-blend-multiply opacity-70" loading="lazy">
+                    </template>
                     <div class="grid-tex"></div>
                     <span class="relative font-mono text-[10px] text-paper/90 bg-ink/25 px-2 py-1 rounded" x-text="it.tag"></span>
-                    <span class="relative font-mono text-[11px] text-paper/90 flex items-center gap-1">
-                        <svg viewBox="0 0 24 24" class="w-3.5 h-3.5" fill="currentColor" aria-hidden="true"><path d="m12 2 3 7 7 .5-5.5 4.5 2 7L12 17l-6.5 4 2-7L2 9.5 9 9z"/></svg>
-                        <span x-text="it.rating"></span>
+                    <span class="relative font-mono text-[11px] text-paper/90 flex items-center gap-1" x-show="it.dur">
+                        <span x-text="it.dur"></span>
                     </span>
                 </div>
                 <div class="p-4 flex-1 flex flex-col">
-                    <p class="font-mono text-[10px] text-ink-soft" x-text="it.city.toUpperCase()+' · '+it.dur"></p>
+                    <p class="font-mono text-[10px] text-ink-soft" x-text="it.city ? it.city.toUpperCase() : ''"></p>
                     <h3 class="font-display text-xl font-700 leading-tight mt-1" x-text="it.t"></h3>
                     <div class="mt-auto pt-4 flex items-center justify-between">
-                        <p><span class="text-xs text-ink-soft">de la </span><span class="font-display text-2xl font-700" x-text="it.price"></span><span class="text-sm text-ink-soft"> lei</span></p>
+                        <p x-show="it.price > 0"><span class="text-xs text-ink-soft">de la </span><span class="font-display text-2xl font-700" x-text="it.price"></span><span class="text-sm text-ink-soft"> lei</span></p>
                         <span class="px-3 py-1.5 rounded-full bg-ink text-paper text-xs font-600 group-hover:bg-vermilion transition-colors">Rezervă</span>
                     </div>
                 </div>
-            </article>
+            </a>
         </template>
     </div>
+
+    <?php if (empty($homeActivities)): ?>
+        <div class="text-center py-16">
+            <p class="font-display text-2xl font-600">Nicio activitate disponibilă încă.</p>
+            <p class="text-ink-soft mt-2">Verifică mai târziu — în curând adăugăm experiențele noi.</p>
+        </div>
+    <?php endif; ?>
 
     <div x-show="filtered.length===0" x-cloak class="text-center py-16">
         <p class="font-display text-2xl font-600">Nimic pe căutarea asta — încă.</p>

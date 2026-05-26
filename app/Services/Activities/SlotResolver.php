@@ -89,10 +89,18 @@ class SlotResolver
         $consumed = self::consumedCapacityMap($activity->id, $date);
 
         // 4. Materialise slots from each interval.
+        // Semantics:
+        //   duration_minutes      = how long one session occupies the venue
+        //   slot_interval_minutes = spacing between consecutive slot START times
+        //                           (NOT auto-clamped to duration — allowing slots to
+        //                           overlap is legitimate when capacity_per_slot is
+        //                           a parallel-group counter, e.g. adventure parks)
+        //   buffer_minutes        = informational reset time between sessions; NOT
+        //                           used in cursor advance (slot_interval is the
+        //                           single source of truth for spacing)
         $slots = collect();
         $duration = max(5, (int) ($activity->duration_minutes ?? 60));
-        $interval = max($duration, (int) ($activity->slot_interval_minutes ?? 60));
-        $buffer   = max(0, (int) ($activity->buffer_minutes ?? 0));
+        $interval = max(5, (int) ($activity->slot_interval_minutes ?? 60));
         $capTotal = max(1, (int) ($activity->capacity_per_slot ?? 1));
         $leadTime = max(0, (int) ($activity->booking_lead_time_hours ?? 0));
         $leadCutoff = $now->copy()->addHours($leadTime);
@@ -134,7 +142,7 @@ class SlotResolver
                     'unavailable_reason' => $reason,
                 ]);
 
-                $cursor = $cursor->copy()->addMinutes($interval + $buffer);
+                $cursor = $cursor->copy()->addMinutes($interval);
             }
         }
 

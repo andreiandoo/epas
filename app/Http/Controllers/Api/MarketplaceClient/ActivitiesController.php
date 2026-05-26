@@ -334,29 +334,107 @@ class ActivitiesController extends BaseController
                     'body'        => $this->translate($activity->seo_body, $locale),
                 ],
                 'faqs' => (array) ($activity->faqs ?? []),
-                // Cross-sell shortlist (capped at 6) for the "Other experiences" rail.
+                // Admin-managed cross-sell (Conexiuni tab).
                 'related' => $activity->relatedActivities
                     ->take(6)
-                    ->map(fn (Activity $rel) => [
-                        'id' => $rel->id,
-                        'slug' => $rel->slug,
-                        'title' => $this->translate($rel->title, $locale),
-                        'cover_image_url' => $this->resolveStorageUrl($rel->cover_image_url),
-                        'cheapest_price_cents' => $rel->cheapest_price_cents,
-                        'duration_minutes' => (int) $rel->duration_minutes,
-                        'city' => $rel->city ? [
-                            'slug' => $rel->city->slug,
-                            'name' => $this->translate($rel->city->name, $locale),
-                        ] : null,
-                        'category' => $rel->category ? [
-                            'slug' => $rel->category->slug,
-                            'name' => $this->translate($rel->category->name, $locale),
-                        ] : null,
-                    ])
+                    ->map(fn (Activity $rel) => $this->relatedCardPayload($rel, $locale))
                     ->values()
                     ->all(),
+                // Auto-computed recommendations layered by priority:
+                //   1. Other activities by the same organizer
+                //   2. Same city + same category
+                //   3. Same city + any other category
+                // Capped at 6 total, deduped against `related` and self.
+                'recommended' => $this->buildRecommendations($activity, $locale, 6),
             ]
         );
+    }
+
+    /**
+     * Build auto-recommendations for the public detail page in priority order:
+     *   1. Same organizer (excluding self)
+     *   2. Same city + same category
+     *   3. Same city + any other category
+     * Each tier appends to the result; we cap at $cap total, dedupe by id, and
+     * skip activities already linked via the admin-managed Conexiuni pivot
+     * (those show up under `related` already — no point duplicating).
+     */
+    private function buildRecommendations(Activity $activity, string $locale, int $cap = 6): array
+    {
+        $excluded = collect([$activity->id])
+            ->merge($activity->relatedActivities->pluck('id'))
+            ->unique()
+            ->values()
+            ->all();
+
+        $base = Activity::query()
+            ->where('marketplace_client_id', $activity->marketplace_client_id)
+            ->where('is_published', true)
+            ->whereNotIn('id', $excluded)
+            ->with(['city:id,name,slug', 'category:id,name,slug,parent_id']);
+
+        $collected = collect();
+
+        // Tier 1: same organizer
+        if ($activity->marketplace_organizer_id) {
+            $tier1 = (clone $base)
+                ->where('marketplace_organizer_id', $activity->marketplace_organizer_id)
+                ->limit($cap)
+                ->get();
+            $collected = $collected->concat($tier1);
+        }
+
+        // Tier 2: same city + same category (excluding tier 1 ids)
+        if ($collected->count() < $cap && $activity->marketplace_city_id && $activity->marketplace_category_id) {
+            $remaining = $cap - $collected->count();
+            $tier2 = (clone $base)
+                ->where('marketplace_city_id', $activity->marketplace_city_id)
+                ->where('marketplace_category_id', $activity->marketplace_category_id)
+                ->whereNotIn('id', $collected->pluck('id')->all())
+                ->limit($remaining)
+                ->get();
+            $collected = $collected->concat($tier2);
+        }
+
+        // Tier 3: same city + any category
+        if ($collected->count() < $cap && $activity->marketplace_city_id) {
+            $remaining = $cap - $collected->count();
+            $tier3 = (clone $base)
+                ->where('marketplace_city_id', $activity->marketplace_city_id)
+                ->whereNotIn('id', $collected->pluck('id')->all())
+                ->limit($remaining)
+                ->get();
+            $collected = $collected->concat($tier3);
+        }
+
+        return $collected
+            ->take($cap)
+            ->map(fn (Activity $rel) => $this->relatedCardPayload($rel, $locale))
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Shared card-shape payload used by `related` + `recommended` rails.
+     */
+    private function relatedCardPayload(Activity $rel, string $locale): array
+    {
+        return [
+            'id' => $rel->id,
+            'slug' => $rel->slug,
+            'title' => $this->translate($rel->title, $locale),
+            'cover_image_url' => $this->resolveStorageUrl($rel->cover_image_url),
+            'cheapest_price_cents' => $rel->cheapest_price_cents,
+            'duration_minutes' => (int) $rel->duration_minutes,
+            'city' => $rel->city ? [
+                'slug' => $rel->city->slug,
+                'name' => $this->translate($rel->city->name, $locale),
+            ] : null,
+            'category' => $rel->category ? [
+                'slug' => $rel->category->slug,
+                'name' => $this->translate($rel->category->name, $locale),
+            ] : null,
+        ];
     }
 
     private function translate($value, string $locale): ?string
