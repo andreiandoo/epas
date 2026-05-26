@@ -418,20 +418,19 @@
 
     function saveCart(cart) {
         try {
-            localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cart));
+            // Prefer AmbiletCart.saveCart when available — it writes to
+            // the same localStorage key, dispatches `ambilet:cart:update`
+            // (which the checkout / cart pages listen for), AND triggers
+            // revalidatePromoCode so the stored discount stays in sync
+            // with the new cart contents. Writing directly here would
+            // bypass both signals, leaving the checkout page summary
+            // stale until full page reload.
+            if (window.AmbiletCart && typeof window.AmbiletCart.saveCart === 'function') {
+                window.AmbiletCart.saveCart(cart);
+            } else {
+                localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cart));
+            }
             updateCartUI();
-            // Promo discount snapshot (stored on PROMO_KEY) is frozen at
-            // apply-time. Any cart mutation needs to re-validate against
-            // the new contents so a 50%-off code applied on 4 tickets
-            // doesn't keep its absolute lei value when the user drops to
-            // 2 tickets. AmbiletCart's revalidate hits the backend, then
-            // dispatches `ambilet:cart:promo` which we listen for below
-            // to re-render the drawer with the fresh discount.
-            try {
-                if (window.AmbiletCart && typeof window.AmbiletCart.revalidatePromoCode === 'function') {
-                    window.AmbiletCart.revalidatePromoCode().catch(function () { /* best effort */ });
-                }
-            } catch (e) { /* never break the save */ }
         } catch (e) {}
     }
 
@@ -537,7 +536,14 @@
         // by the row's `flex` class in CSS specificity, which would
         // leave the row visible with stale placeholder text even when
         // there's no promo.
-        if (promo && promoDiscount > 0 && items.length > 0) {
+        //
+        // Gate the discount row on `promo` existing (not on
+        // promoDiscount > 0). The amount may be momentarily 0 during a
+        // re-validation in flight; we still want the user to see the
+        // code is applied so they don't think it was lost. The amount
+        // updates on the next `ambilet:cart:promo` event when revalidate
+        // lands.
+        if (promo && items.length > 0) {
             if (cartDiscountRow) cartDiscountRow.style.display = 'flex';
             if (cartDiscountAmount) cartDiscountAmount.textContent = '-' + promoDiscount.toLocaleString('ro-RO', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' lei';
             if (cartDiscountCode) cartDiscountCode.textContent = promo.code || '';
