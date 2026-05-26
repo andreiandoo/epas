@@ -7,23 +7,23 @@ require_once __DIR__ . '/includes/config.php';
 require_once __DIR__ . '/includes/api.php';
 
 // =========================================================================
-// DATA — venue categories (locations) + activitati publicate
+// DATA — event categories (parinte) + activitati publicate
 // =========================================================================
-// "Alege-ți genul de aventură" pulls VENUE categories (marketplace_venue_categories
-// table) — these exist as a flat top-level list regardless of activity volume.
-// Using /events/categories filters out categories with no published events,
-// which gave an empty grid here because we only have activities, not events.
-$categoriesResp = api_cached('home_venue_categories', fn () => api_get('/venue-categories'), 600);
+// "Alege-ți genul de aventură" pulls top-level EVENT categories from
+// marketplace_event_categories (parent_id IS NULL). The endpoint accepts
+// `all=1` to bypass the "has-published-event" gate (without it the rail
+// would be empty when the marketplace has only activities), and
+// `parents_only=1` to skip subcategories.
+$categoriesResp = api_cached('home_event_top_categories', fn () => api_get('/events/categories', ['all' => 1, 'parents_only' => 1]), 600);
 $rawCategories = $categoriesResp['data']['categories'] ?? [];
 $homeCategories = [];
 foreach ((is_array($rawCategories) ? $rawCategories : []) as $c) {
     $homeCategories[] = [
         't'     => $c['name'] ?? $c['slug'] ?? '',
         'd'     => $c['description'] ?? '',
-        'url'   => '/locatii?categorie=' . ($c['slug'] ?? ''),
-        'count' => isset($c['venues_count']) && (int) $c['venues_count'] > 0 ? (int) $c['venues_count'] . ' locații' : '',
-        'icon'  => $c['icon'] ?? null,   // heroicon class string (e.g. 'heroicon-o-sun')
-        'image' => $c['image'] ?? null,
+        'url'   => '/' . ($c['slug'] ?? ''),
+        'count' => isset($c['event_count']) && (int) $c['event_count'] > 0 ? (int) $c['event_count'] . ' opțiuni' : '',
+        'emoji' => $c['icon_emoji'] ?? null,
         'color' => $c['color'] ?? null,
     ];
 }
@@ -228,14 +228,15 @@ include __DIR__ . '/includes/header.php';
 
     <?php if (empty($homeCategories)): ?>
         <div class="rounded-2xl border-2 border-ink bg-paper-2 p-8 text-center">
-            <p class="font-display text-xl font-700">Niciun gen de activitate configurat încă.</p>
-            <p class="mt-2 text-ink-soft">Admin: adaugă categorii de locații pentru a popula această secțiune.</p>
+            <p class="font-display text-xl font-700">Nicio categorie configurată încă.</p>
+            <p class="mt-2 text-ink-soft">Admin: adaugă categorii părinte la /marketplace/event-categories.</p>
         </div>
     <?php else: ?>
         <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
             <?php
-            // Color palette rotation — gives each card a unique tone without
-            // requiring the seeder to encode it. Maps cycle: vermilion → forest → sky → ochre.
+            // Color palette rotation — gives each card a unique tone. If the
+            // category has its own color from DB (hex), we use that as inline
+            // gradient; otherwise we cycle through 4 named palette options.
             $palette = ['vermilion', 'forest', 'sky', 'ochre'];
             $paletteClasses = [
                 'vermilion' => 'bg-gradient-to-br from-vermilion to-vermilion-d',
@@ -243,42 +244,16 @@ include __DIR__ . '/includes/header.php';
                 'sky'       => 'bg-gradient-to-br from-sky to-ink',
                 'ochre'     => 'bg-gradient-to-br from-ochre to-vermilion-d',
             ];
-            // Map heroicon name fragments → emoji glyphs (rough but functional)
-            // so we don't have to ship the heroicon SVG library on the frontend.
-            $heroToEmoji = [
-                'sun'                  => '☀️',
-                'building-storefront'  => '🏪',
-                'building-library'     => '🏛️',
-                'globe-europe-africa'  => '🌍',
-                'globe-alt'            => '🌐',
-                'cube-transparent'     => '🪟',
-                'sparkles'             => '✨',
-                'map-pin'              => '📍',
-                'home'                 => '🏠',
-                'rocket-launch'        => '🚀',
-                'fire'                 => '🔥',
-                'puzzle-piece'         => '🧩',
-            ];
-            $emojiFromIcon = function ($icon) use ($heroToEmoji): string {
-                if (! $icon) return '🎯';
-                foreach ($heroToEmoji as $needle => $glyph) {
-                    if (str_contains($icon, $needle)) return $glyph;
-                }
-                return '🎯';
-            };
 
             foreach ($homeCategories as $idx => $cat):
                 $tone = $palette[$idx % count($palette)];
                 $bgClass = $paletteClasses[$tone];
-                $emoji = $emojiFromIcon($cat['icon'] ?? null);
+                $emoji = $cat['emoji'] ?: '🎯';
                 ?>
                 <a href="<?= htmlspecialchars($cat['url']) ?>" class="ticket ticket-lift group bg-paper border-2 border-ink rounded-2xl overflow-hidden" style="--perf:100%">
                     <div class="duotone h-40 flex items-end p-5 <?= $bgClass ?> text-paper relative">
-                        <?php if (! empty($cat['image'])): ?>
-                            <img src="<?= htmlspecialchars($cat['image']) ?>" alt="<?= htmlspecialchars($cat['t']) ?>" class="absolute inset-0 w-full h-full object-cover opacity-60 mix-blend-multiply" loading="lazy">
-                        <?php endif; ?>
                         <div class="grid-tex"></div>
-                        <span class="absolute right-4 top-4 text-4xl"><?= $emoji ?></span>
+                        <span class="absolute right-4 top-4 text-5xl"><?= $emoji ?></span>
                         <?php if (! empty($cat['count'])): ?>
                             <span class="relative font-mono text-[10px] text-paper/80 tracking-wider"><?= htmlspecialchars(strtoupper($cat['count'])) ?></span>
                         <?php endif; ?>
