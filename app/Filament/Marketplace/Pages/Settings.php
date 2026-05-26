@@ -132,6 +132,20 @@ class Settings extends Page
                 // Stock alert settings
                 'stock_alert_threshold' => $settings['stock_alert_threshold'] ?? null,
                 'stock_alert_email' => $settings['stock_alert_email'] ?? null,
+
+                // Payment processing fees — unpack JSONB column into form fields.
+                // The DB stores providers as an associative dict keyed by slug;
+                // the Repeater needs a positional array. Convert here, re-pack on save.
+                'payment_fees_pass_to_customer' => (bool) ($marketplace->payment_fees['pass_to_customer'] ?? false),
+                'payment_fees_providers' => collect($marketplace->payment_fees['providers'] ?? [])
+                    ->map(fn ($cfg, $slug) => [
+                        'slug'          => is_string($slug) ? $slug : ($cfg['slug'] ?? ''),
+                        'label'         => $cfg['label'] ?? '',
+                        'percent_rate'  => $cfg['percent_rate'] ?? null,
+                        'fixed_lei'     => isset($cfg['fixed_cents']) ? round(((int) $cfg['fixed_cents']) / 100, 2) : null,
+                    ])
+                    ->values()
+                    ->all(),
             ]);
         }
     }
@@ -267,6 +281,78 @@ class Settings extends Page
                                             ->url()
                                             ->maxLength(255),
                                     ])->columns(2),
+                            ]),
+
+                        // ============================================================
+                        // Taxe procesare card — opt-in per marketplace.
+                        // Leave the Providers repeater empty (or this tab untouched)
+                        // to keep the marketplace's payment_fees = NULL → kill switch
+                        // active. Marketplaces that don't fill anything here are
+                        // observationally identical to before this feature shipped.
+                        // ============================================================
+                        SC\Tabs\Tab::make('Taxe procesare card')
+                            ->icon('heroicon-o-credit-card')
+                            ->schema([
+                                SC\Section::make('Procesare plăți online')
+                                    ->description('Configurează ratele de comision percepute de procesatorii de plăți (Stripe, Netopia, RoPay) și cine plătește această taxă: clientul final sau marketplace-ul prin comisionul tău. Lasă providers gol pentru a dezactiva complet — comportamentul este identic cu cel actual.')
+                                    ->schema([
+                                        Forms\Components\Toggle::make('payment_fees_pass_to_customer')
+                                            ->label('Transferă taxa de procesare clientului')
+                                            ->helperText('Activ: linie nouă în checkout "Taxă procesare card", clientul plătește subtotal + taxă. Inactiv: marketplace-ul absoarbe taxa din comisionul propriu, clientul nu vede nimic în plus. Poți suprascrie per organizator pe pagina organizatorului.')
+                                            ->onColor('success')
+                                            ->offColor('gray')
+                                            ->default(false)
+                                            ->columnSpanFull(),
+
+                                        Forms\Components\Repeater::make('payment_fees_providers')
+                                            ->label('Provideri configurați')
+                                            ->helperText('Adaugă fiecare procesator de plăți pe care îl folosești. Formula taxei: (procent% × subtotal) + sumă fixă. Subtotal = bilet + comision marketplace + asigurare. Lasă gol = feature dezactivat complet.')
+                                            ->schema([
+                                                Forms\Components\TextInput::make('slug')
+                                                    ->label('Slug provider')
+                                                    ->placeholder('stripe / netopia / ropay')
+                                                    ->required()
+                                                    ->maxLength(32)
+                                                    ->rule('alpha_dash')
+                                                    ->columnSpan(1),
+                                                Forms\Components\TextInput::make('label')
+                                                    ->label('Etichetă afișată')
+                                                    ->placeholder('Stripe')
+                                                    ->maxLength(64)
+                                                    ->columnSpan(1),
+                                                Forms\Components\TextInput::make('percent_rate')
+                                                    ->label('Procent (%)')
+                                                    ->numeric()
+                                                    ->step(0.01)
+                                                    ->minValue(0)
+                                                    ->maxValue(100)
+                                                    ->suffix('%')
+                                                    ->placeholder('1.50')
+                                                    ->columnSpan(1),
+                                                Forms\Components\TextInput::make('fixed_lei')
+                                                    ->label('Fix (lei)')
+                                                    ->numeric()
+                                                    ->step(0.01)
+                                                    ->minValue(0)
+                                                    ->suffix('lei')
+                                                    ->placeholder('1.00')
+                                                    ->helperText('Stocat ca bani (× 100) intern.')
+                                                    ->columnSpan(1),
+                                            ])
+                                            ->columns(4)
+                                            ->reorderable()
+                                            ->collapsible()
+                                            ->cloneable()
+                                            ->itemLabel(function (array $state): ?string {
+                                                $slug = $state['slug'] ?? null;
+                                                $rate = $state['percent_rate'] ?? '?';
+                                                $fix = $state['fixed_lei'] ?? '?';
+                                                return $slug ? strtoupper($slug) . " — {$rate}% + {$fix} lei" : null;
+                                            })
+                                            ->addActionLabel('Adaugă provider')
+                                            ->columnSpanFull(),
+                                    ])
+                                    ->columns(1),
                             ]),
 
                         SC\Tabs\Tab::make('Personalization')
@@ -815,6 +901,34 @@ class Settings extends Page
             'currency' => $data['currency'] ?? $marketplace->currency,
             'ticket_terms' => $data['ticket_terms'] ?? $marketplace->ticket_terms,
         ];
+
+        // ============================================================
+        // Payment processing fees — re-pack Repeater rows back into the
+        // associative `providers` dictionary keyed by slug. Empty providers
+        // list = explicit NULL on payment_fees → kill switch (status quo).
+        // ============================================================
+        $repeaterRows = $data['payment_fees_providers'] ?? [];
+        $providers = [];
+        if (is_array($repeaterRows)) {
+            foreach ($repeaterRows as $row) {
+                $slug = trim((string) ($row['slug'] ?? ''));
+                if ($slug === '') continue;
+                $providers[$slug] = [
+                    'label'        => trim((string) ($row['label'] ?? ucfirst($slug))),
+                    'percent_rate' => (float) ($row['percent_rate'] ?? 0),
+                    'fixed_cents'  => (int) round(((float) ($row['fixed_lei'] ?? 0)) * 100),
+                ];
+            }
+        }
+        if (empty($providers)) {
+            // Nothing configured → store NULL so the calculator's kill switch trips.
+            $update['payment_fees'] = null;
+        } else {
+            $update['payment_fees'] = [
+                'pass_to_customer' => (bool) ($data['payment_fees_pass_to_customer'] ?? false),
+                'providers'        => $providers,
+            ];
+        }
 
         // Update settings JSON — start from existing to preserve all keys
         $settings = $marketplace->settings ?? [];

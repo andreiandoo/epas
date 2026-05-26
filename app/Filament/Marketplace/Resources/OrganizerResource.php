@@ -1129,6 +1129,21 @@ class OrganizerResource extends Resource
                                 ->placeholder('Use marketplace default')
                                 ->helperText('Applied automatically when creating events for this organizer'),
 
+                            // Per-organizer override of marketplace.payment_fees.pass_to_customer.
+                            // Visible only when the marketplace has the feature enabled (otherwise
+                            // it's a config that goes nowhere). For ambilet/tics this section
+                            // doesn't render until they opt in.
+                            Forms\Components\Select::make('payment_fee_mode')
+                                ->label('Taxă procesare card (Stripe / Netopia / RoPay)')
+                                ->options([
+                                    'pass_to_customer'       => 'Transferă clientului (linie separată în checkout)',
+                                    'absorbed_by_commission' => 'Inclusă în comision (marketplace absoarbe taxa)',
+                                ])
+                                ->placeholder('Moștenește din marketplace')
+                                ->helperText('Lasă gol pentru a moșteni setarea de la nivel de marketplace. Setează doar dacă vrei un deal special pentru acest organizator.')
+                                ->native(false)
+                                ->visible(fn () => is_array(static::getMarketplaceClient()?->payment_fees ?? null)),
+
                             Forms\Components\DateTimePicker::make('verified_at')
                                 ->label('Verified At'),
                         ])
