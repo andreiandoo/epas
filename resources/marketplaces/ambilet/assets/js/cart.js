@@ -883,6 +883,14 @@ const AmbiletCart = {
     }
 };
 
+// Expose to window so other scripts (header.js cart drawer, page modules)
+// can find the real cart object. Classic <script> top-level `const` does
+// NOT create a window property, so without this assignment header.js's
+// `if (window.AmbiletCart)` check sees undefined and builds a stub
+// without saveCart/removeItem — bypassing revalidatePromoCode on every
+// drawer mutation.
+window.AmbiletCart = AmbiletCart;
+
 // Initialize on DOM ready
 document.addEventListener('DOMContentLoaded', () => {
     AmbiletCart.init();
