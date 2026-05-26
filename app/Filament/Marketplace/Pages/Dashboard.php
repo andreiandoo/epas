@@ -35,12 +35,18 @@ class Dashboard extends Page
     #[Url]
     public string $selectedMonth = '';
 
+    #[Url]
+    public string $selectedDailyReportDate = '';
+
     public function mount(): void
     {
         $admin = Auth::guard('marketplace_admin')->user();
         $this->marketplace = $admin?->marketplaceClient;
         if (!$this->selectedMonth) {
             $this->selectedMonth = Carbon::now('Europe/Bucharest')->format('Y-m');
+        }
+        if (!$this->selectedDailyReportDate) {
+            $this->selectedDailyReportDate = Carbon::now('Europe/Bucharest')->format('Y-m-d');
         }
     }
 
@@ -53,6 +59,14 @@ class Dashboard extends Page
             Cache::forget("mp_dash_billing_{$id}_{$this->selectedMonth}");
             Cache::forget("mp_month_comm_{$id}_{$this->selectedMonth}");
         }
+    }
+
+    public function updatedSelectedDailyReportDate(): void
+    {
+        // No cache invalidation needed — the daily report cache key already
+        // includes the date, so changing the date just hits a different
+        // (possibly empty) cache slot. Method exists so Livewire registers
+        // the property as live-bindable.
     }
 
     public function getTitle(): string
@@ -201,9 +215,37 @@ class Dashboard extends Page
                 ->count()
         );
 
+        $isSuperAdmin = Auth::guard('marketplace_admin')->user()?->isSuperAdmin() ?? false;
+
+        // Daily event sales report (super-admin only) — events that had
+        // sales on the selected day, with same-day + all-time aggregates.
+        // Date is clamped to [today-30d, today] in Romania time. Today
+        // gets a short TTL (data is still moving); past days cache longer.
+        $dailyEventReport = null;
+        $dailyReportDate = null;
+        $dailyReportMinDate = null;
+        $dailyReportMaxDate = null;
+        if ($isSuperAdmin) {
+            $maxDate = Carbon::now($tz)->format('Y-m-d');
+            $minDate = Carbon::now($tz)->subDays(30)->format('Y-m-d');
+            $reqDate = $this->selectedDailyReportDate ?: $maxDate;
+            if ($reqDate < $minDate) { $reqDate = $minDate; }
+            if ($reqDate > $maxDate) { $reqDate = $maxDate; }
+            $dailyReportDate = $reqDate;
+            $dailyReportMinDate = $minDate;
+            $dailyReportMaxDate = $maxDate;
+            $isToday = $reqDate === $maxDate;
+            $ttl = $isToday ? 60 : 900;
+            $dailyEventReport = Cache::remember(
+                "mp_dash_daily_evt_{$marketplaceId}_{$reqDate}",
+                $ttl,
+                fn () => $this->computeDailyEventReport($marketplaceId, $reqDate)
+            );
+        }
+
         return [
             'marketplace' => $marketplace,
-            'isSuperAdmin' => Auth::guard('marketplace_admin')->user()?->isSuperAdmin() ?? false,
+            'isSuperAdmin' => $isSuperAdmin,
             'stats' => $stats['cards'],
             'monthStats' => $monthStats,
             'chartData' => $chartData,
@@ -221,6 +263,10 @@ class Dashboard extends Page
             'prevYearChartData' => $prevYearChartData,
             'prevYearTicketChartData' => $prevYearTicketChartData,
             'selectedMonth' => $month,
+            'dailyEventReport' => $dailyEventReport,
+            'dailyReportDate' => $dailyReportDate,
+            'dailyReportMinDate' => $dailyReportMinDate,
+            'dailyReportMaxDate' => $dailyReportMaxDate,
         ];
     }
 
@@ -779,5 +825,181 @@ class Dashboard extends Page
             'events_published' => $eventsPublished,
             'date_label' => Carbon::now($tz)->translatedFormat('d F Y'),
         ];
+    }
+
+    /**
+     * Per-event sales breakdown for a single day. Returns a list of events
+     * that had at least one paid/confirmed/completed order on that day,
+     * each row carrying same-day + all-time aggregates (orders, tickets,
+     * revenue, commission).
+     *
+     * Caller is responsible for super-admin gating and date clamping
+     * (the date arrives validated from getViewData()).
+     */
+    private function computeDailyEventReport(int $marketplaceId, string $date): array
+    {
+        $tz = 'Europe/Bucharest';
+        $dayStart = Carbon::createFromFormat('Y-m-d', $date, $tz)->startOfDay()->utc();
+        $dayEnd = Carbon::createFromFormat('Y-m-d', $date, $tz)->endOfDay()->utc();
+        $paidStatuses = ['paid', 'confirmed', 'completed'];
+        $commissionRate = (float) ($this->marketplace->commission_rate ?? 5);
+
+        // Step 1 — find every event with at least one paid order on the
+        // selected day. Group by effective event id (marketplace_event_id
+        // falls back to event_id for legacy single-tenant orders), so
+        // both linkage paths fold into one row.
+        $eventSub = function ($sub) use ($marketplaceId) {
+            $sub->select('id')->from('events')->where('marketplace_client_id', $marketplaceId);
+        };
+        $orderScope = function ($q) use ($marketplaceId, $eventSub) {
+            $q->where('orders.marketplace_client_id', $marketplaceId)
+                ->orWhereIn('orders.marketplace_event_id', $eventSub)
+                ->orWhereIn('orders.event_id', $eventSub);
+        };
+
+        $dayRows = Order::where($orderScope)
+            ->whereIn('orders.status', $paidStatuses)
+            ->whereNotIn('orders.source', ['test_order', 'external_import'])
+            ->whereBetween('orders.created_at', [$dayStart, $dayEnd])
+            ->where(function ($q) {
+                // Skip orders that aren't linked to any event — they
+                // can't appear as a row in this per-event report.
+                $q->whereNotNull('marketplace_event_id')
+                  ->orWhereNotNull('event_id');
+            })
+            ->selectRaw('COALESCE(marketplace_event_id, event_id) as eid')
+            ->selectRaw('COUNT(*) as orders_count')
+            ->selectRaw('SUM(total) as revenue')
+            ->selectRaw('SUM(COALESCE(commission_amount, 0)) as commission_db')
+            ->groupBy('eid')
+            ->get()
+            ->keyBy('eid');
+
+        if ($dayRows->isEmpty()) {
+            return [];
+        }
+
+        $eventIds = $dayRows->keys()->map(fn ($v) => (int) $v)->all();
+
+        // Step 2 — same-day ticket counts per event (join through
+        // ticket_types so we land on the event id directly).
+        $dayTicketCounts = Ticket::join('ticket_types', 'tickets.ticket_type_id', '=', 'ticket_types.id')
+            ->join('events', 'ticket_types.event_id', '=', 'events.id')
+            ->where('events.marketplace_client_id', $marketplaceId)
+            ->whereIn('events.id', $eventIds)
+            ->whereIn('tickets.status', ['valid', 'used'])
+            ->whereBetween('tickets.created_at', [$dayStart, $dayEnd])
+            ->selectRaw('events.id as eid, COUNT(*) as cnt')
+            ->groupBy('events.id')
+            ->pluck('cnt', 'eid');
+
+        // Step 3 — all-time per-event aggregates for the same scope, so
+        // both the day cell and the running total live on the same row.
+        // Filter by the same effective event id list so we don't pull
+        // every marketplace order into memory.
+        $eventIdsInt = array_map('intval', $eventIds);
+        $eventIdsList = implode(',', $eventIdsInt);
+        $totalRows = Order::where($orderScope)
+            ->whereIn('orders.status', $paidStatuses)
+            ->whereNotIn('orders.source', ['test_order', 'external_import'])
+            ->whereRaw("COALESCE(marketplace_event_id, event_id) IN ({$eventIdsList})")
+            ->selectRaw('COALESCE(marketplace_event_id, event_id) as eid')
+            ->selectRaw('COUNT(*) as orders_count')
+            ->selectRaw('SUM(total) as revenue')
+            ->selectRaw('SUM(COALESCE(commission_amount, 0)) as commission_db')
+            ->groupBy('eid')
+            ->get()
+            ->keyBy('eid');
+
+        $totalTicketCounts = Ticket::join('ticket_types', 'tickets.ticket_type_id', '=', 'ticket_types.id')
+            ->join('events', 'ticket_types.event_id', '=', 'events.id')
+            ->where('events.marketplace_client_id', $marketplaceId)
+            ->whereIn('events.id', $eventIds)
+            ->whereIn('tickets.status', ['valid', 'used'])
+            ->selectRaw('events.id as eid, COUNT(*) as cnt')
+            ->groupBy('events.id')
+            ->pluck('cnt', 'eid');
+
+        // Step 4 — pull the event records (with venue) so we can render
+        // name/date/venue in the UI. Done in one query and indexed by id.
+        $events = Event::with(['venue:id,name,city'])
+            ->whereIn('id', $eventIds)
+            ->get(['id', 'title', 'event_date', 'range_start_date', 'duration_mode', 'multi_slots', 'venue_id'])
+            ->keyBy('id');
+
+        $rows = [];
+        foreach ($dayRows as $eid => $day) {
+            $eid = (int) $eid;
+            $event = $events->get($eid);
+            if (!$event) {
+                continue; // Orphan order pointing at a deleted event — skip.
+            }
+
+            $dayRevenue = (float) $day->revenue;
+            $dayCommissionDb = (float) $day->commission_db;
+            $dayCommission = $dayCommissionDb > 0
+                ? $dayCommissionDb
+                : round($dayRevenue * $commissionRate / 100, 2);
+
+            $total = $totalRows->get((string) $eid) ?? $totalRows->get($eid);
+            $totalOrders = $total ? (int) $total->orders_count : 0;
+            $totalRevenue = $total ? (float) $total->revenue : 0.0;
+            $totalCommissionDb = $total ? (float) $total->commission_db : 0.0;
+            $totalCommission = $totalCommissionDb > 0
+                ? $totalCommissionDb
+                : round($totalRevenue * $commissionRate / 100, 2);
+
+            // Display date — single_day uses event_date, range starts at
+            // range_start_date, multi-day slot lists fall back to the
+            // earliest entry in multi_slots.
+            $displayDate = null;
+            if ($event->duration_mode === 'range' && $event->range_start_date) {
+                $displayDate = Carbon::parse($event->range_start_date);
+            } elseif ($event->duration_mode === 'single_day' && $event->event_date) {
+                $displayDate = Carbon::parse($event->event_date);
+            } elseif (is_array($event->multi_slots) && !empty($event->multi_slots)) {
+                $firstSlot = collect($event->multi_slots)->pluck('date')->filter()->sort()->first();
+                if ($firstSlot) {
+                    $displayDate = Carbon::parse($firstSlot);
+                }
+            } elseif ($event->event_date) {
+                $displayDate = Carbon::parse($event->event_date);
+            }
+
+            $venueName = '-';
+            $venueCity = '';
+            if ($event->venue) {
+                $rawName = $event->venue->name;
+                if (is_array($rawName)) {
+                    $venueName = $rawName['ro'] ?? $rawName['en'] ?? reset($rawName) ?: '-';
+                } else {
+                    $venueName = $rawName ?: '-';
+                }
+                $venueCity = $event->venue->city ?: '';
+            }
+
+            $rows[] = [
+                'event_id' => $eid,
+                'event_name' => $event->getTranslation('title', 'ro') ?: $event->getTranslation('title', 'en') ?: '-',
+                'event_date' => $displayDate?->format('Y-m-d'),
+                'event_date_label' => $displayDate?->translatedFormat('d M Y') ?? '-',
+                'venue_name' => $venueName,
+                'venue_city' => $venueCity,
+                'orders_day' => (int) $day->orders_count,
+                'tickets_day' => (int) ($dayTicketCounts[$eid] ?? 0),
+                'sales_day' => $dayRevenue,
+                'commission_day' => $dayCommission,
+                'orders_total' => $totalOrders,
+                'tickets_total' => (int) ($totalTicketCounts[$eid] ?? 0),
+                'sales_total' => $totalRevenue,
+                'commission_total' => $totalCommission,
+            ];
+        }
+
+        // Highest same-day revenue first — operators usually scan from
+        // top for "what moved today".
+        usort($rows, fn ($a, $b) => $b['sales_day'] <=> $a['sales_day']);
+
+        return $rows;
     }
 }

@@ -205,6 +205,102 @@
         </div>
         @endif
 
+        {{-- Daily per-event sales report (super-admin only) --}}
+        @if(isset($dailyEventReport))
+        <div class="mb-5">
+            <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
+                <h3 class="flex items-center gap-2 text-sm font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-400">
+                    <x-heroicon-o-calendar-days class="w-4 h-4" />
+                    Raport vânzări pe zi (per eveniment)
+                </h3>
+                <div class="flex items-center gap-2">
+                    <label for="dailyReportDate" class="text-xs text-gray-500 dark:text-gray-400">Ziua:</label>
+                    <input
+                        type="date"
+                        id="dailyReportDate"
+                        wire:model.live="selectedDailyReportDate"
+                        min="{{ $dailyReportMinDate }}"
+                        max="{{ $dailyReportMaxDate }}"
+                        class="px-2 py-1 text-xs bg-white border border-gray-300 rounded-md dark:bg-gray-800 dark:border-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                </div>
+            </div>
+
+            <div class="overflow-x-auto bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700" wire:key="daily-report-{{ $dailyReportDate }}">
+                <table class="w-full text-xs">
+                    <thead class="bg-gray-50 dark:bg-gray-900/50">
+                        <tr class="text-left text-gray-500 dark:text-gray-400">
+                            <th class="px-3 py-2 font-medium">Eveniment</th>
+                            <th class="px-3 py-2 font-medium">Data eveniment</th>
+                            <th class="px-3 py-2 font-medium">Locație</th>
+                            <th class="px-3 py-2 font-medium text-right whitespace-nowrap" title="Comenzi în ziua selectată">Cmd. zi</th>
+                            <th class="px-3 py-2 font-medium text-right whitespace-nowrap" title="Bilete în ziua selectată">Bil. zi</th>
+                            <th class="px-3 py-2 font-medium text-right whitespace-nowrap" title="Vânzări în ziua selectată">Vânz. zi</th>
+                            <th class="px-3 py-2 font-medium text-right whitespace-nowrap" title="Comisioane în ziua selectată">Com. zi</th>
+                            <th class="px-3 py-2 font-medium text-right whitespace-nowrap border-l border-gray-200 dark:border-gray-700" title="Total comenzi all-time">Cmd. total</th>
+                            <th class="px-3 py-2 font-medium text-right whitespace-nowrap" title="Total bilete all-time">Bil. total</th>
+                            <th class="px-3 py-2 font-medium text-right whitespace-nowrap" title="Total vânzări all-time">Vânz. total</th>
+                            <th class="px-3 py-2 font-medium text-right whitespace-nowrap" title="Total comisioane all-time">Com. total</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                        @forelse($dailyEventReport as $row)
+                            <tr class="text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-900/30">
+                                <td class="px-3 py-2 font-medium text-gray-900 dark:text-white">{{ $row['event_name'] }}</td>
+                                <td class="px-3 py-2 whitespace-nowrap text-gray-500 dark:text-gray-400">{{ $row['event_date_label'] }}</td>
+                                <td class="px-3 py-2">
+                                    <div class="text-gray-900 dark:text-gray-100">{{ $row['venue_name'] }}</div>
+                                    @if($row['venue_city'])
+                                        <div class="text-[10px] text-gray-400">{{ $row['venue_city'] }}</div>
+                                    @endif
+                                </td>
+                                <td class="px-3 py-2 text-right tabular-nums">{{ number_format($row['orders_day']) }}</td>
+                                <td class="px-3 py-2 text-right tabular-nums">{{ number_format($row['tickets_day']) }}</td>
+                                <td class="px-3 py-2 text-right tabular-nums font-semibold text-indigo-600 dark:text-indigo-400">{{ number_format($row['sales_day'], 2) }}</td>
+                                <td class="px-3 py-2 text-right tabular-nums font-semibold text-emerald-600 dark:text-emerald-400">{{ number_format($row['commission_day'], 2) }}</td>
+                                <td class="px-3 py-2 text-right tabular-nums border-l border-gray-200 dark:border-gray-700 text-gray-500">{{ number_format($row['orders_total']) }}</td>
+                                <td class="px-3 py-2 text-right tabular-nums text-gray-500">{{ number_format($row['tickets_total']) }}</td>
+                                <td class="px-3 py-2 text-right tabular-nums text-gray-500">{{ number_format($row['sales_total'], 2) }}</td>
+                                <td class="px-3 py-2 text-right tabular-nums text-gray-500">{{ number_format($row['commission_total'], 2) }}</td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="11" class="px-3 py-6 text-center text-gray-400 dark:text-gray-500">
+                                    Nicio vânzare în ziua selectată.
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                    @if(count($dailyEventReport) > 0)
+                        @php
+                            $sumOrdersDay = array_sum(array_column($dailyEventReport, 'orders_day'));
+                            $sumTicketsDay = array_sum(array_column($dailyEventReport, 'tickets_day'));
+                            $sumSalesDay = array_sum(array_column($dailyEventReport, 'sales_day'));
+                            $sumCommissionDay = array_sum(array_column($dailyEventReport, 'commission_day'));
+                            $sumOrdersTotal = array_sum(array_column($dailyEventReport, 'orders_total'));
+                            $sumTicketsTotal = array_sum(array_column($dailyEventReport, 'tickets_total'));
+                            $sumSalesTotal = array_sum(array_column($dailyEventReport, 'sales_total'));
+                            $sumCommissionTotal = array_sum(array_column($dailyEventReport, 'commission_total'));
+                        @endphp
+                        <tfoot class="bg-gray-50 dark:bg-gray-900/50">
+                            <tr class="font-semibold text-gray-900 dark:text-white">
+                                <td colspan="3" class="px-3 py-2 text-right text-gray-500 dark:text-gray-400">Total ({{ count($dailyEventReport) }} {{ count($dailyEventReport) === 1 ? 'eveniment' : 'evenimente' }}):</td>
+                                <td class="px-3 py-2 text-right tabular-nums">{{ number_format($sumOrdersDay) }}</td>
+                                <td class="px-3 py-2 text-right tabular-nums">{{ number_format($sumTicketsDay) }}</td>
+                                <td class="px-3 py-2 text-right tabular-nums text-indigo-600 dark:text-indigo-400">{{ number_format($sumSalesDay, 2) }}</td>
+                                <td class="px-3 py-2 text-right tabular-nums text-emerald-600 dark:text-emerald-400">{{ number_format($sumCommissionDay, 2) }}</td>
+                                <td class="px-3 py-2 text-right tabular-nums border-l border-gray-200 dark:border-gray-700">{{ number_format($sumOrdersTotal) }}</td>
+                                <td class="px-3 py-2 text-right tabular-nums">{{ number_format($sumTicketsTotal) }}</td>
+                                <td class="px-3 py-2 text-right tabular-nums">{{ number_format($sumSalesTotal, 2) }}</td>
+                                <td class="px-3 py-2 text-right tabular-nums">{{ number_format($sumCommissionTotal, 2) }}</td>
+                            </tr>
+                        </tfoot>
+                    @endif
+                </table>
+            </div>
+        </div>
+        @endif
+
         <!-- Combined Chart: Sales + Tickets -->
         <div class="p-4 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700" wire:key="charts-{{ $chartPeriod }}">
             <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
