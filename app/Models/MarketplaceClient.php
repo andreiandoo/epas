@@ -58,6 +58,8 @@ class MarketplaceClient extends Model
         'email_settings',
         'next_contract_number',
         'signature_image',
+        // Payment processing fees config (NULL = feature disabled for this marketplace)
+        'payment_fees',
     ];
 
     protected $casts = [
@@ -73,6 +75,7 @@ class MarketplaceClient extends Model
         'billing_starts_at' => 'date',
         'next_billing_date' => 'date',
         'last_billing_date' => 'date',
+        'payment_fees' => 'array',
     ];
 
     protected $hidden = [

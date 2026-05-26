@@ -75,6 +75,9 @@ class MarketplaceOrganizer extends Authenticatable
         'commission_rate',
         'fixed_commission_default',
         'default_commission_mode',
+        // Override for marketplace.payment_fees.pass_to_customer flag.
+        // NULL = inherit. Values: 'pass_to_customer' | 'absorbed_by_commission'.
+        'payment_fee_mode',
         'settings',
         'gamification_enabled',
         'invitations_enabled',

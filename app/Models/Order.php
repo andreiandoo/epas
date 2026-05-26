@@ -62,6 +62,14 @@ class Order extends Model
         'refund_status',
         'refunded_amount',
         'metadata',
+        // Payment processing fee snapshot (Stripe/Netopia/RoPay etc).
+        // Zero / NULL by default → backward compat for marketplaces without
+        // payment_fees configured AND for every existing order at deploy time.
+        'processing_fee_cents',
+        'processing_fee_passed',
+        'processing_fee_provider',
+        'processing_fee_percent_rate',
+        'processing_fee_fixed_cents',
     ];
 
     protected $casts = [
@@ -77,6 +85,11 @@ class Order extends Model
         'paid_at' => 'datetime',
         'cancelled_at' => 'datetime',
         'refunded_at' => 'datetime',
+        // Processing fee snapshot (see fillable comment for kill-switch semantics)
+        'processing_fee_cents' => 'integer',
+        'processing_fee_passed' => 'boolean',
+        'processing_fee_percent_rate' => 'decimal:2',
+        'processing_fee_fixed_cents' => 'integer',
     ];
 
     public function tenant(): BelongsTo
