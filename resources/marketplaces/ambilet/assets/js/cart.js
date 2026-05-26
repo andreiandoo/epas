@@ -183,8 +183,8 @@ const AmbiletCart = {
         return AmbiletAPI.delete('/cart/seats', {
             event_seating_id: item.event_seating_id,
             seat_uids: item.seat_uids
-        }).catch(function(error) {
-            console.warn('[AmbiletCart] Failed to release seats (cleanup job will handle):', error);
+        }).catch(function() {
+            // Best-effort release — cleanup job handles unreleased seats
         });
     },
 
@@ -522,20 +522,6 @@ const AmbiletCart = {
                 total: (item.ticketType?.price || 0) * item.quantity
             }));
 
-            // TEMP DEBUG — log the exact payload sent to the backend so we
-            // can verify the items array carries the post-mutation
-            // quantities and totals. User reported a revalidate ran but
-            // backend kept returning the old discount.
-            try {
-                console.log('[Revalidate] →', {
-                    code: promo.code,
-                    eventId: eventId,
-                    subtotal: subtotal,
-                    ticketCount: ticketCount,
-                    items: items,
-                });
-            } catch (e) {}
-
             const response = await AmbiletAPI.validatePromoCode(
                 promo.code,
                 eventId,
@@ -544,10 +530,6 @@ const AmbiletCart = {
                 (typeof AmbiletAuth !== 'undefined' ? AmbiletAuth.getCustomerData()?.email : null),
                 items
             );
-
-            try {
-                console.log('[Revalidate] ←', response);
-            } catch (e) {}
 
             if (response && response.success) {
                 const discountData = response.data?.discount || {};
@@ -582,7 +564,6 @@ const AmbiletCart = {
             // Network / unexpected — leave the stored promo in place so
             // the user doesn't lose their code on a transient blip. The
             // checkout endpoint validates one more time before charging.
-            console.warn('[AmbiletCart] revalidatePromoCode failed:', error);
             return { updated: false, removed: false, reason: 'network_error' };
         }
     },
@@ -827,8 +808,6 @@ const AmbiletCart = {
         if (hadItems) {
             this.showNotification('Timpul de rezervare a expirat. Coșul a fost golit.', 'warning');
         }
-
-        console.log('Cart reservation expired - cart cleared');
     },
 
     /**

@@ -115,7 +115,7 @@ const CheckoutPage = {
                 }
             }
         } catch (error) {
-            console.log('Could not load checkout features:', error);
+            // Features endpoint optional — fall through silently
         }
     },
 
@@ -949,7 +949,6 @@ const CheckoutPage = {
                 window.location.href = '/multumim?order=' + order.order_number;
             }
         } catch (error) {
-            console.error('Checkout error:', error);
             if (typeof AmbiletNotifications !== 'undefined') {
                 AmbiletNotifications.error(error.message || 'Eroare la procesare. Încearcă din nou.');
             }

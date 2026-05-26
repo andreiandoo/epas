@@ -549,23 +549,6 @@
         // more than the subtotal even if a snapshot is stale.
         if (promoDiscount > subtotal) promoDiscount = subtotal;
 
-        // TEMP DEBUG — remove once user confirms the drawer shows the
-        // discount/total rows on /finalizare. Logs the exact state seen
-        // by updateCartUI so we can tell if it's a DOM-missing issue or
-        // a data-missing issue.
-        try {
-            console.log('[CartDrawer] updateCartUI state:', {
-                items: items.length,
-                subtotal: subtotal,
-                promo: promo,
-                promoDiscount: promoDiscount,
-                ambiletCartLoaded: !!window.AmbiletCart,
-                discountRowExists: !!cartDiscountRow,
-                totalRowExists: !!cartTotalRow,
-                discountRowDisplayBefore: cartDiscountRow ? cartDiscountRow.style.display : 'no-elem',
-            });
-        } catch (e) {}
-
         // Toggle via inline `display` because `[hidden]` is outranked
         // by the row's `flex` class in CSS specificity, which would
         // leave the row visible with stale placeholder text even when

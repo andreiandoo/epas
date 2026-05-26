@@ -53,7 +53,7 @@ const CartPage = {
                 }
             }
         } catch (e) {
-            console.log('Using default taxes from config');
+            // Falls back to empty taxes array below
         }
 
         // Fallback - no hardcoded taxes, they come from DB via cart items
@@ -139,14 +139,11 @@ const CartPage = {
             // Check if this item has held seats
             if (item.seat_uids && item.seat_uids.length > 0 && item.event_seating_id) {
                 try {
-                    console.log('[CartPage] Releasing seats for item:', item.key, item.seat_uids);
                     await AmbiletAPI.delete('/cart/seats', {
                         event_seating_id: item.event_seating_id,
                         seat_uids: item.seat_uids
                     });
-                    console.log('[CartPage] Seats released successfully');
                 } catch (error) {
-                    console.error('[CartPage] Failed to release seats:', error);
                     // Continue even if release fails - cleanup job will handle it
                 }
             }
@@ -155,10 +152,6 @@ const CartPage = {
 
     render() {
         const items = AmbiletCart.getItems();
-        console.log('[CartPage] Cart items:', items);
-        console.log('[CartPage] First item:', items[0]);
-        console.log('[CartPage] Taxes from cart:', items[0]?.event?.taxes);
-        console.log('[CartPage] CartPage.taxes:', this.taxes);
 
         const loading = document.getElementById('cart-loading');
         const container = document.getElementById('cartPageItems');
@@ -185,24 +178,11 @@ const CartPage = {
         timerBar.classList.remove('hidden');
 
         try {
-            console.log('[CartPage] About to render items, count:', items.length);
-            console.log('[CartPage] Container element:', container);
-            console.log('[CartPage] Container classList before:', container.className);
-
-            const html = items.map((item, index) => {
-                console.log('[CartPage] Rendering item', index, ':', item);
-                return this.renderCartItem(item, index);
-            }).join('');
-            console.log('[CartPage] Generated HTML length:', html.length);
-            console.log('[CartPage] First 500 chars of HTML:', html.substring(0, 500));
+            const html = items.map((item, index) => this.renderCartItem(item, index)).join('');
             container.innerHTML = html;
-            console.log('[CartPage] Items rendered to container');
-            console.log('[CartPage] Container classList after:', container.className);
-            console.log('[CartPage] Container children count:', container.children.length);
-            console.log('[CartPage] Container display style:', window.getComputedStyle(container).display);
             this.updateSummary();
         } catch (error) {
-            console.error('[CartPage] Error rendering items:', error);
+            // Render failed — leave container as-is, user can retry
         }
     },
 
@@ -414,15 +394,12 @@ const CartPage = {
         // Release seats if this item has them
         if (item && item.seat_uids && item.seat_uids.length > 0 && item.event_seating_id) {
             try {
-                console.log('[CartPage] Releasing seats for removed item:', item.seat_uids);
                 await AmbiletAPI.delete('/cart/seats', {
                     event_seating_id: item.event_seating_id,
                     seat_uids: item.seat_uids
                 });
-                console.log('[CartPage] Seats released successfully');
             } catch (error) {
-                console.error('[CartPage] Failed to release seats:', error);
-                // Continue with removal even if API fails
+                // Continue with removal even if API fails — cleanup job handles
             }
         }
 
@@ -759,7 +736,6 @@ document.addEventListener('DOMContentLoaded', () => CartPage.init());
 
 // Listen for cart expiration event from cart.js
 window.addEventListener('ambilet:cart:expired', () => {
-    console.log('[CartPage] Cart expired event received');
     if (CartPage.timerInterval) {
         clearInterval(CartPage.timerInterval);
     }
