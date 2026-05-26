@@ -518,19 +518,53 @@
 
         var promo = null;
         var promoDiscount = 0;
-        if (window.AmbiletCart) {
+        // Read promo directly from localStorage as a safety net — the
+        // AmbiletCart accessor MAY return null transiently if the cart
+        // script hasn't finished initialising (header.js is loaded
+        // BEFORE cart.js in document order, and defer runs in order, so
+        // on the very first updateCartUI tick window.AmbiletCart is
+        // undefined). Fall back to raw storage so the drawer still
+        // reflects the applied code even on that first paint.
+        try {
+            var storedPromo = localStorage.getItem('ambilet_cart_promo');
+            if (storedPromo) promo = JSON.parse(storedPromo);
+        } catch (e) { promo = null; }
+
+        if (window.AmbiletCart && typeof window.AmbiletCart.getPromoDiscount === 'function') {
             try {
-                promo = typeof window.AmbiletCart.getPromoCode === 'function'
-                    ? window.AmbiletCart.getPromoCode()
-                    : null;
-                promoDiscount = typeof window.AmbiletCart.getPromoDiscount === 'function'
-                    ? window.AmbiletCart.getPromoDiscount()
-                    : 0;
+                promoDiscount = window.AmbiletCart.getPromoDiscount() || 0;
             } catch (e) { /* ignore */ }
+        }
+        // Fallback amount: if AmbiletCart not ready yet, derive from the
+        // stored promo + the drawer-computed subtotal so we still get a
+        // sensible value on the first paint.
+        if (promoDiscount === 0 && promo) {
+            if (promo.discountAmount != null) {
+                promoDiscount = parseFloat(promo.discountAmount) || 0;
+            } else if (promo.type === 'percentage' && promo.value) {
+                promoDiscount = subtotal * (parseFloat(promo.value) / 100);
+            }
         }
         // Defensive clamp — never let the displayed discount wipe out
         // more than the subtotal even if a snapshot is stale.
         if (promoDiscount > subtotal) promoDiscount = subtotal;
+
+        // TEMP DEBUG — remove once user confirms the drawer shows the
+        // discount/total rows on /finalizare. Logs the exact state seen
+        // by updateCartUI so we can tell if it's a DOM-missing issue or
+        // a data-missing issue.
+        try {
+            console.log('[CartDrawer] updateCartUI state:', {
+                items: items.length,
+                subtotal: subtotal,
+                promo: promo,
+                promoDiscount: promoDiscount,
+                ambiletCartLoaded: !!window.AmbiletCart,
+                discountRowExists: !!cartDiscountRow,
+                totalRowExists: !!cartTotalRow,
+                discountRowDisplayBefore: cartDiscountRow ? cartDiscountRow.style.display : 'no-elem',
+            });
+        } catch (e) {}
 
         // Toggle via inline `display` because `[hidden]` is outranked
         // by the row's `flex` class in CSS specificity, which would
