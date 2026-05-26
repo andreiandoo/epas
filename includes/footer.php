@@ -23,33 +23,32 @@ $footerExtraJs = $footerExtraJs ?? [];
 $extraBodyEnd = $extraBodyEnd ?? '';
 $hideCookieBanner = $hideCookieBanner ?? false;
 
-// Footer categories — pull top-level (parent_id IS NULL) from the marketplace
-// API. Cached 10 min. Falls back to a static list if the API is unavailable
-// so the footer never breaks even in degraded mode.
+// Footer categories — pull from the venue-categories endpoint so the footer
+// reflects what we actually surface on the homepage. Cached 10 min. Falls
+// back to a static list if the API is unavailable so the footer never breaks.
 if (! isset($footerCategories)) {
     if (! function_exists('api_cached')) {
         require_once __DIR__ . '/api.php';
     }
-    $resp = api_cached('footer_top_categories', fn () => api_get('/events/categories', ['parent_only' => 1, 'per_page' => 8]), 600);
-    $rows = $resp['data'] ?? [];
+    $resp = api_cached('footer_venue_categories', fn () => api_get('/venue-categories'), 600);
+    $rows = $resp['data']['categories'] ?? [];
     $footerCategories = [];
     foreach ((is_array($rows) ? $rows : []) as $c) {
-        if (! empty($c['parent_id'])) continue;
         $footerCategories[] = [
             'label' => $c['name'] ?? $c['slug'] ?? '',
-            'href'  => '/' . ($c['slug'] ?? ''),
+            'href'  => '/locatii?categorie=' . ($c['slug'] ?? ''),
         ];
         if (count($footerCategories) >= 6) break;
     }
     if (empty($footerCategories)) {
         // Fallback when API unreachable — keeps the footer rendering.
         $footerCategories = [
-            ['label' => 'Escape rooms',         'href' => '/escape-rooms'],
-            ['label' => 'Parcuri de distracții','href' => '/parcuri-de-distractii'],
-            ['label' => 'Muzee & expoziții',    'href' => '/muzee-expozitii'],
-            ['label' => 'Parcuri de aventură',  'href' => '/parcuri-de-aventura'],
-            ['label' => 'Acvarii & grădini zoo','href' => '/acvarii-zoo-animale'],
-            ['label' => 'Ateliere & experiențe','href' => '/ateliere-experiente-creative'],
+            ['label' => 'Locații indoor',  'href' => '/locatii'],
+            ['label' => 'Locații outdoor', 'href' => '/locatii'],
+            ['label' => 'Muzee',           'href' => '/locatii'],
+            ['label' => 'Parcuri',         'href' => '/locatii'],
+            ['label' => 'Peșteri',         'href' => '/locatii'],
+            ['label' => 'Centre agrement', 'href' => '/locatii'],
         ];
     }
 }
