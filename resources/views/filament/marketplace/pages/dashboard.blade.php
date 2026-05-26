@@ -186,7 +186,7 @@
                 </div>
                 <div class="p-4 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
                     <p class="text-xs text-gray-500 dark:text-gray-400">Încasări azi</p>
-                    <p class="mt-1 text-2xl font-bold text-indigo-600 dark:text-indigo-400">{{ number_format($todayStats['revenue'], 0) }} <span class="text-sm font-normal text-gray-400">RON</span></p>
+                    <p class="mt-1 text-2xl font-bold text-indigo-600 dark:text-indigo-400">{{ number_format($todayStats['revenue'], 2) }} <span class="text-sm font-normal text-gray-400">RON</span></p>
                 </div>
                 <div class="p-4 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
                     <p class="text-xs text-gray-500 dark:text-gray-400">Bilete vândute</p>
@@ -211,7 +211,7 @@
             <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
                 <h3 class="flex items-center gap-2 text-sm font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-400">
                     <x-heroicon-o-calendar-days class="w-4 h-4" />
-                    Raport vânzări pe zi (per eveniment)
+                    Raport vânzări pe zi
                 </h3>
                 <div class="flex items-center gap-2">
                     <label for="dailyReportDate" class="text-xs text-gray-500 dark:text-gray-400">Ziua:</label>
@@ -226,46 +226,57 @@
                 </div>
             </div>
 
-            <div class="overflow-x-auto bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700" wire:key="daily-report-{{ $dailyReportDate }}">
-                <table class="w-full text-xs">
-                    <thead class="bg-gray-50 dark:bg-gray-900/50">
-                        <tr class="text-left text-gray-500 dark:text-gray-400">
-                            <th class="px-3 py-2 font-medium">Eveniment</th>
-                            <th class="px-3 py-2 font-medium">Data eveniment</th>
-                            <th class="px-3 py-2 font-medium">Locație</th>
-                            <th class="px-3 py-2 font-medium text-right whitespace-nowrap" title="Comenzi în ziua selectată">Cmd. zi</th>
-                            <th class="px-3 py-2 font-medium text-right whitespace-nowrap" title="Bilete în ziua selectată">Bil. zi</th>
-                            <th class="px-3 py-2 font-medium text-right whitespace-nowrap" title="Vânzări în ziua selectată">Vânz. zi</th>
-                            <th class="px-3 py-2 font-medium text-right whitespace-nowrap" title="Comisioane în ziua selectată">Com. zi</th>
-                            <th class="px-3 py-2 font-medium text-right whitespace-nowrap border-l border-gray-200 dark:border-gray-700" title="Total comenzi all-time">Cmd. total</th>
-                            <th class="px-3 py-2 font-medium text-right whitespace-nowrap" title="Total bilete all-time">Bil. total</th>
-                            <th class="px-3 py-2 font-medium text-right whitespace-nowrap" title="Total vânzări all-time">Vânz. total</th>
-                            <th class="px-3 py-2 font-medium text-right whitespace-nowrap" title="Total comisioane all-time">Com. total</th>
+            <div class="overflow-auto max-h-[70vh] bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700" wire:key="daily-report-{{ $dailyReportDate }}">
+                <table class="w-full text-xs border-separate border-spacing-0">
+                    <thead class="text-gray-500 dark:text-gray-400">
+                        {{-- Group row — each th individually sticky for cross-browser reliability --}}
+                        <tr>
+                            <th rowspan="2" style="position: sticky; top: 0; z-index: 20;" class="px-3 py-2 font-medium text-left bg-gray-100 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">Eveniment</th>
+                            <th rowspan="2" style="position: sticky; top: 0; z-index: 20;" class="px-3 py-2 font-medium text-left bg-gray-100 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">Locație</th>
+                            <th colspan="4" style="position: sticky; top: 0; z-index: 20;" class="px-3 py-2 font-semibold text-center text-indigo-700 dark:text-indigo-300 bg-indigo-100 dark:bg-indigo-900/60 border-b border-l border-gray-200 dark:border-gray-700">Azi</th>
+                            <th colspan="4" style="position: sticky; top: 0; z-index: 20;" class="px-3 py-2 font-semibold text-center text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-900/60 border-b border-l border-gray-200 dark:border-gray-700">Total</th>
+                        </tr>
+                        {{-- Sub-header row — sticky just under the group row --}}
+                        <tr>
+                            <th style="position: sticky; top: 34px; z-index: 10;" class="px-3 py-2 font-medium text-right whitespace-nowrap bg-indigo-50 dark:bg-indigo-950/50 border-b border-l border-gray-200 dark:border-gray-700">Cmd.</th>
+                            <th style="position: sticky; top: 34px; z-index: 10;" class="px-3 py-2 font-medium text-right whitespace-nowrap bg-indigo-50 dark:bg-indigo-950/50 border-b border-gray-200 dark:border-gray-700">Bilete</th>
+                            <th style="position: sticky; top: 34px; z-index: 10;" class="px-3 py-2 font-medium text-right whitespace-nowrap bg-indigo-50 dark:bg-indigo-950/50 border-b border-gray-200 dark:border-gray-700">Vânzări</th>
+                            <th style="position: sticky; top: 34px; z-index: 10;" class="px-3 py-2 font-medium text-right whitespace-nowrap bg-indigo-50 dark:bg-indigo-950/50 border-b border-gray-200 dark:border-gray-700">Comisioane</th>
+                            <th style="position: sticky; top: 34px; z-index: 10;" class="px-3 py-2 font-medium text-right whitespace-nowrap bg-emerald-50 dark:bg-emerald-950/50 border-b border-l border-gray-200 dark:border-gray-700">Cmd.</th>
+                            <th style="position: sticky; top: 34px; z-index: 10;" class="px-3 py-2 font-medium text-right whitespace-nowrap bg-emerald-50 dark:bg-emerald-950/50 border-b border-gray-200 dark:border-gray-700">Bilete</th>
+                            <th style="position: sticky; top: 34px; z-index: 10;" class="px-3 py-2 font-medium text-right whitespace-nowrap bg-emerald-50 dark:bg-emerald-950/50 border-b border-gray-200 dark:border-gray-700">Vânzări</th>
+                            <th style="position: sticky; top: 34px; z-index: 10;" class="px-3 py-2 font-medium text-right whitespace-nowrap bg-emerald-50 dark:bg-emerald-950/50 border-b border-gray-200 dark:border-gray-700">Comisioane</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                    <tbody>
                         @forelse($dailyEventReport as $row)
-                            <tr class="text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-900/30">
-                                <td class="px-3 py-2 font-medium text-gray-900 dark:text-white">{{ $row['event_name'] }}</td>
-                                <td class="px-3 py-2 whitespace-nowrap text-gray-500 dark:text-gray-400">{{ $row['event_date_label'] }}</td>
-                                <td class="px-3 py-2">
+                            <tr class="text-gray-700 dark:text-gray-300 transition-colors hover:bg-indigo-50 dark:hover:bg-gray-700/60">
+                                <td class="px-3 py-2 max-w-[300px] border-b border-gray-100 dark:border-gray-700">
+                                    <a href="{{ $row['event_edit_url'] }}" target="_blank"
+                                       class="block truncate text-gray-900 dark:text-white hover:text-indigo-600 dark:hover:text-indigo-400 hover:underline"
+                                       title="{{ $row['event_name'] }} ({{ $row['event_date_label'] }})">
+                                        <span class="font-medium">{{ $row['event_name'] }}</span>
+                                        <span class="font-normal text-gray-400 dark:text-gray-500 text-[11px]">({{ $row['event_date_label'] }})</span>
+                                    </a>
+                                </td>
+                                <td class="px-3 py-2 border-b border-gray-100 dark:border-gray-700">
                                     <div class="text-gray-900 dark:text-gray-100">{{ $row['venue_name'] }}</div>
                                     @if($row['venue_city'])
-                                        <div class="text-[10px] text-gray-400">{{ $row['venue_city'] }}</div>
+                                        <div class="text-[10px] text-gray-400 dark:text-gray-500">{{ $row['venue_city'] }}</div>
                                     @endif
                                 </td>
-                                <td class="px-3 py-2 text-right tabular-nums">{{ number_format($row['orders_day']) }}</td>
-                                <td class="px-3 py-2 text-right tabular-nums">{{ number_format($row['tickets_day']) }}</td>
-                                <td class="px-3 py-2 text-right tabular-nums font-semibold text-indigo-600 dark:text-indigo-400">{{ number_format($row['sales_day'], 2) }}</td>
-                                <td class="px-3 py-2 text-right tabular-nums font-semibold text-emerald-600 dark:text-emerald-400">{{ number_format($row['commission_day'], 2) }}</td>
-                                <td class="px-3 py-2 text-right tabular-nums border-l border-gray-200 dark:border-gray-700 text-gray-500">{{ number_format($row['orders_total']) }}</td>
-                                <td class="px-3 py-2 text-right tabular-nums text-gray-500">{{ number_format($row['tickets_total']) }}</td>
-                                <td class="px-3 py-2 text-right tabular-nums text-gray-500">{{ number_format($row['sales_total'], 2) }}</td>
-                                <td class="px-3 py-2 text-right tabular-nums text-gray-500">{{ number_format($row['commission_total'], 2) }}</td>
+                                <td class="px-3 py-2 text-right tabular-nums border-b border-l border-gray-100 dark:border-gray-700">{{ number_format($row['orders_day']) }}</td>
+                                <td class="px-3 py-2 text-right tabular-nums border-b border-gray-100 dark:border-gray-700">{{ number_format($row['tickets_day']) }}</td>
+                                <td class="px-3 py-2 text-right tabular-nums font-semibold text-indigo-600 dark:text-indigo-400 border-b border-gray-100 dark:border-gray-700">{{ number_format($row['sales_day'], 2) }}</td>
+                                <td class="px-3 py-2 text-right tabular-nums font-semibold text-emerald-600 dark:text-emerald-400 border-b border-gray-100 dark:border-gray-700">{{ number_format($row['commission_day'], 2) }}</td>
+                                <td class="px-3 py-2 text-right tabular-nums text-gray-600 dark:text-gray-400 border-b border-l border-gray-100 dark:border-gray-700">{{ number_format($row['orders_total']) }}</td>
+                                <td class="px-3 py-2 text-right tabular-nums text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{{ number_format($row['tickets_total']) }}</td>
+                                <td class="px-3 py-2 text-right tabular-nums font-bold text-gray-900 dark:text-white border-b border-gray-100 dark:border-gray-700">{{ number_format($row['sales_total'], 2) }}</td>
+                                <td class="px-3 py-2 text-right tabular-nums font-bold text-gray-900 dark:text-white border-b border-gray-100 dark:border-gray-700">{{ number_format($row['commission_total'], 2) }}</td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="11" class="px-3 py-6 text-center text-gray-400 dark:text-gray-500">
+                                <td colspan="10" class="px-3 py-6 text-center text-gray-400 dark:text-gray-500 border-b border-gray-100 dark:border-gray-700">
                                     Nicio vânzare în ziua selectată.
                                 </td>
                             </tr>
@@ -282,17 +293,17 @@
                             $sumSalesTotal = array_sum(array_column($dailyEventReport, 'sales_total'));
                             $sumCommissionTotal = array_sum(array_column($dailyEventReport, 'commission_total'));
                         @endphp
-                        <tfoot class="bg-gray-50 dark:bg-gray-900/50">
+                        <tfoot class="bg-gray-50 dark:bg-gray-900/80">
                             <tr class="font-semibold text-gray-900 dark:text-white">
-                                <td colspan="3" class="px-3 py-2 text-right text-gray-500 dark:text-gray-400">Total ({{ count($dailyEventReport) }} {{ count($dailyEventReport) === 1 ? 'eveniment' : 'evenimente' }}):</td>
-                                <td class="px-3 py-2 text-right tabular-nums">{{ number_format($sumOrdersDay) }}</td>
+                                <td colspan="2" class="px-3 py-2 text-right text-gray-500 dark:text-gray-400">Total ({{ count($dailyEventReport) }} {{ count($dailyEventReport) === 1 ? 'eveniment' : 'evenimente' }}):</td>
+                                <td class="px-3 py-2 text-right tabular-nums border-l border-gray-200 dark:border-gray-700">{{ number_format($sumOrdersDay) }}</td>
                                 <td class="px-3 py-2 text-right tabular-nums">{{ number_format($sumTicketsDay) }}</td>
                                 <td class="px-3 py-2 text-right tabular-nums text-indigo-600 dark:text-indigo-400">{{ number_format($sumSalesDay, 2) }}</td>
                                 <td class="px-3 py-2 text-right tabular-nums text-emerald-600 dark:text-emerald-400">{{ number_format($sumCommissionDay, 2) }}</td>
                                 <td class="px-3 py-2 text-right tabular-nums border-l border-gray-200 dark:border-gray-700">{{ number_format($sumOrdersTotal) }}</td>
                                 <td class="px-3 py-2 text-right tabular-nums">{{ number_format($sumTicketsTotal) }}</td>
-                                <td class="px-3 py-2 text-right tabular-nums">{{ number_format($sumSalesTotal, 2) }}</td>
-                                <td class="px-3 py-2 text-right tabular-nums">{{ number_format($sumCommissionTotal, 2) }}</td>
+                                <td class="px-3 py-2 text-right tabular-nums font-bold">{{ number_format($sumSalesTotal, 2) }}</td>
+                                <td class="px-3 py-2 text-right tabular-nums font-bold">{{ number_format($sumCommissionTotal, 2) }}</td>
                             </tr>
                         </tfoot>
                     @endif

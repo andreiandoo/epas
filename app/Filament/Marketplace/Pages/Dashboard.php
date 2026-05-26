@@ -237,7 +237,7 @@ class Dashboard extends Page
             $isToday = $reqDate === $maxDate;
             $ttl = $isToday ? 60 : 900;
             $dailyEventReport = Cache::remember(
-                "mp_dash_daily_evt_{$marketplaceId}_{$reqDate}",
+                "mp_dash_daily_evt_v2_{$marketplaceId}_{$reqDate}",
                 $ttl,
                 fn () => $this->computeDailyEventReport($marketplaceId, $reqDate)
             );
@@ -981,6 +981,7 @@ class Dashboard extends Page
             $rows[] = [
                 'event_id' => $eid,
                 'event_name' => $event->getTranslation('title', 'ro') ?: $event->getTranslation('title', 'en') ?: '-',
+                'event_edit_url' => \App\Filament\Marketplace\Resources\EventResource::getUrl('edit', ['record' => $eid]),
                 'event_date' => $displayDate?->format('Y-m-d'),
                 'event_date_label' => $displayDate?->translatedFormat('d M Y') ?? '-',
                 'venue_name' => $venueName,
