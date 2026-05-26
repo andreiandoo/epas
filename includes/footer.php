@@ -23,14 +23,36 @@ $footerExtraJs = $footerExtraJs ?? [];
 $extraBodyEnd = $extraBodyEnd ?? '';
 $hideCookieBanner = $hideCookieBanner ?? false;
 
-$footerCategories = $footerCategories ?? [
-    ['label' => 'Escape rooms',         'href' => '/escape-rooms'],
-    ['label' => 'Parcuri de distracții','href' => '/parcuri-de-distractii'],
-    ['label' => 'Muzee & expoziții',    'href' => '/muzee'],
-    ['label' => 'Parcuri de aventură',  'href' => '/parcuri-aventura'],
-    ['label' => 'Acvarii & grădini zoo','href' => '/acvarii-zoo'],
-    ['label' => 'Experiențe & ateliere','href' => '/experiente'],
-];
+// Footer categories — pull top-level (parent_id IS NULL) from the marketplace
+// API. Cached 10 min. Falls back to a static list if the API is unavailable
+// so the footer never breaks even in degraded mode.
+if (! isset($footerCategories)) {
+    if (! function_exists('api_cached')) {
+        require_once __DIR__ . '/api.php';
+    }
+    $resp = api_cached('footer_top_categories', fn () => api_get('/events/categories', ['parent_only' => 1, 'per_page' => 8]), 600);
+    $rows = $resp['data'] ?? [];
+    $footerCategories = [];
+    foreach ((is_array($rows) ? $rows : []) as $c) {
+        if (! empty($c['parent_id'])) continue;
+        $footerCategories[] = [
+            'label' => $c['name'] ?? $c['slug'] ?? '',
+            'href'  => '/' . ($c['slug'] ?? ''),
+        ];
+        if (count($footerCategories) >= 6) break;
+    }
+    if (empty($footerCategories)) {
+        // Fallback when API unreachable — keeps the footer rendering.
+        $footerCategories = [
+            ['label' => 'Escape rooms',         'href' => '/escape-rooms'],
+            ['label' => 'Parcuri de distracții','href' => '/parcuri-de-distractii'],
+            ['label' => 'Muzee & expoziții',    'href' => '/muzee-expozitii'],
+            ['label' => 'Parcuri de aventură',  'href' => '/parcuri-de-aventura'],
+            ['label' => 'Acvarii & grădini zoo','href' => '/acvarii-zoo-animale'],
+            ['label' => 'Ateliere & experiențe','href' => '/ateliere-experiente-creative'],
+        ];
+    }
+}
 
 $footerCities = $footerCities ?? [
     ['label' => 'București',    'href' => '/bucuresti'],

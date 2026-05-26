@@ -135,7 +135,17 @@ $bookingBootstrap = [
 ];
 
 // Pre-render related/similar cards as PHP (cleaner than Alpine x-for for server-side data).
-$related = $activity['related'] ?? [];
+// Merge admin-managed cross-sell (Conexiuni tab) with auto recommendations
+// (same organizer → same city+category → same city). Dedupe by id, cap at 6.
+$relatedRaw = array_merge($activity['related'] ?? [], $activity['recommended'] ?? []);
+$seen = [];
+$related = [];
+foreach ($relatedRaw as $card) {
+    if (! isset($card['id']) || isset($seen[$card['id']])) continue;
+    $seen[$card['id']] = true;
+    $related[] = $card;
+    if (count($related) >= 6) break;
+}
 
 include __DIR__ . '/includes/head.php';
 include __DIR__ . '/includes/header.php';
