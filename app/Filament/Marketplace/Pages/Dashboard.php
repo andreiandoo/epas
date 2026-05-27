@@ -302,7 +302,11 @@ class Dashboard extends Page
                         $sub->select('id')->from('events')->where('marketplace_client_id', $marketplaceId);
                     });
             })
-            ->whereNotIn('source', ['test_order', 'external_import', 'legacy_import'])
+            // All Time cards are lifetime cumulative totals — they DO count
+            // legacy_import (orders migrated from the previous system) so the
+            // figures reflect the full history. Only the period/sales views
+            // (daily report + Vânzări chart) exclude legacy_import.
+            ->whereNotIn('source', ['test_order', 'external_import'])
             ->selectRaw('COUNT(*) as total')
             ->selectRaw("SUM(CASE WHEN DATE(created_at) = ? THEN 1 ELSE 0 END) as today", [today()->toDateString()])
             ->selectRaw("SUM(CASE WHEN status IN ('paid','confirmed','completed') THEN 1 ELSE 0 END) as paid")
@@ -410,7 +414,10 @@ class Dashboard extends Page
                       ->orWhereIn('event_id', $liveEventIds);
                 })
                 ->whereIn('status', $paidStatuses)
-                ->whereNotIn('source', ['test_order', 'external_import', 'legacy_import'])
+                // Top-live-events revenue: live (current/upcoming) events have
+                // no legacy_import orders attached, so this matches the All
+                // Time treatment — leave legacy in for consistency.
+                ->whereNotIn('source', ['test_order', 'external_import'])
                 ->selectRaw('COALESCE(marketplace_event_id, event_id) as eid, SUM(total) as rev')
                 ->groupBy('eid')
                 ->pluck('rev', 'eid');
