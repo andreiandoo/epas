@@ -62,7 +62,7 @@ RewriteRule ^evenimente-trecute/?$ past-events.php [L,QSA]
 # Venues / locations
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^locatii/?$ venues.php [L]
+RewriteRule ^locatii/?$ locatii.php [L]
 
 # Venue type pages
 RewriteCond %{REQUEST_FILENAME} !-f
@@ -71,7 +71,7 @@ RewriteRule ^locatii/([a-z0-9-]+)/?$ venue-type.php?type=$1 [L,QSA]
 
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^locatie/([a-z0-9-]+)/?$ venue-single.php?slug=$1 [L,QSA]
+RewriteRule ^locatie/([a-z0-9-]+)/?$ locatie.php?slug=$1 [L,QSA]
 
 # Legacy: redirect /venues to /locatii
 RewriteRule ^venues/?$ /locatii [R=301,L,QSA]
@@ -79,7 +79,7 @@ RewriteRule ^venues/?$ /locatii [R=301,L,QSA]
 # Cities / regions
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^orase/?$ cities.php [L]
+RewriteRule ^orase/?$ orase.php [L]
 
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
@@ -391,11 +391,21 @@ RewriteRule ^plata/([A-Za-z0-9-]+)/?$ payment-redirect.php?order=$1 [L,QSA]
 
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^autentificare/?$ login.php [L]
+RewriteRule ^autentificare/?$ login.php [L,QSA]
+
+# /login alias used by the v2 template's canonical URL
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^login/?$ login.php [L,QSA]
 
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^inregistrare/?$ register.php [L]
+RewriteRule ^inregistrare/?$ register.php [L,QSA]
+
+# /register alias for parity with /login
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^register/?$ register.php [L,QSA]
 
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
@@ -509,7 +519,15 @@ RewriteRule ^calendar/?$ events-calendar.php [L]
 
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^intrebari/?$ faq.php [L]
+RewriteRule ^intrebari/?$ ajutor.php [L,QSA]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^faqs/?$ ajutor.php [L,QSA]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^faq/?$ ajutor.php [L,QSA]
 
 # Search
 RewriteCond %{REQUEST_FILENAME} !-f
@@ -534,7 +552,7 @@ RewriteRule ^ajutor/([a-z0-9-]+)/?$ ajutor-categorie.php?slug=$1 [L,QSA]
 
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^ajutor/?$ help-center.php [L]
+RewriteRule ^ajutor/?$ ajutor.php [L,QSA]
 
 # ============================================
 # SHARE LINK VIEW - /view/{code}
