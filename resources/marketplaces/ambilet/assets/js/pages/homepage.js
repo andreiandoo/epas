@@ -195,6 +195,20 @@ const CityEventsFilter = {
     cities: [],
     selectedCity: '',
 
+    // Fold Romanian diacritics + lowercase so "București" and "Bucuresti"
+    // collapse to the same key. NFD decomposes ă/â/î/ș/ş/ț/ţ into base
+    // letter + combining mark; the regex strips the marks. Mirrors the
+    // backend normalizeCityKey() in MarketplaceEventsController::cities.
+    foldCity(str) {
+        return (str || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+    },
+
+    // Count diacritic marks so we can prefer the properly-spelled variant
+    // ("București" → 1) over the stripped one ("Bucuresti" → 0) for display.
+    countDiacritics(str) {
+        return ((str || '').normalize('NFD').match(/[̀-ͯ]/g) || []).length;
+    },
+
     async init() {
         // Load events first, then extract cities from them
         await this.loadEvents();
@@ -223,17 +237,27 @@ const CityEventsFilter = {
             const cityName = event.venue_city || event.venue?.city || '';
             if (!cityName) return;
 
-            // Normalize city name for deduplication
-            const normalizedKey = cityName.toLowerCase().trim();
+            // Deduplicate diacritic-insensitively: "București" and
+            // "Bucuresti" share the same folded key, so they collapse
+            // into a single button.
+            const key = this.foldCity(cityName);
+            if (!key) return;
 
-            if (!cityMap.has(normalizedKey)) {
-                cityMap.set(normalizedKey, {
-                    name: cityName,
-                    slug: normalizedKey.replace(/\s+/g, '-'),
+            if (!cityMap.has(key)) {
+                cityMap.set(key, {
+                    name: cityName.trim(),
+                    key: key,
+                    slug: key.replace(/\s+/g, '-'),
                     count: 1
                 });
             } else {
-                cityMap.get(normalizedKey).count++;
+                const entry = cityMap.get(key);
+                entry.count++;
+                // Prefer the properly-spelled variant (with diacritics)
+                // as the visible label.
+                if (this.countDiacritics(cityName) > this.countDiacritics(entry.name)) {
+                    entry.name = cityName.trim();
+                }
             }
         });
 
@@ -247,9 +271,10 @@ const CityEventsFilter = {
         const container = document.getElementById('cityFilterButtons');
         if (!container) return;
 
-        // Keep "Toate" button, add city buttons
+        // Keep "Toate" button, add city buttons. data-city carries the
+        // folded key (used for matching), the label shows the nice name.
         const cityButtons = this.cities.map(city =>
-            '<button class="px-4 py-2 text-sm font-semibold transition-all rounded-full city-filter-btn" data-city="' + city.name + '">' +
+            '<button class="px-4 py-2 text-sm font-semibold transition-all rounded-full city-filter-btn" data-city="' + city.key + '">' +
                 city.name +
             '</button>'
         ).join('');
@@ -281,13 +306,15 @@ const CityEventsFilter = {
         const container = document.getElementById('cityEventsGrid');
         if (!container) return;
 
-        // Filter events by city if selected
+        // Filter events by city if selected. selectedCity is already the
+        // folded key, so fold each event's city the same way — this makes
+        // a "București" button match events stored as "Bucuresti" too.
         let events = this.allEvents;
         if (this.selectedCity) {
-            const selectedCityLower = this.selectedCity.toLowerCase().trim();
+            const selectedKey = this.foldCity(this.selectedCity);
             events = this.allEvents.filter(event => {
-                const eventCity = (event.venue_city || event.venue?.city || '').toLowerCase().trim();
-                return eventCity === selectedCityLower;
+                const eventKey = this.foldCity(event.venue_city || event.venue?.city || '');
+                return eventKey === selectedKey;
             });
         }
 
