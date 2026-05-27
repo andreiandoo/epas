@@ -302,7 +302,7 @@ class Dashboard extends Page
                         $sub->select('id')->from('events')->where('marketplace_client_id', $marketplaceId);
                     });
             })
-            ->whereNotIn('source', ['test_order', 'external_import'])
+            ->whereNotIn('source', ['test_order', 'external_import', 'legacy_import'])
             ->selectRaw('COUNT(*) as total')
             ->selectRaw("SUM(CASE WHEN DATE(created_at) = ? THEN 1 ELSE 0 END) as today", [today()->toDateString()])
             ->selectRaw("SUM(CASE WHEN status IN ('paid','confirmed','completed') THEN 1 ELSE 0 END) as paid")
@@ -410,7 +410,7 @@ class Dashboard extends Page
                       ->orWhereIn('event_id', $liveEventIds);
                 })
                 ->whereIn('status', $paidStatuses)
-                ->whereNotIn('source', ['test_order', 'external_import'])
+                ->whereNotIn('source', ['test_order', 'external_import', 'legacy_import'])
                 ->selectRaw('COALESCE(marketplace_event_id, event_id) as eid, SUM(total) as rev')
                 ->groupBy('eid')
                 ->pluck('rev', 'eid');
@@ -465,7 +465,7 @@ class Dashboard extends Page
         $tz = 'Europe/Bucharest';
         $dailySales = Order::where('marketplace_client_id', $marketplaceId)
             ->whereIn('status', ['paid', 'confirmed', 'completed'])
-            ->whereNotIn('source', ['test_order', 'external_import'])
+            ->whereNotIn('source', ['test_order', 'external_import', 'legacy_import'])
             ->whereBetween('created_at', [$startDate, $endDate])
             ->selectRaw("DATE(created_at AT TIME ZONE 'UTC' AT TIME ZONE '{$tz}') as date, SUM(total) as total")
             ->groupBy('date')
