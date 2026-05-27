@@ -51,12 +51,12 @@ include __DIR__ . '/includes/header.php';
         <article class="rounded-3xl border-2 border-ink bg-paper p-6">
             <p class="font-mono text-xs tracking-[.18em] text-vermilion">NECESARE</p>
             <h2 class="mt-3 font-display text-3xl font-bold">Esențiale</h2>
-            <p class="mt-2 text-ink-soft">Coș, checkout, login, sesiune, securitate, memorarea consimțământului. Mereu active.</p>
+            <p class="mt-2 text-ink-soft">Coș, checkout, login, sesiune, securitate, memorarea consimțământului și măsurare de audiență first-party strict agregată. Mereu active.</p>
         </article>
         <article class="rounded-3xl border-2 border-ink/15 bg-paper-2/70 p-6">
             <p class="font-mono text-xs tracking-[.18em] text-vermilion">MĂSURARE</p>
             <h2 class="mt-3 font-display text-3xl font-bold">Analytics</h2>
-            <p class="mt-2 text-ink-soft">Trafic agregat, pași checkout, erori, performanță. Pornite doar cu acordul tău.</p>
+            <p class="mt-2 text-ink-soft">Instrumente terțe (Google Analytics), conversii și erori. Pornite doar cu acordul tău.</p>
         </article>
         <article class="rounded-3xl border-2 border-ink/15 bg-mint p-6">
             <p class="font-mono text-xs tracking-[.18em] text-forest">RECOMANDĂRI</p>
@@ -75,8 +75,8 @@ include __DIR__ . '/includes/header.php';
         <p>Cookies sunt fișiere mici stocate de browser pentru a-ți face experiența online predictibilă: coșul tău rămâne plin, sesiunea de login persistă, preferințele se țin minte.</p>
 
         <h2 class="font-display text-4xl font-bold text-ink mt-10">Categoriile noastre de cookies</h2>
-        <p><strong>Esențiale</strong> — necesare pentru funcționarea platformei (coș, checkout, login, securitate). Aceste cookies nu pot fi dezactivate.</p>
-        <p><strong>Analytics</strong> — ne ajută să măsurăm traficul, conversiile și performanța paginilor. Se activează doar cu acordul tău.</p>
+        <p><strong>Esențiale</strong> — necesare pentru funcționarea platformei (coș, checkout, login, securitate) plus măsurarea de audiență first-party, strict agregată: fără partajare cu terți, fără urmărire cross-site, cu IP anonimizat și retenție limitată. Conform ghidului CNIL privind audience measurement, această măsurare poate fi exceptată de la consimțământ, așa că rămâne mereu activă. Aceste cookies nu pot fi dezactivate.</p>
+        <p><strong>Analytics</strong> — instrumente terțe (de ex. Google Analytics), conversii și rapoarte avansate. Se activează doar cu acordul tău.</p>
         <p><strong>Personalizare</strong> — folosim preferințele tale (orașul, categoriile vizitate) pentru recomandări mai relevante. Opțional.</p>
         <p><strong>Marketing</strong> — pixeli pentru campanii Meta, Google Ads, TikTok și audiențe personalizate. Doar cu accept explicit.</p>
 

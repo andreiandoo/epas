@@ -304,15 +304,21 @@ function faqsPage(data) {
         faqs: data.faqs || [],
         categories: data.categories || [],
         quickChips: data.quickChips || [],
+        norm(s) {
+            return (s || '').toString().toLowerCase().normalize('NFD')
+                .replace(/[̀-ͯ]/g, '')
+                .replace(/[şș]/g, 's').replace(/[ţț]/g, 't')
+                .replace(/[ăâ]/g, 'a').replace(/[î]/g, 'i').trim();
+        },
         currentCategoryTitle() {
             const found = this.categories.find(c => c.key === this.activeCategory);
             return found ? found.label : 'Toate';
         },
         filteredFaqs() {
-            const q = (this.search || '').toLowerCase().trim();
+            const q = this.norm(this.search);
             return this.faqs.filter(f => {
                 const matchesCategory = this.activeCategory === 'all' || f.category === this.activeCategory;
-                const blob = (f.q + ' ' + f.a + ' ' + (f.categoryLabel || '')).toLowerCase();
+                const blob = this.norm(f.q + ' ' + f.a + ' ' + (f.categoryLabel || ''));
                 const matchesSearch = !q || blob.includes(q);
                 return matchesCategory && matchesSearch;
             });

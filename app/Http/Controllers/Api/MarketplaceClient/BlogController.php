@@ -155,6 +155,32 @@ class BlogController extends Controller
             $eventTitle = $this->translate($article->event->title, $lang);
         }
 
+        // Linked activities + FAQs are only needed on the single-article
+        // view ($withContent). Skip them on list responses to avoid an
+        // extra query per card.
+        $activities = [];
+        $faqs = [];
+        if ($withContent) {
+            foreach ($article->linkedActivities() as $activity) {
+                $cents = (int) ($activity->cheapest_price_cents ?? 0);
+                $activities[] = [
+                    'slug'     => $activity->slug,
+                    'title'    => $this->translate($activity->title, $lang),
+                    'url'      => '/activitate/' . $activity->slug,
+                    'image'    => $activity->cover_image_url ?? null,
+                    'price'    => $cents > 0 ? ((int) round($cents / 100)) . ' lei' : null,
+                    'category' => ($activity->category ?? null) ? $this->translate($activity->category->name, $lang) : null,
+                ];
+            }
+            foreach ((is_array($article->faqs) ? $article->faqs : []) as $faq) {
+                $q = trim((string) ($faq['q'] ?? ''));
+                $a = trim((string) ($faq['a'] ?? ''));
+                if ($q !== '' && $a !== '') {
+                    $faqs[] = ['q' => $q, 'a' => $a];
+                }
+            }
+        }
+
         $data = [
             'slug'        => $article->slug,
             'title'       => $this->translate($article->title, $lang),
@@ -177,6 +203,8 @@ class BlogController extends Controller
                 'slug'  => $eventSlug,
                 'title' => $eventTitle ?? '',
             ] : null,
+            'activities'   => $activities,
+            'faqs'         => $faqs,
         ];
 
         if ($withContent) {

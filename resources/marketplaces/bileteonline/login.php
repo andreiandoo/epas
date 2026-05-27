@@ -28,6 +28,7 @@ $cssBundle       = 'auth';
 $preselect    = isset($_GET['ca']) && $_GET['ca'] === 'venue' ? 'venue' : 'client';
 $preselectMode = (isset($_GET['mode']) && $_GET['mode'] === 'register') ? 'register' : 'login';
 $redirectAfter = $_GET['redirect'] ?? '/cont';
+$prefillEmail  = isset($_GET['email']) && filter_var($_GET['email'], FILTER_VALIDATE_EMAIL) ? $_GET['email'] : '';
 
 include __DIR__ . '/includes/head.php';
 include __DIR__ . '/includes/header.php';
@@ -37,6 +38,7 @@ include __DIR__ . '/includes/header.php';
     'accountType'    => $preselect,
     'mode'           => $preselectMode,
     'redirectAfter'  => $redirectAfter,
+    'prefillEmail'   => $prefillEmail,
 ]), ENT_QUOTES) ?>)">
 
 <!-- HERO + form -->
@@ -324,11 +326,11 @@ function authPage(initial) {
         submitting: false,
         message: '',
         messageType: 'error',
-        login: { email: '', password: '', remember: true },
+        login: { email: (initial.prefillEmail || ''), password: '', remember: true },
         register: {
             first_name: '', last_name: '',
             contact_name: '', venue_name: '',
-            email: '', phone: '', city: '',
+            email: (initial.prefillEmail || ''), phone: '', city: '',
             password: '', password_confirmation: '',
             terms: false, newsletter: true,
         },

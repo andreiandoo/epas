@@ -140,6 +140,34 @@ class BlogArticleResource extends Resource
                                             ->columnSpanFull(),
                                     ])->columns(2),
 
+                                // FAQs Section — optional per-guide FAQ list.
+                                // When empty, the public guide page renders a
+                                // fallback FAQ set from the template.
+                                SC\Section::make('Întrebări frecvente (FAQ)')
+                                    ->description('Opțional. Dacă lași gol, ghidul afișează un set FAQ de fallback. Apar și ca FAQPage JSON-LD pentru SEO.')
+                                    ->collapsed()
+                                    ->schema([
+                                        Forms\Components\Repeater::make('faqs')
+                                            ->label('')
+                                            ->schema([
+                                                Forms\Components\TextInput::make('q')
+                                                    ->label('Întrebare')
+                                                    ->required()
+                                                    ->maxLength(255)
+                                                    ->columnSpanFull(),
+                                                Forms\Components\Textarea::make('a')
+                                                    ->label('Răspuns')
+                                                    ->required()
+                                                    ->rows(3)
+                                                    ->columnSpanFull(),
+                                            ])
+                                            ->itemLabel(fn (array $state): ?string => $state['q'] ?? null)
+                                            ->addActionLabel('Adaugă întrebare')
+                                            ->reorderable()
+                                            ->collapsible()
+                                            ->defaultItems(0),
+                                    ]),
+
                                 // SEO Section
                                 SC\Section::make('SEO & Meta Tags')
                                     ->description('Search engine optimization settings')
@@ -317,6 +345,30 @@ class BlogArticleResource extends Resource
                                             ->searchable()
                                             ->nullable()
                                             ->helperText('Promotes this event in the article (shows a CTA button)'),
+
+                                        Forms\Components\Select::make('activity_ids')
+                                            ->label('Linked Activities')
+                                            ->placeholder('Selectează activități de promovat...')
+                                            ->multiple()
+                                            ->options(function () use ($marketplace, $marketplaceLanguage) {
+                                                if (! class_exists(\App\Models\Activity::class)) {
+                                                    return [];
+                                                }
+                                                return \App\Models\Activity::where('marketplace_client_id', $marketplace?->id)
+                                                    ->orderBy('created_at', 'desc')
+                                                    ->limit(300)
+                                                    ->get()
+                                                    ->mapWithKeys(function ($activity) use ($marketplaceLanguage) {
+                                                        $titleData = $activity->title;
+                                                        $title = is_array($titleData)
+                                                            ? ($titleData[$marketplaceLanguage] ?? $titleData['en'] ?? collect($titleData)->first() ?? 'Fără titlu')
+                                                            : ($titleData ?? 'Fără titlu');
+                                                        return [$activity->id => $title];
+                                                    });
+                                            })
+                                            ->searchable()
+                                            ->nullable()
+                                            ->helperText('Activitățile apar ca recomandări (carduri „Vezi bilete") în ghid'),
                                     ]),
 
                                 // Featured Image Section

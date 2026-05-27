@@ -143,6 +143,8 @@ const BileteOnlineAPI = {
         if (endpoint === '/customer/smart-suggestions') return 'customer.smart-suggestions';
         if (endpoint === '/customer/forgot-password') return 'customer.forgot-password';
         if (endpoint === '/customer/reset-password') return 'customer.reset-password';
+        if (endpoint === '/customer/recover-order/attach') return 'customer.recover-order.attach';
+        if (endpoint === '/customer/recover-order') return 'customer.recover-order';
         if (endpoint === '/customer/verify-email') return 'customer.verify-email';
         if (endpoint === '/customer/resend-verification') return 'customer.resend-verification';
 

@@ -417,6 +417,10 @@ RewriteRule ^parola-uitata/?$ forgot-password.php [L]
 
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^recuperare-comanda/?$ recuperare-comanda.php [L,QSA]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^resetare-parola/?$ reset-password.php [L,QSA]
 
 RewriteCond %{REQUEST_FILENAME} !-f
@@ -504,9 +508,8 @@ RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^dezabonare/?$ newsletter-unsubscribe.php [L]
 
-RewriteCond %{REQUEST_FILENAME} !-f
-RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^blog/?$ blog.php [L]
+# /blog is the editorial guides hub → /ghiduri
+RewriteRule ^blog/?$ /ghiduri [R=301,L,QSA]
 
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
@@ -553,6 +556,17 @@ RewriteRule ^ajutor/([a-z0-9-]+)/?$ ajutor-categorie.php?slug=$1 [L,QSA]
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^ajutor/?$ ajutor.php [L,QSA]
+
+# ============================================
+# GUIDES (editorial blog) - /ghiduri/*
+# ============================================
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^ghiduri/([a-z0-9][a-z0-9-]*)/?$ ghid.php?slug=$1 [L,QSA]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^ghiduri/?$ ghiduri.php [L,QSA]
 
 # ============================================
 # SHARE LINK VIEW - /view/{code}

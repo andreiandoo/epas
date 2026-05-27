@@ -1426,6 +1426,18 @@ switch ($action) {
         $endpoint = '/customer/verify-email';
         break;
 
+    case 'customer.recover-order':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/customer/recover-order';
+        break;
+
+    case 'customer.recover-order.attach':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/customer/recover-order/attach';
+        break;
+
     case 'customer.resend-verification':
         $method = 'POST';
         $body = file_get_contents('php://input');

@@ -2101,6 +2101,12 @@ Route::prefix('marketplace-client/customer')->middleware(['throttle:120,1', 'mar
         ->name('api.marketplace-client.customer.login');
     Route::post('/forgot-password', [CustomerAuthController::class, 'forgotPassword'])
         ->name('api.marketplace-client.customer.forgot-password');
+
+    // Order recovery (guest lookup by order number + email). Tighter
+    // throttle on top of the group's 120/min to blunt order-number guessing.
+    Route::post('/recover-order', [\App\Http\Controllers\Api\MarketplaceClient\Customer\OrderRecoveryController::class, 'recover'])
+        ->middleware('throttle:10,1')
+        ->name('api.marketplace-client.customer.recover-order');
     Route::post('/reset-password', [CustomerAuthController::class, 'resetPassword'])
         ->name('api.marketplace-client.customer.reset-password');
     Route::post('/verify-email', [CustomerAuthController::class, 'verifyEmail'])
@@ -2117,6 +2123,10 @@ Route::prefix('marketplace-client/customer')->middleware(['throttle:120,1', 'mar
             ->name('api.marketplace-client.customer.logout');
         Route::get('/me', [CustomerAuthController::class, 'me'])
             ->name('api.marketplace-client.customer.me');
+
+        // Attach a recovered (guest) order to the logged-in account.
+        Route::post('/recover-order/attach', [\App\Http\Controllers\Api\MarketplaceClient\Customer\OrderRecoveryController::class, 'attach'])
+            ->name('api.marketplace-client.customer.recover-order.attach');
         Route::put('/profile', [CustomerAuthController::class, 'updateProfile'])
             ->name('api.marketplace-client.customer.profile.update');
         Route::put('/password', [CustomerAuthController::class, 'updatePassword'])

@@ -70,6 +70,8 @@ class BlogArticle extends Model
         'language',
         'translations',
         'event_id',
+        'activity_ids',
+        'faqs',
         'created_by',
         'updated_by',
     ];
@@ -89,6 +91,8 @@ class BlogArticle extends Model
         'og_description' => 'array',
         'schema_markup' => 'array',
         'translations' => 'array',
+        'activity_ids' => 'array',
+        'faqs' => 'array',
         'no_index' => 'boolean',
         'allow_comments' => 'boolean',
         'is_featured' => 'boolean',
@@ -282,6 +286,26 @@ class BlogArticle extends Model
     public function event(): BelongsTo
     {
         return $this->belongsTo(\App\Models\Event::class);
+    }
+
+    /**
+     * Resolve the linked activities (stored as a JSON id array on
+     * `activity_ids`) into Activity models, preserving the saved order.
+     * Returns an empty collection when none are linked or the Activity
+     * model isn't available.
+     */
+    public function linkedActivities()
+    {
+        $ids = is_array($this->activity_ids) ? array_values(array_filter($this->activity_ids)) : [];
+        if (empty($ids) || ! class_exists(\App\Models\Activity::class)) {
+            return collect();
+        }
+        $activities = \App\Models\Activity::whereIn('id', $ids)->get()->keyBy('id');
+        // Preserve the admin-defined order.
+        return collect($ids)
+            ->map(fn ($id) => $activities->get($id))
+            ->filter()
+            ->values();
     }
 
 }
