@@ -149,9 +149,10 @@ class OrganizerBalance extends Page
             ->with('marketplaceEvent')
             ->get();
 
-        // Payout history
+        // Payout history — eager-load event + venue for the Eveniment column.
         $payouts = MarketplacePayout::query()
             ->where('marketplace_organizer_id', $this->organizerId)
+            ->with(['event.venue'])
             ->orderByDesc('created_at')
             ->get();
 

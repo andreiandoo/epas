@@ -150,7 +150,7 @@
             <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
                 <h3 class="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                     <x-heroicon-o-banknotes class="w-5 h-5 text-gray-400" />
-                    Payout History
+                    Lista deconturi
                 </h3>
             </div>
             @if($payouts->isEmpty())
@@ -162,6 +162,7 @@
                 <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                     <thead class="bg-gray-50 dark:bg-gray-700/50">
                         <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Eveniment</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Reference</th>
                             <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Amount</th>
                             <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
@@ -172,11 +173,46 @@
                     </thead>
                     <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
                         @foreach($payouts as $payout)
+                            @php
+                                $ev = $payout->event;
+                                $evTitle = null;
+                                $evDate = null;
+                                $evVenue = null;
+                                $evCity = null;
+                                if ($ev) {
+                                    $t = $ev->title;
+                                    $evTitle = is_array($t) ? ($t['ro'] ?? $t['en'] ?? (reset($t) ?: null)) : $t;
+                                    $evDate = $ev->start_date?->format('d.m.Y');
+                                    if ($ev->venue) {
+                                        $vn = $ev->venue->name;
+                                        $evVenue = is_array($vn) ? ($vn['ro'] ?? $vn['en'] ?? (reset($vn) ?: null)) : $vn;
+                                        $evCity = $ev->venue->city ?: null;
+                                    }
+                                    // Event date - venue - city, only the parts we have
+                                    $metaParts = array_filter([$evDate, $evVenue, $evCity]);
+                                    $evMeta = implode(' - ', $metaParts);
+                                }
+                            @endphp
                             <tr>
+                                <td class="px-6 py-3 text-sm">
+                                    @if($ev)
+                                        <a href="{{ url('/marketplace/events/' . $ev->id . '/edit') }}" class="font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400 dark:hover:text-primary-300 hover:underline">
+                                            {{ $evTitle ?? ('Eveniment #' . $ev->id) }}
+                                        </a>
+                                        @if(!empty($evMeta))
+                                            <div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{{ $evMeta }}</div>
+                                        @endif
+                                    @else
+                                        <span class="text-gray-400">—</span>
+                                    @endif
+                                </td>
                                 <td class="px-6 py-3 text-sm font-mono">
                                     <a href="{{ url('/marketplace/payouts/' . $payout->id) }}" class="text-primary-600 hover:text-primary-500 dark:text-primary-400 dark:hover:text-primary-300 hover:underline">
                                         {{ $payout->reference }}
                                     </a>
+                                    @if($payout->decont_series)
+                                        <div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{{ $payout->decont_series }}</div>
+                                    @endif
                                 </td>
                                 <td class="px-6 py-3 text-sm text-right font-medium text-gray-900 dark:text-white">
                                     {{ number_format($payout->amount, 2) }} {{ $payout->currency ?? 'RON' }}

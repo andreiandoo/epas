@@ -496,79 +496,28 @@ class ViewPayout extends ViewRecord
                     && !empty($this->record->event_id))
                 ->action(function () {
                     $payout = $this->record;
-                    $event = $payout->event;
-                    if (!$event) {
-                        Notification::make()->title('Eroare')->body('Decontul nu este legat de un eveniment.')->danger()->send();
-                        return;
-                    }
 
-                    $service = app(\App\Services\Marketplace\SalesBreakdownService::class);
-                    // Snapshot includes POS rows (shown for transparency, excluded
-                    // from totals). Payout-level amounts must reflect only what
-                    // flows through the marketplace → exclude POS.
-                    $rows = $service->buildForPayout($event, $payout->period_start, $payout->period_end);
-                    if (empty($rows)) {
-                        Notification::make()->title('Nu s-au găsit vânzări')->body('Nu există bilete valide în perioada decontului pentru a recalcula snapshot-ul.')->warning()->send();
-                        return;
-                    }
+                    // Single source of truth — same logic the bulk recompute
+                    // (tinker/artisan) runs across every payout.
+                    $result = $payout->recalcBreakdownSnapshot();
 
-                    $onlineBreakdown = $service->build($event, $payout->period_start, $payout->period_end, excludePos: true);
-                    $newCommissionMode = (function () use ($onlineBreakdown, $event) {
-                        $modes = collect($onlineBreakdown['per_type'])->pluck('commission_mode')->filter()->unique()->values();
-                        if ($modes->count() === 1) return $modes->first();
-                        if ($modes->contains('added_on_top') || $modes->contains('on_top')) return 'added_on_top';
-                        return method_exists($event, 'getEffectiveCommissionMode')
-                            ? $event->getEffectiveCommissionMode()
-                            : 'included';
-                    })();
-
-                    $newCommission = 0.0;
-                    $newNet = 0.0;
-                    $newGross = 0.0;
-                    foreach ($onlineBreakdown['per_type'] as $row) {
-                        $isOnTop = in_array($row['commission_mode'] ?? null, ['added_on_top', 'on_top'], true);
-                        $newCommission += (float) $row['commission_amount'];
-                        $newNet += (float) $row['net'];
-                        $newGross += (float) $row['gross'] + ($isOnTop ? (float) $row['commission_amount'] : 0);
-                    }
-                    $newAmount = round($newNet, 2);
-                    $newGross = round($newGross, 2);
-                    $newCommission = round($newCommission, 2);
-
-                    $oldAmount = (float) $payout->amount;
-                    $delta = round($oldAmount - $newAmount, 2);
-
-                    \Illuminate\Support\Facades\DB::transaction(function () use ($payout, $rows, $newCommissionMode, $newAmount, $newGross, $newCommission, $delta) {
-                        $payout->update([
-                            'ticket_breakdown' => $rows,
-                            'commission_mode' => $newCommissionMode,
-                            'amount' => $newAmount,
-                            'gross_amount' => $newGross,
-                            'commission_amount' => $newCommission,
-                        ]);
-
-                        // Adjust the organizer's reserved (pending) balance so
-                        // available_balance reflects the corrected request.
-                        if (abs($delta) > 0.005 && $payout->organizer) {
-                            if ($delta > 0) {
-                                // Old amount was higher → release the excess back
-                                // to the organizer's available balance.
-                                $payout->organizer->returnPendingBalance($delta);
-                            } else {
-                                // New amount is higher → reserve the additional
-                                // amount (only succeeds if balance is available).
-                                $payout->organizer->reserveBalanceForPayout(abs($delta));
-                            }
+                    if (!($result['ok'] ?? false)) {
+                        if (($result['reason'] ?? null) === 'no_event') {
+                            Notification::make()->title('Eroare')->body('Decontul nu este legat de un eveniment.')->danger()->send();
+                        } else {
+                            Notification::make()->title('Nu s-au găsit vânzări')->body('Nu există bilete valide în perioada decontului pentru a recalcula snapshot-ul.')->warning()->send();
                         }
-                    });
+                        return;
+                    }
 
+                    $delta = (float) $result['delta'];
                     $deltaLabel = $delta > 0
                         ? '−' . number_format($delta, 2) . ' RON eliberați la disponibil'
                         : ($delta < 0 ? '+' . number_format(abs($delta), 2) . ' RON rezervați suplimentar' : 'fără ajustare de balanță');
 
                     Notification::make()
                         ->title('Snapshot recalculat')
-                        ->body("Sumă netă: " . number_format($newAmount, 2) . " RON · comision: " . number_format($newCommission, 2) . " RON · {$deltaLabel}.")
+                        ->body("Sumă netă: " . number_format($result['amount'], 2) . " RON · comision: " . number_format($result['commission'], 2) . " RON · {$deltaLabel}.")
                         ->success()
                         ->send();
                     $this->redirect(PayoutResource::getUrl('view', ['record' => $payout]));
@@ -936,24 +885,27 @@ class ViewPayout extends ViewRecord
             return;
         }
 
-        $posTypeIds = $payout->getPosTicketTypeIds();
-        if (empty($posTypeIds)) {
+        if (!$payout->event) {
+            Notification::make()->title('Decontul nu este legat de un eveniment')->warning()->send();
+            return;
+        }
+
+        // POS-only sales slice for this payout's period is the source of truth
+        // for POS commission — ticket_breakdown no longer carries POS rows
+        // (they're excluded from the decont by design).
+        $posRows = app(\App\Services\Marketplace\SalesBreakdownService::class)
+            ->buildPosForPayout($payout->event, $payout->period_start, $payout->period_end);
+        if (empty($posRows)) {
             Notification::make()->title('Nu există comisioane POS de facturat')->warning()->send();
             return;
         }
-        $posSet = array_flip($posTypeIds);
 
         // Event/venue context for each line description
         $eventSuffix = $this->buildEventContextSuffix($payout->event);
 
         $items = [];
         $subtotal = 0.0;
-        foreach ($payout->ticket_breakdown ?? [] as $item) {
-            $ttId = $item['ticket_type_id'] ?? null;
-            if (!$ttId || !isset($posSet[$ttId])) {
-                continue;
-            }
-
+        foreach ($posRows as $item) {
             $name = $item['ticket_type_name'] ?? $item['name'] ?? 'Bilet';
             $qty = (int) ($item['quantity'] ?? $item['tickets'] ?? $item['qty'] ?? 0);
             $commPerTicket = (float) ($item['commission_per_ticket'] ?? 0);

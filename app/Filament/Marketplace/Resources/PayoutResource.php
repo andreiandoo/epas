@@ -156,6 +156,20 @@ class PayoutResource extends Resource
     {
         return $infolist
             ->components([
+                // ========== OPERATOR STEPS (wizard) ==========
+                // Shows the remaining actions in order; each disappears once
+                // done. Hidden when nothing is left (or payout dead).
+                Section::make('Pași de urmat')
+                    ->icon('heroicon-o-list-bullet')
+                    ->compact()
+                    ->schema([
+                        Infolists\Components\ViewEntry::make('operator_steps')
+                            ->hiddenLabel()
+                            ->view('filament.infolists.payout-operator-steps')
+                            ->columnSpanFull(),
+                    ])
+                    ->visible(fn ($record) => collect($record->getOperatorSteps())->where('done', false)->isNotEmpty()),
+
                 // ========== MAIN INFO ==========
                 \Filament\Schemas\Components\Grid::make(3)->schema([
                     // LEFT: Payout details (2/3)

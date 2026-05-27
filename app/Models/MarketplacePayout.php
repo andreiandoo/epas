@@ -246,6 +246,9 @@ class MarketplacePayout extends Model
         'rejected_at' => 'datetime',
     ];
 
+    /** Per-instance memo for getPosCommissionTotal() — not persisted. */
+    protected ?float $posCommissionCache = null;
+
     protected static function boot()
     {
         parent::boot();
@@ -505,39 +508,166 @@ class MarketplacePayout extends Model
     }
 
     /**
-     * Commission value attributable to online (non-POS) tickets in this payout.
-     * Derived from stored commission_amount minus POS commission; this is what
-     * the regular Factură should bill, since POS commission is invoiced separately.
+     * Commission value attributable to online (non-POS) tickets in this payout
+     * — what the regular Factură bills (POS commission goes on a separate
+     * invoice). Post-refactor both ticket_breakdown and commission_amount
+     * already EXCLUDE POS, so we no longer subtract POS here (that would
+     * double-discount it). Sum the breakdown when present so the invoice
+     * subtotal matches the decont PDF's commission line exactly; otherwise
+     * fall back to the stored commission_amount.
      */
     public function getCommissionExclPos(): float
     {
-        $stored = (float) ($this->commission_amount ?? 0);
-        return round(max(0, $stored - $this->getPosCommissionTotal()), 2);
+        $breakdown = $this->ticket_breakdown ?? [];
+        if (!empty($breakdown)) {
+            $sum = 0.0;
+            foreach ($breakdown as $row) {
+                $qty = (int) ($row['quantity'] ?? $row['qty'] ?? $row['tickets'] ?? 0);
+                $commPer = (float) ($row['commission_per_ticket'] ?? 0);
+                $sum += $qty * $commPer;
+            }
+            return round($sum, 2);
+        }
+
+        return round((float) ($this->commission_amount ?? 0), 2);
     }
 
     /**
      * Total commission value attributable to POS/app-only tickets in this payout.
      * Used to generate a separate invoice billed to the organizer.
      */
+    /**
+     * Total marketplace commission on this payout period's POS (mobile cash
+     * app) sales. Computed live from the POS-only sales slice — NOT from
+     * ticket_breakdown, which by design no longer carries POS rows (they're
+     * excluded from the decont). Memoized per instance because several
+     * action visible()/modal callbacks hit it on the same render.
+     */
     public function getPosCommissionTotal(): float
     {
-        $posTypeIds = $this->getPosTicketTypeIds();
-        if (empty($posTypeIds)) {
-            return 0.0;
+        if ($this->posCommissionCache !== null) {
+            return $this->posCommissionCache;
         }
-        $posSet = array_flip($posTypeIds);
+        if (!$this->event_id || !$this->event) {
+            return $this->posCommissionCache = 0.0;
+        }
+
+        $rows = app(\App\Services\Marketplace\SalesBreakdownService::class)
+            ->buildPosForPayout($this->event, $this->period_start, $this->period_end);
 
         $total = 0.0;
-        foreach ($this->ticket_breakdown ?? [] as $item) {
-            $ttId = $item['ticket_type_id'] ?? null;
-            if (!$ttId || !isset($posSet[$ttId])) {
-                continue;
-            }
-            $qty = (int) ($item['quantity'] ?? $item['tickets'] ?? $item['qty'] ?? 0);
-            $commPer = (float) ($item['commission_per_ticket'] ?? 0);
-            $total += $qty * $commPer;
+        foreach ($rows as $row) {
+            $total += (float) ($row['commission_amount'] ?? 0);
         }
-        return round($total, 2);
+        return $this->posCommissionCache = round($total, 2);
+    }
+
+    /**
+     * Recompute ticket_breakdown + amount/gross/commission from the live sales
+     * for this payout's stored period (POS excluded), and adjust the
+     * organizer's reserved balance by the delta. This is the exact logic
+     * behind the "Recalculează snapshot bilete" button, extracted so it can
+     * also be run in bulk (tinker / artisan) across every payout.
+     *
+     * Returns ['ok' => bool, 'reason'? => string, 'amount','commission',
+     * 'gross','delta' => float] for the caller to surface.
+     */
+    public function recalcBreakdownSnapshot(?\App\Services\Marketplace\SalesBreakdownService $service = null): array
+    {
+        $service ??= app(\App\Services\Marketplace\SalesBreakdownService::class);
+
+        $event = $this->event;
+        if (!$event) {
+            return ['ok' => false, 'reason' => 'no_event'];
+        }
+
+        $rows = $service->buildForPayout($event, $this->period_start, $this->period_end);
+        if (empty($rows)) {
+            return ['ok' => false, 'reason' => 'no_sales'];
+        }
+
+        $onlineBreakdown = $service->build($event, $this->period_start, $this->period_end, excludePos: true);
+        $newCommissionMode = (function () use ($onlineBreakdown, $event) {
+            $modes = collect($onlineBreakdown['per_type'])->pluck('commission_mode')->filter()->unique()->values();
+            if ($modes->count() === 1) return $modes->first();
+            if ($modes->contains('added_on_top') || $modes->contains('on_top')) return 'added_on_top';
+            return method_exists($event, 'getEffectiveCommissionMode')
+                ? $event->getEffectiveCommissionMode()
+                : 'included';
+        })();
+
+        $newCommission = 0.0;
+        $newNet = 0.0;
+        $newGross = 0.0;
+        foreach ($onlineBreakdown['per_type'] as $row) {
+            $isOnTop = in_array($row['commission_mode'] ?? null, ['added_on_top', 'on_top'], true);
+            $newCommission += (float) $row['commission_amount'];
+            $newNet += (float) $row['net'];
+            $newGross += (float) $row['gross'] + ($isOnTop ? (float) $row['commission_amount'] : 0);
+        }
+        $newAmount = round($newNet, 2);
+        $newGross = round($newGross, 2);
+        $newCommission = round($newCommission, 2);
+
+        $oldAmount = (float) $this->amount;
+        $delta = round($oldAmount - $newAmount, 2);
+
+        DB::transaction(function () use ($rows, $newCommissionMode, $newAmount, $newGross, $newCommission, $delta) {
+            $this->update([
+                'ticket_breakdown' => $rows,
+                'commission_mode' => $newCommissionMode,
+                'amount' => $newAmount,
+                'gross_amount' => $newGross,
+                'commission_amount' => $newCommission,
+            ]);
+
+            // Adjust the organizer's reserved (pending) balance so
+            // available_balance reflects the corrected request.
+            if (abs($delta) > 0.005 && $this->organizer) {
+                if ($delta > 0) {
+                    $this->organizer->returnPendingBalance($delta);
+                } else {
+                    $this->organizer->reserveBalanceForPayout(abs($delta));
+                }
+            }
+        });
+
+        // Period/breakdown may have shifted — drop the POS memo.
+        $this->posCommissionCache = null;
+
+        return [
+            'ok' => true,
+            'amount' => $newAmount,
+            'commission' => $newCommission,
+            'gross' => $newGross,
+            'delta' => $delta,
+        ];
+    }
+
+    /**
+     * Ordered checklist of operator actions for this payout, used by the
+     * "Pași de urmat" wizard on the view page. Each entry:
+     *   ['key','label','done'].
+     * The POS-invoice step appears only when the period has POS commission to
+     * bill. Empty for rejected/cancelled payouts (the flow no longer applies).
+     */
+    public function getOperatorSteps(): array
+    {
+        if (in_array($this->status, ['rejected', 'cancelled'], true)) {
+            return [];
+        }
+
+        $steps = [
+            ['key' => 'approve', 'label' => 'Aprobă decontul', 'done' => $this->status !== 'pending'],
+            ['key' => 'generate_decont', 'label' => 'Generează decontul', 'done' => $this->decontDocument !== null],
+            ['key' => 'generate_invoice', 'label' => 'Generează factura', 'done' => $this->invoice !== null],
+        ];
+
+        if ($this->getPosCommissionTotal() > 0) {
+            $steps[] = ['key' => 'generate_invoice_pos', 'label' => 'Generează factura POS', 'done' => $this->posInvoice !== null];
+        }
+
+        return $steps;
     }
 
     // =========================================

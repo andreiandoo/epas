@@ -58,7 +58,7 @@ class SalesBreakdownService
      *   }>
      * }
      */
-    public function build(Event $event, ?Carbon $periodStart = null, ?Carbon $periodEnd = null, bool $excludePos = false, string $dateColumn = 'created_at', bool $splitByPrice = false, bool $exactBounds = false): array
+    public function build(Event $event, ?Carbon $periodStart = null, ?Carbon $periodEnd = null, bool $excludePos = false, string $dateColumn = 'created_at', bool $splitByPrice = false, bool $exactBounds = false, bool $onlyPos = false): array
     {
         $eventId = $event->id;
 
@@ -78,12 +78,17 @@ class SalesBreakdownService
         // dates, not datetimes.
         $tickets = Ticket::where(fn ($q) => $q->where('event_id', $eventId)->orWhere('marketplace_event_id', $eventId))
             ->whereIn('status', ['valid', 'used'])
-            ->where(function ($outer) use ($periodStart, $periodEnd, $excludePos, $dateColumn, $exactBounds) {
+            ->where(function ($outer) use ($periodStart, $periodEnd, $excludePos, $dateColumn, $exactBounds, $onlyPos) {
                 // Normal flow: ticket tied to a paid/confirmed/completed order
-                $outer->whereHas('order', function ($q) use ($periodStart, $periodEnd, $excludePos, $dateColumn, $exactBounds) {
+                $outer->whereHas('order', function ($q) use ($periodStart, $periodEnd, $excludePos, $dateColumn, $exactBounds, $onlyPos) {
                     $q->whereIn('status', ['paid', 'confirmed', 'completed'])
                         ->where('source', '!=', 'external_import');
-                    if ($excludePos) {
+                    if ($onlyPos) {
+                        // POS-only slice: just the organizer's mobile cash POS
+                        // app sales. Used to bill POS commission separately
+                        // (these never flow through a marketplace decont).
+                        $q->where('source', 'pos_app');
+                    } elseif ($excludePos) {
                         $q->where('source', '!=', 'pos_app')
                           ->where('source', '!=', 'test_order');
                     }
@@ -105,18 +110,22 @@ class SalesBreakdownService
                 // the "Invitatie" row disappear from the payout breakdown
                 // after a recalc. Period bounds apply to tickets.created_at
                 // instead since there's no order date to anchor on.
-                $outer->orWhere(function ($q2) use ($periodStart, $periodEnd, $exactBounds) {
-                    $q2->whereNull('order_id');
-                    if ($periodStart) {
-                        $operator = $exactBounds ? '>' : '>=';
-                        $bound = $exactBounds ? $periodStart : $periodStart->copy()->startOfDay();
-                        $q2->where('created_at', $operator, $bound);
-                    }
-                    if ($periodEnd) {
-                        $bound = $exactBounds ? $periodEnd : $periodEnd->copy()->endOfDay();
-                        $q2->where('created_at', '<=', $bound);
-                    }
-                });
+                // Skipped entirely for the POS-only slice — invitations are
+                // not POS sales.
+                if (!$onlyPos) {
+                    $outer->orWhere(function ($q2) use ($periodStart, $periodEnd, $exactBounds) {
+                        $q2->whereNull('order_id');
+                        if ($periodStart) {
+                            $operator = $exactBounds ? '>' : '>=';
+                            $bound = $exactBounds ? $periodStart : $periodStart->copy()->startOfDay();
+                            $q2->where('created_at', $operator, $bound);
+                        }
+                        if ($periodEnd) {
+                            $bound = $exactBounds ? $periodEnd : $periodEnd->copy()->endOfDay();
+                            $q2->where('created_at', '<=', $bound);
+                        }
+                    });
+                }
             })
             ->with(['ticketType'])
             ->get(['id', 'order_id', 'ticket_type_id', 'price']);
@@ -446,6 +455,27 @@ class SalesBreakdownService
             unset($row['tt']);
             // Storage convention used by MarketplacePayout::getBreakdownTotals(): `quantity` aliases qty,
             // and `unit_price` aliases price. Keep both so legacy readers still work.
+            $row['quantity'] = $row['qty'];
+            $row['unit_price'] = $row['price'];
+            return $row;
+        })->all();
+    }
+
+    /**
+     * POS-only per-ticket-type breakdown for the payout period — the mirror
+     * of buildForPayout() but restricted to source=pos_app sales. Used to bill
+     * the organizer's POS commission on a separate invoice, since POS sales
+     * never flow through a marketplace decont (and are therefore excluded from
+     * buildForPayout / ticket_breakdown). Same row shape as buildForPayout.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function buildPosForPayout(Event $event, ?Carbon $periodStart = null, ?Carbon $periodEnd = null, bool $exactBounds = false): array
+    {
+        $breakdown = $this->build($event, $periodStart, $periodEnd, excludePos: false, dateColumn: 'created_at', splitByPrice: false, exactBounds: $exactBounds, onlyPos: true);
+
+        return collect($breakdown['per_type'])->values()->map(function (array $row) {
+            unset($row['tt']);
             $row['quantity'] = $row['qty'];
             $row['unit_price'] = $row['price'];
             return $row;
