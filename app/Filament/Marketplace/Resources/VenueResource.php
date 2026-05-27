@@ -334,6 +334,10 @@ class VenueResource extends Resource
                                     ->label('Address')
                                     ->maxLength(255)
                                     ->placeholder('Street and number'),
+                                // Canonical județ + localitate pickers (helpers).
+                                // They pre-fill from / write into the free-text
+                                // city/state fields below — see LocationSelectFields.
+                                ...\App\Filament\Support\LocationSelectFields::make(),
                                 Forms\Components\TextInput::make('city')
                                     ->label('City')
                                     ->maxLength(120)
