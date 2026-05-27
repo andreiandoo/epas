@@ -2199,12 +2199,12 @@ class EventResource extends Resource
                                         ->hint(function (SGet $get, ?Event $record) use ($t) {
                                             $quota = $get('general_quota');
                                             if (!$quota || !$record) return null;
-                                            // Count active tickets (exclude cancelled/refunded) from non-independent types
+                                            // Count sold tickets (valid/used only) from non-independent types
                                             $nonIndepIds = $record->ticketTypes()
                                                 ->where('is_independent_stock', false)
                                                 ->pluck('id');
                                             $activeCount = $nonIndepIds->isEmpty() ? 0 : \App\Models\Ticket::whereIn('ticket_type_id', $nonIndepIds)
-                                                ->whereNotIn('status', ['cancelled', 'refunded'])
+                                                ->whereIn('status', ['valid', 'used'])
                                                 ->count();
                                             $remaining = max(0, (int) $quota - $activeCount);
                                             return new HtmlString(
@@ -2520,7 +2520,7 @@ class EventResource extends Resource
                                                                             ->where('is_independent_stock', false)
                                                                             ->pluck('id');
                                                                         $activeCount = $nonIndepIds->isEmpty() ? 0 : \App\Models\Ticket::whereIn('ticket_type_id', $nonIndepIds)
-                                                                            ->whereNotIn('status', ['cancelled', 'refunded'])
+                                                                            ->whereIn('status', ['valid', 'used'])
                                                                             ->count();
                                                                         $remaining = max(0, $generalQuota - $activeCount);
                                                                         $component->state($remaining);
@@ -5139,8 +5139,12 @@ class EventResource extends Resource
                         $nonIndepIds = $record->ticketTypes
                             ->where('is_independent_stock', false)
                             ->pluck('id');
+                        // Only valid/used tickets occupy capacity. The old
+                        // "everything except cancelled/refunded" filter also
+                        // counted `pending` tickets from unpaid/in-progress
+                        // orders, inflating the sold figure.
                         $activeCount = $nonIndepIds->isEmpty() ? 0 : \App\Models\Ticket::whereIn('ticket_type_id', $nonIndepIds)
-                            ->whereNotIn('status', ['cancelled', 'refunded'])
+                            ->whereIn('status', ['valid', 'used'])
                             ->count();
                         $remaining = max(0, $record->general_quota - $activeCount);
                         return $remaining . '/' . $record->general_quota;
@@ -5149,7 +5153,7 @@ class EventResource extends Resource
                         if ($record->general_quota === null) return 'gray';
                         $nonIndepIds = $record->ticketTypes->where('is_independent_stock', false)->pluck('id');
                         $activeCount = $nonIndepIds->isEmpty() ? 0 : \App\Models\Ticket::whereIn('ticket_type_id', $nonIndepIds)
-                            ->whereNotIn('status', ['cancelled', 'refunded'])->count();
+                            ->whereIn('status', ['valid', 'used'])->count();
                         $pct = ($record->general_quota > 0) ? ($activeCount / $record->general_quota) * 100 : 0;
                         if ($pct >= 80) return 'success';
                         if ($pct >= 50) return 'warning';
