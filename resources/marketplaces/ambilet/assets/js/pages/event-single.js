@@ -2526,6 +2526,17 @@ const EventPage = {
             return;
         }
 
+        // Reconcile lines the user zeroed out before checking out: the selector
+        // mirrors the cart after a bfcache "back", so a ticket type left at 0
+        // must be removed from the cart to keep the two in sync.
+        var selectedPerfForKey = (this.getSelectedPerformance() && this.getSelectedPerformance().id) || 0;
+        for (var zeroTtId in this.quantities) {
+            if ((this.quantities[zeroTtId] || 0) <= 0) {
+                var zeroKey = this.event.id + '_' + zeroTtId + (selectedPerfForKey ? '_' + selectedPerfForKey : '');
+                AmbiletCart.updateQuantity(zeroKey, 0);
+            }
+        }
+
         for (var ticketId in this.quantities) {
             var qty = this.quantities[ticketId];
             if (qty > 0) {
@@ -2580,7 +2591,7 @@ const EventPage = {
                         commission: tt.commission || null,
                         is_refundable: tt.is_refundable || false
                     };
-                    AmbiletCart.addItem(self.event.id, eventData, tt.id, ticketTypeData, qty);
+                    AmbiletCart.addItem(self.event.id, eventData, tt.id, ticketTypeData, qty, null, { replace: true });
                     addedAny = true;
                 }
             }

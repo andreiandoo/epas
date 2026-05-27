@@ -50,7 +50,7 @@ const AmbiletCart = {
     /**
      * Add item to cart
      */
-    addItem(eventId, eventData, ticketTypeId, ticketTypeData, quantity = 1, meta = null) {
+    addItem(eventId, eventData, ticketTypeId, ticketTypeData, quantity = 1, meta = null, options = {}) {
         // Support alternative signature: addItem(eventData, ticketTypeData, quantity, meta)
         if (typeof eventId === 'object' && eventId !== null) {
             meta = ticketTypeId; // 4th arg
@@ -60,6 +60,11 @@ const AmbiletCart = {
             ticketTypeId = ticketTypeData.id;
             eventId = eventData.id;
         }
+        // When options.replace is set, an existing line's quantity is SET to
+        // `quantity` (absolute) instead of accumulated. Callers whose quantity
+        // selector already mirrors the cart (e.g. the event page after a
+        // bfcache "back") must use replace so re-submitting doesn't double-count.
+        const replaceQuantity = !!(options && options.replace);
         const cart = this.getCart();
         const perfId = eventData.performance_id || 0;
         const visitDate = meta?.visit_date || eventData.visit_date || '';
@@ -69,8 +74,12 @@ const AmbiletCart = {
         const existingIndex = cart.items.findIndex(item => item.key === itemKey);
 
         if (existingIndex >= 0) {
-            // Update quantity
-            cart.items[existingIndex].quantity += quantity;
+            // Update quantity (replace = set absolute, otherwise accumulate)
+            if (replaceQuantity) {
+                cart.items[existingIndex].quantity = quantity;
+            } else {
+                cart.items[existingIndex].quantity += quantity;
+            }
         } else {
             // Add new item
             cart.items.push({

@@ -29,6 +29,18 @@ const CartPage = {
         };
         window.addEventListener('ambilet:cart:promo', onPromoChanged);
         window.addEventListener('ambilet:cart:update', () => this.render());
+
+        // Re-validate any stored promo against the CURRENT cart on load. The
+        // discountAmount was frozen at apply-time; if the user changed
+        // quantities elsewhere (e.g. the event page) before landing here, the
+        // stored value is stale — it would otherwise show the old discount for
+        // the new cart. revalidate recomputes it and dispatches
+        // `ambilet:cart:promo`, which onPromoChanged catches → re-render with
+        // the fresh discount. Listeners are registered above so the event is
+        // caught when the async call lands.
+        if (typeof AmbiletCart !== 'undefined' && typeof AmbiletCart.revalidatePromoCode === 'function') {
+            AmbiletCart.revalidatePromoCode().catch(function () { /* best effort */ });
+        }
     },
 
     /**
