@@ -306,14 +306,14 @@
                         <tfoot class="bg-gray-50 dark:bg-gray-900/80">
                             <tr class="font-semibold text-gray-900 dark:text-white">
                                 <td colspan="2" class="px-3 py-2 text-right text-gray-500 dark:text-gray-400">Total ({{ count($dailyEventReport) }} {{ count($dailyEventReport) === 1 ? 'eveniment' : 'evenimente' }}):</td>
-                                <td class="px-3 py-2 text-right tabular-nums border-l border-gray-200 dark:border-gray-700">{{ number_format($sumOrdersDay) }}</td>
-                                <td class="px-3 py-2 text-right tabular-nums">{{ number_format($sumTicketsDay) }}</td>
-                                <td class="px-3 py-2 text-right tabular-nums text-indigo-600 dark:text-indigo-400">{{ number_format($sumSalesDay, 2) }}</td>
-                                <td class="px-3 py-2 text-right tabular-nums text-emerald-600 dark:text-emerald-400">{{ number_format($sumCommissionDay, 2) }}</td>
-                                <td class="px-3 py-2 text-right tabular-nums border-l border-gray-200 dark:border-gray-700">{{ number_format($sumOrdersTotal) }}</td>
-                                <td class="px-3 py-2 text-right tabular-nums">{{ number_format($sumTicketsTotal) }}</td>
-                                <td class="px-3 py-2 text-right tabular-nums font-bold">{{ number_format($sumSalesTotal, 2) }}</td>
-                                <td class="px-3 py-2 text-right tabular-nums font-bold">{{ number_format($sumCommissionTotal, 2) }}</td>
+                                <td class="px-3 py-2 text-right tabular-nums border-l border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white">{{ number_format($sumOrdersDay) }}</td>
+                                <td class="px-3 py-2 text-right tabular-nums text-gray-900 dark:text-white">{{ number_format($sumTicketsDay) }}</td>
+                                <td class="px-3 py-2 text-right tabular-nums font-bold text-indigo-800 dark:text-indigo-300">{{ number_format($sumSalesDay, 2) }}</td>
+                                <td class="px-3 py-2 text-right tabular-nums font-bold text-emerald-800 dark:text-emerald-300">{{ number_format($sumCommissionDay, 2) }}</td>
+                                <td class="px-3 py-2 text-right tabular-nums border-l border-gray-200 dark:border-gray-700"></td>
+                                <td class="px-3 py-2"></td>
+                                <td class="px-3 py-2"></td>
+                                <td class="px-3 py-2"></td>
                             </tr>
                         </tfoot>
                     @endif
@@ -407,7 +407,6 @@
                 <div class="p-4 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
                     <p class="text-xs text-gray-500 dark:text-gray-400">Media vânzări zilnice</p>
                     <p class="mt-1 text-2xl font-bold text-teal-600 dark:text-teal-400">{{ number_format($monthStats['avg_daily_sales'], 0) }} <span class="text-sm font-normal text-gray-400">{{ $monthStats['currency'] }}</span></p>
-                    <p class="text-xs text-gray-400 mt-0.5">/ {{ $monthStats['avg_daily_sales_days'] }} {{ $monthStats['avg_daily_sales_days'] === 1 ? 'zi' : 'zile' }}</p>
                 </div>
             </div>
         </div>
