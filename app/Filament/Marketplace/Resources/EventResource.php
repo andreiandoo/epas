@@ -4142,6 +4142,48 @@ class EventResource extends Resource
                                     })
                                     ->badgeColor('warning')
                                     ->schema([
+                                        // New section — every PDF actually generated for this event,
+                                        // from any source (EventGeneratedDocument, OrganizerDocument
+                                        // for payout PDFs, plus Invoice records linked via payout).
+                                        // Sorted desc by date so the latest doc is on top.
+                                        SC\Section::make($t('Documente generate', 'Generated documents'))
+                                            ->icon('heroicon-o-folder-open')
+                                            ->description($t('Toate PDF-urile generate pentru acest eveniment.', 'All PDF documents generated for this event.'))
+                                            ->visible(fn (?Event $record) => $record && $record->exists)
+                                            ->schema([
+                                                Forms\Components\Placeholder::make('event_generated_documents_list')
+                                                    ->hiddenLabel()
+                                                    ->content(function (?Event $record) {
+                                                        if (!$record) return '';
+
+                                                        $eventGeneratedDocs = \App\Models\EventGeneratedDocument::with('taxTemplate')
+                                                            ->where('event_id', $record->id)
+                                                            ->orderByDesc('created_at')
+                                                            ->get();
+
+                                                        $organizerDocs = \App\Models\OrganizerDocument::where('event_id', $record->id)
+                                                            ->orderByDesc('created_at')
+                                                            ->get();
+
+                                                        // Invoices linked to any payout of this event.
+                                                        $invoices = \App\Models\Invoice::with('marketplacePayout')
+                                                            ->whereHas('marketplacePayout', fn ($q) => $q->where('event_id', $record->id))
+                                                            ->orderByDesc('created_at')
+                                                            ->get();
+
+                                                        return new HtmlString(
+                                                            view('filament.marketplace.components.event-generated-documents-list', [
+                                                                'event' => $record,
+                                                                'eventGeneratedDocs' => $eventGeneratedDocs,
+                                                                'organizerDocs' => $organizerDocs,
+                                                                'invoices' => $invoices,
+                                                            ])->render()
+                                                        );
+                                                    }),
+                                            ])
+                                            ->collapsible()
+                                            ->collapsed(false),
+
                                         SC\Section::make($t('Documente eveniment', 'Event Documents'))
                                             ->icon('heroicon-o-document-text')
                                             ->visible(fn (?Event $record) => $record && $record->exists)
