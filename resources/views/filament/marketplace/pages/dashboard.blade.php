@@ -405,8 +405,9 @@
                     <p class="mt-1 text-2xl font-bold text-amber-600 dark:text-amber-400">{{ number_format($monthStats['payouts_pending'], 0) }} <span class="text-sm font-normal text-gray-400">{{ $monthStats['currency'] }}</span></p>
                 </div>
                 <div class="p-4 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
-                    <p class="text-xs text-gray-500 dark:text-gray-400">Deconturi achitate</p>
-                    <p class="mt-1 text-2xl font-bold text-teal-600 dark:text-teal-400">{{ number_format($monthStats['payouts_paid'], 0) }} <span class="text-sm font-normal text-gray-400">{{ $monthStats['currency'] }}</span></p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Media vânzări zilnice</p>
+                    <p class="mt-1 text-2xl font-bold text-teal-600 dark:text-teal-400">{{ number_format($monthStats['avg_daily_sales'], 0) }} <span class="text-sm font-normal text-gray-400">{{ $monthStats['currency'] }}</span></p>
+                    <p class="text-xs text-gray-400 mt-0.5">/ {{ $monthStats['avg_daily_sales_days'] }} {{ $monthStats['avg_daily_sales_days'] === 1 ? 'zi' : 'zile' }}</p>
                 </div>
             </div>
         </div>

@@ -663,6 +663,13 @@ class Dashboard extends Page
             ->selectRaw("COALESCE(SUM(CASE WHEN status = 'completed' THEN amount ELSE 0 END), 0) as paid")
             ->first();
 
+        // Average daily sales. For the in-progress month, divide by the days
+        // elapsed so far (so a mid-month value isn't deflated by future empty
+        // days); for a past month, divide by its full day count.
+        $isCurrentMonth = $monthDate->isSameMonth($now) && $monthDate->isSameYear($now);
+        $daysForAvg = $isCurrentMonth ? max(1, $now->day) : $monthDate->daysInMonth;
+        $avgDailySales = $daysForAvg > 0 ? $totalSales / $daysForAvg : 0;
+
         return [
             'month_label' => $monthDate->translatedFormat('F Y'),
             'new_organizers' => $newOrganizers,
@@ -675,6 +682,8 @@ class Dashboard extends Page
             'payouts_pending' => (float) ($monthPayouts->pending ?? 0),
             'payouts_paid' => (float) ($monthPayouts->paid ?? 0),
             'month_orders' => $monthOrders,
+            'avg_daily_sales' => $avgDailySales,
+            'avg_daily_sales_days' => $daysForAvg,
             'currency' => $this->marketplace->currency ?? 'RON',
         ];
     }
