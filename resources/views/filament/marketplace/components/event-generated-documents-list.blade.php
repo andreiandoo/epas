@@ -17,16 +17,20 @@
 
     $items = collect();
 
-    // 1) EventGeneratedDocument — uses tax_template_id for the template label
+    // 1) EventGeneratedDocument — template() relation; type comes from the
+    //    linked template (the model itself has no document_type column).
     foreach ($eventGeneratedDocs as $doc) {
-        $template = $doc->relationLoaded('taxTemplate') ? $doc->taxTemplate : ($doc->tax_template_id ? \App\Models\MarketplaceTaxTemplate::find($doc->tax_template_id) : null);
+        $template = $doc->template;
+        $docType = $template?->type;
         $items->push([
             'source' => 'event_generated',
-            'title' => $template?->name ?? ($doc->document_type ? ucfirst(str_replace('_', ' ', $doc->document_type)) : 'Document'),
-            'type_label' => \App\Models\MarketplaceTaxTemplate::TYPES[$doc->document_type] ?? ucfirst(str_replace('_', ' ', $doc->document_type ?? 'document')),
+            'title' => $template?->name ?? ($docType ? ucfirst(str_replace('_', ' ', $docType)) : 'Document'),
+            'type_label' => ($docType && isset(\App\Models\MarketplaceTaxTemplate::TYPES[$docType]))
+                ? \App\Models\MarketplaceTaxTemplate::TYPES[$docType]
+                : ($docType ? ucfirst(str_replace('_', ' ', $docType)) : 'Document'),
             'created_at' => $doc->created_at,
             'file_path' => $doc->file_path,
-            'file_name' => $doc->file_name ?? null,
+            'file_name' => $doc->filename ?? null,
             'file_size' => $doc->file_size ?? null,
             'context' => $template?->name ? "Template: {$template->name}" : null,
             'badge_color' => 'blue',
@@ -62,9 +66,7 @@
 
     // 3) Invoice — facturi de comision pe payouts ale acestui event
     foreach ($invoices as $invoice) {
-        $payout = $invoice->relationLoaded('marketplacePayout')
-            ? $invoice->marketplacePayout
-            : ($invoice->marketplace_payout_id ? \App\Models\MarketplacePayout::find($invoice->marketplace_payout_id) : null);
+        $payout = $invoice->payout;
         $amount = number_format((float) $invoice->amount, 2, ',', '.');
         $context = "Factură {$invoice->number} • {$amount} {$invoice->currency} • {$invoice->status}";
         if ($payout) {

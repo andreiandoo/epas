@@ -4156,7 +4156,7 @@ class EventResource extends Resource
                                                     ->content(function (?Event $record) {
                                                         if (!$record) return '';
 
-                                                        $eventGeneratedDocs = \App\Models\EventGeneratedDocument::with('taxTemplate')
+                                                        $eventGeneratedDocs = \App\Models\EventGeneratedDocument::with('template')
                                                             ->where('event_id', $record->id)
                                                             ->orderByDesc('created_at')
                                                             ->get();
@@ -4166,8 +4166,8 @@ class EventResource extends Resource
                                                             ->get();
 
                                                         // Invoices linked to any payout of this event.
-                                                        $invoices = \App\Models\Invoice::with('marketplacePayout')
-                                                            ->whereHas('marketplacePayout', fn ($q) => $q->where('event_id', $record->id))
+                                                        $invoices = \App\Models\Invoice::with('payout')
+                                                            ->whereHas('payout', fn ($q) => $q->where('event_id', $record->id))
                                                             ->orderByDesc('created_at')
                                                             ->get();
 
