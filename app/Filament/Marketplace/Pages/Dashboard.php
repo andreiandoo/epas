@@ -128,7 +128,10 @@ class Dashboard extends Page
             $prevEnd = $nowRo->copy()->subYear()->endOfMonth()->endOfDay()->utc();
             $prevDays = $nowRo->copy()->subYear()->daysInMonth;
             $prevYearChartData = Cache::remember("mp_dash_chart_{$marketplaceId}_prevyear_{$nowRo->copy()->subYear()->format('Y-m')}", 3600, function () use ($marketplaceId, $prevStart, $prevEnd, $prevDays) {
-                return $this->getChartData($marketplaceId, $prevStart, $prevEnd, $prevDays, true);
+                // Include legacy_import for the comparison line — last year's
+                // sales are mostly migrated orders; excluding them would leave
+                // the prev-year series empty and nothing to compare against.
+                return $this->getChartData($marketplaceId, $prevStart, $prevEnd, $prevDays, true, excludeLegacy: false);
             });
             $prevYearTicketChartData = Cache::remember("mp_dash_tchart_{$marketplaceId}_prevyear_{$nowRo->copy()->subYear()->format('Y-m')}", 3600, function () use ($marketplaceId, $prevStart, $prevEnd, $prevDays) {
                 return $this->getTicketChartData($marketplaceId, $prevStart, $prevEnd, $prevDays, true);
@@ -467,12 +470,19 @@ class Dashboard extends Page
         ];
     }
 
-    private function getChartData(int $marketplaceId, Carbon $startDate, Carbon $endDate, int $days, bool $fullMonth = false): array
+    private function getChartData(int $marketplaceId, Carbon $startDate, Carbon $endDate, int $days, bool $fullMonth = false, bool $excludeLegacy = true): array
     {
         $tz = 'Europe/Bucharest';
+        // Current-period bars present real marketplace sales → exclude
+        // legacy_import. The prev-year comparison passes excludeLegacy=false
+        // because last year's data is mostly migrated (legacy_import); drop
+        // it and there's nothing left to compare against.
+        $excludedSources = $excludeLegacy
+            ? ['test_order', 'external_import', 'legacy_import']
+            : ['test_order', 'external_import'];
         $dailySales = Order::where('marketplace_client_id', $marketplaceId)
             ->whereIn('status', ['paid', 'confirmed', 'completed'])
-            ->whereNotIn('source', ['test_order', 'external_import', 'legacy_import'])
+            ->whereNotIn('source', $excludedSources)
             ->whereBetween('created_at', [$startDate, $endDate])
             ->selectRaw("DATE(created_at AT TIME ZONE 'UTC' AT TIME ZONE '{$tz}') as date, SUM(total) as total")
             ->groupBy('date')
