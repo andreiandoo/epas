@@ -166,15 +166,15 @@ function bileteOnlineCookieConsent() {
         categories: [
             { key:'essential', label:'Esențiale', kicker:'NECESARE', required:true,
                 description:'Aceste cookies sunt necesare pentru funcționarea platformei și nu pot fi dezactivate din acest panou.',
-                examples:['păstrarea produselor în coș','checkout și procesarea comenzii','login, sesiune și securitate','memorarea setărilor de consimțământ'],
-                services:['session','cart','checkout','security'],
-                technical:'Aceste cookies nu sunt folosite pentru marketing comportamental. Sunt necesare pentru furnizarea serviciului cerut de utilizator.'
+                examples:['păstrarea produselor în coș','checkout și procesarea comenzii','login, sesiune și securitate','memorarea setărilor de consimțământ','măsurare de audiență strict agregată (first-party)'],
+                services:['session','cart','checkout','security','server analytics (agregat)'],
+                technical:'Nu sunt folosite pentru marketing comportamental. Includem aici doar măsurarea de audiență first-party, strict agregată: fără partajare cu terți, fără urmărire cross-site, cu IP anonimizat și retenție limitată — conform excepției de consimțământ pentru audience measurement (ghidul CNIL).'
             },
             { key:'analytics', label:'Analytics', kicker:'MĂSURARE', required:false,
-                description:'Ne ajută să înțelegem cum este folosit site-ul: pagini vizitate, performanță, erori și conversii agregate.',
-                examples:['măsurarea traficului pe pagini','înțelegerea pașilor din checkout','detectarea erorilor și a paginilor lente','rapoarte agregate despre activități populare'],
-                services:['Google Analytics','server analytics','conversion events'],
-                technical:'Activează scripturile de măsurare doar după consimțământ. Evită încărcarea pixelilor analytics înainte de accept.'
+                description:'Ne ajută să înțelegem cum este folosit site-ul: pagini vizitate, performanță, erori și conversii agregate prin instrumente terțe.',
+                examples:['măsurarea traficului pe pagini cu instrumente terțe','înțelegerea pașilor din checkout','detectarea erorilor și a paginilor lente','rapoarte despre activități populare'],
+                services:['Google Analytics','conversion events'],
+                technical:'Activează scripturile de măsurare terțe doar după consimțământ. Măsurarea server-side first-party, strict agregată, rămâne în categoria Esențiale conform excepției de audience measurement.'
             },
             { key:'personalization', label:'Personalizare', kicker:'RECOMANDĂRI', required:false,
                 description:'Permite folosirea preferințelor și comportamentului de navigare pentru recomandări mai relevante de activități.',

@@ -43,9 +43,9 @@ $accentMap = [
 
 <a href="#top" class="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[100] focus:px-4 focus:py-2 focus:bg-ink focus:text-paper focus:rounded-md">Sari la conținut</a>
 
-<header x-data="{ open:false, scrolled:false, mega:false, user:false }"
-        x-init="window.addEventListener('scroll', () => scrolled = window.scrollY > 20)"
-        @keydown.escape.window="mega=false; user=false; open=false"
+<header x-data="bileteOnlineHeader()"
+        x-init="initHeader()"
+        @keydown.escape.window="mega=false; user=false; open=false; cityOpen=false"
         class="sticky top-0 z-50"
         role="banner">
 
@@ -163,7 +163,38 @@ $accentMap = [
 
             <!-- right cluster -->
             <div class="flex items-center gap-2 sm:gap-3 shrink-0">
-                <a href="/pentru-locatii" class="hidden md:inline-flex px-4 py-2 rounded-full border-2 border-ink text-sm font-600 hover:bg-ink hover:text-paper transition-colors duration-300">Listează-ți locația</a>
+
+                <!-- CITY SELECTOR (optional pre-filter by city) -->
+                <div class="relative hidden md:block" @click.outside="cityOpen=false">
+                    <button @click="cityOpen=!cityOpen" :aria-expanded="cityOpen"
+                            class="flex items-center gap-1.5 px-3 py-2 rounded-full border-2 border-ink/15 text-sm font-600 hover:border-ink transition"
+                            aria-label="Alege orașul">
+                        <svg viewBox="0 0 24 24" class="w-4 h-4 text-vermilion" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 21s7-4.7 7-11a7 7 0 1 0-14 0c0 6.3 7 11 7 11Z"/><circle cx="12" cy="10" r="2.5"/></svg>
+                        <span x-text="cityLabel || 'Alege orașul'"></span>
+                        <svg :class="cityOpen && 'rotate-180'" class="w-3.5 h-3.5 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+                    </button>
+                    <div x-show="cityOpen" x-cloak
+                         x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0 -translate-y-1" x-transition:enter-end="opacity-100 translate-y-0"
+                         class="absolute right-0 top-[calc(100%+10px)] w-64 bg-paper border-2 border-ink rounded-xl shadow-mega overflow-hidden z-50">
+                        <div class="max-h-80 overflow-y-auto p-2">
+                            <button type="button" @click="selectCity('', '')" class="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-left hover:bg-paper-2 transition" :class="!cityLabel && 'bg-paper-2 font-700'">
+                                <span class="text-ink-soft">🌍</span> Toate orașele
+                            </button>
+                            <?php foreach ($navCities as $city): ?>
+                                <button type="button"
+                                        @click="selectCity('<?= htmlspecialchars($city['slug'] ?? ltrim($city['href'], '/'), ENT_QUOTES) ?>', '<?= htmlspecialchars($city['label'], ENT_QUOTES) ?>')"
+                                        class="w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-lg text-left hover:bg-paper-2 transition"
+                                        :class="cityLabel === '<?= htmlspecialchars($city['label'], ENT_QUOTES) ?>' && 'bg-paper-2 font-700'">
+                                    <span><?= htmlspecialchars($city['label']) ?></span>
+                                    <svg x-show="cityLabel === '<?= htmlspecialchars($city['label'], ENT_QUOTES) ?>'" class="w-4 h-4 text-vermilion" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 13l4 4L19 7"/></svg>
+                                </button>
+                            <?php endforeach; ?>
+                        </div>
+                        <a href="/orase" class="block border-t-2 border-dashed border-ink/15 px-4 py-3 text-sm font-600 text-vermilion hover:bg-paper-2 transition">Vezi toate orașele →</a>
+                    </div>
+                </div>
+
+                <a href="/pentru-locatii" class="hidden lg:inline-flex px-4 py-2 rounded-full border-2 border-ink text-sm font-600 hover:bg-ink hover:text-paper transition-colors duration-300">Listează-ți locația</a>
 
                 <!-- LOGGED OUT (default) -->
                 <a href="/login" class="hidden lg:inline-flex px-4 py-2 rounded-full bg-ink text-paper text-sm font-600 hover:bg-ink-2 transition" x-show="!user">
@@ -232,6 +263,18 @@ $accentMap = [
                 </div>
             </div>
             <a x-show="!user" href="/login" @click="open=false" class="block py-2 font-600 text-vermilion">Intră în cont</a>
+
+            <!-- mobile city selector -->
+            <div class="py-3 my-2 border-y border-ink/10">
+                <p class="font-mono text-[10px] tracking-[.2em] text-ink-soft mb-2">ORAȘUL TĂU</p>
+                <div class="flex flex-wrap gap-2">
+                    <button type="button" @click="selectCity('', '')" class="px-3 py-1.5 rounded-full border border-ink/15 text-sm font-600" :class="!cityLabel ? 'bg-ink text-paper' : 'bg-paper-2'">Toate</button>
+                    <?php foreach (array_slice($navCities, 0, 6) as $city): ?>
+                        <button type="button" @click="selectCity('<?= htmlspecialchars($city['slug'] ?? ltrim($city['href'], '/'), ENT_QUOTES) ?>', '<?= htmlspecialchars($city['label'], ENT_QUOTES) ?>')" class="px-3 py-1.5 rounded-full border border-ink/15 text-sm font-600" :class="cityLabel === '<?= htmlspecialchars($city['label'], ENT_QUOTES) ?>' ? 'bg-ink text-paper' : 'bg-paper-2'"><?= htmlspecialchars($city['label']) ?></button>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+
             <a @click="open=false" href="/categorii" class="block py-2">Categorii</a>
             <a @click="open=false" href="/cum-functioneaza" class="block py-2">Cum funcționează</a>
             <a @click="open=false" href="/experiente" class="block py-2">Experiențe</a>
@@ -241,6 +284,47 @@ $accentMap = [
         </div>
     </div>
 </header>
+<script>
+/**
+ * Header Alpine component. Adds the optional city pre-filter on top of the
+ * existing nav state (mega menu, user dropdown, mobile drawer).
+ *
+ * Selected city is stored in localStorage:
+ *   bo_city        — slug (e.g. "brasov")  — readable by any page to
+ *                    pre-filter listings (events/activities) by city.
+ *   bo_city_label  — display label (e.g. "Brașov")
+ * Selecting a city navigates to its city page (/{slug}); "Toate orașele"
+ * clears the preference and goes to /orase. It's purely a convenience —
+ * nothing on the site requires a city to be set.
+ */
+function bileteOnlineHeader() {
+    return {
+        open: false, scrolled: false, mega: false, user: false, cityOpen: false,
+        cityLabel: '',
+        initHeader() {
+            window.addEventListener('scroll', () => { this.scrolled = window.scrollY > 20; });
+            try { this.cityLabel = localStorage.getItem('bo_city_label') || ''; } catch (e) {}
+        },
+        selectCity(slug, label) {
+            try {
+                if (slug) {
+                    localStorage.setItem('bo_city', slug);
+                    localStorage.setItem('bo_city_label', label);
+                } else {
+                    localStorage.removeItem('bo_city');
+                    localStorage.removeItem('bo_city_label');
+                }
+            } catch (e) {}
+            this.cityLabel = label;
+            this.cityOpen = false;
+            this.open = false;
+            window.dispatchEvent(new CustomEvent('bo-city-changed', { detail: { slug, label } }));
+            window.location.href = slug ? ('/' + slug) : '/orase';
+        },
+    };
+}
+</script>
+
 <?php if (!$skipMainTag): ?>
 <main id="top" role="main">
 <?php endif; ?>

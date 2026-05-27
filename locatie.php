@@ -77,6 +77,28 @@ foreach ($activities as $a) {
     ];
 }
 
+// Similar venues — same city, exclude current. Best-effort + cached.
+$similarVenues = [];
+if ($citySlug) {
+    $simResp = api_cached("venues_city_{$citySlug}", fn () => api_get('/venues', ['per_page' => 7, 'city' => $citySlug]), 600);
+    $simRaw = $simResp['data']['venues'] ?? $simResp['data']['items'] ?? (is_array($simResp['data'] ?? null) ? $simResp['data'] : []);
+    foreach ((is_array($simRaw) ? $simRaw : []) as $sv) {
+        $svSlug = $sv['slug'] ?? '';
+        $svName = navFlatName($sv['name'] ?? '');
+        if (! $svSlug || ! $svName || $svSlug === $slug) continue;
+        $svType = $sv['type'] ?? $sv['venue_type'] ?? '';
+        $similarVenues[] = [
+            'name'  => $svName,
+            'slug'  => $svSlug,
+            'url'   => '/locatie/' . $svSlug,
+            'image' => $sv['cover_image_url'] ?? $sv['image'] ?? null,
+            'type'  => $typeLabels[$svType] ?? (ucfirst(str_replace('_', ' ', (string) $svType)) ?: 'Locație'),
+            'desc'  => navFlatName($sv['short_description'] ?? $sv['description'] ?? '') ?: '',
+        ];
+        if (count($similarVenues) >= 3) break;
+    }
+}
+
 // SEO
 $pageTitleRaw = $name . ' — ' . ($cityName ?: 'România') . ' · ' . SITE_NAME;
 $pageDescription = $shortDescription ?: ($description ? mb_substr(strip_tags($description), 0, 160) : "Bilete pentru activități la {$name}" . ($cityName ? " în {$cityName}" : '') . '. Rezervi online, primești QR pe email.');
@@ -439,6 +461,65 @@ include __DIR__ . '/includes/header.php';
                 <div x-show="open===<?= $i ?>" x-collapse class="px-5 sm:px-6 pb-6 text-ink-soft leading-relaxed"><?= htmlspecialchars($faq[1]) ?></div>
             </article>
         <?php endforeach; ?>
+    </div>
+</section>
+
+<?php if (! empty($similarVenues)): ?>
+<!-- SIMILAR VENUES -->
+<section id="similare" class="bg-paper-2 border-y border-ink/10">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-16 lg:py-24">
+        <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6 mb-9">
+            <div>
+                <p class="font-mono text-xs tracking-[.2em] text-vermilion mb-3">LOCAȚII SIMILARE</p>
+                <h2 class="font-display text-[clamp(2rem,5vw,3.8rem)] font-bold leading-[.95]">Mai multe locuri de vizitat<?= $cityName ? ' în ' . htmlspecialchars($cityName) : '' ?></h2>
+            </div>
+            <?php if ($citySlug): ?>
+                <a href="/<?= htmlspecialchars($citySlug, ENT_QUOTES) ?>" class="inline-flex px-6 py-3 rounded-full bg-ink text-paper font-bold hover:bg-vermilion transition">Vezi toate locațiile</a>
+            <?php endif; ?>
+        </div>
+        <div class="grid md:grid-cols-3 gap-5">
+            <?php foreach ($similarVenues as $sv): ?>
+                <a href="<?= htmlspecialchars($sv['url'], ENT_QUOTES) ?>" class="ticket block bg-paper border-2 border-ink rounded-3xl overflow-hidden shadow-soft hover:-translate-y-1 transition" style="--perf:100%">
+                    <div class="h-52 bg-ink overflow-hidden">
+                        <?php if ($sv['image']): ?>
+                            <img src="<?= htmlspecialchars($sv['image'], ENT_QUOTES) ?>" alt="<?= htmlspecialchars($sv['name'], ENT_QUOTES) ?>" class="h-full w-full object-cover opacity-90" loading="lazy" onerror="this.style.display='none'">
+                        <?php else: ?>
+                            <div class="h-full grid place-items-center text-paper/30 text-6xl">📍</div>
+                        <?php endif; ?>
+                    </div>
+                    <div class="p-5">
+                        <p class="font-mono text-[10px] tracking-[.18em] text-vermilion"><?= htmlspecialchars(strtoupper($sv['type'])) ?></p>
+                        <h3 class="font-display text-2xl font-bold mt-1"><?= htmlspecialchars($sv['name']) ?></h3>
+                        <?php if ($sv['desc']): ?>
+                            <p class="text-sm text-ink-soft mt-2 line-clamp-2"><?= htmlspecialchars($sv['desc']) ?></p>
+                        <?php endif; ?>
+                    </div>
+                </a>
+            <?php endforeach; ?>
+        </div>
+    </div>
+</section>
+<?php endif; ?>
+
+<!-- FINAL CTA -->
+<section class="max-w-7xl mx-auto px-4 sm:px-6 py-16 lg:py-20">
+    <div class="ticket relative bg-vermilion text-paper rounded-3xl overflow-hidden border-2 border-ink p-10 sm:p-14 text-center" style="--perf:100%; --punch:#F4EFE3">
+        <div class="absolute inset-0 opacity-20" style="background-image:radial-gradient(#fff 1.5px,transparent 1.5px);background-size:26px 26px"></div>
+        <div class="relative">
+            <p class="font-mono text-[10px] tracking-[.22em] text-paper/70 mb-3"><?= htmlspecialchars(strtoupper($name)) ?></p>
+            <h2 class="font-display text-[clamp(2rem,5vw,3.6rem)] font-bold leading-[0.95]">Alege activitatea, rezervă online,<br>intră cu QR.</h2>
+            <p class="mt-4 text-paper/85 text-lg max-w-xl mx-auto">Toate experiențele acestei locații într-un singur loc: program, prețuri, disponibilitate și bilete digitale.</p>
+            <div class="mt-8 flex flex-wrap justify-center gap-3">
+                <?php if (! empty($normalizedActivities)): ?>
+                    <a href="#activitati" class="px-7 py-4 rounded-full bg-ink text-paper font-bold hover:bg-ink-2 transition">Vezi activitățile</a>
+                <?php endif; ?>
+                <?php if ($citySlug): ?>
+                    <a href="/<?= htmlspecialchars($citySlug, ENT_QUOTES) ?>" class="px-7 py-4 rounded-full bg-paper text-ink font-bold hover:bg-paper-2 transition">Explorează <?= htmlspecialchars($cityName) ?></a>
+                <?php else: ?>
+                    <a href="/categorii" class="px-7 py-4 rounded-full bg-paper text-ink font-bold hover:bg-paper-2 transition">Explorează categorii</a>
+                <?php endif; ?>
+            </div>
+        </div>
     </div>
 </section>
 

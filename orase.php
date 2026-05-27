@@ -390,15 +390,29 @@ function citiesPage(data) {
         cities: data.cities || [],
         regionFilters: data.regionFilters || [],
         quickCities: data.quickCities || [],
+        // Normalize for search: lowercase + strip Romanian diacritics so
+        // "brasov", "BRAȘOV", "Brașov" all match the same city.
+        norm(s) {
+            return (s || '')
+                .toString()
+                .toLowerCase()
+                .normalize('NFD')
+                .replace(/[̀-ͯ]/g, '')   // strip combining marks
+                .replace(/[şș]/g, 's')   // ş ș → s
+                .replace(/[ţț]/g, 't')   // ţ ț → t
+                .replace(/[ăâ]/g, 'a')   // ă â → a
+                .replace(/[î]/g, 'i')         // î → i
+                .trim();
+        },
         currentRegionTitle() {
             const found = this.regionFilters.find(f => f.key === this.activeRegion);
             return found ? found.label : 'Toate orașele';
         },
         filteredCities() {
-            const q = (this.search || '').toLowerCase().trim();
+            const q = this.norm(this.search);
             return this.cities.filter(c => {
                 const matchesRegion = this.activeRegion === 'all' || c.region_key === this.activeRegion;
-                const matchesSearch = !q || (c.name + ' ' + c.region + ' ' + c.description).toLowerCase().includes(q);
+                const matchesSearch = !q || this.norm(c.name + ' ' + c.region + ' ' + c.description).includes(q);
                 return matchesRegion && matchesSearch;
             });
         },

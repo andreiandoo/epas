@@ -367,11 +367,17 @@ function categoriesPage(categories) {
     return {
         search: '',
         categories: categories || [],
+        norm(s) {
+            return (s || '').toString().toLowerCase().normalize('NFD')
+                .replace(/[̀-ͯ]/g, '')
+                .replace(/[şș]/g, 's').replace(/[ţț]/g, 't')
+                .replace(/[ăâ]/g, 'a').replace(/[î]/g, 'i').trim();
+        },
         filteredCategories() {
-            const q = (this.search || '').toLowerCase().trim();
+            const q = this.norm(this.search);
             if (! q) return this.categories;
             return this.categories.filter(c => {
-                const blob = (c.title + ' ' + c.desc + ' ' + (c.children || []).map(ch => ch.title).join(' ')).toLowerCase();
+                const blob = this.norm(c.title + ' ' + c.desc + ' ' + (c.children || []).map(ch => ch.title).join(' '));
                 return blob.includes(q);
             });
         },

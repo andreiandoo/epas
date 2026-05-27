@@ -405,16 +405,22 @@ function locationsPage(data) {
         typeFilters: data.typeFilters || [],
         cities: data.cities || [],
         quickChips: data.quickChips || [],
+        norm(s) {
+            return (s || '').toString().toLowerCase().normalize('NFD')
+                .replace(/[̀-ͯ]/g, '')
+                .replace(/[şș]/g, 's').replace(/[ţț]/g, 't')
+                .replace(/[ăâ]/g, 'a').replace(/[î]/g, 'i').trim();
+        },
         currentTypeTitle() {
             const found = this.typeFilters.find(f => f.key === this.activeType);
             return found ? found.label : 'Toate locațiile';
         },
         filteredLocations() {
-            const q = (this.search || '').toLowerCase().trim();
+            const q = this.norm(this.search);
             return this.locations.filter(l => {
                 const matchesType = this.activeType === 'all' || l.type === this.activeType;
                 const matchesCity = this.activeCity === 'all' || l.city === this.activeCity;
-                const matchesSearch = !q || (l.name + ' ' + l.city + ' ' + l.description + ' ' + l.typeLabel).toLowerCase().includes(q);
+                const matchesSearch = !q || this.norm(l.name + ' ' + l.city + ' ' + l.description + ' ' + l.typeLabel).includes(q);
                 return matchesType && matchesCity && matchesSearch;
             });
         },
