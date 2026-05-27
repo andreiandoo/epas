@@ -161,6 +161,10 @@ $supportEmail = defined('SUPPORT_EMAIL') ? SUPPORT_EMAIL : '';
 <script defer src="<?= asset(ltrim($jsPath, '/')) ?>"></script>
 <?php endforeach; ?>
 
+<?php if (! $hideCookieBanner): ?>
+    <?php include __DIR__ . '/cookie-consent.php'; ?>
+<?php endif; ?>
+
 <?php echo $extraBodyEnd; ?>
 </body>
 </html>
