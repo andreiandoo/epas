@@ -169,6 +169,13 @@ class PayoutResource extends Resource
                                     ->icon('heroicon-o-clipboard-document')
                                     ->iconPosition(IconPosition::After),
 
+                                Infolists\Components\TextEntry::make('decont_series')
+                                    ->label('Serie decont')
+                                    ->placeholder('—')
+                                    ->copyable()
+                                    ->icon('heroicon-o-hashtag')
+                                    ->iconPosition(IconPosition::After),
+
                                 Infolists\Components\TextEntry::make('status')
                                     ->label('Status')
                                     ->badge()
@@ -736,7 +743,16 @@ class PayoutResource extends Resource
                     ->searchable()
                     ->sortable()
                     ->copyable()
+                    ->description(fn ($record) => $record->decont_series)
                     ->toggleable(),
+
+                Tables\Columns\TextColumn::make('decont_series')
+                    ->label('Serie decont')
+                    ->searchable()
+                    ->sortable()
+                    ->copyable()
+                    ->placeholder('—')
+                    ->toggleable(isToggledHiddenByDefault: true),
 
                 Tables\Columns\TextColumn::make('organizer.name')
                     ->label('Organizer')

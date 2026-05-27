@@ -248,7 +248,8 @@ class MarketplaceTaxTemplate extends Model
             '{{client_address}}' => 'Client Address',
         ],
         'Payout' => [
-            '{{payout_number}}' => 'Payout Reference Number',
+            '{{payout_number}}' => 'Payout Reference Number (serie decont dacă există, altfel referința PAY-...)',
+            '{{decont_series}}' => 'Serie decont (DECAMB1, DECAMB2... — gol pentru deconturi vechi)',
             '{{payout_date}}' => 'Payout Completion Date',
             '{{payout_amount}}' => 'Net Payout Amount (de plată)',
             '{{payout_currency}}' => 'Payout Currency',
@@ -1600,7 +1601,10 @@ class MarketplaceTaxTemplate extends Model
             $payoutCommission = $hasBreakdown ? $commissionExclPos : (float) ($payout->commission_amount ?? 0);
             $payoutAmount = $hasBreakdown ? $netExclPos : (float) ($payout->amount ?? 0);
 
-            $variables['payout_number'] = $payout->reference ?? '';
+            // Prefer the configurable decont series; fall back to the
+            // PAY-... reference for older payouts that have no series.
+            $variables['decont_series'] = $payout->decont_series ?? '';
+            $variables['payout_number'] = $payout->decont_series ?: ($payout->reference ?? '');
             $variables['payout_date'] = $payout->completed_at
                 ? $payout->completed_at->format('d.m.Y')
                 : now()->format('d.m.Y');

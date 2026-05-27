@@ -55,23 +55,29 @@ class EditTaxTemplate extends EditRecord
                             $organizerId = $get('organizer_id');
                             if (!$organizerId) return [];
                             $marketplace = static::getMarketplaceClient();
-                            $now = now()->toDateString();
 
                             $events = Event::where('marketplace_organizer_id', $organizerId)
                                 ->where('marketplace_client_id', $marketplace?->id)
                                 ->get();
 
-                            $live = $events->filter(fn ($e) => $e->event_date && $e->event_date >= $now)->sortBy('event_date');
-                            $ended = $events->filter(fn ($e) => $e->event_date && $e->event_date < $now)->sortByDesc('event_date');
-                            $noDate = $events->filter(fn ($e) => !$e->event_date);
+                            // Use start_date/isPast accessors so Interval (range),
+                            // multi-day and recurring events show their real date
+                            // instead of TBD (event_date is only set for single_day).
+                            $live = $events->filter(fn ($e) => $e->start_date && !$e->isPast())->sortBy(fn ($e) => $e->start_date);
+                            $ended = $events->filter(fn ($e) => $e->start_date && $e->isPast())->sortByDesc(fn ($e) => $e->start_date);
+                            $noDate = $events->filter(fn ($e) => !$e->start_date);
 
                             return $live->concat($ended)->concat($noDate)
-                                ->mapWithKeys(function ($e) use ($now) {
+                                ->mapWithKeys(function ($e) {
                                     $title = is_array($e->title)
                                         ? ($e->title['ro'] ?? $e->title['en'] ?? array_values($e->title)[0] ?? 'Untitled')
                                         : ($e->title ?? 'Event #' . $e->id);
-                                    $status = (!$e->event_date) ? 'TBD' : ($e->event_date >= $now ? '🟢' : '🔴');
-                                    $date = $e->event_date?->format('d.m.Y') ?? '';
+                                    $status = (!$e->start_date) ? 'TBD' : ($e->isPast() ? '🔴' : '🟢');
+                                    $start = $e->start_date?->format('d.m.Y');
+                                    $end = $e->end_date?->format('d.m.Y');
+                                    $date = $start
+                                        ? ($end && $end !== $start ? "{$start} – {$end}" : $start)
+                                        : 'TBD';
                                     return [$e->id => "{$status} {$title} ({$date})"];
                                 })
                                 ->toArray();

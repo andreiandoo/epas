@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class MarketplacePayout extends Model
@@ -21,6 +22,7 @@ class MarketplacePayout extends Model
         'marketplace_organizer_id',
         'event_id',
         'reference',
+        'decont_series',
         'amount',
         'currency',
         'period_start',
@@ -252,6 +254,10 @@ class MarketplacePayout extends Model
             if (empty($payout->reference)) {
                 $payout->reference = 'PAY-' . strtoupper(Str::random(8));
             }
+            // Assign the marketplace-configurable decont series (prefix +
+            // incrementing counter). Saved on the row at creation so it is
+            // immutable thereafter. Existing payouts are never touched.
+            $payout->assignDecontSeries();
         });
 
         static::created(function ($payout) {
@@ -259,6 +265,44 @@ class MarketplacePayout extends Model
             if (!str_ends_with($payout->reference, '-' . $payout->id)) {
                 $payout->updateQuietly(['reference' => $payout->reference . '-' . $payout->id]);
             }
+        });
+    }
+
+    /**
+     * Assign the decont series from the owning marketplace client's settings:
+     * `decont_prefix` + incrementing `decont_next_number` (no zero-padding,
+     * e.g. DECAMB1, DECAMB2...). Idempotent — does nothing if a series is
+     * already set or the client can't be resolved. The counter is read and
+     * bumped under a row lock so concurrent creations never collide.
+     */
+    public function assignDecontSeries(): void
+    {
+        if (!empty($this->decont_series)) {
+            return;
+        }
+        if (!$this->marketplace_client_id) {
+            return;
+        }
+
+        DB::transaction(function () {
+            $client = MarketplaceClient::whereKey($this->marketplace_client_id)
+                ->lockForUpdate()
+                ->first();
+            if (!$client) {
+                return;
+            }
+
+            $settings = $client->settings ?? [];
+            $prefix = $settings['decont_prefix'] ?? 'DEC';
+            $next = (int) ($settings['decont_next_number'] ?? 1);
+            if ($next < 1) {
+                $next = 1;
+            }
+
+            $this->decont_series = $prefix . $next;
+
+            $settings['decont_next_number'] = $next + 1;
+            $client->updateQuietly(['settings' => $settings]);
         });
     }
 

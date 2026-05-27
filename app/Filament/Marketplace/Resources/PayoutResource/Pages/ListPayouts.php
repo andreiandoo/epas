@@ -78,20 +78,26 @@ class ListPayouts extends ListRecords
                             ->where('marketplace_client_id', $marketplaceAdmin->marketplace_client_id)
                             ->get();
 
-                        $now = now()->toDateString();
-
-                        // Split into live (upcoming) and ended (past)
-                        $live = $events->filter(fn ($e) => $e->event_date && $e->event_date >= $now)->sortBy('event_date');
-                        $ended = $events->filter(fn ($e) => $e->event_date && $e->event_date < $now)->sortByDesc('event_date');
-                        $noDate = $events->filter(fn ($e) => !$e->event_date);
+                        // Resolve dates via the Event accessors (start_date /
+                        // end_date / isPast) so Interval (range), multi-day and
+                        // recurring events show their real date instead of "TBD".
+                        // The raw event_date column is only populated for single_day.
+                        $live = $events->filter(fn ($e) => $e->start_date && !$e->isPast())->sortBy(fn ($e) => $e->start_date);
+                        $ended = $events->filter(fn ($e) => $e->start_date && $e->isPast())->sortByDesc(fn ($e) => $e->start_date);
+                        $noDate = $events->filter(fn ($e) => !$e->start_date);
 
                         return $live->concat($ended)->concat($noDate)
-                            ->mapWithKeys(function ($event) use ($now) {
+                            ->mapWithKeys(function ($event) {
                                 $title = is_array($event->title)
                                     ? ($event->title['ro'] ?? $event->title['en'] ?? array_values($event->title)[0] ?? 'Untitled')
                                     : ($event->title ?? 'Untitled');
-                                $status = (!$event->event_date) ? '⚪ TBD' : ($event->event_date >= $now ? '🟢 Live' : '🔴 Încheiat');
-                                $date = $event->event_date?->format('d.m.Y') ?? '';
+                                $status = (!$event->start_date) ? '⚪ TBD' : ($event->isPast() ? '🔴 Încheiat' : '🟢 Live');
+                                $start = $event->start_date?->format('d.m.Y');
+                                $end = $event->end_date?->format('d.m.Y');
+                                // Show range as "start – end" when the end differs (Interval/multi-day)
+                                $date = $start
+                                    ? ($end && $end !== $start ? "{$start} – {$end}" : $start)
+                                    : 'TBD';
                                 return [$event->id => "{$title} ({$date}) — {$status}"];
                             })
                             ->toArray();

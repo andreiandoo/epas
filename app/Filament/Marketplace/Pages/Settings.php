@@ -86,6 +86,8 @@ class Settings extends Page
                 'invoice_prefix' => $settings['invoice_prefix'] ?? 'FACT',
                 'invoice_next_number' => $settings['invoice_next_number'] ?? 1,
                 'invoice_due_days' => $settings['invoice_due_days'] ?? 30,
+                'decont_prefix' => $settings['decont_prefix'] ?? 'DEC',
+                'decont_next_number' => $settings['decont_next_number'] ?? 1,
 
                 // Legal Pages
                 'terms_title' => $settings['legal']['terms_title'] ?? 'Terms & Conditions',
@@ -962,6 +964,8 @@ class Settings extends Page
         $settings['invoice_prefix'] = $data['invoice_prefix'] ?? 'FACT';
         $settings['invoice_next_number'] = (int) ($data['invoice_next_number'] ?? 1);
         $settings['invoice_due_days'] = (int) ($data['invoice_due_days'] ?? 30);
+        $settings['decont_prefix'] = $data['decont_prefix'] ?? 'DEC';
+        $settings['decont_next_number'] = (int) ($data['decont_next_number'] ?? 1);
 
         $settings['legal'] = [
             'terms_title' => $data['terms_title'] ?? 'Terms & Conditions',
