@@ -1800,9 +1800,21 @@ class MarketplaceTaxTemplate extends Model
             // order.promo_code string, order.promo_code_id → promo_codes
             // table, or meta.promo_code.code (older WP imports). Orders
             // with a discount but no code surface as "reducere manuală".
+            // Snapshots built by SalesBreakdownService write a 'discount'
+            // key on every row (zero when no discount). Older snapshots
+            // simply omit the key. Distinguish those two cases via
+            // array_key_exists — without it, payouts whose new-style
+            // snapshot legitimately has zero discount triggered the
+            // order-level fallback and reported false discount values
+            // (e.g. payout 2921 showed 24 RON discount even though the
+            // breakdown was all 0).
+            $hasPerRowDiscount = !empty($ticketBreakdown)
+                && array_key_exists('discount', $ticketBreakdown[0] ?? []);
             $totalDiscountAmount = 0.0;
-            foreach ($ticketBreakdown as $item) {
-                $totalDiscountAmount += (float) ($item['discount'] ?? 0);
+            if ($hasPerRowDiscount) {
+                foreach ($ticketBreakdown as $item) {
+                    $totalDiscountAmount += (float) ($item['discount'] ?? 0);
+                }
             }
             $promoCodes = [];
             $orderHasNonCodeDiscount = false;
@@ -1844,10 +1856,13 @@ class MarketplaceTaxTemplate extends Model
                     }
                 }
             }
-            // Use the snapshot total when it has signal; else fall back to the
-            // order-derived sum so legacy payouts (snapshot pre-dates per-row
-            // discount) still render the right number.
-            if ($totalDiscountAmount <= 0 && $fallbackDiscountFromOrders > 0) {
+            // Only fall back to the order-level sum for legacy snapshots
+            // that don't carry the 'discount' key at all. New-style
+            // snapshots with explicit zero discount stay at zero — we
+            // trust the breakdown over orphan totals on the model
+            // (payout->discount_amount stays for legacy bookkeeping but
+            // doesn't override what the breakdown encodes).
+            if (!$hasPerRowDiscount && $fallbackDiscountFromOrders > 0) {
                 $totalDiscountAmount = $fallbackDiscountFromOrders;
             }
             $variables['total_discount_amount'] = number_format($totalDiscountAmount, 2);
