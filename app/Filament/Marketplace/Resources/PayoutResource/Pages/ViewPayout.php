@@ -830,9 +830,13 @@ class ViewPayout extends ViewRecord
                 ->button()
                 ->visible(fn () => $this->record->invoice !== null),
 
-            // ========== GENERATE POS INVOICE (when POS tickets exist, no POS invoice yet) ==========
-            // POS/app sales don't flow through marketplace. Commission for those is charged
-            // to the organizer via a separate invoice.
+            // ========== GENERATE POS INVOICE (event-level, billed once) ==========
+            // POS/app sales don't flow through marketplace. Commission is
+            // charged via a SINGLE invoice per event — the button shows on any
+            // active decont of the event while the event is finished and the
+            // invoice hasn't been emitted yet; after emission it disappears
+            // everywhere (the other decont gets a "Vezi factura POS" link
+            // below instead).
             Actions\Action::make('generate_invoice_pos')
                 ->label('Generează factură POS')
                 ->icon('heroicon-o-device-phone-mobile')
@@ -840,14 +844,42 @@ class ViewPayout extends ViewRecord
                 ->requiresConfirmation()
                 ->modalDescription(function () {
                     $posComm = $this->record->getPosCommissionTotal();
-                    return 'Se va genera o factură către organizator cu valoarea comisioanelor biletelor vândute prin aplicație: ' . number_format($posComm, 2) . ' RON.';
+                    return 'Se va genera o singură factură către organizator pentru comisioanele TUTUROR biletelor vândute prin aplicația POS pe acest eveniment: ' . number_format($posComm, 2) . ' RON. După emitere, butonul dispare de pe toate deconturile evenimentului.';
                 })
-                ->visible(fn () => $this->record->posInvoice === null
+                ->visible(fn () => $this->record->getEventPosInvoice() === null
+                    && $this->record->isEventFinished()
                     && $this->record->getPosCommissionTotal() > 0
                     && !in_array($this->record->status, ['rejected', 'cancelled']))
                 ->action(function () {
                     $this->generatePosInvoice();
                 }),
+
+            // When the POS invoice was emitted on ANOTHER decont of the same
+            // event, surface a one-click jump so the operator can see/manage
+            // it without hunting through deconts.
+            Actions\Action::make('view_event_pos_invoice_elsewhere')
+                ->label(function () {
+                    $inv = $this->record->getEventPosInvoice();
+                    $payoutId = $inv?->marketplace_payout_id;
+                    return $payoutId
+                        ? "Vezi factura POS (Decont #{$payoutId})"
+                        : 'Vezi factura POS';
+                })
+                ->icon('heroicon-o-arrow-top-right-on-square')
+                ->color('gray')
+                ->visible(function () {
+                    $inv = $this->record->getEventPosInvoice();
+                    return $inv !== null
+                        && $inv->marketplace_payout_id !== $this->record->id;
+                })
+                ->url(function () {
+                    $inv = $this->record->getEventPosInvoice();
+                    if (!$inv) return null;
+                    // Link to the decont that owns the POS invoice — from there
+                    // the operator can view/download/send through the existing
+                    // POS group actions.
+                    return PayoutResource::getUrl('view', ['record' => $inv->marketplace_payout_id]);
+                }, shouldOpenInNewTab: true),
 
             Actions\ActionGroup::make([
                 Actions\Action::make('view_invoice_pos')
@@ -949,18 +981,12 @@ class ViewPayout extends ViewRecord
             return;
         }
 
-        // POS-only sales slice for this payout's period is the source of truth
-        // for POS commission — ticket_breakdown no longer carries POS rows
-        // (they're excluded from the decont by design). Upper bound clamped
-        // at the payout's created_at so we never bill POS sales that arrived
-        // AFTER this decont was created (those belong to a later decont) —
-        // matches getPosCommissionTotal()'s visibility check exactly.
-        $createdAt = $payout->created_at ? \Carbon\Carbon::parse($payout->created_at) : null;
-        $posUpper = ($createdAt && $payout->period_end && $payout->period_end->lt($createdAt))
-            ? $payout->period_end
-            : ($createdAt ?? $payout->period_end);
+        // POS commission is billed ONCE per event — covers every POS sale,
+        // not just this decont's slice. No period bounds. Gated upstream by
+        // the button's visible() so we only reach here after the event has
+        // finished and no prior POS invoice exists.
         $posRows = app(\App\Services\Marketplace\SalesBreakdownService::class)
-            ->buildPosForPayout($payout->event, $payout->period_start, $posUpper);
+            ->buildPosForPayout($payout->event, null, null);
         if (empty($posRows)) {
             Notification::make()->title('Nu există comisioane POS de facturat')->warning()->send();
             return;

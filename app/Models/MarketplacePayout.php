@@ -635,6 +635,16 @@ class MarketplacePayout extends Model
      * excluded from the decont). Memoized per instance because several
      * action visible()/modal callbacks hit it on the same render.
      */
+    /**
+     * Total POS commission for THE ENTIRE EVENT (not the payout slice). POS
+     * commission is billed once per event via a single invoice — see
+     * getEventPosInvoice() — so the amount shown on each decont's "Generează
+     * factură POS" button reflects what the single invoice will charge for
+     * all POS sales of the event, regardless of which decont triggers it.
+     *
+     * Returns 0 when the event has no POS sales, or when there's no event
+     * link. Memoized per instance.
+     */
     public function getPosCommissionTotal(): float
     {
         if ($this->posCommissionCache !== null) {
@@ -644,8 +654,9 @@ class MarketplacePayout extends Model
             return $this->posCommissionCache = 0.0;
         }
 
+        // No period bounds — POS is billed event-wide.
         $rows = app(\App\Services\Marketplace\SalesBreakdownService::class)
-            ->buildPosForPayout($this->event, $this->period_start, $this->getPosUpperBound());
+            ->buildPosForPayout($this->event, null, null);
 
         $total = 0.0;
         foreach ($rows as $row) {
@@ -655,23 +666,39 @@ class MarketplacePayout extends Model
     }
 
     /**
-     * Upper bound for POS sales attributable to THIS payout: never later
-     * than the payout's own `created_at`. POS sales made after the payout
-     * was created belong to a future payout, not this one — without this
-     * clamp, the first decont on an event picks up POS sales that came in
-     * later (period_end may be null or set past created_at), showing a
-     * phantom "Generează factură POS" button + wizard step.
+     * The POS invoice for this payout's EVENT (if any), regardless of which
+     * decont actually triggered the generation. Used so the button hides on
+     * every payout of the event after the first emission, and so the other
+     * payouts can show a "Vezi factura POS (Decont #X)" link to the one
+     * that owns it.
      */
-    protected function getPosUpperBound(): ?\Carbon\Carbon
+    public function getEventPosInvoice(): ?\App\Models\Invoice
     {
-        $createdAt = $this->created_at ? \Carbon\Carbon::parse($this->created_at) : null;
-        if (!$createdAt) {
-            return $this->period_end;
+        if (!$this->event_id || !$this->marketplace_organizer_id) {
+            return null;
         }
-        if ($this->period_end && $this->period_end->lt($createdAt)) {
-            return $this->period_end;
+
+        return \App\Models\Invoice::query()
+            ->whereHas('payout', fn ($q) => $q
+                ->where('event_id', $this->event_id)
+                ->where('marketplace_organizer_id', $this->marketplace_organizer_id))
+            ->where('meta->is_pos_commission', true)
+            ->latest('id')
+            ->first();
+    }
+
+    /**
+     * True once the event has reached its end — the only point at which we
+     * allow POS billing, since after that no more POS sales can be added
+     * and the single POS invoice can safely cover everything.
+     */
+    public function isEventFinished(): bool
+    {
+        $event = $this->event;
+        if (!$event) {
+            return false;
         }
-        return $createdAt;
+        return $event->isPast() || ($event->status ?? null) === 'archived';
     }
 
     /**
@@ -775,8 +802,15 @@ class MarketplacePayout extends Model
             ['key' => 'generate_invoice', 'label' => 'Generează factura', 'done' => $this->invoice !== null],
         ];
 
-        if ($this->getPosCommissionTotal() > 0) {
-            $steps[] = ['key' => 'generate_invoice_pos', 'label' => 'Generează factura POS', 'done' => $this->posInvoice !== null];
+        // POS step appears only when the event is finished and has POS
+        // commission to bill. Done = any decont on this event already emitted
+        // the (single) POS invoice — by design we bill POS once per event.
+        if ($this->isEventFinished() && $this->getPosCommissionTotal() > 0) {
+            $steps[] = [
+                'key' => 'generate_invoice_pos',
+                'label' => 'Generează factura POS',
+                'done' => $this->getEventPosInvoice() !== null,
+            ];
         }
 
         return $steps;
