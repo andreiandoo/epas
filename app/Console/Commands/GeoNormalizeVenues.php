@@ -105,9 +105,12 @@ class GeoNormalizeVenues extends Command
             $county = $venue->state ? GeoLocations::matchCounty($venue->state, $country) : null;
             if ($venue->state && $county && $county->name_native !== $venue->state) {
                 // Safety guard: never replace a value with one that has
-                // FEWER diacritics. Otherwise a partially-correct seed
-                // entry would silently strip operators' careful spelling.
-                if (GeoLocations::countDiacritics($county->name_native) < GeoLocations::countDiacritics($venue->state)) {
+                // FEWER diacritics — UNLESS the fold-keys differ, which
+                // means it's an alias (e.g. "Bucharest" → "București"
+                // would be safe; same-word downgrades like "Onești" →
+                // "Onesti" stay blocked).
+                $sameWord = GeoLocations::fold($county->name_native) === GeoLocations::fold($venue->state);
+                if ($sameWord && GeoLocations::countDiacritics($county->name_native) < GeoLocations::countDiacritics($venue->state)) {
                     $stats['would_downgrade_state']++;
                     $downgradeState[] = ['id' => $venue->id, 'current' => $venue->state, 'canonical' => $county->name_native];
                 } else {
@@ -141,8 +144,13 @@ class GeoNormalizeVenues extends Command
                         $ambiguousCity[] = ['id' => $venue->id, 'city' => $venue->city, 'state' => $venue->state];
                     } else {
                         if ($loc->name_native !== $venue->city) {
-                            // Same safety guard for the city rewrite.
-                            if (GeoLocations::countDiacritics($loc->name_native) < GeoLocations::countDiacritics($venue->city)) {
+                            // Same safety guard for the city rewrite — only
+                            // blocks when the fold-keys match (same word,
+                            // fewer diacritics = real downgrade). Alias-
+                            // driven rewrites with different folds (e.g.
+                            // "București 5" → "Sector 5") pass through.
+                            $sameWord = GeoLocations::fold($loc->name_native) === GeoLocations::fold($venue->city);
+                            if ($sameWord && GeoLocations::countDiacritics($loc->name_native) < GeoLocations::countDiacritics($venue->city)) {
                                 $stats['would_downgrade_city']++;
                                 $downgradeCity[] = ['id' => $venue->id, 'current' => $venue->city, 'canonical' => $loc->name_native];
                             } else {
