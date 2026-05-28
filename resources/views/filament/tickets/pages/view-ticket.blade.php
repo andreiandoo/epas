@@ -135,7 +135,7 @@
                     </div>
                     <div>
                         <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Creat la</span>
-                        <p class="text-base text-gray-900 dark:text-white">{{ $ticket->created_at->format('d M Y, H:i') }}</p>
+                        <p class="text-base text-gray-900 dark:text-white">{{ \App\Support\MarketplaceTz::fmt($ticket->created_at, 'd M Y, H:i', $ticket->order?->marketplaceClient) }}</p>
                     </div>
                 </div>
             </div>
@@ -321,7 +321,7 @@
                             <li class="ml-4">
                                 <div class="absolute w-2.5 h-2.5 bg-blue-500 rounded-full mt-1.5 -left-1.5 border border-white dark:border-gray-800"></div>
                                 <time class="text-xs font-normal leading-none text-gray-400 dark:text-gray-500">
-                                    {{ isset($transfer['at']) ? \Carbon\Carbon::parse($transfer['at'])->format('d.m.Y H:i') : '—' }}
+                                    {{ isset($transfer['at']) ? \App\Support\MarketplaceTz::fmt($transfer['at'], 'd.m.Y H:i', $ticket->order?->marketplaceClient) : '—' }}
                                 </time>
                                 <p class="mt-1 text-sm text-gray-900 dark:text-gray-100">
                                     De la
@@ -417,7 +417,7 @@
                             <li class="mb-4 ml-4">
                                 <div class="absolute w-2.5 h-2.5 {{ $dotColor }} rounded-full mt-1.5 -left-1.5 border border-white dark:border-gray-800"></div>
                                 <time class="text-xs font-normal leading-none text-gray-400 dark:text-gray-500">
-                                    {{ $act->created_at?->format('d.m.Y H:i') }} · {{ $causerName ?? $causerEmail ?? '— sistem —' }}
+                                    {{ \App\Support\MarketplaceTz::fmt($act->created_at, 'd.m.Y H:i', $ticket->order?->marketplaceClient) }} · {{ $causerName ?? $causerEmail ?? '— sistem —' }}
                                 </time>
                                 <p class="mt-1 text-sm text-gray-900 dark:text-gray-100">
                                     <strong>{{ $actionLabel }}</strong>:

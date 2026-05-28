@@ -16,6 +16,7 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
+use App\Support\MarketplaceTz;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\HtmlString;
 
@@ -441,7 +442,7 @@ class OrderResource extends Resource
                     ->toggleable(),
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Data')
-                    ->dateTime('d M Y H:i')
+                    ->dateTime('d M Y H:i', timezone: MarketplaceTz::tz())
                     ->sortable()
                     ->toggleable(),
             ])
@@ -753,7 +754,7 @@ class OrderResource extends Resource
     {
         $incrementalId = '#' . str_pad($record->id, 6, '0', STR_PAD_LEFT);
         $customerRef = $record->order_number; // Customer-facing reference like MKT-xxx
-        $date = $record->created_at->format('d M Y, H:i');
+        $date = MarketplaceTz::fmt($record->created_at, 'd M Y, H:i', $record->marketplaceClient ?? null);
         $currency = $record->currency ?? 'RON';
         $ticketCount = $record->tickets->count();
 
@@ -794,7 +795,7 @@ class OrderResource extends Resource
                 $paymentMethod = '-';
             }
         }
-        $updatedAt = $record->updated_at->format('d M H:i');
+        $updatedAt = MarketplaceTz::fmt($record->updated_at, 'd M H:i', $record->marketplaceClient ?? null);
 
         // Calculate savings (discount + target price savings)
         $savings = (float) ($record->discount_amount ?? 0);
@@ -1746,7 +1747,7 @@ class OrderResource extends Resource
 
         $html = '<div style="display:flex;flex-direction:column;gap:10px;">';
         foreach ($entries as $t) {
-            $when = !empty($t['at']) ? \Carbon\Carbon::parse($t['at'])->format('d.m.Y H:i') : '—';
+            $when = !empty($t['at']) ? MarketplaceTz::fmt($t['at'], 'd.m.Y H:i', $record->marketplaceClient ?? null) : '—';
             $fromName = e($t['from_name'] ?? '—');
             $fromEmail = !empty($t['from_email']) ? e($t['from_email']) : '';
             $toName = e($t['to_name'] ?? '—');
@@ -1857,9 +1858,7 @@ class OrderResource extends Resource
 
         // Payment Date
         if ($paidAt) {
-            $paidAtFormatted = $paidAt instanceof \Carbon\Carbon 
-                ? $paidAt->format('d M Y, H:i') 
-                : \Carbon\Carbon::parse($paidAt)->format('d M Y, H:i');
+            $paidAtFormatted = MarketplaceTz::fmt($paidAt, 'd M Y, H:i', $record->marketplaceClient ?? null);
             
             $html .= "
                 <div style='display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid rgba(51, 65, 85, 0.5);'>
@@ -1923,7 +1922,7 @@ class OrderResource extends Resource
                 </div>
                 <div style='padding:12px;background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.2);border-radius:8px;'>
                     <div style='font-size:11px;color:#94A3B8;margin-bottom:4px;'>Data rambursării</div>
-                    <div style='font-size:14px;font-weight:600;color:#E2E8F0;'>" . ($refundedAt ? $refundedAt->format('d.m.Y H:i') : '—') . "</div>
+                    <div style='font-size:14px;font-weight:600;color:#E2E8F0;'>" . MarketplaceTz::fmt($refundedAt, 'd.m.Y H:i', $record->marketplaceClient ?? null) . "</div>
                 </div>
             </div>
         ";
@@ -1972,7 +1971,7 @@ class OrderResource extends Resource
                     </div>
                     <div style='font-size:11px;color:#64748B;margin-bottom:6px;'>
                         " . number_format($refReq->approved_amount ?? $refReq->requested_amount ?? 0, 2) . " {$currency}
-                        · " . ($refReq->created_at?->format('d.m.Y H:i') ?? '') . "
+                        · " . MarketplaceTz::fmt($refReq->created_at, 'd.m.Y H:i', $record->marketplaceClient ?? null, fallback: '') . "
                         {$refId}
                     </div>
             ";
@@ -2091,7 +2090,7 @@ class OrderResource extends Resource
                 // status flip lags the real expiry by 0–2 minutes. Surface the
                 // gap so it doesn't look like a TTL bug.
                 $lag = ($record->updated_at && $record->updated_at->gt($record->expires_at))
-                    ? ' · verificat la ' . $record->updated_at->format('H:i')
+                    ? ' · verificat la ' . MarketplaceTz::fmt($record->updated_at, 'H:i', $record->marketplaceClient ?? null)
                     : '';
                 $statusSubtext = $cause . $lag;
             }
@@ -2286,8 +2285,8 @@ class OrderResource extends Resource
                 default => '#334155',
             };
 
-            $time = $event['time'] instanceof \Carbon\Carbon 
-                ? $event['time']->format('d M Y, H:i') 
+            $time = $event['time'] instanceof \Carbon\Carbon
+                ? MarketplaceTz::fmt($event['time'], 'd M Y, H:i', $record->marketplaceClient ?? null)
                 : $event['time'];
 
             $isLast = $index === $events->count() - 1;

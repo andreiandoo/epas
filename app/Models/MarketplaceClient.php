@@ -36,6 +36,7 @@ class MarketplaceClient extends Model
         'bank_name',
         'bank_account',
         'currency',
+        'timezone',
         'website',
         'ticket_terms',
         'status',

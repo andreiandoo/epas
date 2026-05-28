@@ -10,6 +10,7 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
+use App\Support\MarketplaceTz;
 
 class TicketResource extends Resource
 {
@@ -205,7 +206,7 @@ class TicketResource extends Resource
                     ->toggleable(),
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Data achiziție')
-                    ->dateTime('d M Y H:i')
+                    ->dateTime('d M Y H:i', timezone: MarketplaceTz::tz())
                     ->sortable()
                     ->toggleable(),
             ])

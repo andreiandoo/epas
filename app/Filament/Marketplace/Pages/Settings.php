@@ -60,6 +60,7 @@ class Settings extends Page
                 'bank_name' => $marketplace->bank_name,
                 'bank_account' => $marketplace->bank_account,
                 'currency' => $marketplace->currency ?? 'EUR',
+                'timezone' => $marketplace->timezone ?? \App\Support\MarketplaceTz::DEFAULT_TIMEZONE,
                 'invoice_preparer' => $settings['invoice_preparer'] ?? '',
                 'general_invoice_client_name' => $settings['general_invoice_client_name'] ?? 'Client general',
                 'general_invoice_client_cui' => $settings['general_invoice_client_cui'] ?? '',
@@ -218,6 +219,17 @@ class Settings extends Page
                                             ->default('EUR')
                                             ->required()
                                             ->hintIcon('heroicon-o-information-circle', tooltip: 'Default currency for sales and invoices'),
+
+                                        Forms\Components\Select::make('timezone')
+                                            ->label('Fus orar')
+                                            ->options(fn () => collect(\DateTimeZone::listIdentifiers())
+                                                ->mapWithKeys(fn ($tz) => [$tz => $tz])
+                                                ->all())
+                                            ->default(\App\Support\MarketplaceTz::DEFAULT_TIMEZONE)
+                                            ->searchable()
+                                            ->required()
+                                            ->helperText('Toate orele afișate (comenzi, bilete, rapoarte) vor fi convertite în acest fus orar. Datele rămân stocate în UTC.')
+                                            ->hintIcon('heroicon-o-information-circle', tooltip: 'Default: Europe/Bucharest. Schimbarea afectează doar afișarea — nu modifică datele istorice.'),
 
                                         Forms\Components\TextInput::make('invoice_preparer')
                                             ->label('Persoana care completează documentele')
@@ -901,6 +913,7 @@ class Settings extends Page
             'bank_name' => $data['bank_name'] ?? $marketplace->bank_name,
             'bank_account' => $data['bank_account'] ?? $marketplace->bank_account,
             'currency' => $data['currency'] ?? $marketplace->currency,
+            'timezone' => $data['timezone'] ?? $marketplace->timezone ?? \App\Support\MarketplaceTz::DEFAULT_TIMEZONE,
             'ticket_terms' => $data['ticket_terms'] ?? $marketplace->ticket_terms,
         ];
 
