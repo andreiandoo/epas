@@ -22,6 +22,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\HtmlString;
 use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
+use App\Support\MarketplaceTz;
 
 class MarketplaceCustomerResource extends Resource
 {
@@ -459,13 +460,13 @@ class MarketplaceCustomerResource extends Resource
 
                 Tables\Columns\TextColumn::make('last_login_at')
                     ->label('Last Login')
-                    ->dateTime()
+                    ->dateTime(timezone: MarketplaceTz::tz())
                     ->sortable()
                     ->toggleable(),
 
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Registered')
-                    ->dateTime()
+                    ->dateTime(timezone: MarketplaceTz::tz())
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
@@ -605,7 +606,7 @@ class MarketplaceCustomerResource extends Resource
         if (!$record) return new HtmlString('');
 
         $lastLogin = $record->last_login_at?->diffForHumans() ?? 'Never';
-        $registered = $record->created_at?->format('d M Y') ?? '-';
+        $registered = MarketplaceTz::fmt($record->created_at, 'd M Y', $record->marketplaceClient ?? null, fallback: '-');
 
         return new HtmlString("
             <div style='display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;'>
@@ -750,7 +751,7 @@ class MarketplaceCustomerResource extends Resource
     {
         if (!$record) return new HtmlString('');
 
-        $createdAt = $record->created_at?->format('d M Y H:i') ?? '-';
+        $createdAt = MarketplaceTz::fmt($record->created_at, 'd M Y H:i', $record->marketplaceClient ?? null, fallback: '-');
         $updatedAt = $record->updated_at?->diffForHumans() ?? '-';
         $lastLogin = $record->last_login_at?->diffForHumans() ?? 'Never';
 

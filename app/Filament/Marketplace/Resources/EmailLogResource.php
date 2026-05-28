@@ -4,6 +4,7 @@ namespace App\Filament\Marketplace\Resources;
 
 use App\Filament\Marketplace\Resources\EmailLogResource\Pages;
 use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
+use App\Support\MarketplaceTz;
 use App\Jobs\ResendEmailJob;
 use App\Models\MarketplaceEmailLog;
 use Filament\Forms;
@@ -76,14 +77,19 @@ class EmailLogResource extends Resource
                 SC\Section::make('Tracking')
                     ->schema([
                         Forms\Components\DateTimePicker::make('sent_at')
+                            ->timezone(MarketplaceTz::tz())
                             ->disabled(),
                         Forms\Components\DateTimePicker::make('delivered_at')
+                            ->timezone(MarketplaceTz::tz())
                             ->disabled(),
                         Forms\Components\DateTimePicker::make('opened_at')
+                            ->timezone(MarketplaceTz::tz())
                             ->disabled(),
                         Forms\Components\DateTimePicker::make('clicked_at')
+                            ->timezone(MarketplaceTz::tz())
                             ->disabled(),
                         Forms\Components\DateTimePicker::make('bounced_at')
+                            ->timezone(MarketplaceTz::tz())
                             ->disabled(),
                     ])->columns(3),
 
@@ -143,7 +149,7 @@ class EmailLogResource extends Resource
                         default => 'gray',
                     }),
                 Tables\Columns\TextColumn::make('sent_at')
-                    ->dateTime()
+                    ->dateTime(timezone: MarketplaceTz::tz())
                     ->sortable(),
                 Tables\Columns\IconColumn::make('opened_at')
                     ->label('Opened')

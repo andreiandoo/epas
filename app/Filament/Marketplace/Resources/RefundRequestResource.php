@@ -4,6 +4,7 @@ namespace App\Filament\Marketplace\Resources;
 
 use App\Filament\Marketplace\Resources\RefundRequestResource\Pages;
 use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
+use App\Support\MarketplaceTz;
 use App\Jobs\SendRefundNotificationsJob;
 use App\Models\MarketplaceRefundRequest;
 use Filament\Forms;
@@ -139,7 +140,7 @@ class RefundRequestResource extends Resource
                             ->visible(fn ($record) => $record?->isRefunded()),
                         Forms\Components\Placeholder::make('processed_info')
                             ->label('Processed')
-                            ->content(fn ($record) => $record?->processed_at?->format('Y-m-d H:i') . ' by ' . ($record?->processedBy?->name ?? 'System'))
+                            ->content(fn ($record) => MarketplaceTz::fmt($record?->processed_at, 'Y-m-d H:i', $record?->marketplaceClient) . ' by ' . ($record?->processedBy?->name ?? 'System'))
                             ->visible(fn ($record) => $record?->processed_at),
                     ])->columns(2)
                     ->visible(fn ($record) => in_array($record?->status, ['approved', 'processing', 'refunded', 'partially_refunded', 'failed'])),
@@ -196,7 +197,7 @@ class RefundRequestResource extends Resource
                     ->color(fn ($record) => $record->status_color),
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Requested')
-                    ->dateTime()
+                    ->dateTime(timezone: MarketplaceTz::tz())
                     ->sortable(),
             ])
             ->defaultSort('created_at', 'desc')

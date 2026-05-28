@@ -9,6 +9,7 @@ use App\Models\Invoice;
 use App\Models\OrganizerDocument;
 use App\Services\Accounting\AccountingService;
 use App\Services\EFactura\EFacturaService;
+use App\Support\MarketplaceTz;
 use Filament\Actions;
 use Filament\Forms;
 use Filament\Notifications\Notification;
@@ -356,7 +357,7 @@ class ViewPayout extends ViewRecord
                                         '%s · %s RON · %s',
                                         $r->reference,
                                         number_format((float) $r->approved_amount, 2),
-                                        $r->completed_at?->format('d.m.Y') ?? '—'
+                                        MarketplaceTz::fmt($r->completed_at, 'd.m.Y', $this->record->marketplaceClient ?? null, fallback: '—')
                                     ),
                                 ])
                                 ->all();
@@ -1282,7 +1283,7 @@ class ViewPayout extends ViewRecord
         $reference = $payout->reference;
         $sequenceLabel = $this->buildPayoutSequenceLabel($payout);
         $ev = $this->resolveEventContext($payout->event);
-        $createdAt = $payout->created_at ? $payout->created_at->format('d.m.Y') : '';
+        $createdAt = MarketplaceTz::fmt($payout->created_at, 'd.m.Y', $payout->marketplaceClient ?? null, fallback: '');
 
         $venueFragment = '';
         if ($ev['venue'] !== '' && $ev['city'] !== '') {

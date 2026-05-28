@@ -7,6 +7,7 @@ use App\Filament\Marketplace\Resources\EventResource;
 use App\Filament\Marketplace\Resources\OrganizerResource;
 use App\Models\MarketplacePayout;
 use App\Models\MarketplaceAdmin;
+use App\Support\MarketplaceTz;
 use Filament\Forms;
 use Filament\Infolists;
 use Filament\Schemas\Schema;
@@ -85,7 +86,7 @@ class PayoutResource extends Resource
                         Forms\Components\Placeholder::make('created_at_display')
                             ->label('Requested At')
                             ->content(fn (?MarketplacePayout $record): string =>
-                                $record?->created_at?->format('d.m.Y H:i') ?? '-'),
+                                MarketplaceTz::fmt($record?->created_at, 'd.m.Y H:i', $record?->marketplaceClient, fallback: '-')),
                     ])
                     ->columns(3),
 
@@ -230,7 +231,7 @@ class PayoutResource extends Resource
 
                                 Infolists\Components\TextEntry::make('created_at')
                                     ->label('Creat la')
-                                    ->dateTime('d.m.Y H:i'),
+                                    ->dateTime('d.m.Y H:i', timezone: MarketplaceTz::tz()),
                             ])
                             ->columns(3),
 
@@ -487,7 +488,7 @@ class PayoutResource extends Resource
                                     ->label('Metodă plată'),
                                 Infolists\Components\TextEntry::make('completed_at')
                                     ->label('Finalizat la')
-                                    ->dateTime('d.m.Y H:i'),
+                                    ->dateTime('d.m.Y H:i', timezone: MarketplaceTz::tz()),
                                 Infolists\Components\TextEntry::make('payment_notes')
                                     ->label('Note plată')
                                     ->columnSpanFull()
@@ -507,7 +508,7 @@ class PayoutResource extends Resource
                                     ->label('Respins de'),
                                 Infolists\Components\TextEntry::make('rejected_at')
                                     ->label('Data')
-                                    ->dateTime('d.m.Y H:i'),
+                                    ->dateTime('d.m.Y H:i', timezone: MarketplaceTz::tz()),
                             ])
                             ->columns(2)
                             ->visible(fn ($record) => $record->status === 'rejected'),
@@ -596,7 +597,7 @@ class PayoutResource extends Resource
                                             $url = static::getUrl('view', ['record' => $p->id]);
                                             $color = $statusColor[$p->status] ?? '#6b7280';
                                             $label = $statusLabel[$p->status] ?? $p->status;
-                                            $date = $p->created_at?->format('d.m.Y') ?? '—';
+                                            $date = MarketplaceTz::fmt($p->created_at, 'd.m.Y', $p->marketplaceClient ?? null, fallback: '—');
                                             $amount = number_format((float) $p->amount, 2, ',', '.');
                                             $marker = $isCurrent ? '<span style="margin-left:6px;color:#059669;font-weight:700;">← acest decont</span>' : '';
                                             $linkOrText = $isCurrent
@@ -640,7 +641,7 @@ class PayoutResource extends Resource
                                         'manual', 'automated' => 'Creat de admin',
                                         default => 'Solicitat',
                                     })
-                                    ->dateTime('d.m.Y H:i'),
+                                    ->dateTime('d.m.Y H:i', timezone: MarketplaceTz::tz()),
                                 // Show the actual user (admin) or organizer who
                                 // created the payout. Prefer the approving
                                 // admin recorded in approved_by — that field
@@ -697,15 +698,15 @@ class PayoutResource extends Resource
                                     }),
                                 Infolists\Components\TextEntry::make('approved_at')
                                     ->label('Aprobat')
-                                    ->dateTime('d.m.Y H:i')
+                                    ->dateTime('d.m.Y H:i', timezone: MarketplaceTz::tz())
                                     ->visible(fn ($record) => $record->approved_at),
                                 Infolists\Components\TextEntry::make('processed_at')
                                     ->label('Procesat')
-                                    ->dateTime('d.m.Y H:i')
+                                    ->dateTime('d.m.Y H:i', timezone: MarketplaceTz::tz())
                                     ->visible(fn ($record) => $record->processed_at),
                                 Infolists\Components\TextEntry::make('completed_at')
                                     ->label('Finalizat')
-                                    ->dateTime('d.m.Y H:i')
+                                    ->dateTime('d.m.Y H:i', timezone: MarketplaceTz::tz())
                                     ->visible(fn ($record) => $record->completed_at),
                                 Infolists\Components\TextEntry::make('period_start')
                                     ->label('Perioadă')
@@ -722,7 +723,7 @@ class PayoutResource extends Resource
                                     ->label('Titlu'),
                                 Infolists\Components\TextEntry::make('decontDocument.issued_at')
                                     ->label('Generat la')
-                                    ->dateTime('d.m.Y H:i'),
+                                    ->dateTime('d.m.Y H:i', timezone: MarketplaceTz::tz()),
                                 Infolists\Components\TextEntry::make('decontDocument.formatted_file_size')
                                     ->label('Mărime'),
                             ])
@@ -849,12 +850,12 @@ class PayoutResource extends Resource
                     ->toggleable(),
 
                 Tables\Columns\TextColumn::make('created_at')
-                    ->dateTime()
+                    ->dateTime(timezone: MarketplaceTz::tz())
                     ->sortable()
                     ->toggleable(),
 
                 Tables\Columns\TextColumn::make('completed_at')
-                    ->dateTime()
+                    ->dateTime(timezone: MarketplaceTz::tz())
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
