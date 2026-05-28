@@ -140,6 +140,33 @@ class GeoLocations
     }
 
     /**
+     * Return true when two strings differ ONLY in punctuation / spacing
+     * / case (same letters, same diacritic count). These are stylistic
+     * variants ("Bolintin-Vale" vs "Bolintin Vale", "Vișeu de Sus" vs
+     * "Vișeu De Sus"); the static city data isn't a reliable arbiter for
+     * which form is "canonical" on these axes, so the cleanup commands
+     * leave operator-typed values alone when this check passes.
+     *
+     * Real upgrades like "Bucuresti" → "București" still fail this check
+     * (different diacritic count) and proceed as rewrites.
+     */
+    public static function isStylisticVariant(?string $a, ?string $b): bool
+    {
+        $a = (string) $a;
+        $b = (string) $b;
+        if ($a === '' || $b === '' || $a === $b) {
+            return false;
+        }
+        if (self::countDiacritics($a) !== self::countDiacritics($b)) {
+            return false;
+        }
+        // Compare letter-only forms after ASCII folding: drops hyphens,
+        // spaces, digits, and case differences.
+        $strip = fn (string $s) => strtolower((string) preg_replace('/[^a-zA-Z]/', '', Str::ascii($s)));
+        return $strip($a) === $strip($b);
+    }
+
+    /**
      * Count Romanian diacritic characters in a string (ă/â/î/ș/ț plus
      * cedilla legacy ş/ţ and their uppercase variants). Used to decide
      * whether a rewrite improves or degrades the spelling.

@@ -76,12 +76,14 @@ class GeoNormalizeMarketplaceCities extends Command
             'activities_repointed' => 0,
             'unmatched' => 0,
             'skipped_no_name' => 0,
+            'skipped_stylistic' => 0,
             'would_downgrade' => 0,
         ];
         $renamePlans = [];
         $mergePlans = [];
         $downgradeRows = [];
         $unmatchedRows = [];
+        $stylisticRows = [];
 
         foreach ($marketplaces as $mp) {
             $stats['mp_processed']++;
@@ -122,13 +124,18 @@ class GeoNormalizeMarketplaceCities extends Command
                     if ($canonical) {
                         $current = self::primaryName($winner);
                         if ($current !== $canonical->name_native) {
-                            $sameWord = GeoLocations::fold($canonical->name_native) === GeoLocations::fold($current);
-                            $downgrade = $sameWord && GeoLocations::countDiacritics($canonical->name_native) < GeoLocations::countDiacritics($current);
-                            if (! $downgrade) {
-                                $newName = $canonical->name_native;
+                            if (GeoLocations::isStylisticVariant($current, $canonical->name_native)) {
+                                $stats['skipped_stylistic']++;
+                                $stylisticRows[] = ['mp' => $mp->id, 'id' => $winner->id, 'current' => $current, 'canonical' => $canonical->name_native];
                             } else {
-                                $stats['would_downgrade']++;
-                                $downgradeRows[] = ['mp' => $mp->id, 'id' => $winner->id, 'current' => $current, 'canonical' => $canonical->name_native];
+                                $sameWord = GeoLocations::fold($canonical->name_native) === GeoLocations::fold($current);
+                                $downgrade = $sameWord && GeoLocations::countDiacritics($canonical->name_native) < GeoLocations::countDiacritics($current);
+                                if (! $downgrade) {
+                                    $newName = $canonical->name_native;
+                                } else {
+                                    $stats['would_downgrade']++;
+                                    $downgradeRows[] = ['mp' => $mp->id, 'id' => $winner->id, 'current' => $current, 'canonical' => $canonical->name_native];
+                                }
                             }
                         }
                     }
@@ -155,6 +162,11 @@ class GeoNormalizeMarketplaceCities extends Command
                     $current = self::primaryName($row);
                     if ($current === $canonical->name_native) {
                         $stats['already_canonical']++;
+                        continue;
+                    }
+                    if (GeoLocations::isStylisticVariant($current, $canonical->name_native)) {
+                        $stats['skipped_stylistic']++;
+                        $stylisticRows[] = ['mp' => $mp->id, 'id' => $row->id, 'current' => $current, 'canonical' => $canonical->name_native];
                         continue;
                     }
                     $sameWord = GeoLocations::fold($canonical->name_native) === GeoLocations::fold($current);
@@ -259,6 +271,13 @@ class GeoNormalizeMarketplaceCities extends Command
         $this->line('  blocked (would_downgrade): ' . count($downgradeRows));
         if ($downgradeRows) {
             $this->table(['mp', 'id', 'current (kept)', 'canonical (skipped)'], array_slice($downgradeRows, 0, 20));
+        }
+        $this->line('  blocked (stylistic only — hyphen/space/case): ' . count($stylisticRows));
+        if ($stylisticRows) {
+            $this->table(['mp', 'id', 'current (kept)', 'geo says (skipped)'], array_slice($stylisticRows, 0, 30));
+            if (count($stylisticRows) > 30) {
+                $this->line('  ... ' . (count($stylisticRows) - 30) . ' more');
+            }
         }
 
         $this->line('');

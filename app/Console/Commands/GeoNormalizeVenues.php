@@ -77,16 +77,20 @@ class GeoNormalizeVenues extends Command
             'would_downgrade_city' => 0,
             'would_downgrade_state' => 0,
         ];
+        $stats['skipped_stylistic_city'] = 0;
+        $stats['skipped_stylistic_state'] = 0;
         $changes = [];
         $unmatchedCity = [];
         $unmatchedState = [];
         $ambiguousCity = [];
         $downgradeCity = [];
         $downgradeState = [];
+        $stylisticCity = [];
+        $stylisticState = [];
 
         $countryFoldKeys = ['', strtolower($country), 'romania', 'românia'];
 
-        $action = function (Venue $venue) use ($country, &$stats, &$changes, &$unmatchedCity, &$unmatchedState, &$ambiguousCity, &$downgradeCity, &$downgradeState, $countryFoldKeys, $apply, $verbose) {
+        $action = function (Venue $venue) use ($country, &$stats, &$changes, &$unmatchedCity, &$unmatchedState, &$ambiguousCity, &$downgradeCity, &$downgradeState, &$stylisticCity, &$stylisticState, $countryFoldKeys, $apply, $verbose) {
             $stats['scanned']++;
 
             // Foreign-country guard — only normalize when the country field
@@ -104,19 +108,28 @@ class GeoNormalizeVenues extends Command
             // Step 1 — resolve county from state text.
             $county = $venue->state ? GeoLocations::matchCounty($venue->state, $country) : null;
             if ($venue->state && $county && $county->name_native !== $venue->state) {
-                // Safety guard: never replace a value with one that has
-                // FEWER diacritics — UNLESS the fold-keys differ, which
-                // means it's an alias (e.g. "Bucharest" → "București"
-                // would be safe; same-word downgrades like "Onești" →
-                // "Onesti" stay blocked).
-                $sameWord = GeoLocations::fold($county->name_native) === GeoLocations::fold($venue->state);
-                if ($sameWord && GeoLocations::countDiacritics($county->name_native) < GeoLocations::countDiacritics($venue->state)) {
-                    $stats['would_downgrade_state']++;
-                    $downgradeState[] = ['id' => $venue->id, 'current' => $venue->state, 'canonical' => $county->name_native];
+                // Stylistic guard: skip when the only difference is
+                // hyphen / space / case ("Bolintin-Vale" vs "Bolintin
+                // Vale"). The source data isn't authoritative on these
+                // axes, so operator-typed values may be more correct.
+                if (GeoLocations::isStylisticVariant($venue->state, $county->name_native)) {
+                    $stats['skipped_stylistic_state']++;
+                    $stylisticState[] = ['id' => $venue->id, 'current' => $venue->state, 'canonical' => $county->name_native];
                 } else {
-                    $newState = $county->name_native;
-                    $stats['rewrite_state']++;
-                    $reasons[] = 'state→' . $county->name_native;
+                    // Safety guard: never replace a value with one that has
+                    // FEWER diacritics — UNLESS the fold-keys differ, which
+                    // means it's an alias (e.g. "Bucharest" → "București"
+                    // would be safe; same-word downgrades like "Onești" →
+                    // "Onesti" stay blocked).
+                    $sameWord = GeoLocations::fold($county->name_native) === GeoLocations::fold($venue->state);
+                    if ($sameWord && GeoLocations::countDiacritics($county->name_native) < GeoLocations::countDiacritics($venue->state)) {
+                        $stats['would_downgrade_state']++;
+                        $downgradeState[] = ['id' => $venue->id, 'current' => $venue->state, 'canonical' => $county->name_native];
+                    } else {
+                        $newState = $county->name_native;
+                        $stats['rewrite_state']++;
+                        $reasons[] = 'state→' . $county->name_native;
+                    }
                 }
             } elseif ($venue->state && ! $county) {
                 $stats['unmatched_state']++;
@@ -144,19 +157,26 @@ class GeoNormalizeVenues extends Command
                         $ambiguousCity[] = ['id' => $venue->id, 'city' => $venue->city, 'state' => $venue->state];
                     } else {
                         if ($loc->name_native !== $venue->city) {
-                            // Same safety guard for the city rewrite — only
-                            // blocks when the fold-keys match (same word,
-                            // fewer diacritics = real downgrade). Alias-
-                            // driven rewrites with different folds (e.g.
-                            // "București 5" → "Sector 5") pass through.
-                            $sameWord = GeoLocations::fold($loc->name_native) === GeoLocations::fold($venue->city);
-                            if ($sameWord && GeoLocations::countDiacritics($loc->name_native) < GeoLocations::countDiacritics($venue->city)) {
-                                $stats['would_downgrade_city']++;
-                                $downgradeCity[] = ['id' => $venue->id, 'current' => $venue->city, 'canonical' => $loc->name_native];
+                            if (GeoLocations::isStylisticVariant($venue->city, $loc->name_native)) {
+                                // Stylistic-only difference — keep operator
+                                // value. See state branch above.
+                                $stats['skipped_stylistic_city']++;
+                                $stylisticCity[] = ['id' => $venue->id, 'current' => $venue->city, 'canonical' => $loc->name_native];
                             } else {
-                                $newCity = $loc->name_native;
-                                $stats['rewrite_city']++;
-                                $reasons[] = 'city→' . $loc->name_native;
+                                // Same safety guard for the city rewrite — only
+                                // blocks when the fold-keys match (same word,
+                                // fewer diacritics = real downgrade). Alias-
+                                // driven rewrites with different folds (e.g.
+                                // "București 5" → "Sector 5") pass through.
+                                $sameWord = GeoLocations::fold($loc->name_native) === GeoLocations::fold($venue->city);
+                                if ($sameWord && GeoLocations::countDiacritics($loc->name_native) < GeoLocations::countDiacritics($venue->city)) {
+                                    $stats['would_downgrade_city']++;
+                                    $downgradeCity[] = ['id' => $venue->id, 'current' => $venue->city, 'canonical' => $loc->name_native];
+                                } else {
+                                    $newCity = $loc->name_native;
+                                    $stats['rewrite_city']++;
+                                    $reasons[] = 'city→' . $loc->name_native;
+                                }
                             }
                         }
                         // Backfill missing state from the matched locality's
@@ -278,6 +298,23 @@ class GeoNormalizeVenues extends Command
             $this->table(['id', 'current (kept)', 'geo canonical (skipped)'], array_slice($downgradeState, 0, 20));
             if (count($downgradeState) > 20) {
                 $this->line('  ... ' . (count($downgradeState) - 20) . ' more');
+            }
+        }
+
+        $this->line('');
+        $this->info('Skipped — stylistic only (hyphen / space / case differences, geo source not authoritative):');
+        $this->line('  skipped_stylistic city:  ' . count($stylisticCity));
+        if ($stylisticCity) {
+            $this->table(['id', 'current (kept)', 'geo says (skipped)'], array_slice($stylisticCity, 0, 20));
+            if (count($stylisticCity) > 20) {
+                $this->line('  ... ' . (count($stylisticCity) - 20) . ' more');
+            }
+        }
+        $this->line('  skipped_stylistic state: ' . count($stylisticState));
+        if ($stylisticState) {
+            $this->table(['id', 'current (kept)', 'geo says (skipped)'], array_slice($stylisticState, 0, 20));
+            if (count($stylisticState) > 20) {
+                $this->line('  ... ' . (count($stylisticState) - 20) . ' more');
             }
         }
 
