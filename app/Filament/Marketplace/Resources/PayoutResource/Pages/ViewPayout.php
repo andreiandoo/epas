@@ -700,13 +700,26 @@ class ViewPayout extends ViewRecord
                     $vatRate = $marketplace->vat_payer ? 19 : 0;
                     $vatAmount = $vatRate > 0 ? round($commissionSubtotal * $vatRate / 100, 2) : 0;
 
+                    // For general-client invoices the marketplace already
+                    // collected the commission from buyers on top of the
+                    // ticket price — the invoice is just a paper record.
+                    // Stamp it as paid on creation. Organizer-recipient
+                    // invoices represent an actual debt and stay outstanding.
+                    $isGeneralClient = $recipientType === 'general_client';
+
+                    // Description + line item composition mirrors what the
+                    // accountant expects to see on the printed factură. The
+                    // sequence label ("1 din 2") only shows when more than
+                    // one decont exists for this event+organizer.
+                    [$description, $itemDescription] = $this->buildGeneralClientInvoiceTexts($payout, $isGeneralClient);
+
                     $invoice = Invoice::create([
                         'marketplace_client_id' => $marketplace->id,
                         'marketplace_organizer_id' => $organizer->id,
                         'marketplace_payout_id' => $payout->id,
                         'number' => $invoiceNumber,
                         'type' => 'fiscal',
-                        'description' => 'Factura pentru decont ' . $payout->reference,
+                        'description' => $description,
                         'issue_date' => now(),
                         'period_start' => $payout->period_start,
                         'period_end' => $payout->period_end,
@@ -716,7 +729,8 @@ class ViewPayout extends ViewRecord
                         'vat_amount' => $vatAmount,
                         'amount' => $commissionSubtotal + $vatAmount,
                         'currency' => $payout->currency ?? 'RON',
-                        'status' => 'outstanding',
+                        'status' => $isGeneralClient ? 'paid' : 'outstanding',
+                        'paid_at' => $isGeneralClient ? now() : null,
                         'meta' => [
                             'payout_reference' => $payout->reference,
                             'issuer' => [
@@ -727,7 +741,7 @@ class ViewPayout extends ViewRecord
                             'client' => $client,
                             'recipient_type' => $recipientType,
                             'items' => [[
-                                'description' => 'Comision servicii ticketing - ' . $payout->reference,
+                                'description' => $itemDescription,
                                 'quantity' => 1,
                                 'unit_price' => $commissionSubtotal,
                                 'amount' => $commissionSubtotal,
@@ -945,41 +959,46 @@ class ViewPayout extends ViewRecord
             return;
         }
 
-        // Event/venue context for each line description
-        $eventSuffix = $this->buildEventContextSuffix($payout->event);
+        // Organizer contract reference for the POS line description.
+        // Contract series/date come from the organizer's financiar tab —
+        // any change to that contract is reflected next time a POS
+        // invoice is generated.
+        $contractNumber = trim((string) ($organizer->contract_number_series ?? ''));
+        $contractDate = $organizer->contract_date instanceof \Carbon\Carbon
+            ? $organizer->contract_date->format('d.m.Y')
+            : (is_string($organizer->contract_date) && $organizer->contract_date !== ''
+                ? \Carbon\Carbon::parse($organizer->contract_date)->format('d.m.Y')
+                : '');
+        $contractFragment = ($contractNumber !== '' || $contractDate !== '')
+            ? 'conform contract nr ' . $contractNumber . '/' . $contractDate . ','
+            : '';
+
+        // Event context — quoted name plus date / venue / city, matching
+        // the accountant-friendly phrasing the user defined.
+        $eventCtx = $this->resolveEventContext($payout->event);
+        $eventFragment = $eventCtx['name'] !== ''
+            ? ' pentru eveniment "' . $eventCtx['name'] . '"'
+                . ($eventCtx['date'] !== '' ? ' din ' . $eventCtx['date'] : '')
+                . ($eventCtx['venue'] !== '' && $eventCtx['city'] !== ''
+                    ? ' la ' . $eventCtx['venue'] . ', ' . $eventCtx['city']
+                    : ($eventCtx['venue'] !== '' ? ' la ' . $eventCtx['venue'] : ''))
+            : '';
 
         $items = [];
         $subtotal = 0.0;
         foreach ($posRows as $item) {
-            $name = $item['ticket_type_name'] ?? $item['name'] ?? 'Bilet';
             $qty = (int) ($item['quantity'] ?? $item['tickets'] ?? $item['qty'] ?? 0);
             $commPerTicket = (float) ($item['commission_per_ticket'] ?? 0);
             if ($qty <= 0 || $commPerTicket <= 0) {
                 continue;
             }
 
-            $commMode = $item['commission_mode'] ?? null;
-            $commRate = $item['commission_rate'] ?? null;
-
-            $modeWord = match ($commMode) {
-                'added_on_top' => 'peste preț',
-                'included' => 'inclus',
-                default => null,
-            };
-            $rateModePart = '';
-            if ($commRate !== null && $modeWord) {
-                $rateModePart = ' (' . $commRate . '% ' . $modeWord . ')';
-            } elseif ($commRate !== null) {
-                $rateModePart = ' (' . $commRate . '%)';
-            } elseif ($modeWord) {
-                $rateModePart = ' (' . $modeWord . ')';
-            }
-
             $lineTotal = round($qty * $commPerTicket, 2);
             $subtotal += $lineTotal;
 
             $items[] = [
-                'description' => 'Comision servicii ticketing pentru bilet "' . $name . '"' . $rateModePart . $eventSuffix,
+                'description' => trim('Prestari servicii invitatii/bilete online acces POS, taxa ticketing '
+                    . $contractFragment . $eventFragment),
                 'quantity' => $qty,
                 'unit_price' => $commPerTicket,
                 'amount' => $lineTotal,
@@ -1092,6 +1111,140 @@ class ViewPayout extends ViewRecord
         }
 
         return $suffix;
+    }
+
+    /**
+     * Resolve the event/venue parts callers need to compose invoice text.
+     * Same translatable-fallback rules as buildEventContextSuffix, just
+     * exposed as a structured array so each caller can phrase the line
+     * the way the accountant expects.
+     *
+     * @return array{name: string, date: string, venue: string, city: string}
+     */
+    protected function resolveEventContext(?\App\Models\Event $event): array
+    {
+        if (!$event) {
+            return ['name' => '', 'date' => '', 'venue' => '', 'city' => ''];
+        }
+
+        $title = $event->title;
+        $name = is_array($title)
+            ? ($title['ro'] ?? $title['en'] ?? (reset($title) ?: ''))
+            : ($title ?? '');
+
+        $date = '';
+        if ($event->event_date) {
+            $date = $event->event_date->format('d.m.Y');
+        } elseif ($event->range_start_date) {
+            $date = $event->range_start_date->format('d.m.Y');
+        }
+
+        $venue = '';
+        $city = '';
+        if ($event->venue) {
+            $vName = $event->venue->name;
+            $venue = is_array($vName)
+                ? ($vName['ro'] ?? $vName['en'] ?? (reset($vName) ?: ''))
+                : ($vName ?? '');
+            $city = $event->venue->city ?? '';
+        }
+
+        return [
+            'name' => (string) $name,
+            'date' => (string) $date,
+            'venue' => (string) $venue,
+            'city' => (string) $city,
+        ];
+    }
+
+    /**
+     * Sequence label "X din Y " (trailing space) for invoice descriptions,
+     * empty when the event has just one payout overall. Counts pending /
+     * approved / processing / completed payouts only — rejected /
+     * cancelled never appear on the books.
+     */
+    protected function buildPayoutSequenceLabel(\App\Models\MarketplacePayout $payout): string
+    {
+        if (!$payout->event_id || !$payout->marketplace_organizer_id) {
+            return '';
+        }
+        $total = \App\Models\MarketplacePayout::where('event_id', $payout->event_id)
+            ->where('marketplace_organizer_id', $payout->marketplace_organizer_id)
+            ->whereIn('status', ['pending', 'approved', 'processing', 'completed'])
+            ->count();
+        if ($total <= 1) {
+            return '';
+        }
+        $nr = \App\Models\MarketplacePayout::where('event_id', $payout->event_id)
+            ->where('marketplace_organizer_id', $payout->marketplace_organizer_id)
+            ->whereIn('status', ['pending', 'approved', 'processing', 'completed'])
+            ->where('id', '<=', $payout->id)
+            ->count();
+        return $nr . ' din ' . $total . ' ';
+    }
+
+    /**
+     * Build (description, item_description) for the general-client-style
+     * invoice. Same shape regardless of whether the invoice is actually
+     * sent to the general client or to the organizer — we keep the
+     * phrasing the user defined for general invoices and let the meta
+     * recipient_type drive who it's sent to.
+     *
+     * @return array{0: string, 1: string}  [header description, line item description]
+     */
+    protected function buildGeneralClientInvoiceTexts(\App\Models\MarketplacePayout $payout, bool $isGeneralClient): array
+    {
+        $series = trim((string) ($payout->decont_series ?? '')) !== ''
+            ? $payout->decont_series
+            : $payout->reference;
+        $reference = $payout->reference;
+        $sequenceLabel = $this->buildPayoutSequenceLabel($payout);
+        $ev = $this->resolveEventContext($payout->event);
+        $createdAt = $payout->created_at ? $payout->created_at->format('d.m.Y') : '';
+
+        $venueFragment = '';
+        if ($ev['venue'] !== '' && $ev['city'] !== '') {
+            $venueFragment = ' la ' . $ev['venue'] . ', ' . $ev['city'];
+        } elseif ($ev['venue'] !== '') {
+            $venueFragment = ' la ' . $ev['venue'];
+        } elseif ($ev['city'] !== '') {
+            $venueFragment = ' la ' . $ev['city'];
+        }
+
+        // Header text: "Factura pentru decont [seq] [series] cu referinta
+        // [reference] pentru [event] din [date] la [venue], [city]".
+        $headerEventFragment = $ev['name'] !== ''
+            ? ' pentru ' . $ev['name']
+                . ($ev['date'] !== '' ? ' din ' . $ev['date'] : '')
+                . $venueFragment
+            : '';
+        $description = 'Factura pentru decont '
+            . $sequenceLabel
+            . $series
+            . ' cu referinta ' . $reference
+            . $headerEventFragment;
+
+        // Line item text: only emitted in the general-client phrasing the
+        // user defined. For organizer-recipient invoices we keep the old
+        // short "Comision servicii ticketing - REF" line, since the
+        // accountant context is different there.
+        if ($isGeneralClient) {
+            $itemEventFragment = $ev['name'] !== ''
+                ? ' pentru evenimentul "' . $ev['name'] . '"'
+                    . ($ev['date'] !== '' ? ' din ' . $ev['date'] : '')
+                    . ($ev['venue'] !== '' && $ev['city'] !== ''
+                        ? ' la ' . $ev['venue'] . ', ' . $ev['city']
+                        : ($ev['venue'] !== '' ? ' la ' . $ev['venue'] : ''))
+                : '';
+            $itemDescription = 'Taxa ticketing bilete vandute online'
+                . $itemEventFragment
+                . ' // Conform decont nr. ' . $series
+                . ($createdAt !== '' ? ' din data ' . $createdAt : '');
+        } else {
+            $itemDescription = 'Comision servicii ticketing - ' . $reference;
+        }
+
+        return [$description, $itemDescription];
     }
 
     /**
