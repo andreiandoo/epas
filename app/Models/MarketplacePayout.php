@@ -228,6 +228,12 @@ class MarketplacePayout extends Model
     public static function buildRemainingTicketsItems(\App\Models\Event $event, ?int $excludePayoutId = null): array
     {
         $commissionRate = $event->getEffectiveCommissionRate();
+        // Each repeater row must carry the commission_mode so the edit
+        // modal's live preview computes brut/net correctly: added_on_top →
+        // gross = qty*(price+comm), net = qty*price; included → gross =
+        // qty*price, net = qty*price − comm. Mode is event-level by default
+        // (SalesBreakdownService uses the same fallback chain).
+        $commissionMode = $event->getEffectiveCommissionMode() ?? 'included';
 
         $ticketCounts = \App\Models\Ticket::whereHas('ticketType', fn ($q) => $q->where('event_id', $event->id))
             ->whereIn('status', ['valid', 'used'])
@@ -294,6 +300,7 @@ class MarketplacePayout extends Model
                 'ticket_type_name' => is_array($tt->name) ? ($tt->name['ro'] ?? $tt->name['en'] ?? '') : $tt->name,
                 'unit_price' => $basePrice,
                 'commission_per_ticket' => $commPer,
+                'commission_mode' => $commissionMode,
                 'qty' => $remaining,
             ];
         }
