@@ -212,6 +212,95 @@ class MarketplacePayout extends Model
      * Skips cancelled/rejected payouts so their slice is recoverable by the
      * next valid payout.
      */
+    /**
+     * Build the repeater-shape items for every ticket on an event that has NOT
+     * yet been included in another active payout's ticket_breakdown.
+     * Mirrors ListPayouts::populatePayoutTicketsFromEvent but is reusable from
+     * the edit-payout modal (which needs to exclude its own ticket_breakdown
+     * from the "already paid" subtraction — otherwise its own current rows
+     * would cancel themselves out and report zero remaining).
+     *
+     * Excludes POS / test_order / external_import sources, same as the
+     * manual-create flow, so the count matches "Sold disponibil".
+     *
+     * @return array<int, array{ticket_type_id:int, ticket_type_name:string, unit_price:float, commission_per_ticket:float, qty:int}>
+     */
+    public static function buildRemainingTicketsItems(\App\Models\Event $event, ?int $excludePayoutId = null): array
+    {
+        $commissionRate = $event->getEffectiveCommissionRate();
+
+        $ticketCounts = \App\Models\Ticket::whereHas('ticketType', fn ($q) => $q->where('event_id', $event->id))
+            ->whereIn('status', ['valid', 'used'])
+            ->where(function ($q) {
+                $q->whereHas('order', function ($q2) {
+                    $q2->whereIn('status', ['paid', 'confirmed', 'completed'])
+                        ->where('source', '!=', 'external_import')
+                        ->where('source', '!=', 'pos_app')
+                        ->where('source', '!=', 'test_order');
+                })->orWhereNull('order_id');
+            })
+            ->select('ticket_type_id', \DB::raw('COUNT(*) as cnt'))
+            ->groupBy('ticket_type_id')
+            ->pluck('cnt', 'ticket_type_id')
+            ->toArray();
+
+        $alreadyPaid = [];
+        $organizerId = $event->marketplace_organizer_id;
+        if ($organizerId) {
+            $q = static::query()
+                ->where('marketplace_organizer_id', $organizerId)
+                ->where('event_id', $event->id)
+                ->whereIn('status', ['completed', 'processing', 'approved', 'pending'])
+                ->whereNotNull('ticket_breakdown');
+            if ($excludePayoutId) {
+                $q->where('id', '!=', $excludePayoutId);
+            }
+            foreach ($q->get() as $pp) {
+                foreach ($pp->ticket_breakdown ?? [] as $tb) {
+                    $ttId = $tb['ticket_type_id'] ?? null;
+                    if ($ttId) {
+                        $alreadyPaid[$ttId] = ($alreadyPaid[$ttId] ?? 0) + (int) ($tb['qty'] ?? 0);
+                    }
+                }
+            }
+        }
+
+        $items = [];
+        foreach ($event->ticketTypes as $tt) {
+            $totalSold = (int) ($ticketCounts[$tt->id] ?? 0);
+            if ($totalSold <= 0) continue;
+
+            $paid = (int) ($alreadyPaid[$tt->id] ?? 0);
+            $remaining = max(0, $totalSold - $paid);
+            if ($remaining <= 0) continue;
+
+            $basePrice = (float) ($tt->sale_price_cents
+                ? $tt->sale_price_cents / 100
+                : ($tt->price_cents ? $tt->price_cents / 100 : 0));
+
+            if ($tt->commission_type && $tt->commission_type !== '') {
+                $commPer = match ($tt->commission_type) {
+                    'percentage' => round($basePrice * (($tt->commission_rate ?? 0) / 100), 2),
+                    'fixed' => (float) ($tt->commission_fixed ?? 0),
+                    'both' => round($basePrice * (($tt->commission_rate ?? 0) / 100), 2) + (float) ($tt->commission_fixed ?? 0),
+                    default => round($basePrice * ($commissionRate / 100), 2),
+                };
+            } else {
+                $commPer = round($basePrice * ($commissionRate / 100), 2);
+            }
+
+            $items[] = [
+                'ticket_type_id' => $tt->id,
+                'ticket_type_name' => is_array($tt->name) ? ($tt->name['ro'] ?? $tt->name['en'] ?? '') : $tt->name,
+                'unit_price' => $basePrice,
+                'commission_per_ticket' => $commPer,
+                'qty' => $remaining,
+            ];
+        }
+
+        return $items;
+    }
+
     public static function resolveNextPeriodStart(int $eventId, int $organizerId, \App\Models\Event $event): ?\Carbon\Carbon
     {
         $lastPrior = static::query()

@@ -247,7 +247,37 @@ class ViewPayout extends ViewRecord
                                     $set('payout_tickets', $tickets);
                                     Notification::make()->title('Scalat')->body('Factor: ' . number_format($scale, 3) . '. Verifică cantitățile noi în preview-ul de mai jos.')->success()->send();
                                 }),
-                        ])->columnSpan(1)->extraAttributes(['class' => 'flex items-end pb-6']),
+
+                            // Pull every ticket sold on the event that isn't already
+                            // included in ANOTHER active payout — the operator's
+                            // one-click way to re-fill this payout with the remaining
+                            // tickets (e.g. after a recalc accidentally narrowed the
+                            // slice, or when picking up newly-sold tickets).
+                            \Filament\Actions\Action::make('fill_remaining_tickets')
+                                ->label('Adu biletele rămase')
+                                ->icon('heroicon-o-arrow-down-tray')
+                                ->color('gray')
+                                ->size('sm')
+                                ->requiresConfirmation()
+                                ->modalHeading('Înlocuiește biletele cu cele rămase neîncasate?')
+                                ->modalDescription('Lista actuală din repeater va fi înlocuită cu toate biletele de pe acest eveniment care NU sunt deja incluse în alt decont (POS / external_import / test_order excluse). Cantitățile se setează la maximul rămas.')
+                                ->modalSubmitActionLabel('Da, înlocuiește')
+                                ->action(function (\Filament\Schemas\Components\Utilities\Set $set) {
+                                    $event = $this->record->event;
+                                    if (!$event) {
+                                        Notification::make()->title('Lipsește evenimentul')->body('Decontul nu este legat de un eveniment.')->danger()->send();
+                                        return;
+                                    }
+                                    $items = \App\Models\MarketplacePayout::buildRemainingTicketsItems($event, $this->record->id);
+                                    if (empty($items)) {
+                                        Notification::make()->title('Nimic de adus')->body('Toate biletele vândute pe acest eveniment sunt deja incluse în alte deconturi.')->warning()->send();
+                                        return;
+                                    }
+                                    $set('payout_tickets', $items);
+                                    $totalQty = array_sum(array_column($items, 'qty'));
+                                    Notification::make()->title('Bilete adăugate')->body(count($items) . ' tipuri · ' . $totalQty . ' bilete rămase aduse în listă. Verifică suma netă și apasă Salvează.')->success()->send();
+                                }),
+                        ])->columnSpan(1)->extraAttributes(['class' => 'flex items-end pb-6 gap-2']),
                     ]),
 
                     \Filament\Forms\Components\Repeater::make('payout_tickets')
