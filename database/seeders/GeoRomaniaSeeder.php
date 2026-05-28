@@ -92,6 +92,61 @@ class GeoRomaniaSeeder extends Seeder
         'BC|onesti' => 'Onești',
     ];
 
+    /**
+     * Extra localities to seed on top of the static source files —
+     * primarily resorts and well-known sub-localities operators reach
+     * for as venue addresses. Keyed by county code; each entry carries
+     * native name, lat/lng (approximate, sourced from public coords),
+     * and a `type` tag for future use. Skipped if a same-named entry
+     * already exists in that county (dedup-on-fold), so growing this
+     * list is always safe to re-run.
+     */
+    private array $localityAdditions = [
+        // Constanța — Black Sea resorts.
+        'CT' => [
+            ['name' => 'Mamaia', 'lat' => 44.2306, 'lng' => 28.6306, 'type' => 'statiune'],
+            ['name' => 'Neptun', 'lat' => 43.9703, 'lng' => 28.6497, 'type' => 'statiune'],
+            ['name' => 'Olimp', 'lat' => 43.9628, 'lng' => 28.6481, 'type' => 'statiune'],
+            ['name' => 'Jupiter', 'lat' => 43.9519, 'lng' => 28.6464, 'type' => 'statiune'],
+            ['name' => 'Venus', 'lat' => 43.9319, 'lng' => 28.6536, 'type' => 'statiune'],
+            ['name' => 'Saturn', 'lat' => 43.8203, 'lng' => 28.5894, 'type' => 'statiune'],
+            ['name' => 'Cap Aurora', 'lat' => 43.9408, 'lng' => 28.6519, 'type' => 'statiune'],
+            ['name' => 'Eforie Nord', 'lat' => 44.0578, 'lng' => 28.6383, 'type' => 'statiune'],
+            ['name' => 'Eforie Sud', 'lat' => 44.0233, 'lng' => 28.6422, 'type' => 'statiune'],
+            ['name' => 'Vama Veche', 'lat' => 43.7494, 'lng' => 28.5722, 'type' => 'statiune'],
+            ['name' => '2 Mai', 'lat' => 43.7894, 'lng' => 28.5750, 'type' => 'sat'],
+        ],
+        // Brăila — spa.
+        'BR' => [
+            ['name' => 'Lacul Sărat', 'lat' => 45.2289, 'lng' => 27.9319, 'type' => 'statiune'],
+        ],
+        // Brașov — mountain resorts.
+        'BV' => [
+            ['name' => 'Poiana Brașov', 'lat' => 45.5867, 'lng' => 25.5575, 'type' => 'statiune'],
+            ['name' => 'Timișu de Jos', 'lat' => 45.5089, 'lng' => 25.5453, 'type' => 'sat'],
+            ['name' => 'Timișu de Sus', 'lat' => 45.4992, 'lng' => 25.5742, 'type' => 'sat'],
+        ],
+        // Prahova — Valea Prahovei resorts.
+        'PH' => [
+            ['name' => 'Sinaia', 'lat' => 45.3508, 'lng' => 25.5483, 'type' => 'oras'],
+            ['name' => 'Bușteni', 'lat' => 45.4083, 'lng' => 25.5333, 'type' => 'oras'],
+            ['name' => 'Azuga', 'lat' => 45.4533, 'lng' => 25.5500, 'type' => 'oras'],
+            ['name' => 'Slănic', 'lat' => 45.2386, 'lng' => 25.9433, 'type' => 'oras'],
+        ],
+        // Hunedoara — Retezat / Parâng winter resorts.
+        'HD' => [
+            ['name' => 'Straja', 'lat' => 45.3500, 'lng' => 23.2333, 'type' => 'statiune'],
+        ],
+        // Sibiu — mountain.
+        'SB' => [
+            ['name' => 'Păltiniș', 'lat' => 45.6500, 'lng' => 23.9333, 'type' => 'statiune'],
+        ],
+        // Maramureș.
+        'MM' => [
+            ['name' => 'Borșa', 'lat' => 47.6553, 'lng' => 24.6664, 'type' => 'oras'],
+        ],
+    ];
+
     public function run(): void
     {
         $dir = resource_path('data/ro/cities');
@@ -143,6 +198,7 @@ class GeoRomaniaSeeder extends Seeder
                 $rows = include $file;
                 $batch = [];
                 $locSort = 0;
+                $seenFoldKeys = []; // dedup-on-fold within this county
 
                 foreach ((array) $rows as $row) {
                     if (! is_array($row)) {
@@ -166,13 +222,19 @@ class GeoRomaniaSeeder extends Seeder
                         $name = $this->localityCanonicalOverrides[$overrideKey];
                     }
 
+                    $foldKey = $this->fold($name);
+                    if (isset($seenFoldKeys[$foldKey])) {
+                        continue;
+                    }
+                    $seenFoldKeys[$foldKey] = true;
+
                     $locSort++;
                     $batch[] = [
                         'country_id' => $country->id,
                         'county_id' => $countyId,
                         'name_native' => $name,
-                        'name_ascii' => $this->fold($name),
-                        'slug' => Str::slug($this->fold($name)),
+                        'name_ascii' => $foldKey,
+                        'slug' => Str::slug($foldKey),
                         'type' => null,
                         'latitude' => $this->toDecimal($row['latitude'] ?? null),
                         'longitude' => $this->toDecimal($row['longitude'] ?? null),
@@ -181,6 +243,35 @@ class GeoRomaniaSeeder extends Seeder
                         'updated_at' => $now,
                     ];
 
+                    if (count($batch) >= 500) {
+                        DB::table('geo_localities')->insert($batch);
+                        $batch = [];
+                    }
+                }
+
+                // Manual additions (resorts, sub-localities) for this county
+                // — skipped when already present by fold-key.
+                foreach ($this->localityAdditions[$c['code']] ?? [] as $add) {
+                    $addName = $this->normalizeDiacritics((string) $add['name']);
+                    $addFold = $this->fold($addName);
+                    if (isset($seenFoldKeys[$addFold])) {
+                        continue;
+                    }
+                    $seenFoldKeys[$addFold] = true;
+                    $locSort++;
+                    $batch[] = [
+                        'country_id' => $country->id,
+                        'county_id' => $countyId,
+                        'name_native' => $addName,
+                        'name_ascii' => $addFold,
+                        'slug' => Str::slug($addFold),
+                        'type' => $add['type'] ?? null,
+                        'latitude' => $this->toDecimal($add['lat'] ?? null),
+                        'longitude' => $this->toDecimal($add['lng'] ?? null),
+                        'sort_order' => $locSort,
+                        'created_at' => $now,
+                        'updated_at' => $now,
+                    ];
                     if (count($batch) >= 500) {
                         DB::table('geo_localities')->insert($batch);
                         $batch = [];

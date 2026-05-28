@@ -185,6 +185,14 @@ class GeoLocations
         // folded form). RO only for now; extend per country as needed.
         $iso = strtoupper(trim($countryIso)) ?: 'RO';
         if ($iso === 'RO') {
+            // București sector shorthand: "București 5" → "Sector 5" (the
+            // canonical name as seeded from Bucharest.php). Caught before
+            // the lookup table because the trailing digit is what carries
+            // the meaning.
+            if (preg_match('/^bucuresti\s+([1-6])$/', $key, $m)) {
+                return 'sector ' . $m[1];
+            }
+
             $aliases = [
                 'bucharest' => 'bucuresti',
                 // Pre-1993 orthography (î inside words) → modern (â).
