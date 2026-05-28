@@ -688,9 +688,77 @@ class MarketplacePayout extends Model
     }
 
     /**
+     * Per-ticket-type aggregation of commission for refund items where the
+     * commission WAS returned to the customer (`commission_refunded = true`).
+     * Marketplace lost that commission via the Stripe refund — it bills the
+     * organizer for it on the unified "Factură organizator". Item status is
+     * 'refunded' (per-item flag — the parent request may be partially or
+     * fully refunded). Scoped to this payout's event + organizer.
+     *
+     * @return array<int, array{ticket_type_id:int, ticket_type_name:string, qty:int, commission_per_ticket:float, commission_amount:float}>
+     */
+    public function getRefundedCommissionRowsForEvent(): array
+    {
+        if (!$this->event_id || !$this->marketplace_organizer_id) {
+            return [];
+        }
+
+        $items = \App\Models\MarketplaceRefundItem::query()
+            ->whereHas('refundRequest', function ($q) {
+                $q->where('marketplace_event_id', $this->event_id)
+                    ->where('marketplace_organizer_id', $this->marketplace_organizer_id);
+            })
+            ->where('commission_refunded', true)
+            ->where('status', 'refunded')
+            ->with('ticketType:id,name')
+            ->get();
+
+        $byType = [];
+        foreach ($items as $item) {
+            $ttId = (int) $item->ticket_type_id;
+            $commPer = (float) $item->commission_amount;
+
+            if (!isset($byType[$ttId])) {
+                $ttName = $item->ticketType?->name;
+                $ttName = is_array($ttName)
+                    ? ($ttName['ro'] ?? $ttName['en'] ?? (reset($ttName) ?: 'Bilet'))
+                    : ($ttName ?? 'Bilet');
+                $byType[$ttId] = [
+                    'ticket_type_id' => $ttId,
+                    'ticket_type_name' => $ttName,
+                    'qty' => 0,
+                    'commission_per_ticket' => $commPer,
+                    'commission_amount' => 0.0,
+                ];
+            }
+
+            $byType[$ttId]['qty']++;
+            $byType[$ttId]['commission_amount'] += $commPer;
+        }
+
+        return array_values($byType);
+    }
+
+    /**
+     * Total commission marketplace has to recover from the organizer because
+     * those commissions were returned to the customer alongside the ticket
+     * price (full refunds). Event-wide. Used to decide whether the unified
+     * "Factură organizator" should appear even when there are no POS sales.
+     */
+    public function getRefundedCommissionTotalForEvent(): float
+    {
+        $total = 0.0;
+        foreach ($this->getRefundedCommissionRowsForEvent() as $row) {
+            $total += (float) $row['commission_amount'];
+        }
+        return round($total, 2);
+    }
+
+    /**
      * True once the event has reached its end — the only point at which we
-     * allow POS billing, since after that no more POS sales can be added
-     * and the single POS invoice can safely cover everything.
+     * allow organizer-invoice billing, since after that no more sales (POS
+     * or online) can be added and the single invoice can safely cover
+     * everything.
      */
     public function isEventFinished(): bool
     {
@@ -802,13 +870,17 @@ class MarketplacePayout extends Model
             ['key' => 'generate_invoice', 'label' => 'Generează factura', 'done' => $this->invoice !== null],
         ];
 
-        // POS step appears only when the event is finished and has POS
-        // commission to bill. Done = any decont on this event already emitted
-        // the (single) POS invoice — by design we bill POS once per event.
-        if ($this->isEventFinished() && $this->getPosCommissionTotal() > 0) {
+        // Organizer-invoice step appears only when the event is finished AND
+        // there's something to bill the organizer for — either POS commission
+        // or commission on full refunds (where the commission was returned to
+        // the customer). Done = any decont on this event already emitted the
+        // (single) organizer invoice — by design we bill once per event.
+        if ($this->isEventFinished()
+            && ($this->getPosCommissionTotal() > 0
+                || $this->getRefundedCommissionTotalForEvent() > 0)) {
             $steps[] = [
-                'key' => 'generate_invoice_pos',
-                'label' => 'Generează factura POS',
+                'key' => 'generate_invoice_organizer',
+                'label' => 'Generează factura organizator',
                 'done' => $this->getEventPosInvoice() !== null,
             ];
         }

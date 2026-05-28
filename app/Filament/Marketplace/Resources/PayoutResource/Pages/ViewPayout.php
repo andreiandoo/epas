@@ -830,40 +830,59 @@ class ViewPayout extends ViewRecord
                 ->button()
                 ->visible(fn () => $this->record->invoice !== null),
 
-            // ========== GENERATE POS INVOICE (event-level, billed once) ==========
-            // POS/app sales don't flow through marketplace. Commission is
-            // charged via a SINGLE invoice per event — the button shows on any
-            // active decont of the event while the event is finished and the
-            // invoice hasn't been emitted yet; after emission it disappears
-            // everywhere (the other decont gets a "Vezi factura POS" link
-            // below instead).
-            Actions\Action::make('generate_invoice_pos')
-                ->label('Generează factură POS')
-                ->icon('heroicon-o-device-phone-mobile')
+            // ========== GENERATE ORGANIZER INVOICE (event-level, billed once) ==========
+            // Single invoice per event that bills the organizer for two
+            // disjoint commission flows that marketplace didn't recover via
+            // the regular Factură:
+            //   (1) POS commission — sales the organizer collected via the
+            //       mobile POS app (never flowed through marketplace).
+            //   (2) Refunded-ticket commission — commission portion that was
+            //       returned to the customer on FULL refunds
+            //       (commission_refunded=true on the refund item).
+            // Visible on any active decont of the event once the event has
+            // ended and the invoice hasn't been emitted yet. After emission
+            // it disappears everywhere; the other decont gets a "Vezi factura
+            // organizator" link below instead.
+            Actions\Action::make('generate_invoice_organizer')
+                ->label('Generează factură organizator')
+                ->icon('heroicon-o-receipt-percent')
                 ->color('warning')
                 ->requiresConfirmation()
                 ->modalDescription(function () {
                     $posComm = $this->record->getPosCommissionTotal();
-                    return 'Se va genera o singură factură către organizator pentru comisioanele TUTUROR biletelor vândute prin aplicația POS pe acest eveniment: ' . number_format($posComm, 2) . ' RON. După emitere, butonul dispare de pe toate deconturile evenimentului.';
+                    $refundedComm = $this->record->getRefundedCommissionTotalForEvent();
+                    $total = $posComm + $refundedComm;
+                    $parts = [];
+                    if ($posComm > 0) {
+                        $parts[] = 'comision POS: ' . number_format($posComm, 2) . ' RON';
+                    }
+                    if ($refundedComm > 0) {
+                        $parts[] = 'comision pe bilete rambursate integral: ' . number_format($refundedComm, 2) . ' RON';
+                    }
+                    $breakdown = !empty($parts) ? ' (' . implode(' + ', $parts) . ')' : '';
+                    return 'Se va genera o singură factură către organizator pentru toate comisioanele datorate pe acest eveniment: '
+                        . number_format($total, 2) . ' RON' . $breakdown
+                        . '. După emitere, butonul dispare de pe toate deconturile evenimentului.';
                 })
                 ->visible(fn () => $this->record->getEventPosInvoice() === null
                     && $this->record->isEventFinished()
-                    && $this->record->getPosCommissionTotal() > 0
+                    && ($this->record->getPosCommissionTotal() > 0
+                        || $this->record->getRefundedCommissionTotalForEvent() > 0)
                     && !in_array($this->record->status, ['rejected', 'cancelled']))
                 ->action(function () {
                     $this->generatePosInvoice();
                 }),
 
-            // When the POS invoice was emitted on ANOTHER decont of the same
-            // event, surface a one-click jump so the operator can see/manage
-            // it without hunting through deconts.
-            Actions\Action::make('view_event_pos_invoice_elsewhere')
+            // When the organizer invoice was emitted on ANOTHER decont of the
+            // same event, surface a one-click jump so the operator can see /
+            // manage it without hunting through deconts.
+            Actions\Action::make('view_event_organizer_invoice_elsewhere')
                 ->label(function () {
                     $inv = $this->record->getEventPosInvoice();
                     $payoutId = $inv?->marketplace_payout_id;
                     return $payoutId
-                        ? "Vezi factura POS (Decont #{$payoutId})"
-                        : 'Vezi factura POS';
+                        ? "Vezi factura organizator (Decont #{$payoutId})"
+                        : 'Vezi factura organizator';
                 })
                 ->icon('heroicon-o-arrow-top-right-on-square')
                 ->color('gray')
@@ -875,9 +894,9 @@ class ViewPayout extends ViewRecord
                 ->url(function () {
                     $inv = $this->record->getEventPosInvoice();
                     if (!$inv) return null;
-                    // Link to the decont that owns the POS invoice — from there
-                    // the operator can view/download/send through the existing
-                    // POS group actions.
+                    // Link to the decont that owns the organizer invoice — from
+                    // there the operator can view/download/send through the
+                    // existing organizer-invoice group actions.
                     return PayoutResource::getUrl('view', ['record' => $inv->marketplace_payout_id]);
                 }, shouldOpenInNewTab: true),
 
@@ -916,7 +935,7 @@ class ViewPayout extends ViewRecord
                     ->modalDescription(function () {
                         $providerLabel = $this->getAccountingProviderLabel() ?? 'software-ul de contabilitate';
                         $docLabel = $this->isAccountingDraftMode() ? 'DRAFT' : 'FACTURĂ FISCALĂ';
-                        return "Factura POS va fi trimisa ca {$docLabel} in {$providerLabel}.";
+                        return "Factura organizator va fi trimisa ca {$docLabel} in {$providerLabel}.";
                     })
                     ->visible(function () {
                         $invoice = $this->record->posInvoice;
@@ -951,8 +970,8 @@ class ViewPayout extends ViewRecord
                         $this->sendInvoiceByEmail($this->record->posInvoice, $data['email']);
                     }),
             ])
-                ->label('Factură POS')
-                ->icon('heroicon-o-device-phone-mobile')
+                ->label('Factură organizator')
+                ->icon('heroicon-o-receipt-percent')
                 ->color('warning')
                 ->button()
                 ->visible(fn () => $this->record->posInvoice !== null),
@@ -981,14 +1000,18 @@ class ViewPayout extends ViewRecord
             return;
         }
 
-        // POS commission is billed ONCE per event — covers every POS sale,
-        // not just this decont's slice. No period bounds. Gated upstream by
-        // the button's visible() so we only reach here after the event has
-        // finished and no prior POS invoice exists.
+        // Organizer invoice is billed ONCE per event and covers BOTH:
+        //   (1) POS commission — every POS sale on the event, event-wide.
+        //   (2) Refunded-ticket commission — commission on tickets where
+        //       commission_refunded=true (marketplace returned commission to
+        //       the customer; bills it back to the organizer).
+        // Gated upstream by the button's visible() so we only reach here
+        // after the event has finished and no prior invoice exists.
         $posRows = app(\App\Services\Marketplace\SalesBreakdownService::class)
             ->buildPosForPayout($payout->event, null, null);
-        if (empty($posRows)) {
-            Notification::make()->title('Nu există comisioane POS de facturat')->warning()->send();
+        $refundedRows = $payout->getRefundedCommissionRowsForEvent();
+        if (empty($posRows) && empty($refundedRows)) {
+            Notification::make()->title('Nu există comisioane de facturat')->warning()->send();
             return;
         }
 
@@ -1019,6 +1042,8 @@ class ViewPayout extends ViewRecord
 
         $items = [];
         $subtotal = 0.0;
+
+        // (1) POS commission lines — one per ticket type sold via POS.
         foreach ($posRows as $item) {
             $qty = (int) ($item['quantity'] ?? $item['tickets'] ?? $item['qty'] ?? 0);
             $commPerTicket = (float) ($item['commission_per_ticket'] ?? 0);
@@ -1038,8 +1063,32 @@ class ViewPayout extends ViewRecord
             ];
         }
 
+        // (2) Refunded-ticket commission lines — commission returned to the
+        //     customer on full refunds. Marketplace recovers it from the
+        //     organizer here. One line per ticket type that had any
+        //     commission_refunded=true items.
+        foreach ($refundedRows as $row) {
+            $qty = (int) ($row['qty'] ?? 0);
+            $commPerTicket = (float) ($row['commission_per_ticket'] ?? 0);
+            $lineTotal = round((float) ($row['commission_amount'] ?? ($qty * $commPerTicket)), 2);
+            if ($qty <= 0 || $lineTotal <= 0) {
+                continue;
+            }
+
+            $subtotal += $lineTotal;
+
+            $items[] = [
+                'description' => trim('Comision pentru bilet "' . ($row['ticket_type_name'] ?? 'Bilet')
+                    . '" rambursat integral (comision returnat clientului), taxa ticketing '
+                    . $contractFragment . $eventFragment),
+                'quantity' => $qty,
+                'unit_price' => $commPerTicket,
+                'amount' => $lineTotal,
+            ];
+        }
+
         if ($subtotal <= 0) {
-            Notification::make()->title('Nu există comisioane POS de facturat')->warning()->send();
+            Notification::make()->title('Nu există comisioane de facturat')->warning()->send();
             return;
         }
 
@@ -1066,7 +1115,7 @@ class ViewPayout extends ViewRecord
             'marketplace_payout_id' => $payout->id,
             'number' => $invoiceNumber,
             'type' => 'fiscal',
-            'description' => 'Factură POS pentru decont ' . $payout->reference,
+            'description' => 'Factură organizator (comision POS + comision pe rambursări integrale) — decont ' . $payout->reference,
             'issue_date' => now(),
             'period_start' => $payout->period_start,
             'period_end' => $payout->period_end,
