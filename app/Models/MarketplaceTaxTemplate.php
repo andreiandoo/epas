@@ -1906,8 +1906,10 @@ class MarketplaceTaxTemplate extends Model
             // "Taxe pentru bilete returnate") — the rate label moves into
             // each Xa row so mixed payouts can show different rates
             // alongside their respective values.
-            $variables['sales_breakdown_rows'] = $this->buildPayoutSalesBreakdownRows($ticketBreakdown, $posTypeIdsSet, $vatAmount, $formatPrice);
-            $variables['refund_breakdown_rows'] = $this->buildPayoutRefundBreakdownRows($payout, $formatPrice);
+            // getVariablesForContext() is static — helpers must be called
+            // via self:: too. The earlier $this-> calls blew up at 1909.
+            $variables['sales_breakdown_rows'] = self::buildPayoutSalesBreakdownRows($ticketBreakdown, $posTypeIdsSet, $vatAmount, $formatPrice);
+            $variables['refund_breakdown_rows'] = self::buildPayoutRefundBreakdownRows($payout, $formatPrice);
 
             // Preprinted tickets (physical tickets sent by courier)
             $preprintedData = $payout->payout_method['preprinted'] ?? [];
