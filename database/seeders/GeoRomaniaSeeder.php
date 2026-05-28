@@ -79,6 +79,19 @@ class GeoRomaniaSeeder extends Seeder
         'Bucharest' => 'București',
     ];
 
+    /**
+     * County-scoped overrides for localities where the source data lacks
+     * diacritics. Keyed by "{county_code}|{ASCII-folded name}"; the value
+     * is the canonical native spelling that gets stored as name_native.
+     *
+     * Grow this list as `geo:normalize-venues` reports new
+     * `would_downgrade` entries (the diacritic safety guard flags any
+     * geo entry missing diacritics that an operator typed correctly).
+     */
+    private array $localityCanonicalOverrides = [
+        'BC|onesti' => 'Onești',
+    ];
+
     public function run(): void
     {
         $dir = resource_path('data/ro/cities');
@@ -143,6 +156,15 @@ class GeoRomaniaSeeder extends Seeder
                     // Apply known anglicized fixes, then normalize diacritics.
                     $name = $this->localityNameFixes[$rawName] ?? $rawName;
                     $name = $this->normalizeDiacritics($name);
+
+                    // County-scoped canonical override: source files store
+                    // some major-city names without diacritics (e.g. "Onesti"
+                    // in Bacău.php); the table promotes them to the proper
+                    // native spelling before insert.
+                    $overrideKey = $c['code'] . '|' . $this->fold($name);
+                    if (isset($this->localityCanonicalOverrides[$overrideKey])) {
+                        $name = $this->localityCanonicalOverrides[$overrideKey];
+                    }
 
                     $locSort++;
                     $batch[] = [

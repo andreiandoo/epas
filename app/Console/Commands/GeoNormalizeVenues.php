@@ -74,15 +74,19 @@ class GeoNormalizeVenues extends Command
             'unmatched_city' => 0,
             'unmatched_state' => 0,
             'ambiguous_city' => 0,
+            'would_downgrade_city' => 0,
+            'would_downgrade_state' => 0,
         ];
         $changes = [];
         $unmatchedCity = [];
         $unmatchedState = [];
         $ambiguousCity = [];
+        $downgradeCity = [];
+        $downgradeState = [];
 
         $countryFoldKeys = ['', strtolower($country), 'romania', 'românia'];
 
-        $action = function (Venue $venue) use ($country, &$stats, &$changes, &$unmatchedCity, &$unmatchedState, &$ambiguousCity, $countryFoldKeys, $apply, $verbose) {
+        $action = function (Venue $venue) use ($country, &$stats, &$changes, &$unmatchedCity, &$unmatchedState, &$ambiguousCity, &$downgradeCity, &$downgradeState, $countryFoldKeys, $apply, $verbose) {
             $stats['scanned']++;
 
             // Foreign-country guard — only normalize when the country field
@@ -100,9 +104,17 @@ class GeoNormalizeVenues extends Command
             // Step 1 — resolve county from state text.
             $county = $venue->state ? GeoLocations::matchCounty($venue->state, $country) : null;
             if ($venue->state && $county && $county->name_native !== $venue->state) {
-                $newState = $county->name_native;
-                $stats['rewrite_state']++;
-                $reasons[] = 'state→' . $county->name_native;
+                // Safety guard: never replace a value with one that has
+                // FEWER diacritics. Otherwise a partially-correct seed
+                // entry would silently strip operators' careful spelling.
+                if (GeoLocations::countDiacritics($county->name_native) < GeoLocations::countDiacritics($venue->state)) {
+                    $stats['would_downgrade_state']++;
+                    $downgradeState[] = ['id' => $venue->id, 'current' => $venue->state, 'canonical' => $county->name_native];
+                } else {
+                    $newState = $county->name_native;
+                    $stats['rewrite_state']++;
+                    $reasons[] = 'state→' . $county->name_native;
+                }
             } elseif ($venue->state && ! $county) {
                 $stats['unmatched_state']++;
                 $unmatchedState[] = ['id' => $venue->id, 'state' => $venue->state];
@@ -129,9 +141,15 @@ class GeoNormalizeVenues extends Command
                         $ambiguousCity[] = ['id' => $venue->id, 'city' => $venue->city, 'state' => $venue->state];
                     } else {
                         if ($loc->name_native !== $venue->city) {
-                            $newCity = $loc->name_native;
-                            $stats['rewrite_city']++;
-                            $reasons[] = 'city→' . $loc->name_native;
+                            // Same safety guard for the city rewrite.
+                            if (GeoLocations::countDiacritics($loc->name_native) < GeoLocations::countDiacritics($venue->city)) {
+                                $stats['would_downgrade_city']++;
+                                $downgradeCity[] = ['id' => $venue->id, 'current' => $venue->city, 'canonical' => $loc->name_native];
+                            } else {
+                                $newCity = $loc->name_native;
+                                $stats['rewrite_city']++;
+                                $reasons[] = 'city→' . $loc->name_native;
+                            }
                         }
                         // Backfill missing state from the matched locality's
                         // county, when state was empty.
@@ -235,6 +253,23 @@ class GeoNormalizeVenues extends Command
             $this->table(['id', 'city', 'state'], array_slice($ambiguousCity, 0, 20));
             if (count($ambiguousCity) > 20) {
                 $this->line('  ... ' . (count($ambiguousCity) - 20) . ' more');
+            }
+        }
+
+        $this->line('');
+        $this->info('Blocked by diacritic-safety guard (geo entry has fewer diacritics than the venue — needs a seeder fix, NOT rewritten):');
+        $this->line('  would_downgrade city:  ' . count($downgradeCity));
+        if ($downgradeCity) {
+            $this->table(['id', 'current (kept)', 'geo canonical (skipped)'], array_slice($downgradeCity, 0, 20));
+            if (count($downgradeCity) > 20) {
+                $this->line('  ... ' . (count($downgradeCity) - 20) . ' more');
+            }
+        }
+        $this->line('  would_downgrade state: ' . count($downgradeState));
+        if ($downgradeState) {
+            $this->table(['id', 'current (kept)', 'geo canonical (skipped)'], array_slice($downgradeState, 0, 20));
+            if (count($downgradeState) > 20) {
+                $this->line('  ... ' . (count($downgradeState) - 20) . ' more');
             }
         }
 

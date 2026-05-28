@@ -71,15 +71,21 @@ class GeoLocations
      */
     public static function matchCounty(?string $freeText, string $countryIso = 'RO'): ?GeoCounty
     {
-        $key = self::fold($freeText);
-        if ($key === '' || ! self::tablesReady()) {
+        if (! self::tablesReady()) {
             return null;
         }
         $iso = strtoupper(trim($countryIso)) ?: 'RO';
+        $keys = array_unique(array_filter([
+            self::normalizeForMatch($freeText, false, $iso),
+            self::fold($freeText),
+        ]));
+        if (! $keys) {
+            return null;
+        }
 
         return GeoCounty::query()
             ->whereHas('country', fn ($q) => $q->where('iso2', $iso))
-            ->where('name_ascii', $key)
+            ->whereIn('name_ascii', $keys)
             ->first();
     }
 
@@ -91,15 +97,26 @@ class GeoLocations
      */
     public static function matchLocality(?string $freeText, int|string|null $countyId = null, string $countryIso = 'RO'): ?GeoLocality
     {
-        $key = self::fold($freeText);
-        if ($key === '' || ! self::tablesReady()) {
+        if (! self::tablesReady()) {
+            return null;
+        }
+        $iso = strtoupper(trim($countryIso)) ?: 'RO';
+        // Build a small set of candidate keys (normalized + raw fold +
+        // prefix-stripped variant) so robust matching catches "Bucharest",
+        // "Municipiu Botoșani", "Bistrita - Nasaud" etc.
+        $keys = array_values(array_unique(array_filter([
+            self::normalizeForMatch($freeText, true, $iso),
+            self::normalizeForMatch($freeText, false, $iso),
+            self::fold($freeText),
+        ])));
+        if (! $keys) {
             return null;
         }
 
         if ($countyId) {
             $inCounty = GeoLocality::query()
                 ->where('county_id', (int) $countyId)
-                ->where('name_ascii', $key)
+                ->whereIn('name_ascii', $keys)
                 ->orderBy('sort_order')
                 ->first();
             if ($inCounty) {
@@ -107,11 +124,9 @@ class GeoLocations
             }
         }
 
-        $iso = strtoupper(trim($countryIso)) ?: 'RO';
-
         return GeoLocality::query()
             ->whereHas('country', fn ($q) => $q->where('iso2', $iso))
-            ->where('name_ascii', $key)
+            ->whereIn('name_ascii', $keys)
             ->orderBy('sort_order')
             ->first();
     }
@@ -120,6 +135,61 @@ class GeoLocations
     public static function fold(?string $value): string
     {
         return strtolower(trim(Str::ascii((string) $value)));
+    }
+
+    /**
+     * Count Romanian diacritic characters in a string (ă/â/î/ș/ț plus
+     * cedilla legacy ş/ţ and their uppercase variants). Used to decide
+     * whether a rewrite improves or degrades the spelling.
+     */
+    public static function countDiacritics(?string $value): int
+    {
+        if (! $value) {
+            return 0;
+        }
+        $chars = ['ă', 'â', 'î', 'ș', 'ț', 'ş', 'ţ', 'Ă', 'Â', 'Î', 'Ș', 'Ț', 'Ş', 'Ţ'];
+        $count = 0;
+        foreach ($chars as $ch) {
+            $count += substr_count($value, $ch);
+        }
+        return $count;
+    }
+
+    /**
+     * Stronger normalization for matching: fold, then collapse whitespace
+     * (incl. around hyphens), apply RO aliases (Bucharest→București),
+     * optionally strip Romanian administrative prefixes ("Municipiul ",
+     * "Municipiu ", "Orașul ", "Oraș "). Always keeps the original fold
+     * as a fallback inside the matchers.
+     */
+    public static function normalizeForMatch(?string $value, bool $stripLocalityPrefix = false, string $countryIso = 'RO'): string
+    {
+        $key = self::fold($value);
+        if ($key === '') {
+            return '';
+        }
+        // Collapse spaces around hyphens then normalise runs of whitespace
+        // so "Bistrita - Nasaud" matches "Bistrița-Năsăud" after folding.
+        $key = (string) preg_replace('/\s*-\s*/', '-', $key);
+        $key = (string) preg_replace('/\s+/', ' ', $key);
+        $key = trim($key);
+
+        if ($stripLocalityPrefix) {
+            $key = (string) preg_replace('/^(municipiul|municipiu|orasul|oras)\s+/u', '', $key);
+            $key = trim($key);
+        }
+
+        // Country-specific aliases (English / legacy spellings → canonical
+        // folded form). RO only for now; extend per country as needed.
+        $iso = strtoupper(trim($countryIso)) ?: 'RO';
+        if ($iso === 'RO') {
+            $aliases = [
+                'bucharest' => 'bucuresti',
+            ];
+            $key = $aliases[$key] ?? $key;
+        }
+
+        return $key;
     }
 
     /**
