@@ -227,13 +227,15 @@ class MarketplacePayout extends Model
      */
     public static function buildRemainingTicketsItems(\App\Models\Event $event, ?int $excludePayoutId = null): array
     {
-        $commissionRate = $event->getEffectiveCommissionRate();
-        // Each repeater row must carry the commission_mode so the edit
-        // modal's live preview computes brut/net correctly: added_on_top →
-        // gross = qty*(price+comm), net = qty*price; included → gross =
-        // qty*price, net = qty*price − comm. Mode is event-level by default
-        // (SalesBreakdownService uses the same fallback chain).
-        $commissionMode = $event->getEffectiveCommissionMode() ?? 'included';
+        // Resolve commission per TICKET TYPE (not per event) — each
+        // TicketType has its own commission_type / commission_rate /
+        // commission_fixed / commission_mode that overrides the event
+        // default. Using the event-level mode for every item misreports
+        // brut/net in the live preview whenever the event default differs
+        // from the per-type mode (e.g. event default 'included' but every
+        // ticket type set to 'added_on_top').
+        $defaultRate = $event->getEffectiveCommissionRate();
+        $defaultMode = $event->getEffectiveCommissionMode() ?? 'included';
 
         $ticketCounts = \App\Models\Ticket::whereHas('ticketType', fn ($q) => $q->where('event_id', $event->id))
             ->whereIn('status', ['valid', 'used'])
@@ -284,23 +286,17 @@ class MarketplacePayout extends Model
                 ? $tt->sale_price_cents / 100
                 : ($tt->price_cents ? $tt->price_cents / 100 : 0));
 
-            if ($tt->commission_type && $tt->commission_type !== '') {
-                $commPer = match ($tt->commission_type) {
-                    'percentage' => round($basePrice * (($tt->commission_rate ?? 0) / 100), 2),
-                    'fixed' => (float) ($tt->commission_fixed ?? 0),
-                    'both' => round($basePrice * (($tt->commission_rate ?? 0) / 100), 2) + (float) ($tt->commission_fixed ?? 0),
-                    default => round($basePrice * ($commissionRate / 100), 2),
-                };
-            } else {
-                $commPer = round($basePrice * ($commissionRate / 100), 2);
-            }
+            // Single source of truth for mode + commission per type. Picks
+            // up TicketType-level overrides automatically.
+            $eff = $tt->getEffectiveCommission($defaultRate, $defaultMode);
+            $commPer = round($tt->calculateCommission($basePrice, $defaultRate, $defaultMode), 2);
 
             $items[] = [
                 'ticket_type_id' => $tt->id,
                 'ticket_type_name' => is_array($tt->name) ? ($tt->name['ro'] ?? $tt->name['en'] ?? '') : $tt->name,
                 'unit_price' => $basePrice,
                 'commission_per_ticket' => $commPer,
-                'commission_mode' => $commissionMode,
+                'commission_mode' => $eff['mode'] ?? 'included',
                 'qty' => $remaining,
             ];
         }

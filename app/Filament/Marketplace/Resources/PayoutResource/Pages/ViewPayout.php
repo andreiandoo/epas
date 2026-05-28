@@ -224,7 +224,9 @@ class ViewPayout extends ViewRecord
                                         return;
                                     }
                                     $tickets = $get('payout_tickets') ?? [];
-                                    $payoutMode = $this->record->commission_mode ?? 'included';
+                                    $payoutMode = $this->record->event?->getEffectiveCommissionMode()
+                                        ?? $this->record->commission_mode
+                                        ?? 'included';
                                     // Compute current net sum from row data
                                     $currentNet = 0.0;
                                     foreach ($tickets as $t) {
@@ -374,12 +376,16 @@ class ViewPayout extends ViewRecord
                         ->content(function (\Filament\Schemas\Components\Utilities\Get $get) {
                             $tickets = $get('payout_tickets') ?? [];
                             $targetNet = (float) ($get('net_amount') ?? 0);
-                            // Fall back to the payout's stored commission_mode when a
-                            // row doesn't carry one (e.g. items injected by helpers
-                            // that didn't emit the field, or older repeater states).
-                            // Without this, missing → 'included' → brut understated
-                            // for added_on_top events.
-                            $payoutMode = $this->record->commission_mode ?? 'included';
+                            // Authoritative commission mode for the preview: try the
+                            // event's effective mode first (the single source the
+                            // SalesBreakdownService uses), then the payout's stored
+                            // mode, then 'included'. Without this chain, a missing
+                            // commission_mode on a row → 'included' → brut understated
+                            // for added_on_top events (and the diff against Sumă netă
+                            // dorită shows a phantom commission-sized shortfall).
+                            $payoutMode = $this->record->event?->getEffectiveCommissionMode()
+                                ?? $this->record->commission_mode
+                                ?? 'included';
                             $totalQty = 0;
                             $gross = 0.0;
                             $commission = 0.0;
