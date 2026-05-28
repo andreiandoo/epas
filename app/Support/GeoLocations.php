@@ -75,7 +75,7 @@ class GeoLocations
             return null;
         }
         $iso = strtoupper(trim($countryIso)) ?: 'RO';
-        $keys = array_unique(array_filter([
+        $keys = self::withHyphenSpaceVariants(array_filter([
             self::normalizeForMatch($freeText, false, $iso),
             self::fold($freeText),
         ]));
@@ -103,12 +103,14 @@ class GeoLocations
         $iso = strtoupper(trim($countryIso)) ?: 'RO';
         // Build a small set of candidate keys (normalized + raw fold +
         // prefix-stripped variant) so robust matching catches "Bucharest",
-        // "Municipiu Botoșani", "Bistrita - Nasaud" etc.
-        $keys = array_values(array_unique(array_filter([
+        // "Municipiu Botoșani", "Bistrita - Nasaud" etc. Then expand each
+        // to its hyphen↔space twin so "Piatra-Neamț" finds "Piatra Neamț"
+        // and vice versa.
+        $keys = self::withHyphenSpaceVariants(array_filter([
             self::normalizeForMatch($freeText, true, $iso),
             self::normalizeForMatch($freeText, false, $iso),
             self::fold($freeText),
-        ])));
+        ]));
         if (! $keys) {
             return null;
         }
@@ -185,11 +187,36 @@ class GeoLocations
         if ($iso === 'RO') {
             $aliases = [
                 'bucharest' => 'bucuresti',
+                // Pre-1993 orthography (î inside words) → modern (â).
+                'tirgu mures' => 'targu mures',
+                'tirgu jiu' => 'targu jiu',
+                // Regional / old name → modern administrative name.
+                'campulung muscel' => 'campulung',
             ];
             $key = $aliases[$key] ?? $key;
         }
 
         return $key;
+    }
+
+    /**
+     * Expand a normalized key into a small set of candidates that swap
+     * hyphens for spaces and vice versa. Romanian compound place names
+     * appear inconsistently in the wild ("Piatra-Neamț" / "Piatra Neamț",
+     * "Targu-Mures" / "Târgu Mureș"), and matching has to tolerate both.
+     */
+    protected static function withHyphenSpaceVariants(array $keys): array
+    {
+        $out = $keys;
+        foreach ($keys as $k) {
+            if (str_contains($k, '-')) {
+                $out[] = str_replace('-', ' ', $k);
+            }
+            if (str_contains($k, ' ')) {
+                $out[] = str_replace(' ', '-', $k);
+            }
+        }
+        return array_values(array_unique(array_filter($out)));
     }
 
     /**
