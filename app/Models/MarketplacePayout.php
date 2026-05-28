@@ -645,13 +645,33 @@ class MarketplacePayout extends Model
         }
 
         $rows = app(\App\Services\Marketplace\SalesBreakdownService::class)
-            ->buildPosForPayout($this->event, $this->period_start, $this->period_end);
+            ->buildPosForPayout($this->event, $this->period_start, $this->getPosUpperBound());
 
         $total = 0.0;
         foreach ($rows as $row) {
             $total += (float) ($row['commission_amount'] ?? 0);
         }
         return $this->posCommissionCache = round($total, 2);
+    }
+
+    /**
+     * Upper bound for POS sales attributable to THIS payout: never later
+     * than the payout's own `created_at`. POS sales made after the payout
+     * was created belong to a future payout, not this one — without this
+     * clamp, the first decont on an event picks up POS sales that came in
+     * later (period_end may be null or set past created_at), showing a
+     * phantom "Generează factură POS" button + wizard step.
+     */
+    protected function getPosUpperBound(): ?\Carbon\Carbon
+    {
+        $createdAt = $this->created_at ? \Carbon\Carbon::parse($this->created_at) : null;
+        if (!$createdAt) {
+            return $this->period_end;
+        }
+        if ($this->period_end && $this->period_end->lt($createdAt)) {
+            return $this->period_end;
+        }
+        return $createdAt;
     }
 
     /**

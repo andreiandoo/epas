@@ -951,9 +951,16 @@ class ViewPayout extends ViewRecord
 
         // POS-only sales slice for this payout's period is the source of truth
         // for POS commission — ticket_breakdown no longer carries POS rows
-        // (they're excluded from the decont by design).
+        // (they're excluded from the decont by design). Upper bound clamped
+        // at the payout's created_at so we never bill POS sales that arrived
+        // AFTER this decont was created (those belong to a later decont) —
+        // matches getPosCommissionTotal()'s visibility check exactly.
+        $createdAt = $payout->created_at ? \Carbon\Carbon::parse($payout->created_at) : null;
+        $posUpper = ($createdAt && $payout->period_end && $payout->period_end->lt($createdAt))
+            ? $payout->period_end
+            : ($createdAt ?? $payout->period_end);
         $posRows = app(\App\Services\Marketplace\SalesBreakdownService::class)
-            ->buildPosForPayout($payout->event, $payout->period_start, $payout->period_end);
+            ->buildPosForPayout($payout->event, $payout->period_start, $posUpper);
         if (empty($posRows)) {
             Notification::make()->title('Nu există comisioane POS de facturat')->warning()->send();
             return;
