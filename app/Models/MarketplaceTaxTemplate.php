@@ -281,6 +281,8 @@ class MarketplaceTaxTemplate extends Model
             '{{refunded_tickets_breakdown_label}}' => 'Detaliu bilete returnate (ex: 120lei*1)',
             '{{total_discount_amount}}' => 'Total discounturi aplicate (lei)',
             '{{promo_codes_used}}' => 'Coduri promo folosite (ex: " — coduri: SUMMER25 (x3), VIP10")',
+            '{{sales_breakdown_rows}}' => 'Bloc HTML cu rândurile 1a/1b (+ 1c/1d, etc.) grupate per regulă de comision',
+            '{{refund_breakdown_rows}}' => 'Bloc HTML cu rândurile 2a/2b (+ 2c/2d, etc.) grupate per regulă de comision',
         ],
         'Payout - Bilete Pretipărite' => [
             '{{payout_preprinted_ticket_fee}}' => 'Taxă per bilet pretipărit (lei/buc)',
@@ -1889,6 +1891,24 @@ class MarketplaceTaxTemplate extends Model
                 ? ' — coduri: ' . implode(', ', $codeStrings)
                 : '';
 
+            // === Per-commission-rule breakdowns for section 1 + section 2 ===
+            // The decont's section 1 / section 2 each render one pair of
+            // rows (Xa value + Xb ticket list) per distinct commission rule
+            // present in the payout. A single-rule payout outputs just
+            // 1a/1b (and 2a/2b for refunds). Mixed payouts (e.g. some
+            // tickets percentage-based, some fixed) get additional pairs:
+            // 1a/1b + 1c/1d + 1e/1f… Letters wrap a/b → c/d → e/f → …
+            //
+            // The template author replaces the static 1a/1b rows with the
+            // single variable {{sales_breakdown_rows}} and the static
+            // 2a/2b rows with {{refund_breakdown_rows}}. Line 1 / line 2
+            // become pure section headers ("Bilete vândute online" /
+            // "Taxe pentru bilete returnate") — the rate label moves into
+            // each Xa row so mixed payouts can show different rates
+            // alongside their respective values.
+            $variables['sales_breakdown_rows'] = $this->buildPayoutSalesBreakdownRows($ticketBreakdown, $posTypeIdsSet, $vatAmount, $formatPrice);
+            $variables['refund_breakdown_rows'] = $this->buildPayoutRefundBreakdownRows($payout, $formatPrice);
+
             // Preprinted tickets (physical tickets sent by courier)
             $preprintedData = $payout->payout_method['preprinted'] ?? [];
             $variables['payout_preprinted_ticket_fee'] = number_format((float) ($preprintedData['fee_per_ticket'] ?? 0), 2);
@@ -1957,6 +1977,222 @@ class MarketplaceTaxTemplate extends Model
         $variables['current_datetime'] = $now->format('d.m.Y H:i');
 
         return $variables;
+    }
+
+    /**
+     * Group ticket_breakdown rows by their commission rule (type + rate +
+     * fixed + mode) and emit a pair of HTML rows for each group: value +
+     * ticket list. Letters auto-rotate: a/b for the first group, c/d for
+     * the second, e/f for the third. Templates that previously used the
+     * static 1a/1b rows now just drop {{sales_breakdown_rows}} and the
+     * resolver expands to the right number of rows for the payout's
+     * actual mix.
+     *
+     * @param array<int, array<string, mixed>> $ticketBreakdown
+     * @param array<int, mixed> $posTypeIdsSet
+     */
+    private static function buildPayoutSalesBreakdownRows(array $ticketBreakdown, array $posTypeIdsSet, float $vatAmount, callable $formatPrice): string
+    {
+        $groups = [];
+        foreach ($ticketBreakdown as $item) {
+            $ttId = $item['ticket_type_id'] ?? null;
+            if ($ttId && isset($posTypeIdsSet[$ttId])) {
+                continue;
+            }
+            $price = (float) ($item['price'] ?? $item['unit_price'] ?? 0);
+            $qty = (int) ($item['quantity'] ?? $item['tickets'] ?? $item['qty'] ?? 0);
+            if ($qty <= 0 || $price <= 0) continue;
+
+            $key = self::commissionGroupKey($item);
+            if (!isset($groups[$key])) {
+                $groups[$key] = [
+                    'label' => self::commissionRateLabel($item),
+                    'mode' => $item['commission_mode'] ?? null,
+                    'qty' => 0,
+                    'amount' => 0.0,
+                    'priceParts' => [],
+                ];
+            }
+            $groups[$key]['qty'] += $qty;
+            $groups[$key]['amount'] += $price * $qty;
+            $groups[$key]['priceParts'][] = $formatPrice($price) . 'lei*' . $qty;
+        }
+
+        if (empty($groups)) return '';
+
+        $letterPairs = [['a','b'], ['c','d'], ['e','f'], ['g','h'], ['i','j']];
+        $html = '';
+        $idx = 0;
+        foreach ($groups as $g) {
+            [$valueLetter, $listLetter] = $letterPairs[$idx] ?? ['?', '?'];
+            $rateLabel = $g['label'];
+            $mode = $g['mode'];
+            $taxNote = $rateLabel !== ''
+                ? ' (taxa de ticketing ' . (in_array($mode, ['added_on_top', 'on_top'], true)
+                    ? 'adăugată la prețul biletului'
+                    : 'inclusă în prețul biletului') . '): ' . $rateLabel
+                : '';
+            $amountStr = number_format($g['amount'], 2);
+            $vatStr = number_format($vatAmount, 2);
+            $listLabel = !empty($g['priceParts'])
+                ? ' (' . implode('+', $g['priceParts']) . ')'
+                : '';
+
+            // Value row (1a / 1c / 1e ...).
+            $html .= '<tr style="background:#fafafa;">'
+                . '<td style="border:1px solid #ddd; padding:2px 5px; text-align:center; color:#888; font-size:6.5pt;">1' . $valueLetter . '</td>'
+                . '<td style="border:1px solid #ddd; padding:2px 5px; padding-left:6px;">Valoare bilete v&#xe2;ndute' . htmlspecialchars($taxNote, ENT_QUOTES, 'UTF-8') . '</td>'
+                . '<td style="border:1px solid #ddd; padding:2px 5px; text-align:center; color:#555;">lei</td>'
+                . '<td style="border:1px solid #ddd; padding:2px 5px; text-align:right; font-weight:bold;">' . $amountStr . '</td>'
+                . '<td style="border:1px solid #ddd; padding:2px 5px; text-align:center; color:#555;">' . $vatStr . '</td>'
+                . '<td style="border:1px solid #ddd; padding:2px 5px; text-align:right; color:#888;">' . $vatStr . '</td>'
+                . '</tr>';
+
+            // Ticket list row (1b / 1d / 1f ...).
+            $html .= '<tr style="background:#fff;">'
+                . '<td style="border:1px solid #ddd; padding:2px 5px; text-align:center; color:#888; font-size:6.5pt;">1' . $listLetter . '</td>'
+                . '<td style="border:1px solid #ddd; padding:2px 5px; padding-left:6px; font-size:6.5pt; color:#555;">Nr. bilete v&#xe2;ndute' . htmlspecialchars($listLabel, ENT_QUOTES, 'UTF-8') . '</td>'
+                . '<td style="border:1px solid #ddd; padding:2px 5px; text-align:center; color:#555;">buc</td>'
+                . '<td style="border:1px solid #ddd; padding:2px 5px; text-align:right; font-weight:bold;">' . $g['qty'] . '</td>'
+                . '<td style="border:1px solid #ddd; padding:2px 5px;"></td>'
+                . '<td style="border:1px solid #ddd; padding:2px 5px;"></td>'
+                . '</tr>';
+
+            $idx++;
+        }
+
+        return $html;
+    }
+
+    /**
+     * Same idea as buildPayoutSalesBreakdownRows but for refunded tickets,
+     * pulling rules from each refund item's ticket type. Returns 2a/2b
+     * (and optional 2c/2d, 2e/2f...) HTML, or empty string when nothing
+     * was refunded.
+     */
+    private static function buildPayoutRefundBreakdownRows(MarketplacePayout $payout, callable $formatPrice): string
+    {
+        if (!$payout->event_id) return '';
+
+        $items = \App\Models\MarketplaceRefundItem::query()
+            ->whereHas('refundRequest', function ($q) use ($payout) {
+                $q->whereIn('status', ['refunded', 'partially_refunded'])
+                  ->whereHas('order', function ($q2) use ($payout) {
+                      $q2->where(fn ($q3) => $q3->where('event_id', $payout->event_id)
+                                                  ->orWhere('marketplace_event_id', $payout->event_id));
+                  });
+            })
+            ->where('status', 'refunded')
+            ->with('ticketType:id,name,commission_type,commission_rate,commission_fixed,commission_mode')
+            ->get();
+
+        if ($items->isEmpty()) return '';
+
+        $groups = [];
+        foreach ($items as $it) {
+            $tt = $it->ticketType;
+            // Build the same shape commissionGroupKey/Label expects.
+            $proxy = [
+                'commission_type' => $tt?->commission_type,
+                'commission_rate' => $tt?->commission_rate !== null ? (float) $tt->commission_rate : null,
+                'commission_fixed' => $tt?->commission_fixed !== null ? (float) $tt->commission_fixed : null,
+                'commission_mode' => $tt?->commission_mode,
+            ];
+            $key = self::commissionGroupKey($proxy);
+            if (!isset($groups[$key])) {
+                $groups[$key] = [
+                    'label' => self::commissionRateLabel($proxy),
+                    'mode' => $tt?->commission_mode,
+                    'items' => [],
+                ];
+            }
+            $groups[$key]['items'][] = $it;
+        }
+
+        $letterPairs = [['a','b'], ['c','d'], ['e','f'], ['g','h'], ['i','j']];
+        $html = '';
+        $idx = 0;
+        foreach ($groups as $g) {
+            [$valueLetter, $listLetter] = $letterPairs[$idx] ?? ['?', '?'];
+            $rateLabel = $g['label'];
+            $mode = $g['mode'];
+            $taxNote = $rateLabel !== ''
+                ? ' (taxa de ticketing ' . (in_array($mode, ['added_on_top', 'on_top'], true)
+                    ? 'adăugată la prețul biletului'
+                    : 'inclusă în prețul biletului') . '): ' . $rateLabel
+                : '';
+
+            $totalFace = 0.0;
+            $qty = 0;
+            $byPrice = [];
+            foreach ($g['items'] as $it) {
+                $face = (float) $it->face_value;
+                $totalFace += $face;
+                $qty++;
+                $bucketKey = number_format($face, 2, '.', '');
+                $byPrice[$bucketKey] = ($byPrice[$bucketKey] ?? 0) + 1;
+            }
+            $priceParts = [];
+            foreach ($byPrice as $price => $count) {
+                $priceParts[] = $formatPrice((float) $price) . 'lei*' . $count;
+            }
+            $listLabel = !empty($priceParts) ? ' (' . implode('+', $priceParts) . ')' : '';
+            $amountStr = number_format($totalFace, 2);
+
+            $html .= '<tr style="background:#fafafa;">'
+                . '<td style="border:1px solid #ddd; padding:2px 5px; text-align:center; color:#888; font-size:6.5pt;">2' . $valueLetter . '</td>'
+                . '<td style="border:1px solid #ddd; padding:2px 5px; padding-left:6px;">Valoarea total&#x103; a biletelor returnate' . htmlspecialchars($taxNote, ENT_QUOTES, 'UTF-8') . '</td>'
+                . '<td style="border:1px solid #ddd; padding:2px 5px; text-align:center; color:#555;">lei</td>'
+                . '<td style="border:1px solid #ddd; padding:2px 5px; text-align:right; font-weight:bold;">' . $amountStr . ' lei</td>'
+                . '<td style="border:1px solid #ddd; padding:2px 5px; text-align:center; color:#555;">0.00</td>'
+                . '<td style="border:1px solid #ddd; padding:2px 5px; text-align:right; color:#888;">0.00</td>'
+                . '</tr>';
+
+            $html .= '<tr style="background:#fff;">'
+                . '<td style="border:1px solid #ddd; padding:2px 5px; text-align:center; color:#888; font-size:6.5pt;">2' . $listLetter . '</td>'
+                . '<td style="border:1px solid #ddd; padding:2px 5px; padding-left:6px;">Nr. bilete returnate' . htmlspecialchars($listLabel, ENT_QUOTES, 'UTF-8') . '</td>'
+                . '<td style="border:1px solid #ddd; padding:2px 5px; text-align:center; color:#555;">buc</td>'
+                . '<td style="border:1px solid #ddd; padding:2px 5px; text-align:right; font-weight:bold;">' . $qty . '</td>'
+                . '<td style="border:1px solid #ddd; padding:2px 5px;"></td>'
+                . '<td style="border:1px solid #ddd; padding:2px 5px;"></td>'
+                . '</tr>';
+
+            $idx++;
+        }
+
+        return $html;
+    }
+
+    private static function commissionGroupKey(array|object $item): string
+    {
+        $a = is_object($item) ? (array) $item : $item;
+        return implode('|', [
+            $a['commission_type'] ?? '',
+            $a['commission_rate'] ?? '',
+            $a['commission_fixed'] ?? '',
+            $a['commission_mode'] ?? '',
+        ]);
+    }
+
+    private static function commissionRateLabel(array|object $item): string
+    {
+        $a = is_object($item) ? (array) $item : $item;
+        $type = $a['commission_type'] ?? null;
+        $rate = $a['commission_rate'] ?? null;
+        $fixed = $a['commission_fixed'] ?? null;
+
+        return match (true) {
+            $type === 'percentage' && $rate !== null => $rate . '%',
+            $type === 'fixed' && $fixed !== null => number_format((float) $fixed, 2) . ' lei',
+            $type === 'both' && ($rate !== null || $fixed !== null) => trim(
+                ($rate !== null ? $rate . '%' : '')
+                . ($rate !== null && $fixed !== null ? ' + ' : '')
+                . ($fixed !== null ? number_format((float) $fixed, 2) . ' lei' : '')
+            ),
+            // Legacy snapshots without commission_type fall back to rate-only.
+            $rate !== null => $rate . '%',
+            default => '',
+        };
     }
 
     /**
