@@ -2040,10 +2040,14 @@ class MarketplaceTaxTemplate extends Model
                 ? ' (' . implode('+', $g['priceParts']) . ')'
                 : '';
 
+            // Pre-rendered tax-note suffix: smaller font, gray prefix,
+            // red rate value — keeps the row label hierarchy obvious.
+            $taxNoteHtml = self::commissionLabelHtml($rateLabel, $mode, 'sale');
+
             // Value row (1a / 1c / 1e ...).
             $html .= '<tr style="background:#fafafa;">'
                 . '<td style="border:1px solid #ddd; padding:2px 5px; text-align:center; color:#888; font-size:6.5pt;">1' . $valueLetter . '</td>'
-                . '<td style="border:1px solid #ddd; padding:2px 5px; padding-left:6px;">Valoare bilete v&#xe2;ndute' . htmlspecialchars($taxNote, ENT_QUOTES, 'UTF-8') . '</td>'
+                . '<td style="border:1px solid #ddd; padding:2px 5px; padding-left:6px;">Valoare bilete v&#xe2;ndute' . $taxNoteHtml . '</td>'
                 . '<td style="border:1px solid #ddd; padding:2px 5px; text-align:center; color:#555;">lei</td>'
                 . '<td style="border:1px solid #ddd; padding:2px 5px; text-align:right; font-weight:bold;">' . $amountStr . '</td>'
                 . '<td style="border:1px solid #ddd; padding:2px 5px; text-align:center; color:#555;">' . $vatStr . '</td>'
@@ -2067,6 +2071,24 @@ class MarketplaceTaxTemplate extends Model
     }
 
     /**
+     * Render the "(taxa de ticketing …): N%" suffix as inline HTML so
+     * the prefix sits in a smaller, gray inline-block and the rate
+     * itself is bold + red. Empty when there's no rate.
+     */
+    private static function commissionLabelHtml(string $rateLabel, ?string $mode, string $context = 'sale'): string
+    {
+        if ($rateLabel === '') return '';
+        $modeText = in_array($mode, ['added_on_top', 'on_top'], true)
+            ? 'adăugată la prețul biletului'
+            : 'inclusă în prețul biletului';
+        $prefix = '(taxa de ticketing ' . $modeText . '): ';
+        return ' <span style="font-size:6pt; color:#777;">'
+            . htmlspecialchars($prefix, ENT_QUOTES, 'UTF-8')
+            . '<strong style="color:#c0392b;">' . htmlspecialchars($rateLabel, ENT_QUOTES, 'UTF-8') . '</strong>'
+            . '</span>';
+    }
+
+    /**
      * Same idea as buildPayoutSalesBreakdownRows but for refunded tickets,
      * pulling rules from each refund item's ticket type. Returns 2a/2b
      * (and optional 2c/2d, 2e/2f...) HTML, or empty string when nothing
@@ -2076,13 +2098,14 @@ class MarketplaceTaxTemplate extends Model
     {
         if (!$payout->event_id) return '';
 
+        // Same scoping logic as the aggregate vars (total_tickets_refunded
+        // etc.): only refunds explicitly assigned to THIS payout via
+        // refund_request.marketplace_payout_id. Without it the same refund
+        // showed on every later payout for the same event.
         $items = \App\Models\MarketplaceRefundItem::query()
             ->whereHas('refundRequest', function ($q) use ($payout) {
                 $q->whereIn('status', ['refunded', 'partially_refunded'])
-                  ->whereHas('order', function ($q2) use ($payout) {
-                      $q2->where(fn ($q3) => $q3->where('event_id', $payout->event_id)
-                                                  ->orWhere('marketplace_event_id', $payout->event_id));
-                  });
+                  ->where('marketplace_payout_id', $payout->id);
             })
             ->where('status', 'refunded')
             ->with('ticketType:id,name,commission_type,commission_rate,commission_fixed,commission_mode')
@@ -2118,11 +2141,7 @@ class MarketplaceTaxTemplate extends Model
             [$valueLetter, $listLetter] = $letterPairs[$idx] ?? ['?', '?'];
             $rateLabel = $g['label'];
             $mode = $g['mode'];
-            $taxNote = $rateLabel !== ''
-                ? ' (taxa de ticketing ' . (in_array($mode, ['added_on_top', 'on_top'], true)
-                    ? 'adăugată la prețul biletului'
-                    : 'inclusă în prețul biletului') . '): ' . $rateLabel
-                : '';
+            $taxNoteHtml = self::commissionLabelHtml($rateLabel, $mode, 'refund');
 
             $totalFace = 0.0;
             $qty = 0;
@@ -2141,18 +2160,21 @@ class MarketplaceTaxTemplate extends Model
             $listLabel = !empty($priceParts) ? ' (' . implode('+', $priceParts) . ')' : '';
             $amountStr = number_format($totalFace, 2);
 
+            // 2a mirrors 1a styling (default label font, smaller red rate
+            // suffix), 2b mirrors 1b (6.5pt gray label). The previous cut
+            // diverged on both rows.
             $html .= '<tr style="background:#fafafa;">'
                 . '<td style="border:1px solid #ddd; padding:2px 5px; text-align:center; color:#888; font-size:6.5pt;">2' . $valueLetter . '</td>'
-                . '<td style="border:1px solid #ddd; padding:2px 5px; padding-left:6px;">Valoarea total&#x103; a biletelor returnate' . htmlspecialchars($taxNote, ENT_QUOTES, 'UTF-8') . '</td>'
+                . '<td style="border:1px solid #ddd; padding:2px 5px; padding-left:6px;">Valoarea total&#x103; a biletelor returnate' . $taxNoteHtml . '</td>'
                 . '<td style="border:1px solid #ddd; padding:2px 5px; text-align:center; color:#555;">lei</td>'
-                . '<td style="border:1px solid #ddd; padding:2px 5px; text-align:right; font-weight:bold;">' . $amountStr . ' lei</td>'
+                . '<td style="border:1px solid #ddd; padding:2px 5px; text-align:right; font-weight:bold;">' . $amountStr . '</td>'
                 . '<td style="border:1px solid #ddd; padding:2px 5px; text-align:center; color:#555;">0.00</td>'
                 . '<td style="border:1px solid #ddd; padding:2px 5px; text-align:right; color:#888;">0.00</td>'
                 . '</tr>';
 
             $html .= '<tr style="background:#fff;">'
                 . '<td style="border:1px solid #ddd; padding:2px 5px; text-align:center; color:#888; font-size:6.5pt;">2' . $listLetter . '</td>'
-                . '<td style="border:1px solid #ddd; padding:2px 5px; padding-left:6px;">Nr. bilete returnate' . htmlspecialchars($listLabel, ENT_QUOTES, 'UTF-8') . '</td>'
+                . '<td style="border:1px solid #ddd; padding:2px 5px; padding-left:6px; font-size:6.5pt; color:#555;">Nr. bilete returnate' . htmlspecialchars($listLabel, ENT_QUOTES, 'UTF-8') . '</td>'
                 . '<td style="border:1px solid #ddd; padding:2px 5px; text-align:center; color:#555;">buc</td>'
                 . '<td style="border:1px solid #ddd; padding:2px 5px; text-align:right; font-weight:bold;">' . $qty . '</td>'
                 . '<td style="border:1px solid #ddd; padding:2px 5px;"></td>'
