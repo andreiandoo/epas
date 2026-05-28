@@ -224,13 +224,15 @@ class ViewPayout extends ViewRecord
                                         return;
                                     }
                                     $tickets = $get('payout_tickets') ?? [];
+                                    $payoutMode = $this->record->commission_mode ?? 'included';
                                     // Compute current net sum from row data
                                     $currentNet = 0.0;
                                     foreach ($tickets as $t) {
                                         $qty = (int) ($t['qty'] ?? 0);
                                         $unit = (float) ($t['unit_price'] ?? 0);
                                         $commPer = (float) ($t['commission_per_ticket'] ?? 0);
-                                        $isOnTop = in_array($t['commission_mode'] ?? 'included', ['added_on_top', 'on_top'], true);
+                                        $rowMode = $t['commission_mode'] ?? $payoutMode;
+                                        $isOnTop = in_array($rowMode, ['added_on_top', 'on_top'], true);
                                         $g = $qty * $unit + ($isOnTop ? $qty * $commPer : 0);
                                         $c = $qty * $commPer;
                                         $currentNet += $g - $c;
@@ -372,6 +374,12 @@ class ViewPayout extends ViewRecord
                         ->content(function (\Filament\Schemas\Components\Utilities\Get $get) {
                             $tickets = $get('payout_tickets') ?? [];
                             $targetNet = (float) ($get('net_amount') ?? 0);
+                            // Fall back to the payout's stored commission_mode when a
+                            // row doesn't carry one (e.g. items injected by helpers
+                            // that didn't emit the field, or older repeater states).
+                            // Without this, missing → 'included' → brut understated
+                            // for added_on_top events.
+                            $payoutMode = $this->record->commission_mode ?? 'included';
                             $totalQty = 0;
                             $gross = 0.0;
                             $commission = 0.0;
@@ -380,7 +388,8 @@ class ViewPayout extends ViewRecord
                                 if ($qty <= 0) continue;
                                 $unit = (float) ($t['unit_price'] ?? 0);
                                 $commPer = (float) ($t['commission_per_ticket'] ?? 0);
-                                $isOnTop = in_array($t['commission_mode'] ?? 'included', ['added_on_top', 'on_top'], true);
+                                $rowMode = $t['commission_mode'] ?? $payoutMode;
+                                $isOnTop = in_array($rowMode, ['added_on_top', 'on_top'], true);
                                 $totalQty += $qty;
                                 $gross += $qty * $unit + ($isOnTop ? $qty * $commPer : 0);
                                 $commission += $qty * $commPer;
