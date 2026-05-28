@@ -1019,12 +1019,30 @@ class EventResource extends Resource
                                                             'Switzerland' => 'CH', 'Portugal' => 'PT', 'Sweden' => 'SE',
                                                             'România' => 'RO', 'Deutschland' => 'DE',
                                                         ])->get($countryRaw, strtoupper(mb_substr($countryRaw, 0, 2))));
+
+                                                        // Promote the raw venue.city to its canonical
+                                                        // native spelling via the centralized geo
+                                                        // dataset, so a venue typed "Bucuresti"
+                                                        // creates a MarketplaceCity named "București"
+                                                        // instead of perpetuating the non-diacritic
+                                                        // form. Falls back to the raw value when
+                                                        // geo has no match (other countries / typos).
+                                                        $cityName = $venue->city;
+                                                        $cityLat = $venue->lat;
+                                                        $cityLng = $venue->lng;
+                                                        $geoLoc = \App\Support\GeoLocations::matchLocality($venue->city, null, $countryCode);
+                                                        if ($geoLoc) {
+                                                            $cityName = $geoLoc->name_native;
+                                                            $cityLat = $cityLat ?: $geoLoc->latitude;
+                                                            $cityLng = $cityLng ?: $geoLoc->longitude;
+                                                        }
+
                                                         $newCity = MarketplaceCity::create([
                                                             'marketplace_client_id' => $marketplace?->id,
-                                                            'name' => ['ro' => $venue->city, 'en' => $venue->city],
+                                                            'name' => ['ro' => $cityName, 'en' => $cityName],
                                                             'country' => $countryCode,
-                                                            'latitude' => $venue->lat,
-                                                            'longitude' => $venue->lng,
+                                                            'latitude' => $cityLat,
+                                                            'longitude' => $cityLng,
                                                             'is_visible' => true,
                                                         ]);
                                                         $set('marketplace_city_id', $newCity->id);
@@ -1111,17 +1129,31 @@ class EventResource extends Resource
                                     ->nullable(),
                                 Forms\Components\Select::make('marketplace_city_id')
                                     ->label($t('Oraș', 'City'))
-                                    ->options(function () use ($marketplace, $marketplaceLanguage) {
-                                        return MarketplaceCity::query()
+                                    ->options(function (\Filament\Schemas\Components\Utilities\Get $get) use ($marketplace, $marketplaceLanguage) {
+                                        $list = MarketplaceCity::query()
                                             ->where('marketplace_client_id', $marketplace?->id)
                                             ->where('is_visible', true)
                                             ->with('region')
                                             ->orderBy('sort_order')
-                                            ->get()
-                                            ->mapWithKeys(fn ($city) => [
-                                                $city->id => ($city->region ? ($city->region->name[$marketplaceLanguage] ?? $city->region->name['ro'] ?? '') . ' > ' : '')
-                                                    . ($city->name[$marketplaceLanguage] ?? $city->name['ro'] ?? 'Unnamed')
-                                            ]);
+                                            ->get();
+
+                                        // Always include the currently-selected city even if it
+                                        // isn't in the visible list yet. The venue's
+                                        // afterStateUpdated handler can auto-create a new
+                                        // MarketplaceCity inside the same request; without this
+                                        // the Select would render empty until the page reloads.
+                                        $selectedId = $get('marketplace_city_id');
+                                        if ($selectedId && ! $list->contains('id', (int) $selectedId)) {
+                                            $extra = MarketplaceCity::with('region')->find($selectedId);
+                                            if ($extra) {
+                                                $list->push($extra);
+                                            }
+                                        }
+
+                                        return $list->mapWithKeys(fn ($city) => [
+                                            $city->id => ($city->region ? ($city->region->name[$marketplaceLanguage] ?? $city->region->name['ro'] ?? '') . ' > ' : '')
+                                                . ($city->name[$marketplaceLanguage] ?? $city->name['ro'] ?? 'Unnamed')
+                                        ]);
                                     })
                                     ->searchable()
                                     ->preload()

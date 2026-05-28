@@ -30,6 +30,7 @@ class GeoNormalizeVenues extends Command
 {
     protected $signature = 'geo:normalize-venues
         {--apply : Commit changes (default is dry-run only)}
+        {--dry-run : Alias for the default dry-run mode (no-op flag, kept for explicitness)}
         {--country=RO : Country ISO2 to scope the run}
         {--marketplace= : Restrict to one marketplace_client_id}
         {--tenant= : Restrict to one tenant_id}
