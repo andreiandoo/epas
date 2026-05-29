@@ -6,6 +6,7 @@ use App\Filament\Marketplace\Resources\EventResource;
 use App\Filament\Marketplace\Resources\PayoutResource;
 use App\Filament\Marketplace\Resources\PendingPaymentResource\Pages;
 use App\Models\MarketplacePayout;
+use Filament\Actions\ViewAction;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables;
@@ -154,7 +155,7 @@ class PendingPaymentResource extends Resource
                     ->formatStateUsing(fn ($state) => number_format((float) $state, 2) . ' RON')
                     ->color(fn ($state) => ((float) $state) < 0 ? 'danger' : 'success')
                     ->weight('bold')
-                    ->alignRight()
+                    ->alignEnd()
                     ->sortable(query: function (Builder $query, string $direction): Builder {
                         // Sort by amount as proxy — the invoice subtraction is rare
                         // enough that exact ordering by computed balance isn't worth
@@ -212,7 +213,7 @@ class PendingPaymentResource extends Resource
                     ->preload(),
             ])
             ->recordActions([
-                Tables\Actions\ViewAction::make()->label('Vezi'),
+                ViewAction::make()->label('Vezi'),
             ])
             ->defaultSort('created_at', 'desc');
     }
