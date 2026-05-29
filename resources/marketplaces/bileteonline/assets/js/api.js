@@ -145,6 +145,10 @@ const BileteOnlineAPI = {
         if (endpoint === '/customer/reset-password') return 'customer.reset-password';
         if (endpoint === '/customer/recover-order/attach') return 'customer.recover-order.attach';
         if (endpoint === '/customer/recover-order') return 'customer.recover-order';
+        if (endpoint === '/customer/support-meta') return 'customer.support.meta';
+        if (endpoint.match(/^\/customer\/support-tickets\/\d+\/messages$/)) return 'customer.support.reply';
+        if (endpoint.match(/^\/customer\/support-tickets\/\d+$/)) return 'customer.support.show';
+        if (endpoint === '/customer/support-tickets' || endpoint.startsWith('/customer/support-tickets?')) return 'customer.support.index';
         if (endpoint === '/customer/verify-email') return 'customer.verify-email';
         if (endpoint === '/customer/resend-verification') return 'customer.resend-verification';
 
@@ -579,6 +583,12 @@ const BileteOnlineAPI = {
         const ticketMatch = endpoint.match(/\/customer\/tickets\/(\d+)/);
         if (ticketMatch) {
             return `id=${encodeURIComponent(ticketMatch[1])}`;
+        }
+
+        // Extract customer support ticket id from /customer/support-tickets/{id}[/messages]
+        const customerSupportMatch = endpoint.match(/\/customer\/support-tickets\/(\d+)(?:\/messages)?$/);
+        if (customerSupportMatch) {
+            return `id=${encodeURIComponent(customerSupportMatch[1])}`;
         }
 
         // Extract support ticket id from /organizer/support/tickets/{id}[/messages|close|reopen]

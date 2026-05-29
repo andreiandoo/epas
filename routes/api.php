@@ -2127,6 +2127,22 @@ Route::prefix('marketplace-client/customer')->middleware(['throttle:120,1', 'mar
         // Attach a recovered (guest) order to the logged-in account.
         Route::post('/recover-order/attach', [\App\Http\Controllers\Api\MarketplaceClient\Customer\OrderRecoveryController::class, 'attach'])
             ->name('api.marketplace-client.customer.recover-order.attach');
+
+        // Customer support tickets (v1: list + show + create + reply + meta)
+        Route::get('/support-meta', [\App\Http\Controllers\Api\MarketplaceClient\Customer\SupportController::class, 'meta'])
+            ->name('api.marketplace-client.customer.support.meta');
+        Route::get('/support-tickets', [\App\Http\Controllers\Api\MarketplaceClient\Customer\SupportController::class, 'index'])
+            ->name('api.marketplace-client.customer.support.index');
+        Route::post('/support-tickets', [\App\Http\Controllers\Api\MarketplaceClient\Customer\SupportController::class, 'store'])
+            ->middleware('throttle:10,1')
+            ->name('api.marketplace-client.customer.support.store');
+        Route::get('/support-tickets/{ticket}', [\App\Http\Controllers\Api\MarketplaceClient\Customer\SupportController::class, 'show'])
+            ->whereNumber('ticket')
+            ->name('api.marketplace-client.customer.support.show');
+        Route::post('/support-tickets/{ticket}/messages', [\App\Http\Controllers\Api\MarketplaceClient\Customer\SupportController::class, 'reply'])
+            ->whereNumber('ticket')
+            ->middleware('throttle:30,1')
+            ->name('api.marketplace-client.customer.support.reply');
         Route::put('/profile', [CustomerAuthController::class, 'updateProfile'])
             ->name('api.marketplace-client.customer.profile.update');
         Route::put('/password', [CustomerAuthController::class, 'updatePassword'])

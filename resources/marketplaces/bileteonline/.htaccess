@@ -313,6 +313,33 @@ RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^cont/ajutor/?$ user/help.php [L]
 
+# v2 client account aliases (long-form Romanian slugs from the templates)
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^cont/biletele-mele/?$ user/tickets.php [L]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^cont/comenzile-mele/?$ user/orders.php [L]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^cont/punctele-mele/?$ user/rewards.php [L]
+
+# Recommendations
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^cont/recomandari/?$ user/recommendations.php [L]
+
+# Customer support tickets
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^cont/tichete-support/?$ user/support.php [L]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^cont/tichete-support/([0-9a-z-]+)/?$ user/support-detail.php?id=$1 [L,QSA]
+
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^cont/carduri-cadou/?$ user/gift-cards.php [L]

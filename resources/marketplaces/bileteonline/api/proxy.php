@@ -1438,6 +1438,35 @@ switch ($action) {
         $endpoint = '/customer/recover-order/attach';
         break;
 
+    case 'customer.support.meta':
+        $method = 'GET';
+        $endpoint = '/customer/support-meta';
+        break;
+
+    case 'customer.support.index':
+        $method = 'GET';
+        $endpoint = '/customer/support-tickets';
+        break;
+
+    case 'customer.support.store':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/customer/support-tickets';
+        break;
+
+    case 'customer.support.show':
+        $method = 'GET';
+        $id = (int) ($_GET['id'] ?? 0);
+        $endpoint = '/customer/support-tickets/' . $id;
+        break;
+
+    case 'customer.support.reply':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $id = (int) ($_GET['id'] ?? 0);
+        $endpoint = '/customer/support-tickets/' . $id . '/messages';
+        break;
+
     case 'customer.resend-verification':
         $method = 'POST';
         $body = file_get_contents('php://input');
