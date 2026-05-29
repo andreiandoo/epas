@@ -596,8 +596,14 @@ class ListPayouts extends ListRecords
                         Forms\Components\TextInput::make('decont_series')
                             ->label('Serie decont')
                             ->maxLength(40)
-                            ->placeholder('Auto-generare (din Settings → Personalization)')
-                            ->helperText('Lasă gol pentru auto-generare cu prefixul configurat. Completează pentru a forța o valoare proprie.'),
+                            ->prefix(function () {
+                                $admin = Auth::guard('marketplace_admin')->user();
+                                $client = $admin?->marketplaceClient;
+                                $settings = $client?->settings ?? [];
+                                return $settings['decont_prefix'] ?? 'DEC';
+                            })
+                            ->placeholder('Auto (folosește contorul din Settings)')
+                            ->helperText('Tastează doar partea numerică / sufixul — prefixul de mai sus se adaugă automat. Lasă gol pentru auto-generare cu următorul număr din contor.'),
 
                         Forms\Components\DateTimePicker::make('created_at_override')
                             ->label('Data creării')
@@ -692,8 +698,19 @@ class ListPayouts extends ListRecords
 
                 // Optional operator-provided overrides — leave series empty to
                 // let MarketplacePayout::assignDecontSeries auto-generate from
-                // settings.
-                $customSeries = trim((string) ($data['decont_series'] ?? ''));
+                // settings. The input shows the marketplace's configured prefix
+                // as a visual prefix; the operator types only the suffix, which
+                // we prepend with the prefix here so the stored value is the
+                // full series (e.g. "DECAMB47").
+                $customSuffix = trim((string) ($data['decont_series'] ?? ''));
+                if ($customSuffix !== '') {
+                    $client = $marketplaceAdmin->marketplaceClient;
+                    $settings = $client?->settings ?? [];
+                    $prefix = $settings['decont_prefix'] ?? 'DEC';
+                    $customSeries = $prefix . $customSuffix;
+                } else {
+                    $customSeries = '';
+                }
                 $createdAtOverride = !empty($data['created_at_override'])
                     ? \Carbon\Carbon::parse($data['created_at_override'])
                     : null;

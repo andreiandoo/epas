@@ -189,7 +189,30 @@ class PayoutResource extends Resource
                                     ->placeholder('—')
                                     ->copyable()
                                     ->icon('heroicon-o-hashtag')
-                                    ->iconPosition(IconPosition::After),
+                                    ->iconPosition(IconPosition::After)
+                                    ->hintAction(
+                                        \Filament\Actions\Action::make('edit_decont_series_inline')
+                                            ->label('Editează')
+                                            ->icon('heroicon-m-pencil-square')
+                                            ->color('gray')
+                                            ->modalHeading('Editează seria decontului')
+                                            ->modalDescription('Valoarea introdusă înlocuiește seria de decont (afișată separat de referința PAY-...). Lasă gol pentru a o șterge.')
+                                            ->form([
+                                                \Filament\Forms\Components\TextInput::make('decont_series')
+                                                    ->label('Serie decont')
+                                                    ->maxLength(40)
+                                                    ->default(fn ($record) => $record->decont_series),
+                                            ])
+                                            ->action(function (array $data, $record, $livewire) {
+                                                $val = trim((string) ($data['decont_series'] ?? ''));
+                                                $record->updateQuietly(['decont_series' => $val !== '' ? $val : null]);
+                                                $livewire->refreshFormData(['decont_series']);
+                                                \Filament\Notifications\Notification::make()
+                                                    ->title('Serie actualizată')
+                                                    ->success()
+                                                    ->send();
+                                            })
+                                    ),
 
                                 Infolists\Components\TextEntry::make('status')
                                     ->label('Status')
@@ -214,9 +237,21 @@ class PayoutResource extends Resource
                                 Infolists\Components\TextEntry::make('event.title')
                                     ->label('Eveniment')
                                     ->placeholder('Decont general')
-                                    ->formatStateUsing(fn ($state) => is_array($state)
-                                        ? ($state['ro'] ?? $state['en'] ?? reset($state) ?? 'Untitled')
-                                        : $state)
+                                    ->formatStateUsing(function ($state, $record) {
+                                        $title = is_array($state)
+                                            ? ($state['ro'] ?? $state['en'] ?? reset($state) ?? 'Untitled')
+                                            : ($state ?? 'Untitled');
+                                        // Append the event's start_date (handles
+                                        // single_day / range / multi_day / recurring)
+                                        // so the operator sees which edition this
+                                        // decont belongs to without leaving the page.
+                                        $start = $record->event?->start_date?->format('d.m.Y');
+                                        $end = $record->event?->end_date?->format('d.m.Y');
+                                        $date = $start
+                                            ? ($end && $end !== $start ? "{$start} – {$end}" : $start)
+                                            : null;
+                                        return $date ? "{$title} ({$date})" : $title;
+                                    })
                                     ->url(fn ($record) => $record->event_id
                                         ? EventResource::getUrl('edit', ['record' => $record->event_id])
                                         : null)
@@ -531,6 +566,112 @@ class PayoutResource extends Resource
 
                     // RIGHT: Sidebar (1/3)
                     \Filament\Schemas\Components\Group::make()->columnSpan(1)->schema([
+                        // Status workflow actions (approve / process / complete /
+                        // reject) + Admin Note. Moved here from the page header so
+                        // the operator's main controls live alongside the payout
+                        // context instead of getting buried under the document
+                        // generation buttons up top.
+                        Section::make('Acțiuni')
+                            ->icon('heroicon-o-bolt')
+                            ->compact()
+                            ->schema([
+                                \Filament\Schemas\Components\Actions::make([
+                                    \Filament\Actions\Action::make('approve_payout')
+                                        ->label('Aprobă')
+                                        ->icon('heroicon-o-check')
+                                        ->color('success')
+                                        ->requiresConfirmation()
+                                        ->visible(fn ($record) => $record->canBeApproved())
+                                        ->action(function ($record, $livewire) {
+                                            $admin = \Illuminate\Support\Facades\Auth::guard('marketplace_admin')->user();
+                                            $record->approve($admin->id);
+                                            $livewire->redirect(static::getUrl('view', ['record' => $record]));
+                                        }),
+
+                                    \Filament\Actions\Action::make('process_payout')
+                                        ->label('Marchează în procesare')
+                                        ->icon('heroicon-o-arrow-path')
+                                        ->color('info')
+                                        ->requiresConfirmation()
+                                        ->visible(fn ($record) => $record->canBeProcessed())
+                                        ->action(function ($record, $livewire) {
+                                            $admin = \Illuminate\Support\Facades\Auth::guard('marketplace_admin')->user();
+                                            $record->markAsProcessing($admin->id);
+                                            $livewire->redirect(static::getUrl('view', ['record' => $record]));
+                                        }),
+
+                                    \Filament\Actions\Action::make('complete_payout')
+                                        ->label('Finalizează plata')
+                                        ->icon('heroicon-o-check-circle')
+                                        ->color('success')
+                                        ->visible(fn ($record) => $record->canBeCompleted())
+                                        ->form([
+                                            \Filament\Forms\Components\TextInput::make('payment_reference')
+                                                ->label('Referință plată')
+                                                ->required()
+                                                ->helperText('Referința transferului bancar sau ID-ul tranzacției'),
+                                            \Filament\Forms\Components\Textarea::make('payment_notes')
+                                                ->label('Note')
+                                                ->rows(2),
+                                        ])
+                                        ->action(function (array $data, $record, $livewire) {
+                                            $record->complete($data['payment_reference'], $data['payment_notes'] ?? null);
+                                            $livewire->redirect(static::getUrl('view', ['record' => $record]));
+                                        }),
+
+                                    \Filament\Actions\Action::make('reject_payout')
+                                        ->label('Respinge')
+                                        ->icon('heroicon-o-x-circle')
+                                        ->color('danger')
+                                        ->visible(fn ($record) => $record->canBeRejected())
+                                        ->form([
+                                            \Filament\Forms\Components\Textarea::make('reason')
+                                                ->label('Motiv respingere')
+                                                ->required()
+                                                ->rows(3),
+                                        ])
+                                        ->action(function (array $data, $record, $livewire) {
+                                            $admin = \Illuminate\Support\Facades\Auth::guard('marketplace_admin')->user();
+                                            $record->reject($admin->id, $data['reason']);
+
+                                            $decont = $record->decontDocument;
+                                            if ($decont) {
+                                                if ($decont->file_path) {
+                                                    \Illuminate\Support\Facades\Storage::disk('public')->delete($decont->file_path);
+                                                }
+                                                $decont->delete();
+                                            }
+
+                                            $invoice = $record->invoice;
+                                            if ($invoice) {
+                                                $invoice->delete();
+                                            }
+
+                                            \Filament\Notifications\Notification::make()
+                                                ->title('Decont respins')
+                                                ->body('Documentele asociate au fost șterse.')
+                                                ->success()
+                                                ->send();
+                                            $livewire->redirect(static::getUrl('view', ['record' => $record]));
+                                        }),
+
+                                    \Filament\Actions\Action::make('add_admin_note')
+                                        ->label('Notă admin')
+                                        ->icon('heroicon-o-pencil-square')
+                                        ->color('gray')
+                                        ->form([
+                                            \Filament\Forms\Components\Textarea::make('admin_notes')
+                                                ->label('Note admin')
+                                                ->default(fn ($record) => $record->admin_notes)
+                                                ->rows(3),
+                                        ])
+                                        ->action(function (array $data, $record, $livewire) {
+                                            $record->update(['admin_notes' => $data['admin_notes']]);
+                                            $livewire->refreshFormData(['admin_notes']);
+                                        }),
+                                ])->fullWidth(),
+                            ]),
+
                         // Payout method
                         Section::make('Cont bancar')
                             ->icon('heroicon-o-building-library')
@@ -713,21 +854,6 @@ class PayoutResource extends Resource
                                     ->formatStateUsing(fn ($state, $record) => ($record->period_start?->format('d.m.Y') ?? '—') . ' → ' . ($record->period_end?->format('d.m.Y') ?? '—'))
                                     ->visible(fn ($record) => $record->period_start),
                             ]),
-
-                        // Decont document
-                        Section::make('Document decont')
-                            ->icon('heroicon-o-document-text')
-                            ->compact()
-                            ->schema([
-                                Infolists\Components\TextEntry::make('decontDocument.title')
-                                    ->label('Titlu'),
-                                Infolists\Components\TextEntry::make('decontDocument.issued_at')
-                                    ->label('Generat la')
-                                    ->dateTime('d.m.Y H:i', timezone: MarketplaceTz::tz()),
-                                Infolists\Components\TextEntry::make('decontDocument.formatted_file_size')
-                                    ->label('Mărime'),
-                            ])
-                            ->visible(fn ($record) => $record->decontDocument !== null),
 
                         // Invoice
                         Section::make('Factură')
