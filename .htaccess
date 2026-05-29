@@ -446,6 +446,16 @@ RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^recuperare-comanda/?$ recuperare-comanda.php [L,QSA]
 
+# Gift card / voucher balance check (public)
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^voucher/?$ voucher.php [L,QSA]
+
+# Romanian alias used in the v2 templates
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^verifica-card-cadou/?$ voucher.php [L,QSA]
+
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^resetare-parola/?$ reset-password.php [L,QSA]

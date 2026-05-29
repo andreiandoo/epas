@@ -1432,6 +1432,12 @@ switch ($action) {
         $endpoint = '/customer/recover-order';
         break;
 
+    case 'customer.gift-cards.check-balance':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/customer/gift-cards/check-balance';
+        break;
+
     case 'customer.recover-order.attach':
         $method = 'POST';
         $body = file_get_contents('php://input');
