@@ -653,6 +653,25 @@
         var currentQty = item.quantity || 1;
         var newQty = action === 'increase' ? currentQty + 1 : currentQty - 1;
 
+        // Enforce per-ticket-type min/max (mirrors cart-page.js). Fallback chain
+        // covers older cart shapes that may not have ticketType nested.
+        var minQty = (item.ticketType && item.ticketType.min_per_order) || item.min_per_order || 1;
+        var maxQty = (item.ticketType && item.ticketType.max_per_order) || item.max_per_order || item.max_quantity || 10;
+
+        if (action === 'increase' && newQty > maxQty) {
+            if (typeof AmbiletNotifications !== 'undefined') {
+                AmbiletNotifications.warning('Poți cumpăra maximum ' + maxQty + ' bilete de acest tip');
+            }
+            return;
+        }
+
+        // Going below minimum (but not all the way to 0) → remove entirely.
+        // Matches cart-page behaviour: organizers who set min=2 expect the
+        // item gone if the buyer tries to drop to 1, not a 1-ticket order.
+        if (action === 'decrease' && newQty < minQty && newQty > 0) {
+            newQty = 0;
+        }
+
         // When quantity drops to 0, go through AmbiletCart.removeItem so seats get released
         if (newQty <= 0 && window.AmbiletCart && typeof window.AmbiletCart.removeItem === 'function' && item.key) {
             window.AmbiletCart.removeItem(item.key);
