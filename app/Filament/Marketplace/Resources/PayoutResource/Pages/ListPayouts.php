@@ -607,8 +607,15 @@ class ListPayouts extends ListRecords
 
                         Forms\Components\DateTimePicker::make('created_at_override')
                             ->label('Data creării')
+                            // Default Filament minute step (5) + now() (any
+                            // minute) → the popover's hidden minute input fails
+                            // HTML5 validation on submit ("invalid form control
+                            // is not focusable"), silently blocking Creează
+                            // decont. Lock step to 1 + zero seconds on default
+                            // so any chosen value is valid.
                             ->seconds(false)
-                            ->default(fn () => now())
+                            ->minutesStep(1)
+                            ->default(fn () => now()->setTime(now()->hour, now()->minute, 0))
                             ->helperText('Influențează slicing-ul pentru deconturile viitoare ale evenimentului — păstrează data actuală dacă nu ai un motiv anume să o ajustezi.'),
                     ]),
             ])
