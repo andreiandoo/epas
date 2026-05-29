@@ -730,6 +730,14 @@ class ListPayouts extends ListRecords
                     ? \Carbon\Carbon::parse($data['created_at_override'])
                     : null;
 
+                // When the operator back-dates the decont, the period_end of
+                // its sales slice must match the back-date too — otherwise the
+                // displayed period reads "01.01 → today" instead of
+                // "01.01 → official decont date".
+                if ($createdAtOverride) {
+                    $periodEnd = $createdAtOverride;
+                }
+
                 $payout = MarketplacePayout::create([
                     'marketplace_client_id' => $marketplaceAdmin->marketplace_client_id,
                     'marketplace_organizer_id' => $data['marketplace_organizer_id'],
@@ -762,10 +770,15 @@ class ListPayouts extends ListRecords
                 ]);
 
                 // Override created_at when the operator picked a custom date.
-                // Eloquent's performInsert always stamps `now()`, so we update
-                // quietly after the fact (no model events, no extra notifs).
+                // Eloquent's performInsert always stamps `now()`, so we rewrite
+                // it after the fact. Direct attribute assignment + saveQuietly
+                // because created_at isn't in $fillable, so updateQuietly would
+                // silently drop it. approved_at stays at the real now() so the
+                // Cronologie section keeps a true audit trail of who/when —
+                // see the "Creat de admin" entry's state() callback.
                 if ($createdAtOverride && abs($createdAtOverride->diffInSeconds(now())) > 60) {
-                    $payout->updateQuietly(['created_at' => $createdAtOverride]);
+                    $payout->created_at = $createdAtOverride;
+                    $payout->saveQuietly();
                 }
 
                 // Link refunds to this payout AFTER it's created so the FK

@@ -798,6 +798,21 @@ class PayoutResource extends Resource
                                         'manual', 'automated' => 'Creat de admin',
                                         default => 'Solicitat',
                                     })
+                                    // For admin-created payouts (manual / automated)
+                                    // the operator can back-date created_at to match
+                                    // an offline generation, so created_at no longer
+                                    // tells us when the record was actually inserted.
+                                    // approved_at is stamped at real insert time and
+                                    // never overridden — use it here as the audit
+                                    // timestamp. Organizer-requested payouts fall
+                                    // back to created_at (no back-dating possible).
+                                    ->state(function ($record) {
+                                        if (in_array($record->source, ['manual', 'automated'], true)
+                                            && $record->approved_at) {
+                                            return $record->approved_at;
+                                        }
+                                        return $record->created_at;
+                                    })
                                     ->dateTime('d.m.Y H:i', timezone: MarketplaceTz::tz()),
                                 // Show the actual user (admin) or organizer who
                                 // created the payout. Prefer the approving
