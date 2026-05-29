@@ -4,6 +4,7 @@ namespace App\Filament\Marketplace\Resources;
 
 use App\Filament\Marketplace\Resources\EventResource;
 use App\Filament\Marketplace\Resources\PayoutResource;
+use App\Filament\Marketplace\Resources\PendingPaymentResource\Pages;
 use App\Models\MarketplacePayout;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
