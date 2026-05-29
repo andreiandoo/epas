@@ -225,7 +225,7 @@ class MarketplacePayout extends Model
      *
      * @return array<int, array{ticket_type_id:int, ticket_type_name:string, unit_price:float, commission_per_ticket:float, qty:int}>
      */
-    public static function buildRemainingTicketsItems(\App\Models\Event $event, ?int $excludePayoutId = null): array
+    public static function buildRemainingTicketsItems(\App\Models\Event $event, ?int $excludePayoutId = null, ?\Carbon\Carbon $cutoffDate = null): array
     {
         // Resolve commission per TICKET TYPE (not per event) — each
         // TicketType has its own commission_type / commission_rate /
@@ -237,15 +237,28 @@ class MarketplacePayout extends Model
         $defaultRate = $event->getEffectiveCommissionRate();
         $defaultMode = $event->getEffectiveCommissionMode() ?? 'included';
 
+        // When the operator picks a cutoff date, count only tickets whose
+        // ORDER was paid/confirmed/completed up to that point (end of day).
+        // Invitations (order_id NULL) use the ticket's own created_at.
+        $cutoffEnd = $cutoffDate?->copy()->endOfDay();
+
         $ticketCounts = \App\Models\Ticket::whereHas('ticketType', fn ($q) => $q->where('event_id', $event->id))
             ->whereIn('status', ['valid', 'used'])
-            ->where(function ($q) {
-                $q->whereHas('order', function ($q2) {
+            ->where(function ($q) use ($cutoffEnd) {
+                $q->whereHas('order', function ($q2) use ($cutoffEnd) {
                     $q2->whereIn('status', ['paid', 'confirmed', 'completed'])
                         ->where('source', '!=', 'external_import')
                         ->where('source', '!=', 'pos_app')
                         ->where('source', '!=', 'test_order');
-                })->orWhereNull('order_id');
+                    if ($cutoffEnd) {
+                        $q2->where('created_at', '<=', $cutoffEnd);
+                    }
+                })->orWhere(function ($q2) use ($cutoffEnd) {
+                    $q2->whereNull('order_id');
+                    if ($cutoffEnd) {
+                        $q2->where('created_at', '<=', $cutoffEnd);
+                    }
+                });
             })
             ->select('ticket_type_id', \DB::raw('COUNT(*) as cnt'))
             ->groupBy('ticket_type_id')
@@ -302,6 +315,35 @@ class MarketplacePayout extends Model
         }
 
         return $items;
+    }
+
+    /**
+     * Return the IDs of refund_requests that landed on or before a cutoff
+     * date for an event, and are still available to attach to a payout —
+     * i.e. either not linked to anyone yet, or already linked to the payout
+     * being edited (so the operator can re-tick them). Mirrors the picker
+     * filter from the "Editează bilete decontate" modal but with an explicit
+     * date cap so back-dated deconturi can pick up only the refunds that
+     * existed at that point in time.
+     *
+     * @return array<int> refund_request IDs
+     */
+    public static function getRefundIdsAsOfDate(\App\Models\Event $event, \Carbon\Carbon $cutoffDate, ?int $excludePayoutId = null): array
+    {
+        $cutoffEnd = $cutoffDate->copy()->endOfDay();
+
+        return \App\Models\MarketplaceRefundRequest::query()
+            ->where('marketplace_event_id', $event->id)
+            ->whereIn('status', ['refunded', 'partially_refunded'])
+            ->where('created_at', '<=', $cutoffEnd)
+            ->where(function ($q) use ($excludePayoutId) {
+                $q->whereNull('marketplace_payout_id');
+                if ($excludePayoutId) {
+                    $q->orWhere('marketplace_payout_id', $excludePayoutId);
+                }
+            })
+            ->pluck('id')
+            ->all();
     }
 
     public static function resolveNextPeriodStart(int $eventId, int $organizerId, \App\Models\Event $event): ?\Carbon\Carbon

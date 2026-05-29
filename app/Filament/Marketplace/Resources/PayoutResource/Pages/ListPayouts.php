@@ -388,9 +388,84 @@ class ListPayouts extends ListRecords
                                     ->body('Suma netă: ' . number_format($gross - $commission - $discount - $fees, 2) . ' RON din ' . number_format($desiredNet, 2) . ' RON solicitate')
                                     ->success()
                                     ->send();
-                            })
+                            }),
+
+                        // Snapshot the event state AS OF a chosen date:
+                        // tickets with order.created_at <= cutoff + refunds
+                        // with refund_request.created_at <= cutoff (none of
+                        // them already in another active decont). Use case:
+                        // back-filling a decont generated offline at a past
+                        // date — aligned with the "Data creării" override.
+                        \Filament\Actions\Action::make('fill_tickets_as_of_date')
+                            ->label('Calculează la o dată')
+                            ->icon('heroicon-o-clock')
+                            ->color('gray')
+                            ->size('sm')
+                            ->modalHeading('Calculează decontul la o dată din trecut')
+                            ->modalDescription('Repeater-ul de bilete + lista de rambursări se vor înlocui cu starea evenimentului la data aleasă (excluzând ce e deja în alte deconturi). Util pentru a recrea un decont făcut offline la o dată anterioară.')
+                            ->modalSubmitActionLabel('Calculează')
+                            ->form([
+                                Forms\Components\DatePicker::make('cutoff_date')
+                                    ->label('Data limită (inclusiv)')
+                                    ->required()
+                                    ->default(fn () => now()->format('Y-m-d'))
+                                    ->maxDate(now())
+                                    ->helperText('Vânzările și rambursările făcute până la sfârșitul acestei zile vor fi incluse.'),
+                            ])
+                            ->action(function (array $data, Get $get, Set $set) {
+                                $eventId = $get('event_id');
+                                if (!$eventId) {
+                                    \Filament\Notifications\Notification::make()->title('Alege întâi un eveniment')->warning()->send();
+                                    return;
+                                }
+                                $event = Event::with(['marketplaceOrganizer', 'ticketTypes'])->find($eventId);
+                                if (!$event) {
+                                    \Filament\Notifications\Notification::make()->title('Evenimentul nu a fost găsit')->danger()->send();
+                                    return;
+                                }
+                                $cutoff = \Carbon\Carbon::parse($data['cutoff_date']);
+                                $items = MarketplacePayout::buildRemainingTicketsItems($event, null, $cutoff);
+                                $refundIds = MarketplacePayout::getRefundIdsAsOfDate($event, $cutoff, null);
+
+                                if (empty($items) && empty($refundIds)) {
+                                    \Filament\Notifications\Notification::make()
+                                        ->title('Nimic la data aleasă')
+                                        ->body('Nu există bilete sau rambursări noi până la ' . $cutoff->format('d.m.Y') . ' care să nu fie deja în alt decont.')
+                                        ->warning()->send();
+                                    return;
+                                }
+
+                                $set('payout_tickets', $items);
+                                $set('included_refund_ids', $refundIds);
+
+                                // Recompute gross/commission/net from new selection
+                                // (mirrors auto_distribute's tail so the totals
+                                // section stays in sync without an extra click).
+                                $gross = 0;
+                                $commission = 0;
+                                foreach ($items as $row) {
+                                    $qty = (int) ($row['qty'] ?? 0);
+                                    $unit = (float) ($row['unit_price'] ?? 0);
+                                    $commPer = (float) ($row['commission_per_ticket'] ?? 0);
+                                    $isOnTop = in_array($row['commission_mode'] ?? null, ['added_on_top', 'on_top'], true);
+                                    $gross += $qty * $unit + ($isOnTop ? $qty * $commPer : 0);
+                                    $commission += $qty * $commPer;
+                                }
+                                $discount = (float) ($get('discount_amount') ?? 0);
+                                $fees = (float) ($get('fees_amount') ?? 0);
+                                $set('gross_amount', number_format($gross, 2, '.', ''));
+                                $set('commission_amount', number_format($commission, 2, '.', ''));
+                                $set('net_amount', number_format(max(0, $gross - $commission - $discount - $fees), 2, '.', ''));
+
+                                $totalQty = array_sum(array_column($items, 'qty'));
+                                \Filament\Notifications\Notification::make()
+                                    ->title('Stare la ' . $cutoff->format('d.m.Y'))
+                                    ->body(count($items) . ' tipuri · ' . $totalQty . ' bilete · ' . count($refundIds) . ' rambursări. Net calculat: ' . number_format(max(0, $gross - $commission - $discount - $fees), 2) . ' RON.')
+                                    ->success()
+                                    ->send();
+                            }),
                     ])->visible(fn (Get $get) => $get('event_id') !== null)
-                      ->extraAttributes(['class' => 'flex items-end pb-6']),
+                      ->extraAttributes(['class' => 'flex items-end pb-6 gap-2']),
                 ])->visible(fn (Get $get) => $get('event_id') !== null && $get('has_balance')),
 
                 // Ticket selection for partial payout

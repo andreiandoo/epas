@@ -195,6 +195,53 @@ class ViewPayout extends ViewRecord
                                     $totalQty = array_sum(array_column($items, 'qty'));
                                     Notification::make()->title('Bilete adăugate')->body(count($items) . ' tipuri · ' . $totalQty . ' bilete rămase aduse în listă. Verifică suma netă și apasă Salvează.')->success()->send();
                                 }),
+
+                            // Snapshot the event state AS OF a chosen date:
+                            // tickets with order.created_at <= cutoff +
+                            // refunds with refund_request.created_at <= cutoff,
+                            // minus what's already in OTHER deconturi. Use case:
+                            // back-filling a decont generated offline at a past
+                            // date and aligning the system with that history.
+                            \Filament\Actions\Action::make('fill_tickets_as_of_date')
+                                ->label('Adu la dată')
+                                ->icon('heroicon-o-clock')
+                                ->color('gray')
+                                ->size('sm')
+                                ->modalHeading('Calculează decontul la o dată din trecut')
+                                ->modalDescription('Repeater-ul de bilete + lista de rambursări se vor înlocui cu starea evenimentului la data aleasă (excluzând ce e deja în alte deconturi). Util pentru a recrea în sistem un decont făcut offline la o dată anterioară.')
+                                ->modalSubmitActionLabel('Calculează')
+                                ->form([
+                                    \Filament\Forms\Components\DatePicker::make('cutoff_date')
+                                        ->label('Data limită (inclusiv)')
+                                        ->required()
+                                        ->default(fn () => $this->record->created_at?->format('Y-m-d') ?? now()->format('Y-m-d'))
+                                        ->maxDate(now())
+                                        ->helperText('Vânzările și rambursările făcute până la sfârșitul acestei zile vor fi incluse.'),
+                                ])
+                                ->action(function (array $data, \Filament\Schemas\Components\Utilities\Set $set) {
+                                    $event = $this->record->event;
+                                    if (!$event) {
+                                        Notification::make()->title('Lipsește evenimentul')->body('Decontul nu este legat de un eveniment.')->danger()->send();
+                                        return;
+                                    }
+                                    $cutoff = \Carbon\Carbon::parse($data['cutoff_date']);
+                                    $items = \App\Models\MarketplacePayout::buildRemainingTicketsItems($event, $this->record->id, $cutoff);
+                                    $refundIds = \App\Models\MarketplacePayout::getRefundIdsAsOfDate($event, $cutoff, $this->record->id);
+
+                                    if (empty($items) && empty($refundIds)) {
+                                        Notification::make()->title('Nimic la data aleasă')->body('Nu există bilete sau rambursări noi până la ' . $cutoff->format('d.m.Y') . ' care să nu fie deja în alt decont.')->warning()->send();
+                                        return;
+                                    }
+
+                                    $set('payout_tickets', $items);
+                                    $set('included_refund_ids', $refundIds);
+                                    $totalQty = array_sum(array_column($items, 'qty'));
+                                    Notification::make()
+                                        ->title('Stare la ' . $cutoff->format('d.m.Y'))
+                                        ->body(count($items) . ' tipuri · ' . $totalQty . ' bilete · ' . count($refundIds) . ' rambursări selectate. Verifică suma netă și apasă Salvează.')
+                                        ->success()
+                                        ->send();
+                                }),
                         ])->columnSpan(1)->extraAttributes(['class' => 'flex items-end pb-6 gap-2']),
                     ]),
 
