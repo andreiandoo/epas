@@ -145,6 +145,7 @@ const BileteOnlineAPI = {
         if (endpoint === '/customer/reset-password') return 'customer.reset-password';
         if (endpoint === '/customer/recover-order/attach') return 'customer.recover-order.attach';
         if (endpoint === '/customer/recover-order') return 'customer.recover-order';
+        if (endpoint === '/customer/gift-cards/check-balance') return 'customer.gift-cards.check-balance';
         if (endpoint === '/customer/support-meta') return 'customer.support.meta';
         if (endpoint.match(/^\/customer\/support-tickets\/\d+\/messages$/)) return 'customer.support.reply';
         if (endpoint.match(/^\/customer\/support-tickets\/\d+$/)) return 'customer.support.show';
