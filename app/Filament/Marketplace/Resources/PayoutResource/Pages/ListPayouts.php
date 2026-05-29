@@ -546,73 +546,17 @@ class ListPayouts extends ListRecords
                         }),
                 ])->visible(fn (Get $get) => $get('event_id') !== null && $get('has_balance')),
 
-                \Filament\Schemas\Components\Grid::make(2)->schema([
-                    Forms\Components\TextInput::make('gross_amount')
-                        ->label('Suma brută')
-                        ->numeric()
-                        ->required(fn (Get $get) => (bool) $get('has_balance'))
-                        ->suffix('RON')
-                        ->live(onBlur: true)
-                        ->afterStateUpdated(function ($state, Set $set, Get $get) {
-                            $gross = (float) $state;
-                            $commission = (float) $get('commission_amount');
-                            $discount = (float) $get('discount_amount');
-                            $fees = (float) $get('fees_amount');
-                            $set('net_amount', number_format(max(0, $gross - $commission - $discount - $fees), 2, '.', ''));
-                        }),
-
-                    Forms\Components\TextInput::make('commission_amount')
-                        ->label('Comision')
-                        ->numeric()
-                        ->default('0.00')
-                        ->suffix('RON')
-                        ->live(onBlur: true)
-                        ->afterStateUpdated(function ($state, Set $set, Get $get) {
-                            $gross = (float) $get('gross_amount');
-                            $commission = (float) $state;
-                            $discount = (float) $get('discount_amount');
-                            $fees = (float) $get('fees_amount');
-                            $set('net_amount', number_format(max(0, $gross - $commission - $discount - $fees), 2, '.', ''));
-                        }),
-
-                    Forms\Components\TextInput::make('discount_amount')
-                        ->label('Discounturi aplicate')
-                        ->helperText('Codurile promo aplicate de clienți pe biletele acestui eveniment')
-                        ->numeric()
-                        ->default('0.00')
-                        ->suffix('RON')
-                        ->live(onBlur: true)
-                        ->afterStateUpdated(function ($state, Set $set, Get $get) {
-                            $gross = (float) $get('gross_amount');
-                            $commission = (float) $get('commission_amount');
-                            $discount = (float) $state;
-                            $fees = (float) $get('fees_amount');
-                            $set('net_amount', number_format(max(0, $gross - $commission - $discount - $fees), 2, '.', ''));
-                        }),
-
-                    Forms\Components\TextInput::make('fees_amount')
-                        ->label('Taxe / Asigurări')
-                        ->helperText('Extras încasate de la client (asigurare, suprataxă card cultural, etc.)')
-                        ->numeric()
-                        ->default('0.00')
-                        ->suffix('RON')
-                        ->live(onBlur: true)
-                        ->afterStateUpdated(function ($state, Set $set, Get $get) {
-                            $gross = (float) $get('gross_amount');
-                            $commission = (float) $get('commission_amount');
-                            $discount = (float) $get('discount_amount');
-                            $fees = (float) $state;
-                            $set('net_amount', number_format(max(0, $gross - $commission - $discount - $fees), 2, '.', ''));
-                        }),
-
-                    Forms\Components\TextInput::make('net_amount')
-                        ->label('Suma netă (de plată)')
-                        ->numeric()
-                        ->required(fn (Get $get) => (bool) $get('has_balance'))
-                        ->suffix('RON')
-                        ->columnSpan(2)
-                        ->readOnly(),
-                ])->visible(fn (Get $get) => $get('has_balance')),
+                // Financial totals — operator no longer enters or edits these
+                // directly; they're computed from the ticket selection (or set
+                // by event_id afterStateUpdated for the balance fallback) and
+                // persisted with the payout for downstream reports and the PDF.
+                // Kept as Hidden so the existing $set(...) callers keep working
+                // and the action handler still reads them out of $data.
+                Forms\Components\Hidden::make('gross_amount')->default('0.00'),
+                Forms\Components\Hidden::make('commission_amount')->default('0.00'),
+                Forms\Components\Hidden::make('discount_amount')->default('0.00'),
+                Forms\Components\Hidden::make('fees_amount')->default('0.00'),
+                Forms\Components\Hidden::make('net_amount')->default('0.00'),
 
                 Forms\Components\Select::make('bank_account_id')
                     ->label('Cont bancar')
@@ -640,6 +584,27 @@ class ListPayouts extends ListRecords
                     ->visible(fn (Get $get) => $get('has_balance'))
                     ->label('Note admin')
                     ->rows(2),
+
+                // Overrides for operators who need fine control: leave the
+                // series empty for the auto-generated prefix+counter (from
+                // Settings → Personalization), or override created_at when
+                // back-filling a decont retroactively. Both visible only when
+                // a payout is actually being created (event has balance).
+                \Filament\Schemas\Components\Grid::make(2)
+                    ->visible(fn (Get $get) => (bool) $get('has_balance'))
+                    ->schema([
+                        Forms\Components\TextInput::make('decont_series')
+                            ->label('Serie decont')
+                            ->maxLength(40)
+                            ->placeholder('Auto-generare (din Settings → Personalization)')
+                            ->helperText('Lasă gol pentru auto-generare cu prefixul configurat. Completează pentru a forța o valoare proprie.'),
+
+                        Forms\Components\DateTimePicker::make('created_at_override')
+                            ->label('Data creării')
+                            ->seconds(false)
+                            ->default(fn () => now())
+                            ->helperText('Influențează slicing-ul pentru deconturile viitoare ale evenimentului — păstrează data actuală dacă nu ai un motiv anume să o ajustezi.'),
+                    ]),
             ])
             ->modalSubmitActionLabel('Creează decont')
             ->modalCancelActionLabel('Anulează')
@@ -725,6 +690,14 @@ class ListPayouts extends ListRecords
                     $commissionMode = $event?->getEffectiveCommissionMode() ?: 'included';
                 }
 
+                // Optional operator-provided overrides — leave series empty to
+                // let MarketplacePayout::assignDecontSeries auto-generate from
+                // settings.
+                $customSeries = trim((string) ($data['decont_series'] ?? ''));
+                $createdAtOverride = !empty($data['created_at_override'])
+                    ? \Carbon\Carbon::parse($data['created_at_override'])
+                    : null;
+
                 $payout = MarketplacePayout::create([
                     'marketplace_client_id' => $marketplaceAdmin->marketplace_client_id,
                     'marketplace_organizer_id' => $data['marketplace_organizer_id'],
@@ -750,7 +723,18 @@ class ListPayouts extends ListRecords
                     'admin_notes' => $data['admin_notes'] ?? null,
                     'commission_mode' => $commissionMode,
                     'invoice_recipient_type' => $commissionMode === 'added_on_top' ? 'general_client' : 'organizer',
+                    // When set, the boot hook's assignDecontSeries() short-
+                    // circuits and the counter isn't consumed; when empty it
+                    // auto-generates with a locked-row counter increment.
+                    'decont_series' => $customSeries !== '' ? $customSeries : null,
                 ]);
+
+                // Override created_at when the operator picked a custom date.
+                // Eloquent's performInsert always stamps `now()`, so we update
+                // quietly after the fact (no model events, no extra notifs).
+                if ($createdAtOverride && abs($createdAtOverride->diffInSeconds(now())) > 60) {
+                    $payout->updateQuietly(['created_at' => $createdAtOverride]);
+                }
 
                 // Link refunds to this payout AFTER it's created so the FK
                 // points at a real id. syncIncludedRefunds also recomputes

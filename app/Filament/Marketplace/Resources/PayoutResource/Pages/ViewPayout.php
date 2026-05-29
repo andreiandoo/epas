@@ -120,6 +120,29 @@ class ViewPayout extends ViewRecord
                     $this->refreshFormData(['admin_notes']);
                 }),
 
+            // Free-text edit of the decont series — useful when the operator
+            // needs to override the auto-generated value (e.g. to align with
+            // an external accounting series, or to retroactively assign one
+            // to an older decont). Reference (PAY-...) stays untouched.
+            Actions\Action::make('edit_decont_series')
+                ->label('Editează seria')
+                ->icon('heroicon-o-hashtag')
+                ->color('gray')
+                ->modalHeading('Editează seria decontului')
+                ->modalDescription('Valoarea introdusă înlocuiește seria de decont (afișată separat de referința PAY-...). Lasă gol pentru a o șterge.')
+                ->form([
+                    Forms\Components\TextInput::make('decont_series')
+                        ->label('Serie decont')
+                        ->maxLength(40)
+                        ->default(fn () => $this->record->decont_series),
+                ])
+                ->action(function (array $data) {
+                    $newSeries = trim((string) ($data['decont_series'] ?? ''));
+                    $this->record->updateQuietly(['decont_series' => $newSeries !== '' ? $newSeries : null]);
+                    $this->refreshFormData(['decont_series']);
+                    Notification::make()->title('Serie actualizată')->success()->send();
+                }),
+
             // Recalcul snapshot din SalesBreakdownService — util pentru deconturile
             // create inainte de refactor (snapshot pe baza prețului catalog) sau
             // dupa modificari de preturi pe bilete. Doar status-uri editabile.
