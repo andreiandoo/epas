@@ -187,9 +187,6 @@ class PayoutResource extends Resource
                                 Infolists\Components\TextEntry::make('decont_series')
                                     ->label('Serie decont')
                                     ->placeholder('—')
-                                    ->copyable()
-                                    ->icon('heroicon-o-hashtag')
-                                    ->iconPosition(IconPosition::After)
                                     ->hintAction(
                                         \Filament\Actions\Action::make('edit_decont_series_inline')
                                             ->label('Editează')
@@ -574,7 +571,15 @@ class PayoutResource extends Resource
                         Section::make('Acțiuni')
                             ->icon('heroicon-o-bolt')
                             ->compact()
+                            ->columns(2)
                             ->schema([
+                                // Each action is in its own Actions wrapper so
+                                // Section::columns(2) places them 2 per row.
+                                // Visibility on the inner action hides the
+                                // wrapper too (Actions::make returns hidden when
+                                // all its children are hidden), so empty rows
+                                // collapse cleanly when the status doesn't
+                                // allow approve/process/complete/reject.
                                 \Filament\Schemas\Components\Actions::make([
                                     \Filament\Actions\Action::make('approve_payout')
                                         ->label('Aprobă')
@@ -587,9 +592,11 @@ class PayoutResource extends Resource
                                             $record->approve($admin->id);
                                             $livewire->redirect(static::getUrl('view', ['record' => $record]));
                                         }),
+                                ])->fullWidth(),
 
+                                \Filament\Schemas\Components\Actions::make([
                                     \Filament\Actions\Action::make('process_payout')
-                                        ->label('Marchează în procesare')
+                                        ->label('În procesare')
                                         ->icon('heroicon-o-arrow-path')
                                         ->color('info')
                                         ->requiresConfirmation()
@@ -599,9 +606,11 @@ class PayoutResource extends Resource
                                             $record->markAsProcessing($admin->id);
                                             $livewire->redirect(static::getUrl('view', ['record' => $record]));
                                         }),
+                                ])->fullWidth(),
 
+                                \Filament\Schemas\Components\Actions::make([
                                     \Filament\Actions\Action::make('complete_payout')
-                                        ->label('Finalizează plata')
+                                        ->label('Finalizează')
                                         ->icon('heroicon-o-check-circle')
                                         ->color('success')
                                         ->visible(fn ($record) => $record->canBeCompleted())
@@ -618,7 +627,9 @@ class PayoutResource extends Resource
                                             $record->complete($data['payment_reference'], $data['payment_notes'] ?? null);
                                             $livewire->redirect(static::getUrl('view', ['record' => $record]));
                                         }),
+                                ])->fullWidth(),
 
+                                \Filament\Schemas\Components\Actions::make([
                                     \Filament\Actions\Action::make('reject_payout')
                                         ->label('Respinge')
                                         ->icon('heroicon-o-x-circle')
@@ -654,7 +665,12 @@ class PayoutResource extends Resource
                                                 ->send();
                                             $livewire->redirect(static::getUrl('view', ['record' => $record]));
                                         }),
+                                ])->fullWidth(),
 
+                                // Notă admin always visible; spans 2 cols so it
+                                // lives on its own row rather than orphaned on
+                                // half a row with the status buttons above.
+                                \Filament\Schemas\Components\Actions::make([
                                     \Filament\Actions\Action::make('add_admin_note')
                                         ->label('Notă admin')
                                         ->icon('heroicon-o-pencil-square')
@@ -669,7 +685,7 @@ class PayoutResource extends Resource
                                             $record->update(['admin_notes' => $data['admin_notes']]);
                                             $livewire->refreshFormData(['admin_notes']);
                                         }),
-                                ])->fullWidth(),
+                                ])->fullWidth()->columnSpan(2),
                             ]),
 
                         // Payout method
