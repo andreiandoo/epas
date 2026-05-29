@@ -227,51 +227,20 @@ class MarketplacePayout extends Model
      */
     public static function buildRemainingTicketsItems(\App\Models\Event $event, ?int $excludePayoutId = null, ?\Carbon\Carbon $cutoffDate = null): array
     {
-        // Resolve commission per TICKET TYPE (not per event) — each
-        // TicketType has its own commission_type / commission_rate /
-        // commission_fixed / commission_mode that overrides the event
-        // default. Using the event-level mode for every item misreports
-        // brut/net in the live preview whenever the event default differs
-        // from the per-type mode (e.g. event default 'included' but every
-        // ticket type set to 'added_on_top').
-        $defaultRate = $event->getEffectiveCommissionRate();
-        $defaultMode = $event->getEffectiveCommissionMode() ?? 'included';
+        // Per-type figures come from SalesBreakdownService — the same engine
+        // the event "Vânzări" tab and the live payout detail use. It already
+        // allocates order-level discounts (promo codes) across tickets, picks
+        // up per-TicketType commission overrides, and excludes POS sales.
+        // Querying tickets directly here would miss the discount allocation
+        // because tickets.price stores the CATALOG price, not the effective
+        // amount the customer paid; the discount lives on the order row and
+        // has to be apportioned across the order's tickets.
+        $service = app(\App\Services\Marketplace\SalesBreakdownService::class);
+        $rows = $service->buildForPayout($event, null, $cutoffDate);
 
-        // When the operator picks a cutoff date, count only tickets whose
-        // ORDER was paid/confirmed/completed up to that point (end of day).
-        // Invitations (order_id NULL) use the ticket's own created_at.
-        $cutoffEnd = $cutoffDate?->copy()->endOfDay();
-
-        // qty + total-paid per type in a single pass. We need SUM(tickets.price)
-        // — the actual amount the customer paid after promo-code reductions —
-        // to derive the effective unit price; using sale_price_cents (catalog)
-        // would overstate the gross by the discount total.
-        $ticketAgg = \App\Models\Ticket::whereHas('ticketType', fn ($q) => $q->where('event_id', $event->id))
-            ->whereIn('status', ['valid', 'used'])
-            ->where(function ($q) use ($cutoffEnd) {
-                $q->whereHas('order', function ($q2) use ($cutoffEnd) {
-                    $q2->whereIn('status', ['paid', 'confirmed', 'completed'])
-                        ->where('source', '!=', 'external_import')
-                        ->where('source', '!=', 'pos_app')
-                        ->where('source', '!=', 'test_order');
-                    if ($cutoffEnd) {
-                        $q2->where('created_at', '<=', $cutoffEnd);
-                    }
-                })->orWhere(function ($q2) use ($cutoffEnd) {
-                    $q2->whereNull('order_id');
-                    if ($cutoffEnd) {
-                        $q2->where('created_at', '<=', $cutoffEnd);
-                    }
-                });
-            })
-            ->select('ticket_type_id', \DB::raw('COUNT(*) as cnt'), \DB::raw('SUM(price) as total_paid'))
-            ->groupBy('ticket_type_id')
-            ->get()
-            ->keyBy('ticket_type_id');
-
-        $ticketCounts = $ticketAgg->map(fn ($r) => (int) $r->cnt)->toArray();
-        $totalPaidPerType = $ticketAgg->map(fn ($r) => (float) $r->total_paid)->toArray();
-
+        // Compute already-paid qty per type from OTHER active deconturi on
+        // the same event so the operator's "remaining" doesn't include
+        // tickets already covered by another decont's breakdown.
         $alreadyPaid = [];
         $organizerId = $event->marketplace_organizer_id;
         if ($organizerId) {
@@ -294,41 +263,26 @@ class MarketplacePayout extends Model
         }
 
         $items = [];
-        foreach ($event->ticketTypes as $tt) {
-            $totalSold = (int) ($ticketCounts[$tt->id] ?? 0);
-            if ($totalSold <= 0) continue;
+        foreach ($rows as $row) {
+            $ttId = (int) ($row['ticket_type_id'] ?? 0);
+            $totalSold = (int) ($row['qty'] ?? 0);
+            if (!$ttId || $totalSold <= 0) continue;
 
-            $paid = (int) ($alreadyPaid[$tt->id] ?? 0);
+            $paid = (int) ($alreadyPaid[$ttId] ?? 0);
             $remaining = max(0, $totalSold - $paid);
             if ($remaining <= 0) continue;
 
-            // Effective unit price = weighted average of what customers
-            // actually paid for this ticket type. For a type with mixed
-            // pricing (some sold at catalog, some at discounted via promo)
-            // this is the only honest figure to put in the breakdown. Falls
-            // back to catalog when no actual sales data exists (defensive —
-            // shouldn't happen since totalSold > 0 here).
-            $catalogPrice = (float) ($tt->sale_price_cents
-                ? $tt->sale_price_cents / 100
-                : ($tt->price_cents ? $tt->price_cents / 100 : 0));
-            $totalPaid = (float) ($totalPaidPerType[$tt->id] ?? 0);
-            $basePrice = $totalSold > 0 && $totalPaid > 0
-                ? round($totalPaid / $totalSold, 2)
-                : $catalogPrice;
-
-            // Single source of truth for mode + commission per type. Picks
-            // up TicketType-level overrides automatically. Commission is
-            // computed on the EFFECTIVE price — matching SalesBreakdownService,
-            // so the marketplace's commission scales with the actual sale.
-            $eff = $tt->getEffectiveCommission($defaultRate, $defaultMode);
-            $commPer = round($tt->calculateCommission($basePrice, $defaultRate, $defaultMode), 2);
-
+            // `price` from the service is the effective per-ticket amount
+            // (catalog − allocated discount), `commission_per_ticket` is the
+            // weighted commission on that effective price, and `commission_mode`
+            // is the per-type effective mode. All three flow straight into the
+            // repeater so the live preview math is right out of the box.
             $items[] = [
-                'ticket_type_id' => $tt->id,
-                'ticket_type_name' => is_array($tt->name) ? ($tt->name['ro'] ?? $tt->name['en'] ?? '') : $tt->name,
-                'unit_price' => $basePrice,
-                'commission_per_ticket' => $commPer,
-                'commission_mode' => $eff['mode'] ?? 'included',
+                'ticket_type_id' => $ttId,
+                'ticket_type_name' => (string) ($row['ticket_type_name'] ?? ''),
+                'unit_price' => round((float) ($row['price'] ?? 0), 2),
+                'commission_per_ticket' => round((float) ($row['commission_per_ticket'] ?? 0), 4),
+                'commission_mode' => (string) ($row['commission_mode'] ?? 'included'),
                 'qty' => $remaining,
             ];
         }
