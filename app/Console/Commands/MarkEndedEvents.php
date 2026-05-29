@@ -14,12 +14,17 @@ class MarkEndedEvents extends Command
 
     public function handle(): int
     {
-        // Use Romania timezone — events end times are set in local time
-        $now = Carbon::now('Europe/Bucharest');
+        // Carbon comparisons (greaterThan, isPast, ...) operate on absolute UTC
+        // instants regardless of display TZ. getEffectiveEndDatetime() now
+        // parses end_time in the event's marketplace TZ, so a plain now() here
+        // produces the correct boundary across marketplaces with different TZs.
+        $now = Carbon::now();
         $count = 0;
 
-        // Get all published, non-cancelled events that are not yet archived
-        $events = Event::where('is_published', true)
+        // Eager-load marketplaceClient so getEffectiveEndDatetime() doesn't
+        // trigger an N+1 to resolve the TZ for each event.
+        $events = Event::with('marketplaceClient:id,timezone')
+            ->where('is_published', true)
             ->where('status', '!=', 'archived')
             ->where(function ($q) {
                 $q->where('is_cancelled', false)->orWhereNull('is_cancelled');

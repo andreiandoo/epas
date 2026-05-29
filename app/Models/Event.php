@@ -544,10 +544,18 @@ class Event extends Model
     }
 
     /**
-     * Get the effective end datetime (date + time) for the event
+     * Get the effective end datetime (date + time) for the event.
+     *
+     * Times (end_time / range_end_time / multi_slot end_time / postponed_end_time)
+     * are entered by organizers in the marketplace's local timezone (default
+     * Europe/Bucharest for tenant-only events). We parse with that TZ so the
+     * absolute UTC instant is correct — Carbon comparisons (>, isPast, etc.)
+     * operate on instants, so callers don't need to think about TZ.
      */
     public function getEffectiveEndDatetime(): ?\Carbon\Carbon
     {
+        $tz = \App\Support\MarketplaceTz::tz($this->marketplaceClient);
+
         // Postponed events: the "effective" end is the new postponed date +
         // postponed_end_time (or postponed_start_time as cutoff). This makes
         // isPast()/isUpcoming()/MarkEndedEvents skip postponed events whose
@@ -558,7 +566,8 @@ class Event extends Model
                 ?? $this->postponed_start_time
                 ?? '23:59';
             return \Carbon\Carbon::parse(
-                $this->postponed_date->format('Y-m-d') . ' ' . $time
+                $this->postponed_date->format('Y-m-d') . ' ' . $time,
+                $tz
             );
         }
 
@@ -575,13 +584,13 @@ class Event extends Model
         // If we have an end_date, use it with end_time
         if ($endDate) {
             $time = $endTime ?? '23:59';
-            return \Carbon\Carbon::parse($endDate->format('Y-m-d') . ' ' . $time);
+            return \Carbon\Carbon::parse($endDate->format('Y-m-d') . ' ' . $time, $tz);
         }
 
         // For single_day without explicit end_date, use start_date with end_time
         if ($this->duration_mode === 'single_day' && $this->start_date) {
             $time = $this->end_time ?? '23:59';
-            return \Carbon\Carbon::parse($this->start_date->format('Y-m-d') . ' ' . $time);
+            return \Carbon\Carbon::parse($this->start_date->format('Y-m-d') . ' ' . $time, $tz);
         }
 
         return null;
