@@ -306,30 +306,56 @@ class MarketplacePayout extends Model
             $remaining = max(0, $totalSold - $paid);
             if ($remaining <= 0) continue;
 
-            // Effective unit price = average actual paid (per-ticket precise
-            // when CheckoutController wrote tickets.meta.discount_amount,
-            // proportional allocation of order.discount_amount otherwise).
-            $effectiveUnit = $totalSold > 0
-                ? round($agg['effective_total'] / $totalSold, 2)
+            // unit_price stays CATALOG so the operator sees the real ticket
+            // price in the repeater. The discount actually applied across
+            // all sold tickets of this type lives in its own 'discount' field
+            // — surfaced to the form's discount_amount input by the action
+            // that fills the repeater. Sum of catalog × qty − discount =
+            // effective collected.
+            $catalogPrice = (float) ($tt->sale_price_cents
+                ? $tt->sale_price_cents / 100
+                : ($tt->price_cents ? $tt->price_cents / 100 : 0));
+
+            // Allocate the type's total discount proportionally when only a
+            // slice of the qty is in this payout (the rest is already in
+            // another active decont).
+            $totalDiscountAllType = max(0.0, ($catalogPrice * $totalSold) - (float) $agg['effective_total']);
+            $discountForRemaining = $totalSold > 0
+                ? round($totalDiscountAllType * ($remaining / $totalSold), 2)
                 : 0.0;
 
-            // Single source of truth for mode + commission per type. Commission
-            // is computed on the EFFECTIVE price so the marketplace's cut
-            // scales with the discount, matching SalesBreakdownService.
+            // Commission on CATALOG — marketplace earns its full fee even
+            // when the promo cuts the customer-paying side; the discount
+            // comes out of the organizer's share.
             $eff = $tt->getEffectiveCommission($defaultRate, $defaultMode);
-            $commPer = round($tt->calculateCommission($effectiveUnit, $defaultRate, $defaultMode), 4);
+            $commPer = round($tt->calculateCommission($catalogPrice, $defaultRate, $defaultMode), 4);
 
             $items[] = [
                 'ticket_type_id' => $tt->id,
                 'ticket_type_name' => is_array($tt->name) ? ($tt->name['ro'] ?? $tt->name['en'] ?? '') : $tt->name,
-                'unit_price' => $effectiveUnit,
+                'unit_price' => $catalogPrice,
                 'commission_per_ticket' => $commPer,
                 'commission_mode' => $eff['mode'] ?? 'included',
                 'qty' => $remaining,
+                'discount' => $discountForRemaining,
             ];
         }
 
         return $items;
+    }
+
+    /**
+     * Sum the per-type `discount` field across items returned by
+     * buildRemainingTicketsItems. Action handlers use it in one shot to
+     * fill the form's hidden discount_amount input.
+     */
+    public static function sumDiscountFromItems(iterable $items): float
+    {
+        $total = 0.0;
+        foreach ($items as $it) {
+            $total += (float) ($it['discount'] ?? 0);
+        }
+        return round($total, 2);
     }
 
     /**

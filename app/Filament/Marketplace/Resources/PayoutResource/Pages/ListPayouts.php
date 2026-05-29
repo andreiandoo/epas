@@ -437,6 +437,10 @@ class ListPayouts extends ListRecords
 
                                 $set('payout_tickets', $items);
                                 $set('included_refund_ids', $refundIds);
+                                // Surface the per-type discount aggregate as the
+                                // form's discount_amount so the net subtracts it.
+                                $discountTotal = MarketplacePayout::sumDiscountFromItems($items);
+                                $set('discount_amount', number_format($discountTotal, 2, '.', ''));
 
                                 // Recompute gross/commission/net from new selection
                                 // (mirrors auto_distribute's tail so the totals
@@ -451,16 +455,15 @@ class ListPayouts extends ListRecords
                                     $gross += $qty * $unit + ($isOnTop ? $qty * $commPer : 0);
                                     $commission += $qty * $commPer;
                                 }
-                                $discount = (float) ($get('discount_amount') ?? 0);
                                 $fees = (float) ($get('fees_amount') ?? 0);
                                 $set('gross_amount', number_format($gross, 2, '.', ''));
                                 $set('commission_amount', number_format($commission, 2, '.', ''));
-                                $set('net_amount', number_format(max(0, $gross - $commission - $discount - $fees), 2, '.', ''));
+                                $set('net_amount', number_format(max(0, $gross - $commission - $discountTotal - $fees), 2, '.', ''));
 
                                 $totalQty = array_sum(array_column($items, 'qty'));
                                 \Filament\Notifications\Notification::make()
                                     ->title('Stare la ' . $cutoff->format('d.m.Y'))
-                                    ->body(count($items) . ' tipuri · ' . $totalQty . ' bilete · ' . count($refundIds) . ' rambursări. Net calculat: ' . number_format(max(0, $gross - $commission - $discount - $fees), 2) . ' RON.')
+                                    ->body(count($items) . ' tipuri · ' . $totalQty . ' bilete · ' . count($refundIds) . ' rambursări · ' . number_format($discountTotal, 2) . ' RON discount. Net calculat: ' . number_format(max(0, $gross - $commission - $discountTotal - $fees), 2) . ' RON.')
                                     ->success()
                                     ->send();
                             }),
@@ -774,7 +777,11 @@ class ListPayouts extends ListRecords
                     $finalGross = $built['totals']['gross'];
                     $finalCommission = $built['totals']['commission'];
                     $ticketNet = $built['totals']['net'];
-                    $finalNet = round($ticketNet - $refundTotal, 2);
+                    // Match the live preview: net out of promo discount before
+                    // refunds. discount_amount is the form's hidden field,
+                    // populated by the buttons that fill the repeater.
+                    $discountAmount = (float) ($data['discount_amount'] ?? 0);
+                    $finalNet = round($ticketNet - $discountAmount - $refundTotal, 2);
                     $commissionMode = $built['commission_mode'];
                 } else {
                     // Refund-only or zero-selection payout: persist the manually
@@ -1307,6 +1314,10 @@ class ListPayouts extends ListRecords
         }
         unset($item);
         $set('payout_tickets', $items);
+        // Fill the discount_amount hidden input so the modal's totals already
+        // reflect promo-code reductions on initial event pick.
+        $discountTotal = MarketplacePayout::sumDiscountFromItems($items);
+        $set('discount_amount', number_format($discountTotal, 2, '.', ''));
     }
 
     /**

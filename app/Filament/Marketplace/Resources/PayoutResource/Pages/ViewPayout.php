@@ -99,9 +99,15 @@ class ViewPayout extends ViewRecord
                         'payout_tickets' => $rows,
                         'net_amount' => (float) $this->record->amount,
                         'included_refund_ids' => $linkedRefundIds,
+                        'discount_amount' => (float) $this->record->discount_amount,
                     ];
                 })
                 ->form([
+                    // Hidden state — promo-code discount populated by the
+                    // "Adu biletele rămase" / "Adu la dată" buttons (and
+                    // surfaced in the live preview + persisted at submit).
+                    \Filament\Forms\Components\Hidden::make('discount_amount')->default('0.00'),
+
                     // Snapshot of the payout's currently-stored amounts so the
                     // operator can compare against the live preview below.
                     \Filament\Forms\Components\Placeholder::make('current_state')
@@ -192,8 +198,13 @@ class ViewPayout extends ViewRecord
                                         return;
                                     }
                                     $set('payout_tickets', $items);
+                                    // Surface the per-type discount aggregate to the
+                                    // hidden discount_amount input so the payout's
+                                    // net reflects promo-code reductions.
+                                    $discountTotal = \App\Models\MarketplacePayout::sumDiscountFromItems($items);
+                                    $set('discount_amount', number_format($discountTotal, 2, '.', ''));
                                     $totalQty = array_sum(array_column($items, 'qty'));
-                                    Notification::make()->title('Bilete adăugate')->body(count($items) . ' tipuri · ' . $totalQty . ' bilete rămase aduse în listă. Verifică suma netă și apasă Salvează.')->success()->send();
+                                    Notification::make()->title('Bilete adăugate')->body(count($items) . ' tipuri · ' . $totalQty . ' bilete · ' . number_format($discountTotal, 2) . ' RON discount aduse în listă. Verifică suma netă și apasă Salvează.')->success()->send();
                                 }),
 
                             // Snapshot the event state AS OF a chosen date:
@@ -235,10 +246,12 @@ class ViewPayout extends ViewRecord
 
                                     $set('payout_tickets', $items);
                                     $set('included_refund_ids', $refundIds);
+                                    $discountTotal = \App\Models\MarketplacePayout::sumDiscountFromItems($items);
+                                    $set('discount_amount', number_format($discountTotal, 2, '.', ''));
                                     $totalQty = array_sum(array_column($items, 'qty'));
                                     Notification::make()
                                         ->title('Stare la ' . $cutoff->format('d.m.Y'))
-                                        ->body(count($items) . ' tipuri · ' . $totalQty . ' bilete · ' . count($refundIds) . ' rambursări selectate. Verifică suma netă și apasă Salvează.')
+                                        ->body(count($items) . ' tipuri · ' . $totalQty . ' bilete · ' . count($refundIds) . ' rambursări · ' . number_format($discountTotal, 2) . ' RON discount. Verifică suma netă și apasă Salvează.')
                                         ->success()
                                         ->send();
                                 }),
@@ -363,6 +376,13 @@ class ViewPayout extends ViewRecord
                             }
                             $ticketNet = $gross - $commission;
 
+                            // Discount from promo codes — the per-type aggregate
+                            // is surfaced to discount_amount by the buttons that
+                            // fill the repeater (Adu biletele rămase, Adu la
+                            // dată); the operator can also edit it directly via
+                            // the hidden field's state.
+                            $discountAmount = (float) ($get('discount_amount') ?? 0);
+
                             $refundIds = $get('included_refund_ids') ?? [];
                             $refundIds = is_array($refundIds) ? array_values(array_filter($refundIds)) : [];
                             $refundCount = count($refundIds);
@@ -374,7 +394,7 @@ class ViewPayout extends ViewRecord
                                     ->sum('face_value');
                             }
 
-                            $finalNet = $ticketNet - $refundTotal;
+                            $finalNet = $ticketNet - $discountAmount - $refundTotal;
                             $diff = $targetNet - $finalNet;
                             $diffSign = $diff > 0.01 ? '+' : ($diff < -0.01 ? '' : '');
                             $diffColor = abs($diff) < 0.5 ? '#059669' : '#d97706';
@@ -382,11 +402,16 @@ class ViewPayout extends ViewRecord
                                 ? '✓ identic cu Sumă netă dorită'
                                 : "{$diffSign}" . number_format($diff, 2) . ' RON față de Sumă netă dorită (' . number_format($targetNet, 2) . ' RON)';
 
-                            $refundLine = $refundCount > 0
+                            $extraLine = ($discountAmount > 0.005 || $refundCount > 0)
                                 ? '<div style="margin-top:6px;padding-top:6px;border-top:1px dashed #93c5fd;display:grid;grid-template-columns:repeat(4,1fr);gap:8px;">'
                                     . '<div><div style="font-size:10px;color:#666;">Net bilete</div><div style="font-family:monospace;font-weight:600;color:#111827;">' . number_format($ticketNet, 2) . ' RON</div></div>'
-                                    . '<div><div style="font-size:10px;color:#666;">Rambursări (' . $refundCount . ')</div><div style="font-family:monospace;font-weight:600;color:#b91c1c;">-' . number_format($refundTotal, 2) . ' RON</div></div>'
-                                    . '<div style="grid-column:span 2 / span 2;"><div style="font-size:10px;color:#059669;text-transform:uppercase;">Final de plată</div><div style="font-family:monospace;font-weight:700;font-size:16px;color:#059669;">' . number_format($finalNet, 2) . ' RON</div></div>'
+                                    . ($discountAmount > 0.005
+                                        ? '<div><div style="font-size:10px;color:#666;">Discounturi</div><div style="font-family:monospace;font-weight:600;color:#b91c1c;">-' . number_format($discountAmount, 2) . ' RON</div></div>'
+                                        : '<div></div>')
+                                    . ($refundCount > 0
+                                        ? '<div><div style="font-size:10px;color:#666;">Rambursări (' . $refundCount . ')</div><div style="font-family:monospace;font-weight:600;color:#b91c1c;">-' . number_format($refundTotal, 2) . ' RON</div></div>'
+                                        : '<div></div>')
+                                    . '<div><div style="font-size:10px;color:#059669;text-transform:uppercase;">Final de plată</div><div style="font-family:monospace;font-weight:700;font-size:16px;color:#059669;">' . number_format($finalNet, 2) . ' RON</div></div>'
                                     . '</div>'
                                 : '';
 
@@ -397,9 +422,9 @@ class ViewPayout extends ViewRecord
                                 . '<div><div style="font-size:10px;color:#666;">Total bilete</div><div style="font-family:monospace;font-weight:600;color:#111827;">' . $totalQty . '</div></div>'
                                 . '<div><div style="font-size:10px;color:#666;">Brut</div><div style="font-family:monospace;font-weight:600;color:#111827;">' . number_format($gross, 2) . ' RON</div></div>'
                                 . '<div><div style="font-size:10px;color:#666;">Comision</div><div style="font-family:monospace;font-weight:600;color:#b91c1c;">-' . number_format($commission, 2) . ' RON</div></div>'
-                                . '<div><div style="font-size:10px;color:#666;">Net bilete</div><div style="font-family:monospace;font-weight:700;color:' . ($refundCount > 0 ? '#111827' : '#059669') . ';">' . number_format($ticketNet, 2) . ' RON</div></div>'
+                                . '<div><div style="font-size:10px;color:#666;">Net bilete</div><div style="font-family:monospace;font-weight:700;color:' . (($discountAmount > 0.005 || $refundCount > 0) ? '#111827' : '#059669') . ';">' . number_format($ticketNet, 2) . ' RON</div></div>'
                                 . '</div>'
-                                . $refundLine
+                                . $extraLine
                                 . '<div style="margin-top:6px;font-size:11px;color:' . $diffColor . ';font-weight:500;">' . $diffLabel . '</div>'
                                 . '</div>'
                             );
@@ -452,16 +477,22 @@ class ViewPayout extends ViewRecord
 
                     $oldAmount = (float) $this->record->amount;
                     $ticketNet = $built['totals']['net'];
-                    $newAmount = round($ticketNet - $refundTotal, 2);
+                    // Subtract promo-code discount (kept on the payout's own
+                    // discount_amount column) before refunds — same order the
+                    // live preview shows so what the operator saw matches what
+                    // gets saved.
+                    $discountAmount = (float) ($data['discount_amount'] ?? 0);
+                    $newAmount = round($ticketNet - $discountAmount - $refundTotal, 2);
                     $delta = round($oldAmount - $newAmount, 2);
 
-                    \Illuminate\Support\Facades\DB::transaction(function () use ($built, $newAmount, $delta, $includedRefundIds, $refundTotal) {
+                    \Illuminate\Support\Facades\DB::transaction(function () use ($built, $newAmount, $delta, $includedRefundIds, $refundTotal, $discountAmount) {
                         $this->record->update([
                             'ticket_breakdown' => $built['rows'],
                             'commission_mode' => $built['commission_mode'],
                             'amount' => $newAmount,
                             'gross_amount' => $built['totals']['gross'],
                             'commission_amount' => $built['totals']['commission'],
+                            'discount_amount' => $discountAmount,
                             'refund_amount' => $refundTotal,
                         ]);
 
