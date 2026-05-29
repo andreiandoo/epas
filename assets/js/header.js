@@ -651,7 +651,12 @@
         if (index < 0 || index >= items.length) return;
         var item = items[index];
         var currentQty = item.quantity || 1;
-        var newQty = action === 'increase' ? currentQty + 1 : currentQty - 1;
+
+        // Step increment honours the ticket-type multiplier (mirrors cart-page.js).
+        // mult=2 means each +/- click moves by 2.
+        var multiplier = (item.ticketType && item.ticketType.multiplier) || item.multiplier || 1;
+        var step = action === 'increase' ? multiplier : -multiplier;
+        var newQty = currentQty + step;
 
         // Enforce per-ticket-type min/max (mirrors cart-page.js). Fallback chain
         // covers older cart shapes that may not have ticketType nested.

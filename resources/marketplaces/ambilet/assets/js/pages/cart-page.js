@@ -372,7 +372,12 @@ const CartPage = {
         }
 
         const currentQty = item.quantity;
-        let newQty = currentQty + delta;
+        // Step increment honours the ticket-type multiplier (e.g. mult=2 means
+        // each +/- click moves by 2). Mirrors event-single.js where the cart
+        // is first populated. Falls back to 1 for legacy items added before
+        // the field was propagated through AmbiletCart.addItem.
+        const multiplier = item.ticketType?.multiplier || item.multiplier || 1;
+        let newQty = currentQty + (delta * multiplier);
         const minQty = item.ticketType?.min_per_order || item.min_per_order || 1;
         const maxQty = item.ticketType?.max_per_order || item.max_per_order || item.max_quantity || 10;
 

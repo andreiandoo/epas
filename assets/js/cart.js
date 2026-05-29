@@ -113,6 +113,7 @@ const AmbiletCart = {
                     description: ticketTypeData.description,
                     min_per_order: ticketTypeData.min_per_order || 1,
                     max_per_order: ticketTypeData.max_per_order || 10,
+                    multiplier: ticketTypeData.multiplier || 1, // Step increment for cart +/- buttons
                     commission: ticketTypeData.commission || null, // Per-ticket commission settings
                     is_refundable: ticketTypeData.is_refundable || false,
                     is_parking: ticketTypeData.is_parking || false,
