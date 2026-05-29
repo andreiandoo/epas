@@ -32,6 +32,17 @@ class ViewPayout extends ViewRecord
             // moved to the sidebar "Acțiuni" section in the infolist. Serie-decont
             // edit moved to an inline hintAction on the TextEntry itself.
 
+            // Delete the payout — Filament's ViewRecord doesn't auto-include
+            // this when getHeaderActions() is overridden, so we add it back
+            // explicitly. Removed payouts release reserved organizer balance
+            // through the model's deleting hook (no manual cleanup here).
+            Actions\DeleteAction::make()
+                ->label('Șterge decont')
+                ->icon('heroicon-o-trash')
+                ->requiresConfirmation()
+                ->modalHeading('Șterge decontul')
+                ->modalDescription('Decontul va fi mutat în coșul de gunoi (soft delete). Documentele asociate (PDF decont, factură, factură organizator) NU se șterg automat — ocupă-te de ele separat dacă e nevoie.'),
+
             // Recalcul snapshot din SalesBreakdownService — util pentru deconturile
             // create inainte de refactor (snapshot pe baza prețului catalog) sau
             // dupa modificari de preturi pe bilete. Doar status-uri editabile.

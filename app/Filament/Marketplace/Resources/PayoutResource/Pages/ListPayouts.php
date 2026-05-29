@@ -674,11 +674,19 @@ class ListPayouts extends ListRecords
                     : 0.0;
 
                 if ($event && !empty($payoutTicketsInput)) {
-                    $ticketTarget = $enteredNet > 0 ? $enteredNet + $refundTotal : null;
+                    // The repeater qty selection is the operator's source of truth
+                    // on submit. Proportional scaling is performed up-front by the
+                    // explicit "Distribuie automat" / "Distribuie proporțional"
+                    // buttons (which write scaled qtys back into the repeater).
+                    // Without `null` here the handler would re-scale to match
+                    // net_amount — which event_id loads to the FULL event net —
+                    // even when the operator reduced qtys manually (e.g. setting
+                    // most types to 0 and one to 50 would balloon back to 100+
+                    // chasing the event's full balance).
                     $built = MarketplacePayout::buildBreakdownFromSelection(
                         $payoutTicketsInput,
                         $event,
-                        $ticketTarget
+                        null
                     );
                     $ticketBreakdown = $built['rows'];
                     $finalGross = $built['totals']['gross'];
