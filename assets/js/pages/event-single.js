@@ -2587,6 +2587,7 @@ const EventPage = {
                         description: tt.description,
                         min_per_order: tt.min_per_order || 1,
                         max_per_order: tt.max_per_order || 10,
+                        multiplier: tt.multiplier || 1, // Step increment for cart +/- buttons
                         // Per-ticket commission (null means use event defaults)
                         commission: tt.commission || null,
                         is_refundable: tt.is_refundable || false

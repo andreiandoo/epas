@@ -613,6 +613,7 @@
                         originalPrice: tt.base_price !== tt.effective_price ? tt.base_price : null,
                         min_per_order: tt.min_per_order,
                         max_per_order: tt.max_per_order,
+                        multiplier: tt.multiplier || 1,
                         is_parking: tt.is_parking,
                         requires_vehicle_info: tt.requires_vehicle_info,
                     },
