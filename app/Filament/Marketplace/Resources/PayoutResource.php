@@ -667,9 +667,9 @@ class PayoutResource extends Resource
                                         }),
                                 ])->fullWidth(),
 
-                                // Notă admin always visible; spans 2 cols so it
-                                // lives on its own row rather than orphaned on
-                                // half a row with the status buttons above.
+                                // Notă admin and Șterge share row 3 — both
+                                // always visible regardless of payout status,
+                                // so they pair cleanly in the 2-column grid.
                                 \Filament\Schemas\Components\Actions::make([
                                     \Filament\Actions\Action::make('add_admin_note')
                                         ->label('Notă admin')
@@ -685,7 +685,26 @@ class PayoutResource extends Resource
                                             $record->update(['admin_notes' => $data['admin_notes']]);
                                             $livewire->refreshFormData(['admin_notes']);
                                         }),
-                                ])->fullWidth()->columnSpan(2),
+                                ])->fullWidth(),
+
+                                \Filament\Schemas\Components\Actions::make([
+                                    \Filament\Actions\Action::make('delete_payout')
+                                        ->label('Șterge decont')
+                                        ->icon('heroicon-o-trash')
+                                        ->color('danger')
+                                        ->requiresConfirmation()
+                                        ->modalHeading('Șterge decontul')
+                                        ->modalDescription('Decontul va fi mutat în coșul de gunoi (soft delete). Documentele asociate (PDF decont, factură, factură organizator) NU se șterg automat — ocupă-te de ele separat dacă e nevoie.')
+                                        ->modalSubmitActionLabel('Da, șterge')
+                                        ->action(function ($record, $livewire) {
+                                            $record->delete();
+                                            \Filament\Notifications\Notification::make()
+                                                ->title('Decont șters')
+                                                ->success()
+                                                ->send();
+                                            $livewire->redirect(static::getUrl('index'));
+                                        }),
+                                ])->fullWidth(),
                             ]),
 
                         // Payout method
