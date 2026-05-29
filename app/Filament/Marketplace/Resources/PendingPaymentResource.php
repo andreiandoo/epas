@@ -120,10 +120,7 @@ class PendingPaymentResource extends Resource
                         }
                         return implode(' · ', $parts) ?: null;
                     })
-                    ->url(fn ($record) => $record->event_id
-                        ? EventResource::getUrl('edit', ['record' => $record->event_id])
-                        : null)
-                    ->openUrlInNewTab()
+                    ->url(fn ($record) => static::getUrl('view', ['record' => $record->id]))
                     ->searchable(query: function (Builder $query, string $search): Builder {
                         $term = '%' . mb_strtolower($search) . '%';
                         return $query->whereHas('event', function ($q) use ($term) {
@@ -184,28 +181,8 @@ class PendingPaymentResource extends Resource
                     ->date('d.m.Y'),
             ])
             ->filters([
-                Tables\Filters\SelectFilter::make('payment_status')
-                    ->label('Status')
-                    ->options([
-                        'pending' => 'În așteptare',
-                        'completed' => 'Achitat',
-                        'rejected' => 'Respins',
-                    ])
-                    ->default('pending')
-                    ->query(function (Builder $query, array $data): Builder {
-                        $val = $data['value'] ?? null;
-                        if ($val === 'pending') {
-                            return $query->whereIn('status', ['pending', 'approved', 'processing']);
-                        }
-                        if ($val === 'completed') {
-                            return $query->where('status', 'completed');
-                        }
-                        if ($val === 'rejected') {
-                            return $query->where('status', 'rejected');
-                        }
-                        return $query;
-                    }),
-
+                // Status filtering is handled by the toolbar tabs (În așteptare /
+                // Achitat / Respins) on the list page — see ListPendingPayments::getTabs().
                 Tables\Filters\SelectFilter::make('marketplace_organizer_id')
                     ->label('Organizator')
                     ->relationship('organizer', 'company_name')
