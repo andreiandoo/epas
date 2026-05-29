@@ -267,6 +267,10 @@ class ViewPayout extends ViewRecord
                             \Filament\Forms\Components\Hidden::make('unit_price'),
                             \Filament\Forms\Components\Hidden::make('commission_per_ticket'),
                             \Filament\Forms\Components\Hidden::make('commission_mode'),
+                            // Per-row promo discount surfaced by the helper; the
+                            // submit handler passes it through buildBreakdownFromSelection
+                            // so the saved breakdown rows carry it.
+                            \Filament\Forms\Components\Hidden::make('discount')->default('0'),
                             \Filament\Forms\Components\Hidden::make('ticket_type_name'),
                             \Filament\Forms\Components\Placeholder::make('row_label')
                                 ->hiddenLabel()
@@ -476,13 +480,14 @@ class ViewPayout extends ViewRecord
                     }
 
                     $oldAmount = (float) $this->record->amount;
+                    // totals['net'] already nets out the per-row promo discount
+                    // — buildBreakdownFromSelection now propagates each item's
+                    // discount through every pass and into the breakdown rows
+                    // (their `discount` and `net` fields). All we still have to
+                    // peel off here is the refund total.
                     $ticketNet = $built['totals']['net'];
-                    // Subtract promo-code discount (kept on the payout's own
-                    // discount_amount column) before refunds — same order the
-                    // live preview shows so what the operator saw matches what
-                    // gets saved.
-                    $discountAmount = (float) ($data['discount_amount'] ?? 0);
-                    $newAmount = round($ticketNet - $discountAmount - $refundTotal, 2);
+                    $discountAmount = (float) ($built['totals']['discount'] ?? 0);
+                    $newAmount = round($ticketNet - $refundTotal, 2);
                     $delta = round($oldAmount - $newAmount, 2);
 
                     \Illuminate\Support\Facades\DB::transaction(function () use ($built, $newAmount, $delta, $includedRefundIds, $refundTotal, $discountAmount) {

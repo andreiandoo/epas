@@ -481,6 +481,8 @@ class ListPayouts extends ListRecords
                         Forms\Components\Hidden::make('available'),
                         Forms\Components\Hidden::make('unit_price'),
                         Forms\Components\Hidden::make('commission_per_ticket'),
+                        // Per-row promo discount surfaced by the helper.
+                        Forms\Components\Hidden::make('discount')->default('0'),
                         Forms\Components\Placeholder::make('label')
                             ->hiddenLabel()
                             ->content(fn (Get $get) => new \Illuminate\Support\HtmlString(
@@ -776,12 +778,13 @@ class ListPayouts extends ListRecords
                     $ticketBreakdown = $built['rows'];
                     $finalGross = $built['totals']['gross'];
                     $finalCommission = $built['totals']['commission'];
+                    // totals['net'] already excludes the per-row promo discount
+                    // (buildBreakdownFromSelection threads each item's discount
+                    // through every pass + into the saved rows). Just peel off
+                    // the refund total to arrive at the actual amount due.
                     $ticketNet = $built['totals']['net'];
-                    // Match the live preview: net out of promo discount before
-                    // refunds. discount_amount is the form's hidden field,
-                    // populated by the buttons that fill the repeater.
-                    $discountAmount = (float) ($data['discount_amount'] ?? 0);
-                    $finalNet = round($ticketNet - $discountAmount - $refundTotal, 2);
+                    $discountAmount = (float) ($built['totals']['discount'] ?? 0);
+                    $finalNet = round($ticketNet - $refundTotal, 2);
                     $commissionMode = $built['commission_mode'];
                 } else {
                     // Refund-only or zero-selection payout: persist the manually
@@ -789,6 +792,7 @@ class ListPayouts extends ListRecords
                     $ticketBreakdown = [];
                     $finalGross = (float) ($data['gross_amount'] ?? 0);
                     $finalCommission = (float) ($data['commission_amount'] ?? 0);
+                    $discountAmount = (float) ($data['discount_amount'] ?? 0);
                     $finalNet = $enteredNet;
                     $commissionMode = $event?->getEffectiveCommissionMode() ?: 'included';
                 }
@@ -832,7 +836,7 @@ class ListPayouts extends ListRecords
                     'period_end' => $periodEnd?->toDateString() ?? now()->toDateString(),
                     'gross_amount' => round($finalGross, 2),
                     'commission_amount' => round($finalCommission, 2),
-                    'discount_amount' => (float) ($data['discount_amount'] ?? 0),
+                    'discount_amount' => $discountAmount,
                     'refund_amount' => round($refundTotal, 2),
                     'fees_amount' => (float) ($data['fees_amount'] ?? 0),
                     'adjustments_amount' => 0,

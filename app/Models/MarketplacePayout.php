@@ -114,21 +114,28 @@ class MarketplacePayout extends Model
                 'commission_type' => $tt?->commission_type,
                 'commission_rate' => $tt?->commission_rate !== null ? (float) $tt->commission_rate : null,
                 'commission_fixed' => $tt?->commission_fixed !== null ? (float) $tt->commission_fixed : null,
+                // Per-type promo discount surfaced by buildRemainingTicketsItems.
+                // Travels through every pass so the saved breakdown rows carry
+                // the real discount and the per-row Net final reflects it.
+                'discount' => (float) ($item['discount'] ?? 0),
             ];
         }
 
         // Pass 2: compute initial sums
-        [$sumGross, $sumCommission, $sumNet] = self::sumBreakdownRows($rows);
+        [$sumGross, $sumCommission, $sumNet, $sumDiscount] = self::sumBreakdownRows($rows);
 
         // Pass 3: proportional scaling if targetNet differs noticeably
         if ($targetNet !== null && $sumNet > 0.01 && abs($targetNet - $sumNet) > 0.5) {
             $scale = $targetNet / $sumNet;
             foreach ($rows as &$r) {
                 $r['qty'] = max(0, (int) round($r['qty'] * $scale));
+                // Scale the per-row discount alongside qty so the proportion
+                // of promo reduction tracks the slice the operator is keeping.
+                $r['discount'] = round((float) ($r['discount'] ?? 0) * $scale, 2);
             }
             unset($r);
             $rows = array_values(array_filter($rows, fn ($r) => $r['qty'] > 0));
-            [$sumGross, $sumCommission, $sumNet] = self::sumBreakdownRows($rows);
+            [$sumGross, $sumCommission, $sumNet, $sumDiscount] = self::sumBreakdownRows($rows);
         }
 
         // Pass 4: build final breakdown rows in the canonical JSON shape
@@ -137,7 +144,8 @@ class MarketplacePayout extends Model
             $isOnTop = in_array($r['commission_mode'], ['added_on_top', 'on_top'], true);
             $rowGross = $r['qty'] * $r['unit_price'] + ($isOnTop ? $r['qty'] * $r['commission_per_ticket'] : 0);
             $rowComm = $r['qty'] * $r['commission_per_ticket'];
-            $rowNet = $rowGross - $rowComm;
+            $rowDiscount = (float) ($r['discount'] ?? 0);
+            $rowNet = $rowGross - $rowComm - $rowDiscount;
 
             $breakdown[] = [
                 'ticket_type_id' => $r['ticket_type_id'],
@@ -153,7 +161,7 @@ class MarketplacePayout extends Model
                 'commission_type' => $r['commission_type'],
                 'commission_rate' => $r['commission_rate'],
                 'commission_fixed' => $r['commission_fixed'],
-                'discount' => 0.0,
+                'discount' => round($rowDiscount, 2),
                 'extras' => 0.0,
                 'net' => round($rowNet, 2),
             ];
@@ -175,6 +183,7 @@ class MarketplacePayout extends Model
             'totals' => [
                 'gross' => round($sumGross, 2),
                 'commission' => round($sumCommission, 2),
+                'discount' => round($sumDiscount, 2),
                 'net' => round($sumNet, 2),
             ],
             'commission_mode' => $commissionMode,
@@ -182,21 +191,24 @@ class MarketplacePayout extends Model
     }
 
     /**
-     * Sum gross/commission/net across enriched breakdown rows.
-     * Shared between buildBreakdownFromSelection passes.
+     * Sum gross/commission/discount/net across enriched breakdown rows.
+     * Shared between buildBreakdownFromSelection passes. net = gross −
+     * commission − discount (extras handled elsewhere).
      */
     protected static function sumBreakdownRows(array $rows): array
     {
         $sumGross = 0.0;
         $sumCommission = 0.0;
+        $sumDiscount = 0.0;
         foreach ($rows as $r) {
             $isOnTop = in_array($r['commission_mode'] ?? null, ['added_on_top', 'on_top'], true);
             $rowGross = $r['qty'] * $r['unit_price'] + ($isOnTop ? $r['qty'] * $r['commission_per_ticket'] : 0);
             $rowComm = $r['qty'] * $r['commission_per_ticket'];
             $sumGross += $rowGross;
             $sumCommission += $rowComm;
+            $sumDiscount += (float) ($r['discount'] ?? 0);
         }
-        return [$sumGross, $sumCommission, $sumGross - $sumCommission];
+        return [$sumGross, $sumCommission, $sumGross - $sumCommission - $sumDiscount, $sumDiscount];
     }
 
     /**
