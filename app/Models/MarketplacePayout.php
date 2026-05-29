@@ -242,7 +242,11 @@ class MarketplacePayout extends Model
         // Invitations (order_id NULL) use the ticket's own created_at.
         $cutoffEnd = $cutoffDate?->copy()->endOfDay();
 
-        $ticketCounts = \App\Models\Ticket::whereHas('ticketType', fn ($q) => $q->where('event_id', $event->id))
+        // qty + total-paid per type in a single pass. We need SUM(tickets.price)
+        // — the actual amount the customer paid after promo-code reductions —
+        // to derive the effective unit price; using sale_price_cents (catalog)
+        // would overstate the gross by the discount total.
+        $ticketAgg = \App\Models\Ticket::whereHas('ticketType', fn ($q) => $q->where('event_id', $event->id))
             ->whereIn('status', ['valid', 'used'])
             ->where(function ($q) use ($cutoffEnd) {
                 $q->whereHas('order', function ($q2) use ($cutoffEnd) {
@@ -260,10 +264,13 @@ class MarketplacePayout extends Model
                     }
                 });
             })
-            ->select('ticket_type_id', \DB::raw('COUNT(*) as cnt'))
+            ->select('ticket_type_id', \DB::raw('COUNT(*) as cnt'), \DB::raw('SUM(price) as total_paid'))
             ->groupBy('ticket_type_id')
-            ->pluck('cnt', 'ticket_type_id')
-            ->toArray();
+            ->get()
+            ->keyBy('ticket_type_id');
+
+        $ticketCounts = $ticketAgg->map(fn ($r) => (int) $r->cnt)->toArray();
+        $totalPaidPerType = $ticketAgg->map(fn ($r) => (float) $r->total_paid)->toArray();
 
         $alreadyPaid = [];
         $organizerId = $event->marketplace_organizer_id;
@@ -295,12 +302,24 @@ class MarketplacePayout extends Model
             $remaining = max(0, $totalSold - $paid);
             if ($remaining <= 0) continue;
 
-            $basePrice = (float) ($tt->sale_price_cents
+            // Effective unit price = weighted average of what customers
+            // actually paid for this ticket type. For a type with mixed
+            // pricing (some sold at catalog, some at discounted via promo)
+            // this is the only honest figure to put in the breakdown. Falls
+            // back to catalog when no actual sales data exists (defensive —
+            // shouldn't happen since totalSold > 0 here).
+            $catalogPrice = (float) ($tt->sale_price_cents
                 ? $tt->sale_price_cents / 100
                 : ($tt->price_cents ? $tt->price_cents / 100 : 0));
+            $totalPaid = (float) ($totalPaidPerType[$tt->id] ?? 0);
+            $basePrice = $totalSold > 0 && $totalPaid > 0
+                ? round($totalPaid / $totalSold, 2)
+                : $catalogPrice;
 
             // Single source of truth for mode + commission per type. Picks
-            // up TicketType-level overrides automatically.
+            // up TicketType-level overrides automatically. Commission is
+            // computed on the EFFECTIVE price — matching SalesBreakdownService,
+            // so the marketplace's commission scales with the actual sale.
             $eff = $tt->getEffectiveCommission($defaultRate, $defaultMode);
             $commPer = round($tt->calculateCommission($basePrice, $defaultRate, $defaultMode), 2);
 

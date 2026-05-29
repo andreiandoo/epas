@@ -1291,191 +1291,36 @@ class ListPayouts extends ListRecords
 
     /**
      * Populate payout_tickets repeater with ticket type breakdown from event.
+     *
+     * Delegates to MarketplacePayout::buildRemainingTicketsItems so the create
+     * modal, the "Adu biletele rămase" button on the edit modal, the "Adu la
+     * dată" / "Calculează la o dată" buttons, AND this initial event-pick
+     * populate all share one source of truth — including the effective unit
+     * price (post-promo) and per-TicketType commission_mode. Augments each
+     * item with `available` for the UI label that shows max qty.
      */
     protected function populatePayoutTicketsFromEvent(Set $set, Event $event, ?array $financials = null): void
     {
-        $commissionMode = $event->getEffectiveCommissionMode();
-        $commissionRate = $event->getEffectiveCommissionRate();
-
-        // Get sold ticket counts per type — EXCLUDE pos_app + test_order +
-        // external_import. POS tickets are direct cash sales the organizer
-        // collected at the door (no marketplace commission, no money flows
-        // through us), test orders never settled, and external imports
-        // pre-date the marketplace. Including them here makes the modal's
-        // ticket counts and the "Sold disponibil" card (which already
-        // excludes POS via calculateEventBalance -> excludePos:true)
-        // disagree, which is what made operators distrust the form.
-        // Invitations (order_id NULL) are still counted with qty=0 cost so
-        // they show up as a line but don't add to the payout amount.
-        $ticketCounts = \App\Models\Ticket::whereHas('ticketType', fn ($q) => $q->where('event_id', $event->id))
-            ->whereIn('status', ['valid', 'used'])
-            ->where(function ($q) {
-                $q->whereHas('order', function ($q2) {
-                    $q2->whereIn('status', ['paid', 'confirmed', 'completed'])
-                        ->where('source', '!=', 'external_import')
-                        ->where('source', '!=', 'pos_app')
-                        ->where('source', '!=', 'test_order');
-                })->orWhereNull('order_id');
-            })
-            ->select('ticket_type_id', \DB::raw('COUNT(*) as cnt'))
-            ->groupBy('ticket_type_id')
-            ->pluck('cnt', 'ticket_type_id')
-            ->toArray();
-
-        // Get exact ticket counts already paid from previous payouts' ticket_breakdown
-        $organizer = $event->marketplaceOrganizer;
-        $alreadyPaidPerType = [];
-        if ($organizer) {
-            $previousPayouts = MarketplacePayout::where('marketplace_organizer_id', $organizer->id)
-                ->where('event_id', $event->id)
-                ->whereIn('status', ['completed', 'processing', 'approved', 'pending'])
-                ->whereNotNull('ticket_breakdown')
-                ->get();
-
-            foreach ($previousPayouts as $pp) {
-                foreach ($pp->ticket_breakdown ?? [] as $tb) {
-                    $ttId = $tb['ticket_type_id'] ?? null;
-                    if ($ttId) {
-                        $alreadyPaidPerType[$ttId] = ($alreadyPaidPerType[$ttId] ?? 0) + (int) ($tb['qty'] ?? 0);
-                    }
-                }
-            }
+        $items = MarketplacePayout::buildRemainingTicketsItems($event, null, null);
+        foreach ($items as &$item) {
+            $item['available'] = $item['qty'];
         }
-
-        // If no ticket_breakdown data on previous payouts, fall back to ratio estimation
-        $fin = $financials ?? self::calculateEventFinancials($event);
-        $hasExactData = !empty($alreadyPaidPerType);
-
-        if (!$hasExactData && ($fin['paid'] + $fin['pending']) > 0) {
-            $paidRatio = $fin['net'] > 0 ? ($fin['paid'] + $fin['pending']) / $fin['net'] : 1;
-            $paidRatio = min(1, max(0, $paidRatio));
-        }
-
-        $items = [];
-        foreach ($event->ticketTypes as $tt) {
-            $totalSold = $ticketCounts[$tt->id] ?? 0;
-            if ($totalSold <= 0) continue;
-
-            // How many tickets remain (not yet paid out)
-            if ($hasExactData) {
-                $alreadyPaid = $alreadyPaidPerType[$tt->id] ?? 0;
-            } else {
-                $alreadyPaid = isset($paidRatio) ? (int) round($totalSold * $paidRatio) : 0;
-            }
-            $remaining = max(0, $totalSold - $alreadyPaid);
-
-            // price_cents = BASE price
-            $basePrice = (float) ($tt->sale_price_cents ? $tt->sale_price_cents / 100 : ($tt->price_cents ? $tt->price_cents / 100 : 0));
-
-            // Commission on BASE price
-            if ($tt->commission_type && $tt->commission_type !== '') {
-                $commPerTicket = match ($tt->commission_type) {
-                    'percentage' => round($basePrice * (($tt->commission_rate ?? 0) / 100), 2),
-                    'fixed' => (float) ($tt->commission_fixed ?? 0),
-                    'both' => round($basePrice * (($tt->commission_rate ?? 0) / 100), 2) + (float) ($tt->commission_fixed ?? 0),
-                    default => round($basePrice * ($commissionRate / 100), 2),
-                };
-            } else {
-                $commPerTicket = round($basePrice * ($commissionRate / 100), 2);
-            }
-
-            if ($remaining > 0) {
-                $items[] = [
-                    'ticket_type_id' => $tt->id,
-                    'ticket_type_name' => is_array($tt->name) ? ($tt->name['ro'] ?? $tt->name['en'] ?? '') : $tt->name,
-                    'available' => $remaining,
-                    'unit_price' => $basePrice,
-                    'commission_per_ticket' => $commPerTicket,
-                    'qty' => $remaining, // default: all remaining tickets
-                ];
-            }
-        }
-
+        unset($item);
         $set('payout_tickets', $items);
     }
 
     /**
-     * Same logic as populatePayoutTicketsFromEvent but without the Filament Set
-     * dependency — returns the items array directly. Used by automated payout
-     * generation from the "Evenimente încheiate" modal.
+     * Same as populatePayoutTicketsFromEvent but returns the items array
+     * directly. Used by automated payout generation from the "Evenimente
+     * încheiate" modal. Same delegation to keep effective-price + commission
+     * logic in one place.
      */
     public function buildTicketBreakdownForEvent(Event $event): array
     {
-        $commissionRate = $event->getEffectiveCommissionRate();
-
-        // Same POS exclusion as populatePayoutTicketsFromEvent — see the
-        // comment there for the full rationale. The payouts generated from
-        // the "Evenimente încheiate" modal must NOT include POS tickets.
-        $ticketCounts = \App\Models\Ticket::whereHas('ticketType', fn ($q) => $q->where('event_id', $event->id))
-            ->whereIn('status', ['valid', 'used'])
-            ->where(function ($q) {
-                $q->whereHas('order', function ($q2) {
-                    $q2->whereIn('status', ['paid', 'confirmed', 'completed'])
-                        ->where('source', '!=', 'external_import')
-                        ->where('source', '!=', 'pos_app')
-                        ->where('source', '!=', 'test_order');
-                })->orWhereNull('order_id');
-            })
-            ->select('ticket_type_id', \DB::raw('COUNT(*) as cnt'))
-            ->groupBy('ticket_type_id')
-            ->pluck('cnt', 'ticket_type_id')
-            ->toArray();
-
-        $organizer = $event->marketplaceOrganizer;
-        $alreadyPaidPerType = [];
-        if ($organizer) {
-            $previousPayouts = MarketplacePayout::where('marketplace_organizer_id', $organizer->id)
-                ->where('event_id', $event->id)
-                ->whereIn('status', ['completed', 'processing', 'approved', 'pending'])
-                ->whereNotNull('ticket_breakdown')
-                ->get();
-
-            foreach ($previousPayouts as $pp) {
-                foreach ($pp->ticket_breakdown ?? [] as $tb) {
-                    $ttId = $tb['ticket_type_id'] ?? null;
-                    if ($ttId) {
-                        $alreadyPaidPerType[$ttId] = ($alreadyPaidPerType[$ttId] ?? 0) + (int) ($tb['qty'] ?? 0);
-                    }
-                }
-            }
-        }
-
-        $items = [];
-        foreach ($event->ticketTypes as $tt) {
-            $totalSold = $ticketCounts[$tt->id] ?? 0;
-            if ($totalSold <= 0) continue;
-
-            $alreadyPaid = $alreadyPaidPerType[$tt->id] ?? 0;
-            $remaining = max(0, $totalSold - $alreadyPaid);
-            if ($remaining <= 0) continue;
-
-            $basePrice = (float) ($tt->sale_price_cents ? $tt->sale_price_cents / 100 : ($tt->price_cents ? $tt->price_cents / 100 : 0));
-
-            if ($tt->commission_type && $tt->commission_type !== '') {
-                $commPerTicket = match ($tt->commission_type) {
-                    'percentage' => round($basePrice * (($tt->commission_rate ?? 0) / 100), 2),
-                    'fixed' => (float) ($tt->commission_fixed ?? 0),
-                    'both' => round($basePrice * (($tt->commission_rate ?? 0) / 100), 2) + (float) ($tt->commission_fixed ?? 0),
-                    default => round($basePrice * ($commissionRate / 100), 2),
-                };
-            } else {
-                $commPerTicket = round($basePrice * ($commissionRate / 100), 2);
-            }
-
-            $items[] = [
-                'ticket_type_id' => $tt->id,
-                'ticket_type_name' => is_array($tt->name) ? ($tt->name['ro'] ?? $tt->name['en'] ?? '') : $tt->name,
-                'available' => $remaining,
-                'unit_price' => $basePrice,
-                'commission_per_ticket' => $commPerTicket,
-                'qty' => $remaining,
-            ];
-        }
-
-        return $items;
+        // No augmentation needed for the auto-payout path — buildBreakdownFromSelection
+        // consumes the items directly and doesn't care about the `available` field.
+        return MarketplacePayout::buildRemainingTicketsItems($event, null, null);
     }
-
-
 
     /**
      * Calculate event financials: gross, commission (per-ticket-type aware), net.
