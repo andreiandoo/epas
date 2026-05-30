@@ -24,22 +24,39 @@ if (!preg_match('/^[a-z][a-z0-9-]+$/', $slug)) {
     exit;
 }
 
-// 1. Try category first (categories tend to be more numerous in seed data
-// and are the primary SEO landing targets).
+// 1. Try category by exact slug first. If the slug is the LEGACY long
+//    form ({child}-{parent}), 301-redirect to the new short canonical URL.
+//    The short form is what we link from internal nav + what's set as
+//    the canonical in <head>, so Google replaces the old URL within a
+//    few crawls and the link juice transfers automatically.
 $category = navGetCategoryBySlug($slug);
+if ($category) {
+    $shortSlug = bo_short_category_slug($category);
+    if ($shortSlug && $shortSlug !== $slug) {
+        header('Location: /' . $shortSlug, true, 301);
+        exit;
+    }
+    require __DIR__ . '/category.php';
+    return;
+}
+
+// 2. The slug didn't match an exact category record — try as a SHORT
+//    form (e.g. /muzee-de-stiinta resolves to the category whose stored
+//    slug is muzee-de-stiinta-muzee-expozitii).
+$category = bo_find_category_by_short_slug($slug);
 if ($category) {
     require __DIR__ . '/category.php';
     return;
 }
 
-// 2. Try city.
+// 3. Try city.
 $cityData = navGetCityBySlug($slug);
 if ($cityData) {
     require __DIR__ . '/city.php';
     return;
 }
 
-// 3. Neither — 404.
+// 4. Neither — 404.
 http_response_code(404);
 require __DIR__ . '/404.php';
 exit;

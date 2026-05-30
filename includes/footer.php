@@ -36,7 +36,7 @@ if (! isset($footerCategories)) {
     foreach ((is_array($rows) ? $rows : []) as $c) {
         $footerCategories[] = [
             'label' => $c['name'] ?? $c['slug'] ?? '',
-            'href'  => '/' . ($c['slug'] ?? ''),
+            'href'  => '/' . (function_exists('bo_short_category_slug') ? bo_short_category_slug($c) : ($c['slug'] ?? '')),
         ];
         if (count($footerCategories) >= 6) break;
     }
