@@ -130,6 +130,99 @@ function navGetCategoryBySlug(string $slug): ?array
 }
 
 /**
+ * Strip the parent-slug suffix from a subcategory slug so URLs render
+ * in their short form. Returns the original slug unchanged for top-level
+ * categories (no parent suffix to strip).
+ *
+ * Examples:
+ *   "muzee-de-stiinta-muzee-expozitii" → "muzee-de-stiinta"
+ *   "escape-rooms-clasice-escape-rooms" → "escape-rooms-clasice"
+ *   "escape-rooms"                      → "escape-rooms"  (top-level, unchanged)
+ *
+ * The legacy long slug stays the canonical record in the DB; this helper
+ * is what we use for OUTBOUND links + the 301 redirect target. Inbound
+ * requests for the long form get a 301 to the short form (see slug.php).
+ */
+function bo_short_category_slug($category): string
+{
+    if (is_array($category)) {
+        $slug = $category['slug'] ?? '';
+        $parentSlug = $category['parent_slug']
+            ?? ($category['parent']['slug'] ?? null);
+    } else {
+        $slug = (string) $category;
+        $parentSlug = null;
+    }
+
+    if (! $slug) return '';
+
+    // Explicit parent — strip if it matches the trailing segment.
+    if ($parentSlug && $slug !== $parentSlug) {
+        if (str_ends_with($slug, '-' . $parentSlug)) {
+            return substr($slug, 0, -1 - strlen($parentSlug));
+        }
+    }
+
+    // Fallback: scan all known top-level categories. The category list is
+    // already memoised by navGetCategories(); we walk the cached parents and
+    // strip the longest matching trailing segment.
+    static $parentsCache = null;
+    if ($parentsCache === null) {
+        $parentsCache = [];
+        try {
+            foreach (navGetCategories(50) as $cat) {
+                if (! empty($cat['slug']) && empty($cat['parent_id'])) {
+                    $parentsCache[] = $cat['slug'];
+                }
+            }
+            usort($parentsCache, fn ($a, $b) => strlen($b) - strlen($a));
+        } catch (\Throwable $e) {
+            $parentsCache = [];
+        }
+    }
+    foreach ($parentsCache as $p) {
+        if ($slug !== $p && str_ends_with($slug, '-' . $p)) {
+            return substr($slug, 0, -1 - strlen($p));
+        }
+    }
+    return $slug;
+}
+
+/**
+ * Reverse lookup — given a short category slug like "muzee-de-stiinta",
+ * find the full category record whose stored slug strips down to it.
+ *
+ * Used by slug.php to render the short URL without forcing every category
+ * to be migrated in the DB.
+ */
+function bo_find_category_by_short_slug(string $shortSlug): ?array
+{
+    if ($shortSlug === '') return null;
+    // Cache the lookup table for the lifetime of the request (cheap — we
+    // call this at most once per page load).
+    static $shortToFull = null;
+    if ($shortToFull === null) {
+        $shortToFull = [];
+        try {
+            // Pull ALL categories (parents + subcategories). navGetCategories
+            // already caches the API result.
+            foreach (navGetCategories(200) as $cat) {
+                $candidate = bo_short_category_slug($cat);
+                if ($candidate && ! isset($shortToFull[$candidate])) {
+                    $shortToFull[$candidate] = $cat;
+                }
+            }
+        } catch (\Throwable $e) {}
+    }
+    if (! isset($shortToFull[$shortSlug])) return null;
+
+    // Re-resolve via navGetCategoryBySlug so the page gets the full
+    // payload (description, hero image, related categories etc.).
+    return navGetCategoryBySlug($shortToFull[$shortSlug]['slug'])
+        ?: $shortToFull[$shortSlug];
+}
+
+/**
  * Fetch a single city by slug. Returns the full city payload (with
  * description, cover, lat/lng, region, county, events_count) or null.
  */

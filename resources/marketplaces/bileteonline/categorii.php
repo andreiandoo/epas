@@ -99,7 +99,7 @@ $alpineCategories = array_map(function ($c) use ($defaultEmojis) {
     return [
         'title'    => navFlatName($c['name'] ?? '') ?: ($c['slug'] ?? ''),
         'slug'     => $c['slug'] ?? '',
-        'url'      => '/' . ($c['slug'] ?? ''),
+        'url'      => '/' . bo_short_category_slug($c),
         'emoji'    => $emoji,
         'image'    => $c['image'] ?? null,
         'desc'     => navFlatName($c['description'] ?? '') ?: '',

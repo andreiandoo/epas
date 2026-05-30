@@ -153,7 +153,12 @@ if ($cityFilter) {
     $pageTitleRaw = $metaTitle;
     $pageDescription = $metaDescription;
 }
-$canonicalUrl = SITE_URL . '/' . $slug;
+// Canonical URL — always the short form. Even when this page renders
+// from the legacy long slug (e.g. the customer typed it directly), we
+// tell Google + the browser that the short URL is the real one. slug.php
+// also 301-redirects long → short, so this stays consistent across paths.
+$shortSlug = bo_short_category_slug($category ?? ['slug' => $slug]);
+$canonicalUrl = SITE_URL . '/' . ($shortSlug ?: $slug);
 $ogImage = $catImage ? (str_starts_with($catImage, 'http') ? $catImage : STORAGE_URL . '/' . ltrim($catImage, '/')) : (SITE_URL . '/assets/images/og-default.jpg');
 $currentPage = 'category';
 $cssBundle = 'listing';
@@ -345,7 +350,7 @@ include __DIR__ . '/includes/header.php';
             $childEmoji = $child['icon_emoji'] ?? '';
             $childCount = (int) ($child['event_count'] ?? 0);
         ?>
-            <a href="/<?= htmlspecialchars($childSlug, ENT_QUOTES) ?>" class="group flex items-center gap-3 p-4 rounded-2xl border-2 border-ink/10 bg-paper hover:border-ink hover:<?= $ac['bg-light'] ?> transition-colors">
+            <a href="/<?= htmlspecialchars(bo_short_category_slug($child), ENT_QUOTES) ?>" class="group flex items-center gap-3 p-4 rounded-2xl border-2 border-ink/10 bg-paper hover:border-ink hover:<?= $ac['bg-light'] ?> transition-colors">
                 <?php if ($childEmoji): ?>
                     <span class="grid place-items-center w-10 h-10 rounded-lg <?= $ac['bg-light'] ?> <?= $ac['text'] ?> shrink-0 group-hover:<?= $ac['bg'] ?> group-hover:text-paper transition-colors text-xl leading-none" aria-hidden="true"><?= htmlspecialchars($childEmoji) ?></span>
                 <?php else: ?>
