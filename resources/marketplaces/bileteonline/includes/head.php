@@ -232,6 +232,17 @@ echo implode(",\n", $bcItems) . "\n";
 window.BILETEONLINE = <?= json_encode($jsConfig, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>;
 </script>
 
+<!-- ===================== CORE GLOBALS (must come BEFORE Alpine) =====================
+     BileteOnlineAuth / BileteOnlineAPI / BileteOnlineUtils need to be on
+     window by the time Alpine fires `alpine:init`, so x-init / init() on
+     every component can read the current auth state without racing.
+     Defer scripts execute in document order, so these run before the
+     Alpine scripts below. -->
+<script defer src="<?= asset('assets/js/config.js') ?>"></script>
+<script defer src="<?= asset('assets/js/utils.js') ?>"></script>
+<script defer src="<?= asset('assets/js/api.js') ?>"></script>
+<script defer src="<?= asset('assets/js/auth.js') ?>"></script>
+
 <!-- ===================== ALPINE.JS (deferred, in load order) ===================== -->
 <script defer src="<?= asset('assets/js/components/alpine-bootstrap.js') ?>"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>

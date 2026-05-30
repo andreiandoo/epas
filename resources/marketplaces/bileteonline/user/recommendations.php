@@ -131,6 +131,10 @@ function clientRecommendationsPage() {
         items: [],
         topCity: '',
         topCategories: [],
+        // Explicit prefs from /cont/setari (settings.interests.*) — these
+        // get higher weight than history-derived signals.
+        prefCities: [],
+        prefCategories: [],
         activeFilter: 'all',
         cityFilter: '',
 
@@ -141,7 +145,19 @@ function clientRecommendationsPage() {
         },
 
         async load() {
-            // Pull taste profile (best effort — endpoint may be partial)
+            // 1. Explicit prefs from settings (set via /cont/setari → Preferințe client).
+            //    These are the user's stated intent — they outrank historical signals.
+            try {
+                const me = await BileteOnlineAPI.customer.getProfile();
+                // /customer/me response varies: customer may be at data.*, data.customer.*, or both
+                const u = (me && me.data) || {};
+                const settings = (u.customer && u.customer.settings) || u.settings || u.preferences || {};
+                const interests = settings.interests || {};
+                this.prefCities = (Array.isArray(interests.preferred_cities) ? interests.preferred_cities : []).filter(Boolean);
+                this.prefCategories = (Array.isArray(interests.event_categories) ? interests.event_categories : []).filter(Boolean);
+            } catch (e) {}
+
+            // 2. Pull taste profile from history (best effort — endpoint may be partial)
             let profileData = null;
             try {
                 const p = await BileteOnlineAPI.customer.getProfileData();
@@ -153,36 +169,59 @@ function clientRecommendationsPage() {
                 if (s && s.data) profileData = Object.assign({}, profileData || {}, s.data);
             } catch (e) {}
 
+            // 3. Merge — explicit prefs come first, history fills in the gaps
+            let historyTopCity = '';
+            let historyCats = [];
             if (profileData) {
-                this.topCity = profileData.top_city || profileData.preferred_city || profileData.most_visited_city || '';
+                historyTopCity = profileData.top_city || profileData.preferred_city || profileData.most_visited_city || '';
                 const cats = profileData.top_categories || profileData.preferred_categories || profileData.preferred_genres || [];
-                this.topCategories = (Array.isArray(cats) ? cats : []).map(c => typeof c === 'string' ? c : (c.name || c.slug || '')).filter(Boolean).slice(0, 8);
+                historyCats = (Array.isArray(cats) ? cats : []).map(c => typeof c === 'string' ? c : (c.name || c.slug || '')).filter(Boolean);
             }
+            this.topCity = (this.prefCities[0] || historyTopCity || '');
+            // Show explicit categories first, then top history categories not already in the list
+            const merged = [...this.prefCategories];
+            historyCats.forEach(c => { if (! merged.some(m => m.toLowerCase() === c.toLowerCase())) merged.push(c); });
+            this.topCategories = merged.slice(0, 8);
 
-            // Pull a pool of recent activities, rank client-side
+            // 4. Pull a pool of recent activities, rank client-side
             try {
                 const r = await BileteOnlineAPI.get('/activities?sort=recent&per_page=30');
                 const list = (r && r.data && (r.data.items || r.data.activities)) || (r && r.data) || [];
                 const pool = (Array.isArray(list) ? list : []).map(a => ({
-                    title:    a.title || a.name || '',
-                    slug:     a.slug || '',
-                    image:    a.cover_image_url || a.image || null,
-                    city:     a.city ? (a.city.name || a.city) : '',
-                    category: a.category ? (a.category.name || a.category) : '',
-                    tags:     a.tags || [],
-                    matchScore: 0,
+                    title:        a.title || a.name || '',
+                    slug:         a.slug || '',
+                    image:        a.cover_image_url || a.image || null,
+                    city:         a.city ? (a.city.name || a.city) : '',
+                    category:     a.category ? (a.category.name || a.category) : '',
+                    categorySlug: a.category ? (a.category.slug || (typeof a.category === 'string' ? a.category.toLowerCase() : '')) : '',
+                    tags:         a.tags || [],
+                    matchScore:   0,
                 }));
 
-                // Score by city + category overlap with taste profile
-                const lcCity = (this.topCity || '').toLowerCase();
-                const lcCats = this.topCategories.map(c => (c || '').toLowerCase());
+                const lcPrefCities = this.prefCities.map(c => (c || '').toLowerCase());
+                const lcPrefCats   = this.prefCategories.map(c => (c || '').toLowerCase());
+                const lcHistCity   = (historyTopCity || '').toLowerCase();
+                const lcHistCats   = historyCats.map(c => (c || '').toLowerCase());
+
                 pool.forEach(p => {
                     let score = 0;
-                    if (lcCity && (p.city || '').toLowerCase().includes(lcCity)) score += 3;
-                    if (lcCats.includes((p.category || '').toLowerCase())) score += 2;
+                    const pc = (p.city || '').toLowerCase();
+                    const pcat = (p.category || '').toLowerCase();
+                    const pcatSlug = (p.categorySlug || '').toLowerCase();
+
+                    // Explicit prefs (higher weight)
+                    if (lcPrefCities.length > 0 && lcPrefCities.some(c => pc.includes(c) || c.includes(pc))) score += 5;
+                    if (lcPrefCats.length > 0 && (lcPrefCats.includes(pcatSlug) || lcPrefCats.includes(pcat))) score += 4;
+
+                    // History signals (lower weight, additive)
+                    if (lcHistCity && pc.includes(lcHistCity)) score += 2;
+                    if (lcHistCats.includes(pcat)) score += 1;
                     (p.tags || []).forEach(t => {
-                        if (lcCats.includes(((typeof t === 'string') ? t : t.name || '').toLowerCase())) score += 1;
+                        const tl = ((typeof t === 'string') ? t : (t && (t.name || t.slug)) || '').toLowerCase();
+                        if (lcPrefCats.includes(tl)) score += 2;
+                        else if (lcHistCats.includes(tl)) score += 1;
                     });
+
                     p.matchScore = score;
                 });
                 pool.sort((a, b) => b.matchScore - a.matchScore);
