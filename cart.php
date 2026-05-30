@@ -137,6 +137,12 @@ include __DIR__ . '/includes/header.php';
                             <strong id="subtotal" class="font-medium">0.00 lei</strong>
                         </div>
 
+                        <!-- Payment processing fee preview (Stripe / Netopia) -->
+                        <div id="processingFeeRow" class="flex justify-between hidden">
+                            <span class="text-paper/60" id="processingFeeLabel">Taxa procesare card</span>
+                            <strong id="processingFeeAmount" class="font-medium">0.00 lei</strong>
+                        </div>
+
                         <!-- Savings -->
                         <div id="savingsRow" class="hidden px-3 py-2 bg-forest/30 rounded-xl">
                             <div class="flex items-center justify-between gap-2">
