@@ -366,6 +366,12 @@ include __DIR__ . '/includes/header.php';
                             <strong id="cultural-card-amount" class="text-ochre">+0.00 lei</strong>
                         </div>
 
+                        <!-- Payment processing fee preview (Stripe / Netopia) -->
+                        <div id="processing-fee-row" class="hidden flex justify-between">
+                            <span class="text-paper/60" id="processing-fee-label">Taxa procesare card</span>
+                            <strong id="processing-fee-amount" class="font-medium">0.00 lei</strong>
+                        </div>
+
                         <!-- Total -->
                         <div class="pt-4 border-t border-paper/15 flex justify-between gap-4 text-lg">
                             <span>Total de plată</span>

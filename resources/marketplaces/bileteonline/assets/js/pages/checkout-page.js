@@ -685,10 +685,43 @@ const CheckoutPage = {
             culturalCardSurcharge = Math.round(baseTotal * (this.culturalCardSurchargeRate / 100) * 100) / 100;
         }
 
-        const total = baseTotal + culturalCardSurcharge;
+        // Payment processing fee preview (Stripe et al.). Mirrors the
+        // server-side ProcessingFeeCalculator: applied AFTER all other
+        // adjustments so the customer sees the exact amount Stripe will
+        // pull. Skipped when paying with cultural-card (which has its own
+        // surcharge above and doesn't go through the same processor).
+        let processingFee = { amount: 0, percent_rate: 0, fixed: 0, provider: null, label: '', pass_to_customer: false };
+        try {
+            if (paymentMethod !== 'card_cultural'
+                && typeof BileteOnlineCart !== 'undefined'
+                && typeof BileteOnlineCart.computeProcessingFee === 'function') {
+                processingFee = BileteOnlineCart.computeProcessingFee(baseTotal + culturalCardSurcharge);
+                // Lazy-load config the first time + retrigger render once
+                // available so the row appears without a manual refresh.
+                if (! BileteOnlineCart.getPaymentFeeConfig() && BileteOnlineCart.loadPaymentFeeConfig) {
+                    if (! this._feeConfigReloadScheduled) {
+                        this._feeConfigReloadScheduled = true;
+                        BileteOnlineCart.loadPaymentFeeConfig().then(cfg => {
+                            if (cfg) this.renderSummary();
+                        });
+                    }
+                }
+            }
+        } catch (e) {}
+
+        const total = baseTotal + culturalCardSurcharge + processingFee.amount;
         const points = Math.floor(total / 10);
 
-        this.totals = { subtotal: subtotalWithCommission, tax: 0, discount: promoDiscount, insurance: insuranceAmount, culturalCardSurcharge, total, savings };
+        this.totals = {
+            subtotal: subtotalWithCommission,
+            tax: 0,
+            discount: promoDiscount,
+            insurance: insuranceAmount,
+            culturalCardSurcharge,
+            processingFee: processingFee.amount,
+            total,
+            savings,
+        };
 
         // Update DOM
         document.getElementById('summary-items').textContent = totalQty;
@@ -739,6 +772,29 @@ const CheckoutPage = {
                 document.getElementById('discount-amount').textContent = '-' + BileteOnlineUtils.formatCurrency(promoDiscount);
             } else {
                 discountRow.classList.add('hidden');
+            }
+        }
+
+        // Show/hide processing fee row + populate breakdown
+        const feeRow = document.getElementById('processing-fee-row');
+        if (feeRow) {
+            if (processingFee.amount > 0) {
+                feeRow.classList.remove('hidden');
+                document.getElementById('processing-fee-amount').textContent = BileteOnlineUtils.formatCurrency(processingFee.amount);
+                const feeLbl = document.getElementById('processing-fee-label');
+                if (feeLbl) {
+                    const pct = processingFee.percent_rate
+                        ? processingFee.percent_rate.toFixed(2).replace('.', ',').replace(/,?0+$/, '') + '%'
+                        : '';
+                    const fix = processingFee.fixed
+                        ? BileteOnlineUtils.formatCurrency(processingFee.fixed)
+                        : '';
+                    const parts = [pct, fix].filter(Boolean);
+                    const breakdown = parts.length ? ' (' + (processingFee.label || 'card') + ' ' + parts.join(' + ') + ')' : '';
+                    feeLbl.textContent = 'Taxa procesare card' + breakdown;
+                }
+            } else {
+                feeRow.classList.add('hidden');
             }
         }
 

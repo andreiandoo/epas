@@ -624,13 +624,62 @@ const CartPage = {
         if (liveDiscount > subtotalWithCommission) liveDiscount = subtotalWithCommission;
         // Keep this.discount in sync for callers that still read it.
         this.discount = liveDiscount;
-        let total = subtotalWithCommission - liveDiscount;
+        const subtotalAfterDiscount = subtotalWithCommission - liveDiscount;
+
+        // Payment processing fee preview (Stripe et al.). Computed against
+        // (subtotal + commission - discount) to match the order snapshot —
+        // ProcessingFeeCalculator on the server applies on the same base.
+        // Pre-warmed via BileteOnlineCart.init(); if it hasn't loaded yet
+        // (slow network) we render fee=0 now and refresh once it arrives.
+        let processingFee = { amount: 0, percent_rate: 0, fixed: 0, provider: null, label: '', pass_to_customer: false };
+        try {
+            if (typeof BileteOnlineCart !== 'undefined' && typeof BileteOnlineCart.computeProcessingFee === 'function') {
+                processingFee = BileteOnlineCart.computeProcessingFee(subtotalAfterDiscount);
+                // Lazy-load + re-render once if the config wasn't there yet.
+                if (! BileteOnlineCart.getPaymentFeeConfig() && BileteOnlineCart.loadPaymentFeeConfig) {
+                    if (! this._feeConfigReloadScheduled) {
+                        this._feeConfigReloadScheduled = true;
+                        BileteOnlineCart.loadPaymentFeeConfig().then(cfg => {
+                            if (cfg) this.updateSummary();
+                        });
+                    }
+                }
+            }
+        } catch (e) {}
+
+        let total = subtotalAfterDiscount + processingFee.amount;
         const points = Math.floor(total / 10);
 
         // Update DOM
         document.getElementById('totalItems').textContent = totalItems;
         document.getElementById('summaryItems').textContent = totalItems;
         document.getElementById('subtotal').textContent = BileteOnlineUtils.formatCurrency(subtotalWithCommission);
+
+        // Show/hide processing fee row + populate
+        const feeRow = document.getElementById('processingFeeRow');
+        const feeAmt = document.getElementById('processingFeeAmount');
+        const feeLbl = document.getElementById('processingFeeLabel');
+        if (feeRow && feeAmt) {
+            if (processingFee.amount > 0) {
+                feeRow.classList.remove('hidden');
+                feeAmt.textContent = BileteOnlineUtils.formatCurrency(processingFee.amount);
+                // Surface what's being charged so customers don't see a
+                // mystery line — "Taxa procesare card (Stripe 2,5% + 1,00 lei)".
+                if (feeLbl) {
+                    const pct = processingFee.percent_rate
+                        ? processingFee.percent_rate.toFixed(2).replace('.', ',').replace(/,?0+$/, '') + '%'
+                        : '';
+                    const fix = processingFee.fixed
+                        ? BileteOnlineUtils.formatCurrency(processingFee.fixed)
+                        : '';
+                    const parts = [pct, fix].filter(Boolean);
+                    const breakdown = parts.length ? ' (' + (processingFee.label || 'card') + ' ' + parts.join(' + ') + ')' : '';
+                    feeLbl.textContent = 'Taxa procesare card' + breakdown;
+                }
+            } else {
+                feeRow.classList.add('hidden');
+            }
+        }
 
         // Render breakdown in taxes container - grouped by event
         const taxesContainer = document.getElementById('taxesContainer');
