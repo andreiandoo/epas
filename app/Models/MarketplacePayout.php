@@ -104,6 +104,28 @@ class MarketplacePayout extends Model
                 $name = $tt ? (is_array($tt->name) ? ($tt->name['ro'] ?? $tt->name['en'] ?? 'Unknown') : (string) $tt->name) : 'Unknown';
             }
 
+            // Tiers can arrive out-of-sync with qty when the operator manually
+            // shrinks the parent qty in the edit-tickets modal without touching
+            // the Hidden('tiers') field. The PDF expands tiers back into row
+            // lines (50lei*2+40lei*2…), so if Σ tier.qty != qty, the PDF would
+            // print the original tier count and contradict the saved qty.
+            // Normalize the invariant here so every downstream consumer can
+            // trust that tier-sum == qty.
+            $tiers = is_array($item['tiers'] ?? null) ? $item['tiers'] : [];
+            if (!empty($tiers)) {
+                $tierQty = [];
+                $tierSum = 0;
+                foreach ($tiers as $tier) {
+                    $price = (string) round((float) ($tier['price'] ?? 0), 2);
+                    $tQty = (int) ($tier['qty'] ?? 0);
+                    $tierQty[$price] = ($tierQty[$price] ?? 0) + $tQty;
+                    $tierSum += $tQty;
+                }
+                if ($tierSum > 0 && $tierSum !== $qty) {
+                    $tiers = self::scaleTiers($tierQty, $tierSum, $qty);
+                }
+            }
+
             $rows[] = [
                 'ticket_type_id' => $ttId,
                 'ticket_type_name' => $name,
@@ -121,7 +143,7 @@ class MarketplacePayout extends Model
                 // Per-price tier breakdown — list of {price, qty} sub-rows.
                 // Lets the PDF render "50lei*2+40lei*2" when a type was sold
                 // at mixed catalog/promo prices. Scaled with qty in Pass 3.
-                'tiers' => is_array($item['tiers'] ?? null) ? $item['tiers'] : [],
+                'tiers' => $tiers,
             ];
         }
 
@@ -397,7 +419,7 @@ class MarketplacePayout extends Model
      * @param array<string, int> $tierQty
      * @return array<int, array{price: float, qty: int}>
      */
-    protected static function scaleTiers(array $tierQty, int $totalSold, int $remaining): array
+    public static function scaleTiers(array $tierQty, int $totalSold, int $remaining): array
     {
         if ($remaining <= 0 || $totalSold <= 0 || empty($tierQty)) {
             return [];

@@ -2018,10 +2018,28 @@ class MarketplaceTaxTemplate extends Model
         // the PDF can render "50lei*2+40lei*2" and the per-tier sum matches
         // the effective organizer net. Rows without tiers (legacy deconturi,
         // manual edits) emit a single tier from price × qty — same as before.
+        //
+        // Defensive normalize: legacy deconturi saved before the qty/tier
+        // invariant was enforced may have Σ tier.qty != row qty (the operator
+        // shrank qty manually without re-running the scaler). Re-scale tiers
+        // to the row qty here so the rendered PDF total matches the saved
+        // selection, not the stale tier sum.
         $tierRows = [];
         foreach ($ticketBreakdown as $item) {
             $tiers = $item['tiers'] ?? null;
             if (is_array($tiers) && !empty($tiers)) {
+                $rowQty = (int) ($item['quantity'] ?? $item['qty'] ?? 0);
+                $tierSum = 0;
+                $tierQty = [];
+                foreach ($tiers as $tier) {
+                    $priceKey = (string) round((float) ($tier['price'] ?? 0), 2);
+                    $tQty = (int) ($tier['qty'] ?? 0);
+                    $tierQty[$priceKey] = ($tierQty[$priceKey] ?? 0) + $tQty;
+                    $tierSum += $tQty;
+                }
+                if ($rowQty > 0 && $tierSum > 0 && $tierSum !== $rowQty) {
+                    $tiers = \App\Models\MarketplacePayout::scaleTiers($tierQty, $tierSum, $rowQty);
+                }
                 foreach ($tiers as $tier) {
                     $tierRows[] = array_merge($item, [
                         'price' => (float) ($tier['price'] ?? 0),
