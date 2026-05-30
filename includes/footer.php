@@ -155,6 +155,20 @@ $supportEmail = defined('SUPPORT_EMAIL') ? SUPPORT_EMAIL : '';
     </div>
 </footer>
 
+<!-- ===================== CORE JS (api, auth, cart, utils, notifications) =====================
+     These define the BileteOnline* globals every page relies on
+     (BileteOnlineAPI, BileteOnlineAuth, BileteOnlineCart, BileteOnlineUtils,
+     BileteOnlineNotifications). Load order matters: config → utils → api →
+     auth → cart → notifications → tracking. All `defer`, so they execute
+     after HTML parsing in document order, before page-specific scripts. -->
+<script defer src="<?= asset('assets/js/config.js') ?>"></script>
+<script defer src="<?= asset('assets/js/utils.js') ?>"></script>
+<script defer src="<?= asset('assets/js/api.js') ?>"></script>
+<script defer src="<?= asset('assets/js/auth.js') ?>"></script>
+<script defer src="<?= asset('assets/js/cart.js') ?>"></script>
+<script defer src="<?= asset('assets/js/components/notifications.js') ?>"></script>
+<script defer src="<?= asset('assets/js/tracking.js') ?>"></script>
+
 <!-- ===================== PAGE-BOTTOM SCRIPTS ===================== -->
 <script defer src="<?= asset('assets/js/components/scroll-reveal.js') ?>"></script>
 <?php foreach ($footerExtraJs as $jsPath): ?>
