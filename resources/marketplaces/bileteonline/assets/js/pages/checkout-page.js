@@ -513,13 +513,29 @@ const CheckoutPage = {
         let hasAddedOnTopCommission = false;
 
         this.items.forEach(item => {
-            const eventId = item.eventId || item.event?.id || 'unknown';
-            const eventTitle = item.event?.title || item.event?.name || item.event_title || 'Eveniment';
-            const eventImage = item.event?.image || item.event_image || '/assets/images/default-event.png';
-            const eventDate = item.event?.date || item.event_date || '';
-            const venueName = item.event?.venue?.name || (typeof item.event?.venue === 'string' ? item.event.venue : '') || item.venue_name || '';
+            // Activities use a different shape than event tickets — the
+            // same fix we made in cart-page.js applies here so the
+            // /finalizare summary calc doesn't crash on activity items.
+            const isActivity = item.type === 'activity';
 
-            const cityName = item.event?.city?.name || item.event?.city || item.event?.venue?.city || '';
+            const eventId    = isActivity
+                ? ('activity-' + (item.activity?.id || item.activity_id || 'unknown'))
+                : (item.eventId || item.event?.id || 'unknown');
+            const eventTitle = isActivity
+                ? (item.activity?.title || item.activity?.name || 'Activitate')
+                : (item.event?.title || item.event?.name || item.event_title || 'Eveniment');
+            const eventImage = isActivity
+                ? (item.activity?.image || '/assets/images/default-event.png')
+                : (item.event?.image || item.event_image || '/assets/images/default-event.png');
+            const eventDate  = isActivity
+                ? (item.booking_date || '')
+                : (item.event?.date || item.event_date || '');
+            const venueName  = isActivity
+                ? (item.activity?.venue || '')
+                : (item.event?.venue?.name || (typeof item.event?.venue === 'string' ? item.event.venue : '') || item.venue_name || '');
+            const cityName   = isActivity
+                ? (item.activity?.city || '')
+                : (item.event?.city?.name || item.event?.city || item.event?.venue?.city || '');
 
             if (!eventGroups[eventId]) {
                 eventGroups[eventId] = {
@@ -530,14 +546,23 @@ const CheckoutPage = {
                     city: cityName,
                     tickets: [],
                     subtotal: 0,
-                    commission: 0
+                    commission: 0,
+                    isActivity: isActivity
                 };
             }
 
-            const price = item.ticketType?.price || item.price || 0;
-            const originalPrice = item.ticketType?.originalPrice || item.original_price || 0;
-            const ticketTypeName = item.ticketType?.name || item.ticket_type_name || 'Bilet';
-            const qty = item.quantity || 1;
+            const price = isActivity
+                ? ((typeof item.variant?.price === 'number' ? item.variant.price : item.price) || 0)
+                : (item.ticketType?.price || item.price || 0);
+            const originalPrice = isActivity
+                ? (item.variant?.originalPrice || item.original_price || 0)
+                : (item.ticketType?.originalPrice || item.original_price || 0);
+            const ticketTypeName = isActivity
+                ? (item.variant?.name || 'Rezervare')
+                : (item.ticketType?.name || item.ticket_type_name || 'Bilet');
+            const qty = isActivity
+                ? (item.participants_count || item.quantity || 1)
+                : (item.quantity || 1);
 
             // Calculate per-ticket commission using cart helper
             const commission = BileteOnlineCart.calculateItemCommission(item);
