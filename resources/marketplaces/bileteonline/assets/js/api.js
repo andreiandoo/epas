@@ -4,15 +4,47 @@
  */
 
 const BileteOnlineAPI = {
-    // In-memory cache for GET requests
+    // In-memory cache for GET requests (public + authenticated). Keyed by
+    // (URL + token-hash) so one user's cache never leaks to another, and so
+    // a logout-and-relogin invalidates everything automatically.
     _cache: new Map(),
+    // In-flight Promise dedupe: if 5 components on the same page call
+    // /customer/me at the same instant, only one fetch goes out and all 5
+    // await the same Promise. Cleared on resolve/reject.
+    _inflight: new Map(),
     _cacheTTL: {
-        'config': 300000,        // 5 min
-        'events': 30000,         // 30 sec â€” near-instant visibility of newly published events
+        // Public endpoints — long TTL
+        'config': 300000,
+        'events': 30000,
         'events.featured': 60000,
-        'events.past': 300000,   // 5 min
+        'events.past': 300000,
         'categories': 300000,
-        'event': 30000,          // 30 sec
+        'event': 30000,
+        'cities': 600000,
+        // Authenticated /cont/* endpoints — short TTL so they de-dupe the
+        // sidebar + page double-fetch but stay fresh after any mutation.
+        'customer.me': 60000,
+        'customer.profile-data': 60000,
+        'customer.smart-suggestions': 60000,
+        'customer.stats.dashboard': 30000,
+        'customer.upcoming-events': 30000,
+        'customer.rewards': 30000,
+        'customer.rewards.config': 600000,  // static, rarely changes
+        'customer.rewards.history': 30000,
+        'customer.referrals': 60000,
+        'customer.recommendations': 60000,
+        'customer.reviews.meta': 600000,
+        'customer.reviews.to-write': 30000,
+        'customer.beneficiaries': 60000,
+        'customer.sessions': 30000,
+        'customer.2fa.status': 60000,
+        'customer.payment-methods': 60000,
+        'customer.gdpr.export.status': 30000,
+        'customer.gift-cards': 60000,
+        'customer.orders': 15000,           // recent orders refresh quickly
+        'customer.tickets.all': 15000,
+        'customer.support.index': 15000,
+        'customer.reviews': 30000,
         'default': 30000,
     },
 
@@ -21,10 +53,28 @@ const BileteOnlineAPI = {
     },
 
     clearCache(pattern) {
-        if (!pattern) { this._cache.clear(); return; }
+        if (!pattern) {
+            this._cache.clear();
+            this._inflight.clear();
+            return;
+        }
         for (const key of this._cache.keys()) {
             if (key.includes(pattern)) this._cache.delete(key);
         }
+        for (const key of this._inflight.keys()) {
+            if (key.includes(pattern)) this._inflight.delete(key);
+        }
+    },
+
+    // Tiny non-crypto hash so the auth token is bound to the cache key
+    // without storing the raw token anywhere except headers.
+    _hashToken(t) {
+        if (! t) return 'anon';
+        let h = 0;
+        for (let i = 0; i < t.length; i++) {
+            h = ((h << 5) - h + t.charCodeAt(i)) | 0;
+        }
+        return 'auth_' + (h >>> 0).toString(36);
     },
 
     /**
@@ -80,50 +130,63 @@ const BileteOnlineAPI = {
             headers['Authorization'] = `Bearer ${authToken}`;
         }
 
-        // Cache GET requests (skip if preview mode, authenticated, or non-GET)
+        // Cache GET requests including authenticated ones — the cache key
+        // binds the token hash so users never see each other's data, and a
+        // logout/relogin invalidates everything automatically. Skip cache on
+        // preview mode, non-GET, or explicit { noCache: true }.
         const method = (options.method || 'GET').toUpperCase();
         const isPreview = new URLSearchParams(window.location.search).get('preview') === '1';
-        const useCache = method === 'GET' && !authToken && !isPreview && !options.noCache;
-        const cacheKey = url;
+        const useCache = method === 'GET' && !isPreview && !options.noCache;
+        const cacheKey = this._hashToken(authToken) + ':' + url;
 
         if (useCache) {
             const cached = this._cache.get(cacheKey);
             if (cached && Date.now() - cached.time < this._getCacheTTL(action)) {
                 return cached.data;
             }
+            // In-flight dedupe — return the existing Promise so 5 components
+            // calling /customer/me at the same instant share one fetch.
+            const inflight = this._inflight.get(cacheKey);
+            if (inflight) return inflight;
         }
 
-        try {
-            const response = await fetch(url, {
-                ...options,
-                headers
-            });
+        // Invalidate cached GETs whenever the user MUTATES anything customer-
+        // related (PUT /customer/settings, POST /customer/2fa/confirm, …).
+        // Coarse on purpose — keeps client/server state in sync without
+        // building per-route invalidation maps.
+        if (method !== 'GET' && action.startsWith('customer.')) {
+            this.clearCache('customer.');
+        }
 
-            const data = await response.json();
+        const fetchPromise = (async () => {
+            try {
+                const response = await fetch(url, { ...options, headers });
+                const data = await response.json();
 
-            if (!response.ok) {
-                var apiErr = new APIError(data.message || data.error || 'An error occurred', response.status, data.errors);
-                apiErr.data = data;
-                throw apiErr;
-            }
-
-            // Store in cache for GET requests
-            if (useCache) {
-                this._cache.set(cacheKey, { data, time: Date.now() });
-                // Limit cache size to 50 entries
-                if (this._cache.size > 50) {
-                    const firstKey = this._cache.keys().next().value;
-                    this._cache.delete(firstKey);
+                if (!response.ok) {
+                    var apiErr = new APIError(data.message || data.error || 'An error occurred', response.status, data.errors);
+                    apiErr.data = data;
+                    throw apiErr;
                 }
-            }
 
-            return data;
-        } catch (error) {
-            if (error instanceof APIError) {
-                throw error;
+                if (useCache) {
+                    this._cache.set(cacheKey, { data, time: Date.now() });
+                    if (this._cache.size > 50) {
+                        const firstKey = this._cache.keys().next().value;
+                        this._cache.delete(firstKey);
+                    }
+                }
+                return data;
+            } catch (error) {
+                if (error instanceof APIError) throw error;
+                throw new APIError('Network error. Please check your connection.', 0);
+            } finally {
+                this._inflight.delete(cacheKey);
             }
-            throw new APIError('Network error. Please check your connection.', 0);
-        }
+        })();
+
+        if (useCache) this._inflight.set(cacheKey, fetchPromise);
+        return fetchPromise;
     },
 
     /**
