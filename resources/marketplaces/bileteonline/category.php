@@ -304,10 +304,14 @@ include __DIR__ . '/includes/header.php';
             <!-- decorative ticket (uses admin color + emoji) -->
             <div class="hidden lg:block relative h-72" aria-hidden="true">
                 <div class="ticket ticket-lift absolute right-4 top-2 w-[80%] rotate-6 bg-ink text-paper rounded-2xl overflow-hidden border-2 border-ink shadow-2xl" style="--perf:72%; --punch:#1B1714">
-                    <div class="duotone h-32 bg-gradient-to-br <?= $ac['gradient'] ?> <?= $ac['text'] ?>">
+                    <div class="duotone h-32 relative overflow-hidden bg-gradient-to-br <?= $ac['gradient'] ?> <?= $ac['text'] ?>">
+                        <?php if (!empty($catImage)): ?>
+                            <img src="<?= htmlspecialchars(str_starts_with($catImage, 'http') ? $catImage : STORAGE_URL . '/' . ltrim($catImage, '/'), ENT_QUOTES) ?>" alt="<?= htmlspecialchars($catName, ENT_QUOTES) ?>" loading="lazy" class="absolute inset-0 w-full h-full object-cover" />
+                            <div class="absolute inset-0 bg-gradient-to-t from-ink/55 to-transparent"></div>
+                        <?php endif; ?>
                         <div class="grid-tex"></div>
                         <span class="stamp absolute top-4 left-4 text-paper/80 px-3 py-1 text-[10px] font-mono -rotate-6"><?= htmlspecialchars(strtoupper($catName)) ?></span>
-                        <span class="absolute right-5 bottom-2 text-5xl opacity-30"><?= htmlspecialchars($catIcon) ?></span>
+                        <?php if (empty($catImage)): ?><span class="absolute right-5 bottom-2 text-5xl opacity-30"><?= htmlspecialchars($catIcon) ?></span><?php endif; ?>
                     </div>
                     <div class="p-5">
                         <p class="font-mono text-[10px] text-paper/50">ADMIT ONE · QR</p>

@@ -1357,6 +1357,7 @@ class MarketplaceEventsController extends BaseController
                 'slug'            => $cat->slug,
                 'icon'            => $cat->icon,
                 'icon_emoji'      => $cat->icon_emoji ?? null,
+                'image'           => $cat->image_full_url,
                 'color'           => $cat->color ?? null,
                 'parent_id'       => $cat->parent_id,
                 'description'     => $cat->getTranslation('description', $language),
