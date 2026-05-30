@@ -184,6 +184,12 @@ const BileteOnlineCart = {
                     city: activityData.city || null,
                     organizer_id: activityData.organizer_id || null,
                     duration_minutes: activityData.duration_minutes || null,
+                    // Effective organizer commission — set by the activity
+                    // detail page from ActivitiesController::show. Without it,
+                    // calculateItemCommission falls back to a 5% built-in
+                    // default which is almost always wrong.
+                    commission_rate: typeof activityData.commission_rate === 'number' ? activityData.commission_rate : null,
+                    commission_mode: activityData.commission_mode || null,
                 },
                 variant: {
                     id: variantData.id,
@@ -393,8 +399,14 @@ const BileteOnlineCart = {
         if (isActivity) {
             const basePrice = (typeof item.variant?.price === 'number' ? item.variant.price : item.price) || 0;
             const c = item.variant?.commission || item.activity?.commission || null;
-            const fallbackRate = item.activity?.commission_rate ?? 5;
-            const fallbackMode = item.activity?.commission_mode ?? 'included';
+            // Read organizer commission as stored on the cart item — set
+            // by activitate.php from the API. Only fall back to a 5%
+            // marketplace-default percentage when both are nullish (i.e.
+            // legacy items added before this field existed).
+            const fallbackRate = (typeof item.activity?.commission_rate === 'number')
+                ? item.activity.commission_rate
+                : 5;
+            const fallbackMode = item.activity?.commission_mode || 'included';
             if (c && c.type) {
                 let amount = 0;
                 switch (c.type) {

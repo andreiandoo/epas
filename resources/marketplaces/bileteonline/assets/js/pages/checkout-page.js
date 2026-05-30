@@ -743,7 +743,7 @@ const CheckoutPage = {
         }
 
         document.getElementById('summary-total').textContent = BileteOnlineUtils.formatCurrency(total);
-        document.getElementById('pay-btn-text').textContent = `PlÄƒteÈ™te ${BileteOnlineUtils.formatCurrency(total)}`;
+        document.getElementById('pay-btn-text').textContent = `Plătește ${BileteOnlineUtils.formatCurrency(total)}`;
         document.getElementById('points-earned').textContent = `${points} puncte`;
 
         // Savings
@@ -965,7 +965,7 @@ const CheckoutPage = {
                 BileteOnlineNotifications.error(error.message || 'Eroare la procesare. ÃŽncearcÄƒ din nou.');
             }
             payBtn.disabled = false;
-            payBtnText.textContent = `PlÄƒteÈ™te ${BileteOnlineUtils.formatCurrency(this.totals.total)}`;
+            payBtnText.textContent = `Plătește ${BileteOnlineUtils.formatCurrency(this.totals.total)}`;
         }
     }
 };

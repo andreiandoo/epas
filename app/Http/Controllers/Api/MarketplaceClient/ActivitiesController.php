@@ -236,9 +236,15 @@ class ActivitiesController extends BaseController
                 'name' => $this->translate($activity->category->name, $locale),
             ] : null,
             'organizer' => $activity->organizer ? [
-                'id'   => $activity->organizer->id,
-                'slug' => $activity->organizer->slug,
-                'name' => $activity->organizer->name,
+                'id'              => $activity->organizer->id,
+                'slug'            => $activity->organizer->slug,
+                'name'            => $activity->organizer->name,
+                // Commission settings — read effective values (organizer override
+                // first, marketplace_client fallback). The cart uses these to
+                // decide whether to add commission on top of the displayed
+                // price ('added_on_top') or treat the price as final ('included').
+                'commission_rate' => $activity->organizer->getEffectiveCommissionRate(),
+                'commission_mode' => $activity->organizer->getEffectiveCommissionMode(),
             ] : null,
             'flags' => [
                 'is_featured'    => (bool) $activity->is_featured,
