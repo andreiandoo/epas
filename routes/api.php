@@ -2290,7 +2290,75 @@ Route::prefix('marketplace-client/customer')->middleware(['throttle:120,1', 'mar
             ->name('api.marketplace-client.customer.gift-cards.claim');
         Route::get('/gift-cards/{giftCard}/transactions', [CustomerGiftCardController::class, 'transactions'])
             ->name('api.marketplace-client.customer.gift-cards.transactions');
+
+        // === bilete.online /cont/setari extra features (2026-05-30) ===
+
+        // 2FA — setup, confirm, disable, regenerate-codes, status
+        Route::get('/2fa/status', [\App\Http\Controllers\Api\MarketplaceClient\Customer\TwoFactorController::class, 'status'])
+            ->name('api.marketplace-client.customer.2fa.status');
+        Route::post('/2fa/initiate', [\App\Http\Controllers\Api\MarketplaceClient\Customer\TwoFactorController::class, 'initiate'])
+            ->name('api.marketplace-client.customer.2fa.initiate');
+        Route::post('/2fa/confirm', [\App\Http\Controllers\Api\MarketplaceClient\Customer\TwoFactorController::class, 'confirm'])
+            ->name('api.marketplace-client.customer.2fa.confirm');
+        Route::post('/2fa/disable', [\App\Http\Controllers\Api\MarketplaceClient\Customer\TwoFactorController::class, 'disable'])
+            ->name('api.marketplace-client.customer.2fa.disable');
+        Route::post('/2fa/recovery-codes/regenerate', [\App\Http\Controllers\Api\MarketplaceClient\Customer\TwoFactorController::class, 'regenerateRecoveryCodes'])
+            ->name('api.marketplace-client.customer.2fa.recovery-codes.regenerate');
+
+        // Sessions (active Sanctum tokens)
+        Route::get('/sessions', [\App\Http\Controllers\Api\MarketplaceClient\Customer\SessionsController::class, 'index'])
+            ->name('api.marketplace-client.customer.sessions');
+        Route::delete('/sessions/{id}', [\App\Http\Controllers\Api\MarketplaceClient\Customer\SessionsController::class, 'destroy'])
+            ->whereNumber('id')
+            ->name('api.marketplace-client.customer.sessions.destroy');
+        Route::delete('/sessions/all', [\App\Http\Controllers\Api\MarketplaceClient\Customer\SessionsController::class, 'destroyAllOthers'])
+            ->name('api.marketplace-client.customer.sessions.destroy-others');
+
+        // Beneficiaries (Familie)
+        Route::get('/beneficiaries', [\App\Http\Controllers\Api\MarketplaceClient\Customer\BeneficiariesController::class, 'index'])
+            ->name('api.marketplace-client.customer.beneficiaries');
+        Route::post('/beneficiaries', [\App\Http\Controllers\Api\MarketplaceClient\Customer\BeneficiariesController::class, 'store'])
+            ->middleware('throttle:30,1')
+            ->name('api.marketplace-client.customer.beneficiaries.store');
+        Route::put('/beneficiaries/{id}', [\App\Http\Controllers\Api\MarketplaceClient\Customer\BeneficiariesController::class, 'update'])
+            ->whereNumber('id')
+            ->name('api.marketplace-client.customer.beneficiaries.update');
+        Route::delete('/beneficiaries/{id}', [\App\Http\Controllers\Api\MarketplaceClient\Customer\BeneficiariesController::class, 'destroy'])
+            ->whereNumber('id')
+            ->name('api.marketplace-client.customer.beneficiaries.destroy');
+
+        // Payment methods (Stripe saved cards)
+        Route::get('/payment-methods', [\App\Http\Controllers\Api\MarketplaceClient\Customer\PaymentMethodsController::class, 'index'])
+            ->name('api.marketplace-client.customer.payment-methods');
+        Route::post('/payment-methods/setup-intent', [\App\Http\Controllers\Api\MarketplaceClient\Customer\PaymentMethodsController::class, 'createSetupIntent'])
+            ->middleware('throttle:20,1')
+            ->name('api.marketplace-client.customer.payment-methods.setup-intent');
+        Route::post('/payment-methods/confirm', [\App\Http\Controllers\Api\MarketplaceClient\Customer\PaymentMethodsController::class, 'confirmSetup'])
+            ->middleware('throttle:20,1')
+            ->name('api.marketplace-client.customer.payment-methods.confirm');
+        Route::put('/payment-methods/{id}/default', [\App\Http\Controllers\Api\MarketplaceClient\Customer\PaymentMethodsController::class, 'setDefault'])
+            ->whereNumber('id')
+            ->name('api.marketplace-client.customer.payment-methods.default');
+        Route::delete('/payment-methods/{id}', [\App\Http\Controllers\Api\MarketplaceClient\Customer\PaymentMethodsController::class, 'destroy'])
+            ->whereNumber('id')
+            ->name('api.marketplace-client.customer.payment-methods.destroy');
+
+        // GDPR export
+        Route::post('/gdpr/export', [\App\Http\Controllers\Api\MarketplaceClient\Customer\DataExportController::class, 'request'])
+            ->middleware('throttle:5,60')
+            ->name('api.marketplace-client.customer.gdpr.export');
+        Route::get('/gdpr/export/status', [\App\Http\Controllers\Api\MarketplaceClient\Customer\DataExportController::class, 'status'])
+            ->name('api.marketplace-client.customer.gdpr.export.status');
     });
+
+    // 2FA login step 2 (challenge → token). PUBLIC, no auth required.
+    Route::post('/2fa/login', [\App\Http\Controllers\Api\MarketplaceClient\Customer\TwoFactorController::class, 'loginVerify'])
+        ->middleware('throttle:10,1')
+        ->name('api.marketplace-client.customer.2fa.login');
+
+    // GDPR export download — public, gated by signed export_token in URL.
+    Route::get('/gdpr/download/{token}', [\App\Http\Controllers\Api\MarketplaceClient\Customer\DataExportController::class, 'download'])
+        ->name('api.marketplace-client.customer.gdpr.download');
 
     // Public transfer acceptance (by token, no auth required)
     Route::post('/transfers/accept-by-token', [CustomerTicketTransferController::class, 'acceptByToken'])

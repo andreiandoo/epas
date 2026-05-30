@@ -42,12 +42,17 @@ class MarketplaceCustomer extends Authenticatable
         'total_orders',
         'total_spent',
         'wp_password_hash',
+        'two_factor_secret',
+        'two_factor_recovery_codes',
+        'two_factor_confirmed_at',
     ];
 
     protected $hidden = [
         'password',
         'wp_password_hash',
         'remember_token',
+        'two_factor_secret',
+        'two_factor_recovery_codes',
     ];
 
     protected $casts = [
@@ -60,6 +65,9 @@ class MarketplaceCustomer extends Authenticatable
         'accepts_marketing' => 'boolean',
         'settings' => 'array',
         'total_spent' => 'decimal:2',
+        'two_factor_secret' => 'encrypted',
+        'two_factor_recovery_codes' => 'encrypted:array',
+        'two_factor_confirmed_at' => 'datetime',
     ];
 
     // =========================================

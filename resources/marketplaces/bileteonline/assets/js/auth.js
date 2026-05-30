@@ -76,12 +76,40 @@ const BileteOnlineAuth = {
         try {
             const response = await BileteOnlineAPI.customer.login(email, password);
 
+            // 2FA challenge — backend returned a short-lived `challenge` token
+            // instead of a real session token. Caller (login page) must show a
+            // code input and call `finishCustomer2faLogin(challenge, code)`.
+            if (response.success && response.data && response.data.requires_2fa) {
+                return {
+                    success: true,
+                    requires2fa: true,
+                    challenge: response.data.challenge,
+                };
+            }
+
             if (response.success && response.data.token) {
                 this.setCustomerSession(response.data.token, response.data.customer);
                 return { success: true, customer: response.data.customer };
             }
 
             return { success: false, message: response.message || 'Login failed' };
+        } catch (error) {
+            return { success: false, message: error.message, errors: error.errors };
+        }
+    },
+
+    /**
+     * Step 2 of customer login when 2FA is active. Exchanges the challenge +
+     * a TOTP/recovery code for the real Sanctum session token.
+     */
+    async finishCustomer2faLogin(challenge, code) {
+        try {
+            const response = await BileteOnlineAPI.post('/customer/2fa/login', { challenge, code });
+            if (response.success && response.data.token) {
+                this.setCustomerSession(response.data.token, response.data.customer);
+                return { success: true, customer: response.data.customer };
+            }
+            return { success: false, message: response.message || 'Codul nu este valid' };
         } catch (error) {
             return { success: false, message: error.message, errors: error.errors };
         }

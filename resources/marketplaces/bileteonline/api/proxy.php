@@ -1444,6 +1444,137 @@ switch ($action) {
         $endpoint = '/customer/recover-order/attach';
         break;
 
+    // ===== bilete.online /cont/setari extras (2026-05-30) =====
+    // 2FA — setup, confirm, disable, regenerate, status
+    case 'customer.2fa.status':
+        $method = 'GET';
+        $endpoint = '/customer/2fa/status';
+        $requiresAuth = true;
+        break;
+    case 'customer.2fa.initiate':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/customer/2fa/initiate';
+        $requiresAuth = true;
+        break;
+    case 'customer.2fa.confirm':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/customer/2fa/confirm';
+        $requiresAuth = true;
+        break;
+    case 'customer.2fa.disable':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/customer/2fa/disable';
+        $requiresAuth = true;
+        break;
+    case 'customer.2fa.recovery-codes.regenerate':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/customer/2fa/recovery-codes/regenerate';
+        $requiresAuth = true;
+        break;
+    case 'customer.2fa.login':
+        // Public — challenge → token exchange
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/customer/2fa/login';
+        break;
+
+    // Sessions (active Sanctum tokens)
+    case 'customer.sessions':
+        $method = 'GET';
+        $endpoint = '/customer/sessions';
+        $requiresAuth = true;
+        break;
+    case 'customer.sessions.destroy':
+        $method = 'DELETE';
+        $sid = (int) ($_GET['id'] ?? 0);
+        if (! $sid) { http_response_code(400); echo json_encode(['error' => 'Missing session id']); exit; }
+        $endpoint = '/customer/sessions/' . $sid;
+        $requiresAuth = true;
+        break;
+    case 'customer.sessions.destroy-others':
+        $method = 'DELETE';
+        $endpoint = '/customer/sessions/all';
+        $requiresAuth = true;
+        break;
+
+    // Beneficiaries (Familie)
+    case 'customer.beneficiaries':
+        $method = 'GET';
+        $endpoint = '/customer/beneficiaries';
+        $requiresAuth = true;
+        break;
+    case 'customer.beneficiaries.store':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/customer/beneficiaries';
+        $requiresAuth = true;
+        break;
+    case 'customer.beneficiaries.update':
+        $method = 'PUT';
+        $bid = (int) ($_GET['id'] ?? 0);
+        if (! $bid) { http_response_code(400); echo json_encode(['error' => 'Missing beneficiary id']); exit; }
+        $body = file_get_contents('php://input');
+        $endpoint = '/customer/beneficiaries/' . $bid;
+        $requiresAuth = true;
+        break;
+    case 'customer.beneficiaries.destroy':
+        $method = 'DELETE';
+        $bid = (int) ($_GET['id'] ?? 0);
+        if (! $bid) { http_response_code(400); echo json_encode(['error' => 'Missing beneficiary id']); exit; }
+        $endpoint = '/customer/beneficiaries/' . $bid;
+        $requiresAuth = true;
+        break;
+
+    // Payment methods (Stripe)
+    case 'customer.payment-methods':
+        $method = 'GET';
+        $endpoint = '/customer/payment-methods';
+        $requiresAuth = true;
+        break;
+    case 'customer.payment-methods.setup-intent':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/customer/payment-methods/setup-intent';
+        $requiresAuth = true;
+        break;
+    case 'customer.payment-methods.confirm':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/customer/payment-methods/confirm';
+        $requiresAuth = true;
+        break;
+    case 'customer.payment-methods.default':
+        $method = 'PUT';
+        $pmid = (int) ($_GET['id'] ?? 0);
+        if (! $pmid) { http_response_code(400); echo json_encode(['error' => 'Missing payment method id']); exit; }
+        $endpoint = '/customer/payment-methods/' . $pmid . '/default';
+        $requiresAuth = true;
+        break;
+    case 'customer.payment-methods.destroy':
+        $method = 'DELETE';
+        $pmid = (int) ($_GET['id'] ?? 0);
+        if (! $pmid) { http_response_code(400); echo json_encode(['error' => 'Missing payment method id']); exit; }
+        $endpoint = '/customer/payment-methods/' . $pmid;
+        $requiresAuth = true;
+        break;
+
+    // GDPR export
+    case 'customer.gdpr.export':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/customer/gdpr/export';
+        $requiresAuth = true;
+        break;
+    case 'customer.gdpr.export.status':
+        $method = 'GET';
+        $endpoint = '/customer/gdpr/export/status';
+        $requiresAuth = true;
+        break;
+
     case 'customer.support.meta':
         $method = 'GET';
         $endpoint = '/customer/support-meta';

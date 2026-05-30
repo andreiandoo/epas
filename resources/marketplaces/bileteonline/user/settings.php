@@ -186,30 +186,123 @@ include __DIR__ . '/../includes/header.php';
                             </form>
                         </div>
 
-                        <!-- 2FA — în curând -->
-                        <div class="rounded-3xl bg-paper-2 border border-ink/10 p-5 flex items-center justify-between gap-4 opacity-70">
-                            <div>
-                                <h3 class="font-display text-3xl font-bold">Autentificare în doi pași</h3>
-                                <p class="text-ink-soft">Recomandat pentru protecție suplimentară.</p>
+                        <!-- 2FA — TOTP (Google Authenticator / Authy / 1Password) -->
+                        <div class="rounded-3xl bg-paper-2 border border-ink/10 p-5">
+                            <div class="flex items-center justify-between gap-4">
+                                <div>
+                                    <h3 class="font-display text-3xl font-bold">Autentificare în doi pași</h3>
+                                    <p class="text-ink-soft">Recomandat pentru protecție suplimentară. Vei avea nevoie de un cod TOTP de 6 cifre la fiecare login.</p>
+                                </div>
+                                <span x-show="tfa.active" class="rounded-full bg-mint text-forest px-3 py-1 text-xs font-mono tracking-wider">ACTIV</span>
+                                <span x-show="!tfa.active" class="rounded-full bg-paper border border-ink/10 text-ink-soft px-3 py-1 text-xs font-mono tracking-wider">INACTIV</span>
                             </div>
-                            <span class="rounded-full bg-ochre/20 border border-ochre/40 text-ochre px-3 py-1 text-xs font-mono tracking-wider">în curând</span>
+
+                            <!-- 2FA disabled — show "activate" button -->
+                            <div x-show="!tfa.active && !tfa.setup" class="mt-4">
+                                <button @click="tfaStart()" :disabled="saving" class="rounded-full bg-ink text-paper px-5 py-3 font-bold hover:bg-vermilion transition disabled:opacity-60">
+                                    <span x-show="!saving">Activează 2FA</span>
+                                    <span x-show="saving" x-cloak>Se inițializează…</span>
+                                </button>
+                            </div>
+
+                            <!-- 2FA setup wizard (after Activează clicked) -->
+                            <div x-show="!tfa.active && tfa.setup" x-cloak class="mt-4 grid md:grid-cols-[200px_1fr] gap-5">
+                                <div>
+                                    <div id="tfa-qr" class="bg-paper rounded-2xl border-2 border-ink p-3 grid place-items-center min-h-[200px]"></div>
+                                    <p class="mt-2 text-xs text-ink-soft text-center">Scanează QR cu Google Authenticator, Authy, 1Password sau Bitwarden.</p>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-ink-soft">Sau introdu secretul manual:</p>
+                                    <code class="block mt-1 p-3 rounded-2xl bg-paper border border-ink/10 font-mono text-sm break-all" x-text="tfa.secret"></code>
+                                    <p class="mt-4 text-sm font-bold">Pas 2 — introdu codul de 6 cifre afișat în aplicație:</p>
+                                    <input class="field mt-2 font-mono text-lg tracking-widest" maxlength="6" inputmode="numeric" placeholder="123456" x-model="tfa.confirmCode" @keydown.enter.prevent="tfaConfirm()">
+                                    <div class="mt-4 flex gap-2">
+                                        <button @click="tfaConfirm()" :disabled="saving || tfa.confirmCode.length !== 6" class="rounded-full bg-vermilion text-paper px-5 py-3 font-bold hover:bg-vermilion-d transition disabled:opacity-60">
+                                            <span x-show="!saving">Verifică și activează</span>
+                                            <span x-show="saving" x-cloak>Se verifică…</span>
+                                        </button>
+                                        <button @click="tfa.setup = false; tfa.secret = ''; tfa.qrUrl = ''" class="rounded-full border-2 border-ink/20 px-5 py-3 font-bold">Renunță</button>
+                                    </div>
+                                </div>
+                                <!-- Recovery codes (shown after initiate; user must save them now) -->
+                                <div class="md:col-span-2 mt-2 rounded-2xl bg-rose border-2 border-vermilion p-4">
+                                    <p class="font-bold text-vermilion">⚠ Coduri de recuperare</p>
+                                    <p class="mt-1 text-sm text-ink-soft">Salvează aceste 10 coduri într-un loc sigur — fiecare poate fi folosit O SINGURĂ DATĂ dacă pierzi accesul la aplicație.</p>
+                                    <div class="mt-3 grid grid-cols-2 gap-1.5 font-mono text-sm">
+                                        <template x-for="code in tfa.recoveryCodes" :key="code">
+                                            <span class="bg-paper rounded-lg px-3 py-1.5 border border-ink/10" x-text="code"></span>
+                                        </template>
+                                    </div>
+                                    <button @click="copyRecoveryCodes()" class="mt-3 text-xs rounded-full bg-ink text-paper px-3 py-1.5 font-bold">Copiază codurile</button>
+                                </div>
+                            </div>
+
+                            <!-- 2FA active — show disable + regen options -->
+                            <div x-show="tfa.active" x-cloak class="mt-4 space-y-3">
+                                <p class="text-sm text-ink-soft">
+                                    2FA e activ din <strong x-text="tfa.confirmedAt ? new Date(tfa.confirmedAt).toLocaleDateString('ro-RO') : ''"></strong>.
+                                    Mai ai <strong x-text="tfa.recoveryCodesRemaining"></strong> coduri de recuperare neutilizate.
+                                </p>
+                                <div class="flex flex-wrap gap-2">
+                                    <button @click="tfa.disableModal = true" class="rounded-full border-2 border-vermilion text-vermilion px-5 py-2 font-bold hover:bg-vermilion hover:text-paper transition">Dezactivează 2FA</button>
+                                    <button @click="tfa.regenModal = true" class="rounded-full border-2 border-ink px-5 py-2 font-bold hover:bg-ink hover:text-paper transition">Regenerează coduri</button>
+                                </div>
+
+                                <!-- Disable modal -->
+                                <div x-show="tfa.disableModal" x-cloak class="mt-3 rounded-2xl bg-paper border-2 border-vermilion p-4">
+                                    <p class="font-bold">Confirmă parola pentru a dezactiva 2FA:</p>
+                                    <div class="mt-3 flex gap-2">
+                                        <input class="field flex-1" type="password" x-model="tfa.disablePassword" autocomplete="current-password">
+                                        <button @click="tfaDisable()" :disabled="saving" class="rounded-full bg-vermilion text-paper px-4 py-2 font-bold">Dezactivează</button>
+                                        <button @click="tfa.disableModal = false; tfa.disablePassword = ''" class="rounded-full border-2 border-ink/20 px-4 py-2 font-bold">Renunță</button>
+                                    </div>
+                                </div>
+
+                                <!-- Regen recovery modal -->
+                                <div x-show="tfa.regenModal" x-cloak class="mt-3 rounded-2xl bg-paper border-2 border-ink p-4">
+                                    <p class="font-bold">Confirmă parola pentru a regenera codurile (cele vechi nu vor mai funcționa):</p>
+                                    <div class="mt-3 flex gap-2">
+                                        <input class="field flex-1" type="password" x-model="tfa.regenPassword" autocomplete="current-password">
+                                        <button @click="tfaRegenerate()" :disabled="saving" class="rounded-full bg-ink text-paper px-4 py-2 font-bold">Regenerează</button>
+                                        <button @click="tfa.regenModal = false; tfa.regenPassword = ''" class="rounded-full border-2 border-ink/20 px-4 py-2 font-bold">Renunță</button>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
                         <!-- Sesiuni active -->
                         <div class="rounded-3xl bg-paper-2 border border-ink/10 p-5">
                             <h3 class="font-display text-3xl font-bold">Sesiuni active</h3>
-                            <div class="mt-4 space-y-2">
-                                <div class="rounded-2xl bg-paper p-4 flex justify-between gap-3">
-                                    <span>
-                                        <strong x-text="currentDeviceLabel">Browser · Device</strong><br>
-                                        <span class="text-sm text-ink-soft">sesiunea curentă</span>
-                                    </span>
-                                    <span class="text-forest font-bold">curentă</span>
-                                </div>
-                                <p class="text-xs text-ink-soft mt-2">Lista completă de sesiuni active este <strong>în curând</strong>. Pentru a te deconecta de pe alt dispozitiv, folosește butonul de <strong>Deconectare totală</strong> de mai jos.</p>
-                                <button @click="logoutEverywhere()" :disabled="saving" class="mt-2 rounded-full border-2 border-vermilion text-vermilion px-5 py-2 font-bold hover:bg-vermilion hover:text-paper transition disabled:opacity-60">
-                                    <span x-show="!saving">Deconectare totală</span>
-                                    <span x-show="saving" x-cloak>Se procesează…</span>
+                            <p class="mt-1 text-sm text-ink-soft">Dispozitivele unde ești conectat acum. Închide-le pe cele necunoscute.</p>
+
+                            <div x-show="loadingSessions" class="mt-3 h-12 rounded-2xl bg-paper/60 animate-pulse"></div>
+                            <div x-show="!loadingSessions && sessions.length === 0" class="mt-3 text-sm text-ink-soft italic">Nu există sesiuni active.</div>
+
+                            <div x-show="!loadingSessions && sessions.length > 0" class="mt-4 space-y-2">
+                                <template x-for="s in sessions" :key="s.id">
+                                    <div class="rounded-2xl bg-paper p-4 flex justify-between gap-3">
+                                        <div class="min-w-0">
+                                            <p class="font-bold" x-text="s.device || ('Sesiune #' + s.id)"></p>
+                                            <p class="text-sm text-ink-soft">
+                                                <span x-show="s.ip" x-text="'IP ' + s.ip"></span>
+                                                <span x-show="s.last_used_at" class="ml-2">· activă <span x-text="formatRelative(s.last_used_at)"></span></span>
+                                                <span x-show="!s.last_used_at && s.created_at" class="ml-2">· creată <span x-text="formatRelative(s.created_at)"></span></span>
+                                            </p>
+                                        </div>
+                                        <div class="shrink-0">
+                                            <span x-show="s.is_current" class="text-forest font-bold text-sm">aceasta</span>
+                                            <button x-show="!s.is_current" @click="revokeSession(s.id)" class="text-vermilion font-bold text-sm hover:underline">Închide</button>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+
+                            <div class="mt-4 flex gap-2">
+                                <button @click="revokeOtherSessions()" :disabled="saving" class="rounded-full border-2 border-vermilion text-vermilion px-4 py-2 text-sm font-bold hover:bg-vermilion hover:text-paper transition disabled:opacity-60">
+                                    Închide restul sesiunilor
+                                </button>
+                                <button @click="logoutEverywhere()" :disabled="saving" class="rounded-full border-2 border-ink/20 px-4 py-2 text-sm font-bold">
+                                    Deconectare totală (inclusiv aceasta)
                                 </button>
                             </div>
                         </div>
@@ -348,19 +441,97 @@ include __DIR__ . '/../includes/header.php';
             <section x-show="activeTab === 'family'" x-cloak class="mt-6 rounded-[2rem] border-2 border-ink bg-paper p-6 shadow-ticket">
                 <p class="font-mono text-xs tracking-[.18em] text-ink-soft">FAMILIE &amp; BENEFICIARI</p>
                 <h2 class="mt-2 font-display text-5xl font-bold leading-none">Beneficiari salvați și profil familie</h2>
+                <p class="mt-3 text-ink-soft max-w-3xl">Adaugă persoane pentru care cumperi des bilete (copil, partener, prieten). Apar automat la checkout și ne ajută să-ți propunem activități potrivite.</p>
 
-                <div class="mt-6 grid xl:grid-cols-[1fr_380px] gap-6">
+                <div class="mt-6 grid xl:grid-cols-[1fr_360px] gap-6">
                     <div>
-                        <div class="rounded-3xl border-2 border-dashed border-ink/20 bg-paper-2/50 p-8 text-center">
-                            <p class="text-5xl">👨‍👩‍👧</p>
-                            <p class="mt-3 font-display text-3xl font-bold">Lista de beneficiari vine în curând</p>
-                            <p class="mt-2 text-ink-soft max-w-md mx-auto">Vei putea salva membri de familie (cu vârstă, alergii, preferințe) ca să poți cumpăra mai rapid bilete pentru ei și să primești recomandări mai bine țintite.</p>
-                            <p class="mt-4 inline-flex items-center gap-2 rounded-full bg-ochre/20 border border-ochre/40 text-ochre px-4 py-2 text-sm font-mono tracking-wider">în pregătire</p>
+                        <div x-show="loadingBeneficiaries" class="grid sm:grid-cols-2 gap-4">
+                            <div class="h-32 rounded-3xl bg-paper-2/60 animate-pulse"></div>
+                            <div class="h-32 rounded-3xl bg-paper-2/60 animate-pulse"></div>
+                        </div>
+
+                        <div x-show="!loadingBeneficiaries" class="grid sm:grid-cols-2 gap-4">
+                            <template x-for="b in beneficiaries" :key="b.id">
+                                <article class="rounded-3xl bg-paper-2 border border-ink/10 p-5">
+                                    <div class="flex items-start justify-between gap-3">
+                                        <div class="min-w-0">
+                                            <h3 class="font-display text-2xl font-bold truncate" x-text="b.name"></h3>
+                                            <p class="text-ink-soft text-sm">
+                                                <span x-show="b.relation" x-text="relationLabel(b.relation)"></span>
+                                                <span x-show="b.age" class="ml-1" x-text="'· ' + b.age + ' ani'"></span>
+                                            </p>
+                                        </div>
+                                        <div class="flex gap-1 shrink-0">
+                                            <button @click="editBeneficiary(b)" class="text-ink-soft hover:text-vermilion font-bold text-sm">Edit</button>
+                                            <button @click="deleteBeneficiary(b.id)" class="text-vermilion font-bold text-sm">×</button>
+                                        </div>
+                                    </div>
+                                    <div x-show="b.interests && b.interests.length" class="mt-3 flex flex-wrap gap-1">
+                                        <template x-for="tag in (b.interests || [])" :key="tag">
+                                            <span class="rounded-full bg-paper border border-ink/10 px-2.5 py-1 text-xs font-bold" x-text="tag"></span>
+                                        </template>
+                                    </div>
+                                </article>
+                            </template>
+
+                            <button @click="newBeneficiary()" class="rounded-3xl border-2 border-dashed border-ink/20 bg-paper-2/40 p-5 text-center hover:border-ink/40 transition">
+                                <p class="text-4xl">＋</p>
+                                <p class="mt-2 font-bold">Adaugă beneficiar</p>
+                            </button>
+                        </div>
+
+                        <!-- Inline form modal -->
+                        <div x-show="beneficiaryForm.open" x-cloak class="mt-6 rounded-3xl border-2 border-ink bg-paper p-5">
+                            <h3 class="font-display text-3xl font-bold" x-text="beneficiaryForm.id ? 'Editează beneficiar' : 'Beneficiar nou'"></h3>
+                            <form @submit.prevent="saveBeneficiary()" class="mt-4 grid sm:grid-cols-2 gap-3">
+                                <label class="sm:col-span-2">
+                                    <span class="block mb-1.5 text-sm font-bold">Nume complet</span>
+                                    <input class="field" x-model="beneficiaryForm.name" required>
+                                </label>
+                                <label>
+                                    <span class="block mb-1.5 text-sm font-bold">Relație</span>
+                                    <select class="field" x-model="beneficiaryForm.relation">
+                                        <option value="">— alege —</option>
+                                        <option value="self">Eu însumi</option>
+                                        <option value="partner">Partener</option>
+                                        <option value="child">Copil</option>
+                                        <option value="parent">Părinte</option>
+                                        <option value="sibling">Frate / soră</option>
+                                        <option value="friend">Prieten</option>
+                                        <option value="other">Altă relație</option>
+                                    </select>
+                                </label>
+                                <label>
+                                    <span class="block mb-1.5 text-sm font-bold">Data nașterii</span>
+                                    <input class="field" type="date" x-model="beneficiaryForm.birth_date" :max="todayIso()">
+                                </label>
+                                <label>
+                                    <span class="block mb-1.5 text-sm font-bold">Email (opțional)</span>
+                                    <input class="field" type="email" x-model="beneficiaryForm.email">
+                                </label>
+                                <label>
+                                    <span class="block mb-1.5 text-sm font-bold">Telefon (opțional)</span>
+                                    <input class="field" type="tel" x-model="beneficiaryForm.phone">
+                                </label>
+                                <label class="sm:col-span-2">
+                                    <span class="block mb-1.5 text-sm font-bold">Note (opțional)</span>
+                                    <textarea class="field min-h-20" x-model="beneficiaryForm.notes" placeholder="alergii, preferințe, mărime tricou…"></textarea>
+                                </label>
+                                <div class="sm:col-span-2 flex gap-2">
+                                    <button type="submit" :disabled="saving" class="rounded-full bg-vermilion text-paper px-5 py-3 font-bold hover:bg-vermilion-d transition disabled:opacity-60">
+                                        <span x-show="!saving">Salvează</span>
+                                        <span x-show="saving" x-cloak>Se salvează…</span>
+                                    </button>
+                                    <button type="button" @click="beneficiaryForm.open = false" class="rounded-full border-2 border-ink/20 px-5 py-3 font-bold">Renunță</button>
+                                </div>
+                            </form>
                         </div>
                     </div>
+
                     <aside class="rounded-3xl bg-mint border border-forest/20 p-6 self-start">
                         <p class="font-bold text-forest">De ce contează?</p>
-                        <p class="mt-2 text-ink-soft">Beneficiarii frecvenți te scapă de retastarea numelor la checkout, iar profilul familiei (vârste, interese) ajută motorul de recomandări să-ți propună activități potrivite pentru toată echipa.</p>
+                        <p class="mt-2 text-ink-soft">Beneficiarii frecvenți te scapă de retastarea numelor la checkout. Profilul familiei (vârste, interese) ajută motorul de recomandări să-ți propună activități potrivite pentru toată echipa.</p>
+                        <p class="mt-3 text-xs text-ink-soft">Limită: 25 beneficiari per cont.</p>
                     </aside>
                 </div>
             </section>
@@ -395,22 +566,76 @@ include __DIR__ . '/../includes/header.php';
 
             <!-- ===================== 6. PLĂȚI ===================== -->
             <section x-show="activeTab === 'payments'" x-cloak class="mt-6 rounded-[2rem] border-2 border-ink bg-paper p-6 shadow-ticket">
-                <p class="font-mono text-xs tracking-[.18em] text-ink-soft">PLĂȚI</p>
+                <p class="font-mono text-xs tracking-[.18em] text-ink-soft">PLĂȚI · STRIPE</p>
                 <h2 class="mt-2 font-display text-5xl font-bold leading-none">Metode de plată și facturare</h2>
+                <p class="mt-3 text-ink-soft max-w-3xl">Salvează cardul ca să nu-l mai introduci la fiecare comandă. Datele cardului sunt stocate la Stripe — niciodată pe serverele bilete.online.</p>
 
                 <div class="mt-6 grid xl:grid-cols-[1fr_360px] gap-6">
                     <div class="space-y-4">
-                        <div class="rounded-3xl border-2 border-dashed border-ink/20 bg-paper-2/50 p-8 text-center">
-                            <p class="text-5xl">💳</p>
-                            <p class="mt-3 font-display text-3xl font-bold">Carduri salvate</p>
-                            <p class="mt-2 text-ink-soft max-w-md mx-auto">Procesorul de plăți pentru bilete.online este în curs de integrare. Momentan, cardul se introduce la fiecare checkout. Salvarea cardului vine curând.</p>
-                            <p class="mt-4 inline-flex items-center gap-2 rounded-full bg-ochre/20 border border-ochre/40 text-ochre px-4 py-2 text-sm font-mono tracking-wider">în integrare</p>
+
+                        <!-- Configuration warning -->
+                        <div x-show="!loadingCards && !pay.stripeConfigured" class="rounded-3xl bg-rose border-2 border-vermilion p-5">
+                            <p class="font-bold text-vermilion">Procesatorul de plăți nu este încă activ</p>
+                            <p class="mt-1 text-sm text-ink-soft">Echipa bilete.online finalizează integrarea Stripe. Vei putea salva carduri imediat ce e gata.</p>
+                        </div>
+
+                        <!-- Cards list -->
+                        <div x-show="loadingCards" class="space-y-2">
+                            <div class="h-20 rounded-2xl bg-paper-2/60 animate-pulse"></div>
+                            <div class="h-20 rounded-2xl bg-paper-2/60 animate-pulse"></div>
+                        </div>
+
+                        <div x-show="!loadingCards && pay.stripeConfigured" class="space-y-3">
+                            <template x-for="card in pay.cards" :key="card.id">
+                                <article class="rounded-3xl bg-paper-2 border border-ink/10 p-5 flex items-center justify-between gap-4">
+                                    <div class="flex items-center gap-3 min-w-0">
+                                        <div class="grid place-items-center w-12 h-12 rounded-xl bg-paper border border-ink/10 font-bold text-xs uppercase" x-text="card.brand || 'CARD'"></div>
+                                        <div class="min-w-0">
+                                            <p class="font-display text-2xl font-bold">•••• <span x-text="card.last4"></span></p>
+                                            <p class="text-sm text-ink-soft">
+                                                expiră <span x-text="String(card.exp_month).padStart(2,'0') + '/' + String(card.exp_year).slice(-2)"></span>
+                                                <span x-show="card.is_default" class="ml-2 text-forest font-bold">· implicit</span>
+                                                <span x-show="card.is_expired" class="ml-2 text-vermilion font-bold">· expirat</span>
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div class="flex gap-2 shrink-0">
+                                        <button x-show="!card.is_default && !card.is_expired" @click="setCardDefault(card.id)" class="text-ink-soft hover:text-vermilion font-bold text-sm">implicit</button>
+                                        <button @click="deleteCard(card.id)" class="text-vermilion font-bold text-sm">Șterge</button>
+                                    </div>
+                                </article>
+                            </template>
+
+                            <div x-show="pay.cards.length === 0" class="rounded-3xl border-2 border-dashed border-ink/20 bg-paper-2/50 p-6 text-center">
+                                <p class="font-display text-2xl font-bold">Niciun card salvat</p>
+                                <p class="mt-1 text-ink-soft text-sm">Adaugă un card ca să cumperi mai rapid data viitoare.</p>
+                            </div>
+
+                            <!-- Add card form (Stripe Elements) -->
+                            <div x-show="!pay.addOpen" class="text-right">
+                                <button @click="startAddCard()" class="rounded-full bg-vermilion text-paper px-5 py-3 font-bold hover:bg-vermilion-d transition">+ Adaugă card</button>
+                            </div>
+                            <div x-show="pay.addOpen" x-cloak class="rounded-3xl bg-paper-2 border-2 border-ink p-5">
+                                <h3 class="font-display text-2xl font-bold">Card nou</h3>
+                                <p class="mt-1 text-sm text-ink-soft">Datele cardului sunt criptate și trimise direct la Stripe.</p>
+                                <div id="bo-stripe-card-element" class="mt-4 p-3 rounded-2xl bg-paper border-2 border-ink/10 min-h-[44px]"></div>
+                                <p id="bo-stripe-card-error" class="mt-2 text-sm text-vermilion font-bold"></p>
+                                <div class="mt-4 flex gap-2">
+                                    <button @click="submitNewCard()" :disabled="pay.submittingCard" class="rounded-full bg-vermilion text-paper px-5 py-3 font-bold hover:bg-vermilion-d transition disabled:opacity-60">
+                                        <span x-show="!pay.submittingCard">Salvează cardul</span>
+                                        <span x-show="pay.submittingCard" x-cloak>Se salvează…</span>
+                                    </button>
+                                    <button @click="cancelAddCard()" class="rounded-full border-2 border-ink/20 px-5 py-3 font-bold">Renunță</button>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    <aside class="rounded-3xl bg-paper-2 border border-ink/10 p-6">
+
+                    <aside class="rounded-3xl bg-paper-2 border border-ink/10 p-6 self-start">
                         <p class="font-bold">Date facturare</p>
                         <p class="mt-1 text-sm text-ink-soft">Salvăm datele de facturare cu profilul tău, pe baza câmpurilor din tab-ul „Date personale" (nume + adresă).</p>
                         <a @click.prevent="activeTab='personal'" href="#" class="mt-4 inline-flex rounded-full border-2 border-ink px-4 py-2 font-bold text-sm hover:bg-ink hover:text-paper transition">Mergi la datele personale</a>
+                        <p class="mt-5 text-xs text-ink-soft">PCI-DSS: bilete.online nu stochează niciodată numere de card. Stocăm doar un identificator opac (Stripe payment method id) + brand + ultimele 4 cifre pentru afișare.</p>
                     </aside>
                 </div>
             </section>
@@ -425,8 +650,45 @@ include __DIR__ . '/../includes/header.php';
                     <!-- Export -->
                     <article class="rounded-3xl bg-paper-2 border border-ink/10 p-5">
                         <h3 class="font-display text-3xl font-bold">Export date personale</h3>
-                        <p class="mt-2 text-ink-soft">Descarcă o copie cu datele de cont, comenzile, biletele, preferințele și punctele.</p>
-                        <button @click="requestExport()" class="mt-4 rounded-full bg-ink text-paper px-5 py-3 font-bold hover:bg-vermilion transition">Solicită export</button>
+                        <p class="mt-2 text-ink-soft">Descarcă o copie cu datele de cont, comenzile, biletele, preferințele, beneficiarii și punctele.</p>
+
+                        <!-- No prior request -->
+                        <div x-show="!gdpr.latest" class="mt-4">
+                            <button @click="requestExport()" :disabled="gdpr.loading" class="rounded-full bg-ink text-paper px-5 py-3 font-bold hover:bg-vermilion transition disabled:opacity-60">
+                                <span x-show="!gdpr.loading">Solicită export</span>
+                                <span x-show="gdpr.loading" x-cloak>Se trimite…</span>
+                            </button>
+                        </div>
+
+                        <!-- Pending / processing -->
+                        <div x-show="gdpr.latest && (gdpr.latest.status === 'pending' || gdpr.latest.status === 'processing')" x-cloak class="mt-4 rounded-2xl bg-paper border border-ochre/40 p-4">
+                            <p class="font-bold text-ochre">Exportul tău se generează…</p>
+                            <p class="mt-1 text-sm text-ink-soft">Cerere lansată
+                                <span x-text="gdpr.latest && gdpr.latest.requested_at ? formatRelative(gdpr.latest.requested_at) : ''"></span>.
+                                Vei primi un email când arhiva e gata. Poți închide pagina — continuă în fundal.</p>
+                        </div>
+
+                        <!-- Ready -->
+                        <div x-show="gdpr.latest && gdpr.latest.status === 'completed' && gdpr.latest.download_url" x-cloak class="mt-4 rounded-2xl bg-mint border-2 border-forest/30 p-4">
+                            <p class="font-bold text-forest">Arhiva este gata de descărcat</p>
+                            <p class="mt-1 text-sm text-ink-soft">
+                                <span x-show="gdpr.latest && gdpr.latest.file_size_bytes" x-text="formatBytes(gdpr.latest.file_size_bytes)"></span>
+                                <span x-show="gdpr.latest && gdpr.latest.expires_at" class="ml-2">· expiră
+                                    <span x-text="gdpr.latest && gdpr.latest.expires_at ? new Date(gdpr.latest.expires_at).toLocaleDateString('ro-RO') : ''"></span>
+                                </span>
+                            </p>
+                            <div class="mt-3 flex gap-2 flex-wrap">
+                                <a :href="gdpr.latest ? gdpr.latest.download_url : '#'" download class="rounded-full bg-vermilion text-paper px-5 py-3 font-bold hover:bg-vermilion-d transition">Descarcă ZIP</a>
+                                <button @click="requestExport()" class="rounded-full border-2 border-ink/20 px-5 py-3 font-bold">Regenerează</button>
+                            </div>
+                        </div>
+
+                        <!-- Failed -->
+                        <div x-show="gdpr.latest && gdpr.latest.status === 'failed'" x-cloak class="mt-4 rounded-2xl bg-rose border-2 border-vermilion p-4">
+                            <p class="font-bold text-vermilion">Exportul a eșuat</p>
+                            <p class="mt-1 text-sm text-ink-soft" x-text="gdpr.latest && gdpr.latest.error_message ? gdpr.latest.error_message : 'Te rugăm să încerci din nou peste câteva minute.'"></p>
+                            <button @click="requestExport()" class="mt-3 rounded-full bg-vermilion text-paper px-4 py-2 font-bold">Încearcă din nou</button>
+                        </div>
                     </article>
 
                     <!-- Personalizare -->
@@ -551,6 +813,40 @@ function clientSettingsPage() {
         // --- Delete ---
         del: { password: '', reason: '', confirmed: false },
 
+        // --- 2FA ---
+        tfa: {
+            active: false, confirmedAt: null, hasPendingSetup: false,
+            recoveryCodesRemaining: 0,
+            setup: false, secret: '', qrUrl: '', confirmCode: '', recoveryCodes: [],
+            disableModal: false, disablePassword: '',
+            regenModal: false, regenPassword: '',
+        },
+
+        // --- Sessions ---
+        sessions: [],
+        loadingSessions: true,
+
+        // --- Beneficiaries ---
+        beneficiaries: [],
+        loadingBeneficiaries: true,
+        beneficiaryForm: { open: false, id: null, name: '', relation: '', birth_date: '', email: '', phone: '', notes: '' },
+
+        // --- Payment methods (Stripe) ---
+        pay: {
+            cards: [],
+            stripeConfigured: false,
+            publishableKey: null,
+            addOpen: false,
+            submittingCard: false,
+            stripe: null,       // Stripe() instance
+            elements: null,
+            cardElement: null,
+        },
+        loadingCards: true,
+
+        // --- GDPR export ---
+        gdpr: { latest: null, history: [], loading: false, pollTimer: null },
+
         // --- Derived ---
         get currentDeviceLabel() {
             try {
@@ -612,6 +908,11 @@ function clientSettingsPage() {
             this.load();
             this.loadCities();
             this.loadCategories();
+            this.loadTfaStatus();
+            this.loadSessions();
+            this.loadBeneficiaries();
+            this.loadCards();
+            this.loadGdpr();
 
             // Jump to specific tab via hash (#profil-preferinte, #securitate, etc.)
             const h = (location.hash || '').replace('#', '').toLowerCase();
@@ -910,9 +1211,447 @@ function clientSettingsPage() {
             }
         },
 
-        // --- Export ---
-        requestExport() {
-            this.flash('Export-ul GDPR vine în curând. Pentru o copie a datelor, scrie-ne la suport.', 'success');
+        // ===================================================
+        // === 2FA (TOTP) ====================================
+        // ===================================================
+        async loadTfaStatus() {
+            try {
+                const r = await BileteOnlineAPI.get('/customer/2fa/status');
+                const d = (r && r.data) || {};
+                this.tfa.active = !!d.two_factor_active;
+                this.tfa.confirmedAt = d.confirmed_at || null;
+                this.tfa.hasPendingSetup = !!d.has_pending_setup;
+                this.tfa.recoveryCodesRemaining = d.recovery_codes_remaining || 0;
+            } catch (e) {}
+        },
+
+        async tfaStart() {
+            this.saving = true;
+            try {
+                const r = await BileteOnlineAPI.post('/customer/2fa/initiate', {});
+                if (r && r.success) {
+                    const d = r.data || {};
+                    this.tfa.secret = d.secret || '';
+                    this.tfa.qrUrl = d.qr_url || '';
+                    this.tfa.recoveryCodes = d.recovery_codes || [];
+                    this.tfa.setup = true;
+                    this.tfa.confirmCode = '';
+                    await this.$nextTick();
+                    this.renderTfaQr();
+                } else {
+                    this.flash((r && r.message) || 'Nu am putut iniția 2FA.', 'error');
+                }
+            } catch (e) {
+                this.flash((e && e.message) || 'Eroare la inițierea 2FA.', 'error');
+            }
+            this.saving = false;
+        },
+
+        renderTfaQr() {
+            const target = document.getElementById('tfa-qr');
+            if (!target || !this.tfa.qrUrl) return;
+            target.innerHTML = '';
+            // lazy-load qrcode.js once
+            const draw = () => {
+                try {
+                    new window.QRCode(target, {
+                        text: this.tfa.qrUrl,
+                        width: 180, height: 180,
+                        correctLevel: window.QRCode.CorrectLevel.M,
+                    });
+                } catch (e) { console.warn('QR render failed', e); }
+            };
+            if (window.QRCode) { draw(); return; }
+            const s = document.createElement('script');
+            s.src = 'https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js';
+            s.onload = draw;
+            document.head.appendChild(s);
+        },
+
+        async tfaConfirm() {
+            if ((this.tfa.confirmCode || '').length < 6) return;
+            this.saving = true;
+            try {
+                const r = await BileteOnlineAPI.post('/customer/2fa/confirm', { code: this.tfa.confirmCode });
+                if (r && r.success) {
+                    this.flash('2FA activat cu succes.', 'success');
+                    this.tfa.setup = false;
+                    this.tfa.secret = '';
+                    this.tfa.qrUrl = '';
+                    this.tfa.confirmCode = '';
+                    await this.loadTfaStatus();
+                } else {
+                    this.flash((r && r.message) || 'Codul nu este valid.', 'error');
+                }
+            } catch (e) {
+                this.flash((e && e.message) || 'Eroare la verificare.', 'error');
+            }
+            this.saving = false;
+        },
+
+        async tfaDisable() {
+            if (!this.tfa.disablePassword) { this.flash('Introdu parola.', 'error'); return; }
+            this.saving = true;
+            try {
+                const r = await BileteOnlineAPI.post('/customer/2fa/disable', { password: this.tfa.disablePassword });
+                if (r && r.success) {
+                    this.flash('2FA dezactivat.', 'success');
+                    this.tfa.disableModal = false;
+                    this.tfa.disablePassword = '';
+                    await this.loadTfaStatus();
+                } else {
+                    this.flash((r && r.message) || 'Parola este incorectă.', 'error');
+                }
+            } catch (e) {
+                this.flash((e && e.message) || 'Eroare la dezactivare.', 'error');
+            }
+            this.saving = false;
+        },
+
+        async tfaRegenerate() {
+            if (!this.tfa.regenPassword) { this.flash('Introdu parola.', 'error'); return; }
+            this.saving = true;
+            try {
+                const r = await BileteOnlineAPI.post('/customer/2fa/recovery-codes/regenerate', { password: this.tfa.regenPassword });
+                if (r && r.success) {
+                    this.tfa.recoveryCodes = (r.data && r.data.recovery_codes) || [];
+                    this.tfa.regenModal = false;
+                    this.tfa.regenPassword = '';
+                    this.flash('Codurile au fost regenerate. Salvează-le într-un loc sigur.', 'success');
+                    await this.loadTfaStatus();
+                } else {
+                    this.flash((r && r.message) || 'Nu am putut regenera codurile.', 'error');
+                }
+            } catch (e) {
+                this.flash((e && e.message) || 'Eroare la regenerare.', 'error');
+            }
+            this.saving = false;
+        },
+
+        copyRecoveryCodes() {
+            const text = (this.tfa.recoveryCodes || []).join('\n');
+            try { navigator.clipboard.writeText(text); this.flash('Codurile au fost copiate.', 'success'); }
+            catch (e) { this.flash('Selectează manual codurile pentru a le copia.', 'error'); }
+        },
+
+        // ===================================================
+        // === Sessions ======================================
+        // ===================================================
+        async loadSessions() {
+            this.loadingSessions = true;
+            try {
+                const r = await BileteOnlineAPI.get('/customer/sessions');
+                this.sessions = (r && r.data && r.data.sessions) || [];
+            } catch (e) {}
+            this.loadingSessions = false;
+        },
+
+        async revokeSession(id) {
+            if (!confirm('Sigur închizi această sesiune?')) return;
+            try {
+                const r = await BileteOnlineAPI.delete('/customer/sessions/' + id, {});
+                if (r && r.success) {
+                    this.flash('Sesiunea a fost închisă.', 'success');
+                    if (r.data && r.data.logged_out_current) {
+                        setTimeout(() => { location.href = '/autentificare'; }, 800);
+                    } else {
+                        await this.loadSessions();
+                    }
+                } else {
+                    this.flash((r && r.message) || 'Nu am putut închide sesiunea.', 'error');
+                }
+            } catch (e) {
+                this.flash('Eroare la închiderea sesiunii.', 'error');
+            }
+        },
+
+        async revokeOtherSessions() {
+            if (!confirm('Închizi toate celelalte sesiuni? Vei rămâne logat doar pe acest dispozitiv.')) return;
+            this.saving = true;
+            try {
+                const r = await BileteOnlineAPI.delete('/customer/sessions/all', {});
+                if (r && r.success) {
+                    this.flash((r.data && r.data.revoked ? r.data.revoked + ' sesiuni' : 'Sesiunile') + ' au fost închise.', 'success');
+                    await this.loadSessions();
+                }
+            } catch (e) {}
+            this.saving = false;
+        },
+
+        // ===================================================
+        // === Beneficiaries (Familie) =======================
+        // ===================================================
+        async loadBeneficiaries() {
+            this.loadingBeneficiaries = true;
+            try {
+                const r = await BileteOnlineAPI.get('/customer/beneficiaries');
+                this.beneficiaries = (r && r.data && r.data.beneficiaries) || [];
+            } catch (e) {}
+            this.loadingBeneficiaries = false;
+        },
+
+        relationLabel(rel) {
+            const map = { self: 'eu', partner: 'partener', child: 'copil', parent: 'părinte',
+                          sibling: 'frate/soră', friend: 'prieten', other: 'alt' };
+            return map[rel] || rel || '';
+        },
+
+        newBeneficiary() {
+            this.beneficiaryForm = { open: true, id: null, name: '', relation: '', birth_date: '', email: '', phone: '', notes: '' };
+        },
+
+        editBeneficiary(b) {
+            this.beneficiaryForm = {
+                open: true,
+                id: b.id,
+                name: b.name || '',
+                relation: b.relation || '',
+                birth_date: b.birth_date || '',
+                email: b.email || '',
+                phone: b.phone || '',
+                notes: b.notes || '',
+            };
+        },
+
+        async saveBeneficiary() {
+            const f = this.beneficiaryForm;
+            if (!f.name) { this.flash('Numele este obligatoriu.', 'error'); return; }
+            this.saving = true;
+            const payload = {
+                name: f.name,
+                relation: f.relation || null,
+                birth_date: f.birth_date || null,
+                email: f.email || null,
+                phone: f.phone || null,
+                notes: f.notes || null,
+            };
+            try {
+                let r;
+                if (f.id) {
+                    r = await BileteOnlineAPI.put('/customer/beneficiaries/' + f.id, payload);
+                } else {
+                    r = await BileteOnlineAPI.post('/customer/beneficiaries', payload);
+                }
+                if (r && r.success) {
+                    this.flash(f.id ? 'Beneficiar actualizat.' : 'Beneficiar adăugat.', 'success');
+                    this.beneficiaryForm.open = false;
+                    await this.loadBeneficiaries();
+                } else {
+                    this.flash((r && r.message) || 'Nu am putut salva beneficiarul.', 'error');
+                }
+            } catch (e) {
+                this.flash((e && e.message) || 'Eroare la salvare.', 'error');
+            }
+            this.saving = false;
+        },
+
+        async deleteBeneficiary(id) {
+            if (!confirm('Sigur ștergi acest beneficiar?')) return;
+            try {
+                const r = await BileteOnlineAPI.delete('/customer/beneficiaries/' + id, {});
+                if (r && r.success) {
+                    this.flash('Beneficiar șters.', 'success');
+                    await this.loadBeneficiaries();
+                }
+            } catch (e) {
+                this.flash('Eroare la ștergere.', 'error');
+            }
+        },
+
+        // ===================================================
+        // === Payment methods (Stripe) ======================
+        // ===================================================
+        async loadCards() {
+            this.loadingCards = true;
+            try {
+                const r = await BileteOnlineAPI.get('/customer/payment-methods');
+                const d = (r && r.data) || {};
+                this.pay.cards = d.payment_methods || [];
+                this.pay.stripeConfigured = !!d.stripe_configured;
+                this.pay.publishableKey = d.stripe_publishable_key || null;
+            } catch (e) {}
+            this.loadingCards = false;
+        },
+
+        async ensureStripeLoaded() {
+            if (window.Stripe) return true;
+            await new Promise((resolve, reject) => {
+                const s = document.createElement('script');
+                s.src = 'https://js.stripe.com/v3/';
+                s.onload = resolve;
+                s.onerror = reject;
+                document.head.appendChild(s);
+            });
+            return !!window.Stripe;
+        },
+
+        async startAddCard() {
+            if (!this.pay.stripeConfigured || !this.pay.publishableKey) {
+                this.flash('Procesatorul de plăți nu este configurat încă.', 'error');
+                return;
+            }
+            this.pay.addOpen = true;
+            await this.$nextTick();
+            await this.ensureStripeLoaded();
+            if (!window.Stripe) { this.flash('Nu am putut încărca Stripe.', 'error'); return; }
+
+            this.pay.stripe = window.Stripe(this.pay.publishableKey);
+            this.pay.elements = this.pay.stripe.elements();
+            this.pay.cardElement = this.pay.elements.create('card', {
+                hidePostalCode: true,
+                style: {
+                    base: { fontFamily: '"Hanken Grotesk", Arial, sans-serif', fontSize: '16px', color: '#1B1714', '::placeholder': { color: '#5A4F41' } },
+                    invalid: { color: '#E84527' },
+                },
+            });
+            this.pay.cardElement.mount('#bo-stripe-card-element');
+            const errEl = document.getElementById('bo-stripe-card-error');
+            this.pay.cardElement.on('change', (ev) => { if (errEl) errEl.textContent = ev.error ? ev.error.message : ''; });
+        },
+
+        async submitNewCard() {
+            if (!this.pay.stripe || !this.pay.cardElement) return;
+            this.pay.submittingCard = true;
+            try {
+                const intentResp = await BileteOnlineAPI.post('/customer/payment-methods/setup-intent', {});
+                if (!intentResp || !intentResp.success) {
+                    this.flash((intentResp && intentResp.message) || 'Nu am putut iniția salvarea cardului.', 'error');
+                    this.pay.submittingCard = false; return;
+                }
+                const clientSecret = intentResp.data.client_secret;
+
+                const cardholderName = (this.profile.first_name + ' ' + this.profile.last_name).trim();
+                const setup = await this.pay.stripe.confirmCardSetup(clientSecret, {
+                    payment_method: {
+                        card: this.pay.cardElement,
+                        billing_details: { name: cardholderName || undefined, email: this.profile.email || undefined },
+                    },
+                });
+
+                if (setup.error) {
+                    const errEl = document.getElementById('bo-stripe-card-error');
+                    if (errEl) errEl.textContent = setup.error.message;
+                    this.flash(setup.error.message, 'error');
+                    this.pay.submittingCard = false; return;
+                }
+
+                const confirmResp = await BileteOnlineAPI.post('/customer/payment-methods/confirm', {
+                    setup_intent_id: setup.setupIntent.id,
+                });
+                if (confirmResp && confirmResp.success) {
+                    this.flash('Cardul a fost salvat.', 'success');
+                    this.cancelAddCard();
+                    await this.loadCards();
+                } else {
+                    this.flash((confirmResp && confirmResp.message) || 'Cardul nu a putut fi salvat.', 'error');
+                }
+            } catch (e) {
+                this.flash((e && e.message) || 'Eroare la salvarea cardului.', 'error');
+            }
+            this.pay.submittingCard = false;
+        },
+
+        cancelAddCard() {
+            if (this.pay.cardElement) {
+                try { this.pay.cardElement.destroy(); } catch (e) {}
+            }
+            this.pay.cardElement = null;
+            this.pay.elements = null;
+            this.pay.stripe = null;
+            this.pay.addOpen = false;
+            const errEl = document.getElementById('bo-stripe-card-error');
+            if (errEl) errEl.textContent = '';
+        },
+
+        async setCardDefault(id) {
+            try {
+                const r = await BileteOnlineAPI.put('/customer/payment-methods/' + id + '/default', {});
+                if (r && r.success) {
+                    this.flash('Card setat ca implicit.', 'success');
+                    await this.loadCards();
+                }
+            } catch (e) {}
+        },
+
+        async deleteCard(id) {
+            if (!confirm('Sigur ștergi acest card?')) return;
+            try {
+                const r = await BileteOnlineAPI.delete('/customer/payment-methods/' + id, {});
+                if (r && r.success) {
+                    this.flash('Cardul a fost șters.', 'success');
+                    await this.loadCards();
+                }
+            } catch (e) {
+                this.flash('Eroare la ștergere.', 'error');
+            }
+        },
+
+        // ===================================================
+        // === GDPR data export ==============================
+        // ===================================================
+        async loadGdpr() {
+            try {
+                const r = await BileteOnlineAPI.get('/customer/gdpr/export/status');
+                const d = (r && r.data) || {};
+                this.gdpr.latest = d.latest || null;
+                this.gdpr.history = d.history || [];
+                if (this.gdpr.latest && (this.gdpr.latest.status === 'pending' || this.gdpr.latest.status === 'processing')) {
+                    this.startGdprPolling();
+                }
+            } catch (e) {}
+        },
+
+        async requestExport() {
+            this.gdpr.loading = true;
+            try {
+                const r = await BileteOnlineAPI.post('/customer/gdpr/export', {});
+                if (r && r.success) {
+                    this.gdpr.latest = (r.data && r.data.request) || null;
+                    this.flash('Cerere de export înregistrată.', 'success');
+                    this.startGdprPolling();
+                } else {
+                    this.flash((r && r.message) || 'Nu am putut iniția exportul.', 'error');
+                }
+            } catch (e) {
+                this.flash((e && e.message) || 'Eroare la cerere.', 'error');
+            }
+            this.gdpr.loading = false;
+        },
+
+        startGdprPolling() {
+            if (this.gdpr.pollTimer) return;
+            this.gdpr.pollTimer = setInterval(async () => {
+                try {
+                    const r = await BileteOnlineAPI.get('/customer/gdpr/export/status');
+                    this.gdpr.latest = (r && r.data && r.data.latest) || this.gdpr.latest;
+                    if (!this.gdpr.latest || (this.gdpr.latest.status !== 'pending' && this.gdpr.latest.status !== 'processing')) {
+                        clearInterval(this.gdpr.pollTimer);
+                        this.gdpr.pollTimer = null;
+                        if (this.gdpr.latest && this.gdpr.latest.status === 'completed') {
+                            this.flash('Arhiva ta de date e gata. Poți descărca din buton.', 'success');
+                        }
+                    }
+                } catch (e) {}
+            }, 5000);
+        },
+
+        formatBytes(n) {
+            if (!n) return '';
+            const units = ['B','KB','MB','GB'];
+            let i = 0, v = n;
+            while (v >= 1024 && i < units.length - 1) { v /= 1024; i++; }
+            return v.toFixed(v < 10 ? 1 : 0) + ' ' + units[i];
+        },
+
+        formatRelative(iso) {
+            if (!iso) return '';
+            const d = new Date(iso);
+            const diffSec = Math.round((Date.now() - d.getTime()) / 1000);
+            if (diffSec < 60) return 'acum';
+            if (diffSec < 3600) return 'acum ' + Math.floor(diffSec / 60) + ' min';
+            if (diffSec < 86400) return 'acum ' + Math.floor(diffSec / 3600) + ' h';
+            if (diffSec < 86400 * 30) return 'acum ' + Math.floor(diffSec / 86400) + ' zile';
+            return d.toLocaleDateString('ro-RO');
         },
 
         // --- Delete account ---

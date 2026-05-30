@@ -153,6 +153,31 @@ const BileteOnlineAPI = {
         if (endpoint === '/customer/verify-email') return 'customer.verify-email';
         if (endpoint === '/customer/resend-verification') return 'customer.resend-verification';
 
+        // bilete.online /cont/setari extras (2026-05-30)
+        // 2FA
+        if (endpoint === '/customer/2fa/status') return 'customer.2fa.status';
+        if (endpoint === '/customer/2fa/initiate') return 'customer.2fa.initiate';
+        if (endpoint === '/customer/2fa/confirm') return 'customer.2fa.confirm';
+        if (endpoint === '/customer/2fa/disable') return 'customer.2fa.disable';
+        if (endpoint === '/customer/2fa/recovery-codes/regenerate') return 'customer.2fa.recovery-codes.regenerate';
+        if (endpoint === '/customer/2fa/login') return 'customer.2fa.login';
+        // Sessions
+        if (endpoint === '/customer/sessions/all') return 'customer.sessions.destroy-others';
+        if (endpoint === '/customer/sessions') return 'customer.sessions';
+        if (endpoint.match(/^\/customer\/sessions\/\d+$/)) return 'customer.sessions.destroy';
+        // Beneficiaries
+        if (endpoint.match(/^\/customer\/beneficiaries\/\d+$/)) return 'customer.beneficiaries.update';
+        if (endpoint === '/customer/beneficiaries') return 'customer.beneficiaries';
+        // Payment methods
+        if (endpoint === '/customer/payment-methods/setup-intent') return 'customer.payment-methods.setup-intent';
+        if (endpoint === '/customer/payment-methods/confirm') return 'customer.payment-methods.confirm';
+        if (endpoint.match(/^\/customer\/payment-methods\/\d+\/default$/)) return 'customer.payment-methods.default';
+        if (endpoint.match(/^\/customer\/payment-methods\/\d+$/)) return 'customer.payment-methods.destroy';
+        if (endpoint === '/customer/payment-methods') return 'customer.payment-methods';
+        // GDPR
+        if (endpoint === '/customer/gdpr/export') return 'customer.gdpr.export';
+        if (endpoint === '/customer/gdpr/export/status') return 'customer.gdpr.export.status';
+
         // Order confirmation (public, no auth needed â€” for thank-you page)
         if (endpoint.match(/\/order-confirmation\/[\w-]+$/)) return 'order-confirmation';
 
@@ -612,6 +637,13 @@ const BileteOnlineAPI = {
         const reviewMatch = endpoint.match(/\/customer\/reviews\/(\d+)/);
         if (reviewMatch) {
             return `id=${encodeURIComponent(reviewMatch[1])}`;
+        }
+
+        // bilete.online /cont/setari extras (2026-05-30)
+        // Sessions / Beneficiaries / Payment methods all use /customer/<resource>/{id}
+        const accountResourceMatch = endpoint.match(/\/customer\/(?:sessions|beneficiaries|payment-methods)\/(\d+)(?:\/default)?$/);
+        if (accountResourceMatch) {
+            return `id=${encodeURIComponent(accountResourceMatch[1])}`;
         }
 
         // Extract watchlist ID from /customer/watchlist/{id}

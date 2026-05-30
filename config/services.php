@@ -142,4 +142,22 @@ return [
         'token' => env('MAPBOX_TOKEN'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Stripe — marketplace customer payment methods (bilete.online)
+    |--------------------------------------------------------------------------
+    |
+    | Global fallback used by MarketplaceStripeService when a marketplace_client
+    | doesn't have its own Stripe credentials in settings.stripe.{secret_key,
+    | publishable_key}. Used to issue SetupIntents so customers can save cards
+    | for re-use at checkout; one-off charges still flow through the existing
+    | per-tenant TenantPaymentConfig path.
+    |
+    */
+    'stripe' => [
+        'secret'         => env('STRIPE_SECRET'),
+        'publishable'    => env('STRIPE_KEY'),
+        'webhook_secret' => env('STRIPE_WEBHOOK_SECRET'),
+    ],
+
 ];

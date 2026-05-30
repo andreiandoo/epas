@@ -53,7 +53,7 @@ class AuthController extends BaseController
                     'marketing_consent_at' => ($validated['accepts_marketing'] ?? false) ? now() : null,
                 ]);
 
-                $token = $existing->createToken('customer-api')->plainTextToken;
+                $token = $existing->createToken(self::buildSessionTokenName($request))->plainTextToken;
 
                 return $this->success([
                     'customer' => $this->formatCustomer($existing),
@@ -101,7 +101,7 @@ class AuthController extends BaseController
             ]);
         }
 
-        $token = $customer->createToken('customer-api')->plainTextToken;
+        $token = $customer->createToken(self::buildSessionTokenName($request))->plainTextToken;
 
         $response = [
             'customer' => $this->formatCustomer($customer),
@@ -231,14 +231,64 @@ class AuthController extends BaseController
             return $this->error('Your account has been suspended', 403);
         }
 
+        // 2FA challenge — if the customer has confirmed 2FA, do NOT return a
+        // token. Instead, return a one-shot opaque challenge token (5-minute
+        // TTL) that the client trades for the real token via /customer/2fa/login.
+        if ($customer->two_factor_secret && $customer->two_factor_confirmed_at) {
+            $challenge = \Illuminate\Support\Str::random(64);
+            \Illuminate\Support\Facades\Cache::put(
+                'mc_2fa_challenge:' . $challenge,
+                ['customer_id' => $customer->id, 'created_at' => now()->toIso8601String()],
+                now()->addMinutes(5)
+            );
+            return $this->success([
+                'requires_2fa' => true,
+                'challenge'    => $challenge,
+            ], '2FA verification required.');
+        }
+
         $customer->recordLogin();
 
-        $token = $customer->createToken('customer-api')->plainTextToken;
+        $token = $customer->createToken(self::buildSessionTokenName($request))->plainTextToken;
 
         return $this->success([
             'customer' => $this->formatCustomer($customer),
             'token' => $token,
         ], 'Login successful');
+    }
+
+    /**
+     * Build a human-readable, per-device label for a Sanctum token so the
+     * /cont/setari → Sesiuni active list can show "Chrome · Windows · IP".
+     */
+    public static function buildSessionTokenName(Request $request): string
+    {
+        $ua = (string) $request->userAgent();
+        $browser = 'Browser';
+        if (str_contains($ua, 'Edg/')) $browser = 'Edge';
+        elseif (str_contains($ua, 'Chrome/') && ! str_contains($ua, 'Edg/')) $browser = 'Chrome';
+        elseif (str_contains($ua, 'Safari/') && ! str_contains($ua, 'Chrome/')) $browser = 'Safari';
+        elseif (str_contains($ua, 'Firefox/')) $browser = 'Firefox';
+
+        $os = 'Device';
+        if (str_contains($ua, 'Windows')) $os = 'Windows';
+        elseif (str_contains($ua, 'Macintosh') || str_contains($ua, 'Mac OS')) $os = 'macOS';
+        elseif (str_contains($ua, 'iPhone') || str_contains($ua, 'iPad')) $os = 'iOS';
+        elseif (str_contains($ua, 'Android')) $os = 'Android';
+        elseif (str_contains($ua, 'Linux')) $os = 'Linux';
+
+        $ip = (string) $request->ip();
+        return 'web|' . $browser . '|' . $os . '|' . $ip;
+    }
+
+    /**
+     * Public wrapper around protected formatCustomer() — used by sibling
+     * controllers (TwoFactorController loginVerify) that need to format the
+     * same response shape as /customer/me without copy-pasting the array.
+     */
+    public function publicFormatCustomer(MarketplaceCustomer $customer): array
+    {
+        return $this->formatCustomer($customer);
     }
 
     /**

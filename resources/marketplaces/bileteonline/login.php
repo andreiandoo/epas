@@ -109,8 +109,25 @@ include __DIR__ . '/includes/header.php';
                         <!-- shared error/success banner -->
                         <div x-show="message" x-cloak class="mt-5 rounded-2xl border-2 px-4 py-3 text-sm font-medium" :class="messageType === 'error' ? 'border-vermilion bg-vermilion/10 text-vermilion' : 'border-forest bg-mint text-forest'" x-text="message"></div>
 
+                        <!-- 2FA challenge — shown after submitLogin when backend returns requires_2fa -->
+                        <form x-show="mode==='login' && twofa.required" x-cloak x-transition.opacity class="mt-7 space-y-4" @submit.prevent="submit2faCode()">
+                            <div class="rounded-2xl bg-mint border border-forest/20 p-4">
+                                <p class="font-bold text-forest">Autentificare în doi pași</p>
+                                <p class="mt-1 text-sm text-ink-soft">Deschide aplicația de autentificare (Google Authenticator, Authy, 1Password) și introdu codul de 6 cifre. Sau folosește unul dintre codurile de recuperare salvate.</p>
+                            </div>
+                            <label>
+                                <span class="block mb-1.5 text-sm font-bold">Cod TOTP sau cod de recuperare</span>
+                                <input class="field font-mono text-lg tracking-widest" x-model="twofa.code" placeholder="123 456" autocomplete="one-time-code" inputmode="text" required>
+                            </label>
+                            <button type="submit" :disabled="submitting" class="w-full rounded-full bg-vermilion text-paper px-6 py-4 font-bold hover:bg-vermilion-d transition disabled:opacity-60">
+                                <span x-show="!submitting">Verifică și intră</span>
+                                <span x-show="submitting" x-cloak>Se verifică…</span>
+                            </button>
+                            <button type="button" @click="cancel2fa()" class="w-full text-sm font-bold text-ink-soft hover:text-ink">← Înapoi la login</button>
+                        </form>
+
                         <!-- LOGIN -->
-                        <form x-show="mode==='login'" x-transition.opacity class="mt-7 space-y-4" @submit.prevent="submitLogin()">
+                        <form x-show="mode==='login' && !twofa.required" x-transition.opacity class="mt-7 space-y-4" @submit.prevent="submitLogin()">
                             <label>
                                 <span class="block mb-1.5 text-sm font-bold">Email</span>
                                 <input class="field" type="email" x-model="login.email" :placeholder="accountType==='client' ? 'emailul folosit la comandă' : 'email organizator / staff'" autocomplete="email" required>
@@ -327,6 +344,7 @@ function authPage(initial) {
         message: '',
         messageType: 'error',
         login: { email: (initial.prefillEmail || ''), password: '', remember: true },
+        twofa: { required: false, challenge: '', code: '' },
         register: {
             first_name: '', last_name: '',
             contact_name: '', venue_name: '',
@@ -377,6 +395,16 @@ function authPage(initial) {
                     ? BileteOnlineAuth.loginOrganizer.bind(BileteOnlineAuth)
                     : BileteOnlineAuth.loginCustomer.bind(BileteOnlineAuth);
                 const result = await fn(this.login.email.trim(), this.login.password);
+
+                // 2FA challenge — accountType=client only; show the code form instead of finishing login.
+                if (result && result.success && result.requires2fa) {
+                    this.twofa.required = true;
+                    this.twofa.challenge = result.challenge;
+                    this.twofa.code = '';
+                    this.submitting = false;
+                    return;
+                }
+
                 if (result && result.success) {
                     this.showMessage('Conectare reușită. Te redirecționăm…', 'success');
                     const target = this.accountType === 'venue' ? '/organizator/panou' : (this.redirectAfter || '/cont');
@@ -389,6 +417,38 @@ function authPage(initial) {
                 this.showMessage('Eroare la conectare. Încearcă din nou.', 'error');
                 this.submitting = false;
             }
+        },
+
+        async submit2faCode() {
+            if (typeof BileteOnlineAuth === 'undefined' || ! this.twofa.challenge) {
+                this.showMessage('Sesiunea a expirat. Reia autentificarea.', 'error');
+                this.cancel2fa();
+                return;
+            }
+            if (! (this.twofa.code || '').trim()) {
+                this.showMessage('Introdu codul.', 'error');
+                return;
+            }
+            this.submitting = true;
+            try {
+                const r = await BileteOnlineAuth.finishCustomer2faLogin(this.twofa.challenge, this.twofa.code.trim());
+                if (r && r.success) {
+                    this.showMessage('Cod corect. Te redirecționăm…', 'success');
+                    const target = this.redirectAfter || '/cont';
+                    setTimeout(() => { window.location.href = target; }, 500);
+                } else {
+                    this.showMessage((r && r.message) || 'Codul nu este valid.', 'error');
+                    this.submitting = false;
+                }
+            } catch (e) {
+                this.showMessage('Eroare la verificare.', 'error');
+                this.submitting = false;
+            }
+        },
+
+        cancel2fa() {
+            this.twofa = { required: false, challenge: '', code: '' };
+            this.submitting = false;
         },
 
         async submitRegister() {
