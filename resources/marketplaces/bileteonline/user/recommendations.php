@@ -1,17 +1,22 @@
 <?php
 /**
- * bilete.online — /cont/recomandari (Recomandări personalizate, v2 design)
+ * bilete.online — /cont/recomandari (Recomandări personalizate, v2 full template)
  *
- * Activity suggestions based on the client's taste profile (cities + categories
- * mined from their order history). Hits /customer/profile-data for the taste
- * signal and /activities for the candidate pool. No dedicated recommendation
- * endpoint yet — v1 ranks client-side by tag/city overlap.
+ * Implements template-client-recommendations-bilete-online-v2.html end-to-end:
+ *   - Hero w/ PROFILE SIGNALS card (oraș / interes / familie / puncte)
+ *   - 4 stat cards (MATCH BUN / CU PUNCTE / FAMILIE / EXPIRĂ)
+ *   - Filter row: search + reason + city + budget + reset
+ *   - Quick-filter pills (profile/family/points/weather)
+ *   - 2-col activity cards: image overlay + match badge + points-eligible badge +
+ *     city/category/price tags + description + "De ce ți-o recomandăm?" box +
+ *     "Vezi bilete" + "Nu mă interesează" CTAs
+ *   - Right sidebar: CONTROL PERSONALIZARE (4 toggles) + PUNCTE BONUS + DISCOVERY cards
  */
 
 require_once __DIR__ . '/../includes/config.php';
 
-$pageTitleRaw    = 'Recomandări personalizate — ' . SITE_NAME;
-$pageDescription = 'Activități recomandate pentru tine pe bilete.online, alese pe baza orașelor și categoriilor pe care le-ai vizitat sau ai cumpărat.';
+$pageTitleRaw    = 'Recomandări pentru tine — ' . SITE_NAME;
+$pageDescription = 'Recomandări personalizate bilete.online: activități pe baza orașelor preferate, comenzilor, recenziilor, punctelor și profilului de familie.';
 $canonicalUrl    = SITE_URL . '/cont/recomandari';
 $noindex         = true;
 $currentPage     = 'cont';
@@ -28,90 +33,217 @@ include __DIR__ . '/../includes/header.php';
 
         <main class="min-w-0" x-data="clientRecommendationsPage()" x-init="init()">
 
-            <!-- HERO -->
-            <section class="rounded-[2rem] border-2 border-ink bg-ink text-paper p-6 sm:p-8 shadow-deep">
-                <div class="grid xl:grid-cols-[1fr_360px] gap-8 items-center">
+            <!-- HERO with PROFILE SIGNALS -->
+            <section class="relative overflow-hidden rounded-[2rem] border-2 border-ink bg-ink text-paper p-6 sm:p-8 shadow-deep">
+                <div class="absolute inset-0 opacity-10" style="background-image:radial-gradient(#fff 1px,transparent 1.4px);background-size:15px 15px"></div>
+                <div class="relative grid xl:grid-cols-[1fr_420px] gap-8 items-center">
                     <div>
-                        <p class="stamp inline-flex px-3 py-1 text-xs font-mono tracking-[.18em] text-ochre">PENTRU TINE</p>
-                        <h1 class="mt-5 font-display text-5xl sm:text-6xl lg:text-7xl font-bold leading-[.85]">Recomandări</h1>
-                        <p class="mt-5 max-w-3xl text-paper/65 text-lg leading-relaxed">
-                            Activități alese pe baza orașelor și categoriilor pe care le-ai vizitat sau le-ai cumpărat. Cu cât folosești mai mult contul, cu atât devin mai relevante.
-                        </p>
-                        <div class="mt-6 flex flex-wrap gap-3">
-                            <a href="/cont/setari#profil-preferinte" class="rounded-full bg-vermilion text-paper px-6 py-3 font-bold hover:bg-vermilion-d transition">Ajustează preferințele</a>
-                            <a href="/categorii" class="rounded-full border-2 border-paper/50 px-6 py-3 font-bold hover:bg-paper hover:text-ink transition">Vezi categorii</a>
+                        <p class="stamp inline-flex px-3 py-1 text-xs font-mono tracking-[.18em] text-ochre">PERSONAL DISCOVERY</p>
+                        <h1 class="mt-5 font-display text-5xl sm:text-6xl lg:text-7xl font-bold leading-[.85]">Recomandări pentru tine</h1>
+                        <p class="mt-5 max-w-3xl text-paper/65 text-lg leading-relaxed">Activități recomandate pe baza orașelor preferate, comenzilor, recenziilor, punctelor disponibile, profilului de familie și intereselor tale.</p>
+                        <div class="mt-7 flex flex-wrap gap-3">
+                            <a href="#recomandari" class="rounded-full bg-vermilion text-paper px-6 py-4 font-bold hover:bg-vermilion-d transition">Vezi recomandări</a>
+                            <a href="/cont/setari#profil-preferinte" class="rounded-full border-2 border-paper/50 px-6 py-4 font-bold hover:bg-paper hover:text-ink transition">Rafinează profilul</a>
                         </div>
                     </div>
-                    <div class="ticket relative bg-paper text-ink rounded-[2rem] border-2 border-paper/30 p-6 rotate-[-2deg]" style="--perf:100%">
-                        <p class="font-mono text-xs tracking-[.18em] text-ink-soft">PROFIL DE GUST</p>
-                        <p class="mt-2 font-display text-3xl font-bold leading-tight" x-text="topCity || 'Niciun oraș setat'">Niciun oraș setat</p>
-                        <p class="mt-1 text-sm text-ink-soft">cel mai vizitat oraș</p>
-                        <div class="mt-4 flex flex-wrap gap-1.5">
-                            <template x-for="tag in topCategories.slice(0, 5)" :key="tag">
-                                <span class="rounded-full bg-paper-2 border border-ink/10 px-2.5 py-1 text-xs font-bold" x-text="tag"></span>
+
+                    <div class="rounded-[2rem] border-2 border-paper/30 bg-paper text-ink p-6 rotate-[-2deg]">
+                        <p class="font-mono text-xs tracking-[.18em] text-ink-soft">PROFILE SIGNALS</p>
+                        <h2 class="mt-2 font-display text-4xl font-bold leading-none">De ce vezi aceste recomandări?</h2>
+                        <div class="mt-5 space-y-3">
+                            <div class="rounded-2xl bg-paper-2 border border-ink/10 p-4 flex items-center justify-between gap-2">
+                                <span class="font-bold">Oraș preferat</span>
+                                <span x-text="signals.city || 'neales'"></span>
+                            </div>
+                            <div class="rounded-2xl bg-paper-2 border border-ink/10 p-4 flex items-center justify-between gap-2">
+                                <span class="font-bold">Interes</span>
+                                <span class="truncate" x-text="signals.interest || 'descoperire'"></span>
+                            </div>
+                            <div class="rounded-2xl bg-paper-2 border border-ink/10 p-4 flex items-center justify-between gap-2">
+                                <span class="font-bold">Familie</span>
+                                <span x-text="signals.family || 'doar tu'"></span>
+                            </div>
+                            <div class="rounded-2xl bg-paper-2 border border-ink/10 p-4 flex items-center justify-between gap-2">
+                                <span class="font-bold">Puncte</span>
+                                <span x-text="formatNumber(signals.points || 0)"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 4 STAT CARDS -->
+            <section class="mt-6 grid sm:grid-cols-2 xl:grid-cols-4 gap-4">
+                <article class="rounded-[2rem] border-2 border-ink bg-paper p-5 shadow-ticket">
+                    <p class="font-mono text-xs tracking-[.18em] text-ink-soft">MATCH BUN</p>
+                    <p class="mt-3 font-display text-6xl font-bold" x-text="stats.goodMatch">0</p>
+                    <p class="mt-1 text-ink-soft">activități potrivite</p>
+                </article>
+                <article class="rounded-[2rem] border-2 border-ink bg-mint p-5 shadow-ticket">
+                    <p class="font-mono text-xs tracking-[.18em] text-forest">CU PUNCTE</p>
+                    <p class="mt-3 font-display text-6xl font-bold" x-text="stats.withPoints">0</p>
+                    <p class="mt-1 text-ink-soft">poți aplica reducere</p>
+                </article>
+                <article class="rounded-[2rem] border-2 border-ink bg-paper p-5 shadow-ticket">
+                    <p class="font-mono text-xs tracking-[.18em] text-ink-soft">FAMILIE</p>
+                    <p class="mt-3 font-display text-6xl font-bold" x-text="stats.family">0</p>
+                    <p class="mt-1 text-ink-soft">potrivite pentru copii</p>
+                </article>
+                <article class="rounded-[2rem] border-2 border-ink bg-rose p-5 shadow-ticket">
+                    <p class="font-mono text-xs tracking-[.18em] text-vermilion">EXPIRĂ</p>
+                    <p class="mt-3 font-display text-6xl font-bold" x-text="formatNumber(stats.expiringPoints)">0</p>
+                    <p class="mt-1 text-ink-soft" x-text="stats.expiringPoints > 0 ? ('puncte în ' + (stats.expiringDays || 30) + ' zile') : 'fără puncte expirate'">—</p>
+                </article>
+            </section>
+
+            <!-- FILTERS -->
+            <section class="mt-6 rounded-[2rem] border-2 border-ink bg-paper p-5 sm:p-6 shadow-ticket">
+                <div class="grid xl:grid-cols-[1.2fr_.7fr_.7fr_.7fr_auto] gap-3 items-end">
+                    <label>
+                        <span class="block mb-1.5 text-sm font-bold">Caută</span>
+                        <input class="field" x-model="search" placeholder="Escape room, copii, muzeu, Brașov…">
+                    </label>
+                    <label>
+                        <span class="block mb-1.5 text-sm font-bold">Motiv</span>
+                        <select class="field" x-model="reason">
+                            <option value="all">Toate</option>
+                            <option value="profile">Profil</option>
+                            <option value="family">Familie</option>
+                            <option value="points">Puncte</option>
+                            <option value="history">Istoric</option>
+                            <option value="weather">Vreme/sezon</option>
+                        </select>
+                    </label>
+                    <label>
+                        <span class="block mb-1.5 text-sm font-bold">Oraș</span>
+                        <select class="field" x-model="cityFilter">
+                            <option value="all">Toate</option>
+                            <template x-for="c in availableCities" :key="c">
+                                <option :value="c" x-text="c"></option>
                             </template>
-                            <span x-show="topCategories.length === 0" class="text-xs text-ink-soft">Folosește contul ca să-ți construim profilul.</span>
+                        </select>
+                    </label>
+                    <label>
+                        <span class="block mb-1.5 text-sm font-bold">Buget</span>
+                        <select class="field" x-model="budget">
+                            <option value="all">Orice</option>
+                            <option value="low">sub 50 lei</option>
+                            <option value="mid">50–120 lei</option>
+                            <option value="high">120+ lei</option>
+                        </select>
+                    </label>
+                    <button @click="resetFilters()" class="rounded-full border-2 border-ink px-5 py-3.5 font-bold hover:bg-ink hover:text-paper transition">Reset</button>
+                </div>
+
+                <div class="mt-5 flex flex-wrap gap-2">
+                    <button @click="reason='profile'" :class="reason==='profile'?'bg-ink text-paper':'bg-paper-2'" class="rounded-full px-4 py-2 font-bold border border-ink/10">Pentru profilul tău</button>
+                    <button @click="reason='family'" :class="reason==='family'?'bg-forest text-paper':'bg-paper-2'" class="rounded-full px-4 py-2 font-bold border border-ink/10">Cu copiii</button>
+                    <button @click="reason='points'" :class="reason==='points'?'bg-vermilion text-paper':'bg-paper-2'" class="rounded-full px-4 py-2 font-bold border border-ink/10">Folosește puncte</button>
+                    <button @click="reason='weather'" :class="reason==='weather'?'bg-ochre text-ink':'bg-paper-2'" class="rounded-full px-4 py-2 font-bold border border-ink/10">Weekend / vreme</button>
+                </div>
+            </section>
+
+            <!-- RESULTS + RIGHT SIDEBAR -->
+            <section id="recomandari" class="mt-6 grid xl:grid-cols-[1fr_360px] gap-6 items-start">
+
+                <div>
+                    <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-4">
+                        <div>
+                            <p class="font-mono text-xs tracking-[.18em] text-ink-soft">REZULTATE</p>
+                            <h2 class="font-display text-4xl sm:text-5xl font-bold leading-none" x-text="filteredItems().length + ' recomandări'">0 recomandări</h2>
                         </div>
+                        <a href="/cont/setari#profil-preferinte" class="rounded-full bg-ink text-paper px-5 py-3 font-bold hover:bg-vermilion transition">Rafinează profilul</a>
                     </div>
-                </div>
-            </section>
 
-            <!-- TASTE FILTERS -->
-            <section class="mt-6 rounded-[2rem] border-2 border-ink bg-paper p-5 shadow-ticket">
-                <p class="font-mono text-xs tracking-[.18em] text-ink-soft">FILTRE</p>
-                <div class="mt-3 flex flex-wrap gap-2">
-                    <button @click="activeFilter='all'" :class="activeFilter==='all' ? 'bg-ink text-paper' : 'bg-paper-2'" class="rounded-full px-4 py-2 font-bold border border-ink/10 text-sm">Toate</button>
-                    <template x-for="t in topCategories.slice(0, 6)" :key="'cat-'+t">
-                        <button @click="activeFilter=t" :class="activeFilter===t ? 'bg-ink text-paper' : 'bg-paper-2'" class="rounded-full px-4 py-2 font-bold border border-ink/10 text-sm" x-text="t"></button>
-                    </template>
-                    <button x-show="topCity" @click="cityFilter = cityFilter ? '' : topCity" :class="cityFilter ? 'bg-vermilion text-paper' : 'bg-paper-2'" class="rounded-full px-4 py-2 font-bold border border-ink/10 text-sm">
-                        <span x-text="cityFilter ? '✓ Doar ' + topCity : 'Doar ' + topCity"></span>
-                    </button>
-                </div>
-            </section>
-
-            <!-- ACTIVITY GRID -->
-            <section class="mt-6">
-                <div class="flex items-end justify-between gap-3 mb-4">
-                    <div>
-                        <p class="font-mono text-xs tracking-[.18em] text-ink-soft">SUGESTII</p>
-                        <h2 class="font-display text-4xl sm:text-5xl font-bold leading-none" x-text="filteredItems().length + ' activități'"></h2>
+                    <div x-show="loading" class="grid md:grid-cols-2 gap-5">
+                        <div class="h-96 rounded-[2rem] bg-paper-2/60 animate-pulse"></div>
+                        <div class="h-96 rounded-[2rem] bg-paper-2/60 animate-pulse"></div>
                     </div>
-                </div>
 
-                <div x-show="loading" class="grid sm:grid-cols-2 xl:grid-cols-3 gap-4">
-                    <div class="h-64 rounded-[2rem] bg-paper-2/60 animate-pulse"></div>
-                    <div class="h-64 rounded-[2rem] bg-paper-2/60 animate-pulse"></div>
-                    <div class="h-64 rounded-[2rem] bg-paper-2/60 animate-pulse"></div>
-                </div>
-
-                <div x-show="!loading && filteredItems().length > 0" class="grid sm:grid-cols-2 xl:grid-cols-3 gap-4">
-                    <template x-for="item in filteredItems()" :key="item.slug || item.id">
-                        <article class="rounded-[2rem] border-2 border-ink bg-paper overflow-hidden shadow-ticket hover:-translate-y-1 transition">
-                            <a :href="'/activitate/' + item.slug" class="block">
-                                <div class="relative h-44 bg-ink overflow-hidden">
+                    <div x-show="!loading && filteredItems().length > 0" class="grid md:grid-cols-2 gap-5">
+                        <template x-for="item in filteredItems()" :key="item.url || item.id">
+                            <article class="rounded-[2rem] border-2 border-ink bg-paper overflow-hidden shadow-ticket hover:-translate-y-1 transition">
+                                <div class="relative h-56 bg-ink overflow-hidden">
                                     <img x-show="item.image" :src="item.image" :alt="item.title" class="w-full h-full object-cover opacity-85" loading="lazy" onerror="this.style.display='none'">
                                     <div class="absolute inset-0 grid place-items-center" x-show="!item.image"><span class="text-6xl opacity-30">🎫</span></div>
-                                    <div class="absolute inset-0 bg-gradient-to-t from-ink/85 via-ink/10 to-transparent"></div>
-                                    <span x-show="item.category" class="absolute left-4 top-4 rounded-full bg-paper text-ink px-3 py-1 text-xs font-bold" x-text="item.category"></span>
-                                    <span x-show="item.matchScore > 0" class="absolute right-4 top-4 rounded-full bg-mint text-forest px-3 py-1 text-xs font-bold">match <span x-text="item.matchScore"></span></span>
-                                    <h3 class="absolute left-4 bottom-4 right-4 font-display text-2xl font-bold text-paper leading-none" x-text="item.title"></h3>
+                                    <div class="absolute inset-0 bg-gradient-to-t from-ink/90 via-transparent to-transparent"></div>
+                                    <span x-show="item.match > 0" class="absolute left-4 top-4 rounded-full bg-paper text-ink px-3 py-1 text-xs font-bold" x-text="item.match + '% match'"></span>
+                                    <span x-show="item.canUsePoints" class="absolute right-4 top-4 rounded-full bg-mint text-forest px-3 py-1 text-xs font-bold">poți folosi puncte</span>
+                                    <h3 class="absolute left-4 right-4 bottom-4 font-display text-4xl font-bold text-paper leading-none" x-text="item.title"></h3>
                                 </div>
-                            </a>
-                            <div class="p-4 flex items-center justify-between gap-3">
-                                <span class="text-sm font-bold" x-text="item.city || '—'"></span>
-                                <a :href="'/activitate/' + item.slug" class="rounded-full bg-vermilion text-paper px-4 py-2 text-xs font-bold hover:bg-vermilion-d transition">Vezi bilete</a>
-                            </div>
-                        </article>
-                    </template>
+                                <div class="p-5">
+                                    <div class="flex flex-wrap gap-2">
+                                        <span x-show="item.city" class="rounded-full bg-paper-2 border border-ink/10 px-3 py-1 text-xs font-bold" x-text="item.city"></span>
+                                        <span x-show="item.category" class="rounded-full bg-paper-2 border border-ink/10 px-3 py-1 text-xs font-bold" x-text="item.category"></span>
+                                        <span x-show="item.price" class="rounded-full bg-paper-2 border border-ink/10 px-3 py-1 text-xs font-bold" x-text="item.price"></span>
+                                    </div>
+                                    <p class="mt-4 text-ink-soft leading-relaxed" x-text="item.description"></p>
+                                    <div class="mt-4 rounded-2xl bg-mint border border-forest/20 p-4">
+                                        <p class="font-bold text-forest">De ce ți-o recomandăm?</p>
+                                        <p class="mt-1 text-sm text-ink-soft" x-text="item.why"></p>
+                                    </div>
+                                    <div class="mt-5 flex flex-wrap gap-2">
+                                        <a :href="item.url" class="rounded-full bg-vermilion text-paper px-5 py-3 font-bold hover:bg-vermilion-d transition">Vezi bilete</a>
+                                        <button @click="hideItem(item)" class="rounded-full border border-ink/20 px-5 py-3 font-bold hover:bg-ink hover:text-paper transition">Nu mă interesează</button>
+                                    </div>
+                                </div>
+                            </article>
+                        </template>
+                    </div>
+
+                    <div x-show="!loading && filteredItems().length === 0" class="mt-6 rounded-[2rem] border-2 border-ink bg-paper p-8 text-center">
+                        <p class="font-display text-4xl font-bold">Nu am găsit recomandări.</p>
+                        <p class="mt-2 text-ink-soft">Schimbă filtrele sau completează profilul pentru sugestii mai bune.</p>
+                        <div class="mt-5 flex flex-wrap gap-2 justify-center">
+                            <button @click="resetFilters()" class="rounded-full border-2 border-ink px-5 py-3 font-bold hover:bg-ink hover:text-paper transition">Resetează filtrele</button>
+                            <a href="/cont/setari#profil-preferinte" class="rounded-full bg-vermilion text-paper px-5 py-3 font-bold hover:bg-vermilion-d transition">Adaugă preferințe</a>
+                        </div>
+                    </div>
                 </div>
 
-                <div x-show="!loading && filteredItems().length === 0" class="rounded-[2rem] border-2 border-dashed border-ink/20 bg-paper-2/60 p-10 text-center">
-                    <p class="text-5xl">✨</p>
-                    <p class="mt-4 font-display text-3xl font-bold">Pregătim recomandările tale</p>
-                    <p class="mt-2 text-ink-soft">Cumpără sau vizualizează câteva activități și revino — sistemul învață din pașii tăi.</p>
-                    <a href="/categorii" class="mt-5 inline-flex rounded-full bg-vermilion text-paper px-6 py-3 font-bold">Descoperă activități</a>
-                </div>
+                <aside class="space-y-6 xl:sticky xl:top-28">
+
+                    <!-- CONTROL PERSONALIZARE -->
+                    <div class="rounded-[2rem] border-2 border-ink bg-paper p-6 shadow-ticket">
+                        <p class="font-mono text-xs tracking-[.18em] text-ink-soft">CONTROL PERSONALIZARE</p>
+                        <h2 class="mt-2 font-display text-4xl font-bold leading-none">Ce influențează recomandările</h2>
+                        <div class="mt-5 space-y-3">
+                            <label class="flex items-start gap-3 cursor-pointer">
+                                <input type="checkbox" x-model="signalsToggles.history" @change="recompute()" class="mt-1 w-5 h-5 accent-vermilion">
+                                <span><strong>Istoric comenzi</strong><br><span class="text-sm text-ink-soft">activități cumpărate anterior</span></span>
+                            </label>
+                            <label class="flex items-start gap-3 cursor-pointer">
+                                <input type="checkbox" x-model="signalsToggles.reviews" @change="recompute()" class="mt-1 w-5 h-5 accent-vermilion">
+                                <span><strong>Recenzii</strong><br><span class="text-sm text-ink-soft">ratinguri și feedback</span></span>
+                            </label>
+                            <label class="flex items-start gap-3 cursor-pointer">
+                                <input type="checkbox" x-model="signalsToggles.family" @change="recompute()" class="mt-1 w-5 h-5 accent-vermilion">
+                                <span><strong>Profil familie</strong><br><span class="text-sm text-ink-soft">vârste copii / tipuri activități</span></span>
+                            </label>
+                            <label class="flex items-start gap-3 cursor-pointer">
+                                <input type="checkbox" x-model="signalsToggles.cities" @change="recompute()" class="mt-1 w-5 h-5 accent-vermilion">
+                                <span><strong>Orașe favorite</strong><br><span class="text-sm text-ink-soft" x-text="(prefCities.join(', ')) || 'încă nimic ales'">încă nimic ales</span></span>
+                            </label>
+                        </div>
+                        <a href="/cont/setari#profil-preferinte" class="mt-5 inline-flex rounded-full bg-ink text-paper px-5 py-3 font-bold hover:bg-vermilion transition">Editează semnalele</a>
+                    </div>
+
+                    <!-- PUNCTE BONUS -->
+                    <div class="rounded-[2rem] border-2 border-forest bg-mint p-6">
+                        <p class="font-mono text-xs tracking-[.18em] text-forest">PUNCTE BONUS</p>
+                        <h2 class="mt-2 font-display text-4xl font-bold leading-none">Ai <span x-text="formatNumber(signals.points)">0</span> puncte</h2>
+                        <p class="mt-3 text-ink-soft">Poți reduce următoarea comandă cu aproximativ <strong x-text="formatLei(pointsToLei(signals.points))">0 lei</strong>, în funcție de regulile checkout-ului.</p>
+                        <a href="/cont/punctele-mele" class="mt-5 inline-flex rounded-full bg-forest text-paper px-5 py-3 font-bold hover:bg-ink transition">Vezi puncte</a>
+                    </div>
+
+                    <!-- DISCOVERY -->
+                    <div class="rounded-[2rem] border-2 border-ink bg-vermilion text-paper p-6 shadow-ticket">
+                        <p class="font-mono text-xs tracking-[.18em] text-paper/60">DISCOVERY</p>
+                        <h2 class="mt-2 font-display text-4xl font-bold leading-none">Vrei altceva?</h2>
+                        <p class="mt-3 text-paper/70">Explorează toate categoriile sau caută manual activități în orașul tău.</p>
+                        <a href="/categorii" class="mt-5 inline-flex rounded-full bg-paper text-ink px-5 py-3 font-bold hover:bg-ink hover:text-paper transition">Vezi categorii</a>
+                    </div>
+                </aside>
             </section>
 
             <!-- AUTH GUARD -->
@@ -128,118 +260,222 @@ function clientRecommendationsPage() {
     return {
         loading: true,
         isAuth: true,
+
+        search: '',
+        reason: 'all',
+        cityFilter: 'all',
+        budget: 'all',
+        hidden: [],
+
         items: [],
-        topCity: '',
-        topCategories: [],
-        // Explicit prefs from /cont/setari (settings.interests.*) — these
-        // get higher weight than history-derived signals.
         prefCities: [],
         prefCategories: [],
-        activeFilter: 'all',
-        cityFilter: '',
+
+        signals: { city: '', interest: '', family: '', points: 0 },
+        signalsToggles: { history: true, reviews: true, family: true, cities: true },
+
+        stats: { goodMatch: 0, withPoints: 0, family: 0, expiringPoints: 0, expiringDays: 30 },
 
         init() {
             try { this.isAuth = (window.BileteOnlineAuth && BileteOnlineAuth.isLoggedIn && BileteOnlineAuth.isLoggedIn()); } catch (e) { this.isAuth = false; }
             if (! this.isAuth) { this.loading = false; return; }
+
+            // Restore "hidden" set from localStorage so dismissed items don't reappear
+            try {
+                const saved = JSON.parse(localStorage.getItem('bo_rec_hidden') || '[]');
+                if (Array.isArray(saved)) this.hidden = saved;
+            } catch (e) {}
+
             this.load();
         },
 
         async load() {
-            // 1. Explicit prefs from settings (set via /cont/setari → Preferințe client).
-            //    These are the user's stated intent — they outrank historical signals.
+            // 1. Pull explicit prefs + points + customer settings
             try {
-                const me = await BileteOnlineAPI.customer.getProfile();
-                // /customer/me response varies: customer may be at data.*, data.customer.*, or both
-                const u = (me && me.data) || {};
-                const settings = (u.customer && u.customer.settings) || u.settings || u.preferences || {};
+                const r = await BileteOnlineAPI.customer.getProfile();
+                const root = (r && r.data) || {};
+                const u = root.customer || root;
+                const settings = u.settings || {};
                 const interests = settings.interests || {};
-                this.prefCities = (Array.isArray(interests.preferred_cities) ? interests.preferred_cities : []).filter(Boolean);
-                this.prefCategories = (Array.isArray(interests.event_categories) ? interests.event_categories : []).filter(Boolean);
+                this.prefCities = Array.isArray(interests.preferred_cities) ? interests.preferred_cities : [];
+                this.prefCategories = Array.isArray(interests.event_categories) ? interests.event_categories : [];
+
+                this.signals.points = u.points || 0;
+                this.signals.city = this.prefCities[0] || u.city || '';
             } catch (e) {}
 
-            // 2. Pull taste profile from history (best effort — endpoint may be partial)
-            let profileData = null;
+            // 2. Rewards info for expiring points
             try {
-                const p = await BileteOnlineAPI.customer.getProfileData();
-                profileData = (p && p.data) || null;
+                const r = await BileteOnlineAPI.get('/customer/rewards');
+                const d = (r && r.data) || {};
+                const p = d.points || d;
+                if (p.balance != null) this.signals.points = p.balance;
+                this.stats.expiringPoints = p.expiring_soon ?? 0;
+                this.stats.expiringDays   = p.expiring_in_days ?? 30;
             } catch (e) {}
 
+            // 3. Beneficiaries (family signal)
             try {
-                const s = await BileteOnlineAPI.customer.getSmartSuggestions();
-                if (s && s.data) profileData = Object.assign({}, profileData || {}, s.data);
-            } catch (e) {}
+                const r = await BileteOnlineAPI.get('/customer/beneficiaries');
+                const list = (r && r.data && r.data.beneficiaries) || [];
+                const kids = list.filter(b => b.age && b.age <= 14);
+                if (kids.length > 0) {
+                    const ages = kids.map(k => k.age).filter(Boolean).sort((a,b) => a - b);
+                    this.signals.family = 'copii ' + (ages[0] === ages[ages.length-1] ? ages[0] : (ages[0] + '–' + ages[ages.length-1]));
+                } else if (list.length > 0) {
+                    this.signals.family = list.length + ' beneficiari';
+                } else {
+                    this.signals.family = 'doar tu';
+                }
+            } catch (e) { this.signals.family = 'doar tu'; }
 
-            // 3. Merge — explicit prefs come first, history fills in the gaps
-            let historyTopCity = '';
-            let historyCats = [];
-            if (profileData) {
-                historyTopCity = profileData.top_city || profileData.preferred_city || profileData.most_visited_city || '';
-                const cats = profileData.top_categories || profileData.preferred_categories || profileData.preferred_genres || [];
-                historyCats = (Array.isArray(cats) ? cats : []).map(c => typeof c === 'string' ? c : (c.name || c.slug || '')).filter(Boolean);
-            }
-            this.topCity = (this.prefCities[0] || historyTopCity || '');
-            // Show explicit categories first, then top history categories not already in the list
-            const merged = [...this.prefCategories];
-            historyCats.forEach(c => { if (! merged.some(m => m.toLowerCase() === c.toLowerCase())) merged.push(c); });
-            this.topCategories = merged.slice(0, 8);
-
-            // 4. Pull a pool of recent activities, rank client-side
+            // 4. Build the activity pool from /activities (we re-rank client-side)
             try {
-                const r = await BileteOnlineAPI.get('/activities?sort=recent&per_page=30');
+                const r = await BileteOnlineAPI.get('/activities?sort=recent&per_page=40');
                 const list = (r && r.data && (r.data.items || r.data.activities)) || (r && r.data) || [];
-                const pool = (Array.isArray(list) ? list : []).map(a => ({
-                    title:        a.title || a.name || '',
-                    slug:         a.slug || '',
-                    image:        a.cover_image_url || a.image || null,
-                    city:         a.city ? (a.city.name || a.city) : '',
-                    category:     a.category ? (a.category.name || a.category) : '',
-                    categorySlug: a.category ? (a.category.slug || (typeof a.category === 'string' ? a.category.toLowerCase() : '')) : '',
-                    tags:         a.tags || [],
-                    matchScore:   0,
-                }));
-
-                const lcPrefCities = this.prefCities.map(c => (c || '').toLowerCase());
-                const lcPrefCats   = this.prefCategories.map(c => (c || '').toLowerCase());
-                const lcHistCity   = (historyTopCity || '').toLowerCase();
-                const lcHistCats   = historyCats.map(c => (c || '').toLowerCase());
-
-                pool.forEach(p => {
-                    let score = 0;
-                    const pc = (p.city || '').toLowerCase();
-                    const pcat = (p.category || '').toLowerCase();
-                    const pcatSlug = (p.categorySlug || '').toLowerCase();
-
-                    // Explicit prefs (higher weight)
-                    if (lcPrefCities.length > 0 && lcPrefCities.some(c => pc.includes(c) || c.includes(pc))) score += 5;
-                    if (lcPrefCats.length > 0 && (lcPrefCats.includes(pcatSlug) || lcPrefCats.includes(pcat))) score += 4;
-
-                    // History signals (lower weight, additive)
-                    if (lcHistCity && pc.includes(lcHistCity)) score += 2;
-                    if (lcHistCats.includes(pcat)) score += 1;
-                    (p.tags || []).forEach(t => {
-                        const tl = ((typeof t === 'string') ? t : (t && (t.name || t.slug)) || '').toLowerCase();
-                        if (lcPrefCats.includes(tl)) score += 2;
-                        else if (lcHistCats.includes(tl)) score += 1;
-                    });
-
-                    p.matchScore = score;
-                });
-                pool.sort((a, b) => b.matchScore - a.matchScore);
-
-                this.items = pool;
+                this.items = (Array.isArray(list) ? list : []).map(a => this.normalizeActivity(a));
+                this.recompute();
             } catch (e) {}
+
+            // Interest from history (taste profile)
+            try {
+                const r = await BileteOnlineAPI.customer.getProfileData();
+                const d = (r && r.data) || {};
+                const cats = d.top_categories || d.preferred_categories || d.preferred_genres || [];
+                const first = Array.isArray(cats) && cats.length > 0
+                    ? (typeof cats[0] === 'string' ? cats[0] : (cats[0].name || cats[0].slug))
+                    : '';
+                this.signals.interest = (this.prefCategories[0] || first || 'descoperire');
+            } catch (e) {
+                if (! this.signals.interest) this.signals.interest = this.prefCategories[0] || 'descoperire';
+            }
+
             this.loading = false;
         },
 
+        normalizeActivity(a) {
+            const cityName = a.city ? (typeof a.city === 'string' ? a.city : a.city.name) : '';
+            const catName  = a.category ? (typeof a.category === 'string' ? a.category : a.category.name) : '';
+            const catSlug  = a.category ? (typeof a.category === 'string' ? a.category.toLowerCase() : a.category.slug) : '';
+            const priceFrom = a.price_from || (a.tickets && a.tickets.length > 0 ? Math.min.apply(null, a.tickets.map(t => t.price || 1e9)) : null);
+            const tags = (a.tags || []).map(t => typeof t === 'string' ? t : (t.name || t.slug || ''));
+
+            return {
+                id:    a.id || a.slug,
+                title: a.title || a.name || '',
+                slug:  a.slug || '',
+                url:   a.slug ? ('/activitate/' + a.slug) : '#',
+                image: a.cover_image_url || a.image || null,
+                city:  cityName,
+                category: catName,
+                categorySlug: catSlug,
+                tags:  tags,
+                price: priceFrom ? ('de la ' + Math.round(priceFrom) + ' lei') : '',
+                priceValue: priceFrom || 0,
+                description: a.short_description || a.description || (catName ? ('Activitate ' + catName.toLowerCase() + (cityName ? (' în ' + cityName) : '') + '.') : 'Activitate populară.'),
+                // computed below
+                match: 0,
+                why: '',
+                reason: 'profile',
+                canUsePoints: false,
+                isFamily: false,
+                budget: 'mid',
+            };
+        },
+
+        recompute() {
+            const lcPrefCities = this.signalsToggles.cities ? this.prefCities.map(c => c.toLowerCase()) : [];
+            const lcPrefCats   = this.prefCategories.map(c => c.toLowerCase());
+            const pts = this.signals.points;
+
+            this.items.forEach(it => {
+                let score = 30; // base
+                let reasons = [];
+                let reason = 'profile';
+
+                const cityLc = (it.city || '').toLowerCase();
+                const catLc  = (it.category || '').toLowerCase();
+                const slugLc = (it.categorySlug || '').toLowerCase();
+
+                if (lcPrefCities.some(c => c && (cityLc.includes(c) || c.includes(cityLc)))) {
+                    score += 25; reasons.push('Orașul tău preferat');
+                }
+                if (lcPrefCats.length > 0 && (lcPrefCats.includes(slugLc) || lcPrefCats.includes(catLc))) {
+                    score += 30; reasons.push('Categorie pe care ai marcat-o ca preferată');
+                }
+
+                // Family / kids signal
+                const isFamily = /\b(copii|copil|family|familie|kids|junior)\b/i.test(it.title + ' ' + it.description + ' ' + it.tags.join(' '));
+                if (isFamily) { it.isFamily = true; }
+                if (isFamily && this.signalsToggles.family && /copii/.test(this.signals.family || '')) {
+                    score += 15; reasons.push('Activitate potrivită pentru copii'); reason = 'family';
+                }
+
+                // Budget bucket
+                if (it.priceValue && it.priceValue < 50)         it.budget = 'low';
+                else if (it.priceValue && it.priceValue <= 120)  it.budget = 'mid';
+                else if (it.priceValue && it.priceValue > 120)   it.budget = 'high';
+
+                // Points eligibility — heuristic: only count if user actually has points
+                it.canUsePoints = pts >= 100;
+                if (it.canUsePoints) {
+                    score += 5;
+                    if (reasons.length === 0) { reasons.push('Poți aplica reducere din punctele bonus'); reason = 'points'; }
+                }
+
+                // Weather / weekend — pull from tags
+                if (/weekend|outdoor|exterior|natur(ă|a)/i.test(it.tags.join(' ') + ' ' + it.description)) {
+                    score += 5; if (reasons.length === 0) reason = 'weather';
+                }
+
+                // History signal not directly available client-side; use category match as proxy
+                if (! reasons.length && lcPrefCats.includes(slugLc)) { reason = 'history'; }
+
+                it.match = Math.min(99, Math.round(score));
+                it.reason = reason;
+                it.why = reasons.length > 0
+                    ? reasons.join(' · ')
+                    : 'Activitate populară pe care credem că o vei aprecia.';
+            });
+
+            this.items.sort((a, b) => b.match - a.match);
+
+            // Stat tiles
+            this.stats.goodMatch  = this.items.filter(i => i.match >= 70).length;
+            this.stats.withPoints = this.items.filter(i => i.canUsePoints).length;
+            this.stats.family     = this.items.filter(i => i.isFamily).length;
+        },
+
+        get availableCities() {
+            const set = new Set();
+            this.items.forEach(i => { if (i.city) set.add(i.city); });
+            return Array.from(set).sort((a, b) => a.localeCompare(b, 'ro'));
+        },
+
         filteredItems() {
-            const lcFilter = (this.activeFilter || 'all').toLowerCase();
-            const lcCity = (this.cityFilter || '').toLowerCase();
-            return this.items.filter(p => {
-                if (lcFilter !== 'all' && (p.category || '').toLowerCase() !== lcFilter) return false;
-                if (lcCity && ! (p.city || '').toLowerCase().includes(lcCity)) return false;
-                return true;
+            const q = (this.search || '').toLowerCase().trim();
+            return this.items.filter(item => {
+                if (this.hidden.includes(item.url)) return false;
+                if (this.reason !== 'all' && item.reason !== this.reason) return false;
+                if (this.cityFilter !== 'all' && item.city !== this.cityFilter) return false;
+                if (this.budget !== 'all' && item.budget !== this.budget) return false;
+                if (! q) return true;
+                return JSON.stringify(item).toLowerCase().includes(q);
             });
         },
+
+        hideItem(item) {
+            this.hidden.push(item.url);
+            try { localStorage.setItem('bo_rec_hidden', JSON.stringify(this.hidden.slice(-200))); } catch (e) {}
+        },
+
+        resetFilters() {
+            this.search = ''; this.reason = 'all'; this.cityFilter = 'all'; this.budget = 'all';
+        },
+
+        pointsToLei(p) { return Math.floor((p || 0) / 20); },
+        formatNumber(n) { return new Intl.NumberFormat('ro-RO').format(n || 0); },
+        formatLei(n)    { return (new Intl.NumberFormat('ro-RO', { maximumFractionDigits: 0 }).format(n || 0)) + ' lei'; },
     };
 }
 </script>

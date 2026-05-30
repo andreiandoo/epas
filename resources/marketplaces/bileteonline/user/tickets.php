@@ -65,29 +65,33 @@ include __DIR__ . '/../includes/header.php';
             <!-- STATS -->
             <section class="mt-6 grid sm:grid-cols-2 xl:grid-cols-4 gap-4">
                 <article class="rounded-[2rem] border-2 border-ink bg-paper p-5 shadow-ticket">
-                    <p class="font-mono text-xs tracking-[.18em] text-ink-soft">VIITOARE</p>
+                    <p class="font-mono text-xs tracking-[.18em] text-ink-soft">BILETE VIITOARE</p>
                     <p class="mt-3 font-display text-6xl font-bold" x-text="counts.upcoming">0</p>
+                    <p class="mt-1 text-ink-soft" x-text="'în ' + counts.upcomingActivities + ' activități'">în 0 activități</p>
                 </article>
                 <article class="rounded-[2rem] border-2 border-ink bg-mint p-5 shadow-ticket">
                     <p class="font-mono text-xs tracking-[.18em] text-forest">VALIDE</p>
                     <p class="mt-3 font-display text-6xl font-bold" x-text="counts.valid">0</p>
+                    <p class="mt-1 text-ink-soft">gata de scanare</p>
                 </article>
                 <article class="rounded-[2rem] border-2 border-ink bg-paper p-5 shadow-ticket">
                     <p class="font-mono text-xs tracking-[.18em] text-ink-soft">SCANATE</p>
                     <p class="mt-3 font-display text-6xl font-bold" x-text="counts.checked_in">0</p>
+                    <p class="mt-1 text-ink-soft">istoric complet</p>
                 </article>
                 <article class="rounded-[2rem] border-2 border-ink bg-rose p-5 shadow-ticket">
-                    <p class="font-mono text-xs tracking-[.18em] text-vermilion">ACȚIUNE</p>
+                    <p class="font-mono text-xs tracking-[.18em] text-vermilion">ACȚIUNI</p>
                     <p class="mt-3 font-display text-6xl font-bold" x-text="counts.action">0</p>
+                    <p class="mt-1 text-ink-soft">nume de completat</p>
                 </article>
             </section>
 
             <!-- FILTERS -->
             <section class="mt-6 rounded-[2rem] border-2 border-ink bg-paper p-5 sm:p-6 shadow-ticket">
-                <div class="grid xl:grid-cols-[1.3fr_.7fr_.7fr_auto] gap-3 items-end">
+                <div class="grid xl:grid-cols-[1.3fr_.7fr_.7fr_.7fr_auto] gap-3 items-end">
                     <label>
                         <span class="block mb-1.5 text-sm font-bold">Caută bilet</span>
-                        <input class="field" x-model="search" placeholder="Activitate, beneficiar, cod bilet...">
+                        <input class="field" x-model="search" placeholder="Activitate, oraș, beneficiar, cod bilet...">
                     </label>
                     <label>
                         <span class="block mb-1.5 text-sm font-bold">Status</span>
@@ -96,8 +100,17 @@ include __DIR__ . '/../includes/header.php';
                             <option value="upcoming">Viitoare</option>
                             <option value="valid">Valide</option>
                             <option value="used">Scanate</option>
-                            <option value="expired">Trecute</option>
+                            <option value="expired">Expirate</option>
                             <option value="action">Necesită acțiune</option>
+                        </select>
+                    </label>
+                    <label>
+                        <span class="block mb-1.5 text-sm font-bold">Oraș</span>
+                        <select class="field" x-model="city">
+                            <option value="all">Toate orașele</option>
+                            <template x-for="c in availableCities" :key="c">
+                                <option :value="c" x-text="c"></option>
+                            </template>
                         </select>
                     </label>
                     <label>
@@ -110,14 +123,29 @@ include __DIR__ . '/../includes/header.php';
                     </label>
                     <button @click="resetFilters()" class="rounded-full border-2 border-ink px-5 py-3.5 font-bold hover:bg-ink hover:text-paper transition">Reset</button>
                 </div>
+
+                <!-- Quick filter pills -->
+                <div class="mt-5 flex flex-wrap gap-2">
+                    <button @click="status='upcoming'" :class="status==='upcoming'?'bg-ink text-paper':'bg-paper-2'" class="rounded-full px-4 py-2 font-bold border border-ink/10">Viitoare</button>
+                    <button @click="status='valid'" :class="status==='valid'?'bg-forest text-paper':'bg-paper-2'" class="rounded-full px-4 py-2 font-bold border border-ink/10">Valide</button>
+                    <button @click="status='action'" :class="status==='action'?'bg-rose text-vermilion':'bg-paper-2'" class="rounded-full px-4 py-2 font-bold border border-ink/10">Necesită acțiune</button>
+                    <button @click="status='used'" :class="status==='used'?'bg-paper-3 text-ink':'bg-paper-2'" class="rounded-full px-4 py-2 font-bold border border-ink/10">Scanate</button>
+                </div>
             </section>
 
             <!-- TICKETS GRID -->
             <section id="bilete" class="mt-6">
-                <div class="flex items-end justify-between gap-3 mb-4">
+                <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-4">
                     <div>
                         <p class="font-mono text-xs tracking-[.18em] text-ink-soft">REZULTATE</p>
                         <h2 class="font-display text-4xl sm:text-5xl font-bold leading-none" x-text="filteredTickets().length + ' bilete'"></h2>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <button @click="downloadAllPdf()" :disabled="batchBusy || filteredTickets().length === 0" class="rounded-full bg-paper border-2 border-ink px-5 py-3 font-bold hover:bg-ink hover:text-paper transition disabled:opacity-40">
+                            <span x-show="!batchBusy">Descarcă toate PDF</span>
+                            <span x-show="batchBusy" x-cloak>Se descarcă…</span>
+                        </button>
+                        <button @click="addAllToCalendar()" :disabled="filteredTickets().length === 0" class="rounded-full bg-vermilion text-paper px-5 py-3 font-bold hover:bg-vermilion-d transition disabled:opacity-40">Adaugă toate în calendar</button>
                     </div>
                 </div>
 
@@ -135,6 +163,7 @@ include __DIR__ . '/../includes/header.php';
                                     <div class="flex flex-wrap gap-2">
                                         <span class="rounded-full px-3 py-1 text-xs font-bold" :class="badgeClass(ticket.status)" x-text="statusLabel(ticket.status)"></span>
                                         <span x-show="ticket.event_city || (ticket.event && ticket.event.city)" class="rounded-full bg-paper-2 border border-ink/10 px-3 py-1 text-xs font-bold" x-text="ticket.event_city || (ticket.event && ticket.event.city) || ''"></span>
+                                        <span x-show="hasProtection(ticket)" class="rounded-full bg-mint text-forest px-3 py-1 text-xs font-bold">protecție bilet</span>
                                     </div>
                                     <h3 class="mt-4 font-display text-3xl font-bold leading-none" x-text="ticket.event_title || (ticket.event && (ticket.event.title || ticket.event.name)) || 'Bilet'"></h3>
                                     <p class="mt-2 text-ink-soft" x-text="ticket.venue_name || (ticket.event && ticket.event.venue_name) || ''"></p>
@@ -164,9 +193,11 @@ include __DIR__ . '/../includes/header.php';
                                     </div>
 
                                     <div class="mt-5 flex flex-wrap gap-2">
-                                        <button @click="showQR(ticket)" class="rounded-full bg-ink text-paper px-4 py-2 text-sm font-bold hover:bg-vermilion transition">QR mare</button>
+                                        <a :href="ticketDetailUrl(ticket)" class="rounded-full bg-ink text-paper px-4 py-2 text-sm font-bold hover:bg-vermilion transition">Deschide</a>
                                         <a :href="pdfUrl(ticket)" class="rounded-full bg-vermilion text-paper px-4 py-2 text-sm font-bold hover:bg-vermilion-d transition">PDF</a>
                                         <a :href="calendarUrl(ticket)" class="rounded-full border border-ink/20 px-4 py-2 text-sm font-bold hover:bg-ink hover:text-paper transition">Calendar</a>
+                                        <button @click="showQR(ticket)" class="rounded-full border border-ink/20 px-4 py-2 text-sm font-bold hover:bg-ink hover:text-paper transition">QR mare</button>
+                                        <a x-show="canEditBeneficiary(ticket)" :href="ticketEditUrl(ticket)" class="rounded-full border border-ink/20 px-4 py-2 text-sm font-bold hover:bg-ink hover:text-paper transition">Editează nume</a>
                                         <a x-show="canRefund(ticket)" :href="'/cont/cerere-rambursare?ticket=' + (ticket.id || '')" class="rounded-full border border-vermilion/30 bg-rose text-vermilion px-4 py-2 text-sm font-bold hover:bg-vermilion hover:text-paper transition">Retur</a>
                                     </div>
                                 </div>
@@ -193,6 +224,25 @@ include __DIR__ . '/../includes/header.php';
                     <a x-show="tickets.length === 0" href="/categorii" class="mt-5 inline-flex rounded-full bg-vermilion text-paper px-6 py-3 font-bold">Descoperă activități</a>
                     <button x-show="tickets.length > 0" @click="resetFilters()" class="mt-5 rounded-full bg-vermilion text-paper px-6 py-3 font-bold">Resetează</button>
                 </div>
+            </section>
+
+            <!-- INFO CARDS -->
+            <section class="mt-6 grid md:grid-cols-3 gap-5">
+                <article class="rounded-[2rem] border-2 border-ink bg-paper p-6 shadow-ticket">
+                    <p class="font-mono text-xs tracking-[.18em] text-ink-soft">ACCES</p>
+                    <h2 class="mt-2 font-display text-4xl font-bold leading-none">Cum folosești QR-ul?</h2>
+                    <p class="mt-3 text-ink-soft">Arată QR-ul de pe telefon, cu luminozitate ridicată. Fiecare bilet are cod unic. Dacă nu se citește din prima, mai încearcă — operatorul are scaner manual ca rezervă.</p>
+                </article>
+                <article class="rounded-[2rem] border-2 border-ink bg-mint p-6 shadow-ticket">
+                    <p class="font-mono text-xs tracking-[.18em] text-forest">BENEFICIARI</p>
+                    <h2 class="mt-2 font-display text-4xl font-bold leading-none">Nume diferite?</h2>
+                    <p class="mt-3 text-ink-soft">Pentru grupuri, poți avea beneficiari diferiți pe fiecare bilet, dacă activitatea o cere. Editează numele înainte de eveniment ca să eviți probleme la intrare.</p>
+                </article>
+                <article class="rounded-[2rem] border-2 border-ink bg-rose p-6 shadow-ticket">
+                    <p class="font-mono text-xs tracking-[.18em] text-vermilion">RETUR</p>
+                    <h2 class="mt-2 font-display text-4xl font-bold leading-none">Nu mai poți ajunge?</h2>
+                    <p class="mt-3 text-ink-soft">Verifică dacă biletul este eligibil pentru retur. Dacă ai protecție bilet activă (cumpărată la checkout), poți recupera banii fără justificare.</p>
+                </article>
             </section>
 
             <!-- QR MODAL -->
@@ -238,9 +288,11 @@ function clientTicketsPage() {
         tickets: [],
         search: '',
         status: 'upcoming',
+        city: 'all',
         sort: 'soon',
         selectedTicket: null,
-        counts: { upcoming: 0, valid: 0, checked_in: 0, action: 0 },
+        batchBusy: false,
+        counts: { upcoming: 0, upcomingActivities: 0, valid: 0, checked_in: 0, action: 0 },
 
         init() {
             try { this.isAuth = (window.BileteOnlineAuth && BileteOnlineAuth.isLoggedIn && BileteOnlineAuth.isLoggedIn()); } catch (e) { this.isAuth = false; }
@@ -259,15 +311,29 @@ function clientTicketsPage() {
         },
 
         computeCounts() {
-            const now = new Date();
-            this.counts = { upcoming: 0, valid: 0, checked_in: 0, action: 0 };
+            this.counts = { upcoming: 0, upcomingActivities: 0, valid: 0, checked_in: 0, action: 0 };
+            const upcomingEventIds = new Set();
             this.tickets.forEach(t => {
                 const isUpcoming = this.isUpcoming(t);
-                if (isUpcoming && t.status !== 'cancelled') this.counts.upcoming++;
+                if (isUpcoming && t.status !== 'cancelled') {
+                    this.counts.upcoming++;
+                    const eventKey = t.event_id || (t.event && t.event.id) || t.event_slug || (t.event && t.event.slug) || t.event_title;
+                    if (eventKey) upcomingEventIds.add(eventKey);
+                }
                 if (t.status === 'valid' || t.status === 'paid' || t.status === 'confirmed' || t.status === 'pending') this.counts.valid++;
                 if (t.status === 'checked_in') this.counts.checked_in++;
                 if (isUpcoming && ! t.attendee_name) this.counts.action++;
             });
+            this.counts.upcomingActivities = upcomingEventIds.size;
+        },
+
+        get availableCities() {
+            const set = new Set();
+            this.tickets.forEach(t => {
+                const c = t.event_city || (t.event && t.event.city);
+                if (c) set.add(c);
+            });
+            return Array.from(set).sort((a, b) => a.localeCompare(b, 'ro'));
         },
 
         isUpcoming(t) {
@@ -305,6 +371,9 @@ function clientTicketsPage() {
                 if (this.status === 'action')   return this.isUpcoming(t) && ! t.attendee_name;
                 return true;
             });
+            if (this.city !== 'all') {
+                list = list.filter(t => (t.event_city || (t.event && t.event.city) || '') === this.city);
+            }
             if (q) list = list.filter(t => JSON.stringify(t).toLowerCase().includes(q));
             if (this.sort === 'activity') list.sort((a, b) => (a.event_title || '').localeCompare(b.event_title || ''));
             else if (this.sort === 'newest') list.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
@@ -316,7 +385,57 @@ function clientTicketsPage() {
             return list;
         },
 
-        resetFilters() { this.search = ''; this.status = 'upcoming'; this.sort = 'soon'; },
+        resetFilters() { this.search = ''; this.status = 'upcoming'; this.city = 'all'; this.sort = 'soon'; },
+
+        canEditBeneficiary(t) {
+            return this.isUpcoming(t) && t.status !== 'cancelled' && t.status !== 'checked_in';
+        },
+        hasProtection(t) {
+            return !!(t.has_protection || t.protection || t.protected || (t.options && t.options.protection));
+        },
+        ticketDetailUrl(t) {
+            const orderId = t.order_number || t.order_id || (t.order && (t.order.number || t.order.id));
+            if (orderId) return '/cont/comenzile-mele#' + orderId;
+            return '/cont/biletele-mele#t-' + (t.id || t.code || '');
+        },
+        ticketEditUrl(t) {
+            return '/cont/biletele-mele/editeaza?ticket=' + encodeURIComponent(t.id || t.code || '');
+        },
+
+        async downloadAllPdf() {
+            const list = this.filteredTickets();
+            if (! list.length) return;
+            this.batchBusy = true;
+            try {
+                for (let i = 0; i < list.length; i++) {
+                    const a = document.createElement('a');
+                    a.href = this.pdfUrl(list[i]);
+                    a.target = '_blank';
+                    a.rel = 'noopener';
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    await new Promise(r => setTimeout(r, 350));
+                }
+            } catch (e) {}
+            this.batchBusy = false;
+        },
+
+        addAllToCalendar() {
+            const list = this.filteredTickets();
+            if (! list.length) return;
+            list.forEach((t, i) => {
+                setTimeout(() => {
+                    const a = document.createElement('a');
+                    a.href = this.calendarUrl(t);
+                    a.target = '_blank';
+                    a.rel = 'noopener';
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                }, i * 250);
+            });
+        },
 
         showQR(ticket) {
             this.selectedTicket = ticket;

@@ -46,7 +46,8 @@ const BileteOnlineAPI = {
 
         // Separate path from query string so routing regexes match correctly
         const [endpointPath, endpointQuery] = endpoint.split('?');
-        const action = this.getProxyAction(endpointPath);
+        const requestMethod = (options.method || 'GET').toUpperCase();
+        const action = this.getProxyAction(endpointPath, requestMethod);
         const params = this.getProxyParams(endpointPath);
 
         // Handle unknown endpoints
@@ -128,7 +129,8 @@ const BileteOnlineAPI = {
     /**
      * Convert endpoint to proxy action
      */
-    getProxyAction(endpoint) {
+    getProxyAction(endpoint, method) {
+        method = (method || 'GET').toUpperCase();
         // Customer auth endpoints
         if (endpoint === '/customer/register') return 'customer.register';
         if (endpoint === '/customer/login') return 'customer.login';
@@ -206,9 +208,16 @@ const BileteOnlineAPI = {
 
         // Customer reviews
         if (endpoint.includes('/customer/reviews/events-to-review')) return 'customer.reviews.to-write';
-        if (endpoint.match(/\/customer\/reviews\/\d+$/) && endpoint.includes('DELETE')) return 'customer.review.delete';
-        if (endpoint.match(/\/customer\/reviews\/\d+$/)) return 'customer.review.show';
-        if (endpoint === '/customer/reviews' || endpoint.includes('/customer/reviews?')) return 'customer.reviews';
+        if (endpoint.match(/\/customer\/reviews\/\d+$/)) {
+            if (method === 'DELETE') return 'customer.review.delete';
+            if (method === 'PUT')    return 'customer.review.update';
+            return 'customer.review.show';
+        }
+        if (endpoint === '/customer/reviews') {
+            if (method === 'POST') return 'customer.review.store';
+            return 'customer.reviews';
+        }
+        if (endpoint.includes('/customer/reviews?')) return 'customer.reviews';
 
         // Customer watchlist
         if (endpoint.includes('/customer/watchlist/check')) return 'customer.watchlist.check';
