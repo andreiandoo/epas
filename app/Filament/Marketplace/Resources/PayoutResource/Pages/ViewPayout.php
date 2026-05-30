@@ -86,6 +86,10 @@ class ViewPayout extends ViewRecord
                             'unit_price' => (float) ($r['price'] ?? $r['unit_price'] ?? 0),
                             'commission_per_ticket' => (float) ($r['commission_per_ticket'] ?? 0),
                             'commission_mode' => (string) ($r['commission_mode'] ?? 'included'),
+                            'discount' => (float) ($r['discount'] ?? 0),
+                            // Preserve tier breakdown so a re-save without touching
+                            // the row keeps the PDF's "50lei*2+40lei*2" detail.
+                            'tiers' => is_array($r['tiers'] ?? null) ? $r['tiers'] : [],
                         ])
                         ->values()
                         ->all();
@@ -271,6 +275,9 @@ class ViewPayout extends ViewRecord
                             // submit handler passes it through buildBreakdownFromSelection
                             // so the saved breakdown rows carry it.
                             \Filament\Forms\Components\Hidden::make('discount')->default('0'),
+                            // Per-price tier breakdown — {price, qty}[] that the PDF
+                            // expands into "50lei*2+40lei*2" entries on row 1b.
+                            \Filament\Forms\Components\Hidden::make('tiers')->default([]),
                             \Filament\Forms\Components\Hidden::make('ticket_type_name'),
                             \Filament\Forms\Components\Placeholder::make('row_label')
                                 ->hiddenLabel()

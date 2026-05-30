@@ -118,6 +118,10 @@ class MarketplacePayout extends Model
                 // Travels through every pass so the saved breakdown rows carry
                 // the real discount and the per-row Net final reflects it.
                 'discount' => (float) ($item['discount'] ?? 0),
+                // Per-price tier breakdown — list of {price, qty} sub-rows.
+                // Lets the PDF render "50lei*2+40lei*2" when a type was sold
+                // at mixed catalog/promo prices. Scaled with qty in Pass 3.
+                'tiers' => is_array($item['tiers'] ?? null) ? $item['tiers'] : [],
             ];
         }
 
@@ -128,10 +132,22 @@ class MarketplacePayout extends Model
         if ($targetNet !== null && $sumNet > 0.01 && abs($targetNet - $sumNet) > 0.5) {
             $scale = $targetNet / $sumNet;
             foreach ($rows as &$r) {
-                $r['qty'] = max(0, (int) round($r['qty'] * $scale));
+                $oldQty = (int) $r['qty'];
+                $r['qty'] = max(0, (int) round($oldQty * $scale));
                 // Scale the per-row discount alongside qty so the proportion
                 // of promo reduction tracks the slice the operator is keeping.
                 $r['discount'] = round((float) ($r['discount'] ?? 0) * $scale, 2);
+                // Scale tiers too — convert {price, qty} list to a price-keyed
+                // bucket, run it through the same scaler, and persist the
+                // sum-corrected result back on the row.
+                if (!empty($r['tiers'])) {
+                    $tierQty = [];
+                    foreach ($r['tiers'] as $tier) {
+                        $price = (string) round((float) ($tier['price'] ?? 0), 2);
+                        $tierQty[$price] = ($tierQty[$price] ?? 0) + (int) ($tier['qty'] ?? 0);
+                    }
+                    $r['tiers'] = self::scaleTiers($tierQty, $oldQty, $r['qty']);
+                }
             }
             unset($r);
             $rows = array_values(array_filter($rows, fn ($r) => $r['qty'] > 0));
@@ -164,6 +180,7 @@ class MarketplacePayout extends Model
                 'discount' => round($rowDiscount, 2),
                 'extras' => 0.0,
                 'net' => round($rowNet, 2),
+                'tiers' => $r['tiers'] ?? [],
             ];
         }
 
@@ -271,16 +288,23 @@ class MarketplacePayout extends Model
             })
             ->get(['id', 'order_id', 'ticket_type_id', 'price', 'meta']);
 
-        // Aggregate per type: count + sum of effective per-ticket prices.
+        // Aggregate per type: count + sum of effective per-ticket prices +
+        // qty PER unique effective price (tier_qty). The tier bucket lets us
+        // emit one row per distinct paid price in the PDF — catalog 50 and
+        // promo 40 stay as separate "50lei*2", "40lei*2" parts instead of
+        // averaging into "45lei*4".
         $perType = [];
         foreach ($tickets as $t) {
             $ttId = (int) $t->ticket_type_id;
             if (!$ttId) continue;
             if (!isset($perType[$ttId])) {
-                $perType[$ttId] = ['qty' => 0, 'effective_total' => 0.0];
+                $perType[$ttId] = ['qty' => 0, 'effective_total' => 0.0, 'tier_qty' => []];
             }
             $perType[$ttId]['qty']++;
-            $perType[$ttId]['effective_total'] += (float) $t->getEffectivePrice();
+            $effective = round((float) $t->getEffectivePrice(), 2);
+            $perType[$ttId]['effective_total'] += $effective;
+            $tierKey = (string) $effective;
+            $perType[$ttId]['tier_qty'][$tierKey] = ($perType[$ttId]['tier_qty'][$tierKey] ?? 0) + 1;
         }
 
         // Already-paid qty per type from OTHER active deconturi on the same
@@ -342,6 +366,13 @@ class MarketplacePayout extends Model
             $eff = $tt->getEffectiveCommission($defaultRate, $defaultMode);
             $commPer = round($tt->calculateCommission($catalogPrice, $defaultRate, $defaultMode), 4);
 
+            // Tier breakdown — one entry per distinct paid price, scaled
+            // proportionally when only part of the qty is remaining. For the
+            // common case (no prior decont so remaining = totalSold) tiers
+            // come through unchanged; the PDF expands them into separate
+            // "50lei*2 + 40lei*2" line items so the promo discount shows.
+            $tiers = self::scaleTiers((array) $agg['tier_qty'], (int) $totalSold, $remaining);
+
             $items[] = [
                 'ticket_type_id' => $tt->id,
                 'ticket_type_name' => is_array($tt->name) ? ($tt->name['ro'] ?? $tt->name['en'] ?? '') : $tt->name,
@@ -350,10 +381,62 @@ class MarketplacePayout extends Model
                 'commission_mode' => $eff['mode'] ?? 'included',
                 'qty' => $remaining,
                 'discount' => $discountForRemaining,
+                'tiers' => $tiers,
             ];
         }
 
         return $items;
+    }
+
+    /**
+     * Scale a per-effective-price qty bucket (price-string => count) down
+     * to `$remaining` of `$totalSold`. Proportional with a final adjustment
+     * so the sum hits exactly `$remaining`. Returns a numerically-indexed
+     * array of {price, qty} sorted by descending price.
+     *
+     * @param array<string, int> $tierQty
+     * @return array<int, array{price: float, qty: int}>
+     */
+    protected static function scaleTiers(array $tierQty, int $totalSold, int $remaining): array
+    {
+        if ($remaining <= 0 || $totalSold <= 0 || empty($tierQty)) {
+            return [];
+        }
+
+        $tiers = [];
+        // Sort by price descending so we deduct any rounding adjustment from
+        // the largest bucket — keeps small promo tiers intact when possible.
+        krsort($tierQty, SORT_NUMERIC);
+
+        if ($remaining === $totalSold) {
+            foreach ($tierQty as $priceKey => $qty) {
+                if ($qty > 0) {
+                    $tiers[] = ['price' => (float) $priceKey, 'qty' => (int) $qty];
+                }
+            }
+            return $tiers;
+        }
+
+        $scale = $remaining / $totalSold;
+        $allocated = 0;
+        foreach ($tierQty as $priceKey => $qty) {
+            $scaled = (int) round($qty * $scale);
+            if ($scaled > 0) {
+                $tiers[] = ['price' => (float) $priceKey, 'qty' => $scaled];
+                $allocated += $scaled;
+            }
+        }
+
+        // Adjust the first (largest-price) tier to make the sum exact.
+        if (!empty($tiers) && $allocated !== $remaining) {
+            $delta = $remaining - $allocated;
+            $tiers[0]['qty'] += $delta;
+            if ($tiers[0]['qty'] <= 0) {
+                array_shift($tiers);
+            }
+        }
+
+        return $tiers;
     }
 
     /**

@@ -483,6 +483,8 @@ class ListPayouts extends ListRecords
                         Forms\Components\Hidden::make('commission_per_ticket'),
                         // Per-row promo discount surfaced by the helper.
                         Forms\Components\Hidden::make('discount')->default('0'),
+                        // Per-price tier breakdown — {price, qty}[] expanded by the PDF.
+                        Forms\Components\Hidden::make('tiers')->default([]),
                         Forms\Components\Placeholder::make('label')
                             ->hiddenLabel()
                             ->content(fn (Get $get) => new \Illuminate\Support\HtmlString(
