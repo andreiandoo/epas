@@ -253,12 +253,45 @@ window.BILETEONLINE = <?= json_encode($jsConfig, JSON_UNESCAPED_SLASHES | JSON_U
      BileteOnlineAuth / BileteOnlineAPI / BileteOnlineUtils need to be on
      window by the time Alpine fires `alpine:init`, so x-init / init() on
      every component can read the current auth state without racing.
-     Defer scripts execute in document order, so these run before the
-     Alpine scripts below. -->
+
+     We prefer a SINGLE concatenated bundle (config + utils + api + auth)
+     — saves 3 HTTP round-trips on cold visits. The bundle is auto-built
+     by head.php itself: if it's missing or older than ANY of the 4
+     sources, we concatenate fresh. That keeps it always in sync without
+     a separate build step. Falls back to the 4 individual scripts if the
+     concat ever fails (defensive, should never trigger). -->
+<?php
+$jsDir          = BILETEONLINE_ROOT . '/assets/js';
+$coreSources    = [
+    $jsDir . '/config.js',
+    $jsDir . '/utils.js',
+    $jsDir . '/api.js',
+    $jsDir . '/auth.js',
+];
+$coreBundlePath = $jsDir . '/core-bundle.js';
+$useCoreBundle  = false;
+
+if (count(array_filter($coreSources, 'file_exists')) === count($coreSources)) {
+    $needsRebuild = ! file_exists($coreBundlePath)
+        || max(array_map('filemtime', $coreSources)) > filemtime($coreBundlePath);
+    if ($needsRebuild) {
+        $concat = '';
+        foreach ($coreSources as $src) {
+            $concat .= "/* === " . basename($src) . " === */\n" . file_get_contents($src) . "\n\n";
+        }
+        @file_put_contents($coreBundlePath, $concat, LOCK_EX);
+    }
+    $useCoreBundle = file_exists($coreBundlePath);
+}
+?>
+<?php if ($useCoreBundle): ?>
+<script defer src="<?= asset('assets/js/core-bundle.js') ?>?v=<?= filemtime($coreBundlePath) ?>"></script>
+<?php else: ?>
 <script defer src="<?= asset('assets/js/config.js') ?>"></script>
 <script defer src="<?= asset('assets/js/utils.js') ?>"></script>
 <script defer src="<?= asset('assets/js/api.js') ?>"></script>
 <script defer src="<?= asset('assets/js/auth.js') ?>"></script>
+<?php endif; ?>
 
 <!-- ===================== ALPINE.JS (deferred, in load order) ===================== -->
 <script defer src="<?= asset('assets/js/components/alpine-bootstrap.js') ?>"></script>

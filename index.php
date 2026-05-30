@@ -6,6 +6,14 @@
 require_once __DIR__ . '/includes/config.php';
 require_once __DIR__ . '/includes/api.php';
 
+// 5-minute page cache for the homepage — categories + featured activities
+// change infrequently, and the homepage gets the most traffic of any
+// route. On a cache hit the entire PHP render is skipped: no API calls,
+// no template includes, just `readfile()` of the saved HTML. Logged-in
+// admins + ?nocache=1 still see a fresh render.
+$pageCacheTTL = 300;
+require_once __DIR__ . '/includes/page-cache.php';
+
 // =========================================================================
 // DATA — event categories (parinte) + activitati publicate
 // =========================================================================
