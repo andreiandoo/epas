@@ -54,7 +54,13 @@ class DashboardController extends BaseController
         // Referrals — best-effort (auto-creates the row if needed).
         $referrals = $this->safeJson(fn () => $referralsCtrl->index($request)->getData(true));
 
-        $stats = $this->safeJson(fn () => $statsCtrl->index($request)->getData(true));
+        // We deliberately DON'T call StatsController::index() here — it
+        // returns the full kitchen-sink (XP / level / badges / watchlist
+        // count / reviews count) and runs 7+ separate count queries plus
+        // two ->withCount->get->sum() patterns that load every paid order
+        // into memory just to sum tickets. The dashboard hero needs 5
+        // numbers, so we compute them with 2 aggregate queries.
+        $stats = ['data' => ['stats' => $this->buildStats($customer)]];
         $upcoming = $this->safeJson(fn () => $statsCtrl->upcomingEvents($request)->getData(true));
 
         // Recommendations (capped to 4 — dashboard grid is 2×2)
@@ -78,6 +84,54 @@ class DashboardController extends BaseController
             'recent_orders'   => $recentOrders,
             'utility'         => $utility,
         ]);
+    }
+
+    /**
+     * Lightweight dashboard stats — replaces StatsController::index() for
+     * the bundle. Two aggregate SELECTs vs the 7+ count() round-trips +
+     * 2 load-all-then-sum patterns the legacy endpoint performs.
+     *
+     * Returns ONLY what the dashboard hero + 4 stat cards consume:
+     *   orders_count, total_spent, last_order_at, upcoming_tickets_count,
+     *   upcoming_activities_count.
+     */
+    protected function buildStats(MarketplaceCustomer $customer): array
+    {
+        $paidStatuses = ['paid', 'confirmed', 'completed'];
+
+        // Query 1: order aggregate. One round-trip → all the order numbers.
+        $orderAgg = Order::where('marketplace_customer_id', $customer->id)
+            ->whereIn('status', $paidStatuses)
+            ->selectRaw('COUNT(*) AS orders_count, COALESCE(SUM(total_amount), 0) AS total_spent, MAX(created_at) AS last_order_at')
+            ->first();
+
+        // Query 2: ticket aggregate, restricted to upcoming events. Joining
+        // marketplace_events lets us count tickets + DISTINCT events in one
+        // pass without N+1 fetches per order.
+        $upcomingAgg = (object) ['tickets' => 0, 'activities' => 0];
+        try {
+            $upcomingAgg = DB::table('tickets')
+                ->join('marketplace_events', 'marketplace_events.id', '=', 'tickets.event_id')
+                ->where('tickets.marketplace_customer_id', $customer->id)
+                ->whereIn('tickets.status', ['paid', 'valid', 'confirmed', 'checked_in'])
+                ->where('marketplace_events.starts_at', '>=', now())
+                ->selectRaw('COUNT(*) AS tickets, COUNT(DISTINCT tickets.event_id) AS activities')
+                ->first();
+        } catch (\Throwable $e) {
+            // Schema variation between EventPilot installs — fall back to 0
+            \Log::warning('Dashboard upcoming aggregate failed', ['error' => $e->getMessage()]);
+        }
+
+        return [
+            'orders_count'                => (int) ($orderAgg->orders_count ?? 0),
+            'total_orders'                => (int) ($orderAgg->orders_count ?? 0),
+            'total_spent'                 => (float) ($orderAgg->total_spent ?? 0),
+            'last_order_at'               => $orderAgg->last_order_at ?? null,
+            'upcoming_tickets_count'      => (int) ($upcomingAgg->tickets ?? 0),
+            'tickets_count'               => (int) ($upcomingAgg->tickets ?? 0),
+            'upcoming_activities_count'   => (int) ($upcomingAgg->activities ?? 0),
+            'upcoming_events_count'       => (int) ($upcomingAgg->activities ?? 0),
+        ];
     }
 
     /**

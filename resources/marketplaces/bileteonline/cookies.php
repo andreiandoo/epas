@@ -13,6 +13,12 @@
  */
 
 require_once __DIR__ . '/includes/config.php';
+require_once __DIR__ . "/includes/api.php";
+
+// 30-minute page cache — static / rarely-changing content. Skips POST,
+// preview, nocache, and admin sessions (see includes/page-cache.php).
+$pageCacheTTL = 1800;
+require_once __DIR__ . "/includes/page-cache.php";
 
 $pageTitleRaw    = 'Politica de cookies — ' . SITE_NAME;
 $pageDescription = 'Cum folosește bilete.online cookies pentru funcționarea platformei, analytics, personalizare și marketing. Cum îți gestionezi preferințele.';

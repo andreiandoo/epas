@@ -4,6 +4,12 @@
  * Static content, no API calls.
  */
 require_once __DIR__ . '/includes/config.php';
+require_once __DIR__ . "/includes/api.php";
+
+// 30-minute page cache — static / rarely-changing content. Skips POST,
+// preview, nocache, and admin sessions (see includes/page-cache.php).
+$pageCacheTTL = 1800;
+require_once __DIR__ . "/includes/page-cache.php";
 
 $pageTitleRaw = 'Cum funcționează bilete.online — rezervi activități, primești QR, intri rapid';
 $pageDescription = 'Află cum funcționează bilete.online: descoperi activități, alegi data și biletele, plătești online, primești QR instant, câștigi puncte bonus și intri rapid la locație.';
