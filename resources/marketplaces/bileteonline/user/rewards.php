@@ -275,7 +275,7 @@ include __DIR__ . '/../includes/header.php';
             </section>
 
             <!-- AUTH GUARD -->
-            <div x-show="!isAuth" x-cloak class="mt-8 rounded-[2rem] border-2 border-vermilion bg-rose p-8 text-center">
+            <div x-show="isAuth === false" x-cloak class="mt-8 rounded-[2rem] border-2 border-vermilion bg-rose p-8 text-center">
                 <p class="font-display text-3xl font-bold text-vermilion">Trebuie să fii autentificat</p>
                 <a href="/autentificare?redirect=/cont/punctele-mele" class="mt-5 inline-flex rounded-full bg-vermilion text-paper px-6 py-3 font-bold">Intră în cont</a>
             </div>
@@ -287,7 +287,7 @@ include __DIR__ . '/../includes/header.php';
 function clientPointsPage() {
     return {
         loading: true,
-        isAuth: true,
+        isAuth: null,
         loadingTransactions: true,
         transactionType: 'all',
 
@@ -326,8 +326,8 @@ function clientPointsPage() {
         transactions: [],
 
         init() {
-            try { this.isAuth = (window.BileteOnlineAuth && BileteOnlineAuth.isLoggedIn && BileteOnlineAuth.isLoggedIn()); } catch (e) { this.isAuth = false; }
-            if (! this.isAuth) { this.loading = false; this.loadingTransactions = false; return; }
+            try { if (window.BileteOnlineAuth && BileteOnlineAuth.getToken && BileteOnlineAuth.getToken()) this.isAuth = true; } catch (e) {}
+            if (this.isAuth === false) { this.loading = false; this.loadingTransactions = false; return; }
 
             this.loadConfig().then(() => {
                 this.loadRewards();

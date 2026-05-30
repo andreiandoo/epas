@@ -296,7 +296,7 @@ include __DIR__ . '/../includes/header.php';
             </section>
 
             <!-- AUTH GUARD -->
-            <div x-show="!isAuth" x-cloak class="mt-8 rounded-[2rem] border-2 border-vermilion bg-rose p-8 text-center">
+            <div x-show="isAuth === false" x-cloak class="mt-8 rounded-[2rem] border-2 border-vermilion bg-rose p-8 text-center">
                 <p class="font-display text-3xl font-bold text-vermilion">Trebuie să fii autentificat</p>
                 <p class="mt-2 text-ink-soft">Intră în cont pentru a vedea dashboardul.</p>
                 <a href="/autentificare?redirect=/cont" class="mt-5 inline-flex rounded-full bg-vermilion text-paper px-6 py-3 font-bold">Intră în cont</a>
@@ -311,7 +311,7 @@ function clientDashboardPage() {
         loading: true,
         loadingRecommendations: true,
         loadingOrders: true,
-        isAuth: true,
+        isAuth: null,
         firstName: '',
         fallbackImage: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect fill="%231B1714" width="100" height="100"/><text x="50" y="58" text-anchor="middle" fill="%23E84527" font-size="40">🎟️</text></svg>',
 
@@ -341,21 +341,66 @@ function clientDashboardPage() {
         rewardsConfig: { pointsPerLei: 100, loaded: false },
 
         init() {
-            try { this.isAuth = (window.BileteOnlineAuth && BileteOnlineAuth.isLoggedIn && BileteOnlineAuth.isLoggedIn()); } catch (e) { this.isAuth = false; }
-            if (! this.isAuth) { this.loading = false; this.loadingRecommendations = false; this.loadingOrders = false; return; }
+            try { if (window.BileteOnlineAuth && BileteOnlineAuth.getToken && BileteOnlineAuth.getToken()) this.isAuth = true; } catch (e) {}
+            if (this.isAuth === false) { this.loading = false; this.loadingRecommendations = false; this.loadingOrders = false; return; }
 
+            // Hydrate from cached session for instant first paint — both the
+            // hero greeting and the 3-step profile checklist render before the
+            // API round-trip finishes.
             try {
                 const u = window.BileteOnlineAuth && BileteOnlineAuth.getUser ? BileteOnlineAuth.getUser() : null;
-                if (u) this.firstName = u.first_name || (u.name ? u.name.split(' ')[0] : '');
+                if (u) {
+                    this.firstName = u.first_name || (u.name ? u.name.split(' ')[0] : '');
+                    // Pre-render the personalisation checklist from cached
+                    // profile_completion so it never shows blank.
+                    if (u.profile_completion) this.applyProfileCompletion(u.profile_completion);
+                    else this.applyProfileCompletion(null);
+                    if (u.points != null) this.stats.points_balance = u.points;
+                }
             } catch (e) {}
+            // Always render the 3 default tasks even when nothing cached
+            if (this.profileTasks.length === 0) this.applyProfileCompletion(null);
 
             this.loadRewardsConfig();
             this.loadMe();
+            this.loadReferral();
             this.loadStats();
             this.loadUpcoming();
             this.loadRecommendations();
             this.loadRecentOrders();
             this.loadUtilityCounts();
+        },
+
+        applyProfileCompletion(pc) {
+            const fields = (pc && pc.fields) || {};
+            this.profileCompletion = (pc && pc.percentage) || 0;
+            this.profileTasks = [
+                { label: 'Adaugă orașul preferat',     helper: 'recomandări locale mai bune',                done: !!fields.city,                          url: '/cont/setari#profil-preferinte' },
+                { label: 'Alege tipuri de activități', helper: 'copii, muzee, natură, escape rooms',          done: !!fields.interests,                     url: '/cont/setari#profil-preferinte' },
+                { label: 'Adaugă vârstele copiilor',   helper: 'filtrare activități potrivite',               done: !!fields.family || !!fields.beneficiaries, url: '/cont/setari#familie' },
+            ];
+        },
+
+        async loadReferral() {
+            // /customer/me returns CustomerPoints.referral_code which is
+            // distinct from marketplace_referral_codes — the latter is the
+            // canonical share link. /customer/referrals auto-creates the row
+            // for us and returns the full URL, stats and code.
+            try {
+                const r = await BileteOnlineAPI.get('/customer/referrals');
+                const d = (r && r.data) || {};
+                const code = d.referral_code || d.code || (d.referralCode || {}).code || '';
+                const fullLink = d.referral_link || d.share_url || '';
+                if (code) {
+                    this.referralCode = code;
+                    if (fullLink) {
+                        this.referralUrl = fullLink.replace(/^https?:\/\//, '');
+                    } else {
+                        const host = location.hostname.replace(/^www\./, '');
+                        this.referralUrl = host + '/r/' + code;
+                    }
+                }
+            } catch (e) {}
         },
 
         async loadRewardsConfig() {
@@ -370,26 +415,23 @@ function clientDashboardPage() {
         async loadMe() {
             try {
                 const r = await BileteOnlineAPI.customer.getProfile();
+                if (r && r.success) this.isAuth = true;
                 const root = (r && r.data) || {};
                 const u = root.customer || root;
                 if (u.first_name) this.firstName = u.first_name;
-                if (u.profile_completion) {
-                    this.profileCompletion = u.profile_completion.percentage || 0;
-                    const fields = u.profile_completion.fields || {};
-                    this.profileTasks = [
-                        { label: 'Adaugă orașul preferat',     helper: 'recomandări locale mai bune',  done: !!fields.city,       url: '/cont/setari#profil-preferinte' },
-                        { label: 'Alege tipuri de activități', helper: 'copii, muzee, escape rooms…',  done: !!fields.interests,  url: '/cont/setari#profil-preferinte' },
-                        { label: 'Completează profilul',       helper: 'telefon, gen, data nașterii',  done: !!fields.phone && !!fields.birth_date, url: '/cont/setari' },
-                    ];
-                }
-                if (u.referral_code) {
+                if (u.profile_completion) this.applyProfileCompletion(u.profile_completion);
+                if (u.points != null) this.stats.points_balance = u.points;
+                // u.referral_code is the CustomerPoints code (legacy); we still
+                // override it with the marketplace_referral_codes value from
+                // loadReferral() if that endpoint returns one.
+                if (u.referral_code && ! this.referralCode) {
                     this.referralCode = u.referral_code;
-                    this.referralUrl = (location.origin + '/r/' + u.referral_code).replace('https://', '').replace('http://', '');
+                    const host = location.hostname.replace(/^www\./, '');
+                    this.referralUrl = host + '/r/' + u.referral_code;
                 }
-                if (u.points != null) {
-                    this.stats.points_balance = u.points;
-                }
-            } catch (e) {}
+            } catch (e) {
+                if (e && e.status === 401) this.isAuth = false;
+            }
         },
 
         async loadStats() {

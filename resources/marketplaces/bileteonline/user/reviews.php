@@ -273,7 +273,7 @@ include __DIR__ . '/../includes/header.php';
             </section>
 
             <!-- AUTH GUARD -->
-            <div x-show="!isAuth" x-cloak class="mt-8 rounded-[2rem] border-2 border-vermilion bg-rose p-8 text-center">
+            <div x-show="isAuth === false" x-cloak class="mt-8 rounded-[2rem] border-2 border-vermilion bg-rose p-8 text-center">
                 <p class="font-display text-3xl font-bold text-vermilion">Trebuie să fii autentificat</p>
                 <a href="/autentificare?redirect=/cont/recenzii" class="mt-5 inline-flex rounded-full bg-vermilion text-paper px-6 py-3 font-bold">Intră în cont</a>
             </div>
@@ -284,7 +284,7 @@ include __DIR__ . '/../includes/header.php';
 <script>
 function clientReviewsPage() {
     return {
-        isAuth: true,
+        isAuth: null,
         loadingToReview: true,
         loadingReviews: true,
         savingReview: false,
@@ -361,8 +361,8 @@ function clientReviewsPage() {
         },
 
         init() {
-            try { this.isAuth = (window.BileteOnlineAuth && BileteOnlineAuth.isLoggedIn && BileteOnlineAuth.isLoggedIn()); } catch (e) { this.isAuth = false; }
-            if (! this.isAuth) { this.loadingToReview = false; this.loadingReviews = false; return; }
+            try { if (window.BileteOnlineAuth && BileteOnlineAuth.getToken && BileteOnlineAuth.getToken()) this.isAuth = true; } catch (e) {}
+            if (this.isAuth === false) { this.loadingToReview = false; this.loadingReviews = false; return; }
             this.loadMeta();
             this.loadToReview();
             this.loadReviews();
