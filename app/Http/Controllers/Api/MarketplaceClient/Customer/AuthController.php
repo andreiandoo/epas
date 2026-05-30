@@ -371,6 +371,13 @@ class AuthController extends BaseController
             'notification_preferences.favorites' => 'sometimes|boolean',
             'notification_preferences.history' => 'sometimes|boolean',
             'notification_preferences.marketing' => 'sometimes|boolean',
+            // bilete.online taste-profile / new client UI keys (non-breaking additions)
+            'notification_preferences.tickets' => 'sometimes|boolean',
+            'notification_preferences.points' => 'sometimes|boolean',
+            'notification_preferences.recommendations' => 'sometimes|boolean',
+            'notification_preferences.reviews' => 'sometimes|boolean',
+            'notification_preferences.support' => 'sometimes|boolean',
+            'personalization_enabled' => 'sometimes|boolean',
             'profile_public' => 'sometimes|boolean',
             'billing_address' => 'sometimes|array',
             'billing_address.address' => 'sometimes|nullable|string|max:255',
@@ -389,6 +396,12 @@ class AuthController extends BaseController
             'interests.preferred_cities.*' => 'string|max:100',
             'interests.preferred_venues' => 'sometimes|array',
             'interests.preferred_venues.*' => 'integer',
+            // bilete.online lifestyle signals (radius, budget, frequency, time-of-day)
+            'interests.lifestyle' => 'sometimes|array',
+            'interests.lifestyle.radius' => 'sometimes|nullable|string|max:30',
+            'interests.lifestyle.budget' => 'sometimes|nullable|string|max:30',
+            'interests.lifestyle.frequency' => 'sometimes|nullable|string|max:30',
+            'interests.lifestyle.moment' => 'sometimes|nullable|string|max:30',
             'profiling' => 'sometimes|array',
             'profiling.completed_steps' => 'sometimes|array',
             'profiling.last_modal_at' => 'sometimes|nullable|string',
@@ -413,6 +426,11 @@ class AuthController extends BaseController
 
         if (isset($validated['profile_public'])) {
             $currentSettings['profile_public'] = $validated['profile_public'];
+            $settingsChanged = true;
+        }
+
+        if (isset($validated['personalization_enabled'])) {
+            $currentSettings['personalization_enabled'] = $validated['personalization_enabled'];
             $settingsChanged = true;
         }
 
