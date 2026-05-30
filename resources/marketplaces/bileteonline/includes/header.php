@@ -194,7 +194,7 @@ $accentMap = [
                     </div>
                 </div>
 
-                <a href="/pentru-locatii" class="hidden lg:inline-flex px-4 py-2 rounded-full border-2 border-ink text-sm font-600 hover:bg-ink hover:text-paper transition-colors duration-300">Listează-ți locația</a>
+                <a href="/pentru-locatii" x-show="!isClient" class="hidden lg:inline-flex px-4 py-2 rounded-full border-2 border-ink text-sm font-600 hover:bg-ink hover:text-paper transition-colors duration-300">Listează-ți locația</a>
 
                 <!-- LOGGED OUT (default) -->
                 <a href="/login" class="hidden lg:inline-flex px-4 py-2 rounded-full bg-ink text-paper text-sm font-600 hover:bg-ink-2 transition" x-show="!loggedIn" x-cloak>
@@ -303,6 +303,7 @@ function bileteOnlineHeader() {
         // Auth state (login button vs client menu) lives in `loggedIn`.
         open: false, scrolled: false, mega: false, user: false, cityOpen: false,
         loggedIn: false,
+        isClient: false,
         cityLabel: '',
         initHeader() {
             window.addEventListener('scroll', () => { this.scrolled = window.scrollY > 20; });
@@ -314,6 +315,9 @@ function bileteOnlineHeader() {
                 this.loggedIn = !!(window.BileteOnlineAuth
                     && typeof BileteOnlineAuth.isLoggedIn === 'function'
                     && BileteOnlineAuth.isLoggedIn());
+                this.isClient = !!(window.BileteOnlineAuth
+                    && typeof BileteOnlineAuth.isCustomer === 'function'
+                    && BileteOnlineAuth.isCustomer());
                 this.hydrateUser();
             };
             syncAuth();
@@ -332,6 +336,11 @@ function bileteOnlineHeader() {
                 document.querySelectorAll('[data-user-name]').forEach(el => el.textContent = name);
                 document.querySelectorAll('[data-user-email]').forEach(el => el.textContent = u.email || '');
                 document.querySelectorAll('[data-user-initials]').forEach(el => el.textContent = initials);
+                // Default the header city selector to the customer's saved city
+                // (account → header) when the visitor hasn't picked one yet.
+                if (u.city && ! localStorage.getItem('bo_city') && ! this.cityLabel) {
+                    this.cityLabel = u.city;
+                }
             } catch (e) {}
         },
         selectCity(slug, label) {
