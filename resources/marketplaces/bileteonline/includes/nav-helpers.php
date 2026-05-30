@@ -189,6 +189,25 @@ function bo_short_category_slug($category): string
 }
 
 /**
+ * Fetch the FULL category list — parents + every subcategory — including
+ * the parent_id so we can strip the parent-suffix correctly. Cached
+ * 10 min on disk via api_cached() so this is one API roundtrip per
+ * marketplace per 10min, regardless of how many requests hit slug.php.
+ *
+ * navGetCategories() returns ONLY top-level categories (it skips anything
+ * with parent_id set), which is what the mega-menu wants. This helper is
+ * what we need for short-URL reverse lookup.
+ */
+function bo_all_categories_flat(): array
+{
+    $resp = api_cached('all_event_categories_flat', function () {
+        return api_get('/events/categories', ['all' => 1]);
+    }, 600);
+    $rows = $resp['data']['categories'] ?? [];
+    return is_array($rows) ? $rows : [];
+}
+
+/**
  * Reverse lookup — given a short category slug like "muzee-de-stiinta",
  * find the full category record whose stored slug strips down to it.
  *
@@ -204,9 +223,24 @@ function bo_find_category_by_short_slug(string $shortSlug): ?array
     if ($shortToFull === null) {
         $shortToFull = [];
         try {
-            // Pull ALL categories (parents + subcategories). navGetCategories
-            // already caches the API result.
-            foreach (navGetCategories(200) as $cat) {
+            // First pass: index parents by id so we can resolve parent_slug
+            // for any child whose API row only has parent_id (no nested
+            // parent object).
+            $allCategories = bo_all_categories_flat();
+            $parentById = [];
+            foreach ($allCategories as $cat) {
+                if (empty($cat['parent_id']) && ! empty($cat['slug'])) {
+                    $parentById[$cat['id']] = $cat;
+                }
+            }
+            // Second pass: build short→full map. For every category we
+            // hydrate the `parent_slug` field so bo_short_category_slug()
+            // can do its job. Top-level entries strip to themselves.
+            foreach ($allCategories as $cat) {
+                if (empty($cat['slug'])) continue;
+                if (! empty($cat['parent_id']) && isset($parentById[$cat['parent_id']])) {
+                    $cat['parent_slug'] = $parentById[$cat['parent_id']]['slug'];
+                }
                 $candidate = bo_short_category_slug($cat);
                 if ($candidate && ! isset($shortToFull[$candidate])) {
                     $shortToFull[$candidate] = $cat;
