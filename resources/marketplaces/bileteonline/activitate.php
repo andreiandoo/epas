@@ -11,6 +11,13 @@
 require_once __DIR__ . '/includes/config.php';
 require_once __DIR__ . '/includes/api.php';
 
+// 10-minute page cache — activity content rarely changes; staff push a
+// change via /admin/activities/{id}/edit which already busts the API cache
+// + we serve stale for up to 40min. ?nocache=1 forces a refresh. Skips
+// caching for POSTs + logged-in admins (see page-cache.php).
+$pageCacheTTL = 600;
+require_once __DIR__ . '/includes/page-cache.php';
+
 // ============================================================
 // SLUG RESOLUTION
 // ============================================================
