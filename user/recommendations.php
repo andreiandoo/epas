@@ -247,7 +247,7 @@ include __DIR__ . '/../includes/header.php';
             </section>
 
             <!-- AUTH GUARD -->
-            <div x-show="!isAuth" x-cloak class="mt-8 rounded-[2rem] border-2 border-vermilion bg-rose p-8 text-center">
+            <div x-show="isAuth === false" x-cloak class="mt-8 rounded-[2rem] border-2 border-vermilion bg-rose p-8 text-center">
                 <p class="font-display text-3xl font-bold text-vermilion">Trebuie să fii autentificat</p>
                 <a href="/autentificare?redirect=/cont/recomandari" class="mt-5 inline-flex rounded-full bg-vermilion text-paper px-6 py-3 font-bold">Intră în cont</a>
             </div>
@@ -259,7 +259,7 @@ include __DIR__ . '/../includes/header.php';
 function clientRecommendationsPage() {
     return {
         loading: true,
-        isAuth: true,
+        isAuth: null,
 
         search: '',
         reason: 'all',
@@ -280,8 +280,8 @@ function clientRecommendationsPage() {
         rewardsConfig: { pointsPerLei: 100, loaded: false },
 
         init() {
-            try { this.isAuth = (window.BileteOnlineAuth && BileteOnlineAuth.isLoggedIn && BileteOnlineAuth.isLoggedIn()); } catch (e) { this.isAuth = false; }
-            if (! this.isAuth) { this.loading = false; return; }
+            try { if (window.BileteOnlineAuth && BileteOnlineAuth.getToken && BileteOnlineAuth.getToken()) this.isAuth = true; } catch (e) {}
+            if (this.isAuth === false) { this.loading = false; return; }
 
             // Restore "hidden" set from localStorage so dismissed items don't reappear
             try {

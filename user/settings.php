@@ -129,13 +129,19 @@ include __DIR__ . '/../includes/header.php';
                     </label>
                     <label>
                         <span class="block mb-1.5 text-sm font-bold">Oraș principal</span>
-                        <input class="field" x-model="profile.city" placeholder="București, Cluj-Napoca, Brașov…">
+                        <select class="field" x-model="profile.city">
+                            <option value="">— alege orașul —</option>
+                            <template x-for="c in availableCities" :key="c.slug || c.name">
+                                <option :value="c.name" x-text="c.name"></option>
+                            </template>
+                        </select>
+                        <span class="mt-1 block text-xs text-ink-soft">Alege din lista de orașe acoperite. Folosit pentru recomandări locale.</span>
                     </label>
                     <label>
                         <span class="block mb-1.5 text-sm font-bold">Data nașterii</span>
                         <input class="field" type="date" x-model="profile.birth_date" :max="todayIso()">
                     </label>
-                    <label>
+                    <label class="md:col-span-2">
                         <span class="block mb-1.5 text-sm font-bold">Gen (opțional)</span>
                         <select class="field" x-model="profile.gender">
                             <option value="">— alege —</option>
@@ -143,10 +149,6 @@ include __DIR__ . '/../includes/header.php';
                             <option value="male">Bărbat</option>
                             <option value="other">Altul</option>
                         </select>
-                    </label>
-                    <label>
-                        <span class="block mb-1.5 text-sm font-bold">Adresă (opțional)</span>
-                        <input class="field" x-model="profile.address" autocomplete="street-address" placeholder="Strada, număr, ap.">
                     </label>
 
                     <div class="md:col-span-2 flex flex-wrap gap-2 pt-2">
@@ -349,12 +351,12 @@ include __DIR__ . '/../includes/header.php';
                             <div class="mt-4 grid md:grid-cols-2 gap-4">
                                 <label>
                                     <span class="block mb-1.5 text-sm font-bold">Oraș principal</span>
-                                    <input class="field" x-model="profile.city" list="cities-list-pref" placeholder="București, Cluj-Napoca…">
-                                    <datalist id="cities-list-pref">
+                                    <select class="field" x-model="profile.city">
+                                        <option value="">— alege orașul —</option>
                                         <template x-for="c in availableCities" :key="c.slug || c.name">
-                                            <option :value="c.name"></option>
+                                            <option :value="c.name" x-text="c.name"></option>
                                         </template>
-                                    </datalist>
+                                    </select>
                                     <span class="mt-1 block text-xs text-ink-soft">Folosit ca semnal principal pentru recomandări.</span>
                                 </label>
                                 <label>
@@ -735,7 +737,7 @@ include __DIR__ . '/../includes/header.php';
             </section>
 
             <!-- AUTH GUARD -->
-            <div x-show="!isAuth" x-cloak class="mt-8 rounded-[2rem] border-2 border-vermilion bg-rose p-8 text-center">
+            <div x-show="isAuth === false" x-cloak class="mt-8 rounded-[2rem] border-2 border-vermilion bg-rose p-8 text-center">
                 <p class="font-display text-3xl font-bold text-vermilion">Trebuie să fii autentificat</p>
                 <a href="/autentificare?redirect=/cont/setari" class="mt-5 inline-flex rounded-full bg-vermilion text-paper px-6 py-3 font-bold">Intră în cont</a>
             </div>
@@ -748,7 +750,7 @@ function clientSettingsPage() {
     return {
         // --- UI state ---
         loading: true,
-        isAuth: true,
+        isAuth: null,
         saving: false,
         message: '',
         messageType: 'success',
@@ -772,7 +774,8 @@ function clientSettingsPage() {
             birth_date: '',
             gender:     '',
             city:       '',
-            address:    '',
+            // address removed — bilete.online doesn't ask for street address;
+            // billing details come from the order itself.
         },
         emailVerified: false,
 
@@ -877,8 +880,8 @@ function clientSettingsPage() {
                 !!this.profile.birth_date,
                 !!this.profile.gender,
                 !!this.profile.city,
-                !!this.profile.address,
                 this.interests.event_categories.length > 0,
+                this.interests.preferred_cities.length > 0,
             ];
             const completed = fields.filter(Boolean).length;
             return Math.round((completed / fields.length) * 100);
@@ -901,9 +904,8 @@ function clientSettingsPage() {
 
         // --- Lifecycle ---
         init() {
-            try { this.isAuth = (window.BileteOnlineAuth && BileteOnlineAuth.isLoggedIn && BileteOnlineAuth.isLoggedIn()); }
-            catch (e) { this.isAuth = false; }
-            if (! this.isAuth) { this.loading = false; return; }
+            try { if (window.BileteOnlineAuth && BileteOnlineAuth.getToken && BileteOnlineAuth.getToken()) this.isAuth = true; } catch (e) {}
+            if (this.isAuth === false) { this.loading = false; return; }
 
             this.load();
             this.loadCities();
@@ -936,26 +938,41 @@ function clientSettingsPage() {
             this._flashTimer = setTimeout(() => { this.message = ''; }, 4500);
         },
 
+        // Apply customer data (from cache OR API) into the form fields.
+        applyCustomer(u) {
+            if (! u) return;
+            // Use ??= so the API call doesn't overwrite text the user is
+            // currently editing. First call wins; subsequent calls only fill
+            // gaps left empty.
+            this.profile.first_name = this.profile.first_name || u.first_name || '';
+            this.profile.last_name  = this.profile.last_name  || u.last_name  || '';
+            this.profile.email      = this.profile.email      || u.email      || '';
+            this.profile.phone      = this.profile.phone      || u.phone      || '';
+            this.profile.birth_date = this.profile.birth_date || u.birth_date || '';
+            this.profile.gender     = this.profile.gender     || u.gender     || '';
+            this.profile.city       = this.profile.city       || u.city       || '';
+            if (typeof u.email_verified === 'boolean') this.emailVerified = u.email_verified;
+        },
+
         // --- Load customer data ---
         async load() {
+            // 1) Instant prefill from the cached session object so the user
+            //    sees their data without waiting for the API round-trip.
+            try {
+                const cached = window.BileteOnlineAuth && BileteOnlineAuth.getUser ? BileteOnlineAuth.getUser() : null;
+                if (cached) this.applyCustomer(cached);
+            } catch (e) {}
+
+            // 2) Authoritative refresh from /customer/me. Backend response
+            //    shape: { success: true, data: { customer: {...} } } — but we
+            //    defend against a flat-data shape too.
             try {
                 const r = await BileteOnlineAPI.customer.getProfile();
-                // Backend response shape: { success:true, data:{ customer:{...} } }
-                // — but we also defend against flat-data shape just in case.
+                if (r && r.success) this.isAuth = true;
                 const root = (r && r.data) || {};
                 const u = root.customer || root;
 
-                this.profile = {
-                    first_name: u.first_name || '',
-                    last_name:  u.last_name  || '',
-                    email:      u.email      || '',
-                    phone:      u.phone      || '',
-                    birth_date: u.birth_date || '',
-                    gender:     u.gender     || '',
-                    city:       u.city       || '',
-                    address:    u.address    || '',
-                };
-                this.emailVerified = !!u.email_verified;
+                this.applyCustomer(u);
 
                 const s = u.settings || u.preferences || {};
 
@@ -988,7 +1005,11 @@ function clientSettingsPage() {
                 // Personalization opt-in (defaults to true when undefined)
                 this.personalizationEnabled = (typeof s.personalization_enabled === 'boolean') ? s.personalization_enabled : true;
             } catch (e) {
-                console.warn('settings load failed', e);
+                if (e && e.status === 401) {
+                    this.isAuth = false;
+                } else {
+                    console.warn('settings load failed', e);
+                }
             }
             this.loading = false;
         },
@@ -1000,7 +1021,9 @@ function clientSettingsPage() {
                 'Arad', 'Târgu Mureș', 'Baia Mare', 'Suceava', 'Râmnicu Vâlcea',
             ];
             try {
-                const r = await BileteOnlineAPI.get('/cities', { limit: 60 });
+                // /cities is unmapped in api.js — must go through the public
+                // marketplace endpoint that footer + category pages also use.
+                const r = await BileteOnlineAPI.get('/marketplace-events/cities', { per_page: 60 });
                 const rows = (r && (r.data?.cities || r.data || [])) || [];
                 if (Array.isArray(rows) && rows.length > 0) {
                     this.availableCities = rows.map(c => ({
@@ -1030,7 +1053,10 @@ function clientSettingsPage() {
                 'gastronomie':                 '🍽️',
             };
             try {
-                const r = await BileteOnlineAPI.get('/events/categories', { all: 1, parents_only: 1 });
+                // /events/categories isn't routed in api.js — the canonical
+                // entrypoint that the footer + category landing pages use is
+                // /marketplace-events/categories (proxy action: 'categories').
+                const r = await BileteOnlineAPI.get('/marketplace-events/categories', { all: 1, parents_only: 1 });
                 const rows = (r && (r.data?.categories || r.data || [])) || [];
                 if (Array.isArray(rows) && rows.length > 0) {
                     this.availableCategories = rows.map(c => ({
@@ -1066,7 +1092,6 @@ function clientSettingsPage() {
                     birth_date: this.profile.birth_date || null,
                     gender:     this.profile.gender     || null,
                     city:       this.profile.city       || null,
-                    address:    this.profile.address    || null,
                 };
                 const r = await BileteOnlineAPI.customer.updateProfile(payload);
                 if (r && r.success) this.flash('Datele au fost salvate.', 'success');
