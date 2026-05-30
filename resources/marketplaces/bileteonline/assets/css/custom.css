@@ -365,3 +365,58 @@ body {
         animation: none !important;
     }
 }
+
+/* =========================================================================
+   v3 header / footer utilities
+   Tailwind is pre-built (not rebuilt on deploy), so these custom utilities
+   live here. Marquee uses bo-marquee/bo-marquee-track to avoid clashing with
+   the existing single-element `.marquee` animation above.
+   ========================================================================= */
+
+/* Film-grain overlay for header/footer surfaces. Only ::after is defined; the
+   host element keeps its own positioning class. */
+.bo-grain::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: .055;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    mix-blend-mode: multiply;
+}
+
+/* Pulsing live-dot in the top utility strip. */
+@keyframes bo-pulse-dot {
+    0%, 100% { transform: scale(1);    opacity: .65; }
+    50%      { transform: scale(1.45); opacity: 1; }
+}
+.pulse-dot { animation: bo-pulse-dot 2.5s ease-in-out infinite; }
+
+/* Punched-ticket edge; --punch must match the surrounding background. */
+.ticket-cut { position: relative; isolation: isolate; }
+.ticket-cut::before,
+.ticket-cut::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    width: 22px;
+    height: 22px;
+    border-radius: 9999px;
+    background: var(--punch, #1B1714);
+    transform: translateY(-50%);
+    z-index: 2;
+}
+.ticket-cut::before { left: -12px; }
+.ticket-cut::after  { right: -12px; }
+
+/* Footer category marquee (container static, track scrolls). */
+@keyframes bo-marquee {
+    from { transform: translateX(0); }
+    to   { transform: translateX(-50%); }
+}
+.bo-marquee-track { animation: bo-marquee 34s linear infinite; }
+.bo-marquee:hover .bo-marquee-track { animation-play-state: paused; }
+
+@media (prefers-reduced-motion: reduce) {
+    .pulse-dot, .bo-marquee-track { animation: none !important; }
+}
