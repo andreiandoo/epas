@@ -128,6 +128,8 @@ $bookingBootstrap = [
     'venue_city'        => $activity['city']['name']     ?? ($activity['venue']['city'] ?? null),
     'organizer_id'      => (int) ($activity['organizer']['id'] ?? 0) ?: null,
     'duration_minutes'  => (int) ($activity['duration_minutes'] ?? 0) ?: null,
+    'commission_rate'   => (float) ($activity['organizer']['commission_rate'] ?? 0),
+    'commission_mode'   => (string) ($activity['organizer']['commission_mode'] ?? 'included'),
     'variants'          => array_map(fn ($v) => [
         'id'             => $v['id'],
         'name'           => $v['name'],
@@ -844,6 +846,8 @@ function activityPage(bootstrap) {
         venueCity: bootstrap.venue_city,
         organizerId: bootstrap.organizer_id,
         durationMinutes: bootstrap.duration_minutes,
+        commissionRate: bootstrap.commission_rate || 0,
+        commissionMode: bootstrap.commission_mode || 'included',
         variants: bootstrap.variants,
         window: bootstrap.window,
         gallery: bootstrap.gallery || [],
@@ -955,6 +959,13 @@ function activityPage(bootstrap) {
                 city: this.venueCity,
                 organizer_id: this.organizerId,
                 duration_minutes: this.durationMinutes,
+                // Carry organizer commission settings through to the cart so
+                // calculateItemCommission can apply them — 2% added on top
+                // (or whatever's configured) shows up as a separate fee line
+                // in the cart + checkout summary instead of being silently
+                // missing.
+                commission_rate: this.commissionRate,
+                commission_mode: this.commissionMode,
             };
 
             // Push one cart line per variant that has at least one participant.

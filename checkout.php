@@ -192,20 +192,20 @@ include __DIR__ . '/includes/header.php';
                 <section class="rounded-3xl border-2 border-ink bg-paper overflow-hidden">
                     <div class="p-5 sm:p-6 border-b-2 border-dashed border-ink/15">
                         <h2 class="font-display text-3xl font-bold">4. Metodă de plată</h2>
-                        <p class="mt-1 text-ink-soft">Plățile cu cardul sunt procesate securizat prin Netopia. 3D Secure, PCI DSS.</p>
+                        <p class="mt-1 text-ink-soft">Plățile cu cardul sunt procesate securizat prin Stripe. 3D Secure, PCI DSS Level 1.</p>
                     </div>
                     <div class="p-5 sm:p-6 space-y-3">
-                        <!-- Credit Card - Netopia -->
+                        <!-- Credit Card - Stripe -->
                         <label class="payment-option selected flex items-center gap-4 p-4 rounded-2xl border-2 border-ink/15 cursor-pointer transition">
                             <span class="payment-radio"></span>
                             <div class="flex items-center justify-between flex-1 gap-3">
                                 <div class="flex items-center gap-3">
-                                    <div class="flex items-center justify-center w-12 h-8 rounded bg-gradient-to-r from-sky to-forest">
-                                        <span class="text-paper text-[10px] font-bold tracking-wider">NETOPIA</span>
+                                    <div class="flex items-center justify-center w-14 h-8 rounded bg-gradient-to-r from-[#635bff] to-[#4f46e5]">
+                                        <span class="text-paper text-[10px] font-bold tracking-wider">STRIPE</span>
                                     </div>
                                     <div>
                                         <p class="font-bold">Card bancar</p>
-                                        <p class="text-xs text-ink-soft">Visa, Mastercard, Maestro</p>
+                                        <p class="text-xs text-ink-soft">Visa, Mastercard, Maestro, Apple Pay, Google Pay</p>
                                     </div>
                                 </div>
                                 <div class="hidden sm:flex items-center gap-2">
