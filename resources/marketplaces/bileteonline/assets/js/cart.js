@@ -384,8 +384,44 @@ const BileteOnlineCart = {
      * @returns {Object} Commission details: { amount, rate, fixed, mode, type }
      */
     calculateItemCommission(item) {
-        const basePrice = item.ticketType.price || 0;
-        const commission = item.ticketType.commission;
+        // Activity bookings have a different shape (item.variant.price +
+        // item.activity instead of item.ticketType + item.event). Without
+        // this branch the legacy `item.ticketType.price` access throws
+        // TypeError and the entire summary updateSummary() forEach blows
+        // up — that's why the right-hand summary stayed at 0 / 0 lei.
+        const isActivity = item.type === 'activity';
+        if (isActivity) {
+            const basePrice = (typeof item.variant?.price === 'number' ? item.variant.price : item.price) || 0;
+            const c = item.variant?.commission || item.activity?.commission || null;
+            const fallbackRate = item.activity?.commission_rate ?? 5;
+            const fallbackMode = item.activity?.commission_mode ?? 'included';
+            if (c && c.type) {
+                let amount = 0;
+                switch (c.type) {
+                    case 'percentage': amount = basePrice * ((c.rate || 0) / 100); break;
+                    case 'fixed':      amount = c.fixed || 0; break;
+                    case 'both':       amount = (basePrice * ((c.rate || 0) / 100)) + (c.fixed || 0); break;
+                }
+                return {
+                    amount: amount,
+                    rate:   c.rate || 0,
+                    fixed:  c.fixed || 0,
+                    mode:   c.mode || fallbackMode,
+                    type:   c.type,
+                };
+            }
+            return {
+                amount: basePrice * (fallbackRate / 100),
+                rate:   fallbackRate,
+                fixed:  0,
+                mode:   fallbackMode,
+                type:   'percentage',
+            };
+        }
+
+        // === Legacy event-ticket shape ===
+        const basePrice = item.ticketType?.price || item.price || 0;
+        const commission = item.ticketType?.commission;
 
         // If ticket has per-ticket commission settings
         if (commission && commission.type) {

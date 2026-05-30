@@ -514,14 +514,31 @@ const CartPage = {
         const savingsTickets = [];
         let hasAddedOnTopCommission = false;
 
-        // Group items by event
+        // Group items by event. Activities use a different item shape
+        // (item.activity + item.variant + item.participants_count) than
+        // event tickets (item.event + item.ticketType + item.quantity), so
+        // we normalize here before grouping. Without this branch, activities
+        // landed in the "0 bilete, 0.00 lei" bucket because the legacy
+        // ticketType lookups returned undefined.
         const eventGroups = {};
         items.forEach(item => {
-            const eventId = item.eventId || item.event?.id || 'unknown';
-            const eventTitle = item.event?.title || item.event?.name || 'Eveniment';
-            const eventDate = item.event?.performance_date || item.event?.date || item.event_date || '';
-            const venueName = item.event?.venue?.name || (typeof item.event?.venue === 'string' ? item.event.venue : '') || item.venue_name || '';
-            const cityName = item.event?.city?.name || item.event?.city || item.event?.venue?.city || '';
+            const isActivity = item.type === 'activity';
+
+            const eventId    = isActivity
+                ? ('activity-' + (item.activity?.id || item.activity_id || 'unknown'))
+                : (item.eventId || item.event?.id || 'unknown');
+            const eventTitle = isActivity
+                ? (item.activity?.title || item.activity?.name || 'Activitate')
+                : (item.event?.title || item.event?.name || 'Eveniment');
+            const eventDate  = isActivity
+                ? (item.booking_date || '')
+                : (item.event?.performance_date || item.event?.date || item.event_date || '');
+            const venueName  = isActivity
+                ? (item.activity?.venue || '')
+                : (item.event?.venue?.name || (typeof item.event?.venue === 'string' ? item.event.venue : '') || item.venue_name || '');
+            const cityName   = isActivity
+                ? (item.activity?.city || '')
+                : (item.event?.city?.name || item.event?.city || item.event?.venue?.city || '');
 
             if (!eventGroups[eventId]) {
                 eventGroups[eventId] = {
@@ -531,14 +548,23 @@ const CartPage = {
                     city: cityName,
                     tickets: [],
                     subtotal: 0,
-                    commission: 0
+                    commission: 0,
+                    isActivity: isActivity
                 };
             }
 
-            const price = item.ticketType?.price || item.price || 0;
-            const originalPrice = item.ticketType?.originalPrice || item.original_price || 0;
-            const ticketName = item.ticketType?.name || item.ticket_type_name || 'Bilet';
-            const quantity = item.quantity || 1;
+            const price = isActivity
+                ? ((typeof item.variant?.price === 'number' ? item.variant.price : item.price) || 0)
+                : (item.ticketType?.price || item.price || 0);
+            const originalPrice = isActivity
+                ? (item.variant?.originalPrice || item.original_price || 0)
+                : (item.ticketType?.originalPrice || item.original_price || 0);
+            const ticketName = isActivity
+                ? (item.variant?.name || 'Bilet')
+                : (item.ticketType?.name || item.ticket_type_name || 'Bilet');
+            const quantity = isActivity
+                ? (item.participants_count || item.quantity || 1)
+                : (item.quantity || 1);
 
             // Calculate per-ticket commission using cart helper
             const commission = BileteOnlineCart.calculateItemCommission(item);
