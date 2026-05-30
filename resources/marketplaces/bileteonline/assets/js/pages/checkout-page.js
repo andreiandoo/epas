@@ -723,21 +723,34 @@ const CheckoutPage = {
             savings,
         };
 
-        // Update DOM
+        // Update DOM. Subtotal shows base prices only — the platform
+        // commission renders as its own row below so the customer sees a
+        // clear "Comision platformă (X%)" line, not a rolled-up subtotal.
         document.getElementById('summary-items').textContent = totalQty;
-        document.getElementById('summary-subtotal').textContent = BileteOnlineUtils.formatCurrency(subtotalWithCommission);
+        document.getElementById('summary-subtotal').textContent = BileteOnlineUtils.formatCurrency(baseSubtotal);
 
-        // Render commission as "Taxe procesare" in taxes container
+        // Platform commission row (added on top, organizer-configured)
+        const commRow = document.getElementById('platform-commission-row');
+        if (commRow) {
+            if (hasAddedOnTopCommission && totalCommission > 0) {
+                commRow.classList.remove('hidden');
+                document.getElementById('platform-commission-amount').textContent = BileteOnlineUtils.formatCurrency(totalCommission);
+                const lbl = document.getElementById('platform-commission-label');
+                if (lbl) {
+                    const ratePct = baseSubtotal > 0
+                        ? (totalCommission / baseSubtotal * 100).toFixed(1).replace(/\.0$/, '')
+                        : '';
+                    lbl.textContent = 'Comision platformă' + (ratePct ? ' (' + ratePct + '%)' : '');
+                }
+            } else {
+                commRow.classList.add('hidden');
+            }
+        }
+
+        // Clear the legacy taxes container — commission has its own row now.
         const taxesContainer = document.getElementById('taxes-container');
         if (taxesContainer) {
-            if (hasAddedOnTopCommission && totalCommission > 0) {
-                taxesContainer.innerHTML = '<div class="flex justify-between text-sm">' +
-                    '<span class="text-muted">Taxe procesare</span>' +
-                    '<span class="font-medium">' + BileteOnlineUtils.formatCurrency(totalCommission) + '</span>' +
-                '</div>';
-            } else {
-                taxesContainer.innerHTML = '';
-            }
+            taxesContainer.innerHTML = '';
         }
 
         // Show/hide insurance row
@@ -775,24 +788,13 @@ const CheckoutPage = {
             }
         }
 
-        // Show/hide processing fee row + populate breakdown
+        // Show/hide processing fee row. Label stays simple — the rate is
+        // in the merchant agreement, not surfaced to the customer.
         const feeRow = document.getElementById('processing-fee-row');
         if (feeRow) {
             if (processingFee.amount > 0) {
                 feeRow.classList.remove('hidden');
                 document.getElementById('processing-fee-amount').textContent = BileteOnlineUtils.formatCurrency(processingFee.amount);
-                const feeLbl = document.getElementById('processing-fee-label');
-                if (feeLbl) {
-                    const pct = processingFee.percent_rate
-                        ? processingFee.percent_rate.toFixed(2).replace('.', ',').replace(/,?0+$/, '') + '%'
-                        : '';
-                    const fix = processingFee.fixed
-                        ? BileteOnlineUtils.formatCurrency(processingFee.fixed)
-                        : '';
-                    const parts = [pct, fix].filter(Boolean);
-                    const breakdown = parts.length ? ' (' + (processingFee.label || 'card') + ' ' + parts.join(' + ') + ')' : '';
-                    feeLbl.textContent = 'Taxa procesare card' + breakdown;
-                }
             } else {
                 feeRow.classList.add('hidden');
             }

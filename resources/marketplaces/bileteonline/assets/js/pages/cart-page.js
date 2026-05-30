@@ -650,32 +650,44 @@ const CartPage = {
         let total = subtotalAfterDiscount + processingFee.amount;
         const points = Math.floor(total / 10);
 
-        // Update DOM
+        // Update DOM. Subtotal now shows BASE prices only — the platform
+        // commission gets its own row below so the customer can see exactly
+        // what they're paying for instead of having it rolled into one
+        // ambiguous "subtotal" number.
         document.getElementById('totalItems').textContent = totalItems;
         document.getElementById('summaryItems').textContent = totalItems;
-        document.getElementById('subtotal').textContent = BileteOnlineUtils.formatCurrency(subtotalWithCommission);
+        document.getElementById('subtotal').textContent = BileteOnlineUtils.formatCurrency(baseSubtotal);
 
-        // Show/hide processing fee row + populate
+        // Platform commission row (added on top, organizer-configured rate)
+        const commRow = document.getElementById('platformCommissionRow');
+        if (commRow) {
+            if (hasAddedOnTopCommission && totalCommission > 0) {
+                commRow.classList.remove('hidden');
+                document.getElementById('platformCommissionAmount').textContent = BileteOnlineUtils.formatCurrency(totalCommission);
+                // Surface the rate — "Comision platformă (2%)".
+                const lbl = document.getElementById('platformCommissionLabel');
+                if (lbl) {
+                    // Derive effective % from the actual amount so multi-item
+                    // carts with different rates collapse to an average that
+                    // customers can still verify with their calculator.
+                    const ratePct = baseSubtotal > 0
+                        ? (totalCommission / baseSubtotal * 100).toFixed(1).replace(/\.0$/, '')
+                        : '';
+                    lbl.textContent = 'Comision platformă' + (ratePct ? ' (' + ratePct + '%)' : '');
+                }
+            } else {
+                commRow.classList.add('hidden');
+            }
+        }
+
+        // Show/hide processing fee row. Label stays simple — the rate is in
+        // the merchant agreement, not the customer's concern.
         const feeRow = document.getElementById('processingFeeRow');
         const feeAmt = document.getElementById('processingFeeAmount');
-        const feeLbl = document.getElementById('processingFeeLabel');
         if (feeRow && feeAmt) {
             if (processingFee.amount > 0) {
                 feeRow.classList.remove('hidden');
                 feeAmt.textContent = BileteOnlineUtils.formatCurrency(processingFee.amount);
-                // Surface what's being charged so customers don't see a
-                // mystery line — "Taxa procesare card (Stripe 2,5% + 1,00 lei)".
-                if (feeLbl) {
-                    const pct = processingFee.percent_rate
-                        ? processingFee.percent_rate.toFixed(2).replace('.', ',').replace(/,?0+$/, '') + '%'
-                        : '';
-                    const fix = processingFee.fixed
-                        ? BileteOnlineUtils.formatCurrency(processingFee.fixed)
-                        : '';
-                    const parts = [pct, fix].filter(Boolean);
-                    const breakdown = parts.length ? ' (' + (processingFee.label || 'card') + ' ' + parts.join(' + ') + ')' : '';
-                    feeLbl.textContent = 'Taxa procesare card' + breakdown;
-                }
             } else {
                 feeRow.classList.add('hidden');
             }
@@ -717,13 +729,11 @@ const CartPage = {
                 });
             });
 
-            // Show commission as "Taxe procesare" only if on top and has commission
-            if (hasAddedOnTopCommission && totalCommission > 0) {
-                breakdownHtml += '<div class="flex justify-between pt-3 mt-3 text-sm border-t border-border">' +
-                    '<span class="text-muted">Taxe procesare</span>' +
-                    '<span class="font-medium">' + BileteOnlineUtils.formatCurrency(totalCommission) + '</span>' +
-                '</div>';
-            }
+            // Commission used to be rendered here as a generic "Taxe procesare"
+            // line, but it's now surfaced separately in #platformCommissionRow
+            // with the explicit "Comision platformă (X%)" label between
+            // Subtotal and Taxa procesare card. Keeping it here too would
+            // double-charge visually.
 
             taxesContainer.innerHTML = breakdownHtml;
         }
