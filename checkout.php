@@ -333,10 +333,16 @@ include __DIR__ . '/includes/header.php';
                         <!-- Dynamic taxes container -->
                         <div id="taxes-container" class="space-y-2 pt-3 border-t border-paper/15"></div>
 
-                        <!-- Subtotal -->
+                        <!-- Subtotal — base prices only; commission below -->
                         <div class="flex justify-between">
                             <span class="text-paper/60">Subtotal (<span id="summary-items">0</span> bilete)</span>
                             <strong id="summary-subtotal" class="font-medium">0.00 lei</strong>
+                        </div>
+
+                        <!-- Platform commission (added on top, e.g. 2%) -->
+                        <div id="platform-commission-row" class="hidden flex justify-between">
+                            <span class="text-paper/60" id="platform-commission-label">Comision platformă</span>
+                            <strong id="platform-commission-amount" class="font-medium">0.00 lei</strong>
                         </div>
 
                         <!-- Discount row -->

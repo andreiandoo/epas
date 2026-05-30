@@ -131,15 +131,21 @@ include __DIR__ . '/includes/header.php';
                             <strong id="discountAmount" class="text-ochre">-0.00 lei</strong>
                         </div>
 
-                        <!-- Subtotal (last before total) -->
+                        <!-- Subtotal (last before total) — base prices only -->
                         <div class="flex justify-between pt-3 border-t border-paper/15">
                             <span class="text-paper/60">Subtotal (<span id="summaryItems">0</span> bilete)</span>
                             <strong id="subtotal" class="font-medium">0.00 lei</strong>
                         </div>
 
+                        <!-- Platform commission (added on top, e.g. 2%) -->
+                        <div id="platformCommissionRow" class="flex justify-between hidden">
+                            <span class="text-paper/60" id="platformCommissionLabel">Comision platformă</span>
+                            <strong id="platformCommissionAmount" class="font-medium">0.00 lei</strong>
+                        </div>
+
                         <!-- Payment processing fee preview (Stripe / Netopia) -->
                         <div id="processingFeeRow" class="flex justify-between hidden">
-                            <span class="text-paper/60" id="processingFeeLabel">Taxa procesare card</span>
+                            <span class="text-paper/60">Taxa procesare card</span>
                             <strong id="processingFeeAmount" class="font-medium">0.00 lei</strong>
                         </div>
 
