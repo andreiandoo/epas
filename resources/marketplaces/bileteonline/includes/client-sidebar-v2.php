@@ -162,5 +162,12 @@ $navItems = [
 
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
     else init();
+
+    // auth.js may boot after this script runs (deferred / load order), in which
+    // case the one-shot init above sees no user. Re-run when auth signals state
+    // so the sidebar hydrates as soon as the customer is known. init() is
+    // idempotent (re-applies user + badges).
+    ['bileteonline:auth:init', 'bileteonline:auth:login', 'bileteonline:auth:update']
+        .forEach(function (ev) { window.addEventListener(ev, init); });
 })();
 </script>
