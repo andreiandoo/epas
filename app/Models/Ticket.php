@@ -234,8 +234,20 @@ class Ticket extends Model
      */
     public function getEffectivePrice(): float
     {
-        $price = (float) ($this->price ?? 0);
-        if ($price <= 0) return 0.0;
+        // Distinguish NULL (legacy_import: never written) from explicit 0
+        // (comp / free ticket) by inspecting the raw attribute.
+        $raw = $this->attributes['price'] ?? null;
+        if ($raw === null) {
+            // Legacy imports (ambilet) leave tickets.price = NULL. Fall
+            // back to catalog price so downstream consumers (payout
+            // breakdown, etc.) don't read 0 and treat the ticket as fully
+            // discounted.
+            $price = (float) ($this->ticketType?->price_cents ?? 0) / 100;
+            if ($price <= 0) return 0.0;
+        } else {
+            $price = (float) $raw;
+            if ($price <= 0) return 0.0;
+        }
 
         // Precise: per-ticket discount written at checkout time. Use
         // array_key_exists (not isset+>0) so that an explicit 0 — meaning
@@ -270,7 +282,15 @@ class Ticket extends Model
      */
     public function getDiscountAmount(): float
     {
-        return round((float) ($this->price ?? 0) - $this->getEffectivePrice(), 2);
+        // Mirror the NULL → catalog fallback in getEffectivePrice() so
+        // legacy imports without tickets.price don't produce a negative
+        // discount (catalog − catalog = 0, the truthful value). Explicit 0
+        // (comp / free ticket) stays at 0.
+        $raw = $this->attributes['price'] ?? null;
+        $price = $raw === null
+            ? (float) ($this->ticketType?->price_cents ?? 0) / 100
+            : (float) $raw;
+        return round($price - $this->getEffectivePrice(), 2);
     }
 
     /**
