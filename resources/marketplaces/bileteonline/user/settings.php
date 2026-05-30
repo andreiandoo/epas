@@ -139,7 +139,13 @@ include __DIR__ . '/../includes/header.php';
                     </label>
                     <label>
                         <span class="block mb-1.5 text-sm font-bold">Data nașterii</span>
-                        <input class="field" type="date" x-model="profile.birth_date" :max="todayIso()">
+                        <input class="field" type="text" inputmode="numeric" maxlength="10"
+                               :value="birthDateDisplay"
+                               @input="onBirthDateInput($event)"
+                               @blur="normalizeBirthDate()"
+                               placeholder="dd/mm/yyyy"
+                               pattern="\d{2}/\d{2}/\d{4}">
+                        <span class="mt-1 block text-xs text-ink-soft">Format: zi/lună/an (exemplu: 15/06/1992)</span>
                     </label>
                     <label class="md:col-span-2">
                         <span class="block mb-1.5 text-sm font-bold">Gen (opțional)</span>
@@ -671,26 +677,30 @@ include __DIR__ . '/../includes/header.php';
                         </div>
 
                         <!-- Ready -->
-                        <div x-show="gdpr.latest && gdpr.latest.status === 'completed' && gdpr.latest.download_url" x-cloak class="mt-4 rounded-2xl bg-mint border-2 border-forest/30 p-4">
-                            <p class="font-bold text-forest">Arhiva este gata de descărcat</p>
-                            <p class="mt-1 text-sm text-ink-soft">
-                                <span x-show="gdpr.latest && gdpr.latest.file_size_bytes" x-text="formatBytes(gdpr.latest.file_size_bytes)"></span>
-                                <span x-show="gdpr.latest && gdpr.latest.expires_at" class="ml-2">· expiră
-                                    <span x-text="gdpr.latest && gdpr.latest.expires_at ? new Date(gdpr.latest.expires_at).toLocaleDateString('ro-RO') : ''"></span>
-                                </span>
-                            </p>
-                            <div class="mt-3 flex gap-2 flex-wrap">
-                                <a :href="gdpr.latest ? gdpr.latest.download_url : '#'" download class="rounded-full bg-vermilion text-paper px-5 py-3 font-bold hover:bg-vermilion-d transition">Descarcă ZIP</a>
-                                <button @click="requestExport()" class="rounded-full border-2 border-ink/20 px-5 py-3 font-bold">Regenerează</button>
+                        <template x-if="gdpr.latest && gdpr.latest.status === 'completed' && gdpr.latest.download_url">
+                            <div class="mt-4 rounded-2xl bg-mint border-2 border-forest/30 p-4">
+                                <p class="font-bold text-forest">Arhiva este gata de descărcat</p>
+                                <p class="mt-1 text-sm text-ink-soft">
+                                    <span x-text="gdpr.latest.file_size_bytes ? formatBytes(gdpr.latest.file_size_bytes) : ''"></span>
+                                    <template x-if="gdpr.latest.expires_at">
+                                        <span class="ml-2">· expiră <span x-text="new Date(gdpr.latest.expires_at).toLocaleDateString('ro-RO')"></span></span>
+                                    </template>
+                                </p>
+                                <div class="mt-3 flex gap-2 flex-wrap">
+                                    <a :href="gdpr.latest.download_url" download class="rounded-full bg-vermilion text-paper px-5 py-3 font-bold hover:bg-vermilion-d transition">Descarcă ZIP</a>
+                                    <button @click="requestExport()" class="rounded-full border-2 border-ink/20 px-5 py-3 font-bold">Regenerează</button>
+                                </div>
                             </div>
-                        </div>
+                        </template>
 
                         <!-- Failed -->
-                        <div x-show="gdpr.latest && gdpr.latest.status === 'failed'" x-cloak class="mt-4 rounded-2xl bg-rose border-2 border-vermilion p-4">
-                            <p class="font-bold text-vermilion">Exportul a eșuat</p>
-                            <p class="mt-1 text-sm text-ink-soft" x-text="gdpr.latest && gdpr.latest.error_message ? gdpr.latest.error_message : 'Te rugăm să încerci din nou peste câteva minute.'"></p>
-                            <button @click="requestExport()" class="mt-3 rounded-full bg-vermilion text-paper px-4 py-2 font-bold">Încearcă din nou</button>
-                        </div>
+                        <template x-if="gdpr.latest && gdpr.latest.status === 'failed'">
+                            <div class="mt-4 rounded-2xl bg-rose border-2 border-vermilion p-4">
+                                <p class="font-bold text-vermilion">Exportul a eșuat</p>
+                                <p class="mt-1 text-sm text-ink-soft" x-text="gdpr.latest.error_message ? gdpr.latest.error_message : 'Te rugăm să încerci din nou peste câteva minute.'"></p>
+                                <button @click="requestExport()" class="mt-3 rounded-full bg-vermilion text-paper px-4 py-2 font-bold">Încearcă din nou</button>
+                            </div>
+                        </template>
                     </article>
 
                     <!-- Personalizare -->
@@ -929,6 +939,51 @@ function clientSettingsPage() {
         todayIso() {
             const d = new Date();
             return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+        },
+
+        // Birth date is stored as ISO (YYYY-MM-DD, what Laravel accepts) but
+        // displayed to the user as dd/mm/yyyy because that's the RO convention.
+        get birthDateDisplay() {
+            const iso = this.profile.birth_date || '';
+            if (! iso) return '';
+            const m = String(iso).match(/^(\d{4})-(\d{2})-(\d{2})/);
+            if (m) return m[3] + '/' + m[2] + '/' + m[1];
+            // Already in dd/mm/yyyy or other — pass through so the user keeps typing
+            return iso;
+        },
+
+        onBirthDateInput(ev) {
+            // Live auto-format: as the user types digits, insert "/" at the
+            // right positions so the field always reads dd/mm/yyyy.
+            let v = (ev.target.value || '').replace(/\D/g, '').slice(0, 8);
+            if (v.length >= 5)      v = v.slice(0, 2) + '/' + v.slice(2, 4) + '/' + v.slice(4);
+            else if (v.length >= 3) v = v.slice(0, 2) + '/' + v.slice(2);
+            ev.target.value = v;
+            // Don't commit to profile.birth_date until blur — keeps the
+            // model in a valid ISO state.
+        },
+
+        normalizeBirthDate() {
+            // Read the literal field value, parse dd/mm/yyyy → ISO YYYY-MM-DD,
+            // and write to profile.birth_date. Leaves the input as-is so the
+            // displayed value still matches what the user typed.
+            const el = document.activeElement && document.activeElement.tagName === 'INPUT'
+                ? document.activeElement
+                : document.querySelector('input[placeholder="dd/mm/yyyy"]');
+            const raw = el ? el.value : '';
+            if (! raw) { this.profile.birth_date = ''; return; }
+            const m = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+            if (! m) {
+                this.flash('Formatul datei nașterii trebuie să fie zi/lună/an (exemplu: 15/06/1992).', 'error');
+                return;
+            }
+            const dd = parseInt(m[1]), mm = parseInt(m[2]), yyyy = parseInt(m[3]);
+            if (mm < 1 || mm > 12 || dd < 1 || dd > 31 || yyyy < 1900 || yyyy > new Date().getFullYear()) {
+                this.flash('Data nașterii nu este validă.', 'error');
+                return;
+            }
+            const iso = String(yyyy) + '-' + String(mm).padStart(2, '0') + '-' + String(dd).padStart(2, '0');
+            this.profile.birth_date = iso;
         },
 
         flash(msg, type) {

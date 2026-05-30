@@ -1027,8 +1027,15 @@ switch ($action) {
         break;
 
     case 'categories':
-        // Use marketplace-events/categories which has the correct implementation
-        $endpoint = '/marketplace-events/categories';
+        // Use marketplace-events/categories which has the correct implementation.
+        // Forward `all` (include categories without events — important for
+        // bilete.online where products are activities, not events) and
+        // `parents_only` (top-level only) so the settings page + footer can
+        // populate even without any live event.
+        $params = [];
+        if (isset($_GET['all']))          $params['all']          = $_GET['all'];
+        if (isset($_GET['parents_only'])) $params['parents_only'] = $_GET['parents_only'];
+        $endpoint = '/marketplace-events/categories' . ($params ? '?' . http_build_query($params) : '');
         break;
 
     case 'event-categories':

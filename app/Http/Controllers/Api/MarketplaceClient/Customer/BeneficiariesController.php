@@ -24,11 +24,19 @@ class BeneficiariesController extends BaseController
             return $this->error('Unauthorized', 401);
         }
 
-        $rows = MarketplaceCustomerBeneficiary::where('marketplace_customer_id', $customer->id)
-            ->orderBy('is_active', 'desc')
-            ->orderBy('created_at', 'desc')
-            ->limit(100)
-            ->get();
+        // Defensive: marketplace_customer_beneficiaries was added in the
+        // 2026-05-30 migration. If a deployed instance hasn't run it yet,
+        // return an empty list instead of 500 so the UI degrades gracefully.
+        try {
+            $rows = MarketplaceCustomerBeneficiary::where('marketplace_customer_id', $customer->id)
+                ->orderBy('is_active', 'desc')
+                ->orderBy('created_at', 'desc')
+                ->limit(100)
+                ->get();
+        } catch (\Throwable $e) {
+            \Log::warning('Beneficiaries query failed (table likely missing)', ['error' => $e->getMessage()]);
+            return $this->success(['beneficiaries' => []]);
+        }
 
         return $this->success([
             'beneficiaries' => $rows->map(fn ($b) => $this->present($b))->all(),

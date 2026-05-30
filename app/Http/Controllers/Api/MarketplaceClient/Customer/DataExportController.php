@@ -66,11 +66,19 @@ class DataExportController extends BaseController
             return $this->error('Unauthorized', 401);
         }
 
-        $rows = MarketplaceCustomerGdprRequest::where('marketplace_customer_id', $customer->id)
-            ->where('request_type', MarketplaceCustomerGdprRequest::TYPE_EXPORT)
-            ->orderByDesc('id')
-            ->limit(10)
-            ->get();
+        // Defensive: marketplace_customer_gdpr_requests was added in the
+        // 2026-05-30 migration. Return an empty status (no pending request)
+        // instead of 500 when the table isn't there yet.
+        try {
+            $rows = MarketplaceCustomerGdprRequest::where('marketplace_customer_id', $customer->id)
+                ->where('request_type', MarketplaceCustomerGdprRequest::TYPE_EXPORT)
+                ->orderByDesc('id')
+                ->limit(10)
+                ->get();
+        } catch (\Throwable $e) {
+            \Log::warning('GDPR status query failed (table likely missing)', ['error' => $e->getMessage()]);
+            return $this->success(['latest' => null, 'history' => []]);
+        }
 
         return $this->success([
             'latest'  => $rows->first() ? $this->present($rows->first()) : null,
