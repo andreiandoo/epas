@@ -282,6 +282,12 @@ class EventCategoryResource extends Resource
                 Tables\Columns\ColorColumn::make('color')
                     ->label('Color'),
 
+                Tables\Columns\IconColumn::make('image_url')
+                    ->label('Image')
+                    ->alignCenter()
+                    ->boolean()
+                    ->state(fn ($record) => filled($record->image_url)),
+
                 Tables\Columns\IconColumn::make('is_visible')
                     ->label('Visible')
                     ->boolean(),
@@ -320,7 +326,20 @@ class EventCategoryResource extends Resource
                     DeleteBulkAction::make(),
                 ]),
             ])
-            ->defaultSort('sort_order');
+            // Hierarchical display: each parent followed by its own children.
+            // Groups are ordered by the parent's sort_order (resolved via the
+            // row's own id for parents, parent_id for children); within a group
+            // the parent row comes first, then children by their sort_order.
+            ->defaultSort(function (Builder $query, string $direction): Builder {
+                $t = $query->getModel()->getTable();
+
+                return $query
+                    ->orderByRaw("(select p.sort_order from {$t} as p where p.id = coalesce({$t}.parent_id, {$t}.id)) asc")
+                    ->orderByRaw("coalesce({$t}.parent_id, {$t}.id) asc")
+                    ->orderByRaw("({$t}.parent_id is null) desc")
+                    ->orderBy("{$t}.sort_order")
+                    ->orderBy("{$t}.id");
+            });
     }
 
     public static function getRelations(): array
