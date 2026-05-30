@@ -1585,23 +1585,27 @@ switch ($action) {
     case 'customer.support.meta':
         $method = 'GET';
         $endpoint = '/customer/support-meta';
+        $requiresAuth = true;
         break;
 
     case 'customer.support.index':
         $method = 'GET';
         $endpoint = '/customer/support-tickets';
+        $requiresAuth = true;
         break;
 
     case 'customer.support.store':
         $method = 'POST';
         $body = file_get_contents('php://input');
         $endpoint = '/customer/support-tickets';
+        $requiresAuth = true;
         break;
 
     case 'customer.support.show':
         $method = 'GET';
         $id = (int) ($_GET['id'] ?? 0);
         $endpoint = '/customer/support-tickets/' . $id;
+        $requiresAuth = true;
         break;
 
     case 'customer.support.reply':
@@ -1609,6 +1613,7 @@ switch ($action) {
         $body = file_get_contents('php://input');
         $id = (int) ($_GET['id'] ?? 0);
         $endpoint = '/customer/support-tickets/' . $id . '/messages';
+        $requiresAuth = true;
         break;
 
     case 'customer.resend-verification':
