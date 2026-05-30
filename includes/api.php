@@ -147,8 +147,16 @@ function api_cached(string $key, callable $callback, int $ttl = 300)
         @mkdir($cacheDir, 0755, true);
     }
 
+    // Allow ?preview=1 / ?nocache=1 to bypass the API data cache and force a
+    // fresh fetch (the fresh payload then overwrites the cache file below),
+    // mirroring how page-cache.php and nav-cache.php treat these flags.
+    // Without this, the file cache here keeps serving a stale payload (e.g. a
+    // categories response from before the `image` field was added) for the
+    // full TTL + stale window, so ?preview=1 appears to "not work".
+    $bypassCache = !empty($_GET['preview']) || !empty($_GET['nocache']);
+
     // Check cache
-    if (file_exists($cacheFile)) {
+    if (!$bypassCache && file_exists($cacheFile)) {
         $cached = json_decode(file_get_contents($cacheFile), true);
         if ($cached && isset($cached['expires']) && isset($cached['data'])) {
             if ($cached['expires'] > time()) {
