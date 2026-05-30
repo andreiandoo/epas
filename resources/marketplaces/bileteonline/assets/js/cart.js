@@ -762,12 +762,83 @@ const BileteOnlineCart = {
         return grouped;
     },
 
+    // Per-marketplace payment-fee config. Loaded lazily on first call to
+    // getPaymentFeeConfig() so non-checkout pages don't pay for the fetch.
+    // {pass_to_customer, providers:{stripe:{percent_rate, fixed_cents}}, default_provider}.
+    _paymentFeeConfig: null,
+    _paymentFeeFetched: false,
+
+    /**
+     * Fetch payment processing fee config from /marketplace-config/checkout/features.
+     * Cached on the singleton — only one network call per page.
+     * Returns null when the marketplace hasn't opted into F1 fees, so the
+     * cart + checkout summary code can gate on truthiness.
+     */
+    async loadPaymentFeeConfig() {
+        if (this._paymentFeeFetched) return this._paymentFeeConfig;
+        this._paymentFeeFetched = true;
+        try {
+            if (typeof BileteOnlineAPI === 'undefined') return null;
+            // The proxy maps '/checkout/features' → action 'checkout.features'
+            // which forwards to the Laravel /marketplace-config/checkout/features
+            // endpoint. We use the short URL here so api.js picks the right
+            // action from getProxyAction().
+            const r = await BileteOnlineAPI.get('/checkout/features');
+            const fees = r?.data?.payment_fees || null;
+            if (fees && fees.providers && Object.keys(fees.providers).length > 0) {
+                this._paymentFeeConfig = fees;
+            }
+        } catch (e) {
+            // Silent — fee preview is a UX enhancement, not a blocker.
+        }
+        return this._paymentFeeConfig;
+    },
+
+    getPaymentFeeConfig() {
+        return this._paymentFeeConfig;
+    },
+
+    /**
+     * Compute the processing fee for a given subtotal (RON, not cents).
+     * Mirror of server-side ProcessingFeeCalculator::compute() so the
+     * preview matches what the order will actually charge.
+     * Returns {amount, percent_rate, fixed, provider, label, pass_to_customer}.
+     * amount is always in RON (lei); 0 when not configured or pass_to_customer=false.
+     */
+    computeProcessingFee(subtotalRon, providerKey) {
+        const cfg = this._paymentFeeConfig;
+        if (! cfg || ! cfg.pass_to_customer) {
+            return { amount: 0, percent_rate: 0, fixed: 0, provider: null, label: '', pass_to_customer: false };
+        }
+        const key = providerKey || cfg.default_provider || Object.keys(cfg.providers)[0];
+        const p = cfg.providers[key];
+        if (! p) {
+            return { amount: 0, percent_rate: 0, fixed: 0, provider: null, label: '', pass_to_customer: true };
+        }
+        const subtotalCents = Math.round(subtotalRon * 100);
+        // Match server: floor(percent component) + fixed component.
+        const percentFeeCents = Math.floor(subtotalCents * (p.percent_rate || 0) / 100);
+        const feeCents = percentFeeCents + (p.fixed_cents || 0);
+        return {
+            amount: feeCents / 100,
+            percent_rate: p.percent_rate || 0,
+            fixed: (p.fixed_cents || 0) / 100,
+            provider: key,
+            label: p.label || 'Procesare card',
+            pass_to_customer: true,
+        };
+    },
+
     /**
      * Initialize cart (call on page load)
      */
     init() {
         // Update cart badge
         this.updateCartBadge();
+
+        // Pre-warm the payment fee config so cart/checkout summary lines
+        // appear on first paint instead of after a delayed re-render.
+        try { this.loadPaymentFeeConfig(); } catch (e) {}
 
         // Listen for storage changes (multi-tab sync)
         window.addEventListener('storage', (e) => {

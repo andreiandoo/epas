@@ -113,7 +113,13 @@ class ActivitiesController extends BaseController
                 'city:id,name,slug,latitude,longitude',
                 'category:id,name,slug,parent_id',
                 'subcategory:id,name,slug,parent_id',
-                'organizer:id,name,slug,logo,description,website',
+                // commission_rate + default_commission_mode included so the
+                // detail payload's organizer.commission_* fields populate
+                // without triggering an extra round-trip to the model. The
+                // helper safeOrganizerCommission() in turn falls back to
+                // marketplace_clients.commission_rate when these are null.
+                'organizer:id,name,slug,logo,description,website,commission_rate,default_commission_mode,marketplace_client_id',
+                'organizer.marketplaceClient:id,commission_rate,commission_mode',
                 'schedules',
                 'scheduleExceptions',
                 'variants' => fn ($q) => $q->where('is_active', true)->orderBy('sort_order'),
@@ -235,17 +241,11 @@ class ActivitiesController extends BaseController
                 'slug' => $activity->category->slug,
                 'name' => $this->translate($activity->category->name, $locale),
             ] : null,
-            'organizer' => $activity->organizer ? [
+            'organizer' => $activity->organizer ? array_merge([
                 'id'              => $activity->organizer->id,
                 'slug'            => $activity->organizer->slug,
                 'name'            => $activity->organizer->name,
-                // Commission settings — read effective values (organizer override
-                // first, marketplace_client fallback). The cart uses these to
-                // decide whether to add commission on top of the displayed
-                // price ('added_on_top') or treat the price as final ('included').
-                'commission_rate' => $activity->organizer->getEffectiveCommissionRate(),
-                'commission_mode' => $activity->organizer->getEffectiveCommissionMode(),
-            ] : null,
+            ], $this->safeOrganizerCommission($activity->organizer)) : null,
             'flags' => [
                 'is_featured'    => (bool) $activity->is_featured,
                 'is_indoor'      => (bool) $activity->is_indoor,
@@ -461,6 +461,46 @@ class ActivitiesController extends BaseController
             return $value[$locale] ?? $value['ro'] ?? $value['en'] ?? (reset($value) ?: null);
         }
         return $value !== '' && $value !== null ? (string) $value : null;
+    }
+
+    /**
+     * Resolve organizer's effective commission settings DEFENSIVELY.
+     *
+     * The straight calls to getEffectiveCommissionRate() / Mode() can blow
+     * up the entire detailPayload (→ /activities/{slug} 500 → activitate.php
+     * 404) when:
+     *   - the eager-loaded organizer was hydrated with only id/name/slug/...
+     *     so commission_rate isn't on the model (returns null)
+     *   - or the cascade falls to $organizer->marketplaceClient which itself
+     *     isn't loaded → triggers a lazy-load that may resolve to null or to
+     *     a row without commission_rate populated
+     *
+     * Wrap both calls in try/catch + fall back to zero (no commission). The
+     * caller already treats organizer.commission_* as advisory data — if
+     * zero, the cart simply doesn't add an on-top line, which is what
+     * legacy items (before this field existed) did anyway. Non-breaking.
+     */
+    private function safeOrganizerCommission($organizer): array
+    {
+        try {
+            return [
+                'commission_rate' => method_exists($organizer, 'getEffectiveCommissionRate')
+                    ? (float) $organizer->getEffectiveCommissionRate()
+                    : (float) ($organizer->commission_rate ?? 0),
+                'commission_mode' => method_exists($organizer, 'getEffectiveCommissionMode')
+                    ? (string) $organizer->getEffectiveCommissionMode()
+                    : (string) ($organizer->default_commission_mode ?? 'included'),
+            ];
+        } catch (\Throwable $e) {
+            \Log::warning('Failed to resolve organizer commission', [
+                'organizer_id' => $organizer->id ?? null,
+                'error'        => $e->getMessage(),
+            ]);
+            return [
+                'commission_rate' => 0.0,
+                'commission_mode' => 'included',
+            ];
+        }
     }
 
     private function resolveStorageUrl(?string $path): ?string

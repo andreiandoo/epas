@@ -156,9 +156,56 @@ class ConfigController extends BaseController
         $features = [
             'ticket_insurance' => $this->getTicketInsuranceSettings($client),
             'cultural_card' => $this->getCulturalCardSettings($client),
+            'payment_fees'  => $this->getPaymentFeesSettings($client),
         ];
 
         return $this->success($features);
+    }
+
+    /**
+     * Expose the payment-processing-fee config so the cart + checkout
+     * pages can show a "Taxa de procesare card" preview line BEFORE the
+     * customer hits Plătește. Returns ONLY the metadata needed for
+     * client-side computation (provider rate + fixed + pass_to_customer
+     * flag) — never PII, never marketplace-private rates that don't
+     * apply to the customer (those stay server-side in the order
+     * snapshot column).
+     *
+     * Returns null when the marketplace hasn't opted into F1 fees;
+     * front-end treats `null` as "do not render fee line" so behaviour
+     * stays identical to today.
+     */
+    protected function getPaymentFeesSettings($client): ?array
+    {
+        if (! is_array($client->payment_fees ?? null)) {
+            return null;
+        }
+        $fees = $client->payment_fees;
+        $providers = is_array($fees['providers'] ?? null) ? $fees['providers'] : [];
+
+        // Sanitise — drop anything that isn't a {percent_rate, fixed_cents}
+        // pair so we don't ship junk to the browser.
+        $sanitised = [];
+        foreach ($providers as $key => $cfg) {
+            if (! is_array($cfg)) continue;
+            $percent = (float) ($cfg['percent_rate'] ?? 0);
+            $fixed   = (int)   ($cfg['fixed_cents']  ?? 0);
+            if ($percent <= 0 && $fixed <= 0) continue;
+            $sanitised[$key] = [
+                'percent_rate' => $percent,
+                'fixed_cents'  => $fixed,
+                'label'        => (string) ($cfg['label'] ?? ucfirst($key)),
+            ];
+        }
+        if (empty($sanitised)) {
+            return null;
+        }
+
+        return [
+            'pass_to_customer' => (bool) ($fees['pass_to_customer'] ?? false),
+            'providers'        => $sanitised,
+            'default_provider' => (string) ($fees['default_provider'] ?? array_key_first($sanitised)),
+        ];
     }
 
     /**
