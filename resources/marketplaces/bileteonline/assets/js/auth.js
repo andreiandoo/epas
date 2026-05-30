@@ -908,6 +908,12 @@ const BileteOnlineAuth = {
     });
 })();
 
+// Expose globally on window. A top-level `const` is a lexical global, NOT a
+// property of `window`, so any consumer that guards on `window.BileteOnlineAuth`
+// (header, /cont sidebar, login redirect, avatar initials, logout buttons)
+// would otherwise see `undefined` and silently treat the user as logged out.
+window.BileteOnlineAuth = BileteOnlineAuth;
+
 // Initialize on DOM ready
 document.addEventListener('DOMContentLoaded', () => {
     BileteOnlineAuth.init();

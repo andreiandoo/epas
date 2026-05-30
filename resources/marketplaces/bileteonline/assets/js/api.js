@@ -2323,3 +2323,8 @@ class APIError extends Error {
 
 // Make APIError available globally
 window.APIError = APIError;
+
+// Expose the API client on window too. A top-level `const` is a lexical global,
+// not a window property, so consumers guarding on `window.BileteOnlineAPI`
+// (e.g. the /cont sidebar) would otherwise see `undefined` and never hydrate.
+window.BileteOnlineAPI = BileteOnlineAPI;
