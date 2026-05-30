@@ -139,7 +139,8 @@ class EventCategoryResource extends Resource
                             ->image()
                             ->disk('public')
                             ->directory('event-categories')
-                            ->visibility('public'),
+                            ->visibility('public')
+                            ->helperText('După ce încarci imaginea, apasă Save. Imaginea se salvează corect chiar dacă previzualizarea dispare momentan (glitch cosmetic).'),
 
                         Forms\Components\Toggle::make('is_visible')
                             ->label('Visible')
