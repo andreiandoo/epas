@@ -102,35 +102,87 @@ include __DIR__ . '/../includes/header.php';
             </section>
 
             <!-- PREFERENCES -->
-            <section x-show="activeTab === 'preferences'" x-cloak class="mt-6 rounded-[2rem] border-2 border-ink bg-paper p-6 sm:p-8 shadow-ticket">
-                <h2 class="font-display text-3xl font-bold leading-none">Notificări & preferințe</h2>
-                <p class="mt-2 text-ink-soft text-sm">Alege ce vrei să primești și cum.</p>
+            <section x-show="activeTab === 'preferences'" x-cloak id="profil-preferinte" class="mt-6 space-y-6">
 
-                <div class="mt-6 space-y-3">
-                    <label class="flex items-start gap-3 p-4 rounded-2xl bg-paper-2 border border-ink/10 cursor-pointer">
-                        <input type="checkbox" x-model="prefs.email_newsletter" class="mt-1 w-5 h-5 accent-vermilion">
-                        <div>
-                            <p class="font-bold">Newsletter</p>
-                            <p class="text-sm text-ink-soft">Recomandări, oferte și activități noi în orașul tău.</p>
-                        </div>
-                    </label>
-                    <label class="flex items-start gap-3 p-4 rounded-2xl bg-paper-2 border border-ink/10 cursor-pointer">
-                        <input type="checkbox" x-model="prefs.email_reminders" class="mt-1 w-5 h-5 accent-vermilion">
-                        <div>
-                            <p class="font-bold">Reminder evenimente</p>
-                            <p class="text-sm text-ink-soft">Primește un email cu 24h înainte de fiecare bilet activ.</p>
-                        </div>
-                    </label>
-                    <label class="flex items-start gap-3 p-4 rounded-2xl bg-paper-2 border border-ink/10 cursor-pointer">
-                        <input type="checkbox" x-model="prefs.email_recommendations" class="mt-1 w-5 h-5 accent-vermilion">
-                        <div>
-                            <p class="font-bold">Recomandări personalizate</p>
-                            <p class="text-sm text-ink-soft">Sugestii bazate pe orașul tău și activitățile vizualizate.</p>
-                        </div>
-                    </label>
+                <!-- Notification toggles -->
+                <div class="rounded-[2rem] border-2 border-ink bg-paper p-6 sm:p-8 shadow-ticket">
+                    <h2 class="font-display text-3xl font-bold leading-none">Notificări pe email</h2>
+                    <p class="mt-2 text-ink-soft text-sm">Alege ce mesaje vrei să primești de la noi.</p>
+
+                    <div class="mt-6 space-y-3">
+                        <label class="flex items-start gap-3 p-4 rounded-2xl bg-paper-2 border border-ink/10 cursor-pointer">
+                            <input type="checkbox" x-model="prefs.email_newsletter" class="mt-1 w-5 h-5 accent-vermilion">
+                            <div>
+                                <p class="font-bold">Newsletter</p>
+                                <p class="text-sm text-ink-soft">Recomandări, oferte și activități noi în orașul tău.</p>
+                            </div>
+                        </label>
+                        <label class="flex items-start gap-3 p-4 rounded-2xl bg-paper-2 border border-ink/10 cursor-pointer">
+                            <input type="checkbox" x-model="prefs.email_reminders" class="mt-1 w-5 h-5 accent-vermilion">
+                            <div>
+                                <p class="font-bold">Reminder evenimente</p>
+                                <p class="text-sm text-ink-soft">Email cu 24h înainte de fiecare bilet activ.</p>
+                            </div>
+                        </label>
+                        <label class="flex items-start gap-3 p-4 rounded-2xl bg-paper-2 border border-ink/10 cursor-pointer">
+                            <input type="checkbox" x-model="prefs.email_recommendations" class="mt-1 w-5 h-5 accent-vermilion">
+                            <div>
+                                <p class="font-bold">Recomandări personalizate</p>
+                                <p class="text-sm text-ink-soft">Sugestii bazate pe orașul și categoriile alese mai jos.</p>
+                            </div>
+                        </label>
+                    </div>
                 </div>
 
-                <button @click="savePreferences()" :disabled="saving" class="mt-6 rounded-full bg-vermilion text-paper px-6 py-3 font-bold hover:bg-vermilion-d transition disabled:opacity-60">
+                <!-- Taste profile: cities + categories -->
+                <div class="rounded-[2rem] border-2 border-ink bg-paper p-6 sm:p-8 shadow-ticket">
+                    <h2 class="font-display text-3xl font-bold leading-none">Preferințe pentru recomandări</h2>
+                    <p class="mt-2 text-ink-soft text-sm">
+                        Alege orașele și categoriile care te interesează — folosim aceste preferințe în
+                        <a href="/cont/recomandari" class="font-bold text-vermilion underline-wobble">Recomandări</a>
+                        ca să-ți afișăm activități relevante.
+                    </p>
+
+                    <div class="mt-6">
+                        <p class="font-mono text-xs tracking-[.18em] text-ink-soft">ORAȘE PREFERATE</p>
+                        <p class="mt-1 text-xs text-ink-soft">Apasă pe orașele unde vrei activități. Poți alege oricâte.</p>
+                        <div x-show="loadingCities" class="mt-3 h-10 rounded-2xl bg-paper-2/60 animate-pulse"></div>
+                        <div x-show="!loadingCities && availableCities.length === 0" class="mt-3 text-sm text-ink-soft italic">Lista de orașe se încarcă în curând.</div>
+                        <div x-show="!loadingCities && availableCities.length > 0" class="mt-3 flex flex-wrap gap-2">
+                            <template x-for="city in availableCities" :key="city.slug || city.name">
+                                <button type="button" @click="toggleCity(city.name)"
+                                        :class="interests.preferred_cities.includes(city.name) ? 'bg-ink text-paper border-ink' : 'bg-paper-2 border-ink/10 hover:border-ink'"
+                                        class="rounded-full px-4 py-2 font-bold text-sm border-2 transition">
+                                    <span x-text="city.name"></span>
+                                </button>
+                            </template>
+                        </div>
+                    </div>
+
+                    <div class="mt-7">
+                        <p class="font-mono text-xs tracking-[.18em] text-ink-soft">CATEGORII PREFERATE</p>
+                        <p class="mt-1 text-xs text-ink-soft">Bifează tipurile de activități care te interesează.</p>
+                        <div x-show="loadingCategories" class="mt-3 h-10 rounded-2xl bg-paper-2/60 animate-pulse"></div>
+                        <div x-show="!loadingCategories && availableCategories.length === 0" class="mt-3 text-sm text-ink-soft italic">Lista de categorii se încarcă în curând.</div>
+                        <div x-show="!loadingCategories && availableCategories.length > 0" class="mt-3 flex flex-wrap gap-2">
+                            <template x-for="cat in availableCategories" :key="cat.slug">
+                                <button type="button" @click="toggleCategory(cat.slug)"
+                                        :class="interests.event_categories.includes(cat.slug) ? 'bg-vermilion text-paper border-vermilion' : 'bg-paper-2 border-ink/10 hover:border-ink'"
+                                        class="rounded-full px-4 py-2 font-bold text-sm border-2 transition">
+                                    <span x-text="cat.emoji + ' ' + cat.name"></span>
+                                </button>
+                            </template>
+                        </div>
+                    </div>
+
+                    <p x-show="interests.preferred_cities.length > 0 || interests.event_categories.length > 0"
+                       class="mt-5 text-xs text-forest">
+                        <strong x-text="interests.preferred_cities.length + interests.event_categories.length"></strong>
+                        preferințe selectate. Apasă „Salvează preferințele" mai jos.
+                    </p>
+                </div>
+
+                <button @click="savePreferences()" :disabled="saving" class="rounded-full bg-vermilion text-paper px-6 py-3 font-bold hover:bg-vermilion-d transition disabled:opacity-60">
                     <span x-show="!saving">Salvează preferințele</span>
                     <span x-show="saving" x-cloak>Se salvează…</span>
                 </button>
@@ -186,12 +238,19 @@ function clientSettingsPage() {
         profile: { first_name: '', last_name: '', email: '', phone: '' },
         pw: { current_password: '', password: '', password_confirmation: '' },
         prefs: { email_newsletter: true, email_reminders: true, email_recommendations: true },
+        interests: { preferred_cities: [], event_categories: [] },
+        availableCities: [],
+        availableCategories: [],
+        loadingCities: true,
+        loadingCategories: true,
         del: { password: '', reason: '', confirmed: false },
 
         init() {
             try { this.isAuth = (window.BileteOnlineAuth && BileteOnlineAuth.isLoggedIn && BileteOnlineAuth.isLoggedIn()); } catch (e) { this.isAuth = false; }
             if (! this.isAuth) { this.loading = false; return; }
             this.load();
+            this.loadCities();
+            this.loadCategories();
 
             // jump to specific tab via hash (#profil-preferinte etc.)
             const h = (location.hash || '').replace('#', '');
@@ -203,7 +262,9 @@ function clientSettingsPage() {
         async load() {
             try {
                 const r = await BileteOnlineAPI.customer.getProfile();
-                const u = (r && r.data) || {};
+                const root = (r && r.data) || {};
+                // /customer/me may return customer at data.* or data.customer.*
+                const u = root.customer || root;
                 this.profile = {
                     first_name: u.first_name || '',
                     last_name:  u.last_name || '',
@@ -211,13 +272,91 @@ function clientSettingsPage() {
                     phone:      u.phone || '',
                 };
                 const s = u.settings || u.preferences || {};
+
+                // Notification toggles — flat keys OR nested under notification_preferences
+                const np = s.notification_preferences || {};
                 this.prefs = {
-                    email_newsletter:      s.email_newsletter      ?? s.newsletter      ?? true,
-                    email_reminders:       s.email_reminders       ?? true,
-                    email_recommendations: s.email_recommendations ?? true,
+                    email_newsletter:      s.email_newsletter      ?? np.newsletter      ?? s.newsletter      ?? true,
+                    email_reminders:       s.email_reminders       ?? np.reminders       ?? true,
+                    email_recommendations: s.email_recommendations ?? np.recommendations ?? true,
+                };
+
+                // Taste profile — interests nested under settings.interests
+                const it = s.interests || {};
+                this.interests = {
+                    preferred_cities: Array.isArray(it.preferred_cities) ? it.preferred_cities.slice(0, 30) : [],
+                    event_categories: Array.isArray(it.event_categories) ? it.event_categories.slice(0, 30) : [],
                 };
             } catch (e) {}
             this.loading = false;
+        },
+
+        async loadCities() {
+            // Try API, fallback to a curated RO list. We want plain city names
+            // (no diacritics issues) so saved values match what footer/category
+            // pages expect.
+            const fallback = [
+                'București', 'Cluj-Napoca', 'Brașov', 'Timișoara', 'Iași', 'Constanța',
+                'Sibiu', 'Oradea', 'Craiova', 'Galați', 'Ploiești', 'Bacău', 'Pitești',
+                'Arad', 'Târgu Mureș', 'Baia Mare', 'Suceava', 'Râmnicu Vâlcea',
+            ];
+            try {
+                const r = await BileteOnlineAPI.get('/cities', { limit: 60 });
+                const rows = (r && (r.data?.cities || r.data || [])) || [];
+                if (Array.isArray(rows) && rows.length > 0) {
+                    this.availableCities = rows.map(c => ({
+                        name: c.name || c.label || c.city || String(c),
+                        slug: c.slug || (c.name || '').toLowerCase(),
+                    })).filter(c => c.name);
+                } else {
+                    this.availableCities = fallback.map(n => ({ name: n, slug: n.toLowerCase() }));
+                }
+            } catch (e) {
+                this.availableCities = fallback.map(n => ({ name: n, slug: n.toLowerCase() }));
+            }
+            this.loadingCities = false;
+        },
+
+        async loadCategories() {
+            // Pull top-level categories. We use `all=1&parents_only=1` so the
+            // list shows the canonical leisure categories regardless of which
+            // events happen to be live right now.
+            const emojiMap = {
+                'escape-rooms': '🔐',
+                'muzee-expozitii': '🏛️',
+                'parcuri-de-distractii': '🎢',
+                'parcuri-de-aventura': '🌲',
+                'acvarii-zoo-animale': '🐠',
+                'ateliere-experiente-creative': '🎨',
+                'spa-wellness': '💆',
+                'sport-fitness': '🏃',
+                'tururi-experiente': '🚶',
+                'gastronomie': '🍽️',
+            };
+            try {
+                const r = await BileteOnlineAPI.get('/events/categories', { all: 1, parents_only: 1 });
+                const rows = (r && (r.data?.categories || r.data || [])) || [];
+                if (Array.isArray(rows) && rows.length > 0) {
+                    this.availableCategories = rows.map(c => ({
+                        slug: c.slug || '',
+                        name: c.name || c.slug || '',
+                        emoji: emojiMap[c.slug] || '✨',
+                    })).filter(c => c.slug && c.name);
+                }
+            } catch (e) {}
+            this.loadingCategories = false;
+        },
+
+        toggleCity(name) {
+            const idx = this.interests.preferred_cities.indexOf(name);
+            if (idx >= 0) this.interests.preferred_cities.splice(idx, 1);
+            else if (this.interests.preferred_cities.length < 20) this.interests.preferred_cities.push(name);
+        },
+
+        toggleCategory(slug) {
+            const idx = this.interests.event_categories.indexOf(slug);
+            if (idx >= 0) this.interests.event_categories.splice(idx, 1);
+            else if (this.interests.event_categories.length < 20) this.interests.event_categories.push(slug);
         },
 
         flash(msg, type) { this.message = msg; this.messageType = type || 'success'; setTimeout(() => { this.message = ''; }, 4500); },
@@ -255,7 +394,26 @@ function clientSettingsPage() {
         async savePreferences() {
             this.saving = true;
             try {
-                const r = await BileteOnlineAPI.put('/customer/settings', this.prefs);
+                // Backend (AuthController::updateSettings) accepts:
+                //   notification_preferences.{reminders,newsletter,recommendations}
+                //   interests.{preferred_cities[], event_categories[]}
+                // We also send the flat keys for backward compat with older
+                // builds that read settings.email_* directly.
+                const payload = {
+                    email_newsletter:      !!this.prefs.email_newsletter,
+                    email_reminders:       !!this.prefs.email_reminders,
+                    email_recommendations: !!this.prefs.email_recommendations,
+                    notification_preferences: {
+                        newsletter:      !!this.prefs.email_newsletter,
+                        reminders:       !!this.prefs.email_reminders,
+                        recommendations: !!this.prefs.email_recommendations,
+                    },
+                    interests: {
+                        preferred_cities: (this.interests.preferred_cities || []).filter(Boolean),
+                        event_categories: (this.interests.event_categories || []).filter(Boolean),
+                    },
+                };
+                const r = await BileteOnlineAPI.put('/customer/settings', payload);
                 if (r && r.success) this.flash('Preferințele au fost salvate.', 'success');
                 else this.flash((r && r.message) || 'Nu am putut salva preferințele.', 'error');
             } catch (e) { this.flash('Eroare la salvare.', 'error'); }
