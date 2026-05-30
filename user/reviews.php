@@ -132,29 +132,25 @@ include __DIR__ . '/../includes/header.php';
 
                                 <label class="block mt-5">
                                     <span class="block mb-1.5 text-sm font-bold">Ce ți-a plăcut sau ce ar trebui să știe alții?</span>
-                                    <textarea class="field min-h-32" x-model="newReview.text" maxlength="2000" placeholder="Scrie sincer, util și concret. De exemplu: cât a durat, pentru ce vârstă e potrivit, cum a fost accesul, dacă ai merge din nou."></textarea>
-                                    <span class="block mt-1 text-xs text-ink-soft" x-text="(newReview.text.length || 0) + ' / 2000'">0 / 2000</span>
+                                    <textarea class="field min-h-32" x-model="newReview.text" :maxlength="meta.text_max_chars" placeholder="Scrie sincer, util și concret. De exemplu: cât a durat, pentru ce vârstă e potrivit, cum a fost accesul, dacă ai merge din nou."></textarea>
+                                    <span class="block mt-1 text-xs text-ink-soft" x-text="(newReview.text.length || 0) + ' / ' + meta.text_max_chars">0 / 2000</span>
                                 </label>
 
                                 <div class="mt-4 grid sm:grid-cols-2 gap-3">
                                     <label>
                                         <span class="block mb-1.5 text-sm font-bold">Potrivit pentru</span>
                                         <select class="field" x-model="newReview.suitable">
-                                            <option>Copii</option>
-                                            <option>Familie</option>
-                                            <option>Cuplu</option>
-                                            <option>Grupuri</option>
-                                            <option>Team building</option>
+                                            <template x-for="opt in meta.suitable_for" :key="opt.value">
+                                                <option :value="opt.value" x-text="opt.label"></option>
+                                            </template>
                                         </select>
                                     </label>
                                     <label>
                                         <span class="block mb-1.5 text-sm font-bold">Vârsta recomandată</span>
                                         <select class="field" x-model="newReview.age">
-                                            <option>3–6 ani</option>
-                                            <option>6–10 ani</option>
-                                            <option>10–14 ani</option>
-                                            <option>Adulți</option>
-                                            <option>Toate vârstele</option>
+                                            <template x-for="opt in meta.age_groups" :key="opt.value">
+                                                <option :value="opt.value" x-text="opt.label"></option>
+                                            </template>
                                         </select>
                                     </label>
                                 </div>
@@ -209,16 +205,14 @@ include __DIR__ . '/../includes/header.php';
                     <div class="grid sm:grid-cols-3 gap-2">
                         <input class="field" x-model="search" placeholder="Caută recenzie...">
                         <select class="field" x-model="statusFilter">
-                            <option value="all">Toate</option>
-                            <option value="published">Publicate</option>
-                            <option value="draft">Drafturi</option>
-                            <option value="moderation">În moderare</option>
+                            <template x-for="opt in meta.status_filters" :key="opt.value">
+                                <option :value="opt.value" x-text="opt.label"></option>
+                            </template>
                         </select>
                         <select class="field" x-model="ratingFilter">
-                            <option value="all">Orice rating</option>
-                            <option value="5">5 stele</option>
-                            <option value="4">4 stele</option>
-                            <option value="3">3 stele</option>
+                            <template x-for="opt in meta.rating_filters" :key="opt.value">
+                                <option :value="opt.value" x-text="opt.label"></option>
+                            </template>
                         </select>
                     </div>
                 </div>
@@ -305,14 +299,52 @@ function clientReviewsPage() {
         statusFilter: 'all',
         ratingFilter: 'all',
 
-        newReview: { rating: 0, text: '', suitable: 'Familie', age: 'Toate vârstele', photos: [], editingId: null },
+        newReview: { rating: 0, text: '', suitable: 'family', age: 'all', photos: [], editingId: null },
+
+        // Loaded from /customer/reviews/meta — falls back to backend defaults
+        meta: {
+            suitable_for: [
+                { value: 'children',     label: 'Copii' },
+                { value: 'family',       label: 'Familie' },
+                { value: 'couple',       label: 'Cuplu' },
+                { value: 'groups',       label: 'Grupuri' },
+                { value: 'team_building',label: 'Team building' },
+                { value: 'solo',         label: 'Solo' },
+            ],
+            age_groups: [
+                { value: '3-6',    label: '3–6 ani' },
+                { value: '6-10',   label: '6–10 ani' },
+                { value: '10-14',  label: '10–14 ani' },
+                { value: '14-18',  label: '14–18 ani' },
+                { value: 'adults', label: 'Adulți' },
+                { value: 'all',    label: 'Toate vârstele' },
+            ],
+            rating_filters: [
+                { value: 'all', label: 'Orice rating' },
+                { value: '5',   label: '5 stele' },
+                { value: '4',   label: '4 stele' },
+                { value: '3',   label: '3 stele' },
+                { value: '2',   label: '2 stele' },
+                { value: '1',   label: '1 stea' },
+            ],
+            status_filters: [
+                { value: 'all',        label: 'Toate' },
+                { value: 'published',  label: 'Publicate' },
+                { value: 'draft',      label: 'Drafturi' },
+                { value: 'moderation', label: 'În moderare' },
+            ],
+            text_min_chars: 10,
+            text_max_chars: 2000,
+            photos_max_count: 5,
+            photos_max_size_mb: 5,
+        },
 
         fallbackImage: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect fill="%231B1714" width="100" height="100"/><text x="50" y="58" text-anchor="middle" fill="%23E84527" font-size="40">⭐</text></svg>',
 
         get currentEvent() { return this.toReviewEvents[this.selectEventIdx] || null; },
 
         get canSubmit() {
-            return this.currentEvent && this.newReview.rating > 0 && (this.newReview.text || '').trim().length >= 10;
+            return this.currentEvent && this.newReview.rating > 0 && (this.newReview.text || '').trim().length >= (this.meta.text_min_chars || 10);
         },
 
         get stats() {
@@ -331,8 +363,24 @@ function clientReviewsPage() {
         init() {
             try { this.isAuth = (window.BileteOnlineAuth && BileteOnlineAuth.isLoggedIn && BileteOnlineAuth.isLoggedIn()); } catch (e) { this.isAuth = false; }
             if (! this.isAuth) { this.loadingToReview = false; this.loadingReviews = false; return; }
+            this.loadMeta();
             this.loadToReview();
             this.loadReviews();
+        },
+
+        async loadMeta() {
+            try {
+                const r = await BileteOnlineAPI.get('/customer/reviews/meta');
+                const d = (r && r.data) || {};
+                if (Array.isArray(d.suitable_for) && d.suitable_for.length) this.meta.suitable_for = d.suitable_for;
+                if (Array.isArray(d.age_groups)   && d.age_groups.length)   this.meta.age_groups   = d.age_groups;
+                if (Array.isArray(d.rating_filters)) this.meta.rating_filters = d.rating_filters;
+                if (Array.isArray(d.status_filters)) this.meta.status_filters = d.status_filters;
+                if (d.text_min_chars)     this.meta.text_min_chars     = d.text_min_chars;
+                if (d.text_max_chars)     this.meta.text_max_chars     = d.text_max_chars;
+                if (d.photos_max_count)   this.meta.photos_max_count   = d.photos_max_count;
+                if (d.photos_max_size_mb) this.meta.photos_max_size_mb = d.photos_max_size_mb;
+            } catch (e) {}
         },
 
         async loadToReview() {
@@ -397,11 +445,13 @@ function clientReviewsPage() {
         },
 
         handlePhotoUpload(ev) {
-            const files = Array.from(ev.target.files || []).slice(0, 5 - this.newReview.photos.length);
+            const maxCount = this.meta.photos_max_count || 5;
+            const maxBytes = (this.meta.photos_max_size_mb || 5) * 1024 * 1024;
+            const files = Array.from(ev.target.files || []).slice(0, maxCount - this.newReview.photos.length);
             files.forEach(file => {
                 if (! file.type.startsWith('image/')) return;
-                if (file.size > 5 * 1024 * 1024) {
-                    this.flashForm('Imaginile trebuie să fie sub 5 MB.', 'error');
+                if (file.size > maxBytes) {
+                    this.flashForm('Imaginile trebuie să fie sub ' + (this.meta.photos_max_size_mb || 5) + ' MB.', 'error');
                     return;
                 }
                 const reader = new FileReader();

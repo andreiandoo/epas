@@ -336,6 +336,10 @@ function clientDashboardPage() {
 
         utility: { supportActive: 0, reviewsPending: 0, giftBalance: 0 },
 
+        // Loaded from /customer/rewards/config (so dashboard never duplicates
+        // the conversion rate). Fallback 100 = backend default point_value 0.01.
+        rewardsConfig: { pointsPerLei: 100, loaded: false },
+
         init() {
             try { this.isAuth = (window.BileteOnlineAuth && BileteOnlineAuth.isLoggedIn && BileteOnlineAuth.isLoggedIn()); } catch (e) { this.isAuth = false; }
             if (! this.isAuth) { this.loading = false; this.loadingRecommendations = false; this.loadingOrders = false; return; }
@@ -345,12 +349,22 @@ function clientDashboardPage() {
                 if (u) this.firstName = u.first_name || (u.name ? u.name.split(' ')[0] : '');
             } catch (e) {}
 
+            this.loadRewardsConfig();
             this.loadMe();
             this.loadStats();
             this.loadUpcoming();
             this.loadRecommendations();
             this.loadRecentOrders();
             this.loadUtilityCounts();
+        },
+
+        async loadRewardsConfig() {
+            try {
+                const r = await BileteOnlineAPI.get('/customer/rewards/config');
+                const d = (r && r.data) || {};
+                if (d.points_per_lei) this.rewardsConfig.pointsPerLei = d.points_per_lei;
+                this.rewardsConfig.loaded = true;
+            } catch (e) {}
         },
 
         async loadMe() {
@@ -517,7 +531,7 @@ function clientDashboardPage() {
         },
 
         // ===== utils =====
-        pointsToLei(points)  { return Math.floor((points || 0) / 20); }, // 20 pts = 1 lei default
+        pointsToLei(points)  { return Math.floor((points || 0) / (this.rewardsConfig.pointsPerLei || 100)); },
         formatNumber(n)      { return new Intl.NumberFormat('ro-RO').format(n || 0); },
         formatLei(n)         { return (n == null ? '0' : new Intl.NumberFormat('ro-RO', { maximumFractionDigits: 0 }).format(n)) + ' lei'; },
         relTime(iso) {

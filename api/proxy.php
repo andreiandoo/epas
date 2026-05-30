@@ -1773,6 +1773,27 @@ switch ($action) {
         $requiresAuth = true;
         break;
 
+    case 'customer.rewards.config':
+        $method = 'GET';
+        $endpoint = '/customer/rewards/config';
+        $requiresAuth = true;
+        break;
+
+    case 'customer.recommendations':
+        $method = 'GET';
+        $params = [];
+        if (isset($_GET['limit']))  $params['limit']  = (int) $_GET['limit'];
+        if (isset($_GET['locale'])) $params['locale'] = $_GET['locale'];
+        $endpoint = '/customer/recommendations' . (! empty($params) ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    case 'customer.reviews.meta':
+        $method = 'GET';
+        $endpoint = '/customer/reviews/meta';
+        $requiresAuth = true;
+        break;
+
     case 'customer.rewards.history':
         $method = 'GET';
         $params = [];
