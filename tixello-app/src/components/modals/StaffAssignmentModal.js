@@ -529,7 +529,17 @@ export default function StaffAssignmentModal({ visible, onClose }) {
 
   const handleInvite = async () => {
     const fullName = `${inviteFirstName.trim()} ${inviteLastName.trim()}`.trim();
-    if (!inviteEmail.trim()) return;
+    // Inline validation that always tells the user what's missing,
+    // rather than silently leaving the button disabled.
+    if (!inviteEmail.trim()) {
+      Alert.alert('Eroare', 'Adresa de email este obligatorie.');
+      return;
+    }
+    const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRe.test(inviteEmail.trim())) {
+      Alert.alert('Eroare', 'Adresa de email este invalidă.');
+      return;
+    }
     if (!invitePassword || invitePassword.length < 8) {
       Alert.alert('Eroare', 'Parola trebuie să aibă cel puțin 8 caractere.');
       return;
@@ -913,12 +923,15 @@ export default function StaffAssignmentModal({ visible, onClose }) {
                   </>
                 )}
 
-                {/* Add Button */}
+                {/* Add Button — always tappable so the user gets explicit
+                    feedback from handleInvite() about what's missing
+                    (email format, password length, etc.). Only disabled
+                    while the request is in flight. */}
                 <TouchableOpacity
-                  style={[styles.addButton, (!inviteEmail.trim() || !invitePassword || invitePassword.length < 8 || inviting) && styles.addButtonDisabled]}
+                  style={[styles.addButton, inviting && styles.addButtonDisabled]}
                   onPress={handleInvite}
                   activeOpacity={0.8}
-                  disabled={!inviteEmail.trim() || !invitePassword || invitePassword.length < 8 || inviting}
+                  disabled={inviting}
                 >
                   {inviting ? (
                     <ActivityIndicator size="small" color={colors.white} />
