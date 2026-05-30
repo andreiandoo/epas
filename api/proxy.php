@@ -1800,6 +1800,12 @@ switch ($action) {
         $requiresAuth = true;
         break;
 
+    case 'customer.dashboard-bundle':
+        $method = 'GET';
+        $endpoint = '/customer/dashboard-bundle';
+        $requiresAuth = true;
+        break;
+
     case 'customer.reviews.meta':
         $method = 'GET';
         $endpoint = '/customer/reviews/meta';
