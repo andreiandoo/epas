@@ -9,6 +9,12 @@
  */
 
 require_once __DIR__ . '/includes/config.php';
+require_once __DIR__ . "/includes/api.php";
+
+// 30-minute page cache — static / rarely-changing content. Skips POST,
+// preview, nocache, and admin sessions (see includes/page-cache.php).
+$pageCacheTTL = 1800;
+require_once __DIR__ . "/includes/page-cache.php";
 
 $pageTitleRaw    = 'Întrebări frecvente și ajutor — ' . SITE_NAME;
 $pageDescription = 'Răspunsuri rapide despre comenzi, bilete QR, plăți, retururi, protecție bilet, puncte bonus, carduri cadou, cont client și acces pentru locații.';

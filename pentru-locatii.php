@@ -4,6 +4,12 @@
  * Static content + Alpine.js interactivity (feature tabs, FAQ accordion).
  */
 require_once __DIR__ . '/includes/config.php';
+require_once __DIR__ . "/includes/api.php";
+
+// 30-minute page cache — static / rarely-changing content. Skips POST,
+// preview, nocache, and admin sessions (see includes/page-cache.php).
+$pageCacheTTL = 1800;
+require_once __DIR__ . "/includes/page-cache.php";
 
 $pageTitleRaw    = 'Pentru locații — vinde bilete online pentru activități pe bilete.online';
 $pageDescription = 'Listează-ți locația pe bilete.online și vinde bilete online pentru escape rooms, muzee, parcuri, ateliere, peșteri, rezervații și experiențe locale. Pagini SEO, checkout, QR, scanare, rapoarte și dashboard.';

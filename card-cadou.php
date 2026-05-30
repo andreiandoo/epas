@@ -4,6 +4,12 @@
  * Pure static landing with Alpine.js configurator (live preview).
  */
 require_once __DIR__ . '/includes/config.php';
+require_once __DIR__ . "/includes/api.php";
+
+// 30-minute page cache — static / rarely-changing content. Skips POST,
+// preview, nocache, and admin sessions (see includes/page-cache.php).
+$pageCacheTTL = 1800;
+require_once __DIR__ . "/includes/page-cache.php";
 
 $pageTitleRaw = 'Card cadou bilete.online — dăruiește o experiență, nu un obiect';
 $pageDescription = 'Card cadou digital bilete.online pentru activități, experiențe și ieșiri memorabile. Alegi valoarea, scrii mesajul, destinatarul primește email cu cod unic.';
