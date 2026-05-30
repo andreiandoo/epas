@@ -197,12 +197,12 @@ $accentMap = [
                 <a href="/pentru-locatii" class="hidden lg:inline-flex px-4 py-2 rounded-full border-2 border-ink text-sm font-600 hover:bg-ink hover:text-paper transition-colors duration-300">Listează-ți locația</a>
 
                 <!-- LOGGED OUT (default) -->
-                <a href="/login" class="hidden lg:inline-flex px-4 py-2 rounded-full bg-ink text-paper text-sm font-600 hover:bg-ink-2 transition" x-show="!user">
+                <a href="/login" class="hidden lg:inline-flex px-4 py-2 rounded-full bg-ink text-paper text-sm font-600 hover:bg-ink-2 transition" x-show="!loggedIn" x-cloak>
                     Intră în cont
                 </a>
 
-                <!-- LOGGED IN (Alpine flips to true when JS detects auth) -->
-                <div class="relative hidden lg:block" x-show="user" x-cloak @click.outside="user=false">
+                <!-- LOGGED IN (loggedIn flips to true when JS detects auth; `user` = dropdown toggle) -->
+                <div class="relative hidden lg:block" x-show="loggedIn" x-cloak @click.outside="user=false">
                     <button @click="user=!user" :aria-expanded="user" class="flex items-center gap-2 pl-1 pr-2.5 py-1 rounded-full border-2 border-ink hover:bg-ink/5 transition" aria-label="Meniul utilizatorului">
                         <span class="relative grid place-items-center w-8 h-8 rounded-full bg-forest text-paper font-600 text-sm" x-text="(window.BileteOnlineAuth && BileteOnlineAuth.getUser && BileteOnlineAuth.getUser()?.first_name?.charAt(0) || '?') + ''">?</span>
                         <svg :class="user && 'rotate-180'" class="w-4 h-4 transition-transform duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
@@ -255,14 +255,14 @@ $accentMap = [
 
         <!-- mobile drawer -->
         <div x-show="open" x-cloak x-transition.origin.top class="lg:hidden border-t border-ink/10 bg-paper px-5 py-5 text-lg font-500 max-h-[80vh] overflow-y-auto" role="menu">
-            <div class="flex items-center gap-3 pb-4 mb-3 border-b border-ink/10" x-show="user" x-cloak>
+            <div class="flex items-center gap-3 pb-4 mb-3 border-b border-ink/10" x-show="loggedIn" x-cloak>
                 <span class="grid place-items-center w-10 h-10 rounded-full bg-forest text-paper font-600" data-user-initials>?</span>
                 <div>
                     <p class="text-base font-600 leading-tight" data-user-name>Bun venit</p>
                     <a href="/cont/bilete" class="text-sm text-vermilion">Biletele mele →</a>
                 </div>
             </div>
-            <a x-show="!user" href="/login" @click="open=false" class="block py-2 font-600 text-vermilion">Intră în cont</a>
+            <a x-show="!loggedIn" href="/login" @click="open=false" class="block py-2 font-600 text-vermilion">Intră în cont</a>
 
             <!-- mobile city selector -->
             <div class="py-3 my-2 border-y border-ink/10">
@@ -299,11 +299,40 @@ $accentMap = [
  */
 function bileteOnlineHeader() {
     return {
+        // NOTE: `user` is ONLY the user-dropdown open/close toggle.
+        // Auth state (login button vs client menu) lives in `loggedIn`.
         open: false, scrolled: false, mega: false, user: false, cityOpen: false,
+        loggedIn: false,
         cityLabel: '',
         initHeader() {
             window.addEventListener('scroll', () => { this.scrolled = window.scrollY > 20; });
             try { this.cityLabel = localStorage.getItem('bo_city_label') || ''; } catch (e) {}
+
+            // Reflect auth state in the header. auth.js may finish booting
+            // after Alpine inits, so re-sync on its events + a short timeout.
+            const syncAuth = () => {
+                this.loggedIn = !!(window.BileteOnlineAuth
+                    && typeof BileteOnlineAuth.isLoggedIn === 'function'
+                    && BileteOnlineAuth.isLoggedIn());
+                this.hydrateUser();
+            };
+            syncAuth();
+            ['bileteonline:auth:init', 'bileteonline:auth:login', 'bileteonline:auth:update', 'bileteonline:auth:logout']
+                .forEach(ev => window.addEventListener(ev, syncAuth));
+            setTimeout(syncAuth, 300);
+            window.addEventListener('load', syncAuth);
+        },
+        hydrateUser() {
+            try {
+                const u = (window.BileteOnlineAuth && BileteOnlineAuth.getUser) ? BileteOnlineAuth.getUser() : null;
+                if (! u) return;
+                const name = ((u.first_name || '') + (u.last_name ? ' ' + u.last_name : '')).trim()
+                    || u.name || u.email || 'Client';
+                const initials = (name || '?').split(/\s+/).filter(Boolean).map(s => s[0]).join('').slice(0, 2).toUpperCase() || '?';
+                document.querySelectorAll('[data-user-name]').forEach(el => el.textContent = name);
+                document.querySelectorAll('[data-user-email]').forEach(el => el.textContent = u.email || '');
+                document.querySelectorAll('[data-user-initials]').forEach(el => el.textContent = initials);
+            } catch (e) {}
         },
         selectCity(slug, label) {
             try {

@@ -353,6 +353,26 @@ function authPage(initial) {
             terms: false, newsletter: true,
         },
 
+        init() {
+            // Already authenticated → skip the form and go to the account.
+            // auth.js may boot after Alpine, so retry on its init/login events.
+            const go = () => {
+                if (window.BileteOnlineAuth
+                    && typeof BileteOnlineAuth.isLoggedIn === 'function'
+                    && BileteOnlineAuth.isLoggedIn()) {
+                    const isOrg = BileteOnlineAuth.isOrganizer && BileteOnlineAuth.isOrganizer();
+                    window.location.replace(isOrg ? '/organizator/panou' : (this.redirectAfter || '/cont'));
+                    return true;
+                }
+                return false;
+            };
+            if (! go()) {
+                window.addEventListener('bileteonline:auth:init', go);
+                window.addEventListener('bileteonline:auth:login', go);
+                setTimeout(go, 400);
+            }
+        },
+
         heroTitle() {
             if (this.accountType === 'venue') return this.mode === 'login' ? 'Intră în dashboard-ul locației.' : 'Listează-ți locația.';
             return this.mode === 'login' ? 'Intră în contul tău.' : 'Creează cont pentru biletele tale.';
