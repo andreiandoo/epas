@@ -101,6 +101,7 @@ $alpineCategories = array_map(function ($c) use ($defaultEmojis) {
         'slug'     => $c['slug'] ?? '',
         'url'      => '/' . ($c['slug'] ?? ''),
         'emoji'    => $emoji,
+        'image'    => $c['image'] ?? null,
         'desc'     => navFlatName($c['description'] ?? '') ?: '',
         'count'    => (int) ($c['event_count'] ?? 0),
         'children' => array_map(fn ($ch) => [
@@ -192,8 +193,11 @@ include __DIR__ . '/includes/header.php';
             <template x-for="cat in filteredCategories()" :key="cat.slug">
                 <article class="group rounded-[2rem] border-2 border-ink bg-paper overflow-hidden shadow-ticket hover:-translate-y-1 transition">
                     <a :href="cat.url" class="block">
-                        <div class="relative h-44 bg-gradient-to-br from-vermilion/15 via-ochre/15 to-forest/15">
-                            <div class="absolute inset-0 grid place-items-center">
+                        <div class="relative h-44 overflow-hidden bg-gradient-to-br from-vermilion/15 via-ochre/15 to-forest/15">
+                            <template x-if="cat.image">
+                                <img :src="cat.image" :alt="cat.title" loading="lazy" class="absolute inset-0 w-full h-full object-cover">
+                            </template>
+                            <div class="absolute inset-0 grid place-items-center" x-show="!cat.image">
                                 <span class="text-7xl" x-text="cat.emoji"></span>
                             </div>
                             <div class="absolute left-4 bottom-4 right-4 flex items-end justify-between gap-3">
