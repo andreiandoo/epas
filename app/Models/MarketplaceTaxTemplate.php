@@ -1923,7 +1923,7 @@ class MarketplaceTaxTemplate extends Model
             // alongside their respective values.
             // getVariablesForContext() is static — helpers must be called
             // via self:: too. The earlier $this-> calls blew up at 1909.
-            $variables['sales_breakdown_rows'] = self::buildPayoutSalesBreakdownRows($ticketBreakdown, $posTypeIdsSet, $vatAmount, $formatPrice);
+            $variables['sales_breakdown_rows'] = self::buildPayoutSalesBreakdownRows($payout, $ticketBreakdown, $posTypeIdsSet, $vatAmount, $formatPrice);
             $variables['refund_breakdown_rows'] = self::buildPayoutRefundBreakdownRows($payout, $formatPrice);
 
             // Preprinted tickets (physical tickets sent by courier)
@@ -2008,10 +2008,19 @@ class MarketplaceTaxTemplate extends Model
      * @param array<int, array<string, mixed>> $ticketBreakdown
      * @param array<int, mixed> $posTypeIdsSet
      */
-    private static function buildPayoutSalesBreakdownRows(array $ticketBreakdown, array $posTypeIdsSet, float $vatAmount, callable $formatPrice): string
+    private static function buildPayoutSalesBreakdownRows(MarketplacePayout $payout, array $ticketBreakdown, array $posTypeIdsSet, float $vatAmount, callable $formatPrice): string
     {
+        // Prefer per-price-tier rows from SalesBreakdownService when the
+        // payout is tied to an event with a period — that's the only way the
+        // PDF can show "70lei*35+50lei*2+40lei*2" (mixed catalog/promo
+        // pricing) instead of a single averaged tier. The saved
+        // ticket_breakdown only aggregates per type, so we'd lose the tier
+        // information that the customer actually paid. Falls back to the
+        // saved breakdown when the event lookup fails or the slice is empty.
+        $tierRows = self::resolveTieredSalesRows($payout, $ticketBreakdown);
+
         $groups = [];
-        foreach ($ticketBreakdown as $item) {
+        foreach ($tierRows as $item) {
             $ttId = $item['ticket_type_id'] ?? null;
             if ($ttId && isset($posTypeIdsSet[$ttId])) {
                 continue;
@@ -2083,6 +2092,59 @@ class MarketplaceTaxTemplate extends Model
         }
 
         return $html;
+    }
+
+    /**
+     * Build per-price-tier rows for the PDF's section 1. When the payout has
+     * an event_id + period_end we re-query SalesBreakdownService with
+     * splitByPrice=true so each unique paid price becomes its own row
+     * (catalog 50 RON and promo 40 RON appear separately) — exactly what
+     * row 1b needs to render "50lei*2+40lei*2" instead of merging them into
+     * the catalog average.
+     *
+     * Falls back to the saved ticket_breakdown (one row per type) when the
+     * event lookup fails or returns nothing — older deconturi, payouts
+     * without event_id, or payouts whose period has been emptied.
+     *
+     * Period bounds: period_start..period_end (the payout's stored slice).
+     * Discount is implicit — split rows carry their effective per-ticket
+     * price (catalog − allocated discount), so the catalog 50/promo 40
+     * mix shows up naturally.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private static function resolveTieredSalesRows(MarketplacePayout $payout, array $ticketBreakdown): array
+    {
+        if (!$payout->event_id) return $ticketBreakdown;
+        $event = $payout->event;
+        if (!$event) return $ticketBreakdown;
+
+        try {
+            $service = app(\App\Services\Marketplace\SalesBreakdownService::class);
+            $breakdown = $service->build(
+                $event,
+                $payout->period_start,
+                $payout->period_end,
+                excludePos: true,
+                dateColumn: 'created_at',
+                splitByPrice: true,
+                exactBounds: false,
+                onlyPos: false,
+            );
+        } catch (\Throwable $e) {
+            return $ticketBreakdown;
+        }
+
+        $rows = [];
+        foreach ($breakdown['per_type'] ?? [] as $r) {
+            // Strip the Eloquent TicketType — same shape as buildForPayout.
+            unset($r['tt']);
+            $r['quantity'] = (int) ($r['qty'] ?? 0);
+            $r['unit_price'] = (float) ($r['price'] ?? 0);
+            $rows[] = $r;
+        }
+
+        return !empty($rows) ? $rows : $ticketBreakdown;
     }
 
     /**
