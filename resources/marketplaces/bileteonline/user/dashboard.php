@@ -361,14 +361,112 @@ function clientDashboardPage() {
             // Always render the 3 default tasks even when nothing cached
             if (this.profileTasks.length === 0) this.applyProfileCompletion(null);
 
-            this.loadRewardsConfig();
-            this.loadMe();
-            this.loadReferral();
-            this.loadStats();
-            this.loadUpcoming();
-            this.loadRecommendations();
-            this.loadRecentOrders();
-            this.loadUtilityCounts();
+            // ONE request gets everything dashboard needs. Falls back to the
+            // 8 individual endpoints if the bundle endpoint isn't deployed
+            // yet (graceful rollout).
+            this.loadBundle();
+        },
+
+        async loadBundle() {
+            try {
+                const r = await BileteOnlineAPI.get('/customer/dashboard-bundle');
+                if (! r || ! r.success || ! r.data) throw new Error('bundle missing');
+                this.isAuth = true;
+                const d = r.data;
+
+                // --- customer (profile + profile_completion + referral_code legacy)
+                const u = d.customer || {};
+                if (u.first_name) this.firstName = u.first_name;
+                if (u.profile_completion) this.applyProfileCompletion(u.profile_completion);
+
+                // --- rewards config (points_per_lei)
+                if (d.rewards_config && d.rewards_config.points_per_lei) {
+                    this.rewardsConfig.pointsPerLei = d.rewards_config.points_per_lei;
+                }
+                this.rewardsConfig.loaded = true;
+
+                // --- rewards summary (balance for the hero ticket + 4 stats card)
+                const rs = d.rewards_summary || {};
+                this.stats.points_balance = rs.balance ?? u.points ?? 0;
+
+                // --- referrals
+                const ref = d.referrals || {};
+                const code = ref.referral_code || ref.code || (ref.referralCode && ref.referralCode.code) || '';
+                const fullLink = ref.referral_link || ref.share_url || '';
+                if (code) {
+                    this.referralCode = code;
+                    this.referralUrl = fullLink
+                        ? fullLink.replace(/^https?:\/\//, '')
+                        : (location.hostname.replace(/^www\./, '') + '/r/' + code);
+                }
+
+                // --- stats (counts)
+                const s = d.stats || {};
+                this.stats.upcoming_tickets_count    = s.upcoming_tickets_count ?? s.tickets_count ?? 0;
+                this.stats.upcoming_activities_count = s.upcoming_activities_count ?? s.upcoming_events_count ?? this.stats.upcoming_tickets_count;
+                this.stats.orders_count              = s.orders_count ?? s.total_orders ?? 0;
+                this.stats.total_spent               = s.total_spent ?? 0;
+                if (s.last_order_at) this.stats.last_order_relative = this.relTime(s.last_order_at);
+
+                // --- upcoming events
+                const upcomingList = Array.isArray(d.upcoming) ? d.upcoming : (d.upcoming && d.upcoming.events ? d.upcoming.events : []);
+                this.upcoming = upcomingList.slice(0, 4).map(ev => this.normalizeUpcoming(ev));
+                if (this.upcoming.length > 0) {
+                    const top = this.upcoming[0];
+                    this.nextTicket = {
+                        title:    top.title,
+                        location: top.location || '',
+                        weekday:  top.weekday || '',
+                        time:     top.time || '',
+                        dateLong: top.dateLong || '',
+                        beneficiaries: top.tickets_count || 1,
+                        url:      top.url,
+                    };
+                }
+                this.loading = false;
+
+                // --- recommendations (server-ranked; no client recompute)
+                this.recommendations = (d.recommendations || []).slice(0, 4).map(it => ({
+                    title:  it.title || '',
+                    reason: (it.reasons && it.reasons[0]) || it.reason_primary || 'recomandare',
+                    meta:   it.price_label || '',
+                    image:  it.image,
+                    url:    it.url || '#',
+                }));
+                this.loadingRecommendations = false;
+
+                // --- recent orders (already formatted server-side)
+                this.recentOrders = (d.recent_orders || []).map(o => ({
+                    id:          o.id,
+                    date:        o.date,
+                    total:       o.total,
+                    status:      o.status,
+                    statusClass: o.statusClass,
+                    url:         o.url,
+                }));
+                this.loadingOrders = false;
+
+                // --- utility (support / reviews / gift cards)
+                const ut = d.utility || {};
+                this.utility = {
+                    supportActive:  ut.supportActive  || 0,
+                    reviewsPending: ut.reviewsPending || 0,
+                    giftBalance:    ut.giftBalance    || 0,
+                };
+            } catch (e) {
+                if (e && e.status === 401) { this.isAuth = false; return; }
+                // Bundle endpoint missing/failed — fall back to the old fan-out so
+                // the page still works during deploy rollouts.
+                console.warn('dashboard-bundle unavailable, falling back to per-endpoint fetches', e);
+                this.loadRewardsConfig();
+                this.loadMe();
+                this.loadReferral();
+                this.loadStats();
+                this.loadUpcoming();
+                this.loadRecommendations();
+                this.loadRecentOrders();
+                this.loadUtilityCounts();
+            }
         },
 
         applyProfileCompletion(pc) {

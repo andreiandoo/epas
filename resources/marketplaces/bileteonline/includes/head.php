@@ -154,14 +154,24 @@ $jsConfig = [
 <link rel="preconnect" href="<?= htmlspecialchars(STORAGE_URL, ENT_QUOTES) ?>" crossorigin>
 <link rel="dns-prefetch" href="//fonts.googleapis.com">
 <link rel="dns-prefetch" href="//fonts.gstatic.com">
-<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 
-<!-- Preload Alpine + collapse so the browser starts the CDN fetch as soon as
-     it parses <head>, instead of waiting until the body-bottom script tag.
-     Saves 100–250ms on cold visits where the cdn.jsdelivr.net handshake
-     would otherwise be on the critical path. -->
-<link rel="preload" as="script" crossorigin href="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js">
-<link rel="preload" as="script" crossorigin href="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js">
+<?php
+// Self-hosted Alpine + collapse (saves the cdn.jsdelivr.net DNS + TLS
+// handshake on cold visits). Falls back to the CDN if the local files
+// haven't been deployed yet so the site never breaks during rollout.
+$alpineLocalCore     = BILETEONLINE_ROOT . '/assets/js/vendor/alpine-3.min.js';
+$alpineLocalCollapse = BILETEONLINE_ROOT . '/assets/js/vendor/alpine-collapse-3.min.js';
+$alpineCoreUrl     = file_exists($alpineLocalCore)
+    ? asset('assets/js/vendor/alpine-3.min.js') . '?v=' . filemtime($alpineLocalCore)
+    : 'https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js';
+$alpineCollapseUrl = file_exists($alpineLocalCollapse)
+    ? asset('assets/js/vendor/alpine-collapse-3.min.js') . '?v=' . filemtime($alpineLocalCollapse)
+    : 'https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js';
+?>
+
+<!-- Preload Alpine + collapse — local copy when deployed, CDN as fallback. -->
+<link rel="preload" as="script" href="<?= htmlspecialchars($alpineCoreUrl, ENT_QUOTES) ?>">
+<link rel="preload" as="script" href="<?= htmlspecialchars($alpineCollapseUrl, ENT_QUOTES) ?>">
 
 <!-- ===================== FONTS ===================== -->
 <link rel="preload" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;0,9..144,900;1,9..144,500&family=Hanken+Grotesk:wght@400;500;600;700&family=Spline+Sans+Mono:wght@400;500;600&display=swap" as="style">
@@ -252,8 +262,8 @@ window.BILETEONLINE = <?= json_encode($jsConfig, JSON_UNESCAPED_SLASHES | JSON_U
 
 <!-- ===================== ALPINE.JS (deferred, in load order) ===================== -->
 <script defer src="<?= asset('assets/js/components/alpine-bootstrap.js') ?>"></script>
-<script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
-<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+<script defer src="<?= htmlspecialchars($alpineCollapseUrl, ENT_QUOTES) ?>"></script>
+<script defer src="<?= htmlspecialchars($alpineCoreUrl, ENT_QUOTES) ?>"></script>
 
 <?php echo $extraHead; ?>
 </head>

@@ -27,6 +27,7 @@ const BileteOnlineAPI = {
         'customer.profile-data': 60000,
         'customer.smart-suggestions': 60000,
         'customer.stats.dashboard': 30000,
+        'customer.dashboard-bundle': 30000,
         'customer.upcoming-events': 30000,
         'customer.rewards': 30000,
         'customer.rewards.config': 600000,  // static, rarely changes
@@ -266,6 +267,7 @@ const BileteOnlineAPI = {
         if (endpoint.includes('/customer/tickets')) return 'customer.tickets';
 
         // Customer stats & dashboard
+        if (endpoint.includes('/customer/dashboard-bundle')) return 'customer.dashboard-bundle';
         if (endpoint.includes('/customer/recommendations')) return 'customer.recommendations';
         if (endpoint.includes('/customer/stats/upcoming-events')) return 'customer.upcoming-events';
         if (endpoint.includes('/customer/stats')) return 'customer.stats.dashboard';

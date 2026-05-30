@@ -2172,6 +2172,11 @@ Route::prefix('marketplace-client/customer')->middleware(['throttle:120,1', 'mar
         Route::post('/avatar', [CustomerAuthController::class, 'uploadAvatar'])
             ->name('api.marketplace-client.customer.avatar.upload');
 
+        // Dashboard "bundle" — single round-trip that aggregates everything
+        // /cont needs. Reduces a 10-call init() down to 1 backend request.
+        Route::get('/dashboard-bundle', [\App\Http\Controllers\Api\MarketplaceClient\Customer\DashboardController::class, 'bundle'])
+            ->name('api.marketplace-client.customer.dashboard-bundle');
+
         // Dashboard Stats
         Route::get('/stats', [CustomerStatsController::class, 'index'])
             ->name('api.marketplace-client.customer.stats');
