@@ -193,16 +193,42 @@ class PayoutResource extends Resource
                                             ->icon('heroicon-m-pencil-square')
                                             ->color('gray')
                                             ->modalHeading('Editează seria decontului')
-                                            ->modalDescription('Valoarea introdusă înlocuiește seria de decont (afișată separat de referința PAY-...). Lasă gol pentru a o șterge.')
+                                            ->modalDescription('Tastează doar partea după prefix (ex. „1204" → DECAMB1204). Prefixul vine automat din Settings → Personalization. Lasă gol pentru a șterge seria.')
                                             ->form([
                                                 \Filament\Forms\Components\TextInput::make('decont_series')
                                                     ->label('Serie decont')
                                                     ->maxLength(40)
-                                                    ->default(fn ($record) => $record->decont_series),
+                                                    ->prefix(function ($record) {
+                                                        $settings = $record->marketplaceClient?->settings ?? [];
+                                                        return $settings['decont_prefix'] ?? 'DEC';
+                                                    })
+                                                    ->default(function ($record) {
+                                                        // Show just the suffix in the input when the saved
+                                                        // value already starts with the configured prefix
+                                                        // — so the visual prefix doesn't double up.
+                                                        $current = (string) ($record->decont_series ?? '');
+                                                        $settings = $record->marketplaceClient?->settings ?? [];
+                                                        $prefix = (string) ($settings['decont_prefix'] ?? 'DEC');
+                                                        if ($prefix !== '' && str_starts_with($current, $prefix)) {
+                                                            return substr($current, strlen($prefix));
+                                                        }
+                                                        return $current;
+                                                    }),
                                             ])
                                             ->action(function (array $data, $record, $livewire) {
-                                                $val = trim((string) ($data['decont_series'] ?? ''));
-                                                $record->updateQuietly(['decont_series' => $val !== '' ? $val : null]);
+                                                $suffix = trim((string) ($data['decont_series'] ?? ''));
+                                                if ($suffix === '') {
+                                                    $record->updateQuietly(['decont_series' => null]);
+                                                } else {
+                                                    $settings = $record->marketplaceClient?->settings ?? [];
+                                                    $prefix = (string) ($settings['decont_prefix'] ?? 'DEC');
+                                                    // If the operator already typed the prefix in the suffix
+                                                    // (e.g. pasted the full series), don't double it.
+                                                    $full = ($prefix !== '' && str_starts_with($suffix, $prefix))
+                                                        ? $suffix
+                                                        : $prefix . $suffix;
+                                                    $record->updateQuietly(['decont_series' => $full]);
+                                                }
                                                 $livewire->refreshFormData(['decont_series']);
                                                 \Filament\Notifications\Notification::make()
                                                     ->title('Serie actualizată')

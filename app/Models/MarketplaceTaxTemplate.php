@@ -1607,9 +1607,11 @@ class MarketplaceTaxTemplate extends Model
             // PAY-... reference for older payouts that have no series.
             $variables['decont_series'] = $payout->decont_series ?? '';
             $variables['payout_number'] = $payout->decont_series ?: ($payout->reference ?? '');
-            $variables['payout_date'] = $payout->completed_at
-                ? $payout->completed_at->format('d.m.Y')
-                : now()->format('d.m.Y');
+            // payout_date follows the payout's created_at (the operator-set
+            // "Creat la" override on the manual-create modal) so the printed
+            // decont date matches the official date the operator chose, not
+            // the moment the PDF was generated.
+            $variables['payout_date'] = ($payout->created_at ?? now())->format('d.m.Y');
             $variables['payout_amount'] = number_format($payoutAmount, 2);
             $variables['payout_currency'] = $payout->currency ?? 'RON';
             $variables['payout_gross_amount'] = number_format($payoutGross, 2);
