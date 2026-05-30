@@ -138,7 +138,12 @@ $navItems = [
         if (window.BileteOnlineAuth && BileteOnlineAuth.isLoggedIn && ! BileteOnlineAuth.isLoggedIn()) return;
 
         BileteOnlineAPI.customer.getProfile && BileteOnlineAPI.customer.getProfile()
-            .then(r => { if (r && r.data) applyUser(r.data); })
+            .then(r => {
+                // /customer/me returns { success, data: { customer: {...} } }.
+                // Older builds returned the customer flat at data.* — handle both.
+                const u = (r && r.data && (r.data.customer || r.data)) || null;
+                if (u) applyUser(u);
+            })
             .catch(() => {});
 
         BileteOnlineAPI.customer.getDashboardStats && BileteOnlineAPI.customer.getDashboardStats()
