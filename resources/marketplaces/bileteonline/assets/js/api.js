@@ -203,10 +203,12 @@ const BileteOnlineAPI = {
         if (endpoint.includes('/customer/tickets')) return 'customer.tickets';
 
         // Customer stats & dashboard
+        if (endpoint.includes('/customer/recommendations')) return 'customer.recommendations';
         if (endpoint.includes('/customer/stats/upcoming-events')) return 'customer.upcoming-events';
         if (endpoint.includes('/customer/stats')) return 'customer.stats.dashboard';
 
         // Customer reviews
+        if (endpoint.includes('/customer/reviews/meta')) return 'customer.reviews.meta';
         if (endpoint.includes('/customer/reviews/events-to-review')) return 'customer.reviews.to-write';
         if (endpoint.match(/\/customer\/reviews\/\d+$/)) {
             if (method === 'DELETE') return 'customer.review.delete';
@@ -225,6 +227,7 @@ const BileteOnlineAPI = {
         if (endpoint === '/customer/watchlist' || endpoint.includes('/customer/watchlist?')) return 'customer.watchlist';
 
         // Customer rewards
+        if (endpoint.includes('/customer/rewards/config')) return 'customer.rewards.config';
         if (endpoint.includes('/customer/rewards/history')) return 'customer.rewards.history';
         if (endpoint.includes('/customer/rewards/badges')) return 'customer.badges';
         if (endpoint.includes('/customer/rewards/available')) return 'customer.rewards.available';

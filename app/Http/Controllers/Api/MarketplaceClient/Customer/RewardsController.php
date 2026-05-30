@@ -114,6 +114,54 @@ class RewardsController extends BaseController
     }
 
     /**
+     * Loyalty config — used by /cont/punctele-mele, dashboard hero, and the
+     * recommendations page to compute "puncte → lei" conversions and render
+     * the tier ladder. Pulls EVERY value from GamificationConfig so marketing
+     * can change thresholds / perks / conversion rates without a deploy.
+     */
+    public function config(Request $request): JsonResponse
+    {
+        $client = $this->requireClient($request);
+
+        $cfg = GamificationConfig::where('marketplace_client_id', $client->id)->first();
+
+        $pointValueLei = $cfg && $cfg->point_value > 0 ? (float) $cfg->point_value : 0.01;
+        $pointsPerLei  = $pointValueLei > 0 ? (int) round(1 / $pointValueLei) : 100;
+
+        // Tiers: prefer the per-marketplace `tiers` JSON column. Fall back to
+        // the same Bronze/Silver/Gold/Platinum ladder index() uses so the UI
+        // never blanks out when a marketplace hasn't seeded its own.
+        $tiers = is_array($cfg?->tiers ?? null) && count($cfg->tiers) > 0
+            ? $cfg->tiers
+            : [
+                ['name' => 'Bronze',   'min_level' => 1,  'max_level' => 5,  'threshold_points' => 0,    'color' => '#CD7F32', 'benefits' => ['Acces la oferte exclusive']],
+                ['name' => 'Silver',   'min_level' => 6,  'max_level' => 10, 'threshold_points' => 500,  'color' => '#C0C0C0', 'benefits' => ['10% bonus puncte', 'Acces prioritar la bilete']],
+                ['name' => 'Gold',     'min_level' => 11, 'max_level' => 15, 'threshold_points' => 1500, 'color' => '#FFD700', 'benefits' => ['25% bonus puncte', 'Acces VIP', 'Suport prioritar']],
+                ['name' => 'Platinum', 'min_level' => 16, 'max_level' => 99, 'threshold_points' => 5000, 'color' => '#E5E4E2', 'benefits' => ['50% bonus puncte', 'Meet & Greet exclusiv', 'Upgrades gratuite']],
+            ];
+
+        return $this->success([
+            'point_value_lei'              => $pointValueLei,
+            'points_per_lei'               => $pointsPerLei,
+            'currency'                     => $cfg->currency ?? 'RON',
+            'earn_percentage'              => (float) ($cfg->earn_percentage ?? 5),
+            'earn_on_subtotal'             => (bool)  ($cfg->earn_on_subtotal ?? true),
+            'min_order_for_earning_lei'    => (float) ($cfg->min_order_for_earning ?? 0),
+            'min_redeem_points'            => (int)   ($cfg->min_redeem_points ?? 100),
+            'max_redeem_percentage'        => (float) ($cfg->max_redeem_percentage ?? 50),
+            'max_redeem_points_per_order'  => (int)   ($cfg->max_redeem_points_per_order ?? 0),
+            'points_expire_days'           => (int)   ($cfg->points_expire_days ?? 0),
+            'expiring_warning_days'        => 30,
+            'birthday_bonus_points'        => (int)   ($cfg->birthday_bonus_points ?? 0),
+            'signup_bonus_points'          => (int)   ($cfg->signup_bonus_points ?? 0),
+            'referral_bonus_points'        => (int)   ($cfg->referral_bonus_points ?? 0),
+            'referred_bonus_points'        => (int)   ($cfg->referred_bonus_points ?? 0),
+            'points_name'                  => is_array($cfg->points_name ?? null) ? ($cfg->points_name['ro'] ?? 'Puncte') : ($cfg->points_name ?? 'Puncte'),
+            'tiers'                        => $tiers,
+        ]);
+    }
+
+    /**
      * Get points transaction history
      */
     public function history(Request $request): JsonResponse

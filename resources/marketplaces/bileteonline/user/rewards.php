@@ -292,18 +292,25 @@ function clientPointsPage() {
         transactionType: 'all',
 
         points: { balance: 0, lifetime_earned: 0, spent: 0, expiring_soon: 0, expiring_days: 30 },
-        config: { pointsPerLei: 20, maxRedeemPerOrder: 50 },
+        config: {
+            pointsPerLei: 100,         // populated from /customer/rewards/config
+            pointValueLei: 0.01,
+            maxRedeemPerOrder: 0,      // 0 = "no cap" — UI hides hint when 0
+            maxRedeemPercentage: 50,
+            minRedeem: 100,
+            pointsName: 'Puncte',
+            loaded: false,
+        },
 
         tier: {
-            current: { name: 'Beginning', description: 'Faci primii pași.', perks: [
-                { label: 'Bonus la comenzi eligibile', active: true },
-                { label: 'Recomandări personalizate', active: true },
-                { label: 'Campanii exclusive', active: false },
-            ] },
+            current: { name: '—', description: '', perks: [] },
             next: null,
             progress: 0,
             toNext: 0,
         },
+
+        // Populated from backend GamificationConfig.tiers (or default Bronze→Platinum)
+        tierLadder: [],
 
         referral: {
             code: '',
@@ -318,36 +325,50 @@ function clientPointsPage() {
 
         transactions: [],
 
-        tierLadder: [
-            { name: 'Beginning', threshold: 0,    description: 'Faci primii pași.', perks: [
-                { label: 'Bonus la comenzi eligibile', active: true },
-                { label: 'Recomandări personalizate',  active: true },
-                { label: 'Campanii exclusive',         active: false },
-            ] },
-            { name: 'Explorer',  threshold: 500,  description: 'Ești client constant, mulțumim!', perks: [
-                { label: 'Bonus la comenzi eligibile', active: true },
-                { label: 'Recomandări personalizate',  active: true },
-                { label: 'Acces preview activități',   active: true },
-            ] },
-            { name: 'Explorer Plus', threshold: 1200, description: 'Activitate constantă — ești aproape de VIP.', perks: [
-                { label: 'Bonus extra la comenzi mari', active: true },
-                { label: 'Recomandări premium',         active: true },
-                { label: 'Campanii exclusive',          active: true },
-            ] },
-            { name: 'VIP', threshold: 3000, description: 'Cel mai înalt nivel.', perks: [
-                { label: 'Bonus maxim',                  active: true },
-                { label: 'Activități în avanpremieră',   active: true },
-                { label: 'Suport prioritar',             active: true },
-            ] },
-        ],
-
         init() {
             try { this.isAuth = (window.BileteOnlineAuth && BileteOnlineAuth.isLoggedIn && BileteOnlineAuth.isLoggedIn()); } catch (e) { this.isAuth = false; }
             if (! this.isAuth) { this.loading = false; this.loadingTransactions = false; return; }
 
-            this.loadRewards();
+            this.loadConfig().then(() => {
+                this.loadRewards();
+            });
             this.loadReferrals();
             this.loadHistory();
+        },
+
+        async loadConfig() {
+            try {
+                const r = await BileteOnlineAPI.get('/customer/rewards/config');
+                const d = (r && r.data) || {};
+                this.config.pointsPerLei        = d.points_per_lei || 100;
+                this.config.pointValueLei       = d.point_value_lei || 0.01;
+                this.config.maxRedeemPerOrder   = d.max_redeem_points_per_order || 0;
+                this.config.maxRedeemPercentage = d.max_redeem_percentage || 50;
+                this.config.minRedeem           = d.min_redeem_points || 100;
+                this.config.pointsName          = d.points_name || 'Puncte';
+                this.config.loaded              = true;
+
+                // Build a uniform ladder shape regardless of how the marketplace
+                // stored tiers (by points threshold OR by level). We compute
+                // threshold_points when only min_level is provided so the UI
+                // progress bar still works.
+                const tiers = Array.isArray(d.tiers) ? d.tiers : [];
+                this.tierLadder = tiers.map((t, i) => ({
+                    name:        t.name || ('Tier ' + (i + 1)),
+                    description: t.description || '',
+                    threshold:   t.threshold_points ?? t.threshold ?? (i === 0 ? 0 : null),
+                    perks:       (t.benefits || t.perks || []).map(p =>
+                        typeof p === 'string' ? { label: p, active: true } : p
+                    ),
+                }));
+
+                // Fill missing thresholds proportionally if backend only gave levels
+                let last = 0;
+                this.tierLadder.forEach((t, i) => {
+                    if (t.threshold == null) t.threshold = last + 500;
+                    last = t.threshold;
+                });
+            } catch (e) {}
         },
 
         async loadRewards() {

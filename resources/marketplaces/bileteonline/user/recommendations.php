@@ -276,6 +276,9 @@ function clientRecommendationsPage() {
 
         stats: { goodMatch: 0, withPoints: 0, family: 0, expiringPoints: 0, expiringDays: 30 },
 
+        // Loaded from /customer/rewards/config
+        rewardsConfig: { pointsPerLei: 100, loaded: false },
+
         init() {
             try { this.isAuth = (window.BileteOnlineAuth && BileteOnlineAuth.isLoggedIn && BileteOnlineAuth.isLoggedIn()); } catch (e) { this.isAuth = false; }
             if (! this.isAuth) { this.loading = false; return; }
@@ -290,65 +293,65 @@ function clientRecommendationsPage() {
         },
 
         async load() {
-            // 1. Pull explicit prefs + points + customer settings
+            // 1. Rewards config (for pointsToLei conversion)
             try {
-                const r = await BileteOnlineAPI.customer.getProfile();
-                const root = (r && r.data) || {};
-                const u = root.customer || root;
-                const settings = u.settings || {};
-                const interests = settings.interests || {};
-                this.prefCities = Array.isArray(interests.preferred_cities) ? interests.preferred_cities : [];
-                this.prefCategories = Array.isArray(interests.event_categories) ? interests.event_categories : [];
-
-                this.signals.points = u.points || 0;
-                this.signals.city = this.prefCities[0] || u.city || '';
+                const r = await BileteOnlineAPI.get('/customer/rewards/config');
+                const d = (r && r.data) || {};
+                if (d.points_per_lei) this.rewardsConfig.pointsPerLei = d.points_per_lei;
+                this.rewardsConfig.loaded = true;
             } catch (e) {}
 
-            // 2. Rewards info for expiring points
+            // 2. Server-side recommendations engine — match_score + reasons
+            //    are computed in PHP (RecommendationsController) based on
+            //    settings.interests + history + family + points; we no longer
+            //    score client-side.
+            try {
+                const r = await BileteOnlineAPI.get('/customer/recommendations', { limit: 24 });
+                const d = (r && r.data) || {};
+                this.items = (d.items || []).map(it => ({
+                    id:           it.id,
+                    title:        it.title || '',
+                    url:          it.url || (it.slug ? '/activitate/' + it.slug : '#'),
+                    image:        it.image || null,
+                    city:         it.city || '',
+                    category:     it.category || '',
+                    categorySlug: it.category_slug || '',
+                    price:        it.price_label || '',
+                    priceValue:   it.price_from_lei || 0,
+                    description:  it.short_description || '',
+                    match:        it.match_score || 0,
+                    why:          (it.reasons || []).join(' · '),
+                    reason:       it.reason_primary || 'profile',
+                    canUsePoints: !!it.can_use_points,
+                    isFamily:     !!it.is_family,
+                    budget:       it.budget_bucket || 'mid',
+                }));
+
+                // Stats from engine
+                this.stats.goodMatch     = d.stats?.good_match_count  || 0;
+                this.stats.withPoints    = d.stats?.with_points_count || 0;
+                this.stats.family        = d.stats?.family_count      || 0;
+
+                // Profile signals card (right of hero)
+                this.signals.city     = d.signals?.city     || '';
+                this.signals.interest = d.signals?.interest || 'descoperire';
+                this.signals.family   = d.signals?.family   || 'doar tu';
+                this.signals.points   = d.signals?.points   || 0;
+
+                // Sync local "interests" arrays so the sidebar checkbox card
+                // shows the actual preferred-cities list under "Orașe favorite".
+                this.prefCities     = d.engine?.pref_cities     || [];
+                this.prefCategories = d.engine?.pref_categories || [];
+            } catch (e) {}
+
+            // 3. Expiring points warning (still from rewards summary endpoint)
             try {
                 const r = await BileteOnlineAPI.get('/customer/rewards');
                 const d = (r && r.data) || {};
                 const p = d.points || d;
-                if (p.balance != null) this.signals.points = p.balance;
                 this.stats.expiringPoints = p.expiring_soon ?? 0;
                 this.stats.expiringDays   = p.expiring_in_days ?? 30;
             } catch (e) {}
-
-            // 3. Beneficiaries (family signal)
-            try {
-                const r = await BileteOnlineAPI.get('/customer/beneficiaries');
-                const list = (r && r.data && r.data.beneficiaries) || [];
-                const kids = list.filter(b => b.age && b.age <= 14);
-                if (kids.length > 0) {
-                    const ages = kids.map(k => k.age).filter(Boolean).sort((a,b) => a - b);
-                    this.signals.family = 'copii ' + (ages[0] === ages[ages.length-1] ? ages[0] : (ages[0] + '–' + ages[ages.length-1]));
-                } else if (list.length > 0) {
-                    this.signals.family = list.length + ' beneficiari';
-                } else {
-                    this.signals.family = 'doar tu';
-                }
-            } catch (e) { this.signals.family = 'doar tu'; }
-
-            // 4. Build the activity pool from /activities (we re-rank client-side)
-            try {
-                const r = await BileteOnlineAPI.get('/activities?sort=recent&per_page=40');
-                const list = (r && r.data && (r.data.items || r.data.activities)) || (r && r.data) || [];
-                this.items = (Array.isArray(list) ? list : []).map(a => this.normalizeActivity(a));
-                this.recompute();
-            } catch (e) {}
-
-            // Interest from history (taste profile)
-            try {
-                const r = await BileteOnlineAPI.customer.getProfileData();
-                const d = (r && r.data) || {};
-                const cats = d.top_categories || d.preferred_categories || d.preferred_genres || [];
-                const first = Array.isArray(cats) && cats.length > 0
-                    ? (typeof cats[0] === 'string' ? cats[0] : (cats[0].name || cats[0].slug))
-                    : '';
-                this.signals.interest = (this.prefCategories[0] || first || 'descoperire');
-            } catch (e) {
-                if (! this.signals.interest) this.signals.interest = this.prefCategories[0] || 'descoperire';
-            }
 
             this.loading = false;
         },
@@ -383,9 +386,12 @@ function clientRecommendationsPage() {
             };
         },
 
+        // Client-side fallback re-ranking — only used if the server endpoint
+        // ever fails AND we somehow have unranked items. Real ranking lives in
+        // RecommendationsController. Kept here for resilience only.
         recompute() {
-            const lcPrefCities = this.signalsToggles.cities ? this.prefCities.map(c => c.toLowerCase()) : [];
-            const lcPrefCats   = this.prefCategories.map(c => c.toLowerCase());
+            const lcPrefCities = this.signalsToggles.cities ? this.prefCities.map(c => (c || '').toLowerCase()) : [];
+            const lcPrefCats   = this.prefCategories.map(c => (c || '').toLowerCase());
             const pts = this.signals.points;
 
             this.items.forEach(it => {
@@ -473,7 +479,7 @@ function clientRecommendationsPage() {
             this.search = ''; this.reason = 'all'; this.cityFilter = 'all'; this.budget = 'all';
         },
 
-        pointsToLei(p) { return Math.floor((p || 0) / 20); },
+        pointsToLei(p) { return Math.floor((p || 0) / (this.rewardsConfig.pointsPerLei || 100)); },
         formatNumber(n) { return new Intl.NumberFormat('ro-RO').format(n || 0); },
         formatLei(n)    { return (new Intl.NumberFormat('ro-RO', { maximumFractionDigits: 0 }).format(n || 0)) + ' lei'; },
     };

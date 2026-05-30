@@ -2186,7 +2186,15 @@ Route::prefix('marketplace-client/customer')->middleware(['throttle:120,1', 'mar
         Route::get('/smart-suggestions', [CustomerStatsController::class, 'smartSuggestions'])
             ->name('api.marketplace-client.customer.smart-suggestions');
 
+        // Personalised activity recommendations — server-side ranked using
+        // settings.interests + history + family + points; replaces the JS
+        // heuristic previously used by /cont/recomandari.
+        Route::get('/recommendations', [\App\Http\Controllers\Api\MarketplaceClient\Customer\RecommendationsController::class, 'index'])
+            ->name('api.marketplace-client.customer.recommendations');
+
         // Reviews
+        Route::get('/reviews/meta', [CustomerReviewsController::class, 'meta'])
+            ->name('api.marketplace-client.customer.reviews.meta');
         Route::get('/reviews', [CustomerReviewsController::class, 'index'])
             ->name('api.marketplace-client.customer.reviews');
         Route::post('/reviews', [CustomerReviewsController::class, 'store'])
@@ -2225,6 +2233,11 @@ Route::prefix('marketplace-client/customer')->middleware(['throttle:120,1', 'mar
             ->name('api.marketplace-client.customer.rewards.redeem');
         Route::get('/rewards/redemptions', [CustomerRewardsController::class, 'redemptions'])
             ->name('api.marketplace-client.customer.rewards.redemptions');
+
+        // Loyalty config (tiers + points-per-lei + redeem caps) — replaces
+        // the client-side hardcoded ladder in rewards.php / dashboard / recos
+        Route::get('/rewards/config', [CustomerRewardsController::class, 'config'])
+            ->name('api.marketplace-client.customer.rewards.config');
 
         // Notifications
         Route::get('/notifications', [CustomerNotificationsController::class, 'index'])

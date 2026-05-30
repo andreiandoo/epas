@@ -17,6 +17,70 @@ use Illuminate\Support\Str;
 class ReviewsController extends BaseController
 {
     /**
+     * Metadata for the review form on /cont/recenzii.
+     *
+     * Exposes the canonical option lists used in the "Potrivit pentru" + "Vârsta
+     * recomandată" selects so marketing can edit them without a deploy. Falls
+     * back to defaults when the marketplace_client hasn't seeded its own list
+     * in settings.reviews.{suitable_for,age_groups}.
+     */
+    public function meta(Request $request): JsonResponse
+    {
+        $client = $this->requireClient($request);
+
+        $settings = (array) ($client->settings ?? []);
+        $reviewsSettings = (array) ($settings['reviews'] ?? []);
+
+        $defaults = [
+            'suitable_for' => [
+                ['value' => 'children', 'label' => 'Copii'],
+                ['value' => 'family',   'label' => 'Familie'],
+                ['value' => 'couple',   'label' => 'Cuplu'],
+                ['value' => 'groups',   'label' => 'Grupuri'],
+                ['value' => 'team_building', 'label' => 'Team building'],
+                ['value' => 'solo',     'label' => 'Solo'],
+            ],
+            'age_groups' => [
+                ['value' => '3-6',     'label' => '3–6 ani'],
+                ['value' => '6-10',    'label' => '6–10 ani'],
+                ['value' => '10-14',   'label' => '10–14 ani'],
+                ['value' => '14-18',   'label' => '14–18 ani'],
+                ['value' => 'adults',  'label' => 'Adulți'],
+                ['value' => 'all',     'label' => 'Toate vârstele'],
+            ],
+            'rating_filters' => [
+                ['value' => 'all', 'label' => 'Orice rating'],
+                ['value' => '5',   'label' => '5 stele'],
+                ['value' => '4',   'label' => '4 stele'],
+                ['value' => '3',   'label' => '3 stele'],
+                ['value' => '2',   'label' => '2 stele'],
+                ['value' => '1',   'label' => '1 stea'],
+            ],
+            'status_filters' => [
+                ['value' => 'all',        'label' => 'Toate'],
+                ['value' => 'published',  'label' => 'Publicate'],
+                ['value' => 'draft',      'label' => 'Drafturi'],
+                ['value' => 'moderation', 'label' => 'În moderare'],
+            ],
+            'text_min_chars' => 10,
+            'text_max_chars' => 2000,
+            'photos_max_count' => 5,
+            'photos_max_size_mb' => 5,
+        ];
+
+        return $this->success([
+            'suitable_for'       => $reviewsSettings['suitable_for']       ?? $defaults['suitable_for'],
+            'age_groups'         => $reviewsSettings['age_groups']         ?? $defaults['age_groups'],
+            'rating_filters'     => $defaults['rating_filters'],
+            'status_filters'     => $defaults['status_filters'],
+            'text_min_chars'     => (int) ($reviewsSettings['text_min_chars']     ?? $defaults['text_min_chars']),
+            'text_max_chars'     => (int) ($reviewsSettings['text_max_chars']     ?? $defaults['text_max_chars']),
+            'photos_max_count'   => (int) ($reviewsSettings['photos_max_count']   ?? $defaults['photos_max_count']),
+            'photos_max_size_mb' => (int) ($reviewsSettings['photos_max_size_mb'] ?? $defaults['photos_max_size_mb']),
+        ]);
+    }
+
+    /**
      * Get customer's reviews
      */
     public function index(Request $request): JsonResponse
