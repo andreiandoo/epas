@@ -277,12 +277,11 @@ include __DIR__ . '/includes/header.php';
                     <div class="duotone h-40 flex items-end p-5 <?= $bgClass ?> text-paper relative">
                         <?php if ($img): ?>
                             <img src="<?= htmlspecialchars($img, ENT_QUOTES) ?>" alt="<?= htmlspecialchars($cat['t'], ENT_QUOTES) ?>" loading="lazy" class="absolute inset-0 w-full h-full object-cover" />
-                            <div class="absolute inset-0 bg-gradient-to-t from-ink/65 via-ink/15 to-transparent"></div>
                         <?php endif; ?>
                         <div class="grid-tex"></div>
                         <?php if (! $img): ?><span class="absolute right-4 top-4 text-5xl"><?= $emoji ?></span><?php endif; ?>
                         <?php if (! empty($cat['count'])): ?>
-                            <span class="relative font-mono text-[10px] text-paper/80 tracking-wider"><?= htmlspecialchars(strtoupper($cat['count'])) ?></span>
+                            <span class="relative font-mono text-[10px] text-paper/80 tracking-wider"<?= $img ? ' style="text-shadow:0 1px 3px rgba(0,0,0,.7)"' : '' ?>><?= htmlspecialchars(strtoupper($cat['count'])) ?></span>
                         <?php endif; ?>
                     </div>
                     <div class="p-5 flex items-start justify-between gap-3">

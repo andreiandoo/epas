@@ -307,7 +307,6 @@ include __DIR__ . '/includes/header.php';
                     <div class="duotone h-32 relative overflow-hidden bg-gradient-to-br <?= $ac['gradient'] ?> <?= $ac['text'] ?>">
                         <?php if (!empty($catImage)): ?>
                             <img src="<?= htmlspecialchars(str_starts_with($catImage, 'http') ? $catImage : STORAGE_URL . '/' . ltrim($catImage, '/'), ENT_QUOTES) ?>" alt="<?= htmlspecialchars($catName, ENT_QUOTES) ?>" loading="lazy" class="absolute inset-0 w-full h-full object-cover" />
-                            <div class="absolute inset-0 bg-gradient-to-t from-ink/55 to-transparent"></div>
                         <?php endif; ?>
                         <div class="grid-tex"></div>
                         <span class="stamp absolute top-4 left-4 text-paper/80 px-3 py-1 text-[10px] font-mono -rotate-6"><?= htmlspecialchars(strtoupper($catName)) ?></span>
