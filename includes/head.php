@@ -174,8 +174,17 @@ $alpineCollapseUrl = file_exists($alpineLocalCollapse)
 <link rel="preload" as="script" href="<?= htmlspecialchars($alpineCollapseUrl, ENT_QUOTES) ?>">
 
 <!-- ===================== FONTS ===================== -->
-<link rel="preload" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;0,9..144,900;1,9..144,500&family=Hanken+Grotesk:wght@400;500;600;700&family=Spline+Sans+Mono:wght@400;500;600&display=swap" as="style">
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;0,9..144,900;1,9..144,500&family=Hanken+Grotesk:wght@400;500;600;700&family=Spline+Sans+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<?php
+// Loaded non-render-blocking: `media="print"` keeps the request off the
+// critical path, then `onload` flips it to `all` once the CSS arrives. The
+// fonts already use display=swap, so text paints immediately in the fallback
+// and swaps in when the webfont is ready — this just stops the Google Fonts
+// request from delaying first paint. <noscript> covers the (rare) no-JS case.
+$fontsUrl = 'https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;0,9..144,900;1,9..144,500&family=Hanken+Grotesk:wght@400;500;600;700&family=Spline+Sans+Mono:wght@400;500;600&display=swap';
+?>
+<link rel="preload" href="<?= htmlspecialchars($fontsUrl, ENT_QUOTES) ?>" as="style">
+<link rel="stylesheet" href="<?= htmlspecialchars($fontsUrl, ENT_QUOTES) ?>" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="<?= htmlspecialchars($fontsUrl, ENT_QUOTES) ?>"></noscript>
 
 <!-- ===================== STYLES ===================== -->
 <?php if ($cssLink): ?>
