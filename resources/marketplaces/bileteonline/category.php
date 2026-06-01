@@ -97,8 +97,57 @@ $eventsResp = api_cached($apiCacheKey, function () use ($slug, $cityFilter, $sea
 }, 300);
 
 $events = $eventsResp['data'] ?? [];
-$pagination = $eventsResp['meta'] ?? ['current_page' => 1, 'last_page' => 1, 'total' => count($events)];
+$evPagination = $eventsResp['meta'] ?? ['current_page' => 1, 'last_page' => 1, 'total' => count($events)];
 if (!is_array($events)) $events = [];
+
+// Activities in this category/subcategory + city. bilete.online is activity-
+// centric, so the listing must include ACTIVITIES, not just ticketed events.
+// /activities filters by exact category slug (parent OR subcategory) + city —
+// pass the resolved category's real slug so subcategory pages match too.
+$activityCatSlug = $category['slug'] ?? $slug;
+$actCacheKey = "category_activities_{$activityCatSlug}_" . ($cityFilter ?? 'all') . '_' . md5($searchQuery) . "_mp{$maxPrice}_s{$sort}_p{$pageNum}";
+$actResp = api_cached($actCacheKey, function () use ($activityCatSlug, $cityFilter, $searchQuery, $maxPrice, $sort, $pageNum) {
+    $params = ['category' => $activityCatSlug, 'page' => $pageNum, 'per_page' => 24];
+    if ($cityFilter) $params['city'] = $cityFilter;
+    if ($searchQuery !== '') $params['search'] = $searchQuery;
+    if ($maxPrice !== null) $params['max_price_ron'] = $maxPrice;
+    if ($sort === 'price_asc') $params['sort'] = 'cheapest';
+    return api_get('/activities', $params);
+}, 300);
+$activities = $actResp['data']['items'] ?? [];
+if (!is_array($activities)) $activities = [];
+$actPagination = $actResp['data']['pagination'] ?? ['last_page' => 1, 'total' => count($activities)];
+
+// Unified card list — activities first (primary content), then events.
+$cards = [];
+foreach ($activities as $a) {
+    $cards[] = [
+        'title'       => is_array($a['title'] ?? null) ? navFlatName($a['title']) : ($a['title'] ?? ''),
+        'city'        => $a['city']['name'] ?? ($a['venue']['city'] ?? ''),
+        'cover'       => $a['cover_image_url'] ?? '',
+        'price_cents' => $a['cheapest_price_cents'] ?? null,
+        'url'         => '/activitate/' . ($a['slug'] ?? ''),
+        'cta'         => 'Vezi activitatea',
+    ];
+}
+foreach ($events as $ev) {
+    $cards[] = [
+        'title'       => navEventTitle($ev),
+        'city'        => navEventCity($ev),
+        'cover'       => $ev['cover_image_url'] ?? $ev['image_url'] ?? '',
+        'price_cents' => $ev['cheapest_price_cents'] ?? null,
+        'url'         => '/bilete/' . ($ev['slug'] ?? ''),
+        'cta'         => 'Vezi bilete',
+    ];
+}
+
+// Combined pagination: both sources paginate independently; surface the deeper
+// page count and the summed total (used for the hero "ACTIVITĂȚI" stat).
+$pagination = [
+    'current_page' => $pageNum,
+    'last_page'    => max((int) ($evPagination['last_page'] ?? 1), (int) ($actPagination['last_page'] ?? 1)),
+    'total'        => (int) ($evPagination['total'] ?? count($events)) + (int) ($actPagination['total'] ?? count($activities)),
+];
 
 // Featured cities for filter dropdown
 $featuredCities = navGetCities(30);
@@ -500,7 +549,7 @@ include __DIR__ . '/includes/header.php';
             <p class="hidden sm:block font-mono text-xs text-ink-soft">DISPONIBILE TOT ANUL · INTRARE CU QR</p>
         </div>
 
-        <?php if (empty($events)): ?>
+        <?php if (empty($cards)): ?>
             <div class="ticket bg-paper border-2 border-ink rounded-3xl p-10 sm:p-16 text-center" style="--perf:100%">
                 <div class="inline-grid place-items-center w-16 h-16 rounded-full bg-paper-2 mb-4">
                     <svg viewBox="0 0 24 24" class="w-7 h-7 text-ink-soft" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
@@ -519,14 +568,14 @@ include __DIR__ . '/includes/header.php';
             </div>
         <?php else: ?>
             <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                <?php foreach ($events as $ev):
-                    $evTitle = navEventTitle($ev);
-                    $evCity = navEventCity($ev);
-                    $evSlug = $ev['slug'] ?? '';
-                    $evCover = $ev['cover_image_url'] ?? $ev['image_url'] ?? '';
-                    $evPrice = navFormatPriceCents($ev['cheapest_price_cents'] ?? null);
+                <?php foreach ($cards as $ev):
+                    $evTitle = $ev['title'];
+                    $evCity = $ev['city'];
+                    $evCover = $ev['cover'];
+                    $evPriceCents = $ev['price_cents'] ?? null;
+                    $evPrice = navFormatPriceCents($evPriceCents);
                 ?>
-                    <a href="/bilete/<?= htmlspecialchars($evSlug, ENT_QUOTES) ?>" class="ticket ticket-lift group bg-paper border-2 border-ink rounded-2xl overflow-hidden flex flex-col" style="--perf:100%">
+                    <a href="<?= htmlspecialchars($ev['url'], ENT_QUOTES) ?>" class="ticket ticket-lift group bg-paper border-2 border-ink rounded-2xl overflow-hidden flex flex-col" style="--perf:100%">
                         <?php if ($evCover): ?>
                             <img src="<?= htmlspecialchars($evCover, ENT_QUOTES) ?>" alt="<?= htmlspecialchars($evTitle, ENT_QUOTES) ?>" class="h-44 w-full object-cover" loading="lazy" width="600" height="320">
                         <?php else: ?>
@@ -544,12 +593,12 @@ include __DIR__ . '/includes/header.php';
 
                             <div class="mt-auto pt-4 flex items-center justify-between">
                                 <p class="text-ink-soft">
-                                    <?php if (($ev['cheapest_price_cents'] ?? null) !== null && $ev['cheapest_price_cents'] > 0): ?>
+                                    <?php if ($evPriceCents !== null && $evPriceCents > 0): ?>
                                         <span class="text-xs">de la </span>
                                     <?php endif; ?>
                                     <span class="font-display text-lg font-700 text-ink"><?= htmlspecialchars($evPrice) ?></span>
                                 </p>
-                                <span class="px-3 py-1.5 rounded-full bg-ink text-paper text-xs font-600 group-hover:<?= $ac['bg'] ?> transition-colors">Vezi bilete</span>
+                                <span class="px-3 py-1.5 rounded-full bg-ink text-paper text-xs font-600 group-hover:<?= $ac['bg'] ?> transition-colors"><?= htmlspecialchars($ev['cta']) ?></span>
                             </div>
                         </div>
                     </a>

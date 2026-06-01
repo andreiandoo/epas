@@ -740,7 +740,7 @@ const CheckoutPage = {
                     const ratePct = baseSubtotal > 0
                         ? (totalCommission / baseSubtotal * 100).toFixed(1).replace(/\.0$/, '')
                         : '';
-                    lbl.textContent = 'Comision platformă' + (ratePct ? ' (' + ratePct + '%)' : '');
+                    lbl.textContent = 'Comision ticketing' + (ratePct ? ' (' + ratePct + '%)' : '');
                 }
             } else {
                 commRow.classList.add('hidden');

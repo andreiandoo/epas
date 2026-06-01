@@ -647,7 +647,10 @@ const CartPage = {
             }
         } catch (e) {}
 
-        let total = subtotalAfterDiscount + processingFee.amount;
+        // Cart page total = tickets + ticketing commission (− discount) ONLY.
+        // The payment transaction fee depends on the chosen payment method, so
+        // it is applied & shown at checkout, not here.
+        let total = subtotalAfterDiscount;
         const points = Math.floor(total / 10);
 
         // Update DOM. Subtotal now shows BASE prices only — the platform
@@ -673,25 +676,18 @@ const CartPage = {
                     const ratePct = baseSubtotal > 0
                         ? (totalCommission / baseSubtotal * 100).toFixed(1).replace(/\.0$/, '')
                         : '';
-                    lbl.textContent = 'Comision platformă' + (ratePct ? ' (' + ratePct + '%)' : '');
+                    lbl.textContent = 'Comision ticketing' + (ratePct ? ' (' + ratePct + '%)' : '');
                 }
             } else {
                 commRow.classList.add('hidden');
             }
         }
 
-        // Show/hide processing fee row. Label stays simple — the rate is in
-        // the merchant agreement, not the customer's concern.
+        // The payment transaction fee is NOT shown on the cart page — it moves
+        // to checkout (where the payment method, each with its own fee, is
+        // chosen). Always keep the row hidden here.
         const feeRow = document.getElementById('processingFeeRow');
-        const feeAmt = document.getElementById('processingFeeAmount');
-        if (feeRow && feeAmt) {
-            if (processingFee.amount > 0) {
-                feeRow.classList.remove('hidden');
-                feeAmt.textContent = BileteOnlineUtils.formatCurrency(processingFee.amount);
-            } else {
-                feeRow.classList.add('hidden');
-            }
-        }
+        if (feeRow) feeRow.classList.add('hidden');
 
         // Render breakdown in taxes container - grouped by event
         const taxesContainer = document.getElementById('taxesContainer');

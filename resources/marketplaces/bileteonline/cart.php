@@ -139,7 +139,7 @@ include __DIR__ . '/includes/header.php';
 
                         <!-- Platform commission (added on top, e.g. 2%) -->
                         <div id="platformCommissionRow" class="flex justify-between hidden">
-                            <span class="text-paper/60" id="platformCommissionLabel">Comision platformă</span>
+                            <span class="text-paper/60" id="platformCommissionLabel">Comision ticketing</span>
                             <strong id="platformCommissionAmount" class="font-medium">0.00 lei</strong>
                         </div>
 
