@@ -499,6 +499,8 @@ function bileteOnlineHeader(seed) {
         cartItems: [],
         searchItems: (seed && seed.searchItems) || [],
         quickSearches: (seed && seed.quickSearches) || [],
+        activityResults: [],
+        _searchTimer: null,
 
         initHeader() {
             this.scrolled = window.scrollY > 20;
@@ -516,6 +518,14 @@ function bileteOnlineHeader(seed) {
                     this.cartOpen = false; this.accountOpen = false; this.mega = null;
                     this.$nextTick(() => this.$refs.searchInput && this.$refs.searchInput.focus());
                 }
+            });
+            // Live activity search (debounced). The static suggestions only cover
+            // categories/cities, so query the activities API for matching names.
+            this.$watch('searchQuery', (q) => {
+                clearTimeout(this._searchTimer);
+                const term = (q || '').trim();
+                if (term.length < 2) { this.activityResults = []; return; }
+                this._searchTimer = setTimeout(() => this.searchActivities(term), 250);
             });
 
             // Auth: re-sync on auth.js events + a short timeout (auth.js may boot
@@ -630,10 +640,27 @@ function bileteOnlineHeader(seed) {
             const q = (this.searchQuery || '').trim();
             window.location.href = q ? ('/cauta?q=' + encodeURIComponent(q)) : '/cauta';
         },
+        searchActivities(term) {
+            const base = (window.BILETEONLINE && window.BILETEONLINE.apiUrl) || '/api/proxy.php';
+            fetch(base + '?action=activities&per_page=6&search=' + encodeURIComponent(term), { headers: { 'Accept': 'application/json' } })
+                .then(r => r.json())
+                .then(d => {
+                    const items = (d && d.data && (d.data.items || d.data)) || [];
+                    this.activityResults = (Array.isArray(items) ? items : []).map(a => ({
+                        title: (a.title && typeof a.title === 'object') ? (a.title.ro || a.title.en || Object.values(a.title)[0] || '') : (a.title || ''),
+                        type: 'Activitate',
+                        meta: (a.city && a.city.name) || (a.category && a.category.name) || '',
+                        href: '/activitate/' + (a.slug || ''),
+                    })).filter(x => x.title && x.href !== '/activitate/');
+                })
+                .catch(() => { this.activityResults = []; });
+        },
         filteredSearch() {
             const q = (this.searchQuery || '').toLowerCase().trim();
             if (! q) return this.searchItems.slice(0, 6);
-            return this.searchItems.filter(i => JSON.stringify(i).toLowerCase().includes(q)).slice(0, 8);
+            const staticMatches = this.searchItems.filter(i => JSON.stringify(i).toLowerCase().includes(q));
+            // Live activity matches first, then category/city suggestions.
+            return [...this.activityResults, ...staticMatches].slice(0, 10);
         },
 
         // ---- misc ----

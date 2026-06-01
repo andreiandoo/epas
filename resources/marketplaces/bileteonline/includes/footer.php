@@ -33,6 +33,15 @@ $footerExtraJs = $footerExtraJs ?? [];
 $extraBodyEnd = $extraBodyEnd ?? '';
 $hideCookieBanner = $hideCookieBanner ?? false;
 
+// Compact footer (only the brand/legal bottom bar) for focused, conversion or
+// account flows — cart, checkout, login and the whole /cont area. Pages may
+// force it by setting $compactFooter before include; otherwise it's derived
+// from the request path.
+if (! isset($compactFooter)) {
+    $compactPath = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
+    $compactFooter = (bool) preg_match('#^/(cont|cos|finalizare|checkout|cart|login)(/|$)#', $compactPath);
+}
+
 // --- Categories (live, with sensible fallback) ---------------------------
 if (! isset($footerCategories)) {
     $resp = api_cached('footer_event_top_categories', fn () => api_get('/events/categories', ['all' => 1, 'parents_only' => 1]), 600);
@@ -122,6 +131,7 @@ $footerAlpineSeed = json_encode([
     <meta itemprop="url" content="<?= htmlspecialchars(SITE_URL, ENT_QUOTES) ?>">
 
     <!-- Category marquee -->
+    <?php if (! $compactFooter): ?>
     <section class="bo-marquee relative border-y-2 border-paper/10 bg-vermilion text-paper overflow-hidden" aria-label="Categorii populare">
         <div class="bo-marquee-track flex w-max items-center gap-5 py-3 text-sm font-mono font-semibold tracking-[.16em] uppercase">
             <?php for ($rep = 0; $rep < 2; $rep++): ?>
@@ -133,11 +143,13 @@ $footerAlpineSeed = json_encode([
             <?php endfor; ?>
         </div>
     </section>
+    <?php endif; ?>
 
     <section class="bo-grain relative">
         <div class="absolute inset-0" aria-hidden="true" style="background-image:radial-gradient(circle at 80% 0%,rgba(232,69,39,.22),transparent 30%),radial-gradient(circle at 10% 50%,rgba(218,154,51,.16),transparent 32%),radial-gradient(circle at 70% 90%,rgba(30,74,61,.34),transparent 34%)"></div>
 
         <div class="relative mx-auto max-w-[1500px] px-4 py-12 sm:px-6 sm:py-16 lg:py-20">
+            <?php if (! $compactFooter): ?>
             <div class="grid gap-5 lg:grid-cols-[1.25fr_.75fr]">
                 <!-- Discovery hero -->
                 <section class="relative overflow-hidden rounded-[2rem] border-2 border-paper/15 bg-paper text-ink shadow-deep">
@@ -278,6 +290,7 @@ $footerAlpineSeed = json_encode([
                     </div>
                 </section>
             </div>
+            <?php endif; ?>
 
             <!-- Bottom -->
             <div class="mt-12 border-t border-paper/10 pt-7">

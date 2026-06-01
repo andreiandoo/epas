@@ -378,16 +378,40 @@ include __DIR__ . '/../includes/header.php';
                             </div>
                             <p class="mt-4 mb-2 text-sm font-bold">Orașe secundare unde mergi des:</p>
                             <div x-show="loadingCities" class="h-10 rounded-2xl bg-paper/60 animate-pulse"></div>
-                            <div x-show="!loadingCities" class="flex flex-wrap gap-2">
-                                <!-- Exclude the chosen primary city from the secondary options. -->
-                                <template x-for="city in availableCities.filter(c => c.name !== profile.city)" :key="city.slug || city.name">
-                                    <button type="button" @click="toggleCity(city.name)"
-                                            :class="interests.preferred_cities.includes(city.name) ? 'bg-mint text-forest border-forest' : 'bg-paper border-ink/10 hover:border-ink'"
-                                            class="rounded-full px-3 py-1.5 text-sm font-bold border-2 transition">
-                                        <span x-text="city.name"></span>
-                                    </button>
-                                </template>
-                                <p x-show="availableCities.filter(c => c.name !== profile.city).length === 0" class="text-sm text-ink-soft italic">Nu sunt alte orașe disponibile.</p>
+                            <div x-show="!loadingCities" class="relative" @click.outside="secCitiesOpen=false" @keydown.escape="secCitiesOpen=false">
+                                <!-- Multiselect trigger -->
+                                <button type="button" @click="secCitiesOpen=!secCitiesOpen" :aria-expanded="secCitiesOpen"
+                                        class="field flex w-full items-center justify-between gap-2 text-left">
+                                    <span :class="interests.preferred_cities.length ? '' : 'text-ink-soft'"
+                                          x-text="interests.preferred_cities.length ? (interests.preferred_cities.length + ' ' + (interests.preferred_cities.length === 1 ? 'oraș selectat' : 'orașe selectate')) : 'Alege orașe…'"></span>
+                                    <svg class="w-4 h-4 transition-transform" :class="secCitiesOpen && 'rotate-180'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+                                </button>
+
+                                <!-- Selected chips (removable) -->
+                                <div x-show="interests.preferred_cities.length" class="mt-2 flex flex-wrap gap-1.5">
+                                    <template x-for="c in interests.preferred_cities" :key="c">
+                                        <span class="inline-flex items-center gap-1.5 rounded-full bg-mint text-forest border-2 border-forest px-3 py-1 text-sm font-bold">
+                                            <span x-text="c"></span>
+                                            <button type="button" @click="toggleCity(c)" class="leading-none hover:text-vermilion" aria-label="Elimină orașul">×</button>
+                                        </span>
+                                    </template>
+                                </div>
+
+                                <!-- Dropdown panel -->
+                                <div x-show="secCitiesOpen" x-cloak x-transition.origin.top
+                                     class="absolute z-30 mt-2 w-full max-h-72 overflow-auto rounded-2xl border-2 border-ink bg-paper p-2 shadow-deep">
+                                    <input type="text" x-model="secCitySearch" placeholder="Caută oraș…"
+                                           class="mb-2 w-full rounded-xl border border-ink/15 bg-paper-2 px-3 py-2 text-sm outline-none focus:border-ink">
+                                    <template x-for="city in availableCities.filter(c => c.name !== profile.city && c.name.toLowerCase().includes(secCitySearch.toLowerCase()))" :key="city.slug || city.name">
+                                        <button type="button" @click="toggleCity(city.name)"
+                                                class="flex w-full items-center justify-between gap-2 rounded-xl px-3 py-2 text-left text-sm font-bold transition hover:bg-paper-2">
+                                            <span x-text="city.name"></span>
+                                            <svg x-show="interests.preferred_cities.includes(city.name)" class="w-4 h-4 text-forest" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 13l4 4L19 7"/></svg>
+                                        </button>
+                                    </template>
+                                    <p x-show="availableCities.filter(c => c.name !== profile.city && c.name.toLowerCase().includes(secCitySearch.toLowerCase())).length === 0"
+                                       class="px-3 py-2 text-sm italic text-ink-soft">Niciun oraș găsit.</p>
+                                </div>
                             </div>
                         </div>
 
@@ -807,6 +831,8 @@ function clientSettingsPage() {
         availableCategories: [],
         loadingCities: true,
         loadingCategories: true,
+        secCitiesOpen: false,
+        secCitySearch: '',
 
         // --- Notifications ---
         notif: {
