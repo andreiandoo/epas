@@ -970,12 +970,18 @@ function activityPage(bootstrap) {
 
             // Push one cart line per variant that has at least one participant.
             // Same (activity, slot, variant) → one cart line; counts roll up.
+            //
+            // Only increment `pushed` if addActivityItem actually persisted
+            // (returns the saved cart). When its guard rejects (missing id,
+            // empty date, etc.) it now returns `null` — we must NOT redirect
+            // to /cos in that case, otherwise the user lands on an empty
+            // cart page and can't tell why.
             let pushed = 0;
             for (const variant of this.variants) {
                 const qty = this.quantities[variant.id] || 0;
                 if (qty <= 0) continue;
 
-                BileteOnlineCart.addActivityItem(
+                const result = BileteOnlineCart.addActivityItem(
                     activityData,
                     {
                         id: variant.id,
@@ -990,10 +996,18 @@ function activityPage(bootstrap) {
                     },
                     qty
                 );
-                pushed++;
+                if (result) pushed++;
             }
 
-            if (pushed === 0) return;
+            if (pushed === 0) {
+                // Either every variant had qty=0 (shouldn't happen — canSubmit
+                // would be false) OR addActivityItem rejected the input. In
+                // both cases the user needs to see something instead of a
+                // silent no-op. The console.warn from addActivityItem already
+                // explains WHY for the second case.
+                alert('Nu am putut adăuga în coș. Verifică data și ora alese, apoi încearcă din nou.');
+                return;
+            }
 
             // Redirect to cart so the user can review + continue to checkout.
             window.location.href = '/cos';

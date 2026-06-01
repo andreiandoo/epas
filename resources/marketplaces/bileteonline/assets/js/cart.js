@@ -148,7 +148,19 @@ const BileteOnlineCart = {
         const end   = slotData.end_time   || slotData.slot_end_time   || null;
 
         if (!activityData?.id || !variantData?.id || !date || !start || participantsCount < 1) {
-            return cart;
+            // Return null (not the existing cart) so callers can detect that
+            // nothing was actually added. Previously this returned the
+            // unchanged cart and submitBooking still incremented `pushed`,
+            // redirecting the user to /cos even when no item was saved.
+            console.warn('[BileteOnlineCart.addActivityItem] guard rejected; nothing saved', {
+                hasActivityId:     !!activityData?.id,
+                hasVariantId:      !!variantData?.id,
+                hasDate:           !!date,
+                hasStart:          !!start,
+                participantsCount,
+                slotData,
+            });
+            return null;
         }
 
         const itemKey = `activity_${activityData.id}_${variantData.id}_${date}_${start}`;

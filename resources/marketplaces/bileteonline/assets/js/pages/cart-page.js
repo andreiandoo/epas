@@ -27,8 +27,15 @@ const CartPage = {
             }
             this.render();
         };
+        // cart.js dispatches `bileteonline:cart:*` events. The `ambilet:*`
+        // names below are legacy aliases from when this code was copied
+        // from the ambilet marketplace — they NEVER fire on bilete.online,
+        // so the cart page wasn't re-rendering on quantity changes etc.
+        // Listen to both names for safety during the rename window.
         window.addEventListener('ambilet:cart:promo', onPromoChanged);
+        window.addEventListener('bileteonline:cart:promo', onPromoChanged);
         window.addEventListener('ambilet:cart:update', () => this.render());
+        window.addEventListener('bileteonline:cart:update', () => this.render());
     },
 
     /**
@@ -182,7 +189,10 @@ const CartPage = {
             container.innerHTML = html;
             this.updateSummary();
         } catch (error) {
-            // Render failed — leave container as-is, user can retry
+            // Don't swallow render failures silently — they're the only
+            // signal we have when a cart item shape changes (e.g. an
+            // activity item field rename) and the page ends up empty.
+            console.error('[CartPage] render failed:', error, items);
         }
     },
 
@@ -899,13 +909,17 @@ const CartPage = {
 document.addEventListener('DOMContentLoaded', () => CartPage.init());
 
 // Listen for cart expiration event from cart.js
-window.addEventListener('ambilet:cart:expired', () => {
+// `ambilet:` alias kept for the legacy listener; `bileteonline:` is what
+// cart.js actually dispatches on this marketplace.
+function _onCartExpired() {
     if (CartPage.timerInterval) {
         clearInterval(CartPage.timerInterval);
     }
     localStorage.removeItem('cart_end_time');
     CartPage.render();
-});
+}
+window.addEventListener('ambilet:cart:expired', _onCartExpired);
+window.addEventListener('bileteonline:cart:expired', _onCartExpired);
 
 // Initialize featured carousel
 document.addEventListener('DOMContentLoaded', () => FeaturedCarousel.init());
