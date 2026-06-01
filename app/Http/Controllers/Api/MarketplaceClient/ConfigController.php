@@ -220,7 +220,7 @@ class ConfigController extends BaseController
             ->where('enabled', true)
             ->get();
 
-        return $this->success($this->buildScriptResponse($integrations));
+        return $this->success($this->buildScriptResponse($integrations, $client));
     }
 
     /**
@@ -234,16 +234,25 @@ class ConfigController extends BaseController
             ->where('enabled', true)
             ->get();
 
-        return $this->success($this->buildScriptResponse($integrations));
+        return $this->success($this->buildScriptResponse($integrations, $client));
     }
 
     /**
-     * Build head/body script response from integrations
+     * Build head/body script response from integrations.
+     *
+     * $client is required so we can derive the per-marketplace consent
+     * storage key (e.g. ambilet → ambilet_cookie_consent, bileteonline →
+     * bileteonline_cookie_consent). Without this, Meta + TikTok pixels were
+     * hardcoded to read ambilet_cookie_consent on every site → consent state
+     * was never honored on bilete.online / tics.
      */
-    protected function buildScriptResponse($integrations): array
+    protected function buildScriptResponse($integrations, $client = null): array
     {
         $headScripts = [];
         $bodyScripts = [];
+        $consentKey = $client && !empty($client->slug)
+            ? str_replace(['-', '.'], '', strtolower($client->slug)) . '_cookie_consent'
+            : 'ambilet_cookie_consent';
 
         foreach ($integrations as $integration) {
             $settings = $integration->getSettings();
@@ -254,7 +263,7 @@ class ConfigController extends BaseController
                 continue;
             }
 
-            $script = $this->generateTrackingScript($integration->provider, $providerId, $settings);
+            $script = $this->generateTrackingScript($integration->provider, $providerId, $settings, $consentKey);
 
             if (empty($script)) {
                 continue;
@@ -276,26 +285,47 @@ class ConfigController extends BaseController
     /**
      * Generate tracking script HTML for a specific provider
      */
-    protected function generateTrackingScript(string $provider, string $providerId, array $settings): string
+    protected function generateTrackingScript(string $provider, string $providerId, array $settings, string $consentKey = 'ambilet_cookie_consent'): string
     {
         return match ($provider) {
-            'ga4' => $this->generateGA4Script($providerId),
+            'ga4' => $this->generateGA4Script($providerId, $settings),
             'gtm' => $this->generateGTMScript($providerId),
-            'meta' => $this->generateMetaPixelScript($providerId),
-            'tiktok' => $this->generateTikTokPixelScript($providerId),
+            'meta' => $this->generateMetaPixelScript($providerId, $consentKey),
+            'tiktok' => $this->generateTikTokPixelScript($providerId, $consentKey),
             default => '',
         };
     }
 
-    protected function generateGA4Script(string $measurementId): string
+    protected function generateGA4Script(string $measurementId, array $settings = []): string
     {
         $id = htmlspecialchars($measurementId, ENT_QUOTES, 'UTF-8');
+
+        // Cross-domain linker — when admin lists other domains here, GA4 will
+        // append `_gl=...` to outbound links pointing at those domains so the
+        // session/client ID survives the navigation. Inbound `_gl` is consumed
+        // automatically by GA4 regardless of this setting.
+        $rawDomains = $settings['linker_domains'] ?? null;
+        $domains = [];
+        if (is_string($rawDomains) && $rawDomains !== '') {
+            $domains = array_filter(array_map('trim', explode(',', $rawDomains)));
+        } elseif (is_array($rawDomains)) {
+            $domains = array_filter(array_map(fn ($d) => trim((string) $d), $rawDomains));
+        }
+
+        $configCall = "gtag('config','{$id}');";
+        if (!empty($domains)) {
+            $jsonDomains = json_encode(array_values($domains), JSON_UNESCAPED_SLASHES);
+            // accept_incoming:true is the default and lets GA4 read inbound _gl;
+            // decorate_forms helps when the destination is reached via form POST.
+            $configCall = "gtag('config','{$id}',{linker:{domains:{$jsonDomains},accept_incoming:true,decorate_forms:true}});";
+        }
+
         return <<<HTML
 <!-- Google Analytics 4 -->
 <script async src="https://www.googletagmanager.com/gtag/js?id={$id}"></script>
 <script>
 window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}
-gtag('js',new Date());gtag('config','{$id}');
+gtag('js',new Date());{$configCall}
 </script>
 HTML;
     }
@@ -314,9 +344,10 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 HTML;
     }
 
-    protected function generateMetaPixelScript(string $pixelId): string
+    protected function generateMetaPixelScript(string $pixelId, string $consentKey = 'ambilet_cookie_consent'): string
     {
         $id = htmlspecialchars($pixelId, ENT_QUOTES, 'UTF-8');
+        $ck = htmlspecialchars($consentKey, ENT_QUOTES, 'UTF-8');
         return <<<HTML
 <!-- Meta Pixel -->
 <script>
@@ -325,7 +356,7 @@ n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
 n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
 t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,
 document,'script','https://connect.facebook.net/en_US/fbevents.js');
-(function(){var c=null;try{c=JSON.parse(localStorage.getItem('ambilet_cookie_consent'))}catch(e){}
+(function(){var c=null;try{c=JSON.parse(localStorage.getItem('{$ck}'))}catch(e){}
 if(!c||!c.marketing)fbq('consent','revoke');})();
 fbq('init','{$id}');fbq('track','PageView');
 </script>
@@ -334,9 +365,10 @@ fbq('init','{$id}');fbq('track','PageView');
 HTML;
     }
 
-    protected function generateTikTokPixelScript(string $pixelId): string
+    protected function generateTikTokPixelScript(string $pixelId, string $consentKey = 'ambilet_cookie_consent'): string
     {
         $id = htmlspecialchars($pixelId, ENT_QUOTES, 'UTF-8');
+        $ck = htmlspecialchars($consentKey, ENT_QUOTES, 'UTF-8');
         return <<<HTML
 <!-- TikTok Pixel -->
 <script>
@@ -352,7 +384,7 @@ ttq._t[e]=+new Date,ttq._o=ttq._o||{},ttq._o[e]=n||{};var a=document.createEleme
 a.type="text/javascript",a.async=!0,a.src=r+"?sdkid="+e+"&lib="+t;var s=
 document.getElementsByTagName("script")[0];s.parentNode.insertBefore(a,s)};
 ttq.load('{$id}');
-(function(){var c=null;try{c=JSON.parse(localStorage.getItem('ambilet_cookie_consent'))}catch(e){}
+(function(){var c=null;try{c=JSON.parse(localStorage.getItem('{$ck}'))}catch(e){}
 if(!c||!c.marketing){ttq.disableCookie();ttq.revokeConsent();}})();
 ttq.page();
 }(window,document,'ttq');

@@ -78,11 +78,18 @@ class TrackingSettings extends Page
                 $formData["{$provider}_id"] = $integration->getProviderId() ?? '';
                 $formData["{$provider}_inject_at"] = $integration->getInjectAt();
                 $formData["{$provider}_page_scope"] = $integration->getPageScope();
+                if ($provider === 'ga4') {
+                    $linker = $settings['linker_domains'] ?? '';
+                    $formData['ga4_linker_domains'] = is_array($linker) ? implode(', ', $linker) : (string) $linker;
+                }
             } else {
                 $formData["{$provider}_enabled"] = false;
                 $formData["{$provider}_id"] = '';
                 $formData["{$provider}_inject_at"] = 'head';
                 $formData["{$provider}_page_scope"] = 'public';
+                if ($provider === 'ga4') {
+                    $formData['ga4_linker_domains'] = '';
+                }
             }
         }
 
@@ -108,6 +115,13 @@ class TrackingSettings extends Page
                             ->placeholder('G-XXXXXXXXXX')
                             ->hintIcon('heroicon-o-information-circle', tooltip: 'Your GA4 Measurement ID from Google Analytics')
                             ->maxLength(20)
+                            ->visible(fn ($get) => $get('ga4_enabled')),
+
+                        Forms\Components\TextInput::make('ga4_linker_domains')
+                            ->label('Cross-Domain Linker (optional)')
+                            ->placeholder('ambilet.ro, tics.ro, partner-site.com')
+                            ->helperText('Comma-separated list of OTHER domains where this same GA4 session should follow the visitor. GA4 will append _gl=… to outbound links pointing at these domains so the client ID survives the navigation. Inbound _gl from another domain is consumed automatically — no config needed for that direction.')
+                            ->maxLength(500)
                             ->visible(fn ($get) => $get('ga4_enabled')),
 
                         SC\Grid::make(2)->schema([
@@ -303,6 +317,19 @@ class TrackingSettings extends Page
             $toggleEnabled = (bool) ($data["{$provider}_enabled"] ?? false);
             $providerId = $data["{$provider}_id"] ?? '';
 
+            $settings = [
+                $config['id_field'] => $providerId,
+                'inject_at' => $data["{$provider}_inject_at"] ?? 'head',
+                'page_scope' => $data["{$provider}_page_scope"] ?? 'public',
+                'toggle_enabled' => $toggleEnabled,
+            ];
+
+            // GA4-only: cross-domain linker. Store the raw CSV; consumer
+            // (ConfigController::generateGA4Script) splits on save.
+            if ($provider === 'ga4' && !empty($data['ga4_linker_domains'])) {
+                $settings['linker_domains'] = trim((string) $data['ga4_linker_domains']);
+            }
+
             // enabled = true only when toggle is on AND provider ID exists
             // toggle_enabled in settings stores the UI toggle state
             TrackingIntegration::updateOrCreate(
@@ -313,12 +340,7 @@ class TrackingSettings extends Page
                 [
                     'enabled' => $toggleEnabled && !empty($providerId),
                     'consent_category' => $config['consent_category'],
-                    'settings' => [
-                        $config['id_field'] => $providerId,
-                        'inject_at' => $data["{$provider}_inject_at"] ?? 'head',
-                        'page_scope' => $data["{$provider}_page_scope"] ?? 'public',
-                        'toggle_enabled' => $toggleEnabled,
-                    ],
+                    'settings' => $settings,
                 ]
             );
         }
