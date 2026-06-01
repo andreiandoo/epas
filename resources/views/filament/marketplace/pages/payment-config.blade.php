@@ -103,6 +103,14 @@
                                                             @if(isset($sections[$sectionKey]['description']))
                                                                 <p class="text-xs text-gray-500 dark:text-gray-400">{{ $sections[$sectionKey]['description'] }}</p>
                                                             @endif
+                                                            @if(!empty($sections[$sectionKey]['info_html']))
+                                                                {{-- Section-level guidance (e.g. Stripe webhook URL + event list).
+                                                                     Pre-substituted in PaymentConfig::placeholdersForProvider,
+                                                                     so any {WEBHOOK_URL} is already the live per-marketplace URL. --}}
+                                                                <div class="mt-2 p-3 rounded-md bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/40 text-blue-900 dark:text-blue-100">
+                                                                    {!! $sections[$sectionKey]['info_html'] !!}
+                                                                </div>
+                                                            @endif
                                                         </div>
                                                     @elseif($sectionKey === 'default')
                                                         <h4 class="text-sm font-medium text-gray-900 dark:text-white mb-3">Configuration Settings</h4>
@@ -185,6 +193,14 @@
                                                                         placeholder="{{ $field['placeholder'] ?? '' }}"
                                                                         @if($field['required'] ?? false) required @endif
                                                                     />
+                                                                @endif
+
+                                                                @if(!empty($field['help_html']))
+                                                                    {{-- Per-field guidance. Placeholders ({WEBHOOK_URL} etc.)
+                                                                         are pre-substituted in PaymentConfig::loadPaymentMethods. --}}
+                                                                    <div class="mt-1 text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
+                                                                        {!! $field['help_html'] !!}
+                                                                    </div>
                                                                 @endif
                                                             </div>
                                                         @endforeach

@@ -54,6 +54,30 @@ class PaymentConfig extends Page implements HasForms
                     $settings = json_decode($settings, true) ?? [];
                 }
 
+                $schema   = $ms->metadata['settings_schema']   ?? [];
+                $sections = $ms->metadata['settings_sections'] ?? [];
+
+                // Substitute provider-specific placeholders so the help text
+                // displays the correct, copy-pastable values for THIS
+                // marketplace (rather than the static template from the
+                // seeder). Currently only `payment-stripe` needs the
+                // per-marketplace webhook URL injected.
+                $placeholders = $this->placeholdersForProvider($ms->slug);
+                if (!empty($placeholders)) {
+                    foreach ($schema as &$field) {
+                        if (!empty($field['help_html']) && is_string($field['help_html'])) {
+                            $field['help_html'] = strtr($field['help_html'], $placeholders);
+                        }
+                    }
+                    unset($field);
+                    foreach ($sections as &$section) {
+                        if (!empty($section['info_html']) && is_string($section['info_html'])) {
+                            $section['info_html'] = strtr($section['info_html'], $placeholders);
+                        }
+                    }
+                    unset($section);
+                }
+
                 return [
                     'id' => $ms->id,
                     'name' => $ms->getTranslation('name', app()->getLocale()),
@@ -64,12 +88,30 @@ class PaymentConfig extends Page implements HasForms
                     'is_default' => (bool) $ms->pivot->is_default,
                     'status' => $ms->pivot->status,
                     'settings' => $settings,
-                    'settings_schema' => $ms->metadata['settings_schema'] ?? [],
-                    'settings_sections' => $ms->metadata['settings_sections'] ?? [],
+                    'settings_schema' => $schema,
+                    'settings_sections' => $sections,
                     'is_configured' => $this->isPaymentMethodConfigured($ms),
                 ];
             })
             ->toArray();
+    }
+
+    /**
+     * Build the help-text placeholder map for a given payment provider.
+     *
+     * Stripe: `{WEBHOOK_URL}` resolves to the per-marketplace webhook URL
+     * (`/webhooks/marketplace-stripe/{id}`) so the admin can copy-paste it
+     * directly into Stripe Dashboard. Same URL for both Test and Live —
+     * Stripe handles the mode split via separate endpoint registrations.
+     */
+    protected function placeholdersForProvider(string $slug): array
+    {
+        return match ($slug) {
+            'payment-stripe' => [
+                '{WEBHOOK_URL}' => url("/webhooks/marketplace-stripe/{$this->marketplace->id}"),
+            ],
+            default => [],
+        };
     }
 
     protected function isPaymentMethodConfigured(Microservice $ms): bool
