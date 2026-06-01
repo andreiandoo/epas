@@ -341,7 +341,7 @@ include __DIR__ . '/includes/header.php';
 
                         <!-- Platform commission (added on top, e.g. 2%) -->
                         <div id="platform-commission-row" class="hidden flex justify-between">
-                            <span class="text-paper/60" id="platform-commission-label">Comision platformă</span>
+                            <span class="text-paper/60" id="platform-commission-label">Comision ticketing</span>
                             <strong id="platform-commission-amount" class="font-medium">0.00 lei</strong>
                         </div>
 
@@ -374,7 +374,7 @@ include __DIR__ . '/includes/header.php';
 
                         <!-- Payment processing fee preview (Stripe / Netopia) -->
                         <div id="processing-fee-row" class="hidden flex justify-between">
-                            <span class="text-paper/60" id="processing-fee-label">Taxa procesare card</span>
+                            <span class="text-paper/60" id="processing-fee-label">Comision tranzacționare plată</span>
                             <strong id="processing-fee-amount" class="font-medium">0.00 lei</strong>
                         </div>
 

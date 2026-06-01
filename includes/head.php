@@ -173,17 +173,89 @@ $alpineCollapseUrl = file_exists($alpineLocalCollapse)
 <link rel="preload" as="script" href="<?= htmlspecialchars($alpineCoreUrl, ENT_QUOTES) ?>">
 <link rel="preload" as="script" href="<?= htmlspecialchars($alpineCollapseUrl, ENT_QUOTES) ?>">
 
-<!-- ===================== FONTS ===================== -->
-<link rel="preload" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;0,9..144,900;1,9..144,500&family=Hanken+Grotesk:wght@400;500;600;700&family=Spline+Sans+Mono:wght@400;500;600&display=swap" as="style">
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;0,9..144,900;1,9..144,500&family=Hanken+Grotesk:wght@400;500;600;700&family=Spline+Sans+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<!-- ===================== FONTS (non-render-blocking: preload + print swap) ===================== -->
+<?php $fontsUrl = 'https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;0,9..144,900;1,9..144,500&family=Hanken+Grotesk:wght@400;500;600;700&family=Spline+Sans+Mono:wght@400;500;600&display=swap'; ?>
+<link rel="preload" as="style" href="<?= $fontsUrl ?>">
+<link href="<?= $fontsUrl ?>" rel="stylesheet" media="print" onload="this.media='all'">
+<noscript><link href="<?= $fontsUrl ?>" rel="stylesheet"></noscript>
 
-<!-- ===================== STYLES ===================== -->
+<!-- ===================== CRITICAL CSS (inline above-the-fold) ===================== -->
+<style>
+:root{--color-paper:#F5EFE6;--color-ink:#1B1714;--color-ink-soft:#5A4F46;--color-accent:#C2410C;--color-line:#E8DFCF}*,::after,::before{box-sizing:border-box;border:0 solid #E8DFCF;margin:0;padding:0}html{line-height:1.5;-webkit-text-size-adjust:100%;font-family:'Hanken Grotesk','Inter',system-ui,sans-serif;scroll-behavior:smooth;background:#F5EFE6;color:#1B1714}body{margin:0;line-height:inherit;background:#F5EFE6;color:#1B1714;-webkit-font-smoothing:antialiased;min-height:100vh}img,video{max-width:100%;height:auto;display:block}a{color:inherit;text-decoration:inherit}button,[role=button]{cursor:pointer;background:transparent}h1,h2,h3,h4,h5,h6{font-family:'Fraunces',Georgia,serif;font-size:inherit;font-weight:inherit}ul,ol,menu{list-style:none;margin:0;padding:0}.hidden{display:none}[x-cloak]{display:none!important}.flex{display:flex}.block{display:block}.inline-block{display:inline-block}.relative{position:relative}.absolute{position:absolute}.fixed{position:fixed}.sticky{position:sticky}.items-center{align-items:center}.justify-between{justify-content:space-between}.justify-center{justify-content:center}.gap-2{gap:.5rem}.gap-4{gap:1rem}.gap-6{gap:1.5rem}.w-full{width:100%}.h-full{height:100%}.min-h-screen{min-height:100vh}.overflow-hidden{overflow:hidden}.bg-paper{background-color:#F5EFE6}.bg-ink{background-color:#1B1714}.text-paper{color:#F5EFE6}.text-ink{color:#1B1714}.text-accent{color:#C2410C}.font-bold{font-weight:700}.font-semibold{font-weight:600}.font-medium{font-weight:500}.text-sm{font-size:.875rem;line-height:1.25rem}.text-xs{font-size:.75rem;line-height:1rem}.text-lg{font-size:1.125rem;line-height:1.75rem}.text-xl{font-size:1.25rem;line-height:1.75rem}.text-2xl{font-size:1.5rem;line-height:2rem}.rounded-xl{border-radius:.75rem}.rounded-lg{border-radius:.5rem}.rounded-full{border-radius:9999px}.p-4{padding:1rem}.px-4{padding-left:1rem;padding-right:1rem}.px-6{padding-left:1.5rem;padding-right:1.5rem}.py-2{padding-top:.5rem;padding-bottom:.5rem}.py-3{padding-top:.75rem;padding-bottom:.75rem}.py-4{padding-top:1rem;padding-bottom:1rem}.mb-2{margin-bottom:.5rem}.mb-4{margin-bottom:1rem}.mb-6{margin-bottom:1.5rem}.mt-7{margin-top:1.75rem}.mx-auto{margin-left:auto;margin-right:auto}.max-w-2xl{max-width:42rem}.max-w-7xl{max-width:80rem}.border{border-width:1px}.border-line{border-color:#E8DFCF}.shadow-sm{box-shadow:0 1px 2px 0 rgba(27,23,20,.06)}.transition-all{transition-property:all;transition-timing-function:cubic-bezier(.4,0,.2,1);transition-duration:.15s}.opacity-0{opacity:0}.inset-0{inset:0}.top-0{top:0}.object-cover{object-fit:cover}.container{width:100%;margin-left:auto;margin-right:auto;padding-left:1rem;padding-right:1rem}@media(min-width:768px){.container{max-width:768px}.md\:flex{display:flex}}@media(min-width:1024px){.container{max-width:1024px}.lg\:flex{display:flex}.lg\:hidden{display:none}}@media(min-width:1280px){.container{max-width:1280px}}.leading-relaxed{line-height:1.625}
+</style>
+
+<!-- ===================== STYLES (preload + render-blocking to avoid FOUC) ===================== -->
 <?php if ($cssLink): ?>
+<link rel="preload" as="style" href="<?= htmlspecialchars($cssLink, ENT_QUOTES) ?><?= file_exists(BILETEONLINE_ROOT . $cssLink) ? '?v=' . filemtime(BILETEONLINE_ROOT . $cssLink) : '' ?>">
 <link rel="stylesheet" href="<?= htmlspecialchars($cssLink, ENT_QUOTES) ?><?= file_exists(BILETEONLINE_ROOT . $cssLink) ? '?v=' . filemtime(BILETEONLINE_ROOT . $cssLink) : '' ?>">
 <?php else: ?>
 <link rel="stylesheet" href="<?= asset('assets/css/custom.css') ?>">
 <link rel="stylesheet" href="<?= asset('assets/css/tailwind.min.css') ?>">
 <?php endif; ?>
+
+<!-- ===================== GOOGLE CONSENT MODE v2 — MUST be before tracking ===================== -->
+<script>
+window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}
+(function(){
+    var c=null;
+    try{c=JSON.parse(localStorage.getItem('bileteonline_cookie_consent'))}catch(e){}
+    var m=c&&c.marketing,a=c&&c.analytics,f=c&&c.functional;
+    gtag('consent','default',{
+        'ad_storage':m?'granted':'denied',
+        'ad_user_data':m?'granted':'denied',
+        'ad_personalization':m?'granted':'denied',
+        'analytics_storage':a?'granted':'denied',
+        'functionality_storage':f?'granted':'denied',
+        'personalization_storage':f?'granted':'denied',
+        'security_storage':'granted',
+        'wait_for_update':c?0:500
+    });
+    gtag('set','ads_data_redaction',true);
+    gtag('set','url_passthrough',true);
+})();
+</script>
+
+<!-- ===================== TRACKING SCRIPTS (head) — deferred until user interaction or 7s idle ===================== -->
+<?php
+if (!isset($trackingHeadScripts)) {
+    require_once __DIR__ . '/tracking.php';
+}
+if (!empty($trackingHeadScripts)): ?>
+<script>
+(function(){
+    var h=<?= json_encode($trackingHeadScripts) ?>;
+    var done=false;
+    function go(){
+        if(done)return;done=true;
+        var d=document.createElement('div');d.innerHTML=h;
+        d.querySelectorAll('script').forEach(function(s){
+            var n=document.createElement('script');
+            if(s.src){n.src=s.src;n.async=true}else{n.textContent=s.textContent}
+            document.head.appendChild(n);
+        });
+    }
+    ['scroll','click','touchstart','mousemove','keydown'].forEach(function(e){
+        window.addEventListener(e,go,{once:true,passive:true});
+    });
+    if('requestIdleCallback' in window){requestIdleCallback(function(){setTimeout(go,7000)});}
+    else{setTimeout(go,10000);}
+})();
+</script>
+<?php endif; ?>
+
+<!-- Clean GA / UTM params from URL after GA has read them (15s after load) -->
+<script>
+setTimeout(function(){
+    if(!window.location.search)return;
+    var p=new URLSearchParams(window.location.search),del=[];
+    p.forEach(function(v,k){if(/^(_gl|_ga|_up|_gac|utm_)/.test(k))del.push(k)});
+    if(del.length){
+        del.forEach(function(k){p.delete(k)});
+        var s=p.toString();
+        history.replaceState(null,'',location.pathname+(s?'?'+s:'')+location.hash);
+    }
+},15000);
+</script>
 
 <!-- ===================== STRUCTURED DATA ===================== -->
 <script type="application/ld+json">
