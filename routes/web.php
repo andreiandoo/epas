@@ -12,6 +12,7 @@ use App\Http\Controllers\Admin\ContractController;
 use App\Http\Controllers\ContractSigningController;
 use App\Http\Controllers\MicroserviceMarketplaceController;
 use App\Http\Controllers\StripeWebhookController;
+use App\Http\Controllers\MarketplaceStripeWebhookController;
 use App\Http\Controllers\TenantPaymentWebhookController;
 use App\Http\Controllers\StatusController;
 use App\Http\Controllers\DocsController;
@@ -206,9 +207,24 @@ Route::middleware(['web'])->get('/test-session-read', function() {
 |--------------------------------------------------------------------------
 */
 
-// Stripe Webhook (must be outside CSRF protection)
+// Stripe Webhook for TENANT subscriptions / microservice purchases.
+// Tenant-only: uses the global Setting.stripe_webhook_secret + Tenant lookup
+// via session metadata. NOT used for marketplace customer ticket orders —
+// see /webhooks/marketplace-stripe/{id} below for that.
 Route::post('/webhooks/stripe', [StripeWebhookController::class, 'handle'])
     ->name('webhooks.stripe')
+    ->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]);
+
+// Stripe Webhook for MARKETPLACE customer orders (per-marketplace endpoint).
+// Each marketplace registers its own URL with its own client id baked in:
+//   bilete.online → https://core.tixello.com/webhooks/marketplace-stripe/3
+//   ambilet.ro    → https://core.tixello.com/webhooks/marketplace-stripe/1
+// Stripe issues a unique signing secret per registered endpoint; that secret
+// is stored in the marketplace_client_microservices pivot settings for the
+// `payment-stripe` microservice (test_webhook_secret / live_webhook_secret).
+Route::post('/webhooks/marketplace-stripe/{marketplaceClientId}', [MarketplaceStripeWebhookController::class, 'handle'])
+    ->name('webhooks.marketplace-stripe')
+    ->where('marketplaceClientId', '[0-9]+')
     ->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]);
 
 // Tenant Payment Processor Webhooks
