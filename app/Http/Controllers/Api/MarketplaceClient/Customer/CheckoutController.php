@@ -1389,7 +1389,13 @@ class CheckoutController extends BaseController
                 // Lock existing bookings for this slot so two concurrent
                 // checkouts can't both pass the capacity check. The lock
                 // is held until the transaction commits or rolls back.
-                $consumed = DB::table('activity_bookings')
+                //
+                // PostgreSQL note: cannot use `lockForUpdate()->sum(...)`
+                // ("FOR UPDATE is not allowed with aggregate functions").
+                // We select the raw column values WITH the row lock, then
+                // sum in PHP — same lock semantics on the existing rows,
+                // works on both MySQL and Postgres.
+                $consumed = (int) DB::table('activity_bookings')
                     ->where('activity_id', $activity->id)
                     ->whereDate('booking_date', $item['booking_date'])
                     ->where('slot_start_time', $item['slot_start_time'])
@@ -1401,7 +1407,8 @@ class CheckoutController extends BaseController
                     })
                     ->whereNull('deleted_at')
                     ->lockForUpdate()
-                    ->sum('participants_count');
+                    ->pluck('participants_count')
+                    ->sum();
 
                 $capTotal  = max(1, (int) ($activity->capacity_per_slot ?? 1));
                 $remaining = max(0, $capTotal - (int) $consumed);
