@@ -19,11 +19,10 @@ class EditMarketplaceClient extends EditRecord
                 ->color('success')
                 ->visible(fn () => $this->record->status === 'active' && auth()->user()?->isSuperAdmin())
                 ->action(function () {
-                    // See switch-client route for context. We write the guard
-                    // session key by hand to avoid Session::migrate(true)
-                    // (triggered by auth->login()) which regenerates the
-                    // session ID and destroys the old row, breaking the
-                    // browser's cookie.
+                    // Delegates to switchSuperAdminToMarketplace() (defined in
+                    // routes/web.php). See that function for why we avoid
+                    // auth->login() — TL;DR Session::migrate(true) breaks the
+                    // browser cookie under our session config.
                     $user = auth('web')->user();
                     $admin = \App\Models\MarketplaceAdmin::where('marketplace_client_id', $this->record->id)
                         ->where(function ($q) use ($user) {
@@ -42,19 +41,7 @@ class EditMarketplaceClient extends EditRecord
                         ]);
                     }
 
-                    $guard = auth('marketplace_admin');
-                    $guardSessionKey = $guard instanceof \Illuminate\Auth\SessionGuard
-                        ? $guard->getName()
-                        : 'login_marketplace_admin_' . sha1(\Illuminate\Auth\SessionGuard::class);
-
-                    session()->put($guardSessionKey, $admin->getAuthIdentifier());
-                    session([
-                        'super_admin_marketplace_client_id' => (int) $this->record->id,
-                        'marketplace_is_super_admin' => true,
-                        'marketplace_super_admin_user_id' => $user->id,
-                    ]);
-                    $guard->setUser($admin);
-                    session()->save();
+                    switchSuperAdminToMarketplace($admin, (int) $this->record->id, $user);
 
                     return redirect('/marketplace');
                 }),

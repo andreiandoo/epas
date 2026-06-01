@@ -496,13 +496,10 @@ class MarketplaceClientResource extends Resource
                     ->color('success')
                     ->visible(fn ($record) => $record->status === 'active' && auth()->user()?->isSuperAdmin())
                     ->action(function ($record) {
-                        // Same approach as the /marketplace/switch-client route:
-                        // resolve+login the right admin here so the redirect
-                        // to /marketplace already has the correct guard state.
-                        // NB: write the guard session key directly (no login())
-                        // to avoid Session::migrate(true) — which would
-                        // regenerate the session ID and destroy the old row,
-                        // leaving the browser pointing at an empty session.
+                        // Delegates to switchSuperAdminToMarketplace() (defined
+                        // in routes/web.php) so all three admin entry points +
+                        // the /marketplace/switch-client/{id} route share the
+                        // same no-migrate session manipulation.
                         $user = auth('web')->user();
                         $admin = \App\Models\MarketplaceAdmin::where('marketplace_client_id', $record->id)
                             ->where(function ($q) use ($user) {
@@ -521,19 +518,7 @@ class MarketplaceClientResource extends Resource
                             ]);
                         }
 
-                        $guard = auth('marketplace_admin');
-                        $guardSessionKey = $guard instanceof \Illuminate\Auth\SessionGuard
-                            ? $guard->getName()
-                            : 'login_marketplace_admin_' . sha1(\Illuminate\Auth\SessionGuard::class);
-
-                        session()->put($guardSessionKey, $admin->getAuthIdentifier());
-                        session([
-                            'super_admin_marketplace_client_id' => (int) $record->id,
-                            'marketplace_is_super_admin' => true,
-                            'marketplace_super_admin_user_id' => $user->id,
-                        ]);
-                        $guard->setUser($admin);
-                        session()->save();
+                        switchSuperAdminToMarketplace($admin, (int) $record->id, $user);
                     })
                     ->successRedirectUrl('/marketplace'),
                 ViewAction::make(),

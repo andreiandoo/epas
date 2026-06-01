@@ -86,16 +86,17 @@ Route::middleware(['web', 'auth:marketplace_admin'])->group(function () {
     })->name('marketplace.orders.dispute-evidence');
 });
 
-// Marketplace Client Switcher (for super-admins)
+// Marketplace Client Switcher (for super-admins).
 //
-// Previously this just wrote super_admin_marketplace_client_id to session +
-// logout() and relied on the panel middleware to re-login on the next request.
-// In practice the session write was being lost (debug endpoint showed the old
-// client_id sticking around), so this route now does EVERYTHING up front:
-// resolve the target admin, log them in, set the flags. The next request to
-// /marketplace then just confirms the already-correct state.
+// Writes the guard session key + flags by hand instead of calling
+// auth('marketplace_admin')->login() — login() calls Session::migrate(true)
+// which regenerates the session ID and destroys the old session row in DB.
+// In practice the new session cookie wasn't getting picked up by the browser
+// reliably, so the next request would land on a session that no longer
+// existed — Laravel created an empty session, the panel middleware saw no
+// super_admin_marketplace_client_id, and fell back to the first active
+// marketplace. Keeping the session ID stable avoids the whole Set-Cookie race.
 Route::middleware(['web'])->get('/marketplace/switch-client/{clientId}', function ($clientId) {
-    // Only allow if user is super-admin from core
     if (!auth('web')->check() || !auth('web')->user()->isSuperAdmin()) {
         abort(403, 'Unauthorized');
     }
@@ -107,7 +108,6 @@ Route::middleware(['web'])->get('/marketplace/switch-client/{clientId}', functio
 
     $user = auth('web')->user();
 
-    // Find or create the marketplace admin for the target client.
     $admin = \App\Models\MarketplaceAdmin::where('marketplace_client_id', $clientId)
         ->where(function ($q) use ($user) {
             $q->where('email', $user->email)->orWhere('role', 'super_admin');
@@ -126,105 +126,56 @@ Route::middleware(['web'])->get('/marketplace/switch-client/{clientId}', functio
         ]);
     }
 
-    $sessionIdBefore = session()->getId();
-
-    \Log::info('marketplace.switch-client: pre-switch state', [
-        'target_client_id' => $clientId,
-        'admin_to_login_id' => $admin->id,
-        'admin_to_login_client_id' => $admin->marketplace_client_id,
-        'session_id_before' => $sessionIdBefore,
-        'session_client_id_before' => session('super_admin_marketplace_client_id'),
-        'logged_in_admin_before' => auth('marketplace_admin')->id(),
-    ]);
-
-    // IMPORTANT: don't use auth('marketplace_admin')->login() — under the hood
-    // it calls Session::migrate(true) which regenerates the session ID AND
-    // destroys the old session row in DB. The browser was holding the old
-    // cookie, so subsequent requests landed on a session that no longer
-    // existed — Laravel then created an empty session, the panel middleware
-    // saw no client_id, and fell back to the first active marketplace (tics).
-    //
-    // Instead, write the guard session key + flags by hand. Session ID stays
-    // the same, the browser keeps its cookie, no Set-Cookie race possible.
-    $guard = auth('marketplace_admin');
-    $guardSessionKey = $guard instanceof \Illuminate\Auth\SessionGuard
-        ? $guard->getName()
-        : 'login_marketplace_admin_' . sha1(\Illuminate\Auth\SessionGuard::class);
-
-    session()->put($guardSessionKey, $admin->getAuthIdentifier());
-    session([
-        'super_admin_marketplace_client_id' => (int) $clientId,
-        'marketplace_is_super_admin' => true,
-        'marketplace_super_admin_user_id' => $user->id,
-    ]);
-    $guard->setUser($admin);
-    session()->save();
-
-    \Log::info('marketplace.switch-client: post-switch state', [
-        'session_id_after' => session()->getId(),
-        'session_id_changed' => session()->getId() !== $sessionIdBefore,
-        'session_client_id_after' => session('super_admin_marketplace_client_id'),
-        'logged_in_admin_after' => auth('marketplace_admin')->id(),
-        'logged_in_admin_client_id_after' => auth('marketplace_admin')->user()?->marketplace_client_id,
-    ]);
+    switchSuperAdminToMarketplace($admin, (int) $clientId, $user);
 
     return redirect('/marketplace');
 })->name('marketplace.switch-client');
 
-// DEBUG: dump auth + session state for super-admin marketplace switching
-// Remove after the switch bug is resolved.
-Route::middleware(['web'])->get('/marketplace/_debug-auth', function () {
-    $webUser = auth('web')->user();
-    $mpAdmin = auth('marketplace_admin')->user();
-    $sessionClientId = session('super_admin_marketplace_client_id');
+if (!function_exists('switchSuperAdminToMarketplace')) {
+    /**
+     * Switch the marketplace_admin guard to $admin without regenerating the
+     * session ID. Updates the AuthenticateSession password-hash sentinel for
+     * both the panel guard and the global default so the next request doesn't
+     * get flushed by a hash mismatch (which would also drop us back to the
+     * first active marketplace). Shared by the route above + the admin-side
+     * "Login to marketplace" Filament actions on MarketplaceClientResource.
+     */
+    function switchSuperAdminToMarketplace(
+        \App\Models\MarketplaceAdmin $admin,
+        int $clientId,
+        \App\Models\User $superAdmin
+    ): void {
+        $guard = auth('marketplace_admin');
+        $guardSessionKey = $guard instanceof \Illuminate\Auth\SessionGuard
+            ? $guard->getName()
+            : 'login_marketplace_admin_' . sha1(\Illuminate\Auth\SessionGuard::class);
 
-    if (!$webUser || !method_exists($webUser, 'isSuperAdmin') || !$webUser->isSuperAdmin()) {
-        return response()->json(['error' => 'super-admin only'], 403);
+        session()->put($guardSessionKey, $admin->getAuthIdentifier());
+
+        // AuthenticateSession flushes the session when the new user's password
+        // hash doesn't match the value stored under password_hash_<guard>.
+        // Pre-populate it for both the panel guard and the global default.
+        $hashForCookie = $admin->getAuthPassword();
+        try {
+            if ($guard instanceof \Illuminate\Auth\SessionGuard && method_exists($guard, 'hashPasswordForCookie')) {
+                $hashForCookie = $guard->hashPasswordForCookie($admin->getAuthPassword());
+            }
+        } catch (\Throwable $e) {
+            // older guards don't have hashPasswordForCookie — fall through to raw hash
+        }
+        session()->put('password_hash_marketplace_admin', $hashForCookie);
+        session()->put('password_hash_web', $hashForCookie);
+
+        session([
+            'super_admin_marketplace_client_id' => $clientId,
+            'marketplace_is_super_admin' => true,
+            'marketplace_super_admin_user_id' => $superAdmin->id,
+        ]);
+
+        $guard->setUser($admin);
+        session()->save();
     }
-
-    $adminsForClient1 = \App\Models\MarketplaceAdmin::where('marketplace_client_id', 1)
-        ->get(['id', 'marketplace_client_id', 'email', 'role', 'status', 'deleted_at'])
-        ->toArray();
-    $adminsForClient2 = \App\Models\MarketplaceAdmin::where('marketplace_client_id', 2)
-        ->get(['id', 'marketplace_client_id', 'email', 'role', 'status', 'deleted_at'])
-        ->toArray();
-
-    $resolvedAdmin = $sessionClientId
-        ? \App\Models\MarketplaceAdmin::where('marketplace_client_id', $sessionClientId)
-            ->where(function ($q) use ($webUser) {
-                $q->where('email', $webUser->email)->orWhere('role', 'super_admin');
-            })
-            ->first(['id', 'marketplace_client_id', 'email', 'role'])
-            ?->toArray()
-        : null;
-
-    return response()->json([
-        'session_id' => session()->getId(),
-        'session' => [
-            'super_admin_marketplace_client_id' => $sessionClientId,
-            'marketplace_is_super_admin' => session('marketplace_is_super_admin'),
-            'marketplace_super_admin_user_id' => session('marketplace_super_admin_user_id'),
-        ],
-        'web_user' => [
-            'id' => $webUser->id,
-            'email' => $webUser->email,
-            'is_super_admin' => $webUser->isSuperAdmin(),
-        ],
-        'marketplace_admin' => $mpAdmin ? [
-            'id' => $mpAdmin->id,
-            'marketplace_client_id' => $mpAdmin->marketplace_client_id,
-            'email' => $mpAdmin->email,
-            'role' => $mpAdmin->role,
-            'belongs_to_marketplace' => $mpAdmin->marketplaceClient?->only(['id', 'name', 'slug']),
-        ] : null,
-        'mismatch' => $sessionClientId && $mpAdmin
-            ? ((int) $sessionClientId !== (int) $mpAdmin->marketplace_client_id)
-            : null,
-        'middleware_would_resolve_to' => $resolvedAdmin,
-        'admins_for_client_1' => $adminsForClient1,
-        'admins_for_client_2' => $adminsForClient2,
-    ], 200, [], JSON_PRETTY_PRINT);
-})->name('marketplace.debug-auth');
+}
 
 // DEBUG: Test session and cookies
 Route::middleware(['web'])->get('/test-session', function() {
