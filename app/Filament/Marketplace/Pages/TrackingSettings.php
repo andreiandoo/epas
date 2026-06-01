@@ -290,6 +290,15 @@ class TrackingSettings extends Page
         $marketplace = static::getMarketplaceClient();
 
         if (!$marketplace) {
+            // Silent return was masking save failures for super-admins who
+            // landed on this page without a marketplace context. Surface the
+            // problem so users know the form actually didn't persist.
+            Notification::make()
+                ->danger()
+                ->title('No marketplace context')
+                ->body('Could not determine which marketplace to save these settings for. Make sure you are logged in as a marketplace admin (not a super-admin) and try again.')
+                ->persistent()
+                ->send();
             return;
         }
 
@@ -331,10 +340,18 @@ class TrackingSettings extends Page
             }
 
             // enabled = true only when toggle is on AND provider ID exists
-            // toggle_enabled in settings stores the UI toggle state
+            // toggle_enabled in settings stores the UI toggle state.
+            //
+            // Match by client_id + provider + organizer_id=NULL explicitly so
+            // we don't accidentally update an organizer-scoped integration
+            // when saving the marketplace-level settings. Without this guard,
+            // if a single organizer happened to have a GA4 integration row,
+            // updateOrCreate would clobber THAT row and the marketplace-level
+            // one would never be created — silent breakage.
             TrackingIntegration::updateOrCreate(
                 [
                     'marketplace_client_id' => $marketplace->id,
+                    'marketplace_organizer_id' => null,
                     'provider' => $provider,
                 ],
                 [
