@@ -525,6 +525,37 @@ class OrdersController extends BaseController
             return $this->error('Order not found', 404);
         }
 
+        // Inline Stripe Checkout Session reconciliation. Without a webhook
+        // configured, an order stays pending forever after a successful
+        // Stripe payment — the customer lands on the thank-you page,
+        // thank-you.js hits this endpoint, but every read still says
+        // "pending" / "Plata este în procesare". Here we fetch the Stripe
+        // Checkout Session for any pending Stripe-processed order and
+        // flip it to paid if Stripe reports paid. Webhook stays the
+        // production-grade path; this just makes the thank-you page work
+        // out of the box when the webhook hasn't been wired up yet.
+        if (
+            $order->payment_status === 'pending'
+            && $order->payment_processor === 'stripe'
+            && !empty($order->payment_reference)
+            && str_starts_with((string) $order->payment_reference, 'cs_')
+        ) {
+            try {
+                $this->reconcileStripeSessionStatus($client, $order);
+                // Re-read to pick up any side-effect updates (status,
+                // payment_status, paid_at).
+                $order->refresh();
+            } catch (\Throwable $e) {
+                \Log::channel('marketplace')->warning('Stripe session reconcile failed in OrdersController::show', [
+                    'order_id' => $order->id,
+                    'payment_reference' => $order->payment_reference,
+                    'error' => $e->getMessage(),
+                ]);
+                // Swallow — the order is still returned, frontend can
+                // poll again.
+            }
+        }
+
         // Build event data
         $eventData = null;
         if ($order->marketplaceEvent) {
@@ -1146,5 +1177,102 @@ class OrdersController extends BaseController
             ]);
             return $this->error('Failed to generate claim URL: ' . $e->getMessage(), 500);
         }
+    }
+
+    /**
+     * Fetch the Stripe Checkout Session for a pending order and mark the
+     * order paid when Stripe reports the session paid. Mirrors the side
+     * effects performed by MarketplaceStripeWebhookController so a
+     * webhook-less deploy still ends up in the same end state (order
+     * flipped, tickets activated, seats confirmed) the moment the
+     * customer's thank-you page loads.
+     *
+     * Idempotent: if the order is already paid we no-op. Safe under
+     * concurrent requests because the row updates use atomic DB::transaction.
+     */
+    protected function reconcileStripeSessionStatus(\App\Models\MarketplaceClient $client, \App\Models\Order $order): void
+    {
+        if ($order->payment_status === 'paid') {
+            return;
+        }
+
+        $stripeMicroservice = $client->microservices()
+            ->where('slug', 'payment-stripe')
+            ->first();
+
+        if (!$stripeMicroservice) {
+            return;
+        }
+
+        $settings = $stripeMicroservice->pivot->settings ?? [];
+        if (is_string($settings)) {
+            $settings = json_decode($settings, true) ?: [];
+        }
+
+        $isTest = (bool) ($settings['test_mode'] ?? true);
+        $secretKey = $isTest ? ($settings['test_secret_key'] ?? null) : ($settings['live_secret_key'] ?? null);
+
+        if (empty($secretKey)) {
+            \Log::channel('marketplace')->warning('Stripe reconcile: secret key not configured', [
+                'order_id' => $order->id,
+                'test_mode' => $isTest,
+            ]);
+            return;
+        }
+
+        // Lazy-init the Stripe SDK against the marketplace's own key —
+        // intentionally NOT going through StripeProcessor here because
+        // we only need the session lookup, not its full createPayment
+        // surface.
+        \Stripe\Stripe::setApiKey($secretKey);
+        $session = \Stripe\Checkout\Session::retrieve($order->payment_reference);
+
+        if (!$session || ($session->payment_status ?? null) !== 'paid') {
+            return;
+        }
+
+        // Mirror MarketplaceStripeWebhookController::handlePaymentSucceeded.
+        \DB::transaction(function () use ($order, $session) {
+            $order->update([
+                'status' => 'completed',
+                'payment_status' => 'paid',
+                'paid_at' => now(),
+                // Promote the PaymentIntent id over the Checkout Session id
+                // once we have it (webhook + admin views both expect a
+                // pi_… reference on paid orders).
+                'payment_reference' => $session->payment_intent ?? $order->payment_reference,
+            ]);
+
+            \DB::table('tickets')
+                ->where('order_id', $order->id)
+                ->where('status', 'pending')
+                ->update(['status' => 'valid', 'updated_at' => now()]);
+
+            $seatedItems = $order->meta['seated_items'] ?? [];
+            if (!empty($seatedItems)) {
+                $seatHoldService = app(\App\Services\Seating\SeatHoldService::class);
+                foreach ($seatedItems as $seatedItem) {
+                    try {
+                        $seatHoldService->confirmPurchase(
+                            $seatedItem['event_seating_id'],
+                            $seatedItem['seat_uids'],
+                            'thank-you-page-confirmed',
+                            (int) ($order->total * 100),
+                        );
+                    } catch (\Throwable $e) {
+                        \Log::channel('marketplace')->warning('Stripe reconcile: seat confirm failed', [
+                            'order_id' => $order->id,
+                            'event_seating_id' => $seatedItem['event_seating_id'] ?? null,
+                            'error' => $e->getMessage(),
+                        ]);
+                    }
+                }
+            }
+        });
+
+        \Log::channel('marketplace')->info('Stripe reconcile: order marked paid from thank-you page', [
+            'order_id' => $order->id,
+            'session_id' => $session->id,
+        ]);
     }
 }

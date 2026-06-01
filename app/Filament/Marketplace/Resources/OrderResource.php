@@ -1108,37 +1108,63 @@ class OrderResource extends Resource
         // for the join.
         $details = collect($record->meta['commission_details'] ?? []);
 
+        // Helper: pull a usable string out of a translatable column that
+        // might come back as null, string, or {ro, en, ...} array. Without
+        // this the page 500'd on activity orders because the venue.name
+        // column is JSON-translatable and `e(array)` blows up in PHP 8.
+        $asString = static function ($value, string $fallback = ''): string {
+            if (is_string($value) && $value !== '') {
+                return $value;
+            }
+            if (is_array($value)) {
+                $picked = $value['ro'] ?? $value['en'] ?? null;
+                if (!is_string($picked) || $picked === '') {
+                    foreach ($value as $v) {
+                        if (is_string($v) && $v !== '') {
+                            $picked = $v;
+                            break;
+                        }
+                    }
+                }
+                return is_string($picked) ? $picked : $fallback;
+            }
+            return $fallback;
+        };
+
         $html = '<div style="display:flex;flex-direction:column;gap:12px;">';
         foreach ($activities as $activity) {
-            $title = $activity->getTranslation('title', app()->getLocale()) ?? $activity->title ?? 'Activitate';
-            if (is_array($title)) {
-                $title = $title['ro'] ?? reset($title) ?? 'Activitate';
-            }
-            $venue = $activity->venue?->name ? e($activity->venue->name) : '';
-            $city = $activity->venue?->city ? e($activity->venue->city) : '';
-            $venueLine = trim($venue . ($city ? ' · ' . $city : ''));
-            $organizerName = $activity->organizer?->name ? e($activity->organizer->name) : '';
+            $title = $asString(
+                $activity->getTranslation('title', app()->getLocale()),
+                $asString($activity->title, 'Activitate')
+            );
+            $venue = $asString($activity->venue?->name);
+            $city  = $asString($activity->venue?->city);
+            $venueLine = trim($venue . ($city !== '' ? ' · ' . $city : ''));
+            $organizerName = $asString($activity->organizer?->name);
 
             $html .= '<div style="padding:12px;border:1px solid #E5E7EB;border-radius:8px;background:#F9FAFB;">';
             $html .= '<div style="font-weight:600;color:#111827;margin-bottom:4px;">' . e($title) . '</div>';
             if ($venueLine !== '') {
-                $html .= '<div style="font-size:12px;color:#64748B;margin-bottom:4px;">' . $venueLine . '</div>';
+                $html .= '<div style="font-size:12px;color:#64748B;margin-bottom:4px;">' . e($venueLine) . '</div>';
             }
             if ($organizerName !== '') {
-                $html .= '<div style="font-size:12px;color:#64748B;margin-bottom:8px;">Organizator: ' . $organizerName . '</div>';
+                $html .= '<div style="font-size:12px;color:#64748B;margin-bottom:8px;">Organizator: ' . e($organizerName) . '</div>';
             }
 
             // Slot lines from commission_details (one per variant+date+slot
-            // booked under this activity within this order).
-            $forActivity = $details->filter(fn ($d) => ($d['activity'] ?? null) === $title
-                || ($d['activity'] ?? null) === ($activity->title ?? null));
+            // booked under this activity within this order). The match is
+            // by activity title — best effort; new orders set the title
+            // through the same translator the renderer uses so this lines up.
+            $forActivity = $details->filter(static function ($d) use ($title, $asString) {
+                return $asString($d['activity'] ?? null) === $title;
+            });
             foreach ($forActivity as $d) {
-                $variant = e($d['variant'] ?? 'Bilet');
+                $variant = e($asString($d['variant'] ?? null, 'Bilet'));
                 $participants = (int) ($d['participants'] ?? 1);
                 $unit = number_format((float) ($d['unit_price'] ?? 0), 2);
                 $line = number_format((float) ($d['line_total'] ?? 0), 2);
                 $html .= '<div style="font-size:12px;color:#374151;padding:4px 0;border-top:1px dashed #E5E7EB;">';
-                $html .= "{$variant} × {$participants} — {$unit} × {$participants} = <strong>{$line} {$record->currency}</strong>";
+                $html .= "{$variant} × {$participants} — {$unit} × {$participants} = <strong>{$line} " . e($record->currency) . "</strong>";
                 $html .= '</div>';
             }
             $html .= '</div>';

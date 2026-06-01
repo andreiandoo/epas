@@ -371,18 +371,55 @@ const ThankYouPage = {
         const serviceFee = parseFloat(order.service_fee) || 0;
         const insuranceAmount = parseFloat(order.insurance_amount) || 0;
 
+        // Split "service fee" into the two underlying charges the cart
+        // already showed separately:
+        //   - Platform commission (only when commission_mode = added_on_top)
+        //   - Stripe / Netopia processing fee
+        // We try the new explicit fields first (commission_added_on_top
+        // stored in order.meta when CheckoutController persists the order;
+        // processing_fee_cents as a column on the order). Falls back to the
+        // legacy single "Comision serviciu" line for older orders.
+        const meta = order.meta || {};
+        const commissionAddedOnTop = parseFloat(
+            meta.commission_added_on_top ?? order.commission_added_on_top ?? 0
+        ) || 0;
+        const processingFee = (typeof order.processing_fee_cents === 'number')
+            ? order.processing_fee_cents / 100
+            : (parseFloat(order.processing_fee) || 0);
+        const hasSplit = commissionAddedOnTop > 0 || processingFee > 0;
+        // Difference between the legacy single fee and the split components
+        // (rounding or unaccounted fees) — keep it visible under a generic
+        // "Alte taxe" so the breakdown still sums to the displayed total.
+        const otherFees = Math.max(0, +(serviceFee - commissionAddedOnTop - processingFee).toFixed(2));
+
         document.getElementById('paymentSummary').innerHTML = `
-            <h4 class="mb-3 font-semibold text-secondary">Sumar platÄƒ</h4>
+            <h4 class="mb-3 font-semibold text-secondary">Sumar plată</h4>
             <div class="space-y-2 text-sm">
                 <div class="flex justify-between">
                     <span class="text-muted">Subtotal</span>
                     <span>${BileteOnlineUtils.formatCurrency(subtotal)}</span>
                 </div>
-                ${serviceFee > 0 ? `
+                ${hasSplit ? `
+                    ${commissionAddedOnTop > 0 ? `
+                    <div class="flex justify-between">
+                        <span class="text-muted">Comision platformă</span>
+                        <span>${BileteOnlineUtils.formatCurrency(commissionAddedOnTop)}</span>
+                    </div>` : ''}
+                    ${processingFee > 0 ? `
+                    <div class="flex justify-between">
+                        <span class="text-muted">Taxă procesare card</span>
+                        <span>${BileteOnlineUtils.formatCurrency(processingFee)}</span>
+                    </div>` : ''}
+                    ${otherFees > 0 ? `
+                    <div class="flex justify-between">
+                        <span class="text-muted">Alte taxe</span>
+                        <span>${BileteOnlineUtils.formatCurrency(otherFees)}</span>
+                    </div>` : ''}
+                ` : (serviceFee > 0 ? `
                 <div class="flex justify-between">
                     <span class="text-muted">Comision serviciu</span>
                     <span>${BileteOnlineUtils.formatCurrency(serviceFee)}</span>
-                </div>` : ''}
+                </div>` : '')}
                 ${insuranceAmount > 0 ? `
                 <div class="flex justify-between">
                     <span class="text-muted">Taxa de retur</span>
