@@ -18,9 +18,30 @@ class AuthenticateMarketplaceOrSuperAdmin
 {
     public function handle(Request $request, Closure $next): Response
     {
-        // If already authenticated via marketplace_admin guard, continue
+        // If already authenticated via marketplace_admin guard, double-check
+        // (for super-admins) that the logged-in admin actually belongs to the
+        // marketplace the session points at. If not, force a re-login as the
+        // correct admin. This guards against cases where switch-client /
+        // login_to_marketplace flows updated the session but the previous
+        // guard session sticks (e.g. remember-me cookie, session save race).
         if (Auth::guard('marketplace_admin')->check()) {
-            return $next($request);
+            $isSuperAdminContext = Auth::guard('web')->check()
+                && Auth::guard('web')->user()->isSuperAdmin();
+
+            if ($isSuperAdminContext) {
+                $sessionClientId = session('super_admin_marketplace_client_id');
+                $loggedInClientId = Auth::guard('marketplace_admin')->user()->marketplace_client_id;
+
+                if ($sessionClientId && (int) $sessionClientId !== (int) $loggedInClientId) {
+                    // Mismatch — fall through to the super-admin auto-login below
+                    Auth::guard('marketplace_admin')->logout();
+                    session()->forget('marketplace_is_super_admin');
+                } else {
+                    return $next($request);
+                }
+            } else {
+                return $next($request);
+            }
         }
 
         // Check if user is authenticated via web guard and is super-admin
