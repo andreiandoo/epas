@@ -41,10 +41,15 @@ if (USE_STAGE_API) {
 define('API_KEY', 'mpc_goiSqTnSIylztVouFaStMLVMYcD4XDSmqMGsaanWJZpXQ8ZovBIS4nodSTmx');
 define('API_ENV', USE_STAGE_API ? 'stage' : 'production');
 
-// Shared secret for /api/cache-bust.php — verifies the POST is coming
-// from Tixello admin (which has the matching BILETEONLINE_CACHE_BUST_TOKEN
-// in its env). Rotate by updating both sides simultaneously.
-define('CACHE_BUST_TOKEN', 'cb_REPLACE_ME_GENERATE_NEW_TOKEN_FOR_BILETEONLINE');
+// Shared secret for /api/cache-bust.php (called by Tixello admin) AND for
+// /clear-cache.php (manual nuke-all endpoint). Set BILETEONLINE_CACHE_BUST_TOKEN
+// in the server env so the real token never lives in git. Falls back to a
+// placeholder that the clear-cache endpoint rejects with 503 — preventing
+// accidental "anyone can wipe cache" on a misconfigured deploy.
+define(
+    'CACHE_BUST_TOKEN',
+    getenv('BILETEONLINE_CACHE_BUST_TOKEN') ?: 'cb_REPLACE_ME_GENERATE_NEW_TOKEN_FOR_BILETEONLINE'
+);
 
 // Site Configuration
 define('SITE_NAME', 'bilete.online');
