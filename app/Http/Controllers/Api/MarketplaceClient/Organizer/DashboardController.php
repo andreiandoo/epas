@@ -246,8 +246,8 @@ class DashboardController extends BaseController
         // Filters — "completed" is a user-facing bucket covering paid/confirmed/
         // completed so app-channel orders (status="confirmed") also show up
         // under Finalizate. Other statuses use exact match.
-        if ($request->has('status')) {
-            $statusFilter = $request->status;
+        $statusFilter = $request->filled('status') ? $request->status : null;
+        if ($statusFilter !== null) {
             if ($statusFilter === 'completed') {
                 $query->whereIn('status', ['paid', 'confirmed', 'completed']);
             } else {
@@ -335,12 +335,20 @@ class DashboardController extends BaseController
             'refunded' => (int) (clone $allOrdersQuery)->whereIn('status', ['refunded', 'partially_refunded'])->count(),
         ];
 
-        // Hide expired/cancelled orders from the listing — they're noise
-        // for the organizer (abandoned checkouts that never produced
+        // Hide expired/cancelled orders from the listing by DEFAULT — they're
+        // noise for the organizer (abandoned checkouts that never produced
         // tickets). Stats above still see them via the
         // order_breakdown.cancelled/expired counts so the operator can
         // tell at a glance how many were dropped this period.
-        $query->whereNotIn('status', ['cancelled', 'expired']);
+        //
+        // BUT: when the organizer explicitly filters for "cancelled" or
+        // "expired" via the Status dropdown, the whereNotIn would contradict
+        // the where('status', $statusFilter) above and return an empty list
+        // (the bug that prompted this guard). Skip the noise filter in that
+        // case so the explicit filter actually surfaces those orders.
+        if (!in_array($statusFilter, ['cancelled', 'expired'], true)) {
+            $query->whereNotIn('status', ['cancelled', 'expired']);
+        }
 
         $perPage = min((int) $request->input('per_page', 20), 100);
         $orders = $query->paginate($perPage);

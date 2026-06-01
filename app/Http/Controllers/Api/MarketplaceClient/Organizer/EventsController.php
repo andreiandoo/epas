@@ -147,6 +147,7 @@ class EventsController extends BaseController
             'genre_ids' => 'nullable|array',
             'artist_ids' => 'nullable|array',
             'website_url' => 'nullable|url|max:500',
+            'event_website_url' => 'nullable|url|max:500',
             'facebook_url' => 'nullable|url|max:500',
             'category' => 'nullable|string|max:100',
             'tags' => 'nullable|array',
@@ -221,6 +222,7 @@ class EventsController extends BaseController
                 'address' => $validated['venue_address'] ?? null,
                 'marketplace_event_category_id' => $validated['marketplace_event_category_id'] ?? null,
                 'website_url' => $validated['website_url'] ?? null,
+                'event_website_url' => $validated['event_website_url'] ?? null,
                 'facebook_url' => $validated['facebook_url'] ?? null,
                 'is_published' => false,
             ], $dateFields));
@@ -313,6 +315,7 @@ class EventsController extends BaseController
             'genre_ids' => 'nullable|array',
             'artist_ids' => 'nullable|array',
             'website_url' => 'nullable|url|max:500',
+            'event_website_url' => 'nullable|url|max:500',
             'facebook_url' => 'nullable|url|max:500',
             'category' => 'nullable|string|max:100',
             'tags' => 'nullable|array',
@@ -427,6 +430,9 @@ class EventsController extends BaseController
             }
             if (isset($validated['website_url'])) {
                 $updateData['website_url'] = $validated['website_url'];
+            }
+            if (isset($validated['event_website_url'])) {
+                $updateData['event_website_url'] = $validated['event_website_url'];
             }
             if (isset($validated['facebook_url'])) {
                 $updateData['facebook_url'] = $validated['facebook_url'];
@@ -3955,6 +3961,18 @@ class EventsController extends BaseController
             'venue_name' => $venueName,
             'venue_address' => $event->venue?->address ?? $event->address,
             'venue_city' => $event->venue?->city ?? $event->marketplaceCity?->name ?? null,
+            // Event web presence. The schema has THREE columns:
+            //   - website_url        = venue website (auto-filled when a venue is
+            //                          selected in admin; legacy field organizer
+            //                          previously wrote into for "Website eveniment")
+            //   - event_website_url  = the event's own website (admin label
+            //                          "Website Eveniment")
+            //   - facebook_url       = the event's Facebook URL
+            // Organizer JS prefers event_website_url and falls back to
+            // website_url so legacy data still shows up.
+            'website_url' => $event->website_url,
+            'event_website_url' => $event->event_website_url,
+            'facebook_url' => $event->facebook_url,
             'marketplace_event_category_id' => $event->marketplace_event_category_id,
             'category' => $event->marketplaceEventCategory?->name ?? null,
             'genre_ids' => $genreIds,

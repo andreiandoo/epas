@@ -1505,8 +1505,12 @@ async function loadEventForEdit(eventId) {
         if (event.venue_address) form.querySelector('[name="venue_address"]').value = event.venue_address;
         if (event.venue_id) document.getElementById('selected-venue-id').value = event.venue_id;
 
-        // Links
-        if (event.website_url) form.querySelector('[name="website_url"]').value = event.website_url;
+        // Links. The "Website eveniment" field reads event_website_url first
+        // (the admin-side "Website Eveniment" column) and falls back to the
+        // legacy website_url so organizer-only data still shows up. Save
+        // writes the value back to event_website_url — see submit handler.
+        const eventWebsite = event.event_website_url || event.website_url;
+        if (eventWebsite) form.querySelector('[name="website_url"]').value = eventWebsite;
         if (event.facebook_url) form.querySelector('[name="facebook_url"]').value = event.facebook_url;
 
         // Step 4: Content — if the editors are already up, set directly;
@@ -2477,8 +2481,11 @@ function collectFormData() {
     const venueAddress = form.querySelector('[name="venue_address"]').value;
     if (venueAddress) data.venue_address = venueAddress;
 
+    // "Website eveniment" — write to event_website_url so admin's
+    // "Website Eveniment" column round-trips. (Field name in the HTML stays
+    // website_url for backwards compat with prefill.)
     const websiteUrl = form.querySelector('[name="website_url"]').value;
-    if (websiteUrl) data.website_url = websiteUrl;
+    if (websiteUrl) data.event_website_url = websiteUrl;
 
     const facebookUrl = form.querySelector('[name="facebook_url"]').value;
     if (facebookUrl) data.facebook_url = facebookUrl;
