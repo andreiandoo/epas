@@ -175,6 +175,15 @@ const CartPage = {
             promoSection.classList.add('hidden');
             timerBar.classList.add('hidden');
             emptyState.classList.remove('hidden');
+            // Reset the "N bilete" counter in the page header (and the
+            // hidden summary block) — they're cosmetic so leaving them
+            // stale doesn't break anything, but it shows e.g.
+            // "1 bilete" next to "Coșul tău este gol" after the user
+            // clears the cart. Zeroing them keeps the UI honest.
+            const totalItemsEl = document.getElementById('totalItems');
+            if (totalItemsEl) totalItemsEl.textContent = '0';
+            const summaryItemsEl = document.getElementById('summaryItems');
+            if (summaryItemsEl) summaryItemsEl.textContent = '0';
             return;
         }
 

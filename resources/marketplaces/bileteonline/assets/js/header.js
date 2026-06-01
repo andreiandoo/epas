@@ -508,18 +508,54 @@
 
     function renderCartItems(items) {
         cartItems.innerHTML = items.map(function(item, index) {
-            var image = item.event ? (item.event.image || '') : (item.image || '');
-            var ticketName = item.ticketType ? (item.ticketType.name || 'Bilet') : (item.name || 'Bilet');
-            var eventName = item.event ? (item.event.title || item.event.name || '') : (item.eventName || '');
-            var venueName = item.event ? (item.event.venue ? (item.event.venue.name || item.event.venue) : '') : '';
-            var cityName = item.event ? (item.event.city ? (item.event.city.name || item.event.city) : '') : '';
+            // Activity items live alongside event items in the same cart
+            // but use a different shape — `activity` + `variant` instead of
+            // `event` + `ticketType`. Reading the wrong shape silently
+            // produced empty rows in the drawer (the bug the user spotted:
+            // bilete.online's drawer showed nothing for activity carts).
+            var isActivity = item.type === 'activity';
+
+            var image = isActivity
+                ? (item.activity ? (item.activity.image || '') : '')
+                : (item.event ? (item.event.image || '') : (item.image || ''));
+
+            var ticketName = isActivity
+                ? (item.variant ? (item.variant.name || 'Bilet') : 'Bilet')
+                : (item.ticketType ? (item.ticketType.name || 'Bilet') : (item.name || 'Bilet'));
+
+            var eventName = isActivity
+                ? (item.activity ? (item.activity.title || '') : '')
+                : (item.event ? (item.event.title || item.event.name || '') : (item.eventName || ''));
+
+            var venueName = isActivity
+                ? (item.activity ? (item.activity.venue || '') : '')
+                : (item.event ? (item.event.venue ? (item.event.venue.name || item.event.venue) : '') : '');
+
+            var cityName = isActivity
+                ? (item.activity ? (item.activity.city || '') : '')
+                : (item.event ? (item.event.city ? (item.event.city.name || item.event.city) : '') : '');
+
             var locationText = [venueName, cityName].filter(Boolean).join(', ');
-            var basePrice = item.ticketType ? (item.ticketType.price || 0) : (item.price || 0);
-            var quantity = item.quantity || 1;
+
+            var basePrice = isActivity
+                ? (item.variant ? (item.variant.price || 0) : (item.price || 0))
+                : (item.ticketType ? (item.ticketType.price || 0) : (item.price || 0));
+
+            var quantity = isActivity
+                ? (item.participants_count || item.quantity || 1)
+                : (item.quantity || 1);
             var itemKey = item.key || index;
             var itemSeats = item.seats || [];
             var hasSeats = itemSeats.length > 0 || (item.seat_uids && item.seat_uids.length > 0);
-            var eventSlug = item.event ? (item.event.slug || '') : '';
+            var eventSlug = isActivity
+                ? (item.activity ? (item.activity.slug || '') : '')
+                : (item.event ? (item.event.slug || '') : '');
+            // Activities and events live under different URL prefixes;
+            // the "Modifică" link in the seated-item layout needs to go
+            // back to the right detail page.
+            var detailHref = isActivity
+                ? (eventSlug ? '/activitate/' + escapeHtml(eventSlug) : '')
+                : (eventSlug ? '/bilete/' + escapeHtml(eventSlug) : '');
             var commission = calculateItemCommission(item);
             var displayPrice = basePrice;
             if (commission.mode === 'added_on_top') displayPrice = basePrice + commission.amount;
@@ -527,7 +563,7 @@
             var qtyHtml;
             if (hasSeats) {
                 qtyHtml = '<span class="text-sm font-semibold">' + quantity + ' loc' + (quantity > 1 ? 'uri' : '') + '</span>' +
-                    (eventSlug ? ' <a href="/bilete/' + escapeHtml(eventSlug) + '" class="text-xs font-semibold underline text-primary">ModificÄƒ</a>' : '');
+                    (detailHref ? ' <a href="' + detailHref + '" class="text-xs font-semibold underline text-primary">Modifică</a>' : '');
             } else {
                 qtyHtml = '<button type="button" class="flex items-center justify-center w-6 h-6 transition-colors bg-gray-100 rounded hover:bg-gray-200 cart-qty-btn" data-action="decrease" data-index="' + index + '"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/></svg></button>' +
                     '<span class="w-6 text-sm font-semibold text-center">' + quantity + '</span>' +

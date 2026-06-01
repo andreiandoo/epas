@@ -406,6 +406,13 @@ const ThankYouPage = {
             if (cardEl) cardEl.textContent = order.payment_method;
         }
 
+        // Processor badge — was hardcoded to NETOPIA in the template; now
+        // reflects the actual processor that handled this order.
+        const badgeText = document.getElementById('paymentProcessorBadgeText');
+        if (badgeText && order.payment_processor) {
+            badgeText.textContent = String(order.payment_processor).toUpperCase();
+        }
+
         // Hide points section
         const pointsEl = document.getElementById('pointsEarned');
         if (pointsEl) pointsEl.style.display = 'none';

@@ -118,14 +118,29 @@ class OrderResource extends Resource
                                 ->content(fn ($record) => self::renderTicketTransferHistory($record)),
                         ]),
 
-                    // Event Section
-                    SC\Section::make('Eveniment')
+                    // Event / Activity Section. Activity orders (created by
+                    // bilete.online's CheckoutController::processActivityCheckout)
+                    // have meta.order_type === 'activity' and no event_id /
+                    // marketplace_event_id — for those, the section's label
+                    // shifts to "Activitate" and the card body renders an
+                    // activity summary. For everything else the existing
+                    // event card is used.
+                    SC\Section::make(fn ($record) => ($record?->meta['order_type'] ?? null) === 'activity'
+                        ? 'Activitate'
+                        : 'Eveniment')
                         ->icon('heroicon-o-calendar')
                         ->collapsible()
+                        ->visible(fn ($record) => $record !== null && (
+                            // Hide entirely for activity orders that don't yet
+                            // have a renderer — better empty-by-design than a
+                            // ghost section with stale "Eveniment" labels.
+                            ($record->meta['order_type'] ?? null) !== 'activity'
+                            || !empty($record->meta['activity_ids'])
+                        ))
                         ->schema([
                             Forms\Components\Placeholder::make('event_card')
                                 ->hiddenLabel()
-                                ->content(fn ($record) => self::renderEventCard($record)),
+                                ->content(fn ($record) => self::renderEventOrActivityCard($record)),
                         ]),
 
                     // Tickets Section
@@ -1053,6 +1068,82 @@ class OrderResource extends Resource
                 </div>
             ";
         }
+
+        return new HtmlString($html);
+    }
+
+    /**
+     * Pick the right card renderer based on order type. Activity orders
+     * (bilete.online, leisure marketplaces) have no event_id / tickets link
+     * to events — they reference Activities via meta.activity_ids. Other
+     * orders keep the existing event-card path.
+     */
+    protected static function renderEventOrActivityCard(Order $record): HtmlString
+    {
+        if (($record->meta['order_type'] ?? null) === 'activity') {
+            return self::renderActivityCard($record);
+        }
+
+        return self::renderEventCard($record);
+    }
+
+    protected static function renderActivityCard(Order $record): HtmlString
+    {
+        $activityIds = $record->meta['activity_ids'] ?? [];
+        if (empty($activityIds)) {
+            return new HtmlString('<p style="color: #64748B;">Nu există activități asociate.</p>');
+        }
+
+        $activities = \App\Models\Activity::with(['venue:id,name,city,address', 'organizer:id,name,slug'])
+            ->whereIn('id', $activityIds)
+            ->get();
+
+        if ($activities->isEmpty()) {
+            return new HtmlString('<p style="color: #64748B;">Activitățile asociate nu mai există.</p>');
+        }
+
+        // commission_details in meta carries the per-line slot + variant
+        // info that's not redundant with the Activity rows above (booking
+        // date, slot times, participants count). Index it by activity id
+        // for the join.
+        $details = collect($record->meta['commission_details'] ?? []);
+
+        $html = '<div style="display:flex;flex-direction:column;gap:12px;">';
+        foreach ($activities as $activity) {
+            $title = $activity->getTranslation('title', app()->getLocale()) ?? $activity->title ?? 'Activitate';
+            if (is_array($title)) {
+                $title = $title['ro'] ?? reset($title) ?? 'Activitate';
+            }
+            $venue = $activity->venue?->name ? e($activity->venue->name) : '';
+            $city = $activity->venue?->city ? e($activity->venue->city) : '';
+            $venueLine = trim($venue . ($city ? ' · ' . $city : ''));
+            $organizerName = $activity->organizer?->name ? e($activity->organizer->name) : '';
+
+            $html .= '<div style="padding:12px;border:1px solid #E5E7EB;border-radius:8px;background:#F9FAFB;">';
+            $html .= '<div style="font-weight:600;color:#111827;margin-bottom:4px;">' . e($title) . '</div>';
+            if ($venueLine !== '') {
+                $html .= '<div style="font-size:12px;color:#64748B;margin-bottom:4px;">' . $venueLine . '</div>';
+            }
+            if ($organizerName !== '') {
+                $html .= '<div style="font-size:12px;color:#64748B;margin-bottom:8px;">Organizator: ' . $organizerName . '</div>';
+            }
+
+            // Slot lines from commission_details (one per variant+date+slot
+            // booked under this activity within this order).
+            $forActivity = $details->filter(fn ($d) => ($d['activity'] ?? null) === $title
+                || ($d['activity'] ?? null) === ($activity->title ?? null));
+            foreach ($forActivity as $d) {
+                $variant = e($d['variant'] ?? 'Bilet');
+                $participants = (int) ($d['participants'] ?? 1);
+                $unit = number_format((float) ($d['unit_price'] ?? 0), 2);
+                $line = number_format((float) ($d['line_total'] ?? 0), 2);
+                $html .= '<div style="font-size:12px;color:#374151;padding:4px 0;border-top:1px dashed #E5E7EB;">';
+                $html .= "{$variant} × {$participants} — {$unit} × {$participants} = <strong>{$line} {$record->currency}</strong>";
+                $html .= '</div>';
+            }
+            $html .= '</div>';
+        }
+        $html .= '</div>';
 
         return new HtmlString($html);
     }

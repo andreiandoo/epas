@@ -163,8 +163,13 @@ include __DIR__ . '/includes/header.php';
                         <div>
                             <p class="mb-3 font-mono text-xs tracking-[.18em] text-ink-soft">METODĂ DE PLATĂ</p>
                             <div class="flex items-center gap-3 p-3 bg-paper-2/60 border border-ink/10 rounded-xl">
-                                <div class="flex items-center justify-center w-12 h-8 rounded bg-gradient-to-r from-sky to-forest">
-                                    <span class="text-paper text-[9px] font-bold tracking-wider">NETOPIA</span>
+                                <!-- Processor badge populated by thank-you.js from
+                                     order.payment_processor — falls back to STRIPE
+                                     since that's the marketplace default now.
+                                     Was hardcoded NETOPIA which contradicted the
+                                     "Card bancar (Stripe)" label below. -->
+                                <div id="paymentProcessorBadge" class="flex items-center justify-center w-12 h-8 rounded bg-gradient-to-r from-sky to-forest">
+                                    <span id="paymentProcessorBadgeText" class="text-paper text-[9px] font-bold tracking-wider">STRIPE</span>
                                 </div>
                                 <div>
                                     <p class="text-sm font-bold">Card bancar</p>
