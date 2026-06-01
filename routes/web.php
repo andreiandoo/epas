@@ -107,6 +107,61 @@ Route::middleware(['web'])->get('/marketplace/switch-client/{clientId}', functio
     return redirect('/marketplace');
 })->name('marketplace.switch-client');
 
+// DEBUG: dump auth + session state for super-admin marketplace switching
+// Remove after the switch bug is resolved.
+Route::middleware(['web'])->get('/marketplace/_debug-auth', function () {
+    $webUser = auth('web')->user();
+    $mpAdmin = auth('marketplace_admin')->user();
+    $sessionClientId = session('super_admin_marketplace_client_id');
+
+    if (!$webUser || !method_exists($webUser, 'isSuperAdmin') || !$webUser->isSuperAdmin()) {
+        return response()->json(['error' => 'super-admin only'], 403);
+    }
+
+    $adminsForClient1 = \App\Models\MarketplaceAdmin::where('marketplace_client_id', 1)
+        ->get(['id', 'marketplace_client_id', 'email', 'role', 'status', 'deleted_at'])
+        ->toArray();
+    $adminsForClient2 = \App\Models\MarketplaceAdmin::where('marketplace_client_id', 2)
+        ->get(['id', 'marketplace_client_id', 'email', 'role', 'status', 'deleted_at'])
+        ->toArray();
+
+    $resolvedAdmin = $sessionClientId
+        ? \App\Models\MarketplaceAdmin::where('marketplace_client_id', $sessionClientId)
+            ->where(function ($q) use ($webUser) {
+                $q->where('email', $webUser->email)->orWhere('role', 'super_admin');
+            })
+            ->first(['id', 'marketplace_client_id', 'email', 'role'])
+            ?->toArray()
+        : null;
+
+    return response()->json([
+        'session_id' => session()->getId(),
+        'session' => [
+            'super_admin_marketplace_client_id' => $sessionClientId,
+            'marketplace_is_super_admin' => session('marketplace_is_super_admin'),
+            'marketplace_super_admin_user_id' => session('marketplace_super_admin_user_id'),
+        ],
+        'web_user' => [
+            'id' => $webUser->id,
+            'email' => $webUser->email,
+            'is_super_admin' => $webUser->isSuperAdmin(),
+        ],
+        'marketplace_admin' => $mpAdmin ? [
+            'id' => $mpAdmin->id,
+            'marketplace_client_id' => $mpAdmin->marketplace_client_id,
+            'email' => $mpAdmin->email,
+            'role' => $mpAdmin->role,
+            'belongs_to_marketplace' => $mpAdmin->marketplaceClient?->only(['id', 'name', 'slug']),
+        ] : null,
+        'mismatch' => $sessionClientId && $mpAdmin
+            ? ((int) $sessionClientId !== (int) $mpAdmin->marketplace_client_id)
+            : null,
+        'middleware_would_resolve_to' => $resolvedAdmin,
+        'admins_for_client_1' => $adminsForClient1,
+        'admins_for_client_2' => $adminsForClient2,
+    ], 200, [], JSON_PRETTY_PRINT);
+})->name('marketplace.debug-auth');
+
 // DEBUG: Test session and cookies
 Route::middleware(['web'])->get('/test-session', function() {
     session(['test_key' => 'test_value_' . time()]);
