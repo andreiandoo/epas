@@ -799,7 +799,11 @@ function clientSettingsPage() {
         // --- Preferences ---
         interests: { preferred_cities: [], event_categories: [] },
         lifestyle: { radius: '', budget: '', frequency: '', moment: '' },
-        availableCities: [],
+        // Seeded synchronously so the "Oraș principal" <select> has options on
+        // first paint — otherwise the saved city (set async from the profile)
+        // has no matching <option> yet and the select renders blank on refresh.
+        // loadCities() replaces this with the live list when the API responds.
+        availableCities: ['București','Cluj-Napoca','Brașov','Timișoara','Iași','Constanța','Sibiu','Oradea','Craiova','Galați','Ploiești','Bacău','Pitești','Arad','Târgu Mureș','Baia Mare','Suceava','Râmnicu Vâlcea','Buzău','Botoșani','Satu Mare','Brăila','Drobeta-Turnu Severin','Deva','Alba Iulia','Hunedoara','Focșani','Bistrița','Reșița','Slatina','Călărași','Giurgiu','Târgoviște','Tulcea','Slobozia','Vaslui','Zalău','Sfântu Gheorghe','Piatra Neamț','Târgu Jiu','Miercurea Ciuc'].map(n => ({ name: n, slug: n.toLowerCase().replace(/[ăâ]/g,'a').replace(/[î]/g,'i').replace(/[șş]/g,'s').replace(/[țţ]/g,'t').replace(/\s+/g,'-') })),
         availableCategories: [],
         loadingCities: true,
         loadingCategories: true,
@@ -1009,6 +1013,17 @@ function clientSettingsPage() {
             this.profile.gender     = this.profile.gender     || u.gender     || '';
             this.profile.city       = this.profile.city       || u.city       || '';
             if (typeof u.email_verified === 'boolean') this.emailVerified = u.email_verified;
+            this.ensureSelectedCity();
+        },
+
+        // Make sure the saved primary city is always present as an <option> —
+        // even if it isn't in the live/fallback list — so the
+        // <select x-model="profile.city"> reliably shows it after a refresh.
+        ensureSelectedCity() {
+            const c = (this.profile.city || '').trim();
+            if (c && ! this.availableCities.some(x => x.name === c)) {
+                this.availableCities = [{ name: c, slug: c.toLowerCase().replace(/\s+/g, '-') }, ...this.availableCities];
+            }
         },
 
         // --- Load customer data ---
@@ -1087,12 +1102,13 @@ function clientSettingsPage() {
                         name: c.name || c.label || c.city || String(c),
                         slug: c.slug || (c.name || '').toLowerCase(),
                     })).filter(c => c.name);
-                } else {
-                    this.availableCities = fallback.map(n => ({ name: n, slug: n.toLowerCase() }));
                 }
+                // else: keep the synchronously-seeded fallback already in
+                // availableCities (don't blank the select).
             } catch (e) {
-                this.availableCities = fallback.map(n => ({ name: n, slug: n.toLowerCase() }));
+                // keep seeded fallback
             }
+            this.ensureSelectedCity();
             this.loadingCities = false;
         },
 
