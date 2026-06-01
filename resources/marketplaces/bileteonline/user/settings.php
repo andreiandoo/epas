@@ -379,13 +379,15 @@ include __DIR__ . '/../includes/header.php';
                             <p class="mt-4 mb-2 text-sm font-bold">Orașe secundare unde mergi des:</p>
                             <div x-show="loadingCities" class="h-10 rounded-2xl bg-paper/60 animate-pulse"></div>
                             <div x-show="!loadingCities" class="flex flex-wrap gap-2">
-                                <template x-for="city in availableCities" :key="city.slug || city.name">
+                                <!-- Exclude the chosen primary city from the secondary options. -->
+                                <template x-for="city in availableCities.filter(c => c.name !== profile.city)" :key="city.slug || city.name">
                                     <button type="button" @click="toggleCity(city.name)"
                                             :class="interests.preferred_cities.includes(city.name) ? 'bg-mint text-forest border-forest' : 'bg-paper border-ink/10 hover:border-ink'"
                                             class="rounded-full px-3 py-1.5 text-sm font-bold border-2 transition">
                                         <span x-text="city.name"></span>
                                     </button>
                                 </template>
+                                <p x-show="availableCities.filter(c => c.name !== profile.city).length === 0" class="text-sm text-ink-soft italic">Nu sunt alte orașe disponibile.</p>
                             </div>
                         </div>
 
@@ -1107,20 +1109,46 @@ function clientSettingsPage() {
                 'tururi-experiente':           '🚶',
                 'gastronomie':                 '🍽️',
             };
+            // Fallback parent categories (bilete.online) so the picker is never
+            // empty if the API call fails — mirrors loadCities(). Slugs match the
+            // real marketplace_event_categories parents.
+            const fallback = [
+                { slug: 'escape-rooms',                  name: 'Escape rooms' },
+                { slug: 'muzee-expozitii',               name: 'Muzee & expoziții' },
+                { slug: 'parcuri-de-distractii',         name: 'Parcuri de distracții' },
+                { slug: 'parcuri-de-aventura',           name: 'Parcuri de aventură' },
+                { slug: 'natura-outdoor',                name: 'Natură & outdoor' },
+                { slug: 'acvarii-zoo-animale',           name: 'Acvarii, zoo & animale' },
+                { slug: 'ateliere-experiente-creative',  name: 'Ateliere & experiențe creative' },
+                { slug: 'tururi-experiente-turistice',   name: 'Tururi & experiențe turistice' },
+                { slug: 'educatie-invatare-experientiala', name: 'Educație & învățare' },
+                { slug: 'familie-copii',                 name: 'Familie & copii' },
+                { slug: 'corporate-grupuri',             name: 'Corporate & grupuri' },
+                { slug: 'cultura-arta',                  name: 'Cultură & artă' },
+            ];
+            const flattenName = (n, slug) => (n && typeof n === 'object')
+                ? (n.ro || n.en || Object.values(n)[0] || slug || '')
+                : (n || slug || '');
+            const applyFallback = () => {
+                this.availableCategories = fallback.map(c => ({ slug: c.slug, name: c.name, emoji: emojiMap[c.slug] || '✨' }));
+            };
             try {
-                // /events/categories isn't routed in api.js — the canonical
-                // entrypoint that the footer + category landing pages use is
-                // /marketplace-events/categories (proxy action: 'categories').
+                // Canonical entrypoint used by footer + category landing pages
+                // (proxy action: 'categories'). all=1 returns categories without
+                // events too — essential on activity-only marketplaces.
                 const r = await BileteOnlineAPI.get('/marketplace-events/categories', { all: 1, parents_only: 1 });
                 const rows = (r && (r.data?.categories || r.data || [])) || [];
                 if (Array.isArray(rows) && rows.length > 0) {
                     this.availableCategories = rows.map(c => ({
                         slug: c.slug || '',
-                        name: c.name || c.slug || '',
+                        name: flattenName(c.name, c.slug),
                         emoji: emojiMap[c.slug] || '✨',
                     })).filter(c => c.slug && c.name);
                 }
-            } catch (e) {}
+                if (this.availableCategories.length === 0) applyFallback();
+            } catch (e) {
+                applyFallback();
+            }
             this.loadingCategories = false;
         },
 
