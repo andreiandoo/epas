@@ -1362,16 +1362,32 @@ class CheckoutController extends BaseController
             // Process each cart item: lock the slot's current bookings,
             // re-check remaining capacity inside the transaction, accumulate
             // subtotal/commission, and stage the booking shape for insertion.
-            $subtotal        = 0;
-            $totalCommission = 0;
-            $stagedBookings  = [];
-            $primaryActivity = null;
-            $primaryOrganizerId = null;
-            $organizerIds    = [];
+            $subtotal             = 0;
+            $totalCommission      = 0;
+            // Subset of $totalCommission that came from "added_on_top"
+            // lines. This is what gets added to the customer-facing total
+            // (the rest is already baked into ticket prices for "included"
+            // lines, so no double-charging).
+            $commissionAddedOnTop = 0;
+            $stagedBookings       = [];
+            $primaryActivity      = null;
+            $primaryOrganizerId   = null;
+            $organizerIds         = [];
 
             foreach ($cartItems as $item) {
-                $activity = Activity::with(['variants', 'schedules', 'scheduleExceptions'])
-                    ->find($item['activity_id']);
+                // organizer.marketplaceClient is eager-loaded because
+                // getEffectiveCommissionMode falls back to the marketplace
+                // client's mode when the organizer's own mode is null.
+                // Without this eager-load, that fallback triggers an N+1
+                // and (worse) breaks under DB::transaction lazy-loading
+                // restrictions on some setups.
+                $activity = Activity::with([
+                    'variants',
+                    'schedules',
+                    'scheduleExceptions',
+                    'organizer:id,marketplace_client_id,commission_rate,default_commission_mode',
+                    'organizer.marketplaceClient:id,commission_rate,commission_mode',
+                ])->find($item['activity_id']);
                 if (!$activity) {
                     throw new \Exception("Activity not found: {$item['activity_id']}");
                 }
@@ -1421,14 +1437,37 @@ class CheckoutController extends BaseController
                 $lineTotal  = round($unitPrice * $participants, 2);
                 $subtotal  += $lineTotal;
 
-                // Commission — per-variant override falls back to activity's
-                // organizer default. Mirrors the event side's variant-level
-                // commission logic (kept simple for v1: use the variant
-                // rate if set, else fall back to flat 0% — payout reports
-                // recompute on read for activities anyway).
-                $commissionRate = (float) ($variant->commission_rate ?? 0);
+                // Commission resolution cascade:
+                //   variant override → organizer effective → 0%.
+                // Mode is always organizer-level (variants don't get to flip
+                // included vs added_on_top). v1 was reading variant->commission_rate
+                // with a 0 fallback only, which silently dropped the 2%
+                // platform commission for every bilete.online order:
+                // organizer had 2% added_on_top, variant had no override,
+                // → commissionRate=0 → nothing collected, nothing added
+                // to the customer's total. Customer pays subtotal+processing
+                // and Tixello eats the 2% loss.
+                $organizer = $activity->organizer ?? null;
+                $organizerRate = $organizer
+                    ? (float) $organizer->getEffectiveCommissionRate()
+                    : 0.0;
+                $commissionRate = $variant->commission_rate !== null
+                    ? (float) $variant->commission_rate
+                    : $organizerRate;
+                $commissionMode = $organizer
+                    ? $organizer->getEffectiveCommissionMode()
+                    : 'included';
                 $lineCommission = round($lineTotal * $commissionRate / 100, 2);
                 $totalCommission += $lineCommission;
+                // added_on_top → customer pays this on top of the ticket
+                // price. included → it's baked into the ticket price and
+                // doesn't change the customer-facing total. We track the
+                // "added on top" sum SEPARATELY (not by mutating $subtotal)
+                // so the order.subtotal column stays the pure ticket-value
+                // base — reports + payout math read it as such.
+                if ($commissionMode === 'added_on_top') {
+                    $commissionAddedOnTop += $lineCommission;
+                }
 
                 $organizerIds[$activity->marketplace_organizer_id ?? 0] = true;
                 if (!$primaryActivity) {
@@ -1454,6 +1493,8 @@ class CheckoutController extends BaseController
                     'unit_price'         => $unitPrice,
                     'line_total'         => $lineTotal,
                     'commission'         => $lineCommission,
+                    'commission_rate'    => $commissionRate,
+                    'commission_mode'    => $commissionMode,
                     'variant_name'       => $variantNameRo,
                     'activity_title'     => $activityTitleRo,
                 ];
@@ -1461,7 +1502,13 @@ class CheckoutController extends BaseController
 
             // Processing fee snapshot. Kill switch = NULL payment_fees on
             // marketplace_clients leaves fee_cents=0 (no impact on RON total).
-            $orderTotal     = $subtotal;
+            //
+            // Customer-facing total starts with ticket subtotal + any
+            // "added_on_top" commission. Processing fee (computed below) is
+            // calculated AGAINST this combined value so the % component
+            // covers the commission too — matches the cart/checkout summary
+            // labels customers saw on /finalizare.
+            $orderTotal     = $subtotal + $commissionAddedOnTop;
             $processingFee  = [
                 'fee_cents'        => 0,
                 'pass_to_customer' => false,
@@ -1524,13 +1571,21 @@ class CheckoutController extends BaseController
                     'activity_ids'       => array_unique(array_map(fn ($b) => $b['activity']->id, $stagedBookings)),
                     'multi_organizer'    => $isMultiOrganizer,
                     'commission_details' => array_map(fn ($b) => [
-                        'activity'         => $b['activity_title'],
-                        'variant'          => $b['variant_name'],
-                        'participants'     => $b['participants_count'],
-                        'unit_price'       => $b['unit_price'],
-                        'line_total'       => $b['line_total'],
-                        'commission'       => $b['commission'],
+                        'activity'          => $b['activity_title'],
+                        'variant'           => $b['variant_name'],
+                        'participants'      => $b['participants_count'],
+                        'unit_price'        => $b['unit_price'],
+                        'line_total'        => $b['line_total'],
+                        'commission'        => $b['commission'],
+                        'commission_rate'   => $b['commission_rate'],
+                        'commission_mode'   => $b['commission_mode'],
                     ], $stagedBookings),
+                    // Aggregate split so reports + the admin order view can
+                    // distinguish "Commission already in ticket price"
+                    // (included) from "Commission added on top of the
+                    // ticket price" (added_on_top). Total = subtotal +
+                    // commission_added_on_top + processing_fee.
+                    'commission_added_on_top' => $commissionAddedOnTop,
                 ],
             ]);
 
