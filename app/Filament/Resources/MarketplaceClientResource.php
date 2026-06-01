@@ -496,9 +496,35 @@ class MarketplaceClientResource extends Resource
                     ->color('success')
                     ->visible(fn ($record) => $record->status === 'active' && auth()->user()?->isSuperAdmin())
                     ->action(function ($record) {
-                        session(['super_admin_marketplace_client_id' => $record->id]);
+                        // Same approach as the /marketplace/switch-client route:
+                        // resolve+login the right admin here so the redirect
+                        // to /marketplace already has the correct guard state.
+                        $user = auth('web')->user();
+                        $admin = \App\Models\MarketplaceAdmin::where('marketplace_client_id', $record->id)
+                            ->where(function ($q) use ($user) {
+                                $q->where('email', $user->email)->orWhere('role', 'super_admin');
+                            })
+                            ->first();
+                        if (!$admin) {
+                            $admin = \App\Models\MarketplaceAdmin::create([
+                                'marketplace_client_id' => $record->id,
+                                'email' => $user->email,
+                                'password' => bcrypt(uniqid('system_', true)),
+                                'name' => $user->name . ' (System)',
+                                'role' => 'super_admin',
+                                'status' => 'active',
+                                'email_verified_at' => now(),
+                            ]);
+                        }
+
                         auth('marketplace_admin')->logout();
-                        session()->forget('marketplace_is_super_admin');
+                        auth('marketplace_admin')->login($admin);
+                        session([
+                            'super_admin_marketplace_client_id' => (int) $record->id,
+                            'marketplace_is_super_admin' => true,
+                            'marketplace_super_admin_user_id' => $user->id,
+                        ]);
+                        session()->save();
                     })
                     ->successRedirectUrl('/marketplace'),
                 ViewAction::make(),

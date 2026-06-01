@@ -87,22 +87,72 @@ Route::middleware(['web', 'auth:marketplace_admin'])->group(function () {
 });
 
 // Marketplace Client Switcher (for super-admins)
+//
+// Previously this just wrote super_admin_marketplace_client_id to session +
+// logout() and relied on the panel middleware to re-login on the next request.
+// In practice the session write was being lost (debug endpoint showed the old
+// client_id sticking around), so this route now does EVERYTHING up front:
+// resolve the target admin, log them in, set the flags. The next request to
+// /marketplace then just confirms the already-correct state.
 Route::middleware(['web'])->get('/marketplace/switch-client/{clientId}', function ($clientId) {
     // Only allow if user is super-admin from core
     if (!auth('web')->check() || !auth('web')->user()->isSuperAdmin()) {
         abort(403, 'Unauthorized');
     }
 
-    // Validate client exists
     $client = \App\Models\MarketplaceClient::where('status', 'active')->find($clientId);
     if (!$client) {
         abort(404, 'Marketplace client not found');
     }
 
-    // Update session and logout from current marketplace admin
+    $user = auth('web')->user();
+
+    // Find or create the marketplace admin for the target client.
+    $admin = \App\Models\MarketplaceAdmin::where('marketplace_client_id', $clientId)
+        ->where(function ($q) use ($user) {
+            $q->where('email', $user->email)->orWhere('role', 'super_admin');
+        })
+        ->first();
+
+    if (!$admin) {
+        $admin = \App\Models\MarketplaceAdmin::create([
+            'marketplace_client_id' => $clientId,
+            'email' => $user->email,
+            'password' => bcrypt(uniqid('system_', true)),
+            'name' => $user->name . ' (System)',
+            'role' => 'super_admin',
+            'status' => 'active',
+            'email_verified_at' => now(),
+        ]);
+    }
+
+    \Log::info('marketplace.switch-client: pre-switch state', [
+        'target_client_id' => $clientId,
+        'admin_to_login_id' => $admin->id,
+        'admin_to_login_client_id' => $admin->marketplace_client_id,
+        'session_id_before' => session()->getId(),
+        'session_client_id_before' => session('super_admin_marketplace_client_id'),
+        'logged_in_admin_before' => auth('marketplace_admin')->id(),
+    ]);
+
+    // Force-switch: logout the old marketplace_admin, login the new one,
+    // overwrite the session client_id. session()->save() persists immediately
+    // so the redirect doesn't race with the response cycle.
     auth('marketplace_admin')->logout();
-    session(['super_admin_marketplace_client_id' => $clientId]);
-    session()->forget('marketplace_is_super_admin'); // Force re-login
+    auth('marketplace_admin')->login($admin);
+    session([
+        'super_admin_marketplace_client_id' => (int) $clientId,
+        'marketplace_is_super_admin' => true,
+        'marketplace_super_admin_user_id' => $user->id,
+    ]);
+    session()->save();
+
+    \Log::info('marketplace.switch-client: post-switch state', [
+        'session_id_after' => session()->getId(),
+        'session_client_id_after' => session('super_admin_marketplace_client_id'),
+        'logged_in_admin_after' => auth('marketplace_admin')->id(),
+        'logged_in_admin_client_id_after' => auth('marketplace_admin')->user()?->marketplace_client_id,
+    ]);
 
     return redirect('/marketplace');
 })->name('marketplace.switch-client');
