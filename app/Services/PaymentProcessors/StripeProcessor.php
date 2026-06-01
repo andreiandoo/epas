@@ -12,18 +12,62 @@ use Stripe\Exception\SignatureVerificationException;
 
 class StripeProcessor implements PaymentProcessorInterface
 {
-    protected TenantPaymentConfig $config;
+    /** Tenant context — null when this processor is built from a marketplace pivot. */
+    protected ?TenantPaymentConfig $config = null;
     protected array $keys;
 
-    public function __construct(TenantPaymentConfig $config)
+    /**
+     * Two call shapes:
+     *   - Tenant flow:     new StripeProcessor($tenantPaymentConfig)
+     *   - Marketplace flow: new StripeProcessor(null, $pivotSettingsArray)
+     *
+     * The factory's `makeFromArray('stripe', $config)` uses the second form
+     * (the marketplace pivot stores settings as an array keyed by
+     * test_publishable_key / test_secret_key / test_webhook_secret / test_mode
+     * plus their `live_*` equivalents, NOT the flat secret_key/publishable_key
+     * pair that TenantPaymentConfig::getActiveKeys returns). Previously the
+     * constructor signature was `(TenantPaymentConfig $config)` so the
+     * marketplace call path threw a TypeError → 500 the moment a customer
+     * clicked Plătește on bilete.online.
+     */
+    public function __construct(?TenantPaymentConfig $config = null, ?array $arrayConfig = null)
     {
-        $this->config = $config;
-        $this->keys = $config->getActiveKeys();
+        if ($config) {
+            $this->config = $config;
+            $this->keys = $config->getActiveKeys();
+        } elseif ($arrayConfig !== null) {
+            $this->keys = $this->normalizeMarketplaceSettings($arrayConfig);
+        } else {
+            throw new \InvalidArgumentException(
+                'StripeProcessor requires either a TenantPaymentConfig or a marketplace pivot settings array.'
+            );
+        }
 
         // Initialize Stripe with secret key
         if ($this->isConfigured()) {
             Stripe::setApiKey($this->keys['secret_key']);
         }
+    }
+
+    /**
+     * Flatten the marketplace_client_microservices.settings JSON shape into
+     * the {secret_key, publishable_key, webhook_secret} triple the rest of
+     * this class consumes.
+     *
+     * The pivot stores both test and live credentials side-by-side and a
+     * `test_mode` boolean (defaults to true — safer) picks which to use.
+     */
+    protected function normalizeMarketplaceSettings(array $settings): array
+    {
+        $isTest = (bool) ($settings['test_mode'] ?? true);
+        $prefix = $isTest ? 'test_' : 'live_';
+
+        return [
+            'publishable_key' => $settings[$prefix . 'publishable_key'] ?? null,
+            'secret_key'      => $settings[$prefix . 'secret_key']      ?? null,
+            'webhook_secret'  => $settings[$prefix . 'webhook_secret']  ?? null,
+            'test_mode'       => $isTest,
+        ];
     }
 
     public function createPayment(array $data): array
