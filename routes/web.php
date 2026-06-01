@@ -126,29 +126,43 @@ Route::middleware(['web'])->get('/marketplace/switch-client/{clientId}', functio
         ]);
     }
 
+    $sessionIdBefore = session()->getId();
+
     \Log::info('marketplace.switch-client: pre-switch state', [
         'target_client_id' => $clientId,
         'admin_to_login_id' => $admin->id,
         'admin_to_login_client_id' => $admin->marketplace_client_id,
-        'session_id_before' => session()->getId(),
+        'session_id_before' => $sessionIdBefore,
         'session_client_id_before' => session('super_admin_marketplace_client_id'),
         'logged_in_admin_before' => auth('marketplace_admin')->id(),
     ]);
 
-    // Force-switch: logout the old marketplace_admin, login the new one,
-    // overwrite the session client_id. session()->save() persists immediately
-    // so the redirect doesn't race with the response cycle.
-    auth('marketplace_admin')->logout();
-    auth('marketplace_admin')->login($admin);
+    // IMPORTANT: don't use auth('marketplace_admin')->login() — under the hood
+    // it calls Session::migrate(true) which regenerates the session ID AND
+    // destroys the old session row in DB. The browser was holding the old
+    // cookie, so subsequent requests landed on a session that no longer
+    // existed — Laravel then created an empty session, the panel middleware
+    // saw no client_id, and fell back to the first active marketplace (tics).
+    //
+    // Instead, write the guard session key + flags by hand. Session ID stays
+    // the same, the browser keeps its cookie, no Set-Cookie race possible.
+    $guard = auth('marketplace_admin');
+    $guardSessionKey = $guard instanceof \Illuminate\Auth\SessionGuard
+        ? $guard->getName()
+        : 'login_marketplace_admin_' . sha1(\Illuminate\Auth\SessionGuard::class);
+
+    session()->put($guardSessionKey, $admin->getAuthIdentifier());
     session([
         'super_admin_marketplace_client_id' => (int) $clientId,
         'marketplace_is_super_admin' => true,
         'marketplace_super_admin_user_id' => $user->id,
     ]);
+    $guard->setUser($admin);
     session()->save();
 
     \Log::info('marketplace.switch-client: post-switch state', [
         'session_id_after' => session()->getId(),
+        'session_id_changed' => session()->getId() !== $sessionIdBefore,
         'session_client_id_after' => session('super_admin_marketplace_client_id'),
         'logged_in_admin_after' => auth('marketplace_admin')->id(),
         'logged_in_admin_client_id_after' => auth('marketplace_admin')->user()?->marketplace_client_id,

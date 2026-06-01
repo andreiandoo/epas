@@ -19,9 +19,11 @@ class EditMarketplaceClient extends EditRecord
                 ->color('success')
                 ->visible(fn () => $this->record->status === 'active' && auth()->user()?->isSuperAdmin())
                 ->action(function () {
-                    // Same approach as /marketplace/switch-client: resolve and
-                    // login the target admin in this request, so the redirect
-                    // already has the correct guard state.
+                    // See switch-client route for context. We write the guard
+                    // session key by hand to avoid Session::migrate(true)
+                    // (triggered by auth->login()) which regenerates the
+                    // session ID and destroys the old row, breaking the
+                    // browser's cookie.
                     $user = auth('web')->user();
                     $admin = \App\Models\MarketplaceAdmin::where('marketplace_client_id', $this->record->id)
                         ->where(function ($q) use ($user) {
@@ -40,13 +42,18 @@ class EditMarketplaceClient extends EditRecord
                         ]);
                     }
 
-                    auth('marketplace_admin')->logout();
-                    auth('marketplace_admin')->login($admin);
+                    $guard = auth('marketplace_admin');
+                    $guardSessionKey = $guard instanceof \Illuminate\Auth\SessionGuard
+                        ? $guard->getName()
+                        : 'login_marketplace_admin_' . sha1(\Illuminate\Auth\SessionGuard::class);
+
+                    session()->put($guardSessionKey, $admin->getAuthIdentifier());
                     session([
                         'super_admin_marketplace_client_id' => (int) $this->record->id,
                         'marketplace_is_super_admin' => true,
                         'marketplace_super_admin_user_id' => $user->id,
                     ]);
+                    $guard->setUser($admin);
                     session()->save();
 
                     return redirect('/marketplace');

@@ -499,6 +499,10 @@ class MarketplaceClientResource extends Resource
                         // Same approach as the /marketplace/switch-client route:
                         // resolve+login the right admin here so the redirect
                         // to /marketplace already has the correct guard state.
+                        // NB: write the guard session key directly (no login())
+                        // to avoid Session::migrate(true) — which would
+                        // regenerate the session ID and destroy the old row,
+                        // leaving the browser pointing at an empty session.
                         $user = auth('web')->user();
                         $admin = \App\Models\MarketplaceAdmin::where('marketplace_client_id', $record->id)
                             ->where(function ($q) use ($user) {
@@ -517,13 +521,18 @@ class MarketplaceClientResource extends Resource
                             ]);
                         }
 
-                        auth('marketplace_admin')->logout();
-                        auth('marketplace_admin')->login($admin);
+                        $guard = auth('marketplace_admin');
+                        $guardSessionKey = $guard instanceof \Illuminate\Auth\SessionGuard
+                            ? $guard->getName()
+                            : 'login_marketplace_admin_' . sha1(\Illuminate\Auth\SessionGuard::class);
+
+                        session()->put($guardSessionKey, $admin->getAuthIdentifier());
                         session([
                             'super_admin_marketplace_client_id' => (int) $record->id,
                             'marketplace_is_super_admin' => true,
                             'marketplace_super_admin_user_id' => $user->id,
                         ]);
+                        $guard->setUser($admin);
                         session()->save();
                     })
                     ->successRedirectUrl('/marketplace'),
