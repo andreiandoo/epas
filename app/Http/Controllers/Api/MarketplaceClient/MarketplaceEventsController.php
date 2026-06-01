@@ -845,6 +845,12 @@ class MarketplaceEventsController extends BaseController
                 // Event status flags
                 'is_password_protected' => !empty($event->access_password),
             'redirect_url' => $event->redirect_url,
+                // External links surfaced under the description on the public
+                // event page — Facebook event + organizer's standalone event
+                // microsite. Trimmed nulls / empty strings filter themselves
+                // out of the JSON payload via the event.php strip-empty pass.
+                'facebook_url' => $event->facebook_url ?: null,
+                'event_website_url' => $event->event_website_url ?: null,
                 'is_sold_out' => (bool) ($event->is_sold_out ?? false),
                 'is_cancelled' => (bool) ($event->is_cancelled ?? false),
                 'cancel_reason' => $event->is_cancelled ? ($event->cancel_reason ?? null) : null,

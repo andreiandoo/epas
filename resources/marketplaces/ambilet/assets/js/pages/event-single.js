@@ -647,6 +647,8 @@ const EventPage = {
             description: eventData.description,
             content: eventData.description,
             short_description: eventData.short_description,
+            facebook_url: eventData.facebook_url || null,
+            event_website_url: eventData.event_website_url || null,
             image: heroImage || posterImage,
             posterImage: posterImage,
             heroImage: heroImage,
@@ -1166,6 +1168,12 @@ const EventPage = {
         descEl.innerHTML = this.formatDescription(e.description || e.content);
         this.initDescriptionToggle(descEl);
 
+        // External links right after the description so the visitor sees
+        // them in context with the event details. Quiet section — only
+        // appears when at least one of facebook_url / event_website_url
+        // is set on the event.
+        this.renderEventExternalLinks(e);
+
         // Artist section
         if (e.artist || e.artists?.length) {
             var artists = e.artists && e.artists.length ? e.artists : (e.artist ? [e.artist] : []);
@@ -1500,6 +1508,58 @@ const EventPage = {
         return paragraphs.map(function(p) {
             return '<p class="mb-4 leading-relaxed text-muted">' + p.trim() + '</p>';
         }).join('');
+    },
+
+    /**
+     * Render a compact "external links" strip right after the description,
+     * surfacing the event's Facebook event page + dedicated event website
+     * if either is configured by the organizer. Quiet when neither is set
+     * so the section never shows up empty.
+     */
+    renderEventExternalLinks(e) {
+        var fbUrl = (e && e.facebook_url) ? String(e.facebook_url).trim() : '';
+        var siteUrl = (e && e.event_website_url) ? String(e.event_website_url).trim() : '';
+        if (!fbUrl && !siteUrl) return;
+
+        var descEl = document.getElementById(this.elements.eventDescription);
+        if (!descEl) return;
+        // Reuse the same node across re-renders.
+        var existing = document.getElementById('event-external-links');
+        if (existing) existing.remove();
+
+        var fbIcon = '<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>';
+        var siteIcon = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"/></svg>';
+        var arrowIcon = '<svg class="w-3 h-3 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>';
+
+        var links = [];
+        if (fbUrl) {
+            links.push(
+                '<a href="' + fbUrl + '" target="_blank" rel="noopener noreferrer" ' +
+                'class="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-border bg-surface hover:bg-[#1877F2]/10 hover:border-[#1877F2] hover:text-[#1877F2] transition-colors text-sm font-medium text-secondary">' +
+                fbIcon +
+                '<span>Evenimentul pe Facebook</span>' +
+                arrowIcon +
+                '</a>'
+            );
+        }
+        if (siteUrl) {
+            links.push(
+                '<a href="' + siteUrl + '" target="_blank" rel="noopener noreferrer" ' +
+                'class="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-border bg-surface hover:bg-primary/10 hover:border-primary hover:text-primary transition-colors text-sm font-medium text-secondary">' +
+                siteIcon +
+                '<span>Website-ul evenimentului</span>' +
+                arrowIcon +
+                '</a>'
+            );
+        }
+
+        var section = document.createElement('div');
+        section.id = 'event-external-links';
+        section.className = 'mt-6 pt-5 border-t border-border';
+        section.innerHTML =
+            '<div class="text-xs uppercase tracking-wide text-muted mb-3 font-semibold">Mai multe despre eveniment</div>' +
+            '<div class="flex flex-wrap gap-2">' + links.join('') + '</div>';
+        descEl.parentNode.insertBefore(section, descEl.nextSibling);
     },
 
     /**
