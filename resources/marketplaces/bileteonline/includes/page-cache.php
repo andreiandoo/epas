@@ -30,10 +30,22 @@ $pageCacheDir = __DIR__ . '/cache/pages';
 // Include $_GET params (other than our control flags) in the cache key so
 // different query strings (e.g. tour_slug injected by vanity-tour.php) get
 // their own cache file and don't collide on stale content.
+//
+// IMPORTANT: strip GA4 linker (_gl, _ga, _up, _gac) and UTM params before
+// hashing. Otherwise every visitor arriving from another linker domain gets
+// a unique cache key → always cache MISS + thousands of dead files on disk.
 $cacheParams = $_GET;
 unset($cacheParams['preview'], $cacheParams['nocache']);
+foreach (array_keys($cacheParams) as $_k) {
+    if (preg_match('/^(_gl|_ga|_up|_gac|utm_|fbclid|gclid|msclkid|yclid)/i', $_k)) {
+        unset($cacheParams[$_k]);
+    }
+}
 ksort($cacheParams);
-$pageCacheKey = md5(($_SERVER['REQUEST_URI'] ?? '/') . '|' . serialize($cacheParams));
+// Use just the path (strtok strips ?query) so tracking-laden URLs collapse
+// onto the canonical cache entry of the same path.
+$_cachePath = strtok($_SERVER['REQUEST_URI'] ?? '/', '?');
+$pageCacheKey = md5($_cachePath . '|' . serialize($cacheParams));
 $pageCacheFile = $pageCacheDir . '/' . $pageCacheKey . '.html';
 
 // Check cache
