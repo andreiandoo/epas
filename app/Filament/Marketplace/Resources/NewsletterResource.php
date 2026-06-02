@@ -296,18 +296,20 @@ class NewsletterResource extends Resource
 
                                 // Featured event picker — single event, populated
                                 // as iabilet-style hero (image + name + venue/city
-                                // + price + CTA). Same options shape as the multi
-                                // picker below so the search/options helpers stay
-                                // consistent.
+                                // + price + CTA). Status / is_public are NOT
+                                // filtered here: search is scoped only by
+                                // marketplace_client_id so admin can pick any
+                                // event they own regardless of the lifecycle
+                                // status of the underlying record (statuses on
+                                // marketplace_events have varied across imports).
                                 Forms\Components\Select::make('event_id')
                                     ->label('Selectează evenimentul featured')
                                     ->searchable()
                                     ->getSearchResultsUsing(function (string $search) use ($marketplace) {
                                         return MarketplaceEvent::where('marketplace_client_id', $marketplace?->id)
-                                            ->where('status', 'published')
-                                            ->where('is_public', true)
                                             ->where('name', 'like', "%{$search}%")
-                                            ->limit(20)
+                                            ->orderByDesc('starts_at')
+                                            ->limit(30)
                                             ->pluck('name', 'id');
                                     })
                                     ->getOptionLabelUsing(function ($value) {
@@ -369,35 +371,68 @@ class NewsletterResource extends Resource
                                     ->columnSpanFull()
                                     ->helperText('HTML personalizat. Poți importa template-uri externe sau scrie cod HTML direct.'),
 
-                                // Hand-picked events
+                                // Manual event picker — shared across all 4 list
+                                // sections (recommended/hand_picked/next_week/
+                                // next_month). The 4 sections differ only in
+                                // the section TITLE the renderer emits + the
+                                // date pre-filter applied to the dropdown:
+                                //   recommended_events / hand_picked_events
+                                //       → no date filter
+                                //   events_next_week
+                                //       → starts_at BETWEEN now() AND +14 days
+                                //   events_next_month
+                                //       → starts_at BETWEEN now() AND +45 days
+                                // No status / is_public filter — admin picks
+                                // any of their own events.
                                 Forms\Components\Select::make('event_ids')
                                     ->label('Selectează evenimente')
                                     ->multiple()
                                     ->searchable()
-                                    ->getSearchResultsUsing(function (string $search) use ($marketplace) {
-                                        return MarketplaceEvent::where('marketplace_client_id', $marketplace?->id)
-                                            ->where('status', 'published')
-                                            ->where('is_public', true)
-                                            ->where('name', 'like', "%{$search}%")
-                                            ->limit(20)
-                                            ->pluck('name', 'id');
+                                    ->getSearchResultsUsing(function (string $search, callable $get) use ($marketplace) {
+                                        $q = MarketplaceEvent::where('marketplace_client_id', $marketplace?->id)
+                                            ->where('name', 'like', "%{$search}%");
+
+                                        $type = $get('type');
+                                        if ($type === 'events_next_week') {
+                                            $q->whereBetween('starts_at', [now(), now()->addDays(14)]);
+                                        } elseif ($type === 'events_next_month') {
+                                            $q->whereBetween('starts_at', [now(), now()->addDays(45)]);
+                                        }
+
+                                        return $q->orderBy('starts_at')->limit(40)->pluck('name', 'id');
                                     })
                                     ->getOptionLabelsUsing(function (array $values) {
                                         return MarketplaceEvent::whereIn('id', $values)->pluck('name', 'id');
                                     })
-                                    ->visible(fn ($get) => $get('type') === 'hand_picked_events')
+                                    ->visible(fn ($get) => in_array($get('type'), [
+                                        'recommended_events',
+                                        'hand_picked_events',
+                                        'events_next_week',
+                                        'events_next_month',
+                                    ]))
                                     ->columnSpanFull()
-                                    ->helperText('Caută și selectează evenimentele pe care vrei să le incluzi'),
+                                    ->helperText(function (callable $get): string {
+                                        return match ($get('type')) {
+                                            'events_next_week' => 'Dropdown-ul îți arată doar evenimentele cu starts_at în următoarele 14 zile.',
+                                            'events_next_month' => 'Dropdown-ul îți arată doar evenimentele cu starts_at în următoarele 45 de zile.',
+                                            default => 'Caută și selectează evenimentele pe care vrei să le incluzi.',
+                                        };
+                                    }),
 
-                                // Event limit (for auto-populated sections)
-                                Forms\Components\TextInput::make('limit')
-                                    ->label('Număr maxim de evenimente')
-                                    ->numeric()
-                                    ->default(4)
-                                    ->minValue(1)
-                                    ->maxValue(20)
-                                    ->visible(fn ($get) => in_array($get('type'), ['recommended_events', 'events_next_week', 'events_next_month']))
-                                    ->maxWidth('xs'),
+                                // Optional section title override — when blank
+                                // the renderer falls back to a per-type default
+                                // (e.g. "Evenimente recomandate" / "Săptămâna
+                                // viitoare").
+                                Forms\Components\TextInput::make('section_title')
+                                    ->label('Titlu secțiune (opțional)')
+                                    ->visible(fn ($get) => in_array($get('type'), [
+                                        'recommended_events',
+                                        'hand_picked_events',
+                                        'events_next_week',
+                                        'events_next_month',
+                                    ]))
+                                    ->maxLength(120)
+                                    ->columnSpanFull(),
 
                                 // Button fields
                                 Forms\Components\TextInput::make('button_text')
@@ -444,10 +479,10 @@ class NewsletterResource extends Resource
                                 'text' => 'Text / Rich Content',
                                 'html' => 'HTML personalizat',
                                 'featured_event' => 'Eveniment featured' . (!empty($state['event_id']) ? ' (#' . $state['event_id'] . ')' : ''),
-                                'recommended_events' => 'Evenimente recomandate',
+                                'recommended_events' => 'Evenimente recomandate (' . count($state['event_ids'] ?? []) . ')',
                                 'hand_picked_events' => 'Evenimente alese (' . count($state['event_ids'] ?? []) . ')',
-                                'events_next_week' => 'Evenimente săptămâna viitoare',
-                                'events_next_month' => 'Evenimente luna viitoare',
+                                'events_next_week' => 'Săptămâna viitoare (' . count($state['event_ids'] ?? []) . ')',
+                                'events_next_month' => 'Luna viitoare (' . count($state['event_ids'] ?? []) . ')',
                                 'button' => 'Buton: ' . ($state['button_text'] ?? 'CTA'),
                                 'spacer' => 'Spațiu / Separator',
                                 'image' => 'Imagine',

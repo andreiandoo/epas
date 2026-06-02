@@ -45,27 +45,42 @@ class AmbiletNewsletterExamplesSeeder extends Seeder
             return;
         }
 
-        // Pick the soonest upcoming published+public event, OR fall back to
-        // the most recent past one so the seeded newsletter renders
-        // something out of the box. event_id stays null only when the
-        // marketplace has literally no published+public events.
+        // Pick the soonest upcoming event for the featured slot, fall back
+        // to the most recent past one so the seeded newsletter has
+        // something to render out of the box. No status/is_public filter —
+        // matches the Filament picker behavior and avoids tripping on
+        // legacy status values that vary across imports.
         $featuredEventId = MarketplaceEvent::query()
             ->where('marketplace_client_id', $client->id)
-            ->where('status', 'published')
-            ->where('is_public', true)
             ->where('starts_at', '>=', now())
             ->orderBy('starts_at', 'asc')
             ->value('id')
             ?? MarketplaceEvent::query()
                 ->where('marketplace_client_id', $client->id)
-                ->where('status', 'published')
-                ->where('is_public', true)
                 ->orderBy('starts_at', 'desc')
                 ->value('id');
 
         if (!$featuredEventId) {
-            $this->command->warn('No published+public event found — featured_event sections will be created with event_id=null; pick one in the editor.');
+            $this->command->warn('No event found for this marketplace — featured_event sections will be created with event_id=null; pick one in the editor.');
         }
+
+        // Pre-populate the digest example with real event_ids so the
+        // preview shows actual cards. Same lenient query as above.
+        $nextWeekEventIds = MarketplaceEvent::query()
+            ->where('marketplace_client_id', $client->id)
+            ->whereBetween('starts_at', [now(), now()->addDays(14)])
+            ->orderBy('starts_at')
+            ->limit(4)
+            ->pluck('id')
+            ->all();
+
+        $nextMonthEventIds = MarketplaceEvent::query()
+            ->where('marketplace_client_id', $client->id)
+            ->whereBetween('starts_at', [now()->addDays(14), now()->addDays(45)])
+            ->orderBy('starts_at')
+            ->limit(6)
+            ->pluck('id')
+            ->all();
 
         $host = $this->hostOf($client);
         $name = $client->name ?? 'AmBilet.ro';
@@ -73,7 +88,7 @@ class AmbiletNewsletterExamplesSeeder extends Seeder
         $examples = [
             $this->buildV1FeaturedExample($name, $host, $featuredEventId),
             $this->buildV2FeaturedExample($name, $host, $featuredEventId),
-            $this->buildWeeklyDigestExample($name, $host),
+            $this->buildWeeklyDigestExample($name, $host, $nextWeekEventIds, $nextMonthEventIds),
         ];
 
         foreach ($examples as $payload) {
@@ -173,10 +188,11 @@ class AmbiletNewsletterExamplesSeeder extends Seeder
 
     /**
      * Example 3 — săptămânal: text intro + events_next_week +
-     * events_next_month + footer CTA. Auto-populated from the upcoming
-     * calendar; no specific event picked.
+     * events_next_month + footer CTA. event_ids are pre-populated from
+     * the seeder so the preview shows real cards; admin can swap them
+     * in the editor.
      */
-    private function buildWeeklyDigestExample(string $name, string $host): array
+    private function buildWeeklyDigestExample(string $name, string $host, array $nextWeekIds, array $nextMonthIds): array
     {
         return [
             'name' => 'Exemplu — Săptămâna asta la ' . $name,
@@ -190,7 +206,8 @@ class AmbiletNewsletterExamplesSeeder extends Seeder
                 ],
                 [
                     'type' => 'events_next_week',
-                    'limit' => 4,
+                    'event_ids' => $nextWeekIds,
+                    'section_title' => 'Săptămâna viitoare',
                 ],
                 [
                     'type' => 'spacer',
@@ -202,7 +219,8 @@ class AmbiletNewsletterExamplesSeeder extends Seeder
                 ],
                 [
                     'type' => 'events_next_month',
-                    'limit' => 6,
+                    'event_ids' => $nextMonthIds,
+                    'section_title' => 'Luna viitoare',
                 ],
                 [
                     'type' => 'spacer',

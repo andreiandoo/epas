@@ -104,19 +104,11 @@ class NewsletterRenderer
 
     protected function renderRecommendedEvents(array $section, int $marketplaceId, MarketplaceClient $marketplace): string
     {
-        $limit = (int) ($section['limit'] ?? 4);
-
-        $events = MarketplaceEvent::where('marketplace_client_id', $marketplaceId)
-            ->where('status', 'published')
-            ->where('is_public', true)
-            ->where('starts_at', '>=', now())
-            ->orderByRaw('is_featured DESC, starts_at ASC')
-            ->limit($limit)
-            ->get();
-
-        if ($events->isEmpty()) return '';
-
-        return $this->renderEventCardsSection('Evenimente recomandate', $events, $marketplace);
+        return $this->renderManualEventList(
+            $section,
+            $marketplace,
+            $section['section_title'] ?? 'Evenimente recomandate'
+        );
     }
 
     /**
@@ -320,54 +312,50 @@ class NewsletterRenderer
 
     protected function renderHandPickedEvents(array $section, MarketplaceClient $marketplace): string
     {
-        $eventIds = $section['event_ids'] ?? [];
-        if (empty($eventIds)) return '';
-
-        $events = MarketplaceEvent::whereIn('id', $eventIds)
-            ->where('status', 'published')
-            ->where('is_public', true)
-            ->get()
-            ->sortBy(function ($event) use ($eventIds) {
-                return array_search($event->id, $eventIds);
-            });
-
-        if ($events->isEmpty()) return '';
-
-        return $this->renderEventCardsSection('Evenimente selectate', $events, $marketplace);
+        return $this->renderManualEventList(
+            $section,
+            $marketplace,
+            $section['section_title'] ?? 'Evenimente alese'
+        );
     }
 
     protected function renderEventsNextWeek(array $section, int $marketplaceId, MarketplaceClient $marketplace): string
     {
-        $limit = (int) ($section['limit'] ?? 6);
-
-        $events = MarketplaceEvent::where('marketplace_client_id', $marketplaceId)
-            ->where('status', 'published')
-            ->where('is_public', true)
-            ->whereBetween('starts_at', [now(), now()->addDays(7)])
-            ->orderBy('starts_at')
-            ->limit($limit)
-            ->get();
-
-        if ($events->isEmpty()) return '';
-
-        return $this->renderEventCardsSection('Evenimente săptămâna viitoare', $events, $marketplace);
+        return $this->renderManualEventList(
+            $section,
+            $marketplace,
+            $section['section_title'] ?? 'Săptămâna viitoare'
+        );
     }
 
     protected function renderEventsNextMonth(array $section, int $marketplaceId, MarketplaceClient $marketplace): string
     {
-        $limit = (int) ($section['limit'] ?? 8);
+        return $this->renderManualEventList(
+            $section,
+            $marketplace,
+            $section['section_title'] ?? 'Luna viitoare'
+        );
+    }
 
-        $events = MarketplaceEvent::where('marketplace_client_id', $marketplaceId)
-            ->where('status', 'published')
-            ->where('is_public', true)
-            ->whereBetween('starts_at', [now(), now()->addDays(30)])
-            ->orderBy('starts_at')
-            ->limit($limit)
-            ->get();
+    /**
+     * Shared body for the 4 manual-pick event list sections (recommended,
+     * hand_picked, next_week, next_month). Renderer no longer auto-queries
+     * by date/featured — admin pre-selects in the Filament picker (which
+     * applies its own dropdown pre-filter for the next_week / next_month
+     * variants). Order in $eventIds is preserved.
+     */
+    protected function renderManualEventList(array $section, MarketplaceClient $marketplace, string $title): string
+    {
+        $eventIds = $section['event_ids'] ?? [];
+        if (empty($eventIds)) return '';
+
+        $events = MarketplaceEvent::whereIn('id', $eventIds)
+            ->get()
+            ->sortBy(fn ($event) => array_search($event->id, $eventIds));
 
         if ($events->isEmpty()) return '';
 
-        return $this->renderEventCardsSection('Evenimente luna viitoare', $events, $marketplace);
+        return $this->renderEventCardsSection($title, $events, $marketplace);
     }
 
     protected function renderButton(array $section): string
