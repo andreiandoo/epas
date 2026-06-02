@@ -24,6 +24,8 @@ class FacebookCapiConnection extends Model
         'test_mode',
         'test_event_code',
         'status',
+        'last_health_status',
+        'last_alerted_at',
         'enabled_events',
         'last_event_at',
         'metadata',
@@ -34,6 +36,7 @@ class FacebookCapiConnection extends Model
         'enabled_events' => 'array',
         'metadata' => 'array',
         'last_event_at' => 'datetime',
+        'last_alerted_at' => 'datetime',
     ];
 
     protected $hidden = ['access_token'];
@@ -97,5 +100,10 @@ class FacebookCapiConnection extends Model
     public function isEventEnabled(string $eventName): bool
     {
         return in_array($eventName, $this->enabled_events ?? []);
+    }
+
+    public function isAlerting(): bool
+    {
+        return $this->last_health_status === 'alerting';
     }
 }

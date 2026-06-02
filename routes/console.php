@@ -132,6 +132,21 @@ Schedule::command('changelog:update')
         \Log::info('Changelog updated successfully');
     });
 
+/*
+|--------------------------------------------------------------------------
+| Facebook CAPI Health Check
+|--------------------------------------------------------------------------
+| Hourly probe of each active facebook_capi_connection over the last 6h.
+| Sends one alert per failure incident to super-admins of the affected
+| marketplace (via mail + in-app notifications) and a recovery confirmation
+| when events start flowing again. State stored on the connection row
+| (last_health_status / last_alerted_at) so re-runs are idempotent.
+*/
+Schedule::command('capi:health-check')
+    ->hourly()
+    ->withoutOverlapping()
+    ->runInBackground();
+
 // Regenerate CHANGELOG.md daily
 Schedule::command('changelog:generate-md')
     ->dailyAt('03:00')
