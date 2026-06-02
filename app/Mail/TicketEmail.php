@@ -191,8 +191,12 @@ class TicketEmail extends Mailable
         $variableService = app(TicketVariableService::class);
         $generator = app(TicketPreviewGenerator::class);
 
-        $data = $variableService->resolveTicketData($ticket);
-        $content = $generator->renderToHtml($template->template_data, $data);
+        // Multi-locale: cascada ticket.locale → order.locale → 'ro'. Pe ticketele
+        // vechi (Ticket.locale=NULL, Order.locale=NULL), helper-ul intoarce 'ro' →
+        // comportament identic cu inainte.
+        $locale = $variableService->resolveOrderLocale($ticket);
+        $data = $variableService->resolveTicketData($ticket, $locale);
+        $content = $generator->renderToHtml($template->template_data, $data, $locale);
 
         // If content is empty, fall back to generic
         if (empty(trim($content))) {

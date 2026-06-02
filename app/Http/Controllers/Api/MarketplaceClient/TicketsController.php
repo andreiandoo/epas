@@ -119,8 +119,9 @@ class TicketsController extends BaseController
 
                 $pages = [];
                 foreach ($tickets as $ticket) {
-                    $data = $variableService->resolveTicketData($ticket);
-                    $content = $generator->renderToHtml($template->template_data, $data);
+                    $locale = $variableService->resolveOrderLocale($ticket);
+                    $data = $variableService->resolveTicketData($ticket, $locale);
+                    $content = $generator->renderToHtml($template->template_data, $data, $locale);
                     if (!empty(trim($content))) {
                         $pages[] = $content;
                     }
@@ -207,8 +208,9 @@ class TicketsController extends BaseController
                 $variableService = app(TicketVariableService::class);
                 $generator = app(TicketPreviewGenerator::class);
 
-                $data = $variableService->resolveTicketData($ticket);
-                $content = $generator->renderToHtml($template->template_data, $data);
+                $locale = $variableService->resolveOrderLocale($ticket);
+                $data = $variableService->resolveTicketData($ticket, $locale);
+                $content = $generator->renderToHtml($template->template_data, $data, $locale);
 
                 if (!empty(trim($content))) {
                     $size = $template->getSize();

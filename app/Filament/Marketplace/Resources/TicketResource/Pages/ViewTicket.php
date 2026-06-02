@@ -334,8 +334,9 @@ class ViewTicket extends ViewRecord
             $variableService = app(TicketVariableService::class);
             $generator = app(TicketPreviewGenerator::class);
 
-            $data = $variableService->resolveTicketData($ticket);
-            $content = $generator->renderToHtml($template->template_data, $data);
+            $locale = $variableService->resolveOrderLocale($ticket);
+            $data = $variableService->resolveTicketData($ticket, $locale);
+            $content = $generator->renderToHtml($template->template_data, $data, $locale);
 
             // If rendered content is empty/whitespace, fall back to generic
             if (empty(trim($content))) {

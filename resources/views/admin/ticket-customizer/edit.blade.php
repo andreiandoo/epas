@@ -432,6 +432,35 @@
                                                     <button @click="wrapSelectedText('<u>', '</u>')" type="button" class="px-2 py-0.5 bg-gray-700 hover:bg-gray-600 rounded text-xs underline" title="Underline">U</button>
                                                 </div>
                                                 <textarea x-ref="contentTextarea" x-model="selectedLayer.content" @input="markChanged()" rows="4" class="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1.5 text-sm" placeholder="Text or @{{variable}}"></textarea>
+                                                <p class="text-[10px] text-gray-500 mt-1">Conținutul default e RO. Pentru traduceri suplimentare (HU/EN), deschide secțiunea de mai jos. Lipsa unei traduceri = se folosește textul default.</p>
+                                            </div>
+                                            <!-- Traduceri layer (opt-in) — salvate in layer.content_translations -->
+                                            <div class="border border-gray-700 rounded p-2 bg-gray-800/40">
+                                                <button @click="showLayerTranslations = !showLayerTranslations" type="button" class="w-full flex items-center justify-between text-xs text-gray-300 hover:text-white">
+                                                    <span class="flex items-center gap-1.5">🌐 Traduceri (opțional)</span>
+                                                    <svg class="w-3 h-3 transition-transform" :class="showLayerTranslations ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                                                </button>
+                                                <div x-show="showLayerTranslations" x-cloak class="mt-2 space-y-2">
+                                                    <div>
+                                                        <label class="text-[10px] text-gray-400 uppercase tracking-wider">🇭🇺 Maghiară</label>
+                                                        <textarea
+                                                            :value="(selectedLayer.content_translations && selectedLayer.content_translations.hu) || ''"
+                                                            @input="setLayerTranslation('hu', $event.target.value)"
+                                                            rows="3"
+                                                            placeholder="Lasă gol pentru a folosi textul default"
+                                                            class="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1.5 text-sm"></textarea>
+                                                    </div>
+                                                    <div>
+                                                        <label class="text-[10px] text-gray-400 uppercase tracking-wider">🇬🇧 Engleză</label>
+                                                        <textarea
+                                                            :value="(selectedLayer.content_translations && selectedLayer.content_translations.en) || ''"
+                                                            @input="setLayerTranslation('en', $event.target.value)"
+                                                            rows="3"
+                                                            placeholder="Lasă gol pentru a folosi textul default"
+                                                            class="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1.5 text-sm"></textarea>
+                                                    </div>
+                                                    <p class="text-[10px] text-gray-500">Variabilele <code>@{{event.title}}</code>, <code>@{{ticket.type}}</code> etc. sunt traduse automat dacă organizatorul a configurat traduceri pe Event/TicketType.</p>
+                                                </div>
                                             </div>
                                             <div class="grid grid-cols-2 gap-2">
                                                 <div>
@@ -706,6 +735,7 @@
                 showTicketElements: true,
                 showVariables: false,
                 showLayerProperties: true,
+                showLayerTranslations: false,
                 draggingLayerId: null,
                 dragOverLayerId: null,
                 showTemplatesModal: false,
@@ -1296,6 +1326,27 @@
 
                 markChanged() {
                     this.hasUnsavedChanges = true;
+                },
+
+                // Seteaza traducerea unui layer text pentru un locale specific.
+                // Stocheaza in selectedLayer.content_translations[locale]. Daca textul
+                // e gol, sterge cheia ca sa nu balonam JSON-ul cu siruri goale.
+                setLayerTranslation(locale, value) {
+                    if (!this.selectedLayer) return;
+                    if (!this.selectedLayer.content_translations) {
+                        this.selectedLayer.content_translations = {};
+                    }
+                    const trimmed = (value || '').trim();
+                    if (trimmed === '') {
+                        delete this.selectedLayer.content_translations[locale];
+                        // Cleanup: daca dictionarul e gol, sterge cheia complet
+                        if (Object.keys(this.selectedLayer.content_translations).length === 0) {
+                            delete this.selectedLayer.content_translations;
+                        }
+                    } else {
+                        this.selectedLayer.content_translations[locale] = value;
+                    }
+                    this.markChanged();
                 },
 
                 applyBaseTextColor() {

@@ -2484,8 +2484,10 @@ class OrderResource extends Resource
 
             $pages = [];
             foreach ($tickets as $ticket) {
-                $data = $variableService->resolveTicketData($ticket);
-                $content = $generator->renderToHtml($template->template_data, $data);
+                // Multi-locale: ticket.locale → order.locale → 'ro' (fallback).
+                $locale = $variableService->resolveOrderLocale($ticket);
+                $data = $variableService->resolveTicketData($ticket, $locale);
+                $content = $generator->renderToHtml($template->template_data, $data, $locale);
                 if (!empty(trim($content))) {
                     $pages[] = $content;
                 }

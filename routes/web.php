@@ -480,8 +480,9 @@ Route::middleware(['web', 'auth:marketplace_admin'])->prefix('marketplace')->gro
         if ($template && !empty($template->template_data)) {
             $variableService = app(\App\Services\TicketCustomizer\TicketVariableService::class);
             $generator = app(\App\Services\TicketCustomizer\TicketPreviewGenerator::class);
-            $data = $variableService->resolveTicketData($ticket);
-            $content = $generator->renderToHtml($template->template_data, $data);
+            $locale = $variableService->resolveOrderLocale($ticket);
+            $data = $variableService->resolveTicketData($ticket, $locale);
+            $content = $generator->renderToHtml($template->template_data, $data, $locale);
 
             if (!empty(trim($content))) {
                 $size = $template->getSize();

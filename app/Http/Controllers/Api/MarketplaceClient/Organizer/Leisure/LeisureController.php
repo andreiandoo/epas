@@ -724,8 +724,18 @@ class LeisureController extends BaseController
             'company.iban' => 'nullable|string|max:34',
             'company.contact_person' => 'nullable|string|max:120',
             'generate_invoice' => 'nullable|boolean',
+            // Locale preferat al clientului (RO/EN/HU/...). Optional. Daca lipseste,
+            // Order.locale ramane NULL si pipeline-ul foloseste 'ro' ca fallback.
+            'locale' => 'nullable|string|max:8',
             'payment_method' => 'required|in:cash,card,invoice',
         ]);
+
+        // Captura locale efectiv (whitelist din config) — zero risc de injectie.
+        $availableLocales = config('locales.available', []);
+        $posLocale = null;
+        if (!empty($validated['locale']) && in_array($validated['locale'], $availableLocales, true)) {
+            $posLocale = $validated['locale'];
+        }
 
         $visitDate = isset($validated['date'])
             ? Carbon::parse($validated['date'])->toDateString()
@@ -962,6 +972,7 @@ class LeisureController extends BaseController
                 'discount_amount' => 0,
                 'total' => $total,
                 'currency' => 'RON',
+                'locale' => $posLocale,
                 'status' => $paymentMethod === 'invoice' ? 'pending' : 'paid',
                 'payment_status' => $paymentMethod === 'invoice' ? 'pending' : 'paid',
                 'payment_processor' => 'pos',
@@ -1063,6 +1074,7 @@ class LeisureController extends BaseController
                             'marketplace_client_id' => $marketplace->id,
                             'code' => $packageCode,
                             'barcode' => $packageCode,
+                            'locale' => $posLocale,
                             'status' => $paymentMethod === 'invoice' ? 'pending' : 'valid',
                             'price' => $it['unit_price'],
                             'attendee_name' => $validated['customer']['name'] ?? null,
@@ -1120,6 +1132,7 @@ class LeisureController extends BaseController
                                     'marketplace_client_id' => $marketplace->id,
                                     'code' => $code,
                                     'barcode' => $code,
+                                    'locale' => $posLocale,
                                     'status' => $paymentMethod === 'invoice' ? 'pending' : 'valid',
                                     'price' => 0, // componenta = $0, prețul e în pachet
                                     'attendee_name' => $validated['customer']['name'] ?? null,
@@ -1159,6 +1172,7 @@ class LeisureController extends BaseController
                             'marketplace_client_id' => $marketplace->id,
                             'code' => $code,
                             'barcode' => $code,
+                            'locale' => $posLocale,
                             'status' => $paymentMethod === 'invoice' ? 'pending' : 'valid',
                             'price' => $it['unit_price'],
                             'attendee_name' => $validated['customer']['name'] ?? null,
@@ -2266,6 +2280,9 @@ class LeisureController extends BaseController
                     'marketplace_client_id' => $marketplace->id,
                     'code' => $code,
                     'barcode' => $code,
+                    // Bilet extra calup — mosteneste locale-ul din order-ul original
+                    // ca sa fie tradus corect daca clientul a comandat in HU/EN.
+                    'locale' => Order::find($r->order_id)?->locale,
                     'status' => 'used',
                     'price' => $r->extra_charge_total,
                     'checked_in_at' => $now,

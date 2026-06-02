@@ -803,6 +803,20 @@ class TicketVariableService
      *                          Toate call-site-urile existente fara param continua
      *                          sa primeasca exact aceleasi valori (default 'ro').
      */
+    /**
+     * Extrage locale-ul efectiv al unui Ticket. Folosit de call-site-urile care
+     * randeaza biletul (PDF/SVG/HTML) ca sa-l propage atat la resolveTicketData
+     * cat si la TicketPreviewGenerator->renderToHtml (care citeste
+     * layer.content_translations[locale]).
+     *
+     * Cascada: ticket.locale → order.locale → 'ro' (default, backward compat).
+     */
+    public function resolveOrderLocale(?Ticket $ticket): string
+    {
+        if (!$ticket) return 'ro';
+        return $ticket->locale ?? $ticket->order?->locale ?? 'ro';
+    }
+
     public function resolveTicketData(Ticket $ticket, ?string $locale = null): array
     {
         $order = $ticket->order;
