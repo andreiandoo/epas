@@ -26,21 +26,35 @@ class NewsletterRenderer
 
         $contentHtml = '';
 
-        foreach ($sections as $section) {
+        foreach ($sections as $idx => $section) {
             $type = $section['type'] ?? 'text';
-            $contentHtml .= match ($type) {
-                'text' => $this->renderTextSection($section),
-                'html' => $this->renderHtmlSection($section),
-                'recommended_events' => $this->renderRecommendedEvents($section, $marketplaceId, $marketplace),
-                'hand_picked_events' => $this->renderHandPickedEvents($section, $marketplace),
-                'featured_event' => $this->renderFeaturedEvent($section, $marketplace),
-                'events_next_week' => $this->renderEventsNextWeek($section, $marketplaceId, $marketplace),
-                'events_next_month' => $this->renderEventsNextMonth($section, $marketplaceId, $marketplace),
-                'button' => $this->renderButton($section),
-                'spacer' => $this->renderSpacer($section),
-                'image' => $this->renderImage($section),
-                default => '',
-            };
+            try {
+                $contentHtml .= match ($type) {
+                    'text' => $this->renderTextSection($section),
+                    'html' => $this->renderHtmlSection($section),
+                    'recommended_events' => $this->renderRecommendedEvents($section, $marketplaceId, $marketplace),
+                    'hand_picked_events' => $this->renderHandPickedEvents($section, $marketplace),
+                    'featured_event' => $this->renderFeaturedEvent($section, $marketplace),
+                    'events_next_week' => $this->renderEventsNextWeek($section, $marketplaceId, $marketplace),
+                    'events_next_month' => $this->renderEventsNextMonth($section, $marketplaceId, $marketplace),
+                    'button' => $this->renderButton($section),
+                    'spacer' => $this->renderSpacer($section),
+                    'image' => $this->renderImage($section),
+                    default => '',
+                };
+            } catch (\Throwable $e) {
+                // One broken section shouldn't 500 the whole preview /
+                // outgoing email. Log + replace with a visible placeholder
+                // so the admin can spot the problem.
+                \Log::error('NewsletterRenderer: section #' . $idx . ' (' . $type . ') failed', [
+                    'newsletter_id' => $newsletter->id ?? null,
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString(),
+                ]);
+                $contentHtml .= '<div style="margin:16px 0;padding:12px 14px;border:1px solid #fca5a5;background:#fef2f2;color:#991b1b;font-family:Arial,Helvetica,sans-serif;font-size:13px;border-radius:8px;">'
+                    . 'Secțiunea #' . ($idx + 1) . ' (' . e($type) . ') nu a putut fi randată: ' . e($e->getMessage())
+                    . '</div>';
+            }
         }
 
         // Replace event variables {{event:ID:field}}
@@ -112,11 +126,13 @@ class NewsletterRenderer
     }
 
     /**
-     * Single "featured event" hero block — iabilet-style layout with a
-     * 580px-wide image, big title link, venue / city subline, doors / start
-     * times, the cheapest live price and a prominent CTA. All driven by the
-     * event_id picked in the section schema; admin only needs to supply the
-     * event reference (plus an optional intro_text + cta_label override).
+     * Featured event hero block — AmBilet design (was "v2" before the
+     * v1 iabilet variant was dropped). Emits INNER content only: big
+     * title, optional artist subtitle, optional intro paragraph, details
+     * grid (data/ora/locație/oraș), primary pill CTA, and a poster
+     * image. The outer dark wrap + rounded white card are supplied by
+     * wrapInEmailTemplate() — never wrap here, or the hero ends up
+     * nested in a card-within-a-card and disappears in preview.
      */
     protected function renderFeaturedEvent(array $section, MarketplaceClient $marketplace): string
     {
@@ -126,88 +142,10 @@ class NewsletterRenderer
         $event = Event::with('venue')->find($eventId);
         if (!$event) return '';
 
-        $variant = $section['design_variant'] ?? 'v1';
-        return $variant === 'v2'
-            ? $this->renderFeaturedEventV2($section, $event, $marketplace)
-            : $this->renderFeaturedEventV1($section, $event, $marketplace);
+        return $this->renderFeaturedEventHero($section, $event, $marketplace);
     }
 
-    /**
-     * v1 — iabilet-style compact hero (white card on light wrapper).
-     */
-    protected function renderFeaturedEventV1(array $section, Event $event, MarketplaceClient $marketplace): string
-    {
-        $intro = trim((string) ($section['intro_text'] ?? ''));
-        if ($intro === '') {
-            $intro = ($marketplace->name ?? 'Newsletter') . ' îți recomandă cele mai tari concerte și evenimente';
-        }
-
-        $ctaLabel = trim((string) ($section['cta_label'] ?? ''));
-        if ($ctaLabel === '') {
-            $ctaLabel = 'Vezi programul și Cumpără bilet';
-        }
-
-        $name = e($this->eventTitle($event));
-        $venueName = e($this->eventVenueName($event));
-        $venueCity = e($this->eventVenueCity($event));
-        $location = trim($venueName . ($venueName && $venueCity ? ', ' : '') . $venueCity);
-        $date = ($d = $this->eventDate($event)) ? $d->format('d M Y') : '';
-        $eventUrl = $this->getEventUrl($event, $marketplace);
-        $imageRaw = $this->eventImage($event, 'card');
-        $imageUrl = $imageRaw !== '' ? $this->resolveImageUrl($imageRaw, $marketplace) : '';
-        $price = $this->getEventPrice($event, $marketplace);
-        $priceLabel = $price ? 'De la ' . e($price) : 'Detalii';
-
-        $imageBlock = '';
-        if ($imageUrl) {
-            $imageBlock = '<tr><td><a href="' . e($eventUrl) . '" target="_blank" rel="noreferrer" style="text-decoration:none;"><img src="' . e($imageUrl) . '" alt="' . $name . '" style="display:block;border:0;width:580px;max-width:100%;height:auto;border-radius:8px;" width="580" /></a></td></tr>';
-        }
-
-        $locationLine = $location !== ''
-            ? '<div style="color:#4C4C59;font-size:14px;margin-top:4px;">' . $location . '</div>'
-            : '';
-        $dateLine = $date !== ''
-            ? '<div style="color:#4C4C59;font-size:14px;margin-top:4px;">' . e($date) . '</div>'
-            : '';
-
-        return <<<HTML
-        <table align="center" border="0" cellpadding="0" cellspacing="0" width="100%" style="border-collapse:collapse;margin:24px 0;">
-            <tr>
-                <td align="center" style="padding:0 0 12px 0;font-size:14px;color:#4C4C59;">
-                    {$intro}
-                </td>
-            </tr>
-            <tr>
-                <td align="center" style="padding:0 10px;">
-                    <table border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width:580px;border-collapse:collapse;">
-                        {$imageBlock}
-                        <tr>
-                            <td align="center" style="padding:16px 0 4px 0;">
-                                <a href="{$eventUrl}" target="_blank" rel="noreferrer" style="color:#A51C30;text-decoration:none;font-size:22px;font-weight:700;font-family:Arial,Helvetica,sans-serif;line-height:1.3;">{$name}</a>
-                                {$locationLine}
-                                {$dateLine}
-                            </td>
-                        </tr>
-                        <tr>
-                            <td align="center" style="padding:16px 0 4px 0;">
-                                <a href="{$eventUrl}" target="_blank" rel="noreferrer" style="display:inline-block;padding:14px 28px;background-color:#A51C30;color:#ffffff;text-decoration:none;border-radius:8px;font-size:15px;font-weight:bold;font-family:Arial,Helvetica,sans-serif;">{$ctaLabel} — {$priceLabel}</a>
-                            </td>
-                        </tr>
-                    </table>
-                </td>
-            </tr>
-        </table>
-        HTML;
-    }
-
-    /**
-     * v2 — ambilet single-event hero block. Emits INNER content only: big
-     * title + artist subtitle + optional intro + details grid + primary CTA
-     * + image. The outer dark wrap and rounded white card are supplied by
-     * wrapInEmailTemplate(); double-wrapping (a card inside a card) was the
-     * bug that hid the hero in preview.
-     */
-    protected function renderFeaturedEventV2(array $section, Event $event, MarketplaceClient $marketplace): string
+    protected function renderFeaturedEventHero(array $section, Event $event, MarketplaceClient $marketplace): string
     {
         $name = e($this->eventTitle($event));
         $venueName = e($this->eventVenueName($event) ?: '—');
@@ -215,7 +153,11 @@ class NewsletterRenderer
         $date = ($d = $this->eventDate($event)) ? $d->format('d M Y') : '—';
         $time = $this->eventStartTime($event) ?: '—';
         $eventUrl = e($this->getEventUrl($event, $marketplace));
-        $imageRaw = $this->eventImage($event, 'hero');
+        // Always prefer poster format for newsletter heroes — admin
+        // request. Falls back to featured / hero columns when poster_url
+        // is blank (common for events imported from older WP feeds where
+        // only image_url → hero_image_url was populated).
+        $imageRaw = $this->eventImage($event, 'card');
         $imageUrl = $imageRaw !== '' ? e($this->resolveImageUrl($imageRaw, $marketplace)) : '';
 
         $artist = trim((string) ($section['artist_name'] ?? ''));
@@ -439,11 +381,14 @@ class NewsletterRenderer
         $image = $imageRaw !== '' ? $this->resolveImageUrl($imageRaw, $marketplace) : '';
         $eventUrl = $this->getEventUrl($event, $marketplace);
 
-        // Get cheapest ticket price
+        // Get cheapest ticket price. ticket_types uses `status='active'` (not
+        // a boolean is_active), `is_entry_ticket` (not `is_entry`), and the
+        // physical column is `price_cents`. The `price` accessor maps to
+        // price_cents/100, so we sort by price_cents and read via accessor.
         $cheapest = $event->ticketTypes()
-            ->where('is_active', true)
-            ->where('is_entry', false)
-            ->orderBy('price')
+            ->where('status', 'active')
+            ->where('is_entry_ticket', false)
+            ->orderBy('price_cents')
             ->first();
         $price = $cheapest ? number_format($cheapest->price, 0) . ' ' . ($marketplace->currency ?? 'RON') : '';
 
@@ -651,14 +596,21 @@ class NewsletterRenderer
     // Helpers
     // =========================================
 
+    /**
+     * Resolve a stored image reference to an absolute URL.
+     *
+     * Images live on the platform host (config('app.url') →
+     * core.tixello.com), NOT on the marketplace consumer host
+     * (ambilet.ro). This matches the EventsController::formatImageUrl
+     * convention used by the public API + the /bilete catalog. Pass-
+     * through if the column already holds a fully qualified URL.
+     */
     protected function resolveImageUrl(string $image, MarketplaceClient $marketplace): string
     {
-        if (str_starts_with($image, 'http')) {
+        if (str_starts_with($image, 'http://') || str_starts_with($image, 'https://')) {
             return $image;
         }
-
-        $host = $this->hostOf($marketplace);
-        return "https://{$host}/storage/{$image}";
+        return rtrim(config('app.url'), '/') . '/storage/' . ltrim($image, '/');
     }
 
     protected function getEventUrl(Event $event, MarketplaceClient $marketplace): string
@@ -756,7 +708,7 @@ class NewsletterRenderer
         }
 
         $tt = $event->ticketTypes()
-            ->where('is_active', true)
+            ->where('status', 'active')
             ->orderByRaw('COALESCE(NULLIF(sale_price_cents, 0), price_cents) ASC')
             ->first();
         if (!$tt) return '';

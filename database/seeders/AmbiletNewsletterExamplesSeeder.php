@@ -126,36 +126,20 @@ class AmbiletNewsletterExamplesSeeder extends Seeder
     }
 
     /**
-     * Example 1 — text intro + featured event (v1 compact) + footer CTA.
+     * Example 1 — minimal featured event (just the hero, no artist /
+     * intro paragraph). Subject + preview_text drive the inbox snippet.
      */
     private function buildV1FeaturedExample(string $name, string $host, ?int $eventId): array
     {
         return [
-            'name' => 'Exemplu — Eveniment featured (v1 compact)',
+            'name' => 'Exemplu — Eveniment featured (minimal)',
             'subject' => "{$name} îți recomandă: nu rata acest eveniment!",
             'preview_text' => 'Un eveniment ales pe sprânceană, doar pentru tine.',
             'body_sections' => [
                 [
-                    'type' => 'text',
-                    'content' => '<p style="font-size:15px;line-height:22px;color:#1f2937;margin:0 0 12px 0;">Salut {{customer_name}},</p>'
-                        . '<p style="font-size:15px;line-height:22px;color:#1f2937;margin:0 0 12px 0;">Echipa <strong>' . e($name) . '</strong> îți pregătește o recomandare specială pentru zilele următoare. Mai jos ai toate detaliile + linkul direct la bilete.</p>',
-                ],
-                [
                     'type' => 'featured_event',
                     'event_id' => $eventId,
-                    'design_variant' => 'v1',
-                    'intro_text' => $name . ' îți recomandă',
-                    'cta_label' => 'Vezi programul și Cumpără bilet',
-                ],
-                [
-                    'type' => 'spacer',
-                    'height' => 16,
-                ],
-                [
-                    'type' => 'button',
-                    'button_text' => 'Vezi toate evenimentele',
-                    'button_url' => "https://{$host}/bilete",
-                    'button_color' => '#A51C30',
+                    'cta_label' => 'Cumpără bilete',
                 ],
             ],
             'body_text' => "Salut,\n\n{$name} îți recomandă un eveniment de neratat. Vezi detaliile în versiunea HTML a acestui email.\n\nDezabonare: {{unsubscribe_url}}\n",
@@ -163,20 +147,20 @@ class AmbiletNewsletterExamplesSeeder extends Seeder
     }
 
     /**
-     * Example 2 — featured event v2 hero (dark wrapper, big title,
-     * artist subtitle, intro paragraph, details grid).
+     * Example 2 — featured event with artist subtitle + intro paragraph
+     * so the admin sees what those optional fields look like in the
+     * rendered hero.
      */
     private function buildV2FeaturedExample(string $name, string $host, ?int $eventId): array
     {
         return [
-            'name' => 'Exemplu — Eveniment featured (v2 hero cu detalii)',
+            'name' => 'Exemplu — Eveniment featured (cu artist + intro)',
             'subject' => 'Eveniment de neratat — ' . $name,
             'preview_text' => 'Concertul săptămânii — energie, scenă, vibe. Vezi detaliile.',
             'body_sections' => [
                 [
                     'type' => 'featured_event',
                     'event_id' => $eventId,
-                    'design_variant' => 'v2',
                     'artist_name' => 'Trupa pe care nu vrei să o ratezi',
                     'intro_paragraph' => 'Un show intens, lumini, vibrații puternice și o seară pe care o vei ține minte. Bilete limitate — rezervă-ți locul acum, la prețul cel mai bun.',
                     'cta_label' => 'Cumpără bilete',
