@@ -378,6 +378,20 @@ require_once __DIR__ . '/includes/head.php';
                             <span id="desc-toggle-text">Vezi mai mult</span>
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                         </button>
+                        <!-- YouTube embed (populated by event-single.js when event.video_url is set) -->
+                        <div id="event-video" class="hidden px-6 pb-6 mobile:px-4">
+                            <div class="relative w-full overflow-hidden bg-black rounded-xl" style="padding-top: 56.25%;">
+                                <iframe id="event-video-iframe"
+                                    class="absolute inset-0 w-full h-full"
+                                    src=""
+                                    title="Video eveniment"
+                                    frameborder="0"
+                                    loading="lazy"
+                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                                    referrerpolicy="strict-origin-when-cross-origin"
+                                    allowfullscreen></iframe>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
