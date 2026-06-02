@@ -118,19 +118,52 @@ class MarketplaceNewsletter extends Model
         $clientId = $marketplace?->id;
         if (!$clientId) return collect();
 
+        $resolved = $this->resolveRecipientCustomerIds($clientId, materializeOrganizers: true);
+
+        if ($resolved->isEmpty()) return collect();
+
+        return MarketplaceCustomer::whereIn('id', $resolved)->get();
+    }
+
+    /**
+     * Resolve the targeted customer-id set, applying the correct
+     * combination semantics:
+     *
+     *   Lists / tags / organizer-typed lists  -> BASE audience (subscribers,
+     *                                            curated cohorts)
+     *   Events / organizers / cities          -> NARROWING FILTER over the
+     *                                            base
+     *
+     *   - Only base set                       -> base
+     *   - Only filter set                     -> filter members (transactional)
+     *   - Both set                             -> base ∩ filter
+     *
+     * This was UNION before — picking "Clienți" (70k) + "Qfeel events in
+     * Bucharest" returned 70k + Qfeel-Bucharest buyers, which is what
+     * the admin was seeing as the inflated 70k+ count even though they
+     * meant "Clienți who also bought at Qfeel in Bucharest".
+     *
+     * `$materializeOrganizers` is true for the actual recipient build
+     * (we want a customer row for each organizer email), false for the
+     * read-only count + email collection so we don't write rows just to
+     * compute a number.
+     */
+    protected function resolveRecipientCustomerIds(int $clientId, bool $materializeOrganizers = false): \Illuminate\Support\Collection
+    {
         [$organizerListIds, $regularListIds] = $this->splitListsByType((array) $this->target_lists);
 
-        $customerIds = collect();
+        // ---- Base audience: lists + tags + organizer-typed lists.
+        // The organizer's list pick IS the consent — every email carries
+        // an unsubscribe link, and Filament's "Abonați" list is already
+        // the pre-segmented opt-in cohort. We do NOT filter by
+        // accepts_marketing here (would double-filter the "Clienți"
+        // non-marketing segment to empty).
+        $baseIds = collect();
+        $hasBase = false;
 
-        // ---- Regular lists / tags ----
-        // The organizer's list pick IS the consent — every email carries an
-        // unsubscribe link, and Filament's "Abonați" list is already the
-        // pre-segmented opt-in cohort. Filtering by accepts_marketing here
-        // double-filters: a "Clienți" list (designed to be the non-marketing
-        // segment) would always come back empty, defeating the segmentation.
         if (!empty($regularListIds) || !empty($this->target_tags)) {
+            $hasBase = true;
             $q = MarketplaceCustomer::where('marketplace_client_id', $clientId);
-
             if (!empty($regularListIds)) {
                 $q->whereHas('contactLists', function ($qq) use ($regularListIds) {
                     $qq->whereIn('marketplace_contact_lists.id', $regularListIds)
@@ -142,44 +175,58 @@ class MarketplaceNewsletter extends Model
                     $qq->whereIn('marketplace_contact_tags.id', $this->target_tags);
                 });
             }
-
-            $customerIds = $customerIds->merge($q->pluck('id'));
+            $baseIds = $baseIds->merge($q->pluck('id'));
         }
 
-        // ---- Organizer-typed lists: pull straight from marketplace_organizers
-        // and ensure a MarketplaceCustomer row exists for each so the
-        // recipient FK is satisfied. The customer rows are created with
-        // accepts_marketing=false so they never accidentally get scooped up
-        // by a future "Abonați" blast.
         if (!empty($organizerListIds)) {
-            $customerIds = $customerIds->merge($this->materializeOrganizerCustomers($clientId));
-        }
-
-        // ---- Event ticket-buyers (transactional; ignores opt-in) ----
-        if (!empty($this->target_event_ids)) {
-            $eventBuyerIds = $this->getEventBuyerCustomerIds($this->target_event_ids);
-            $customerIds = $customerIds->merge($eventBuyerIds);
-        }
-
-        // ---- Organizer ticket-buyers (transactional; ignores opt-in).
-        // Only resolved when target_event_ids is empty — otherwise the
-        // admin has already narrowed to specific events and the
-        // organizer filter is just a UI pre-filter, not a separate
-        // recipient source.
-        if (empty($this->target_event_ids) && !empty($this->target_organizer_ids)) {
-            $organizerEventIds = $this->getOrganizerEventIds(
-                (array) $this->target_organizer_ids,
-                (array) ($this->target_city_ids ?? [])
-            );
-            if (!empty($organizerEventIds)) {
-                $customerIds = $customerIds->merge($this->getEventBuyerCustomerIds($organizerEventIds));
+            $hasBase = true;
+            if ($materializeOrganizers) {
+                $baseIds = $baseIds->merge($this->materializeOrganizerCustomers($clientId));
+            } else {
+                // Read-only branch: count by joining organizer emails to
+                // existing customers, no firstOrCreate.
+                $emails = $this->collectOrganizerEmails($clientId);
+                if (!$emails->isEmpty()) {
+                    $existing = MarketplaceCustomer::where('marketplace_client_id', $clientId)
+                        ->whereIn('email', $emails->all())
+                        ->pluck('id');
+                    $baseIds = $baseIds->merge($existing);
+                }
             }
         }
 
-        $uniqueIds = $customerIds->unique()->values();
-        if ($uniqueIds->isEmpty()) return collect();
+        // ---- Narrowing filter: events + organizer (+ optional city).
+        // Organizer is only used as a SEPARATE source when target_event_ids
+        // is empty; otherwise the admin already narrowed to specific events
+        // and organizer is a UI pre-filter only.
+        $filterIds = null; // null = no filter applied
+        $eventIds = (array) ($this->target_event_ids ?? []);
+        if (empty($eventIds) && !empty($this->target_organizer_ids)) {
+            $eventIds = $this->getOrganizerEventIds(
+                (array) $this->target_organizer_ids,
+                (array) ($this->target_city_ids ?? [])
+            );
+        }
+        if (!empty($eventIds)) {
+            $filterIds = $this->getEventBuyerCustomerIds($eventIds);
+        } elseif (!empty($this->target_organizer_ids)) {
+            // Organizer picked but expanded to zero events — filter set is
+            // empty (so an "AND" combination yields zero).
+            $filterIds = collect();
+        }
 
-        return MarketplaceCustomer::whereIn('id', $uniqueIds)->get();
+        // ---- Combination semantics.
+        if (!$hasBase && $filterIds === null) {
+            return collect(); // nothing selected
+        }
+        if ($filterIds === null) {
+            return $baseIds->unique()->values();
+        }
+        if (!$hasBase) {
+            return $filterIds->unique()->values();
+        }
+        // Both → intersect.
+        return $baseIds->unique()->intersect($filterIds->unique())->values();
     }
 
     /**
@@ -304,8 +351,10 @@ class MarketplaceNewsletter extends Model
 
     /**
      * Per-source recipient counts so the UI can explain where the total
-     * comes from. Each bucket is the count of unique emails contributed
-     * by that source; `total` is the deduped union across all sources.
+     * comes from. Counts are reported PER SOURCE before the
+     * intersection — that way the admin sees the raw cohort size of
+     * each picker and the `total` field reflects the actual deduped
+     * resolved audience (base ∩ filter when both are set).
      *
      * @return array{lists:int, tags:int, organizers:int, events:int, total:int}
      */
@@ -346,16 +395,13 @@ class MarketplaceNewsletter extends Model
         if (!empty($this->target_event_ids)) {
             $eventsCount = $this->getEventBuyerCustomerIds($this->target_event_ids)->count();
         }
-
-        // Organizer-driven recipients (only when no explicit event picks).
-        $organizerBuyersCount = 0;
         if (empty($this->target_event_ids) && !empty($this->target_organizer_ids)) {
             $orgEventIds = $this->getOrganizerEventIds(
                 (array) $this->target_organizer_ids,
                 (array) ($this->target_city_ids ?? [])
             );
             if (!empty($orgEventIds)) {
-                $organizerBuyersCount = $this->getEventBuyerCustomerIds($orgEventIds)->count();
+                $eventsCount += $this->getEventBuyerCustomerIds($orgEventIds)->count();
             }
         }
 
@@ -363,70 +409,38 @@ class MarketplaceNewsletter extends Model
             'lists' => $listsCount,
             'tags' => $tagsCount,
             'organizers' => $organizersCount,
-            'events' => $eventsCount + $organizerBuyersCount,
+            'events' => $eventsCount,
             'total' => $this->getRecipientCount(),
         ];
     }
 
     /**
-     * Read-only union of all recipient emails (lowercased, deduped) without
-     * touching the customers table. Used for count + preview.
+     * Read-only emails for the resolved audience (lowercased, deduped).
+     * Uses the same intersect-when-both semantics as buildRecipientList
+     * via resolveRecipientCustomerIds(materializeOrganizers: false), so
+     * the count surfaced to the admin stays in sync with what actually
+     * gets sent.
      */
     protected function collectRecipientEmails(): \Illuminate\Support\Collection
     {
         $clientId = $this->marketplace_client_id ?? $this->marketplaceClient?->id;
         if (!$clientId) return collect();
 
-        [$organizerListIds, $regularListIds] = $this->splitListsByType((array) $this->target_lists);
+        $resolvedIds = $this->resolveRecipientCustomerIds($clientId, materializeOrganizers: false);
 
-        $emails = collect();
-
-        // Regular lists / tags branch
-        if (!empty($regularListIds) || !empty($this->target_tags)) {
-            $q = MarketplaceCustomer::where('marketplace_client_id', $clientId);
-            if (!empty($regularListIds)) {
-                $q->whereHas('contactLists', function ($qq) use ($regularListIds) {
-                    $qq->whereIn('marketplace_contact_lists.id', $regularListIds)
-                        ->where('marketplace_contact_list_members.status', 'subscribed');
-                });
+        if ($resolvedIds->isEmpty()) {
+            // Organizer-typed lists may still resolve to organizer emails
+            // that don't yet have a MarketplaceCustomer row — surface
+            // them in the count when nothing else is selected.
+            [$organizerListIds] = $this->splitListsByType((array) $this->target_lists);
+            if (!empty($organizerListIds) && empty($this->target_event_ids) && empty($this->target_organizer_ids)) {
+                return $this->collectOrganizerEmails($clientId);
             }
-            if (!empty($this->target_tags)) {
-                $q->whereHas('tags', function ($qq) {
-                    $qq->whereIn('marketplace_contact_tags.id', $this->target_tags);
-                });
-            }
-            $emails = $emails->merge($q->pluck('email'));
+            return collect();
         }
 
-        if (!empty($organizerListIds)) {
-            $emails = $emails->merge($this->collectOrganizerEmails($clientId));
-        }
-
-        if (!empty($this->target_event_ids)) {
-            $buyerIds = $this->getEventBuyerCustomerIds($this->target_event_ids);
-            if (!$buyerIds->isEmpty()) {
-                $emails = $emails->merge(
-                    MarketplaceCustomer::whereIn('id', $buyerIds)->pluck('email')
-                );
-            }
-        }
-
-        if (empty($this->target_event_ids) && !empty($this->target_organizer_ids)) {
-            $orgEventIds = $this->getOrganizerEventIds(
-                (array) $this->target_organizer_ids,
-                (array) ($this->target_city_ids ?? [])
-            );
-            if (!empty($orgEventIds)) {
-                $buyerIds = $this->getEventBuyerCustomerIds($orgEventIds);
-                if (!$buyerIds->isEmpty()) {
-                    $emails = $emails->merge(
-                        MarketplaceCustomer::whereIn('id', $buyerIds)->pluck('email')
-                    );
-                }
-            }
-        }
-
-        return $emails
+        return MarketplaceCustomer::whereIn('id', $resolvedIds)
+            ->pluck('email')
             ->map(fn ($e) => strtolower(trim((string) $e)))
             ->filter(fn ($e) => $e !== '' && filter_var($e, FILTER_VALIDATE_EMAIL))
             ->unique()

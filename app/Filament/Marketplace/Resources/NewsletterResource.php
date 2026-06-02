@@ -340,16 +340,31 @@ class NewsletterResource extends Resource
                         ->helperText('Selectează orașul mai sus → evenimentele se preîncărc automat. Newsletter ajunge la toți cumpărătorii cu bilete valide; un client care a cumpărat la mai multe evenimente primește un singur email.')
                         ->columnSpanFull(),
 
+                    // Contact lists. Labels include subscriber counts and
+                    // the (Manual / Dynamic) type tag — Ambilet has
+                    // historically held BOTH a "Clienți" (Manual, ~70k)
+                    // and a "Clienti" (Dynamic, ~59k) row, which look
+                    // alike in a vanilla dropdown but mean very different
+                    // cohorts. Showing the count + type avoids the
+                    // "which one did I pick?" trap.
                     Forms\Components\Select::make('target_lists')
                         ->label('Contact Lists')
                         ->multiple()
                         ->live(onBlur: true)
                         ->options(function () use ($marketplace) {
-                            return MarketplaceContactList::where('marketplace_client_id', $marketplace?->id)
+                            if (!$marketplace) return [];
+                            return MarketplaceContactList::where('marketplace_client_id', $marketplace->id)
                                 ->where('is_active', true)
-                                ->pluck('name', 'id');
+                                ->orderBy('name')
+                                ->get()
+                                ->mapWithKeys(function ($list) {
+                                    $type = ucfirst($list->list_type ?? '—');
+                                    $count = number_format((int) ($list->subscriber_count ?? 0), 0, '.', '.');
+                                    return [$list->id => "{$list->name} — {$type} ({$count})"];
+                                })
+                                ->toArray();
                         })
-                        ->helperText('Trimite către listele de contacte selectate'),
+                        ->helperText('Listele sunt sursa de bază (audiența). Combinate cu organizator/eveniment, rezultatul e INTERSECȚIA: doar membrii listei care au cumpărat la scopul ales.'),
                     Forms\Components\Select::make('target_tags')
                         ->label('Contact Tags')
                         ->multiple()
