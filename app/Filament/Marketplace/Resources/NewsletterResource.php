@@ -330,6 +330,30 @@ class NewsletterResource extends Resource
                                     ->maxLength(80)
                                     ->columnSpanFull(),
 
+                                Forms\Components\Select::make('design_variant')
+                                    ->label('Design')
+                                    ->options([
+                                        'v1' => 'iabilet-style (compact)',
+                                        'v2' => 'AmBilet v2 (hero cu detalii)',
+                                    ])
+                                    ->default('v1')
+                                    ->visible(fn ($get) => $get('type') === 'featured_event')
+                                    ->columnSpanFull(),
+
+                                Forms\Components\TextInput::make('artist_name')
+                                    ->label('Subtitlu / Artist (opțional, doar pentru v2)')
+                                    ->visible(fn ($get) => $get('type') === 'featured_event' && ($get('design_variant') ?? 'v1') === 'v2')
+                                    ->placeholder('ex: Dirty Shirt')
+                                    ->maxLength(120)
+                                    ->columnSpanFull(),
+
+                                Forms\Components\Textarea::make('intro_paragraph')
+                                    ->label('Paragraf intro (opțional, doar pentru v2)')
+                                    ->visible(fn ($get) => $get('type') === 'featured_event' && ($get('design_variant') ?? 'v1') === 'v2')
+                                    ->rows(3)
+                                    ->placeholder('Energia trupei ajunge pe scenă într-un show intens...')
+                                    ->columnSpanFull(),
+
                                 // Text section
                                 Forms\Components\RichEditor::make('content')
                                     ->label('Conținut')

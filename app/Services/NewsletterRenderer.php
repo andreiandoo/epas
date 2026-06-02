@@ -109,6 +109,17 @@ class NewsletterRenderer
             ->first();
         if (!$event) return '';
 
+        $variant = $section['design_variant'] ?? 'v1';
+        return $variant === 'v2'
+            ? $this->renderFeaturedEventV2($section, $event, $marketplace)
+            : $this->renderFeaturedEventV1($section, $event, $marketplace);
+    }
+
+    /**
+     * v1 — iabilet-style compact hero (white card on light wrapper).
+     */
+    protected function renderFeaturedEventV1(array $section, MarketplaceEvent $event, MarketplaceClient $marketplace): string
+    {
         $intro = trim((string) ($section['intro_text'] ?? ''));
         if ($intro === '') {
             $intro = ($marketplace->name ?? 'Newsletter') . ' îți recomandă cele mai tari concerte și evenimente';
@@ -164,6 +175,133 @@ class NewsletterRenderer
                                 <a href="{$eventUrl}" target="_blank" rel="noreferrer" style="display:inline-block;padding:14px 28px;background-color:#A51C30;color:#ffffff;text-decoration:none;border-radius:8px;font-size:15px;font-weight:bold;font-family:Arial,Helvetica,sans-serif;">{$ctaLabel} — {$priceLabel}</a>
                             </td>
                         </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+        HTML;
+    }
+
+    /**
+     * v2 — ambilet single-event hero: dark wrapper, rounded white card,
+     * "Concert recomandat" eyebrow, big title + artist subtitle, details
+     * grid (data/ora/locație/oraș), primary CTA, image, supporting copy
+     * and a secondary CTA. Optional fields (artist_name, intro_paragraph)
+     * fall back to sensible defaults driven by the event itself.
+     */
+    protected function renderFeaturedEventV2(array $section, MarketplaceEvent $event, MarketplaceClient $marketplace): string
+    {
+        $name = e($event->name ?? 'Eveniment');
+        $venueName = e($event->venue_name ?? '');
+        $venueCity = e($event->venue_city ?? '');
+        $date = $event->starts_at ? $event->starts_at->format('d M Y') : '';
+        $time = $event->starts_at ? $event->starts_at->format('H:i') : '';
+        $eventUrl = e($this->getEventUrl($event, $marketplace));
+        $imageUrl = $event->image ? e($this->resolveImageUrl($event->image, $marketplace)) : '';
+
+        $artist = trim((string) ($section['artist_name'] ?? ''));
+        $artistBlock = $artist !== ''
+            ? '<div style="font-family:Arial, Helvetica, sans-serif; font-size:20px; line-height:28px; font-weight:700; color:#334155; padding-top:8px;">' . e($artist) . '</div>'
+            : '';
+
+        $intro = trim((string) ($section['intro_paragraph'] ?? ''));
+        $introBlock = $intro !== ''
+            ? '<p style="margin:20px 0 0 0; padding:0; font-family:Arial, Helvetica, sans-serif; font-size:16px; line-height:25px; color:#4B5563;">' . e($intro) . '</p>'
+            : '';
+
+        $ctaLabel = trim((string) ($section['cta_label'] ?? '')) ?: 'Cumpără bilete';
+        $ctaLabel = e($ctaLabel);
+
+        $imageBlock = '';
+        if ($imageUrl) {
+            $imageBlock = <<<HTML
+            <tr>
+                <td bgcolor="#FFFFFF" style="padding:0 28px 8px 28px; background-color:#FFFFFF;">
+                    <a href="{$eventUrl}" target="_blank" style="text-decoration:none;">
+                        <img src="{$imageUrl}" width="544" alt="{$name}" style="display:block; width:544px; max-width:100%; height:auto; border:0; border-radius:18px; outline:none; text-decoration:none;" />
+                    </a>
+                </td>
+            </tr>
+            HTML;
+        }
+
+        return <<<HTML
+        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" bgcolor="#0F172A" style="border-collapse:collapse; background-color:#0F172A; margin:0; padding:0;">
+            <tr>
+                <td align="center" style="padding:12px 12px 12px 12px;">
+                    <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="600" style="width:600px; max-width:600px; border-collapse:collapse; background-color:#FFFFFF; border-radius:20px; overflow:hidden;">
+
+                        <tr>
+                            <td style="padding:20px 28px 4px 28px;">
+                                <table role="presentation" width="100%" border="0" cellpadding="0" cellspacing="0">
+                                    <tr>
+                                        <td align="right" style="font-family:Arial,Helvetica,sans-serif; font-size:12px; line-height:18px; color:#334155; text-transform:uppercase; letter-spacing:1.4px;">
+                                            Concert recomandat
+                                        </td>
+                                    </tr>
+                                </table>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td align="center" bgcolor="#FFFFFF" style="padding:34px 34px 8px 34px; background-color:#FFFFFF;">
+                                <h1 style="margin:12px 0 0 0; padding:0; font-family:Arial, Helvetica, sans-serif; font-size:36px; line-height:42px; font-weight:800; color:#1e293b; letter-spacing:-1px;">
+                                    {$name}
+                                </h1>
+                                {$artistBlock}
+                                {$introBlock}
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td bgcolor="#FFFFFF" style="padding:22px 34px 8px 34px; background-color:#FFFFFF;">
+                                <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="border-collapse:collapse;">
+                                    <tr>
+                                        <td bgcolor="#FFF7ED" style="padding:18px 18px 16px 18px; background-color:#FFF7ED; border:1px solid #FED7AA; border-radius:16px;">
+                                            <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="border-collapse:collapse;">
+                                                <tr>
+                                                    <td width="50%" valign="top" style="font-family:Arial, Helvetica, sans-serif; font-size:13px; line-height:18px; color:#9A3412; font-weight:700; padding:0 8px 10px 0;">
+                                                        Data
+                                                        <div style="font-size:16px; line-height:23px; color:#1e293b; font-weight:800; padding-top:3px;">{$date}</div>
+                                                    </td>
+                                                    <td width="50%" valign="top" style="font-family:Arial, Helvetica, sans-serif; font-size:13px; line-height:18px; color:#9A3412; font-weight:700; padding:0 0 10px 8px;">
+                                                        Ora
+                                                        <div style="font-size:16px; line-height:23px; color:#1e293b; font-weight:800; padding-top:3px;">{$time}</div>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td width="50%" valign="top" style="font-family:Arial, Helvetica, sans-serif; font-size:13px; line-height:18px; color:#9A3412; font-weight:700; padding:6px 8px 0 0;">
+                                                        Locație
+                                                        <div style="font-size:16px; line-height:23px; color:#1e293b; font-weight:800; padding-top:3px;">{$venueName}</div>
+                                                    </td>
+                                                    <td width="50%" valign="top" style="font-family:Arial, Helvetica, sans-serif; font-size:13px; line-height:18px; color:#9A3412; font-weight:700; padding:6px 0 0 8px;">
+                                                        Oraș
+                                                        <div style="font-size:16px; line-height:23px; color:#1e293b; font-weight:800; padding-top:3px;">{$venueCity}</div>
+                                                    </td>
+                                                </tr>
+                                            </table>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td align="center" bgcolor="#FFFFFF" style="padding:26px 34px 28px 34px; background-color:#FFFFFF;">
+                                <table role="presentation" border="0" cellspacing="0" cellpadding="0" style="border-collapse:separate;">
+                                    <tr>
+                                        <td align="center" bgcolor="#a51c30" style="border-radius:999px; background-color:#a51c30;">
+                                            <a href="{$eventUrl}" target="_blank" style="display:inline-block; padding:16px 34px; font-family:Arial, Helvetica, sans-serif; font-size:16px; line-height:20px; font-weight:800; color:#FFFFFF; text-decoration:none; border-radius:999px;">
+                                                {$ctaLabel}
+                                            </a>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </td>
+                        </tr>
+
+                        {$imageBlock}
+
                     </table>
                 </td>
             </tr>
