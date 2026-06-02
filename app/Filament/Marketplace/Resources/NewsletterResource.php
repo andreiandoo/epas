@@ -304,7 +304,7 @@ class NewsletterResource extends Resource
                                     ->searchable()
                                     ->getSearchResultsUsing(function (string $search) use ($marketplace) {
                                         return MarketplaceEvent::where('marketplace_client_id', $marketplace?->id)
-                                            ->where('status', 'approved')
+                                            ->where('status', 'published')
                                             ->where('is_public', true)
                                             ->where('name', 'like', "%{$search}%")
                                             ->limit(20)
@@ -376,7 +376,7 @@ class NewsletterResource extends Resource
                                     ->searchable()
                                     ->getSearchResultsUsing(function (string $search) use ($marketplace) {
                                         return MarketplaceEvent::where('marketplace_client_id', $marketplace?->id)
-                                            ->where('status', 'approved')
+                                            ->where('status', 'published')
                                             ->where('is_public', true)
                                             ->where('name', 'like', "%{$search}%")
                                             ->limit(20)

@@ -45,16 +45,26 @@ class AmbiletNewsletterExamplesSeeder extends Seeder
             return;
         }
 
+        // Pick the soonest upcoming published+public event, OR fall back to
+        // the most recent past one so the seeded newsletter renders
+        // something out of the box. event_id stays null only when the
+        // marketplace has literally no published+public events.
         $featuredEventId = MarketplaceEvent::query()
             ->where('marketplace_client_id', $client->id)
-            ->where('status', 'approved')
+            ->where('status', 'published')
             ->where('is_public', true)
             ->where('starts_at', '>=', now())
             ->orderBy('starts_at', 'asc')
-            ->value('id');
+            ->value('id')
+            ?? MarketplaceEvent::query()
+                ->where('marketplace_client_id', $client->id)
+                ->where('status', 'published')
+                ->where('is_public', true)
+                ->orderBy('starts_at', 'desc')
+                ->value('id');
 
         if (!$featuredEventId) {
-            $this->command->warn('No upcoming approved+public event found — featured_event sections will be created with event_id=null; pick one in the editor.');
+            $this->command->warn('No published+public event found — featured_event sections will be created with event_id=null; pick one in the editor.');
         }
 
         $host = $this->hostOf($client);
