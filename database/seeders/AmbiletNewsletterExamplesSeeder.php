@@ -57,10 +57,13 @@ class AmbiletNewsletterExamplesSeeder extends Seeder
             $this->command->warn('No upcoming approved+public event found — featured_event sections will be created with event_id=null; pick one in the editor.');
         }
 
+        $host = $this->hostOf($client);
+        $name = $client->name ?? 'AmBilet.ro';
+
         $examples = [
-            $this->buildV1FeaturedExample($client, $featuredEventId),
-            $this->buildV2FeaturedExample($client, $featuredEventId),
-            $this->buildWeeklyDigestExample($client),
+            $this->buildV1FeaturedExample($name, $host, $featuredEventId),
+            $this->buildV2FeaturedExample($name, $host, $featuredEventId),
+            $this->buildWeeklyDigestExample($name, $host),
         ];
 
         foreach ($examples as $payload) {
@@ -72,8 +75,13 @@ class AmbiletNewsletterExamplesSeeder extends Seeder
                 array_merge($payload, [
                     'marketplace_client_id' => $client->id,
                     'status' => 'draft',
-                    'from_name' => $client->name ?? 'AmBilet.ro',
-                    'from_email' => 'newsletter@' . ($client->domain ?? 'ambilet.ro'),
+                    'from_name' => $name,
+                    'from_email' => 'newsletter@' . $host,
+                    // body_html is NOT NULL in DB; renderer uses body_sections
+                    // when present (this column is just the legacy fallback).
+                    // Stub it with a 1-line note so the constraint passes.
+                    'body_html' => $payload['body_html']
+                        ?? '<p>Acest newsletter folosește secțiuni structurate (body_sections). Editează-l în Filament pentru a vedea conținutul complet.</p>',
                 ])
             );
             $this->command->info("Seeded newsletter draft: #{$nl->id} — {$nl->name}");
@@ -81,13 +89,22 @@ class AmbiletNewsletterExamplesSeeder extends Seeder
     }
 
     /**
+     * Normalize the client's stored domain (often `https://ambilet.ro`)
+     * down to a bare host suitable for both `from_email` and CTA URLs.
+     */
+    private function hostOf(MarketplaceClient $client): string
+    {
+        $raw = trim((string) ($client->domain ?? 'ambilet.ro'));
+        $raw = preg_replace('#^https?://#i', '', $raw);
+        $raw = rtrim((string) $raw, '/');
+        return $raw !== '' ? $raw : 'ambilet.ro';
+    }
+
+    /**
      * Example 1 — text intro + featured event (v1 compact) + footer CTA.
      */
-    private function buildV1FeaturedExample(MarketplaceClient $client, ?int $eventId): array
+    private function buildV1FeaturedExample(string $name, string $host, ?int $eventId): array
     {
-        $name = $client->name ?? 'AmBilet.ro';
-        $domain = $client->domain ?? 'ambilet.ro';
-
         return [
             'name' => 'Exemplu — Eveniment featured (v1 compact)',
             'subject' => "{$name} îți recomandă: nu rata acest eveniment!",
@@ -112,7 +129,7 @@ class AmbiletNewsletterExamplesSeeder extends Seeder
                 [
                     'type' => 'button',
                     'button_text' => 'Vezi toate evenimentele',
-                    'button_url' => "https://{$domain}/bilete",
+                    'button_url' => "https://{$host}/bilete",
                     'button_color' => '#A51C30',
                 ],
             ],
@@ -124,10 +141,8 @@ class AmbiletNewsletterExamplesSeeder extends Seeder
      * Example 2 — featured event v2 hero (dark wrapper, big title,
      * artist subtitle, intro paragraph, details grid).
      */
-    private function buildV2FeaturedExample(MarketplaceClient $client, ?int $eventId): array
+    private function buildV2FeaturedExample(string $name, string $host, ?int $eventId): array
     {
-        $name = $client->name ?? 'AmBilet.ro';
-
         return [
             'name' => 'Exemplu — Eveniment featured (v2 hero cu detalii)',
             'subject' => 'Eveniment de neratat — ' . $name,
@@ -151,11 +166,8 @@ class AmbiletNewsletterExamplesSeeder extends Seeder
      * events_next_month + footer CTA. Auto-populated from the upcoming
      * calendar; no specific event picked.
      */
-    private function buildWeeklyDigestExample(MarketplaceClient $client): array
+    private function buildWeeklyDigestExample(string $name, string $host): array
     {
-        $name = $client->name ?? 'AmBilet.ro';
-        $domain = $client->domain ?? 'ambilet.ro';
-
         return [
             'name' => 'Exemplu — Săptămâna asta la ' . $name,
             'subject' => 'Săptămâna asta pe ' . $name . ' — concerte, festivaluri, evenimente',
@@ -189,11 +201,11 @@ class AmbiletNewsletterExamplesSeeder extends Seeder
                 [
                     'type' => 'button',
                     'button_text' => 'Vezi calendarul complet',
-                    'button_url' => "https://{$domain}/bilete",
+                    'button_url' => "https://{$host}/bilete",
                     'button_color' => '#A51C30',
                 ],
             ],
-            'body_text' => "Salut,\n\nMai jos sunt recomandările {$name} pentru săptămâna și luna care vine. Vezi versiunea HTML pentru poze și prețuri.\n\nCalendar complet: https://{$domain}/bilete\n\nDezabonare: {{unsubscribe_url}}\n",
+            'body_text' => "Salut,\n\nMai jos sunt recomandările {$name} pentru săptămâna și luna care vine. Vezi versiunea HTML pentru poze și prețuri.\n\nCalendar complet: https://{$host}/bilete\n\nDezabonare: {{unsubscribe_url}}\n",
         ];
     }
 }
