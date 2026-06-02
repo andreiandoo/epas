@@ -709,18 +709,26 @@ class NewsletterResource extends Resource
                             // Build a transient instance and use the same
                             // logic the real send-time recipient build uses,
                             // so the count here matches what'll actually be
-                            // mailed.
+                            // mailed. IMPORTANT: copy target_organizer_ids +
+                            // target_city_ids too — without them the
+                            // resolver sees no filter and returns the full
+                            // base audience (so "Clienți + Qfeel Bucharest"
+                            // came back as the 70k full list instead of
+                            // the intersected ~few hundred buyers).
                             $instance = new MarketplaceNewsletter();
                             $instance->marketplace_client_id = $marketplace?->id;
                             $instance->target_lists = $get('target_lists') ?? [];
                             $instance->target_tags = $get('target_tags') ?? [];
                             $instance->target_event_ids = $get('target_event_ids') ?? [];
+                            $instance->target_organizer_ids = $get('target_organizer_ids') ?? [];
+                            $instance->target_city_ids = $get('target_city_ids') ?? [];
 
                             $hasTargeting = !empty($instance->target_lists)
                                 || !empty($instance->target_tags)
-                                || !empty($instance->target_event_ids);
+                                || !empty($instance->target_event_ids)
+                                || !empty($instance->target_organizer_ids);
                             if (!$hasTargeting) {
-                                return new HtmlString('<span class="text-gray-500">Selectează evenimente / liste / tag-uri</span>');
+                                return new HtmlString('<span class="text-gray-500">Selectează evenimente / liste / organizator</span>');
                             }
 
                             try {

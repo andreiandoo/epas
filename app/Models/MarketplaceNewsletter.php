@@ -122,7 +122,23 @@ class MarketplaceNewsletter extends Model
 
         if ($resolved->isEmpty()) return collect();
 
-        return MarketplaceCustomer::whereIn('id', $resolved)->get();
+        return $this->fetchCustomersChunked($resolved);
+    }
+
+    /**
+     * Hydrate MarketplaceCustomers from an id collection without ever
+     * binding more than ~10k params at once — Postgres caps a single
+     * prepared statement at 65535 bound parameters, and "Clienți" on
+     * Ambilet is already 70k+ rows. We chunk + concat instead of doing
+     * one giant whereIn.
+     */
+    protected function fetchCustomersChunked(\Illuminate\Support\Collection $ids): \Illuminate\Support\Collection
+    {
+        $all = collect();
+        foreach ($ids->chunk(10000) as $chunk) {
+            $all = $all->concat(MarketplaceCustomer::whereIn('id', $chunk->values()->all())->get());
+        }
+        return $all;
     }
 
     /**
@@ -439,8 +455,16 @@ class MarketplaceNewsletter extends Model
             return collect();
         }
 
-        return MarketplaceCustomer::whereIn('id', $resolvedIds)
-            ->pluck('email')
+        // Chunked to stay under Postgres' 65535 bound-param cap on a
+        // single prepared statement. "Clienți" on Ambilet alone is 70k+.
+        $emails = collect();
+        foreach ($resolvedIds->chunk(10000) as $chunk) {
+            $emails = $emails->concat(
+                MarketplaceCustomer::whereIn('id', $chunk->values()->all())->pluck('email')
+            );
+        }
+
+        return $emails
             ->map(fn ($e) => strtolower(trim((string) $e)))
             ->filter(fn ($e) => $e !== '' && filter_var($e, FILTER_VALIDATE_EMAIL))
             ->unique()
