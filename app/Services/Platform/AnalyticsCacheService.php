@@ -324,10 +324,13 @@ class AnalyticsCacheService
                 ->when($tenantId, fn($q) => $q->where('tenant_id', $tenantId))
                 ->whereBetween('started_at', [$startDate, $endDate])
                 ->groupBy('utm_source')
+                // core_sessions uses `converted` (boolean) + `conversion_value`
+                // — NOT is_converted/total_value (those names exist on
+                // core_customer_events / referral_codes respectively).
                 ->selectRaw("COALESCE(utm_source, 'direct') as source,
                     COUNT(*) as sessions,
-                    SUM(CASE WHEN is_converted = TRUE THEN 1 ELSE 0 END) as conversions,
-                    SUM(CASE WHEN is_converted = TRUE THEN total_value ELSE 0 END) as revenue")
+                    SUM(CASE WHEN converted = TRUE THEN 1 ELSE 0 END) as conversions,
+                    SUM(CASE WHEN converted = TRUE THEN conversion_value ELSE 0 END) as revenue")
                 ->orderByDesc('sessions')
                 ->limit(10)
                 ->get();
@@ -369,11 +372,12 @@ class AnalyticsCacheService
                 ->whereBetween('started_at', [$startDate, $endDate])
                 ->whereNotNull('country_code')
                 ->groupBy('country_code')
+                // core_sessions: converted / conversion_value (see getTrafficSources()).
                 ->selectRaw('country_code,
                     COUNT(*) as sessions,
                     COUNT(DISTINCT customer_id) as unique_visitors,
-                    SUM(CASE WHEN is_converted = TRUE THEN 1 ELSE 0 END) as conversions,
-                    SUM(CASE WHEN is_converted = TRUE THEN total_value ELSE 0 END) as revenue')
+                    SUM(CASE WHEN converted = TRUE THEN 1 ELSE 0 END) as conversions,
+                    SUM(CASE WHEN converted = TRUE THEN conversion_value ELSE 0 END) as revenue')
                 ->orderByDesc('sessions')
                 ->limit(20)
                 ->get();
