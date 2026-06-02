@@ -4,6 +4,7 @@ namespace App\Filament\Marketplace\Resources\NewsletterResource\Pages;
 
 use App\Filament\Marketplace\Resources\NewsletterResource;
 use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
+use App\Models\MarketplaceNewsletterLinkEvent;
 use App\Services\NewsletterRenderer;
 use Filament\Actions;
 use Filament\Forms;
@@ -16,6 +17,60 @@ class EditNewsletter extends EditRecord
     use HasMarketplaceContext;
 
     protected static string $resource = NewsletterResource::class;
+
+    /**
+     * Engagement stats panel — shown above the form when the newsletter
+     * has any activity (sent, opens, or clicks). Reads aggregate counts
+     * straight off the model + per-link breakdown from
+     * marketplace_newsletter_link_events. Rates are computed off
+     * sent_count so they stay meaningful on partial sends.
+     */
+    protected function getHeaderWidgets(): array
+    {
+        return [];
+    }
+
+    protected function getFormSchema(): array
+    {
+        return parent::getFormSchema();
+    }
+
+    public function getSubheading(): \Illuminate\Contracts\Support\Htmlable|string|null
+    {
+        $r = $this->record;
+        if (!$r) return null;
+
+        $sent = (int) ($r->sent_count ?? 0);
+        $opened = (int) ($r->opened_count ?? 0);
+        $clicked = (int) ($r->clicked_count ?? 0);
+        $uniqueOpens = MarketplaceNewsletterLinkEvent::where('newsletter_id', $r->id)
+            ->where('event_type', MarketplaceNewsletterLinkEvent::TYPE_OPEN)
+            ->count();
+        $uniqueClicks = MarketplaceNewsletterLinkEvent::where('newsletter_id', $r->id)
+            ->where('event_type', MarketplaceNewsletterLinkEvent::TYPE_CLICK)
+            ->count();
+
+        if ($sent + $opened + $clicked === 0) return null;
+
+        $openRate = $sent > 0 ? round(($opened / $sent) * 100, 1) : 0;
+        $clickRate = $sent > 0 ? round(($clicked / $sent) * 100, 1) : 0;
+        $ctor = $opened > 0 ? round(($clicked / $opened) * 100, 1) : 0;
+
+        $cell = fn ($label, $value, $sub = null) => '<div style="flex:1;min-width:130px;padding:10px 12px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;">'
+            . '<div style="font-size:11px;text-transform:uppercase;letter-spacing:0.6px;color:#6b7280;">' . e($label) . '</div>'
+            . '<div style="font-size:20px;font-weight:700;color:#111827;margin-top:2px;">' . e((string) $value) . '</div>'
+            . ($sub ? '<div style="font-size:11px;color:#6b7280;margin-top:2px;">' . e($sub) . '</div>' : '')
+            . '</div>';
+
+        $html = '<div style="display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 0 0;">'
+            . $cell('Trimise', $sent)
+            . $cell('Deschideri', $opened, "{$openRate}% open rate · {$uniqueOpens} unic")
+            . $cell('Click-uri', $clicked, "{$clickRate}% click rate · {$uniqueClicks} unic")
+            . $cell('CTOR', "{$ctor}%", 'click ÷ open')
+            . '</div>';
+
+        return new HtmlString($html);
+    }
 
     protected function getHeaderActions(): array
     {

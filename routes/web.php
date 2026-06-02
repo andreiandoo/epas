@@ -23,8 +23,19 @@ use App\Http\Controllers\Tenant\TicketCustomizerController as TenantTicketCustom
 use App\Http\Controllers\Marketplace\TicketCustomizerController as MarketplaceTicketCustomizerController;
 use App\Http\Controllers\ApplePayVerificationController;
 use App\Http\Controllers\Seating\SeatingEmbedController;
+use App\Http\Controllers\NewsletterTrackingController;
 
 Route::pattern('locale', 'en|ro|de|fr|es');
+
+// Newsletter open + click tracking. Token is self-signed (HMAC over
+// APP_KEY) so no auth / no CSRF needed. Public edge; must be reachable
+// from any inbox / forwarded copy. See NewsletterTrackingController.
+Route::get('/newsletter/click/{token}', [NewsletterTrackingController::class, 'click'])
+    ->name('newsletter.click')
+    ->where('token', '[A-Za-z0-9._-]+');
+Route::get('/newsletter/open/{token}.gif', [NewsletterTrackingController::class, 'open'])
+    ->name('newsletter.open')
+    ->where('token', '[A-Za-z0-9._-]+');
 
 // Define login route that redirects to Filament admin login
 Route::get('/login', function () {

@@ -339,6 +339,20 @@ class NewsletterResource extends Resource
                                     ])
                                     ->required()
                                     ->live()
+                                    ->afterStateUpdated(function ($state, SSet $set, SGet $get) {
+                                        // Seed type-specific defaults the moment
+                                        // the admin picks a section type, so the
+                                        // form shows brand-red button color and
+                                        // a sensible CTA label instead of empty
+                                        // fields the user has to fill manually.
+                                        if ($state === 'button') {
+                                            if (!$get('button_color')) $set('button_color', '#A51C30');
+                                            if (!$get('button_text')) $set('button_text', 'Click aici');
+                                        }
+                                        if ($state === 'spacer' && !$get('height')) {
+                                            $set('height', 20);
+                                        }
+                                    })
                                     ->columnSpanFull(),
 
                                 // Featured event picker — single event, populated
@@ -461,7 +475,14 @@ class NewsletterResource extends Resource
                                     ->maxLength(120)
                                     ->columnSpanFull(),
 
-                                // Button fields
+                                // Button fields. Defaults (#A51C30 brand red,
+                                // "Click aici" label) are applied via the
+                                // afterStateUpdated hook on the type Select
+                                // below, since Filament's default() on these
+                                // children doesn't fire when the parent type
+                                // is switched to "button" inside an existing
+                                // repeater item — it only seeds defaults at
+                                // initial item create.
                                 Forms\Components\TextInput::make('button_text')
                                     ->label('Text buton')
                                     ->default('Click aici')
@@ -473,12 +494,22 @@ class NewsletterResource extends Resource
                                 Forms\Components\ColorPicker::make('button_color')
                                     ->label('Culoare')
                                     ->default('#A51C30')
+                                    ->dehydrateStateUsing(fn ($state) => $state ?: '#A51C30')
                                     ->visible(fn ($get) => $get('type') === 'button'),
 
-                                // Image fields
-                                Forms\Components\TextInput::make('image_url')
-                                    ->label('URL imagine')
-                                    ->url()
+                                // Image upload — drag & drop. Saved on the
+                                // `public` disk under `newsletter-images/`.
+                                // The relative path stored in `file` is
+                                // resolved at render time via
+                                // NewsletterRenderer::resolveImageUrl(),
+                                // which prepends config('app.url') /storage/.
+                                Forms\Components\FileUpload::make('file')
+                                    ->label('Imagine')
+                                    ->image()
+                                    ->imageEditor()
+                                    ->disk('public')
+                                    ->directory('newsletter-images')
+                                    ->maxSize(8192)
                                     ->visible(fn ($get) => $get('type') === 'image')
                                     ->columnSpanFull(),
                                 Forms\Components\TextInput::make('image_link')

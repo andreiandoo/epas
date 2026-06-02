@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Http\Controllers\NewsletterTrackingController;
 use App\Models\Event;
 use App\Models\MarketplaceClient;
 use App\Models\MarketplaceCustomer;
@@ -39,7 +40,7 @@ class NewsletterRenderer
                     'events_next_month' => $this->renderEventsNextMonth($section, $marketplaceId, $marketplace),
                     'button' => $this->renderButton($section),
                     'spacer' => $this->renderSpacer($section),
-                    'image' => $this->renderImage($section),
+                    'image' => $this->renderImage($section, $marketplace),
                     default => '',
                 };
             } catch (\Throwable $e) {
@@ -60,11 +61,19 @@ class NewsletterRenderer
         // Replace event variables {{event:ID:field}}
         $contentHtml = $this->replaceEventVariables($contentHtml, $marketplaceId, $marketplace);
 
+        // Rewrite outgoing <a href> through the tracking redirect AFTER
+        // event variables are resolved (so the dest URL is final). The
+        // wrap then appends the open-tracking pixel at the end of the
+        // email body.
+        $contentHtml = $this->instrumentLinks($contentHtml, $newsletter, $customer);
+
         return $this->wrapInEmailTemplate(
             $contentHtml,
             $marketplace,
             $newsletter->preview_text ?? null,
             $this->deriveEyebrow($sections),
+            $newsletter,
+            $customer,
         );
     }
 
@@ -108,7 +117,11 @@ class NewsletterRenderer
         $content = $section['content'] ?? '';
         if (empty($content)) return '';
 
-        return '<div style="margin-bottom: 20px;">' . $content . '</div>';
+        // Match the typography used by the predefined sections
+        // (featured_event hero, event cards, footer, etc.) so the
+        // RichEditor output doesn't visually clash with system-rendered
+        // blocks. Body copy + line-height pegged to AmBilet's defaults.
+        return '<div style="margin-bottom:20px;font-family:Arial, Helvetica, sans-serif;font-size:15px;line-height:22px;color:#1f2937;">' . $content . '</div>';
     }
 
     protected function renderHtmlSection(array $section): string
@@ -319,22 +332,30 @@ class NewsletterRenderer
         return "<div style=\"height: {$height}px;\"></div>";
     }
 
-    protected function renderImage(array $section): string
+    protected function renderImage(array $section, MarketplaceClient $marketplace): string
     {
-        $url = e($section['image_url'] ?? '');
+        // Accept either a `file` (relative path stored by FileUpload) or
+        // a legacy `image_url` (free-text URL). FileUpload payloads come
+        // through as an array with one element when single().
+        $raw = $section['file'] ?? $section['image_url'] ?? '';
+        if (is_array($raw)) {
+            $raw = reset($raw) ?: '';
+        }
+        $raw = (string) $raw;
+        if ($raw === '') return '';
+
+        $url = e($this->resolveImageUrl($raw, $marketplace));
         $link = $section['image_link'] ?? '';
         $alt = e($section['alt_text'] ?? '');
 
-        if (empty($url)) return '';
-
-        $img = "<img src=\"{$url}\" alt=\"{$alt}\" width=\"100%\" style=\"display: block; border-radius: 8px; max-width: 100%;\" />";
+        $img = "<img src=\"{$url}\" alt=\"{$alt}\" width=\"100%\" style=\"display:block;border-radius:8px;max-width:100%;height:auto;\" />";
 
         if (!empty($link)) {
             $linkE = e($link);
-            $img = "<a href=\"{$linkE}\" style=\"text-decoration: none;\">{$img}</a>";
+            $img = "<a href=\"{$linkE}\" target=\"_blank\" style=\"text-decoration:none;\">{$img}</a>";
         }
 
-        return '<div style="margin-bottom: 20px;">' . $img . '</div>';
+        return '<div style="margin-bottom:20px;">' . $img . '</div>';
     }
 
     // =========================================
@@ -379,42 +400,38 @@ class NewsletterRenderer
         $date = e($dateStr);
         $imageRaw = $this->eventImage($event, 'card');
         $image = $imageRaw !== '' ? $this->resolveImageUrl($imageRaw, $marketplace) : '';
-        $eventUrl = $this->getEventUrl($event, $marketplace);
+        $eventUrl = e($this->getEventUrl($event, $marketplace));
 
-        // Get cheapest ticket price. ticket_types uses `status='active'` (not
-        // a boolean is_active), `is_entry_ticket` (not `is_entry`), and the
-        // physical column is `price_cents`. The `price` accessor maps to
-        // price_cents/100, so we sort by price_cents and read via accessor.
-        $cheapest = $event->ticketTypes()
-            ->where('status', 'active')
-            ->where('is_entry_ticket', false)
-            ->orderBy('price_cents')
-            ->first();
-        $price = $cheapest ? number_format($cheapest->price, 0) . ' ' . ($marketplace->currency ?? 'RON') : '';
+        // Use the shared helper so we honor sale_price_cents > 0 and fall
+        // back to price_cents. The TicketType $price accessor returns
+        // null when no sale is active, which (after number_format) was
+        // rendering as the bogus "De la 0 RON" pill on every card.
+        $priceLabel = $this->getEventPrice($event, $marketplace);
+        $ctaText = $priceLabel !== '' ? 'De la ' . e($priceLabel) : 'Detalii';
 
         $imageHtml = '';
         if ($image) {
-            $imageHtml = '<tr><td><img src="' . e($image) . '" width="100%" style="display:block;border-radius:8px 8px 0 0;height:140px;object-fit:cover;" alt="' . $name . '" /></td></tr>';
+            $imageHtml = '<tr><td><img src="' . e($image) . '" width="100%" style="display:block;border-radius:8px 8px 0 0;height:160px;object-fit:cover;" alt="' . $name . '" /></td></tr>';
         }
 
-        $priceBtn = '';
-        if ($price) {
-            $priceBtn = '<a href="' . e($eventUrl) . '" style="display:inline-block;padding:8px 16px;background:#A51C30;color:#fff;text-decoration:none;border-radius:4px;font-size:13px;font-family:Arial,sans-serif;">De la ' . e($price) . '</a>';
-        } else {
-            $priceBtn = '<a href="' . e($eventUrl) . '" style="display:inline-block;padding:8px 16px;background:#A51C30;color:#fff;text-decoration:none;border-radius:4px;font-size:13px;font-family:Arial,sans-serif;">Detalii</a>';
-        }
-
+        // Whole card is one clickable target — admin asked the entire
+        // card to be a link, not just the price pill. Color:inherit +
+        // text-decoration:none on the wrapping <a> keeps the inner
+        // typography intact; the visual "button" is just a styled span
+        // sitting inside the same anchor.
         return <<<HTML
         <td width="48%" valign="top" style="padding: 8px;">
-            <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;">
-                {$imageHtml}
-                <tr><td style="padding:12px;">
-                    <p style="font-size:15px;font-weight:bold;margin:0 0 4px;color:#1f2937;font-family:Arial,sans-serif;">{$name}</p>
-                    <p style="font-size:13px;color:#6b7280;margin:0 0 4px;font-family:Arial,sans-serif;">{$date}</p>
-                    <p style="font-size:13px;color:#6b7280;margin:0 0 10px;font-family:Arial,sans-serif;">{$venue}</p>
-                    {$priceBtn}
-                </td></tr>
-            </table>
+            <a href="{$eventUrl}" target="_blank" style="display:block;color:inherit;text-decoration:none;">
+                <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;background:#ffffff;">
+                    {$imageHtml}
+                    <tr><td style="padding:12px;font-family:Arial, Helvetica, sans-serif;">
+                        <p style="font-size:15px;font-weight:bold;margin:0 0 4px;color:#1f2937;font-family:Arial, Helvetica, sans-serif;">{$name}</p>
+                        <p style="font-size:13px;color:#6b7280;margin:0 0 4px;font-family:Arial, Helvetica, sans-serif;">{$date}</p>
+                        <p style="font-size:13px;color:#6b7280;margin:0 0 10px;font-family:Arial, Helvetica, sans-serif;">{$venue}</p>
+                        <span style="display:inline-block;padding:8px 16px;background:#A51C30;color:#fff;border-radius:4px;font-size:13px;font-family:Arial, Helvetica, sans-serif;font-weight:600;">{$ctaText}</span>
+                    </td></tr>
+                </table>
+            </a>
         </td>
         HTML;
     }
@@ -486,7 +503,7 @@ class NewsletterRenderer
      * type of digest. Preheader is the first <div> hidden by max-height,
      * shown by Gmail/Outlook in the inbox snippet.
      */
-    protected function wrapInEmailTemplate(string $content, MarketplaceClient $marketplace, ?string $previewText = null, ?string $eyebrowText = null): string
+    protected function wrapInEmailTemplate(string $content, MarketplaceClient $marketplace, ?string $previewText = null, ?string $eyebrowText = null, ?MarketplaceNewsletter $newsletter = null, ?MarketplaceCustomer $customer = null): string
     {
         $name = e($marketplace->name ?? 'Newsletter');
         $host = $this->hostOf($marketplace);
@@ -496,6 +513,17 @@ class NewsletterRenderer
         $preheader = e($previewText ?: ($marketplace->name ?? 'Newsletter') . ' — cumpără bilete online');
         $privacyUrl = "https://{$host}/privacy";
         $contactUrl = "https://{$host}/contact";
+
+        // Open-tracking pixel — empty src when there's no newsletter
+        // (shouldn't happen at send time but guards against direct
+        // template-preview calls). Recipient id is left null in preview;
+        // populated only by per-recipient send loops.
+        $pixelTag = '';
+        if ($newsletter) {
+            $token = NewsletterTrackingController::buildToken($newsletter->id, null, null);
+            $pixelUrl = e(route('newsletter.open', ['token' => $token]));
+            $pixelTag = '<img src="' . $pixelUrl . '" width="1" height="1" alt="" style="display:block;width:1px;height:1px;border:0;" />';
+        }
 
         return <<<HTML
         <!DOCTYPE html>
@@ -587,9 +615,53 @@ class NewsletterRenderer
                 </tr>
             </table>
 
+            {$pixelTag}
+
         </body>
         </html>
         HTML;
+    }
+
+    // =========================================
+    // Link Instrumentation
+    // =========================================
+
+    /**
+     * Rewrite every external <a href="..."> in the rendered body so it
+     * goes through /newsletter/click/{token}. Skips:
+     *   - mailto: / tel: / sms: schemes
+     *   - in-page anchors (#fragment)
+     *   - {{placeholder}} tokens that still need replacement (e.g.
+     *     {{unsubscribe_url}} — handled per-recipient at send time)
+     *
+     * The tracking endpoint logs the click + 302s to the dest URL with
+     * utm_source=newsletter & utm_campaign=nl_{id} appended, so any
+     * existing analytics on the destination domain attributes the
+     * traffic to this newsletter.
+     */
+    protected function instrumentLinks(string $html, MarketplaceNewsletter $newsletter, ?MarketplaceCustomer $customer): string
+    {
+        $recipientId = null; // populated per-recipient by the send loop;
+                              // for preview / test send this stays null.
+
+        return preg_replace_callback(
+            '#href\s*=\s*"([^"]+)"#i',
+            function ($m) use ($newsletter, $recipientId) {
+                $dest = $m[1];
+
+                if ($dest === '' || $dest[0] === '#') return $m[0];
+                if (str_starts_with($dest, 'mailto:') || str_starts_with($dest, 'tel:') || str_starts_with($dest, 'sms:')) {
+                    return $m[0];
+                }
+                if (str_contains($dest, '{{') || str_contains($dest, '}}')) return $m[0];
+                if (!preg_match('#^https?://#i', $dest)) return $m[0];
+
+                $token = NewsletterTrackingController::buildToken($newsletter->id, $dest, $recipientId);
+                $tracked = route('newsletter.click', ['token' => $token]);
+                return 'href="' . e($tracked) . '"';
+            },
+            $html
+        ) ?? $html;
     }
 
     // =========================================
