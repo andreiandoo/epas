@@ -2,9 +2,9 @@
 
 namespace App\Services;
 
+use App\Models\Event;
 use App\Models\MarketplaceClient;
 use App\Models\MarketplaceCustomer;
-use App\Models\MarketplaceEvent;
 use App\Models\MarketplaceNewsletter;
 use Illuminate\Support\Collection;
 
@@ -123,10 +123,7 @@ class NewsletterRenderer
         $eventId = (int) ($section['event_id'] ?? 0);
         if ($eventId <= 0) return '';
 
-        $event = MarketplaceEvent::where('id', $eventId)
-            ->where('status', 'published')
-            ->where('is_public', true)
-            ->first();
+        $event = Event::with('venue')->find($eventId);
         if (!$event) return '';
 
         $variant = $section['design_variant'] ?? 'v1';
@@ -138,7 +135,7 @@ class NewsletterRenderer
     /**
      * v1 — iabilet-style compact hero (white card on light wrapper).
      */
-    protected function renderFeaturedEventV1(array $section, MarketplaceEvent $event, MarketplaceClient $marketplace): string
+    protected function renderFeaturedEventV1(array $section, Event $event, MarketplaceClient $marketplace): string
     {
         $intro = trim((string) ($section['intro_text'] ?? ''));
         if ($intro === '') {
@@ -150,13 +147,14 @@ class NewsletterRenderer
             $ctaLabel = 'Vezi programul și Cumpără bilet';
         }
 
-        $name = e($event->name ?? 'Eveniment');
-        $venueName = e($event->venue_name ?? '');
-        $venueCity = e($event->venue_city ?? '');
+        $name = e($this->eventTitle($event));
+        $venueName = e($this->eventVenueName($event));
+        $venueCity = e($this->eventVenueCity($event));
         $location = trim($venueName . ($venueName && $venueCity ? ', ' : '') . $venueCity);
-        $date = $event->starts_at ? $event->starts_at->format('d M Y') : '';
+        $date = ($d = $this->eventDate($event)) ? $d->format('d M Y') : '';
         $eventUrl = $this->getEventUrl($event, $marketplace);
-        $imageUrl = $event->image ? $this->resolveImageUrl($event->image, $marketplace) : '';
+        $imageRaw = $this->eventImage($event, 'card');
+        $imageUrl = $imageRaw !== '' ? $this->resolveImageUrl($imageRaw, $marketplace) : '';
         $price = $this->getEventPrice($event, $marketplace);
         $priceLabel = $price ? 'De la ' . e($price) : 'Detalii';
 
@@ -209,15 +207,16 @@ class NewsletterRenderer
      * wrapInEmailTemplate(); double-wrapping (a card inside a card) was the
      * bug that hid the hero in preview.
      */
-    protected function renderFeaturedEventV2(array $section, MarketplaceEvent $event, MarketplaceClient $marketplace): string
+    protected function renderFeaturedEventV2(array $section, Event $event, MarketplaceClient $marketplace): string
     {
-        $name = e($event->name ?? 'Eveniment');
-        $venueName = e($event->venue_name ?: '—');
-        $venueCity = e($event->venue_city ?: '—');
-        $date = $event->starts_at ? $event->starts_at->format('d M Y') : '—';
-        $time = $event->starts_at ? $event->starts_at->format('H:i') : '—';
+        $name = e($this->eventTitle($event));
+        $venueName = e($this->eventVenueName($event) ?: '—');
+        $venueCity = e($this->eventVenueCity($event) ?: '—');
+        $date = ($d = $this->eventDate($event)) ? $d->format('d M Y') : '—';
+        $time = $this->eventStartTime($event) ?: '—';
         $eventUrl = e($this->getEventUrl($event, $marketplace));
-        $imageUrl = $event->image ? e($this->resolveImageUrl($event->image, $marketplace)) : '';
+        $imageRaw = $this->eventImage($event, 'hero');
+        $imageUrl = $imageRaw !== '' ? e($this->resolveImageUrl($imageRaw, $marketplace)) : '';
 
         $artist = trim((string) ($section['artist_name'] ?? ''));
         $artistBlock = $artist !== ''
@@ -349,7 +348,8 @@ class NewsletterRenderer
         $eventIds = $section['event_ids'] ?? [];
         if (empty($eventIds)) return '';
 
-        $events = MarketplaceEvent::whereIn('id', $eventIds)
+        $events = Event::with('venue')
+            ->whereIn('id', $eventIds)
             ->get()
             ->sortBy(fn ($event) => array_search($event->id, $eventIds));
 
@@ -425,12 +425,18 @@ class NewsletterRenderer
         return $titleHtml . $cardsHtml;
     }
 
-    protected function renderSingleEventCard(MarketplaceEvent $event, MarketplaceClient $marketplace): string
+    protected function renderSingleEventCard(Event $event, MarketplaceClient $marketplace): string
     {
-        $name = e($event->name ?? 'Eveniment');
-        $date = $event->starts_at ? $event->starts_at->format('d M Y, H:i') : '';
-        $venue = e($event->venue_name ?? '');
-        $image = $event->image ? $this->resolveImageUrl($event->image, $marketplace) : '';
+        $name = e($this->eventTitle($event));
+        $d = $this->eventDate($event);
+        $time = $this->eventStartTime($event);
+        $dateStr = $d ? $d->format('d M Y') . ($time ? ", {$time}" : '') : '';
+        $venueName = $this->eventVenueName($event);
+        $venueCity = $this->eventVenueCity($event);
+        $venue = e(trim($venueName . ($venueName && $venueCity ? ', ' : '') . $venueCity));
+        $date = e($dateStr);
+        $imageRaw = $this->eventImage($event, 'card');
+        $image = $imageRaw !== '' ? $this->resolveImageUrl($imageRaw, $marketplace) : '';
         $eventUrl = $this->getEventUrl($event, $marketplace);
 
         // Get cheapest ticket price
@@ -482,8 +488,9 @@ class NewsletterRenderer
         // Collect unique event IDs
         $eventIds = array_unique(array_map(fn ($m) => (int) $m[1], $matches));
 
-        // Batch load events
-        $events = MarketplaceEvent::whereIn('id', $eventIds)->get()->keyBy('id');
+        // Batch load events with venue eager-loaded so the translatable
+        // venue name + city accessors don't fan out to per-event queries.
+        $events = Event::with('venue')->whereIn('id', $eventIds)->get()->keyBy('id');
 
         // Replace each occurrence
         foreach ($matches as $match) {
@@ -497,11 +504,16 @@ class NewsletterRenderer
                 continue;
             }
 
+            $d = $this->eventDate($event);
+            $time = $this->eventStartTime($event);
+            $imageRaw = $this->eventImage($event, 'card');
+
             $value = match ($field) {
-                'name' => $event->name ?? '',
-                'date' => $event->starts_at ? $event->starts_at->format('d M Y, H:i') : '',
-                'venue' => $event->venue_name ?? '',
-                'image' => $event->image ? $this->resolveImageUrl($event->image, $marketplace) : '',
+                'name' => $this->eventTitle($event),
+                'date' => $d ? $d->format('d M Y') . ($time ? ", {$time}" : '') : '',
+                'venue' => $this->eventVenueName($event),
+                'city' => $this->eventVenueCity($event),
+                'image' => $imageRaw !== '' ? $this->resolveImageUrl($imageRaw, $marketplace) : '',
                 'url' => $this->getEventUrl($event, $marketplace),
                 'price' => $this->getEventPrice($event, $marketplace),
                 default => '',
@@ -649,11 +661,71 @@ class NewsletterRenderer
         return "https://{$host}/storage/{$image}";
     }
 
-    protected function getEventUrl(MarketplaceEvent $event, MarketplaceClient $marketplace): string
+    protected function getEventUrl(Event $event, MarketplaceClient $marketplace): string
     {
         $host = $this->hostOf($marketplace);
         $slug = $event->slug ?? $event->id;
         return "https://{$host}/bilete/{$slug}";
+    }
+
+    /**
+     * Pick the first non-empty value from a translatable JSON column
+     * (e.g. Event.title, Venue.name) — ro first, en next, then any locale.
+     * Falls back to the raw string when the column isn't JSON-cast.
+     */
+    protected function localized($value): string
+    {
+        if (is_array($value)) {
+            return (string) ($value['ro'] ?? $value['en'] ?? reset($value) ?? '');
+        }
+        return (string) ($value ?? '');
+    }
+
+    protected function eventTitle(Event $e): string
+    {
+        return $this->localized($e->title) ?: 'Eveniment';
+    }
+
+    protected function eventVenueName(Event $e): string
+    {
+        return $this->localized($e->venue?->name) ?: (string) ($e->suggested_venue_name ?? '');
+    }
+
+    protected function eventVenueCity(Event $e): string
+    {
+        return (string) ($e->venue?->city ?? '');
+    }
+
+    /** Returns a Carbon date (event_date) or null. */
+    protected function eventDate(Event $e): ?\Carbon\Carbon
+    {
+        return $e->event_date ? \Carbon\Carbon::parse($e->event_date) : null;
+    }
+
+    /** Earliest start time as HH:mm, or empty string. */
+    protected function eventStartTime(Event $e): string
+    {
+        $t = $e->start_time ?? $e->range_start_time ?? null;
+        if (!$t) return '';
+        try { return \Carbon\Carbon::parse((string) $t)->format('H:i'); }
+        catch (\Throwable $ex) { return ''; }
+    }
+
+    /**
+     * Pick the best image column for newsletter use. $variant='hero' prefers
+     * wide cover assets (used by v2 hero); $variant='card' prefers poster
+     * thumbnails (used by event cards + v1 hero). Returns empty string
+     * when no image is on file.
+     */
+    protected function eventImage(Event $e, string $variant = 'card'): string
+    {
+        $candidates = $variant === 'hero'
+            ? [$e->hero_image_url ?? null, $e->homepage_featured_image ?? null, $e->featured_image ?? null, $e->poster_url ?? null]
+            : [$e->poster_url ?? null, $e->featured_image ?? null, $e->homepage_featured_image ?? null, $e->hero_image_url ?? null];
+        foreach ($candidates as $img) {
+            if (!empty($img)) return (string) $img;
+        }
+        return '';
     }
 
     /**
@@ -669,15 +741,31 @@ class NewsletterRenderer
         return $raw !== '' ? $raw : 'example.com';
     }
 
-    protected function getEventPrice(MarketplaceEvent $event, MarketplaceClient $marketplace): string
+    /**
+     * Cheapest active ticket-type price for the event, formatted as
+     * "{N} RON". Uses the denormalized cheapest_price_cents column when
+     * available, falls back to a live ticket_types lookup otherwise.
+     */
+    protected function getEventPrice(Event $event, MarketplaceClient $marketplace): string
     {
-        $cheapest = $event->ticketTypes()
-            ->where('is_active', true)
-            ->where('is_entry', false)
-            ->orderBy('price')
-            ->first();
+        $currency = $marketplace->currency ?? 'RON';
 
-        if (!$cheapest) return '';
-        return number_format($cheapest->price, 0) . ' ' . ($marketplace->currency ?? 'RON');
+        $cents = (int) ($event->cheapest_price_cents ?? 0);
+        if ($cents > 0) {
+            return number_format($cents / 100, 0) . ' ' . $currency;
+        }
+
+        $tt = $event->ticketTypes()
+            ->where('is_active', true)
+            ->orderByRaw('COALESCE(NULLIF(sale_price_cents, 0), price_cents) ASC')
+            ->first();
+        if (!$tt) return '';
+
+        $best = (int) ($tt->sale_price_cents ?? 0) > 0
+            ? (int) $tt->sale_price_cents
+            : (int) ($tt->price_cents ?? 0);
+        if ($best <= 0) return '';
+
+        return number_format($best / 100, 0) . ' ' . $currency;
     }
 }

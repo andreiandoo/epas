@@ -2,8 +2,8 @@
 
 namespace Database\Seeders;
 
+use App\Models\Event;
 use App\Models\MarketplaceClient;
-use App\Models\MarketplaceEvent;
 use App\Models\MarketplaceNewsletter;
 use Illuminate\Database\Seeder;
 
@@ -45,39 +45,39 @@ class AmbiletNewsletterExamplesSeeder extends Seeder
             return;
         }
 
-        // Pick the soonest upcoming event for the featured slot, fall back
-        // to the most recent past one so the seeded newsletter has
-        // something to render out of the box. No status/is_public filter —
-        // matches the Filament picker behavior and avoids tripping on
-        // legacy status values that vary across imports.
-        $featuredEventId = MarketplaceEvent::query()
+        // Pick the soonest live event for the featured slot. Newsletter
+        // uses the public catalog Event model (the one /bilete renders),
+        // NOT marketplace_events. Filter: is_published, not cancelled,
+        // event_date >= today.
+        $liveEventsQuery = fn () => Event::query()
             ->where('marketplace_client_id', $client->id)
-            ->where('starts_at', '>=', now())
-            ->orderBy('starts_at', 'asc')
+            ->where('is_published', true)
+            ->where(fn ($q) => $q->where('is_cancelled', false)->orWhereNull('is_cancelled'));
+
+        $featuredEventId = $liveEventsQuery()
+            ->where('event_date', '>=', now()->toDateString())
+            ->orderBy('event_date', 'asc')
             ->value('id')
-            ?? MarketplaceEvent::query()
-                ->where('marketplace_client_id', $client->id)
-                ->orderBy('starts_at', 'desc')
+            ?? $liveEventsQuery()
+                ->orderBy('event_date', 'desc')
                 ->value('id');
 
         if (!$featuredEventId) {
-            $this->command->warn('No event found for this marketplace — featured_event sections will be created with event_id=null; pick one in the editor.');
+            $this->command->warn('No live event found for this marketplace — featured_event sections will be created with event_id=null; pick one in the editor.');
         }
 
         // Pre-populate the digest example with real event_ids so the
-        // preview shows actual cards. Same lenient query as above.
-        $nextWeekEventIds = MarketplaceEvent::query()
-            ->where('marketplace_client_id', $client->id)
-            ->whereBetween('starts_at', [now(), now()->addDays(14)])
-            ->orderBy('starts_at')
+        // preview shows actual cards. Same live-only filter.
+        $nextWeekEventIds = $liveEventsQuery()
+            ->whereBetween('event_date', [now()->toDateString(), now()->addDays(14)->toDateString()])
+            ->orderBy('event_date')
             ->limit(4)
             ->pluck('id')
             ->all();
 
-        $nextMonthEventIds = MarketplaceEvent::query()
-            ->where('marketplace_client_id', $client->id)
-            ->whereBetween('starts_at', [now()->addDays(14), now()->addDays(45)])
-            ->orderBy('starts_at')
+        $nextMonthEventIds = $liveEventsQuery()
+            ->whereBetween('event_date', [now()->addDays(14)->toDateString(), now()->addDays(45)->toDateString()])
+            ->orderBy('event_date')
             ->limit(6)
             ->pluck('id')
             ->all();

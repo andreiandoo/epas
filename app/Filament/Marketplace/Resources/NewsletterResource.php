@@ -10,7 +10,6 @@ use App\Models\MarketplaceNewsletter;
 use App\Models\MarketplaceContactList;
 use App\Models\MarketplaceContactTag;
 use App\Models\MarketplaceEmailTemplate;
-use App\Models\MarketplaceEvent;
 use Filament\Forms;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
@@ -40,6 +39,54 @@ class NewsletterResource extends Resource
     {
         $marketplace = static::getMarketplaceClient();
         return parent::getEloquentQuery()->where('marketplace_client_id', $marketplace?->id);
+    }
+
+    /**
+     * Search the live event catalog for use in newsletter pickers.
+     *
+     * Filters applied:
+     *   - same marketplace_client_id as the current admin context
+     *   - is_published = true
+     *   - is_cancelled is NULL or false
+     *   - event_date >= today (no past events)
+     *   - optional [$from, $to] window narrows the dropdown for the
+     *     "next week" / "next month" section types
+     *
+     * Search uses PostgreSQL unaccent + lower on the JSON title text so
+     * diacritics don't have to match. Returns id => "{title} ({date}) —
+     * {venue}, {city}" labels (matches the reference format requested by
+     * the marketplace admin).
+     *
+     * @return array<int, string>
+     */
+    public static function searchLiveEvents(?int $marketplaceId, string $search, ?array $window): array
+    {
+        if (!$marketplaceId) return [];
+
+        $needle = '%' . trim($search) . '%';
+        $q = Event::query()
+            ->with('venue')
+            ->where('marketplace_client_id', $marketplaceId)
+            ->where('is_published', true)
+            ->where(fn ($w) => $w->where('is_cancelled', false)->orWhereNull('is_cancelled'))
+            ->where(function ($w) {
+                $w->where('event_date', '>=', now()->toDateString())
+                    ->orWhere('range_end_date', '>=', now()->toDateString());
+            });
+
+        if ($window) {
+            $q->whereBetween('event_date', [$window[0]->toDateString(), $window[1]->toDateString()]);
+        }
+
+        if ($search !== '') {
+            $q->whereRaw('LOWER(unaccent(title::text)) LIKE LOWER(unaccent(?))', [$needle]);
+        }
+
+        return $q->orderBy('event_date')
+            ->limit(50)
+            ->get()
+            ->mapWithKeys(fn (Event $e) => [$e->id => static::formatEventOption($e)])
+            ->toArray();
     }
 
     public static function form(Schema $schema): Schema
@@ -295,29 +342,25 @@ class NewsletterResource extends Resource
                                     ->columnSpanFull(),
 
                                 // Featured event picker — single event, populated
-                                // as iabilet-style hero (image + name + venue/city
-                                // + price + CTA). Status / is_public are NOT
-                                // filtered here: search is scoped only by
-                                // marketplace_client_id so admin can pick any
-                                // event they own regardless of the lifecycle
-                                // status of the underlying record (statuses on
-                                // marketplace_events have varied across imports).
+                                // as a hero (image + title + venue/city +
+                                // price + CTA). Live events only: published,
+                                // not cancelled, event_date >= today. Search
+                                // walks the translatable title JSON via
+                                // unaccent + LOWER LIKE so "lacul sf" matches
+                                // "Lacul Sf. Ana" regardless of diacritics.
                                 Forms\Components\Select::make('event_id')
                                     ->label('Selectează evenimentul featured')
                                     ->searchable()
                                     ->getSearchResultsUsing(function (string $search) use ($marketplace) {
-                                        return MarketplaceEvent::where('marketplace_client_id', $marketplace?->id)
-                                            ->where('name', 'like', "%{$search}%")
-                                            ->orderByDesc('starts_at')
-                                            ->limit(30)
-                                            ->pluck('name', 'id');
+                                        return static::searchLiveEvents($marketplace?->id, $search, null);
                                     })
                                     ->getOptionLabelUsing(function ($value) {
-                                        return MarketplaceEvent::where('id', $value)->value('name');
+                                        $e = Event::with('venue')->find($value);
+                                        return $e ? static::formatEventOption($e) : null;
                                     })
                                     ->visible(fn ($get) => $get('type') === 'featured_event')
                                     ->columnSpanFull()
-                                    ->helperText('Va popula automat în email: imagine, nume, preț, venue, oraș și link.'),
+                                    ->helperText('Va popula automat în email: imagine, titlu, preț, venue, oraș și link.'),
 
                                 Forms\Components\TextInput::make('intro_text')
                                     ->label('Text intro (opțional)')
@@ -389,20 +432,20 @@ class NewsletterResource extends Resource
                                     ->multiple()
                                     ->searchable()
                                     ->getSearchResultsUsing(function (string $search, callable $get) use ($marketplace) {
-                                        $q = MarketplaceEvent::where('marketplace_client_id', $marketplace?->id)
-                                            ->where('name', 'like', "%{$search}%");
-
                                         $type = $get('type');
-                                        if ($type === 'events_next_week') {
-                                            $q->whereBetween('starts_at', [now(), now()->addDays(14)]);
-                                        } elseif ($type === 'events_next_month') {
-                                            $q->whereBetween('starts_at', [now(), now()->addDays(45)]);
-                                        }
-
-                                        return $q->orderBy('starts_at')->limit(40)->pluck('name', 'id');
+                                        $window = match ($type) {
+                                            'events_next_week'  => [now(), now()->addDays(14)],
+                                            'events_next_month' => [now(), now()->addDays(45)],
+                                            default => null,
+                                        };
+                                        return static::searchLiveEvents($marketplace?->id, $search, $window);
                                     })
                                     ->getOptionLabelsUsing(function (array $values) {
-                                        return MarketplaceEvent::whereIn('id', $values)->pluck('name', 'id');
+                                        return Event::with('venue')
+                                            ->whereIn('id', $values)
+                                            ->get()
+                                            ->mapWithKeys(fn (Event $e) => [$e->id => static::formatEventOption($e)])
+                                            ->toArray();
                                     })
                                     ->visible(fn ($get) => in_array($get('type'), [
                                         'recommended_events',
@@ -764,20 +807,34 @@ class NewsletterResource extends Resource
     }
 
     /**
-     * Render an event option label like "Title — City, 24 Apr 2026".
+     * Render an event option label like
+     *   "Festivalul X (15.07.2026) — Centrul Cultural, Tușnad"
+     * Format requested by marketplace admin: title, then date in parens,
+     * then venue + city after the em-dash. Falls back gracefully when
+     * venue/city is missing or when the event has no event_date.
      */
-    protected static function formatEventOption(Event $event): string
+    public static function formatEventOption(Event $event): string
     {
         $title = $event->getTranslation('title', 'ro')
             ?? $event->getTranslation('title', 'en')
             ?? (is_array($event->title) ? (reset($event->title) ?: '') : ($event->title ?? ''));
-        $parts = [];
-        $city = $event->city ?? $event->venue?->city ?? null;
-        if ($city) $parts[] = $city;
-        if ($event->event_date) $parts[] = \Carbon\Carbon::parse($event->event_date)->translatedFormat('d M Y');
-        elseif ($event->range_start_date) $parts[] = \Carbon\Carbon::parse($event->range_start_date)->translatedFormat('d M Y');
-        $suffix = !empty($parts) ? ' — ' . implode(', ', $parts) : '';
-        return ($title ?: 'Eveniment #' . $event->id) . $suffix;
+        $title = $title ?: 'Eveniment #' . $event->id;
+
+        $dateSrc = $event->event_date ?? $event->range_start_date ?? null;
+        $date = $dateSrc ? \Carbon\Carbon::parse($dateSrc)->format('d.m.Y') : null;
+
+        $venueName = '';
+        if ($event->venue) {
+            $venueName = is_array($event->venue->name)
+                ? ($event->venue->name['ro'] ?? $event->venue->name['en'] ?? reset($event->venue->name) ?? '')
+                : (string) ($event->venue->name ?? '');
+        }
+        $venueName = $venueName ?: (string) ($event->suggested_venue_name ?? '');
+        $city = (string) ($event->venue?->city ?? $event->city ?? '');
+        $venueChunk = trim($venueName . ($venueName && $city ? ', ' : '') . $city);
+
+        $base = $date ? "{$title} ({$date})" : $title;
+        return $venueChunk !== '' ? "{$base} — {$venueChunk}" : $base;
     }
 
     public static function table(Table $table): Table
