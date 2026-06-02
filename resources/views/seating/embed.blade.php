@@ -183,20 +183,30 @@ function seatColor(seat) {
   if (selectedSeats.has(seat.seat_uid)) return '#a51c30'; // selected
   if (seat.status === 'sold' || seat.status === 'held') return '#9CA3AF';
   if (seat.status === 'blocked' || seat.status === 'disabled') return '#374151';
-  // Available — color by ticket type (or default green)
+  // Available — color by ticket type (or default green). Locked-out
+  // (non-POS) tiers get a muted slate so they read as 'not for sale here'.
+  const ttId = seat.ticket_type_id != null ? Number(seat.ticket_type_id) : null;
+  if (ttId == null || !POS_TT_IDS.has(ttId)) return '#475569';
   return seat.ticket_type_color || '#10B981';
 }
 
+// Set of POS-allowed ticket type ids (is_entry_ticket = true). Only seats
+// whose ticket type is in this set can be sold from the mobile app —
+// online-only / imported tiers stay locked out. Built once at boot.
+const POS_TT_IDS = new Set(
+  (SEATING.ticket_types || [])
+    .filter(t => t.is_entry_ticket)
+    .map(t => Number(t.id))
+);
+
 function isSeatSelectable(seat) {
   if (seat.status !== 'available') return false;
-  // Any available seat is selectable, regardless of which ticket type
-  // the buyer initially picked in SalesScreen. Each tapped seat enters
-  // the cart with ITS OWN ticket type / price — the cart groups them
-  // automatically at confirm time. This matches the legacy SVG screen
-  // behavior and removes the 'cannot select' confusion that the
-  // per-type filter caused. PRESELECTED_TT stays around as a hint
-  // (e.g. could be used to highlight matching seats in the future)
-  // but no longer restricts selection.
+  // Lock out seats whose ticket type isn't marked as POS / entry. The
+  // mobile app must never sell non-POS tiers (online-only / imported)
+  // — that was the urgent bug the operator reported.
+  const ttId = seat.ticket_type_id != null ? Number(seat.ticket_type_id) : null;
+  if (ttId == null) return false; // no assignment → not sellable
+  if (!POS_TT_IDS.has(ttId)) return false;
   return true;
 }
 

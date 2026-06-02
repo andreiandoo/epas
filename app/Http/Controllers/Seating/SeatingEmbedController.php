@@ -225,12 +225,16 @@ class SeatingEmbedController extends Controller
         }
         unset($sec);
 
+        // is_entry_ticket defaults to FALSE — only explicitly POS-flagged
+        // tiers may be sold from the mobile app. Previously this defaulted
+        // to true, which let operators sell e.g. online-only / Tickera-
+        // imported tickets through the seating map. Major bug.
         $ticketTypeOut = $ticketTypes->map(fn ($t) => [
             'id' => (int) $t->id,
             'name' => $t->name,
             'price' => (float) ($t->display_price ?? (($t->price_cents ?? 0) / 100)),
             'color' => $t->color ?? null,
-            'is_entry_ticket' => (bool) ($t->is_entry_ticket ?? true),
+            'is_entry_ticket' => (bool) ($t->is_entry_ticket ?? false),
         ])->values()->toArray();
 
         return [
