@@ -71,6 +71,17 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     </div>
                 </details>
 
+                <!-- Limba bilet/email (RO default, HU/EN pentru turisti) -->
+                <div class="px-5 py-3 border-t border-border text-sm">
+                    <p class="text-xs text-muted mb-1.5">🌐 Limba bilet & email</p>
+                    <div class="grid grid-cols-3 gap-2">
+                        <button data-lang="ro" type="button" class="lv-lang-btn px-2 py-1.5 text-xs font-medium border border-primary bg-primary/10 rounded">🇷🇴 RO</button>
+                        <button data-lang="hu" type="button" class="lv-lang-btn px-2 py-1.5 text-xs font-medium border border-border bg-white rounded">🇭🇺 HU</button>
+                        <button data-lang="en" type="button" class="lv-lang-btn px-2 py-1.5 text-xs font-medium border border-border bg-white rounded">🇬🇧 EN</button>
+                    </div>
+                    <p class="text-[10px] text-muted mt-1.5">Determină limba textelor pe biletul PDF (dacă template-ul are traduceri) și pe emailurile trimise.</p>
+                </div>
+
                 <!-- Date firma (opțional — pentru factura B2B) -->
                 <details id="lv-company-section" class="px-5 py-3 border-t border-border text-sm">
                     <summary class="cursor-pointer font-medium text-secondary flex items-center gap-2">
@@ -123,6 +134,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
     let types = [];
     let cart = {}; // { key (tid sau tid|variantId): {qty, price, name, category, ticket_type_id, variant} }
     let payment = 'cash';
+    let posLocale = 'ro'; // default RO; staff il schimba pentru turisti HU/EN
     let commission = { rate: 0, fixed: 0, mode: 'included' };
 
     function cartKey(ttId, variantId) { return variantId ? `${ttId}|${variantId}` : String(ttId); }
@@ -408,6 +420,17 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         renderCart();
     }
 
+    function selectLocale(lang) {
+        posLocale = lang;
+        document.querySelectorAll('.lv-lang-btn').forEach(b => {
+            const sel = b.dataset.lang === lang;
+            b.classList.toggle('bg-primary/10', sel);
+            b.classList.toggle('border-primary', sel);
+            b.classList.toggle('bg-white', !sel);
+            b.classList.toggle('border-border', !sel);
+        });
+    }
+
     function buildReceiptHtml(data) {
         const o = data.order || {};
         const c = data.customer || {};
@@ -486,6 +509,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             },
             ...(companyData ? { company: companyData } : {}),
             generate_invoice: $('lv-co-invoice').checked,
+            locale: posLocale,
             payment_method: payment,
         };
 
@@ -616,8 +640,10 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         renderGrid();
         renderCart();
         selectPayment('cash');
+        selectLocale('ro');
 
         document.querySelectorAll('.lv-pay-btn').forEach(b => b.addEventListener('click', () => selectPayment(b.dataset.pay)));
+        document.querySelectorAll('.lv-lang-btn').forEach(b => b.addEventListener('click', () => selectLocale(b.dataset.lang)));
         $('lv-checkout').addEventListener('click', checkout);
     });
 })();

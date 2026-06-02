@@ -115,6 +115,9 @@
 
     <!-- EPAS Tracking -->
     <script defer src="<?= asset('assets/js/tracking.js') ?>"></script>
+
+    <!-- Newsletter attribution capture (`nl=` URL param → localStorage) -->
+    <script defer src="<?= asset('assets/js/newsletter-attribution.js') ?>"></script>
     <?php
     // Get marketplace client ID from cached config
     if (!isset($trackingClientId)) {
