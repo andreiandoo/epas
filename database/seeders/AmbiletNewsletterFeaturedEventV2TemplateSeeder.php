@@ -45,11 +45,10 @@ class AmbiletNewsletterFeaturedEventV2TemplateSeeder extends Seeder
                 'category' => 'newsletter',
                 'is_active' => true,
                 'is_default' => false,
-                'subject' => '{{event_title}} — îți recomandăm',
+                'subject' => 'Îți recomandăm — eveniment featured (v2)',
                 'body_html' => $this->buildBodyHtml($client),
                 'body_text' => $this->buildBodyText($client),
                 'variables' => [
-                    'event_title' => 'Numele evenimentului (apare în subject; după ce alegi evenimentul în secțiunea "Eveniment featured", se completează automat din nume).',
                     'unsubscribe_url' => 'Auto-generat la send time.',
                     'preferences_url' => 'Auto-generat la send time.',
                 ],
