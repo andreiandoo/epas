@@ -227,6 +227,20 @@ require_once __DIR__ . '/includes/head.php';
                         </div>
 
                         <div id="event-description" class="prose prose-slate max-w-none"></div>
+                        <!-- YouTube embed (populated by event-single.js when event.video_url is set) -->
+                        <div id="event-video" class="hidden mt-4">
+                            <div class="relative w-full overflow-hidden bg-black rounded-xl" style="padding-top: 56.25%;">
+                                <iframe id="event-video-iframe"
+                                    class="absolute inset-0 w-full h-full"
+                                    src=""
+                                    title="Video eveniment"
+                                    frameborder="0"
+                                    loading="lazy"
+                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                                    referrerpolicy="strict-origin-when-cross-origin"
+                                    allowfullscreen></iframe>
+                            </div>
+                        </div>
                     </div>
                 </div>
 

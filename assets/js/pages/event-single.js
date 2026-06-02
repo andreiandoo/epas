@@ -1168,6 +1168,11 @@ const EventPage = {
         descEl.innerHTML = this.formatDescription(e.description || e.content);
         this.initDescriptionToggle(descEl);
 
+        // YouTube embed (below the description, above external links).
+        // Static markup in event.php is hidden by default; populate the
+        // iframe src when video_url is a parsable YouTube link.
+        this.renderEventVideo(e.video_url);
+
         // External links right after the description so the visitor sees
         // them in context with the event details. Quiet section — only
         // appears when at least one of facebook_url / event_website_url
@@ -1516,6 +1521,60 @@ const EventPage = {
      * if either is configured by the organizer. Quiet when neither is set
      * so the section never shows up empty.
      */
+    /**
+     * Show the static #event-video iframe with the YouTube embed if the
+     * event has a video_url set. Accepts watch / share / embed / shorts
+     * formats and extracts the 11-char video id. Anything we can't parse
+     * (or null) leaves the section hidden — no broken iframe shown.
+     */
+    renderEventVideo(videoUrl) {
+        var wrap = document.getElementById('event-video');
+        var iframe = document.getElementById('event-video-iframe');
+        if (!wrap || !iframe) return;
+
+        var url = (videoUrl || '').toString().trim();
+        if (!url) {
+            wrap.classList.add('hidden');
+            iframe.removeAttribute('src');
+            return;
+        }
+
+        var videoId = this.extractYouTubeId(url);
+        if (!videoId) {
+            wrap.classList.add('hidden');
+            iframe.removeAttribute('src');
+            return;
+        }
+
+        iframe.src = 'https://www.youtube-nocookie.com/embed/' + videoId;
+        wrap.classList.remove('hidden');
+    },
+
+    extractYouTubeId(url) {
+        try {
+            var u = new URL(url);
+            var host = u.hostname.replace(/^www\./, '');
+            // youtu.be/<id>
+            if (host === 'youtu.be') {
+                return u.pathname.replace(/^\//, '').split(/[?#/]/)[0] || null;
+            }
+            // youtube.com / m.youtube.com / music.youtube.com / youtube-nocookie.com
+            if (/(^|\.)youtube\.com$/.test(host) || /(^|\.)youtube-nocookie\.com$/.test(host)) {
+                // /watch?v=<id>
+                var v = u.searchParams.get('v');
+                if (v) return v;
+                // /embed/<id>, /shorts/<id>, /live/<id>, /v/<id>
+                var m = u.pathname.match(/\/(embed|shorts|live|v)\/([A-Za-z0-9_-]{6,})/);
+                if (m) return m[2];
+            }
+        } catch (err) {
+            // not a parsable URL — fall through to regex sweep
+        }
+        // Last-ditch sweep: pull out an 11-char id-looking token
+        var fallback = url.match(/([A-Za-z0-9_-]{11})/);
+        return fallback ? fallback[1] : null;
+    },
+
     renderEventExternalLinks(e) {
         var fbUrl = (e && e.facebook_url) ? String(e.facebook_url).trim() : '';
         var siteUrl = (e && e.event_website_url) ? String(e.event_website_url).trim() : '';

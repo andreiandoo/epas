@@ -803,6 +803,7 @@ class MarketplaceEventsController extends BaseController
                 'slug' => $event->slug,
                 'description' => $event->getTranslation('description', $language),
                 'short_description' => $event->getTranslation('short_description', $language),
+                'video_url' => $event->video_url,
                 // Image fields - provide both naming conventions for compatibility
                 'image' => $posterImage,
                 'image_url' => $posterImage,

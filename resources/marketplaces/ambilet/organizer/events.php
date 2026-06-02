@@ -461,6 +461,11 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                                         <input type="url" name="facebook_url" class="input" placeholder="https://facebook.com/events/...">
                                     </div>
                                 </div>
+                                <div class="mt-4">
+                                    <label class="label">Videoclip YouTube</label>
+                                    <input type="url" name="video_url" class="input" placeholder="https://www.youtube.com/watch?v=...">
+                                    <p class="mt-1 text-xs text-muted">Orice link YouTube (watch, share sau embed). Va fi afișat ca videoclip pe pagina publică a evenimentului.</p>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1512,6 +1517,10 @@ async function loadEventForEdit(eventId) {
         const eventWebsite = event.event_website_url || event.website_url;
         if (eventWebsite) form.querySelector('[name="website_url"]').value = eventWebsite;
         if (event.facebook_url) form.querySelector('[name="facebook_url"]').value = event.facebook_url;
+        if (event.video_url) {
+            const videoInput = form.querySelector('[name="video_url"]');
+            if (videoInput) videoInput.value = event.video_url;
+        }
 
         // Step 4: Content — if the editors are already up, set directly;
         // otherwise queue the content so the 'init' callback in
@@ -2489,6 +2498,9 @@ function collectFormData() {
 
     const facebookUrl = form.querySelector('[name="facebook_url"]').value;
     if (facebookUrl) data.facebook_url = facebookUrl;
+
+    const videoInput = form.querySelector('[name="video_url"]');
+    if (videoInput) data.video_url = videoInput.value.trim();
 
     const capacity = form.querySelector('[name="capacity"]').value;
     if (capacity) data.capacity = parseInt(capacity);

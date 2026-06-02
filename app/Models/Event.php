@@ -91,7 +91,7 @@ class Event extends Model
 
         // location & links
         'suggested_venue_name',
-        'address', 'website_url', 'facebook_url', 'event_website_url',
+        'address', 'website_url', 'facebook_url', 'event_website_url', 'video_url',
         'marketplace_city_id', 'marketplace_event_category_id', 'manifestation_type',
 
         // content

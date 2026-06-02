@@ -149,6 +149,7 @@ class EventsController extends BaseController
             'website_url' => 'nullable|url|max:500',
             'event_website_url' => 'nullable|url|max:500',
             'facebook_url' => 'nullable|url|max:500',
+            'video_url' => 'nullable|url|max:500',
             'category' => 'nullable|string|max:100',
             'tags' => 'nullable|array',
             'capacity' => 'nullable|integer|min:1',
@@ -224,6 +225,7 @@ class EventsController extends BaseController
                 'website_url' => $validated['website_url'] ?? null,
                 'event_website_url' => $validated['event_website_url'] ?? null,
                 'facebook_url' => $validated['facebook_url'] ?? null,
+                'video_url' => $validated['video_url'] ?? null,
                 'is_published' => false,
             ], $dateFields));
 
@@ -317,6 +319,7 @@ class EventsController extends BaseController
             'website_url' => 'nullable|url|max:500',
             'event_website_url' => 'nullable|url|max:500',
             'facebook_url' => 'nullable|url|max:500',
+            'video_url' => 'nullable|url|max:500',
             'category' => 'nullable|string|max:100',
             'tags' => 'nullable|array',
         ];
@@ -436,6 +439,9 @@ class EventsController extends BaseController
             }
             if (isset($validated['facebook_url'])) {
                 $updateData['facebook_url'] = $validated['facebook_url'];
+            }
+            if (isset($validated['video_url'])) {
+                $updateData['video_url'] = $validated['video_url'];
             }
 
             if (!empty($updateData)) {
@@ -3973,6 +3979,7 @@ class EventsController extends BaseController
             'website_url' => $event->website_url,
             'event_website_url' => $event->event_website_url,
             'facebook_url' => $event->facebook_url,
+            'video_url' => $event->video_url,
             'marketplace_event_category_id' => $event->marketplace_event_category_id,
             'category' => $event->marketplaceEventCategory?->name ?? null,
             'genre_ids' => $genreIds,

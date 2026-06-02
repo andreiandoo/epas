@@ -1271,6 +1271,16 @@ class EventResource extends Resource
                                     ->label($t('Termeni bilete', 'Ticket terms'))
                                     ->columnSpanFull()
                                     ->default($marketplace?->ticket_terms ?? null),
+                                Forms\Components\TextInput::make('video_url')
+                                    ->label($t('Videoclip YouTube', 'YouTube video'))
+                                    ->url()
+                                    ->maxLength(500)
+                                    ->placeholder('https://www.youtube.com/watch?v=...')
+                                    ->helperText($t(
+                                        'Lipește orice link YouTube (watch, share sau embed). Va fi afișat ca videoclip pe pagina publică a evenimentului.',
+                                        'Paste any YouTube link (watch, share or embed). It will be shown as an embedded video on the public event page.'
+                                    ))
+                                    ->columnSpanFull(),
                             ])->columns(1),
 
                         // MEDIA - only visible when at least one image is uploaded (use header action to upload)
