@@ -87,15 +87,18 @@ class EditEvent extends EditRecord
             ?? $this->record->getTranslation('title', 'en')
             ?? '';
 
-        // Append city and date in parentheses
+        // Append city and date in parentheses. The date string is
+        // produced by Event::displayDateLabel() so range / multi_day /
+        // recurring events get their proper interval instead of falling
+        // back to a stale event_date (or showing nothing at all).
         $parts = [];
         $city = $this->record->city ?? $this->record->venue?->city ?? null;
         if ($city) {
             $parts[] = $city;
         }
-        $eventDate = $this->record->event_date ?? null;
-        if ($eventDate) {
-            $parts[] = \Carbon\Carbon::parse($eventDate)->translatedFormat('d M Y');
+        $dateLabel = $this->record->displayDateLabel();
+        if ($dateLabel) {
+            $parts[] = $dateLabel;
         }
         if (!empty($parts)) {
             $title .= ' (' . implode(', ', $parts) . ')';

@@ -520,6 +520,64 @@ class Event extends Model
     }
 
     /**
+     * Human-readable date label for the event, picked from whichever
+     * fields belong to the row's `duration_mode`. Mirrors the formatting
+     * used by the events list column so the same string surfaces in
+     * lists, page titles, emails, etc.
+     *
+     *   single_day → "15 Mai 2026"
+     *   range      → "15-20 Sep 2026" (same month) /
+     *                "15 Sep - 5 Oct 2026" (same year) /
+     *                "15 Dec 2026 - 5 Ian 2027" (cross-year)
+     *   multi_day  → "15-20 Sep 2026" (first/last slot)
+     *   recurring  → uses recurring_start_date if set, otherwise null
+     *   anything missing → null (so callers can omit the line entirely)
+     */
+    public function displayDateLabel(): ?string
+    {
+        if ($this->duration_mode === 'range') {
+            $start = $this->range_start_date;
+            $end = $this->range_end_date;
+            if ($start && $end) {
+                if ($start->format('m Y') === $end->format('m Y')) {
+                    return $start->format('d') . '-' . $end->format('d M Y');
+                }
+                if ($start->format('Y') === $end->format('Y')) {
+                    return $start->format('d M') . ' - ' . $end->format('d M Y');
+                }
+                return $start->format('d M Y') . ' - ' . $end->format('d M Y');
+            }
+            if ($start) {
+                return 'din ' . $start->format('d M Y');
+            }
+            return null;
+        }
+
+        if ($this->duration_mode === 'multi_day' && ! empty($this->multi_slots)) {
+            $slots = collect($this->multi_slots)->pluck('date')->filter()->sort()->values();
+            if ($slots->count() >= 2) {
+                $first = \Carbon\Carbon::parse($slots->first());
+                $last = \Carbon\Carbon::parse($slots->last());
+                if ($first->format('m Y') === $last->format('m Y')) {
+                    return $first->format('d') . '-' . $last->format('d M Y');
+                }
+                return $first->format('d M') . ' - ' . $last->format('d M Y');
+            }
+            if ($slots->count() === 1) {
+                return \Carbon\Carbon::parse($slots->first())->format('d M Y');
+            }
+            return null;
+        }
+
+        if ($this->duration_mode === 'recurring' && $this->recurring_start_date) {
+            return \Carbon\Carbon::parse($this->recurring_start_date)->format('d M Y');
+        }
+
+        // single_day (or unset mode with event_date present)
+        return $this->event_date?->format('d M Y');
+    }
+
+    /**
      * Get effective commission mode (event's, marketplace organizer's, or tenant's default)
      */
     public function getEffectiveCommissionMode(): string
