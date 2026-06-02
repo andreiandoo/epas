@@ -235,6 +235,44 @@ class Event extends Model
                 $event->slug = ($base ?: 'event') . '-' . $suffix;
             }
         });
+
+        // Date-mode field hygiene: when an event is saved, NULL out the
+        // date/time/slot columns that don't belong to its `duration_mode`.
+        // Otherwise a duplicate-then-edit flow (clone a single-day event,
+        // switch to range, save) leaves the original `event_date` in the
+        // row and downstream accessors that fall back on it surface the
+        // wrong date in lists / homepage / emails.
+        //
+        // Only the three primary modes are touched. `recurring` parent
+        // templates are left alone (they use a different field family
+        // and child events carry per-occurrence event_date separately).
+        static::saving(function ($event) {
+            $map = match ($event->duration_mode) {
+                'single_day' => [
+                    'range_start_date', 'range_end_date',
+                    'range_start_time', 'range_end_time',
+                    'multi_slots',
+                ],
+                'range' => [
+                    'event_date', 'start_time', 'door_time', 'end_time',
+                    'multi_slots',
+                ],
+                'multi_day' => [
+                    'event_date', 'start_time', 'door_time', 'end_time',
+                    'range_start_date', 'range_end_date',
+                    'range_start_time', 'range_end_time',
+                ],
+                default => null, // recurring / custom / null → leave untouched
+            };
+            if (! $map) {
+                return;
+            }
+            foreach ($map as $field) {
+                if ($event->{$field} !== null) {
+                    $event->{$field} = null;
+                }
+            }
+        });
     }
 
     /**
