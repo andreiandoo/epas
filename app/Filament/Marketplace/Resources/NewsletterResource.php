@@ -281,6 +281,7 @@ class NewsletterResource extends Resource
                                     ->options([
                                         'text' => 'Text / Rich Content',
                                         'html' => 'HTML personalizat',
+                                        'featured_event' => 'Eveniment featured (single hero)',
                                         'recommended_events' => 'Evenimente recomandate',
                                         'hand_picked_events' => 'Evenimente alese',
                                         'events_next_week' => 'Evenimente săptămâna viitoare',
@@ -291,6 +292,42 @@ class NewsletterResource extends Resource
                                     ])
                                     ->required()
                                     ->live()
+                                    ->columnSpanFull(),
+
+                                // Featured event picker — single event, populated
+                                // as iabilet-style hero (image + name + venue/city
+                                // + price + CTA). Same options shape as the multi
+                                // picker below so the search/options helpers stay
+                                // consistent.
+                                Forms\Components\Select::make('event_id')
+                                    ->label('Selectează evenimentul featured')
+                                    ->searchable()
+                                    ->getSearchResultsUsing(function (string $search) use ($marketplace) {
+                                        return MarketplaceEvent::where('marketplace_client_id', $marketplace?->id)
+                                            ->where('status', 'approved')
+                                            ->where('is_public', true)
+                                            ->where('name', 'like', "%{$search}%")
+                                            ->limit(20)
+                                            ->pluck('name', 'id');
+                                    })
+                                    ->getOptionLabelUsing(function ($value) {
+                                        return MarketplaceEvent::where('id', $value)->value('name');
+                                    })
+                                    ->visible(fn ($get) => $get('type') === 'featured_event')
+                                    ->columnSpanFull()
+                                    ->helperText('Va popula automat în email: imagine, nume, preț, venue, oraș și link.'),
+
+                                Forms\Components\TextInput::make('intro_text')
+                                    ->label('Text intro (opțional)')
+                                    ->visible(fn ($get) => $get('type') === 'featured_event')
+                                    ->placeholder('ex: îți recomandă cele mai tari concerte și evenimente')
+                                    ->columnSpanFull(),
+
+                                Forms\Components\TextInput::make('cta_label')
+                                    ->label('Text buton CTA (opțional)')
+                                    ->visible(fn ($get) => $get('type') === 'featured_event')
+                                    ->placeholder('Vezi programul și Cumpără bilet')
+                                    ->maxLength(80)
                                     ->columnSpanFull(),
 
                                 // Text section
@@ -382,6 +419,7 @@ class NewsletterResource extends Resource
                             ->itemLabel(fn (array $state): ?string => match ($state['type'] ?? null) {
                                 'text' => 'Text / Rich Content',
                                 'html' => 'HTML personalizat',
+                                'featured_event' => 'Eveniment featured' . (!empty($state['event_id']) ? ' (#' . $state['event_id'] . ')' : ''),
                                 'recommended_events' => 'Evenimente recomandate',
                                 'hand_picked_events' => 'Evenimente alese (' . count($state['event_ids'] ?? []) . ')',
                                 'events_next_week' => 'Evenimente săptămâna viitoare',

@@ -33,6 +33,7 @@ class NewsletterRenderer
                 'html' => $this->renderHtmlSection($section),
                 'recommended_events' => $this->renderRecommendedEvents($section, $marketplaceId, $marketplace),
                 'hand_picked_events' => $this->renderHandPickedEvents($section, $marketplace),
+                'featured_event' => $this->renderFeaturedEvent($section, $marketplace),
                 'events_next_week' => $this->renderEventsNextWeek($section, $marketplaceId, $marketplace),
                 'events_next_month' => $this->renderEventsNextMonth($section, $marketplaceId, $marketplace),
                 'button' => $this->renderButton($section),
@@ -88,6 +89,86 @@ class NewsletterRenderer
         if ($events->isEmpty()) return '';
 
         return $this->renderEventCardsSection('Evenimente recomandate', $events, $marketplace);
+    }
+
+    /**
+     * Single "featured event" hero block — iabilet-style layout with a
+     * 580px-wide image, big title link, venue / city subline, doors / start
+     * times, the cheapest live price and a prominent CTA. All driven by the
+     * event_id picked in the section schema; admin only needs to supply the
+     * event reference (plus an optional intro_text + cta_label override).
+     */
+    protected function renderFeaturedEvent(array $section, MarketplaceClient $marketplace): string
+    {
+        $eventId = (int) ($section['event_id'] ?? 0);
+        if ($eventId <= 0) return '';
+
+        $event = MarketplaceEvent::where('id', $eventId)
+            ->where('status', 'approved')
+            ->where('is_public', true)
+            ->first();
+        if (!$event) return '';
+
+        $intro = trim((string) ($section['intro_text'] ?? ''));
+        if ($intro === '') {
+            $intro = ($marketplace->name ?? 'Newsletter') . ' îți recomandă cele mai tari concerte și evenimente';
+        }
+
+        $ctaLabel = trim((string) ($section['cta_label'] ?? ''));
+        if ($ctaLabel === '') {
+            $ctaLabel = 'Vezi programul și Cumpără bilet';
+        }
+
+        $name = e($event->name ?? 'Eveniment');
+        $venueName = e($event->venue_name ?? '');
+        $venueCity = e($event->venue_city ?? '');
+        $location = trim($venueName . ($venueName && $venueCity ? ', ' : '') . $venueCity);
+        $date = $event->starts_at ? $event->starts_at->format('d M Y') : '';
+        $eventUrl = $this->getEventUrl($event, $marketplace);
+        $imageUrl = $event->image ? $this->resolveImageUrl($event->image, $marketplace) : '';
+        $price = $this->getEventPrice($event, $marketplace);
+        $priceLabel = $price ? 'De la ' . e($price) : 'Detalii';
+
+        $imageBlock = '';
+        if ($imageUrl) {
+            $imageBlock = '<tr><td><a href="' . e($eventUrl) . '" target="_blank" rel="noreferrer" style="text-decoration:none;"><img src="' . e($imageUrl) . '" alt="' . $name . '" style="display:block;border:0;width:580px;max-width:100%;height:auto;border-radius:8px;" width="580" /></a></td></tr>';
+        }
+
+        $locationLine = $location !== ''
+            ? '<div style="color:#4C4C59;font-size:14px;margin-top:4px;">' . $location . '</div>'
+            : '';
+        $dateLine = $date !== ''
+            ? '<div style="color:#4C4C59;font-size:14px;margin-top:4px;">' . e($date) . '</div>'
+            : '';
+
+        return <<<HTML
+        <table align="center" border="0" cellpadding="0" cellspacing="0" width="100%" style="border-collapse:collapse;margin:24px 0;">
+            <tr>
+                <td align="center" style="padding:0 0 12px 0;font-size:14px;color:#4C4C59;">
+                    {$intro}
+                </td>
+            </tr>
+            <tr>
+                <td align="center" style="padding:0 10px;">
+                    <table border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width:580px;border-collapse:collapse;">
+                        {$imageBlock}
+                        <tr>
+                            <td align="center" style="padding:16px 0 4px 0;">
+                                <a href="{$eventUrl}" target="_blank" rel="noreferrer" style="color:#A51C30;text-decoration:none;font-size:22px;font-weight:700;font-family:Arial,Helvetica,sans-serif;line-height:1.3;">{$name}</a>
+                                {$locationLine}
+                                {$dateLine}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td align="center" style="padding:16px 0 4px 0;">
+                                <a href="{$eventUrl}" target="_blank" rel="noreferrer" style="display:inline-block;padding:14px 28px;background-color:#A51C30;color:#ffffff;text-decoration:none;border-radius:8px;font-size:15px;font-weight:bold;font-family:Arial,Helvetica,sans-serif;">{$ctaLabel} — {$priceLabel}</a>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+        HTML;
     }
 
     protected function renderHandPickedEvents(array $section, MarketplaceClient $marketplace): string
