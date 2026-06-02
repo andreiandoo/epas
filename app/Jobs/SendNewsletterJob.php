@@ -118,21 +118,23 @@ class SendNewsletterJob implements ShouldQueue
 
         $subject = $this->replaceVariables($newsletter->subject, $variables);
 
-        // Use section renderer if body_sections is set, otherwise fall back to body_html
+        // Use section renderer if body_sections is set, otherwise fall back to body_html.
+        // The renderer now handles BOTH click instrumentation and the
+        // open-tracking pixel itself (see NewsletterRenderer::render +
+        // instrumentLinks + wrapInEmailTemplate). Passing the recipient
+        // through lets the HMAC token bind the click/open to a specific
+        // marketplace_newsletter_recipients row. The legacy
+        // wrapLinksWithTracking + generateTrackingPixel helpers below
+        // are kept only for the body_html backward-compat path.
         if (!empty($newsletter->body_sections)) {
             $renderer = new NewsletterRenderer();
-            $bodyHtml = $renderer->render($newsletter, $customer);
+            $bodyHtml = $renderer->render($newsletter, $customer, $recipient);
             $bodyHtml = $this->replaceVariables($bodyHtml, $variables);
         } else {
             $bodyHtml = $this->replaceVariables($newsletter->body_html, $variables);
+            $bodyHtml = $this->wrapLinksWithTracking($bodyHtml, $recipient);
+            $bodyHtml .= $this->generateTrackingPixel($recipient);
         }
-
-        // Wrap all links with click tracking (before adding tracking pixel)
-        $bodyHtml = $this->wrapLinksWithTracking($bodyHtml, $recipient);
-
-        // Add tracking pixel
-        $trackingPixel = $this->generateTrackingPixel($recipient);
-        $bodyHtml .= $trackingPixel;
 
         // Create email
         $email = (new Email())

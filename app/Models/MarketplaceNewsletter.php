@@ -25,6 +25,8 @@ class MarketplaceNewsletter extends Model
         'target_lists',
         'target_tags',
         'target_event_ids',
+        'target_organizer_ids',
+        'target_city_ids',
         'source_email_template_id',
         'status',
         'scheduled_at',
@@ -36,6 +38,8 @@ class MarketplaceNewsletter extends Model
         'opened_count',
         'clicked_count',
         'unsubscribed_count',
+        'purchase_count',
+        'purchase_amount_cents',
         'created_by',
     ];
 
@@ -44,6 +48,8 @@ class MarketplaceNewsletter extends Model
         'target_lists' => 'array',
         'target_tags' => 'array',
         'target_event_ids' => 'array',
+        'target_organizer_ids' => 'array',
+        'target_city_ids' => 'array',
         'scheduled_at' => 'datetime',
         'started_at' => 'datetime',
         'completed_at' => 'datetime',
@@ -155,6 +161,21 @@ class MarketplaceNewsletter extends Model
             $customerIds = $customerIds->merge($eventBuyerIds);
         }
 
+        // ---- Organizer ticket-buyers (transactional; ignores opt-in).
+        // Only resolved when target_event_ids is empty — otherwise the
+        // admin has already narrowed to specific events and the
+        // organizer filter is just a UI pre-filter, not a separate
+        // recipient source.
+        if (empty($this->target_event_ids) && !empty($this->target_organizer_ids)) {
+            $organizerEventIds = $this->getOrganizerEventIds(
+                (array) $this->target_organizer_ids,
+                (array) ($this->target_city_ids ?? [])
+            );
+            if (!empty($organizerEventIds)) {
+                $customerIds = $customerIds->merge($this->getEventBuyerCustomerIds($organizerEventIds));
+            }
+        }
+
         $uniqueIds = $customerIds->unique()->values();
         if ($uniqueIds->isEmpty()) return collect();
 
@@ -224,6 +245,30 @@ class MarketplaceNewsletter extends Model
             $ids->push($customer->id);
         }
         return $ids;
+    }
+
+    /**
+     * Event IDs for the given organizers, optionally narrowed by the
+     * city pre-filter. Live events only (is_published, not cancelled,
+     * not past) so the resulting recipient set reflects ACTUAL future
+     * ticket buyers — past-event audiences are usually a separate
+     * "we miss you" campaign.
+     */
+    public function getOrganizerEventIds(array $organizerIds, array $cityIds = []): array
+    {
+        if (empty($organizerIds)) return [];
+        $clientId = $this->marketplace_client_id ?? $this->marketplaceClient?->id;
+        if (!$clientId) return [];
+
+        $q = \App\Models\Event::query()
+            ->where('marketplace_client_id', $clientId)
+            ->whereIn('marketplace_organizer_id', $organizerIds);
+
+        if (!empty($cityIds)) {
+            $q->whereIn('marketplace_city_id', $cityIds);
+        }
+
+        return $q->pluck('id')->all();
     }
 
     /**
@@ -302,11 +347,23 @@ class MarketplaceNewsletter extends Model
             $eventsCount = $this->getEventBuyerCustomerIds($this->target_event_ids)->count();
         }
 
+        // Organizer-driven recipients (only when no explicit event picks).
+        $organizerBuyersCount = 0;
+        if (empty($this->target_event_ids) && !empty($this->target_organizer_ids)) {
+            $orgEventIds = $this->getOrganizerEventIds(
+                (array) $this->target_organizer_ids,
+                (array) ($this->target_city_ids ?? [])
+            );
+            if (!empty($orgEventIds)) {
+                $organizerBuyersCount = $this->getEventBuyerCustomerIds($orgEventIds)->count();
+            }
+        }
+
         return [
             'lists' => $listsCount,
             'tags' => $tagsCount,
             'organizers' => $organizersCount,
-            'events' => $eventsCount,
+            'events' => $eventsCount + $organizerBuyersCount,
             'total' => $this->getRecipientCount(),
         ];
     }
@@ -351,6 +408,21 @@ class MarketplaceNewsletter extends Model
                 $emails = $emails->merge(
                     MarketplaceCustomer::whereIn('id', $buyerIds)->pluck('email')
                 );
+            }
+        }
+
+        if (empty($this->target_event_ids) && !empty($this->target_organizer_ids)) {
+            $orgEventIds = $this->getOrganizerEventIds(
+                (array) $this->target_organizer_ids,
+                (array) ($this->target_city_ids ?? [])
+            );
+            if (!empty($orgEventIds)) {
+                $buyerIds = $this->getEventBuyerCustomerIds($orgEventIds);
+                if (!$buyerIds->isEmpty()) {
+                    $emails = $emails->merge(
+                        MarketplaceCustomer::whereIn('id', $buyerIds)->pluck('email')
+                    );
+                }
             }
         }
 

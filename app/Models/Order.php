@@ -36,6 +36,7 @@ class Order extends Model
         // Marketplace fields
         'marketplace_client_id',
         'marketplace_organizer_id',
+        'newsletter_attribution_id',
         'marketplace_customer_id',
         'marketplace_event_id',
         'event_id',

@@ -15,6 +15,7 @@ class MarketplaceNewsletterLinkEvent extends Model
 {
     public const TYPE_OPEN = 'open';
     public const TYPE_CLICK = 'click';
+    public const TYPE_PURCHASE = 'purchase';
 
     protected $fillable = [
         'newsletter_id',

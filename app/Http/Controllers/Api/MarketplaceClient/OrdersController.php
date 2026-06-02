@@ -40,7 +40,24 @@ class OrdersController extends BaseController
             'customer.first_name' => 'required|string|max:255',
             'customer.last_name' => 'required|string|max:255',
             'customer.phone' => 'nullable|string|max:50',
+            // Locale preferat al clientului (RO/EN/HU/...). Optional — daca lipseste,
+            // Order.locale ramane NULL si pipeline-ul foloseste 'ro' ca fallback.
+            'locale' => 'nullable|string|max:8',
         ]);
+
+        // Captura locale-ului efectiv: prioritate request body → header Accept-Language → null.
+        // Validam strict ca sa nu permitem locale-uri necunoscute (zero risc de XSS/SQLi).
+        $available = config('locales.available', []);
+        $resolvedLocale = null;
+        $requestedLocale = $request->input('locale');
+        if (is_string($requestedLocale) && in_array($requestedLocale, $available, true)) {
+            $resolvedLocale = $requestedLocale;
+        } elseif (!$requestedLocale) {
+            $headerLocale = $request->getPreferredLanguage($available);
+            if ($headerLocale && in_array($headerLocale, $available, true)) {
+                $resolvedLocale = $headerLocale;
+            }
+        }
 
         $event = Event::find($request->event_id);
 
@@ -217,6 +234,22 @@ class OrdersController extends BaseController
                 $orderMeta['team_member_name'] = $teamMemberName;
             }
 
+            // Newsletter attribution — the marketplace JS sends `nl` from
+            // the URL/localStorage (set by clicks through the tracked
+            // newsletter redirect). Persist only when it resolves to a
+            // real campaign owned by the same marketplace_client_id, so
+            // a forged value can't credit an unrelated organizer.
+            $newsletterAttributionId = null;
+            $nlRaw = $request->input('newsletter_attribution_id') ?? $request->input('nl');
+            if (is_numeric($nlRaw) && (int) $nlRaw > 0) {
+                $nlId = (int) $nlRaw;
+                $exists = \DB::table('marketplace_newsletters')
+                    ->where('id', $nlId)
+                    ->where('marketplace_client_id', $client->id)
+                    ->exists();
+                if ($exists) $newsletterAttributionId = $nlId;
+            }
+
             // Create order — disable activity logging and ticket sync inside this transaction
             // to avoid any side-effect queries that could abort the PostgreSQL transaction.
             // Insert order directly via DB to avoid all model events (OrderObserver,
@@ -233,9 +266,11 @@ class OrdersController extends BaseController
                 'commission_amount' => $commissionAmount,
                 'total' => $total,
                 'currency' => 'RON',
+                'locale' => $resolvedLocale,
                 'source' => $request->input('source', 'marketplace'),
                 'marketplace_client_id' => $client->id,
                 'marketplace_organizer_id' => $event->marketplace_organizer_id,
+                'newsletter_attribution_id' => $newsletterAttributionId,
                 'customer_email' => $customer->email,
                 'customer_name' => $customer->first_name . ' ' . $customer->last_name,
                 'customer_phone' => $customer->phone,

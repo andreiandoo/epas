@@ -886,6 +886,15 @@ const CheckoutPage = {
                 checkoutData.preview_token = previewToken;
             }
 
+            // Newsletter attribution — populated from the `nl=` URL
+            // param dropped by the platform's click redirect (stored
+            // in localStorage with 30-day TTL by
+            // newsletter-attribution.js). Spread when present so the
+            // backend can credit the campaign on paid status.
+            if (window.AmbiletNewsletterAttribution) {
+                Object.assign(checkoutData, window.AmbiletNewsletterAttribution.getPayload());
+            }
+
             const response = await AmbiletAPI.post('/checkout', checkoutData);
 
             if (!response.success) {

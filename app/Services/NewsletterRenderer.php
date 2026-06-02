@@ -7,15 +7,24 @@ use App\Models\Event;
 use App\Models\MarketplaceClient;
 use App\Models\MarketplaceCustomer;
 use App\Models\MarketplaceNewsletter;
+use App\Models\MarketplaceNewsletterRecipient;
 use Illuminate\Support\Collection;
 
 class NewsletterRenderer
 {
     /**
+     * Set per-call by render() so instrumentLinks() + wrap pixel can
+     * stamp per-recipient tokens without threading the recipient
+     * through every helper signature. Null in preview / test send.
+     */
+    protected ?MarketplaceNewsletterRecipient $currentRecipient = null;
+
+    /**
      * Render newsletter sections to full HTML email.
      */
-    public function render(MarketplaceNewsletter $newsletter, ?MarketplaceCustomer $customer = null): string
+    public function render(MarketplaceNewsletter $newsletter, ?MarketplaceCustomer $customer = null, ?MarketplaceNewsletterRecipient $recipient = null): string
     {
+        $this->currentRecipient = $recipient;
         $sections = $newsletter->body_sections ?? [];
         $marketplace = $newsletter->marketplaceClient;
         $marketplaceId = $marketplace->id;
@@ -520,7 +529,11 @@ class NewsletterRenderer
         // populated only by per-recipient send loops.
         $pixelTag = '';
         if ($newsletter) {
-            $token = NewsletterTrackingController::buildToken($newsletter->id, null, null);
+            $token = NewsletterTrackingController::buildToken(
+                $newsletter->id,
+                null,
+                $this->currentRecipient?->id
+            );
             $pixelUrl = e(route('newsletter.open', ['token' => $token]));
             $pixelTag = '<img src="' . $pixelUrl . '" width="1" height="1" alt="" style="display:block;width:1px;height:1px;border:0;" />';
         }
@@ -641,8 +654,7 @@ class NewsletterRenderer
      */
     protected function instrumentLinks(string $html, MarketplaceNewsletter $newsletter, ?MarketplaceCustomer $customer): string
     {
-        $recipientId = null; // populated per-recipient by the send loop;
-                              // for preview / test send this stays null.
+        $recipientId = $this->currentRecipient?->id;
 
         return preg_replace_callback(
             '#href\s*=\s*"([^"]+)"#i',

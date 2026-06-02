@@ -19,12 +19,16 @@ class EditNewsletter extends EditRecord
     protected static string $resource = NewsletterResource::class;
 
     /**
-     * Engagement stats panel — shown above the form when the newsletter
-     * has any activity (sent, opens, or clicks). Reads aggregate counts
-     * straight off the model + per-link breakdown from
-     * marketplace_newsletter_link_events. Rates are computed off
-     * sent_count so they stay meaningful on partial sends.
+     * Override the default "Edit Marketplace Newsletter" with a more
+     * useful "Edit Newsletter - {campaign name}" so the browser tab +
+     * page header identify the specific campaign at a glance.
      */
+    public function getTitle(): string|\Illuminate\Contracts\Support\Htmlable
+    {
+        $name = trim((string) ($this->record->name ?? ''));
+        return $name !== '' ? "Edit Newsletter - {$name}" : 'Edit Newsletter';
+    }
+
     protected function getHeaderWidgets(): array
     {
         return [];
@@ -43,6 +47,9 @@ class EditNewsletter extends EditRecord
         $sent = (int) ($r->sent_count ?? 0);
         $opened = (int) ($r->opened_count ?? 0);
         $clicked = (int) ($r->clicked_count ?? 0);
+        $purchases = (int) ($r->purchase_count ?? 0);
+        $revenueCents = (int) ($r->purchase_amount_cents ?? 0);
+
         $uniqueOpens = MarketplaceNewsletterLinkEvent::where('newsletter_id', $r->id)
             ->where('event_type', MarketplaceNewsletterLinkEvent::TYPE_OPEN)
             ->count();
@@ -50,11 +57,14 @@ class EditNewsletter extends EditRecord
             ->where('event_type', MarketplaceNewsletterLinkEvent::TYPE_CLICK)
             ->count();
 
-        if ($sent + $opened + $clicked === 0) return null;
+        if ($sent + $opened + $clicked + $purchases === 0) return null;
 
         $openRate = $sent > 0 ? round(($opened / $sent) * 100, 1) : 0;
         $clickRate = $sent > 0 ? round(($clicked / $sent) * 100, 1) : 0;
         $ctor = $opened > 0 ? round(($clicked / $opened) * 100, 1) : 0;
+        $convRate = $clicked > 0 ? round(($purchases / $clicked) * 100, 1) : 0;
+        $currency = $r->marketplaceClient?->currency ?? 'RON';
+        $revenue = number_format($revenueCents / 100, 2, ',', '.') . ' ' . $currency;
 
         $cell = fn ($label, $value, $sub = null) => '<div style="flex:1;min-width:130px;padding:10px 12px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;">'
             . '<div style="font-size:11px;text-transform:uppercase;letter-spacing:0.6px;color:#6b7280;">' . e($label) . '</div>'
@@ -67,6 +77,8 @@ class EditNewsletter extends EditRecord
             . $cell('Deschideri', $opened, "{$openRate}% open rate · {$uniqueOpens} unic")
             . $cell('Click-uri', $clicked, "{$clickRate}% click rate · {$uniqueClicks} unic")
             . $cell('CTOR', "{$ctor}%", 'click ÷ open')
+            . $cell('Cumpărări', $purchases, "{$convRate}% conv. rate")
+            . $cell('Venit atribuit', $revenue, 'plătit prin newsletter')
             . '</div>';
 
         return new HtmlString($html);

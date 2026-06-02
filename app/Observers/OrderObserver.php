@@ -202,12 +202,71 @@ class OrderObserver
                 }
             }
 
+            // Newsletter purchase attribution. When the order carries a
+            // newsletter_attribution_id (set by the marketplace JS layer
+            // from the `nl=` URL param / localStorage), credit it to
+            // that campaign: log a TYPE_PURCHASE event and bump the
+            // aggregates so the EditNewsletter stats panel reflects
+            // revenue + conversion immediately.
+            if ($order->newsletter_attribution_id) {
+                try {
+                    $this->creditNewsletterAttribution($order);
+                } catch (\Throwable $e) {
+                    Log::warning('Newsletter attribution credit failed', [
+                        'order_id' => $order->id,
+                        'newsletter_id' => $order->newsletter_attribution_id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
+
         } catch (\Throwable $e) {
             Log::error('Failed to track order conversion', [
                 'order_id' => $order->id,
                 'error' => $e->getMessage(),
                 'error_class' => get_class($e),
             ]);
+        }
+    }
+
+    /**
+     * Credit a newsletter campaign for a paid order. Inserts a
+     * TYPE_PURCHASE row into marketplace_newsletter_link_events and
+     * increments purchase_count + purchase_amount_cents on the
+     * MarketplaceNewsletter so the EditNewsletter stats panel reflects
+     * the conversion + revenue.
+     *
+     * Idempotent: if a row for this (newsletter, order) already exists
+     * (e.g. status transition fires the observer twice on
+     * paid → completed), we exit early so revenue isn't double-counted.
+     */
+    protected function creditNewsletterAttribution(Order $order): void
+    {
+        $newsletterId = (int) $order->newsletter_attribution_id;
+        if ($newsletterId <= 0) return;
+
+        $newsletter = \App\Models\MarketplaceNewsletter::find($newsletterId);
+        if (!$newsletter) return;
+
+        $existing = \App\Models\MarketplaceNewsletterLinkEvent::where('newsletter_id', $newsletterId)
+            ->where('event_type', \App\Models\MarketplaceNewsletterLinkEvent::TYPE_PURCHASE)
+            ->where('dest_url', (string) $order->id)
+            ->first();
+        if ($existing) return;
+
+        \App\Models\MarketplaceNewsletterLinkEvent::create([
+            'newsletter_id' => $newsletterId,
+            'event_type' => \App\Models\MarketplaceNewsletterLinkEvent::TYPE_PURCHASE,
+            'dest_url' => (string) $order->id, // reuse field as the order key
+            'recipient_id' => null,
+        ]);
+
+        $amountCents = (int) ($order->total_cents ?? round(((float) ($order->total ?? 0)) * 100));
+        if ($amountCents < 0) $amountCents = 0;
+
+        $newsletter->increment('purchase_count');
+        if ($amountCents > 0) {
+            $newsletter->increment('purchase_amount_cents', $amountCents);
         }
     }
 

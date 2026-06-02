@@ -10,6 +10,7 @@ use App\Models\MarketplaceNewsletter;
 use App\Models\MarketplaceContactList;
 use App\Models\MarketplaceContactTag;
 use App\Models\MarketplaceEmailTemplate;
+use App\Models\MarketplaceOrganizer;
 use Filament\Forms;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
@@ -39,6 +40,83 @@ class NewsletterResource extends Resource
     {
         $marketplace = static::getMarketplaceClient();
         return parent::getEloquentQuery()->where('marketplace_client_id', $marketplace?->id);
+    }
+
+    /**
+     * Organizer options for the recipients-section pre-filter. Narrowed
+     * by city when at least one city is selected (the join goes via the
+     * organizer's events). Optionally filtered by name LIKE for search.
+     *
+     * @return array<int,string>
+     */
+    public static function organizerOptionsFor(?int $marketplaceId, array $cityIds = [], string $search = ''): array
+    {
+        if (!$marketplaceId) return [];
+
+        $q = MarketplaceOrganizer::query()
+            ->where('marketplace_client_id', $marketplaceId);
+
+        if (!empty($cityIds)) {
+            $q->whereExists(function ($sub) use ($cityIds, $marketplaceId) {
+                $sub->select(\DB::raw(1))
+                    ->from('events')
+                    ->whereColumn('events.marketplace_organizer_id', 'marketplace_organizers.id')
+                    ->where('events.marketplace_client_id', $marketplaceId)
+                    ->whereIn('events.marketplace_city_id', $cityIds);
+            });
+        }
+
+        if ($search !== '') {
+            $q->where(function ($w) use ($search) {
+                $w->where('name', 'ilike', "%{$search}%")
+                    ->orWhere('company_name', 'ilike', "%{$search}%")
+                    ->orWhere('company_tax_id', 'ilike', "%{$search}%");
+            });
+        }
+
+        return $q->orderBy('name')
+            ->limit(50)
+            ->pluck('name', 'id')
+            ->toArray();
+    }
+
+    /**
+     * Event options narrowed by city + organizer + optional name search.
+     * When no upstream filter is set and no search term given, returns
+     * an empty array so the dropdown stays clean (admin can still type
+     * to search across all events of the marketplace).
+     *
+     * @return array<int,string>
+     */
+    public static function eventOptionsFor(?int $marketplaceId, array $cityIds = [], array $organizerIds = [], string $search = ''): array
+    {
+        if (!$marketplaceId) return [];
+
+        $query = Event::query()
+            ->with('venue')
+            ->where('marketplace_client_id', $marketplaceId);
+
+        if (!empty($cityIds)) {
+            $query->whereIn('marketplace_city_id', $cityIds);
+        }
+        if (!empty($organizerIds)) {
+            $query->whereIn('marketplace_organizer_id', $organizerIds);
+        }
+        if ($search !== '') {
+            $query->where(function ($q) use ($search) {
+                $q->where('title->ro', 'ilike', "%{$search}%")
+                    ->orWhere('title->en', 'ilike', "%{$search}%")
+                    ->orWhere('slug', 'ilike', "%{$search}%");
+            });
+        }
+
+        $hasUpstream = !empty($cityIds) || !empty($organizerIds);
+
+        return $query->orderByDesc('event_date')
+            ->limit($hasUpstream && $search === '' ? 100 : 40)
+            ->get()
+            ->mapWithKeys(fn (Event $e) => [$e->id => static::formatEventOption($e)])
+            ->toArray();
     }
 
     /**
@@ -147,10 +225,9 @@ class NewsletterResource extends Resource
                     // any number of selected events in the buildRecipientList
                     // resolver.
                     Forms\Components\Select::make('target_city_ids')
-                        ->label('Oraș — filtrează evenimentele')
+                        ->label('Oraș — filtrează evenimente / organizatori')
                         ->multiple()
                         ->searchable()
-                        ->dehydrated(false)
                         ->live(onBlur: true)
                         // Static dropdown content — shown when the admin
                         // opens the picker before typing. Loads every
@@ -183,12 +260,50 @@ class NewsletterResource extends Resource
                                 ->toArray();
                         })
                         ->afterStateUpdated(function (SSet $set) {
-                            // Reset event selection when city filter changes
-                            // — keeping stale events from another city would
-                            // be confusing.
+                            // Reset event + organizer picks when city
+                            // filter changes — they're pre-filtered by
+                            // city and any stale rows from a different
+                            // city would be confusing.
+                            $set('target_event_ids', []);
+                            $set('target_organizer_ids', []);
+                        })
+                        ->helperText('Selectează unul sau mai multe orașe pentru a vedea doar evenimentele/organizatorii de acolo. Caută cu sau fără diacritice. Lasă gol pentru toate.')
+                        ->columnSpanFull(),
+
+                    // Organizer pre-filter. Two purposes:
+                    //   1. Narrows the events dropdown below to only
+                    //      events owned by these organizers (combined
+                    //      with the city pre-filter above).
+                    //   2. When the events dropdown is left empty, the
+                    //      newsletter targets ALL customers who bought
+                    //      a valid ticket at ANY event of these
+                    //      organizers (optionally narrowed by city) —
+                    //      "send a campaign to all buyers of organizer X
+                    //      in Bucharest". See
+                    //      MarketplaceNewsletter::buildRecipientList.
+                    Forms\Components\Select::make('target_organizer_ids')
+                        ->label('Organizatori — filtru / target direct')
+                        ->multiple()
+                        ->searchable()
+                        ->live(onBlur: true)
+                        ->options(function (SGet $get) use ($marketplace) {
+                            $cityIds = $get('target_city_ids') ?? [];
+                            return static::organizerOptionsFor($marketplace?->id, $cityIds);
+                        })
+                        ->getSearchResultsUsing(function (string $search, SGet $get) use ($marketplace) {
+                            $cityIds = $get('target_city_ids') ?? [];
+                            return static::organizerOptionsFor($marketplace?->id, $cityIds, $search);
+                        })
+                        ->getOptionLabelsUsing(function (array $values) use ($marketplace) {
+                            return MarketplaceOrganizer::where('marketplace_client_id', $marketplace?->id)
+                                ->whereIn('id', $values)
+                                ->pluck('name', 'id')
+                                ->toArray();
+                        })
+                        ->afterStateUpdated(function (SSet $set) {
                             $set('target_event_ids', []);
                         })
-                        ->helperText('Selectează unul sau mai multe orașe pentru a vedea doar evenimentele de acolo. Caută cu sau fără diacritice. Lasă gol pentru toate.')
+                        ->helperText('Dacă selectezi organizator + nu alegi evenimente: trimite la TOȚI cumpărătorii lui (eventual narrow pe oraș). Dacă alegi și evenimente: organizatorul filtrează doar dropdown-ul.')
                         ->columnSpanFull(),
 
                     Forms\Components\Select::make('target_event_ids')
@@ -204,37 +319,15 @@ class NewsletterResource extends Resource
                         // can still search by typing — see below).
                         ->options(function (SGet $get) use ($marketplace) {
                             $cityIds = $get('target_city_ids') ?? [];
-                            if (empty($cityIds)) return [];
-                            return Event::where('marketplace_client_id', $marketplace?->id)
-                                ->whereIn('marketplace_city_id', $cityIds)
-                                ->orderByDesc('event_date')
-                                ->limit(100)
-                                ->get()
-                                ->mapWithKeys(fn ($e) => [
-                                    $e->id => static::formatEventOption($e),
-                                ])
-                                ->toArray();
+                            $orgIds = $get('target_organizer_ids') ?? [];
+                            // Pre-fill only when at least one upstream filter is set.
+                            if (empty($cityIds) && empty($orgIds)) return [];
+                            return static::eventOptionsFor($marketplace?->id, $cityIds, $orgIds);
                         })
                         ->getSearchResultsUsing(function (string $search, SGet $get) use ($marketplace) {
                             $cityIds = $get('target_city_ids') ?? [];
-                            $query = Event::where('marketplace_client_id', $marketplace?->id);
-                            if (!empty($cityIds)) {
-                                $query->whereIn('marketplace_city_id', $cityIds);
-                            }
-                            if ($search !== '') {
-                                $query->where(function ($q) use ($search) {
-                                    $q->where('title->ro', 'ilike', "%{$search}%")
-                                        ->orWhere('title->en', 'ilike', "%{$search}%")
-                                        ->orWhere('slug', 'ilike', "%{$search}%");
-                                });
-                            }
-                            return $query->orderByDesc('event_date')
-                                ->limit(!empty($cityIds) && $search === '' ? 100 : 30)
-                                ->get()
-                                ->mapWithKeys(fn ($e) => [
-                                    $e->id => static::formatEventOption($e),
-                                ])
-                                ->toArray();
+                            $orgIds = $get('target_organizer_ids') ?? [];
+                            return static::eventOptionsFor($marketplace?->id, $cityIds, $orgIds, $search);
                         })
                         ->getOptionLabelsUsing(function (array $values) {
                             return Event::whereIn('id', $values)

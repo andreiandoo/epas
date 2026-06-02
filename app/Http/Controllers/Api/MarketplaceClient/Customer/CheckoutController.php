@@ -957,9 +957,25 @@ class CheckoutController extends BaseController
             $isFreeOrder = !$isTestOrder && $orderTotal <= 0;
             $isAutoConfirmed = $isTestOrder || $isFreeOrder;
 
+            // Newsletter attribution — JS sends `nl` from URL/localStorage
+            // (see resources/marketplaces/ambilet/assets/js/newsletter-attribution.js).
+            // Validate against the marketplace so a forged value can't
+            // credit an unrelated organizer.
+            $newsletterAttributionId = null;
+            $nlRaw = $request->input('newsletter_attribution_id') ?? $request->input('nl');
+            if (is_numeric($nlRaw) && (int) $nlRaw > 0) {
+                $nlId = (int) $nlRaw;
+                $nlExists = \DB::table('marketplace_newsletters')
+                    ->where('id', $nlId)
+                    ->where('marketplace_client_id', $client->id)
+                    ->exists();
+                if ($nlExists) $newsletterAttributionId = $nlId;
+            }
+
             $order = Order::create([
                 'marketplace_client_id' => $client->id,
                 'marketplace_organizer_id' => $isMultiEvent ? null : $primaryOrganizerId,
+                'newsletter_attribution_id' => $newsletterAttributionId,
                 'tenant_id' => $primaryEvent?->tenant_id,
                 'marketplace_customer_id' => $customer->id,
                 'event_id' => $isMultiEvent ? null : ($primaryEvent?->id),
