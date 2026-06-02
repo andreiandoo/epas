@@ -65,7 +65,7 @@ class TicketPreviewGenerator
      * @param int $scale Scale factor (1 = 1:1, 2 = 2x for retina)
      * @return string SVG markup
      */
-    public function renderToSvg(array $templateData, ?array $data = null, int $scale = 1): string
+    public function renderToSvg(array $templateData, ?array $data = null, int $scale = 1, ?string $locale = null): string
     {
         $data = $data ?? $this->variableService->getSampleData();
 
@@ -77,7 +77,7 @@ class TicketPreviewGenerator
         $widthPx = (int) round(($sizeW / 25.4) * $dpi * $scale);
         $heightPx = (int) round(($sizeH / 25.4) * $dpi * $scale);
 
-        return $this->generateSVG($templateData, $data, $widthPx, $heightPx, $scale);
+        return $this->generateSVG($templateData, $data, $widthPx, $heightPx, $scale, $locale);
     }
 
     /**
@@ -87,7 +87,7 @@ class TicketPreviewGenerator
      * Returns raw HTML elements without a wrapper - caller must provide
      * the HTML document wrapper with @page size and body background-color.
      */
-    public function renderToHtml(array $templateData, ?array $data = null): string
+    public function renderToHtml(array $templateData, ?array $data = null, ?string $locale = null): string
     {
         $data = $data ?? $this->variableService->getSampleData();
 
@@ -117,17 +117,46 @@ class TicketPreviewGenerator
             if (isset($layer['visible']) && $layer['visible'] === false) {
                 continue;
             }
-            $html .= $this->renderLayerAsHtml($layer, $data);
+            $html .= $this->renderLayerAsHtml($layer, $data, $locale);
         }
 
         return $html;
     }
 
     /**
+     * Citeste content-ul unui layer text cu suport multi-locale opt-in.
+     *
+     * Layer-ele text au:
+     *   - $layer['content'] = string (defaultul actual, RO de obicei)
+     *   - $layer['content_translations'] = ['ro' => '...', 'hu' => '...', 'en' => '...'] (opt-in)
+     *
+     * Cand `content_translations` lipseste sau cheia locale nu e completata,
+     * intoarce `$layer['content']` neschimbat → ZERO regresie pe template-urile
+     * actuale care nu folosesc traduceri.
+     */
+    private function resolveLayerContent(array $layer, ?string $locale): string
+    {
+        $default = (string) ($layer['content'] ?? '');
+        if ($locale === null) return $default;
+
+        $translations = $layer['content_translations'] ?? null;
+        if (!is_array($translations) || empty($translations)) return $default;
+
+        $value = $translations[$locale] ?? null;
+        if ($value !== null && $value !== '') return (string) $value;
+
+        // Fallback: 'ro' apoi content default.
+        $value = $translations['ro'] ?? null;
+        if ($value !== null && $value !== '') return (string) $value;
+
+        return $default;
+    }
+
+    /**
      * Render a single layer as DomPDF-safe HTML/CSS.
      * All coordinates converted from mm to pt.
      */
-    private function renderLayerAsHtml(array $layer, array $data): string
+    private function renderLayerAsHtml(array $layer, array $data, ?string $locale = null): string
     {
         $type = $layer['type'] ?? 'text';
         $frame = $layer['frame'] ?? [];
@@ -140,7 +169,7 @@ class TicketPreviewGenerator
 
         switch ($type) {
             case 'text':
-                return $this->renderTextLayerHtml($layer, $data, $x, $y, $w, $h);
+                return $this->renderTextLayerHtml($layer, $data, $x, $y, $w, $h, $locale);
             case 'shape':
                 return $this->renderShapeLayerHtml($layer, $x, $y, $w, $h);
             case 'qr':
@@ -154,9 +183,9 @@ class TicketPreviewGenerator
         }
     }
 
-    private function renderTextLayerHtml(array $layer, array $data, float $x, float $y, float $w, float $h): string
+    private function renderTextLayerHtml(array $layer, array $data, float $x, float $y, float $w, float $h, ?string $locale = null): string
     {
-        $rawContent = $layer['content'] ?? '';
+        $rawContent = $this->resolveLayerContent($layer, $locale);
         // Detect dacă layer-ul folosește placeholder *_html — atunci sărim peste escape
         // pentru a permite HTML inline (ex: {{ order.addon_services_html }} cu <img> QR-uri).
         $isHtmlContent = (bool) preg_match('/\{\{\s*[^}]*_html\s*\}\}/', $rawContent);
@@ -405,7 +434,7 @@ class TicketPreviewGenerator
     /**
      * Generate SVG from template data
      */
-    private function generateSVG(array $templateData, array $data, int $width, int $height, int $scale): string
+    private function generateSVG(array $templateData, array $data, int $width, int $height, int $scale, ?string $locale = null): string
     {
         $meta = $templateData['meta'] ?? [];
         $layers = $templateData['layers'] ?? [];
@@ -460,7 +489,7 @@ SVG;
             if (isset($layer['visible']) && $layer['visible'] === false) {
                 continue;
             }
-            $svg .= $this->renderLayer($layer, $data, $pxPerMm);
+            $svg .= $this->renderLayer($layer, $data, $pxPerMm, $locale);
         }
 
         $svg .= "</svg>";
@@ -471,7 +500,7 @@ SVG;
     /**
      * Render a single layer to SVG
      */
-    private function renderLayer(array $layer, array $data, float $pxPerMm): string
+    private function renderLayer(array $layer, array $data, float $pxPerMm, ?string $locale = null): string
     {
         $type = $layer['type'] ?? 'text';
         $frame = $layer['frame'] ?? [];
@@ -494,7 +523,7 @@ SVG;
 
         switch ($type) {
             case 'text':
-                return $this->renderTextLayer($layer, $data, $x, $y, $w, $h, $opacity, $transform, $pxPerMm);
+                return $this->renderTextLayer($layer, $data, $x, $y, $w, $h, $opacity, $transform, $pxPerMm, $locale);
             case 'shape':
                 return $this->renderShapeLayer($layer, $x, $y, $w, $h, $opacity, $transform, $pxPerMm);
             case 'qr':
@@ -511,10 +540,10 @@ SVG;
     /**
      * Render text layer
      */
-    private function renderTextLayer(array $layer, array $data, float $x, float $y, float $w, float $h, float $opacity, string $transform, float $pxPerMm): string
+    private function renderTextLayer(array $layer, array $data, float $x, float $y, float $w, float $h, float $opacity, string $transform, float $pxPerMm, ?string $locale = null): string
     {
-        // Get content directly from layer (new structure)
-        $rawContent = $layer['content'] ?? '';
+        // Get content directly from layer (new structure), cu suport multi-locale opt-in
+        $rawContent = $this->resolveLayerContent($layer, $locale);
         $usesHtmlVar = (bool) preg_match('/\{\{\s*[^}]*_html\s*\}\}/', $rawContent);
 
         // Replace placeholders

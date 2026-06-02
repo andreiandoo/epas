@@ -23,6 +23,7 @@ class Ticket extends Model
         'code',
         'barcode',
         'status',
+        'locale',
         'refund_status',
         'seat_label',
         'seat_uid',

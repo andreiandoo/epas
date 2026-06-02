@@ -796,8 +796,14 @@ class TicketVariableService
     /**
      * Resolve real ticket data from a Ticket model
      * Maps actual database values to the same variable paths used by getSampleData()
+     *
+     * @param  Ticket  $ticket
+     * @param  ?string $locale  Locale preferat (RO/EN/HU/etc.). NULL = foloseste
+     *                          Ticket.locale → Order.locale → 'ro' (backward compat).
+     *                          Toate call-site-urile existente fara param continua
+     *                          sa primeasca exact aceleasi valori (default 'ro').
      */
-    public function resolveTicketData(Ticket $ticket): array
+    public function resolveTicketData(Ticket $ticket, ?string $locale = null): array
     {
         $order = $ticket->order;
         $ticketType = $ticket->ticketType;
@@ -808,30 +814,27 @@ class TicketVariableService
         $meta = $ticket->meta ?? [];
         $orderMeta = $order?->meta ?? [];
 
-        // Resolve event title (translatable)
-        $eventTitle = '';
-        if ($event) {
-            $eventTitle = $event->getTranslation('title', 'ro')
-                ?? $event->getTranslation('title', 'en')
-                ?? (is_array($event->title) ? (reset($event->title) ?: '') : ($event->title ?? ''));
-        }
+        // Determina locale-ul efectiv. Fallback strict: 'ro' ramane defaultul,
+        // deci comenzile vechi (Ticket.locale=NULL si Order.locale=NULL) raman
+        // 100% identice cu fluxul actual.
+        $effectiveLocale = $locale
+            ?? ($ticket->locale ?? null)
+            ?? ($order?->locale ?? null)
+            ?? 'ro';
 
-        // Resolve event subtitle/description
+        // Resolve event title (translatable) — cu fallback grațios la 'ro' apoi 'en'.
+        $eventTitle = $event ? ($this->localizedAttr($event, 'title', $effectiveLocale) ?? '') : '';
+
+        // Resolve event subtitle/description — locale preferat, apoi RO/EN.
         $eventDescription = '';
         if ($event) {
-            $eventDescription = $event->getTranslation('subtitle', 'ro')
-                ?? $event->getTranslation('subtitle', 'en')
-                ?? $event->getTranslation('short_description', 'ro')
+            $eventDescription = $this->localizedAttr($event, 'subtitle', $effectiveLocale)
+                ?? $this->localizedAttr($event, 'short_description', $effectiveLocale)
                 ?? '';
         }
 
         // Resolve venue name (translatable)
-        $venueName = '';
-        if ($venue) {
-            $venueName = $venue->getTranslation('name', 'ro')
-                ?? $venue->getTranslation('name', 'en')
-                ?? '';
-        }
+        $venueName = $venue ? ($this->localizedAttr($venue, 'name', $effectiveLocale) ?? '') : '';
         if (!$venueName) {
             $venueName = $marketplaceEvent?->venue_name ?? '';
         }
@@ -894,10 +897,10 @@ class TicketVariableService
             $visitDate = $event->event_date?->format('Y-m-d');
         }
         $leisureProgram = $isLeisure
-            ? $this->buildLeisureProgramFields($event, $visitDate)
+            ? $this->buildLeisureProgramFields($event, $visitDate, $effectiveLocale)
             : ['program_today' => '', 'season_label' => ''];
-        $addonServices = $isLeisure ? $this->buildAddonServicesText($order, $ticket->id) : '';
-        $addonServicesHtml = $isLeisure ? $this->buildAddonServicesHtml($order, $ticket->id) : '';
+        $addonServices = $isLeisure ? $this->buildAddonServicesText($order, $ticket->id, $effectiveLocale) : '';
+        $addonServicesHtml = $isLeisure ? $this->buildAddonServicesHtml($order, $ticket->id, $effectiveLocale) : '';
 
         return [
             'event' => [
@@ -915,7 +918,8 @@ class TicketVariableService
             ],
             'date' => $dateBlock,
             'ticket' => [
-                'type' => $ticketType?->name ?? $ticket->marketplaceTicketType?->name ?? '',
+                'type' => $this->localizedTicketTypeName($ticketType, $effectiveLocale)
+                    ?? ($ticket->marketplaceTicketType?->name ?? ''),
                 'price' => number_format($ticketPrice, 2) . ' ' . $currency,
                 // Seat placement variables include their Romanian label in the
                 // output so ticket templates can drop them in plain text. When
@@ -965,8 +969,7 @@ class TicketVariableService
             ],
             'legal' => [
                 'terms' => $organizer?->ticket_terms
-                    ?? $event?->getTranslation('ticket_terms', 'ro')
-                    ?? '',
+                    ?? ($event ? ($this->localizedAttr($event, 'ticket_terms', $effectiveLocale) ?? '') : ''),
                 'disclaimer' => '',
             ],
         ];
@@ -1159,7 +1162,7 @@ class TicketVariableService
      * @param  string|null  $visitDate  YYYY-MM-DD
      * @return array{program_today: string, season_label: string}
      */
-    private function buildLeisureProgramFields($event, ?string $visitDate): array
+    private function buildLeisureProgramFields($event, ?string $visitDate, string $locale = 'ro'): array
     {
         $empty = ['program_today' => '', 'season_label' => ''];
         if (!$event || !$visitDate) return $empty;
@@ -1192,7 +1195,15 @@ class TicketVariableService
         }
         if (!$activeSeason) return $empty;
 
-        $seasonLabel = (string) ($activeSeason['name'] ?? '');
+        // season.name poate fi:
+        //   - string simplu ("Sezon vara") → folosit ca atare
+        //   - array multi-locale ({"ro":"Sezon vara","hu":"Nyár","en":"Summer"}) → ales pe locale cu fallback
+        // Organizatorul completeaza câmpul în Filament; pana introduce variante,
+        // folosirea string-ului simplu ramane neschimbata.
+        $rawName = $activeSeason['name'] ?? '';
+        $seasonLabel = is_array($rawName)
+            ? (string) ($rawName[$locale] ?? $rawName['ro'] ?? $rawName['en'] ?? reset($rawName) ?: '')
+            : (string) $rawName;
 
         // Program pe ziua respectivă (DOW)
         $programToday = '';
@@ -1213,6 +1224,65 @@ class TicketVariableService
     }
 
     /**
+     * Helper privat — citeste atribut translatable cu cascada de fallback:
+     *   locale preferat → 'ro' → 'en' → prima valoare disponibila → null.
+     *
+     * Trateaza atat modelele cu trait `Translatable` (Event, Venue) cat si
+     * modelele cu attribut JSON simplu (TicketType.name daca devine multi-locale
+     * in viitor).
+     */
+    private function localizedAttr($model, string $field, string $locale): ?string
+    {
+        if (!$model) return null;
+
+        // Cale 1: trait Translatable → getTranslation()
+        if (method_exists($model, 'getTranslation')) {
+            $value = $model->getTranslation($field, $locale);
+            if ($value !== null && $value !== '') return (string) $value;
+            // Fallback chain
+            $fallback = $model->getTranslation($field, 'ro')
+                ?? $model->getTranslation($field, 'en');
+            if ($fallback !== null && $fallback !== '') return (string) $fallback;
+        }
+
+        // Cale 2: atribut JSON simplu (array) sau string
+        $raw = $model->{$field} ?? null;
+        if (is_array($raw)) {
+            $value = $raw[$locale] ?? $raw['ro'] ?? $raw['en'] ?? null;
+            if ($value === null || $value === '') {
+                $value = reset($raw) ?: null;
+            }
+            return $value !== null ? (string) $value : null;
+        }
+        return $raw !== null && $raw !== '' ? (string) $raw : null;
+    }
+
+    /**
+     * Numele unui TicketType cu suport multi-locale prin `meta.translations.name`.
+     * Cand `meta.translations` lipseste sau locale-ul nu e completat, foloseste
+     * string-ul simplu actual (backward compat 100%).
+     *
+     *   meta.translations: { "name": { "ro": "Bilet adult", "hu": "Felnőtt jegy", "en": "Adult ticket" } }
+     */
+    private function localizedTicketTypeName($ticketType, string $locale): ?string
+    {
+        if (!$ticketType) return null;
+
+        $meta = $ticketType->meta ?? null;
+        if (is_array($meta) && isset($meta['translations']['name']) && is_array($meta['translations']['name'])) {
+            $tt = $meta['translations']['name'];
+            $value = $tt[$locale] ?? $tt['ro'] ?? $tt['en'] ?? null;
+            if ($value !== null && $value !== '') return (string) $value;
+        }
+
+        $name = $ticketType->name ?? null;
+        if (is_array($name)) {
+            return (string) ($name[$locale] ?? $name['ro'] ?? $name['en'] ?? (reset($name) ?: ''));
+        }
+        return $name !== null && $name !== '' ? (string) $name : null;
+    }
+
+    /**
      * Construiește lista multi-linie cu add-on services atribuite biletului curent.
      *
      * Algoritm distribuție per Order:
@@ -1229,9 +1299,9 @@ class TicketVariableService
      * Format pe linie: "{icon} {nume produs} · cod: {ticket.code}"
      * Returnează empty string dacă nu există add-on-uri pentru ticketul curent.
      */
-    private function buildAddonServicesText(?Order $order, ?int $currentTicketId = null): string
+    private function buildAddonServicesText(?Order $order, ?int $currentTicketId = null, string $locale = 'ro'): string
     {
-        $assigned = $this->resolveAddonAssignmentsForTicket($order, $currentTicketId);
+        $assigned = $this->resolveAddonAssignmentsForTicket($order, $currentTicketId, $locale);
         if (empty($assigned)) return '';
 
         $emojiMap = [
@@ -1252,9 +1322,9 @@ class TicketVariableService
      * Folosit prin {{ order.addon_services_html }} (placeholder cu suffix _html
      * detectat în renderTextLayerHtml pentru a sări peste htmlspecialchars).
      */
-    private function buildAddonServicesHtml(?Order $order, ?int $currentTicketId = null): string
+    private function buildAddonServicesHtml(?Order $order, ?int $currentTicketId = null, string $locale = 'ro'): string
     {
-        $assigned = $this->resolveAddonAssignmentsForTicket($order, $currentTicketId);
+        $assigned = $this->resolveAddonAssignmentsForTicket($order, $currentTicketId, $locale);
         if (empty($assigned)) return '';
 
         $emojiMap = [
@@ -1289,7 +1359,7 @@ class TicketVariableService
      *
      * @return array<int,array{category:string,name:string,code:string,ticket_id:int}>
      */
-    private function resolveAddonAssignmentsForTicket(?Order $order, ?int $currentTicketId): array
+    private function resolveAddonAssignmentsForTicket(?Order $order, ?int $currentTicketId, string $locale = 'ro'): array
     {
         if (!$order || !$currentTicketId) return [];
 
@@ -1359,9 +1429,9 @@ class TicketVariableService
         foreach ($mine as $extra) {
             $tt = $extra->ticketType;
             $cat = $tt?->service_category ?? 'extra';
-            $name = $tt && $tt->name
-                ? (is_array($tt->name) ? ($tt->name['ro'] ?? reset($tt->name)) : $tt->name)
-                : 'Serviciu';
+            // Folosim helper-ul cu fallback grațios; daca traducerile lipsesc,
+            // intoarce string-ul actual al biletului (zero regresie).
+            $name = $this->localizedTicketTypeName($tt, $locale) ?? 'Serviciu';
             $out[] = [
                 'category' => $cat,
                 'name' => (string) $name,

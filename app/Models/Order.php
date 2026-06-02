@@ -46,6 +46,7 @@ class Order extends Model
         'commission_amount',
         'total',
         'currency',
+        'locale',
         'source',
         'customer_name',
         'customer_phone',
