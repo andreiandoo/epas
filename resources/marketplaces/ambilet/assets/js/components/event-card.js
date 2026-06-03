@@ -63,9 +63,10 @@ const AmbiletEventCard = {
 
         // Date badge - show range for festivals, single date otherwise
         let dateBadgeHtml;
-        if (event.isDateRange && event.dateRangeFormatted) {
+        if (event.isDateRange && event.dateRangeMain) {
             dateBadgeHtml = '<div class="px-3 py-2 text-center text-white shadow-lg bg-primary rounded-xl">' +
-                '<span class="block text-xs font-semibold leading-tight">' + this.escapeHtml(event.dateRangeFormatted) + '</span>' +
+                '<span class="block text-base font-extrabold leading-tight whitespace-nowrap">' + this.escapeHtml(event.dateRangeMain) + '</span>' +
+                (event.dateRangeYear ? '<span class="block mt-0.5 text-xs font-semibold leading-none text-white/90">' + this.escapeHtml(event.dateRangeYear) + '</span>' : '') +
             '</div>';
         } else {
             dateBadgeHtml = '<div class="px-3 py-2 text-center text-white shadow-lg bg-primary rounded-xl">' +
@@ -171,9 +172,10 @@ const AmbiletEventCard = {
 
         // Date badge
         let dateBadgeHtml;
-        if (event.isDateRange && event.dateRangeFormatted) {
+        if (event.isDateRange && event.dateRangeMain) {
             dateBadgeHtml = '<div class="px-2 py-1 text-center text-white shadow-lg bg-primary rounded-md">' +
-                '<span class="block text-xs font-semibold leading-tight mobile:text-sm">' + this.escapeHtml(event.dateRangeFormatted) + '</span>' +
+                '<span class="block text-sm font-extrabold leading-tight mobile:text-base whitespace-nowrap">' + this.escapeHtml(event.dateRangeMain) + '</span>' +
+                (event.dateRangeYear ? '<span class="block mt-0.5 text-[10px] font-semibold leading-none text-white/90 mobile:text-xs">' + this.escapeHtml(event.dateRangeYear) + '</span>' : '') +
             '</div>';
         } else {
             dateBadgeHtml = '<div class="px-2 py-1 text-center text-white shadow-lg bg-primary rounded-md">' +
@@ -282,10 +284,15 @@ const AmbiletEventCard = {
         const heroImgRaw = event.heroImage;
         const heroImg = heroImgRaw ? (typeof getStorageUrl === 'function' ? getStorageUrl(heroImgRaw) : heroImgRaw) : null;
         let dateHtml;
-        if (event.isDateRange && event.dateRangeFormatted) {
-            dateHtml = '<div class="relative flex flex-col items-center justify-center flex-shrink-0 w-28 py-5 text-center bg-primary overflow-hidden mobile:max-w-[96px]">' +
+        if (event.isDateRange && event.dateRangeMain) {
+            // Two-line range badge: big day-month line on top, smaller
+            // year line beneath ("18 - 21 Iun" / "2026"). Width widened
+            // to w-32 so two-month-letter spans like "15 Sep - 5 Oct"
+            // still fit without truncation; mobile keeps the prior cap.
+            dateHtml = '<div class="relative flex flex-col items-center justify-center flex-shrink-0 w-32 py-5 text-center bg-primary overflow-hidden mobile:max-w-[112px]">' +
                 '<div class="absolute inset-0 bg-gradient-to-br from-primary/85 to-primary-light/85"></div>' +
-                '<div class="relative z-10 px-2 text-xs font-semibold leading-tight text-white">' + this.escapeHtml(event.dateRangeFormatted) + '</div>' +
+                '<div class="relative z-10 px-2 text-lg font-extrabold leading-tight text-white whitespace-nowrap">' + this.escapeHtml(event.dateRangeMain) + '</div>' +
+                (event.dateRangeYear ? '<div class="relative z-10 mt-1 text-sm font-semibold text-white/90 whitespace-nowrap">' + this.escapeHtml(event.dateRangeYear) + '</div>' : '') +
             '</div>';
         } else {
             dateHtml = '<div class="relative flex flex-col items-center justify-center flex-shrink-0 w-24 py-5 text-center bg-primary overflow-hidden mobile:max-w-[96px]">' +
@@ -574,7 +581,14 @@ const AmbiletEventCard = {
             }
         }
 
+        // Build two fields so the card can render the range on two
+        // lines: a day-month part (always present) and a year part
+        // (rendered on its own line beneath). `dateRangeFormatted`
+        // remains as the single-line concatenation for any caller that
+        // still uses it.
         let dateRangeFormatted = '';
+        let dateRangeMain = '';   // "18 - 21 Iun" / "15 Sep - 5 Oct"
+        let dateRangeYear = '';   // "2026" / "2026 - 2027"
         if (isDateRange && rangeStart && rangeEnd) {
             const startDate = new Date(rangeStart);
             const endDate = new Date(rangeEnd);
@@ -586,12 +600,14 @@ const AmbiletEventCard = {
             const endYear = endDate.getFullYear();
 
             if (startYear === endYear) {
-                if (startMonth === endMonth) {
-                    dateRangeFormatted = startDay + ' - ' + endDay + ' ' + endMonth;
-                } else {
-                    dateRangeFormatted = startDay + ' ' + startMonth + ' - ' + endDay + ' ' + endMonth;
-                }
+                dateRangeMain = (startMonth === endMonth)
+                    ? startDay + ' - ' + endDay + ' ' + endMonth
+                    : startDay + ' ' + startMonth + ' - ' + endDay + ' ' + endMonth;
+                dateRangeYear = String(startYear);
+                dateRangeFormatted = dateRangeMain + ' ' + dateRangeYear;
             } else {
+                dateRangeMain = startDay + ' ' + startMonth + ' - ' + endDay + ' ' + endMonth;
+                dateRangeYear = startYear + ' - ' + endYear;
                 dateRangeFormatted = startDay + ' ' + startMonth + ' ' + startYear + ' - ' + endDay + ' ' + endMonth + ' ' + endYear;
             }
         }
@@ -622,6 +638,8 @@ const AmbiletEventCard = {
             postponedDate: apiEvent.postponed_date || null,
             isDateRange: isDateRange,
             dateRangeFormatted: dateRangeFormatted,
+            dateRangeMain: dateRangeMain,
+            dateRangeYear: dateRangeYear,
             redirectUrl: apiEvent.redirect_url || null,
             artists: apiEvent.artists || [],
             _raw: apiEvent
