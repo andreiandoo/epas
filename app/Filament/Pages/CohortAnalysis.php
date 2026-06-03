@@ -110,17 +110,17 @@ class CohortAnalysis extends Page
 
                 // Active customers in this period
                 $activeCount = DB::table('core_customer_events')
-                    ->whereIn('core_customer_id', $customerIds)
+                    ->whereIn('customer_id', $customerIds)
                     ->whereBetween('created_at', [$periodStart, $periodEnd])
-                    ->distinct('core_customer_id')
-                    ->count('core_customer_id');
+                    ->distinct('customer_id')
+                    ->count('customer_id');
 
                 // Purchasers and revenue
                 $purchaseData = DB::table('core_customer_events')
-                    ->whereIn('core_customer_id', $customerIds)
+                    ->whereIn('customer_id', $customerIds)
                     ->where('event_type', 'purchase')
                     ->whereBetween('created_at', [$periodStart, $periodEnd])
-                    ->selectRaw('COUNT(DISTINCT core_customer_id) as purchasers, COALESCE(SUM(conversion_value), 0) as revenue')
+                    ->selectRaw('COUNT(DISTINCT customer_id) as purchasers, COALESCE(SUM(conversion_value), 0) as revenue')
                     ->first();
 
                 $retention[$offset] = $baseCount > 0 ? round(($activeCount / $baseCount) * 100, 1) : 0;

@@ -94,21 +94,21 @@ class CalculateCohortMetricsJob implements ShouldQueue
 
             // Calculate active customers in this period
             $activeCustomers = CoreCustomerEvent::query()
-                ->whereIn('core_customer_id', $cohortCustomerIds)
+                ->whereIn('customer_id', $cohortCustomerIds)
                 ->whereBetween('created_at', [$periodStart, $periodEnd])
-                ->distinct('core_customer_id')
-                ->count('core_customer_id');
+                ->distinct('customer_id')
+                ->count('customer_id');
 
             // Calculate revenue in this period
             $periodRevenue = CoreCustomerEvent::query()
-                ->whereIn('core_customer_id', $cohortCustomerIds)
+                ->whereIn('customer_id', $cohortCustomerIds)
                 ->whereBetween('created_at', [$periodStart, $periodEnd])
                 ->where('is_converted', true)
                 ->sum('conversion_value');
 
             // Calculate orders in this period
             $periodOrders = CoreCustomerEvent::query()
-                ->whereIn('core_customer_id', $cohortCustomerIds)
+                ->whereIn('customer_id', $cohortCustomerIds)
                 ->whereBetween('created_at', [$periodStart, $periodEnd])
                 ->where('event_type', 'purchase')
                 ->count();

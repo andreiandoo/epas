@@ -378,9 +378,12 @@ Schedule::call(function () {
     }
 })->dailyAt('08:00')->timezone('Europe/Bucharest');
 
-// Clean up old platform tracking sessions (daily at 4:30 AM)
+// Clean up old platform tracking sessions (daily at 4:30 AM).
+// core_sessions doesn't have a last_activity_at column — its timing
+// fields are started_at (required) + ended_at (nullable). Anchor the
+// cleanup on started_at so half-closed sessions still age out.
 Schedule::call(function () {
-    $deleted = \App\Models\Platform\CoreSession::where('last_activity_at', '<', now()->subDays(90))
+    $deleted = \App\Models\Platform\CoreSession::where('started_at', '<', now()->subDays(90))
         ->delete();
     \Log::info('Old platform tracking sessions cleaned up', ['deleted' => $deleted]);
 })->dailyAt('04:30')->timezone('Europe/Bucharest');
