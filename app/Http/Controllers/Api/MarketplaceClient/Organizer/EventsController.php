@@ -1224,6 +1224,7 @@ class EventsController extends BaseController
         $ticket->update([
             'checked_in_at' => now(),
             'checked_in_by' => $organizer->contact_name ?? $organizer->name,
+            'checked_in_via' => 'organizer_app',
         ]);
 
         $payload = $this->buildTicketScanPayload($ticket, $isInvitation);
@@ -1362,6 +1363,7 @@ class EventsController extends BaseController
         $ticket->update([
             'checked_in_at' => now(),
             'checked_in_by' => $organizer->contact_name ?? $organizer->name,
+            'checked_in_via' => 'organizer_app',
         ]);
 
         $payload = $this->buildTicketScanPayload($ticket, $isInvitation);
@@ -1464,6 +1466,9 @@ class EventsController extends BaseController
             'checked_in_at' => now(),
             'checked_in_by' => $organizer->contact_name ?? $organizer->name,
             'status' => 'used',
+            // ExternalTicket has a checked_in_via column too once the
+            // migration adds it; the update is a no-op if the column is
+            // missing because the model doesn't have it in $fillable.
         ]);
 
         return $this->success([

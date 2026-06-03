@@ -44,21 +44,31 @@
                         </div>
                     @endif
 
-                    {{-- Status Badge --}}
+                    {{-- Status Badge — check-in takes precedence over plain
+                         "Valid" because check-in flow leaves status='valid'
+                         and only sets checked_in_at. Without this override the
+                         badge would say "Valid" for a ticket the gate already
+                         scanned in, which is misleading for the operator. --}}
                     <div class="mt-4 space-y-2">
-                        <span class="inline-flex items-center px-3 py-1.5 text-sm font-semibold rounded-full
-                            @if($ticket->status === 'valid') bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200
-                            @elseif($ticket->status === 'used') bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200
-                            @elseif($ticket->status === 'cancelled' || $ticket->status === 'void') bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200
-                            @else bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200
-                            @endif">
-                            @if($ticket->status === 'valid') ✓ Valid
-                            @elseif($ticket->status === 'used') ✓ Utilizat
-                            @elseif($ticket->status === 'cancelled') ✗ Anulat
-                            @elseif($ticket->status === 'void') ✗ Anulat
-                            @else {{ ucfirst($ticket->status) }}
-                            @endif
-                        </span>
+                        @if($ticket->checked_in_at && !in_array($ticket->status, ['cancelled', 'void', 'refunded']))
+                            <span class="inline-flex items-center px-3 py-1.5 text-sm font-semibold rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                                ✓ Check-in
+                            </span>
+                        @else
+                            <span class="inline-flex items-center px-3 py-1.5 text-sm font-semibold rounded-full
+                                @if($ticket->status === 'valid') bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200
+                                @elseif($ticket->status === 'used') bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200
+                                @elseif($ticket->status === 'cancelled' || $ticket->status === 'void') bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200
+                                @else bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200
+                                @endif">
+                                @if($ticket->status === 'valid') ✓ Valid
+                                @elseif($ticket->status === 'used') ✓ Utilizat
+                                @elseif($ticket->status === 'cancelled') ✗ Anulat
+                                @elseif($ticket->status === 'void') ✗ Anulat
+                                @else {{ ucfirst($ticket->status) }}
+                                @endif
+                            </span>
+                        @endif
                         <div class="flex flex-wrap justify-center gap-1">
                             @if($hasInsurance)
                                 <span class="inline-flex items-center px-3 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300">
@@ -139,6 +149,46 @@
                     </div>
                 </div>
             </div>
+
+            {{-- Check-in Details — only shown after the ticket has been
+                 scanned at the gate. checked_in_at lives in UTC, formatted
+                 here in the marketplace timezone via MarketplaceTz so the
+                 displayed timestamp matches when the operator actually
+                 scanned (e.g. 19:19 RO, not 16:19 UTC). --}}
+            @if($ticket->checked_in_at)
+                @php
+                    $checkInSourceLabel = match ($ticket->checked_in_via) {
+                        'organizer_app' => 'Aplicație organizator (mobil)',
+                        'venue_app'     => 'Aplicație locație (mobil)',
+                        'pos_app'       => 'POS automat (la vânzare)',
+                        'staff_app'     => 'Aplicație staff festival',
+                        'activities_app'=> 'Aplicație activități',
+                        'leisure_app'   => 'Aplicație leisure',
+                        'manual'        => 'Manual (cont organizator)',
+                        default         => $ticket->checked_in_via ?: 'Necunoscut (înainte de tracking sursă)',
+                    };
+                @endphp
+                <div class="p-5 bg-blue-50 border border-blue-200 shadow-sm dark:bg-blue-900/20 dark:border-blue-800 rounded-xl">
+                    <h3 class="mb-3 text-sm font-semibold tracking-wider text-blue-700 uppercase dark:text-blue-300 flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        Check-in efectuat
+                    </h3>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Data și ora</span>
+                            <p class="text-base font-semibold text-gray-900 dark:text-white">{{ \App\Support\MarketplaceTz::fmt($ticket->checked_in_at, 'd M Y, H:i:s', $ticket->order?->marketplaceClient) }}</p>
+                        </div>
+                        <div>
+                            <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Scanat de</span>
+                            <p class="text-base font-semibold text-gray-900 dark:text-white">{{ $ticket->checked_in_by ?: '—' }}</p>
+                        </div>
+                        <div class="col-span-2">
+                            <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Sursa scanării</span>
+                            <p class="text-base text-gray-900 dark:text-white">{{ $checkInSourceLabel }}</p>
+                        </div>
+                    </div>
+                </div>
+            @endif
 
             {{-- Event Details --}}
             @if($event)

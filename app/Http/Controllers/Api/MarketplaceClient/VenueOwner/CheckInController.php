@@ -91,6 +91,7 @@ class CheckInController extends BaseController
         $ticket->update([
             'checked_in_at' => now(),
             'checked_in_by' => $scannerLabel,
+            'checked_in_via' => 'venue_app',
         ]);
 
         return $this->success($this->buildScanPayload($ticket, $isInvitation), 'Ticket checked in successfully');
@@ -160,6 +161,7 @@ class CheckInController extends BaseController
         $ticket->update([
             'checked_in_at' => now(),
             'checked_in_by' => $scannerLabel,
+            'checked_in_via' => 'venue_app',
         ]);
 
         return $this->success($this->buildScanPayload($ticket, $isInvitation), 'Ticket checked in successfully');

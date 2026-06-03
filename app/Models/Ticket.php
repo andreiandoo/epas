@@ -37,6 +37,7 @@ class Ticket extends Model
         'refund_request_id',
         'checked_in_at',
         'checked_in_by',
+        'checked_in_via',
     ];
 
     protected $casts = [

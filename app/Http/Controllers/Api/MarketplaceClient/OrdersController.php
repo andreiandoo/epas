@@ -1056,6 +1056,7 @@ class OrdersController extends BaseController
                     $ticket->update([
                         'checked_in_at' => $now,
                         'checked_in_by' => $checkinBy,
+                        'checked_in_via' => 'pos_app',
                     ]);
                     $checkedIn[] = [
                         'id' => $ticket->id,
