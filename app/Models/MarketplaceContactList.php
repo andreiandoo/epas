@@ -424,14 +424,28 @@ class MarketplaceContactList extends Model
         // Customers to add
         $toAdd = $matchingCustomerIds->diff($currentSubscriberIds);
 
-        // Add new matching customers
-        foreach ($toAdd as $customerId) {
-            $this->subscribers()->syncWithoutDetaching([
-                $customerId => [
-                    'status' => 'subscribed',
-                    'subscribed_at' => now(),
-                ],
-            ]);
+        // Bulk-upsert in chunks. The previous foreach + syncWithoutDetaching
+        // form fired ~2 queries per customer (one EXISTS + one INSERT),
+        // so a 22k-row "Cumpărători & Abonați" sync stalled the artisan
+        // shell for several minutes. Chunked DB::upsert lets Postgres
+        // handle ON CONFLICT in batches of 5000 and the same sync
+        // completes in single-digit seconds.
+        $now = now();
+        $listId = $this->id;
+        foreach ($toAdd->chunk(5000) as $chunk) {
+            $payload = $chunk->map(fn ($id) => [
+                'list_id' => $listId,
+                'marketplace_customer_id' => $id,
+                'status' => 'subscribed',
+                'subscribed_at' => $now,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ])->all();
+            DB::table('marketplace_contact_list_members')->upsert(
+                $payload,
+                ['list_id', 'marketplace_customer_id'],
+                ['status', 'subscribed_at', 'updated_at']
+            );
         }
 
         // Update sync timestamp
