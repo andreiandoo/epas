@@ -45,7 +45,7 @@ class CreateNewsletter extends CreateRecord
             'subject' => $title ? ($title) : '',
             'target_event_ids' => [$event->id],
             'from_name' => $marketplace?->name,
-            'from_email' => $marketplace?->contact_email,
+            'from_email' => $this->resolveDefaultFromEmail($marketplace),
         ]);
     }
 
@@ -56,6 +56,22 @@ class CreateNewsletter extends CreateRecord
         $data['created_by'] = auth()->id();
         $data['status'] = $data['status'] ?? 'draft';
         return $data;
+    }
+
+    /**
+     * Use noreply@<host> as the default From, where <host> is the
+     * marketplace's domain stripped of scheme/path. Matches the
+     * Brevo-verified sender on Ambilet and avoids the
+     * "newsletter@ambilet.ro" pattern that wasn't actually configured
+     * in DNS as a verified sender. Falls back to marketplace->contact_email
+     * when domain is missing.
+     */
+    protected function resolveDefaultFromEmail($marketplace): ?string
+    {
+        if (!$marketplace) return null;
+        $host = preg_replace('#^https?://#i', '', (string) ($marketplace->domain ?? ''));
+        $host = rtrim($host, '/');
+        return $host !== '' ? "noreply@{$host}" : $marketplace->contact_email;
     }
 
     /**

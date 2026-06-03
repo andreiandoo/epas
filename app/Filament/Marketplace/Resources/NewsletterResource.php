@@ -776,7 +776,16 @@ class NewsletterResource extends Resource
                     Forms\Components\TextInput::make('from_email')
                         ->label('From Email')
                         ->email()
-                        ->default(fn () => $marketplace?->contact_email)
+                        ->default(function () use ($marketplace) {
+                            // Default to noreply@<host> — that's the
+                            // verified Brevo sender + bypasses the "do not
+                            // reply please" inbox confusion. Marketplaces
+                            // can still override per-newsletter.
+                            if (!$marketplace) return null;
+                            $host = preg_replace('#^https?://#i', '', (string) ($marketplace->domain ?? ''));
+                            $host = rtrim($host, '/');
+                            return $host !== '' ? "noreply@{$host}" : $marketplace->contact_email;
+                        })
                         ->required()
                         ->maxLength(255),
                     Forms\Components\TextInput::make('reply_to')

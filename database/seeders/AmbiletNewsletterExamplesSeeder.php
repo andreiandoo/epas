@@ -101,7 +101,7 @@ class AmbiletNewsletterExamplesSeeder extends Seeder
                     'marketplace_client_id' => $client->id,
                     'status' => 'draft',
                     'from_name' => $name,
-                    'from_email' => 'newsletter@' . $host,
+                    'from_email' => 'noreply@' . $host,
                     // body_html is NOT NULL in DB; renderer uses body_sections
                     // when present (this column is just the legacy fallback).
                     // Stub it with a 1-line note so the constraint passes.
