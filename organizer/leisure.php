@@ -198,6 +198,70 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                         <span class="text-xs font-semibold text-muted uppercase tracking-wider">Termeni utilizare</span>
                         <textarea id="pr-f-terms" rows="2" class="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg" placeholder="Condiții, restricții..."></textarea>
                     </label>
+
+                    <!-- 🌐 Traduceri opt-in (HU + EN) — stocate in meta.translations -->
+                    <div class="md:col-span-2 border border-amber-200 bg-amber-50 rounded-lg p-3">
+                        <button type="button" id="pr-f-tr-toggle" class="w-full flex items-center justify-between text-sm font-semibold text-amber-900 hover:text-amber-700">
+                            <span class="flex items-center gap-2">🌐 Traduceri (HU + EN) — opțional</span>
+                            <svg id="pr-f-tr-chevron" class="w-4 h-4 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                        </button>
+                        <p class="text-[11px] text-amber-800 mt-1">Completează doar limbile dorite. Câmpurile goale rămân în limba română (textele de mai sus).</p>
+                        <div id="pr-f-tr-fields" class="hidden mt-3 space-y-3">
+                            <!-- Tabs limbi -->
+                            <div class="flex gap-1 border-b border-amber-300">
+                                <button type="button" data-tr-lang="hu" class="pr-f-tr-tab px-3 py-1.5 text-xs font-semibold border-b-2 border-amber-600 text-amber-900">🇭🇺 Maghiară</button>
+                                <button type="button" data-tr-lang="en" class="pr-f-tr-tab px-3 py-1.5 text-xs font-semibold border-b-2 border-transparent text-amber-700 hover:text-amber-900">🇬🇧 Engleză</button>
+                            </div>
+
+                            <!-- HU tab -->
+                            <div data-tr-pane="hu" class="space-y-2">
+                                <div>
+                                    <label class="text-[11px] uppercase text-amber-800">Nume (HU)</label>
+                                    <input type="text" data-tr-field="name" data-tr-locale="hu" class="pr-f-tr-input w-full px-2 py-1.5 text-sm border border-amber-300 rounded bg-white" placeholder="lasă gol = folosește numele RO">
+                                </div>
+                                <div>
+                                    <label class="text-[11px] uppercase text-amber-800">Descriere scurtă (HU)</label>
+                                    <textarea data-tr-field="description" data-tr-locale="hu" rows="2" class="pr-f-tr-input w-full px-2 py-1.5 text-sm border border-amber-300 rounded bg-white" placeholder="lasă gol = folosește descrierea RO"></textarea>
+                                </div>
+                                <div>
+                                    <label class="text-[11px] uppercase text-amber-800">Unitate preț (HU)</label>
+                                    <input type="text" data-tr-field="unit_label" data-tr-locale="hu" class="pr-f-tr-input w-full px-2 py-1.5 text-sm border border-amber-300 rounded bg-white" placeholder="ex: / autó / 3 óra">
+                                </div>
+                                <div>
+                                    <label class="text-[11px] uppercase text-amber-800">Include — un element per linie (HU)</label>
+                                    <textarea data-tr-field="includes" data-tr-locale="hu" rows="3" class="pr-f-tr-input w-full px-2 py-1.5 text-sm border border-amber-300 rounded bg-white" placeholder="Bejárás egész nap&#10;Nyomtatott térkép"></textarea>
+                                </div>
+                                <div>
+                                    <label class="text-[11px] uppercase text-amber-800">Termeni utilizare (HU)</label>
+                                    <textarea data-tr-field="usage_terms" data-tr-locale="hu" rows="2" class="pr-f-tr-input w-full px-2 py-1.5 text-sm border border-amber-300 rounded bg-white" placeholder="lasă gol = folosește termenii RO"></textarea>
+                                </div>
+                            </div>
+
+                            <!-- EN tab -->
+                            <div data-tr-pane="en" class="space-y-2 hidden">
+                                <div>
+                                    <label class="text-[11px] uppercase text-amber-800">Nume (EN)</label>
+                                    <input type="text" data-tr-field="name" data-tr-locale="en" class="pr-f-tr-input w-full px-2 py-1.5 text-sm border border-amber-300 rounded bg-white" placeholder="empty = use RO name">
+                                </div>
+                                <div>
+                                    <label class="text-[11px] uppercase text-amber-800">Descriere scurtă (EN)</label>
+                                    <textarea data-tr-field="description" data-tr-locale="en" rows="2" class="pr-f-tr-input w-full px-2 py-1.5 text-sm border border-amber-300 rounded bg-white" placeholder="empty = use RO description"></textarea>
+                                </div>
+                                <div>
+                                    <label class="text-[11px] uppercase text-amber-800">Unitate preț (EN)</label>
+                                    <input type="text" data-tr-field="unit_label" data-tr-locale="en" class="pr-f-tr-input w-full px-2 py-1.5 text-sm border border-amber-300 rounded bg-white" placeholder="e.g. / car / 3h">
+                                </div>
+                                <div>
+                                    <label class="text-[11px] uppercase text-amber-800">Includes — one per line (EN)</label>
+                                    <textarea data-tr-field="includes" data-tr-locale="en" rows="3" class="pr-f-tr-input w-full px-2 py-1.5 text-sm border border-amber-300 rounded bg-white" placeholder="Whole-day access&#10;Printed map"></textarea>
+                                </div>
+                                <div>
+                                    <label class="text-[11px] uppercase text-amber-800">Usage terms (EN)</label>
+                                    <textarea data-tr-field="usage_terms" data-tr-locale="en" rows="2" class="pr-f-tr-input w-full px-2 py-1.5 text-sm border border-amber-300 rounded bg-white" placeholder="empty = use RO terms"></textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                     <!-- Variante (durată / preț) — pentru rental + activity -->
                     <div id="pr-f-variants-wrap" class="md:col-span-2 hidden">
                         <div class="flex items-center justify-between mb-2">
@@ -1105,6 +1169,8 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         $('pr-f-child').checked = p ? !!p.is_child_ticket : false;
         $('pr-f-pos-price').value = (p?.pos_price !== undefined && p?.pos_price !== null) ? p.pos_price : '';
         $('pr-f-pos-only').checked = p ? !!(p.pos_only ?? p?.meta?.pos_only) : false;
+        // B3 — Traduceri (HU + EN) opt-in din meta.translations
+        populateTranslationFields(p?.meta?.translations || {});
         // F10: blocked time ranges
         renderBlockRows(Array.isArray(p?.blocked_time_ranges) ? p.blocked_time_ranges : (Array.isArray(p?.meta?.blocked_time_ranges) ? p.meta.blocked_time_ranges : []));
         $('pr-f-delete').classList.toggle('hidden', !p);
@@ -1188,6 +1254,52 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         const list = $('pr-f-blocks-list');
         list.innerHTML = '';
         (ranges || []).forEach(b => list.appendChild(makeBlockRow(b)));
+    }
+
+    // ============================================================
+    // B3 — Traduceri opt-in pe modal produs (HU + EN)
+    // Stocate in meta.translations.{field}.{locale}. Fields simple:
+    // name / description / unit_label / usage_terms (string),
+    // includes (array — separator newline in UI, transformat la save).
+    // Daca operatorul nu completeaza nimic, returnam null → meta.translations
+    // ramane sters din JSON si pagina publica foloseste RO fallback.
+    // ============================================================
+    function populateTranslationFields(translations) {
+        translations = (translations && typeof translations === 'object') ? translations : {};
+        ['hu', 'en'].forEach(loc => {
+            document.querySelectorAll(`.pr-f-tr-input[data-tr-locale="${loc}"]`).forEach(inp => {
+                const field = inp.dataset.trField;
+                let value = (translations[field] && translations[field][loc] !== undefined) ? translations[field][loc] : '';
+                // 'includes' poate veni array → afișezi pe linii in textarea
+                if (field === 'includes' && Array.isArray(value)) value = value.join('\n');
+                inp.value = value || '';
+            });
+        });
+        // Reset accordion la inchis pe deschiderea modal-ului
+        $('pr-f-tr-fields').classList.add('hidden');
+        const chev = $('pr-f-tr-chevron');
+        if (chev) chev.classList.remove('rotate-180');
+    }
+
+    function collectTranslationFields() {
+        const out = {};
+        const fields = ['name', 'description', 'unit_label', 'includes', 'usage_terms'];
+        fields.forEach(field => {
+            ['hu', 'en'].forEach(loc => {
+                const inp = document.querySelector(`.pr-f-tr-input[data-tr-field="${field}"][data-tr-locale="${loc}"]`);
+                if (!inp) return;
+                const raw = (inp.value || '').trim();
+                if (!raw) return;
+                if (!out[field]) out[field] = {};
+                if (field === 'includes') {
+                    out[field][loc] = raw.split('\n').map(s => s.trim()).filter(s => s);
+                } else {
+                    out[field][loc] = raw;
+                }
+            });
+        });
+        // Returnam null daca nu s-a completat nimic → meta.translations nu se salveaza degeaba.
+        return Object.keys(out).length > 0 ? out : null;
     }
     function collectBlockedRanges() {
         const out = [];
@@ -1426,6 +1538,8 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     enabled: true,
                     count: parseInt($('pr-f-physical-count').value || 1, 10),
                 } : null,
+                // B3 — Traduceri opt-in HU + EN (stocate doar daca operatorul completeaza ceva)
+                translations: collectTranslationFields(),
             },
         };
         if (!body.name) { alert('Numele produsului e obligatoriu.'); return; }
@@ -1930,6 +2044,32 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         setupTabs();
         setupProductsHandlers();
         setupGatesHandlers();
+
+        // B3 — Toggle accordion + tabs limbi pentru sectiunea traduceri
+        const trToggle = $('pr-f-tr-toggle');
+        if (trToggle) {
+            trToggle.addEventListener('click', () => {
+                const fields = $('pr-f-tr-fields');
+                const chev = $('pr-f-tr-chevron');
+                fields.classList.toggle('hidden');
+                if (chev) chev.classList.toggle('rotate-180');
+            });
+        }
+        document.querySelectorAll('.pr-f-tr-tab').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const lang = btn.dataset.trLang;
+                document.querySelectorAll('.pr-f-tr-tab').forEach(b => {
+                    const sel = b.dataset.trLang === lang;
+                    b.classList.toggle('border-amber-600', sel);
+                    b.classList.toggle('text-amber-900', sel);
+                    b.classList.toggle('border-transparent', !sel);
+                    b.classList.toggle('text-amber-700', !sel);
+                });
+                document.querySelectorAll('[data-tr-pane]').forEach(p => {
+                    p.classList.toggle('hidden', p.dataset.trPane !== lang);
+                });
+            });
+        });
     });
 
     window.addEventListener('load', async () => {

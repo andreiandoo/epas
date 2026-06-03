@@ -75,14 +75,30 @@ if ($isPreview) {
     }
 }
 
+// B7: detectare locale pentru paginile leisure_venue (cookie scoped + URL).
+// Pentru evenimente non-leisure, cookie-ul `ambilet_locale_leisure` nu exista,
+// deci $eventLocale ramane null si api_get nu trimite ?lang= → EventsController
+// foloseste $client->language (comportament identic cu inainte).
+$eventLocale = null;
+$availableLocalesEv = ['ro', 'en', 'hu'];
+if (!empty($_GET['lang']) && in_array($_GET['lang'], $availableLocalesEv, true)) {
+    $eventLocale = $_GET['lang'];
+} elseif (!empty($_COOKIE['ambilet_locale_leisure']) && in_array($_COOKIE['ambilet_locale_leisure'], $availableLocalesEv, true)) {
+    $eventLocale = $_COOKIE['ambilet_locale_leisure'];
+}
+
 // Server-side: fetch event data for LCP image preload and SEO meta
 $eventPreload = null;
 if ($eventSlug) {
+    $langSuffix = $eventLocale ? ('&lang=' . urlencode($eventLocale)) : '';
     if ($isPreview) {
-        $eventPreload = api_get('/events/' . urlencode($eventSlug) . '?preview=1');
+        $eventPreload = api_get('/events/' . urlencode($eventSlug) . '?preview=1' . $langSuffix);
     } else {
-        $eventPreload = api_cached('event_preload_' . $eventSlug, function () use ($eventSlug) {
-            return api_get('/events/' . urlencode($eventSlug));
+        // Cache key include locale ca sa nu mixam translations intre vizitatori.
+        $cacheKey = 'event_preload_' . $eventSlug . ($eventLocale ? '_' . $eventLocale : '');
+        $eventPreload = api_cached($cacheKey, function () use ($eventSlug, $eventLocale) {
+            $query = $eventLocale ? ('?lang=' . urlencode($eventLocale)) : '';
+            return api_get('/events/' . urlencode($eventSlug) . $query);
         }, 1800); // 30min cache
     }
     $ev = $eventPreload['data']['event'] ?? null;

@@ -18,6 +18,24 @@
  *  - API live: GET /marketplace-events/{slug}/date-availability?month|date
  */
 
+// ── Multi-locale (B4): detectare strict-scoped pentru leisure_venue ──
+// Sursa adevarului, in ordine: (1) ?lang= din URL, (2) cookie scoped, (3) RO.
+// Cookie-ul `ambilet_locale_leisure` e citit DOAR aici → restul site-ului
+// ambilet.ro nu e afectat de selectia clientului pe leisure.
+$availableLocalesLv = ['ro', 'en', 'hu'];
+$publicLocale = 'ro';
+if (!empty($_GET['lang']) && in_array($_GET['lang'], $availableLocalesLv, true)) {
+    $publicLocale = $_GET['lang'];
+    // Persistent pentru navigarile urmatoare in tab-ul curent (24h)
+    @setcookie('ambilet_locale_leisure', $publicLocale, [
+        'expires' => time() + 86400,
+        'path' => '/',
+        'samesite' => 'Lax',
+    ]);
+} elseif (!empty($_COOKIE['ambilet_locale_leisure']) && in_array($_COOKIE['ambilet_locale_leisure'], $availableLocalesLv, true)) {
+    $publicLocale = $_COOKIE['ambilet_locale_leisure'];
+}
+
 $venueConfig    = $ev['venue_config'] ?? [];
 $amenities      = $venueConfig['amenities'] ?? [];
 $heroImages     = $venueConfig['hero_images'] ?? [];
@@ -201,6 +219,90 @@ require_once __DIR__ . '/includes/head.php';
         'videos' => $videos,
         'nearby_hotels' => $nearbyHotels,
         'is_preview' => !empty($_GET['preview']),
+        // B4 — locale efectiv pentru aceasta pagina (RO/HU/EN)
+        'locale' => $publicLocale,
+        // B5 — dicționar texte statice. RO = textele actuale 1:1 (verificate la
+        // randul cu HTML-ul); HU/EN traduse de mine pe baza textelor existente.
+        'i18n' => [
+            'ro' => [
+                'step1' => 'Pasul 1 din 2',
+                'step1_title' => 'Alege data și biletele',
+                'step1_subtitle' => 'Selectează ziua vizitei, apoi tipul de acces.',
+                'step2' => 'Pasul 2 din 2 · Opțional',
+                'step2_subtitle' => 'Adaugă plimbare cu barca, ghid privat sau alte experiențe.',
+                'legend_available' => 'Disponibil',
+                'legend_almost_full' => 'Aproape full',
+                'legend_sold_out' => 'Sold out',
+                'legend_closed' => 'Închis',
+                'pick_a_date' => 'Selectează o dată din calendar',
+                'choose_option' => 'Alege opțiunea',
+                'choose_slot' => 'Alege ora cursei',
+                'choose_date' => 'Alege data',
+                'requires_access' => 'Adaugă mai întâi un bilet de acces',
+                'closed' => 'Închis',
+                'cart_total' => 'Total',
+                'cart_for' => 'Pentru',
+                'cart_remove_title' => 'Elimină din coș',
+                'savings' => 'Economisești',
+                'individual_value' => 'Valoare individuală',
+                'continue' => 'Continuă spre coș',
+                'days_short' => ['Lun', 'Mar', 'Mie', 'Joi', 'Vin', 'Sâm', 'Dum'],
+                'months' => ['Ianuarie', 'Februarie', 'Martie', 'Aprilie', 'Mai', 'Iunie', 'Iulie', 'August', 'Septembrie', 'Octombrie', 'Noiembrie', 'Decembrie'],
+                'lang_label' => 'Limbă',
+            ],
+            'hu' => [
+                'step1' => '1./2. lépés',
+                'step1_title' => 'Válassz dátumot és jegyet',
+                'step1_subtitle' => 'Válaszd ki a látogatás napját, majd a belépő típusát.',
+                'step2' => '2./2. lépés · Opcionális',
+                'step2_subtitle' => 'Adj hozzá csónakázást, magánvezetést vagy más élményt.',
+                'legend_available' => 'Elérhető',
+                'legend_almost_full' => 'Majdnem tele',
+                'legend_sold_out' => 'Elfogyott',
+                'legend_closed' => 'Zárva',
+                'pick_a_date' => 'Válassz egy dátumot a naptárból',
+                'choose_option' => 'Válassz opciót',
+                'choose_slot' => 'Válassz indulási időpontot',
+                'choose_date' => 'Válassz dátumot',
+                'requires_access' => 'Először adj hozzá egy belépőjegyet',
+                'closed' => 'Zárva',
+                'cart_total' => 'Összesen',
+                'cart_for' => 'Erre a napra',
+                'cart_remove_title' => 'Eltávolítás a kosárból',
+                'savings' => 'Megtakarítás',
+                'individual_value' => 'Egyedi ár',
+                'continue' => 'Tovább a kosárhoz',
+                'days_short' => ['Hét', 'Ked', 'Sze', 'Csü', 'Pén', 'Szo', 'Vas'],
+                'months' => ['Január', 'Február', 'Március', 'Április', 'Május', 'Június', 'Július', 'Augusztus', 'Szeptember', 'Október', 'November', 'December'],
+                'lang_label' => 'Nyelv',
+            ],
+            'en' => [
+                'step1' => 'Step 1 of 2',
+                'step1_title' => 'Choose date and tickets',
+                'step1_subtitle' => 'Select your visit date, then the access type.',
+                'step2' => 'Step 2 of 2 · Optional',
+                'step2_subtitle' => 'Add a boat ride, private guide or other experiences.',
+                'legend_available' => 'Available',
+                'legend_almost_full' => 'Almost full',
+                'legend_sold_out' => 'Sold out',
+                'legend_closed' => 'Closed',
+                'pick_a_date' => 'Pick a date from the calendar',
+                'choose_option' => 'Choose option',
+                'choose_slot' => 'Choose departure time',
+                'choose_date' => 'Pick a date',
+                'requires_access' => 'Add an access ticket first',
+                'closed' => 'Closed',
+                'cart_total' => 'Total',
+                'cart_for' => 'For',
+                'cart_remove_title' => 'Remove from cart',
+                'savings' => 'You save',
+                'individual_value' => 'Individual value',
+                'continue' => 'Continue to cart',
+                'days_short' => ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                'months' => ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
+                'lang_label' => 'Language',
+            ],
+        ],
     ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
 </script>
 
@@ -224,6 +326,15 @@ require_once __DIR__ . '/includes/head.php';
         <a href="#bilete" class="bg-white/15 backdrop-blur text-white px-4 py-2 rounded-full text-sm font-semibold hover:bg-white/25 transition-colors">Rezervă acces →</a>
     </div>
 </nav>
+
+<!-- ============ B4: SELECTOR LIMBĂ (fixed top-right) ============ -->
+<div class="fixed top-4 right-4 z-50 flex items-center gap-1 bg-white/95 backdrop-blur rounded-full px-2 py-1 shadow-lg border border-forest-200" style="font-size:11px;">
+    <span class="text-forest-600 text-[10px] uppercase tracking-wider font-bold px-1.5" data-i18n="lang_label">Limbă</span>
+    <?php foreach (['ro' => '🇷🇴 RO', 'hu' => '🇭🇺 HU', 'en' => '🇬🇧 EN'] as $code => $label): ?>
+        <a href="?<?= http_build_query(array_merge($_GET, ['lang' => $code])) ?>"
+           class="px-2 py-1 rounded-full text-[11px] font-semibold transition-colors <?= $publicLocale === $code ? 'bg-forest-700 text-white' : 'text-forest-700 hover:bg-forest-100' ?>"><?= $label ?></a>
+    <?php endforeach; ?>
+</div>
 
 <!-- ============ HERO ============ -->
 <section class="lv-hero-bg relative min-h-[100vh] flex flex-col justify-end overflow-hidden pb-24 lg:pb-32">
@@ -325,9 +436,9 @@ require_once __DIR__ . '/includes/head.php';
 <section id="bilete" class="lv-scroll-mt py-16 lg:py-24 px-6 lg:px-12 bg-fog">
     <div class="max-w-7xl mx-auto">
         <div class="text-center mb-12">
-            <p class="text-forest-600 text-xs uppercase tracking-[0.3em] font-bold mb-3">Pasul 1 din 2</p>
-            <h2 class="font-display text-4xl lg:text-5xl font-bold text-ink mb-3">Alege data și biletele</h2>
-            <p class="text-forest-700/70 max-w-xl mx-auto">Selectează ziua vizitei, apoi tipul de acces.</p>
+            <p class="text-forest-600 text-xs uppercase tracking-[0.3em] font-bold mb-3" data-i18n="step1">Pasul 1 din 2</p>
+            <h2 class="font-display text-4xl lg:text-5xl font-bold text-ink mb-3" data-i18n="step1_title">Alege data și biletele</h2>
+            <p class="text-forest-700/70 max-w-xl mx-auto" data-i18n="step1_subtitle">Selectează ziua vizitei, apoi tipul de acces.</p>
         </div>
 
         <div class="grid lg:grid-cols-12 gap-6">
@@ -379,10 +490,10 @@ require_once __DIR__ . '/includes/head.php';
                     </div>
 
                     <div class="flex flex-wrap items-center gap-3 mt-5 pt-5 border-t border-forest-100 text-xs text-forest-700/70">
-                        <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-forest-400"></span>Disponibil</span>
-                        <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-amber-400"></span>Aproape full</span>
-                        <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-red-400"></span>Sold out</span>
-                        <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-forest-700/20"></span>Închis</span>
+                        <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-forest-400"></span><span data-i18n="legend_available">Disponibil</span></span>
+                        <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-amber-400"></span><span data-i18n="legend_almost_full">Aproape full</span></span>
+                        <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-red-400"></span><span data-i18n="legend_sold_out">Sold out</span></span>
+                        <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-forest-700/20"></span><span data-i18n="legend_closed">Închis</span></span>
                     </div>
 
                     <div x-show="selectedDate" class="mt-5 p-3 bg-forest-50 rounded-xl flex items-center gap-3">
@@ -1098,7 +1209,37 @@ function reservationPage() {
     const MAX_ADVANCE = DATA.max_advance_days || 90;
     const IS_PREVIEW = !!DATA.is_preview;
 
-    const MONTHS_RO = ['Ianuarie','Februarie','Martie','Aprilie','Mai','Iunie','Iulie','August','Septembrie','Octombrie','Noiembrie','Decembrie'];
+    // B4/B5 — locale + dicționar i18n
+    const PUBLIC_LOCALE = DATA.locale || 'ro';
+    const I18N_DICT = (DATA.i18n && DATA.i18n[PUBLIC_LOCALE]) ? DATA.i18n[PUBLIC_LOCALE] : (DATA.i18n?.ro || {});
+    // Helper global pentru template-uri Alpine: t('key') sau t('days_short')
+    function t(key, fallback) {
+        const v = I18N_DICT[key];
+        if (v === undefined || v === null) return fallback ?? '';
+        return v;
+    }
+    // Aplica traduceri pe elementele cu data-i18n. Ruleaza dupa Alpine init (DOMContentLoaded);
+    // daca un element nu are cheia in dictionar, lasa textul HTML original neatins (RO).
+    function applyI18N() {
+        document.querySelectorAll('[data-i18n]').forEach(el => {
+            const key = el.dataset.i18n;
+            if (!key) return;
+            const txt = I18N_DICT[key];
+            if (typeof txt === 'string' && txt !== '') {
+                el.textContent = txt;
+            }
+        });
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', applyI18N);
+    } else {
+        applyI18N();
+    }
+
+    // Numele lunilor — citite din dicționar daca exista, altfel RO ca default
+    const MONTHS_RO = Array.isArray(I18N_DICT.months) && I18N_DICT.months.length === 12
+        ? I18N_DICT.months
+        : ['Ianuarie','Februarie','Martie','Aprilie','Mai','Iunie','Iulie','August','Septembrie','Octombrie','Noiembrie','Decembrie'];
 
     return {
         cartOpen: false,
@@ -1179,7 +1320,11 @@ function reservationPage() {
             this.loadingMonth = true;
             try {
                 const url = `/marketplace-events/${SLUG}/date-availability` + (IS_PREVIEW ? `?month=${monthStr}&preview=1` : `?month=${monthStr}`);
-                const resp = await AmbiletAPI.get(url.split('?')[0], Object.fromEntries(new URLSearchParams(url.split('?')[1] || '')));
+                const baseParams = Object.fromEntries(new URLSearchParams(url.split('?')[1] || ''));
+                // B4: propaga locale-ul la API (date-availability filtreaza ticket types
+                // si returnaza string-urile traduse din meta.translations).
+                baseParams.lang = PUBLIC_LOCALE;
+                const resp = await AmbiletAPI.get(url.split('?')[0], baseParams);
                 if (resp && resp.dates) this.monthCache[monthStr] = resp;
             } catch (e) {
                 console.warn('loadMonth failed', e);
@@ -1194,7 +1339,7 @@ function reservationPage() {
             this.ticketsRaw = [];
             this.qtyById = {};
             try {
-                const params = { date: key };
+                const params = { date: key, lang: PUBLIC_LOCALE };
                 if (IS_PREVIEW) params.preview = 1;
                 const resp = await AmbiletAPI.get(`/marketplace-events/${SLUG}/date-availability`, params);
                 if (resp && resp.is_open) {
