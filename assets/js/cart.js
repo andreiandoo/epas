@@ -571,9 +571,27 @@ const AmbiletCart = {
             this.showNotification(msg, 'info');
             return { updated: false, removed: true, reason: msg };
         } catch (error) {
-            // Network / unexpected — leave the stored promo in place so
-            // the user doesn't lose their code on a transient blip. The
-            // checkout endpoint validates one more time before charging.
+            // Distinguish a deliberate backend rejection from a real
+            // network blip. AmbiletAPI throws APIError on every non-2xx,
+            // so a 4xx (e.g. "promo no longer applies to current cart"
+            // when the only eligible items were removed) lands here too.
+            // For 4xx we DROP the promo so the discount stops applying
+            // immediately. For 0 / 5xx (true network / server hiccup)
+            // we leave the stored promo in place — checkout will
+            // revalidate one more time before charging.
+            const status = error && typeof error.status === 'number' ? error.status : 0;
+            const isClientRejection = status >= 400 && status < 500;
+            if (isClientRejection) {
+                localStorage.removeItem(this.PROMO_KEY);
+                window.dispatchEvent(new CustomEvent('ambilet:cart:promo', {
+                    detail: { promo: null }
+                }));
+                const msg = (error && error.message)
+                    ? error.message
+                    : 'Codul promoțional nu mai este valid pentru coșul actual';
+                this.showNotification(msg, 'info');
+                return { updated: false, removed: true, reason: msg };
+            }
             return { updated: false, removed: false, reason: 'network_error' };
         }
     },

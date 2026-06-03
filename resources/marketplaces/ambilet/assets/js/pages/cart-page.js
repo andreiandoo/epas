@@ -180,6 +180,14 @@ const CartPage = {
             promoSection.classList.add('hidden');
             timerBar.classList.add('hidden');
             emptyState.classList.remove('hidden');
+            // The summary area is hidden but its counters live elsewhere
+            // in the layout (header, breadcrumb, etc.). Zero them out
+            // explicitly so an empty cart never shows a stale "1 bilet"
+            // count from the previous render.
+            const totalItemsEl = document.getElementById('totalItems');
+            if (totalItemsEl) totalItemsEl.textContent = '0';
+            const summaryItemsEl = document.getElementById('summaryItems');
+            if (summaryItemsEl) summaryItemsEl.textContent = '0';
             return;
         }
 
