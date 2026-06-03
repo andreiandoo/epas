@@ -58,7 +58,19 @@ class CheckoutController extends BaseController
             'ticket_insurance_amount' => 'nullable|numeric|min:0',
             'cultural_card_surcharge' => 'nullable|numeric|min:0',
             'preview_token' => 'nullable|string',
+            // Locale preferat al clientului (RO/HU/EN/...). Optional. Daca lipseste
+            // sau nu e in whitelist, Order.locale ramane NULL si pipeline-ul
+            // foloseste 'ro' ca fallback (backward compat 100%).
+            'locale' => 'nullable|string|max:8',
         ]);
+
+        // B6: Captura locale-ului efectiv pentru order-urile create in acest flow.
+        // Whitelist strict din config → zero risc de injection. NULL daca nu e valid.
+        $availableLocales = config('locales.available', []);
+        $checkoutLocale = null;
+        if (!empty($validated['locale']) && in_array($validated['locale'], $availableLocales, true)) {
+            $checkoutLocale = $validated['locale'];
+        }
 
         // Determine if this is a test order via valid preview token
         $isTestOrder = false;
@@ -1001,6 +1013,7 @@ class CheckoutController extends BaseController
                 'processing_fee_percent_rate' => $processingFee['percent_rate'] ?? null,
                 'processing_fee_fixed_cents'  => $processingFee['fixed_cents'] ?? null,
                 'currency' => $currency,
+                'locale' => $checkoutLocale,
                 'source' => $isTestOrder ? 'test_order' : ($isFreeOrder ? 'marketplace_free' : 'marketplace'),
                 'customer_email' => $customer->email,
                 'customer_name' => $customer->first_name . ' ' . $customer->last_name,
@@ -1152,6 +1165,8 @@ class CheckoutController extends BaseController
                         'marketplace_customer_id' => $customer->id,
                         'code' => strtoupper(Str::random(8)),
                         'barcode' => Str::uuid()->toString(),
+                        // B6: ticket mosteneste locale-ul order-ului (NULL = fallback 'ro' la randare)
+                        'locale' => $checkoutLocale,
                         'status' => $isAutoConfirmed ? 'valid' : 'pending',
                         'price' => $isTestOrder ? 0 : $item['unit_price'],
                         'seat_label' => $seatLabel,
@@ -1580,6 +1595,7 @@ class CheckoutController extends BaseController
                 'processing_fee_percent_rate' => $processingFee['percent_rate'] ?? null,
                 'processing_fee_fixed_cents'  => $processingFee['fixed_cents'] ?? null,
                 'currency'                 => $currency,
+                'locale'                   => $checkoutLocale,
                 'source'                   => $isTestOrder ? 'test_order' : 'marketplace_activity',
                 'customer_email'           => $customer->email,
                 'customer_name'            => $customer->first_name . ' ' . $customer->last_name,
@@ -1679,6 +1695,8 @@ class CheckoutController extends BaseController
                         'marketplace_customer_id'  => $customer->id,
                         'code'                     => strtoupper(Str::random(8)),
                         'barcode'                  => Str::uuid()->toString(),
+                        // B6: ticket mosteneste locale-ul order-ului
+                        'locale'                   => $checkoutLocale,
                         'status'                   => $ticketStatus,
                         'price'                    => $isTestOrder ? 0 : $b['unit_price'],
                         'attendee_name'            => $beneficiary['name'] ?? null,

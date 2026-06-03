@@ -67,6 +67,18 @@ class DateAvailabilityController extends BaseController
     {
         $dateStr = $date;
 
+        // Locale efectiv pentru randarea publica a paginii leisure. Vine din
+        // request->query('lang') (selectorul de pe leisure-venue.php), validat
+        // strict la lista de locale disponibile. Fallback 'ro' (backward compat).
+        // Gating extra: e activ DOAR pentru leisure_venue (controller-ul intoarce
+        // 404 mai sus pentru orice alt tip de event), deci zero risc de scurgere
+        // pe alte flow-uri.
+        $availableLocales = config('locales.available', ['ro']);
+        $requestedLocale = request()->query('lang');
+        $publicLocale = (is_string($requestedLocale) && in_array($requestedLocale, $availableLocales, true))
+            ? $requestedLocale
+            : 'ro';
+
         // Validate date is within event range. Event uses range_start_date / range_end_date
         // for leisure venues with seasonal/recurring schedule, instead of starts_at/ends_at.
         $rangeStart = $event->range_start_date ?? $event->event_date ?? null;
@@ -287,10 +299,25 @@ class DateAvailabilityController extends BaseController
                 }
             }
 
+            // Multi-locale: aplica traduceri opt-in din meta.translations. Daca
+            // organizatorul nu a completat traduceri pentru locale-ul cerut,
+            // fallback-ul intoarce valoarea actuala (string original RO) → zero
+            // regresie pe organizatorii care nu folosesc traduceri.
+            $translations = is_array($tt->meta['translations'] ?? null) ? $tt->meta['translations'] : [];
+            $name = $this->pickTranslation($translations, 'name', $publicLocale, $tt->name);
+            $description = $this->pickTranslation($translations, 'description', $publicLocale, $tt->description);
+            $productDescription = $this->pickTranslation($translations, 'product_description', $publicLocale, $tt->product_description);
+            $usageTerms = $this->pickTranslation($translations, 'usage_terms', $publicLocale, $tt->usage_terms);
+            $unitLabel = $this->pickTranslation($translations, 'unit_label', $publicLocale, $unitLabel);
+            $includes = $this->pickTranslation($translations, 'includes', $publicLocale, $includes);
+            // Variants & addons: traducerile sunt indexate dupa id ({"id":{"locale":"label"}})
+            $variants = $this->localizeArrayItems($variants, $translations['variants'] ?? null, $publicLocale);
+            $addons = $this->localizeArrayItems($addons, $translations['addons'] ?? null, $publicLocale);
+
             $ttData = [
                 'id' => $tt->id,
-                'name' => $tt->name,
-                'description' => $tt->description,
+                'name' => $name,
+                'description' => $description,
                 'group' => $tt->ticket_group,
                 'base_price' => (float) ($tt->price_max ?? $tt->price ?? 0),
                 'effective_price' => $effectivePrice,
@@ -306,8 +333,8 @@ class DateAvailabilityController extends BaseController
                 'issuing_company' => $tt->issuing_company ?: 'primary',
                 'service_category' => $tt->service_category ?: 'access',
                 'service_duration_minutes' => $tt->service_duration_minutes,
-                'product_description' => $tt->product_description,
-                'usage_terms' => $tt->usage_terms,
+                'product_description' => $productDescription,
+                'usage_terms' => $usageTerms,
                 'requires_access_ticket' => (bool) ($tt->requires_access_ticket ?? false),
                 'image_url' => $imageUrl,
                 'icon' => $iconEmoji,
@@ -444,5 +471,60 @@ class DateAvailabilityController extends BaseController
             'event_id' => $event->id,
             'dates' => $dates,
         ]);
+    }
+
+    /**
+     * Selecteaza traducerea unui camp din meta.translations.{field}[locale] cu
+     * fallback la valoarea actuala (de obicei RO). Folosit pentru name,
+     * description, product_description, usage_terms, unit_label, includes.
+     *
+     * Stocarea conventionala:
+     *   meta.translations: {
+     *     "name":        {"hu": "Felnőtt jegy", "en": "Adult ticket"},
+     *     "description": {"hu": "...",          "en": "..."},
+     *     "includes":    {"hu": ["...","..."],  "en": ["...","..."]},
+     *     ...
+     *   }
+     *
+     * RO ramane in coloanele/meta-urile originale (descrierea sursa = $tt->X)
+     * si nu se duplica in translations. Daca translations[field][locale] e gol
+     * sau lipseste, intoarcem $default.
+     */
+    private function pickTranslation(array $translations, string $field, string $locale, mixed $default): mixed
+    {
+        if ($locale === 'ro') return $default; // RO = sursa, fara dublare
+        if (!isset($translations[$field]) || !is_array($translations[$field])) return $default;
+        $value = $translations[$field][$locale] ?? null;
+        if ($value === null || $value === '' || (is_array($value) && empty($value))) {
+            return $default;
+        }
+        return $value;
+    }
+
+    /**
+     * Aplica traduceri pe array de item-uri cu id (variants[] / addons[]).
+     * Schema asteptata in meta.translations.variants / .addons:
+     *   {"<id>": {"hu": "...", "en": "..."}}
+     *
+     * Pentru fiecare item din $items (cu cheia 'id' + 'label'), daca exista
+     * o traducere pentru locale-ul cerut, suprascrie labelul. Daca nu, las
+     * labelul actual neatins → backward compat 100%.
+     */
+    private function localizeArrayItems(array $items, ?array $translationsForGroup, string $locale): array
+    {
+        if ($locale === 'ro' || !is_array($translationsForGroup) || empty($translationsForGroup)) {
+            return $items;
+        }
+        return array_map(function (array $item) use ($translationsForGroup, $locale) {
+            $id = $item['id'] ?? null;
+            if (!$id || !isset($translationsForGroup[$id]) || !is_array($translationsForGroup[$id])) {
+                return $item;
+            }
+            $translatedLabel = $translationsForGroup[$id][$locale] ?? null;
+            if ($translatedLabel !== null && $translatedLabel !== '') {
+                $item['label'] = (string) $translatedLabel;
+            }
+            return $item;
+        }, $items);
     }
 }

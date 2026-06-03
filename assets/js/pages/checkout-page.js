@@ -853,6 +853,16 @@ const CheckoutPage = {
         const acceptTerms = document.getElementById('termsCheckbox').checked;
 
         try {
+            // B6: include locale-ul daca a fost setat pe pagina leisure_venue
+            // (cookie scoped `ambilet_locale_leisure` setat de leisure-venue.php).
+            // Pentru flow-urile non-leisure, cookie-ul nu exista → locale ramane
+            // implicit pe backend (NULL), comportament identic cu inainte.
+            let leisureLocale = null;
+            try {
+                const m = document.cookie.match(/(?:^|; )ambilet_locale_leisure=([^;]+)/);
+                if (m && ['ro', 'hu', 'en'].includes(m[1])) leisureLocale = m[1];
+            } catch (e) { /* ignore */ }
+
             // Step 1: Create order via checkout
             const checkoutData = {
                 customer,
@@ -860,7 +870,8 @@ const CheckoutPage = {
                 items: this.items,
                 payment_method: paymentMethod,
                 newsletter,
-                accept_terms: acceptTerms
+                accept_terms: acceptTerms,
+                ...(leisureLocale ? { locale: leisureLocale } : {}),
             };
 
             // Add promo code if applied

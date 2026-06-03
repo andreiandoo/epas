@@ -22,7 +22,15 @@ class EventsController extends BaseController
     {
         $client = $this->requireClient($request);
 
-        $language = $client->language ?? 'ro';
+        // B7: ?lang= are prioritate fata de $client->language (folosit pentru
+        // pagini leisure_venue cu selector de limba). Daca lipseste sau nu e in
+        // whitelist → fallback la $client->language (RO pe ambilet.ro) →
+        // comportament identic pe toate paginile non-leisure.
+        $requestedLang = $request->query('lang');
+        $availableLangs = config('locales.available', ['ro']);
+        $language = (is_string($requestedLang) && in_array($requestedLang, $availableLangs, true))
+            ? $requestedLang
+            : ($client->language ?? 'ro');
 
         $query = Event::query()
             ->with(['venue:id,name,city,state,country', 'marketplaceEventCategory', 'ticketTypes' => function ($q) {
@@ -392,7 +400,15 @@ class EventsController extends BaseController
         }
 
         // Get language from client
-        $language = $client->language ?? 'ro';
+        // B7: ?lang= are prioritate fata de $client->language (folosit pentru
+        // pagini leisure_venue cu selector de limba). Daca lipseste sau nu e in
+        // whitelist → fallback la $client->language (RO pe ambilet.ro) →
+        // comportament identic pe toate paginile non-leisure.
+        $requestedLang = $request->query('lang');
+        $availableLangs = config('locales.available', ['ro']);
+        $language = (is_string($requestedLang) && in_array($requestedLang, $availableLangs, true))
+            ? $requestedLang
+            : ($client->language ?? 'ro');
 
         // Handle both marketplace events (translatable fields) and tenant events (simple fields)
         $isMarketplaceEvent = !empty($event->marketplace_client_id);
@@ -588,7 +604,15 @@ class EventsController extends BaseController
     public function featured(Request $request): JsonResponse
     {
         $client = $this->requireClient($request);
-        $language = $client->language ?? 'ro';
+        // B7: ?lang= are prioritate fata de $client->language (folosit pentru
+        // pagini leisure_venue cu selector de limba). Daca lipseste sau nu e in
+        // whitelist → fallback la $client->language (RO pe ambilet.ro) →
+        // comportament identic pe toate paginile non-leisure.
+        $requestedLang = $request->query('lang');
+        $availableLangs = config('locales.available', ['ro']);
+        $language = (is_string($requestedLang) && in_array($requestedLang, $availableLangs, true))
+            ? $requestedLang
+            : ($client->language ?? 'ro');
 
         $query = Event::query()
             ->with(['venue:id,name,city', 'marketplaceEventCategory', 'ticketTypes' => function ($q) {

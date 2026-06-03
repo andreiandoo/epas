@@ -2974,6 +2974,90 @@ class EventResource extends Resource
                                                     ->visible(fn (SGet $get) => ($get('../../display_template') ?? 'standard') === 'leisure_venue')
                                                     ->columnSpan(12),
 
+                                                // ── Leisure Venue: Traduceri HU + EN (opt-in) ──
+                                                // Stocate in meta.translations.{field}.{locale}. Daca lipsesc,
+                                                // pagina publica afișeaza valoarea RO (campurile de mai sus).
+                                                Forms\Components\Placeholder::make('translations_intro')
+                                                    ->label('')
+                                                    ->content(new \Illuminate\Support\HtmlString(
+                                                        '<div style="background:#fef3c7;border:1px solid #fbbf24;border-radius:6px;padding:10px;font-size:13px;color:#78350f;">'
+                                                        . '🌐 <strong>' . $t('Traduceri opționale (HU + EN)', 'Optional translations (HU + EN)') . '</strong><br>'
+                                                        . '<span style="font-size:11px;">' . $t('Completează doar limbile dorite. Câmpurile goale rămân în limba română (textul de mai sus).', 'Fill only the languages you want. Empty fields fall back to the Romanian text above.') . '</span>'
+                                                        . '</div>'
+                                                    ))
+                                                    ->visible(fn (SGet $get) => ($get('../../display_template') ?? 'standard') === 'leisure_venue')
+                                                    ->columnSpan(12),
+
+                                                Forms\Components\TextInput::make('meta.translations.name.hu')
+                                                    ->label('🇭🇺 ' . $t('Nume bilet (HU)', 'Ticket name (HU)'))
+                                                    ->maxLength(255)
+                                                    ->placeholder($t('lasă gol = folosește numele RO', 'empty = use RO name'))
+                                                    ->visible(fn (SGet $get) => ($get('../../display_template') ?? 'standard') === 'leisure_venue')
+                                                    ->columnSpan(6),
+                                                Forms\Components\TextInput::make('meta.translations.name.en')
+                                                    ->label('🇬🇧 ' . $t('Nume bilet (EN)', 'Ticket name (EN)'))
+                                                    ->maxLength(255)
+                                                    ->placeholder($t('lasă gol = folosește numele RO', 'empty = use RO name'))
+                                                    ->visible(fn (SGet $get) => ($get('../../display_template') ?? 'standard') === 'leisure_venue')
+                                                    ->columnSpan(6),
+
+                                                Forms\Components\Textarea::make('meta.translations.description.hu')
+                                                    ->label('🇭🇺 ' . $t('Descriere scurtă (HU)', 'Short description (HU)'))
+                                                    ->rows(2)
+                                                    ->placeholder($t('lasă gol = folosește descrierea RO', 'empty = use RO description'))
+                                                    ->visible(fn (SGet $get) => ($get('../../display_template') ?? 'standard') === 'leisure_venue')
+                                                    ->columnSpan(6),
+                                                Forms\Components\Textarea::make('meta.translations.description.en')
+                                                    ->label('🇬🇧 ' . $t('Descriere scurtă (EN)', 'Short description (EN)'))
+                                                    ->rows(2)
+                                                    ->placeholder($t('lasă gol = folosește descrierea RO', 'empty = use RO description'))
+                                                    ->visible(fn (SGet $get) => ($get('../../display_template') ?? 'standard') === 'leisure_venue')
+                                                    ->columnSpan(6),
+
+                                                Forms\Components\TextInput::make('meta.translations.unit_label.hu')
+                                                    ->label('🇭🇺 ' . $t('Unitate preț (HU)', 'Price unit (HU)'))
+                                                    ->placeholder($t('ex: / autó / 3 óra', 'e.g. / car / 3h'))
+                                                    ->visible(fn (SGet $get) => ($get('../../display_template') ?? 'standard') === 'leisure_venue')
+                                                    ->columnSpan(6),
+                                                Forms\Components\TextInput::make('meta.translations.unit_label.en')
+                                                    ->label('🇬🇧 ' . $t('Unitate preț (EN)', 'Price unit (EN)'))
+                                                    ->placeholder($t('ex: / car / 3h', 'e.g. / car / 3h'))
+                                                    ->visible(fn (SGet $get) => ($get('../../display_template') ?? 'standard') === 'leisure_venue')
+                                                    ->columnSpan(6),
+
+                                                Forms\Components\TagsInput::make('meta.translations.includes.hu')
+                                                    ->label('🇭🇺 ' . $t('Beneficii incluse (HU)', 'Includes (HU)'))
+                                                    ->placeholder($t('Tastează beneficiul HU + Enter', 'Type HU benefit + Enter'))
+                                                    ->visible(fn (SGet $get) => ($get('../../display_template') ?? 'standard') === 'leisure_venue')
+                                                    ->columnSpan(6),
+                                                Forms\Components\TagsInput::make('meta.translations.includes.en')
+                                                    ->label('🇬🇧 ' . $t('Beneficii incluse (EN)', 'Includes (EN)'))
+                                                    ->placeholder($t('Tastează beneficiul EN + Enter', 'Type EN benefit + Enter'))
+                                                    ->visible(fn (SGet $get) => ($get('../../display_template') ?? 'standard') === 'leisure_venue')
+                                                    ->columnSpan(6),
+
+                                                Forms\Components\RichEditor::make('meta.translations.product_description.hu')
+                                                    ->label('🇭🇺 ' . $t('Descriere produs (HU)', 'Product description (HU)'))
+                                                    ->toolbarButtons(['bold', 'italic', 'underline', 'link', 'bulletList', 'orderedList'])
+                                                    ->visible(fn (SGet $get) => ($get('../../display_template') ?? 'standard') === 'leisure_venue')
+                                                    ->columnSpan(12),
+                                                Forms\Components\RichEditor::make('meta.translations.product_description.en')
+                                                    ->label('🇬🇧 ' . $t('Descriere produs (EN)', 'Product description (EN)'))
+                                                    ->toolbarButtons(['bold', 'italic', 'underline', 'link', 'bulletList', 'orderedList'])
+                                                    ->visible(fn (SGet $get) => ($get('../../display_template') ?? 'standard') === 'leisure_venue')
+                                                    ->columnSpan(12),
+
+                                                Forms\Components\RichEditor::make('meta.translations.usage_terms.hu')
+                                                    ->label('🇭🇺 ' . $t('Condiții utilizare (HU)', 'Usage terms (HU)'))
+                                                    ->toolbarButtons(['bold', 'italic', 'underline', 'link', 'bulletList', 'orderedList'])
+                                                    ->visible(fn (SGet $get) => ($get('../../display_template') ?? 'standard') === 'leisure_venue')
+                                                    ->columnSpan(12),
+                                                Forms\Components\RichEditor::make('meta.translations.usage_terms.en')
+                                                    ->label('🇬🇧 ' . $t('Condiții utilizare (EN)', 'Usage terms (EN)'))
+                                                    ->toolbarButtons(['bold', 'italic', 'underline', 'link', 'bulletList', 'orderedList'])
+                                                    ->visible(fn (SGet $get) => ($get('../../display_template') ?? 'standard') === 'leisure_venue')
+                                                    ->columnSpan(12),
+
                                                 // ── Leisure Venue: Variante (durată/preț — Bărci 30m/1h, Sanii etc.) ──
                                                 Forms\Components\Repeater::make('meta.variants')
                                                     ->label($t('Variante (durată / preț)', 'Variants (duration / price)'))

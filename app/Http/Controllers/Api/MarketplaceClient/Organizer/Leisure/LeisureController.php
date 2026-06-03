@@ -1680,6 +1680,8 @@ class LeisureController extends BaseController
             'slots_config', 'physical_inventory',
             'pos_price', 'is_child_ticket', 'access_requirement', 'blocked_time_ranges',
             'pos_only',
+            // Multi-locale (B2): traduceri opt-in pe name/description/etc. + pe variants/addons.
+            'translations',
         ];
         $filtered = array_intersect_key($meta, array_flip($allowed));
 
