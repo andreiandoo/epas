@@ -79,14 +79,32 @@ const AmbiletDataTransformer = {
             hasMultipleTicketTypes = ttCount != null ? ttCount > 1 : false;
         }
 
-        // Extract date range for multi-day events (festivals)
+        // Extract date range for multi-day events (festivals + multi_day
+        // performances). Range mode pulls the dedicated columns; multi_day
+        // mode derives the span from the first / last entry of
+        // `multi_slots` so the card renders the same "first → last" badge.
         const durationMode = apiEvent.duration_mode || 'single_day';
         let rangeStartDate = null;
         let rangeEndDate = null;
+        let isDateRange = false;
         if (durationMode === 'range' || durationMode === 'date_range') {
             rangeStartDate = apiEvent.range_start_date ? new Date(apiEvent.range_start_date) : null;
             rangeEndDate = apiEvent.range_end_date ? new Date(apiEvent.range_end_date) : null;
+            isDateRange = !!(rangeStartDate && rangeEndDate);
+        } else if (durationMode === 'multi_day' && Array.isArray(apiEvent.multi_slots) && apiEvent.multi_slots.length > 0) {
+            const slotDates = apiEvent.multi_slots
+                .map(function (s) { return s && s.date ? s.date : null; })
+                .filter(Boolean)
+                .sort();
+            if (slotDates.length >= 2) {
+                rangeStartDate = new Date(slotDates[0]);
+                rangeEndDate = new Date(slotDates[slotDates.length - 1]);
+                isDateRange = true;
+            }
         }
+        const dateRangeParts = isDateRange
+            ? this.formatDateRangeParts(rangeStartDate, rangeEndDate)
+            : { main: '', year: '' };
 
         // Extract category
         let categoryName = '';
@@ -131,8 +149,14 @@ const AmbiletDataTransformer = {
             durationMode: durationMode,
             rangeStartDate: rangeStartDate,
             rangeEndDate: rangeEndDate,
-            isDateRange: durationMode === 'range' || durationMode === 'date_range',
+            isDateRange: isDateRange,
+            // Single-line form kept for any caller that still uses it…
             dateRangeFormatted: this.formatDateRange(rangeStartDate, rangeEndDate),
+            // …plus a two-line split the card uses:
+            //   dateRangeMain → "18 - 21 Iun" (big top line)
+            //   dateRangeYear → "2026" / "2026 - 2027" (smaller bottom line)
+            dateRangeMain: dateRangeParts.main,
+            dateRangeYear: dateRangeParts.year,
 
             // Venue information
             venueName: venueName,
@@ -296,6 +320,38 @@ const AmbiletDataTransformer = {
 
         // Different year
         return startDay + ' ' + startMonth + ' ' + startYear + ' - ' + endDay + ' ' + endMonth + ' ' + endYear;
+    },
+
+    /**
+     * Same range-formatting as formatDateRange but split into two parts:
+     * a day-month line and a year line so the event card can render the
+     * range across two stacked lines ("18 - 21 Iun" / "2026") instead of
+     * one cramped line. Returns { main, year } strings; both empty when
+     * the input is missing.
+     */
+    formatDateRangeParts(startDate, endDate) {
+        if (!startDate || !endDate) return { main: '', year: '' };
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+
+        const startDay = start.getDate();
+        const startMonth = this.MONTHS_SHORT[start.getMonth()];
+        const startYear = start.getFullYear();
+        const endDay = end.getDate();
+        const endMonth = this.MONTHS_SHORT[end.getMonth()];
+        const endYear = end.getFullYear();
+
+        if (startYear === endYear) {
+            const main = (start.getMonth() === end.getMonth())
+                ? startDay + ' - ' + endDay + ' ' + endMonth
+                : startDay + ' ' + startMonth + ' - ' + endDay + ' ' + endMonth;
+            return { main: main, year: String(startYear) };
+        }
+        // Cross-year: keep the day-month line tight and stack both years.
+        return {
+            main: startDay + ' ' + startMonth + ' - ' + endDay + ' ' + endMonth,
+            year: startYear + ' - ' + endYear,
+        };
     },
 
     /**
