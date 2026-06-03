@@ -693,7 +693,14 @@ function ShiftSummaryModal({ visible, onClose, onConfirm, cashTurnover, cardTurn
 // Ticket Sales By Type Modal (Vânzări card)
 // ---------------------------------------------------------------------------
 
-function TicketSalesByTypeModal({ visible, onClose, ticketTypes }) {
+function TicketSalesByTypeModal({ visible, onClose, ticketTypes, onRefresh }) {
+  // Pull a fresh snapshot the moment the modal opens, so the operator
+  // never sees a stale count when they explicitly come here for numbers.
+  // Real-time push covers passive updates, this covers the active case.
+  useEffect(() => {
+    if (visible && onRefresh) onRefresh();
+  }, [visible]);
+
   const totalSold = (ticketTypes || []).reduce((sum, t) => sum + (t.quantity_sold || 0), 0);
   const totalRevenue = (ticketTypes || []).reduce((sum, t) => sum + ((t.quantity_sold || 0) * (t.price || 0)), 0);
 
@@ -758,7 +765,11 @@ function TicketSalesByTypeModal({ visible, onClose, ticketTypes }) {
 // Remaining By Type Modal (Rămase card)
 // ---------------------------------------------------------------------------
 
-function RemainingByTypeModal({ visible, onClose, ticketTypes }) {
+function RemainingByTypeModal({ visible, onClose, ticketTypes, onRefresh }) {
+  useEffect(() => {
+    if (visible && onRefresh) onRefresh();
+  }, [visible]);
+
   const totalCheckedIn = (ticketTypes || []).reduce((sum, t) => sum + (t.checked_in || 0), 0);
   const totalSold = (ticketTypes || []).reduce((sum, t) => sum + (t.quantity_sold || 0), 0);
   const totalRemaining = totalSold - totalCheckedIn;
@@ -1121,12 +1132,14 @@ export default function DashboardScreen({ navigation, onShowStaff, onShowGuestLi
         visible={showTicketSales}
         onClose={() => setShowTicketSales(false)}
         ticketTypes={allTicketTypes}
+        onRefresh={() => { refreshStats(); refreshTicketTypes(); }}
       />
 
       <RemainingByTypeModal
         visible={showRemaining}
         onClose={() => setShowRemaining(false)}
         ticketTypes={allTicketTypes}
+        onRefresh={() => { refreshStats(); refreshTicketTypes(); }}
       />
     </View>
   );

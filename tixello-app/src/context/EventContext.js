@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useCallback, useEffect, use
 import { getEvents, getEvent } from '../api/events';
 import { getParticipants } from '../api/participants';
 import { categorizeEvent, groupEventsByCategory } from '../utils/eventCategories';
+import { createReverbConnection } from '../api/reverb';
 import { useAuth } from './AuthContext';
 
 const EventContext = createContext(null);
@@ -159,6 +160,48 @@ export function EventProvider({ children }) {
       fetchTicketTypes(selectedEvent.id);
     }
   }, [selectedEvent]);
+
+  // ── Real-time push: Reverb subscription per selected event ────────
+  // One WebSocket per AuthProvider lifetime; we attach / detach a
+  // listener as selectedEvent changes. When backend dispatches
+  // OrderConfirmed on event.{id}.sales, we refresh stats + ticket
+  // types immediately — no 30 s polling lag.
+  const reverbRef = useRef(null);
+
+  useEffect(() => {
+    const realtime = user?.realtime;
+    if (!realtime?.enabled) return;
+    if (!reverbRef.current) {
+      reverbRef.current = createReverbConnection(realtime);
+    }
+    return () => {
+      // We keep the connection across event switches — only close on
+      // user change (handled by the cleanup of the outer effect that
+      // recreates this when user.id changes).
+    };
+  }, [user?.realtime?.enabled, user?.realtime?.app_key, user?.realtime?.host]);
+
+  // Tear down on logout / account switch.
+  useEffect(() => {
+    return () => {
+      if (reverbRef.current) {
+        reverbRef.current.close();
+        reverbRef.current = null;
+      }
+    };
+  }, [user?.id]);
+
+  // Per-event subscription.
+  useEffect(() => {
+    if (!selectedEvent?.id || !reverbRef.current) return;
+    const channel = `event.${selectedEvent.id}.sales`;
+    const unsub = reverbRef.current.subscribe(channel, 'order.confirmed', () => {
+      // A sale landed somewhere — pull fresh numbers right now.
+      fetchEventStats(selectedEvent.id);
+      fetchTicketTypes(selectedEvent.id);
+    });
+    return () => { try { unsub(); } catch {} };
+  }, [selectedEvent?.id]);
 
   const groupedEvents = groupEventsByCategory(events);
 
