@@ -13,6 +13,17 @@ Schedule::command('events:mark-ended')
     ->everyFiveMinutes()
     ->timezone('Europe/Bucharest');
 
+// Refresh dynamic contact lists nightly so newsletter targeting stays
+// accurate without admins clicking the per-list "Sync" button. Daily
+// 03:00 Europe/Bucharest is the off-peak window the rest of the
+// nightly maintenance runs in. The command iterates only is_active +
+// list_type=dynamic rows and uses syncWithoutDetaching so existing
+// subscribers (including manual carry-overs from Option B drift
+// preservation) are preserved.
+Schedule::command('contact-lists:sync')
+    ->dailyAt('03:00')
+    ->timezone('Europe/Bucharest');
+
 // Recompute intent landing-page aggregates (cheapest_price_cents, next_session_at,
 // has_session_today/_tomorrow/_this_weekend). Hourly is enough — temporal flags
 // shift at most once per day at midnight; pricing updates flow through earlier

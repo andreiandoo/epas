@@ -44,6 +44,8 @@ class MarketplaceContactList extends Model
         'purchased_genre' => 'Purchased from genre',
         'has_refund_request' => 'Has requested refund',
         'is_organizer' => 'Is an event organizer (email matches marketplace_organizers)',
+        'is_artist' => 'Is an artist (email matches marketplace_artist_accounts)',
+        'is_venue_contact' => 'Is a venue contact (email matches venues.email / email2)',
         'city' => 'Lives in city',
         'state' => 'Lives in state/region',
         'age_less_than' => 'Age less than',
@@ -183,6 +185,46 @@ class MarketplaceContactList extends Model
                         ->where('email', '!=', '')
                         ->select(DB::raw('lower(trim(email))'))
                 );
+                break;
+
+            case 'is_artist':
+                // Match customers whose email exists in marketplace_artist_accounts
+                // for the same marketplace. Drives the "Artisti" dynamic list.
+                // Newsletter send-time also materializes any artist email that
+                // doesn't yet have a customer row.
+                $query->whereIn(
+                    DB::raw('lower(trim(' . $query->getModel()->getTable() . '.email))'),
+                    MarketplaceArtistAccount::query()
+                        ->where('marketplace_client_id', $this->marketplace_client_id)
+                        ->whereNotNull('email')
+                        ->where('email', '!=', '')
+                        ->select(DB::raw('lower(trim(email))'))
+                );
+                break;
+
+            case 'is_venue_contact':
+                // Match customers whose email is either venue.email or
+                // venue.email2 for this marketplace. Powers the "Locații"
+                // dynamic list. Same materialize-on-send fallback as
+                // is_organizer / is_artist.
+                $emailColumn = DB::raw('lower(trim(' . $query->getModel()->getTable() . '.email))');
+                $query->where(function ($w) use ($emailColumn) {
+                    $w->whereIn(
+                        $emailColumn,
+                        Venue::query()
+                            ->where('marketplace_client_id', $this->marketplace_client_id)
+                            ->whereNotNull('email')
+                            ->where('email', '!=', '')
+                            ->select(DB::raw('lower(trim(email))'))
+                    )->orWhereIn(
+                        $emailColumn,
+                        Venue::query()
+                            ->where('marketplace_client_id', $this->marketplace_client_id)
+                            ->whereNotNull('email2')
+                            ->where('email2', '!=', '')
+                            ->select(DB::raw('lower(trim(email2))'))
+                    );
+                });
                 break;
 
             case 'city':

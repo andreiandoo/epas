@@ -261,12 +261,18 @@ class MarketplaceNewsletter extends Model
             ->when($clientId, fn ($q) => $q->where('marketplace_client_id', $clientId))
             ->get(['id', 'rules']);
 
+        // "External-source" rules: the customer table isn't authoritative;
+        // we need to materialize from organizers / artists / venues
+        // tables. These lists get full materialization at send time so
+        // we don't lose emails that don't yet have a customer row.
+        $externalRuleTypes = ['is_organizer', 'is_artist', 'is_venue_contact'];
+
         $organizer = [];
         $regular = [];
         foreach ($lists as $list) {
-            $isOrgList = collect($list->rules ?? [])
-                ->contains(fn ($r) => is_array($r) && (($r['type'] ?? null) === 'is_organizer'));
-            if ($isOrgList) {
+            $isExternal = collect($list->rules ?? [])
+                ->contains(fn ($r) => is_array($r) && in_array($r['type'] ?? null, $externalRuleTypes, true));
+            if ($isExternal) {
                 $organizer[] = $list->id;
             } else {
                 $regular[] = $list->id;
@@ -276,21 +282,72 @@ class MarketplaceNewsletter extends Model
     }
 
     /**
-     * For every organizer in this marketplace with a valid email, find or
-     * create a MarketplaceCustomer with the same email and return the set
-     * of customer IDs. This makes the existing recipient pivot work for
-     * organizer-targeted blasts without changing the FK.
+     * For every organizer / artist / venue in this marketplace with a
+     * valid email, find or create a MarketplaceCustomer with the same
+     * email and return the union of customer IDs. Inspects which rule
+     * types appear across the picked external-source lists and runs
+     * exactly the materializers needed (so a campaign that only targets
+     * "Locații" doesn't fan out organizer rows it'll never email).
      */
     protected function materializeOrganizerCustomers(int $clientId): \Illuminate\Support\Collection
     {
-        $organizers = MarketplaceOrganizer::where('marketplace_client_id', $clientId)
-            ->whereNotNull('email')
-            ->where('email', '!=', '')
-            ->get(['id', 'email', 'name', 'company_name']);
+        [$organizerListIds] = $this->splitListsByType((array) $this->target_lists);
+        if (empty($organizerListIds)) return collect();
+
+        $rules = MarketplaceContactList::whereIn('id', $organizerListIds)
+            ->where('marketplace_client_id', $clientId)
+            ->get(['id', 'rules'])
+            ->flatMap(fn ($l) => collect($l->rules ?? [])->pluck('type'))
+            ->unique();
 
         $ids = collect();
-        foreach ($organizers as $o) {
-            $email = strtolower(trim($o->email));
+
+        if ($rules->contains('is_organizer')) {
+            $ids = $ids->concat($this->materializeFromSource(
+                $clientId,
+                MarketplaceOrganizer::where('marketplace_client_id', $clientId)
+                    ->whereNotNull('email')->where('email', '!=', '')
+                    ->get(['email', 'name', 'company_name'])
+                    ->map(fn ($o) => ['email' => $o->email, 'name' => $o->name ?: ($o->company_name ?: 'Organizator')])
+            ));
+        }
+
+        if ($rules->contains('is_artist')) {
+            $ids = $ids->concat($this->materializeFromSource(
+                $clientId,
+                MarketplaceArtistAccount::where('marketplace_client_id', $clientId)
+                    ->whereNotNull('email')->where('email', '!=', '')
+                    ->get(['email', 'name'])
+                    ->map(fn ($a) => ['email' => $a->email, 'name' => $a->name ?: 'Artist'])
+            ));
+        }
+
+        if ($rules->contains('is_venue_contact')) {
+            $venues = Venue::where('marketplace_client_id', $clientId)
+                ->where(function ($w) { $w->whereNotNull('email')->orWhereNotNull('email2'); })
+                ->get(['name', 'email', 'email2']);
+            $rows = collect();
+            foreach ($venues as $v) {
+                $venueName = is_array($v->name) ? ($v->name['ro'] ?? $v->name['en'] ?? reset($v->name) ?? 'Locatie') : ($v->name ?? 'Locatie');
+                if (!empty($v->email))  $rows->push(['email' => $v->email,  'name' => $venueName]);
+                if (!empty($v->email2)) $rows->push(['email' => $v->email2, 'name' => $venueName]);
+            }
+            $ids = $ids->concat($this->materializeFromSource($clientId, $rows));
+        }
+
+        return $ids->unique()->values();
+    }
+
+    /**
+     * Find-or-create customer rows for a collection of [email, name]
+     * pairs, with accepts_marketing=false so they never accidentally
+     * land in a future opt-in blast.
+     */
+    protected function materializeFromSource(int $clientId, \Illuminate\Support\Collection $rows): \Illuminate\Support\Collection
+    {
+        $ids = collect();
+        foreach ($rows as $row) {
+            $email = strtolower(trim((string) ($row['email'] ?? '')));
             if (!filter_var($email, FILTER_VALIDATE_EMAIL)) continue;
 
             $customer = MarketplaceCustomer::firstOrCreate(
@@ -299,7 +356,7 @@ class MarketplaceNewsletter extends Model
                     'email' => $email,
                 ],
                 [
-                    'first_name' => $o->name ?: ($o->company_name ?: 'Organizator'),
+                    'first_name' => $row['name'] ?? '',
                     'last_name' => '',
                     'accepts_marketing' => false,
                     'status' => 'active',
@@ -472,16 +529,55 @@ class MarketplaceNewsletter extends Model
     }
 
     /**
-     * Lowercased, deduped, validated emails of every organizer in the
-     * marketplace. Drives both the count and the actual send for
-     * organizer-typed lists.
+     * Lowercased, deduped, validated emails contributed by external-source
+     * lists (organizers / artists / venue contacts). Inspects which rule
+     * types appear on the picked target_lists and pulls from the right
+     * tables. Drives the read-only count + breakdown (no firstOrCreate
+     * here — that's reserved for materialize at send time).
      */
     protected function collectOrganizerEmails(int $clientId): \Illuminate\Support\Collection
     {
-        return MarketplaceOrganizer::where('marketplace_client_id', $clientId)
-            ->whereNotNull('email')
-            ->where('email', '!=', '')
-            ->pluck('email')
+        [$organizerListIds] = $this->splitListsByType((array) $this->target_lists);
+        if (empty($organizerListIds)) return collect();
+
+        $rules = MarketplaceContactList::whereIn('id', $organizerListIds)
+            ->where('marketplace_client_id', $clientId)
+            ->get(['id', 'rules'])
+            ->flatMap(fn ($l) => collect($l->rules ?? [])->pluck('type'))
+            ->unique();
+
+        $emails = collect();
+
+        if ($rules->contains('is_organizer')) {
+            $emails = $emails->concat(
+                MarketplaceOrganizer::where('marketplace_client_id', $clientId)
+                    ->whereNotNull('email')->where('email', '!=', '')
+                    ->pluck('email')
+            );
+        }
+
+        if ($rules->contains('is_artist')) {
+            $emails = $emails->concat(
+                MarketplaceArtistAccount::where('marketplace_client_id', $clientId)
+                    ->whereNotNull('email')->where('email', '!=', '')
+                    ->pluck('email')
+            );
+        }
+
+        if ($rules->contains('is_venue_contact')) {
+            $emails = $emails->concat(
+                Venue::where('marketplace_client_id', $clientId)
+                    ->whereNotNull('email')->where('email', '!=', '')
+                    ->pluck('email')
+            );
+            $emails = $emails->concat(
+                Venue::where('marketplace_client_id', $clientId)
+                    ->whereNotNull('email2')->where('email2', '!=', '')
+                    ->pluck('email2')
+            );
+        }
+
+        return $emails
             ->map(fn ($e) => strtolower(trim((string) $e)))
             ->filter(fn ($e) => $e !== '' && filter_var($e, FILTER_VALIDATE_EMAIL))
             ->unique()
