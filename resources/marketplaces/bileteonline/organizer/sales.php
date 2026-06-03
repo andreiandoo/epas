@@ -32,6 +32,18 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 
         <!-- Filters -->
         <div class="mb-6 rounded-2xl border-2 border-ink bg-paper p-4">
+            <!-- Time mode toggle -->
+            <div class="mb-4 flex flex-wrap items-center gap-3">
+                <div class="inline-flex rounded-full border-2 border-ink/15 bg-paper-2 p-1">
+                    <button type="button" id="mode-range-btn" onclick="setMode('range')" class="rounded-full px-4 py-1.5 text-sm font-bold transition bg-ink text-paper">Perioadă</button>
+                    <button type="button" id="mode-month-btn" onclick="setMode('month')" class="rounded-full px-4 py-1.5 text-sm font-bold transition text-ink-soft hover:text-ink">Pe lună</button>
+                </div>
+                <label class="inline-flex items-center gap-2 text-sm font-bold text-ink-soft">
+                    <input type="checkbox" id="filter-breakdown" class="h-4 w-4 rounded border-ink/30 text-vermilion focus:ring-vermilion" onchange="toggleBreakdown()">
+                    Defalcat pe activități
+                </label>
+            </div>
+
             <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-5">
                 <label class="block">
                     <span class="mb-1.5 block text-xs font-bold text-ink-soft">Activitate</span>
@@ -51,13 +63,19 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                         <option value="refunded">Rambursate</option>
                     </select>
                 </label>
-                <label class="block">
+                <!-- Range mode: from/to -->
+                <label class="block" data-mode="range">
                     <span class="mb-1.5 block text-xs font-bold text-ink-soft">De la data</span>
                     <input type="date" id="filter-from" class="w-full rounded-xl border-2 border-ink/15 bg-paper-2 px-3 py-2.5 text-sm font-medium outline-none transition focus:border-ink" onchange="resetAndLoad()">
                 </label>
-                <label class="block">
+                <label class="block" data-mode="range">
                     <span class="mb-1.5 block text-xs font-bold text-ink-soft">Până la data</span>
                     <input type="date" id="filter-to" class="w-full rounded-xl border-2 border-ink/15 bg-paper-2 px-3 py-2.5 text-sm font-medium outline-none transition focus:border-ink" onchange="resetAndLoad()">
+                </label>
+                <!-- Month mode: single month picker (spans 2 cols) -->
+                <label class="block lg:col-span-2" style="display:none" data-mode="month">
+                    <span class="mb-1.5 block text-xs font-bold text-ink-soft">Luna</span>
+                    <input type="month" id="filter-month" class="w-full rounded-xl border-2 border-ink/15 bg-paper-2 px-3 py-2.5 text-sm font-medium outline-none transition focus:border-ink" onchange="resetAndLoad()">
                 </label>
                 <label class="block">
                     <span class="mb-1.5 block text-xs font-bold text-ink-soft">Caută</span>
@@ -79,6 +97,27 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             <div class="rounded-2xl border-2 border-ink bg-paper p-4">
                 <p class="mb-1 font-mono text-[11px] uppercase tracking-[.14em] text-ink-soft">Venituri nete</p>
                 <p class="font-display text-3xl font-bold text-vermilion" id="stat-total-value">—</p>
+            </div>
+        </div>
+
+        <!-- Per-activity breakdown (shown when "Defalcat pe activități" is on) -->
+        <div id="breakdown-section" class="mb-6 hidden overflow-hidden rounded-2xl border-2 border-ink bg-paper">
+            <div class="flex items-center justify-between border-b-2 border-dashed border-ink/15 px-4 py-3">
+                <h2 class="font-display text-lg font-bold">Defalcare pe activități</h2>
+                <span class="text-xs text-ink-soft" id="breakdown-period"></span>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-paper-2 text-left">
+                        <tr class="font-mono text-[11px] uppercase tracking-[.12em] text-ink-soft">
+                            <th class="px-4 py-3">Activitate</th>
+                            <th class="px-4 py-3 text-center">Comenzi</th>
+                            <th class="px-4 py-3 text-center">Bilete</th>
+                            <th class="px-4 py-3 text-right">Venituri nete</th>
+                        </tr>
+                    </thead>
+                    <tbody id="breakdown-list" class="divide-y divide-ink/10 text-sm"></tbody>
+                </table>
             </div>
         </div>
 
@@ -207,17 +246,83 @@ function renderSortArrows() {
     });
 }
 
+let filterMode = 'range';
+
+function setMode(mode) {
+    filterMode = mode;
+    const onCls = 'rounded-full px-4 py-1.5 text-sm font-bold transition bg-ink text-paper';
+    const offCls = 'rounded-full px-4 py-1.5 text-sm font-bold transition text-ink-soft hover:text-ink';
+    document.getElementById('mode-range-btn').className = (mode === 'range') ? onCls : offCls;
+    document.getElementById('mode-month-btn').className = (mode === 'month') ? onCls : offCls;
+    document.querySelectorAll('[data-mode]').forEach(el => { el.style.display = (el.getAttribute('data-mode') === mode) ? '' : 'none'; });
+    const mEl = document.getElementById('filter-month');
+    if (mode === 'month' && mEl && !mEl.value) {
+        const d = new Date(); mEl.value = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+    }
+    resetAndLoad();
+}
+
+function effectiveDates() {
+    if (filterMode === 'month') {
+        const v = document.getElementById('filter-month').value; // YYYY-MM
+        if (!v) return { from: '', to: '' };
+        const parts = v.split('-'); const y = +parts[0], m = +parts[1];
+        const last = new Date(y, m, 0).getDate();
+        const mm = String(m).padStart(2, '0');
+        return { from: y + '-' + mm + '-01', to: y + '-' + mm + '-' + String(last).padStart(2, '0') };
+    }
+    return { from: document.getElementById('filter-from').value, to: document.getElementById('filter-to').value };
+}
+
+function toggleBreakdown() {
+    const on = document.getElementById('filter-breakdown').checked;
+    const sec = document.getElementById('breakdown-section');
+    if (!on) { sec.classList.add('hidden'); return; }
+    sec.classList.remove('hidden');
+    loadBreakdown();
+}
+
+async function loadBreakdown() {
+    if (!document.getElementById('filter-breakdown').checked) return;
+    const list = document.getElementById('breakdown-list');
+    const dates = effectiveDates();
+    const status = document.getElementById('filter-status').value;
+    document.getElementById('breakdown-period').textContent = (dates.from && dates.to) ? (dates.from + ' → ' + dates.to) : 'Toată perioada';
+    if (!eventsData.length) { list.innerHTML = '<tr><td colspan="4" class="px-4 py-8 text-center text-ink-soft">Nu există activități.</td></tr>'; return; }
+    list.innerHTML = '<tr><td colspan="4" class="px-4 py-8 text-center text-ink-soft">Se calculează…</td></tr>';
+    const rows = [];
+    for (const ev of eventsData) {
+        const params = { event_id: ev.id, per_page: 1 };
+        if (status) params.status = status;
+        if (dates.from) params.from_date = dates.from;
+        if (dates.to) params.to_date = dates.to;
+        try {
+            const r = await BileteOnlineAPI.organizer.getOrders(params);
+            const meta = (r && r.meta) || {};
+            rows.push({ name: ev.name || ev.title || ('#' + ev.id), orders: meta.completed_orders || meta.total || 0, tickets: meta.total_tickets || 0, revenue: meta.total_revenue || 0 });
+        } catch (e) { /* skip this activity */ }
+    }
+    const visible = rows.filter(r => r.orders || r.tickets || r.revenue).sort((a, b) => b.revenue - a.revenue);
+    if (!visible.length) { list.innerHTML = '<tr><td colspan="4" class="px-4 py-8 text-center text-ink-soft">Nicio vânzare în perioada selectată.</td></tr>'; return; }
+    list.innerHTML = visible.map(r =>
+        '<tr class="hover:bg-paper-2/60">'
+        + '<td class="px-4 py-3 font-medium">' + escHtml(r.name) + '</td>'
+        + '<td class="px-4 py-3 text-center">' + (r.orders || 0).toLocaleString('ro-RO') + '</td>'
+        + '<td class="px-4 py-3 text-center">' + (r.tickets || 0).toLocaleString('ro-RO') + '</td>'
+        + '<td class="px-4 py-3 text-right font-bold">' + money(r.revenue || 0) + '</td>'
+        + '</tr>').join('');
+}
+
 async function loadOrders() {
     const params = { page: currentPage, per_page: perPage, sort_by: sortBy, sort_dir: sortDir };
     const eventId = document.getElementById('filter-event').value;
     const status  = document.getElementById('filter-status').value;
-    const from    = document.getElementById('filter-from').value;
-    const to      = document.getElementById('filter-to').value;
+    const dates   = effectiveDates();
     const search  = document.getElementById('filter-search').value.trim();
     if (eventId) params.event_id = eventId;   // optional — no event = all orders
     if (status)  params.status = status;
-    if (from)    params.from_date = from;
-    if (to)      params.to_date = to;
+    if (dates.from) params.from_date = dates.from;
+    if (dates.to)   params.to_date = dates.to;
     if (search)  params.search = search;
 
     document.getElementById('orders-list').innerHTML = '<tr><td colspan="8" class="px-4 py-12 text-center text-ink-soft">Se încarcă…</td></tr>';
@@ -231,6 +336,7 @@ async function loadOrders() {
         renderOrders();
         updateStats(meta);
         updatePagination();
+        loadBreakdown();   // refresh per-activity breakdown if the toggle is on
     } catch (e) {
         document.getElementById('orders-list').innerHTML = '<tr><td colspan="8" class="px-4 py-12 text-center text-vermilion">Eroare la încărcarea comenzilor.</td></tr>';
     }
