@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Api\MarketplaceClient\Customer;
 
 use App\Http\Controllers\Api\MarketplaceClient\BaseController;
 use App\Models\Activity;
-use App\Models\CustomerPoints;
+use App\Models\Gamification\CustomerPoints;
 use App\Models\MarketplaceCustomer;
 use App\Models\MarketplaceCustomerBeneficiary;
 use App\Models\Order;

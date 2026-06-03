@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Api\MarketplaceClient\Customer;
 
 use App\Http\Controllers\Api\MarketplaceClient\BaseController;
-use App\Models\CustomerPoints;
+use App\Models\Gamification\CustomerPoints;
 use App\Models\MarketplaceCustomer;
 use App\Models\Order;
 use App\Models\Ticket;
