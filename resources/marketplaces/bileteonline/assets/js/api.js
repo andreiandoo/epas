@@ -522,6 +522,7 @@ const BileteOnlineAPI = {
         if (endpoint.match(/\/organizer\/events\/\d+\/milestones\/\d+$/)) return 'organizer.event.milestone';
         if (endpoint.match(/\/organizer\/events\/\d+\/milestones$/)) return 'organizer.event.milestones';
         if (endpoint.match(/\/organizer\/events\/\d+\/images$/)) return 'organizer.event.images';
+        if (endpoint.match(/\/organizer\/events\/\d+\/staff-report/)) return 'organizer.event.staff-report';
         if (endpoint.match(/\/organizer\/events\/\d+\/participants\/export$/)) return 'organizer.event.participants.export';
         if (endpoint.match(/\/organizer\/events\/\d+\/participants$/)) return 'organizer.event.participants';
         if (endpoint.match(/\/organizer\/events\/\d+\/check-in\//)) return 'organizer.event.checkin';
@@ -829,6 +830,12 @@ const BileteOnlineAPI = {
                 return `event_id=${encodeURIComponent(eventId)}&${endpoint.substring(queryStart + 1)}`;
             }
             return `event_id=${encodeURIComponent(eventId)}`;
+        }
+
+        // Organizer event staff report - extract event ID
+        const organizerEventStaffReportMatch = endpoint.match(/\/organizer\/events\/(\d+)\/staff-report/);
+        if (organizerEventStaffReportMatch) {
+            return `event_id=${encodeURIComponent(organizerEventStaffReportMatch[1])}`;
         }
 
         // Organizer event goals - extract event ID and optional goal ID

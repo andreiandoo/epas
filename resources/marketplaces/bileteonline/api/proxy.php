@@ -3460,6 +3460,18 @@ switch ($action) {
         $requiresAuth = true;
         break;
 
+    case 'organizer.event.staff-report':
+        $eventId = $_GET['event_id'] ?? '';
+        if (!$eventId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing event_id parameter']);
+            exit;
+        }
+        $method = 'GET';
+        $endpoint = '/organizer/events/' . urlencode($eventId) . '/staff-report';
+        $requiresAuth = true;
+        break;
+
     case 'organizer.event.participants':
         $eventId = $_GET['event_id'] ?? '';
         if (!$eventId) {
