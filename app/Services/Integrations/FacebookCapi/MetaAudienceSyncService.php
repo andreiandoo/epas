@@ -39,6 +39,17 @@ class MetaAudienceSyncService
             return $this->markFailed($subscription, 'CAPI connection has no ad_account_id; required for Custom Audiences');
         }
 
+        // Remember whether we entered this run with an audience id already
+        // pinned on the subscription. If a Meta "object not found" error
+        // surfaces below, this flag distinguishes:
+        //   - first detection (entered with a stale id pointing at a
+        //     deleted audience)  → reset id, let next run recreate
+        //   - second detection (entered with null, recreated this run,
+        //     and STILL got "doesn't exist") → deeper issue
+        //     (ad account / permissions); disable subscription
+        // See the catch block below for the actual handling.
+        $enteredWithAudienceId = !empty($subscription->meta_audience_id);
+
         try {
             $users = $this->collectUsersForSegment($organizer, $segment);
 
@@ -111,13 +122,58 @@ class MetaAudienceSyncService
                 'audience_id' => $audienceId,
             ];
         } catch (\Throwable $e) {
+            $msg = $e->getMessage();
             Log::error('MetaAudienceSync: subscription sync failed', [
                 'subscription_id' => $subscription->id,
                 'organizer_id' => $organizer->id,
                 'segment_slug' => $segment->slug,
-                'error' => $e->getMessage(),
+                'error' => $msg,
             ]);
-            return $this->markFailed($subscription, $e->getMessage());
+
+            // Self-heal "Object with ID '...' does not exist" — Meta code
+            // 100 / subcode 33. The stored meta_audience_id points at an
+            // audience that was deleted (or had its permissions revoked)
+            // on Meta's side. Strategy:
+            //   1. First detection (entered with the stale id) → null out
+            //      meta_audience_id so the next run hits the "no
+            //      audience_id" branch and creates a fresh one.
+            //   2. Second detection (we already recreated this run and
+            //      Meta STILL says "doesn't exist") → not recoverable
+            //      via retry. Disable the subscription so the daily cron
+            //      stops hammering Meta with the same error.
+            $looksLikeMissingObject = str_contains($msg, "does not exist")
+                && (str_contains($msg, "Object with ID") || str_contains($msg, "code=100"));
+
+            if ($looksLikeMissingObject) {
+                if ($enteredWithAudienceId) {
+                    $subscription->update([
+                        'meta_audience_id' => null,
+                        'meta_audience_name' => null,
+                        'last_synced_at' => now(),
+                        'last_sync_status' => 'audience_reset',
+                        'last_sync_error' => mb_substr($msg, 0, 1000),
+                    ]);
+                    return [
+                        'success' => false,
+                        'message' => 'Audience missing on Meta — reset; next run will recreate',
+                        'member_count' => 0,
+                    ];
+                }
+
+                $subscription->update([
+                    'is_active' => false,
+                    'last_synced_at' => now(),
+                    'last_sync_status' => 'broken',
+                    'last_sync_error' => mb_substr($msg, 0, 1000),
+                ]);
+                return [
+                    'success' => false,
+                    'message' => 'Audience sync broken even after recreate — disabled, needs manual reconnect',
+                    'member_count' => 0,
+                ];
+            }
+
+            return $this->markFailed($subscription, $msg);
         }
     }
 

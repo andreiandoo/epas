@@ -227,28 +227,34 @@ class CheckoutController extends BaseController
         try {
             DB::beginTransaction();
 
-            // Find or create customer
-            $customer = MarketplaceCustomer::where('marketplace_client_id', $client->id)
-                ->where('email', $validated['customer']['email'])
-                ->first();
-
+            // Find or create customer. firstOrCreate is atomic — closes the
+            // race window the where->first + create pattern had under
+            // concurrent checkouts on the same email (was firing 23505
+            // unique violations on marketplace_customers tens of times a
+            // week as "Checkout failed").
+            $plainPassword = $validated['customer']['password'] ?? null;
             $autoCreatedPassword = null;
-            if (!$customer) {
-                $plainPassword = $validated['customer']['password'] ?? null;
-                $customer = MarketplaceCustomer::create([
+
+            $customer = MarketplaceCustomer::firstOrCreate(
+                [
                     'marketplace_client_id' => $client->id,
                     'email' => $validated['customer']['email'],
+                ],
+                [
                     'first_name' => $validated['customer']['first_name'],
                     'last_name' => $validated['customer']['last_name'],
                     'phone' => $validated['customer']['phone'] ?? null,
                     'password' => $plainPassword ? Hash::make($plainPassword) : null,
                     'status' => 'active',
-                ]);
+                ]
+            );
+
+            if ($customer->wasRecentlyCreated) {
                 if ($plainPassword) {
                     $autoCreatedPassword = $plainPassword;
                 }
             } else {
-                // Update customer details
+                // Existing customer — refresh profile fields from the request.
                 $customer->update([
                     'first_name' => $validated['customer']['first_name'],
                     'last_name' => $validated['customer']['last_name'],
@@ -1342,23 +1348,27 @@ class CheckoutController extends BaseController
         try {
             DB::beginTransaction();
 
-            // Find or create customer (same logic as event checkout).
-            $customer = MarketplaceCustomer::where('marketplace_client_id', $client->id)
-                ->where('email', $validated['customer']['email'])
-                ->first();
-
+            // Find or create customer (same logic as event checkout — see the
+            // comment on the event branch for why this is firstOrCreate
+            // instead of where->first + create).
+            $plainPassword = $validated['customer']['password'] ?? null;
             $autoCreatedPassword = null;
-            if (!$customer) {
-                $plainPassword = $validated['customer']['password'] ?? null;
-                $customer = MarketplaceCustomer::create([
+
+            $customer = MarketplaceCustomer::firstOrCreate(
+                [
                     'marketplace_client_id' => $client->id,
-                    'email'      => $validated['customer']['email'],
+                    'email' => $validated['customer']['email'],
+                ],
+                [
                     'first_name' => $validated['customer']['first_name'],
                     'last_name'  => $validated['customer']['last_name'],
                     'phone'      => $validated['customer']['phone'] ?? null,
                     'password'   => $plainPassword ? Hash::make($plainPassword) : null,
                     'status'     => 'active',
-                ]);
+                ]
+            );
+
+            if ($customer->wasRecentlyCreated) {
                 if ($plainPassword) {
                     $autoCreatedPassword = $plainPassword;
                 }
