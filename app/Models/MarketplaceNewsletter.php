@@ -27,6 +27,8 @@ class MarketplaceNewsletter extends Model
         'target_event_ids',
         'target_organizer_ids',
         'target_city_ids',
+        'target_category_ids',
+        'target_artist_ids',
         'source_email_template_id',
         'status',
         'scheduled_at',
@@ -50,6 +52,8 @@ class MarketplaceNewsletter extends Model
         'target_event_ids' => 'array',
         'target_organizer_ids' => 'array',
         'target_city_ids' => 'array',
+        'target_category_ids' => 'array',
+        'target_artist_ids' => 'array',
         'scheduled_at' => 'datetime',
         'started_at' => 'datetime',
         'completed_at' => 'datetime',
@@ -211,23 +215,33 @@ class MarketplaceNewsletter extends Model
             }
         }
 
-        // ---- Narrowing filter: events + organizer (+ optional city).
-        // Organizer is only used as a SEPARATE source when target_event_ids
-        // is empty; otherwise the admin already narrowed to specific events
-        // and organizer is a UI pre-filter only.
-        $filterIds = null; // null = no filter applied
+        // ---- Narrowing filter: events directly OR derived from
+        // city/organizer/category/artist picks. When target_event_ids
+        // is non-empty those exact events drive the filter and the
+        // other pickers are UI pre-filters only. Otherwise we resolve
+        // the AND-combined event set from city + organizer + category
+        // + artist; any of them being non-empty triggers the filter.
+        $filterIds = null;
         $eventIds = (array) ($this->target_event_ids ?? []);
-        if (empty($eventIds) && !empty($this->target_organizer_ids)) {
-            $eventIds = $this->getOrganizerEventIds(
-                (array) $this->target_organizer_ids,
-                (array) ($this->target_city_ids ?? [])
+        $hasDerivedFilter = !empty($this->target_organizer_ids)
+            || !empty($this->target_city_ids)
+            || !empty($this->target_category_ids)
+            || !empty($this->target_artist_ids);
+
+        if (empty($eventIds) && $hasDerivedFilter) {
+            $eventIds = $this->resolveFilteredEventIds(
+                (array) ($this->target_organizer_ids ?? []),
+                (array) ($this->target_city_ids ?? []),
+                (array) ($this->target_category_ids ?? []),
+                (array) ($this->target_artist_ids ?? []),
             );
         }
+
         if (!empty($eventIds)) {
             $filterIds = $this->getEventBuyerCustomerIds($eventIds);
-        } elseif (!empty($this->target_organizer_ids)) {
-            // Organizer picked but expanded to zero events — filter set is
-            // empty (so an "AND" combination yields zero).
+        } elseif ($hasDerivedFilter) {
+            // Filter was requested but resolves to zero events — the AND
+            // semantics yield zero recipients, never widen back to base.
             $filterIds = collect();
         }
 
@@ -368,24 +382,55 @@ class MarketplaceNewsletter extends Model
     }
 
     /**
-     * Event IDs for the given organizers, optionally narrowed by the
-     * city pre-filter. Live events only (is_published, not cancelled,
-     * not past) so the resulting recipient set reflects ACTUAL future
-     * ticket buyers — past-event audiences are usually a separate
-     * "we miss you" campaign.
+     * Event IDs matching ALL of the picked narrowing filters. Each
+     * non-empty argument intersects the result set; an empty argument
+     * is ignored. Used by the recipient resolver to translate
+     * city/organizer/category/artist picks into the actual event set
+     * whose buyers should receive the newsletter.
+     *
+     * Filters applied (all AND'd together when non-empty):
+     *   $organizerIds  -> events.marketplace_organizer_id IN (...)
+     *   $cityIds       -> events.marketplace_city_id IN (...)
+     *   $categoryIds   -> events.marketplace_event_category_id IN (...)
+     *   $artistIds     -> exists row in event_artist with artist_id IN (...)
+     *
+     * Backwards-compatible: callers that pass only the first two
+     * arguments behave exactly like before.
      */
-    public function getOrganizerEventIds(array $organizerIds, array $cityIds = []): array
+    public function getOrganizerEventIds(array $organizerIds, array $cityIds = [], array $categoryIds = [], array $artistIds = []): array
     {
-        if (empty($organizerIds)) return [];
+        return $this->resolveFilteredEventIds($organizerIds, $cityIds, $categoryIds, $artistIds);
+    }
+
+    /**
+     * Generalized event-filter resolver. Returns [] when nothing was
+     * picked (so the caller can decide between "no filter" and "filter
+     * set is empty"). Live cancellation status is not enforced here —
+     * past blasts and refund follow-ups stay possible.
+     */
+    public function resolveFilteredEventIds(array $organizerIds, array $cityIds, array $categoryIds, array $artistIds): array
+    {
+        if (empty($organizerIds) && empty($cityIds) && empty($categoryIds) && empty($artistIds)) {
+            return [];
+        }
         $clientId = $this->marketplace_client_id ?? $this->marketplaceClient?->id;
         if (!$clientId) return [];
 
-        $q = \App\Models\Event::query()
-            ->where('marketplace_client_id', $clientId)
-            ->whereIn('marketplace_organizer_id', $organizerIds);
+        $q = \App\Models\Event::query()->where('marketplace_client_id', $clientId);
 
+        if (!empty($organizerIds)) {
+            $q->whereIn('marketplace_organizer_id', $organizerIds);
+        }
         if (!empty($cityIds)) {
             $q->whereIn('marketplace_city_id', $cityIds);
+        }
+        if (!empty($categoryIds)) {
+            $q->whereIn('marketplace_event_category_id', $categoryIds);
+        }
+        if (!empty($artistIds)) {
+            $q->whereHas('artists', function ($w) use ($artistIds) {
+                $w->whereIn('artists.id', $artistIds);
+            });
         }
 
         return $q->pluck('id')->all();
@@ -468,13 +513,21 @@ class MarketplaceNewsletter extends Model
         if (!empty($this->target_event_ids)) {
             $eventsCount = $this->getEventBuyerCustomerIds($this->target_event_ids)->count();
         }
-        if (empty($this->target_event_ids) && !empty($this->target_organizer_ids)) {
-            $orgEventIds = $this->getOrganizerEventIds(
-                (array) $this->target_organizer_ids,
-                (array) ($this->target_city_ids ?? [])
+        $hasDerivedFilter = empty($this->target_event_ids) && (
+            !empty($this->target_organizer_ids)
+            || !empty($this->target_city_ids)
+            || !empty($this->target_category_ids)
+            || !empty($this->target_artist_ids)
+        );
+        if ($hasDerivedFilter) {
+            $derivedEventIds = $this->resolveFilteredEventIds(
+                (array) ($this->target_organizer_ids ?? []),
+                (array) ($this->target_city_ids ?? []),
+                (array) ($this->target_category_ids ?? []),
+                (array) ($this->target_artist_ids ?? []),
             );
-            if (!empty($orgEventIds)) {
-                $eventsCount += $this->getEventBuyerCustomerIds($orgEventIds)->count();
+            if (!empty($derivedEventIds)) {
+                $eventsCount += $this->getEventBuyerCustomerIds($derivedEventIds)->count();
             }
         }
 

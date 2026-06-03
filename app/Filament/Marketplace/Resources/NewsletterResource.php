@@ -4,8 +4,10 @@ namespace App\Filament\Marketplace\Resources;
 
 use App\Filament\Marketplace\Resources\NewsletterResource\Pages;
 use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
+use App\Models\Artist;
 use App\Models\Event;
 use App\Models\MarketplaceCity;
+use App\Models\MarketplaceEventCategory;
 use App\Models\MarketplaceNewsletter;
 use App\Models\MarketplaceContactList;
 use App\Models\MarketplaceContactTag;
@@ -88,7 +90,7 @@ class NewsletterResource extends Resource
      *
      * @return array<int,string>
      */
-    public static function eventOptionsFor(?int $marketplaceId, array $cityIds = [], array $organizerIds = [], string $search = ''): array
+    public static function eventOptionsFor(?int $marketplaceId, array $cityIds = [], array $organizerIds = [], string $search = '', array $categoryIds = [], array $artistIds = []): array
     {
         if (!$marketplaceId) return [];
 
@@ -102,6 +104,14 @@ class NewsletterResource extends Resource
         if (!empty($organizerIds)) {
             $query->whereIn('marketplace_organizer_id', $organizerIds);
         }
+        if (!empty($categoryIds)) {
+            $query->whereIn('marketplace_event_category_id', $categoryIds);
+        }
+        if (!empty($artistIds)) {
+            $query->whereHas('artists', function ($w) use ($artistIds) {
+                $w->whereIn('artists.id', $artistIds);
+            });
+        }
         if ($search !== '') {
             $query->where(function ($q) use ($search) {
                 $q->where('title->ro', 'ilike', "%{$search}%")
@@ -110,7 +120,7 @@ class NewsletterResource extends Resource
             });
         }
 
-        $hasUpstream = !empty($cityIds) || !empty($organizerIds);
+        $hasUpstream = !empty($cityIds) || !empty($organizerIds) || !empty($categoryIds) || !empty($artistIds);
 
         return $query->orderByDesc('event_date')
             ->limit($hasUpstream && $search === '' ? 100 : 40)
@@ -306,6 +316,64 @@ class NewsletterResource extends Resource
                         ->helperText('Dacă selectezi organizator + nu alegi evenimente: trimite la TOȚI cumpărătorii lui (eventual narrow pe oraș). Dacă alegi și evenimente: organizatorul filtrează doar dropdown-ul.')
                         ->columnSpanFull(),
 
+                    // Category intersect filter. AND'd with city / organizer
+                    // / artist when present. "Concerte" + "Qfeel Events" +
+                    // "Bucharest" → buyers of Qfeel concerts in Bucharest.
+                    Forms\Components\Select::make('target_category_ids')
+                        ->label('Categorie eveniment — filtru intersecție')
+                        ->multiple()
+                        ->searchable()
+                        ->live(onBlur: true)
+                        ->options(function () use ($marketplace) {
+                            if (!$marketplace) return [];
+                            return MarketplaceEventCategory::where('marketplace_client_id', $marketplace->id)
+                                ->orderBy('name')
+                                ->pluck('name', 'id')
+                                ->toArray();
+                        })
+                        ->afterStateUpdated(function (SSet $set) {
+                            $set('target_event_ids', []);
+                        })
+                        ->helperText('Restrânge cumpărătorii doar la cei care au luat bilete la evenimente din categoriile alese.')
+                        ->columnSpanFull(),
+
+                    // Artist intersect filter. Looks up via the event_artist
+                    // pivot — admin picks artists, the filter expands to
+                    // every event that features one of them.
+                    Forms\Components\Select::make('target_artist_ids')
+                        ->label('Artist în eveniment — filtru intersecție')
+                        ->multiple()
+                        ->searchable()
+                        ->live(onBlur: true)
+                        ->getSearchResultsUsing(function (string $search) use ($marketplace) {
+                            if (!$marketplace) return [];
+                            $needle = '%' . trim($search) . '%';
+                            return Artist::query()
+                                ->whereRaw('LOWER(unaccent(name::text)) LIKE LOWER(unaccent(?))', [$needle])
+                                ->orderBy('name')
+                                ->limit(50)
+                                ->get(['id', 'name'])
+                                ->mapWithKeys(function ($a) {
+                                    $name = is_array($a->name) ? ($a->name['ro'] ?? $a->name['en'] ?? reset($a->name) ?? '—') : ($a->name ?? '—');
+                                    return [$a->id => $name];
+                                })
+                                ->toArray();
+                        })
+                        ->getOptionLabelsUsing(function (array $values) {
+                            return Artist::whereIn('id', $values)
+                                ->get(['id', 'name'])
+                                ->mapWithKeys(function ($a) {
+                                    $name = is_array($a->name) ? ($a->name['ro'] ?? $a->name['en'] ?? reset($a->name) ?? '—') : ($a->name ?? '—');
+                                    return [$a->id => $name];
+                                })
+                                ->toArray();
+                        })
+                        ->afterStateUpdated(function (SSet $set) {
+                            $set('target_event_ids', []);
+                        })
+                        ->helperText('Restrânge la cumpărătorii care au luat bilet la cel puțin un eveniment care îi includea pe artiștii aleși.')
+                        ->columnSpanFull(),
+
                     Forms\Components\Select::make('target_event_ids')
                         ->label('Evenimente — către cumpărătorii biletelor')
                         ->multiple()
@@ -320,14 +388,17 @@ class NewsletterResource extends Resource
                         ->options(function (SGet $get) use ($marketplace) {
                             $cityIds = $get('target_city_ids') ?? [];
                             $orgIds = $get('target_organizer_ids') ?? [];
-                            // Pre-fill only when at least one upstream filter is set.
-                            if (empty($cityIds) && empty($orgIds)) return [];
-                            return static::eventOptionsFor($marketplace?->id, $cityIds, $orgIds);
+                            $catIds = $get('target_category_ids') ?? [];
+                            $artistIds = $get('target_artist_ids') ?? [];
+                            if (empty($cityIds) && empty($orgIds) && empty($catIds) && empty($artistIds)) return [];
+                            return static::eventOptionsFor($marketplace?->id, $cityIds, $orgIds, '', $catIds, $artistIds);
                         })
                         ->getSearchResultsUsing(function (string $search, SGet $get) use ($marketplace) {
                             $cityIds = $get('target_city_ids') ?? [];
                             $orgIds = $get('target_organizer_ids') ?? [];
-                            return static::eventOptionsFor($marketplace?->id, $cityIds, $orgIds, $search);
+                            $catIds = $get('target_category_ids') ?? [];
+                            $artistIds = $get('target_artist_ids') ?? [];
+                            return static::eventOptionsFor($marketplace?->id, $cityIds, $orgIds, $search, $catIds, $artistIds);
                         })
                         ->getOptionLabelsUsing(function (array $values) {
                             return Event::whereIn('id', $values)
@@ -722,13 +793,18 @@ class NewsletterResource extends Resource
                             $instance->target_event_ids = $get('target_event_ids') ?? [];
                             $instance->target_organizer_ids = $get('target_organizer_ids') ?? [];
                             $instance->target_city_ids = $get('target_city_ids') ?? [];
+                            $instance->target_category_ids = $get('target_category_ids') ?? [];
+                            $instance->target_artist_ids = $get('target_artist_ids') ?? [];
 
                             $hasTargeting = !empty($instance->target_lists)
                                 || !empty($instance->target_tags)
                                 || !empty($instance->target_event_ids)
-                                || !empty($instance->target_organizer_ids);
+                                || !empty($instance->target_organizer_ids)
+                                || !empty($instance->target_city_ids)
+                                || !empty($instance->target_category_ids)
+                                || !empty($instance->target_artist_ids);
                             if (!$hasTargeting) {
-                                return new HtmlString('<span class="text-gray-500">Selectează evenimente / liste / organizator</span>');
+                                return new HtmlString('<span class="text-gray-500">Selectează evenimente / liste / organizator / oraș / categorie / artist</span>');
                             }
 
                             try {
