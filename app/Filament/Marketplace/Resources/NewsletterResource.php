@@ -319,6 +319,13 @@ class NewsletterResource extends Resource
                     // Category intersect filter. AND'd with city / organizer
                     // / artist when present. "Concerte" + "Qfeel Events" +
                     // "Bucharest" → buyers of Qfeel concerts in Bucharest.
+                    // marketplace_event_categories.name is a translatable
+                    // jsonb column — Postgres can't ORDER BY jsonb directly
+                    // ("could not identify an ordering operator for type
+                    // jsonb") and ->pluck('name', 'id') returns arrays as
+                    // labels that Filament can't render. Both fixed by
+                    // ordering on `name->>'ro'` and extracting the locale
+                    // value via mapWithKeys.
                     Forms\Components\Select::make('target_category_ids')
                         ->label('Categorie eveniment — filtru intersecție')
                         ->multiple()
@@ -327,8 +334,14 @@ class NewsletterResource extends Resource
                         ->options(function () use ($marketplace) {
                             if (!$marketplace) return [];
                             return MarketplaceEventCategory::where('marketplace_client_id', $marketplace->id)
-                                ->orderBy('name')
-                                ->pluck('name', 'id')
+                                ->orderByRaw("LOWER(COALESCE(name->>'ro', name->>'en', name::text))")
+                                ->get(['id', 'name'])
+                                ->mapWithKeys(function ($c) {
+                                    $name = is_array($c->name)
+                                        ? ($c->name['ro'] ?? $c->name['en'] ?? reset($c->name) ?? '—')
+                                        : (string) $c->name;
+                                    return [$c->id => $name ?: '—'];
+                                })
                                 ->toArray();
                         })
                         ->afterStateUpdated(function (SSet $set) {
