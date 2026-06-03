@@ -172,59 +172,43 @@ class MarketplaceContactList extends Model
                 break;
 
             case 'is_organizer':
-                // Match customers whose email exists in the same marketplace's
-                // marketplace_organizers table. Without this case the rule
-                // silently fell through and the list collected every active
-                // customer (was the source of the 17K-row Organizatori list
-                // when only ~512 organizers actually existed).
-                $query->whereIn(
-                    DB::raw('lower(trim(' . $query->getModel()->getTable() . '.email))'),
-                    MarketplaceOrganizer::query()
-                        ->where('marketplace_client_id', $this->marketplace_client_id)
-                        ->whereNotNull('email')
-                        ->where('email', '!=', '')
-                        ->select(DB::raw('lower(trim(email))'))
+                $this->applyEmailInList(
+                    $query,
+                    $this->collectEmails(
+                        MarketplaceOrganizer::query()
+                            ->where('marketplace_client_id', $this->marketplace_client_id)
+                            ->whereNotNull('email')
+                            ->where('email', '!=', '')
+                            ->pluck('email')
+                    )
                 );
                 break;
 
             case 'is_artist':
-                // Match customers whose email exists in marketplace_artist_accounts
-                // for the same marketplace. Drives the "Artisti" dynamic list.
-                // Newsletter send-time also materializes any artist email that
-                // doesn't yet have a customer row.
-                $query->whereIn(
-                    DB::raw('lower(trim(' . $query->getModel()->getTable() . '.email))'),
-                    MarketplaceArtistAccount::query()
-                        ->where('marketplace_client_id', $this->marketplace_client_id)
-                        ->whereNotNull('email')
-                        ->where('email', '!=', '')
-                        ->select(DB::raw('lower(trim(email))'))
+                $this->applyEmailInList(
+                    $query,
+                    $this->collectEmails(
+                        MarketplaceArtistAccount::query()
+                            ->where('marketplace_client_id', $this->marketplace_client_id)
+                            ->whereNotNull('email')
+                            ->where('email', '!=', '')
+                            ->pluck('email')
+                    )
                 );
                 break;
 
             case 'is_venue_contact':
-                // Match customers whose email is either venue.email or
-                // venue.email2 for this marketplace. Powers the "Locații"
-                // dynamic list. Same materialize-on-send fallback as
-                // is_organizer / is_artist.
-                $emailColumn = DB::raw('lower(trim(' . $query->getModel()->getTable() . '.email))');
-                $query->where(function ($w) use ($emailColumn) {
-                    $w->whereIn(
-                        $emailColumn,
-                        Venue::query()
-                            ->where('marketplace_client_id', $this->marketplace_client_id)
-                            ->whereNotNull('email')
-                            ->where('email', '!=', '')
-                            ->select(DB::raw('lower(trim(email))'))
-                    )->orWhereIn(
-                        $emailColumn,
-                        Venue::query()
-                            ->where('marketplace_client_id', $this->marketplace_client_id)
-                            ->whereNotNull('email2')
-                            ->where('email2', '!=', '')
-                            ->select(DB::raw('lower(trim(email2))'))
-                    );
-                });
+                $primary = Venue::query()
+                    ->where('marketplace_client_id', $this->marketplace_client_id)
+                    ->whereNotNull('email')
+                    ->where('email', '!=', '')
+                    ->pluck('email');
+                $secondary = Venue::query()
+                    ->where('marketplace_client_id', $this->marketplace_client_id)
+                    ->whereNotNull('email2')
+                    ->where('email2', '!=', '')
+                    ->pluck('email2');
+                $this->applyEmailInList($query, $this->collectEmails($primary->concat($secondary)));
                 break;
 
             case 'city':
@@ -289,6 +273,47 @@ class MarketplaceContactList extends Model
                 $query->where($column, '<=', $value);
                 break;
         }
+    }
+
+    /**
+     * Normalize a Collection of emails (lowercase + trim + filter valid +
+     * unique). Centralizes the cleanup so the three external-source rules
+     * share a single canonical form.
+     *
+     * @return array<int,string>
+     */
+    protected function collectEmails(\Illuminate\Support\Collection $rawEmails): array
+    {
+        return $rawEmails
+            ->map(fn ($e) => strtolower(trim((string) $e)))
+            ->filter(fn ($e) => $e !== '' && filter_var($e, FILTER_VALIDATE_EMAIL))
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Apply a "customer email is in this list" filter using a literal
+     * array binding instead of a nested Eloquent Builder + DB::raw
+     * subquery. The nested-Builder form silently misbehaves under
+     * PostgreSQL: ->select(DB::raw('lower(trim(email))')) sometimes
+     * generates a "SELECT *" projection in the IN subquery, which makes
+     * the IN check trivially true and the rule resolves to "every
+     * active customer in the marketplace" (the 14k-row Artisti list was
+     * the symptom). A plain whereIn over an in-memory array has no such
+     * ambiguity. Safe up to ~50k bound params; way more than the
+     * organizer / artist / venue cohorts ever need.
+     */
+    protected function applyEmailInList(Builder $query, array $emails): void
+    {
+        if (empty($emails)) {
+            $query->whereRaw('1 = 0');
+            return;
+        }
+        $query->whereIn(
+            DB::raw('lower(trim(' . $query->getModel()->getTable() . '.email))'),
+            $emails
+        );
     }
 
     /**
