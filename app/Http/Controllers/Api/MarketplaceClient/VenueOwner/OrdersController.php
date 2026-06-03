@@ -267,6 +267,25 @@ class OrdersController extends BaseController
         // Mirror the organizer response shape so SalesScreen can read
         // response.data.order.id / .payment_url / etc. uniformly.
         $order = $order->fresh();
+
+        // Real-time push so any other mobile / web dashboard watching
+        // this event refreshes its sales counter instantly.
+        if (in_array($order->status, ['confirmed', 'paid', 'completed'], true)) {
+            try {
+                event(new \App\Events\Sales\OrderConfirmed(
+                    (int) $event->id,
+                    (int) $order->id,
+                    (string) ($order->source ?? 'venue_owner_pos'),
+                    $order->tickets()->count(),
+                ));
+            } catch (\Throwable $e) {
+                Log::warning('OrderConfirmed broadcast (venue owner) failed', [
+                    'order_id' => $order->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
         return $this->success([
             'order' => [
                 'id' => $order->id,

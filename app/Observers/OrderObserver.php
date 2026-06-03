@@ -85,6 +85,32 @@ class OrderObserver
             if (in_array($newStatus, ['paid', 'confirmed', 'completed']) &&
                 !in_array($oldStatus, ['paid', 'confirmed', 'completed'])) {
                 DB::afterCommit(fn () => $this->trackPurchaseConversion($order));
+
+                // Real-time broadcast — mobile dashboards subscribed to
+                // event.{id}.sales refresh their counters instantly.
+                // This covers EVERY web sale path that flows through
+                // Eloquent updates (Stripe webhook, manual confirm, etc.).
+                // POS-create paths use raw DB::table()->update() and fire
+                // the event inline; everyone else lands here.
+                DB::afterCommit(function () use ($order) {
+                    try {
+                        $eventId = $order->event_id ?? $order->marketplace_event_id;
+                        if (!$eventId) {
+                            return;
+                        }
+                        event(new \App\Events\Sales\OrderConfirmed(
+                            (int) $eventId,
+                            (int) $order->id,
+                            (string) ($order->source ?? 'unknown'),
+                            $order->tickets()->count(),
+                        ));
+                    } catch (\Throwable $e) {
+                        Log::warning('OrderConfirmed broadcast (observer) failed', [
+                            'order_id' => $order->id,
+                            'error' => $e->getMessage(),
+                        ]);
+                    }
+                });
             }
 
             // Status moved into / out of the success set on the same customer

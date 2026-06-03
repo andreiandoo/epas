@@ -469,6 +469,28 @@ class OrdersController extends BaseController
             // Reload order to get updated status
             $order->refresh();
 
+            // Real-time: notify all mobile dashboards subscribed to
+            // event.{id}.sales so their POS-vs-online counters refresh
+            // without waiting for the 30 s poll. Only fires when the
+            // order actually landed in a paid / confirmed state; pending
+            // online orders (payment_url path) broadcast later from the
+            // Stripe webhook instead.
+            if (in_array($order->status, ['confirmed', 'paid', 'completed'], true)) {
+                try {
+                    event(new \App\Events\Sales\OrderConfirmed(
+                        (int) $event->id,
+                        (int) $order->id,
+                        (string) ($order->source ?? $source),
+                        $order->tickets()->count(),
+                    ));
+                } catch (\Throwable $e) {
+                    Log::warning('OrderConfirmed broadcast failed', [
+                        'order_id' => $order->id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
+
             Log::info('Marketplace order created', [
                 'order_id' => $order->id,
                 'marketplace_client_id' => $client->id,

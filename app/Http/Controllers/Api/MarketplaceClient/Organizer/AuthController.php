@@ -1283,6 +1283,20 @@ class AuthController extends BaseController
             'mobile_settings' => [
                 'card_nfc_enabled' => (bool) ($organizer->service_settings['mobile_card_nfc_enabled'] ?? false),
             ],
+
+            // Real-time push config — the mobile EventContext opens a
+            // raw WebSocket against this and refreshes stats on
+            // 'order.confirmed' instead of polling every 30 s. Empty
+            // host / null driver means the app silently falls back to
+            // the existing polling cadence.
+            'realtime' => [
+                'enabled' => config('broadcasting.default') === 'reverb' && !empty(config('reverb-client.host')),
+                'app_key' => config('reverb-client.app_key'),
+                'host' => config('reverb-client.host'),
+                'port' => (int) config('reverb-client.port'),
+                'scheme' => config('reverb-client.scheme'),
+                'path' => config('reverb-client.path'),
+            ],
         ];
     }
 

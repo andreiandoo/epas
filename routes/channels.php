@@ -21,3 +21,10 @@ use Illuminate\Support\Facades\Broadcast;
 Broadcast::channel('event.{eventId}.seats', function () {
     return true;
 });
+
+// Sales channel — broadcast every time an order transitions to a paid /
+// confirmed state. Mobile dashboards subscribe to it for instant counter
+// refresh (no 30 s polling lag).
+Broadcast::channel('event.{eventId}.sales', function () {
+    return true;
+});
