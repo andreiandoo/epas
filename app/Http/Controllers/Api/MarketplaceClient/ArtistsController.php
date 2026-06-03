@@ -290,7 +290,18 @@ class ArtistsController extends BaseController
         // marketplace, (b) actually published (is_published=true is the
         // visibility flag), AND (c) have status='published' (not draft, not
         // archived — both are separate from is_published in this codebase).
-        // Past events are filtered out via event_date >= today.
+        //
+        // "Upcoming" is decided per duration_mode — using only event_date
+        // hides range / multi_day / recurring events whose date columns
+        // live elsewhere (range_end_date, multi_slots JSON, recurring_*).
+        //   single_day → event_date >= today
+        //   range      → range_end_date >= today (still running counts)
+        //   multi_day  → at least one slot date >= today (refined in PHP
+        //                after fetch — SQL pre-filter is non-NULL slots)
+        //   recurring  → template parents are visible (children resolve
+        //                their own per-occurrence date)
+        //   legacy / null mode → fall back to event_date >= today
+        $today = now()->toDateString();
         $upcomingEvents = $artist->events()
             ->where('marketplace_client_id', $client->id)
             ->where('is_published', true)
@@ -298,12 +309,43 @@ class ArtistsController extends BaseController
             ->with(['ticketTypes' => function ($q) {
                 $q->where('status', 'active');
             }, 'venue', 'marketplaceOrganizer:id,default_commission_mode,commission_rate', 'marketplaceEventCategory'])
-            ->where('event_date', '>=', now()->toDateString())
             ->where('is_cancelled', false)
+            ->where(function ($q) use ($today) {
+                $q->where(function ($q1) use ($today) {
+                    $q1->where('duration_mode', 'single_day')
+                       ->where('event_date', '>=', $today);
+                })->orWhere(function ($q1) use ($today) {
+                    $q1->where('duration_mode', 'range')
+                       ->where('range_end_date', '>=', $today);
+                })->orWhere(function ($q1) {
+                    $q1->where('duration_mode', 'multi_day')
+                       ->whereNotNull('multi_slots');
+                })->orWhere(function ($q1) {
+                    $q1->where('duration_mode', 'recurring');
+                })->orWhere(function ($q1) use ($today) {
+                    $q1->whereNull('duration_mode')
+                       ->where('event_date', '>=', $today);
+                });
+            })
             ->when($tourIdFilter, fn ($q) => $q->where('tour_id', $tourIdFilter))
-            ->orderBy('event_date')
+            ->orderByRaw('COALESCE(event_date, range_start_date) ASC NULLS LAST')
             ->when(!$tourIdFilter, fn ($q) => $q->limit(50))
             ->get()
+            ->filter(function ($event) use ($today) {
+                // Drop multi_day events whose every slot is in the past.
+                // (SQL kept all multi_day rows with non-NULL multi_slots
+                // because filtering JSON arrays per-DB is messy; this
+                // post-fetch check is cheap on the limited result set.)
+                if ($event->duration_mode !== 'multi_day') {
+                    return true;
+                }
+                $latest = collect($event->multi_slots ?? [])
+                    ->pluck('date')
+                    ->filter()
+                    ->max();
+                return $latest !== null && $latest >= $today;
+            })
+            ->values()
             ->map(function ($event) use ($language, $client) {
                 // For child events (multi-day), inherit ticket types from parent
                 $ticketTypes = $event->ticketTypes;
