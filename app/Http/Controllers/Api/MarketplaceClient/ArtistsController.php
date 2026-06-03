@@ -406,12 +406,56 @@ class ArtistsController extends BaseController
                 // Get category name
                 $categoryName = $event->marketplaceEventCategory?->getTranslation('name', $language);
 
+                // Resolve the effective starting date/time per duration_mode
+                // so the frontend (artist-single.js / event card render) gets
+                // a usable Date instead of NaN for range / multi_day events
+                // whose event_date column is intentionally NULL.
+                $effectiveDate = $event->event_date;
+                $effectiveTime = $event->start_time;
+                $rangeEndDate = null;
+                if ($event->duration_mode === 'range') {
+                    $effectiveDate = $event->range_start_date;
+                    $effectiveTime = $event->range_start_time;
+                    $rangeEndDate = $event->range_end_date;
+                } elseif ($event->duration_mode === 'multi_day' && ! empty($event->multi_slots)) {
+                    $sorted = collect($event->multi_slots)
+                        ->filter(fn ($s) => ! empty($s['date']))
+                        ->sortBy('date');
+                    $first = $sorted->first();
+                    if ($first) {
+                        $effectiveDate = \Carbon\Carbon::parse($first['date']);
+                        $effectiveTime = $first['start_time'] ?? null;
+                    }
+                    $last = $sorted->last();
+                    if ($last) {
+                        $rangeEndDate = \Carbon\Carbon::parse($last['date']);
+                    }
+                } elseif ($event->duration_mode === 'recurring' && $event->recurring_start_date) {
+                    $effectiveDate = $event->recurring_start_date instanceof \Carbon\Carbon
+                        ? $event->recurring_start_date
+                        : \Carbon\Carbon::parse($event->recurring_start_date);
+                    $effectiveTime = $event->recurring_start_time;
+                }
+
+                $effectiveDateStr = $effectiveDate
+                    ? ($effectiveDate instanceof \Carbon\Carbon ? $effectiveDate->format('Y-m-d') : (string) $effectiveDate)
+                    : null;
+
                 return [
                     'id' => $event->id,
                     'name' => $event->getTranslation('title', $language),
                     'slug' => $event->slug,
-                    'starts_at' => $event->event_date?->format('Y-m-d') . 'T' . ($event->start_time ?? '00:00:00'),
-                    'start_time' => $event->start_time,
+                    'duration_mode' => $event->duration_mode,
+                    // event_date / start_time / starts_at now carry the
+                    // effective values per mode so the frontend doesn't
+                    // need to know about range_* / multi_slots.
+                    'event_date' => $effectiveDateStr,
+                    'start_time' => $effectiveTime,
+                    'starts_at' => ($effectiveDateStr ?? '') . 'T' . ($effectiveTime ?? '00:00:00'),
+                    'date_label' => $event->displayDateLabel(),
+                    'range_end_date' => $rangeEndDate instanceof \Carbon\Carbon
+                        ? $rangeEndDate->format('Y-m-d')
+                        : ($rangeEndDate ? (string) $rangeEndDate : null),
                     'parent_slug' => $event->parent_id ? $event->parent?->slug : null,
                     'venue_name' => $event->venue?->getTranslation('name', $language) ?? $event->venue?->name,
                     'venue_city' => $event->venue?->city,
