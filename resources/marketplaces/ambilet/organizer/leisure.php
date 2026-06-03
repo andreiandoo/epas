@@ -1631,7 +1631,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         const faqList = $('faq-list');
         if (faqList) {
             faqList.innerHTML = '';
-            (currentVenueConfig.faqs || []).forEach((f, i) => faqList.appendChild(makeFaqRow(f.q || '', f.a || '', i)));
+            (currentVenueConfig.faqs || []).forEach((f, i) => faqList.appendChild(makeFaqRow(f.q || '', f.a || '', i, f.translations || {})));
             if ((currentVenueConfig.faqs || []).length === 0) faqList.appendChild(makeFaqRow('', '', 0));
         }
 
@@ -1662,9 +1662,10 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         (Array.isArray(data) ? data : []).forEach((item) => list.appendChild(factory(item || {})));
     }
 
-    function makeFaqRow(q, a, idx) {
+    function makeFaqRow(q, a, idx, translations) {
         const wrap = document.createElement('div');
         wrap.className = 'p-3 bg-slate-50 rounded-lg space-y-2';
+        const trData = { translations: translations || {} };
         wrap.innerHTML = `
             <div class="flex items-start gap-2">
                 <input type="text" class="faq-q flex-1 px-3 py-2 border border-border rounded-lg bg-white" placeholder="Întrebare" value="${escapeHtml(q)}">
@@ -1673,6 +1674,10 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 </button>
             </div>
             <textarea class="faq-a w-full px-3 py-2 border border-border rounded-lg bg-white text-sm" rows="2" placeholder="Răspuns (poate conține HTML simplu)">${escapeHtml(a)}</textarea>
+            ${makeTranslationFields(trData, [
+                {key: 'q', label: 'Întrebare'},
+                {key: 'a', label: 'Răspuns', type: 'textarea'},
+            ])}
         `;
         wrap.querySelector('.faq-remove').addEventListener('click', () => wrap.remove());
         return wrap;
@@ -1703,6 +1708,43 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
     }
     function repAttr(name, value) { return `data-rep="${name}" value="${escapeHtml(value ?? '')}"`; }
 
+    // Citeste valoare nested dintr-un obiect (ex: getNested(d, 'translations.hu.title')).
+    function getNested(obj, pathStr) {
+        if (!obj) return '';
+        const parts = pathStr.split('.');
+        let cur = obj;
+        for (const p of parts) {
+            if (cur && typeof cur === 'object' && p in cur) cur = cur[p];
+            else return '';
+        }
+        return (cur === null || cur === undefined) ? '' : cur;
+    }
+
+    // Genereaza block <details> cu input-uri HU + EN pentru un set de field-uri.
+    // d = item data, fields = [{key:'title', label:'Titlu'}, {key:'description', type:'textarea', label:'Descriere'}].
+    function makeTranslationFields(d, fields) {
+        const inputs = ['hu', 'en'].map(loc => {
+            const flag = loc === 'hu' ? '🇭🇺 HU' : '🇬🇧 EN';
+            const items = fields.map(f => {
+                const value = escapeHtml(getNested(d, `translations.${loc}.${f.key}`) || '');
+                const inputClass = 'w-full px-2 py-1.5 text-sm border border-amber-300 rounded bg-white mt-1';
+                if (f.type === 'textarea') {
+                    return `<div><label class="text-[10px] uppercase text-amber-800">${flag} · ${f.label}</label>
+                        <textarea data-rep="translations.${loc}.${f.key}" rows="2" class="${inputClass}" placeholder="lasă gol = RO">${value}</textarea></div>`;
+                }
+                return `<div><label class="text-[10px] uppercase text-amber-800">${flag} · ${f.label}</label>
+                    <input type="text" data-rep="translations.${loc}.${f.key}" value="${value}" class="${inputClass}" placeholder="lasă gol = RO"></div>`;
+            }).join('');
+            return items;
+        }).join('');
+        return `
+            <details class="mt-2 border border-amber-200 bg-amber-50 rounded p-2">
+                <summary class="text-xs font-semibold text-amber-900 cursor-pointer">🌐 Traduceri (HU + EN) — opțional</summary>
+                <div class="mt-2 space-y-2">${inputs}</div>
+            </details>
+        `;
+    }
+
     function makeAttractionRow(d) {
         return repWrap(`
             <div class="grid grid-cols-1 md:grid-cols-6 gap-2 items-start">
@@ -1711,6 +1753,10 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 <input type="url" data-rep="image" class="md:col-span-6 px-3 py-2 border border-border rounded-lg bg-white" placeholder="URL imagine (opțional)" value="${escapeHtml(d.image || '')}">
                 <textarea data-rep="description" rows="2" class="md:col-span-6 px-3 py-2 border border-border rounded-lg bg-white" placeholder="Descriere scurtă">${escapeHtml(d.description || '')}</textarea>
             </div>
+            ${makeTranslationFields(d, [
+                {key: 'title', label: 'Titlu'},
+                {key: 'description', label: 'Descriere', type: 'textarea'},
+            ])}
             <div class="text-right mt-2"><button type="button" data-rm class="text-xs text-rose-600 hover:bg-rose-100 px-2 py-1 rounded">🗑 Șterge</button></div>
         `);
     }
@@ -1730,6 +1776,10 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 <input type="text" data-rep="start_point" class="md:col-span-4 px-3 py-2 border border-border rounded-lg bg-white" placeholder="Punct de plecare" value="${escapeHtml(d.start_point || '')}">
                 <textarea data-rep="description" rows="2" class="md:col-span-6 px-3 py-2 border border-border rounded-lg bg-white" placeholder="Descriere">${escapeHtml(d.description || '')}</textarea>
             </div>
+            ${makeTranslationFields(d, [
+                {key: 'name', label: 'Nume'},
+                {key: 'description', label: 'Descriere', type: 'textarea'},
+            ])}
             <div class="text-right mt-2"><button type="button" data-rm class="text-xs text-rose-600 hover:bg-rose-100 px-2 py-1 rounded">🗑 Șterge</button></div>
         `);
     }
@@ -1788,6 +1838,10 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 <input type="text" data-rep="description" class="flex-1 px-3 py-2 border border-border rounded-lg bg-white" placeholder="Detalii (opțional)" value="${escapeHtml(d.description || '')}">
                 <button type="button" data-rm class="text-rose-600 hover:bg-rose-100 px-2 py-1 rounded">🗑</button>
             </div>
+            ${makeTranslationFields(d, [
+                {key: 'name', label: 'Nume'},
+                {key: 'description', label: 'Detalii', type: 'textarea'},
+            ])}
         `);
     }
 
@@ -1859,6 +1913,10 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 <input type="text" data-rep="from" class="md:col-span-3 px-3 py-2 border border-border rounded-lg bg-white" placeholder="De la / direcție" value="${escapeHtml(d.from || '')}">
                 <textarea data-rep="description" rows="2" class="md:col-span-6 px-3 py-2 border border-border rounded-lg bg-white" placeholder="Detalii rută">${escapeHtml(d.description || '')}</textarea>
             </div>
+            ${makeTranslationFields(d, [
+                {key: 'title', label: 'Titlu'},
+                {key: 'description', label: 'Descriere', type: 'textarea'},
+            ])}
             <div class="text-right mt-2"><button type="button" data-rm class="text-xs text-rose-600 hover:bg-rose-100 px-2 py-1 rounded">🗑 Șterge</button></div>
         `);
     }
@@ -1901,7 +1959,14 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 const key = el.dataset.rep;
                 let val = el.value;
                 if (typeof val === 'string') val = val.trim();
-                if (val !== '' && val !== null && val !== undefined) item[key] = val;
+                if (val === '' || val === null || val === undefined) return;
+                // Suport chei nested (ex: "translations.hu.title") pentru a permite
+                // traducerile opt-in fara a sparge layout-ul existent (chei flat).
+                if (key.indexOf('.') !== -1) {
+                    setNested(item, key, val);
+                } else {
+                    item[key] = val;
+                }
             });
             if (Object.keys(item).length > 0) out.push(item);
         });
@@ -1943,12 +2008,21 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             setNested(payload, input.dataset.vcNested, input.value.trim());
         });
 
-        // FAQ list
+        // FAQ list (cu suport traduceri HU + EN prin data-rep="translations.XX.q/a")
         const faqs = [];
         document.querySelectorAll('#faq-list > div').forEach((row) => {
             const q = row.querySelector('.faq-q')?.value.trim() || '';
             const a = row.querySelector('.faq-a')?.value.trim() || '';
-            if (q || a) faqs.push({ q, a });
+            // Collectez traducerile prin selector data-rep
+            const item = { q, a };
+            row.querySelectorAll('[data-rep]').forEach((el) => {
+                const key = el.dataset.rep;
+                let val = el.value;
+                if (typeof val === 'string') val = val.trim();
+                if (val === '' || val === null || val === undefined) return;
+                if (key.indexOf('.') !== -1) setNested(item, key, val);
+            });
+            if (q || a) faqs.push(item);
         });
         payload.faqs = faqs;
 

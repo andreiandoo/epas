@@ -1869,6 +1869,18 @@ class EventResource extends Resource
                                                                 ->label($t('Gradient blob decorativ (CSS)', 'Decorative blob gradient'))
                                                                 ->placeholder('linear-gradient(135deg, #A5F3FC, #22D3EE)'),
                                                         ]),
+                                                        // 🌐 Traduceri opt-in (HU + EN)
+                                                        SC\Section::make('🌐 ' . $t('Traduceri (HU + EN) — opțional', 'Translations (HU + EN) — optional'))
+                                                            ->description($t('Lasă gol pentru limbi pe care nu vrei să le traduci — se va afișa varianta RO.', 'Leave empty for languages you do not translate — RO will be shown.'))
+                                                            ->collapsed()
+                                                            ->schema([
+                                                                SC\Grid::make(2)->schema([
+                                                                    Forms\Components\TextInput::make('translations.hu.name')->label('🇭🇺 Nume (HU)'),
+                                                                    Forms\Components\TextInput::make('translations.en.name')->label('🇬🇧 Name (EN)'),
+                                                                    Forms\Components\Textarea::make('translations.hu.description')->label('🇭🇺 ' . $t('Descriere (HU)', 'Description (HU)'))->rows(3),
+                                                                    Forms\Components\Textarea::make('translations.en.description')->label('🇬🇧 ' . $t('Descriere (EN)', 'Description (EN)'))->rows(3),
+                                                                ]),
+                                                            ]),
                                                     ])
                                                     ->itemLabel(fn (array $state): ?string => $state['name'] ?? null)
                                                     ->addActionLabel($t('Adaugă atracție', 'Add attraction'))
@@ -1919,6 +1931,14 @@ class EventResource extends Resource
                                                                 ->label($t('Nume latin', 'Latin name'))
                                                                 ->placeholder('Drosera rotundifolia'),
                                                         ]),
+                                                        SC\Section::make('🌐 ' . $t('Traduceri (HU + EN)', 'Translations (HU + EN)'))
+                                                            ->collapsed()
+                                                            ->schema([
+                                                                SC\Grid::make(2)->schema([
+                                                                    Forms\Components\TextInput::make('translations.hu.name')->label('🇭🇺 Nume (HU)'),
+                                                                    Forms\Components\TextInput::make('translations.en.name')->label('🇬🇧 Name (EN)'),
+                                                                ]),
+                                                            ]),
                                                     ])
                                                     ->itemLabel(fn (array $state): ?string => ($state['emoji'] ?? '') . ' ' . ($state['name'] ?? ''))
                                                     ->addActionLabel($t('Adaugă specie', 'Add species'))
@@ -1978,6 +1998,16 @@ class EventResource extends Resource
                                                             ->helperText($t('Opțional, pentru afișaj pe hartă', 'Optional, for map display'))
                                                             ->dehydrateStateUsing(fn ($state) => is_string($state) && trim($state) !== '' ? json_decode($state, true) : null)
                                                             ->afterStateHydrated(fn ($component, $state) => $component->state(is_array($state) ? json_encode($state) : ($state ?? ''))),
+                                                        SC\Section::make('🌐 ' . $t('Traduceri (HU + EN)', 'Translations (HU + EN)'))
+                                                            ->collapsed()
+                                                            ->schema([
+                                                                SC\Grid::make(2)->schema([
+                                                                    Forms\Components\TextInput::make('translations.hu.name')->label('🇭🇺 Nume (HU)'),
+                                                                    Forms\Components\TextInput::make('translations.en.name')->label('🇬🇧 Name (EN)'),
+                                                                    Forms\Components\Textarea::make('translations.hu.description')->label('🇭🇺 ' . $t('Descriere (HU)', 'Description (HU)'))->rows(2),
+                                                                    Forms\Components\Textarea::make('translations.en.description')->label('🇬🇧 ' . $t('Descriere (EN)', 'Description (EN)'))->rows(2),
+                                                                ]),
+                                                            ]),
                                                     ])
                                                     ->itemLabel(fn (array $state): ?string => $state['name'] ?? null)
                                                     ->addActionLabel($t('Adaugă traseu', 'Add trail'))
@@ -2029,6 +2059,16 @@ class EventResource extends Resource
                                                             ->rows(2),
                                                         Forms\Components\TextInput::make('note')
                                                             ->label($t('Notă (mic, gri)', 'Note (small, gray)')),
+                                                        SC\Section::make('🌐 ' . $t('Traduceri (HU + EN)', 'Translations (HU + EN)'))
+                                                            ->collapsed()
+                                                            ->schema([
+                                                                SC\Grid::make(2)->schema([
+                                                                    Forms\Components\TextInput::make('translations.hu.title')->label('🇭🇺 ' . $t('Titlu (HU)', 'Title (HU)')),
+                                                                    Forms\Components\TextInput::make('translations.en.title')->label('🇬🇧 Title (EN)'),
+                                                                    Forms\Components\Textarea::make('translations.hu.description')->label('🇭🇺 ' . $t('Descriere (HU)', 'Description (HU)'))->rows(2),
+                                                                    Forms\Components\Textarea::make('translations.en.description')->label('🇬🇧 ' . $t('Descriere (EN)', 'Description (EN)'))->rows(2),
+                                                                ]),
+                                                            ]),
                                                     ])
                                                     ->itemLabel(fn (array $state): ?string => $state['title'] ?? null)
                                                     ->addActionLabel($t('Adaugă mod', 'Add way'))
@@ -2178,6 +2218,14 @@ class EventResource extends Resource
                                                         Forms\Components\RichEditor::make('a')
                                                             ->label($t('Răspuns', 'Answer'))
                                                             ->toolbarButtons(['bold', 'italic', 'link', 'bulletList', 'orderedList']),
+                                                        SC\Section::make('🌐 ' . $t('Traduceri (HU + EN)', 'Translations (HU + EN)'))
+                                                            ->collapsed()
+                                                            ->schema([
+                                                                Forms\Components\TextInput::make('translations.hu.q')->label('🇭🇺 ' . $t('Întrebare (HU)', 'Question (HU)')),
+                                                                Forms\Components\RichEditor::make('translations.hu.a')->label('🇭🇺 ' . $t('Răspuns (HU)', 'Answer (HU)'))->toolbarButtons(['bold', 'italic', 'link', 'bulletList', 'orderedList']),
+                                                                Forms\Components\TextInput::make('translations.en.q')->label('🇬🇧 Question (EN)'),
+                                                                Forms\Components\RichEditor::make('translations.en.a')->label('🇬🇧 Answer (EN)')->toolbarButtons(['bold', 'italic', 'link', 'bulletList', 'orderedList']),
+                                                            ]),
                                                     ])
                                                     ->itemLabel(fn (array $state): ?string => $state['q'] ?? null)
                                                     ->addActionLabel($t('Adaugă întrebare', 'Add question'))

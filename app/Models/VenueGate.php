@@ -9,6 +9,7 @@ class VenueGate extends Model
 {
     protected $fillable = [
         'venue_id',
+        'marketplace_organizer_id',
         'name',
         'type',
         'location',

@@ -4251,7 +4251,18 @@ class EventsController extends BaseController
         }
 
         $this->ensureVenueGatesTable();
-        $gates = $venue->gates()->get();
+        // Bug-fix: filtrare pe organizer. Portile cu marketplace_organizer_id=NULL
+        // sunt "legacy / shared" si raman vizibile pentru toti (backward compat).
+        // Portile create dupa migratia 2026_06_03_120000 au organizer-ul setat →
+        // vizibile DOAR pentru el. Daca un alt organizer foloseste acelasi venue,
+        // nu mai vede portile altora.
+        $gates = $venue->gates()
+            ->where(function ($q) use ($organizer) {
+                $q->whereNull('marketplace_organizer_id')
+                  ->orWhere('marketplace_organizer_id', $organizer->id);
+            })
+            ->orderBy('sort_order')
+            ->get();
 
         return $this->success([
             'venue' => [
@@ -4303,6 +4314,10 @@ class EventsController extends BaseController
 
         $gate = \App\Models\VenueGate::create([
             'venue_id' => $venue->id,
+            // Bug-fix: salveaza organizer-ul care creeaza poarta, ca sa apara
+            // doar pentru el la list (cand mai mulți organizatori folosesc
+            // acelasi venue fizic).
+            'marketplace_organizer_id' => $organizer->id,
             'name' => $request->name,
             'type' => $request->type,
             'location' => $request->location,
@@ -4344,6 +4359,11 @@ class EventsController extends BaseController
         $gate = $venue->gates()->where('id', $gateId)->first();
         if (!$gate) {
             return $this->error('Gate not found', 404);
+        }
+        // Bug-fix: blocheaza modificarea portilor altor organizatori care folosesc
+        // acelasi venue. Portile legacy (organizer_id=NULL) raman editabile by all.
+        if ($gate->marketplace_organizer_id && $gate->marketplace_organizer_id !== $organizer->id) {
+            return $this->error('Această poartă aparține altui organizator.', 403);
         }
 
         $request->validate([
@@ -4389,6 +4409,11 @@ class EventsController extends BaseController
         $gate = $venue->gates()->where('id', $gateId)->first();
         if (!$gate) {
             return $this->error('Gate not found', 404);
+        }
+        // Bug-fix: nu permite stergerea portilor altor organizatori care folosesc
+        // acelasi venue. Portile legacy (organizer_id=NULL) raman deletable.
+        if ($gate->marketplace_organizer_id && $gate->marketplace_organizer_id !== $organizer->id) {
+            return $this->error('Această poartă aparține altui organizator.', 403);
         }
 
         $gate->delete();
