@@ -276,6 +276,87 @@ class MarketplaceContactList extends Model
     }
 
     /**
+     * Find-or-create a MarketplaceCustomer row for every email exposed
+     * by the picked external-source rules (is_organizer / is_artist /
+     * is_venue_contact). Runs before the rule match so the WHERE
+     * email IN (...) clause can actually find each source row. Inspects
+     * the rules array and runs ONLY the materializers needed.
+     */
+    public function materializeExternalSourceCustomers(): void
+    {
+        $rules = collect($this->getRules())->pluck('type')->unique();
+        $clientId = $this->marketplace_client_id;
+        if (!$clientId) return;
+
+        if ($rules->contains('is_organizer')) {
+            $rows = MarketplaceOrganizer::where('marketplace_client_id', $clientId)
+                ->whereNotNull('email')->where('email', '!=', '')
+                ->get(['email', 'name', 'company_name'])
+                ->map(fn ($o) => [
+                    'email' => $o->email,
+                    'first_name' => $o->name ?: ($o->company_name ?: 'Organizator'),
+                    'last_name' => '',
+                ]);
+            $this->materializeRowsFromSource($rows);
+        }
+
+        if ($rules->contains('is_artist')) {
+            $rows = MarketplaceArtistAccount::where('marketplace_client_id', $clientId)
+                ->whereNotNull('email')->where('email', '!=', '')
+                ->get(['email', 'first_name', 'last_name'])
+                ->map(fn ($a) => [
+                    'email' => $a->email,
+                    'first_name' => $a->first_name ?: 'Artist',
+                    'last_name' => $a->last_name ?: '',
+                ]);
+            $this->materializeRowsFromSource($rows);
+        }
+
+        if ($rules->contains('is_venue_contact')) {
+            $venues = Venue::where('marketplace_client_id', $clientId)
+                ->where(function ($w) { $w->whereNotNull('email')->orWhereNotNull('email2'); })
+                ->get(['name', 'email', 'email2']);
+            $rows = collect();
+            foreach ($venues as $v) {
+                $venueName = is_array($v->name)
+                    ? ($v->name['ro'] ?? $v->name['en'] ?? reset($v->name) ?? 'Locatie')
+                    : ($v->name ?? 'Locatie');
+                if (!empty($v->email))  $rows->push(['email' => $v->email,  'first_name' => $venueName, 'last_name' => '']);
+                if (!empty($v->email2)) $rows->push(['email' => $v->email2, 'first_name' => $venueName, 'last_name' => '']);
+            }
+            $this->materializeRowsFromSource($rows);
+        }
+    }
+
+    /**
+     * firstOrCreate a customer per row. accepts_marketing defaults to
+     * false so these auto-created accounts never accidentally land in
+     * an opt-in marketing blast — only in the specific external-source
+     * list that materialized them.
+     */
+    protected function materializeRowsFromSource(\Illuminate\Support\Collection $rows): void
+    {
+        $clientId = $this->marketplace_client_id;
+        foreach ($rows as $row) {
+            $email = strtolower(trim((string) ($row['email'] ?? '')));
+            if (!filter_var($email, FILTER_VALIDATE_EMAIL)) continue;
+
+            MarketplaceCustomer::firstOrCreate(
+                [
+                    'marketplace_client_id' => $clientId,
+                    'email' => $email,
+                ],
+                [
+                    'first_name' => $row['first_name'] ?? '',
+                    'last_name' => $row['last_name'] ?? '',
+                    'accepts_marketing' => false,
+                    'status' => 'active',
+                ]
+            );
+        }
+    }
+
+    /**
      * Normalize a Collection of emails (lowercase + trim + filter valid +
      * unique). Centralizes the cleanup so the three external-source rules
      * share a single canonical form.
@@ -317,13 +398,23 @@ class MarketplaceContactList extends Model
     }
 
     /**
-     * Sync subscribers based on rules (for dynamic lists)
+     * Sync subscribers based on rules (for dynamic lists).
+     *
+     * For external-source rules (is_organizer / is_artist /
+     * is_venue_contact) we materialize a MarketplaceCustomer row for
+     * every source email FIRST so the subsequent rule match doesn't
+     * silently drop organizers/artists/venues that never registered
+     * as customers. Without this step the Organizatori list ended at
+     * 516 of 548 organizers because the 32 missing ones had no
+     * customer row yet.
      */
     public function syncSubscribers(): int
     {
         if (!$this->isDynamic()) {
             return 0;
         }
+
+        $this->materializeExternalSourceCustomers();
 
         $matchingCustomerIds = $this->buildMatchingCustomersQuery()->pluck('id');
 
