@@ -453,9 +453,16 @@ class ArtistsController extends BaseController
                     'start_time' => $effectiveTime,
                     'starts_at' => ($effectiveDateStr ?? '') . 'T' . ($effectiveTime ?? '00:00:00'),
                     'date_label' => $event->displayDateLabel(),
+                    'range_start_date' => $event->range_start_date
+                        ? $event->range_start_date->format('Y-m-d')
+                        : null,
                     'range_end_date' => $rangeEndDate instanceof \Carbon\Carbon
                         ? $rangeEndDate->format('Y-m-d')
                         : ($rangeEndDate ? (string) $rangeEndDate : null),
+                    // Send the raw multi_slots so AmbiletEventCard can
+                    // render a "first slot - last slot" badge for multi-day
+                    // events the same way it already does for range.
+                    'multi_slots' => $event->multi_slots,
                     'parent_slug' => $event->parent_id ? $event->parent?->slug : null,
                     'venue_name' => $event->venue?->getTranslation('name', $language) ?? $event->venue?->name,
                     'venue_city' => $event->venue?->city,

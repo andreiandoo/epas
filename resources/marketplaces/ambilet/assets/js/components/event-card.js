@@ -298,32 +298,39 @@ const AmbiletEventCard = {
         const soldOutBadge = event.isSoldOut ? '<span class="inline-block px-2 py-0.5 ml-2 text-[10px] font-bold uppercase bg-red-100 text-red-600 rounded align-middle">Sold out</span>' : '';
         const cardOpacity = event.isSoldOut ? ' opacity-60' : '';
 
-        return '<a href="' + eventUrl + '"' + targetAttr + ' class="flex bg-white rounded-2xl overflow-hidden border border-border hover:shadow-lg hover:-translate-y-0.5 hover:border-primary transition-all mobile:flex-col justify-between' + cardOpacity + '">' +
-            '<div class="flex mobile:flex-col">' +
-                '<div class="w-[260px] mobile:w-full flex-none">' +
-                    (heroImg ? '<img src="' + this.escapeHtml(heroImg) + '" alt="" style="inset:0;width:100%;height:100%;object-fit:cover;">' : '') +
-                '</div>' +
-                '<div class="flex">' +
-                    dateHtml +
-                    '<div class="flex flex-col justify-center flex-1 px-4 py-2 mobile:py-2 mobile:px-4 mobile:border-b mobile:border-border">' +
-                        '<h3 class="mb-2 text-base font-bold leading-tight text-secondary mobile:text-lg mobile:leading-tight">' + this.escapeHtml(event.title) + soldOutBadge + '</h3>' +
-                        '<div class="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted">' +
-                            (showTime ? '<span class="flex items-center gap-1">' +
-                                '<svg class="w-3.5 h-3.5 text-muted/60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>' +
-                                event.time +
-                            '</span>' : '') +
-                            (event.venueName ? '<span class="flex items-center gap-1"><svg class="mobile:hidden w-3.5 h-3.5 text-muted/60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>' + this.escapeHtml(event.venueName) + '</span>' : '') +
-                            (showArtists && event.artists && event.artists.length > 0 ? '<span class="flex items-center gap-1"><svg class="w-3.5 h-3.5 text-muted/60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>' + this.escapeHtml(event.artists.join(', ')) + '</span>' : '') +
-                        '</div>' +
+        // Layout notes:
+        // - Outer <a> is flex with min-h-[140px] so every card in a list
+        //   stays the same height regardless of title length, and the
+        //   hero image gets a tall-enough container to fill.
+        // - The image, date+info group, and price block are direct
+        //   children of the outer flex (no wrapper div in between), so
+        //   `justify-between` actually distributes them: image hugs the
+        //   left, price hugs the right, the date+info block (flex-1)
+        //   stretches between them. The "Cumpără bilete" button now sits
+        //   in the same horizontal position on every card.
+        return '<a href="' + eventUrl + '"' + targetAttr + ' class="flex bg-white rounded-2xl overflow-hidden border border-border hover:shadow-lg hover:-translate-y-0.5 hover:border-primary transition-all mobile:flex-col min-h-[140px] mobile:min-h-0' + cardOpacity + '">' +
+            '<div class="w-[260px] mobile:w-full flex-none self-stretch">' +
+                (heroImg ? '<img src="' + this.escapeHtml(heroImg) + '" alt="" style="width:100%;height:100%;object-fit:cover;display:block;">' : '') +
+            '</div>' +
+            '<div class="flex flex-1 min-w-0">' +
+                dateHtml +
+                '<div class="flex flex-col justify-center flex-1 min-w-0 px-4 py-2 mobile:py-2 mobile:px-4 mobile:border-b mobile:border-border">' +
+                    '<h3 class="mb-2 text-base font-bold leading-tight text-secondary mobile:text-lg mobile:leading-tight">' + this.escapeHtml(event.title) + soldOutBadge + '</h3>' +
+                    '<div class="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted">' +
+                        (showTime ? '<span class="flex items-center gap-1">' +
+                            '<svg class="w-3.5 h-3.5 text-muted/60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>' +
+                            event.time +
+                        '</span>' : '') +
+                        (event.venueName ? '<span class="flex items-center gap-1"><svg class="mobile:hidden w-3.5 h-3.5 text-muted/60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>' + this.escapeHtml(event.venueName) + '</span>' : '') +
+                        (showArtists && event.artists && event.artists.length > 0 ? '<span class="flex items-center gap-1"><svg class="w-3.5 h-3.5 text-muted/60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>' + this.escapeHtml(event.artists.join(', ')) + '</span>' : '') +
                     '</div>' +
                 '</div>' +
-            
-                (showPrice ?
-                    '<div class="py-2 px-4 flex flex-col items-center justify-center gap-1.5 mobile:flex-row mobile:items-center mobile:justify-between mobile:py-2 mobile:px-2 flex-none">' +
-                        priceHtml +
-                        buttonHtml +
-                    '</div>' : '') +
             '</div>' +
+            (showPrice ?
+                '<div class="py-2 px-4 flex flex-col items-center justify-center gap-1.5 mobile:flex-row mobile:items-center mobile:justify-between mobile:py-2 mobile:px-2 flex-none">' +
+                    priceHtml +
+                    buttonHtml +
+                '</div>' : '') +
         '</a>';
     },
 
@@ -546,13 +553,31 @@ const AmbiletEventCard = {
             categoryName = apiEvent.category.name || '';
         }
 
-        // Extract date range for festivals
+        // Extract date range for festivals + multi-day events.
+        // Both modes render the same range badge ("4-6 Sep" etc.); only
+        // the source columns differ — range pulls range_start/end_date,
+        // multi_day pulls the first / last entry of multi_slots.
         const durationMode = apiEvent.duration_mode || 'single_day';
-        const isDateRange = durationMode === 'range' || durationMode === 'date_range';
+        let isDateRange = durationMode === 'range' || durationMode === 'date_range';
+        let rangeStart = apiEvent.range_start_date || null;
+        let rangeEnd = apiEvent.range_end_date || null;
+
+        if (!isDateRange && durationMode === 'multi_day' && Array.isArray(apiEvent.multi_slots) && apiEvent.multi_slots.length > 0) {
+            const slotDates = apiEvent.multi_slots
+                .map(function (s) { return s && s.date ? s.date : null; })
+                .filter(Boolean)
+                .sort();
+            if (slotDates.length >= 1) {
+                rangeStart = slotDates[0];
+                rangeEnd = slotDates[slotDates.length - 1];
+                isDateRange = rangeStart !== rangeEnd;
+            }
+        }
+
         let dateRangeFormatted = '';
-        if (isDateRange && apiEvent.range_start_date && apiEvent.range_end_date) {
-            const startDate = new Date(apiEvent.range_start_date);
-            const endDate = new Date(apiEvent.range_end_date);
+        if (isDateRange && rangeStart && rangeEnd) {
+            const startDate = new Date(rangeStart);
+            const endDate = new Date(rangeEnd);
             const startDay = startDate.getDate();
             const startMonth = this.MONTHS[startDate.getMonth()];
             const endDay = endDate.getDate();
