@@ -172,7 +172,10 @@ class NewsletterRenderer
         $name = e($this->eventTitle($event));
         $venueName = e($this->eventVenueName($event) ?: '—');
         $venueCity = e($this->eventVenueCity($event) ?: '—');
-        $date = ($d = $this->eventDate($event)) ? $d->format('d M Y') : '—';
+        // Mode-aware label so range (festival) + multi_day events render
+        // "18 - 21 Iun 2026" instead of '-' (which is what we got when the
+        // legacy single-day path read $event_date on a range row).
+        $date = e($event->displayDateLabel() ?: '—');
         $time = $this->eventStartTime($event) ?: '—';
         $eventUrl = e($this->getEventUrl($event, $marketplace));
         // Always prefer poster format for newsletter heroes — admin
@@ -400,9 +403,13 @@ class NewsletterRenderer
     protected function renderSingleEventCard(Event $event, MarketplaceClient $marketplace): string
     {
         $name = e($this->eventTitle($event));
-        $d = $this->eventDate($event);
         $time = $this->eventStartTime($event);
-        $dateStr = $d ? $d->format('d M Y') . ($time ? ", {$time}" : '') : '';
+        // Use mode-aware label so range/multi_day events render correctly;
+        // append start_time only for single_day events (range/multi already
+        // imply a span — adding a single ", HH:mm" would be misleading).
+        $label = $event->displayDateLabel();
+        $isSingleDay = ($event->duration_mode ?? 'single_day') === 'single_day' || $event->duration_mode === null;
+        $dateStr = $label ? $label . ($isSingleDay && $time ? ", {$time}" : '') : '';
         $venueName = $this->eventVenueName($event);
         $venueCity = $this->eventVenueCity($event);
         $venue = e(trim($venueName . ($venueName && $venueCity ? ', ' : '') . $venueCity));
@@ -475,13 +482,14 @@ class NewsletterRenderer
                 continue;
             }
 
-            $d = $this->eventDate($event);
             $time = $this->eventStartTime($event);
             $imageRaw = $this->eventImage($event, 'card');
+            $label = $event->displayDateLabel();
+            $isSingleDay = ($event->duration_mode ?? 'single_day') === 'single_day' || $event->duration_mode === null;
 
             $value = match ($field) {
                 'name' => $this->eventTitle($event),
-                'date' => $d ? $d->format('d M Y') . ($time ? ", {$time}" : '') : '',
+                'date' => $label ? $label . ($isSingleDay && $time ? ", {$time}" : '') : '',
                 'venue' => $this->eventVenueName($event),
                 'city' => $this->eventVenueCity($event),
                 'image' => $imageRaw !== '' ? $this->resolveImageUrl($imageRaw, $marketplace) : '',
