@@ -1,56 +1,52 @@
 <?php
 /**
- * Organizer Dashboard Footer
+ * bilete.online — Organizer dashboard footer (v3 design).
+ *
+ * Optional, rendered at the bottom of the main column (inside the layout shell
+ * opened by organizer-sidebar.php). Pages that want it include it before
+ * closing the main-column </div> and calling scripts.php.
  */
 ?>
 
-<!-- Organizer Footer -->
-<footer class="bg-gradient-to-br from-slate-900 to-slate-800 px-4 py-3.5 md:px-6 border-t border-primary/30 mobile:rounded-none">
-    <div class="flex flex-col items-center justify-between max-w-6xl gap-3 mx-auto md:flex-row md:gap-5">
-        <!-- Left: Brand & Links -->
+<footer class="mt-auto border-t border-ink/10 bg-ink px-4 py-3.5 text-paper md:px-8">
+    <div class="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 md:flex-row md:gap-5">
+        <!-- Brand + links -->
         <div class="flex flex-col items-center gap-3 md:flex-row md:gap-5">
-            <div class="flex items-center gap-2.5">
-                <a href="/" class="flex items-center gap-1.5 no-underline">
-                    <div class="flex items-center justify-center w-6 h-6 text-xs font-extrabold text-white rounded bg-gradient-to-br from-primary to-red-600">A</div>
-                    <div class="text-sm font-bold text-white">Ambilet</div>
-                </a>
-                <span class="px-2.5 py-1 bg-gradient-to-br from-primary to-red-600 rounded text-[10px] font-bold text-white uppercase tracking-wide">Organizator</span>
-            </div>
-            <div class="hidden w-px h-5 bg-white/10 md:block"></div>
+            <a href="/" class="flex items-center gap-2">
+                <span class="grid h-6 w-6 place-items-center rounded bg-vermilion text-[11px] font-extrabold text-paper">b</span>
+                <span class="text-sm font-bold">bilete<span class="text-vermilion">.</span>online</span>
+                <span class="rounded bg-vermilion px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wide text-paper">Organizator</span>
+            </a>
+            <div class="hidden h-5 w-px bg-paper/10 md:block"></div>
             <div class="flex items-center gap-4">
-                <a href="/organizator/docs" class="flex items-center gap-1.5 text-xs text-white/90 hover:text-white transition-colors">
-                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                    Documentatie
+                <a href="/organizator/help" class="flex items-center gap-1.5 text-xs text-paper/70 transition hover:text-paper">
+                    <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                    Documentație
                 </a>
-                <a href="/organizator/api" class="flex items-center gap-1.5 text-xs text-white/90 hover:text-white transition-colors">
-                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+                <a href="/organizator/apidoc" class="flex items-center gap-1.5 text-xs text-paper/70 transition hover:text-paper">
+                    <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
                     API
                 </a>
-                <a href="/organizator/terms" class="flex items-center gap-1.5 text-xs text-white/90 hover:text-white transition-colors">
-                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M12 18v-6"/><path d="M9 15h6"/></svg>
+                <a href="/termeni" class="flex items-center gap-1.5 text-xs text-paper/70 transition hover:text-paper">
+                    <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M12 18v-6"/><path d="M9 15h6"/></svg>
                     Termeni
                 </a>
             </div>
         </div>
 
-        <!-- Center: Status (on mobile shows first) -->
-        <div class="flex items-center order-first gap-2 md:order-none">
-            <div class="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/15 rounded-md text-[11px] font-semibold text-emerald-500">
-                <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
-                Toate sistemele functionale
-            </div>
+        <!-- Status -->
+        <div class="order-first flex items-center gap-2 md:order-none">
+            <span class="inline-flex items-center gap-1.5 rounded-md bg-forest/20 px-3 py-1.5 text-[11px] font-bold text-mint">
+                <span class="h-1.5 w-1.5 animate-pulse rounded-full bg-mint"></span>
+                Toate sistemele funcționale
+            </span>
         </div>
 
-        <!-- Right: Powered by & Help -->
+        <!-- Powered by + support -->
         <div class="flex items-center gap-3">
-            <div class="hidden items-center gap-1.5 text-[10px] text-white/30">
-                Powered by
-                <a href="https://tixello.com" target="_blank" class="flex items-center gap-1 font-semibold transition-colors text-white/40 hover:text-white">
-                    <img src="/assets/images/tixello-logo.svg" width="40" height="12" alt="Tixello" class="h-3 transition-opacity duration-200 ease-in-out opacity-50 hover:opacity-100"/>
-                </a>
-            </div>
-            <a href="/organizator/support" class="flex items-center gap-1.5 px-3 py-1.5 bg-white/5 border border-white/10 rounded-md text-[11px] font-semibold text-white/90 hover:bg-white/10 hover:text-white transition-all">
-                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            <span class="text-[10px] text-paper/35">Operat de <a href="https://tixello.ro" target="_blank" rel="noopener" class="font-semibold text-ochre transition hover:text-paper">Tixello</a></span>
+            <a href="/organizator/suport" class="inline-flex items-center gap-1.5 rounded-md border border-paper/10 bg-paper/5 px-3 py-1.5 text-[11px] font-bold text-paper/90 transition hover:bg-paper/10 hover:text-paper">
+                <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
                 Suport prioritar
             </a>
         </div>
