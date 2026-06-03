@@ -2173,8 +2173,17 @@ class CheckoutController extends BaseController
             ];
 
             if ($template) {
-                $subject = $template->processSubject($variables);
-                $html = $template->processBody($variables);
+                // MarketplaceEmailTemplate exposes a single render() helper
+                // that returns ['subject', 'body_html', 'body_text']. The
+                // earlier processSubject() / processBody() calls referenced
+                // methods that don't exist on the class — every attempt was
+                // throwing BadMethodCallException and the outer catch was
+                // silently logging "Failed to send low stock alert", so no
+                // alert was ever delivered for marketplaces with a template
+                // configured (template 32 / stock_low_alert / Ambilet).
+                $rendered = $template->render($variables);
+                $subject = $rendered['subject'];
+                $html = $rendered['body_html'];
             } else {
                 $subject = "⚠ Alertă stoc: {$ttName} — {$eventName}";
                 $html = "<div style='font-family:sans-serif;font-size:14px;color:#333;'>"
