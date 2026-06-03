@@ -60,20 +60,13 @@ class CleanupExpiredOrders extends Command
 
                 // Check if any of these seats are still 'held'. We do NOT
                 // count 'sold' seats — a sold seat on a different order is
-                // legitimately taken; this stale-cleanup pass must never
-                // touch it (same bug as the main path, see processOrders).
-                $ownTicketIds = $order->tickets()->pluck('id')->all();
+                // legitimately taken; the status='held' filter on its own
+                // guarantees we skip sold seats (they live in status='sold').
                 $stuckCount = 0;
                 foreach ($seatInfo as $item) {
                     $stuckCount += EventSeat::where('event_seating_id', $item['event_seating_id'])
                         ->whereIn('seat_uid', $item['seat_uids'])
                         ->where('status', 'held')
-                        ->where(function ($q) use ($ownTicketIds) {
-                            $q->whereNull('sold_to_ticket_id');
-                            if (!empty($ownTicketIds)) {
-                                $q->orWhereIn('sold_to_ticket_id', $ownTicketIds);
-                            }
-                        })
                         ->count();
                 }
 
@@ -93,12 +86,6 @@ class CleanupExpiredOrders extends Command
                     $released = EventSeat::where('event_seating_id', $item['event_seating_id'])
                         ->whereIn('seat_uid', $item['seat_uids'])
                         ->where('status', 'held')
-                        ->where(function ($q) use ($ownTicketIds) {
-                            $q->whereNull('sold_to_ticket_id');
-                            if (!empty($ownTicketIds)) {
-                                $q->orWhereIn('sold_to_ticket_id', $ownTicketIds);
-                            }
-                        })
                         ->update([
                             'status' => 'available',
                             'version' => DB::raw('version + 1'),
@@ -160,10 +147,11 @@ class CleanupExpiredOrders extends Command
                     // of expired 172969+172970 at 13:26 flipped seats back to
                     // 'available'; Laura then bought the same seats @ 13:49).
                     //
-                    // Additional guard: even if a seat is somehow in 'held'
-                    // status with sold_to_ticket_id set (legacy/stale data),
-                    // don't release it if the sold ticket isn't ours.
-                    $ownTicketIds = $order->tickets()->pluck('id')->all();
+                    // status='held' already protects sold seats — they live
+                    // in status='sold' and don't match this update. The
+                    // previous additional sold_to_ticket_id defensive guard
+                    // pointed at a column that doesn't exist on event_seats
+                    // and broke every cleanup run with SQLSTATE 42703.
 
                     $seatInfo = $this->extractSeatInfo($order);
                     foreach ($seatInfo as $item) {
@@ -173,12 +161,6 @@ class CleanupExpiredOrders extends Command
                         $released = EventSeat::where('event_seating_id', $eventSeatingId)
                             ->whereIn('seat_uid', $seatUids)
                             ->where('status', 'held')
-                            ->where(function ($q) use ($ownTicketIds) {
-                                $q->whereNull('sold_to_ticket_id');
-                                if (!empty($ownTicketIds)) {
-                                    $q->orWhereIn('sold_to_ticket_id', $ownTicketIds);
-                                }
-                            })
                             ->update([
                                 'status' => 'available',
                                 'version' => DB::raw('version + 1'),

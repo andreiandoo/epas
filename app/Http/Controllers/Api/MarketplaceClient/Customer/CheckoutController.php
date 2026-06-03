@@ -620,23 +620,21 @@ class CheckoutController extends BaseController
                                     ? ($oldOrder->meta['seated_items'] ?? [])
                                     : [];
                                 $releasedSeats = 0;
-                                $ownTicketIds = \App\Models\Ticket::where('order_id', $oldOrder->id)->pluck('id')->all();
 
                                 foreach ($oldSeatedItems as $item) {
                                     if (empty($item['event_seating_id']) || empty($item['seat_uids'])) continue;
-                                    // Release ONLY held seats — never sold
-                                    // ones (same defensive guard as the
-                                    // cleanup cron fix).
+                                    // Release ONLY held seats — the status='held'
+                                    // filter is sufficient on its own; sold
+                                    // seats live in status='sold' and never
+                                    // match this update. The previous extra
+                                    // sold_to_ticket_id defensive guard
+                                    // referenced a column that doesn't exist
+                                    // on event_seats and crashed the whole
+                                    // checkout (SQLSTATE 42703).
                                     $releasedSeats += \App\Models\Seating\EventSeat::query()
                                         ->where('event_seating_id', $item['event_seating_id'])
                                         ->whereIn('seat_uid', $item['seat_uids'])
                                         ->where('status', 'held')
-                                        ->where(function ($q) use ($ownTicketIds) {
-                                            $q->whereNull('sold_to_ticket_id');
-                                            if (!empty($ownTicketIds)) {
-                                                $q->orWhereIn('sold_to_ticket_id', $ownTicketIds);
-                                            }
-                                        })
                                         ->update([
                                             'status' => 'available',
                                             'version' => DB::raw('version + 1'),
