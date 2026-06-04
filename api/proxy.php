@@ -667,6 +667,24 @@ switch ($action) {
         $endpoint = '/contact';
         break;
 
+    case 'leads.create':
+        // Organizer-signup form submission from /inregistrare-locatie. Body
+        // shape validated upstream by LeadsController::create.
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/leads';
+        break;
+
+    case 'leads.track':
+        // Fire-and-forget funnel ping from /devino-partener and
+        // /inregistrare-locatie. Records anonymous page-view events
+        // keyed by the bo_lead_sid cookie so the journey can be linked
+        // to the resulting lead on submission.
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/leads/track';
+        break;
+
     case 'search':
         $query = $_GET['q'] ?? '';
         $limit = min((int)($_GET['limit'] ?? 10), 50);
