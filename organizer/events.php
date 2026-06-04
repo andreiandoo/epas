@@ -893,7 +893,9 @@ async function loadEvents() {
         let page = 1;
         while (true) {
             const response = await BileteOnlineAPI.organizer.getEvents({ per_page: 50, page });
-            const events = response.data || response || [];
+            // Robust to all core response shapes: data:[...] | data:{data:[...]} (paginator) | data:{events|items:[...]}
+            const _d = response && response.data;
+            const events = Array.isArray(_d) ? _d : (_d && (Array.isArray(_d.data) ? _d.data : (_d.events || _d.items))) || (Array.isArray(response) ? response : []);
             allEvents = allEvents.concat(events);
             if (events.length < 50) break;
             page++;

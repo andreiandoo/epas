@@ -86,14 +86,11 @@
             },
         };
     </script>
-    <script defer src="<?= asset('assets/js/config.js') ?>"></script>
-    <!-- Utilities -->
-    <script defer src="<?= asset('assets/js/utils.js') ?>"></script>
+    <!-- Core JS (config/utils/api/auth) is already loaded by head.php via core-bundle.js.
+         Re-loading the individual files here re-declares PHP_CONFIG / BileteOnlineUtils /
+         BileteOnlineAPI / BileteOnlineAuth and throws "already declared" SyntaxErrors,
+         so it is intentionally NOT repeated. Only the extras head.php does not load go here. -->
     <script defer src="<?= asset('assets/js/utils/data-transformer.js') ?>"></script>
-
-    <!-- Core -->
-    <script defer src="<?= asset('assets/js/api.js') ?>"></script>
-    <script defer src="<?= asset('assets/js/auth.js') ?>"></script>
     <script defer src="<?= asset('assets/js/cart.js') ?>"></script>
 
     <!-- Components -->

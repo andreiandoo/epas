@@ -232,6 +232,16 @@ RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^organizator/leisure-boats/?$ organizer/leisure-boats.php [L]
 
+# Organizer activities list - /organizator/activities (primary, activity-centric URL)
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^organizator/activities/?$ organizer/events.php [L,QSA]
+
+# Organizer activity detail/edit - /organizator/activities/{id} (and legacy /organizator/event/{id})
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^organizator/activities/([0-9]+)/?$ organizer/events.php?id=$1 [L,QSA]
+
 # Organizer event detail/edit - /organizator/event/{id}
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
