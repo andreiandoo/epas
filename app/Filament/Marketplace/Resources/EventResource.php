@@ -1796,6 +1796,24 @@ class EventResource extends Resource
                                                     ->label($t('Badge-uri hero', 'Hero badges'))
                                                     ->placeholder($t('Adaugă badge cu Enter', 'Add badge with Enter'))
                                                     ->helperText($t('ex: 🌿 Sit Natura 2000, 🏔️ Altitudine 950m', 'Use emoji + text')),
+
+                                                // 🌐 Traduceri hero (HU + EN) — stocate in venue_config.translations
+                                                SC\Section::make('🌐 ' . $t('Traduceri Hero (HU + EN)', 'Hero translations (HU + EN)'))
+                                                    ->description($t('Lasă gol = se afișează varianta RO. Badge-urile se traduc independent (HU + EN ca tag-uri separate).', 'Empty = RO shown. Badges translated as separate HU/EN tags.'))
+                                                    ->collapsed()
+                                                    ->schema([
+                                                        SC\Grid::make(2)->schema([
+                                                            Forms\Components\TextInput::make('venue_config.translations.title_primary.hu')->label('🇭🇺 ' . $t('Titlu principal (HU)', 'Primary title (HU)')),
+                                                            Forms\Components\TextInput::make('venue_config.translations.title_primary.en')->label('🇬🇧 Primary title (EN)'),
+                                                            Forms\Components\TextInput::make('venue_config.translations.title_secondary.hu')->label('🇭🇺 ' . $t('Subtitlu italic (HU)', 'Italic subtitle (HU)')),
+                                                            Forms\Components\TextInput::make('venue_config.translations.title_secondary.en')->label('🇬🇧 Italic subtitle (EN)'),
+                                                            Forms\Components\TextInput::make('venue_config.translations.hero_kicker.hu')->label('🇭🇺 ' . $t('Kicker (HU)', 'Kicker (HU)')),
+                                                            Forms\Components\TextInput::make('venue_config.translations.hero_kicker.en')->label('🇬🇧 Kicker (EN)'),
+                                                            Forms\Components\TagsInput::make('venue_config.translations.hero_badges.hu')->label('🇭🇺 ' . $t('Badge-uri hero (HU)', 'Hero badges (HU)'))->placeholder($t('Adaugă badge HU + Enter', 'Add HU badge + Enter')),
+                                                            Forms\Components\TagsInput::make('venue_config.translations.hero_badges.en')->label('🇬🇧 Hero badges (EN)')->placeholder($t('Adaugă badge EN + Enter', 'Add EN badge + Enter')),
+                                                        ]),
+                                                    ]),
+
                                                 Forms\Components\FileUpload::make('venue_config.hero_images')
                                                     ->label($t('Imagini hero (drag & drop)', 'Hero images (drag & drop)'))
                                                     ->image()
@@ -1826,6 +1844,16 @@ class EventResource extends Resource
                                                                 ->label($t('Valoare', 'Value'))
                                                                 ->placeholder($t('ex: Zonă cu urși', 'e.g. Bear area')),
                                                         ]),
+                                                        SC\Section::make('🌐 ' . $t('Traduceri (HU + EN)', 'Translations (HU + EN)'))
+                                                            ->collapsed()
+                                                            ->schema([
+                                                                SC\Grid::make(2)->schema([
+                                                                    Forms\Components\TextInput::make('translations.hu.label')->label('🇭🇺 ' . $t('Etichetă (HU)', 'Label (HU)')),
+                                                                    Forms\Components\TextInput::make('translations.en.label')->label('🇬🇧 Label (EN)'),
+                                                                    Forms\Components\TextInput::make('translations.hu.value')->label('🇭🇺 ' . $t('Valoare (HU)', 'Value (HU)')),
+                                                                    Forms\Components\TextInput::make('translations.en.value')->label('🇬🇧 Value (EN)'),
+                                                                ]),
+                                                            ]),
                                                     ])
                                                     ->itemLabel(fn (array $state): ?string => $state['label'] ?? null)
                                                     ->addActionLabel($t('Adaugă info', 'Add info'))
@@ -1879,6 +1907,8 @@ class EventResource extends Resource
                                                                     Forms\Components\TextInput::make('translations.en.name')->label('🇬🇧 Name (EN)'),
                                                                     Forms\Components\Textarea::make('translations.hu.description')->label('🇭🇺 ' . $t('Descriere (HU)', 'Description (HU)'))->rows(3),
                                                                     Forms\Components\Textarea::make('translations.en.description')->label('🇬🇧 ' . $t('Descriere (EN)', 'Description (EN)'))->rows(3),
+                                                                    Forms\Components\TagsInput::make('translations.hu.bullets')->label('🇭🇺 ' . $t('Bullets (HU)', 'Bullets (HU)'))->placeholder($t('Tastează HU + Enter', 'Type HU + Enter')),
+                                                                    Forms\Components\TagsInput::make('translations.en.bullets')->label('🇬🇧 Bullets (EN)')->placeholder($t('Type EN + Enter', 'Type EN + Enter')),
                                                                 ]),
                                                             ]),
                                                     ])
@@ -1905,6 +1935,14 @@ class EventResource extends Resource
                                                                 ->label($t('Etichetă', 'Label'))
                                                                 ->placeholder($t('ex: Ani de la formare', 'e.g. Years since formation')),
                                                         ]),
+                                                        SC\Section::make('🌐 ' . $t('Traduceri (HU + EN)', 'Translations (HU + EN)'))
+                                                            ->collapsed()
+                                                            ->schema([
+                                                                SC\Grid::make(2)->schema([
+                                                                    Forms\Components\TextInput::make('translations.hu.label')->label('🇭🇺 ' . $t('Etichetă (HU)', 'Label (HU)')),
+                                                                    Forms\Components\TextInput::make('translations.en.label')->label('🇬🇧 Label (EN)'),
+                                                                ]),
+                                                            ]),
                                                     ])
                                                     ->itemLabel(fn (array $state): ?string => ($state['value'] ?? '') . ' — ' . ($state['label'] ?? ''))
                                                     ->addActionLabel($t('Adaugă statistică', 'Add stat'))
@@ -2006,6 +2044,10 @@ class EventResource extends Resource
                                                                     Forms\Components\TextInput::make('translations.en.name')->label('🇬🇧 Name (EN)'),
                                                                     Forms\Components\Textarea::make('translations.hu.description')->label('🇭🇺 ' . $t('Descriere (HU)', 'Description (HU)'))->rows(2),
                                                                     Forms\Components\Textarea::make('translations.en.description')->label('🇬🇧 ' . $t('Descriere (EN)', 'Description (EN)'))->rows(2),
+                                                                    Forms\Components\TextInput::make('translations.hu.marker')->label('🇭🇺 ' . $t('Marcaj (HU)', 'Marker (HU)')),
+                                                                    Forms\Components\TextInput::make('translations.en.marker')->label('🇬🇧 Marker (EN)'),
+                                                                    Forms\Components\TextInput::make('translations.hu.start_point')->label('🇭🇺 ' . $t('Punct de plecare (HU)', 'Start point (HU)')),
+                                                                    Forms\Components\TextInput::make('translations.en.start_point')->label('🇬🇧 Start point (EN)'),
                                                                 ]),
                                                             ]),
                                                     ])
@@ -2033,6 +2075,17 @@ class EventResource extends Resource
                                                 Forms\Components\Textarea::make('venue_config.safety_warning.body')
                                                     ->label($t('Mesaj', 'Body'))
                                                     ->rows(3),
+                                                // 🌐 Traduceri safety_warning
+                                                SC\Section::make('🌐 ' . $t('Traduceri (HU + EN)', 'Translations (HU + EN)'))
+                                                    ->collapsed()
+                                                    ->schema([
+                                                        SC\Grid::make(2)->schema([
+                                                            Forms\Components\TextInput::make('venue_config.safety_warning.translations.hu.title')->label('🇭🇺 ' . $t('Titlu (HU)', 'Title (HU)')),
+                                                            Forms\Components\TextInput::make('venue_config.safety_warning.translations.en.title')->label('🇬🇧 Title (EN)'),
+                                                            Forms\Components\Textarea::make('venue_config.safety_warning.translations.hu.body')->label('🇭🇺 ' . $t('Mesaj (HU)', 'Body (HU)'))->rows(3),
+                                                            Forms\Components\Textarea::make('venue_config.safety_warning.translations.en.body')->label('🇬🇧 Body (EN)')->rows(3),
+                                                        ]),
+                                                    ]),
                                             ]),
 
                                         // ===== CUM AJUNGI =====
@@ -2067,6 +2120,8 @@ class EventResource extends Resource
                                                                     Forms\Components\TextInput::make('translations.en.title')->label('🇬🇧 Title (EN)'),
                                                                     Forms\Components\Textarea::make('translations.hu.description')->label('🇭🇺 ' . $t('Descriere (HU)', 'Description (HU)'))->rows(2),
                                                                     Forms\Components\Textarea::make('translations.en.description')->label('🇬🇧 ' . $t('Descriere (EN)', 'Description (EN)'))->rows(2),
+                                                                    Forms\Components\TextInput::make('translations.hu.note')->label('🇭🇺 ' . $t('Notă (HU)', 'Note (HU)')),
+                                                                    Forms\Components\TextInput::make('translations.en.note')->label('🇬🇧 Note (EN)'),
                                                                 ]),
                                                             ]),
                                                     ])

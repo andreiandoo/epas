@@ -440,6 +440,46 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                         <span class="text-xs font-semibold text-muted uppercase tracking-wider">Titlu secțiune "Despre"</span>
                         <input type="text" data-vc="about_title" class="vc-input mt-1 w-full px-3 py-2 border border-border rounded-lg" placeholder="ex: Două cratere, o poveste">
                     </label>
+
+                    <!-- 🌐 Traduceri Hero (HU + EN) — opt-in -->
+                    <details class="border border-amber-200 bg-amber-50 rounded-lg p-3">
+                        <summary class="text-sm font-semibold text-amber-900 cursor-pointer">🌐 Traduceri Hero (HU + EN) — opțional</summary>
+                        <p class="text-[11px] text-amber-800 mt-1 mb-3">Câmpurile goale rămân în limba română (textul de mai sus).</p>
+                        <div class="grid md:grid-cols-2 gap-3">
+                            <label class="block">
+                                <span class="text-[10px] uppercase text-amber-800">🇭🇺 Titlu principal (HU)</span>
+                                <input type="text" data-vc-nested="translations.title_primary.hu" class="vc-input mt-1 w-full px-2 py-1.5 text-sm border border-amber-300 rounded bg-white">
+                            </label>
+                            <label class="block">
+                                <span class="text-[10px] uppercase text-amber-800">🇬🇧 Primary title (EN)</span>
+                                <input type="text" data-vc-nested="translations.title_primary.en" class="vc-input mt-1 w-full px-2 py-1.5 text-sm border border-amber-300 rounded bg-white">
+                            </label>
+                            <label class="block">
+                                <span class="text-[10px] uppercase text-amber-800">🇭🇺 Subtitlu italic (HU)</span>
+                                <input type="text" data-vc-nested="translations.title_secondary.hu" class="vc-input mt-1 w-full px-2 py-1.5 text-sm border border-amber-300 rounded bg-white">
+                            </label>
+                            <label class="block">
+                                <span class="text-[10px] uppercase text-amber-800">🇬🇧 Italic subtitle (EN)</span>
+                                <input type="text" data-vc-nested="translations.title_secondary.en" class="vc-input mt-1 w-full px-2 py-1.5 text-sm border border-amber-300 rounded bg-white">
+                            </label>
+                            <label class="block">
+                                <span class="text-[10px] uppercase text-amber-800">🇭🇺 Kicker (HU)</span>
+                                <input type="text" data-vc-nested="translations.hero_kicker.hu" class="vc-input mt-1 w-full px-2 py-1.5 text-sm border border-amber-300 rounded bg-white">
+                            </label>
+                            <label class="block">
+                                <span class="text-[10px] uppercase text-amber-800">🇬🇧 Kicker (EN)</span>
+                                <input type="text" data-vc-nested="translations.hero_kicker.en" class="vc-input mt-1 w-full px-2 py-1.5 text-sm border border-amber-300 rounded bg-white">
+                            </label>
+                            <label class="block md:col-span-2">
+                                <span class="text-[10px] uppercase text-amber-800">🇭🇺 Badge-uri hero (HU, separate prin virgulă)</span>
+                                <input type="text" data-vc-list-nested="translations.hero_badges.hu" class="vc-input mt-1 w-full px-2 py-1.5 text-sm border border-amber-300 rounded bg-white" placeholder="🌿 Natura 2000 hely, 🏔️ 950m magasság">
+                            </label>
+                            <label class="block md:col-span-2">
+                                <span class="text-[10px] uppercase text-amber-800">🇬🇧 Hero badges (EN, comma-separated)</span>
+                                <input type="text" data-vc-list-nested="translations.hero_badges.en" class="vc-input mt-1 w-full px-2 py-1.5 text-sm border border-amber-300 rounded bg-white" placeholder="🌿 Natura 2000 site, 🏔️ 950m altitude">
+                            </label>
+                        </div>
+                    </details>
                 </div>
             </details>
 
@@ -493,6 +533,29 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                         <span class="text-xs font-semibold text-muted uppercase tracking-wider">Mesaj</span>
                         <textarea data-vc-nested="safety_warning.body" rows="3" class="vc-input mt-1 w-full px-3 py-2 border border-border rounded-lg" placeholder="Detalii recomandare..."></textarea>
                     </label>
+
+                    <!-- 🌐 Traduceri safety_warning -->
+                    <details class="border border-amber-200 bg-amber-50 rounded-lg p-3">
+                        <summary class="text-sm font-semibold text-amber-900 cursor-pointer">🌐 Traduceri (HU + EN) — opțional</summary>
+                        <div class="grid md:grid-cols-2 gap-3 mt-3">
+                            <label class="block">
+                                <span class="text-[10px] uppercase text-amber-800">🇭🇺 Titlu (HU)</span>
+                                <input type="text" data-vc-nested="safety_warning.translations.hu.title" class="vc-input mt-1 w-full px-2 py-1.5 text-sm border border-amber-300 rounded bg-white">
+                            </label>
+                            <label class="block">
+                                <span class="text-[10px] uppercase text-amber-800">🇬🇧 Title (EN)</span>
+                                <input type="text" data-vc-nested="safety_warning.translations.en.title" class="vc-input mt-1 w-full px-2 py-1.5 text-sm border border-amber-300 rounded bg-white">
+                            </label>
+                            <label class="block md:col-span-2">
+                                <span class="text-[10px] uppercase text-amber-800">🇭🇺 Mesaj (HU)</span>
+                                <textarea data-vc-nested="safety_warning.translations.hu.body" rows="3" class="vc-input mt-1 w-full px-2 py-1.5 text-sm border border-amber-300 rounded bg-white"></textarea>
+                            </label>
+                            <label class="block md:col-span-2">
+                                <span class="text-[10px] uppercase text-amber-800">🇬🇧 Body (EN)</span>
+                                <textarea data-vc-nested="safety_warning.translations.en.body" rows="3" class="vc-input mt-1 w-full px-2 py-1.5 text-sm border border-amber-300 rounded bg-white"></textarea>
+                            </label>
+                        </div>
+                    </details>
                 </div>
             </details>
 
@@ -1627,6 +1690,14 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             input.value = typeof val === 'string' ? val : '';
         });
 
+        // Populate nested list fields (e.g. translations.hero_badges.hu) — CSV format.
+        document.querySelectorAll('[data-vc-list-nested]').forEach((input) => {
+            const path = input.dataset.vcListNested.split('.');
+            let val = currentVenueConfig;
+            for (const p of path) val = (val && val[p] !== undefined) ? val[p] : null;
+            input.value = Array.isArray(val) ? val.join(', ') : '';
+        });
+
         // Populate FAQ list
         const faqList = $('faq-list');
         if (faqList) {
@@ -1639,7 +1710,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         const statsList = $('stats-list');
         if (statsList) {
             statsList.innerHTML = '';
-            (currentVenueConfig.stats_highlights || []).forEach((s, i) => statsList.appendChild(makeStatRow(s.value || '', s.label || '', i)));
+            (currentVenueConfig.stats_highlights || []).forEach((s, i) => statsList.appendChild(makeStatRow(s.value || '', s.label || '', i, s.translations || {})));
             if ((currentVenueConfig.stats_highlights || []).length === 0) statsList.appendChild(makeStatRow('', '', 0));
         }
 
@@ -1683,15 +1754,19 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         return wrap;
     }
 
-    function makeStatRow(value, label) {
+    function makeStatRow(value, label, idx, translations) {
         const wrap = document.createElement('div');
-        wrap.className = 'flex items-start gap-2';
+        wrap.className = 'p-2 bg-slate-50 rounded-lg';
+        const trData = { translations: translations || {} };
         wrap.innerHTML = `
-            <input type="text" class="stat-value flex-1 px-3 py-2 border border-border rounded-lg" placeholder="Valoare (ex: 30k, 950m)" value="${escapeHtml(value)}">
-            <input type="text" class="stat-label flex-1 px-3 py-2 border border-border rounded-lg" placeholder="Etichetă (ex: Ani de la formare)" value="${escapeHtml(label)}">
-            <button type="button" class="stat-remove p-2 text-error hover:bg-red-100 rounded-lg">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22"/></svg>
-            </button>
+            <div class="flex items-start gap-2">
+                <input type="text" class="stat-value flex-1 px-3 py-2 border border-border rounded-lg bg-white" placeholder="Valoare (ex: 30k, 950m)" value="${escapeHtml(value)}">
+                <input type="text" class="stat-label flex-1 px-3 py-2 border border-border rounded-lg bg-white" placeholder="Etichetă (ex: Ani de la formare)" value="${escapeHtml(label)}">
+                <button type="button" class="stat-remove p-2 text-error hover:bg-red-100 rounded-lg">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22"/></svg>
+                </button>
+            </div>
+            ${makeTranslationFields(trData, [{key: 'label', label: 'Etichetă'}])}
         `;
         wrap.querySelector('.stat-remove').addEventListener('click', () => wrap.remove());
         return wrap;
@@ -2008,6 +2083,12 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             setNested(payload, input.dataset.vcNested, input.value.trim());
         });
 
+        // Nested list fields (CSV → array, ex: translations.hero_badges.hu)
+        document.querySelectorAll('[data-vc-list-nested]').forEach((input) => {
+            const arr = input.value.split(',').map(s => s.trim()).filter(Boolean);
+            setNested(payload, input.dataset.vcListNested, arr);
+        });
+
         // FAQ list (cu suport traduceri HU + EN prin data-rep="translations.XX.q/a")
         const faqs = [];
         document.querySelectorAll('#faq-list > div').forEach((row) => {
@@ -2026,12 +2107,20 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         });
         payload.faqs = faqs;
 
-        // Stats highlights
+        // Stats highlights (cu suport traduceri prin data-rep="translations.XX.label")
         const stats = [];
         document.querySelectorAll('#stats-list > div').forEach((row) => {
             const value = row.querySelector('.stat-value')?.value.trim() || '';
             const label = row.querySelector('.stat-label')?.value.trim() || '';
-            if (value || label) stats.push({ value, label });
+            const item = { value, label };
+            row.querySelectorAll('[data-rep]').forEach((el) => {
+                const key = el.dataset.rep;
+                let val = el.value;
+                if (typeof val === 'string') val = val.trim();
+                if (val === '' || val === null || val === undefined) return;
+                if (key.indexOf('.') !== -1) setNested(item, key, val);
+            });
+            if (value || label) stats.push(item);
         });
         payload.stats_highlights = stats;
 

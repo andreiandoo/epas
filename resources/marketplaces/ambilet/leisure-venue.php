@@ -137,8 +137,36 @@ $gettingThere = $venueConfig['getting_there'] ?? [];
 $trails       = lv_localize_accordion_items($trails,       $publicLocale);
 $faqs         = lv_localize_accordion_items($faqs,         $publicLocale);
 $flora        = lv_localize_accordion_items($flora,        $publicLocale);
-$attractions  = lv_localize_accordion_items($attractions,  $publicLocale);
-$gettingThere = lv_localize_accordion_items($gettingThere, $publicLocale);
+$attractions  = lv_localize_accordion_items($attractions,  $publicLocale, ['title', 'name', 'description', 'bullets']);
+$gettingThere = lv_localize_accordion_items($gettingThere, $publicLocale, ['title', 'name', 'description', 'note']);
+$quickStats   = lv_localize_accordion_items($quickStats,   $publicLocale, ['label', 'value']);
+$statsHighlights = lv_localize_accordion_items($statsHighlights, $publicLocale, ['label']);
+
+// Hero traduceri (campuri simple pe venue_config.translations)
+$heroTranslations = is_array($venueConfig['translations'] ?? null) ? $venueConfig['translations'] : [];
+$pickTr = function (string $field) use ($heroTranslations, $publicLocale) {
+    if ($publicLocale === 'ro') return null;
+    $value = $heroTranslations[$field][$publicLocale] ?? null;
+    return ($value !== null && $value !== '') ? $value : null;
+};
+if ($publicLocale !== 'ro') {
+    if ($v = $pickTr('title_primary'))   $titlePrimary = $v;
+    if ($v = $pickTr('title_secondary')) $titleSecondary = $v;
+    if ($v = $pickTr('hero_kicker'))     $heroKicker = $v;
+    // hero_badges: array de string-uri, varianta locale daca exista
+    if (isset($heroTranslations['hero_badges'][$publicLocale]) && is_array($heroTranslations['hero_badges'][$publicLocale]) && !empty($heroTranslations['hero_badges'][$publicLocale])) {
+        $heroBadges = $heroTranslations['hero_badges'][$publicLocale];
+    }
+}
+
+// Safety warning (titlu + body), salvat in venue_config.safety_warning.translations[locale].{title,body}
+if ($safetyWarning && is_array($safetyWarning) && $publicLocale !== 'ro') {
+    $swTr = $safetyWarning['translations'][$publicLocale] ?? null;
+    if (is_array($swTr)) {
+        if (!empty($swTr['title'])) $safetyWarning['title'] = $swTr['title'];
+        if (!empty($swTr['body']))  $safetyWarning['body']  = $swTr['body'];
+    }
+}
 
 // Map config
 $mapConfig = $venueConfig['map_config'] ?? [];
@@ -324,10 +352,28 @@ require_once __DIR__ . '/includes/head.php';
                 'order_summary' => 'Sumar comandă',
                 'subtotal_tickets' => 'Subtotal bilete',
                 'total_commission' => 'Total comision',
+                'commission_plus' => '+ Comision ticketing',
                 'total' => 'Total',
                 'choose_date_first' => 'Alege mai întâi data',
                 'missing_access' => 'Lipsesc bilete acces',
                 'continue_to_payment' => 'Continuă spre plată →',
+                // Booking section labels
+                'date_label' => '📅 Data vizitei',
+                'access_types_label' => '🎫 Tipuri de acces',
+                'tickets_selected_one' => 'bilet selectat',
+                'tickets_selected_many' => 'bilete selectate',
+                'savings_short' => 'Economisești',
+                'requires_access_some' => 'Unele necesită bilet de acces',
+                // Upsell + recommended
+                'recommended_for_you' => '✨ Recomandate pentru tine',
+                'see_all' => 'Vezi toate',
+                // FAQ section
+                'faqs_title' => 'Întrebări frecvente',
+                // Trail details
+                'trail_length' => 'Lungime',
+                'trail_duration' => 'Durată',
+                'trail_elevation' => 'Diferență',
+                'trail_starts_from' => 'Pornește din:',
             ],
             'hu' => [
                 'step1' => '1./2. lépés',
@@ -380,10 +426,24 @@ require_once __DIR__ . '/includes/head.php';
                 'order_summary' => 'Rendelés összesítő',
                 'subtotal_tickets' => 'Jegyek részösszege',
                 'total_commission' => 'Összes jutalék',
+                'commission_plus' => '+ Jegyértékesítési jutalék',
                 'total' => 'Összesen',
                 'choose_date_first' => 'Előbb válassz dátumot',
                 'missing_access' => 'Hiányzó belépőjegyek',
                 'continue_to_payment' => 'Tovább a fizetéshez →',
+                'date_label' => '📅 Látogatás dátuma',
+                'access_types_label' => '🎫 Belépőtípusok',
+                'tickets_selected_one' => 'jegy kiválasztva',
+                'tickets_selected_many' => 'jegy kiválasztva',
+                'savings_short' => 'Megtakarítás',
+                'requires_access_some' => 'Néhányhoz belépőjegy szükséges',
+                'recommended_for_you' => '✨ Ajánlott neked',
+                'see_all' => 'Mind megtekintése',
+                'faqs_title' => 'Gyakori kérdések',
+                'trail_length' => 'Hossz',
+                'trail_duration' => 'Időtartam',
+                'trail_elevation' => 'Szintkülönbség',
+                'trail_starts_from' => 'Indul innen:',
             ],
             'en' => [
                 'step1' => 'Step 1 of 2',
@@ -436,10 +496,24 @@ require_once __DIR__ . '/includes/head.php';
                 'order_summary' => 'Order summary',
                 'subtotal_tickets' => 'Tickets subtotal',
                 'total_commission' => 'Total commission',
+                'commission_plus' => '+ Ticketing commission',
                 'total' => 'Total',
                 'choose_date_first' => 'Pick a date first',
                 'missing_access' => 'Missing access tickets',
                 'continue_to_payment' => 'Continue to payment →',
+                'date_label' => '📅 Visit date',
+                'access_types_label' => '🎫 Access types',
+                'tickets_selected_one' => 'ticket selected',
+                'tickets_selected_many' => 'tickets selected',
+                'savings_short' => 'You save',
+                'requires_access_some' => 'Some require an access ticket',
+                'recommended_for_you' => '✨ Recommended for you',
+                'see_all' => 'See all',
+                'faqs_title' => 'Frequently asked questions',
+                'trail_length' => 'Length',
+                'trail_duration' => 'Duration',
+                'trail_elevation' => 'Elevation',
+                'trail_starts_from' => 'Starts from:',
             ],
         ],
     ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
@@ -592,7 +666,7 @@ foreach (['slug', '_route', '_path'] as $_drop) {
             <!-- LEFT: Calendar -->
             <div class="lg:col-span-5">
                 <div class="bg-white rounded-3xl border border-forest-100 shadow-sm p-6 lg:p-7 lg:sticky lg:top-24">
-                    <p class="text-xs uppercase tracking-wider text-forest-700/60 font-bold mb-3">📅 Data vizitei</p>
+                    <p class="text-xs uppercase tracking-wider text-forest-700/60 font-bold mb-3" data-i18n="date_label">📅 Data vizitei</p>
                     <div class="flex items-center justify-between mb-5">
                         <button @click="prevMonth()" class="lv-qty-btn" aria-label="Luna anterioară">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
@@ -655,7 +729,7 @@ foreach (['slug', '_route', '_path'] as $_drop) {
 
             <!-- RIGHT: Tickets -->
             <div class="lg:col-span-7">
-                <p class="text-xs uppercase tracking-wider text-forest-700/60 font-bold mb-3">🎫 Tipuri de acces</p>
+                <p class="text-xs uppercase tracking-wider text-forest-700/60 font-bold mb-3" data-i18n="access_types_label">🎫 Tipuri de acces</p>
 
                 <div x-show="!selectedDate" class="bg-white rounded-2xl p-8 text-center border-2 border-dashed border-forest-200">
                     <svg class="w-12 h-12 mx-auto text-forest-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
@@ -687,7 +761,7 @@ foreach (['slug', '_route', '_path'] as $_drop) {
                                         <span x-show="ticket.is_parking" class="lv-badge bg-lake-100 text-lake-800 text-xs">🅿️ Parcare inclusă</span>
                                         <span x-show="ticket.service_category === 'package'" class="lv-badge bg-rose-100 text-rose-800 text-xs font-bold">🎁 PACHET</span>
                                         <span x-show="ticket.package_savings > 0" class="lv-badge bg-emerald-100 text-emerald-800 text-xs font-bold">
-                                            Economisești <span x-text="parseFloat(ticket.package_savings).toFixed(2)"></span> RON
+                                            <span data-i18n="savings_short">Economisești</span> <span x-text="parseFloat(ticket.package_savings).toFixed(2)"></span> RON
                                         </span>
                                     </div>
                                     <p x-show="ticket.description" class="text-sm text-forest-700/70 mb-3" x-text="ticket.description"></p>
@@ -802,12 +876,12 @@ foreach (['slug', '_route', '_path'] as $_drop) {
                         <div class="absolute -bottom-12 -left-12 w-48 h-48 rounded-full bg-forest-400/20 blur-3xl"></div>
                         <div class="relative flex flex-col lg:flex-row lg:items-center gap-5">
                             <div class="flex-1">
-                                <p class="text-lake-200 text-xs uppercase tracking-[0.2em] font-bold mb-2">✨ Recomandate pentru tine</p>
+                                <p class="text-lake-200 text-xs uppercase tracking-[0.2em] font-bold mb-2" data-i18n="recommended_for_you">✨ Recomandate pentru tine</p>
                                 <h3 class="font-display text-xl lg:text-2xl font-bold mb-2" data-i18n="upsell_title">Fă vizita o experiență completă</h3>
                                 <p class="text-white/80 text-sm">Alege ce te tentează și economisește timp pe loc.</p>
                             </div>
                             <div class="flex gap-2 flex-shrink-0">
-                                <button @click="scrollToServices()" class="lv-btn bg-white text-forest-800 hover:bg-lake-50">Vezi toate →</button>
+                                <button @click="scrollToServices()" class="lv-btn bg-white text-forest-800 hover:bg-lake-50" data-i18n="see_all">Vezi toate →</button>
                                 <button @click="upsellDismissed = true" class="p-2 text-white/60 hover:text-white" aria-label="Închide">
                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
                                 </button>
@@ -840,12 +914,12 @@ foreach (['slug', '_route', '_path'] as $_drop) {
     <div class="max-w-7xl mx-auto">
         <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-4 mb-12">
             <div>
-                <p class="text-forest-600 text-xs uppercase tracking-[0.3em] font-bold mb-3">Pasul 2 din 2 · Opțional</p>
+                <p class="text-forest-600 text-xs uppercase tracking-[0.3em] font-bold mb-3" data-i18n="step2">Pasul 2 din 2 · Opțional</p>
                 <h2 class="font-display text-4xl lg:text-5xl font-bold text-ink mb-3" data-i18n="extra_services">Servicii suplimentare</h2>
-                <p class="text-forest-700/70 max-w-xl">Adaugă plimbare cu barca, ghid privat sau alte experiențe.</p>
+                <p class="text-forest-700/70 max-w-xl" data-i18n="step2_subtitle">Adaugă plimbare cu barca, ghid privat sau alte experiențe.</p>
             </div>
             <span class="lv-badge bg-fog text-forest-700 border border-forest-100" x-show="anyRequiresAccess">
-                ⚠️ Unele necesită bilet de acces
+                ⚠️ <span data-i18n="requires_access_some">Unele necesită bilet de acces</span>
             </span>
         </div>
         <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -871,7 +945,7 @@ foreach (['slug', '_route', '_path'] as $_drop) {
                             <span x-show="service.access_requirement === 'adult_only'" class="lv-badge bg-amber-50 text-amber-700 text-[10px]">Necesită bilet acces ADULT</span>
                             <span x-show="service.access_requirement === 'any'" class="lv-badge bg-amber-50 text-amber-700 text-[10px]" data-i18n="requires_access_short">Necesită bilet acces</span>
                             <span x-show="service.package_savings > 0" class="lv-badge bg-emerald-100 text-emerald-800 text-[10px] font-bold">
-                                Economisești <span x-text="parseFloat(service.package_savings).toFixed(2)"></span> RON
+                                <span data-i18n="savings_short">Economisești</span> <span x-text="parseFloat(service.package_savings).toFixed(2)"></span> RON
                             </span>
                         </div>
                         <!-- F10: Banner blocked time ranges pentru ziua selectată -->
@@ -989,10 +1063,10 @@ foreach (['slug', '_route', '_path'] as $_drop) {
                     <?php endif; ?>
                 </div>
                 <div class="grid grid-cols-3 gap-3 pt-4 border-t border-white/10">
-                    <?php foreach (['length' => 'Lungime', 'duration' => 'Durată', 'elevation' => 'Diferență'] as $k => $lbl): ?>
+                    <?php foreach (['length' => ['Lungime', 'trail_length'], 'duration' => ['Durată', 'trail_duration'], 'elevation' => ['Diferență', 'trail_elevation']] as $k => $meta): ?>
                     <?php if (!empty($trail[$k])): ?>
                     <div>
-                        <p class="text-xs text-white/50 uppercase tracking-wider font-medium"><?= $lbl ?></p>
+                        <p class="text-xs text-white/50 uppercase tracking-wider font-medium" data-i18n="<?= $meta[1] ?>"><?= $meta[0] ?></p>
                         <p class="font-display text-lg font-bold mt-0.5"><?= htmlspecialchars($trail[$k]) ?></p>
                     </div>
                     <?php endif; ?>
@@ -1001,7 +1075,7 @@ foreach (['slug', '_route', '_path'] as $_drop) {
                 <?php if (!empty($trail['start_point'])): ?>
                 <div class="mt-4 flex items-center gap-2 text-sm">
                     <svg class="w-4 h-4 text-lake-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/></svg>
-                    <span class="text-white/70">Pornește din: <span class="font-semibold text-white"><?= htmlspecialchars($trail['start_point']) ?></span></span>
+                    <span class="text-white/70"><span data-i18n="trail_starts_from">Pornește din:</span> <span class="font-semibold text-white"><?= htmlspecialchars($trail['start_point']) ?></span></span>
                 </div>
                 <?php endif; ?>
             </div>
@@ -1252,7 +1326,7 @@ foreach (['slug', '_route', '_path'] as $_drop) {
     <div class="max-w-3xl mx-auto">
         <div class="text-center mb-10">
             <p class="text-forest-600 text-xs uppercase tracking-[0.3em] font-bold mb-3" data-i18n="good_to_know">Bine de știut</p>
-            <h2 class="font-display text-4xl lg:text-5xl font-bold text-ink">Întrebări frecvente</h2>
+            <h2 class="font-display text-4xl lg:text-5xl font-bold text-ink" data-i18n="faqs_title">Întrebări frecvente</h2>
         </div>
         <div class="space-y-3">
             <template x-for="(faq, idx) in faqs" :key="idx">
@@ -1276,7 +1350,7 @@ foreach (['slug', '_route', '_path'] as $_drop) {
             <div class="flex items-center gap-3 min-w-0">
                 <div class="w-10 h-10 bg-lake-400 rounded-xl flex items-center justify-center flex-shrink-0 font-bold text-forest-900" x-text="cartCount"></div>
                 <div class="text-left min-w-0">
-                    <p class="font-bold text-sm" x-text="cartCount + (cartCount === 1 ? ' bilet selectat' : ' items selectate')"></p>
+                    <p class="font-bold text-sm" x-text="cartCount + ' ' + (cartCount === 1 ? t('tickets_selected_one') : t('tickets_selected_many'))"></p>
                     <p class="text-xs text-white/60 truncate" x-text="selectedDate ? 'Pentru ' + formatDate(selectedDate) : 'Alege data'"></p>
                 </div>
             </div>
@@ -1308,7 +1382,7 @@ foreach (['slug', '_route', '_path'] as $_drop) {
                             </div>
                         </template>
                         <div x-show="hasCommission" class="flex items-center justify-between text-xs text-white/50 mt-0.5 pl-3">
-                            <span>+ Comision ticketing</span>
+                            <span data-i18n="commission_plus">+ Comision ticketing</span>
                             <span>+<span x-text="(item.qty * commissionPerTicket(item.effective_price)).toFixed(2)"></span> RON</span>
                         </div>
                     </div>
@@ -1389,6 +1463,8 @@ function reservationPage() {
         : ['Ianuarie','Februarie','Martie','Aprilie','Mai','Iunie','Iulie','August','Septembrie','Octombrie','Noiembrie','Decembrie'];
 
     return {
+        // i18n helper expus pe Alpine scope (utilizat in template prin t('key'))
+        t: t,
         cartOpen: false,
         openFaq: 0,
         upsellDismissed: false,
