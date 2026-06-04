@@ -442,25 +442,29 @@ class MarketplaceNewsletter extends Model
     /**
      * Customer IDs who own at least one valid ticket for any of $eventIds.
      *
-     * The schema has two flavours of buyer:
+     * The schema has THREE flavours of buyer for a marketplace event:
      *   1. Linked: orders.marketplace_customer_id is set (modern checkout
      *      flow always populates this).
-     *   2. Guest / legacy: only orders.customer_email is set. Old WP imports
-     *      (2022–2024 events on Ambilet) and guest checkouts never created
-     *      a marketplace_customer row.
+     *   2. Guest order: only orders.customer_email is set. Guest checkouts
+     *      never created a marketplace_customer row.
+     *   3. External / legacy import: rows live in external_tickets with
+     *      attendee_email per ticket. Old WP / iabilet imports for
+     *      QFeel-style theater shows have NO matching orders row at all —
+     *      each imported ticket is the only record of that buyer.
      *
-     * Returning only flavour #1 makes pre-2024 campaigns wildly undercount
-     * — 20 events × 100 buyers each got reported as ~80 unique recipients.
-     * We now ALSO:
-     *   - match orphan emails against existing customer rows (a buyer who
-     *     later registered an account uses the same email)
-     *   - optionally firstOrCreate a customer row for any remaining orphan
+     * Returning only flavour #1 makes legacy campaigns wildly undercount
+     * — a 15-event QFeel blast (~200 tickets each) was reporting 1 unique
+     * recipient because the only "modern" order was a POS catch-all sale.
+     *
+     * The fix unions all three sources, then:
+     *   - matches orphan emails against existing customer rows (buyers who
+     *     later registered an account use the same email)
+     *   - optionally firstOrCreate a customer row for any still-unresolved
      *     email when `$materializeOrphans=true` (set by send-time callers
      *     so the recipient pivot stays FK-valid).
      *
      * Materialized buyers get `accepts_marketing=false` to keep them out
-     * of future general blasts — they explicitly bought a ticket, but
-     * never opted in to marketing.
+     * of future general blasts — they bought a ticket, never opted in.
      */
     public function getEventBuyerCustomerIds(array $eventIds, bool $materializeOrphans = false): \Illuminate\Support\Collection
     {
@@ -478,56 +482,36 @@ class MarketplaceNewsletter extends Model
             ->pluck('orders.marketplace_customer_id')
             ->unique();
 
-        $orphanRows = \DB::table('tickets')
-            ->join('orders', 'orders.id', '=', 'tickets.order_id')
-            ->join('ticket_types', 'ticket_types.id', '=', 'tickets.ticket_type_id')
-            ->whereIn('ticket_types.event_id', $eventIds)
-            ->where('tickets.status', 'valid')
-            ->whereNull('orders.marketplace_customer_id')
-            ->where('orders.marketplace_client_id', $clientId)
-            ->whereNotNull('orders.customer_email')
-            ->where('orders.customer_email', '!=', '')
-            ->select('orders.customer_email', 'orders.customer_name')
-            ->distinct()
-            ->get();
+        // All unique emails from orders + external_tickets — both legacy
+        // sources that don't have customer FKs.
+        $allEmails = $this->getEventBuyerEmails($eventIds);
 
-        $orphanEmails = $orphanRows
-            ->map(fn ($r) => strtolower(trim((string) $r->customer_email)))
-            ->filter(fn ($e) => $e !== '' && filter_var($e, FILTER_VALIDATE_EMAIL))
-            ->unique()
-            ->values();
-
-        if ($orphanEmails->isEmpty()) {
+        if ($allEmails->isEmpty()) {
             return $linkedIds->values();
         }
 
         $existingByEmail = MarketplaceCustomer::where('marketplace_client_id', $clientId)
-            ->whereIn('email', $orphanEmails->all())
+            ->whereIn('email', $allEmails->all())
             ->pluck('id', 'email');
 
         $resolved = $linkedIds->concat($existingByEmail->values());
-        $stillUnresolved = $orphanEmails->diff($existingByEmail->keys()->map(fn ($e) => strtolower($e)))->values();
+        $stillUnresolved = $allEmails->diff(
+            $existingByEmail->keys()->map(fn ($e) => strtolower($e))
+        )->values();
 
         if ($materializeOrphans && $stillUnresolved->isNotEmpty()) {
-            // Build email→name lookup once so each firstOrCreate carries a
-            // sensible label (rather than empty first_name) on the new row.
-            $nameByEmail = [];
-            foreach ($orphanRows as $row) {
-                $em = strtolower(trim((string) $row->customer_email));
-                if ($em !== '' && !isset($nameByEmail[$em]) && !empty($row->customer_name)) {
-                    $nameByEmail[$em] = $row->customer_name;
-                }
-            }
+            $nameByEmail = $this->buildBuyerNameLookup($eventIds);
 
             foreach ($stillUnresolved as $email) {
+                $names = $nameByEmail[$email] ?? ['first' => '', 'last' => ''];
                 $customer = MarketplaceCustomer::firstOrCreate(
                     [
                         'marketplace_client_id' => $clientId,
                         'email' => $email,
                     ],
                     [
-                        'first_name' => $nameByEmail[$email] ?? '',
-                        'last_name' => '',
+                        'first_name' => $names['first'],
+                        'last_name' => $names['last'],
                         'accepts_marketing' => false,
                         'status' => 'active',
                     ]
@@ -540,28 +524,101 @@ class MarketplaceNewsletter extends Model
     }
 
     /**
-     * Unique lowercased buyer emails for any of $eventIds — same semantics
-     * as getEventBuyerCustomerIds() but in email-space. Used by the
-     * read-only count path so guest/legacy buyers without a
+     * Unique lowercased buyer emails for any of $eventIds — UNION across
+     * BOTH ticket sources:
+     *   - orders.customer_email via the modern checkout (tickets table)
+     *   - external_tickets.attendee_email for legacy WP / iabilet imports
+     *
+     * Used by the read-only count path so guest + import buyers without a
      * marketplace_customers row still show up in the sidebar total.
      */
     public function getEventBuyerEmails(array $eventIds): \Illuminate\Support\Collection
     {
         if (empty($eventIds)) return collect();
 
-        return \DB::table('tickets')
+        $clientId = $this->marketplace_client_id;
+
+        $orderEmails = \DB::table('tickets')
             ->join('orders', 'orders.id', '=', 'tickets.order_id')
             ->join('ticket_types', 'ticket_types.id', '=', 'tickets.ticket_type_id')
             ->whereIn('ticket_types.event_id', $eventIds)
             ->where('tickets.status', 'valid')
-            ->where('orders.marketplace_client_id', $this->marketplace_client_id)
+            ->where('orders.marketplace_client_id', $clientId)
             ->whereNotNull('orders.customer_email')
             ->where('orders.customer_email', '!=', '')
-            ->pluck('orders.customer_email')
+            ->pluck('orders.customer_email');
+
+        $externalEmails = collect();
+        if (\Schema::hasTable('external_tickets')) {
+            $externalEmails = \DB::table('external_tickets')
+                ->whereIn('event_id', $eventIds)
+                ->where('marketplace_client_id', $clientId)
+                ->where('status', 'valid')
+                ->whereNotNull('attendee_email')
+                ->where('attendee_email', '!=', '')
+                ->pluck('attendee_email');
+        }
+
+        return $orderEmails
+            ->concat($externalEmails)
             ->map(fn ($e) => strtolower(trim((string) $e)))
             ->filter(fn ($e) => $e !== '' && filter_var($e, FILTER_VALIDATE_EMAIL))
             ->unique()
             ->values();
+    }
+
+    /**
+     * email → ['first' => …, 'last' => …] lookup pulled from BOTH sources
+     * so firstOrCreate'd customer rows carry a sensible label rather than
+     * an empty name. Modern orders only have a single `customer_name`
+     * field, so it lands as `first` with `last` empty.
+     */
+    protected function buildBuyerNameLookup(array $eventIds): array
+    {
+        $clientId = $this->marketplace_client_id;
+        $names = [];
+
+        \DB::table('tickets')
+            ->join('orders', 'orders.id', '=', 'tickets.order_id')
+            ->join('ticket_types', 'ticket_types.id', '=', 'tickets.ticket_type_id')
+            ->whereIn('ticket_types.event_id', $eventIds)
+            ->where('tickets.status', 'valid')
+            ->whereNull('orders.marketplace_customer_id')
+            ->where('orders.marketplace_client_id', $clientId)
+            ->whereNotNull('orders.customer_email')
+            ->where('orders.customer_email', '!=', '')
+            ->select('orders.customer_email as email', 'orders.customer_name as name')
+            ->distinct()
+            ->get()
+            ->each(function ($r) use (&$names) {
+                $em = strtolower(trim((string) $r->email));
+                if ($em !== '' && !isset($names[$em]) && !empty($r->name)) {
+                    $names[$em] = ['first' => (string) $r->name, 'last' => ''];
+                }
+            });
+
+        if (\Schema::hasTable('external_tickets')) {
+            \DB::table('external_tickets')
+                ->whereIn('event_id', $eventIds)
+                ->where('marketplace_client_id', $clientId)
+                ->where('status', 'valid')
+                ->whereNotNull('attendee_email')
+                ->where('attendee_email', '!=', '')
+                ->select('attendee_email as email', 'attendee_first_name as first_name', 'attendee_last_name as last_name')
+                ->distinct()
+                ->get()
+                ->each(function ($r) use (&$names) {
+                    $em = strtolower(trim((string) $r->email));
+                    if ($em !== '' && !isset($names[$em]) && (!empty($r->first_name) || !empty($r->last_name))) {
+                        $names[$em] = [
+                            'first' => (string) ($r->first_name ?? ''),
+                            'last' => (string) ($r->last_name ?? ''),
+                        ];
+                    }
+                });
+        }
+
+        return $names;
     }
 
     /**
