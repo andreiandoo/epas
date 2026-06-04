@@ -613,6 +613,7 @@ const BileteOnlineAPI = {
         if (endpoint === '/organizer/services/email-audiences' || endpoint.includes('/organizer/services/email-audiences?')) return 'organizer.services.email-audiences';
         if (endpoint.match(/\/organizer\/services\/orders\/[^\/\?]+\/pay$/)) return 'organizer.services.orders.pay';
         if (endpoint.match(/\/organizer\/services\/orders\/[^\/\?]+\/cancel$/)) return 'organizer.services.orders.cancel';
+        if (endpoint.match(/\/organizer\/services\/orders\/[^\/\?]+\/tracking-pixels$/)) return 'organizer.services.orders.tracking-pixels';
         if (endpoint.match(/\/organizer\/services\/orders\/[^\/\?]+$/)) return 'organizer.services.orders.show';
         if (endpoint === '/organizer/services/orders' || endpoint.includes('/organizer/services/orders?')) return 'organizer.services.orders';
 

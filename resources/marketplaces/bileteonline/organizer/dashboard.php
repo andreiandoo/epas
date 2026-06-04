@@ -12,7 +12,7 @@
 require_once dirname(__DIR__) . '/includes/config.php';
 $pageTitle   = 'Panou';
 $currentPage = 'dashboard';
-$headExtra   = '<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>';
+$extraHead   = '<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>';
 require_once dirname(__DIR__) . '/includes/head.php';
 require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 ?>
