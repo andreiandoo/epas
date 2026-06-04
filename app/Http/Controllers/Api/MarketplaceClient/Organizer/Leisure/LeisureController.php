@@ -164,6 +164,13 @@ class LeisureController extends BaseController
                     }
                 }
 
+                // Expun top-level field-urile pos_* + access_requirement + slots/inventory
+                // ca POS frontend-ul (leisure-pos.php) si mobile app-ul sa filtreze
+                // corect produsele si sa afiseze pretul POS. Frontend foloseste deja
+                // t.pos_price direct (linia 130+ in leisure-pos.php) — fara expunere
+                // explicita, valoarea era 'undefined' si toate produsele cu doar
+                // pos_price setat erau ascunse din POS panel.
+                $metaArr = is_array($tt->meta) ? $tt->meta : [];
                 return [
                     'id' => $tt->id,
                     'name' => $tt->name,
@@ -177,12 +184,22 @@ class LeisureController extends BaseController
                     'ticket_group' => $tt->ticket_group,
                     'issuing_company' => $tt->effective_issuing_company,
                     'issuing_explicit' => (bool) $tt->issuing_company,
-                    'meta' => is_array($tt->meta) ? $tt->meta : (object) [],
+                    'meta' => $metaArr ?: (object) [],
                     'variants' => $variants,
                     'addons' => $addons,
                     'package_outputs' => $packageOutputs,
                     'package_components_sum' => round($packageSum, 2),
                     'package_savings' => $packageOutputs ? round($packageSum - $price, 2) : 0,
+                    // Top-level mirror pentru meta-uri folosite la POS gating + UI
+                    'pos_price' => (isset($metaArr['pos_price']) && $metaArr['pos_price'] !== '' && $metaArr['pos_price'] !== null)
+                        ? (float) $metaArr['pos_price'] : null,
+                    'pos_only' => (bool) ($metaArr['pos_only'] ?? false),
+                    'is_child_ticket' => (bool) ($metaArr['is_child_ticket'] ?? false),
+                    'access_requirement' => in_array($metaArr['access_requirement'] ?? null, ['none','any','adult_only'], true)
+                        ? $metaArr['access_requirement']
+                        : 'none',
+                    'slots_config' => is_array($metaArr['slots_config'] ?? null) ? $metaArr['slots_config'] : null,
+                    'physical_inventory' => is_array($metaArr['physical_inventory'] ?? null) ? $metaArr['physical_inventory'] : null,
                 ];
             })->all(),
         ]);
