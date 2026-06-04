@@ -76,9 +76,10 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                                 <!-- Logo upload -->
                                 <div>
                                     <label class="block mb-2 text-xs font-semibold tracking-wider uppercase text-secondary">Logo organizator</label>
-                                    <div class="wl-upload-zone" onclick="this.querySelector('input[type=file]').click()">
+                                    <div class="wl-upload-zone" onclick="WidgetsPage.openPicker(event)">
                                         <input type="file" accept="image/*" style="display:none" onchange="WidgetsPage.uploadImage(this, 'logo', 'full-logo')">
                                         <input type="hidden" id="full-logo">
+                                        <button type="button" class="wl-upload-remove" aria-label="Șterge imagine" onclick="WidgetsPage.removeImage(event, 'logo', 'full-logo')">×</button>
                                         <div class="wl-upload-preview" id="preview-logo"></div>
                                         <div class="wl-upload-text">
                                             <div class="flex items-center justify-center w-10 h-10 mx-auto mb-2 rounded-full bg-primary/10">
@@ -88,14 +89,16 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                                             <span class="block mt-0.5 text-xs text-muted">PNG, SVG sau JPG &middot; max 5MB</span>
                                         </div>
                                     </div>
+                                    <p class="wl-upload-error" id="error-logo"></p>
                                 </div>
 
                                 <!-- Hero upload -->
                                 <div>
                                     <label class="block mb-2 text-xs font-semibold tracking-wider uppercase text-secondary">Imagine hero homepage</label>
-                                    <div class="wl-upload-zone wl-upload-wide" onclick="this.querySelector('input[type=file]').click()">
+                                    <div class="wl-upload-zone wl-upload-wide" onclick="WidgetsPage.openPicker(event)">
                                         <input type="file" accept="image/*" style="display:none" onchange="WidgetsPage.uploadImage(this, 'hero', 'full-hero-image')">
                                         <input type="hidden" id="full-hero-image">
+                                        <button type="button" class="wl-upload-remove" aria-label="Șterge imagine" onclick="WidgetsPage.removeImage(event, 'hero', 'full-hero-image')">×</button>
                                         <div class="wl-upload-preview" id="preview-hero"></div>
                                         <div class="wl-upload-text">
                                             <div class="flex items-center justify-center w-10 h-10 mx-auto mb-2 rounded-full bg-primary/10">
@@ -105,14 +108,16 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                                             <span class="block mt-0.5 text-xs text-muted">Recomandat: 1920×800px</span>
                                         </div>
                                     </div>
+                                    <p class="wl-upload-error" id="error-hero"></p>
                                 </div>
 
                                 <!-- Background upload -->
                                 <div>
                                     <label class="block mb-2 text-xs font-semibold tracking-wider uppercase text-secondary">Imagine de fundal <span class="font-normal normal-case text-muted">(opțional, toate paginile)</span></label>
-                                    <div class="wl-upload-zone" onclick="this.querySelector('input[type=file]').click()">
+                                    <div class="wl-upload-zone" onclick="WidgetsPage.openPicker(event)">
                                         <input type="file" accept="image/*" style="display:none" onchange="WidgetsPage.uploadImage(this, 'background', 'full-bg-image')">
                                         <input type="hidden" id="full-bg-image">
+                                        <button type="button" class="wl-upload-remove" aria-label="Șterge imagine" onclick="WidgetsPage.removeImage(event, 'background', 'full-bg-image')">×</button>
                                         <div class="wl-upload-preview" id="preview-background"></div>
                                         <div class="wl-upload-text">
                                             <div class="flex items-center justify-center w-10 h-10 mx-auto mb-2 rounded-full bg-slate-100">
@@ -122,6 +127,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                                             <span class="block mt-0.5 text-xs text-muted">Se aplică pe toate paginile</span>
                                         </div>
                                     </div>
+                                    <p class="wl-upload-error" id="error-background"></p>
                                 </div>
                             </div>
                             <div class="space-y-4">
@@ -292,6 +298,23 @@ require_once dirname(__DIR__) . '/includes/scripts.php';
 .wl-upload-preview img { width: 100%; height: 100%; object-fit: contain; }
 .wl-upload-wide { min-height: 120px; }
 .wl-upload-wide .wl-upload-preview img { object-fit: cover; }
+.wl-upload-remove {
+    position: absolute; top: 8px; right: 8px; z-index: 2;
+    width: 28px; height: 28px; border-radius: 9999px;
+    background: rgba(15, 23, 42, 0.85); color: #fff;
+    border: 0; cursor: pointer; display: none;
+    align-items: center; justify-content: center;
+    font-size: 18px; line-height: 1; padding: 0;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+    transition: background .15s ease, transform .15s ease;
+}
+.wl-upload-remove:hover { background: #dc2626; transform: scale(1.06); }
+.wl-upload-zone.has-image .wl-upload-remove { display: inline-flex; }
+.wl-upload-error {
+    display: none; margin-top: 6px;
+    font-size: 12px; color: #dc2626; line-height: 1.4;
+}
+.wl-upload-error.visible { display: block; }
 </style>
 <script>
 const WidgetsPage = {
@@ -427,6 +450,91 @@ const WidgetsPage = {
         if (panel) panel.style.display = '';
     },
 
+    // Opens the file picker without recursively triggering itself when the
+    // user clicks the embedded × delete button (which lives inside the same
+    // .wl-upload-zone). Without this guard, removeImage()'s stopPropagation
+    // would still race the zone's onclick handler in some browsers.
+    openPicker(ev) {
+        if (ev && ev.target && ev.target.closest && ev.target.closest('.wl-upload-remove')) {
+            return;
+        }
+        const zone = ev?.currentTarget || ev?.target?.closest?.('.wl-upload-zone');
+        if (!zone) return;
+        const input = zone.querySelector('input[type=file]');
+        if (input) input.click();
+    },
+
+    _showUploadError(type, message) {
+        const $err = document.getElementById('error-' + type);
+        if (!$err) return;
+        $err.textContent = message;
+        $err.classList.add('visible');
+    },
+
+    _clearUploadError(type) {
+        const $err = document.getElementById('error-' + type);
+        if (!$err) return;
+        $err.textContent = '';
+        $err.classList.remove('visible');
+    },
+
+    _resetUploadZone(type, fieldId) {
+        const $preview = document.getElementById('preview-' + type);
+        const $zone = $preview?.closest('.wl-upload-zone');
+        const $field = document.getElementById(fieldId);
+        if ($preview) $preview.innerHTML = '';
+        if ($zone) $zone.classList.remove('has-image');
+        if ($field) $field.value = '';
+        // Reset the file input so the same file can be re-selected after fix
+        const $file = $zone?.querySelector('input[type=file]');
+        if ($file) $file.value = '';
+    },
+
+    // Map upstream error response to a Romanian message the user can act on.
+    // Laravel returns 422 with { errors: { image: ['...'] } } when validation
+    // fails; everything else falls back to message/status-based defaults.
+    _mapUploadError(status, file, body) {
+        // Hard size cap before bytes even leave the browser
+        if (file && file.size > 5 * 1024 * 1024) {
+            return 'Fișier prea mare (' + (file.size / 1024 / 1024).toFixed(1) + ' MB). Limita este 5 MB.';
+        }
+
+        const validationMsg = body?.errors?.image?.[0] || body?.errors?.type?.[0];
+        if (validationMsg) {
+            // Laravel produces English messages by default; translate the
+            // common ones so the organizer sees something useful.
+            const lower = String(validationMsg).toLowerCase();
+            if (lower.includes('may not be greater') || lower.includes('larger than') || lower.includes('mai mare')) {
+                return 'Fișier prea mare. Limita este 5 MB.';
+            }
+            if (lower.includes('must be a file of type') || lower.includes('mimes') || lower.includes('type')) {
+                return 'Format neacceptat. Acceptăm doar PNG, JPG, WebP sau SVG.';
+            }
+            if (lower.includes('must be an image') || lower.includes('image')) {
+                return 'Fișierul nu pare a fi o imagine validă.';
+            }
+            return validationMsg;
+        }
+
+        if (body?.message && typeof body.message === 'string') {
+            return body.message;
+        }
+
+        if (status === 413) {
+            return 'Fișier prea mare. Limita este 5 MB.';
+        }
+        if (status === 422) {
+            return 'Imaginea nu a putut fi validată. Verifică formatul (PNG, JPG, WebP sau SVG, max 5 MB).';
+        }
+        if (status === 401 || status === 403) {
+            return 'Sesiune expirată. Reîncarcă pagina și încearcă din nou.';
+        }
+        if (status >= 500) {
+            return 'Eroare server. Încearcă din nou peste câteva momente.';
+        }
+        return 'Eroare la încărcare. Verifică conexiunea și încearcă din nou.';
+    },
+
     async uploadImage(fileInput, type, fieldId) {
         const file = fileInput.files[0];
         if (!file) return;
@@ -434,6 +542,17 @@ const WidgetsPage = {
         const zone = fileInput.closest('.wl-upload-zone');
         const previewId = 'preview-' + type;
         const $preview = document.getElementById(previewId);
+
+        this._clearUploadError(type);
+
+        // Early client-side size guard so the user doesn't wait for the upload
+        // round-trip to find out the file is too big.
+        if (file.size > 5 * 1024 * 1024) {
+            this._showUploadError(type, this._mapUploadError(0, file, null));
+            // Don't keep a misleading preview from the rejected file.
+            fileInput.value = '';
+            return;
+        }
 
         // Show local preview immediately
         const reader = new FileReader();
@@ -448,26 +567,49 @@ const WidgetsPage = {
         formData.append('image', file);
         formData.append('type', type);
 
+        let resp, result;
         try {
             const token = typeof AmbiletAuth !== 'undefined' ? AmbiletAuth.getToken() : null;
             const headers = {};
             if (token) headers['Authorization'] = 'Bearer ' + token;
 
-            const resp = await fetch(this.siteUrl + '/api/proxy.php?action=organizer.widget-image', {
+            resp = await fetch(this.siteUrl + '/api/proxy.php?action=organizer.widget-image', {
                 method: 'POST',
                 body: formData,
                 credentials: 'include',
                 headers: headers,
             });
-            const result = await resp.json();
-            if (result.success && result.data?.url) {
-                const $field = document.getElementById(fieldId);
-                if ($field) $field.value = result.data.url;
-            }
+            try { result = await resp.json(); } catch (_) { result = null; }
         } catch (e) {
             console.error('Upload failed:', e);
-            alert('Eroare la încărcarea imaginii.');
+            this._resetUploadZone(type, fieldId);
+            this._showUploadError(type, 'Conexiune eșuată. Verifică internetul și încearcă din nou.');
+            return;
         }
+
+        if (resp.ok && result && result.success && result.data?.url) {
+            const $field = document.getElementById(fieldId);
+            if ($field) $field.value = result.data.url;
+            this._clearUploadError(type);
+            return;
+        }
+
+        // Anything else = server-side failure; revert UI so the user doesn't
+        // think the upload succeeded.
+        this._resetUploadZone(type, fieldId);
+        this._showUploadError(type, this._mapUploadError(resp.status, file, result));
+    },
+
+    removeImage(ev, type, fieldId) {
+        if (ev) {
+            ev.stopPropagation();
+            ev.preventDefault();
+        }
+        this._resetUploadZone(type, fieldId);
+        this._clearUploadError(type);
+        // The actual file in storage is cleaned up either by the backend's
+        // oldPath delete on the NEXT upload, or stays orphan until support
+        // sweep. The persisted widget_config field becomes empty on Save.
     },
 
     async saveWidgetConfig() {
