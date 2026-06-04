@@ -525,18 +525,31 @@ class MarketplaceNewsletter extends Model
 
     /**
      * Unique lowercased buyer emails for any of $eventIds — UNION across
-     * BOTH ticket sources:
-     *   - orders.customer_email via the modern checkout (tickets table)
-     *   - external_tickets.attendee_email for legacy WP / iabilet imports
+     * ALL three ticket sources:
+     *   - tickets.attendee_email per-row (POS / QFeel-style flows where
+     *     orders.customer_email is a catch-all like pos@ambilet.ro and
+     *     the actual buyer's address lives on the ticket itself)
+     *   - orders.customer_email (modern + guest checkout, single buyer
+     *     per order)
+     *   - external_tickets.attendee_email (legacy WP / iabilet imports
+     *     with no orders rows at all)
      *
-     * Used by the read-only count path so guest + import buyers without a
-     * marketplace_customers row still show up in the sidebar total.
+     * Used by the read-only count path so guest + import + POS buyers
+     * without a marketplace_customers row still show up in the total.
      */
     public function getEventBuyerEmails(array $eventIds): \Illuminate\Support\Collection
     {
         if (empty($eventIds)) return collect();
 
         $clientId = $this->marketplace_client_id;
+
+        $ticketEmails = \DB::table('tickets')
+            ->join('ticket_types', 'ticket_types.id', '=', 'tickets.ticket_type_id')
+            ->whereIn('ticket_types.event_id', $eventIds)
+            ->where('tickets.status', 'valid')
+            ->whereNotNull('tickets.attendee_email')
+            ->where('tickets.attendee_email', '!=', '')
+            ->pluck('tickets.attendee_email');
 
         $orderEmails = \DB::table('tickets')
             ->join('orders', 'orders.id', '=', 'tickets.order_id')
@@ -559,7 +572,8 @@ class MarketplaceNewsletter extends Model
                 ->pluck('attendee_email');
         }
 
-        return $orderEmails
+        return $ticketEmails
+            ->concat($orderEmails)
             ->concat($externalEmails)
             ->map(fn ($e) => strtolower(trim((string) $e)))
             ->filter(fn ($e) => $e !== '' && filter_var($e, FILTER_VALIDATE_EMAIL))
@@ -578,6 +592,24 @@ class MarketplaceNewsletter extends Model
         $clientId = $this->marketplace_client_id;
         $names = [];
 
+        // tickets.attendee_name — most specific (per-ticket override).
+        \DB::table('tickets')
+            ->join('ticket_types', 'ticket_types.id', '=', 'tickets.ticket_type_id')
+            ->whereIn('ticket_types.event_id', $eventIds)
+            ->where('tickets.status', 'valid')
+            ->whereNotNull('tickets.attendee_email')
+            ->where('tickets.attendee_email', '!=', '')
+            ->select('tickets.attendee_email as email', 'tickets.attendee_name as name')
+            ->distinct()
+            ->get()
+            ->each(function ($r) use (&$names) {
+                $em = strtolower(trim((string) $r->email));
+                if ($em !== '' && !isset($names[$em]) && !empty($r->name)) {
+                    $names[$em] = ['first' => (string) $r->name, 'last' => ''];
+                }
+            });
+
+        // orders.customer_name — broader fallback for guest checkouts.
         \DB::table('tickets')
             ->join('orders', 'orders.id', '=', 'tickets.order_id')
             ->join('ticket_types', 'ticket_types.id', '=', 'tickets.ticket_type_id')
