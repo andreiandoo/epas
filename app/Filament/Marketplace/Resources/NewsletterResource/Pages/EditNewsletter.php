@@ -148,6 +148,41 @@ class EditNewsletter extends EditRecord
                     }
                 }),
 
+            // Duplicate — clone settings only (sections, targeting, sender
+            // fields). Stats / lifecycle timestamps are zeroed so the copy
+            // is a clean draft. Recipients are a separate table and don't
+            // get replicated.
+            Actions\Action::make('duplicate')
+                ->label('Duplică')
+                ->icon('heroicon-o-document-duplicate')
+                ->color('gray')
+                ->requiresConfirmation()
+                ->modalHeading('Duplică newsletter')
+                ->modalDescription('Setările (subiect, secțiuni, target, expeditor) se copiază. Statisticile nu se copiază.')
+                ->modalSubmitActionLabel('Duplică')
+                ->action(function () {
+                    $new = $this->record->replicate();
+                    $new->name = 'DUPLICAT - ' . $this->record->name;
+                    $new->status = 'draft';
+                    $new->scheduled_at = null;
+                    $new->started_at = null;
+                    $new->completed_at = null;
+                    $new->total_recipients = 0;
+                    $new->sent_count = 0;
+                    $new->failed_count = 0;
+                    $new->opened_count = 0;
+                    $new->clicked_count = 0;
+                    $new->unsubscribed_count = 0;
+                    $new->purchase_count = 0;
+                    $new->purchase_amount_cents = 0;
+                    $new->created_by = auth()->id();
+                    $new->save();
+
+                    Notification::make()->title('Duplicat creat')->success()->send();
+
+                    return redirect(NewsletterResource::getUrl('edit', ['record' => $new]));
+                }),
+
             // Real send — same logic as the list-view recordAction so users
             // don't have to bounce back to the index to ship a draft.
             Actions\Action::make('send')
