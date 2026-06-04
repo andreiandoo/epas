@@ -43,10 +43,13 @@
     }
 
     function getPrice(tt) {
+        // List view always shows the BASE ticket price. When commission mode
+        // is added_on_top, the fee is disclosed below the price (tt-comm-trigger
+        // tooltip) and added by the cart at checkout — never inflating the
+        // headline price on the picker. When commission mode is included, the
+        // base price already contains the fee, so no addition either way.
         var base = parseFloat(tt.price || 0);
         var c = calcComm(tt, base);
-        if (c.mode === 'added_on_top' || c.mode === 'on_top')
-            return { display: Math.round((base + c.amount) * 100) / 100, comm: c.amount, mode: c.mode };
         return { display: base, comm: c.amount, mode: c.mode };
     }
 
@@ -112,8 +115,12 @@
                 html += '<div style="font-size:11px;line-height:1.6;">';
                 html += '<div style="display:flex;justify-content:space-between;"><span>Preț bilet:</span><span>' + base.toFixed(2) + ' lei</span></div>';
                 if (c.mode === 'added_on_top' || c.mode === 'on_top') {
+                    // p.display now equals base (commission deferred to cart);
+                    // surface the post-commission total here so the tooltip
+                    // remains an accurate "what you'll actually pay" breakdown.
+                    var totalAtCheckout = Math.round((base + c.amount) * 100) / 100;
                     html += '<div style="display:flex;justify-content:space-between;"><span>Taxă procesare (' + commTypeLabel + '):</span><span>+' + c.amount.toFixed(2) + ' lei</span></div>';
-                    html += '<div style="display:flex;justify-content:space-between;border-top:1px solid var(--border);padding-top:4px;margin-top:4px;font-weight:600;"><span>Total la plată:</span><span>' + p.display.toFixed(2) + ' lei</span></div>';
+                    html += '<div style="display:flex;justify-content:space-between;border-top:1px solid var(--border);padding-top:4px;margin-top:4px;font-weight:600;"><span>Total la plată:</span><span>' + totalAtCheckout.toFixed(2) + ' lei</span></div>';
                 } else {
                     html += '<div style="display:flex;justify-content:space-between;"><span>Taxă procesare (' + commTypeLabel + '):</span><span>' + c.amount.toFixed(2) + ' lei</span></div>';
                     html += '<div style="display:flex;justify-content:space-between;border-top:1px solid var(--border);padding-top:4px;margin-top:4px;font-weight:600;"><span>Total:</span><span>' + p.display.toFixed(2) + ' lei</span></div>';
@@ -236,10 +243,46 @@
             var code = $voucher.value.trim();
             if (!code) return;
             $voucherMsg.style.display = 'block';
+
+            // The /promo-codes/validate endpoint requires cart_total (and uses
+            // items[] to honour ticket-type targeting + min_purchase_amount).
+            // Compute both from currently-selected quantities × base price.
+            // Sending only { code, event_id } returns 422.
+            var items = [];
+            var cartTotal = 0;
+            var ticketCount = 0;
+            ticketTypes.forEach(function (tt) {
+                var q = quantities[tt.id] || 0;
+                if (q <= 0) return;
+                var base = parseFloat(tt.price || 0);
+                var line = q * base;
+                cartTotal += line;
+                ticketCount += q;
+                items.push({
+                    event_id: event.id,
+                    ticket_type_id: tt.id,
+                    quantity: q,
+                    price: base,
+                    total: line,
+                });
+            });
+
+            if (ticketCount === 0) {
+                $voucherMsg.style.color = '#e05c44';
+                $voucherMsg.textContent = 'Selectează biletele înainte de a aplica codul.';
+                return;
+            }
+
             $voucherMsg.style.color = 'var(--text-muted)';
             $voucherMsg.textContent = 'Se verifică...';
 
-            WLApi.post('/promo-codes/validate', { code: code, event_id: event.id }).then(function(resp) {
+            WLApi.post('/promo-codes/validate', {
+                code: code,
+                event_id: event.id,
+                cart_total: Math.round(cartTotal * 100) / 100,
+                ticket_count: ticketCount,
+                items: items,
+            }).then(function(resp) {
                 if (resp.success && resp.data && resp.data.valid) {
                     $voucherMsg.style.color = '#5cc87a';
                     $voucherMsg.textContent = 'Cod valid! Reducere aplicată.';
