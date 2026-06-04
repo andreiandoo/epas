@@ -238,7 +238,10 @@ class MarketplaceNewsletter extends Model
         }
 
         if (!empty($eventIds)) {
-            $filterIds = $this->getEventBuyerCustomerIds($eventIds);
+            // Send-time runs materialize orphan buyers (orders without a
+            // marketplace_customer row) so the recipient pivot stays
+            // FK-valid; read-only count runs don't write.
+            $filterIds = $this->getEventBuyerCustomerIds($eventIds, $materializeOrganizers);
         } elseif ($hasDerivedFilter) {
             // Filter was requested but resolves to zero events — the AND
             // semantics yield zero recipients, never widen back to base.
@@ -438,10 +441,111 @@ class MarketplaceNewsletter extends Model
 
     /**
      * Customer IDs who own at least one valid ticket for any of $eventIds.
-     * Tickets are linked to orders, orders to customers; we walk that chain
-     * scoped to the same marketplace_client_id to be safe.
+     *
+     * The schema has two flavours of buyer:
+     *   1. Linked: orders.marketplace_customer_id is set (modern checkout
+     *      flow always populates this).
+     *   2. Guest / legacy: only orders.customer_email is set. Old WP imports
+     *      (2022–2024 events on Ambilet) and guest checkouts never created
+     *      a marketplace_customer row.
+     *
+     * Returning only flavour #1 makes pre-2024 campaigns wildly undercount
+     * — 20 events × 100 buyers each got reported as ~80 unique recipients.
+     * We now ALSO:
+     *   - match orphan emails against existing customer rows (a buyer who
+     *     later registered an account uses the same email)
+     *   - optionally firstOrCreate a customer row for any remaining orphan
+     *     email when `$materializeOrphans=true` (set by send-time callers
+     *     so the recipient pivot stays FK-valid).
+     *
+     * Materialized buyers get `accepts_marketing=false` to keep them out
+     * of future general blasts — they explicitly bought a ticket, but
+     * never opted in to marketing.
      */
-    public function getEventBuyerCustomerIds(array $eventIds): \Illuminate\Support\Collection
+    public function getEventBuyerCustomerIds(array $eventIds, bool $materializeOrphans = false): \Illuminate\Support\Collection
+    {
+        if (empty($eventIds)) return collect();
+
+        $clientId = $this->marketplace_client_id;
+
+        $linkedIds = \DB::table('tickets')
+            ->join('orders', 'orders.id', '=', 'tickets.order_id')
+            ->join('ticket_types', 'ticket_types.id', '=', 'tickets.ticket_type_id')
+            ->whereIn('ticket_types.event_id', $eventIds)
+            ->where('tickets.status', 'valid')
+            ->whereNotNull('orders.marketplace_customer_id')
+            ->where('orders.marketplace_client_id', $clientId)
+            ->pluck('orders.marketplace_customer_id')
+            ->unique();
+
+        $orphanRows = \DB::table('tickets')
+            ->join('orders', 'orders.id', '=', 'tickets.order_id')
+            ->join('ticket_types', 'ticket_types.id', '=', 'tickets.ticket_type_id')
+            ->whereIn('ticket_types.event_id', $eventIds)
+            ->where('tickets.status', 'valid')
+            ->whereNull('orders.marketplace_customer_id')
+            ->where('orders.marketplace_client_id', $clientId)
+            ->whereNotNull('orders.customer_email')
+            ->where('orders.customer_email', '!=', '')
+            ->select('orders.customer_email', 'orders.customer_name')
+            ->distinct()
+            ->get();
+
+        $orphanEmails = $orphanRows
+            ->map(fn ($r) => strtolower(trim((string) $r->customer_email)))
+            ->filter(fn ($e) => $e !== '' && filter_var($e, FILTER_VALIDATE_EMAIL))
+            ->unique()
+            ->values();
+
+        if ($orphanEmails->isEmpty()) {
+            return $linkedIds->values();
+        }
+
+        $existingByEmail = MarketplaceCustomer::where('marketplace_client_id', $clientId)
+            ->whereIn('email', $orphanEmails->all())
+            ->pluck('id', 'email');
+
+        $resolved = $linkedIds->concat($existingByEmail->values());
+        $stillUnresolved = $orphanEmails->diff($existingByEmail->keys()->map(fn ($e) => strtolower($e)))->values();
+
+        if ($materializeOrphans && $stillUnresolved->isNotEmpty()) {
+            // Build email→name lookup once so each firstOrCreate carries a
+            // sensible label (rather than empty first_name) on the new row.
+            $nameByEmail = [];
+            foreach ($orphanRows as $row) {
+                $em = strtolower(trim((string) $row->customer_email));
+                if ($em !== '' && !isset($nameByEmail[$em]) && !empty($row->customer_name)) {
+                    $nameByEmail[$em] = $row->customer_name;
+                }
+            }
+
+            foreach ($stillUnresolved as $email) {
+                $customer = MarketplaceCustomer::firstOrCreate(
+                    [
+                        'marketplace_client_id' => $clientId,
+                        'email' => $email,
+                    ],
+                    [
+                        'first_name' => $nameByEmail[$email] ?? '',
+                        'last_name' => '',
+                        'accepts_marketing' => false,
+                        'status' => 'active',
+                    ]
+                );
+                $resolved = $resolved->push($customer->id);
+            }
+        }
+
+        return $resolved->unique()->values();
+    }
+
+    /**
+     * Unique lowercased buyer emails for any of $eventIds — same semantics
+     * as getEventBuyerCustomerIds() but in email-space. Used by the
+     * read-only count path so guest/legacy buyers without a
+     * marketplace_customers row still show up in the sidebar total.
+     */
+    public function getEventBuyerEmails(array $eventIds): \Illuminate\Support\Collection
     {
         if (empty($eventIds)) return collect();
 
@@ -450,9 +554,12 @@ class MarketplaceNewsletter extends Model
             ->join('ticket_types', 'ticket_types.id', '=', 'tickets.ticket_type_id')
             ->whereIn('ticket_types.event_id', $eventIds)
             ->where('tickets.status', 'valid')
-            ->whereNotNull('orders.marketplace_customer_id')
             ->where('orders.marketplace_client_id', $this->marketplace_client_id)
-            ->pluck('orders.marketplace_customer_id')
+            ->whereNotNull('orders.customer_email')
+            ->where('orders.customer_email', '!=', '')
+            ->pluck('orders.customer_email')
+            ->map(fn ($e) => strtolower(trim((string) $e)))
+            ->filter(fn ($e) => $e !== '' && filter_var($e, FILTER_VALIDATE_EMAIL))
             ->unique()
             ->values();
     }
@@ -510,8 +617,13 @@ class MarketplaceNewsletter extends Model
         }
 
         $eventsCount = 0;
+        // Count in email-space — getEventBuyerCustomerIds() undercounts
+        // because guest + legacy orders have NULL marketplace_customer_id.
+        // getEventBuyerEmails() walks orders.customer_email directly and
+        // matches what'll actually go out at send time (where orphan
+        // customer rows get materialized).
         if (!empty($this->target_event_ids)) {
-            $eventsCount = $this->getEventBuyerCustomerIds($this->target_event_ids)->count();
+            $eventsCount = $this->getEventBuyerEmails($this->target_event_ids)->count();
         }
         $hasDerivedFilter = empty($this->target_event_ids) && (
             !empty($this->target_organizer_ids)
@@ -527,7 +639,7 @@ class MarketplaceNewsletter extends Model
                 (array) ($this->target_artist_ids ?? []),
             );
             if (!empty($derivedEventIds)) {
-                $eventsCount += $this->getEventBuyerCustomerIds($derivedEventIds)->count();
+                $eventsCount += $this->getEventBuyerEmails($derivedEventIds)->count();
             }
         }
 
@@ -552,33 +664,71 @@ class MarketplaceNewsletter extends Model
         $clientId = $this->marketplace_client_id ?? $this->marketplaceClient?->id;
         if (!$clientId) return collect();
 
-        $resolvedIds = $this->resolveRecipientCustomerIds($clientId, materializeOrganizers: false);
+        [$organizerListIds, $regularListIds] = $this->splitListsByType((array) $this->target_lists);
 
-        if ($resolvedIds->isEmpty()) {
-            // Organizer-typed lists may still resolve to organizer emails
-            // that don't yet have a MarketplaceCustomer row — surface
-            // them in the count when nothing else is selected.
-            [$organizerListIds] = $this->splitListsByType((array) $this->target_lists);
-            if (!empty($organizerListIds) && empty($this->target_event_ids) && empty($this->target_organizer_ids)) {
-                return $this->collectOrganizerEmails($clientId);
+        // ---- Base audience emails (lists + tags + organizer-typed lists).
+        $baseEmails = collect();
+        $hasBase = false;
+
+        if (!empty($regularListIds) || !empty($this->target_tags)) {
+            $hasBase = true;
+            $q = MarketplaceCustomer::where('marketplace_client_id', $clientId);
+            if (!empty($regularListIds)) {
+                $q->whereHas('contactLists', function ($qq) use ($regularListIds) {
+                    $qq->whereIn('marketplace_contact_lists.id', $regularListIds)
+                        ->where('marketplace_contact_list_members.status', 'subscribed');
+                });
             }
-            return collect();
+            if (!empty($this->target_tags)) {
+                $q->whereHas('tags', function ($qq) {
+                    $qq->whereIn('marketplace_contact_tags.id', $this->target_tags);
+                });
+            }
+            $baseEmails = $baseEmails->concat($q->pluck('email'));
         }
 
-        // Chunked to stay under Postgres' 65535 bound-param cap on a
-        // single prepared statement. "Clienți" on Ambilet alone is 70k+.
-        $emails = collect();
-        foreach ($resolvedIds->chunk(10000) as $chunk) {
-            $emails = $emails->concat(
-                MarketplaceCustomer::whereIn('id', $chunk->values()->all())->pluck('email')
+        if (!empty($organizerListIds)) {
+            $hasBase = true;
+            $baseEmails = $baseEmails->concat($this->collectOrganizerEmails($clientId));
+        }
+
+        $baseEmails = $baseEmails
+            ->map(fn ($e) => strtolower(trim((string) $e)))
+            ->filter(fn ($e) => $e !== '' && filter_var($e, FILTER_VALIDATE_EMAIL))
+            ->unique();
+
+        // ---- Filter audience emails (events / city / org / cat / artist).
+        // Uses getEventBuyerEmails() so guest + legacy orders count too —
+        // see the comment on that method for context.
+        $eventIds = (array) ($this->target_event_ids ?? []);
+        $hasDerivedFilter = !empty($this->target_organizer_ids)
+            || !empty($this->target_city_ids)
+            || !empty($this->target_category_ids)
+            || !empty($this->target_artist_ids);
+
+        if (empty($eventIds) && $hasDerivedFilter) {
+            $eventIds = $this->resolveFilteredEventIds(
+                (array) ($this->target_organizer_ids ?? []),
+                (array) ($this->target_city_ids ?? []),
+                (array) ($this->target_category_ids ?? []),
+                (array) ($this->target_artist_ids ?? []),
             );
         }
 
-        return $emails
-            ->map(fn ($e) => strtolower(trim((string) $e)))
-            ->filter(fn ($e) => $e !== '' && filter_var($e, FILTER_VALIDATE_EMAIL))
-            ->unique()
-            ->values();
+        $filterEmails = null;
+        if (!empty($eventIds)) {
+            $filterEmails = $this->getEventBuyerEmails($eventIds);
+        } elseif ($hasDerivedFilter) {
+            // Filter requested but resolved to zero events — AND semantics
+            // yield zero recipients.
+            $filterEmails = collect();
+        }
+
+        // ---- Combine using the same semantics as resolveRecipientCustomerIds.
+        if (!$hasBase && $filterEmails === null) return collect();
+        if ($filterEmails === null) return $baseEmails->values();
+        if (!$hasBase) return $filterEmails->values();
+        return $baseEmails->intersect($filterEmails)->values();
     }
 
     /**
