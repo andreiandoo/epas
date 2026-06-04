@@ -49,6 +49,18 @@ RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^cum-functioneaza/?$ cum-functioneaza.php [L,QSA]
 
+# Partner / merchant acquisition landing — full sales page sent to
+# prospective venues + activity organizers (handles ?tip=…&loc=… for
+# personalized campaign URLs).
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^devino-partener/?$ devino-partener.php [L,QSA]
+
+# Self-service onboarding form linked from every CTA on /devino-partener.
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^inregistrare-locatie/?$ inregistrare-locatie.php [L,QSA]
+
 # All events listing
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
