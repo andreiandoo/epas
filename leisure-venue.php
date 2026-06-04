@@ -36,6 +36,40 @@ if (!empty($_GET['lang']) && in_array($_GET['lang'], $availableLocalesLv, true))
     $publicLocale = $_COOKIE['ambilet_locale_leisure'];
 }
 
+/**
+ * Helper local: aplica traduceri opt-in per-item pe array-urile accordeoanelor
+ * (attractions, trails, faqs, flora, getting_there). Schema asteptata in venue_config:
+ *
+ *   "attractions": [{
+ *       "title": "Lacul Sf. Ana",
+ *       "description": "Singurul lac de crater din Romania...",
+ *       "translations": {
+ *           "hu": {"title": "Szent Anna-tó", "description": "..."},
+ *           "en": {"title": "Saint Ann Lake",  "description": "..."}
+ *       }
+ *   }, ...]
+ *
+ * Pentru locale='ro' sau item fara `translations` → intoarce item-ul neatins
+ * (zero regresie pe organizatorii fara traduceri).
+ */
+if (!function_exists('lv_localize_accordion_items')) {
+    function lv_localize_accordion_items(array $items, string $locale, array $fields = ['title', 'subtitle', 'name', 'description', 'body', 'answer', 'question', 'short', 'long', 'q', 'a', 'note', 'latin']): array
+    {
+        if ($locale === 'ro' || empty($items)) return $items;
+        return array_map(function ($item) use ($locale, $fields) {
+            if (!is_array($item)) return $item;
+            $tr = $item['translations'][$locale] ?? null;
+            if (!is_array($tr)) return $item;
+            foreach ($fields as $field) {
+                if (isset($tr[$field]) && $tr[$field] !== '') {
+                    $item[$field] = $tr[$field];
+                }
+            }
+            return $item;
+        }, $items);
+    }
+}
+
 $venueConfig    = $ev['venue_config'] ?? [];
 $amenities      = $venueConfig['amenities'] ?? [];
 $heroImages     = $venueConfig['hero_images'] ?? [];
@@ -97,6 +131,14 @@ $attractions = $venueConfig['attractions'] ?? [];
 
 // Cum ajungi — 3 carduri (mașină / pe jos / cazare)
 $gettingThere = $venueConfig['getting_there'] ?? [];
+
+// Aplica traduceri pe accordeoane (Fix 4+5). Item-urile fara `translations` raman
+// neatinse → zero regresie pentru organizatorii fara traduceri completate.
+$trails       = lv_localize_accordion_items($trails,       $publicLocale);
+$faqs         = lv_localize_accordion_items($faqs,         $publicLocale);
+$flora        = lv_localize_accordion_items($flora,        $publicLocale);
+$attractions  = lv_localize_accordion_items($attractions,  $publicLocale);
+$gettingThere = lv_localize_accordion_items($gettingThere, $publicLocale);
 
 // Map config
 $mapConfig = $venueConfig['map_config'] ?? [];
@@ -249,6 +291,43 @@ require_once __DIR__ . '/includes/head.php';
                 'days_short' => ['Lun', 'Mar', 'Mie', 'Joi', 'Vin', 'Sâm', 'Dum'],
                 'months' => ['Ianuarie', 'Februarie', 'Martie', 'Aprilie', 'Mai', 'Iunie', 'Iulie', 'August', 'Septembrie', 'Octombrie', 'Noiembrie', 'Decembrie'],
                 'lang_label' => 'Limbă',
+                // Nav
+                'nav_tickets' => 'Bilete', 'nav_trails' => 'Trasee', 'nav_about' => 'Despre', 'nav_directions' => 'Cum ajungi',
+                // Hero / labels
+                'see_trails' => 'Vezi traseele turistice',
+                'label_program' => 'Program', 'label_contact' => 'Contact', 'label_location' => 'Locație',
+                'selected_date' => 'Data selectată',
+                // Booking section
+                'package_includes' => 'Include în pachet',
+                'rental_start_time' => 'Ora de start a închirierii',
+                // Upsell
+                'upsell_title' => 'Fă vizita o experiență completă',
+                'upsell_subtitle' => 'Alege ce te tentează și economisește timp pe loc.',
+                // Step 2 services
+                'extra_services' => 'Servicii suplimentare',
+                'requires_access_short' => 'Necesită bilet acces',
+                'includes_label' => 'Include',
+                'rental_hour' => 'Ora închiriere',
+                // Sections
+                'marked_trails' => 'Drumeții marcate',
+                'tourist_trails' => 'Trasee turistice',
+                'know_the_place' => 'Cunoaște locul',
+                'program_h2' => 'Program',
+                'when_we_open' => 'Când suntem deschiși',
+                'location_h2' => 'Locație',
+                'how_to_reach' => 'Cum ajungi la noi',
+                'gallery' => 'Galerie',
+                'video' => 'Video',
+                'place_in_motion' => 'Locul în mișcare',
+                'good_to_know' => 'Bine de știut',
+                // Cart panel
+                'order_summary' => 'Sumar comandă',
+                'subtotal_tickets' => 'Subtotal bilete',
+                'total_commission' => 'Total comision',
+                'total' => 'Total',
+                'choose_date_first' => 'Alege mai întâi data',
+                'missing_access' => 'Lipsesc bilete acces',
+                'continue_to_payment' => 'Continuă spre plată →',
             ],
             'hu' => [
                 'step1' => '1./2. lépés',
@@ -275,6 +354,36 @@ require_once __DIR__ . '/includes/head.php';
                 'days_short' => ['Hét', 'Ked', 'Sze', 'Csü', 'Pén', 'Szo', 'Vas'],
                 'months' => ['Január', 'Február', 'Március', 'Április', 'Május', 'Június', 'Július', 'Augusztus', 'Szeptember', 'Október', 'November', 'December'],
                 'lang_label' => 'Nyelv',
+                'nav_tickets' => 'Jegyek', 'nav_trails' => 'Túraútvonalak', 'nav_about' => 'Rólunk', 'nav_directions' => 'Megközelítés',
+                'see_trails' => 'Túraútvonalak megtekintése',
+                'label_program' => 'Nyitvatartás', 'label_contact' => 'Kapcsolat', 'label_location' => 'Helyszín',
+                'selected_date' => 'Kiválasztott dátum',
+                'package_includes' => 'A csomag tartalmazza',
+                'rental_start_time' => 'Bérlés kezdő időpontja',
+                'upsell_title' => 'Tedd látogatásod teljes élménnyé',
+                'upsell_subtitle' => 'Válaszd ki, mi tetszik, és spórolj időt a helyszínen.',
+                'extra_services' => 'Kiegészítő szolgáltatások',
+                'requires_access_short' => 'Belépőjegy szükséges',
+                'includes_label' => 'Tartalmaz',
+                'rental_hour' => 'Bérlés időpontja',
+                'marked_trails' => 'Kijelölt túraútvonalak',
+                'tourist_trails' => 'Túraútvonalak',
+                'know_the_place' => 'Ismerd meg a helyet',
+                'program_h2' => 'Nyitvatartás',
+                'when_we_open' => 'Mikor vagyunk nyitva',
+                'location_h2' => 'Helyszín',
+                'how_to_reach' => 'Hogyan érhetsz el',
+                'gallery' => 'Galéria',
+                'video' => 'Videó',
+                'place_in_motion' => 'A hely mozgásban',
+                'good_to_know' => 'Jó tudni',
+                'order_summary' => 'Rendelés összesítő',
+                'subtotal_tickets' => 'Jegyek részösszege',
+                'total_commission' => 'Összes jutalék',
+                'total' => 'Összesen',
+                'choose_date_first' => 'Előbb válassz dátumot',
+                'missing_access' => 'Hiányzó belépőjegyek',
+                'continue_to_payment' => 'Tovább a fizetéshez →',
             ],
             'en' => [
                 'step1' => 'Step 1 of 2',
@@ -301,6 +410,36 @@ require_once __DIR__ . '/includes/head.php';
                 'days_short' => ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
                 'months' => ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
                 'lang_label' => 'Language',
+                'nav_tickets' => 'Tickets', 'nav_trails' => 'Trails', 'nav_about' => 'About', 'nav_directions' => 'Directions',
+                'see_trails' => 'See the hiking trails',
+                'label_program' => 'Schedule', 'label_contact' => 'Contact', 'label_location' => 'Location',
+                'selected_date' => 'Selected date',
+                'package_includes' => 'Package includes',
+                'rental_start_time' => 'Rental start time',
+                'upsell_title' => 'Make your visit a complete experience',
+                'upsell_subtitle' => 'Pick what tempts you and save time on-site.',
+                'extra_services' => 'Extra services',
+                'requires_access_short' => 'Access ticket required',
+                'includes_label' => 'Includes',
+                'rental_hour' => 'Rental time',
+                'marked_trails' => 'Marked hikes',
+                'tourist_trails' => 'Hiking trails',
+                'know_the_place' => 'Know the place',
+                'program_h2' => 'Schedule',
+                'when_we_open' => 'When we are open',
+                'location_h2' => 'Location',
+                'how_to_reach' => 'How to reach us',
+                'gallery' => 'Gallery',
+                'video' => 'Video',
+                'place_in_motion' => 'The place in motion',
+                'good_to_know' => 'Good to know',
+                'order_summary' => 'Order summary',
+                'subtotal_tickets' => 'Tickets subtotal',
+                'total_commission' => 'Total commission',
+                'total' => 'Total',
+                'choose_date_first' => 'Pick a date first',
+                'missing_access' => 'Missing access tickets',
+                'continue_to_payment' => 'Continue to payment →',
             ],
         ],
     ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
@@ -318,21 +457,29 @@ require_once __DIR__ . '/includes/head.php';
             <span class="font-extrabold text-lg"><?= SITE_NAME ?></span>
         </a>
         <div class="hidden lg:flex items-center gap-1 bg-white/10 backdrop-blur rounded-full px-2 py-1.5">
-            <a href="#bilete" class="px-4 py-1.5 text-white/80 hover:text-white text-sm font-medium transition-colors rounded-full hover:bg-white/10">Bilete</a>
-            <a href="#trasee" class="px-4 py-1.5 text-white/80 hover:text-white text-sm font-medium transition-colors rounded-full hover:bg-white/10">Trasee</a>
-            <a href="#despre" class="px-4 py-1.5 text-white/80 hover:text-white text-sm font-medium transition-colors rounded-full hover:bg-white/10">Despre</a>
-            <a href="#cum-ajungi" class="px-4 py-1.5 text-white/80 hover:text-white text-sm font-medium transition-colors rounded-full hover:bg-white/10">Cum ajungi</a>
+            <a href="#bilete" class="px-4 py-1.5 text-white/80 hover:text-white text-sm font-medium transition-colors rounded-full hover:bg-white/10" data-i18n="nav_tickets">Bilete</a>
+            <a href="#trasee" class="px-4 py-1.5 text-white/80 hover:text-white text-sm font-medium transition-colors rounded-full hover:bg-white/10" data-i18n="nav_trails">Trasee</a>
+            <a href="#despre" class="px-4 py-1.5 text-white/80 hover:text-white text-sm font-medium transition-colors rounded-full hover:bg-white/10" data-i18n="nav_about">Despre</a>
+            <a href="#cum-ajungi" class="px-4 py-1.5 text-white/80 hover:text-white text-sm font-medium transition-colors rounded-full hover:bg-white/10" data-i18n="nav_directions">Cum ajungi</a>
         </div>
         <a href="#bilete" class="bg-white/15 backdrop-blur text-white px-4 py-2 rounded-full text-sm font-semibold hover:bg-white/25 transition-colors">Rezervă acces →</a>
     </div>
 </nav>
 
 <!-- ============ B4: SELECTOR LIMBĂ (fixed top-right) ============ -->
+<?php
+// Curat $_GET pentru build query: scot `slug` (vine din rewrite .htaccess
+// pentru /bilete/{slug}) si chei interne care nu trebuie pastrate in URL.
+$_lvSelectorQuery = $_GET;
+foreach (['slug', '_route', '_path'] as $_drop) {
+    unset($_lvSelectorQuery[$_drop]);
+}
+?>
 <div class="fixed top-4 right-4 z-50 flex items-center gap-1 bg-white/95 backdrop-blur rounded-full px-2 py-1 shadow-lg border border-forest-200" style="font-size:11px;">
     <span class="text-forest-600 text-[10px] uppercase tracking-wider font-bold px-1.5" data-i18n="lang_label">Limbă</span>
-    <?php foreach (['ro' => '🇷🇴 RO', 'hu' => '🇭🇺 HU', 'en' => '🇬🇧 EN'] as $code => $label): ?>
-        <a href="?<?= http_build_query(array_merge($_GET, ['lang' => $code])) ?>"
-           class="px-2 py-1 rounded-full text-[11px] font-semibold transition-colors <?= $publicLocale === $code ? 'bg-forest-700 text-white' : 'text-forest-700 hover:bg-forest-100' ?>"><?= $label ?></a>
+    <?php foreach (['ro' => 'RO', 'hu' => 'HU', 'en' => 'EN'] as $code => $label): ?>
+        <a href="?<?= http_build_query(array_merge($_lvSelectorQuery, ['lang' => $code])) ?>"
+           class="px-2.5 py-1 rounded-full text-[11px] font-bold tracking-wider transition-colors <?= $publicLocale === $code ? 'bg-forest-700 text-white' : 'text-forest-700 hover:bg-forest-100' ?>"><?= $label ?></a>
     <?php endforeach; ?>
 </div>
 
@@ -375,7 +522,7 @@ require_once __DIR__ . '/includes/head.php';
             <div class="flex flex-wrap items-center gap-4 mt-8">
                 <a href="#bilete" class="lv-btn bg-white text-forest-800 hover:bg-lake-50">Rezervă accesul →</a>
                 <?php if (!empty($trails)): ?>
-                <a href="#trasee" class="lv-btn bg-transparent text-white border border-white/30 hover:bg-white/10">Vezi traseele turistice</a>
+                <a href="#trasee" class="lv-btn bg-transparent text-white border border-white/30 hover:bg-white/10" data-i18n="see_trails">Vezi traseele turistice</a>
                 <?php endif; ?>
             </div>
         </div>
@@ -391,7 +538,7 @@ require_once __DIR__ . '/includes/head.php';
                     <svg class="w-5 h-5 text-forest-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                 </div>
                 <div class="min-w-0">
-                    <p class="text-xs text-forest-700/60 font-medium">Program</p>
+                    <p class="text-xs text-forest-700/60 font-medium" data-i18n="label_program">Program</p>
                     <p class="text-sm font-bold text-forest-900 truncate" x-text="currentScheduleLabel"></p>
                 </div>
             </div>
@@ -401,7 +548,7 @@ require_once __DIR__ . '/includes/head.php';
                     <svg class="w-5 h-5 text-lake-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
                 </div>
                 <div class="min-w-0">
-                    <p class="text-xs text-forest-700/60 font-medium">Contact</p>
+                    <p class="text-xs text-forest-700/60 font-medium" data-i18n="label_contact">Contact</p>
                     <p class="text-sm font-bold text-forest-900 truncate"><?= htmlspecialchars($contactPhone) ?></p>
                 </div>
             </a>
@@ -412,7 +559,7 @@ require_once __DIR__ . '/includes/head.php';
                     <svg class="w-5 h-5 text-sand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                 </div>
                 <div class="min-w-0">
-                    <p class="text-xs text-forest-700/60 font-medium">Locație</p>
+                    <p class="text-xs text-forest-700/60 font-medium" data-i18n="label_location">Locație</p>
                     <p class="text-sm font-bold text-forest-900 truncate"><?= htmlspecialchars($venueCity ?: $venueAddress) ?></p>
                 </div>
             </div>
@@ -499,7 +646,7 @@ require_once __DIR__ . '/includes/head.php';
                     <div x-show="selectedDate" class="mt-5 p-3 bg-forest-50 rounded-xl flex items-center gap-3">
                         <svg class="w-5 h-5 text-forest-700 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
                         <div class="text-sm min-w-0">
-                            <p class="text-xs text-forest-700/60 font-medium">Data selectată</p>
+                            <p class="text-xs text-forest-700/60 font-medium" data-i18n="selected_date">Data selectată</p>
                             <p class="font-bold text-forest-900 truncate" x-text="formatDate(selectedDate)"></p>
                         </div>
                     </div>
@@ -512,7 +659,7 @@ require_once __DIR__ . '/includes/head.php';
 
                 <div x-show="!selectedDate" class="bg-white rounded-2xl p-8 text-center border-2 border-dashed border-forest-200">
                     <svg class="w-12 h-12 mx-auto text-forest-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                    <p class="text-forest-700/70 font-medium">Selectează o dată din calendar</p>
+                    <p class="text-forest-700/70 font-medium" data-i18n="pick_a_date">Selectează o dată din calendar</p>
                 </div>
 
                 <div x-show="selectedDate && loadingTickets" class="space-y-3">
@@ -546,7 +693,7 @@ require_once __DIR__ . '/includes/head.php';
                                     <p x-show="ticket.description" class="text-sm text-forest-700/70 mb-3" x-text="ticket.description"></p>
                                     <!-- Lista componentelor (pentru pachet) -->
                                     <div x-show="ticket.service_category === 'package' && ticket.package_outputs && ticket.package_outputs.length > 0" class="mt-2 p-3 bg-rose-50 rounded-lg">
-                                        <p class="text-[10px] uppercase tracking-wider text-rose-700 font-bold mb-1.5">Include în pachet</p>
+                                        <p class="text-[10px] uppercase tracking-wider text-rose-700 font-bold mb-1.5" data-i18n="package_includes">Include în pachet</p>
                                         <ul class="space-y-1">
                                             <template x-for="comp in (ticket.package_outputs || [])" :key="comp.ticket_type_id + (comp.variant_id || '')">
                                                 <li class="text-sm text-rose-900 flex items-start gap-1.5">
@@ -572,7 +719,7 @@ require_once __DIR__ . '/includes/head.php';
                             </div>
                             <!-- Variante (Bărci 30m/1h etc.) — se afișează când există -->
                             <div x-show="ticket.variants && ticket.variants.length > 0" class="mt-4 pt-4 border-t border-forest-100">
-                                <p class="text-xs uppercase tracking-wider text-forest-700/60 font-bold mb-2">Alege opțiunea</p>
+                                <p class="text-xs uppercase tracking-wider text-forest-700/60 font-bold mb-2" data-i18n="choose_option">Alege opțiunea</p>
                                 <div class="flex flex-wrap gap-2">
                                     <template x-for="v in (ticket.variants || [])" :key="v.id">
                                         <button @click="variantSelectedByTicket[ticket.id] = v.id; if (ticket.physical_inventory && ticket.physical_inventory.enabled) refreshPhysicalAvailability(ticket)"
@@ -588,7 +735,7 @@ require_once __DIR__ . '/includes/head.php';
                             </div>
                             <!-- F3: Slot-uri pe oră (Vaporașe etc.) -->
                             <div x-show="ticket.slots_config && ticket.slots_config.enabled" class="mt-4 pt-4 border-t border-forest-100">
-                                <p class="text-xs uppercase tracking-wider text-forest-700/60 font-bold mb-2">Alege ora cursei</p>
+                                <p class="text-xs uppercase tracking-wider text-forest-700/60 font-bold mb-2" data-i18n="choose_slot">Alege ora cursei</p>
                                 <div class="flex flex-wrap gap-1.5 max-h-44 overflow-y-auto pr-1">
                                     <template x-for="slot in (ticketSlots[ticket.id] || [])" :key="slot.time">
                                         <button @click="slotSelectedByTicket[ticket.id] = slot.time"
@@ -604,7 +751,7 @@ require_once __DIR__ . '/includes/head.php';
                             </div>
                             <!-- F5: Inventar fizic — selector ora start -->
                             <div x-show="ticket.physical_inventory && ticket.physical_inventory.enabled && !(ticket.slots_config && ticket.slots_config.enabled)" class="mt-4 pt-4 border-t border-forest-100">
-                                <p class="text-xs uppercase tracking-wider text-forest-700/60 font-bold mb-2">Ora de start a închirierii</p>
+                                <p class="text-xs uppercase tracking-wider text-forest-700/60 font-bold mb-2" data-i18n="rental_start_time">Ora de start a închirierii</p>
                                 <div class="flex items-center gap-3">
                                     <input type="time" x-model="slotSelectedByTicket[ticket.id]" @change="refreshPhysicalAvailability(ticket)" class="px-3 py-2 border-2 border-forest-200 rounded-lg text-sm">
                                     <span class="text-xs text-forest-700/70" x-text="physicalAvailableLabel(ticket)"></span>
@@ -656,7 +803,7 @@ require_once __DIR__ . '/includes/head.php';
                         <div class="relative flex flex-col lg:flex-row lg:items-center gap-5">
                             <div class="flex-1">
                                 <p class="text-lake-200 text-xs uppercase tracking-[0.2em] font-bold mb-2">✨ Recomandate pentru tine</p>
-                                <h3 class="font-display text-xl lg:text-2xl font-bold mb-2">Fă vizita o experiență completă</h3>
+                                <h3 class="font-display text-xl lg:text-2xl font-bold mb-2" data-i18n="upsell_title">Fă vizita o experiență completă</h3>
                                 <p class="text-white/80 text-sm">Alege ce te tentează și economisește timp pe loc.</p>
                             </div>
                             <div class="flex gap-2 flex-shrink-0">
@@ -694,7 +841,7 @@ require_once __DIR__ . '/includes/head.php';
         <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-4 mb-12">
             <div>
                 <p class="text-forest-600 text-xs uppercase tracking-[0.3em] font-bold mb-3">Pasul 2 din 2 · Opțional</p>
-                <h2 class="font-display text-4xl lg:text-5xl font-bold text-ink mb-3">Servicii suplimentare</h2>
+                <h2 class="font-display text-4xl lg:text-5xl font-bold text-ink mb-3" data-i18n="extra_services">Servicii suplimentare</h2>
                 <p class="text-forest-700/70 max-w-xl">Adaugă plimbare cu barca, ghid privat sau alte experiențe.</p>
             </div>
             <span class="lv-badge bg-fog text-forest-700 border border-forest-100" x-show="anyRequiresAccess">
@@ -722,7 +869,7 @@ require_once __DIR__ . '/includes/head.php';
                         <div class="flex flex-wrap gap-1.5 mb-3" x-show="service.service_duration_minutes || (service.access_requirement && service.access_requirement !== 'none') || service.package_savings > 0">
                             <span x-show="service.service_duration_minutes" class="lv-badge bg-blue-50 text-blue-700 text-[10px]" x-text="formatDuration(service.service_duration_minutes)"></span>
                             <span x-show="service.access_requirement === 'adult_only'" class="lv-badge bg-amber-50 text-amber-700 text-[10px]">Necesită bilet acces ADULT</span>
-                            <span x-show="service.access_requirement === 'any'" class="lv-badge bg-amber-50 text-amber-700 text-[10px]">Necesită bilet acces</span>
+                            <span x-show="service.access_requirement === 'any'" class="lv-badge bg-amber-50 text-amber-700 text-[10px]" data-i18n="requires_access_short">Necesită bilet acces</span>
                             <span x-show="service.package_savings > 0" class="lv-badge bg-emerald-100 text-emerald-800 text-[10px] font-bold">
                                 Economisești <span x-text="parseFloat(service.package_savings).toFixed(2)"></span> RON
                             </span>
@@ -738,7 +885,7 @@ require_once __DIR__ . '/includes/head.php';
                         </div>
                         <!-- Componente pachet -->
                         <div x-show="service.service_category === 'package' && service.package_outputs && service.package_outputs.length > 0" class="mb-3 p-2.5 bg-rose-50 rounded-lg">
-                            <p class="text-[10px] uppercase tracking-wider text-rose-700 font-bold mb-1">Include</p>
+                            <p class="text-[10px] uppercase tracking-wider text-rose-700 font-bold mb-1" data-i18n="includes_label">Include</p>
                             <ul class="space-y-0.5">
                                 <template x-for="comp in (service.package_outputs || [])" :key="comp.ticket_type_id + (comp.variant_id || '')">
                                     <li class="text-xs text-rose-900"><strong x-text="comp.qty + '×'"></strong> <span x-text="comp.component_name"></span></li>
@@ -771,7 +918,7 @@ require_once __DIR__ . '/includes/head.php';
                         </div>
                         <!-- F3: Slot-uri pe oră (Vaporașe) -->
                         <div x-show="service.slots_config && service.slots_config.enabled" class="mb-3">
-                            <p class="text-[10px] uppercase tracking-wider text-forest-700/60 font-bold mb-1.5">Alege ora cursei</p>
+                            <p class="text-[10px] uppercase tracking-wider text-forest-700/60 font-bold mb-1.5" data-i18n="choose_slot">Alege ora cursei</p>
                             <div class="flex flex-wrap gap-1 max-h-36 overflow-y-auto pr-1">
                                 <template x-for="slot in (ticketSlots[service.id] || [])" :key="slot.time">
                                     <button @click="slotSelectedByTicket[service.id] = slot.time"
@@ -785,7 +932,7 @@ require_once __DIR__ . '/includes/head.php';
                         </div>
                         <!-- F5: Physical inventory time picker -->
                         <div x-show="service.physical_inventory && service.physical_inventory.enabled && !(service.slots_config && service.slots_config.enabled)" class="mb-3">
-                            <p class="text-[10px] uppercase tracking-wider text-forest-700/60 font-bold mb-1.5">Ora închiriere</p>
+                            <p class="text-[10px] uppercase tracking-wider text-forest-700/60 font-bold mb-1.5" data-i18n="rental_hour">Ora închiriere</p>
                             <div class="flex items-center gap-2">
                                 <input type="time" x-model="slotSelectedByTicket[service.id]" @change="refreshPhysicalAvailability(service)" class="px-2 py-1.5 border-2 border-forest-200 rounded text-sm">
                                 <span class="text-[11px] text-forest-700/70" x-text="physicalAvailableLabel(service)"></span>
@@ -805,7 +952,7 @@ require_once __DIR__ . '/includes/head.php';
                                 <button @click="incrementService(service)" :disabled="(service.requires_access_ticket && !hasAccessInCart) || (service.available !== null && qtyForTicket(service) >= service.available)" class="lv-qty-btn bg-forest-700 text-white border-forest-700 hover:bg-forest-800 hover:border-forest-800">+</button>
                             </div>
                         </div>
-                        <p x-show="service.requires_access_ticket && !hasAccessInCart && service.qty === 0" class="text-[11px] text-red-600 mt-2 font-medium">Adaugă mai întâi un bilet de acces</p>
+                        <p x-show="service.requires_access_ticket && !hasAccessInCart && service.qty === 0" class="text-[11px] text-red-600 mt-2 font-medium" data-i18n="requires_access">Adaugă mai întâi un bilet de acces</p>
                     </div>
                 </div>
             </template>
@@ -819,8 +966,8 @@ require_once __DIR__ . '/includes/head.php';
     <div class="absolute inset-0 lv-topo-pattern opacity-10"></div>
     <div class="max-w-7xl mx-auto relative">
         <div class="text-center mb-12">
-            <p class="text-lake-300 text-xs uppercase tracking-[0.3em] font-bold mb-3">Drumeții marcate</p>
-            <h2 class="font-display text-4xl lg:text-5xl font-bold mb-3">Trasee turistice</h2>
+            <p class="text-lake-300 text-xs uppercase tracking-[0.3em] font-bold mb-3" data-i18n="marked_trails">Drumeții marcate</p>
+            <h2 class="font-display text-4xl lg:text-5xl font-bold mb-3" data-i18n="tourist_trails">Trasee turistice</h2>
         </div>
         <?php if (!empty($trails)): ?>
         <div class="grid lg:grid-cols-2 gap-6 mb-10">
@@ -884,7 +1031,7 @@ require_once __DIR__ . '/includes/head.php';
 <section id="despre" class="lv-scroll-mt py-16 lg:py-24 px-6 lg:px-12 bg-white">
     <div class="max-w-7xl mx-auto">
         <div class="text-center mb-12">
-            <p class="text-forest-600 text-xs uppercase tracking-[0.3em] font-bold mb-3">Cunoaște locul</p>
+            <p class="text-forest-600 text-xs uppercase tracking-[0.3em] font-bold mb-3" data-i18n="know_the_place">Cunoaște locul</p>
             <h2 class="font-display text-4xl lg:text-5xl font-bold text-ink mb-3"><?= htmlspecialchars($venueConfig['about_title'] ?? 'Despre locație') ?></h2>
         </div>
         <?php if (!empty($attractions)): ?>
@@ -953,8 +1100,8 @@ require_once __DIR__ . '/includes/head.php';
 <section class="py-16 lg:py-24 px-6 lg:px-12 bg-fog">
     <div class="max-w-5xl mx-auto">
         <div class="text-center mb-12">
-            <p class="text-forest-600 text-xs uppercase tracking-[0.3em] font-bold mb-3">Program</p>
-            <h2 class="font-display text-4xl lg:text-5xl font-bold text-ink mb-3">Când suntem deschiși</h2>
+            <p class="text-forest-600 text-xs uppercase tracking-[0.3em] font-bold mb-3" data-i18n="program_h2">Program</p>
+            <h2 class="font-display text-4xl lg:text-5xl font-bold text-ink mb-3" data-i18n="when_we_open">Când suntem deschiși</h2>
         </div>
         <div class="grid md:grid-cols-<?= min(count($seasons), 2) ?> gap-6">
             <?php
@@ -997,8 +1144,8 @@ require_once __DIR__ . '/includes/head.php';
 <section id="cum-ajungi" class="lv-scroll-mt py-16 lg:py-24 px-6 lg:px-12 bg-white">
     <div class="max-w-7xl mx-auto">
         <div class="text-center mb-12">
-            <p class="text-forest-600 text-xs uppercase tracking-[0.3em] font-bold mb-3">Locație</p>
-            <h2 class="font-display text-4xl lg:text-5xl font-bold text-ink mb-3">Cum ajungi la noi</h2>
+            <p class="text-forest-600 text-xs uppercase tracking-[0.3em] font-bold mb-3" data-i18n="location_h2">Locație</p>
+            <h2 class="font-display text-4xl lg:text-5xl font-bold text-ink mb-3" data-i18n="how_to_reach">Cum ajungi la noi</h2>
         </div>
         <?php if (!empty($gettingThere)): ?>
         <div class="grid lg:grid-cols-<?= min(count($gettingThere), 3) ?> gap-6 mb-8">
@@ -1048,7 +1195,7 @@ require_once __DIR__ . '/includes/head.php';
 <section id="galerie" class="lv-scroll-mt py-16 lg:py-24 px-6 lg:px-12 bg-fog">
     <div class="max-w-7xl mx-auto">
         <div class="text-center mb-12">
-            <p class="text-forest-600 text-xs uppercase tracking-[0.3em] font-bold mb-3">Galerie</p>
+            <p class="text-forest-600 text-xs uppercase tracking-[0.3em] font-bold mb-3" data-i18n="gallery">Galerie</p>
             <h2 class="font-display text-4xl lg:text-5xl font-bold text-ink">În imagini</h2>
         </div>
         <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
@@ -1069,8 +1216,8 @@ require_once __DIR__ . '/includes/head.php';
 <section id="video" class="lv-scroll-mt py-16 lg:py-24 px-6 lg:px-12 bg-white">
     <div class="max-w-5xl mx-auto">
         <div class="text-center mb-12">
-            <p class="text-forest-600 text-xs uppercase tracking-[0.3em] font-bold mb-3">Video</p>
-            <h2 class="font-display text-4xl lg:text-5xl font-bold text-ink">Locul în mișcare</h2>
+            <p class="text-forest-600 text-xs uppercase tracking-[0.3em] font-bold mb-3" data-i18n="video">Video</p>
+            <h2 class="font-display text-4xl lg:text-5xl font-bold text-ink" data-i18n="place_in_motion">Locul în mișcare</h2>
         </div>
         <div class="grid md:grid-cols-2 gap-6">
             <template x-for="(v, i) in videos" :key="i">
@@ -1104,7 +1251,7 @@ require_once __DIR__ . '/includes/head.php';
 <section class="py-16 lg:py-24 px-6 lg:px-12 bg-fog">
     <div class="max-w-3xl mx-auto">
         <div class="text-center mb-10">
-            <p class="text-forest-600 text-xs uppercase tracking-[0.3em] font-bold mb-3">Bine de știut</p>
+            <p class="text-forest-600 text-xs uppercase tracking-[0.3em] font-bold mb-3" data-i18n="good_to_know">Bine de știut</p>
             <h2 class="font-display text-4xl lg:text-5xl font-bold text-ink">Întrebări frecvente</h2>
         </div>
         <div class="space-y-3">
@@ -1139,7 +1286,7 @@ require_once __DIR__ . '/includes/head.php';
             </div>
         </button>
         <div x-show="cartOpen" x-collapse class="px-4 pb-4 border-t border-white/10 max-h-[60vh] overflow-y-auto">
-            <p class="text-xs uppercase tracking-wider text-white/40 font-bold mt-4 mb-2">Sumar comandă</p>
+            <p class="text-xs uppercase tracking-wider text-white/40 font-bold mt-4 mb-2" data-i18n="order_summary">Sumar comandă</p>
             <div class="space-y-2 mb-4">
                 <template x-for="item in cartItems" :key="item._cartKey">
                     <div class="py-1.5 group">
@@ -1168,22 +1315,22 @@ require_once __DIR__ . '/includes/head.php';
                 </template>
             </div>
             <div x-show="hasCommission" class="flex items-center justify-between text-sm text-white/70 py-2 border-t border-white/10">
-                <span>Subtotal bilete</span>
+                <span data-i18n="subtotal_tickets">Subtotal bilete</span>
                 <span><span x-text="cartSubtotalBase.toFixed(2)"></span> RON</span>
             </div>
             <div x-show="hasCommission" class="flex items-center justify-between text-sm text-white/70 py-1">
-                <span>Total comision</span>
+                <span data-i18n="total_commission">Total comision</span>
                 <span>+<span x-text="cartCommissionTotal.toFixed(2)"></span> RON</span>
             </div>
             <div class="flex items-center justify-between py-3 border-t border-white/10">
-                <span class="font-bold">Total</span>
+                <span class="font-bold" data-i18n="total">Total</span>
                 <span class="font-display text-2xl font-bold"><span x-text="cartTotal"></span> RON</span>
             </div>
             <button @click="checkout()" :disabled="!selectedDate || cartCount === 0 || !canCheckout" class="lv-btn w-full mt-2"
                     :class="!selectedDate || cartCount === 0 || !canCheckout ? 'bg-white/10 text-white/40' : 'bg-lake-400 text-forest-900 hover:bg-lake-300'">
-                <span x-show="!selectedDate">Alege mai întâi data</span>
-                <span x-show="selectedDate && !canCheckout && cartCount > 0">Lipsesc bilete acces</span>
-                <span x-show="selectedDate && canCheckout && cartCount > 0">Continuă spre plată →</span>
+                <span x-show="!selectedDate" data-i18n="choose_date_first">Alege mai întâi data</span>
+                <span x-show="selectedDate && !canCheckout && cartCount > 0" data-i18n="missing_access">Lipsesc bilete acces</span>
+                <span x-show="selectedDate && canCheckout && cartCount > 0" data-i18n="continue_to_payment">Continuă spre plată →</span>
             </button>
             <p x-show="!canCheckout && cartCount > 0" class="mt-2 text-xs text-amber-200">
                 <template x-if="requiresAccessAdult > accessAdultInCart">
