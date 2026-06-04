@@ -49,7 +49,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 
     <div id="promo-modal" class="fixed inset-0 bg-black/50 z-50 hidden items-center justify-center p-4">
         <div class="bg-white rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
-            <div class="sticky top-0 bg-white p-6 border-b border-border flex items-center justify-between">
+            <div class="sticky top-0 z-20 bg-white p-6 border-b border-border flex items-center justify-between">
                 <h3 id="modal-title" class="text-xl font-bold text-secondary">Creeaza Cod Promotional</h3>
                 <button onclick="closePromoModal()" class="p-2 hover:bg-surface rounded-lg"><svg class="w-5 h-5 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
             </div>
@@ -146,8 +146,29 @@ async function savePromoCode(e) {
     } catch (error) { AmbiletNotifications.error('Eroare la salvare'); }
 }
 
-document.getElementById('search-codes').addEventListener('input', AmbiletUtils.debounce(function() { const q = this.value.toLowerCase(); const status = document.getElementById('status-filter').value; const filtered = promoCodes.filter(c => (!q || c.code.toLowerCase().includes(q)) && (!status || c.status === status)); const temp = promoCodes; promoCodes = filtered; renderPromoCodes(); promoCodes = temp; }, 300));
-document.getElementById('status-filter').addEventListener('change', function() { const q = document.getElementById('search-codes').value.toLowerCase(); const status = this.value; const filtered = promoCodes.filter(c => (!q || c.code.toLowerCase().includes(q)) && (!status || c.status === status)); const temp = promoCodes; promoCodes = filtered; renderPromoCodes(); promoCodes = temp; });
+// Bind filter handlers after defer-loaded utils.js executes — without the
+// DOMContentLoaded wrap, AmbiletUtils.debounce is undefined at inline-script
+// parse time and the resulting ReferenceError aborts the rest of the block.
+document.addEventListener('DOMContentLoaded', function () {
+    var searchEl = document.getElementById('search-codes');
+    var statusEl = document.getElementById('status-filter');
+    if (searchEl) {
+        searchEl.addEventListener('input', AmbiletUtils.debounce(function () {
+            const q = this.value.toLowerCase();
+            const status = document.getElementById('status-filter').value;
+            const filtered = promoCodes.filter(c => (!q || c.code.toLowerCase().includes(q)) && (!status || c.status === status));
+            const temp = promoCodes; promoCodes = filtered; renderPromoCodes(); promoCodes = temp;
+        }, 300));
+    }
+    if (statusEl) {
+        statusEl.addEventListener('change', function () {
+            const q = document.getElementById('search-codes').value.toLowerCase();
+            const status = this.value;
+            const filtered = promoCodes.filter(c => (!q || c.code.toLowerCase().includes(q)) && (!status || c.status === status));
+            const temp = promoCodes; promoCodes = filtered; renderPromoCodes(); promoCodes = temp;
+        });
+    }
+});
 </script>
 JS;
 require_once dirname(__DIR__) . '/includes/scripts.php';

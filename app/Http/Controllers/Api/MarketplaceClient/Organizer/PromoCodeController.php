@@ -295,6 +295,13 @@ class PromoCodeController extends BaseController
             'expires_at' => 'nullable|date',
             'is_public' => 'boolean',
             'status' => 'nullable|in:active,inactive',
+            // ticket_type_ids: optional on update — when present, replaces the
+            // current list of ticket types the code applies to. The form on
+            // /organizator/promo always sends it (required ≥1 ticket type), but
+            // legacy / scripted callers may omit it to update only the meta
+            // fields above. Validated against ticket types of the code's event.
+            'ticket_type_ids' => 'nullable|array|min:1',
+            'ticket_type_ids.*' => 'integer|exists:ticket_types,id',
         ]);
 
         // Validate usage_limit is not less than current usage
@@ -302,7 +309,54 @@ class PromoCodeController extends BaseController
             return $this->error('Usage limit cannot be less than current usage count', 422);
         }
 
+        // Resolve ticket_type_ids → applicable_ticket_type_ids (+ legacy single
+        // ticket_type_id for backward compatibility). Scope check uses the
+        // code's persisted marketplace_event_id, since event_id is intentionally
+        // not editable from the UI.
+        $ticketTypeIds = $validated['ticket_type_ids'] ?? null;
+        unset($validated['ticket_type_ids']);
+
+        if ($ticketTypeIds !== null) {
+            $eventId = $promoCode->marketplace_event_id;
+            if (!$eventId) {
+                return $this->error('Cannot assign ticket types: code has no associated event', 422);
+            }
+            $eventTicketTypeIds = \App\Models\TicketType::where('event_id', $eventId)
+                ->pluck('id')->map(fn ($v) => (int) $v)->all();
+            $invalidIds = array_diff(
+                array_map('intval', $ticketTypeIds),
+                $eventTicketTypeIds
+            );
+            if (!empty($invalidIds)) {
+                return $this->error('Some ticket types do not belong to the selected event', 422);
+            }
+
+            $ticketTypeIdsInt = array_map('intval', $ticketTypeIds);
+            $validated['applicable_ticket_type_ids'] = $ticketTypeIdsInt;
+            $validated['ticket_type_id'] = $ticketTypeIdsInt[0];
+        }
+
         $promoCode->update($validated);
+
+        // Mirror ticket-type changes to coupon_codes (admin Coupon Codes view).
+        // We only update the linked admin mirror — never create one here, since
+        // a missing mirror means the code was created before mirroring was
+        // wired (or the mirror was intentionally removed).
+        if ($ticketTypeIds !== null) {
+            try {
+                \App\Models\Coupon\CouponCode::where('marketplace_client_id', $promoCode->marketplace_client_id)
+                    ->where('marketplace_organizer_id', $organizer->id)
+                    ->where('code', $promoCode->code)
+                    ->update([
+                        'applicable_ticket_types' => $ticketTypeIdsInt,
+                    ]);
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('Failed to mirror ticket_type_ids update to coupon_codes', [
+                    'code' => $promoCode->code,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
 
         return $this->success([
             'promo_code' => $this->formatPromoCode($promoCode->fresh(['event:id,title,slug', 'ticketType:id,name'])),

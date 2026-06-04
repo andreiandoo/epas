@@ -79,7 +79,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 
     <div id="promo-modal" class="fixed inset-0 z-50 items-center justify-center hidden p-4 bg-black/50">
         <div class="bg-white rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
-            <div class="sticky top-0 flex items-center justify-between p-6 bg-white border-b border-border">
+            <div class="sticky top-0 z-20 flex items-center justify-between p-6 bg-white border-b border-border">
                 <h3 id="modal-title" class="text-xl font-bold text-secondary">Creeaza Cod Promotional</h3>
                 <button onclick="closePromoModal()" aria-label="Închide" class="p-2 rounded-lg hover:bg-surface"><svg class="w-5 h-5 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
             </div>
@@ -492,8 +492,21 @@ async function savePromoCode(e) {
     } catch (error) { AmbiletNotifications.error(error.message || 'Eroare la salvare'); }
 }
 
-document.getElementById('search-codes').addEventListener('input', AmbiletUtils.debounce(filterPromoCodes, 300));
-document.getElementById('status-filter').addEventListener('change', filterPromoCodes);
+// Bind filter handlers after defer-loaded scripts finish (utils.js carries
+// AmbiletUtils.debounce). Without the DOMContentLoaded wrap, this inline
+// <script> evaluates immediately on parse — before utils.js has executed —
+// and the AmbiletUtils.debounce(...) argument throws ReferenceError, which
+// aborts the rest of the script block.
+document.addEventListener('DOMContentLoaded', function () {
+    var searchEl = document.getElementById('search-codes');
+    var statusEl = document.getElementById('status-filter');
+    if (searchEl) {
+        searchEl.addEventListener('input', AmbiletUtils.debounce(filterPromoCodes, 300));
+    }
+    if (statusEl) {
+        statusEl.addEventListener('change', filterPromoCodes);
+    }
+});
 </script>
 JS;
 require_once dirname(__DIR__) . '/includes/scripts.php';
