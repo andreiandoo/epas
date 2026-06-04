@@ -8,6 +8,10 @@ use App\Models\Marketplace\OrganizerLead;
 use App\Models\Marketplace\OrganizerLeadEvent;
 use App\Models\User;
 use Filament\Actions\Action;
+use Filament\Actions\BulkAction;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\EditAction;
+use Filament\Actions\ViewAction;
 use Filament\Forms;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
@@ -24,15 +28,13 @@ use Illuminate\Database\Eloquent\Builder;
  * /devino-partener + /inregistrare-locatie on bilete.online (and any
  * leisure marketplace wiring up the same flow).
  *
- * Pipeline visibility: list view shows lead state at a glance
- * (status, who's assigned, last activity), and the view page exposes
- * the full per-lead activity timeline (page views, status changes,
- * notes, emails sent, calls). Quick actions in the table + view let
- * an operator transition a lead, assign it, and add notes without
- * leaving the page.
- *
  * Marketplace-scoped: HasMarketplaceContext narrows the base query so
  * a marketplace admin only sees leads belonging to their marketplace.
+ *
+ * Uses Filament 4 conventions throughout:
+ *   - record-level actions go in ->recordActions([])
+ *   - bulk actions go in ->toolbarActions([BulkActionGroup::make([...])])
+ *   - badge columns are TextColumn::make()->badge()->color(fn)
  */
 class OrganizerLeadResource extends Resource
 {
@@ -54,10 +56,6 @@ class OrganizerLeadResource extends Resource
             ->when($client, fn ($q) => $q->where('marketplace_client_id', $client->id));
     }
 
-    /**
-     * Show a badge with the count of new leads (pending triage) so
-     * admins notice incoming signups without opening the section.
-     */
     public static function getNavigationBadge(): ?string
     {
         $client = static::getMarketplaceClient();
@@ -76,7 +74,7 @@ class OrganizerLeadResource extends Resource
 
     public static function form(Schema $form): Schema
     {
-        return $form->schema([
+        return $form->components([
             SC\Section::make('Identitate contact')->columns(2)->schema([
                 Forms\Components\TextInput::make('contact_name')->label('Nume')->required()->maxLength(160),
                 Forms\Components\TextInput::make('email')->label('Email')->email()->required()->maxLength(190),
@@ -131,19 +129,26 @@ class OrganizerLeadResource extends Resource
                 Tables\Columns\TextColumn::make('contact_name')->label('Contact')->searchable()
                     ->description(fn (OrganizerLead $r) => $r->email),
                 Tables\Columns\TextColumn::make('activity_type_label')->label('Tip activitate')->wrap(),
-                Tables\Columns\BadgeColumn::make('status')
+
+                // Filament 4: TextColumn::make()->badge()->color(fn) — there's
+                // no separate BadgeColumn class. Color callback uses match()
+                // to return one Tailwind-equivalent color name per status.
+                Tables\Columns\TextColumn::make('status')
                     ->label('Status')
+                    ->badge()
                     ->formatStateUsing(fn ($state) => OrganizerLead::STATUSES[$state] ?? $state)
-                    ->colors([
-                        'warning' => OrganizerLead::STATUS_NEW,
-                        'info'    => OrganizerLead::STATUS_CONTACTED,
-                        'primary' => OrganizerLead::STATUS_IN_NEGOTIATION,
-                        'primary' => OrganizerLead::STATUS_DEMO_SCHEDULED,
-                        'success' => OrganizerLead::STATUS_ACCEPTED,
-                        'danger'  => OrganizerLead::STATUS_REJECTED,
-                        'gray'    => OrganizerLead::STATUS_GHOSTED,
-                        'gray'    => OrganizerLead::STATUS_ARCHIVED,
-                    ]),
+                    ->color(fn (string $state): string => match ($state) {
+                        OrganizerLead::STATUS_NEW            => 'warning',
+                        OrganizerLead::STATUS_CONTACTED      => 'info',
+                        OrganizerLead::STATUS_IN_NEGOTIATION => 'primary',
+                        OrganizerLead::STATUS_DEMO_SCHEDULED => 'primary',
+                        OrganizerLead::STATUS_ACCEPTED       => 'success',
+                        OrganizerLead::STATUS_REJECTED       => 'danger',
+                        OrganizerLead::STATUS_GHOSTED,
+                        OrganizerLead::STATUS_ARCHIVED       => 'gray',
+                        default                              => 'gray',
+                    }),
+
                 Tables\Columns\TextColumn::make('landing_views')->label('LP')->numeric()->alignCenter()
                     ->tooltip('Câte vizite a făcut pe /devino-partener'),
                 Tables\Columns\TextColumn::make('onboarding_views')->label('OB')->numeric()->alignCenter()
@@ -160,32 +165,37 @@ class OrganizerLeadResource extends Resource
                 SelectFilter::make('assigned_to_user_id')
                     ->label('Asignat lui')
                     ->relationship('assignedTo', 'name'),
-                Filter::make('city')->form([Forms\Components\TextInput::make('city')])
-                    ->query(fn ($q, array $data) => $data['city']
+                Filter::make('city')->schema([Forms\Components\TextInput::make('city')])
+                    ->query(fn ($q, array $data) => isset($data['city']) && $data['city'] !== ''
                         ? $q->where('city', 'ILIKE', '%'.$data['city'].'%')
                         : $q),
                 Filter::make('has_phone')
                     ->label('Are telefon')
-                    ->query(fn ($q) => $q->whereNotNull('phone')),
+                    ->query(fn ($q) => $q->whereNotNull('phone'))
+                    ->toggle(),
                 Filter::make('needs_action')
                     ->label('Necesită acțiune (next_action_at trecut)')
-                    ->query(fn ($q) => $q->where('next_action_at', '<', now())),
+                    ->query(fn ($q) => $q->where('next_action_at', '<', now()))
+                    ->toggle(),
             ])
-            ->actions([
-                Tables\Actions\ViewAction::make()->iconButton(),
-                Tables\Actions\EditAction::make()->iconButton(),
+            // Filament 4 — record-level actions
+            ->recordActions([
+                ViewAction::make(),
+                EditAction::make(),
                 Action::make('contacted')
                     ->label('Marchează contactat')
                     ->icon('heroicon-o-phone')
+                    ->color('info')
                     ->visible(fn (OrganizerLead $r) => $r->status === OrganizerLead::STATUS_NEW)
                     ->action(function (OrganizerLead $r) {
                         $r->transitionTo(OrganizerLead::STATUS_CONTACTED, 'Marcat contactat din tabel', auth()->id());
                         Notification::make()->success()->title('Marcat contactat')->send();
                     }),
             ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\BulkAction::make('assign')
+            // Filament 4 — bulk actions live under ->toolbarActions()
+            ->toolbarActions([
+                BulkActionGroup::make([
+                    BulkAction::make('assign')
                         ->label('Asignează lui…')
                         ->icon('heroicon-o-user')
                         ->form([
@@ -198,7 +208,8 @@ class OrganizerLeadResource extends Resource
                         ->action(function ($records, array $data) {
                             foreach ($records as $r) {
                                 $r->update(['assigned_to_user_id' => $data['user_id']]);
-                                $r->events()->create([
+                                OrganizerLeadEvent::create([
+                                    'lead_id'               => $r->id,
                                     'marketplace_client_id' => $r->marketplace_client_id,
                                     'event_type'            => OrganizerLeadEvent::TYPE_ASSIGNED,
                                     'summary'               => 'Asignat din bulk action',
@@ -215,10 +226,10 @@ class OrganizerLeadResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListOrganizerLeads::route('/'),
+            'index'  => Pages\ListOrganizerLeads::route('/'),
             'create' => Pages\CreateOrganizerLead::route('/create'),
-            'view'  => Pages\ViewOrganizerLead::route('/{record}'),
-            'edit'  => Pages\EditOrganizerLead::route('/{record}/edit'),
+            'view'   => Pages\ViewOrganizerLead::route('/{record}'),
+            'edit'   => Pages\EditOrganizerLead::route('/{record}/edit'),
         ];
     }
 }
