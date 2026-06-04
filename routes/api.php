@@ -2767,6 +2767,19 @@ Route::prefix('marketplace-client/event-categories')->middleware(['throttle:120,
         ->name('api.marketplace-client.event-categories.show');
 });
 
+// Organizer Leads — used by the public /devino-partener + /inregistrare-locatie
+// funnel on bilete.online (and any leisure marketplace wiring up the same
+// pages). `track` is a fire-and-forget anonymous page-view ping; `create`
+// is the form submission. Both rate-limited; the create path additionally
+// enforces a per-IP per-hour cap inside the controller to keep the
+// pipeline clean.
+Route::prefix('marketplace-client/leads')->middleware(['throttle:60,1', 'marketplace.auth'])->group(function () {
+    Route::post('/', [\App\Http\Controllers\Api\MarketplaceClient\LeadsController::class, 'create'])
+        ->name('api.marketplace-client.leads.create');
+    Route::post('/track', [\App\Http\Controllers\Api\MarketplaceClient\LeadsController::class, 'track'])
+        ->name('api.marketplace-client.leads.track');
+});
+
 // Event Types (global taxonomy)
 Route::get('/marketplace-client/event-types', [MarketplaceEventsController::class, 'eventTypes'])
     ->middleware(['throttle:120,1', 'marketplace.auth'])
