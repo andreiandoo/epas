@@ -147,7 +147,7 @@ class ViewOrganizerLead extends ViewRecord
      * detail. Kept inline for now — if it grows we can split into a
      * Livewire component.
      */
-    protected function getFooter(): ?View
+    public function getFooter(): ?View
     {
         /** @var OrganizerLead $lead */
         $lead = $this->record;
