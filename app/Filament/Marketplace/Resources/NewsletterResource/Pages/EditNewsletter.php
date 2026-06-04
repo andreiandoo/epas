@@ -148,6 +148,56 @@ class EditNewsletter extends EditRecord
                     }
                 }),
 
+            // Real send — same logic as the list-view recordAction so users
+            // don't have to bounce back to the index to ship a draft.
+            Actions\Action::make('send')
+                ->label('Trimite newsletter')
+                ->icon('heroicon-o-paper-airplane')
+                ->color('success')
+                ->requiresConfirmation()
+                ->modalHeading('Trimite newsletter')
+                ->modalDescription('Sigur vrei să trimiți acum? Acțiunea nu poate fi anulată.')
+                ->modalSubmitActionLabel('Trimite')
+                ->visible(fn () => $this->record->status === 'draft')
+                ->action(function () {
+                    $this->record->createRecipients();
+                    $this->record->startSending();
+                    \App\Jobs\SendNewsletterJob::dispatch($this->record);
+                    Notification::make()
+                        ->title('Newsletter pornit')
+                        ->body('Destinatari: ' . (int) $this->record->total_recipients)
+                        ->success()
+                        ->send();
+                }),
+
+            Actions\Action::make('schedule')
+                ->label('Programează')
+                ->icon('heroicon-o-clock')
+                ->color('warning')
+                ->form([
+                    Forms\Components\DateTimePicker::make('scheduled_at')
+                        ->label('Trimite la')
+                        ->required()
+                        ->minDate(now()),
+                ])
+                ->visible(fn () => $this->record->status === 'draft')
+                ->action(function (array $data) {
+                    $this->record->createRecipients();
+                    $this->record->schedule(new \DateTime($data['scheduled_at']));
+                    Notification::make()->title('Programat')->success()->send();
+                }),
+
+            Actions\Action::make('cancel')
+                ->label('Anulează programare')
+                ->icon('heroicon-o-x-mark')
+                ->color('danger')
+                ->requiresConfirmation()
+                ->visible(fn () => $this->record->status === 'scheduled')
+                ->action(function () {
+                    $this->record->cancel();
+                    Notification::make()->title('Anulat')->success()->send();
+                }),
+
             Actions\DeleteAction::make()
                 ->visible(fn () => $this->record->status === 'draft'),
         ];
