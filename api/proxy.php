@@ -3398,6 +3398,21 @@ switch ($action) {
         $rawResponse = true; // PDF binary stream
         break;
 
+    case 'organizer.event.analytics.export':
+        $eventId = $_GET['event_id'] ?? '';
+        if (!$eventId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing event_id parameter']);
+            exit;
+        }
+        $method = 'GET';
+        $params = [];
+        if (isset($_GET['period'])) $params['period'] = $_GET['period'];
+        $endpoint = '/organizer/events/' . urlencode($eventId) . '/analytics/export' . ($params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        $rawResponse = true; // CSV/PDF binary stream
+        break;
+
     case 'organizer.event.goals':
         $eventId = $_GET['event_id'] ?? '';
         if (!$eventId) {
@@ -3457,6 +3472,18 @@ switch ($action) {
             $body = file_get_contents('php://input');
         }
         $endpoint = '/organizer/events/' . urlencode($eventId) . '/milestones/' . urlencode($milestoneId);
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.event.staff-report':
+        $eventId = $_GET['event_id'] ?? '';
+        if (!$eventId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing event_id parameter']);
+            exit;
+        }
+        $method = 'GET';
+        $endpoint = '/organizer/events/' . urlencode($eventId) . '/staff-report';
         $requiresAuth = true;
         break;
 
