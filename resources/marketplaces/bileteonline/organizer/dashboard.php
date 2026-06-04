@@ -182,7 +182,12 @@ const OrgDashboard = {
 
     render() {
         const d = this.data;
-        const revenueMonth = d.revenue_month ?? (d.sales && d.sales.gross_revenue) ?? 0;
+        // "Venituri" = organizer NET (ce încasează el din bilete, fără comision platformă / card).
+        // Preferă un câmp net dacă API-ul îl expune; altfel cade pe revenue_month.
+        const s = d.sales || {};
+        const revenueMonth = d.net_revenue_month ?? d.net_revenue ?? d.revenue_net ?? d.organizer_revenue_month ?? d.organizer_revenue
+            ?? s.net_revenue ?? s.organizer_revenue ?? s.net
+            ?? d.revenue_month ?? s.gross_revenue ?? 0;
         const ticketsSold = d.tickets_sold ?? (d.sales && d.sales.tickets_sold) ?? 0;
         const activeEvents = d.active_events ?? (d.events && d.events.upcoming) ?? 0;
         const conversionRate = d.conversion_rate ?? 0;
