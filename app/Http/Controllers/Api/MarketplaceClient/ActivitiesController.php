@@ -457,46 +457,44 @@ class ActivitiesController extends BaseController
                 $detailedAverages = [];
             }
 
-            // Recent review cards. Resilient for the same reason (join / date
-            // formatting must not blank out the rating summary).
+            // Recent review cards. Two simple queries (no JOIN) for max Postgres
+            // robustness; a failure here must not blank the rating summary.
             $items = [];
             try {
-                $items = (clone $base)
-                    ->leftJoin('marketplace_customers', 'marketplace_customers.id', '=', 'marketplace_customer_reviews.marketplace_customer_id')
-                    ->orderByDesc('marketplace_customer_reviews.created_at')
+                $rows = (clone $base)
+                    ->orderByDesc('created_at')
                     ->limit(9)
-                    ->get([
-                        'marketplace_customer_reviews.rating',
-                        'marketplace_customer_reviews.text',
-                        'marketplace_customer_reviews.created_at',
-                        'marketplace_customer_reviews.is_anonymous',
-                        'marketplace_customers.first_name',
-                        'marketplace_customers.last_name',
-                    ])
-                    ->map(function ($r) {
-                        $anon = filter_var($r->is_anonymous, FILTER_VALIDATE_BOOLEAN);
-                        $name = trim((string) ($r->first_name ?? '') . ' ' . substr((string) ($r->last_name ?? ''), 0, 1));
-                        if ($anon || $name === '') {
-                            $name = 'Client bilete.online';
-                        }
-                        $when = '';
-                        try {
-                            $when = $r->created_at ? \Carbon\Carbon::parse($r->created_at)->locale('ro')->isoFormat('MMMM YYYY') : '';
-                        } catch (\Throwable $e) {
-                            $when = '';
-                        }
+                    ->get(['rating', 'text', 'created_at', 'is_anonymous', 'marketplace_customer_id']);
 
-                        return [
-                            'rating'   => (int) $r->rating,
-                            'text'     => (string) $r->text,
-                            'name'     => $name,
-                            'initial'  => mb_strtoupper(mb_substr($name, 0, 1)),
-                            'meta'     => trim($when . ' · rezervare verificată', ' ·'),
-                        ];
-                    })
-                    ->values()
-                    ->all();
+                $custIds = $rows->pluck('marketplace_customer_id')->filter()->unique()->values()->all();
+                $custs = $custIds
+                    ? DB::table('marketplace_customers')->whereIn('id', $custIds)->get(['id', 'first_name', 'last_name'])->keyBy('id')
+                    : collect();
+
+                $items = $rows->map(function ($r) use ($custs) {
+                    $c = $custs->get($r->marketplace_customer_id);
+                    $anon = filter_var($r->is_anonymous, FILTER_VALIDATE_BOOLEAN);
+                    $name = $c ? trim((string) ($c->first_name ?? '') . ' ' . substr((string) ($c->last_name ?? ''), 0, 1)) : '';
+                    if ($anon || $name === '') {
+                        $name = 'Client bilete.online';
+                    }
+                    $when = '';
+                    try {
+                        $when = $r->created_at ? \Carbon\Carbon::parse($r->created_at)->locale('ro')->isoFormat('MMMM YYYY') : '';
+                    } catch (\Throwable $e) {
+                        $when = '';
+                    }
+
+                    return [
+                        'rating'  => (int) $r->rating,
+                        'text'    => (string) $r->text,
+                        'name'    => $name,
+                        'initial' => mb_strtoupper(mb_substr($name, 0, 1)),
+                        'meta'    => trim($when . ' · rezervare verificată', ' ·'),
+                    ];
+                })->values()->all();
             } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('activity reviews items failed: ' . $e->getMessage());
                 $items = [];
             }
 
