@@ -21,7 +21,7 @@ class RomaniaLocationSeeder extends Seeder
     {
         $marketplaceClientId = env('MARKETPLACE_ID', 1);
 
-        $this->command->info("Seeding Romanian locations for marketplace_client_id: {$marketplaceClientId}");
+        $this->command?->info("Seeding Romanian locations for marketplace_client_id: {$marketplaceClientId}");
 
         // Create Regions
         $regions = $this->createRegions($marketplaceClientId);
@@ -29,7 +29,7 @@ class RomaniaLocationSeeder extends Seeder
         // Create Counties with their cities
         $this->createCountiesAndCities($marketplaceClientId, $regions);
 
-        $this->command->info("Seeding complete!");
+        $this->command?->info("Seeding complete!");
     }
 
     protected function createRegions(int $marketplaceClientId): array
@@ -65,7 +65,7 @@ class RomaniaLocationSeeder extends Seeder
                 ]
             );
             $regions[$data['code']] = $region;
-            $this->command->info("Created region: {$data['name']['ro']}");
+            $this->command?->info("Created region: {$data['name']['ro']}");
         }
 
         return $regions;
@@ -94,7 +94,7 @@ class RomaniaLocationSeeder extends Seeder
                 ]
             );
 
-            $this->command->info("  Created county: {$countyData['code']} - {$countyData['name']['ro']}");
+            $this->command?->info("  Created county: {$countyData['code']} - {$countyData['name']['ro']}");
 
             // Create cities for this county
             $citySortOrder = 0;

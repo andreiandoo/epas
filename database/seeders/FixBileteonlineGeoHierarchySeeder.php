@@ -55,19 +55,47 @@ use Illuminate\Support\Str;
  */
 class FixBileteonlineGeoHierarchySeeder extends Seeder
 {
-    /** Target marketplace — bilete.online's client id. */
-    protected const MARKETPLACE_CLIENT_ID = 3;
+    /** Target marketplace — bilete.online's client id by default; can be
+     *  overridden via forMarketplace() so the same code path serves the
+     *  Settings-page country importer for any marketplace. */
+    protected int $marketplaceClientId = 3;
+
+    /** Fluent setter the service layer uses to swap targets. */
+    public function forMarketplace(int $marketplaceClientId): self
+    {
+        $this->marketplaceClientId = $marketplaceClientId;
+        return $this;
+    }
+
+    /**
+     * Logging shim. When invoked from artisan db:seed the parent
+     * Seeder populates $this->command with an OutputStyle; when called
+     * programmatically from a service/Filament action it stays null,
+     * so we fall back to dropping the line on the floor (the
+     * caller is responsible for collecting structured stats).
+     */
+    protected function log(string $line, string $level = 'info'): void
+    {
+        if (!$this->command) {
+            return;
+        }
+        match ($level) {
+            'warn' => $this->command->warn($line),
+            'line' => $this->command->line($line),
+            default => $this->command->info($line),
+        };
+    }
 
     public function run(): void
     {
-        $mcId = static::MARKETPLACE_CLIENT_ID;
+        $mcId = $this->marketplaceClientId;
 
         // The curated data lives on RomaniaLocationSeeder so we don't
         // have to maintain two copies of "what cities are in which
         // county". This class reuses the parent's protected getters.
         $dataProvider = new RomaniaLocationSeeder();
 
-        $this->command->info("Wiping wrongly-seeded regions + empty counties for bilete.online (mc {$mcId})...");
+        $this->log("Wiping wrongly-seeded regions + empty counties for marketplace {$mcId}...");
 
         DB::transaction(function () use ($mcId) {
             // Both tables are scoped by marketplace_client_id so we
@@ -81,37 +109,37 @@ class FixBileteonlineGeoHierarchySeeder extends Seeder
             DB::table('marketplace_regions')->where('marketplace_client_id', $mcId)->delete();
         });
 
-        $this->command->info("Re-seeding 8 macro-regions...");
+        $this->log("Re-seeding 8 macro-regions...");
         $regions = $this->createRegionsThroughReflection($dataProvider, $mcId);
-        $this->command->info("  Done: " . count($regions) . " regions inserted");
+        $this->log("  Done: " . count($regions) . " regions inserted");
 
-        $this->command->info("Re-seeding counties...");
+        $this->log("Re-seeding counties...");
         $countiesData = $this->getCountiesData($dataProvider);
         [$citySlugToCounty, $countyCount] = $this->createCounties($mcId, $regions, $countiesData);
-        $this->command->info("  Done: {$countyCount} counties inserted");
-        $this->command->info("  Built slug→county map for " . count($citySlugToCounty) . " known cities");
+        $this->log("  Done: {$countyCount} counties inserted");
+        $this->log("  Built slug→county map for " . count($citySlugToCounty) . " known cities");
 
-        $this->command->info("Re-linking existing city rows (region_id + county_id ONLY)...");
+        $this->log("Re-linking existing city rows (region_id + county_id ONLY)...");
         [$linked, $unlinked] = $this->relinkCities($mcId, $citySlugToCounty);
-        $this->command->info("  Linked:   {$linked} cities");
-        $this->command->info("  Unlinked: " . count($unlinked) . " cities (no slug match in curated data)");
+        $this->log("  Linked:   {$linked} cities");
+        $this->log("  Unlinked: " . count($unlinked) . " cities (no slug match in curated data)");
 
         if (!empty($unlinked)) {
-            $this->command->warn("Cities the seeder couldn't auto-link (review in admin):");
+            $this->log("Cities the seeder couldn't auto-link (review in admin):", 'warn');
             foreach ($unlinked as $row) {
-                $this->command->line(sprintf(
+                $this->log(sprintf(
                     "  - id=%d  slug=%s  name=%s",
                     $row['id'],
                     $row['slug'],
                     $row['name']
-                ));
+                ), 'line');
             }
         }
 
-        $this->command->info("Updating county.city_count...");
+        $this->log("Updating county.city_count...");
         $this->recountCounties($mcId);
 
-        $this->command->info("Done. Bilete.online geo hierarchy is fixed.");
+        $this->log("Done. Bilete.online geo hierarchy is fixed.");
     }
 
     /**

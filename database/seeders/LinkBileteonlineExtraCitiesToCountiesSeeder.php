@@ -27,7 +27,14 @@ use Illuminate\Support\Facades\DB;
  */
 class LinkBileteonlineExtraCitiesToCountiesSeeder extends Seeder
 {
-    protected const MARKETPLACE_CLIENT_ID = 3;
+    /** Default to bilete.online's id; overridable via forMarketplace(). */
+    protected int $marketplaceClientId = 3;
+
+    public function forMarketplace(int $marketplaceClientId): self
+    {
+        $this->marketplaceClientId = $marketplaceClientId;
+        return $this;
+    }
 
     /**
      * slug ⇒ county code. Codes match the standard 2-letter county
@@ -229,7 +236,7 @@ class LinkBileteonlineExtraCitiesToCountiesSeeder extends Seeder
 
     public function run(): void
     {
-        $mcId = static::MARKETPLACE_CLIENT_ID;
+        $mcId = $this->marketplaceClientId;
 
         // Build code → County lookup ONCE so the per-city update loop
         // stays cheap.
@@ -237,7 +244,7 @@ class LinkBileteonlineExtraCitiesToCountiesSeeder extends Seeder
             ->get(['id', 'code', 'region_id'])
             ->keyBy('code');
 
-        $this->command->info('Linking 109 extra bilete.online cities to their counties...');
+        $this->command?->info('Linking 109 extra bilete.online cities to their counties...');
 
         $linked = 0;
         $missingCounty = [];
@@ -266,21 +273,21 @@ class LinkBileteonlineExtraCitiesToCountiesSeeder extends Seeder
             }
         }
 
-        $this->command->info("  Linked: {$linked} extra cities");
+        $this->command?->info("  Linked: {$linked} extra cities");
         if (!empty($missingCounty)) {
-            $this->command->warn('  Missing counties (run FixBileteonlineGeoHierarchySeeder first?):');
+            $this->command?->warn('  Missing counties (run FixBileteonlineGeoHierarchySeeder first?):');
             foreach ($missingCounty as $m) {
-                $this->command->line("    - {$m}");
+                $this->command?->line("    - {$m}");
             }
         }
         if (!empty($missingCity)) {
-            $this->command->warn('  Cities the curated slug list expected but the DB did not contain:');
+            $this->command?->warn('  Cities the curated slug list expected but the DB did not contain:');
             foreach ($missingCity as $m) {
-                $this->command->line("    - {$m}");
+                $this->command?->line("    - {$m}");
             }
         }
 
-        $this->command->info('Refreshing county.city_count for bilete.online...');
+        $this->command?->info('Refreshing county.city_count for bilete.online...');
         $counts = DB::table('marketplace_cities')
             ->where('marketplace_client_id', $mcId)
             ->whereNotNull('county_id')
@@ -294,6 +301,6 @@ class LinkBileteonlineExtraCitiesToCountiesSeeder extends Seeder
                 ->update(['city_count' => $c]);
         }
 
-        $this->command->info('Done.');
+        $this->command?->info('Done.');
     }
 }

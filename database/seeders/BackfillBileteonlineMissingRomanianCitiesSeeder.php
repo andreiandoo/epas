@@ -37,7 +37,14 @@ use Illuminate\Support\Str;
  */
 class BackfillBileteonlineMissingRomanianCitiesSeeder extends Seeder
 {
-    protected const MARKETPLACE_CLIENT_ID = 3;
+    /** Default to bilete.online; overridable via forMarketplace(). */
+    protected int $marketplaceClientId = 3;
+
+    public function forMarketplace(int $marketplaceClientId): self
+    {
+        $this->marketplaceClientId = $marketplaceClientId;
+        return $this;
+    }
 
     /**
      * Romanian cities by county code. Each entry is a (name, optional
@@ -92,7 +99,7 @@ class BackfillBileteonlineMissingRomanianCitiesSeeder extends Seeder
 
     public function run(): void
     {
-        $mcId = static::MARKETPLACE_CLIENT_ID;
+        $mcId = $this->marketplaceClientId;
 
         // Build code → County lookup once. Will fail loudly if any
         // county code in the curated list isn't present in the DB.
@@ -101,7 +108,7 @@ class BackfillBileteonlineMissingRomanianCitiesSeeder extends Seeder
             ->keyBy('code');
 
         $expectedCount = collect(static::CITIES_BY_COUNTY)->flatten(1)->count();
-        $this->command->info("Backfilling bilete.online from a curated list of {$expectedCount} Romanian cities...");
+        $this->command?->info("Backfilling bilete.online from a curated list of {$expectedCount} Romanian cities...");
 
         $inserted = 0;
         $skippedExisting = 0;
@@ -147,17 +154,17 @@ class BackfillBileteonlineMissingRomanianCitiesSeeder extends Seeder
             }
         });
 
-        $this->command->info("  Inserted: {$inserted} new cities");
-        $this->command->info("  Skipped:  {$skippedExisting} (already present)");
+        $this->command?->info("  Inserted: {$inserted} new cities");
+        $this->command?->info("  Skipped:  {$skippedExisting} (already present)");
 
         if (!empty($missingCounty)) {
-            $this->command->warn('Counties present in the curated list but missing in DB:');
+            $this->command?->warn('Counties present in the curated list but missing in DB:');
             foreach ($missingCounty as $code) {
-                $this->command->line("  - {$code}");
+                $this->command?->line("  - {$code}");
             }
         }
 
-        $this->command->info('Refreshing county.city_count...');
+        $this->command?->info('Refreshing county.city_count...');
         $counts = DB::table('marketplace_cities')
             ->where('marketplace_client_id', $mcId)
             ->whereNotNull('county_id')
@@ -170,6 +177,6 @@ class BackfillBileteonlineMissingRomanianCitiesSeeder extends Seeder
         }
 
         $total = MarketplaceCity::where('marketplace_client_id', $mcId)->count();
-        $this->command->info("Done. Bilete.online now has {$total} marketplace_cities rows.");
+        $this->command?->info("Done. Bilete.online now has {$total} marketplace_cities rows.");
     }
 }

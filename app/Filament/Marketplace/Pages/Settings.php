@@ -456,6 +456,59 @@ class Settings extends Page
                                             ->default('default'),
                                     ])->columns(3),
 
+                                // Country geo importer — one-click bootstrap for a
+                                // marketplace's region/county/city catalogue from the
+                                // central per-country curated taxonomies. Idempotent
+                                // and safe to re-run; bilete.online's existing data
+                                // is the production-tested example.
+                                SC\Section::make('Geo Catalog Importer')
+                                    ->description('Import macro-regions, counties and the official city catalogue for one country at a time. Existing rows are preserved — re-running just no-ops on what already exists.')
+                                    ->icon('heroicon-o-globe-europe-africa')
+                                    ->collapsed()
+                                    ->schema([
+                                        Forms\Components\Placeholder::make('current_geo_stats')
+                                            ->label('Current state of this marketplace')
+                                            ->content(function () {
+                                                $client = static::getMarketplaceClient();
+                                                if (!$client) {
+                                                    return new \Illuminate\Support\HtmlString('<em>No marketplace selected.</em>');
+                                                }
+                                                $regions  = \App\Models\MarketplaceRegion::where('marketplace_client_id', $client->id)->count();
+                                                $counties = \App\Models\MarketplaceCounty::where('marketplace_client_id', $client->id)->count();
+                                                $cities   = \App\Models\MarketplaceCity::where('marketplace_client_id', $client->id)->count();
+                                                return new \Illuminate\Support\HtmlString(
+                                                    "<strong>{$regions}</strong> regions · <strong>{$counties}</strong> counties · <strong>{$cities}</strong> cities"
+                                                );
+                                            }),
+
+                                        Forms\Components\Select::make('geo_import_country')
+                                            ->label('Country to import')
+                                            ->options(array_combine(
+                                                \App\Services\Geo\CountryGeoImporter::SUPPORTED_COUNTRIES,
+                                                array_map(
+                                                    fn ($iso) => match ($iso) {
+                                                        'RO' => 'România (8 regions · 42 counties · 319 cities)',
+                                                        default => $iso,
+                                                    },
+                                                    \App\Services\Geo\CountryGeoImporter::SUPPORTED_COUNTRIES
+                                                )
+                                            ))
+                                            ->placeholder('Pick a country to import')
+                                            ->helperText('Importing replaces this marketplace\'s region + county lookup tables but does NOT delete existing city rows — only their region_id + county_id are re-linked. Custom descriptions, GYG ids, lat/lng, etc. on each city are preserved.'),
+
+                                        SC\Actions::make([
+                                            \Filament\Actions\Action::make('runGeoImport')
+                                                ->label('Run geo import')
+                                                ->icon('heroicon-o-arrow-down-tray')
+                                                ->color('warning')
+                                                ->requiresConfirmation()
+                                                ->modalHeading('Import country geo data?')
+                                                ->modalDescription('This will rebuild the marketplace\'s region + county lookup tables for the chosen country and link existing cities to the new IDs. City rows themselves are not deleted; their custom data is preserved. Safe to re-run.')
+                                                ->modalSubmitActionLabel('Yes, import')
+                                                ->action(fn () => $this->runGeoImport()),
+                                        ]),
+                                    ]),
+
                                 SC\Section::make('Serii documente')
                                     ->description('Configurează prefixele și numerotarea pentru comenzi, facturi și deconturi')
                                     ->schema([
@@ -1534,5 +1587,74 @@ class Settings extends Page
                     ->hintIcon('heroicon-o-information-circle', tooltip: 'Sender display name'),
             ]),
         ];
+    }
+
+    /**
+     * Action handler for the Geo Catalog Importer section in
+     * Personalization. Reads the picked country from the form state and
+     * delegates to CountryGeoImporter — its DB-transaction wrapper makes
+     * a half-broken run impossible.
+     */
+    public function runGeoImport(): void
+    {
+        $marketplace = static::getMarketplaceClient();
+        if (!$marketplace) {
+            \Filament\Notifications\Notification::make()
+                ->danger()
+                ->title('No marketplace context')
+                ->body('Could not determine which marketplace to import for. Try the marketplace switcher first.')
+                ->send();
+            return;
+        }
+
+        $country = $this->data['geo_import_country'] ?? null;
+        if (!$country) {
+            \Filament\Notifications\Notification::make()
+                ->warning()
+                ->title('Pick a country first')
+                ->body('Select a country from the dropdown above before running the import.')
+                ->send();
+            return;
+        }
+
+        try {
+            $stats = app(\App\Services\Geo\CountryGeoImporter::class)
+                ->importCountry($marketplace->id, $country);
+
+            $delta = $stats['delta'];
+            \Filament\Notifications\Notification::make()
+                ->success()
+                ->title("Geo import for {$stats['country']} complete")
+                ->body(sprintf(
+                    'Regions: %s → %s · Counties: %s → %s · Cities: %s → %s (Δ %s, %s, %s)',
+                    $stats['before']['regions'],
+                    $stats['after']['regions'],
+                    $stats['before']['counties'],
+                    $stats['after']['counties'],
+                    $stats['before']['cities'],
+                    $stats['after']['cities'],
+                    $delta['regions']  >= 0 ? "+{$delta['regions']}"  : $delta['regions'],
+                    $delta['counties'] >= 0 ? "+{$delta['counties']}" : $delta['counties'],
+                    $delta['cities']   >= 0 ? "+{$delta['cities']}"   : $delta['cities'],
+                ))
+                ->persistent()
+                ->send();
+
+            // Refresh the placeholder so the next render shows the new
+            // counts immediately instead of waiting for a manual reload.
+            $this->dispatch('$refresh');
+        } catch (\Throwable $e) {
+            \Log::error('[Settings::runGeoImport] failed', [
+                'marketplace_id' => $marketplace->id,
+                'country' => $country,
+                'error' => $e->getMessage(),
+            ]);
+            \Filament\Notifications\Notification::make()
+                ->danger()
+                ->title('Geo import failed')
+                ->body($e->getMessage())
+                ->persistent()
+                ->send();
+        }
     }
 }
