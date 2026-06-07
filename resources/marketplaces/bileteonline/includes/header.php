@@ -1,27 +1,39 @@
 <?php
 /**
- * bilete.online — site header (v3 design)
+ * bilete.online — site header (v6 context-aware design)
  *
- * Opens <body>, renders the sticky header (top strip, primary nav with mega
- * menus for categories + cities, command search overlay, cart drawer, account
- * dropdown, mobile drawer), then opens <main id="top"> so pages drop their
- * <section> blocks directly. footer.php closes </main>, the footer and the doc.
+ * Opens <body>, renders the sticky single-bar header (logo, center command
+ * search, context-aware mega menus for Explore / Activities / Inspiration,
+ * language+currency popover, cart drawer, account dropdown, mobile drawer),
+ * then opens <main id="top"> so pages drop their <section> blocks directly.
+ * footer.php closes </main>, the footer and the doc.
  *
- * Dynamic data:
+ * "Context-aware": the primary Explore button label, the search placeholder
+ * and the Explore mega hero adapt to the page the header sits on. A page sets
+ * the context BEFORE including this file via $headerContext (see below).
+ *
+ * Dynamic data (unchanged from v3 — all live):
  *   - Categories / cities pulled live from the API (navGetCategories/Cities),
  *     rendered server-side for SEO inside the mega menus + mobile drawer.
- *   - Auth state (login pill vs account dropdown) + user name/email/initials +
+ *   - Guides (Inspiration mega) pulled from /blog-articles, with a curated
+ *     intent-hub fallback when the guides API is empty.
+ *   - Auth state (login pills vs account dropdown) + user name/email/initials +
  *     dashboard stats hydrated client-side from BileteOnlineAuth / BileteOnlineAPI.
  *   - Cart drawer bound to BileteOnlineCart (live items, qty, subtotal).
- *   - Search overlay: suggestions seeded from real categories/cities; submit
- *     navigates to /cauta?q=…
+ *   - Search overlay: suggestions seeded from real categories/cities + live
+ *     activity search; submit navigates to /cauta?q=…
  *
  * Variables a page can set BEFORE include:
  *   $currentPage     — slug used for aria-current="page"
+ *   $headerContext   — ['type' => 'homepage'|'category'|'city'|'activity',
+ *                       'label' => 'Sinaia', 'slug' => 'sinaia']
+ *                      (label/slug optional; only used for category/city/activity)
  *   $navCategories   — override mega-menu category items
  *   $navCities       — override mega-menu city items
  *   $bodyClass       — extra classes appended to <body>
  *   $skipMainTag     — true if the page renders its own <main>
+ *
+ * NOTE: the previous v3 header is preserved at includes/header-v3-backup.php.
  */
 
 if (!defined('BILETEONLINE_ROOT')) {
@@ -33,11 +45,54 @@ $currentPage = $currentPage ?? '';
 $bodyClass   = $bodyClass ?? '';
 $skipMainTag = $skipMainTag ?? false;
 
-// Mega menu data (live, cached). Pages can override before include.
+// ---- Context resolution -------------------------------------------------
+$headerContext = $headerContext ?? ['type' => 'homepage'];
+$ctxType  = $headerContext['type']  ?? 'homepage';
+$ctxLabel = trim((string) ($headerContext['label'] ?? ''));
+$ctxSlug  = trim((string) ($headerContext['slug'] ?? ''));
+if (!in_array($ctxType, ['homepage', 'category', 'city', 'activity'], true)) {
+    $ctxType = 'homepage';
+}
+
+// Primary "Explorează …" button label + search placeholder + explore hero,
+// computed server-side from the context so they're correct on first paint.
+$ctxExploreLabel = 'Explorează România';
+$ctxPlaceholder  = 'Caută orașe, activități, locații sau experiențe';
+$ctxHero = [
+    'kicker' => 'DESCOPERIRE',
+    'title'  => 'Explorează România',
+    'desc'   => 'Activități, experiențe, orașe și locuri populare din toată țara.',
+    'cta'    => 'Vezi orașe',
+    'href'   => '/orase',
+];
+
+if (($ctxType === 'city' || $ctxType === 'activity') && $ctxLabel !== '') {
+    $ctxExploreLabel = 'Explorează ' . $ctxLabel;
+    $ctxPlaceholder  = 'Caută activități, atracții sau locații în ' . $ctxLabel;
+    $ctxHero = [
+        'kicker' => 'DESTINAȚIE',
+        'title'  => $ctxLabel,
+        'desc'   => 'Activități, locații și idei pe care le poți combina într-o ieșire în ' . $ctxLabel . '.',
+        'cta'    => 'Vezi orașul',
+        'href'   => $ctxSlug !== '' ? '/' . ltrim($ctxSlug, '/') : '/orase',
+    ];
+} elseif ($ctxType === 'category' && $ctxLabel !== '') {
+    $ctxExploreLabel = 'Explorează ' . $ctxLabel;
+    $ctxPlaceholder  = 'Caută ' . mb_strtolower($ctxLabel) . ', orașe sau experiențe similare';
+    $ctxHero = [
+        'kicker' => 'CATEGORIE',
+        'title'  => $ctxLabel,
+        'desc'   => 'Vezi unde găsești ' . mb_strtolower($ctxLabel) . ' și alege orașul potrivit.',
+        'cta'    => 'Vezi categoria',
+        'href'   => $ctxSlug !== '' ? '/' . ltrim($ctxSlug, '/') : '/categorii',
+    ];
+}
+
+// ---- Mega menu data (live, cached). Pages can override before include. ----
 $navCategories = $navCategories ?? navGetCategories(8);
 $navCities     = $navCities ?? navGetCities(8);
 
-// Curated quick-search chips + guide links — all point at real routes
+// Curated quick-search chips + intent hubs — all point at real routes
 // (category/city pages + programmatic SEO intent hubs).
 $navQuickSearches = [
     ['label' => 'Idei de weekend',      'href' => '/activitati-weekend'],
@@ -47,14 +102,37 @@ $navQuickSearches = [
     ['label' => 'Experiențe cadou',     'href' => '/card-cadou'],
     ['label' => 'Pentru cupluri',       'href' => '/activitati-cupluri'],
 ];
-$navGuides = [
-    ['title' => 'Idei de weekend',          'meta' => 'activități, tururi, idei locale',     'href' => '/activitati-weekend'],
-    ['title' => 'Activități cu copiii',     'meta' => 'ateliere, muzee, locuri indoor',      'href' => '/activitati-copii'],
-    ['title' => 'Experiențe cadou',         'meta' => 'pentru cupluri, familie, prieteni',   'href' => '/card-cadou'],
-];
 
-// Search overlay suggestions (client-filtered). Built from live categories +
-// cities so the suggestions reflect the real catalogue, not a hardcoded list.
+// Inspiration mega → real guides from the blog API, with a curated fallback.
+$navGuides = [];
+try {
+    $guidesResp = api_cached('nav_guides', fn () => api_get('/blog-articles', ['per_page' => 6, 'status' => 'published']), 300);
+    $rawGuides  = $guidesResp['data']['articles'] ?? $guidesResp['data']['items'] ?? $guidesResp['data'] ?? [];
+    if (is_array($rawGuides)) {
+        foreach ($rawGuides as $g) {
+            $gt = navFlatName($g['title'] ?? '');
+            $gs = $g['slug'] ?? '';
+            if ($gt === '' || $gs === '') continue;
+            $navGuides[] = [
+                'title' => $gt,
+                'meta'  => navFlatName($g['category']['name'] ?? '') ?: 'Ghid',
+                'href'  => '/ghiduri/' . ltrim($gs, '/'),
+            ];
+            if (count($navGuides) >= 6) break;
+        }
+    }
+} catch (\Throwable $e) {
+    $navGuides = [];
+}
+if (empty($navGuides)) {
+    $navGuides = [
+        ['title' => 'Idei de weekend',      'meta' => 'activități, tururi, idei locale',   'href' => '/activitati-weekend'],
+        ['title' => 'Activități cu copiii', 'meta' => 'ateliere, muzee, locuri indoor',    'href' => '/activitati-copii'],
+        ['title' => 'Experiențe cadou',     'meta' => 'pentru cupluri, familie, prieteni', 'href' => '/card-cadou'],
+    ];
+}
+
+// Search overlay suggestions (client-filtered), built from live data.
 $searchItems = [];
 foreach ($navCategories as $c) {
     $searchItems[] = ['title' => $c['label'], 'type' => 'Categorie', 'meta' => ($c['count'] ?? ''), 'href' => $c['href']];
@@ -66,12 +144,22 @@ $searchItems[] = ['title' => 'Card cadou pentru experiențe', 'type' => 'Cadou',
 $searchItems[] = ['title' => 'Recuperează comanda', 'type' => 'Ajutor', 'meta' => 'Găsește biletele după email și comandă', 'href' => '/recuperare-comanda'];
 
 // json_encode (UTF-8 kept) + htmlspecialchars(ENT_QUOTES) is the correct escaping
-// for an HTML attribute Alpine parses. Do NOT add JSON_HEX_* here — that emits
-// " for structural quotes, which is invalid as an object key in the x-data expr.
+// for an HTML attribute Alpine parses. Do NOT add JSON_HEX_* here.
 $headerSeed = json_encode([
     'searchItems'   => $searchItems,
     'quickSearches' => $navQuickSearches,
+    'context'       => [
+        'type'         => $ctxType,
+        'label'        => $ctxLabel,
+        'exploreLabel' => $ctxExploreLabel,
+        'placeholder'  => $ctxPlaceholder,
+    ],
 ], JSON_UNESCAPED_UNICODE);
+
+// Explore mega tab labels (context-aware copy on the section headers).
+$tabPlacesLabel = ($ctxType === 'city' || $ctxType === 'activity')
+    ? 'Aproape de ' . ($ctxLabel ?: 'tine')
+    : (($ctxType === 'category' && $ctxLabel !== '') ? 'Orașe pentru ' . $ctxLabel : 'Orașe populare');
 ?>
 <body class="grain font-sans antialiased selection:bg-vermilion selection:text-paper<?= $bodyClass ? ' ' . htmlspecialchars($bodyClass, ENT_QUOTES) : '' ?>">
 
@@ -83,208 +171,261 @@ $headerSeed = json_encode([
         class="sticky top-0 z-50"
         role="banner">
 
-    <!-- Top utility strip -->
-    <div class="bg-ink text-paper">
-        <div class="mx-auto flex h-9 max-w-[1500px] items-center justify-between gap-4 px-4 text-[11px] font-mono tracking-[.16em] sm:px-6">
-            <a href="/activitati-weekend" class="hidden items-center gap-2 text-paper/75 transition hover:text-ochre md:flex">
-                <span class="h-1.5 w-1.5 rounded-full bg-vermilion pulse-dot"></span>
-                <span>IDEI DE WEEKEND · ACTIVITĂȚI NOI · CARDURI CADOU</span>
-            </a>
-            <button @click="searchOpen=true" class="flex min-w-0 items-center gap-2 text-paper/75 transition hover:text-ochre md:hidden">
-                <span class="h-1.5 w-1.5 rounded-full bg-vermilion pulse-dot"></span>
-                <span>Caută activități</span>
-            </button>
-            <div class="flex shrink-0 items-center gap-4">
-                <a href="/recuperare-comanda" class="hidden text-ochre underline-wobble sm:inline">Recuperează comanda</a>
-                <a href="/pentru-locatii" x-show="!isClient" class="hidden text-paper/60 transition hover:text-ochre lg:inline">Pentru locații</a>
-                <a href="/card-cadou" class="text-paper/60 transition hover:text-ochre">Card cadou</a>
-            </div>
-        </div>
-    </div>
-
-    <!-- Main nav -->
-    <div :class="scrolled ? 'bg-paper/95 shadow-header-scroll backdrop-blur-xl border-b border-ink/10' : 'bg-paper/85 backdrop-blur-md border-b border-ink/5'"
-         class="relative transition-all duration-300">
+    <div :class="scrolled ? 'shadow-header-scroll' : ''"
+         class="relative border-b border-ink/10 bg-paper/95 backdrop-blur-xl transition-all duration-300">
         <div class="bo-grain pointer-events-none absolute inset-0"></div>
 
-        <nav class="relative mx-auto grid h-[76px] max-w-[1500px] grid-cols-[auto_1fr_auto] items-center gap-3 px-4 sm:px-6" aria-label="Navigare principală">
+        <nav class="relative mx-auto flex h-[72px] max-w-[1500px] items-center gap-3 px-4 sm:px-6" aria-label="Navigare principală">
             <!-- Logo -->
-            <a href="/" class="group flex items-center gap-3" aria-label="<?= htmlspecialchars(SITE_NAME, ENT_QUOTES) ?> — acasă">
-                <span class="grid h-11 w-11 place-items-center rounded-xl bg-vermilion text-paper rotate-[-4deg] shadow-logo transition group-hover:rotate-[4deg] group-hover:scale-105">
-                    <svg viewBox="0 0 24 24" class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <a href="/" class="group flex shrink-0 items-center gap-2.5" aria-label="<?= htmlspecialchars(SITE_NAME, ENT_QUOTES) ?> — acasă">
+                <span class="grid h-10 w-10 place-items-center rounded-xl bg-vermilion text-paper rotate-[-4deg] shadow-logo transition group-hover:rotate-[4deg] group-hover:scale-105">
+                    <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                         <path d="M3 9a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2 2 2 0 0 0 0 4 2 2 0 0 1-2 2H5a2 2 0 0 1-2-2 2 2 0 0 0 0-4Z"/>
                         <path d="M9 7v10" stroke-dasharray="2 2"/>
                     </svg>
                 </span>
-                <span>
-                    <span class="block font-display text-2xl font-bold leading-none">bilete<span class="text-vermilion">.</span>online</span>
-                    <span class="hidden text-xs font-bold text-ink-soft sm:block">activități, experiențe, locuri de descoperit</span>
-                </span>
+                <span class="font-display text-[1.55rem] font-bold leading-none tracking-tight">bilete<span class="text-vermilion">.</span>online</span>
             </a>
 
-            <!-- Desktop nav center -->
-            <div class="hidden justify-center lg:flex">
-                <div class="flex items-center gap-1 rounded-full border border-ink/10 bg-paper-2/70 p-1">
-                    <button @mouseenter="mega='categories'" @focus="mega='categories'" @click="mega = mega==='categories' ? null : 'categories'"
-                            :class="mega==='categories' ? 'bg-ink text-paper' : 'hover:bg-paper'"
-                            class="rounded-full px-4 py-2.5 text-sm font-bold transition" aria-label="Categorii">Categorii</button>
-                    <button @mouseenter="mega='cities'" @focus="mega='cities'" @click="mega = mega==='cities' ? null : 'cities'"
-                            :class="mega==='cities' ? 'bg-ink text-paper' : 'hover:bg-paper'"
-                            class="rounded-full px-4 py-2.5 text-sm font-bold transition" aria-label="Orașe">Orașe</button>
-                    <a href="/ghiduri" @mouseenter="mega=null" class="rounded-full px-4 py-2.5 text-sm font-bold transition hover:bg-paper"<?= $currentPage === 'ghiduri' ? ' aria-current="page"' : '' ?>>Ghiduri</a>
-                    <a href="/operatori" @mouseenter="mega=null" class="rounded-full px-4 py-2.5 text-sm font-bold transition hover:bg-paper"<?= $currentPage === 'operatori' ? ' aria-current="page"' : '' ?>>Operatori</a>
-                    <a href="/faqs" @mouseenter="mega=null" class="rounded-full px-4 py-2.5 text-sm font-bold transition hover:bg-paper"<?= $currentPage === 'faqs' ? ' aria-current="page"' : '' ?>>Ajutor</a>
-                </div>
+            <!-- Center command-search -->
+            <div class="hidden min-w-0 flex-1 px-2 md:block">
+                <button type="button" @click="searchOpen=true"
+                        class="mx-auto flex h-12 w-full max-w-[620px] items-center gap-3 rounded-full border-2 border-ink/15 bg-paper px-4 text-left transition hover:border-ink/40 hover:bg-paper-2">
+                    <svg viewBox="0 0 24 24" class="h-5 w-5 shrink-0 text-ink-soft" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+                    <span class="min-w-0 flex-1 truncate text-sm font-bold text-ink-soft" x-text="searchPlaceholder()"></span>
+                    <span class="hidden rounded-full bg-paper-2 px-2.5 py-1 text-[11px] font-bold text-ink-soft lg:inline">Ctrl K</span>
+                </button>
             </div>
 
-            <!-- Right actions -->
-            <div class="flex items-center justify-end gap-2">
-                <button @click="searchOpen=true" class="hidden items-center gap-2 rounded-full border-2 border-ink bg-paper px-4 py-2.5 text-sm font-bold transition hover:bg-ink hover:text-paper xl:flex">
-                    <svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-                    <span>Caută</span>
-                    <span class="rounded-full bg-paper-2 px-2 py-0.5 text-[11px] text-ink-soft">Ctrl K</span>
-                </button>
+            <!-- Right actions (desktop) -->
+            <div class="ml-auto hidden items-center gap-1 lg:flex" @mouseleave="scheduleMegaClose()" @mouseenter="cancelMegaClose()">
+                <button @mouseenter="openMega('explore','places')" @focus="openMega('explore','places')" @click="toggleMega('explore','places')"
+                        :class="mega==='explore' ? 'bg-paper-2' : 'hover:bg-paper-2'"
+                        class="max-w-[220px] truncate rounded-full px-4 py-2.5 text-sm font-bold transition" x-text="primaryExploreLabel()"></button>
+
+                <button @mouseenter="openMega('explore','things')" @focus="openMega('explore','things')" @click="toggleMega('explore','things')"
+                        :class="mega==='explore' && megaTab==='things' ? 'bg-paper-2' : 'hover:bg-paper-2'"
+                        class="rounded-full px-4 py-2.5 text-sm font-bold transition">Activități</button>
+
+                <button @mouseenter="openMega('inspiration')" @focus="openMega('inspiration')" @click="toggleMega('inspiration')"
+                        :class="mega==='inspiration' ? 'bg-paper-2' : 'hover:bg-paper-2'"
+                        class="rounded-full px-4 py-2.5 text-sm font-bold transition">Inspirație</button>
+
+                <a href="/card-cadou" @mouseenter="mega=null" class="rounded-full px-4 py-2.5 text-sm font-bold transition hover:bg-paper-2"<?= $currentPage === 'card-cadou' ? ' aria-current="page"' : '' ?>>Card cadou</a>
 
                 <!-- Cart -->
-                <button @click="openCart()" class="relative grid h-11 w-11 place-items-center rounded-full border-2 border-ink bg-paper text-ink transition hover:bg-ink hover:text-paper" aria-label="Deschide coșul">
+                <button @click="openCart()" class="relative grid h-11 w-11 place-items-center rounded-full text-ink transition hover:bg-paper-2" aria-label="Deschide coșul">
                     <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6h15l-1.5 9h-12z"/><path d="M6 6 5 3H2"/><circle cx="9" cy="20" r="1"/><circle cx="18" cy="20" r="1"/></svg>
-                    <span x-show="cartCount() > 0" x-cloak class="absolute -right-1 -top-1 grid h-5 min-w-5 place-items-center rounded-full bg-vermilion px-1 text-[11px] font-bold text-paper" x-text="cartCount()"></span>
+                    <span x-show="cartCount() > 0" x-cloak class="absolute right-0 top-0 grid h-5 min-w-5 place-items-center rounded-full bg-vermilion px-1 text-[11px] font-bold text-paper" x-text="cartCount()"></span>
                 </button>
 
-                <!-- Logged OUT: login pill -->
-                <a href="/login" x-show="!loggedIn" x-cloak class="hidden items-center gap-2 rounded-full bg-ink py-2.5 pl-4 pr-4 text-sm font-bold text-paper transition hover:bg-vermilion sm:flex">Intră în cont</a>
+                <!-- Language / currency -->
+                <button @click="languageOpen=!languageOpen; accountOpen=false; mega=null" class="rounded-full px-3 py-2.5 text-sm font-bold transition hover:bg-paper-2">RO/RON</button>
+
+                <!-- Logged OUT: login + register -->
+                <template x-if="!loggedIn">
+                    <div class="flex items-center gap-2" x-cloak>
+                        <a href="/login" class="rounded-full px-4 py-2.5 text-sm font-bold transition hover:bg-paper-2">Intră în cont</a>
+                        <a href="/register" class="rounded-full bg-ink px-4 py-2.5 text-sm font-bold text-paper transition hover:bg-vermilion">Creează cont</a>
+                    </div>
+                </template>
 
                 <!-- Logged IN: account dropdown -->
-                <div class="relative hidden sm:block" x-show="loggedIn" x-cloak>
-                    <button @click="accountOpen=!accountOpen; cartOpen=false" class="flex items-center gap-2 rounded-full bg-ink py-2 pl-2 pr-4 text-sm font-bold text-paper transition hover:bg-vermilion" aria-haspopup="menu" :aria-expanded="accountOpen.toString()">
-                        <span class="grid h-7 w-7 place-items-center rounded-full bg-paper text-ink" x-text="acct.initials">?</span>
-                        <span x-text="acct.firstName">Cont</span>
-                        <svg viewBox="0 0 24 24" class="h-4 w-4 transition" :class="accountOpen ? 'rotate-180' : ''" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
-                    </button>
+                <template x-if="loggedIn">
+                    <div class="relative" x-cloak>
+                        <button @click="accountOpen=!accountOpen; languageOpen=false; mega=null" class="grid h-11 w-11 place-items-center rounded-full bg-ink text-sm font-bold text-paper transition hover:bg-vermilion" aria-haspopup="menu" :aria-expanded="accountOpen.toString()" x-text="acct.initials">A</button>
 
-                    <div x-show="accountOpen" x-cloak x-transition.origin.top.right @click.outside="accountOpen=false" class="absolute right-0 top-[calc(100%+12px)] w-[360px] overflow-hidden rounded-[2rem] border-2 border-ink bg-paper text-ink shadow-deep" role="menu">
-                        <div class="bo-grain relative">
-                            <div class="relative border-b-2 border-dashed border-ink/15 bg-ink p-5 text-paper">
-                                <div class="flex items-center gap-3">
-                                    <span class="grid h-12 w-12 place-items-center rounded-full bg-paper text-xl font-bold text-ink" x-text="acct.initials">?</span>
-                                    <div class="min-w-0">
-                                        <p class="font-display text-3xl font-bold leading-none" x-text="acct.firstName">Cont</p>
-                                        <p class="truncate text-sm text-paper/50" x-text="acct.email"></p>
+                        <div x-show="accountOpen" x-cloak x-transition.origin.top.right @click.outside="accountOpen=false" class="absolute right-0 top-[calc(100%+12px)] w-[360px] overflow-hidden rounded-[2rem] border-2 border-ink bg-paper text-ink shadow-deep" role="menu">
+                            <div class="bo-grain relative">
+                                <div class="relative border-b-2 border-dashed border-ink/15 bg-ink p-5 text-paper">
+                                    <div class="flex items-center gap-3">
+                                        <span class="grid h-12 w-12 place-items-center rounded-full bg-paper text-xl font-bold text-ink" x-text="acct.initials">?</span>
+                                        <div class="min-w-0">
+                                            <p class="font-display text-3xl font-bold leading-none" x-text="acct.firstName">Cont</p>
+                                            <p class="truncate text-sm text-paper/50" x-text="acct.email"></p>
+                                        </div>
+                                    </div>
+                                    <div class="mt-4 grid grid-cols-3 gap-2 text-center">
+                                        <div class="rounded-2xl bg-paper/10 p-3"><p class="font-display text-2xl font-bold" x-text="stats.tickets"></p><p class="text-[11px] text-paper/50">bilete</p></div>
+                                        <div class="rounded-2xl bg-paper/10 p-3"><p class="font-display text-2xl font-bold" x-text="stats.points"></p><p class="text-[11px] text-paper/50">puncte</p></div>
+                                        <div class="rounded-2xl bg-paper/10 p-3"><p class="font-display text-2xl font-bold"><span x-text="stats.profile"></span>%</p><p class="text-[11px] text-paper/50">profil</p></div>
                                     </div>
                                 </div>
-                                <div class="mt-4 grid grid-cols-3 gap-2 text-center">
-                                    <div class="rounded-2xl bg-paper/10 p-3"><p class="font-display text-2xl font-bold" x-text="stats.tickets"></p><p class="text-[11px] text-paper/50">bilete</p></div>
-                                    <div class="rounded-2xl bg-paper/10 p-3"><p class="font-display text-2xl font-bold" x-text="stats.points"></p><p class="text-[11px] text-paper/50">puncte</p></div>
-                                    <div class="rounded-2xl bg-paper/10 p-3"><p class="font-display text-2xl font-bold"><span x-text="stats.profile"></span>%</p><p class="text-[11px] text-paper/50">profil</p></div>
+                                <nav class="relative p-3 text-sm font-bold" role="none">
+                                    <a href="/cont" class="flex items-center justify-between rounded-2xl px-4 py-3 transition hover:bg-ink hover:text-paper" role="menuitem"><span>Dashboard</span><span aria-hidden="true">→</span></a>
+                                    <a href="/cont/bilete" class="flex items-center justify-between rounded-2xl px-4 py-3 transition hover:bg-ink hover:text-paper" role="menuitem"><span>Biletele mele</span><span x-show="stats.tickets" class="rounded-full bg-vermilion px-2 py-0.5 text-xs text-paper" x-text="stats.tickets"></span></a>
+                                    <a href="/cont/comenzi" class="flex items-center justify-between rounded-2xl px-4 py-3 transition hover:bg-ink hover:text-paper" role="menuitem"><span>Comenzile mele</span><span x-text="stats.orders"></span></a>
+                                    <a href="/cont/puncte" class="flex items-center justify-between rounded-2xl px-4 py-3 transition hover:bg-ink hover:text-paper" role="menuitem"><span>Punctele mele</span><span x-text="stats.points"></span></a>
+                                    <a href="/cont/recomandari" class="flex items-center justify-between rounded-2xl px-4 py-3 transition hover:bg-ink hover:text-paper" role="menuitem"><span>Recomandări</span><span class="text-vermilion">nou</span></a>
+                                    <a href="/cont/setari" class="flex items-center justify-between rounded-2xl px-4 py-3 transition hover:bg-ink hover:text-paper" role="menuitem"><span>Setări cont</span><span aria-hidden="true">→</span></a>
+                                </nav>
+                                <div class="relative border-t border-ink/10 p-3">
+                                    <button type="button" @click="logout()" class="flex w-full items-center justify-center rounded-full border-2 border-ink px-4 py-3 text-sm font-bold transition hover:bg-ink hover:text-paper">Ieși din cont</button>
                                 </div>
-                            </div>
-                            <nav class="relative p-3 text-sm font-bold" role="none">
-                                <a href="/cont" class="flex items-center justify-between rounded-2xl px-4 py-3 transition hover:bg-ink hover:text-paper" role="menuitem"><span>Dashboard</span><span aria-hidden="true">→</span></a>
-                                <a href="/cont/bilete" class="flex items-center justify-between rounded-2xl px-4 py-3 transition hover:bg-ink hover:text-paper" role="menuitem"><span>Biletele mele</span><span x-show="stats.tickets" class="rounded-full bg-vermilion px-2 py-0.5 text-xs text-paper" x-text="stats.tickets"></span></a>
-                                <a href="/cont/comenzi" class="flex items-center justify-between rounded-2xl px-4 py-3 transition hover:bg-ink hover:text-paper" role="menuitem"><span>Comenzile mele</span><span x-text="stats.orders"></span></a>
-                                <a href="/cont/puncte" class="flex items-center justify-between rounded-2xl px-4 py-3 transition hover:bg-ink hover:text-paper" role="menuitem"><span>Punctele mele</span><span x-text="stats.points"></span></a>
-                                <a href="/cont/recomandari" class="flex items-center justify-between rounded-2xl px-4 py-3 transition hover:bg-ink hover:text-paper" role="menuitem"><span>Recomandări</span><span class="text-vermilion">nou</span></a>
-                                <a href="/cont/tichete-support" class="flex items-center justify-between rounded-2xl px-4 py-3 transition hover:bg-ink hover:text-paper" role="menuitem"><span>Tichete support</span><span x-show="stats.support" x-text="stats.support"></span></a>
-                                <a href="/cont/setari" class="flex items-center justify-between rounded-2xl px-4 py-3 transition hover:bg-ink hover:text-paper" role="menuitem"><span>Setări cont</span><span aria-hidden="true">→</span></a>
-                            </nav>
-                            <div class="relative border-t border-ink/10 p-3">
-                                <button type="button" @click="logout()" class="flex w-full items-center justify-center rounded-full border-2 border-ink px-4 py-3 text-sm font-bold transition hover:bg-ink hover:text-paper">Ieși din cont</button>
                             </div>
                         </div>
                     </div>
-                </div>
+                </template>
+            </div>
 
-                <!-- Mobile burger -->
-                <button @click="mobileOpen=!mobileOpen" class="grid h-11 w-11 place-items-center rounded-full border-2 border-ink bg-paper text-ink transition hover:bg-ink hover:text-paper lg:hidden" aria-label="Deschide meniul" :aria-expanded="mobileOpen.toString()">
-                    <svg x-show="!mobileOpen" viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
-                    <svg x-show="mobileOpen" x-cloak viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6 6 18"/></svg>
+            <!-- Right actions (mobile) -->
+            <div class="ml-auto flex items-center gap-1 lg:hidden">
+                <button @click="openCart()" class="relative grid h-11 w-11 place-items-center rounded-full text-ink transition hover:bg-paper-2" aria-label="Coș">
+                    <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6h15l-1.5 9h-12z"/><path d="M6 6 5 3H2"/><circle cx="9" cy="20" r="1"/><circle cx="18" cy="20" r="1"/></svg>
+                    <span x-show="cartCount() > 0" x-cloak class="absolute right-0 top-0 grid h-5 min-w-5 place-items-center rounded-full bg-vermilion px-1 text-[11px] font-bold text-paper" x-text="cartCount()"></span>
+                </button>
+                <button @click="searchOpen=true" class="grid h-11 w-11 place-items-center rounded-full hover:bg-paper-2" aria-label="Caută">
+                    <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+                </button>
+                <button @click="mobileOpen=!mobileOpen" class="grid h-11 w-11 place-items-center rounded-full hover:bg-paper-2" aria-label="Meniu" :aria-expanded="mobileOpen.toString()">
+                    <svg x-show="!mobileOpen" viewBox="0 0 24 24" class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+                    <svg x-show="mobileOpen" x-cloak viewBox="0 0 24 24" class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6 6 18"/></svg>
                 </button>
             </div>
         </nav>
 
-        <!-- Desktop mega menu -->
-        <div x-show="mega" x-cloak x-transition.opacity.duration.180ms @mouseleave="mega=null"
+        <!-- Language / currency popover -->
+        <div x-show="languageOpen" x-cloak x-transition.origin.top.right @click.outside="languageOpen=false" class="absolute right-[88px] top-[calc(100%+10px)] z-[51] hidden w-[320px] rounded-[1.6rem] border-2 border-ink bg-paper p-4 shadow-deep lg:block">
+            <p class="font-display text-3xl font-bold leading-none">Limbă și monedă</p>
+            <div class="mt-4 grid gap-3">
+                <label><span class="mb-1 block text-sm font-bold text-ink-soft">Limbă</span><select class="w-full rounded-2xl border-2 border-ink/10 bg-paper-2 px-4 py-3 font-bold outline-none"><option>Română</option><option disabled>English (în curând)</option></select></label>
+                <label><span class="mb-1 block text-sm font-bold text-ink-soft">Monedă</span><select class="w-full rounded-2xl border-2 border-ink/10 bg-paper-2 px-4 py-3 font-bold outline-none"><option>RON</option><option disabled>EUR (în curând)</option></select></label>
+                <button @click="languageOpen=false" class="rounded-full bg-ink px-5 py-3 font-bold text-paper transition hover:bg-vermilion">Aplică</button>
+            </div>
+        </div>
+
+        <!-- Mega menu -->
+        <div x-show="mega" x-cloak x-transition.opacity.duration.160ms @mouseenter="cancelMegaClose()" @mouseleave="scheduleMegaClose()"
              class="absolute inset-x-0 top-full hidden border-b-2 border-ink bg-paper shadow-deep lg:block" role="menu">
             <div class="bo-grain relative">
-                <div class="relative mx-auto max-w-[1500px] px-6 py-6">
-                    <!-- Categories mega -->
-                    <div x-show="mega==='categories'" class="grid gap-6 xl:grid-cols-[1.2fr_.8fr_.8fr]">
-                        <section class="rounded-[2rem] border-2 border-ink bg-ink p-6 text-paper">
-                            <p class="font-mono text-xs tracking-[.18em] text-ochre">DESCOPERĂ</p>
-                            <h2 class="mt-3 font-display text-5xl font-bold leading-[.9]">Alege după ce vrei să faci, nu după ce trebuie să cauți.</h2>
-                            <p class="mt-4 text-paper/60">Activități pentru weekend, copii, grupuri, cadouri, vreme ploioasă sau ieșiri rapide după muncă.</p>
-                            <div class="mt-5 flex flex-wrap gap-2">
-                                <a href="/activitati-weekend" class="rounded-full bg-paper px-4 py-2 text-sm font-bold text-ink transition hover:bg-vermilion hover:text-paper">Weekend</a>
-                                <a href="/activitati-copii" class="rounded-full bg-paper px-4 py-2 text-sm font-bold text-ink transition hover:bg-vermilion hover:text-paper">Cu copiii</a>
-                                <a href="/card-cadou" class="rounded-full bg-paper px-4 py-2 text-sm font-bold text-ink transition hover:bg-vermilion hover:text-paper">Cadouri</a>
-                            </div>
-                        </section>
 
-                        <section class="rounded-[2rem] border border-ink/10 bg-paper-2 p-5">
-                            <p class="font-mono text-xs tracking-[.18em] text-ink-soft">CATEGORII PRINCIPALE</p>
-                            <div class="mt-4 grid gap-2">
-                                <?php foreach ($navCategories as $cat): ?>
-                                    <a href="<?= htmlspecialchars($cat['href'], ENT_QUOTES) ?>" @click="mega=null" class="group flex items-center justify-between rounded-2xl bg-paper px-4 py-3 font-bold transition hover:bg-ink hover:text-paper">
-                                        <span class="flex items-center gap-2">
-                                            <?php if (!empty($cat['icon_emoji'])): ?><span aria-hidden="true"><?= htmlspecialchars($cat['icon_emoji']) ?></span><?php endif; ?>
-                                            <span><?= htmlspecialchars($cat['label']) ?></span>
-                                        </span>
-                                        <span class="text-xs text-ink-soft group-hover:text-paper/50"><?= htmlspecialchars($cat['count'] ?? '') ?></span>
-                                    </a>
-                                <?php endforeach; ?>
-                            </div>
-                            <a href="/categorii" @click="mega=null" class="mt-3 inline-flex font-bold text-vermilion underline-wobble">Vezi toate categoriile →</a>
-                        </section>
+                <!-- EXPLORE / ACTIVITIES mega -->
+                <div x-show="mega==='explore'" class="relative mx-auto grid max-w-[1500px] grid-cols-[300px_1fr] gap-0 px-6 py-6">
+                    <aside class="border-r border-ink/10 pr-5">
+                        <button @mouseenter="megaTab='places'" @focus="megaTab='places'" :class="megaTab==='places' ? 'bg-ink text-paper' : 'hover:bg-paper-2'" class="flex w-full items-center justify-between rounded-2xl px-4 py-3 text-left font-bold transition"><span><?= htmlspecialchars($tabPlacesLabel) ?></span><span>→</span></button>
+                        <button @mouseenter="megaTab='things'" @focus="megaTab='things'" :class="megaTab==='things' ? 'bg-ink text-paper' : 'hover:bg-paper-2'" class="mt-1 flex w-full items-center justify-between rounded-2xl px-4 py-3 text-left font-bold transition"><span>Categorii populare</span><span>→</span></button>
+                        <button @mouseenter="megaTab='nearby'" @focus="megaTab='nearby'" :class="megaTab==='nearby' ? 'bg-ink text-paper' : 'hover:bg-paper-2'" class="mt-1 flex w-full items-center justify-between rounded-2xl px-4 py-3 text-left font-bold transition"><span>Idei rapide</span><span>→</span></button>
 
-                        <section class="rounded-[2rem] border border-ink/10 bg-paper-2 p-5">
-                            <p class="font-mono text-xs tracking-[.18em] text-ink-soft">CĂUTĂRI RAPIDE</p>
-                            <div class="mt-4 flex flex-wrap gap-2">
-                                <?php foreach ($navQuickSearches as $tag): ?>
-                                    <a href="<?= htmlspecialchars($tag['href'], ENT_QUOTES) ?>" @click="mega=null" class="rounded-full bg-paper px-4 py-2 text-sm font-bold transition hover:bg-vermilion hover:text-paper"><?= htmlspecialchars($tag['label']) ?></a>
-                                <?php endforeach; ?>
-                            </div>
-                            <div class="mt-5 rounded-2xl border border-forest/20 bg-mint p-4">
-                                <p class="font-bold text-forest">Ai puncte bonus?</p>
-                                <p class="mt-1 text-sm text-ink-soft">Intră în cont și vezi activitățile unde poți aplica reducere.</p>
-                                <a href="/cont/recomandari" class="mt-3 inline-flex font-bold text-forest underline-wobble">Vezi recomandări</a>
-                            </div>
-                        </section>
-                    </div>
+                        <div class="mt-5 rounded-[1.5rem] bg-mint p-5">
+                            <p class="font-mono text-xs tracking-[.16em] text-forest"><?= htmlspecialchars($ctxHero['kicker']) ?></p>
+                            <h3 class="mt-2 font-display text-4xl font-bold leading-none"><?= htmlspecialchars($ctxHero['title']) ?></h3>
+                            <p class="mt-2 text-sm text-ink-soft"><?= htmlspecialchars($ctxHero['desc']) ?></p>
+                            <a href="<?= htmlspecialchars($ctxHero['href'], ENT_QUOTES) ?>" @click="mega=null" class="mt-4 inline-flex rounded-full bg-forest px-4 py-2 text-sm font-bold text-paper transition hover:bg-ink"><?= htmlspecialchars($ctxHero['cta']) ?></a>
+                        </div>
+                    </aside>
 
-                    <!-- Cities mega -->
-                    <div x-show="mega==='cities'" class="grid gap-6 xl:grid-cols-[.9fr_1.1fr_1fr]">
-                        <section class="rounded-[2rem] border-2 border-ink bg-vermilion p-6 text-paper">
-                            <p class="font-mono text-xs tracking-[.18em] text-paper/60">ORAȘE</p>
-                            <h2 class="mt-3 font-display text-5xl font-bold leading-[.9]">Ce poți face aproape de tine?</h2>
-                            <p class="mt-4 text-paper/75">Alege orașul și vezi activități, locații, ghiduri și recomandări locale.</p>
-                            <a href="/orase" class="mt-5 inline-flex rounded-full bg-paper px-5 py-3 font-bold text-ink transition hover:bg-ink hover:text-paper">Toate orașele</a>
-                        </section>
-
-                        <section class="rounded-[2rem] border border-ink/10 bg-paper-2 p-5">
-                            <p class="font-mono text-xs tracking-[.18em] text-ink-soft">POPULARE</p>
-                            <div class="mt-4 grid grid-cols-2 gap-2">
+                    <section class="pl-6">
+                        <!-- Places / cities -->
+                        <div x-show="megaTab==='places'">
+                            <div class="flex items-end justify-between gap-6">
+                                <div>
+                                    <p class="font-mono text-xs tracking-[.18em] text-ink-soft">ORAȘE</p>
+                                    <h2 class="mt-2 font-display text-5xl font-bold leading-none"><?= htmlspecialchars($tabPlacesLabel) ?></h2>
+                                    <p class="mt-3 max-w-3xl text-ink-soft">Alege un oraș și descoperă activități, ghiduri și locații locale.</p>
+                                </div>
+                                <a href="/orase" @click="mega=null" class="shrink-0 rounded-full bg-ink px-5 py-3 font-bold text-paper transition hover:bg-vermilion">Toate orașele</a>
+                            </div>
+                            <div class="mt-7 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                                 <?php foreach ($navCities as $city): ?>
-                                    <a href="<?= htmlspecialchars($city['href'], ENT_QUOTES) ?>" @click="mega=null" class="rounded-2xl bg-paper p-4 transition hover:bg-ink hover:text-paper">
-                                        <span class="block font-display text-2xl font-bold leading-none"><?= htmlspecialchars($city['label']) ?></span>
-                                        <span class="mt-1 block text-xs font-bold text-ink-soft">Activități locale</span>
+                                    <a href="<?= htmlspecialchars($city['href'], ENT_QUOTES) ?>" @click="mega=null" class="group rounded-[1.5rem] border border-ink/10 bg-paper-2 p-5 transition hover:-translate-y-0.5 hover:bg-paper hover:shadow-deep">
+                                        <div class="flex items-start justify-between gap-4">
+                                            <div>
+                                                <span class="rounded-full bg-paper px-3 py-1 text-xs font-bold text-ink-soft">Oraș</span>
+                                                <p class="mt-4 font-display text-3xl font-bold leading-none group-hover:text-vermilion"><?= htmlspecialchars($city['label']) ?></p>
+                                                <p class="mt-2 text-sm text-ink-soft">Activități și experiențe locale</p>
+                                            </div>
+                                            <span class="text-2xl transition group-hover:translate-x-1">→</span>
+                                        </div>
                                     </a>
                                 <?php endforeach; ?>
                             </div>
-                        </section>
+                        </div>
 
-                        <section class="rounded-[2rem] border border-ink/10 bg-paper-2 p-5">
-                            <p class="font-mono text-xs tracking-[.18em] text-ink-soft">GHIDURI & IDEI</p>
-                            <div class="mt-4 space-y-3">
-                                <?php foreach ($navGuides as $guide): ?>
-                                    <a href="<?= htmlspecialchars($guide['href'], ENT_QUOTES) ?>" @click="mega=null" class="group block rounded-2xl bg-paper p-4 transition hover:bg-ink hover:text-paper">
-                                        <span class="block font-bold"><?= htmlspecialchars($guide['title']) ?></span>
-                                        <span class="mt-1 block text-sm text-ink-soft group-hover:text-paper/50"><?= htmlspecialchars($guide['meta']) ?></span>
+                        <!-- Things / categories -->
+                        <div x-show="megaTab==='things'" x-cloak>
+                            <div class="flex items-end justify-between gap-6">
+                                <div>
+                                    <p class="font-mono text-xs tracking-[.18em] text-ink-soft">ACTIVITĂȚI</p>
+                                    <h2 class="mt-2 font-display text-5xl font-bold leading-none">Alege după ce vrei să faci</h2>
+                                    <p class="mt-3 max-w-3xl text-ink-soft">Categorii clare pentru ieșiri, weekenduri, copii, cadouri și experiențe locale.</p>
+                                </div>
+                                <a href="/categorii" @click="mega=null" class="shrink-0 rounded-full bg-ink px-5 py-3 font-bold text-paper transition hover:bg-vermilion">Toate categoriile</a>
+                            </div>
+                            <div class="mt-7 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                                <?php foreach ($navCategories as $cat): ?>
+                                    <a href="<?= htmlspecialchars($cat['href'], ENT_QUOTES) ?>" @click="mega=null" class="group rounded-[1.5rem] border border-ink/10 bg-paper-2 p-5 transition hover:-translate-y-0.5 hover:bg-paper hover:shadow-deep">
+                                        <div class="flex items-start justify-between gap-4">
+                                            <div>
+                                                <span class="rounded-full bg-paper px-3 py-1 text-xs font-bold text-ink-soft"><?= !empty($cat['icon_emoji']) ? htmlspecialchars($cat['icon_emoji']) . ' ' : '' ?><?= htmlspecialchars($cat['count'] ?? '') ?></span>
+                                                <p class="mt-4 font-display text-3xl font-bold leading-none group-hover:text-vermilion"><?= htmlspecialchars($cat['label']) ?></p>
+                                                <p class="mt-2 text-sm text-ink-soft">Vezi activitățile din categorie</p>
+                                            </div>
+                                            <span class="text-2xl transition group-hover:translate-x-1">→</span>
+                                        </div>
                                     </a>
                                 <?php endforeach; ?>
-                                <a href="/ghiduri" @click="mega=null" class="inline-flex font-bold text-vermilion underline-wobble">Toate ghidurile →</a>
                             </div>
-                        </section>
-                    </div>
+                        </div>
+
+                        <!-- Nearby / quick ideas -->
+                        <div x-show="megaTab==='nearby'" x-cloak>
+                            <div class="flex items-end justify-between gap-6">
+                                <div>
+                                    <p class="font-mono text-xs tracking-[.18em] text-ink-soft">IDEI RAPIDE</p>
+                                    <h2 class="mt-2 font-display text-5xl font-bold leading-none">Scurtături utile</h2>
+                                    <p class="mt-3 max-w-3xl text-ink-soft">Pagini care se potrivesc sezonului și intereselor frecvente.</p>
+                                </div>
+                                <a href="/ghiduri" @click="mega=null" class="shrink-0 rounded-full bg-ink px-5 py-3 font-bold text-paper transition hover:bg-vermilion">Vezi ghidurile</a>
+                            </div>
+                            <div class="mt-7 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                                <?php foreach ($navQuickSearches as $tag): ?>
+                                    <a href="<?= htmlspecialchars($tag['href'], ENT_QUOTES) ?>" @click="mega=null" class="group rounded-[1.5rem] border border-ink/10 bg-paper-2 p-5 transition hover:-translate-y-0.5 hover:bg-paper hover:shadow-deep">
+                                        <div class="flex items-center justify-between gap-4">
+                                            <p class="font-display text-3xl font-bold leading-none group-hover:text-vermilion"><?= htmlspecialchars($tag['label']) ?></p>
+                                            <span class="text-2xl transition group-hover:translate-x-1">→</span>
+                                        </div>
+                                    </a>
+                                <?php endforeach; ?>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+
+                <!-- INSPIRATION mega -->
+                <div x-show="mega==='inspiration'" x-cloak class="relative mx-auto grid max-w-[1500px] grid-cols-[300px_1fr] gap-0 px-6 py-6">
+                    <aside class="border-r border-ink/10 pr-5">
+                        <p class="mb-3 px-4 font-mono text-xs tracking-[.18em] text-ink-soft">INSPIRAȚIE</p>
+                        <a href="/ghiduri" @click="mega=null" class="flex w-full items-center justify-between rounded-2xl bg-ink px-4 py-3 text-left font-bold text-paper transition hover:bg-vermilion"><span>Toate ghidurile</span><span>→</span></a>
+                        <a href="/activitati-weekend" @click="mega=null" class="mt-1 flex w-full items-center justify-between rounded-2xl px-4 py-3 text-left font-bold transition hover:bg-paper-2"><span>Idei de weekend</span><span>→</span></a>
+                        <a href="/activitati-copii" @click="mega=null" class="mt-1 flex w-full items-center justify-between rounded-2xl px-4 py-3 text-left font-bold transition hover:bg-paper-2"><span>Cu copiii</span><span>→</span></a>
+                        <a href="/card-cadou" @click="mega=null" class="mt-1 flex w-full items-center justify-between rounded-2xl px-4 py-3 text-left font-bold transition hover:bg-paper-2"><span>Experiențe cadou</span><span>→</span></a>
+
+                        <div class="mt-5 rounded-[1.5rem] border border-forest/20 bg-mint p-5">
+                            <p class="font-bold text-forest">Ai puncte bonus?</p>
+                            <p class="mt-1 text-sm text-ink-soft">Intră în cont și vezi activitățile unde poți aplica reducere.</p>
+                            <a href="/cont/recomandari" @click="mega=null" class="mt-3 inline-flex font-bold text-forest underline-wobble">Vezi recomandări</a>
+                        </div>
+                    </aside>
+
+                    <section class="pl-6">
+                        <div class="flex items-end justify-between gap-6">
+                            <div>
+                                <p class="font-mono text-xs tracking-[.18em] text-ink-soft">GHIDURI</p>
+                                <h2 class="mt-2 font-display text-5xl font-bold leading-none">Idei și recomandări editoriale</h2>
+                                <p class="mt-3 max-w-3xl text-ink-soft">Ghiduri pentru orașe, weekenduri, atracții și activități de pus pe listă.</p>
+                            </div>
+                            <a href="/ghiduri" @click="mega=null" class="shrink-0 rounded-full bg-ink px-5 py-3 font-bold text-paper transition hover:bg-vermilion">Toate ghidurile</a>
+                        </div>
+                        <div class="mt-7 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                            <?php foreach ($navGuides as $guide): ?>
+                                <a href="<?= htmlspecialchars($guide['href'], ENT_QUOTES) ?>" @click="mega=null" class="group rounded-[1.5rem] border border-ink/10 bg-paper-2 p-5 transition hover:-translate-y-0.5 hover:bg-paper hover:shadow-deep">
+                                    <span class="rounded-full bg-paper px-3 py-1 text-xs font-bold text-ink-soft"><?= htmlspecialchars($guide['meta']) ?></span>
+                                    <p class="mt-4 font-display text-3xl font-bold leading-none group-hover:text-vermilion"><?= htmlspecialchars($guide['title']) ?></p>
+                                    <p class="mt-2 text-sm text-ink-soft">Citește ghidul →</p>
+                                </a>
+                            <?php endforeach; ?>
+                        </div>
+                    </section>
                 </div>
             </div>
         </div>
@@ -292,7 +433,6 @@ $headerSeed = json_encode([
         <!-- Mobile menu -->
         <div x-show="mobileOpen" x-cloak x-collapse class="border-t border-ink/10 bg-paper lg:hidden">
             <div class="mx-auto max-w-[1500px] px-4 py-5 sm:px-6">
-                <!-- logged-in mini card -->
                 <div x-show="loggedIn" x-cloak class="mb-4 flex items-center gap-3 rounded-2xl border-2 border-ink bg-paper-2 p-4">
                     <span class="grid h-11 w-11 place-items-center rounded-full bg-forest text-paper font-bold" x-text="acct.initials">?</span>
                     <div class="min-w-0">
@@ -303,19 +443,18 @@ $headerSeed = json_encode([
 
                 <button @click="searchOpen=true; mobileOpen=false" class="mb-4 flex w-full items-center gap-3 rounded-2xl border-2 border-ink bg-paper-2 px-4 py-4 text-left font-bold">
                     <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-                    Caută activități, orașe, locații
+                    <span x-text="searchPlaceholder()">Caută</span>
                 </button>
 
                 <div class="grid gap-3">
-                    <a href="/categorii" class="rounded-2xl bg-ink px-4 py-4 font-display text-3xl font-bold text-paper">Categorii</a>
+                    <a href="<?= htmlspecialchars($ctxHero['href'], ENT_QUOTES) ?>" class="rounded-2xl bg-ink px-4 py-4 font-display text-3xl font-bold text-paper" x-text="primaryExploreLabel()"><?= htmlspecialchars($ctxExploreLabel) ?></a>
+                    <a href="/categorii" class="rounded-2xl bg-paper-2 px-4 py-4 font-display text-3xl font-bold">Activități</a>
                     <a href="/orase" class="rounded-2xl bg-paper-2 px-4 py-4 font-display text-3xl font-bold">Orașe</a>
                     <a href="/operatori" class="rounded-2xl bg-paper-2 px-4 py-4 font-display text-3xl font-bold">Operatori</a>
-                    <a href="/ghiduri" class="rounded-2xl bg-paper-2 px-4 py-4 font-display text-3xl font-bold">Ghiduri</a>
+                    <a href="/ghiduri" class="rounded-2xl bg-paper-2 px-4 py-4 font-display text-3xl font-bold">Inspirație</a>
                     <a href="/card-cadou" class="rounded-2xl bg-mint px-4 py-4 font-display text-3xl font-bold text-forest">Card cadou</a>
-                    <a href="/pentru-locatii" x-show="!isClient" class="rounded-2xl bg-vermilion px-4 py-4 font-display text-3xl font-bold text-paper">Pentru locații</a>
                 </div>
 
-                <!-- quick city chips (live) -->
                 <div class="mt-5">
                     <p class="font-mono text-[10px] tracking-[.2em] text-ink-soft mb-2">ORAȘE POPULARE</p>
                     <div class="flex flex-wrap gap-2">
@@ -424,7 +563,7 @@ $headerSeed = json_encode([
                 <form @submit.prevent="doSearch()" class="relative border-b-2 border-dashed border-ink/15 p-4 sm:p-5">
                     <div class="flex items-center gap-3">
                         <svg viewBox="0 0 24 24" class="h-6 w-6 shrink-0 text-ink-soft" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-                        <input x-ref="searchInput" x-model="searchQuery" type="search" placeholder="Caută escape rooms, activități copii, muzee, Brașov..." class="w-full bg-transparent py-3 text-xl font-bold outline-none placeholder:text-ink-soft/70 sm:text-2xl">
+                        <input x-ref="searchInput" x-model="searchQuery" type="search" :placeholder="searchPlaceholder()" class="w-full bg-transparent py-3 text-xl font-bold outline-none placeholder:text-ink-soft/70 sm:text-2xl">
                         <button type="button" @click="searchOpen=false" class="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-ink text-xl font-bold text-paper transition hover:bg-vermilion">×</button>
                     </div>
                 </form>
@@ -479,9 +618,11 @@ $headerSeed = json_encode([
 
 <script>
 /**
- * Header Alpine component (v3). Auth state (login pill vs account dropdown),
- * user info + dashboard stats, cart drawer and search overlay are all driven
- * by live data: BileteOnlineAuth / BileteOnlineAPI / BileteOnlineCart.
+ * Header Alpine component (v6). Context (Explore label + search placeholder)
+ * comes from the PHP seed. Auth state, user info + dashboard stats, cart drawer
+ * and search overlay are all driven by live data: BileteOnlineAuth /
+ * BileteOnlineAPI / BileteOnlineCart. Mega menus are server-rendered (SEO);
+ * this component only toggles their open/close + active tab state.
  */
 function bileteOnlineHeader(seed) {
     return {
@@ -490,10 +631,14 @@ function bileteOnlineHeader(seed) {
         searchOpen: false,
         cartOpen: false,
         accountOpen: false,
+        languageOpen: false,
         mega: null,
+        megaTab: 'places',
+        megaCloseTimer: null,
         searchQuery: '',
         loggedIn: false,
         isClient: false,
+        ctx: (seed && seed.context) || { type: 'homepage', label: '', exploreLabel: 'Explorează România', placeholder: 'Caută activități' },
         acct: { firstName: 'Cont', name: 'Client', email: '', initials: '?' },
         stats: { tickets: 0, points: 0, orders: 0, profile: 0, support: 0 },
         cartItems: [],
@@ -501,6 +646,24 @@ function bileteOnlineHeader(seed) {
         quickSearches: (seed && seed.quickSearches) || [],
         activityResults: [],
         _searchTimer: null,
+
+        primaryExploreLabel() { return (this.ctx && this.ctx.exploreLabel) || 'Explorează'; },
+        searchPlaceholder() { return (this.ctx && this.ctx.placeholder) || 'Caută activități'; },
+
+        // ---- mega ----
+        openMega(menu, tab) {
+            this.cancelMegaClose();
+            this.mega = menu;
+            if (menu === 'explore') this.megaTab = tab || (this.megaTab || 'places');
+            this.languageOpen = false;
+            this.accountOpen = false;
+        },
+        toggleMega(menu, tab) {
+            if (this.mega === menu && (menu !== 'explore' || this.megaTab === (tab || this.megaTab))) { this.mega = null; }
+            else { this.openMega(menu, tab); }
+        },
+        scheduleMegaClose() { this.cancelMegaClose(); this.megaCloseTimer = setTimeout(() => { this.mega = null; }, 180); },
+        cancelMegaClose() { if (this.megaCloseTimer) { clearTimeout(this.megaCloseTimer); this.megaCloseTimer = null; } },
 
         initHeader() {
             this.scrolled = window.scrollY > 20;
@@ -515,12 +678,11 @@ function bileteOnlineHeader(seed) {
             });
             this.$watch('searchOpen', (open) => {
                 if (open) {
-                    this.cartOpen = false; this.accountOpen = false; this.mega = null;
+                    this.cartOpen = false; this.accountOpen = false; this.mega = null; this.languageOpen = false;
                     this.$nextTick(() => this.$refs.searchInput && this.$refs.searchInput.focus());
                 }
             });
-            // Live activity search (debounced). The static suggestions only cover
-            // categories/cities, so query the activities API for matching names.
+            // Live activity search (debounced).
             this.$watch('searchQuery', (q) => {
                 clearTimeout(this._searchTimer);
                 const term = (q || '').trim();
@@ -542,9 +704,7 @@ function bileteOnlineHeader(seed) {
             setTimeout(syncAuth, 300);
             window.addEventListener('load', syncAuth);
 
-            // Cart: load now + whenever it changes. Also re-run on window load,
-            // since cart.js is a deferred footer script that may execute after
-            // Alpine's init (so the badge shows the right count on first paint).
+            // Cart: load now + whenever it changes.
             this.loadCart();
             window.addEventListener('bileteonline:cart:update', () => this.loadCart());
             window.addEventListener('load', () => this.loadCart());
@@ -582,7 +742,7 @@ function bileteOnlineHeader(seed) {
         },
 
         // ---- cart ----
-        openCart() { this.cartOpen = true; this.accountOpen = false; this.mega = null; this.loadCart(); },
+        openCart() { this.cartOpen = true; this.accountOpen = false; this.mega = null; this.languageOpen = false; this.loadCart(); },
         loadCart() {
             try {
                 if (! window.BileteOnlineCart || ! BileteOnlineCart.getItems) { this.cartItems = []; return; }
@@ -659,7 +819,6 @@ function bileteOnlineHeader(seed) {
             const q = (this.searchQuery || '').toLowerCase().trim();
             if (! q) return this.searchItems.slice(0, 6);
             const staticMatches = this.searchItems.filter(i => JSON.stringify(i).toLowerCase().includes(q));
-            // Live activity matches first, then category/city suggestions.
             return [...this.activityResults, ...staticMatches].slice(0, 10);
         },
 
@@ -671,7 +830,7 @@ function bileteOnlineHeader(seed) {
             } catch (e) {}
             window.location.href = '/';
         },
-        closeAll() { this.searchOpen = false; this.mobileOpen = false; this.cartOpen = false; this.accountOpen = false; this.mega = null; },
+        closeAll() { this.searchOpen = false; this.mobileOpen = false; this.cartOpen = false; this.accountOpen = false; this.languageOpen = false; this.mega = null; },
     };
 }
 </script>
