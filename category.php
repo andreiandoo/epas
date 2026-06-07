@@ -126,7 +126,7 @@ foreach ($activities as $a) {
         'city'        => $a['city']['name'] ?? ($a['venue']['city'] ?? ''),
         'cover'       => $a['cover_image_url'] ?? '',
         'price_cents' => $a['cheapest_price_cents'] ?? null,
-        'url'         => '/activitate/' . ($a['slug'] ?? ''),
+        'url'         => ($a['city']['slug'] ?? '') ? '/' . $a['city']['slug'] . '/' . ($a['slug'] ?? '') : '/activitate/' . ($a['slug'] ?? ''),
         'cta'         => 'Vezi activitatea',
     ];
 }
