@@ -71,22 +71,35 @@ RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^evenimente-trecute/?$ past-events.php [L,QSA]
 
-# Venues / locations
+# ============================================
+# OPERATORS (companies selling activities) — replaces the public "Locații" nav
+# ============================================
+
+# Operators listing
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^locatii/?$ locatii.php [L]
+RewriteRule ^operatori/?$ operatori.php [L,QSA]
 
-# Venue type pages
+# Single operator profile — reuses the organizer public profile page
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^operator/([a-z0-9-]+)/?$ organizer/public.php?slug=$1 [L,QSA]
+
+# Legacy: the old "Locații" listing now redirects to Operators
+RewriteRule ^locatii/?$ /operatori [R=301,L]
+
+# Venue type pages (internal — still reachable, e.g. activity venue links)
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^locatii/([a-z0-9-]+)/?$ venue-type.php?type=$1 [L,QSA]
 
+# Single venue page (internal — used by activity maps / event links)
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^locatie/([a-z0-9-]+)/?$ locatie.php?slug=$1 [L,QSA]
 
-# Legacy: redirect /venues to /locatii
-RewriteRule ^venues/?$ /locatii [R=301,L,QSA]
+# Legacy: redirect /venues to /operatori
+RewriteRule ^venues/?$ /operatori [R=301,L,QSA]
 
 # Cities / regions
 RewriteCond %{REQUEST_FILENAME} !-f

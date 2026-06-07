@@ -132,7 +132,7 @@ $headerSeed = json_encode([
                             :class="mega==='cities' ? 'bg-ink text-paper' : 'hover:bg-paper'"
                             class="rounded-full px-4 py-2.5 text-sm font-bold transition" aria-label="Orașe">Orașe</button>
                     <a href="/ghiduri" @mouseenter="mega=null" class="rounded-full px-4 py-2.5 text-sm font-bold transition hover:bg-paper"<?= $currentPage === 'ghiduri' ? ' aria-current="page"' : '' ?>>Ghiduri</a>
-                    <a href="/locatii" @mouseenter="mega=null" class="rounded-full px-4 py-2.5 text-sm font-bold transition hover:bg-paper"<?= $currentPage === 'locatii' ? ' aria-current="page"' : '' ?>>Locații</a>
+                    <a href="/operatori" @mouseenter="mega=null" class="rounded-full px-4 py-2.5 text-sm font-bold transition hover:bg-paper"<?= $currentPage === 'operatori' ? ' aria-current="page"' : '' ?>>Operatori</a>
                     <a href="/faqs" @mouseenter="mega=null" class="rounded-full px-4 py-2.5 text-sm font-bold transition hover:bg-paper"<?= $currentPage === 'faqs' ? ' aria-current="page"' : '' ?>>Ajutor</a>
                 </div>
             </div>
@@ -309,7 +309,7 @@ $headerSeed = json_encode([
                 <div class="grid gap-3">
                     <a href="/categorii" class="rounded-2xl bg-ink px-4 py-4 font-display text-3xl font-bold text-paper">Categorii</a>
                     <a href="/orase" class="rounded-2xl bg-paper-2 px-4 py-4 font-display text-3xl font-bold">Orașe</a>
-                    <a href="/locatii" class="rounded-2xl bg-paper-2 px-4 py-4 font-display text-3xl font-bold">Locații</a>
+                    <a href="/operatori" class="rounded-2xl bg-paper-2 px-4 py-4 font-display text-3xl font-bold">Operatori</a>
                     <a href="/ghiduri" class="rounded-2xl bg-paper-2 px-4 py-4 font-display text-3xl font-bold">Ghiduri</a>
                     <a href="/card-cadou" class="rounded-2xl bg-mint px-4 py-4 font-display text-3xl font-bold text-forest">Card cadou</a>
                     <a href="/pentru-locatii" x-show="!isClient" class="rounded-2xl bg-vermilion px-4 py-4 font-display text-3xl font-bold text-paper">Pentru locații</a>
