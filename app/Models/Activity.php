@@ -46,6 +46,8 @@ class Activity extends Model
         'marketplace_city_id',
         'marketplace_category_id',
         'marketplace_subcategory_id',
+        'latitude',
+        'longitude',
 
         // identity
         'title',
@@ -113,6 +115,10 @@ class Activity extends Model
     ];
 
     protected $casts = [
+        // geo (F2 — Nearby)
+        'latitude' => 'float',
+        'longitude' => 'float',
+
         // translatables
         'title' => 'array',
         'subtitle' => 'array',

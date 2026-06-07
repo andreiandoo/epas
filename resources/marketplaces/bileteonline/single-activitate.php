@@ -191,6 +191,13 @@ if (! empty($recs['same_city'])) {
     $rails[] = ['kicker' => 'ÎN ACELAȘI ORAȘ', 'title' => $cityName ? "Alte experiențe în {$cityName}" : 'Alte experiențe', 'cards' => $recs['same_city']];
 }
 
+// F2 — proximity rail. Real Haversine distance from the API; cards carry a
+// distance_km the rail card can surface. Placed high (right after the curated
+// recommendations) since "near me" is a primary GYG discovery pattern.
+if (! empty($activity['nearby'])) {
+    $rails[] = ['kicker' => 'ÎN APROPIERE', 'title' => 'Activități în apropiere', 'cards' => $activity['nearby'], 'show_distance' => true];
+}
+
 // Extra GYG-style discovery rails built from a city activities pool. Same pool,
 // different framing/order (Top / Experiențe) — like GetYourGuide destination
 // pages. Only added when there's enough to show; empty rails are skipped.
@@ -659,6 +666,7 @@ include __DIR__ . '/includes/header.php';
                   <div class="grid h-full place-items-center bg-gradient-to-br from-vermilion via-ochre to-forest text-paper"><span class="px-3 text-center font-display text-xl font-bold"><?= htmlspecialchars(mb_substr($c['title'] ?? '', 0, 20)) ?></span></div>
                 <?php endif; ?>
                 <?php if (! empty($c['category']['name'])): ?><span class="absolute left-3 top-3 rounded-full bg-paper px-3 py-1 text-xs font-bold text-ink"><?= htmlspecialchars($c['category']['name']) ?></span><?php endif; ?>
+                <?php if (! empty($rail['show_distance']) && isset($c['distance_km'])): ?><span class="absolute right-3 top-3 rounded-full bg-ink/90 px-3 py-1 text-xs font-bold text-paper"><?= htmlspecialchars(number_format((float) $c['distance_km'], ($c['distance_km'] < 10 ? 1 : 0), ',', '.')) ?> km</span><?php endif; ?>
               </div>
               <div class="p-4">
                 <p class="font-display text-xl font-bold leading-tight line-clamp-2 group-hover:text-vermilion"><?= htmlspecialchars($c['title'] ?? '') ?></p>

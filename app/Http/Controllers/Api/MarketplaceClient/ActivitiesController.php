@@ -372,8 +372,84 @@ class ActivitiesController extends BaseController
                 // Defensive: returns an empty/zeroed shape if the activity_id
                 // column hasn't been migrated yet, so the page never breaks.
                 'reviews' => $this->buildReviewsPayload($activity),
+                // F2 — proximity rail. Activities within ~75km ordered by real
+                // Haversine distance (activity coords → venue coords fallback).
+                'nearby' => $this->buildNearbyPayload($activity, $locale, 8, 75),
             ]
         );
+    }
+
+    /**
+     * F2 — Nearby activities by real geographic distance (Haversine, km).
+     *
+     * Origin coords come from the activity's denormalised latitude/longitude,
+     * falling back to its venue. Candidate distance uses COALESCE(activity, venue)
+     * so rows that were never backfilled still participate. Fully defensive:
+     * any failure (missing geo column, no coords) returns [] so the page never
+     * breaks.
+     */
+    private function buildNearbyPayload(Activity $activity, string $locale, int $limit = 8, float $radiusKm = 75): array
+    {
+        $lat = $activity->latitude ?? optional($activity->venue)->lat;
+        $lng = $activity->longitude ?? optional($activity->venue)->lng;
+        if ($lat === null || $lng === null || $lat === '' || $lng === '') {
+            return [];
+        }
+        $lat = (float) $lat;
+        $lng = (float) $lng;
+
+        // Haversine expression (Earth radius 6371 km). LEAST(1, …) guards against
+        // floating-point > 1 inside acos() for coincident points.
+        $hav = '(6371 * acos(LEAST(1, cos(radians(?)) * cos(radians(COALESCE(a.latitude, v.lat))) * cos(radians(COALESCE(a.longitude, v.lng)) - radians(?)) + sin(radians(?)) * sin(radians(COALESCE(a.latitude, v.lat))))))';
+
+        try {
+            $rows = DB::table('activities as a')
+                ->leftJoin('venues as v', 'v.id', '=', 'a.venue_id')
+                ->selectRaw('a.id, ' . $hav . ' AS distance_km', [$lat, $lng, $lat])
+                ->where('a.marketplace_client_id', $activity->marketplace_client_id)
+                ->where('a.is_published', true)
+                ->where('a.id', '!=', $activity->id)
+                ->whereNull('a.deleted_at')
+                ->whereRaw('COALESCE(a.latitude, v.lat) IS NOT NULL')
+                ->whereRaw('COALESCE(a.longitude, v.lng) IS NOT NULL')
+                ->whereRaw($hav . ' <= ?', [$lat, $lng, $lat, $radiusKm])
+                ->orderBy('distance_km')
+                ->limit($limit)
+                ->get();
+        } catch (\Throwable $e) {
+            return [];
+        }
+
+        if ($rows->isEmpty()) {
+            return [];
+        }
+
+        $ids = $rows->pluck('id')->all();
+        $dist = $rows->pluck('distance_km', 'id');
+
+        $models = Activity::query()
+            ->whereIn('id', $ids)
+            ->with([
+                'city:id,name,slug',
+                'category:id,name,slug,parent_id',
+                'organizer:id,name,slug,logo,commission_rate,default_commission_mode,marketplace_client_id',
+                'organizer.marketplaceClient:id,commission_rate,commission_mode',
+            ])
+            ->get()
+            ->keyBy('id');
+
+        $out = [];
+        foreach ($ids as $id) {
+            $m = $models->get($id);
+            if (! $m) {
+                continue;
+            }
+            $card = $this->summarisePayload($m, $locale);
+            $card['distance_km'] = round((float) $dist[$id], 1);
+            $out[] = $card;
+        }
+
+        return $out;
     }
 
     /**
