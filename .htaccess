@@ -26,7 +26,7 @@ RewriteRule ^event/([a-z0-9-]+)/?$ /bilete/$1 [R=301,L,QSA]
 # microservice active have no rows, so any slug returns 404 there.
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^activitate/([a-z0-9-]+)/?$ activitate.php?slug=$1 [L,QSA]
+RewriteRule ^activitate/([a-z0-9-]+)/?$ single-activitate.php?slug=$1 [L,QSA]
 
 # Category & city single-segment URLs.
 # Both `/escape-rooms` (category) and `/bucuresti` (city) match `^[a-z][a-z0-9-]+$`.
@@ -71,22 +71,35 @@ RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^evenimente-trecute/?$ past-events.php [L,QSA]
 
-# Venues / locations
+# ============================================
+# OPERATORS (companies selling activities) — replaces the public "Locații" nav
+# ============================================
+
+# Operators listing
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^locatii/?$ locatii.php [L]
+RewriteRule ^operatori/?$ operatori.php [L,QSA]
 
-# Venue type pages
+# Single operator profile — reuses the organizer public profile page
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^operator/([a-z0-9-]+)/?$ organizer/public.php?slug=$1 [L,QSA]
+
+# Legacy: the old "Locații" listing now redirects to Operators
+RewriteRule ^locatii/?$ /operatori [R=301,L]
+
+# Venue type pages (internal — still reachable, e.g. activity venue links)
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^locatii/([a-z0-9-]+)/?$ venue-type.php?type=$1 [L,QSA]
 
+# Single venue page (internal — used by activity maps / event links)
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^locatie/([a-z0-9-]+)/?$ locatie.php?slug=$1 [L,QSA]
 
-# Legacy: redirect /venues to /locatii
-RewriteRule ^venues/?$ /locatii [R=301,L,QSA]
+# Legacy: redirect /venues to /operatori
+RewriteRule ^venues/?$ /operatori [R=301,L,QSA]
 
 # Cities / regions
 RewriteCond %{REQUEST_FILENAME} !-f
@@ -661,6 +674,17 @@ RewriteRule ^([a-z][a-z0-9-]{1,50})/(activitati-[a-z0-9-]{1,80})/?$ city-intent.
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^(activitati-[a-z0-9-]{1,80})/?$ city-intent.php?intent=$1 [L,QSA]
+
+# ============================================
+# SINGLE ACTIVITY (GYG-style) — /{city}/{activity-slug}
+# Must come AFTER the city×intent rules above (their 2nd segment is
+# `activitati-*`) and BEFORE the single-segment dispatcher below. The page
+# itself 404s if the slug isn't a real activity, and 301-redirects to the
+# canonical /{city}/{slug} when reached via a wrong/empty city prefix.
+# ============================================
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^([a-z][a-z0-9-]{1,50})/([a-z0-9][a-z0-9-]{1,120})/?$ single-activitate.php?city=$1&slug=$2 [L,QSA]
 
 # ============================================
 # SINGLE-SEGMENT URL DISPATCHER (category OR city OR 404)
