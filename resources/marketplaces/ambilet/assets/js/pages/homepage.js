@@ -329,7 +329,11 @@ const CityEventsFilter = {
                 urlPrefix: '/bilete/',
                 showCategory: true,
                 showPrice: true,
-                showVenue: true
+                showVenue: true,
+                // The "ultimele evenimente adăugate" grid intentionally hides
+                // the date badge — the date already appears in the body card
+                // copy, the overlay distracts from the poster artwork.
+                hideDate: true
             });
         } else {
             // Fallback - shouldn't happen

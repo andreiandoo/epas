@@ -35,7 +35,9 @@ const AmbiletEventCard = {
             showVenue = true,
             urlPrefix = '/bilete/',
             linkClass = '',
-            showPromotedBadge = false // Show "Promovat" badge for paid promotions
+            showPromotedBadge = false, // Show "Promovat" badge for paid promotions
+            hideDate = false           // Suppress the date badge over the poster
+                                       // (used by homepage #cityEventsGrid only)
         } = options;
 
         const isRedirect = !!event.redirectUrl;
@@ -112,7 +114,7 @@ const AmbiletEventCard = {
                     '<source media="(min-width: 768px)" srcset="' + heroSrc + '">' +
                     '<img src="' + posterSrc + '" alt="' + this.escapeHtml(event.title) + '" class="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105 rounded-tl-lg rounded-tr-lg" loading="lazy" width="400" height="256" onerror="this.src=\'' + this.PLACEHOLDER + '\'">' +
                 '</picture>' +
-                (promotedBadge ? promotedBadge : '<div class="absolute top-3 left-3">' + dateBadgeHtml + '</div>') +
+                (promotedBadge ? promotedBadge : (hideDate ? '' : '<div class="absolute top-3 left-3">' + dateBadgeHtml + '</div>')) +
                 statusBadge +
             '</div>' +
             '<div class="py-2">' +
@@ -212,7 +214,10 @@ const AmbiletEventCard = {
             '</p>' : '';
 
         return '<a href="' + eventUrl + '"' + targetAttr + ' class="overflow-hidden relative transition-all bg-primary group rounded-md hover:-translate-y-1 hover:shadow-xl hover:scale-105 duration-300 ease-in-out">' +
-            '<div class="relative aspect-[2/3] overflow-hidden mobile:aspect-auto">' +
+            // Desktop poster slot has a fixed 270px height (per design ask
+            // 2026-06); mobile reverts to natural height so the wider hero
+            // image (h-52) drives the dimensions on small screens.
+            '<div class="relative h-[270px] overflow-hidden mobile:h-auto">' +
                 '<img src="' + posterSrc + '" alt="' + this.escapeHtml(event.title) + '" class="mobile:hidden object-cover w-full h-full transition-transform duration-300" loading="lazy" width="300" height="450" onerror="this.src=\'' + this.PLACEHOLDER + '\'">' +
                 '<img src="' + heroSrc + '" alt="' + this.escapeHtml(event.title) + '" class="hidden mobile:block object-cover w-full h-52 transition-transform duration-300 relative" loading="lazy" width="400" height="208" onerror="this.src=\'' + this.PLACEHOLDER + '\'">' +
                 '<div class="opacity-0 z-10 bg-gradient-to-b from-transparent via-gray-900/70 to-gray-900 w-full h-full bottom-0 absolute transition-opacity duration-250 ease-in-out group-hover:opacity-100 "></div>' +
