@@ -32,7 +32,7 @@ class RomaniaLocationSeeder extends Seeder
         $this->command->info("Seeding complete!");
     }
 
-    private function createRegions(int $marketplaceClientId): array
+    protected function createRegions(int $marketplaceClientId): array
     {
         $regionsData = [
             ['name' => ['ro' => 'Transilvania', 'en' => 'Transylvania'], 'code' => 'TR', 'featured' => true],
@@ -128,7 +128,7 @@ class RomaniaLocationSeeder extends Seeder
         }
     }
 
-    private function getCountiesWithCities(): array
+    protected function getCountiesWithCities(): array
     {
         return [
             // ===============================

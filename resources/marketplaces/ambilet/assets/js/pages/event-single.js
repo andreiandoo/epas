@@ -1256,10 +1256,10 @@ const EventPage = {
             badgesHtml.push('<span class="px-3 py-1.5 bg-gray-600 text-white text-xs font-bold rounded-lg uppercase">SOLD OUT</span>');
         }
 
-        // Category badge
-        if (e.category) {
-            badgesHtml.push('<span class="px-3 py-1.5 bg-accent text-slate-800 text-xs font-bold rounded-lg uppercase">' + e.category + '</span>');
-        }
+        // Category badge - ascuns fiindca asa s-a cerut
+        // if (e.category) {
+        //     badgesHtml.push('<span class="px-3 py-1.5 bg-accent text-slate-800 text-xs font-bold rounded-lg uppercase">' + e.category + '</span>');
+        // }
 
         // Popular badge (only if not cancelled/postponed/sold out)
         if (e.is_popular && !e.is_cancelled && !e.is_postponed && !e.is_sold_out) {
@@ -1614,7 +1614,7 @@ const EventPage = {
 
         var section = document.createElement('div');
         section.id = 'event-external-links';
-        section.className = 'mt-6 pt-5 border-t border-border';
+        section.className = 'pt-5 mt-6 border-t border-border';
         section.innerHTML =
             '<div class="text-xs uppercase tracking-wide text-muted mb-3 font-semibold">Mai multe despre eveniment</div>' +
             '<div class="flex flex-wrap gap-2">' + links.join('') + '</div>';

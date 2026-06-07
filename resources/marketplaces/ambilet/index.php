@@ -100,7 +100,7 @@ require_once __DIR__ . '/includes/header.php';
         <div class="px-4 mx-auto max-w-7xl">
             <span class="block w-full mb-4 text-lg font-bold text-center text-second-text md:text-2xl">ultimele evenimente adăugate</span>
             <!-- Events Grid (filtered by city) -->
-            <div class="grid grid-cols-2 gap-4 lg:grid-cols-4 xl:grid-cols-5 md:gap-5" id="cityEventsGrid">
+            <div class="grid grid-cols-2 gap-4 lg:grid-cols-4 xl:grid-cols-4 md:gap-5" id="cityEventsGrid">
                 <!-- Events will be loaded dynamically -->
                 <?php for ($i = 0; $i < 10; $i++): ?>
                 <div class="overflow-hidden bg-white border rounded-2xl border-border">
