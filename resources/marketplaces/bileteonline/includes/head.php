@@ -371,4 +371,7 @@ if (count(array_filter($coreSources, 'file_exists')) === count($coreSources)) {
 <script defer src="<?= htmlspecialchars($alpineCoreUrl, ENT_QUOTES) ?>"></script>
 
 <?php echo $extraHead; ?>
+
+<!-- GetYourGuide Analytics -->
+<script async defer src="https://widget.getyourguide.com/dist/pa.umd.production.min.js" data-gyg-partner-id="HF2XYCH"></script>
 </head>

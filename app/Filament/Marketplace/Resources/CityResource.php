@@ -190,19 +190,27 @@ class CityResource extends Resource
                                 'Caută orașul pe GetYourGuide → ID-ul e numărul după <code>-l</code> în URL (ex. <code>...-l<strong>124688</strong>/</code>).'
                             ))
                             ->hintAction(
-                                \Filament\Forms\Components\Actions\Action::make('searchOnGyg')
+                                // Filament 4 uses \Filament\Actions\Action — the old
+                                // Forms\Components\Actions\Action class is gone and
+                                // referencing it 500s the page on load. Reading state
+                                // via the typed Get injection is the v4 way; falls
+                                // back to $record on edit views and stays a search
+                                // home-page link on create.
+                                \Filament\Actions\Action::make('searchOnGyg')
                                     ->label('Caută pe GetYourGuide ↗')
                                     ->icon('heroicon-o-magnifying-glass')
-                                    ->url(function ($get) {
+                                    ->url(function (\Filament\Schemas\Components\Utilities\Get $get, $record = null) {
                                         $name = $get('name');
+                                        if (empty($name) && $record) {
+                                            $name = $record->name;
+                                        }
                                         if (is_array($name)) {
                                             $name = $name['ro'] ?? $name['en'] ?? reset($name) ?? '';
                                         }
                                         $q = urlencode((string) ($name ?: ''));
-                                        // Force English locale on the search side — GYG
-                                        // returns more reliable city matches that way; the
-                                        // widget itself still renders in ro-RO regardless.
-                                        return "https://www.getyourguide.com/s/?q={$q}&searchSource=3";
+                                        return $q !== ''
+                                            ? "https://www.getyourguide.com/s/?q={$q}"
+                                            : 'https://www.getyourguide.com/s/';
                                     }, shouldOpenInNewTab: true)
                             ),
                     ])->columns(1),
