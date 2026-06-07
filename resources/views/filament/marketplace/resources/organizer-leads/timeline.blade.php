@@ -5,6 +5,7 @@
         return match ($type) {
             OrganizerLeadEvent::TYPE_PAGE_VIEW_LANDING    => 'heroicon-o-cursor-arrow-rays',
             OrganizerLeadEvent::TYPE_PAGE_VIEW_ONBOARDING => 'heroicon-o-clipboard-document-list',
+            OrganizerLeadEvent::TYPE_CTA_CLICK            => 'heroicon-o-hand-raised',
             OrganizerLeadEvent::TYPE_FORM_SUBMITTED       => 'heroicon-o-check-badge',
             OrganizerLeadEvent::TYPE_STATUS_CHANGED       => 'heroicon-o-arrow-path',
             OrganizerLeadEvent::TYPE_NOTE                 => 'heroicon-o-pencil-square',
@@ -26,6 +27,7 @@
             OrganizerLeadEvent::TYPE_DEMO_SCHEDULED       => 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-300',
             OrganizerLeadEvent::TYPE_PAGE_VIEW_LANDING,
             OrganizerLeadEvent::TYPE_PAGE_VIEW_ONBOARDING => 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300',
+            OrganizerLeadEvent::TYPE_CTA_CLICK            => 'bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300',
             default                                       => 'bg-gray-100 text-gray-700',
         };
     };
@@ -67,6 +69,15 @@
                         <div class="mt-2 text-xs text-gray-500 dark:text-gray-400 space-y-0.5">
                             @if ($event->page_url)
                                 <p><span class="font-semibold">URL:</span> <code class="text-xs">{{ $event->page_url }}</code></p>
+                            @endif
+                            @if (!empty($event->payload['cta_id']))
+                                <p>
+                                    <span class="font-semibold">CTA:</span>
+                                    <code class="text-xs">{{ $event->payload['cta_id'] }}</code>
+                                    @if (!empty($event->payload['cta_label']))
+                                        <span class="ml-1">— „{{ $event->payload['cta_label'] }}"</span>
+                                    @endif
+                                </p>
                             @endif
                             @if (!empty($event->payload['utm']) && array_filter($event->payload['utm']))
                                 <p><span class="font-semibold">UTM:</span>

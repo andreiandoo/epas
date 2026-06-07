@@ -190,6 +190,11 @@ class LeadsController extends BaseController
             'prefill_tip'   => 'nullable|string|max:80',
             'prefill_loc'   => 'nullable|string|max:200',
             'utm'           => 'nullable|array',
+            // CTA-click events carry the button identifier so the admin
+            // timeline can show *which* CTA the visitor clicked, not just
+            // that they clicked something.
+            'cta_id'        => 'nullable|string|max:80',
+            'cta_label'     => 'nullable|string|max:200',
         ]);
 
         // Reject types we don't track from the public side — keeps the
@@ -198,6 +203,7 @@ class LeadsController extends BaseController
         $allowedTypes = [
             OrganizerLeadEvent::TYPE_PAGE_VIEW_LANDING,
             OrganizerLeadEvent::TYPE_PAGE_VIEW_ONBOARDING,
+            OrganizerLeadEvent::TYPE_CTA_CLICK,
         ];
         if (!in_array($validated['event_type'], $allowedTypes, true)) {
             return $this->error('Event type not allowed from public tracker.', 400);
@@ -212,17 +218,25 @@ class LeadsController extends BaseController
                 ->orderByDesc('id')
                 ->first();
 
+            $isCtaClick = $validated['event_type'] === OrganizerLeadEvent::TYPE_CTA_CLICK;
             $event = OrganizerLeadEvent::create([
                 'lead_id'               => $lead?->id,
                 'marketplace_client_id' => $client->id,
                 'session_token'         => $validated['session_token'],
                 'event_type'            => $validated['event_type'],
-                'summary'               => null,
+                // CTA-click events get a human-readable summary so the
+                // timeline doesn't just say "cta_click" — it shows which
+                // button got clicked, which is the actual signal.
+                'summary'               => $isCtaClick
+                    ? trim('Click pe „' . ($validated['cta_label'] ?? $validated['cta_id'] ?? 'CTA') . '"')
+                    : null,
                 'payload'               => [
                     'utm'         => $validated['utm']         ?? null,
                     'referrer'    => $validated['referrer']    ?? null,
                     'prefill_tip' => $validated['prefill_tip'] ?? null,
                     'prefill_loc' => $validated['prefill_loc'] ?? null,
+                    'cta_id'      => $validated['cta_id']      ?? null,
+                    'cta_label'   => $validated['cta_label']   ?? null,
                 ],
                 'ip_address' => $request->ip(),
                 'user_agent' => substr((string) $request->userAgent(), 0, 500),

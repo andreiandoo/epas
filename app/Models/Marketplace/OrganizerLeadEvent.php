@@ -21,6 +21,7 @@ class OrganizerLeadEvent extends Model
 
     public const TYPE_PAGE_VIEW_LANDING    = 'page_view_landing';
     public const TYPE_PAGE_VIEW_ONBOARDING = 'page_view_onboarding';
+    public const TYPE_CTA_CLICK            = 'cta_click';
     public const TYPE_FORM_SUBMITTED       = 'form_submitted';
     public const TYPE_STATUS_CHANGED       = 'status_changed';
     public const TYPE_NOTE                 = 'note';
@@ -32,6 +33,7 @@ class OrganizerLeadEvent extends Model
     public const TYPES = [
         self::TYPE_PAGE_VIEW_LANDING    => 'Landing visit',
         self::TYPE_PAGE_VIEW_ONBOARDING => 'Onboarding visit',
+        self::TYPE_CTA_CLICK            => 'CTA click',
         self::TYPE_FORM_SUBMITTED       => 'Form submitted',
         self::TYPE_STATUS_CHANGED       => 'Status changed',
         self::TYPE_NOTE                 => 'Note',

@@ -130,11 +130,11 @@ include __DIR__ . '/includes/header.php';
         <p class="mt-7 text-lg sm:text-xl max-w-xl text-ink-soft leading-relaxed" x-html="$store.perso.profile.sub"></p>
       </template>
       <div class="mt-9 flex flex-col sm:flex-row gap-4">
-        <a :href="$store.perso.signupHref('/inregistrare-locatie')" class="group inline-flex items-center justify-center gap-2 bg-vermilion text-paper font-bold text-lg px-8 py-4 rounded-full shadow-hard hover:shadow-none hover:translate-x-[6px] hover:translate-y-[6px] transition-all">
+        <a :href="$store.perso.signupHref('/inregistrare-locatie')" data-track-cta="hero_primary" class="group inline-flex items-center justify-center gap-2 bg-vermilion text-paper font-bold text-lg px-8 py-4 rounded-full shadow-hard hover:shadow-none hover:translate-x-[6px] hover:translate-y-[6px] transition-all">
           <span x-text="$store.perso.hasProfile ? ('Pune ' + $store.perso.profile.label + ' online') : 'Pune-ți activitățile la vânzare'">Pune-ți activitățile la vânzare</span>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="group-hover:translate-x-1 transition"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
         </a>
-        <a href="#cum" class="inline-flex items-center justify-center gap-2 border-2 border-ink font-bold text-lg px-8 py-4 rounded-full hover:bg-ink hover:text-paper transition">Vezi cum funcționează</a>
+        <a href="#cum" data-track-cta="hero_secondary" class="inline-flex items-center justify-center gap-2 border-2 border-ink font-bold text-lg px-8 py-4 rounded-full hover:bg-ink hover:text-paper transition">Vezi cum funcționează</a>
       </div>
       <div class="mt-8 flex flex-wrap items-center gap-x-7 gap-y-3 text-sm font-semibold text-ink-soft">
         <span class="flex items-center gap-2"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1E4A3D" stroke-width="2.5"><path d="M5 13l4 4L19 7"/></svg> Fără costuri de pornire</span>
@@ -230,7 +230,7 @@ include __DIR__ . '/includes/header.php';
     </div>
     <?php endforeach; ?>
   </div>
-  <div class="mt-10 text-center"><a :href="$store.perso.signupHref('/inregistrare-locatie')" class="inline-flex items-center gap-2 bg-ink text-paper font-bold px-7 py-3.5 rounded-full shadow-hard-sm hover:shadow-none hover:translate-x-[3px] hover:translate-y-[3px] transition-all">Rezolvă-le pe toate cu bilete.online →</a></div>
+  <div class="mt-10 text-center"><a :href="$store.perso.signupHref('/inregistrare-locatie')" data-track-cta="problem_solve" class="inline-flex items-center gap-2 bg-ink text-paper font-bold px-7 py-3.5 rounded-full shadow-hard-sm hover:shadow-none hover:translate-x-[3px] hover:translate-y-[3px] transition-all">Rezolvă-le pe toate cu bilete.online →</a></div>
 </section>
 
 <!-- BOOKING (animated demo) -->
@@ -247,7 +247,7 @@ include __DIR__ . '/includes/header.php';
         <li class="flex items-start gap-3"><span class="mt-1 text-vermilion">✓</span> Booking detaliat: participanți, opțiuni, add-on-uri</li>
         <li class="flex items-start gap-3"><span class="mt-1 text-vermilion">✓</span> Pachete de grup și prețuri pe categorie de vârstă</li>
       </ul>
-      <a :href="$store.perso.signupHref('/inregistrare-locatie')" class="mt-8 inline-flex items-center gap-2 bg-vermilion text-paper font-bold px-7 py-3.5 rounded-full shadow-hard-sm hover:translate-x-[3px] hover:translate-y-[3px] transition-all">Vreau booking pe sloturi →</a>
+      <a :href="$store.perso.signupHref('/inregistrare-locatie')" data-track-cta="booking_slots" class="mt-8 inline-flex items-center gap-2 bg-vermilion text-paper font-bold px-7 py-3.5 rounded-full shadow-hard-sm hover:translate-x-[3px] hover:translate-y-[3px] transition-all">Vreau booking pe sloturi →</a>
     </div>
     <div x-data="bookingFlow()" x-intersect.once="start()" class="bg-paper-2 text-ink rounded-2xl border-2 border-paper-2 shadow-hard p-6 -rotate-[1.5deg] min-h-[420px] flex flex-col">
       <div class="flex items-center justify-between mb-1">
@@ -404,7 +404,7 @@ include __DIR__ . '/includes/header.php';
         <p class="mt-5 text-sm text-paper/70">Funcționează cu reclame pe <strong class="text-paper">Facebook, Instagram, TikTok și Google</strong>. Date corecte = algoritmi mai eficienți = cost pe vânzare mai mic.</p>
       </div>
     </div>
-    <div class="mt-10"><a :href="$store.perso.signupHref('/inregistrare-locatie')" class="inline-flex items-center gap-2 bg-vermilion text-paper font-bold px-7 py-3.5 rounded-full hover:translate-x-[3px] hover:translate-y-[3px] transition-all">Vreau reclame mai ieftine →</a></div>
+    <div class="mt-10"><a :href="$store.perso.signupHref('/inregistrare-locatie')" data-track-cta="analytics_ads" class="inline-flex items-center gap-2 bg-vermilion text-paper font-bold px-7 py-3.5 rounded-full hover:translate-x-[3px] hover:translate-y-[3px] transition-all">Vreau reclame mai ieftine →</a></div>
   </div>
 </section>
 
@@ -487,7 +487,7 @@ include __DIR__ . '/includes/header.php';
       </ul>
     </div>
   </div>
-  <div class="mt-10 text-center"><a :href="$store.perso.signupHref('/inregistrare-locatie')" class="inline-flex items-center gap-2 bg-vermilion text-paper font-bold px-7 py-3.5 rounded-full shadow-hard-sm hover:shadow-none hover:translate-x-[3px] hover:translate-y-[3px] transition-all">Vreau să vând online și local →</a></div>
+  <div class="mt-10 text-center"><a :href="$store.perso.signupHref('/inregistrare-locatie')" data-track-cta="local_sales" class="inline-flex items-center gap-2 bg-vermilion text-paper font-bold px-7 py-3.5 rounded-full shadow-hard-sm hover:shadow-none hover:translate-x-[3px] hover:translate-y-[3px] transition-all">Vreau să vând online și local →</a></div>
 </section>
 
 <!-- FISCAL / ANAF -->
@@ -531,7 +531,7 @@ include __DIR__ . '/includes/header.php';
       </div>
       <div class="mt-6 pt-5 border-t border-paper/10 flex flex-wrap items-center justify-between gap-3">
         <p class="text-paper/70 text-sm">Zero introducere manuală. Documentele sunt gata în <strong class="text-vermilion" x-text="elapsed + 's'">0s</strong> de la fiecare vânzare.</p>
-        <a :href="$store.perso.signupHref('/inregistrare-locatie')" class="inline-flex items-center gap-2 bg-vermilion text-paper font-bold px-6 py-3 rounded-full hover:translate-x-[3px] hover:translate-y-[3px] transition-all text-sm">Vreau fiscalitatea pe pilot automat →</a>
+        <a :href="$store.perso.signupHref('/inregistrare-locatie')" data-track-cta="anaf" class="inline-flex items-center gap-2 bg-vermilion text-paper font-bold px-6 py-3 rounded-full hover:translate-x-[3px] hover:translate-y-[3px] transition-all text-sm">Vreau fiscalitatea pe pilot automat →</a>
       </div>
     </div>
   </div>
@@ -559,7 +559,7 @@ include __DIR__ . '/includes/header.php';
     </div>
     <?php endforeach; ?>
   </div>
-  <div class="mt-10 text-center"><a :href="$store.perso.signupHref('/inregistrare-locatie')" class="inline-flex items-center gap-2 bg-ink text-paper font-bold px-7 py-3.5 rounded-full shadow-hard-sm hover:shadow-none hover:translate-x-[3px] hover:translate-y-[3px] transition-all">Începe acum, gratuit →</a></div>
+  <div class="mt-10 text-center"><a :href="$store.perso.signupHref('/inregistrare-locatie')" data-track-cta="how_it_works" class="inline-flex items-center gap-2 bg-ink text-paper font-bold px-7 py-3.5 rounded-full shadow-hard-sm hover:shadow-none hover:translate-x-[3px] hover:translate-y-[3px] transition-all">Începe acum, gratuit →</a></div>
 </section>
 
 <!-- TIXELLO ENGINE -->
@@ -569,7 +569,7 @@ include __DIR__ . '/includes/header.php';
       <span class="inline-block font-mono text-xs uppercase tracking-widest bg-ink text-paper px-3 py-1.5 rounded-full mb-5">Powered by Tixello</span>
       <h2 class="font-display font-bold text-4xl sm:text-5xl leading-tight">Infrastructură matură, testată la scară.</h2>
       <p class="mt-6 text-lg text-ink-soft leading-relaxed">bilete.online rulează pe Tixello — sistemul de ticketing care a procesat deja peste 4,4 milioane EUR în vânzări și peste 301.000 de bilete. Primești tehnologie de producție, fără s-o construiești sau s-o întreții.</p>
-      <a :href="$store.perso.signupHref('/inregistrare-locatie')" class="mt-7 inline-flex items-center gap-2 bg-vermilion text-paper font-bold px-7 py-3.5 rounded-full shadow-hard-sm hover:shadow-none hover:translate-x-[3px] hover:translate-y-[3px] transition-all">Devino partener →</a>
+      <a :href="$store.perso.signupHref('/inregistrare-locatie')" data-track-cta="tixello" class="mt-7 inline-flex items-center gap-2 bg-vermilion text-paper font-bold px-7 py-3.5 rounded-full shadow-hard-sm hover:shadow-none hover:translate-x-[3px] hover:translate-y-[3px] transition-all">Devino partener →</a>
     </div>
     <div class="bg-ink text-paper rounded-2xl p-8 shadow-hard border-2 border-ink">
       <p class="font-mono text-xs uppercase tracking-widest text-vermilion mb-5">În cifre</p>
@@ -650,10 +650,10 @@ include __DIR__ . '/includes/header.php';
     <h2 class="font-display font-bold text-4xl sm:text-6xl leading-[0.95]">Pune-ți activitățile la vânzare<br>și păstrează prețul tău întreg.</h2>
     <p class="mt-6 text-lg text-paper/90 max-w-xl mx-auto leading-relaxed">Fără costuri de pornire. Activități nelimitate. Onboarding în 5 minute, go-live azi. Comision 2%* plătit de client.</p>
     <div class="mt-10 flex flex-col sm:flex-row gap-4 justify-center">
-      <a :href="$store.perso.signupHref('/inregistrare-locatie')" class="inline-flex items-center justify-center gap-2 bg-ink text-paper font-bold text-lg px-8 py-4 rounded-full shadow-hard hover:shadow-none hover:translate-x-[6px] hover:translate-y-[6px] transition-all">
+      <a :href="$store.perso.signupHref('/inregistrare-locatie')" data-track-cta="final_primary" class="inline-flex items-center justify-center gap-2 bg-ink text-paper font-bold text-lg px-8 py-4 rounded-full shadow-hard hover:shadow-none hover:translate-x-[6px] hover:translate-y-[6px] transition-all">
         Vreau să-mi vând activitățile →
       </a>
-      <a href="mailto:contact@bilete.online?subject=Întrebare%20parteneriat%20bilete.online" class="inline-flex items-center justify-center gap-2 border-2 border-paper font-bold text-lg px-8 py-4 rounded-full hover:bg-paper hover:text-ink transition">
+      <a href="mailto:contact@bilete.online?subject=Întrebare%20parteneriat%20bilete.online" data-track-cta="email_contact" class="inline-flex items-center justify-center gap-2 border-2 border-paper font-bold text-lg px-8 py-4 rounded-full hover:bg-paper hover:text-ink transition">
         Trimite-ne un email
       </a>
     </div>
@@ -793,6 +793,41 @@ include __DIR__ . '/includes/header.php';
       }).catch(() => {});
     } catch (_) {}
   })();
+
+  /* CTA click tracking — every element with [data-track-cta] reports a
+     cta_click event tied to the same bo_lead_sid session. We use the
+     readable button text as cta_label so the admin timeline shows
+     "Click pe „Vreau booking pe sloturi"" instead of just an ID. */
+  document.addEventListener('click', function(ev){
+    const el = ev.target.closest('[data-track-cta]');
+    if (!el) return;
+    try {
+      let sid = (document.cookie.match(/(?:^|;\s*)bo_lead_sid=([^;]+)/)||[])[1];
+      if (!sid) {
+        sid = (crypto?.randomUUID?.() || (Date.now().toString(36) + Math.random().toString(36).slice(2)));
+        const yr = new Date(); yr.setFullYear(yr.getFullYear()+1);
+        document.cookie = `bo_lead_sid=${sid}; expires=${yr.toUTCString()}; path=/; SameSite=Lax`;
+      }
+      const ctaId = el.getAttribute('data-track-cta');
+      const label = (el.innerText || el.textContent || '').replace(/\s+/g,' ').trim().slice(0, 200);
+      const p = new URLSearchParams(window.location.search);
+      fetch('/api/proxy.php?action=leads.track', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({
+          session_token: sid,
+          event_type: 'cta_click',
+          page_url: window.location.pathname + window.location.search,
+          referrer: document.referrer || null,
+          prefill_tip: p.get('tip') || null,
+          prefill_loc: p.get('loc') || null,
+          cta_id: ctaId,
+          cta_label: label,
+        }),
+        keepalive: true,
+      }).catch(() => {});
+    } catch (_) {}
+  }, true);
 </script>
 
 <?php include __DIR__ . '/includes/footer.php'; ?>

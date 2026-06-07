@@ -16,12 +16,14 @@ use Filament\Forms;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components as SC;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\HtmlString;
 
 /**
  * Filament admin resource for prospective-organizer leads coming through
@@ -49,6 +51,44 @@ class OrganizerLeadResource extends Resource
     protected static \UnitEnum|string|null $navigationGroup = 'Sales';
     protected static ?int $navigationSort = 20;
 
+    /**
+     * Activity-type → tip code mapping used to generate personalized
+     * outbound URLs for /devino-partener. The keys are the EXACT codes
+     * accepted by the PERSO_ALIASES table in devino-partener.php, so
+     * a saved lead with category_slug='muzeu' yields
+     * https://bilete.online/devino-partener?tip=muzeu&loc=…
+     * and that page renders the muzeu-flavored copy on arrival.
+     */
+    public const CATEGORY_OPTIONS = [
+        'escape'          => 'Escape rooms',
+        'muzeu'           => 'Muzee & expoziții',
+        'parc-distractii' => 'Parcuri de distracții',
+        'parc-aventura'   => 'Parcuri de aventură',
+        'natura'          => 'Natură & outdoor',
+        'acvarii-zoo'     => 'Acvarii, zoo & animale',
+        'ateliere'        => 'Ateliere creative',
+        'tururi'          => 'Tururi turistice',
+        'educatie'        => 'Educație experiențială',
+        'familie'         => 'Familie & copii',
+        'corporate'       => 'Corporate & grupuri',
+        'cultura'         => 'Cultură & artă',
+    ];
+
+    /**
+     * Build the public link a sales person should send to a lead. Used
+     * both by the form preview (live) and by the View page (after save).
+     * Returns empty string when no useful params are set, so callers can
+     * decide whether to render a placeholder.
+     */
+    public static function buildCampaignLink(?string $tip, ?string $loc): string
+    {
+        $params = [];
+        if ($tip) $params['tip'] = $tip;
+        if ($loc) $params['loc'] = $loc;
+        if (empty($params)) return '';
+        return 'https://bilete.online/devino-partener?' . http_build_query($params);
+    }
+
     public static function getEloquentQuery(): Builder
     {
         $client = static::getMarketplaceClient();
@@ -75,46 +115,140 @@ class OrganizerLeadResource extends Resource
     public static function form(Schema $form): Schema
     {
         return $form->components([
-            SC\Section::make('Identitate contact')->columns(2)->schema([
-                Forms\Components\TextInput::make('contact_name')->label('Nume')->required()->maxLength(160),
-                Forms\Components\TextInput::make('email')->label('Email')->email()->required()->maxLength(190),
-                Forms\Components\TextInput::make('phone')->label('Telefon')->maxLength(40),
-            ]),
-            SC\Section::make('Locație')->columns(2)->schema([
-                Forms\Components\TextInput::make('location_name')->label('Numele locației')->required()->maxLength(200),
-                Forms\Components\TextInput::make('city')->label('Oraș')->required()->maxLength(120),
-                Forms\Components\TextInput::make('website')->label('Website')->maxLength(255),
-                Forms\Components\TextInput::make('volume_estimate')->label('Volum estimat bilete/lună')->maxLength(40),
-            ]),
-            SC\Section::make('Activitate')->columns(2)->schema([
-                Forms\Components\TextInput::make('category_slug')->label('Categorie (slug)')->maxLength(120),
-                Forms\Components\TextInput::make('category_name')->label('Categorie (nume)')->maxLength(200),
-                Forms\Components\TextInput::make('category_other')->label('Categorie free-text')->maxLength(200),
-            ]),
-            SC\Section::make('Pipeline')->columns(2)->schema([
-                Forms\Components\Select::make('status')
-                    ->options(OrganizerLead::STATUSES)
-                    ->required()
-                    ->default(OrganizerLead::STATUS_NEW),
-                Forms\Components\Select::make('source')->options(OrganizerLead::SOURCES)->required(),
-                Forms\Components\Select::make('assigned_to_user_id')
-                    ->label('Asignat lui')
-                    ->relationship('assignedTo', 'name')
-                    ->searchable()
-                    ->preload(),
-                Forms\Components\DateTimePicker::make('next_action_at')->label('Următoarea acțiune'),
-                Forms\Components\Textarea::make('notes')->label('Note interne')->rows(3)->columnSpanFull(),
-            ]),
-            SC\Section::make('Sursă vizită (read-only)')->columns(2)->collapsed()->schema([
-                Forms\Components\TextInput::make('prefill_tip')->label('Prefill tip')->disabled(),
-                Forms\Components\TextInput::make('prefill_loc')->label('Prefill loc')->disabled(),
-                Forms\Components\Textarea::make('referrer')->label('Referrer')->disabled()->rows(2),
-                Forms\Components\TextInput::make('utm_source')->disabled(),
-                Forms\Components\TextInput::make('utm_medium')->disabled(),
-                Forms\Components\TextInput::make('utm_campaign')->disabled(),
-                Forms\Components\TextInput::make('utm_content')->disabled(),
-                Forms\Components\TextInput::make('utm_term')->disabled(),
-            ]),
+            // One wide section — collapsing contact + location + activity +
+            // pipeline into a single grid so the page reads top-to-bottom
+            // instead of jumping between fragmented section cards.
+            SC\Section::make('Lead')
+                ->description('Datele despre lead + linkul pe care îl trimiți. Categoria + Numele locației construiesc automat URL-ul personalizat.')
+                ->columns(12)
+                ->schema([
+                    // ─── Contact ─────────────────────────────────────────
+                    Forms\Components\TextInput::make('contact_name')
+                        ->label('Nume contact')->required()->maxLength(160)
+                        ->columnSpan(['md' => 6, 'sm' => 12]),
+                    Forms\Components\TextInput::make('email')
+                        ->label('Email')->email()->required()->maxLength(190)
+                        ->columnSpan(['md' => 4, 'sm' => 12]),
+                    Forms\Components\TextInput::make('phone')
+                        ->label('Telefon')->maxLength(40)
+                        ->columnSpan(['md' => 2, 'sm' => 12]),
+
+                    // ─── Locație ─────────────────────────────────────────
+                    Forms\Components\TextInput::make('location_name')
+                        ->label('Numele locației')->required()->maxLength(200)
+                        ->live(debounce: 400)
+                        ->helperText('Va apărea ca „loc=…" în URL-ul personalizat')
+                        ->columnSpan(['md' => 6, 'sm' => 12]),
+                    Forms\Components\TextInput::make('city')
+                        ->label('Oraș')->required()->maxLength(120)
+                        ->columnSpan(['md' => 3, 'sm' => 12]),
+                    Forms\Components\TextInput::make('website')
+                        ->label('Website (opțional)')->url()->maxLength(255)
+                        ->placeholder('https://…')
+                        ->columnSpan(['md' => 3, 'sm' => 12]),
+
+                    // ─── Activitate ──────────────────────────────────────
+                    Forms\Components\Select::make('category_slug')
+                        ->label('Categorie activitate')
+                        ->options(self::CATEGORY_OPTIONS)
+                        ->live()
+                        ->afterStateUpdated(function ($state, callable $set) {
+                            // Keep the display name in sync so reports
+                            // that read category_name still work.
+                            $set('category_name', self::CATEGORY_OPTIONS[$state] ?? null);
+                        })
+                        ->searchable()
+                        ->helperText('Determină „tip=…" din URL — pagina /devino-partener afișează copy specific categoriei.')
+                        ->columnSpan(['md' => 6, 'sm' => 12]),
+                    Forms\Components\TextInput::make('category_other')
+                        ->label('Sau descriere alternativă (dacă nu se potrivește niciuna)')
+                        ->placeholder('ex. Centru de echitație, planetariu')
+                        ->maxLength(200)
+                        ->columnSpan(['md' => 6, 'sm' => 12]),
+                    Forms\Components\Hidden::make('category_name'),
+
+                    Forms\Components\TextInput::make('volume_estimate')
+                        ->label('Volum estimat bilete/lună (ex: 100-500)')
+                        ->maxLength(40)
+                        ->columnSpan(['md' => 4, 'sm' => 12]),
+
+                    // ─── Pipeline ────────────────────────────────────────
+                    Forms\Components\Select::make('status')
+                        ->options(OrganizerLead::STATUSES)
+                        ->required()
+                        ->default(OrganizerLead::STATUS_NEW)
+                        ->columnSpan(['md' => 4, 'sm' => 12]),
+                    Forms\Components\Select::make('source')
+                        ->options(OrganizerLead::SOURCES)
+                        ->default('manual')
+                        ->required()
+                        ->columnSpan(['md' => 4, 'sm' => 12]),
+                    Forms\Components\Select::make('assigned_to_user_id')
+                        ->label('Asignat lui')
+                        ->relationship('assignedTo', 'name')
+                        ->searchable()->preload()
+                        ->columnSpan(['md' => 4, 'sm' => 12]),
+                    Forms\Components\DateTimePicker::make('next_action_at')
+                        ->label('Următoarea acțiune')
+                        ->columnSpan(['md' => 4, 'sm' => 12]),
+                    Forms\Components\Textarea::make('notes')
+                        ->label('Note interne')->rows(2)
+                        ->columnSpan(12),
+                ]),
+
+            // Live preview of the campaign URL — updates as the rep fills
+            // in category + location. Hidden until both are set; clickable
+            // anchor opens the destination in a new tab so the rep can
+            // verify the page renders correctly with that personalization.
+            SC\Section::make('Link partener personalizat')
+                ->description('Linkul pe care îl trimiți leadului. Se actualizează automat când completezi categoria + numele locației.')
+                ->schema([
+                    Forms\Components\Placeholder::make('campaign_link')
+                        ->hiddenLabel()
+                        ->content(function (Get $get) {
+                            $tip = $get('category_slug');
+                            $loc = $get('location_name');
+                            $url = self::buildCampaignLink($tip, $loc);
+                            if ($url === '') {
+                                return new HtmlString(
+                                    '<em class="text-gray-500">Completează categoria + numele locației pentru a vedea linkul.</em>'
+                                );
+                            }
+                            $safe = e($url);
+                            return new HtmlString(<<<HTML
+<div class="flex items-center gap-3">
+    <a href="{$safe}" target="_blank" rel="noopener"
+       class="font-mono text-sm text-primary-600 hover:text-primary-700 break-all underline">
+        {$safe}
+    </a>
+    <button type="button"
+            onclick="navigator.clipboard.writeText(this.previousElementSibling.href).then(() => { this.textContent = 'Copiat ✓'; setTimeout(() => this.textContent = 'Copiază', 1500); })"
+            class="px-3 py-1 text-xs font-medium bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 rounded-md whitespace-nowrap">
+        Copiază
+    </button>
+</div>
+<p class="mt-2 text-xs text-gray-500">Pagina se va personaliza cu copy specific categoriei + va afișa banner-ul de bun-venit pentru locație.</p>
+HTML);
+                        }),
+                ]),
+
+            // Read-only acquisition context — collapsed by default; useful
+            // when a lead actually arrived via the public form and the
+            // utm/referrer fields got auto-filled.
+            SC\Section::make('Sursă vizită (din public form)')
+                ->description('Aceste câmpuri sunt populate automat când leadul ajunge prin /inregistrare-locatie. La adăugare manuală pot fi lăsate goale.')
+                ->collapsed()
+                ->columns(4)
+                ->schema([
+                    Forms\Components\TextInput::make('prefill_tip')->label('Prefill tip')->disabled(),
+                    Forms\Components\TextInput::make('prefill_loc')->label('Prefill loc')->disabled(),
+                    Forms\Components\TextInput::make('utm_source')->disabled(),
+                    Forms\Components\TextInput::make('utm_medium')->disabled(),
+                    Forms\Components\TextInput::make('utm_campaign')->disabled(),
+                    Forms\Components\TextInput::make('utm_content')->disabled(),
+                    Forms\Components\TextInput::make('utm_term')->disabled(),
+                    Forms\Components\Textarea::make('referrer')->disabled()->rows(2)->columnSpan(4),
+                ]),
         ]);
     }
 

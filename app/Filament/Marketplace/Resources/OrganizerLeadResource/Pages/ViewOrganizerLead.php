@@ -36,8 +36,38 @@ class ViewOrganizerLead extends ViewRecord
             ->reject(fn ($_, $key) => $key === $lead->status)
             ->all();
 
+        $campaignLink = OrganizerLeadResource::buildCampaignLink(
+            $lead->category_slug,
+            $lead->business_name ?: $lead->city
+        );
+
         return [
             EditAction::make(),
+
+            Action::make('copy_campaign_link')
+                ->label('Link campanie')
+                ->icon('heroicon-o-link')
+                ->color('warning')
+                ->visible((bool) $campaignLink)
+                ->modalHeading('Link personalizat pentru acest lead')
+                ->modalDescription('Trimite linkul prin email/SMS. Pagina /devino-partener se personalizează automat în funcție de parametrii tip + loc.')
+                ->modalSubmitAction(false)
+                ->modalCancelActionLabel('Închide')
+                ->form([
+                    Forms\Components\TextInput::make('url')
+                        ->label('URL campanie')
+                        ->default($campaignLink)
+                        ->readOnly()
+                        ->suffixAction(
+                            \Filament\Forms\Components\Actions\Action::make('copy')
+                                ->icon('heroicon-o-clipboard')
+                                ->label('Copiază')
+                                ->action(fn () => null)
+                                ->extraAttributes([
+                                    'x-on:click' => 'navigator.clipboard.writeText("' . addslashes($campaignLink) . '"); $tooltip("Copiat!", { timeout: 1500 });',
+                                ])
+                        ),
+                ]),
 
             Action::make('change_status')
                 ->label('Schimbă status')
