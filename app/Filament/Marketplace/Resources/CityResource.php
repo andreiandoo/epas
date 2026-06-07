@@ -357,8 +357,24 @@ class CityResource extends Resource
                     ->label('Country')
                     ->badge(),
 
+                // Events / Activities — same column physically, but the
+                // label and the source of the count depend on which
+                // microservice the marketplace runs. Activities-module
+                // marketplaces (bilete.online et al.) compute live from
+                // the Activity table because `event_count` is only
+                // populated by the events pipeline. Events marketplaces
+                // keep using the persisted counter.
                 Tables\Columns\TextColumn::make('event_count')
-                    ->label('Events')
+                    ->label(fn () => static::marketplaceHasMicroservice('activities-module')
+                        ? 'Activități' : 'Events')
+                    ->getStateUsing(function ($record) {
+                        if (static::marketplaceHasMicroservice('activities-module')) {
+                            return \App\Models\Activity::query()
+                                ->where('marketplace_city_id', $record->id)
+                                ->count();
+                        }
+                        return $record->event_count;
+                    })
                     ->sortable(),
 
                 Tables\Columns\IconColumn::make('is_visible')

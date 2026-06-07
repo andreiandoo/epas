@@ -176,12 +176,32 @@ class RegionResource extends Resource
                     ->label('Country')
                     ->badge(),
 
+                // Live count of cities currently linked via region_id —
+                // sidesteps the stale `city_count` column whose backfill
+                // only runs when the seed scripts touch it. Cheap join
+                // (~8 regions × one count query each).
                 Tables\Columns\TextColumn::make('city_count')
                     ->label('Cities')
+                    ->getStateUsing(fn ($record) => \App\Models\MarketplaceCity::query()
+                        ->where('region_id', $record->id)
+                        ->count())
                     ->sortable(),
 
+                // Events / Activities — same logic as CityResource:
+                // activities-module marketplaces (bilete.online) compute
+                // live from the Activity table; events marketplaces use
+                // the persisted counter.
                 Tables\Columns\TextColumn::make('event_count')
-                    ->label('Events')
+                    ->label(fn () => static::marketplaceHasMicroservice('activities-module')
+                        ? 'Activități' : 'Events')
+                    ->getStateUsing(function ($record) {
+                        if (static::marketplaceHasMicroservice('activities-module')) {
+                            return \App\Models\Activity::query()
+                                ->whereHas('city', fn ($q) => $q->where('region_id', $record->id))
+                                ->count();
+                        }
+                        return $record->event_count;
+                    })
                     ->sortable(),
 
                 Tables\Columns\IconColumn::make('is_visible')

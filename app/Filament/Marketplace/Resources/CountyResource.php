@@ -189,8 +189,14 @@ class CountyResource extends Resource
                         return $name ?? '-';
                     }),
 
+                // Live count of cities currently linked via county_id —
+                // the persisted column gets stale whenever cities are
+                // added/removed outside the seed scripts.
                 Tables\Columns\TextColumn::make('city_count')
                     ->label('Cities')
+                    ->getStateUsing(fn ($record) => \App\Models\MarketplaceCity::query()
+                        ->where('county_id', $record->id)
+                        ->count())
                     ->sortable(),
 
                 Tables\Columns\ColorColumn::make('color')
