@@ -118,17 +118,22 @@ class FixBileteonlineGeoHierarchySeeder extends Seeder
      * Reuses the parent seeder's protected createRegions() method. The
      * parent uses updateOrCreate, but we already wiped so they are all
      * fresh inserts. Same data, no copy-paste drift.
+     *
+     * Both `command` and `createRegions` are accessed via reflection so
+     * we don't have to widen visibility on RomaniaLocationSeeder just
+     * for one bilete.online-specific consumer.
      */
     protected function createRegionsThroughReflection(RomaniaLocationSeeder $provider, int $mcId): array
     {
-        // Make $this->command available to the provider — it writes
-        // progress lines via $this->command->info inside createRegions.
         $providerReflection = new \ReflectionClass($provider);
+
         $cmdProp = $providerReflection->getProperty('command');
         $cmdProp->setAccessible(true);
         $cmdProp->setValue($provider, $this->command);
 
-        return $provider->createRegions($mcId);
+        $method = $providerReflection->getMethod('createRegions');
+        $method->setAccessible(true);
+        return $method->invoke($provider, $mcId);
     }
 
     /**
