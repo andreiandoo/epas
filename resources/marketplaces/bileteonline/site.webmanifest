@@ -1,0 +1,13 @@
+{
+  "name": "bilete.online",
+  "short_name": "bilete.online",
+  "description": "Activități, experiențe și locuri de descoperit. Bilete digitale cu QR, instant pe email.",
+  "icons": [
+    { "src": "/assets/images/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ],
+  "theme_color": "#1B1714",
+  "background_color": "#F4EFE3",
+  "display": "standalone",
+  "start_url": "/",
+  "lang": "ro"
+}

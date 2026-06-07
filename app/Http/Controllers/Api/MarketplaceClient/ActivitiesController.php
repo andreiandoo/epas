@@ -410,59 +410,80 @@ class ActivitiesController extends BaseController
                 }
             }
 
-            $recommendCount = (clone $base)->where('recommend', true)->count();
+            // Portable boolean aggregate. A plain ->where('recommend', true) breaks
+            // on Postgres because Laravel binds the bool as integer 1 (operator
+            // does not exist: boolean = integer). CASE WHEN works on pg + mysql.
+            $recommendCount = (int) (clone $base)->selectRaw('SUM(CASE WHEN recommend THEN 1 ELSE 0 END) AS c')->value('c');
             $recommendPct = $count > 0 ? (int) round(($recommendCount / $count) * 100) : 0;
 
-            // Aggregate detailed_ratings (json) → per-aspect average.
-            $detailedSums = [];
-            $detailedCounts = [];
-            foreach ((clone $base)->whereNotNull('detailed_ratings')->pluck('detailed_ratings') as $json) {
-                $data = is_array($json) ? $json : json_decode((string) $json, true);
-                if (! is_array($data)) {
-                    continue;
-                }
-                foreach ($data as $aspect => $value) {
-                    if (! is_numeric($value)) {
+            // Aggregate detailed_ratings (json) → per-aspect average. Resilient:
+            // a parsing hiccup must not zero the whole summary.
+            $detailedAverages = [];
+            try {
+                $detailedSums = [];
+                $detailedCounts = [];
+                foreach ((clone $base)->whereNotNull('detailed_ratings')->pluck('detailed_ratings') as $json) {
+                    $data = is_array($json) ? $json : json_decode((string) $json, true);
+                    if (! is_array($data)) {
                         continue;
                     }
-                    $detailedSums[$aspect] = ($detailedSums[$aspect] ?? 0) + (float) $value;
-                    $detailedCounts[$aspect] = ($detailedCounts[$aspect] ?? 0) + 1;
-                }
-            }
-            $detailedAverages = [];
-            foreach ($detailedSums as $aspect => $sum) {
-                $detailedAverages[$aspect] = round($sum / max(1, $detailedCounts[$aspect]), 1);
-            }
-
-            $items = (clone $base)
-                ->leftJoin('marketplace_customers', 'marketplace_customers.id', '=', 'marketplace_customer_reviews.marketplace_customer_id')
-                ->orderByDesc('marketplace_customer_reviews.created_at')
-                ->limit(9)
-                ->get([
-                    'marketplace_customer_reviews.rating',
-                    'marketplace_customer_reviews.text',
-                    'marketplace_customer_reviews.created_at',
-                    'marketplace_customer_reviews.is_anonymous',
-                    'marketplace_customers.first_name',
-                    'marketplace_customers.last_name',
-                ])
-                ->map(function ($r) {
-                    $name = trim((string) ($r->first_name ?? '') . ' ' . substr((string) ($r->last_name ?? ''), 0, 1));
-                    if ($r->is_anonymous || $name === '') {
-                        $name = 'Client bilete.online';
+                    foreach ($data as $aspect => $value) {
+                        if (! is_numeric($value)) {
+                            continue;
+                        }
+                        $detailedSums[$aspect] = ($detailedSums[$aspect] ?? 0) + (float) $value;
+                        $detailedCounts[$aspect] = ($detailedCounts[$aspect] ?? 0) + 1;
                     }
-                    $when = $r->created_at ? \Carbon\Carbon::parse($r->created_at)->translatedFormat('F Y') : '';
+                }
+                foreach ($detailedSums as $aspect => $sum) {
+                    $detailedAverages[$aspect] = round($sum / max(1, $detailedCounts[$aspect]), 1);
+                }
+            } catch (\Throwable $e) {
+                $detailedAverages = [];
+            }
 
-                    return [
-                        'rating'   => (int) $r->rating,
-                        'text'     => (string) $r->text,
-                        'name'     => $name,
-                        'initial'  => mb_strtoupper(mb_substr($name, 0, 1)),
-                        'meta'     => trim($when . ' · rezervare verificată', ' ·'),
-                    ];
-                })
-                ->values()
-                ->all();
+            // Recent review cards. Resilient for the same reason (join / date
+            // formatting must not blank out the rating summary).
+            $items = [];
+            try {
+                $items = (clone $base)
+                    ->leftJoin('marketplace_customers', 'marketplace_customers.id', '=', 'marketplace_customer_reviews.marketplace_customer_id')
+                    ->orderByDesc('marketplace_customer_reviews.created_at')
+                    ->limit(9)
+                    ->get([
+                        'marketplace_customer_reviews.rating',
+                        'marketplace_customer_reviews.text',
+                        'marketplace_customer_reviews.created_at',
+                        'marketplace_customer_reviews.is_anonymous',
+                        'marketplace_customers.first_name',
+                        'marketplace_customers.last_name',
+                    ])
+                    ->map(function ($r) {
+                        $anon = filter_var($r->is_anonymous, FILTER_VALIDATE_BOOLEAN);
+                        $name = trim((string) ($r->first_name ?? '') . ' ' . substr((string) ($r->last_name ?? ''), 0, 1));
+                        if ($anon || $name === '') {
+                            $name = 'Client bilete.online';
+                        }
+                        $when = '';
+                        try {
+                            $when = $r->created_at ? \Carbon\Carbon::parse($r->created_at)->locale('ro')->isoFormat('MMMM YYYY') : '';
+                        } catch (\Throwable $e) {
+                            $when = '';
+                        }
+
+                        return [
+                            'rating'   => (int) $r->rating,
+                            'text'     => (string) $r->text,
+                            'name'     => $name,
+                            'initial'  => mb_strtoupper(mb_substr($name, 0, 1)),
+                            'meta'     => trim($when . ' · rezervare verificată', ' ·'),
+                        ];
+                    })
+                    ->values()
+                    ->all();
+            } catch (\Throwable $e) {
+                $items = [];
+            }
 
             return [
                 'average'           => $average,
