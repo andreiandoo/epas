@@ -168,6 +168,11 @@ $bookingBootstrap = [
     'window'  => $activity['booking_window'] ?? ['lead_time_hours' => 2, 'max_advance_days' => 60, 'min_participants' => 1, 'max_participants' => 10],
     'gallery' => array_values(array_filter(array_map(fn ($url) => $url ? ['src' => $url, 'alt' => $activity['title']] : null, $activity['gallery'] ?? []))),
     'reviews' => $reviews,
+    // Loyalty estimate (display only — exact points computed at checkout from
+    // the marketplace gamification config). earn_percentage = % of subtotal
+    // value awarded; point_value_cents = value of 1 point in cents.
+    'earn_percentage'   => 5,
+    'point_value_cents' => 1,
 ];
 
 // Recommendation rails (only when ≥1 card each).
@@ -184,6 +189,30 @@ if (! empty($recs['same_city_same_cat'])) {
 }
 if (! empty($recs['same_city'])) {
     $rails[] = ['kicker' => 'ÎN ACELAȘI ORAȘ', 'title' => $cityName ? "Alte experiențe în {$cityName}" : 'Alte experiențe', 'cards' => $recs['same_city']];
+}
+
+// Extra GYG-style discovery rails built from a city activities pool. Same pool,
+// different framing/order (Top / Experiențe) — like GetYourGuide destination
+// pages. Only added when there's enough to show; empty rails are skipped.
+$cityLabel = $cityName ?: 'orașul tău';
+$cityPool = [];
+if ($citySlug) {
+    $cpResp = api_cached("city_pool_{$citySlug}", fn () => api_get('/activities', ['city' => $citySlug, 'per_page' => 16]), 300);
+    $cpRaw = $cpResp['data']['items'] ?? $cpResp['data']['data'] ?? (is_array($cpResp['data'] ?? null) ? $cpResp['data'] : []);
+    foreach ((is_array($cpRaw) ? $cpRaw : []) as $ca) {
+        if ((int) ($ca['id'] ?? 0) !== (int) $activity['id']) $cityPool[] = $ca;
+    }
+}
+if (count($cityPool) >= 1 && empty($recs['same_city'])) {
+    $rails[] = ['kicker' => 'ÎN ' . mb_strtoupper($cityLabel), 'title' => 'Alte experiențe în ' . $cityLabel, 'cards' => array_slice($cityPool, 0, 8)];
+}
+if (count($cityPool) >= 3) {
+    $top = $cityPool;
+    usort($top, fn ($a, $b) => ((($b['flags']['is_featured'] ?? false) ? 1 : 0) <=> (($a['flags']['is_featured'] ?? false) ? 1 : 0)));
+    $rails[] = ['kicker' => 'TOP', 'title' => 'Top activități în ' . $cityLabel, 'cards' => array_slice($top, 0, 8)];
+}
+if (count($cityPool) >= 3) {
+    $rails[] = ['kicker' => 'EXPERIENȚE', 'title' => 'Experiențe de descoperit în ' . $cityLabel, 'cards' => array_slice(array_reverse($cityPool), 0, 8)];
 }
 
 // Card URL helper (city-prefixed when the card carries a city).
@@ -354,7 +383,7 @@ include __DIR__ . '/includes/header.php';
               <div x-show="!loadingSlots && slots.length>0" class="grid grid-cols-3 gap-2">
                 <template x-for="slot in slots" :key="slot.start_time">
                   <button type="button" @click="selectedSlot=slot.start_time; Object.keys(quantities).forEach(k=>quantities[k]=0)" :class="selectedSlot===slot.start_time ? 'bg-ink text-paper' : 'bg-paper-2 hover:bg-paper-3'" class="rounded-2xl p-2.5 text-center transition">
-                    <span class="block font-display text-lg font-bold leading-none" x-text="slot.start_time"></span>
+                    <span class="block font-display text-lg font-bold leading-none" x-text="fmtTime(slot.start_time)"></span>
                     <span class="block text-[11px] font-bold" :class="(slot.capacity_remaining||0)<=3 ? 'text-vermilion' : 'text-ink-soft'" x-text="(slot.capacity_remaining||0) + ' locuri'"></span>
                   </button>
                 </template>
@@ -386,11 +415,28 @@ include __DIR__ . '/includes/header.php';
                 <div class="flex justify-between"><span>Bilete</span><strong x-text="money(totalCents)"></strong></div>
                 <div x-show="commissionRate>0 && commissionMode==='added_on_top'" class="flex justify-between"><span>Comision platformă estimat (<span x-text="commissionRate"></span>%)</span><strong x-text="money(Math.round(totalCents*commissionRate/100))"></strong></div>
                 <div class="flex items-end justify-between border-t border-ink/10 pt-3 text-lg"><span class="font-bold">Total estimat</span><strong class="font-display text-4xl leading-none" x-text="money(commissionMode==='added_on_top' ? totalCents + Math.round(totalCents*commissionRate/100) : totalCents)"></strong></div>
-                <p class="text-xs text-ink-soft">Taxele finale se calculează la checkout.</p>
+                <div class="flex justify-between rounded-2xl bg-mint px-3 py-2 text-forest"><span class="font-bold">Puncte bonus estimate</span><strong x-text="'+' + pointsEstimate() + ' puncte'"></strong></div>
+                <p class="text-xs text-ink-soft">Taxele și punctele finale se calculează la checkout.</p>
               </div>
             </div>
 
-            <button @click="submitBooking()" :disabled="!canSubmit" :class="canSubmit ? 'bg-vermilion hover:bg-vermilion-d' : 'bg-ink/20 cursor-not-allowed'" class="w-full rounded-full px-6 py-4 text-center font-bold text-paper transition">Adaugă în coș</button>
+            <button @click="submitBooking('cart')" :disabled="!canSubmit" :class="canSubmit ? 'bg-vermilion hover:bg-vermilion-d' : 'bg-ink/20 cursor-not-allowed'" class="w-full rounded-full px-6 py-4 text-center font-bold text-paper transition">Adaugă în coș</button>
+            <button @click="submitBooking('checkout')" :disabled="!canSubmit" :class="canSubmit ? 'bg-ink hover:bg-forest text-paper' : 'bg-ink/10 text-ink-soft cursor-not-allowed'" class="w-full rounded-full px-6 py-4 text-center font-bold transition">Rezervă acum — direct la checkout</button>
+
+            <!-- Points reward card -->
+            <div x-show="totalSeatsUsed>0" class="rounded-3xl border border-forest/20 bg-mint p-4">
+              <div class="flex items-center justify-between gap-3">
+                <div>
+                  <p class="font-bold text-forest">Câștigi puncte</p>
+                  <p class="text-sm text-ink-soft">Primești <strong x-text="pointsEstimate()"></strong> puncte după confirmarea participării.</p>
+                </div>
+                <span class="font-display text-4xl font-bold text-forest" x-text="'+' + pointsEstimate()"></span>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-4 gap-2 text-center text-[11px] font-bold text-ink-soft">
+              <span class="rounded-2xl bg-paper-2 px-2 py-2">Apple Pay</span><span class="rounded-2xl bg-paper-2 px-2 py-2">Google Pay</span><span class="rounded-2xl bg-paper-2 px-2 py-2">Card</span><span class="rounded-2xl bg-paper-2 px-2 py-2">Revolut</span>
+            </div>
             <p class="text-center text-xs text-ink-soft">Nu se percepe plată până la confirmarea checkout-ului.</p>
           </div>
         </div>
@@ -473,14 +519,34 @@ include __DIR__ . '/includes/header.php';
         </section>
         <?php endif; ?>
 
-        <!-- Map -->
+        <!-- Map + meeting point -->
         <?php if (! empty($activity['venue']['lat']) && ! empty($activity['venue']['lng'])): ?>
-        <section class="rounded-[2rem] border-2 border-ink bg-paper p-6 shadow-ticket sm:p-8">
-          <p class="font-mono text-xs tracking-[.18em] text-ink-soft">LOCAȚIE</p>
-          <h2 class="mt-2 font-display text-3xl font-bold leading-none sm:text-4xl"><?= htmlspecialchars($activity['venue']['name'] ?? 'Punct de întâlnire') ?></h2>
-          <?php if (! empty($activity['venue']['address'])): ?><p class="mt-2 text-ink-soft"><?= htmlspecialchars($activity['venue']['address']) ?><?= $cityName ? ', ' . htmlspecialchars($cityName) : '' ?></p><?php endif; ?>
-          <div class="mt-5 overflow-hidden rounded-[1.5rem] border-2 border-ink">
-            <iframe class="h-[360px] w-full" loading="lazy" referrerpolicy="no-referrer-when-downgrade" src="https://www.google.com/maps?q=<?= urlencode($activity['venue']['lat'] . ',' . $activity['venue']['lng']) ?>&output=embed"></iframe>
+        <?php $vLat = $activity['venue']['lat']; $vLng = $activity['venue']['lng']; $vAddr = trim(($activity['venue']['address'] ?? '') . ($cityName ? ', ' . $cityName : ''), ', '); ?>
+        <section class="overflow-hidden rounded-[2rem] border-2 border-ink bg-paper shadow-ticket">
+          <div class="grid lg:grid-cols-[400px_1fr]">
+            <div class="p-6 sm:p-8 lg:border-r-2 lg:border-ink/10">
+              <p class="font-mono text-xs tracking-[.18em] text-ink-soft">LOCAȚIE & PUNCT DE ÎNTÂLNIRE</p>
+              <h2 class="mt-2 font-display text-3xl font-bold leading-none sm:text-4xl"><?= htmlspecialchars($activity['venue']['name'] ?? 'Punct de întâlnire') ?></h2>
+              <?php if ($vAddr): ?>
+                <div class="mt-5 flex items-start gap-3">
+                  <span class="grid h-11 w-11 flex-none place-items-center rounded-2xl bg-vermilion text-paper text-lg">📍</span>
+                  <div><p class="font-bold leading-snug"><?= htmlspecialchars($vAddr) ?></p><?php if ($cityName): ?><p class="text-sm text-ink-soft"><?= htmlspecialchars($cityName) ?></p><?php endif; ?></div>
+                </div>
+              <?php endif; ?>
+              <?php if (! empty($activity['meeting_point'])): ?>
+                <div class="mt-5 rounded-3xl border border-ink/10 bg-paper-2 p-4">
+                  <p class="font-bold">Cum ne găsești</p>
+                  <p class="mt-1 text-sm leading-relaxed text-ink-soft"><?= htmlspecialchars($activity['meeting_point']) ?></p>
+                </div>
+              <?php endif; ?>
+              <a href="https://www.google.com/maps/dir/?api=1&destination=<?= urlencode($vLat . ',' . $vLng) ?>" target="_blank" rel="noopener" class="mt-5 inline-flex items-center gap-2 rounded-full bg-ink px-5 py-3 font-bold text-paper transition hover:bg-vermilion">
+                <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/></svg>
+                Deschide în Google Maps
+              </a>
+            </div>
+            <div class="relative min-h-[340px] bg-paper-2">
+              <iframe class="absolute inset-0 h-full w-full" loading="lazy" referrerpolicy="no-referrer-when-downgrade" src="https://www.google.com/maps?q=<?= urlencode($vLat . ',' . $vLng) ?>&z=15&output=embed"></iframe>
+            </div>
           </div>
         </section>
         <?php endif; ?>
@@ -570,30 +636,38 @@ include __DIR__ . '/includes/header.php';
     </div>
   </section>
 
-  <!-- RECOMMENDATIONS -->
-  <?php foreach ($rails as $rail): ?>
-  <section class="<?= $rail === $rails[0] ? 'bg-ink text-paper' : 'bg-paper border-b-2 border-ink' ?>">
-    <div class="mx-auto max-w-[1500px] px-4 py-14 sm:px-6 lg:py-16">
-      <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+  <!-- RECOMMENDATIONS (GYG-style scrollable rails) -->
+  <?php foreach ($rails as $idx => $rail): if (empty($rail['cards'])) continue; ?>
+  <?php $dark = ($idx === 0); ?>
+  <section class="<?= $dark ? 'bg-ink text-paper' : ($idx % 2 ? 'bg-paper-2/60' : 'bg-paper') ?> border-b-2 border-ink">
+    <div class="mx-auto max-w-[1500px] px-4 py-12 sm:px-6 lg:py-16">
+      <div class="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p class="font-mono text-xs tracking-[.18em] <?= $rail === $rails[0] ? 'text-ochre' : 'text-ink-soft' ?>"><?= htmlspecialchars($rail['kicker']) ?></p>
+          <p class="font-mono text-xs tracking-[.18em] <?= $dark ? 'text-ochre' : 'text-vermilion' ?>"><?= htmlspecialchars($rail['kicker']) ?></p>
           <h2 class="mt-2 font-display text-4xl font-bold leading-none sm:text-5xl"><?= htmlspecialchars($rail['title']) ?></h2>
         </div>
+        <?php if ($citySlug): ?><a href="/<?= htmlspecialchars($citySlug) ?>" class="rounded-full <?= $dark ? 'bg-paper text-ink hover:bg-vermilion hover:text-paper' : 'border-2 border-ink hover:bg-ink hover:text-paper' ?> px-5 py-2.5 text-sm font-bold transition">Vezi tot</a><?php endif; ?>
       </div>
-      <div class="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        <?php foreach (array_slice($rail['cards'], 0, 4) as $c): ?>
-          <a href="<?= htmlspecialchars($cardUrl($c)) ?>" class="group overflow-hidden rounded-[2rem] <?= $rail === $rails[0] ? 'bg-paper text-ink' : 'border-2 border-ink bg-paper' ?> shadow-deep">
-            <div class="relative h-44 overflow-hidden bg-ink">
-              <?php if (! empty($c['cover_image_url'])): ?>
-                <img src="<?= htmlspecialchars($c['cover_image_url']) ?>" alt="<?= htmlspecialchars($c['title'] ?? '') ?>" class="h-full w-full object-cover transition duration-500 group-hover:scale-105" loading="lazy">
-              <?php else: ?>
-                <div class="grid h-full place-items-center bg-gradient-to-br from-vermilion via-ochre to-forest text-paper"><span class="font-display text-2xl font-bold px-3 text-center"><?= htmlspecialchars(mb_substr($c['title'] ?? '', 0, 18)) ?></span></div>
-              <?php endif; ?>
-            </div>
-            <div class="p-5">
-              <p class="font-display text-2xl font-bold leading-none group-hover:text-vermilion"><?= htmlspecialchars($c['title'] ?? '') ?></p>
-              <p class="mt-2 text-sm text-ink-soft"><?= htmlspecialchars(($c['city']['name'] ?? '') . (! empty($c['duration_minutes']) ? ' · ' . $durationLabel((int) $c['duration_minutes']) : '')) ?></p>
-              <p class="mt-3 font-bold"><?= ! empty($c['cheapest_price_cents']) ? 'de la ' . $pricedFromCents($c['cheapest_price_cents']) : '' ?></p>
+      <div class="no-bar mt-8 flex snap-x gap-5 overflow-x-auto pb-2">
+        <?php foreach (array_slice($rail['cards'], 0, 10) as $c): ?>
+          <a href="<?= htmlspecialchars($cardUrl($c)) ?>" class="group w-[280px] shrink-0 snap-start sm:w-[300px]">
+            <div class="overflow-hidden rounded-[1.5rem] border-2 border-ink bg-paper text-ink shadow-ticket transition group-hover:-translate-y-1">
+              <div class="relative h-44 overflow-hidden bg-ink">
+                <?php if (! empty($c['cover_image_url'])): ?>
+                  <img src="<?= htmlspecialchars($c['cover_image_url']) ?>" alt="<?= htmlspecialchars($c['title'] ?? '') ?>" class="h-full w-full object-cover transition duration-500 group-hover:scale-105" loading="lazy">
+                <?php else: ?>
+                  <div class="grid h-full place-items-center bg-gradient-to-br from-vermilion via-ochre to-forest text-paper"><span class="px-3 text-center font-display text-xl font-bold"><?= htmlspecialchars(mb_substr($c['title'] ?? '', 0, 20)) ?></span></div>
+                <?php endif; ?>
+                <?php if (! empty($c['category']['name'])): ?><span class="absolute left-3 top-3 rounded-full bg-paper px-3 py-1 text-xs font-bold text-ink"><?= htmlspecialchars($c['category']['name']) ?></span><?php endif; ?>
+              </div>
+              <div class="p-4">
+                <p class="font-display text-xl font-bold leading-tight line-clamp-2 group-hover:text-vermilion"><?= htmlspecialchars($c['title'] ?? '') ?></p>
+                <p class="mt-2 text-sm text-ink-soft"><?= htmlspecialchars(trim(($c['city']['name'] ?? '') . (! empty($c['duration_minutes']) ? ' · ' . $durationLabel((int) $c['duration_minutes']) : ''), ' ·')) ?></p>
+                <div class="mt-3 flex items-end justify-between gap-2">
+                  <p class="font-bold"><?= ! empty($c['cheapest_price_cents']) ? '<span class="text-ink-soft text-xs font-normal">de la</span> ' . $pricedFromCents($c['cheapest_price_cents']) : '' ?></p>
+                  <span class="text-lg">→</span>
+                </div>
+              </div>
             </div>
           </a>
         <?php endforeach; ?>
@@ -634,6 +708,8 @@ function activityPage(bootstrap) {
         durationMinutes: bootstrap.duration_minutes,
         commissionRate: bootstrap.commission_rate || 0,
         commissionMode: bootstrap.commission_mode || 'included',
+        earnPercentage: bootstrap.earn_percentage || 5,
+        pointValueCents: bootstrap.point_value_cents || 1,
         variants: bootstrap.variants,
         window: bootstrap.window,
         gallery: bootstrap.gallery || [],
@@ -745,12 +821,19 @@ function activityPage(bootstrap) {
         money(cents) {
             return new Intl.NumberFormat('ro-RO', { style: 'currency', currency: 'RON', maximumFractionDigits: 0 }).format((cents || 0) / 100);
         },
+        fmtTime(t) { return (t || '').toString().slice(0, 5); },
+        // Estimated loyalty points on the tickets subtotal. earn_percentage = %
+        // of value awarded; point_value_cents = value of 1 point in cents.
+        pointsEstimate() {
+            const pv = this.pointValueCents || 1;
+            return Math.max(0, Math.floor((this.totalCents * (this.earnPercentage || 0) / 100) / pv));
+        },
 
         openGallery(index) { if (this.gallery.length === 0) return; this.galleryIndex = index; this.galleryOpen = true; },
         nextImage() { this.galleryIndex = (this.galleryIndex + 1) % this.gallery.length; },
         prevImage() { this.galleryIndex = (this.galleryIndex - 1 + this.gallery.length) % this.gallery.length; },
 
-        submitBooking() {
+        submitBooking(dest) {
             if (! this.canSubmit) return;
             if (typeof BileteOnlineCart === 'undefined' || typeof BileteOnlineCart.addActivityItem !== 'function') {
                 alert('Coșul nu este încărcat. Reîncarcă pagina și încearcă din nou.');
@@ -779,7 +862,7 @@ function activityPage(bootstrap) {
                 if (result) pushed++;
             }
             if (pushed === 0) { alert('Nu am putut adăuga în coș. Verifică data și ora alese, apoi încearcă din nou.'); return; }
-            window.location.href = '/cos';
+            window.location.href = (dest === 'checkout') ? '/finalizare' : '/cos';
         },
     };
 }

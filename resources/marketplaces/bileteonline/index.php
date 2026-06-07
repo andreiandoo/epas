@@ -52,7 +52,7 @@ foreach ((is_array($rawActivities) ? $rawActivities : []) as $a) {
         'tag'    => $a['category']['name'] ?? 'Activitate',
         'cat'    => $a['category']['slug'] ?? 'all',
         'price'  => $priceLei,
-        'url'    => '/activitate/' . ($a['slug'] ?? ''),
+        'url'    => ($a['city']['slug'] ?? '') ? '/' . $a['city']['slug'] . '/' . ($a['slug'] ?? '') : '/activitate/' . ($a['slug'] ?? ''),
         'img'    => $a['cover_image_url'] ?? null,
         'c'      => 'vermilion',
         'dur'    => isset($a['duration_minutes']) ? ((int) $a['duration_minutes']) . ' min' : '—',
