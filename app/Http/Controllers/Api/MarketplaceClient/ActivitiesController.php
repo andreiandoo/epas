@@ -66,6 +66,16 @@ class ActivitiesController extends BaseController
             });
         }
 
+        // Explicit id list (used by the guide "activities block" shortcode for
+        // hand-picked activities). Preserves the editor's chosen order.
+        $idsOrder = null;
+        if ($idsParam = $request->query('ids')) {
+            $idsOrder = array_values(array_filter(array_map('intval', explode(',', (string) $idsParam))));
+            if ($idsOrder) {
+                $query->whereIn('id', $idsOrder);
+            }
+        }
+
         if ($search = trim((string) $request->query('search', ''))) {
             // Title is JSONB translatable; search the RO key with LIKE since it's
             // the primary locale on bilete.online. Loose match for partial words.
@@ -82,6 +92,11 @@ class ActivitiesController extends BaseController
             'soon'     => $query->orderByRaw('next_session_at IS NULL ASC')->orderBy('next_session_at', 'asc'),
             default    => $query->orderBy('is_featured', 'desc')->orderBy('updated_at', 'desc'),
         };
+
+        // When a hand-picked id list is given, honour that exact order (Postgres).
+        if ($idsOrder) {
+            $query->reorder()->orderByRaw('array_position(ARRAY[' . implode(',', $idsOrder) . ']::bigint[], id)');
+        }
 
         $perPage = max(1, min(50, (int) $request->query('per_page', 20)));
         $paginator = $query->paginate($perPage);

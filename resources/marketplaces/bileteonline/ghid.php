@@ -17,6 +17,111 @@ require_once __DIR__ . '/includes/config.php';
 require_once __DIR__ . '/includes/api.php';
 require_once __DIR__ . '/includes/nav-helpers.php';
 
+// =========================================================================
+// [activities ...] SHORTCODE — renders real activity cards inside guide
+// content. Attributes:
+//   ids="1,5,9"                              hand-picked activities, in order
+//   city="bucuresti" category="x" limit="6"  auto-pull from category + city
+//   style="small|large|long"                 card layout (default small)
+// =========================================================================
+if (! function_exists('bo_activity_card_url')) {
+    function bo_activity_card_url(array $a): string {
+        $cs = $a['city']['slug'] ?? '';
+        return $cs ? '/' . $cs . '/' . ($a['slug'] ?? '') : '/activitate/' . ($a['slug'] ?? '');
+    }
+    function bo_price_from_cents($cents): string {
+        $c = (int) $cents;
+        return $c > 0 ? 'de la ' . number_format($c / 100, 0, ',', '.') . ' lei' : '';
+    }
+    function bo_duration_label($min): string {
+        $m = (int) $min; if ($m <= 0) return '';
+        if ($m < 60) return $m . ' min';
+        $h = intdiv($m, 60); $r = $m % 60; return $r ? "{$h}h {$r}m" : "{$h}h";
+    }
+
+    function bo_render_activity_shortcodes(string $html): string {
+        if (stripos($html, '[activities') === false) return $html;
+        // The RichEditor usually wraps the shortcode in <p>…</p>; strip that
+        // wrapper first (cards are block-level), then handle any bare ones.
+        $html = preg_replace_callback('#<p>\s*(\[activities\b[^\]]*\])\s*</p>#i', fn ($m) => bo_activities_block($m[1]), $html);
+        $html = preg_replace_callback('#\[activities\b[^\]]*\]#i', fn ($m) => bo_activities_block($m[0]), $html);
+        return $html;
+    }
+
+    function bo_activities_block(string $shortcode): string {
+        preg_match_all('/([a-z_]+)\s*=\s*"([^"]*)"/i', $shortcode, $mm, PREG_SET_ORDER);
+        $attr = [];
+        foreach ($mm as $a) $attr[strtolower($a[1])] = $a[2];
+
+        $style = in_array($attr['style'] ?? 'small', ['small', 'large', 'long'], true) ? $attr['style'] : 'small';
+
+        $params = [];
+        if (! empty($attr['ids'])) {
+            $ids = preg_replace('/[^0-9,]/', '', $attr['ids']);
+            if ($ids === '') return '';
+            $params['ids'] = $ids;
+            $params['per_page'] = max(1, min(24, substr_count($ids, ',') + 1));
+        } else {
+            if (! empty($attr['city']))     $params['city'] = $attr['city'];
+            if (! empty($attr['category'])) $params['category'] = $attr['category'];
+            if (empty($params['city']) && empty($params['category'])) return '';
+            $params['per_page'] = max(1, min(24, (int) ($attr['limit'] ?? 6)));
+            $params['sort'] = in_array($attr['sort'] ?? '', ['recent', 'cheapest', 'soon'], true) ? $attr['sort'] : 'recent';
+        }
+
+        $resp = api_cached('guide_acts_' . md5(json_encode($params)), fn () => api_get('/activities', $params), 300);
+        $items = $resp['data']['items'] ?? $resp['data']['data'] ?? [];
+        if (! is_array($items) || ! $items) return '';
+
+        return bo_activities_cards_html($items, $style);
+    }
+
+    function bo_activities_cards_html(array $items, string $style): string {
+        $e = fn ($s) => htmlspecialchars((string) $s, ENT_QUOTES);
+        $cards = '';
+        foreach ($items as $a) {
+            $url   = $e(bo_activity_card_url($a));
+            $title = $e($a['title'] ?? '');
+            $img   = $a['cover_image_url'] ?? '';
+            $cat   = $e($a['category']['name'] ?? '');
+            $meta  = $e(trim(($a['city']['name'] ?? '') . (bo_duration_label($a['duration_minutes'] ?? 0) ? ' · ' . bo_duration_label($a['duration_minutes'] ?? 0) : ''), ' ·'));
+            $price = $e(bo_price_from_cents($a['cheapest_price_cents'] ?? 0));
+            $ph    = '<div class="grid h-full w-full place-items-center bg-gradient-to-br from-vermilion via-ochre to-forest text-paper"><span class="px-3 text-center font-display text-xl font-bold">' . $e(mb_substr($a['title'] ?? '', 0, 18)) . '</span></div>';
+
+            if ($style === 'long') {
+                $imgBox = '<div class="relative h-32 w-40 flex-none overflow-hidden bg-ink sm:h-36 sm:w-52">' . ($img ? '<img src="' . $e($img) . '" alt="' . $title . '" class="h-full w-full object-cover transition duration-500 group-hover:scale-105" loading="lazy">' : $ph) . '</div>';
+                $cards .= '<a href="' . $url . '" class="group flex gap-4 overflow-hidden rounded-[1.5rem] border-2 border-ink bg-paper shadow-ticket transition hover:-translate-y-0.5">' . $imgBox
+                    . '<div class="flex min-w-0 flex-1 flex-col justify-center p-4 pr-5">'
+                    . ($cat ? '<span class="mb-1 font-mono text-[10px] uppercase tracking-[.14em] text-vermilion">' . $cat . '</span>' : '')
+                    . '<p class="font-display text-2xl font-bold leading-tight line-clamp-2 group-hover:text-vermilion">' . $title . '</p>'
+                    . '<p class="mt-1 text-sm text-ink-soft">' . $meta . '</p>'
+                    . ($price ? '<p class="mt-2 font-bold">' . $price . '</p>' : '')
+                    . '</div></a>';
+            } elseif ($style === 'large') {
+                $imgBox = '<div class="relative aspect-square overflow-hidden bg-ink">' . ($img ? '<img src="' . $e($img) . '" alt="' . $title . '" class="h-full w-full object-cover transition duration-500 group-hover:scale-105" loading="lazy">' : $ph) . ($cat ? '<span class="absolute left-3 top-3 rounded-full bg-paper px-3 py-1 text-xs font-bold text-ink">' . $cat . '</span>' : '') . '</div>';
+                $cards .= '<a href="' . $url . '" class="group overflow-hidden rounded-[1.5rem] border-2 border-ink bg-paper shadow-ticket transition hover:-translate-y-1">' . $imgBox
+                    . '<div class="p-5"><p class="font-display text-2xl font-bold leading-tight line-clamp-2 group-hover:text-vermilion">' . $title . '</p>'
+                    . '<p class="mt-2 text-sm text-ink-soft">' . $meta . '</p>'
+                    . ($price ? '<p class="mt-3 font-bold">' . $price . '</p>' : '') . '</div></a>';
+            } else { // small (vertical)
+                $imgBox = '<div class="relative h-40 overflow-hidden bg-ink">' . ($img ? '<img src="' . $e($img) . '" alt="' . $title . '" class="h-full w-full object-cover transition duration-500 group-hover:scale-105" loading="lazy">' : $ph) . ($cat ? '<span class="absolute left-3 top-3 rounded-full bg-paper px-2.5 py-1 text-[11px] font-bold text-ink">' . $cat . '</span>' : '') . '</div>';
+                $cards .= '<a href="' . $url . '" class="group overflow-hidden rounded-[1.25rem] border-2 border-ink bg-paper shadow-ticket transition hover:-translate-y-1">' . $imgBox
+                    . '<div class="p-4"><p class="font-display text-xl font-bold leading-tight line-clamp-2 group-hover:text-vermilion">' . $title . '</p>'
+                    . '<p class="mt-1.5 text-sm text-ink-soft">' . $meta . '</p>'
+                    . ($price ? '<p class="mt-2 font-bold">' . $price . '</p>' : '') . '</div></a>';
+            }
+        }
+
+        $grid = match ($style) {
+            'long'  => 'grid gap-4',
+            'large' => 'grid gap-5 sm:grid-cols-2 lg:grid-cols-3',
+            default => 'grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4',
+        };
+
+        return '<div class="not-prose my-8 ' . $grid . '">' . $cards . '</div>';
+    }
+}
+
 $slug = $_GET['slug'] ?? '';
 if (! preg_match('/^[a-z0-9][a-z0-9-]*$/', $slug)) {
     http_response_code(404);
@@ -35,7 +140,7 @@ if (! $article || empty($article['title'])) {
 
 $title       = $article['title'];
 $excerpt     = $article['excerpt'] ?? '';
-$contentHtml = $article['content'] ?? '';
+$contentHtml = bo_render_activity_shortcodes($article['content'] ?? '');
 $image       = $article['image_url'] ?? null;
 $catName     = $article['category']['name'] ?? '';
 $catSlug     = $article['category']['slug'] ?? '';
