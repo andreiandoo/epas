@@ -34,6 +34,7 @@ class MarketplaceCity extends Model
         'image_url',
         'cover_image_url',
         'icon',
+        'getyourguide_city_id',
         'population',
         'sort_order',
         'is_visible',

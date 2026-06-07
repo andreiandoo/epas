@@ -475,6 +475,16 @@ class LocationsController extends BaseController
                 'latitude' => $city->latitude,
                 'longitude' => $city->longitude,
                 'is_capital' => $city->is_capital,
+                // Affiliate widget IDs surfaced to the public frontend so the
+                // city template can render embedded blocks (e.g.
+                // GetYourGuide) without needing a second API call.
+                'getyourguide_city_id' => $city->getyourguide_city_id,
+            ],
+            // Per-marketplace affiliate configuration (partner ids etc.)
+            // bundled with the city payload — keeps the frontend's network
+            // budget at one call per city page render.
+            'affiliates' => [
+                'getyourguide_partner_id' => data_get($client->settings, 'affiliate.getyourguide_partner_id'),
             ],
         ]);
     }

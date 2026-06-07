@@ -32,6 +32,14 @@ if (!$cityData) {
 // ============================================================
 // City data extraction
 // ============================================================
+// Pull the full API response (city + affiliates) so we can render the
+// GetYourGuide widget without a second network call. Both helpers share
+// the same upstream cache key, so this stays cheap.
+$cityResponse  = navGetCityResponseBySlug($slug);
+$gygCityId     = trim((string) ($cityData['getyourguide_city_id'] ?? ''));
+$gygPartnerId  = trim((string) ($cityResponse['affiliates']['getyourguide_partner_id'] ?? ''));
+$gygWidgetEnabled = $gygCityId !== '' && $gygPartnerId !== '';
+
 $cityName = navFlatName($cityData['name'] ?? '');
 $cityDescription = navFlatName($cityData['description'] ?? '');
 $citySeoTitle = navFlatName($cityData['seo_body_title'] ?? '');
@@ -651,6 +659,41 @@ document.addEventListener('alpine:init', () => {
     Alpine.data('cityFilters', () => ({ open: null, sheet: false }));
 });
 </script>
+
+<?php if ($gygWidgetEnabled): ?>
+<!-- ============================== GETYOURGUIDE WIDGET ============================== -->
+<!--
+     Affiliate widget — surfaces tours + activities for this city from
+     GetYourGuide. Only renders when BOTH the per-city GYG location id
+     (marketplace_cities.getyourguide_city_id) AND the per-marketplace
+     partner id (marketplace_clients.settings.affiliate.getyourguide_partner_id)
+     are configured. Without both, the section is skipped entirely so
+     unconfigured cities don't show an empty box.
+
+     The GYG SDK script is loaded with async+defer so it never blocks
+     the LCP — the widget hydrates after the page is interactive.
+-->
+<section id="getyourguide" class="max-w-7xl mx-auto px-4 sm:px-6 py-16 lg:py-20 border-t border-ink/10">
+    <div class="mb-8 max-w-3xl">
+        <p class="font-mono text-xs tracking-[.2em] text-vermilion mb-3">EXTRA · PRIN PARTENERII NOȘTRI</p>
+        <h2 class="font-display text-[clamp(1.8rem,3vw,2.6rem)] font-700 leading-[1.05] mb-3">
+            Mai multe activități și tururi în <?= htmlspecialchars($cityName) ?>
+        </h2>
+        <p class="text-ink-soft leading-relaxed">
+            Selecție de tururi ghidate, experiențe și activități internaționale, disponibile prin GetYourGuide.
+        </p>
+    </div>
+    <div
+        data-gyg-href="https://widget.getyourguide.com/default/city.frame"
+        data-gyg-location-id="<?= htmlspecialchars($gygCityId, ENT_QUOTES) ?>"
+        data-gyg-locale-code="ro-RO"
+        data-gyg-widget="city"
+        data-gyg-partner-id="<?= htmlspecialchars($gygPartnerId, ENT_QUOTES) ?>"
+        aria-label="Activități GetYourGuide pentru <?= htmlspecialchars($cityName, ENT_QUOTES) ?>"
+    ></div>
+</section>
+<script async defer src="https://widget.getyourguide.com/dist/pa.umd.production.min.js"></script>
+<?php endif; ?>
 
 <!-- ============================== EDITORIAL + CROSS-LINKS ============================== -->
 <section id="ghid-local" class="max-w-7xl mx-auto px-4 sm:px-6 py-20 lg:py-28">

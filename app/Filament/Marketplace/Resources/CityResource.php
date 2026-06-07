@@ -172,6 +172,41 @@ class CityResource extends Resource
                             ->minValue(0),
                     ])->columns(2),
 
+                // Affiliate widgets — GetYourGuide. The numeric city id is
+                // visible in the GYG URL after a city search (e.g.
+                // https://www.getyourguide.com/bucharest-l124688/). The
+                // helper link below opens the GYG search pre-filled with
+                // the city name so the operator can grab the id with two
+                // clicks instead of remembering the URL pattern.
+                SC\Section::make('Widget GetYourGuide')
+                    ->description('ID-ul numeric al orașului pe GetYourGuide. Folosit pentru widget-ul de activități afișat pe pagina publică a orașului.')
+                    ->collapsed()
+                    ->schema([
+                        Forms\Components\TextInput::make('getyourguide_city_id')
+                            ->label('GetYourGuide City ID')
+                            ->placeholder('ex. 124688')
+                            ->maxLength(40)
+                            ->helperText(new \Illuminate\Support\HtmlString(
+                                'Caută orașul pe GetYourGuide → ID-ul e numărul după <code>-l</code> în URL (ex. <code>...-l<strong>124688</strong>/</code>).'
+                            ))
+                            ->hintAction(
+                                \Filament\Forms\Components\Actions\Action::make('searchOnGyg')
+                                    ->label('Caută pe GetYourGuide ↗')
+                                    ->icon('heroicon-o-magnifying-glass')
+                                    ->url(function ($get) {
+                                        $name = $get('name');
+                                        if (is_array($name)) {
+                                            $name = $name['ro'] ?? $name['en'] ?? reset($name) ?? '';
+                                        }
+                                        $q = urlencode((string) ($name ?: ''));
+                                        // Force English locale on the search side — GYG
+                                        // returns more reliable city matches that way; the
+                                        // widget itself still renders in ro-RO regardless.
+                                        return "https://www.getyourguide.com/s/?q={$q}&searchSource=3";
+                                    }, shouldOpenInNewTab: true)
+                            ),
+                    ])->columns(1),
+
                 SC\Section::make('Appearance')
                     ->collapsed()
                     ->schema([

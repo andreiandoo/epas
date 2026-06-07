@@ -274,6 +274,26 @@ function navGetCityBySlug(string $slug): ?array
     return $resp['data']['city'] ?? $resp['data'] ?? null;
 }
 
+/**
+ * Sibling to navGetCityBySlug that returns the full `data` block — both
+ * the city object and the marketplace-level `affiliates` config (GYG
+ * partner id etc.). Used by city.php to render affiliate widgets without
+ * making a second API call. Shares the same upstream cache key, so
+ * calling both helpers on the same render only hits the network once.
+ */
+function navGetCityResponseBySlug(string $slug): ?array
+{
+    $cacheKey = 'city_full_' . $slug;
+    $resp = api_cached($cacheKey, function () use ($slug) {
+        return api_get('/locations/cities/' . urlencode($slug));
+    }, 300);
+
+    if (!is_array($resp) || empty($resp['success'])) {
+        return null;
+    }
+    return $resp['data'] ?? null;
+}
+
 // ============================================================
 // Shared formatting helpers used by category.php / city.php / city-intent.php
 // Declared once here so each render template can be included multiple times
