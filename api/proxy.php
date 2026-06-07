@@ -749,7 +749,7 @@ switch ($action) {
     // ============================================================
     case 'activities':
         $params = [];
-        foreach (['city', 'category', 'search', 'sort', 'max_price_ron', 'page', 'per_page', 'locale'] as $k) {
+        foreach (['city', 'category', 'search', 'sort', 'max_price_ron', 'page', 'per_page', 'locale', 'ids'] as $k) {
             if (isset($_GET[$k])) $params[$k] = $_GET[$k];
         }
         $endpoint = '/activities' . ($params ? '?' . http_build_query($params) : '');
