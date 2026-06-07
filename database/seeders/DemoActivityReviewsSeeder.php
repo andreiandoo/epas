@@ -25,7 +25,10 @@ class DemoActivityReviewsSeeder extends Seeder
     {
         $slug = env('DEMO_REVIEW_ACTIVITY_SLUG', 'demo-camera-13-escape-room');
 
-        if (! Schema::hasColumn('marketplace_customer_reviews', 'activity_id')) {
+        // Raw column check — Schema::hasColumn returns stale results on this
+        // environment, so query the live table metadata directly.
+        $hasActivityCol = ! empty(DB::select("SHOW COLUMNS FROM marketplace_customer_reviews LIKE 'activity_id'"));
+        if (! $hasActivityCol) {
             $this->command?->warn('Column activity_id missing — run `php artisan migrate` first. Skipping.');
             return;
         }
