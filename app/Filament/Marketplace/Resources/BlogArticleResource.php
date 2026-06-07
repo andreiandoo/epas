@@ -4,9 +4,11 @@ namespace App\Filament\Marketplace\Resources;
 
 use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 use App\Filament\Marketplace\Resources\BlogArticleResource\Pages;
+use App\Models\Activity;
 use App\Models\Blog\BlogArticle;
 use App\Models\Blog\BlogCategory;
 use App\Models\Event;
+use Illuminate\Support\HtmlString;
 use BackedEnum;
 use Filament\Forms;
 use Filament\Resources\Resource;
@@ -50,6 +52,128 @@ class BlogArticleResource extends Resource
     public static function shouldRegisterNavigation(): bool
     {
         return static::marketplaceHasMicroservice('blog');
+    }
+
+    /** Resolve a translatable name (json array or string) to a display string. */
+    public static function transName($name, string $fallback = ''): string
+    {
+        if (is_array($name)) {
+            return (string) ($name['ro'] ?? $name['en'] ?? (reset($name) ?: $fallback));
+        }
+
+        return (string) ($name !== null && $name !== '' ? $name : $fallback);
+    }
+
+    /** Build the [activities ...] shortcode string from the builder helper fields. */
+    public static function buildActivitiesShortcode(\Filament\Schemas\Components\Utilities\Get $get): string
+    {
+        $style = in_array($get('_ab_style'), ['small', 'large', 'long'], true) ? $get('_ab_style') : 'small';
+
+        if ($get('_ab_mode') === 'manual') {
+            $ids = $get('_ab_ids');
+            $ids = is_array($ids) ? implode(',', array_map('intval', array_filter($ids))) : '';
+            if ($ids === '') {
+                return '[activities …] — alege una sau mai multe activități';
+            }
+
+            return '[activities ids="' . $ids . '" style="' . $style . '"]';
+        }
+
+        $city = trim((string) $get('_ab_city'));
+        $cat = trim((string) $get('_ab_category'));
+        $limit = (int) ($get('_ab_limit') ?: 6);
+
+        if ($city === '' && $cat === '') {
+            return '[activities …] — alege oraș și/sau categorie';
+        }
+
+        $out = '[activities';
+        if ($city !== '') {
+            $out .= ' city="' . $city . '"';
+        }
+        if ($cat !== '') {
+            $out .= ' category="' . $cat . '"';
+        }
+        $out .= ' limit="' . max(1, min(24, $limit)) . '" style="' . $style . '"]';
+
+        return $out;
+    }
+
+    /** Yoast-style live SEO analysis for the focus keyword. Returns rendered HTML. */
+    public static function seoAnalysis(\Filament\Schemas\Components\Utilities\Get $get, string $lang): HtmlString
+    {
+        $kw = trim((string) $get('focus_keyword'));
+        $title = (string) $get("title.{$lang}");
+        $metaTitle = (string) ($get("meta_title.{$lang}") ?: $title);
+        $metaDesc = (string) $get("meta_description.{$lang}");
+        $slug = (string) $get('slug');
+        $contentHtml = (string) $get("content.{$lang}");
+        $excerpt = (string) $get("excerpt.{$lang}");
+        $secondary = array_values(array_filter(array_map('trim', explode(',', (string) $get('secondary_keywords')))));
+
+        $text = trim(preg_replace('/\s+/', ' ', html_entity_decode(strip_tags($contentHtml), ENT_QUOTES | ENT_HTML5, 'UTF-8')));
+        $words = $text === '' ? [] : preg_split('/\s+/u', $text, -1, PREG_SPLIT_NO_EMPTY);
+        $wordCount = count($words);
+
+        $lc = fn ($s) => mb_strtolower((string) $s, 'UTF-8');
+        $has = fn ($hay, $needle) => $needle !== '' && mb_strpos($lc($hay), $lc($needle), 0, 'UTF-8') !== false;
+
+        $checks = [];
+
+        if ($kw === '') {
+            $checks[] = ['warn', 'Setează un keyword principal pentru a porni analiza.'];
+        } else {
+            $checks[] = [$has($metaTitle, $kw) ? 'ok' : 'bad', 'Keyword principal în titlul SEO'];
+            $checks[] = [($has($slug, str_replace(' ', '-', $kw)) || $has($slug, $kw)) ? 'ok' : 'warn', 'Keyword principal în slug'];
+            $checks[] = [$has($metaDesc, $kw) ? 'ok' : 'bad', 'Keyword principal în meta description'];
+            $intro = mb_substr($text, 0, 250, 'UTF-8') . ' ' . $excerpt;
+            $checks[] = [$has($intro, $kw) ? 'ok' : 'warn', 'Keyword principal în introducere'];
+
+            $occ = $wordCount ? substr_count($lc($text), $lc($kw)) : 0;
+            $density = $wordCount ? round($occ / $wordCount * 100, 2) : 0.0;
+            $densOk = $density >= 0.5 && $density <= 2.5;
+            $checks[] = [$occ === 0 ? 'bad' : ($densOk ? 'ok' : 'warn'), "Densitate keyword: {$density}% ({$occ} apariții, ideal 0.5–2.5%)"];
+
+            $inHeading = (bool) preg_match('/<h[2-4][^>]*>(?:(?!<\/h[2-4]>).)*' . preg_quote($kw, '/') . '/isu', $contentHtml);
+            $checks[] = [$inHeading ? 'ok' : 'warn', 'Keyword principal într-un subtitlu (H2–H4)'];
+        }
+
+        $checks[] = [$wordCount >= 300 ? 'ok' : 'warn', "Lungime conținut: {$wordCount} cuvinte (ideal ≥300)"];
+
+        $mtLen = mb_strlen($metaTitle, 'UTF-8');
+        $checks[] = [($mtLen >= 30 && $mtLen <= 60) ? 'ok' : 'warn', "Titlu SEO: {$mtLen} caractere (ideal 30–60)"];
+
+        $mdLen = mb_strlen($metaDesc, 'UTF-8');
+        $checks[] = [($mdLen >= 120 && $mdLen <= 160) ? 'ok' : 'warn', "Meta description: {$mdLen} caractere (ideal 120–160)"];
+
+        if ($secondary) {
+            $found = count(array_filter($secondary, fn ($s) => $has($text, $s)));
+            $checks[] = [$found === count($secondary) ? 'ok' : 'warn', "Keywords secundare în conținut: {$found}/" . count($secondary)];
+        }
+
+        $okN = count(array_filter($checks, fn ($c) => $c[0] === 'ok'));
+        $total = max(1, count($checks));
+        $score = (int) round($okN / $total * 100);
+        $barColor = $score >= 80 ? '#1E4A3D' : ($score >= 50 ? '#DA9A33' : '#E84527');
+        $iconFor = ['ok' => ['✓', '#1E4A3D'], 'warn' => ['!', '#DA9A33'], 'bad' => ['✗', '#E84527']];
+
+        $rows = '';
+        foreach ($checks as [$st, $label]) {
+            [$glyph, $col] = $iconFor[$st];
+            $rows .= '<div style="display:flex;gap:.5rem;align-items:flex-start;padding:.3rem 0;border-top:1px solid #f0eee9;">'
+                . '<span style="flex:0 0 1.1rem;color:' . $col . ';font-weight:700;">' . $glyph . '</span>'
+                . '<span style="color:#3f3a33;">' . htmlspecialchars($label, ENT_QUOTES, 'UTF-8') . '</span></div>';
+        }
+
+        $html = '<div style="border:1px solid #e7e2d6;border-radius:.85rem;padding:1rem 1.1rem;background:#fcfbf7;">'
+            . '<div style="display:flex;align-items:center;gap:.85rem;margin-bottom:.5rem;">'
+            . '<span style="font-size:1.6rem;font-weight:800;line-height:1;color:' . $barColor . ';">' . $score . '<span style="font-size:.85rem;color:#9a917f;">/100</span></span>'
+            . '<span style="font-weight:600;color:#5A4F41;">Scor SEO</span></div>'
+            . '<div style="height:.5rem;border-radius:99px;background:#ece7da;overflow:hidden;margin-bottom:.5rem;">'
+            . '<div style="height:100%;width:' . $score . '%;background:' . $barColor . ';"></div></div>'
+            . $rows . '</div>';
+
+        return new HtmlString($html);
     }
 
     public static function form(Schema $schema): Schema
@@ -168,21 +292,180 @@ class BlogArticleResource extends Resource
                                             ->defaultItems(0),
                                     ]),
 
+                                // Activities block builder — generates an
+                                // [activities ...] shortcode to paste into the
+                                // content. None of these fields are persisted
+                                // (dehydrated:false); they only build the string.
+                                SC\Section::make('Bloc de activități (shortcode)')
+                                    ->description('Configurează un bloc de carduri, copiază shortcode-ul și lipește-l în Content acolo unde vrei să apară.')
+                                    ->icon('heroicon-o-squares-2x2')
+                                    ->collapsed()
+                                    ->schema([
+                                        SC\Grid::make(2)->schema([
+                                            Forms\Components\Select::make('_ab_mode')
+                                                ->label('Mod')
+                                                ->dehydrated(false)
+                                                ->live()
+                                                ->default('auto')
+                                                ->selectablePlaceholder(false)
+                                                ->options([
+                                                    'auto'   => 'Automat (categorie + oraș)',
+                                                    'manual' => 'Manual (activități alese)',
+                                                ]),
+                                            Forms\Components\Select::make('_ab_style')
+                                                ->label('Stil carduri')
+                                                ->dehydrated(false)
+                                                ->live()
+                                                ->default('small')
+                                                ->selectablePlaceholder(false)
+                                                ->options([
+                                                    'small' => 'Small — verticale',
+                                                    'large' => 'Large — pătrate',
+                                                    'long'  => 'Long — orizontale',
+                                                ]),
+                                        ]),
+
+                                        SC\Grid::make(3)
+                                            ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => $get('_ab_mode') !== 'manual')
+                                            ->schema([
+                                                Forms\Components\Select::make('_ab_city')
+                                                    ->label('Oraș')
+                                                    ->dehydrated(false)
+                                                    ->live()
+                                                    ->searchable()
+                                                    ->placeholder('Toate orașele')
+                                                    ->options(function () use ($marketplace) {
+                                                        try {
+                                                            return Activity::query()
+                                                                ->where('marketplace_client_id', $marketplace?->id)
+                                                                ->whereNotNull('marketplace_city_id')
+                                                                ->with('city:id,slug,name')
+                                                                ->get()
+                                                                ->pluck('city')
+                                                                ->filter()
+                                                                ->unique('id')
+                                                                ->sortBy('id')
+                                                                ->mapWithKeys(fn ($c) => [$c->slug => static::transName($c->name, $c->slug)])
+                                                                ->all();
+                                                        } catch (\Throwable $e) {
+                                                            return [];
+                                                        }
+                                                    }),
+                                                Forms\Components\Select::make('_ab_category')
+                                                    ->label('Categorie')
+                                                    ->dehydrated(false)
+                                                    ->live()
+                                                    ->searchable()
+                                                    ->placeholder('Toate categoriile')
+                                                    ->options(function () use ($marketplace) {
+                                                        try {
+                                                            return Activity::query()
+                                                                ->where('marketplace_client_id', $marketplace?->id)
+                                                                ->whereNotNull('marketplace_category_id')
+                                                                ->with('category:id,slug,name')
+                                                                ->get()
+                                                                ->pluck('category')
+                                                                ->filter()
+                                                                ->unique('id')
+                                                                ->sortBy('id')
+                                                                ->mapWithKeys(fn ($c) => [$c->slug => static::transName($c->name, $c->slug)])
+                                                                ->all();
+                                                        } catch (\Throwable $e) {
+                                                            return [];
+                                                        }
+                                                    }),
+                                                Forms\Components\TextInput::make('_ab_limit')
+                                                    ->label('Număr carduri')
+                                                    ->dehydrated(false)
+                                                    ->live(onBlur: true)
+                                                    ->numeric()
+                                                    ->default(6)
+                                                    ->minValue(1)
+                                                    ->maxValue(24),
+                                            ]),
+
+                                        Forms\Components\Select::make('_ab_ids')
+                                            ->label('Activități alese (în ordine)')
+                                            ->dehydrated(false)
+                                            ->live()
+                                            ->multiple()
+                                            ->searchable()
+                                            ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => $get('_ab_mode') === 'manual')
+                                            ->options(function () use ($marketplace) {
+                                                try {
+                                                    return Activity::query()
+                                                        ->where('marketplace_client_id', $marketplace?->id)
+                                                        ->orderByDesc('id')
+                                                        ->limit(300)
+                                                        ->get(['id', 'title'])
+                                                        ->mapWithKeys(fn ($a) => [$a->id => static::transName($a->title, 'Activitate #' . $a->id)])
+                                                        ->all();
+                                                } catch (\Throwable $e) {
+                                                    return [];
+                                                }
+                                            }),
+
+                                        Forms\Components\Placeholder::make('_ab_shortcode')
+                                            ->label('Shortcode generat')
+                                            ->content(function (\Filament\Schemas\Components\Utilities\Get $get) {
+                                                $code = static::buildActivitiesShortcode($get);
+                                                $js = htmlspecialchars(json_encode($code), ENT_QUOTES, 'UTF-8');
+
+                                                return new HtmlString(
+                                                    '<div style="display:flex;gap:.6rem;align-items:center;flex-wrap:wrap;">'
+                                                    . '<code style="flex:1 1 auto;min-width:14rem;padding:.55rem .7rem;border-radius:.6rem;background:#1B1714;color:#F4EFE3;font-size:.85rem;">'
+                                                    . htmlspecialchars($code, ENT_QUOTES, 'UTF-8') . '</code>'
+                                                    . '<button type="button" onclick="navigator.clipboard.writeText(' . $js . ');this.textContent=\'Copiat!\';setTimeout(()=>this.textContent=\'Copiază\',1500);" '
+                                                    . 'style="flex:0 0 auto;padding:.55rem .9rem;border-radius:.6rem;background:#E84527;color:#fff;font-weight:600;border:0;cursor:pointer;">Copiază</button>'
+                                                    . '</div>'
+                                                    . '<p style="margin-top:.5rem;color:#7a7164;font-size:.8rem;">Lipește acest shortcode pe o linie separată în Content. Stiluri disponibile: <b>small</b> (verticale), <b>large</b> (pătrate), <b>long</b> (orizontale).</p>'
+                                                );
+                                            }),
+                                    ]),
+
                                 // SEO Section
                                 SC\Section::make('SEO & Meta Tags')
                                     ->description('Search engine optimization settings')
                                     ->schema([
                                         SC\Tabs::make('SEO Tabs')
                                             ->tabs([
+                                                SC\Tabs\Tab::make('Cuvinte cheie & analiză')
+                                                    ->icon('heroicon-o-magnifying-glass-circle')
+                                                    ->schema([
+                                                        Forms\Components\TextInput::make('focus_keyword')
+                                                            ->label('Keyword principal')
+                                                            ->live(onBlur: true)
+                                                            ->maxLength(255)
+                                                            ->helperText('Un singur cuvânt/frază pe care vrei să o ranking-uiești (ex: „escape room București”).'),
+
+                                                        Forms\Components\Textarea::make('secondary_keywords')
+                                                            ->label('Keywords secundare')
+                                                            ->live(onBlur: true)
+                                                            ->rows(2)
+                                                            ->helperText('Mai multe cuvinte/fraze, separate prin virgulă.'),
+
+                                                        Forms\Components\Textarea::make('longtail_phrases')
+                                                            ->label('Long-tail phrases')
+                                                            ->live(onBlur: true)
+                                                            ->rows(2)
+                                                            ->helperText('Fraze lungi (întrebări, intenții), separate prin virgulă.'),
+
+                                                        Forms\Components\Placeholder::make('seo_analysis')
+                                                            ->label('Analiză SEO (live)')
+                                                            ->content(fn (\Filament\Schemas\Components\Utilities\Get $get) => static::seoAnalysis($get, $marketplaceLanguage)),
+                                                    ])->columns(1),
+
                                                 SC\Tabs\Tab::make('Basic SEO')
                                                     ->schema([
                                                         Forms\Components\TextInput::make("meta_title.{$marketplaceLanguage}")
                                                             ->label('Meta Title')
+                                                            ->live(onBlur: true)
                                                             ->maxLength(60)
                                                             ->helperText('Recommended: 50-60 characters. Auto-fills from title.'),
 
                                                         Forms\Components\Textarea::make("meta_description.{$marketplaceLanguage}")
                                                             ->label('Meta Description')
+                                                            ->live(onBlur: true)
                                                             ->rows(2)
                                                             ->maxLength(160)
                                                             ->helperText('Recommended: 150-160 characters. Auto-fills from excerpt.'),
