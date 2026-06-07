@@ -1,44 +1,49 @@
 """
-GetYourGuide city-id scraper for bilete.online cities.
+GetYourGuide city-id scraper for bilete.online cities (Playwright edition).
+
+Why Playwright instead of plain requests
+-----------------------------------------
+GetYourGuide's search page is gated by Cloudflare. A plain `requests`
+call gets 403 because Cloudflare reads the TLS fingerprint + JS-challenge
+state, neither of which a pure-HTTP client can produce. Playwright runs
+a real headless Chromium that passes through Cloudflare's checks at low
+request rates.
 
 Pipeline
 --------
-  1. Export your DB cities to a CSV with at least the columns
-     `id, slug, name` (see README.md for the tinker oneliner).
-  2. Run this script. It iterates city-by-city, queries GYG's public
-     search page, picks the first hit whose URL matches the
-     `[slug]-l<id>/` city-page pattern, and writes a result CSV with
-     a confidence flag per row.
-  3. Send the result CSV back to the assistant — it will produce a
-     Laravel seeder that fills marketplace_cities.getyourguide_city_id
-     in one shot.
+  1. Export the 264 cities from the DB to a CSV with columns
+     `id, slug, name` (see README in the tinker oneliner provided
+     by the assistant).
+  2. Run this script. It opens a Chromium, browses the GYG search page
+     city-by-city, and picks the first hit whose URL matches the
+     `[slug]-l<id>/` city-page pattern.
+  3. Send the result CSV back; the assistant will produce a Laravel
+     seeder.
 
-Design notes
-------------
-- Polite rate limit (3 s + 0-1.5 s jitter) so a 264-row run takes
-  ~13 minutes and looks like organic browser traffic. Increase
-  DELAY_SEC if GYG starts returning 429.
-- Tries the Romanian name as-is, then an ASCII-folded variant
-  (Brașov → Brasov), then a small dictionary of English exonyms
-  (București → Bucharest). First hit wins; confidence is "high"
-  when the slug returned by GYG contains the query string,
-  "low" when we accept the first city-shaped URL on the page
-  anyway, "not_found" when no city URL appears at all.
-- Resume: if `output.csv` already exists, the script picks up
-  where it left off (skips rows whose `id` is already in there).
-  Kill it any time with Ctrl-C — re-running continues from the
-  next un-processed city.
-- 4xx/5xx responses skip the candidate; a 429 triggers a long
-  back-off (60 s) then a retry on the SAME candidate.
+Install
+-------
+  pip install playwright
+  python -m playwright install chromium
 
 Run
 ---
-  python -m venv venv && source venv/bin/activate     # optional
-  pip install requests
-  python scrape_gyg_cities.py input.csv output.csv
+  # Sanity check on the first 5 rows (eyes-on, browser visible):
+  python scrape_gyg_cities.py bileteonline_cities.csv out.csv --max 5 --headed
 
-  # Limit to first N rows (for a sanity check):
-  python scrape_gyg_cities.py input.csv output.csv --max 5
+  # Full run, headless:
+  python scrape_gyg_cities.py bileteonline_cities.csv out.csv
+
+  # Resume: re-run with the same output file — already-processed ids
+  # are skipped automatically.
+
+Strategy per city
+-----------------
+- Three candidate queries: original (București), ASCII-folded
+  (Bucuresti), and a hand-curated exonym (Bucharest).
+- First city-shaped URL on the search page wins.
+- Confidence is "high" when the GYG slug contains the query, "low"
+  when we accept the first match anyway, "not_found" otherwise.
+- Polite rate-limit: 4-6 s between cities. 264 rows ≈ 25 minutes.
 """
 
 from __future__ import annotations
@@ -54,42 +59,42 @@ import urllib.parse
 from pathlib import Path
 from typing import Iterable
 
-import requests
+try:
+    from playwright.sync_api import sync_playwright, TimeoutError as PWTimeout
+except ImportError:
+    print(
+        "Playwright not installed. Run:\n"
+        "  pip install playwright\n"
+        "  python -m playwright install chromium",
+        file=sys.stderr,
+    )
+    sys.exit(1)
 
 # ─── Config ──────────────────────────────────────────────────────────
-DELAY_SEC = 3.0
-JITTER_SEC = 1.5
-REQUEST_TIMEOUT_SEC = 20
+DELAY_MIN_SEC = 4.0
+DELAY_MAX_SEC = 6.0
+PAGE_TIMEOUT_MS = 30_000
 USER_AGENT = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
     "(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
 )
 
-# Map Romanian (or otherwise localized) city names to their canonical
-# GetYourGuide exonyms when an obvious one exists. Anything else we
-# leave to the ASCII-folding heuristic.
+# Romanian → GYG exonym. Anything else relies on the ASCII-fold heuristic.
 EXONYMS = {
     "bucuresti": "bucharest",
-    "bucurești": "bucharest",
-    "iasi": "iasi",         # GYG keeps the ASCII form
-    "iași": "iasi",
+    "iasi": "iasi",
     "brasov": "brasov",
-    "brașov": "brasov",
     "timisoara": "timisoara",
-    "timișoara": "timisoara",
     "constanta": "constanta",
-    "constanța": "constanta",
     "galati": "galati",
-    "galați": "galati",
     "ploiesti": "ploiesti",
-    "ploiești": "ploiesti",
     "targu mures": "targu mures",
-    "târgu mureș": "targu mures",
+    "oradea": "oradea",
+    "sibiu": "sibiu",
+    "cluj-napoca": "cluj-napoca",
 }
 
-# Match a path like `/bucharest-l124688/` (the GYG city page shape).
-# The negative-lookahead at the end stops us from picking up things
-# like `/bucharest-l124688/some-tour-t123/` halfway through.
+# /bucharest-l124688/ — slug, then -l, then digits, then a separator.
 CITY_URL_RE = re.compile(
     r'/([a-z][a-z0-9-]+)-l(\d+)/(?=["\'?#]|<|\s|$)',
     re.IGNORECASE,
@@ -97,7 +102,6 @@ CITY_URL_RE = re.compile(
 
 
 def to_ascii(value: str) -> str:
-    """Strip diacritics so 'Brașov' → 'Brasov'."""
     return (
         unicodedata.normalize("NFKD", value)
         .encode("ASCII", "ignore")
@@ -105,8 +109,11 @@ def to_ascii(value: str) -> str:
     )
 
 
+def slugify_for_compare(value: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "-", to_ascii(value).lower()).strip("-")
+
+
 def build_query_candidates(name: str) -> list[str]:
-    """Order of attempts for a city name."""
     seen: set[str] = set()
     ordered: list[str] = []
 
@@ -117,92 +124,61 @@ def build_query_candidates(name: str) -> list[str]:
             ordered.append(candidate)
 
     push(name)
-
     ascii_name = to_ascii(name)
     if ascii_name != name:
         push(ascii_name)
-
     exonym = EXONYMS.get(name.lower()) or EXONYMS.get(ascii_name.lower())
     if exonym:
         push(exonym)
-
     return ordered
 
 
-def slugify_for_compare(value: str) -> str:
-    return re.sub(r"[^a-z0-9]+", "-", to_ascii(value).lower()).strip("-")
-
-
-def search_gyg(name: str, session: requests.Session) -> tuple[str | None, str | None, str]:
-    """
-    Try to find the GYG location-id for `name`.
-
-    Returns (gyg_id, gyg_url, confidence). Confidence is one of:
-      'high'      — slug returned by GYG looks like the query
-      'low'       — accepted the first city-shaped URL even though
-                    the slug doesn't obviously match
-      'not_found' — no city-shaped URL on the search page
-    """
+def search_gyg(page, name: str) -> tuple[str | None, str | None, str]:
+    """Returns (gyg_id, gyg_url, confidence) for one city."""
     target_slug = slugify_for_compare(name)
     first_low: tuple[str, str] | None = None
 
     for q in build_query_candidates(name):
         url = f"https://www.getyourguide.com/s/?q={urllib.parse.quote(q)}"
+        try:
+            page.goto(url, wait_until="domcontentloaded", timeout=PAGE_TIMEOUT_MS)
+        except PWTimeout:
+            print("  page goto timeout", file=sys.stderr)
+            continue
+        except Exception as exc:
+            print(f"  page goto error: {exc}", file=sys.stderr)
+            continue
 
-        attempt = 0
-        while True:
-            attempt += 1
-            try:
-                response = session.get(
-                    url,
-                    headers={
-                        "User-Agent": USER_AGENT,
-                        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-                        "Accept-Language": "ro-RO,ro;q=0.9,en;q=0.8",
-                    },
-                    timeout=REQUEST_TIMEOUT_SEC,
-                )
-            except requests.RequestException as exc:
-                print(f"  HTTP error: {exc}", file=sys.stderr)
-                break  # next candidate
+        # GYG renders results client-side after hydration. Give it a
+        # short window — `networkidle` is too strict (their telemetry
+        # never stops), so we wait for a city URL to appear in the
+        # rendered HTML instead.
+        try:
+            page.wait_for_function(
+                "() => /\\/[a-z0-9-]+-l\\d+\\//.test(document.body.innerHTML)",
+                timeout=10_000,
+            )
+        except PWTimeout:
+            # No city URL in the page even after 10 s — likely a "no
+            # results" response. Skip this candidate.
+            continue
 
-            if response.status_code == 429:
-                # Be polite, GYG asked us to back off.
-                back_off = min(60 * attempt, 300)
-                print(f"  429, backing off {back_off}s", file=sys.stderr)
-                time.sleep(back_off)
-                if attempt < 3:
-                    continue
-                break
-
-            if response.status_code != 200:
-                print(f"  HTTP {response.status_code}", file=sys.stderr)
-                break  # next candidate
-
-            for match in CITY_URL_RE.finditer(response.text):
-                slug = match.group(1).lower()
-                gid = match.group(2)
-
-                # Reject obvious non-city hits (footer fluff, popular
-                # destinations widget on irrelevant queries).
-                if target_slug and (target_slug in slug or slug in target_slug):
-                    canonical = f"https://www.getyourguide.com/{slug}-l{gid}/"
-                    return gid, canonical, "high"
-
-                if first_low is None:
-                    first_low = (slug, gid)
-
-            break  # finished this candidate
+        html = page.content()
+        for match in CITY_URL_RE.finditer(html):
+            slug = match.group(1).lower()
+            gid = match.group(2)
+            if target_slug and (target_slug in slug or slug in target_slug):
+                return gid, f"https://www.getyourguide.com/{slug}-l{gid}/", "high"
+            if first_low is None:
+                first_low = (slug, gid)
 
     if first_low:
         slug, gid = first_low
         return gid, f"https://www.getyourguide.com/{slug}-l{gid}/", "low"
-
     return None, None, "not_found"
 
 
-def read_pending_ids(output_path: Path) -> set[str]:
-    """Resume support — skip rows already present in the output file."""
+def read_processed_ids(output_path: Path) -> set[str]:
     if not output_path.exists() or output_path.stat().st_size == 0:
         return set()
     with output_path.open(encoding="utf-8") as f:
@@ -211,7 +187,6 @@ def read_pending_ids(output_path: Path) -> set[str]:
 
 
 def normalize_input_row(row: dict) -> dict:
-    """The name column may itself be a JSON-encoded translation map."""
     name = (row.get("name") or "").strip()
     if name.startswith("{") and name.endswith("}"):
         try:
@@ -225,11 +200,11 @@ def normalize_input_row(row: dict) -> dict:
 
 
 def main(argv: Iterable[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description=__doc__.splitlines()[1] if __doc__ else None)
+    parser = argparse.ArgumentParser()
     parser.add_argument("input", help="Input CSV (id,slug,name)")
-    parser.add_argument("output", help="Output CSV (gets gyg_id + confidence appended)")
+    parser.add_argument("output", help="Output CSV")
     parser.add_argument("--max", type=int, default=None, help="Process at most N rows")
-    parser.add_argument("--delay", type=float, default=DELAY_SEC, help=f"Seconds between requests (default {DELAY_SEC})")
+    parser.add_argument("--headed", action="store_true", help="Show the browser window (default: headless)")
     args = parser.parse_args(argv)
 
     input_path = Path(args.input)
@@ -242,14 +217,28 @@ def main(argv: Iterable[str] | None = None) -> int:
     with input_path.open(encoding="utf-8") as f:
         rows = [normalize_input_row(r) for r in csv.DictReader(f)]
 
-    processed = read_pending_ids(output_path)
+    processed = read_processed_ids(output_path)
     write_header = not output_path.exists() or output_path.stat().st_size == 0
-
     fieldnames = ["id", "slug", "name", "gyg_id", "gyg_url", "status", "confidence"]
-    session = requests.Session()
     counters = {"high": 0, "low": 0, "not_found": 0, "skipped": 0}
 
-    with output_path.open("a", encoding="utf-8", newline="") as out:
+    with sync_playwright() as p, output_path.open("a", encoding="utf-8", newline="") as out:
+        browser = p.chromium.launch(headless=not args.headed)
+        context = browser.new_context(
+            user_agent=USER_AGENT,
+            locale="ro-RO",
+            viewport={"width": 1280, "height": 800},
+        )
+        # Block heavyweight resources we don't need so each page settles
+        # faster — image/font/media bytes are pure waste for our use case.
+        context.route(
+            "**/*",
+            lambda route: route.abort()
+            if route.request.resource_type in ("image", "font", "media", "stylesheet")
+            else route.continue_(),
+        )
+        page = context.new_page()
+
         writer = csv.DictWriter(out, fieldnames=fieldnames)
         if write_header:
             writer.writeheader()
@@ -265,12 +254,10 @@ def main(argv: Iterable[str] | None = None) -> int:
                 continue
 
             name = row["name"]
-            label = f"[{index:>3}/{len(rows):>3}] {name}"
-            print(f"{label}...", end=" ", flush=True)
+            print(f"[{index:>3}/{len(rows):>3}] {name}...", end=" ", flush=True)
 
-            gid, gurl, confidence = search_gyg(name, session)
+            gid, gurl, confidence = search_gyg(page, name)
             counters[confidence] += 1
-            status = "ok" if gid else "not_found"
             print(f"→ {gid or '-':>10}  ({confidence})")
 
             writer.writerow({
@@ -279,16 +266,15 @@ def main(argv: Iterable[str] | None = None) -> int:
                 "name": name,
                 "gyg_id": gid or "",
                 "gyg_url": gurl or "",
-                "status": status,
+                "status": "ok" if gid else "not_found",
                 "confidence": confidence,
             })
             out.flush()
             seen_this_run += 1
 
-            # Politely wait between requests — but not after the last one.
-            if (args.max is not None and seen_this_run >= args.max) or index == len(rows):
-                continue
-            time.sleep(args.delay + random.uniform(0, JITTER_SEC))
+            time.sleep(random.uniform(DELAY_MIN_SEC, DELAY_MAX_SEC))
+
+        browser.close()
 
     print(
         "\nDone.\n"
