@@ -59,26 +59,32 @@ class DemoActivityReviewsSeeder extends Seeder
             ['rating' => 5, 'text' => 'Aniversare reușită! Am rezervat pentru iubitul meu și a fost încântat. Decorul și efectele sunt la alt nivel față de alte escape rooms.', 'detailed' => ['organizare' => 5, 'experienta' => 5, 'valoare' => 4], 'name' => ['Bianca', 'T']],
         ];
 
-        // If the client has no customers, create a few demo ones (defensive).
-        if (empty($customerIds)) {
-            foreach ($reviews as $i => $rv) {
-                try {
-                    $id = DB::table('marketplace_customers')->insertGetId(array_filter([
-                        'marketplace_client_id' => $clientId,
-                        'first_name'            => $rv['name'][0],
-                        'last_name'             => $rv['name'][1] . '.',
-                        'email'                 => 'demo-review-' . $i . '-' . $clientId . '@example.com',
-                        'status'                => 'active',
-                        'created_at'            => now(),
-                        'updated_at'            => now(),
-                    ], fn ($v) => $v !== null));
-                    $customerIds[] = $id;
-                } catch (\Throwable $e) {
-                    // column mismatch — stop trying to create, use whatever we have
-                    break;
-                }
+        // Top up to one customer per review (unique is per customer+activity, so
+        // we need distinct customers). Reuse demo customers across runs by email.
+        for ($i = 0; count($customerIds) < count($reviews) && $i < count($reviews); $i++) {
+            $email = 'demo-review-' . $i . '-' . $clientId . '@bilete.online';
+            $existing = DB::table('marketplace_customers')->where('email', $email)->value('id');
+            if ($existing) {
+                if (! in_array($existing, $customerIds, true)) $customerIds[] = $existing;
+                continue;
+            }
+            try {
+                $id = DB::table('marketplace_customers')->insertGetId([
+                    'marketplace_client_id' => $clientId,
+                    'first_name'            => $reviews[$i]['name'][0],
+                    'last_name'             => $reviews[$i]['name'][1] . '.',
+                    'email'                 => $email,
+                    'created_at'            => now(),
+                    'updated_at'            => now(),
+                ]);
+                $customerIds[] = $id;
+            } catch (\Throwable $e) {
+                // column mismatch / required field — stop creating, use what we have
+                $this->command?->warn('Could not create demo customer: ' . $e->getMessage());
+                break;
             }
         }
+        $customerIds = array_values(array_unique($customerIds));
 
         if (empty($customerIds)) {
             $this->command?->warn('No customers available for this client and could not create demo ones. Skipping.');
