@@ -1,6 +1,265 @@
 id,slug,name,gyg_id,gyg_url,status,confidence
-789,bucuresti,București,,,not_found,not_found
+789,bucuresti,București,111,https://www.getyourguide.com/bucuresti-l111/,ok,high
 790,voluntari,Voluntari,,,not_found,not_found
 791,popesti-leordeni,Popești-Leordeni,,,not_found,not_found
 792,bragadiru,Bragadiru,,,not_found,not_found
 793,buftea,Buftea,,,not_found,not_found
+794,pantelimon,Pantelimon,185106,https://www.getyourguide.com/judetul-ilfov-l185106/,ok,low
+795,otopeni,Otopeni,185106,https://www.getyourguide.com/judetul-ilfov-l185106/,ok,low
+796,chitila,Chitila,,,not_found,not_found
+797,magurele,Măgurele,,,not_found,not_found
+798,cluj-napoca,Cluj-Napoca,2393,https://www.getyourguide.com/cluj-napoca-l2393/,ok,high
+799,turda,Turda,144427,https://www.getyourguide.com/judetul-cluj-l144427/,ok,low
+800,dej,Dej,144427,https://www.getyourguide.com/judetul-cluj-l144427/,ok,low
+801,campia-turzii,Câmpia Turzii,,,not_found,not_found
+802,gherla,Gherla,144427,https://www.getyourguide.com/judetul-cluj-l144427/,ok,low
+803,huedin,Huedin,,,not_found,not_found
+804,floresti,Florești,,,not_found,not_found
+805,baciu,Baciu,,,not_found,not_found
+806,timisoara,Timișoara,169162,https://www.getyourguide.com/romania-l169162/,ok,low
+807,lugoj,Lugoj,,,not_found,not_found
+808,sannicolau-mare,Sânnicolau Mare,,,not_found,not_found
+809,jimbolia,Jimbolia,,,not_found,not_found
+810,faget,Făget,,,not_found,not_found
+811,buzias,Buziaș,,,not_found,not_found
+812,deta,Deta,,,not_found,not_found
+813,recas,Recaș,,,not_found,not_found
+814,giroc,Giroc,,,not_found,not_found
+815,dumbravita,Dumbrăvița,,,not_found,not_found
+816,constanta,Constanța,2660,https://www.getyourguide.com/judetul-constanta-l2660/,ok,high
+817,mangalia,Mangalia,,,not_found,not_found
+818,medgidia,Medgidia,,,not_found,not_found
+819,navodari,Năvodari,,,not_found,not_found
+820,cernavoda,Cernavodă,,,not_found,not_found
+821,mamaia,Mamaia,2660,https://www.getyourguide.com/judetul-constanta-l2660/,ok,low
+822,eforie-nord,Eforie Nord,2660,https://www.getyourguide.com/judetul-constanta-l2660/,ok,low
+823,eforie-sud,Eforie Sud,,,not_found,not_found
+824,neptun,Neptun,,,not_found,not_found
+825,costinesti,Costinești,,,not_found,not_found
+826,vama-veche,Vama Veche,,,not_found,not_found
+827,brasov,Brașov,2003,https://www.getyourguide.com/brasov-l2003/,ok,high
+828,fagaras,Făgăraș,182616,https://www.getyourguide.com/judetul-brasov-l182616/,ok,low
+829,sacele,Săcele,,,not_found,not_found
+830,codlea,Codlea,,,not_found,not_found
+831,rasnov,Râșnov,2004,https://www.getyourguide.com/rasnov-l2004/,ok,high
+832,zarnesti,Zărnești,182616,https://www.getyourguide.com/judetul-brasov-l182616/,ok,low
+833,predeal,Predeal,182616,https://www.getyourguide.com/judetul-brasov-l182616/,ok,low
+834,poiana-brasov,Poiana Brașov,182616,https://www.getyourguide.com/judetul-brasov-l182616/,ok,low
+835,bran,Bran,188057,https://www.getyourguide.com/tarate-l188057/,ok,low
+836,iasi,Iași,169162,https://www.getyourguide.com/romania-l169162/,ok,low
+837,pascani,Pașcani,,,not_found,not_found
+838,targu-frumos,Târgu Frumos,314,https://www.getyourguide.com/frumos-l314/,ok,high
+839,harlau,Hârlău,,,not_found,not_found
+840,ploiesti,Ploiești,,,not_found,not_found
+841,campina,Câmpina,186732,https://www.getyourguide.com/judetul-prahova-l186732/,ok,low
+842,baicoi,Băicoi,,,not_found,not_found
+843,breaza,Breaza,,,not_found,not_found
+844,sinaia,Sinaia,124688,https://www.getyourguide.com/sinaia-l124688/,ok,high
+845,busteni,Bușteni,234246,https://www.getyourguide.com/busteni-l234246/,ok,high
+846,azuga,Azuga,186732,https://www.getyourguide.com/judetul-prahova-l186732/,ok,low
+847,comarnic,Comarnic,,,not_found,not_found
+848,valenii-de-munte,Vălenii de Munte,121525,https://www.getyourguide.com/theth-l121525/,ok,low
+849,sibiu,Sibiu,1833,https://www.getyourguide.com/sibiu-l1833/,ok,high
+850,medias,Mediaș,144426,https://www.getyourguide.com/judetul-sibiu-l144426/,ok,low
+851,cisnadie,Cisnădie,144426,https://www.getyourguide.com/judetul-sibiu-l144426/,ok,low
+852,avrig,Avrig,144426,https://www.getyourguide.com/judetul-sibiu-l144426/,ok,low
+853,dumbraveni,Dumbrăveni,,,not_found,not_found
+854,talmaciu,Tălmaciu,,,not_found,not_found
+855,paltinis,Păltiniș,144426,https://www.getyourguide.com/judetul-sibiu-l144426/,ok,low
+856,targu-mures,Târgu Mureș,144429,https://www.getyourguide.com/judetul-mures-l144429/,ok,low
+857,reghin,Reghin,,,not_found,not_found
+858,sighisoara,Sighișoara,2012,https://www.getyourguide.com/sighisoara-l2012/,ok,high
+859,tarnaveni,Târnăveni,144429,https://www.getyourguide.com/judetul-mures-l144429/,ok,low
+860,ludus,Luduș,,,not_found,not_found
+861,sovata,Sovata,,,not_found,not_found
+862,craiova,Craiova,169162,https://www.getyourguide.com/romania-l169162/,ok,low
+863,bailesti,Băilești,,,not_found,not_found
+864,calafat,Calafat,,,not_found,not_found
+865,filiasi,Filiași,,,not_found,not_found
+866,segarcea,Segarcea,,,not_found,not_found
+867,galati,Galați,169162,https://www.getyourguide.com/romania-l169162/,ok,low
+868,tecuci,Tecuci,169162,https://www.getyourguide.com/romania-l169162/,ok,low
+869,targu-bujor,Târgu Bujor,,,not_found,not_found
+870,beresti,Berești,,,not_found,not_found
+871,pitesti,Pitești,201945,https://www.getyourguide.com/arges-l201945/,ok,low
+872,campulung,Câmpulung,201945,https://www.getyourguide.com/arges-l201945/,ok,low
+873,curtea-de-arges,Curtea de Argeș,201945,https://www.getyourguide.com/arges-l201945/,ok,high
+874,mioveni,Mioveni,,,not_found,not_found
+875,costesti,Costești,169162,https://www.getyourguide.com/romania-l169162/,ok,low
+876,topoloveni,Topoloveni,,,not_found,not_found
+877,arad,Arad,169162,https://www.getyourguide.com/romania-l169162/,ok,low
+878,ineu,Ineu,,,not_found,not_found
+879,lipova,Lipova,,,not_found,not_found
+880,pecica,Pecica,,,not_found,not_found
+881,curtici,Curtici,,,not_found,not_found
+882,nadlac,Nădlac,,,not_found,not_found
+883,chisineu-cris,Chișineu-Criș,,,not_found,not_found
+884,oradea,Oradea,169162,https://www.getyourguide.com/romania-l169162/,ok,low
+885,salonta,Salonta,,,not_found,not_found
+886,marghita,Marghita,,,not_found,not_found
+887,beius,Beiuș,,,not_found,not_found
+888,alesd,Aleșd,,,not_found,not_found
+889,stei,Ștei,,,not_found,not_found
+890,baile-felix,Băile Felix,169162,https://www.getyourguide.com/romania-l169162/,ok,low
+891,baile-1-mai,Băile 1 Mai,,,not_found,not_found
+892,bacau,Bacău,169162,https://www.getyourguide.com/romania-l169162/,ok,low
+893,onesti,Onești,,,not_found,not_found
+894,moinesti,Moinești,,,not_found,not_found
+895,comanesti,Comănești,,,not_found,not_found
+896,buhusi,Buhuși,,,not_found,not_found
+897,darmanesti,Dărmănești,,,not_found,not_found
+898,targu-ocna,Târgu Ocna,,,not_found,not_found
+899,slanic-moldova,Slănic Moldova,91935,https://www.getyourguide.com/slanic-l91935/,ok,high
+900,deva,Deva,2510,https://www.getyourguide.com/judetul-alba-l2510/,ok,low
+901,hunedoara,Hunedoara,2510,https://www.getyourguide.com/judetul-alba-l2510/,ok,low
+902,petrosani,Petroșani,,,not_found,not_found
+903,lupeni,Lupeni,,,not_found,not_found
+904,vulcan,Vulcan,3446,https://www.getyourguide.com/insulele-eoliene-l3446/,ok,low
+905,orastie,Orăștie,,,not_found,not_found
+906,brad,Brad,,,not_found,not_found
+907,calan,Călan,,,not_found,not_found
+908,sarmizegetusa,Sarmizegetusa,169162,https://www.getyourguide.com/romania-l169162/,ok,low
+909,suceava,Suceava,257948,https://www.getyourguide.com/judetul-suceava-l257948/,ok,high
+910,falticeni,Fălticeni,,,not_found,not_found
+911,radauti,Rădăuți,,,not_found,not_found
+912,campulung-moldovenesc,Câmpulung Moldovenesc,201945,https://www.getyourguide.com/arges-l201945/,ok,low
+913,vatra-dornei,Vatra Dornei,,,not_found,not_found
+914,gura-humorului,Gura Humorului,257948,https://www.getyourguide.com/judetul-suceava-l257948/,ok,low
+915,siret,Siret,,,not_found,not_found
+916,alba-iulia,Alba Iulia,2510,https://www.getyourguide.com/judetul-alba-l2510/,ok,low
+917,aiud,Aiud,2510,https://www.getyourguide.com/judetul-alba-l2510/,ok,low
+918,blaj,Blaj,2510,https://www.getyourguide.com/judetul-alba-l2510/,ok,low
+919,sebes,Sebeș,2510,https://www.getyourguide.com/judetul-alba-l2510/,ok,low
+920,cugir,Cugir,2510,https://www.getyourguide.com/judetul-alba-l2510/,ok,low
+921,ocna-mures,Ocna Mureș,144429,https://www.getyourguide.com/judetul-mures-l144429/,ok,low
+922,campeni,Câmpeni,,,not_found,not_found
+923,buzau,Buzău,169162,https://www.getyourguide.com/romania-l169162/,ok,low
+924,ramnicu-sarat,Râmnicu Sărat,,,not_found,not_found
+925,nehoiu,Nehoiu,169162,https://www.getyourguide.com/romania-l169162/,ok,low
+926,patarlagele,Pătârlagele,,,not_found,not_found
+927,pogoanele,Pogoanele,,,not_found,not_found
+928,botosani,Botoșani,,,not_found,not_found
+929,dorohoi,Dorohoi,,,not_found,not_found
+930,darabani,Darabani,,,not_found,not_found
+931,saveni,Săveni,,,not_found,not_found
+932,bistrita,Bistrița,169162,https://www.getyourguide.com/romania-l169162/,ok,low
+933,nasaud,Năsăud,,,not_found,not_found
+934,beclean,Beclean,,,not_found,not_found
+935,sangeorz-bai,Sângeorz-Băi,,,not_found,not_found
+936,braila,Brăila,169162,https://www.getyourguide.com/romania-l169162/,ok,low
+937,ianca,Ianca,,,not_found,not_found
+938,insuratei,Însurăței,,,not_found,not_found
+939,faurei,Făurei,,,not_found,not_found
+940,resita,Reșița,169162,https://www.getyourguide.com/romania-l169162/,ok,low
+941,caransebes,Caransebeș,,,not_found,not_found
+942,bocsa,Bocșa,,,not_found,not_found
+943,oravita,Oravița,169162,https://www.getyourguide.com/romania-l169162/,ok,low
+944,moldova-noua,Moldova Nouă,169139,https://www.getyourguide.com/moldova-l169139/,ok,high
+945,anina,Anina,,,not_found,not_found
+946,baile-herculane,Băile Herculane,169162,https://www.getyourguide.com/romania-l169162/,ok,low
+947,calarasi,Călărași,169162,https://www.getyourguide.com/romania-l169162/,ok,low
+948,oltenita,Oltenița,,,not_found,not_found
+949,budesti,Budești,169162,https://www.getyourguide.com/romania-l169162/,ok,low
+950,fundulea,Fundulea,,,not_found,not_found
+951,lehliu-gara,Lehliu Gară,,,not_found,not_found
+952,sfantu-gheorghe,Sfântu Gheorghe,169162,https://www.getyourguide.com/romania-l169162/,ok,low
+953,targu-secuiesc,Târgu Secuiesc,,,not_found,not_found
+954,covasna,Covasna,169162,https://www.getyourguide.com/romania-l169162/,ok,low
+955,baraolt,Baraolt,,,not_found,not_found
+956,intorsura-buzaului,Întorsura Buzăului,,,not_found,not_found
+957,targoviste,Târgoviște,185430,https://www.getyourguide.com/judetul-dambovita-l185430/,ok,low
+958,moreni,Moreni,,,not_found,not_found
+959,pucioasa,Pucioasa,,,not_found,not_found
+960,gaesti,Găești,,,not_found,not_found
+961,titu,Titu,,,not_found,not_found
+962,fieni,Fieni,,,not_found,not_found
+963,targu-jiu,Târgu Jiu,,,not_found,not_found
+964,motru,Motru,,,not_found,not_found
+965,rovinari,Rovinari,,,not_found,not_found
+966,bumbesti-jiu,Bumbești-Jiu,,,not_found,not_found
+967,targu-carbunesti,Târgu Cărbunești,,,not_found,not_found
+968,novaci,Novaci,,,not_found,not_found
+969,ranca,Rânca,,,not_found,not_found
+970,giurgiu,Giurgiu,169162,https://www.getyourguide.com/romania-l169162/,ok,low
+971,bolintin-vale,Bolintin-Vale,,,not_found,not_found
+972,mihailesti,Mihăilești,,,not_found,not_found
+973,miercurea-ciuc,Miercurea Ciuc,,,not_found,not_found
+974,odorheiu-secuiesc,Odorheiu Secuiesc,169162,https://www.getyourguide.com/romania-l169162/,ok,low
+975,gheorgheni,Gheorgheni,169162,https://www.getyourguide.com/romania-l169162/,ok,low
+976,toplita,Toplița,,,not_found,not_found
+977,cristuru-secuiesc,Cristuru Secuiesc,,,not_found,not_found
+978,balan,Bălan,,,not_found,not_found
+979,borsec,Borsec,,,not_found,not_found
+980,praid,Praid,,,not_found,not_found
+981,lacul-rosu,Lacul Roșu,169162,https://www.getyourguide.com/romania-l169162/,ok,low
+982,slobozia,Slobozia,169162,https://www.getyourguide.com/romania-l169162/,ok,low
+983,fetesti,Fetești,,,not_found,not_found
+984,urziceni,Urziceni,,,not_found,not_found
+985,tandarei,Țăndărei,,,not_found,not_found
+986,amara,Amara,,,not_found,not_found
+987,baia-mare,Baia Mare,169162,https://www.getyourguide.com/romania-l169162/,ok,low
+988,sighetu-marmatiei,Sighetu Marmației,169162,https://www.getyourguide.com/romania-l169162/,ok,low
+989,borsa,Borșa,,,not_found,not_found
+990,baia-sprie,Baia Sprie,599,https://www.getyourguide.com/campania-l599/,ok,low
+991,cavnic,Cavnic,,,not_found,not_found
+992,viseu-de-sus,Vișeu de Sus,169162,https://www.getyourguide.com/romania-l169162/,ok,low
+993,seini,Seini,,,not_found,not_found
+994,tautii-magheraus,Tăuții-Măgherăuș,,,not_found,not_found
+995,sapanta,Săpânța,169162,https://www.getyourguide.com/romania-l169162/,ok,low
+996,drobeta-turnu-severin,Drobeta-Turnu Severin,169162,https://www.getyourguide.com/romania-l169162/,ok,low
+997,orsova,Orșova,169162,https://www.getyourguide.com/romania-l169162/,ok,low
+998,strehaia,Strehaia,,,not_found,not_found
+999,vanju-mare,Vânju Mare,169035,https://www.getyourguide.com/coreea-de-sud-l169035/,ok,low
+1000,baia-de-arama,Baia de Aramă,121525,https://www.getyourguide.com/theth-l121525/,ok,low
+1001,piatra-neamt,Piatra Neamț,169162,https://www.getyourguide.com/romania-l169162/,ok,low
+1002,roman,Roman,,,not_found,not_found
+1003,targu-neamt,Târgu Neamț,,,not_found,not_found
+1004,bicaz,Bicaz,,,not_found,not_found
+1005,roznov,Roznov,,,not_found,not_found
+1006,durau,Durău,,,not_found,not_found
+1007,slatina,Slatina,,,not_found,not_found
+1008,caracal,Caracal,,,not_found,not_found
+1009,corabia,Corabia,,,not_found,not_found
+1010,bals,Balș,,,not_found,not_found
+1011,scornicesti,Scornicești,,,not_found,not_found
+1012,draganesti-olt,Drăgănești-Olt,,,not_found,not_found
+1013,satu-mare,Satu Mare,169162,https://www.getyourguide.com/romania-l169162/,ok,low
+1014,carei,Carei,,,not_found,not_found
+1015,negresti-oas,Negrești-Oaș,,,not_found,not_found
+1016,tasnad,Tășnad,,,not_found,not_found
+1017,livada,Livada,,,not_found,not_found
+1018,ardud,Ardud,,,not_found,not_found
+1019,zalau,Zalău,,,not_found,not_found
+1020,simleu-silvaniei,Șimleu Silvaniei,169162,https://www.getyourguide.com/romania-l169162/,ok,low
+1021,jibou,Jibou,,,not_found,not_found
+1022,cehu-silvaniei,Cehu Silvaniei,,,not_found,not_found
+1023,alexandria,Alexandria,490,https://www.getyourguide.com/alexandria-l490/,ok,high
+1024,rosiori-de-vede,Roșiori de Vede,121525,https://www.getyourguide.com/theth-l121525/,ok,low
+1025,turnu-magurele,Turnu Măgurele,,,not_found,not_found
+1026,zimnicea,Zimnicea,,,not_found,not_found
+1027,videle,Videle,,,not_found,not_found
+1028,tulcea,Tulcea,2659,https://www.getyourguide.com/tulcea-l2659/,ok,high
+1029,macin,Măcin,,,not_found,not_found
+1030,babadag,Babadag,,,not_found,not_found
+1031,isaccea,Isaccea,,,not_found,not_found
+1032,sulina,Sulina,2658,https://www.getyourguide.com/judetul-tulcea-l2658/,ok,low
+1033,murighiol,Murighiol,2658,https://www.getyourguide.com/judetul-tulcea-l2658/,ok,low
+1034,ramnicu-valcea,Râmnicu Vâlcea,169162,https://www.getyourguide.com/romania-l169162/,ok,low
+1035,dragasani,Drăgășani,,,not_found,not_found
+1036,baile-govora,Băile Govora,,,not_found,not_found
+1037,baile-olanesti,Băile Olănești,,,not_found,not_found
+1038,calimanesti,Călimănești,,,not_found,not_found
+1039,horezu,Horezu,169162,https://www.getyourguide.com/romania-l169162/,ok,low
+1040,brezoi,Brezoi,,,not_found,not_found
+1041,berbesti,Berbești,,,not_found,not_found
+1042,voineasa,Voineasa,,,not_found,not_found
+1043,vaslui,Vaslui,169162,https://www.getyourguide.com/romania-l169162/,ok,low
+1044,barlad,Bârlad,,,not_found,not_found
+1045,husi,Huși,,,not_found,not_found
+1046,negresti,Negrești,,,not_found,not_found
+1047,murgeni,Murgeni,,,not_found,not_found
+1048,focsani,Focșani,,,not_found,not_found
+1049,adjud,Adjud,,,not_found,not_found
+1050,marasesti,Mărășești,,,not_found,not_found
+1051,panciu,Panciu,,,not_found,not_found
+1052,odobesti,Odobești,,,not_found,not_found
