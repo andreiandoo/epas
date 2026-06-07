@@ -352,8 +352,128 @@ class ActivitiesController extends BaseController
                 //   2. Same city + same category
                 //   3. Same city + any other category
                 'recommendations' => $this->buildRecommendationTiers($activity, $locale, 6),
+                // Customer reviews summary + a few recent approved reviews.
+                // Defensive: returns an empty/zeroed shape if the activity_id
+                // column hasn't been migrated yet, so the page never breaks.
+                'reviews' => $this->buildReviewsPayload($activity),
             ]
         );
+    }
+
+    /**
+     * Aggregate + recent customer reviews for an activity.
+     *
+     * Reads marketplace_customer_reviews (status = approved) scoped to this
+     * activity. Activity reviews are distinguished by activity_id (added in a
+     * later migration); event reviews keep activity_id NULL and are never
+     * counted here. Wrapped in try/catch so a missing column / empty table
+     * yields a safe zeroed payload instead of a 500 on the public page.
+     *
+     * @return array{
+     *   average: float, count: int,
+     *   distribution: array<int,int>,
+     *   detailed_averages: array<string,float>,
+     *   recommend_pct: int,
+     *   items: array<int, array>
+     * }
+     */
+    private function buildReviewsPayload(Activity $activity): array
+    {
+        $empty = [
+            'average'           => 0.0,
+            'count'             => 0,
+            'distribution'      => [5 => 0, 4 => 0, 3 => 0, 2 => 0, 1 => 0],
+            'detailed_averages' => [],
+            'recommend_pct'     => 0,
+            'items'             => [],
+        ];
+
+        try {
+            $base = \DB::table('marketplace_customer_reviews')
+                ->where('marketplace_client_id', $activity->marketplace_client_id)
+                ->where('activity_id', $activity->id)
+                ->where('status', 'approved');
+
+            $count = (clone $base)->count();
+            if ($count === 0) {
+                return $empty;
+            }
+
+            $average = round((float) (clone $base)->avg('rating'), 2);
+
+            $dist = [5 => 0, 4 => 0, 3 => 0, 2 => 0, 1 => 0];
+            foreach ((clone $base)->select('rating', \DB::raw('COUNT(*) as c'))->groupBy('rating')->get() as $row) {
+                $r = (int) $row->rating;
+                if (isset($dist[$r])) {
+                    $dist[$r] = (int) $row->c;
+                }
+            }
+
+            $recommendCount = (clone $base)->where('recommend', true)->count();
+            $recommendPct = $count > 0 ? (int) round(($recommendCount / $count) * 100) : 0;
+
+            // Aggregate detailed_ratings (json) → per-aspect average.
+            $detailedSums = [];
+            $detailedCounts = [];
+            foreach ((clone $base)->whereNotNull('detailed_ratings')->pluck('detailed_ratings') as $json) {
+                $data = is_array($json) ? $json : json_decode((string) $json, true);
+                if (! is_array($data)) {
+                    continue;
+                }
+                foreach ($data as $aspect => $value) {
+                    if (! is_numeric($value)) {
+                        continue;
+                    }
+                    $detailedSums[$aspect] = ($detailedSums[$aspect] ?? 0) + (float) $value;
+                    $detailedCounts[$aspect] = ($detailedCounts[$aspect] ?? 0) + 1;
+                }
+            }
+            $detailedAverages = [];
+            foreach ($detailedSums as $aspect => $sum) {
+                $detailedAverages[$aspect] = round($sum / max(1, $detailedCounts[$aspect]), 1);
+            }
+
+            $items = (clone $base)
+                ->leftJoin('marketplace_customers', 'marketplace_customers.id', '=', 'marketplace_customer_reviews.marketplace_customer_id')
+                ->orderByDesc('marketplace_customer_reviews.created_at')
+                ->limit(9)
+                ->get([
+                    'marketplace_customer_reviews.rating',
+                    'marketplace_customer_reviews.text',
+                    'marketplace_customer_reviews.created_at',
+                    'marketplace_customer_reviews.is_anonymous',
+                    'marketplace_customers.first_name',
+                    'marketplace_customers.last_name',
+                ])
+                ->map(function ($r) {
+                    $name = trim((string) ($r->first_name ?? '') . ' ' . substr((string) ($r->last_name ?? ''), 0, 1));
+                    if ($r->is_anonymous || $name === '') {
+                        $name = 'Client bilete.online';
+                    }
+                    $when = $r->created_at ? \Carbon\Carbon::parse($r->created_at)->translatedFormat('F Y') : '';
+
+                    return [
+                        'rating'   => (int) $r->rating,
+                        'text'     => (string) $r->text,
+                        'name'     => $name,
+                        'initial'  => mb_strtoupper(mb_substr($name, 0, 1)),
+                        'meta'     => trim($when . ' · rezervare verificată', ' ·'),
+                    ];
+                })
+                ->values()
+                ->all();
+
+            return [
+                'average'           => $average,
+                'count'             => $count,
+                'distribution'      => $dist,
+                'detailed_averages' => $detailedAverages,
+                'recommend_pct'     => $recommendPct,
+                'items'             => $items,
+            ];
+        } catch (\Throwable $e) {
+            return $empty;
+        }
     }
 
     /**
