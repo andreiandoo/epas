@@ -7,6 +7,7 @@ use App\Services\Activities\SlotResolver;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
 /**
@@ -389,7 +390,7 @@ class ActivitiesController extends BaseController
         ];
 
         try {
-            $base = \DB::table('marketplace_customer_reviews')
+            $base = DB::table('marketplace_customer_reviews')
                 ->where('marketplace_client_id', $activity->marketplace_client_id)
                 ->where('activity_id', $activity->id)
                 ->where('status', 'approved');
@@ -402,7 +403,7 @@ class ActivitiesController extends BaseController
             $average = round((float) (clone $base)->avg('rating'), 2);
 
             $dist = [5 => 0, 4 => 0, 3 => 0, 2 => 0, 1 => 0];
-            foreach ((clone $base)->select('rating', \DB::raw('COUNT(*) as c'))->groupBy('rating')->get() as $row) {
+            foreach ((clone $base)->select('rating', DB::raw('COUNT(*) as c'))->groupBy('rating')->get() as $row) {
                 $r = (int) $row->rating;
                 if (isset($dist[$r])) {
                     $dist[$r] = (int) $row->c;
