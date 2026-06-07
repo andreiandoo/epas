@@ -5,7 +5,7 @@ namespace App\Filament\Marketplace\Resources\OrganizerLeadResource\Pages;
 use App\Filament\Marketplace\Resources\OrganizerLeadResource;
 use App\Models\Marketplace\OrganizerLead;
 use Filament\Actions\CreateAction;
-use Filament\Resources\Components\Tab;
+use Filament\Schemas\Components\Tabs\Tab;
 use Filament\Resources\Pages\ListRecords;
 use Illuminate\Database\Eloquent\Builder;
 
