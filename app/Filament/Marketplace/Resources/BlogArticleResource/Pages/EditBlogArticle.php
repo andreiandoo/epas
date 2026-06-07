@@ -14,9 +14,34 @@ class EditBlogArticle extends EditRecord
 
     protected static string $resource = BlogArticleResource::class;
 
+    /** Public frontend URL of the guide on the marketplace domain, or null. */
+    protected function frontendUrl(): ?string
+    {
+        $slug = $this->record->slug ?? null;
+        if (! $slug) {
+            return null;
+        }
+
+        $domain = static::getMarketplaceClient()?->domain;
+        $domain = preg_replace('#^https?://#i', '', trim((string) $domain));
+        $domain = rtrim($domain, '/');
+        if ($domain === '') {
+            return null;
+        }
+
+        return 'https://' . $domain . '/ghiduri/' . $slug;
+    }
+
     protected function getHeaderActions(): array
     {
         return [
+            Actions\Action::make('view_frontend')
+                ->label('Vizualizează')
+                ->icon('heroicon-o-arrow-top-right-on-square')
+                ->color('gray')
+                ->url(fn () => $this->frontendUrl(), shouldOpenInNewTab: true)
+                ->visible(fn () => $this->record->status === 'published' && filled($this->frontendUrl())),
+
             Actions\Action::make('publish')
                 ->label('Publish')
                 ->icon('heroicon-o-check-circle')

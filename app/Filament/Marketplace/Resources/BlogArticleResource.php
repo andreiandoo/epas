@@ -264,165 +264,6 @@ class BlogArticleResource extends Resource
                                             ->columnSpanFull(),
                                     ])->columns(2),
 
-                                // FAQs Section — optional per-guide FAQ list.
-                                // When empty, the public guide page renders a
-                                // fallback FAQ set from the template.
-                                SC\Section::make('Întrebări frecvente (FAQ)')
-                                    ->description('Opțional. Dacă lași gol, ghidul afișează un set FAQ de fallback. Apar și ca FAQPage JSON-LD pentru SEO.')
-                                    ->collapsed()
-                                    ->schema([
-                                        Forms\Components\Repeater::make('faqs')
-                                            ->label('')
-                                            ->schema([
-                                                Forms\Components\TextInput::make('q')
-                                                    ->label('Întrebare')
-                                                    ->required()
-                                                    ->maxLength(255)
-                                                    ->columnSpanFull(),
-                                                Forms\Components\Textarea::make('a')
-                                                    ->label('Răspuns')
-                                                    ->required()
-                                                    ->rows(3)
-                                                    ->columnSpanFull(),
-                                            ])
-                                            ->itemLabel(fn (array $state): ?string => $state['q'] ?? null)
-                                            ->addActionLabel('Adaugă întrebare')
-                                            ->reorderable()
-                                            ->collapsible()
-                                            ->defaultItems(0),
-                                    ]),
-
-                                // Activities block builder — generates an
-                                // [activities ...] shortcode to paste into the
-                                // content. None of these fields are persisted
-                                // (dehydrated:false); they only build the string.
-                                SC\Section::make('Bloc de activități (shortcode)')
-                                    ->description('Configurează un bloc de carduri, copiază shortcode-ul și lipește-l în Content acolo unde vrei să apară.')
-                                    ->icon('heroicon-o-squares-2x2')
-                                    ->collapsed()
-                                    ->schema([
-                                        SC\Grid::make(2)->schema([
-                                            Forms\Components\Select::make('_ab_mode')
-                                                ->label('Mod')
-                                                ->dehydrated(false)
-                                                ->live()
-                                                ->default('auto')
-                                                ->selectablePlaceholder(false)
-                                                ->options([
-                                                    'auto'   => 'Automat (categorie + oraș)',
-                                                    'manual' => 'Manual (activități alese)',
-                                                ]),
-                                            Forms\Components\Select::make('_ab_style')
-                                                ->label('Stil carduri')
-                                                ->dehydrated(false)
-                                                ->live()
-                                                ->default('small')
-                                                ->selectablePlaceholder(false)
-                                                ->options([
-                                                    'small' => 'Small — verticale',
-                                                    'large' => 'Large — pătrate',
-                                                    'long'  => 'Long — orizontale',
-                                                ]),
-                                        ]),
-
-                                        SC\Grid::make(3)
-                                            ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => $get('_ab_mode') !== 'manual')
-                                            ->schema([
-                                                Forms\Components\Select::make('_ab_city')
-                                                    ->label('Oraș')
-                                                    ->dehydrated(false)
-                                                    ->live()
-                                                    ->searchable()
-                                                    ->placeholder('Toate orașele')
-                                                    ->options(function () use ($marketplace) {
-                                                        try {
-                                                            return Activity::query()
-                                                                ->where('marketplace_client_id', $marketplace?->id)
-                                                                ->whereNotNull('marketplace_city_id')
-                                                                ->with('city:id,slug,name')
-                                                                ->get()
-                                                                ->pluck('city')
-                                                                ->filter()
-                                                                ->unique('id')
-                                                                ->sortBy('id')
-                                                                ->mapWithKeys(fn ($c) => [$c->slug => static::transName($c->name, $c->slug)])
-                                                                ->all();
-                                                        } catch (\Throwable $e) {
-                                                            return [];
-                                                        }
-                                                    }),
-                                                Forms\Components\Select::make('_ab_category')
-                                                    ->label('Categorie')
-                                                    ->dehydrated(false)
-                                                    ->live()
-                                                    ->searchable()
-                                                    ->placeholder('Toate categoriile')
-                                                    ->options(function () use ($marketplace) {
-                                                        try {
-                                                            return Activity::query()
-                                                                ->where('marketplace_client_id', $marketplace?->id)
-                                                                ->whereNotNull('marketplace_category_id')
-                                                                ->with('category:id,slug,name')
-                                                                ->get()
-                                                                ->pluck('category')
-                                                                ->filter()
-                                                                ->unique('id')
-                                                                ->sortBy('id')
-                                                                ->mapWithKeys(fn ($c) => [$c->slug => static::transName($c->name, $c->slug)])
-                                                                ->all();
-                                                        } catch (\Throwable $e) {
-                                                            return [];
-                                                        }
-                                                    }),
-                                                Forms\Components\TextInput::make('_ab_limit')
-                                                    ->label('Număr carduri')
-                                                    ->dehydrated(false)
-                                                    ->live(onBlur: true)
-                                                    ->numeric()
-                                                    ->default(6)
-                                                    ->minValue(1)
-                                                    ->maxValue(24),
-                                            ]),
-
-                                        Forms\Components\Select::make('_ab_ids')
-                                            ->label('Activități alese (în ordine)')
-                                            ->dehydrated(false)
-                                            ->live()
-                                            ->multiple()
-                                            ->searchable()
-                                            ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => $get('_ab_mode') === 'manual')
-                                            ->options(function () use ($marketplace) {
-                                                try {
-                                                    return Activity::query()
-                                                        ->where('marketplace_client_id', $marketplace?->id)
-                                                        ->orderByDesc('id')
-                                                        ->limit(300)
-                                                        ->get(['id', 'title'])
-                                                        ->mapWithKeys(fn ($a) => [$a->id => static::transName($a->title, 'Activitate #' . $a->id)])
-                                                        ->all();
-                                                } catch (\Throwable $e) {
-                                                    return [];
-                                                }
-                                            }),
-
-                                        Forms\Components\Placeholder::make('_ab_shortcode')
-                                            ->label('Shortcode generat')
-                                            ->content(function (\Filament\Schemas\Components\Utilities\Get $get) {
-                                                $code = static::buildActivitiesShortcode($get);
-                                                $js = htmlspecialchars(json_encode($code), ENT_QUOTES, 'UTF-8');
-
-                                                return new HtmlString(
-                                                    '<div style="display:flex;gap:.6rem;align-items:center;flex-wrap:wrap;">'
-                                                    . '<code style="flex:1 1 auto;min-width:14rem;padding:.55rem .7rem;border-radius:.6rem;background:#1B1714;color:#F4EFE3;font-size:.85rem;">'
-                                                    . htmlspecialchars($code, ENT_QUOTES, 'UTF-8') . '</code>'
-                                                    . '<button type="button" onclick="navigator.clipboard.writeText(' . $js . ');this.textContent=\'Copiat!\';setTimeout(()=>this.textContent=\'Copiază\',1500);" '
-                                                    . 'style="flex:0 0 auto;padding:.55rem .9rem;border-radius:.6rem;background:#E84527;color:#fff;font-weight:600;border:0;cursor:pointer;">Copiază</button>'
-                                                    . '</div>'
-                                                    . '<p style="margin-top:.5rem;color:#7a7164;font-size:.8rem;">Lipește acest shortcode pe o linie separată în Content. Stiluri disponibile: <b>small</b> (verticale), <b>large</b> (pătrate), <b>long</b> (orizontale).</p>'
-                                                );
-                                            }),
-                                    ]),
-
                                 // SEO Section
                                 SC\Section::make('SEO & Meta Tags')
                                     ->description('Search engine optimization settings')
@@ -569,12 +410,168 @@ class BlogArticleResource extends Resource
                                             ])
                                             ->columnSpanFull(),
                                     ]),
+
+                                // FAQs Section — moved last, after SEO. Optional
+                                // per-guide FAQ list; if empty the public guide
+                                // renders a fallback set. Emitted as FAQPage JSON-LD.
+                                SC\Section::make('Întrebări frecvente (FAQ)')
+                                    ->description('Opțional. Dacă lași gol, ghidul afișează un set FAQ de fallback. Apar și ca FAQPage JSON-LD pentru SEO.')
+                                    ->collapsed()
+                                    ->schema([
+                                        Forms\Components\Repeater::make('faqs')
+                                            ->label('')
+                                            ->schema([
+                                                Forms\Components\TextInput::make('q')
+                                                    ->label('Întrebare')
+                                                    ->required()
+                                                    ->maxLength(255)
+                                                    ->columnSpanFull(),
+                                                Forms\Components\Textarea::make('a')
+                                                    ->label('Răspuns')
+                                                    ->required()
+                                                    ->rows(3)
+                                                    ->columnSpanFull(),
+                                            ])
+                                            ->itemLabel(fn (array $state): ?string => $state['q'] ?? null)
+                                            ->addActionLabel('Adaugă întrebare')
+                                            ->reorderable()
+                                            ->collapsible()
+                                            ->defaultItems(0),
+                                    ]),
                             ]),
 
                         // RIGHT COLUMN (1/3 width)
                         SC\Grid::make(1)
                             ->columnSpan(1)
                             ->schema([
+                                // Activities block builder — sticky right rail,
+                                // always visible while editing. Generates an
+                                // [activities ...] shortcode to paste into Content.
+                                // Helper fields are dehydrated(false) — not saved.
+                                SC\Section::make('Bloc de activități (shortcode)')
+                                    ->description('Configurează un bloc, copiază shortcode-ul și lipește-l în Content.')
+                                    ->icon('heroicon-o-squares-2x2')
+                                    ->extraAttributes(['style' => 'position: sticky; top: 5rem; z-index: 5;'])
+                                    ->schema([
+                                        Forms\Components\Select::make('_ab_mode')
+                                            ->label('Mod')
+                                            ->dehydrated(false)
+                                            ->live()
+                                            ->default('auto')
+                                            ->selectablePlaceholder(false)
+                                            ->options([
+                                                'auto'   => 'Automat (categorie + oraș)',
+                                                'manual' => 'Manual (activități alese)',
+                                            ]),
+                                        Forms\Components\Select::make('_ab_style')
+                                            ->label('Stil carduri')
+                                            ->dehydrated(false)
+                                            ->live()
+                                            ->default('small')
+                                            ->selectablePlaceholder(false)
+                                            ->options([
+                                                'small' => 'Small — verticale',
+                                                'large' => 'Large — pătrate',
+                                                'long'  => 'Long — orizontale',
+                                            ]),
+
+                                        Forms\Components\Select::make('_ab_city')
+                                            ->label('Oraș')
+                                            ->dehydrated(false)
+                                            ->live()
+                                            ->searchable()
+                                            ->placeholder('Toate orașele')
+                                            ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => $get('_ab_mode') !== 'manual')
+                                            ->options(function () use ($marketplace) {
+                                                try {
+                                                    return Activity::query()
+                                                        ->where('marketplace_client_id', $marketplace?->id)
+                                                        ->whereNotNull('marketplace_city_id')
+                                                        ->with('city:id,slug,name')
+                                                        ->get()
+                                                        ->pluck('city')
+                                                        ->filter()
+                                                        ->unique('id')
+                                                        ->sortBy('id')
+                                                        ->mapWithKeys(fn ($c) => [$c->slug => static::transName($c->name, $c->slug)])
+                                                        ->all();
+                                                } catch (\Throwable $e) {
+                                                    return [];
+                                                }
+                                            }),
+                                        Forms\Components\Select::make('_ab_category')
+                                            ->label('Categorie')
+                                            ->dehydrated(false)
+                                            ->live()
+                                            ->searchable()
+                                            ->placeholder('Toate categoriile')
+                                            ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => $get('_ab_mode') !== 'manual')
+                                            ->options(function () use ($marketplace) {
+                                                try {
+                                                    return Activity::query()
+                                                        ->where('marketplace_client_id', $marketplace?->id)
+                                                        ->whereNotNull('marketplace_category_id')
+                                                        ->with('category:id,slug,name')
+                                                        ->get()
+                                                        ->pluck('category')
+                                                        ->filter()
+                                                        ->unique('id')
+                                                        ->sortBy('id')
+                                                        ->mapWithKeys(fn ($c) => [$c->slug => static::transName($c->name, $c->slug)])
+                                                        ->all();
+                                                } catch (\Throwable $e) {
+                                                    return [];
+                                                }
+                                            }),
+                                        Forms\Components\TextInput::make('_ab_limit')
+                                            ->label('Număr carduri')
+                                            ->dehydrated(false)
+                                            ->live(onBlur: true)
+                                            ->numeric()
+                                            ->default(6)
+                                            ->minValue(1)
+                                            ->maxValue(24)
+                                            ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => $get('_ab_mode') !== 'manual'),
+
+                                        Forms\Components\Select::make('_ab_ids')
+                                            ->label('Activități alese (în ordine)')
+                                            ->dehydrated(false)
+                                            ->live()
+                                            ->multiple()
+                                            ->searchable()
+                                            ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => $get('_ab_mode') === 'manual')
+                                            ->options(function () use ($marketplace) {
+                                                try {
+                                                    return Activity::query()
+                                                        ->where('marketplace_client_id', $marketplace?->id)
+                                                        ->orderByDesc('id')
+                                                        ->limit(300)
+                                                        ->get(['id', 'title'])
+                                                        ->mapWithKeys(fn ($a) => [$a->id => static::transName($a->title, 'Activitate #' . $a->id)])
+                                                        ->all();
+                                                } catch (\Throwable $e) {
+                                                    return [];
+                                                }
+                                            }),
+
+                                        Forms\Components\Placeholder::make('_ab_shortcode')
+                                            ->label('Shortcode generat')
+                                            ->content(function (\Filament\Schemas\Components\Utilities\Get $get) {
+                                                $code = static::buildActivitiesShortcode($get);
+                                                $js = htmlspecialchars(json_encode($code), ENT_QUOTES, 'UTF-8');
+
+                                                return new HtmlString(
+                                                    '<div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;">'
+                                                    . '<code style="flex:1 1 100%;padding:.55rem .7rem;border-radius:.6rem;background:#1B1714;color:#F4EFE3;font-size:.8rem;word-break:break-all;">'
+                                                    . htmlspecialchars($code, ENT_QUOTES, 'UTF-8') . '</code>'
+                                                    . '<button type="button" onclick="navigator.clipboard.writeText(' . $js . ');this.textContent=\'Copiat!\';setTimeout(()=>this.textContent=\'Copiază shortcode\',1500);" '
+                                                    . 'style="flex:1 1 100%;padding:.55rem .9rem;border-radius:.6rem;background:#E84527;color:#fff;font-weight:600;border:0;cursor:pointer;">Copiază shortcode</button>'
+                                                    . '</div>'
+                                                    . '<p style="margin-top:.5rem;color:#7a7164;font-size:.78rem;">Lipește-l pe o linie separată în Content. Poți insera oricâte blocuri.</p>'
+                                                );
+                                            }),
+                                    ]),
+
                                 // Organization Section
                                 SC\Section::make('Organization')
                                     ->schema([
