@@ -2669,6 +2669,14 @@ const EventPage = {
                         slug: self.event.slug,
                         start_date: self.event.start_date || self.event.date,
                         start_time: self.event.start_time,
+                        // Forward the schedule shape so /cos can render a date
+                        // range for festivals instead of just the start day.
+                        duration_mode: self.event.duration_mode || null,
+                        end_date: self.event.end_date || null,
+                        range_start_date: self.event.range_start_date || null,
+                        range_end_date: self.event.range_end_date || null,
+                        range_start_time: self.event.range_start_time || null,
+                        range_end_time: self.event.range_end_time || null,
                         image: self.event.image,
                         venue: self.event.venue,
                         taxes: self.event.taxes || [],
@@ -4949,6 +4957,14 @@ const EventPage = {
             slug: self.event.slug,
             start_date: self.event.start_date || self.event.date,
             start_time: self.event.start_time,
+            // Forward the schedule shape so /cos can render a date range
+            // for festivals (mirrors the non-seated path above).
+            duration_mode: self.event.duration_mode || null,
+            end_date: self.event.end_date || null,
+            range_start_date: self.event.range_start_date || null,
+            range_end_date: self.event.range_end_date || null,
+            range_start_time: self.event.range_start_time || null,
+            range_end_time: self.event.range_end_time || null,
             image: self.event.image,
             venue: self.event.venue,
             taxes: self.event.taxes || [],

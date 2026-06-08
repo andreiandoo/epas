@@ -228,7 +228,11 @@ const CartPage = {
 
         const hasDiscount = originalPrice && originalPrice > price;
         const discountPercent = hasDiscount ? Math.round((1 - price / originalPrice) * 100) : 0;
-        const formattedDate = eventDate ? AmbiletUtils.formatDate(eventDate, 'medium') : '';
+        // For festivals/ranges (duration_mode=range or explicit end_date that
+        // differs from start), render "10 - 12 Iun 2026" instead of just the
+        // start. Performance-specific dates still win (single slot picked from
+        // a multi-day event must show the picked slot).
+        const formattedDate = this.formatItemDate(item, eventDate);
 
         // Calculate commission - price is always base price
         let commissionAmount = 0;
@@ -628,6 +632,52 @@ const CartPage = {
         pointsEl.classList.remove('points-animation');
         void pointsEl.offsetWidth; // Force reflow
         pointsEl.classList.add('points-animation');
+    },
+
+    /**
+     * Format an event date for the cart row, honouring festival/range
+     * shape ("10 - 12 Iun 2026") when the cart item carries range_*/end_date
+     * info. Performance-specific dates (multi-day with a single picked slot)
+     * keep using the existing single-date renderer because the buyer chose a
+     * specific date — showing the whole range would be misleading.
+     */
+    formatItemDate(item, fallbackDate) {
+        if (item && item.event && item.event.performance_date) {
+            return AmbiletUtils.formatDate(item.event.performance_date, 'medium');
+        }
+        const ev = item && item.event ? item.event : {};
+        const rangeStart = ev.range_start_date || ev.date;
+        const rangeEnd = ev.range_end_date || (ev.end_date && ev.end_date !== ev.date ? ev.end_date : null);
+        const isRange = ev.duration_mode === 'range' || (rangeEnd && rangeEnd !== rangeStart);
+        if (isRange && rangeStart && rangeEnd) {
+            return this._formatRange(rangeStart, rangeEnd);
+        }
+        return fallbackDate ? AmbiletUtils.formatDate(fallbackDate, 'medium') : '';
+    },
+
+    _formatRange(startIso, endIso) {
+        const MONTHS = ['Ian', 'Feb', 'Mar', 'Apr', 'Mai', 'Iun', 'Iul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const toDate = (v) => {
+            if (!v) return null;
+            // Plain YYYY-MM-DD must parse as local midnight; bare new Date(str)
+            // would coerce it to UTC and shift the displayed day on negative
+            // offsets.
+            if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return new Date(v + 'T00:00:00');
+            const d = new Date(v);
+            return isNaN(d) ? null : d;
+        };
+        const s = toDate(startIso);
+        const e = toDate(endIso);
+        if (!s || !e) return AmbiletUtils.formatDate(startIso || endIso, 'medium');
+        const sameMonth = s.getMonth() === e.getMonth() && s.getFullYear() === e.getFullYear();
+        const sameYear = s.getFullYear() === e.getFullYear();
+        if (sameMonth) {
+            return s.getDate() + ' - ' + e.getDate() + ' ' + MONTHS[e.getMonth()] + ' ' + e.getFullYear();
+        }
+        if (sameYear) {
+            return s.getDate() + ' ' + MONTHS[s.getMonth()] + ' - ' + e.getDate() + ' ' + MONTHS[e.getMonth()] + ' ' + e.getFullYear();
+        }
+        return s.getDate() + ' ' + MONTHS[s.getMonth()] + ' ' + s.getFullYear() + ' - ' + e.getDate() + ' ' + MONTHS[e.getMonth()] + ' ' + e.getFullYear();
     },
 
     /**

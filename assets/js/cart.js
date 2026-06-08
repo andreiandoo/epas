@@ -91,6 +91,16 @@ const AmbiletCart = {
                     slug: eventData.slug,
                     date: eventData.start_date,
                     time: eventData.start_time,
+                    // Persist enough of the schedule shape that the cart page
+                    // can render a date RANGE (festival "10 - 12 Iun 2026"),
+                    // not just the start date. Without these, /cos rendered
+                    // only `date` and dropped the end.
+                    duration_mode: eventData.duration_mode || null,
+                    end_date: eventData.end_date || null,
+                    range_start_date: eventData.range_start_date || null,
+                    range_end_date: eventData.range_end_date || null,
+                    range_start_time: eventData.range_start_time || null,
+                    range_end_time: eventData.range_end_time || null,
                     image: eventData.image || eventData.featured_image,
                     venue: eventData.venue,
                     city: eventData.venue?.city,
