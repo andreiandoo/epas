@@ -83,14 +83,38 @@ class PayoutsRecomputeDiscounts extends Command
                     $ttId = (int) ($item['ticket_type_id'] ?? 0);
                     $qty = (int) ($item['quantity'] ?? $item['qty'] ?? 0);
                     $price = (float) ($item['price'] ?? $item['unit_price'] ?? 0);
+                    $commPer = (float) ($item['commission_per_ticket'] ?? 0);
+                    $mode = $item['commission_mode'] ?? null;
                     $oldDisc = (float) ($item['discount'] ?? 0);
+                    $oldNet = (float) ($item['net'] ?? 0);
                     $newDisc = round((float) ($newDiscountByType[$ttId] ?? 0), 2);
 
                     if (abs($oldDisc - $newDisc) > 0.005) {
                         $changedRow = true;
                     }
 
+                    // Per-row stored fields the ViewPayout table reads directly.
+                    // Update net so the page recalculates the same way the
+                    // creation path did: net = gross − commission − discount.
+                    // gross + commission_amount stay as the creation snapshot;
+                    // qty / price haven't changed, so the formula's other
+                    // inputs are stable.
+                    $isOnTop = in_array($mode, ['added_on_top', 'on_top'], true);
+                    $rowGross = $qty * $price + ($isOnTop ? $qty * $commPer : 0);
+                    $rowComm = $qty * $commPer;
+                    $rowNet = round($rowGross - $rowComm - $newDisc, 2);
+
+                    if (abs($oldNet - $rowNet) > 0.005) {
+                        $changedRow = true;
+                    }
+
                     $item['discount'] = $newDisc;
+                    $item['net'] = $rowNet;
+                    // Refresh gross + commission_amount too so they're not
+                    // a stale legacy snapshot when the per-row values diverge
+                    // from the formula (rare, but covers any drift).
+                    $item['gross'] = round($rowGross, 2);
+                    $item['commission_amount'] = round($rowComm, 2);
                     $newBd[] = $item;
 
                     if ($qty > 0 && $price > 0) {
