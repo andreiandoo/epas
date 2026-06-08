@@ -1925,7 +1925,7 @@ class MarketplaceTaxTemplate extends Model
             // alongside their respective values.
             // getVariablesForContext() is static — helpers must be called
             // via self:: too. The earlier $this-> calls blew up at 1909.
-            $variables['sales_breakdown_rows'] = self::buildPayoutSalesBreakdownRows($payout, $ticketBreakdown, $posTypeIdsSet, $vatAmount, $formatPrice);
+            $variables['sales_breakdown_rows'] = self::buildPayoutSalesBreakdownRows($payout, $ticketBreakdown, $posTypeIdsSet, $vatAmount, $formatPrice, $totalDiscountAmount);
             $variables['refund_breakdown_rows'] = self::buildPayoutRefundBreakdownRows($payout, $formatPrice);
 
             // Preprinted tickets (physical tickets sent by courier)
@@ -2010,7 +2010,7 @@ class MarketplaceTaxTemplate extends Model
      * @param array<int, array<string, mixed>> $ticketBreakdown
      * @param array<int, mixed> $posTypeIdsSet
      */
-    private static function buildPayoutSalesBreakdownRows(MarketplacePayout $payout, array $ticketBreakdown, array $posTypeIdsSet, float $vatAmount, callable $formatPrice): string
+    private static function buildPayoutSalesBreakdownRows(MarketplacePayout $payout, array $ticketBreakdown, array $posTypeIdsSet, float $vatAmount, callable $formatPrice, float $totalDiscountAmount = 0.0): string
     {
         // Expand each saved breakdown row by its `tiers` field when present.
         // buildBreakdownFromSelection writes one tier per distinct paid price
@@ -2080,6 +2080,36 @@ class MarketplaceTaxTemplate extends Model
 
         if (empty($groups)) return '';
 
+        // Distribute the period's discount across groups proportionally to
+        // each group's gross. Without this, row 1a stays at gross while the
+        // final payable (row E) is reduced — and the template's
+        // "A = 1a + 3a" math no longer adds up. Per-tier breakdowns already
+        // encode each effective price tier (so promo-reduced rows show as
+        // their own 50lei*X part), but legacy / non-tier payouts lose the
+        // discount unless we subtract it here. Last group absorbs any
+        // rounding leftover so the sum stays exact.
+        $totalGross = 0.0;
+        foreach ($groups as $g) {
+            $totalGross += $g['amount'];
+        }
+        $remainingDiscount = $totalDiscountAmount;
+        $groupKeys = array_keys($groups);
+        $lastKey = $groupKeys ? end($groupKeys) : null;
+        foreach ($groupKeys as $key) {
+            if ($totalDiscountAmount > 0 && $totalGross > 0) {
+                if ($key === $lastKey) {
+                    $groups[$key]['discount'] = max(0.0, $remainingDiscount);
+                } else {
+                    $share = $groups[$key]['amount'] / $totalGross;
+                    $deduct = round($totalDiscountAmount * $share, 2);
+                    $groups[$key]['discount'] = $deduct;
+                    $remainingDiscount -= $deduct;
+                }
+            } else {
+                $groups[$key]['discount'] = 0.0;
+            }
+        }
+
         $letterPairs = [['a','b'], ['c','d'], ['e','f'], ['g','h'], ['i','j']];
         $html = '';
         $idx = 0;
@@ -2092,7 +2122,9 @@ class MarketplaceTaxTemplate extends Model
                     ? 'adăugată la prețul biletului'
                     : 'inclusă în prețul biletului') . '): ' . $rateLabel
                 : '';
-            $amountStr = number_format($g['amount'], 2);
+            $groupDiscount = (float) ($g['discount'] ?? 0);
+            $netGroupAmount = max(0.0, $g['amount'] - $groupDiscount);
+            $amountStr = number_format($netGroupAmount, 2);
             $vatStr = number_format($vatAmount, 2);
             $listLabel = !empty($g['priceParts'])
                 ? ' (' . implode('+', $g['priceParts']) . ')'
@@ -2102,10 +2134,20 @@ class MarketplaceTaxTemplate extends Model
             // red rate value — keeps the row label hierarchy obvious.
             $taxNoteHtml = self::commissionLabelHtml($rateLabel, $mode, 'sale');
 
+            // Discount annotation — only when something was deducted. Sits
+            // on the SAME label cell as the tax note, smaller + gray, so
+            // the operator immediately sees why the value isn't gross *
+            // qty. The breakdown at 1b still shows catalog prices because
+            // that reflects the saved ticket_breakdown faithfully.
+            $discountNoteHtml = $groupDiscount > 0
+                ? ' <span style="font-size:6pt; color:#777;">(brut: ' . number_format($g['amount'], 2)
+                    . ' lei − reducere: ' . number_format($groupDiscount, 2) . ' lei)</span>'
+                : '';
+
             // Value row (1a / 1c / 1e ...).
             $html .= '<tr style="background:#fafafa;">'
                 . '<td style="border:1px solid #ddd; padding:2px 5px; text-align:center; color:#888; font-size:6.5pt;">1' . $valueLetter . '</td>'
-                . '<td style="border:1px solid #ddd; padding:2px 5px; padding-left:6px;">Valoare bilete v&#xe2;ndute' . $taxNoteHtml . '</td>'
+                . '<td style="border:1px solid #ddd; padding:2px 5px; padding-left:6px;">Valoare bilete v&#xe2;ndute' . $taxNoteHtml . $discountNoteHtml . '</td>'
                 . '<td style="border:1px solid #ddd; padding:2px 5px; text-align:center; color:#555;">lei</td>'
                 . '<td style="border:1px solid #ddd; padding:2px 5px; text-align:right; font-weight:bold;">' . $amountStr . '</td>'
                 . '<td style="border:1px solid #ddd; padding:2px 5px; text-align:center; color:#555;">' . $vatStr . '</td>'
