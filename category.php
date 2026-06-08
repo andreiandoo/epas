@@ -466,13 +466,13 @@ include __DIR__ . '/includes/header.php';
     <div class="absolute -z-10 -top-28 -right-32 w-[520px] h-[520px] rounded-full <?= $ac['bg'] ?>/10 blur-3xl" aria-hidden="true"></div>
     <div class="absolute inset-0 -z-10 opacity-[.3] bg-ruled-vertical" aria-hidden="true"></div>
 
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 pt-7 pb-12 lg:pb-16">
+    <div class="px-4 pb-12 mx-auto max-w-7xl sm:px-6 pt-7 lg:pb-16">
         <!-- breadcrumb -->
-        <nav aria-label="breadcrumb" class="flex flex-wrap items-center gap-2 text-sm text-ink-soft font-mono mb-8">
+        <nav aria-label="breadcrumb" class="flex flex-wrap items-center gap-2 mb-8 font-mono text-sm text-ink-soft">
             <?php foreach ($breadcrumbs as $i => $bc): ?>
                 <?php if ($i > 0): ?><span class="opacity-40">/</span><?php endif; ?>
                 <?php if ($i < count($breadcrumbs) - 1): ?>
-                    <a href="<?= htmlspecialchars($bc['url'], ENT_QUOTES) ?>" class="hover:text-vermilion transition"><?= htmlspecialchars($bc['name']) ?></a>
+                    <a href="<?= htmlspecialchars($bc['url'], ENT_QUOTES) ?>" class="transition hover:text-vermilion"><?= htmlspecialchars($bc['name']) ?></a>
                 <?php else: ?>
                     <span class="text-ink font-600"><?= htmlspecialchars($bc['name']) ?></span>
                 <?php endif; ?>
@@ -486,12 +486,12 @@ include __DIR__ . '/includes/header.php';
                 </div>
 
                 <h1 class="font-display text-[clamp(2.6rem,6vw,4.6rem)] font-700 leading-[0.92]">
-                    <?php if ($catIcon): ?><span class="inline-block align-middle mr-2"><?= htmlspecialchars($catIcon) ?></span><?php endif; ?>
+                    <?php if ($catIcon): ?><span class="inline-block mr-2 align-middle"><?= htmlspecialchars($catIcon) ?></span><?php endif; ?>
                     <?= htmlspecialchars($catName) ?><br>
                     <span class="ital <?= $ac['text'] ?>">în <?= htmlspecialchars($heroLocation) ?></span>
                 </h1>
 
-                <p class="mt-6 text-lg text-ink-soft max-w-2xl leading-relaxed">
+                <p class="max-w-2xl mt-6 text-lg leading-relaxed text-ink-soft">
                     <?php if ($catDescription): ?>
                         <?= htmlspecialchars($catDescription) ?>
                     <?php else: ?>
@@ -500,20 +500,20 @@ include __DIR__ . '/includes/header.php';
                 </p>
 
                 <!-- mini stats -->
-                <div class="mt-8 flex flex-wrap gap-3">
+                <div class="flex flex-wrap gap-3 mt-8">
                     <div class="ticket bg-paper border-2 border-ink rounded-xl px-4 py-2.5" style="--perf:100%">
-                        <p class="font-display text-2xl font-700 leading-none"><?= (int) ($pagination['total'] ?? $eventCount) ?></p>
+                        <p class="text-2xl leading-none font-display font-700"><?= (int) ($pagination['total'] ?? $eventCount) ?></p>
                         <p class="font-mono text-[10px] text-ink-soft mt-1">ACTIVITĂȚI</p>
                     </div>
                     <?php if (!empty($children)): ?>
                     <div class="ticket bg-paper border-2 border-ink rounded-xl px-4 py-2.5" style="--perf:100%">
-                        <p class="font-display text-2xl font-700 leading-none"><?= count($children) ?></p>
+                        <p class="text-2xl leading-none font-display font-700"><?= count($children) ?></p>
                         <p class="font-mono text-[10px] text-ink-soft mt-1">SUBCATEGORII</p>
                     </div>
                     <?php endif; ?>
                     <?php if (!empty($featuredCities)): ?>
                     <div class="ticket bg-paper border-2 border-ink rounded-xl px-4 py-2.5" style="--perf:100%">
-                        <p class="font-display text-2xl font-700 leading-none"><?= count($featuredCities) ?>+</p>
+                        <p class="text-2xl leading-none font-display font-700"><?= count($featuredCities) ?>+</p>
                         <p class="font-mono text-[10px] text-ink-soft mt-1">ORAȘE</p>
                     </div>
                     <?php endif; ?>
@@ -521,20 +521,20 @@ include __DIR__ . '/includes/header.php';
             </div>
 
             <!-- decorative ticket (uses admin color + emoji) -->
-            <div class="hidden lg:block relative h-72" aria-hidden="true">
+            <div class="relative hidden lg:block h-72" aria-hidden="true">
                 <div class="ticket ticket-lift absolute right-4 top-2 w-[80%] rotate-6 bg-ink text-paper rounded-2xl overflow-hidden border-2 border-ink shadow-2xl" style="--perf:72%; --punch:#1B1714">
                     <div class="duotone h-32 relative overflow-hidden bg-gradient-to-br <?= $ac['gradient'] ?> <?= $ac['text'] ?>">
                         <?php if (!empty($catImage)): ?>
-                            <img src="<?= htmlspecialchars(str_starts_with($catImage, 'http') ? $catImage : STORAGE_URL . '/' . ltrim($catImage, '/'), ENT_QUOTES) ?>" alt="<?= htmlspecialchars($catName, ENT_QUOTES) ?>" loading="lazy" class="absolute inset-0 w-full h-full object-cover" />
+                            <img src="<?= htmlspecialchars(str_starts_with($catImage, 'http') ? $catImage : STORAGE_URL . '/' . ltrim($catImage, '/'), ENT_QUOTES) ?>" alt="<?= htmlspecialchars($catName, ENT_QUOTES) ?>" loading="lazy" class="absolute inset-0 object-cover w-full h-full" />
                         <?php endif; ?>
                         <div class="grid-tex"></div>
                         <span class="stamp absolute top-4 left-4 text-paper/80 px-3 py-1 text-[10px] font-mono -rotate-6"><?= htmlspecialchars(strtoupper($catName)) ?></span>
-                        <?php if (empty($catImage)): ?><span class="absolute right-5 bottom-2 text-5xl opacity-30"><?= htmlspecialchars($catIcon) ?></span><?php endif; ?>
+                        <?php if (empty($catImage)): ?><span class="absolute text-5xl right-5 bottom-2 opacity-30"><?= htmlspecialchars($catIcon) ?></span><?php endif; ?>
                     </div>
                     <div class="p-5">
                         <p class="font-mono text-[10px] text-paper/50">ADMIT ONE · QR</p>
-                        <h3 class="font-display text-xl font-700 mt-1">bilete.online</h3>
-                        <div class="mt-3 flex items-center justify-between">
+                        <h3 class="mt-1 text-xl font-display font-700">bilete.online</h3>
+                        <div class="flex items-center justify-between mt-3">
                             <span class="font-mono text-xs text-paper/60">VALABIL TOT ANUL</span>
                             <span class="px-3 py-1.5 rounded-full <?= $ac['bg'] ?> text-paper text-xs font-600">Rezervă</span>
                         </div>
@@ -548,15 +548,15 @@ include __DIR__ . '/includes/header.php';
 
 <!-- ============================== SUBCATEGORII (prominent grid) ============================== -->
 <?php if (!empty($children)): ?>
-<section class="max-w-7xl mx-auto px-4 sm:px-6 pt-10 pb-2">
+<section class="px-4 pt-10 pb-2 mx-auto max-w-7xl sm:px-6">
     <div class="flex items-end justify-between gap-6 mb-6">
         <div>
             <p class="font-mono text-xs tracking-[.2em] <?= $ac['text'] ?> mb-2">SUBCATEGORII</p>
-            <h2 class="font-display text-2xl sm:text-3xl font-700 leading-tight">Alege tipul de <?= htmlspecialchars(mb_strtolower($catName)) ?></h2>
+            <h2 class="text-2xl leading-tight font-display sm:text-3xl font-700">Alege tipul de <?= htmlspecialchars(mb_strtolower($catName)) ?></h2>
         </div>
-        <p class="hidden sm:block font-mono text-xs text-ink-soft"><?= count($children) ?> opțiuni</p>
+        <p class="hidden font-mono text-xs sm:block text-ink-soft"><?= count($children) ?> opțiuni</p>
     </div>
-    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+    <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
         <?php foreach ($children as $child):
             $childName = navFlatName($child['name'] ?? '');
             $childSlug = $child['slug'] ?? '';
@@ -572,8 +572,8 @@ include __DIR__ . '/includes/header.php';
                         <?= htmlspecialchars(mb_substr($childName, 0, 1)) ?>
                     </span>
                 <?php endif; ?>
-                <div class="min-w-0 flex-1">
-                    <p class="font-600 text-sm leading-tight truncate"><?= htmlspecialchars($childName) ?></p>
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm leading-tight truncate font-600"><?= htmlspecialchars($childName) ?></p>
                     <?php if ($childCount > 0): ?>
                         <p class="text-xs text-ink-soft mt-0.5"><?= $childCount ?> <?= $childCount === 1 ? 'activitate' : 'activități' ?></p>
                     <?php else: ?>
@@ -591,8 +591,8 @@ include __DIR__ . '/includes/header.php';
 
     <!-- Sticky top filter bar -->
     <div class="sticky top-[72px] z-40 border-b border-ink/10 bg-paper/95 backdrop-blur-xl">
-        <div class="mx-auto max-w-7xl px-4 sm:px-6 py-3">
-            <div class="flex items-center gap-2 overflow-x-auto pb-1">
+        <div class="px-4 py-3 mx-auto max-w-7xl sm:px-6">
+            <div class="flex items-center gap-2 pb-1 overflow-x-auto">
                 <button @click="openMap()" class="shrink-0 rounded-full border-2 border-ink bg-ink px-4 py-2.5 text-sm font-bold text-paper transition hover:bg-vermilion">Map view</button>
                 <button @click="filtersModal=true" class="shrink-0 rounded-full border-2 border-ink bg-paper px-4 py-2.5 text-sm font-bold transition hover:bg-ink hover:text-paper">Filtre <span x-show="activeFilterCount()" class="ml-1 rounded-full bg-vermilion px-2 py-0.5 text-xs text-paper" x-text="activeFilterCount()"></span></button>
                 <template x-for="b in topButtons()" :key="b.key">
@@ -606,75 +606,75 @@ include __DIR__ . '/includes/header.php';
                 <div class="flex items-start justify-between gap-4">
                     <div>
                         <p class="font-mono text-xs tracking-[.18em] text-ink-soft" x-text="topFilterMeta().kicker"></p>
-                        <h3 class="font-display text-4xl font-bold leading-none" x-text="topFilterMeta().title"></h3>
+                        <h3 class="text-4xl font-bold leading-none font-display" x-text="topFilterMeta().title"></h3>
                     </div>
-                    <button @click="topFilterOpen=null" class="grid h-10 w-10 place-items-center rounded-full bg-ink text-xl font-bold text-paper">×</button>
+                    <button @click="topFilterOpen=null" class="grid w-10 h-10 text-xl font-bold rounded-full place-items-center bg-ink text-paper">×</button>
                 </div>
                 <div class="mt-5">
                     <template x-if="topFilterOpen==='search'">
-                        <input x-ref="searchInput" x-model="filters.search" class="w-full rounded-2xl border-2 border-ink/15 bg-paper px-4 py-3 font-bold outline-none focus:border-vermilion" placeholder="Caută după nume, locație, temă..." />
+                        <input x-ref="searchInput" x-model="filters.search" class="w-full px-4 py-3 font-bold border-2 outline-none rounded-2xl border-ink/15 bg-paper focus:border-vermilion" placeholder="Caută după nume, locație, temă..." />
                     </template>
                     <template x-if="topFilterOpen==='price'">
                         <div>
                             <div class="flex items-center justify-between"><span class="font-bold">Preț maxim</span><strong x-text="formatMoney(filters.maxPrice)"></strong></div>
-                            <input type="range" min="0" :max="priceCap" step="10" x-model.number="filters.maxPrice" class="mt-4 w-full" style="accent-color:#E84527">
-                            <div class="mt-2 flex justify-between text-xs font-bold text-ink-soft"><span>0 lei</span><span x-text="formatMoney(priceCap)"></span></div>
+                            <input type="range" min="0" :max="priceCap" step="10" x-model.number="filters.maxPrice" class="w-full mt-4" style="accent-color:#E84527">
+                            <div class="flex justify-between mt-2 text-xs font-bold text-ink-soft"><span>0 lei</span><span x-text="formatMoney(priceCap)"></span></div>
                         </div>
                     </template>
                     <template x-if="topFilterOpen==='duration'">
                         <div class="grid gap-2 sm:grid-cols-3">
                             <template x-for="o in durationOptions" :key="o.value">
-                                <label class="flex cursor-pointer items-center gap-3 rounded-2xl bg-paper-2 px-4 py-3 font-bold hover:bg-paper"><input type="checkbox" :value="o.value" x-model="filters.durations" class="h-5 w-5" style="accent-color:#E84527"><span x-text="o.label"></span></label>
+                                <label class="flex items-center gap-3 px-4 py-3 font-bold cursor-pointer rounded-2xl bg-paper-2 hover:bg-paper"><input type="checkbox" :value="o.value" x-model="filters.durations" class="w-5 h-5" style="accent-color:#E84527"><span x-text="o.label"></span></label>
                             </template>
                         </div>
                     </template>
                     <template x-if="topFilterOpen==='languages'">
                         <div class="grid gap-2 sm:grid-cols-3">
                             <template x-for="o in languageOptions" :key="o.value">
-                                <label class="flex cursor-pointer items-center gap-3 rounded-2xl bg-paper-2 px-4 py-3 font-bold hover:bg-paper"><input type="checkbox" :value="o.value" x-model="filters.languages" class="h-5 w-5" style="accent-color:#E84527"><span x-text="o.label"></span></label>
+                                <label class="flex items-center gap-3 px-4 py-3 font-bold cursor-pointer rounded-2xl bg-paper-2 hover:bg-paper"><input type="checkbox" :value="o.value" x-model="filters.languages" class="w-5 h-5" style="accent-color:#E84527"><span x-text="o.label"></span></label>
                             </template>
                         </div>
                     </template>
                     <template x-if="topFilterOpen==='features'">
                         <div class="grid gap-2 sm:grid-cols-2">
                             <template x-for="o in featureOptions" :key="o.value">
-                                <label class="flex cursor-pointer items-center gap-3 rounded-2xl bg-paper-2 px-4 py-3 font-bold hover:bg-paper"><input type="checkbox" :value="o.value" x-model="filters.features" class="h-5 w-5" style="accent-color:#E84527"><span x-text="o.label"></span></label>
+                                <label class="flex items-center gap-3 px-4 py-3 font-bold cursor-pointer rounded-2xl bg-paper-2 hover:bg-paper"><input type="checkbox" :value="o.value" x-model="filters.features" class="w-5 h-5" style="accent-color:#E84527"><span x-text="o.label"></span></label>
                             </template>
                         </div>
                     </template>
                     <template x-if="topFilterOpen==='interests'">
                         <div class="grid gap-2 sm:grid-cols-2">
                             <template x-for="o in interestOptions" :key="o.value">
-                                <label class="flex cursor-pointer items-center gap-3 rounded-2xl bg-paper-2 px-4 py-3 font-bold hover:bg-paper"><input type="checkbox" :value="o.value" x-model="filters.interests" class="h-5 w-5" style="accent-color:#E84527"><span x-text="o.label"></span></label>
+                                <label class="flex items-center gap-3 px-4 py-3 font-bold cursor-pointer rounded-2xl bg-paper-2 hover:bg-paper"><input type="checkbox" :value="o.value" x-model="filters.interests" class="w-5 h-5" style="accent-color:#E84527"><span x-text="o.label"></span></label>
                             </template>
                         </div>
                     </template>
                     <template x-if="topFilterOpen==='traveler'">
                         <div class="grid gap-2 sm:grid-cols-2">
                             <template x-for="o in travelerOptions" :key="o.value">
-                                <label class="flex cursor-pointer items-center gap-3 rounded-2xl bg-paper-2 px-4 py-3 font-bold hover:bg-paper"><input type="checkbox" :value="o.value" x-model="filters.travelerTypes" class="h-5 w-5" style="accent-color:#E84527"><span x-text="o.label"></span></label>
+                                <label class="flex items-center gap-3 px-4 py-3 font-bold cursor-pointer rounded-2xl bg-paper-2 hover:bg-paper"><input type="checkbox" :value="o.value" x-model="filters.travelerTypes" class="w-5 h-5" style="accent-color:#E84527"><span x-text="o.label"></span></label>
                             </template>
                         </div>
                     </template>
                 </div>
-                <div class="mt-5 flex items-center justify-between gap-3 border-t border-ink/10 pt-4">
-                    <button @click="clearTopFilter()" class="rounded-full border-2 border-ink px-5 py-3 font-bold hover:bg-ink hover:text-paper">Curăță</button>
-                    <button @click="topFilterOpen=null" class="rounded-full bg-vermilion px-5 py-3 font-bold text-paper hover:bg-vermilion-d">Aplică</button>
+                <div class="flex items-center justify-between gap-3 pt-4 mt-5 border-t border-ink/10">
+                    <button @click="clearTopFilter()" class="px-5 py-3 font-bold border-2 rounded-full border-ink hover:bg-ink hover:text-paper">Curăță</button>
+                    <button @click="topFilterOpen=null" class="px-5 py-3 font-bold rounded-full bg-vermilion text-paper hover:bg-vermilion-d">Aplică</button>
                 </div>
             </div>
         </div>
     </div>
 
     <!-- Results -->
-    <div class="mx-auto max-w-7xl px-4 sm:px-6 py-8 lg:py-10">
-        <div class="mb-5 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+    <div class="px-4 py-8 mx-auto max-w-7xl sm:px-6 lg:py-10">
+        <div class="flex flex-col gap-4 mb-5 lg:flex-row lg:items-end lg:justify-between">
             <div>
-                <p class="font-display text-5xl font-bold leading-none"><span x-text="filteredActivities().length"></span> rezultate</p>
+                <p class="text-5xl font-bold leading-none font-display"><span x-text="filteredActivities().length"></span> rezultate</p>
                 <p class="mt-2 text-ink-soft">Activitățile sunt ordonate după relevanță, rating și disponibilitate.</p>
             </div>
-            <label class="flex max-w-sm items-center gap-2">
+            <label class="flex items-center max-w-sm gap-2">
                 <span class="text-sm font-bold text-ink-soft">Sortare</span>
-                <select class="rounded-2xl border-2 border-ink/15 bg-paper px-4 py-3 font-bold outline-none focus:border-vermilion" x-model="sortBy">
+                <select class="px-4 py-3 font-bold border-2 outline-none rounded-2xl border-ink/15 bg-paper focus:border-vermilion" x-model="sortBy">
                     <option value="recommended">Recomandate</option>
                     <option value="rating" x-show="hasRatings">Rating</option>
                     <option value="priceAsc">Preț crescător</option>
@@ -684,9 +684,9 @@ include __DIR__ . '/includes/header.php';
             </label>
         </div>
 
-        <div class="mb-6 flex flex-wrap gap-2" x-show="activeChips().length" x-cloak>
+        <div class="flex flex-wrap gap-2 mb-6" x-show="activeChips().length" x-cloak>
             <template x-for="chip in activeChips()" :key="chip.key">
-                <button @click="removeChip(chip)" class="rounded-full bg-ink px-4 py-2 text-sm font-bold text-paper"><span x-text="chip.label"></span> ×</button>
+                <button @click="removeChip(chip)" class="px-4 py-2 text-sm font-bold rounded-full bg-ink text-paper"><span x-text="chip.label"></span> ×</button>
             </template>
         </div>
 
@@ -695,21 +695,21 @@ include __DIR__ . '/includes/header.php';
                 <article class="group overflow-hidden rounded-[2rem] border-2 border-ink bg-paper shadow-deep transition hover:-translate-y-0.5">
                     <div class="grid md:grid-cols-[290px_1fr]">
                         <a :href="activity.href" class="relative block min-h-[230px] overflow-hidden bg-ink">
-                            <img x-show="activity.image" :src="activity.image" :alt="activity.title" class="h-full w-full object-cover transition duration-500 group-hover:scale-105" loading="lazy">
+                            <img x-show="activity.image" :src="activity.image" :alt="activity.title" class="object-cover w-full h-full transition duration-500 group-hover:scale-105" loading="lazy">
                             <div x-show="!activity.image" class="grid h-full place-items-center bg-gradient-to-br from-vermilion to-vermilion-d"><span class="text-5xl opacity-40">🎫</span></div>
-                            <div class="absolute left-4 top-4 flex flex-wrap gap-2">
-                                <template x-for="badge in activity.badges" :key="badge"><span class="rounded-full bg-paper px-3 py-1 text-xs font-bold text-ink" x-text="badge"></span></template>
+                            <div class="absolute flex flex-wrap gap-2 left-4 top-4">
+                                <template x-for="badge in activity.badges" :key="badge"><span class="px-3 py-1 text-xs font-bold rounded-full bg-paper text-ink" x-text="badge"></span></template>
                             </div>
-                            <button @click.prevent="activity.favorite=!activity.favorite" class="absolute right-4 top-4 grid h-10 w-10 place-items-center rounded-full bg-paper text-2xl text-ink"><span x-text="activity.favorite ? '♥' : '♡'"></span></button>
+                            <button @click.prevent="activity.favorite=!activity.favorite" class="absolute grid w-10 h-10 text-2xl rounded-full right-4 top-4 place-items-center bg-paper text-ink"><span x-text="activity.favorite ? '♥' : '♡'"></span></button>
                         </a>
                         <div class="grid gap-4 p-5 lg:grid-cols-[1fr_220px]">
                             <div>
                                 <div class="flex flex-wrap gap-2">
-                                    <span x-show="activity.category" class="rounded-full bg-paper-2 px-3 py-1 text-xs font-bold text-ink-soft" x-text="activity.category"></span>
+                                    <span x-show="activity.category" class="px-3 py-1 text-xs font-bold rounded-full bg-paper-2 text-ink-soft" x-text="activity.category"></span>
                                 </div>
-                                <a :href="activity.href" class="mt-3 block"><h3 class="font-display text-4xl font-bold leading-none group-hover:text-vermilion" x-text="activity.title"></h3></a>
+                                <a :href="activity.href" class="block mt-3"><h3 class="text-4xl font-bold leading-none font-display group-hover:text-vermilion" x-text="activity.title"></h3></a>
                                 <p x-show="activity.description" class="mt-3 text-ink-soft" x-text="activity.description"></p>
-                                <div class="mt-4 flex flex-wrap items-center gap-3 text-sm font-bold">
+                                <div class="flex flex-wrap items-center gap-3 mt-4 text-sm font-bold">
                                     <template x-if="activity.rating > 0"><span class="text-ochre">★★★★★</span></template>
                                     <span x-show="activity.rating > 0" x-text="activity.rating"></span>
                                     <span x-show="activity.reviews > 0" class="text-ink-soft" x-text="'(' + activity.reviews.toLocaleString('ro-RO') + ')'"></span>
@@ -718,17 +718,17 @@ include __DIR__ . '/includes/header.php';
                                     <span x-show="activity.durationLabel" class="text-ink-soft">·</span>
                                     <span x-show="activity.durationLabel" x-text="activity.durationLabel"></span>
                                 </div>
-                                <div class="mt-4 flex flex-wrap gap-2">
-                                    <template x-for="feature in activity.features" :key="feature"><span class="rounded-full bg-paper-2 px-3 py-1 text-xs font-bold text-ink-soft" x-text="featureLabel(feature)"></span></template>
+                                <div class="flex flex-wrap gap-2 mt-4">
+                                    <template x-for="feature in activity.features" :key="feature"><span class="px-3 py-1 text-xs font-bold rounded-full bg-paper-2 text-ink-soft" x-text="featureLabel(feature)"></span></template>
                                 </div>
                             </div>
-                            <aside class="flex flex-col justify-between rounded-3xl bg-paper-2 p-4">
+                            <aside class="flex flex-col justify-between p-4 rounded-3xl bg-paper-2">
                                 <div>
                                     <p class="text-sm font-bold text-ink-soft" x-show="activity.price">de la</p>
-                                    <p class="font-display text-4xl font-bold leading-none" x-text="activity.price ? formatMoney(activity.price) : 'Vezi preț'"></p>
-                                    <p x-show="activity.price" class="mt-3 rounded-2xl bg-mint px-3 py-2 text-sm font-bold text-forest" x-text="'+' + Math.floor(activity.price/5) + ' puncte bonus'"></p>
+                                    <p class="text-4xl font-bold leading-none font-display" x-text="activity.price ? formatMoney(activity.price) : 'Vezi preț'"></p>
+                                    <p x-show="activity.price" class="px-3 py-2 mt-3 text-sm font-bold rounded-2xl bg-mint text-forest" x-text="'+' + Math.floor(activity.price/5) + ' puncte bonus'"></p>
                                 </div>
-                                <a :href="activity.href" class="mt-4 rounded-full bg-vermilion px-5 py-3 text-center font-bold text-paper transition hover:bg-vermilion-d">Vezi bilete</a>
+                                <a :href="activity.href" class="px-5 py-3 mt-4 font-bold text-center transition rounded-full bg-vermilion text-paper hover:bg-vermilion-d">Vezi bilete</a>
                             </aside>
                         </div>
                     </div>
@@ -736,9 +736,9 @@ include __DIR__ . '/includes/header.php';
             </template>
 
             <div x-show="filteredActivities().length === 0" x-cloak class="rounded-[2rem] border-2 border-ink bg-paper p-8 text-center">
-                <p class="font-display text-5xl font-bold leading-none">Nu am găsit activități.</p>
+                <p class="text-5xl font-bold leading-none font-display">Nu am găsit activități.</p>
                 <p class="mt-3 text-ink-soft">Schimbă filtrele sau resetează căutarea.</p>
-                <button @click="resetFilters()" class="mt-5 rounded-full bg-vermilion px-6 py-4 font-bold text-paper">Resetează filtrele</button>
+                <button @click="resetFilters()" class="px-6 py-4 mt-5 font-bold rounded-full bg-vermilion text-paper">Resetează filtrele</button>
             </div>
         </div>
     </div>
@@ -746,91 +746,91 @@ include __DIR__ . '/includes/header.php';
     <!-- Filters modal -->
     <div x-show="filtersModal" x-cloak class="fixed inset-0 z-[90] bg-ink/70 p-3 backdrop-blur-sm sm:p-5" role="dialog" aria-modal="true" aria-label="Filtre activități">
         <div @click.outside="filtersModal=false" class="mx-auto flex max-h-[94vh] w-full max-w-5xl flex-col overflow-hidden rounded-[2rem] border-2 border-ink bg-paper shadow-deep">
-            <div class="flex items-start justify-between gap-4 border-b border-ink/10 p-5 sm:p-6">
+            <div class="flex items-start justify-between gap-4 p-5 border-b border-ink/10 sm:p-6">
                 <div>
                     <p class="font-mono text-xs tracking-[.18em] text-ink-soft">FILTRE</p>
-                    <h2 class="font-display text-5xl font-bold leading-none">Filtrează activitățile</h2>
+                    <h2 class="text-5xl font-bold leading-none font-display">Filtrează activitățile</h2>
                 </div>
-                <button @click="filtersModal=false" class="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-ink text-2xl font-bold text-paper">×</button>
+                <button @click="filtersModal=false" class="grid text-2xl font-bold rounded-full h-11 w-11 shrink-0 place-items-center bg-ink text-paper">×</button>
             </div>
             <div class="grid min-h-0 flex-1 overflow-auto lg:grid-cols-[260px_1fr]">
-                <aside class="border-b border-ink/10 bg-paper-2 p-4 lg:border-b-0 lg:border-r">
+                <aside class="p-4 border-b border-ink/10 bg-paper-2 lg:border-b-0 lg:border-r">
                     <template x-for="tab in modalTabs()" :key="tab.key">
-                        <button @click="modalTab=tab.key" :class="modalTab===tab.key ? 'bg-ink text-paper' : 'hover:bg-paper'" class="mt-1 flex w-full items-center justify-between rounded-2xl px-4 py-3 text-left font-bold transition"><span x-text="tab.label"></span><span x-show="tabHasValue(tab.key)" class="rounded-full bg-vermilion px-2 py-0.5 text-xs text-paper">•</span></button>
+                        <button @click="modalTab=tab.key" :class="modalTab===tab.key ? 'bg-ink text-paper' : 'hover:bg-paper'" class="flex items-center justify-between w-full px-4 py-3 mt-1 font-bold text-left transition rounded-2xl"><span x-text="tab.label"></span><span x-show="tabHasValue(tab.key)" class="rounded-full bg-vermilion px-2 py-0.5 text-xs text-paper">•</span></button>
                     </template>
                 </aside>
                 <section class="p-5 sm:p-6">
                     <div x-show="modalTab==='categories'">
-                        <h3 class="font-display text-4xl font-bold leading-none">Categorii</h3>
-                        <div class="mt-5 grid gap-2 sm:grid-cols-2">
+                        <h3 class="text-4xl font-bold leading-none font-display">Categorii</h3>
+                        <div class="grid gap-2 mt-5 sm:grid-cols-2">
                             <template x-for="o in categoryOptions" :key="o.value">
-                                <label class="flex cursor-pointer items-center gap-3 rounded-2xl bg-paper-2 px-4 py-3 font-bold hover:bg-paper"><input type="checkbox" :value="o.value" x-model="filters.categories" class="h-5 w-5" style="accent-color:#E84527"><span x-text="o.label"></span></label>
+                                <label class="flex items-center gap-3 px-4 py-3 font-bold cursor-pointer rounded-2xl bg-paper-2 hover:bg-paper"><input type="checkbox" :value="o.value" x-model="filters.categories" class="w-5 h-5" style="accent-color:#E84527"><span x-text="o.label"></span></label>
                             </template>
                         </div>
                     </div>
                     <div x-show="modalTab==='interests'">
-                        <h3 class="font-display text-4xl font-bold leading-none">Interese</h3>
+                        <h3 class="text-4xl font-bold leading-none font-display">Interese</h3>
                         <p class="mt-2 text-ink-soft">Alege atmosfera sau tema activității.</p>
-                        <div class="mt-5 grid gap-2 sm:grid-cols-2">
+                        <div class="grid gap-2 mt-5 sm:grid-cols-2">
                             <template x-for="o in interestOptions" :key="o.value">
-                                <label class="flex cursor-pointer items-center gap-3 rounded-2xl bg-paper-2 px-4 py-3 font-bold hover:bg-paper"><input type="checkbox" :value="o.value" x-model="filters.interests" class="h-5 w-5" style="accent-color:#E84527"><span x-text="o.label"></span></label>
+                                <label class="flex items-center gap-3 px-4 py-3 font-bold cursor-pointer rounded-2xl bg-paper-2 hover:bg-paper"><input type="checkbox" :value="o.value" x-model="filters.interests" class="w-5 h-5" style="accent-color:#E84527"><span x-text="o.label"></span></label>
                             </template>
                         </div>
                     </div>
                     <div x-show="modalTab==='traveler'">
-                        <h3 class="font-display text-4xl font-bold leading-none">Pentru cine</h3>
+                        <h3 class="text-4xl font-bold leading-none font-display">Pentru cine</h3>
                         <p class="mt-2 text-ink-soft">Cui i se potrivește activitatea.</p>
-                        <div class="mt-5 grid gap-2 sm:grid-cols-2">
+                        <div class="grid gap-2 mt-5 sm:grid-cols-2">
                             <template x-for="o in travelerOptions" :key="o.value">
-                                <label class="flex cursor-pointer items-center gap-3 rounded-2xl bg-paper-2 px-4 py-3 font-bold hover:bg-paper"><input type="checkbox" :value="o.value" x-model="filters.travelerTypes" class="h-5 w-5" style="accent-color:#E84527"><span x-text="o.label"></span></label>
+                                <label class="flex items-center gap-3 px-4 py-3 font-bold cursor-pointer rounded-2xl bg-paper-2 hover:bg-paper"><input type="checkbox" :value="o.value" x-model="filters.travelerTypes" class="w-5 h-5" style="accent-color:#E84527"><span x-text="o.label"></span></label>
                             </template>
                         </div>
                     </div>
                     <div x-show="modalTab==='price'">
-                        <h3 class="font-display text-4xl font-bold leading-none">Preț</h3>
-                        <div class="mt-6 rounded-3xl bg-paper-2 p-5">
+                        <h3 class="text-4xl font-bold leading-none font-display">Preț</h3>
+                        <div class="p-5 mt-6 rounded-3xl bg-paper-2">
                             <div class="flex items-center justify-between"><span class="font-bold">Preț maxim</span><strong x-text="formatMoney(filters.maxPrice)"></strong></div>
-                            <input type="range" min="0" :max="priceCap" step="10" x-model.number="filters.maxPrice" class="mt-5 w-full" style="accent-color:#E84527">
-                            <div class="mt-2 flex justify-between text-xs font-bold text-ink-soft"><span>0 lei</span><span x-text="formatMoney(priceCap)"></span></div>
+                            <input type="range" min="0" :max="priceCap" step="10" x-model.number="filters.maxPrice" class="w-full mt-5" style="accent-color:#E84527">
+                            <div class="flex justify-between mt-2 text-xs font-bold text-ink-soft"><span>0 lei</span><span x-text="formatMoney(priceCap)"></span></div>
                         </div>
                     </div>
                     <div x-show="modalTab==='languages'">
-                        <h3 class="font-display text-4xl font-bold leading-none">Limbă</h3>
-                        <div class="mt-5 grid gap-2 sm:grid-cols-3">
+                        <h3 class="text-4xl font-bold leading-none font-display">Limbă</h3>
+                        <div class="grid gap-2 mt-5 sm:grid-cols-3">
                             <template x-for="o in languageOptions" :key="o.value">
-                                <label class="flex cursor-pointer items-center gap-3 rounded-2xl bg-paper-2 px-4 py-3 font-bold hover:bg-paper"><input type="checkbox" :value="o.value" x-model="filters.languages" class="h-5 w-5" style="accent-color:#E84527"><span x-text="o.label"></span></label>
+                                <label class="flex items-center gap-3 px-4 py-3 font-bold cursor-pointer rounded-2xl bg-paper-2 hover:bg-paper"><input type="checkbox" :value="o.value" x-model="filters.languages" class="w-5 h-5" style="accent-color:#E84527"><span x-text="o.label"></span></label>
                             </template>
                         </div>
                     </div>
                     <div x-show="modalTab==='duration'">
-                        <h3 class="font-display text-4xl font-bold leading-none">Durată</h3>
-                        <div class="mt-5 grid gap-2 sm:grid-cols-3">
+                        <h3 class="text-4xl font-bold leading-none font-display">Durată</h3>
+                        <div class="grid gap-2 mt-5 sm:grid-cols-3">
                             <template x-for="o in durationOptions" :key="o.value">
-                                <label class="flex cursor-pointer items-center gap-3 rounded-2xl bg-paper-2 px-4 py-3 font-bold hover:bg-paper"><input type="checkbox" :value="o.value" x-model="filters.durations" class="h-5 w-5" style="accent-color:#E84527"><span x-text="o.label"></span></label>
+                                <label class="flex items-center gap-3 px-4 py-3 font-bold cursor-pointer rounded-2xl bg-paper-2 hover:bg-paper"><input type="checkbox" :value="o.value" x-model="filters.durations" class="w-5 h-5" style="accent-color:#E84527"><span x-text="o.label"></span></label>
                             </template>
                         </div>
                     </div>
                     <div x-show="modalTab==='features'">
-                        <h3 class="font-display text-4xl font-bold leading-none">Caracteristici</h3>
-                        <div class="mt-5 grid gap-2 sm:grid-cols-2">
+                        <h3 class="text-4xl font-bold leading-none font-display">Caracteristici</h3>
+                        <div class="grid gap-2 mt-5 sm:grid-cols-2">
                             <template x-for="o in featureOptions" :key="o.value">
-                                <label class="flex cursor-pointer items-center gap-3 rounded-2xl bg-paper-2 px-4 py-3 font-bold hover:bg-paper"><input type="checkbox" :value="o.value" x-model="filters.features" class="h-5 w-5" style="accent-color:#E84527"><span x-text="o.label"></span></label>
+                                <label class="flex items-center gap-3 px-4 py-3 font-bold cursor-pointer rounded-2xl bg-paper-2 hover:bg-paper"><input type="checkbox" :value="o.value" x-model="filters.features" class="w-5 h-5" style="accent-color:#E84527"><span x-text="o.label"></span></label>
                             </template>
                         </div>
                     </div>
                     <div x-show="modalTab==='rating'">
-                        <h3 class="font-display text-4xl font-bold leading-none">Rating minim</h3>
-                        <div class="mt-5 grid gap-2 sm:grid-cols-4">
+                        <h3 class="text-4xl font-bold leading-none font-display">Rating minim</h3>
+                        <div class="grid gap-2 mt-5 sm:grid-cols-4">
                             <template x-for="o in ratingOptions" :key="o.value">
-                                <button @click="filters.minRating=o.value" :class="filters.minRating===o.value ? 'bg-ink text-paper' : 'bg-paper-2'" class="rounded-2xl px-4 py-4 text-left font-bold hover:bg-ink hover:text-paper"><span class="block text-ochre">★★★★★</span><span x-text="o.label"></span></button>
+                                <button @click="filters.minRating=o.value" :class="filters.minRating===o.value ? 'bg-ink text-paper' : 'bg-paper-2'" class="px-4 py-4 font-bold text-left rounded-2xl hover:bg-ink hover:text-paper"><span class="block text-ochre">★★★★★</span><span x-text="o.label"></span></button>
                             </template>
                         </div>
                     </div>
                 </section>
             </div>
-            <div class="flex items-center justify-between gap-3 border-t border-ink/10 p-5 sm:p-6">
-                <button @click="resetFilters()" class="rounded-full border-2 border-ink px-5 py-3 font-bold hover:bg-ink hover:text-paper">Șterge tot</button>
-                <button @click="filtersModal=false" class="rounded-full bg-vermilion px-6 py-3 font-bold text-paper hover:bg-vermilion-d">Arată <span x-text="filteredActivities().length"></span> rezultate</button>
+            <div class="flex items-center justify-between gap-3 p-5 border-t border-ink/10 sm:p-6">
+                <button @click="resetFilters()" class="px-5 py-3 font-bold border-2 rounded-full border-ink hover:bg-ink hover:text-paper">Șterge tot</button>
+                <button @click="filtersModal=false" class="px-6 py-3 font-bold rounded-full bg-vermilion text-paper hover:bg-vermilion-d">Arată <span x-text="filteredActivities().length"></span> rezultate</button>
             </div>
         </div>
     </div>
@@ -838,31 +838,31 @@ include __DIR__ . '/includes/header.php';
     <!-- Map view modal -->
     <div x-show="mapOpen" x-cloak class="fixed inset-0 z-[95] bg-ink/80 p-2 backdrop-blur-sm sm:p-4" role="dialog" aria-modal="true" aria-label="Map view">
         <div @click.outside="mapOpen=false" class="mx-auto flex h-[96vh] max-w-[1700px] overflow-hidden rounded-[2rem] border-2 border-ink bg-paper shadow-deep">
-            <aside class="flex w-full flex-col border-r border-ink/10 lg:w-1/3">
-                <div class="border-b border-ink/10 p-4">
+            <aside class="flex flex-col w-full border-r border-ink/10 lg:w-1/3">
+                <div class="p-4 border-b border-ink/10">
                     <div class="flex items-start justify-between gap-4">
                         <div>
                             <p class="font-mono text-xs tracking-[.18em] text-ink-soft">MAP VIEW</p>
-                            <h2 class="font-display text-3xl font-bold leading-none"><?= htmlspecialchars($catName) ?><?= $cityFilter ? ' în ' . htmlspecialchars($heroLocation) : '' ?></h2>
+                            <h2 class="text-3xl font-bold leading-none font-display"><?= htmlspecialchars($catName) ?><?= $cityFilter ? ' în ' . htmlspecialchars($heroLocation) : '' ?></h2>
                             <p class="mt-1 text-sm text-ink-soft"><span x-text="filteredActivities().length"></span> rezultate pe hartă</p>
                         </div>
-                        <button @click="mapOpen=false" class="grid h-10 w-10 place-items-center rounded-full bg-ink text-xl font-bold text-paper">×</button>
+                        <button @click="mapOpen=false" class="grid w-10 h-10 text-xl font-bold rounded-full place-items-center bg-ink text-paper">×</button>
                     </div>
-                    <div class="mt-4 flex gap-2 overflow-x-auto pb-1">
-                        <button @click="filtersModal=true" class="shrink-0 rounded-full bg-ink px-4 py-2 text-sm font-bold text-paper">Filtre</button>
-                        <button @click="openTopFilter('price')" class="shrink-0 rounded-full bg-paper-2 px-4 py-2 text-sm font-bold">Preț</button>
-                        <button @click="openTopFilter('duration')" class="shrink-0 rounded-full bg-paper-2 px-4 py-2 text-sm font-bold">Durată</button>
+                    <div class="flex gap-2 pb-1 mt-4 overflow-x-auto">
+                        <button @click="filtersModal=true" class="px-4 py-2 text-sm font-bold rounded-full shrink-0 bg-ink text-paper">Filtre</button>
+                        <button @click="openTopFilter('price')" class="px-4 py-2 text-sm font-bold rounded-full shrink-0 bg-paper-2">Preț</button>
+                        <button @click="openTopFilter('duration')" class="px-4 py-2 text-sm font-bold rounded-full shrink-0 bg-paper-2">Durată</button>
                     </div>
                 </div>
-                <div class="flex-1 overflow-auto p-3">
+                <div class="flex-1 p-3 overflow-auto">
                     <template x-for="activity in sortedActivities()" :key="'l-'+activity.id">
-                        <button @mouseenter="hoveredPin=activity.id" @mouseleave="hoveredPin=null" @click="selectedPin=activity.id" :class="selectedPin===activity.id ? 'border-vermilion bg-rose' : 'border-ink/10 bg-paper'" class="mb-3 w-full rounded-3xl border-2 p-3 text-left transition hover:border-vermilion">
+                        <button @mouseenter="hoveredPin=activity.id" @mouseleave="hoveredPin=null" @click="selectedPin=activity.id" :class="selectedPin===activity.id ? 'border-vermilion bg-rose' : 'border-ink/10 bg-paper'" class="w-full p-3 mb-3 text-left transition border-2 rounded-3xl hover:border-vermilion">
                             <div class="grid grid-cols-[92px_1fr] gap-3">
-                                <div class="h-24 w-full overflow-hidden rounded-2xl bg-ink">
-                                    <img x-show="activity.image" :src="activity.image" :alt="activity.title" class="h-full w-full object-cover">
+                                <div class="w-full h-24 overflow-hidden rounded-2xl bg-ink">
+                                    <img x-show="activity.image" :src="activity.image" :alt="activity.title" class="object-cover w-full h-full">
                                 </div>
                                 <div class="min-w-0">
-                                    <p class="line-clamp-2 font-display text-2xl font-bold leading-none" x-text="activity.title"></p>
+                                    <p class="text-2xl font-bold leading-none line-clamp-2 font-display" x-text="activity.title"></p>
                                     <p class="mt-1 text-xs text-ink-soft" x-text="[activity.place, activity.durationLabel].filter(Boolean).join(' · ')"></p>
                                     <p x-show="activity.rating > 0" class="mt-2 text-sm font-bold"><span class="text-ochre">★★★★★</span> <span x-text="activity.rating"></span></p>
                                     <p class="mt-1 font-bold" x-text="activity.price ? ('de la ' + formatMoney(activity.price)) : 'Vezi preț'"></p>
@@ -873,31 +873,31 @@ include __DIR__ . '/includes/header.php';
                 </div>
             </aside>
 
-            <section class="relative hidden flex-1 lg:block">
+            <section class="relative flex-1 hidden lg:block">
                 <div class="absolute inset-0" style="background:linear-gradient(90deg,rgba(27,23,20,.06) 1px,transparent 1px),linear-gradient(rgba(27,23,20,.06) 1px,transparent 1px),radial-gradient(circle at 20% 20%,rgba(232,69,39,.14),transparent 22%),radial-gradient(circle at 80% 70%,rgba(30,74,61,.16),transparent 28%),#D9E5D0;background-size:48px 48px,48px 48px,auto,auto,auto"></div>
-                <div class="absolute right-5 top-5 z-10 rounded-full bg-paper px-4 py-2 text-sm font-bold shadow-deep"><?= htmlspecialchars($cityFilter ? $heroLocation : 'România') ?> · map preview</div>
+                <div class="absolute z-10 px-4 py-2 text-sm font-bold rounded-full right-5 top-5 bg-paper shadow-deep"><?= htmlspecialchars($cityFilter ? $heroLocation : 'România') ?> · map preview</div>
                 <template x-for="activity in sortedActivities()" :key="'pin-'+activity.id">
-                    <button @mouseenter="hoveredPin=activity.id" @mouseleave="hoveredPin=null" @click="selectedPin=activity.id" class="absolute z-20 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-paper px-3 py-2 text-sm font-bold text-paper shadow-deep transition hover:scale-110" :class="selectedPin===activity.id || hoveredPin===activity.id ? 'bg-vermilion' : 'bg-ink'" :style="'left:'+activity.map.x+'%; top:'+activity.map.y+'%;'">
+                    <button @mouseenter="hoveredPin=activity.id" @mouseleave="hoveredPin=null" @click="selectedPin=activity.id" class="absolute z-20 px-3 py-2 text-sm font-bold transition -translate-x-1/2 -translate-y-1/2 border-2 rounded-full border-paper text-paper shadow-deep hover:scale-110" :class="selectedPin===activity.id || hoveredPin===activity.id ? 'bg-vermilion' : 'bg-ink'" :style="'left:'+activity.map.x+'%; top:'+activity.map.y+'%;'">
                         <span x-text="activity.price ? formatMoney(activity.price) : '•'"></span>
                     </button>
                 </template>
                 <div x-show="selectedActivity()" x-cloak x-transition class="absolute bottom-5 left-5 z-30 w-[420px] overflow-hidden rounded-[2rem] border-2 border-ink bg-paper shadow-deep">
                     <template x-if="selectedActivity()">
                         <div>
-                            <div class="h-40 w-full overflow-hidden bg-ink"><img x-show="selectedActivity().image" :src="selectedActivity().image" :alt="selectedActivity().title" class="h-full w-full object-cover"></div>
+                            <div class="w-full h-40 overflow-hidden bg-ink"><img x-show="selectedActivity().image" :src="selectedActivity().image" :alt="selectedActivity().title" class="object-cover w-full h-full"></div>
                             <div class="p-5">
                                 <div class="flex items-start justify-between gap-4">
                                     <div>
-                                        <p class="font-display text-3xl font-bold leading-none" x-text="selectedActivity().title"></p>
+                                        <p class="text-3xl font-bold leading-none font-display" x-text="selectedActivity().title"></p>
                                         <p class="mt-2 text-sm text-ink-soft" x-text="[selectedActivity().place, selectedActivity().durationLabel].filter(Boolean).join(' · ')"></p>
                                     </div>
-                                    <button @click="selectedPin=null" class="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-ink text-paper">×</button>
+                                    <button @click="selectedPin=null" class="grid rounded-full h-9 w-9 shrink-0 place-items-center bg-ink text-paper">×</button>
                                 </div>
-                                <div class="mt-3 flex items-center justify-between">
+                                <div class="flex items-center justify-between mt-3">
                                     <p x-show="selectedActivity().rating > 0" class="font-bold"><span class="text-ochre">★★★★★</span> <span x-text="selectedActivity().rating"></span></p>
-                                    <p class="font-display text-3xl font-bold" x-text="selectedActivity().price ? formatMoney(selectedActivity().price) : ''"></p>
+                                    <p class="text-3xl font-bold font-display" x-text="selectedActivity().price ? formatMoney(selectedActivity().price) : ''"></p>
                                 </div>
-                                <a :href="selectedActivity().href" class="mt-4 block rounded-full bg-vermilion px-5 py-3 text-center font-bold text-paper">Vezi bilete</a>
+                                <a :href="selectedActivity().href" class="block px-5 py-3 mt-4 font-bold text-center rounded-full bg-vermilion text-paper">Vezi bilete</a>
                             </div>
                         </div>
                     </template>
@@ -1058,13 +1058,13 @@ function categoryGyg(seed) {
 
 <!-- ============================== FILTRE + REZULTATE (legacy server-side — disabled, kept for rollback) ============================== -->
 <?php if (false): ?>
-<section x-data="categoryFilters()" class="max-w-7xl mx-auto px-4 sm:px-6 pt-10">
+<section x-data="categoryFilters()" class="px-4 pt-10 mx-auto max-w-7xl sm:px-6">
 
     <!-- sticky filter toolbar -->
-    <div class="sticky top-24 z-40 -mx-4 sm:-mx-6 px-4 sm:px-6 py-4 bg-paper/90 backdrop-blur-md border-b border-ink/10">
+    <div class="sticky z-40 px-4 py-4 -mx-4 border-b top-24 sm:-mx-6 sm:px-6 bg-paper backdrop-blur-md border-ink/10">
 
         <!-- DESKTOP filter pills -->
-        <form method="get" action="/<?= htmlspecialchars($slug, ENT_QUOTES) ?>" class="hidden lg:flex items-center gap-3" @click.outside="open=null">
+        <form method="get" action="/<?= htmlspecialchars($slug, ENT_QUOTES) ?>" class="items-center hidden gap-3 lg:flex" @click.outside="open=null">
             <?php // Preserve current filter state across form submission ?>
             <?php if ($cityFilter): ?><input type="hidden" name="city" value="<?= htmlspecialchars($cityFilter, ENT_QUOTES) ?>"><?php endif; ?>
             <?php if ($maxPrice !== null): ?><input type="hidden" name="max_price" value="<?= $maxPrice ?>"><?php endif; ?>
@@ -1142,7 +1142,7 @@ function categoryGyg(seed) {
         </form>
 
         <!-- MOBILE: search + filter button -->
-        <form method="get" action="/<?= htmlspecialchars($slug, ENT_QUOTES) ?>" class="lg:hidden flex items-center gap-2">
+        <form method="get" action="/<?= htmlspecialchars($slug, ENT_QUOTES) ?>" class="flex items-center gap-2 lg:hidden">
             <?php if ($cityFilter): ?><input type="hidden" name="city" value="<?= htmlspecialchars($cityFilter, ENT_QUOTES) ?>"><?php endif; ?>
             <?php if ($maxPrice !== null): ?><input type="hidden" name="max_price" value="<?= $maxPrice ?>"><?php endif; ?>
             <?php if ($sort !== 'recommended'): ?><input type="hidden" name="sort" value="<?= htmlspecialchars($sort, ENT_QUOTES) ?>"><?php endif; ?>
@@ -1176,24 +1176,24 @@ function categoryGyg(seed) {
     <!-- ===== results ===== -->
     <div class="py-8 lg:py-10">
         <div class="flex items-baseline justify-between mb-6">
-            <p class="font-display text-2xl font-700">
+            <p class="text-2xl font-display font-700">
                 <?= (int) ($pagination['total'] ?? 0) ?>
-                <span class="text-ink-soft font-sans text-lg font-500">
+                <span class="font-sans text-lg text-ink-soft font-500">
                     <?= ($pagination['total'] ?? 0) === 1 ? mb_strtolower($catName) : (mb_strtolower($catName) . ' disponibile') ?>
                 </span>
             </p>
-            <p class="hidden sm:block font-mono text-xs text-ink-soft">DISPONIBILE TOT ANUL · INTRARE CU QR</p>
+            <p class="hidden font-mono text-xs sm:block text-ink-soft">DISPONIBILE TOT ANUL · INTRARE CU QR</p>
         </div>
 
         <?php if (empty($cards)): ?>
-            <div class="ticket bg-paper border-2 border-ink rounded-3xl p-10 sm:p-16 text-center" style="--perf:100%">
-                <div class="inline-grid place-items-center w-16 h-16 rounded-full bg-paper-2 mb-4">
+            <div class="p-10 text-center border-2 ticket bg-paper border-ink rounded-3xl sm:p-16" style="--perf:100%">
+                <div class="inline-grid w-16 h-16 mb-4 rounded-full place-items-center bg-paper-2">
                     <svg viewBox="0 0 24 24" class="w-7 h-7 text-ink-soft" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
                 </div>
-                <p class="font-display text-2xl font-700">
+                <p class="text-2xl font-display font-700">
                     <?= ($searchQuery !== '' || $cityFilter) ? 'Nimic pe filtrele astea.' : 'Încă nu sunt activități listate aici.' ?>
                 </p>
-                <p class="text-ink-soft mt-2">
+                <p class="mt-2 text-ink-soft">
                     <?= ($searchQuery !== '' || $cityFilter) ? 'Lărgește criteriile sau încearcă o altă subcategorie.' : 'Categoria e activă — operatorii își vor adăuga curând experiențele.' ?>
                 </p>
                 <?php if ($searchQuery !== '' || $cityFilter): ?>
@@ -1203,7 +1203,7 @@ function categoryGyg(seed) {
                 <?php endif; ?>
             </div>
         <?php else: ?>
-            <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
                 <?php foreach ($cards as $ev):
                     $evTitle = $ev['title'];
                     $evCity = $ev['city'];
@@ -1211,9 +1211,9 @@ function categoryGyg(seed) {
                     $evPriceCents = $ev['price_cents'] ?? null;
                     $evPrice = navFormatPriceCents($evPriceCents);
                 ?>
-                    <a href="<?= htmlspecialchars($ev['url'], ENT_QUOTES) ?>" class="ticket ticket-lift group bg-paper border-2 border-ink rounded-2xl overflow-hidden flex flex-col" style="--perf:100%">
+                    <a href="<?= htmlspecialchars($ev['url'], ENT_QUOTES) ?>" class="flex flex-col overflow-hidden border-2 ticket ticket-lift group bg-paper border-ink rounded-2xl" style="--perf:100%">
                         <?php if ($evCover): ?>
-                            <img src="<?= htmlspecialchars($evCover, ENT_QUOTES) ?>" alt="<?= htmlspecialchars($evTitle, ENT_QUOTES) ?>" class="h-44 w-full object-cover" loading="lazy" width="600" height="320">
+                            <img src="<?= htmlspecialchars($evCover, ENT_QUOTES) ?>" alt="<?= htmlspecialchars($evTitle, ENT_QUOTES) ?>" class="object-cover w-full h-44" loading="lazy" width="600" height="320">
                         <?php else: ?>
                             <div class="duotone h-36 p-4 bg-gradient-to-br <?= $ac['gradient'] ?> <?= $ac['text'] ?>">
                                 <div class="grid-tex"></div>
@@ -1221,18 +1221,18 @@ function categoryGyg(seed) {
                             </div>
                         <?php endif; ?>
 
-                        <div class="p-4 flex-1 flex flex-col">
+                        <div class="flex flex-col flex-1 p-4">
                             <?php if ($evCity): ?>
                                 <p class="font-mono text-[10px] text-ink-soft tracking-wider"><?= htmlspecialchars(strtoupper($evCity)) ?></p>
                             <?php endif; ?>
                             <h3 class="font-display text-xl font-700 leading-tight mt-1.5 group-hover:<?= $ac['text'] ?> transition-colors"><?= htmlspecialchars($evTitle) ?></h3>
 
-                            <div class="mt-auto pt-4 flex items-center justify-between">
+                            <div class="flex items-center justify-between pt-4 mt-auto">
                                 <p class="text-ink-soft">
                                     <?php if ($evPriceCents !== null && $evPriceCents > 0): ?>
                                         <span class="text-xs">de la </span>
                                     <?php endif; ?>
-                                    <span class="font-display text-lg font-700 text-ink"><?= htmlspecialchars($evPrice) ?></span>
+                                    <span class="text-lg font-display font-700 text-ink"><?= htmlspecialchars($evPrice) ?></span>
                                 </p>
                                 <span class="px-3 py-1.5 rounded-full bg-ink text-paper text-xs font-600 group-hover:<?= $ac['bg'] ?> transition-colors"><?= htmlspecialchars($ev['cta']) ?></span>
                             </div>
@@ -1243,7 +1243,7 @@ function categoryGyg(seed) {
 
             <!-- pagination -->
             <?php if (($pagination['last_page'] ?? 1) > 1): ?>
-                <nav class="mt-10 flex justify-center gap-2 flex-wrap" aria-label="Pagini">
+                <nav class="flex flex-wrap justify-center gap-2 mt-10" aria-label="Pagini">
                     <?php
                     $baseQs = $_GET;
                     unset($baseQs['slug'], $baseQs['page']);
@@ -1255,13 +1255,13 @@ function categoryGyg(seed) {
                     $start = max(1, $end - 6);
                     ?>
                     <?php if ($current > 1): ?>
-                        <a href="<?= htmlspecialchars($baseLink) ?>page=<?= $current - 1 ?>" class="px-4 py-2 rounded-full border-2 border-ink/20 hover:border-ink font-600 text-sm">‹ Anterior</a>
+                        <a href="<?= htmlspecialchars($baseLink) ?>page=<?= $current - 1 ?>" class="px-4 py-2 text-sm border-2 rounded-full border-ink/20 hover:border-ink font-600">‹ Anterior</a>
                     <?php endif; ?>
                     <?php for ($p = $start; $p <= $end; $p++): ?>
                         <a href="<?= htmlspecialchars($baseLink) ?>page=<?= $p ?>" class="px-4 py-2 rounded-full border-2 font-600 text-sm <?= $p === $current ? 'bg-ink text-paper border-ink' : 'border-ink/20 hover:border-ink' ?>"><?= $p ?></a>
                     <?php endfor; ?>
                     <?php if ($current < $last): ?>
-                        <a href="<?= htmlspecialchars($baseLink) ?>page=<?= $current + 1 ?>" class="px-4 py-2 rounded-full border-2 border-ink/20 hover:border-ink font-600 text-sm">Următor ›</a>
+                        <a href="<?= htmlspecialchars($baseLink) ?>page=<?= $current + 1 ?>" class="px-4 py-2 text-sm border-2 rounded-full border-ink/20 hover:border-ink font-600">Următor ›</a>
                     <?php endif; ?>
                 </nav>
             <?php endif; ?>
@@ -1275,9 +1275,9 @@ function categoryGyg(seed) {
              x-transition:enter="transition ease-out duration-300" x-transition:enter-start="translate-y-full" x-transition:enter-end="translate-y-0"
              x-transition:leave="transition ease-in duration-200" x-transition:leave-start="translate-y-0" x-transition:leave-end="translate-y-full"
              class="absolute bottom-0 inset-x-0 bg-paper rounded-t-3xl border-t-2 border-ink max-h-[88vh] overflow-y-auto">
-            <div class="sticky top-0 bg-paper flex items-center justify-between px-5 py-4 border-b border-ink/10">
-                <h2 class="font-display text-xl font-700">Filtre</h2>
-                <button @click="sheet=false" class="grid place-items-center w-9 h-9 rounded-full border-2 border-ink/15" aria-label="Închide">
+            <div class="sticky top-0 flex items-center justify-between px-5 py-4 border-b bg-paper border-ink/10">
+                <h2 class="text-xl font-display font-700">Filtre</h2>
+                <button @click="sheet=false" class="grid border-2 rounded-full place-items-center w-9 h-9 border-ink/15" aria-label="Închide">
                     <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
                 </button>
             </div>
@@ -1378,7 +1378,7 @@ function categoryGyg(seed) {
                     $siblings = array_filter($navCategories ?? navGetCategories(12), fn ($c) => $c['slug'] !== $slug);
                     foreach (array_slice($siblings, 0, 8) as $sib):
                     ?>
-                        <a href="<?= htmlspecialchars($sib['href'], ENT_QUOTES) ?>" class="px-4 py-2 rounded-full bg-paper border border-ink/15 text-sm hover:border-ink hover:bg-ink hover:text-paper transition">
+                        <a href="<?= htmlspecialchars($sib['href'], ENT_QUOTES) ?>" class="px-4 py-2 text-sm transition border rounded-full bg-paper border-ink/15 hover:border-ink hover:bg-ink hover:text-paper">
                             <?php if (!empty($sib['icon_emoji'])): ?><span class="mr-1"><?= htmlspecialchars($sib['icon_emoji']) ?></span><?php endif; ?>
                             <?= htmlspecialchars($sib['label']) ?>
                         </a>
@@ -1389,18 +1389,18 @@ function categoryGyg(seed) {
 
         <!-- FAQ accordion -->
         <div x-data="{ active: 0 }">
-            <h2 class="font-display text-2xl font-700 mb-6">Întrebări frecvente</h2>
+            <h2 class="mb-6 text-2xl font-display font-700">Întrebări frecvente</h2>
             <div class="space-y-3">
                 <?php foreach ($faqItems as $i => $f): ?>
-                    <div class="border-2 border-ink rounded-xl overflow-hidden bg-paper">
-                        <button type="button" @click="active = active === <?= $i ?> ? null : <?= $i ?>" :aria-expanded="active === <?= $i ?>" class="w-full flex items-center justify-between gap-4 text-left px-5 py-4">
+                    <div class="overflow-hidden border-2 border-ink rounded-xl bg-paper">
+                        <button type="button" @click="active = active === <?= $i ?> ? null : <?= $i ?>" :aria-expanded="active === <?= $i ?>" class="flex items-center justify-between w-full gap-4 px-5 py-4 text-left">
                             <span class="font-600 text-[16px]"><?= htmlspecialchars($f['q']) ?></span>
-                            <span class="shrink-0 grid place-items-center w-7 h-7 rounded-full border-2 border-ink transition-transform duration-300" :class="active === <?= $i ?> && 'rotate-45 <?= $ac['bg'] ?> <?= $ac['border'] ?> text-paper'">
+                            <span class="grid transition-transform duration-300 border-2 rounded-full shrink-0 place-items-center w-7 h-7 border-ink" :class="active === <?= $i ?> && 'rotate-45 <?= $ac['bg'] ?> <?= $ac['border'] ?> text-paper'">
                                 <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
                             </span>
                         </button>
                         <div x-show="active === <?= $i ?>" x-collapse x-cloak>
-                            <p class="px-5 pb-5 text-ink-soft leading-relaxed"><?= htmlspecialchars($f['a']) ?></p>
+                            <p class="px-5 pb-5 leading-relaxed text-ink-soft"><?= htmlspecialchars($f['a']) ?></p>
                         </div>
                     </div>
                 <?php endforeach; ?>

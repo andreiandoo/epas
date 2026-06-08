@@ -161,7 +161,7 @@ $tabPlacesLabel = ($ctxType === 'city' || $ctxType === 'activity')
     ? 'Aproape de ' . ($ctxLabel ?: 'tine')
     : (($ctxType === 'category' && $ctxLabel !== '') ? 'Orașe pentru ' . $ctxLabel : 'Orașe populare');
 ?>
-<body class="grain font-sans antialiased selection:bg-vermilion selection:text-paper<?= $bodyClass ? ' ' . htmlspecialchars($bodyClass, ENT_QUOTES) : '' ?>">
+<body class="grain bg-white font-sans antialiased selection:bg-vermilion selection:text-paper<?= $bodyClass ? ' ' . htmlspecialchars($bodyClass, ENT_QUOTES) : '' ?>">
 
 <a href="#top" class="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[100] focus:px-4 focus:py-2 focus:bg-ink focus:text-paper focus:rounded-md">Sari la conținut</a>
 
@@ -172,33 +172,36 @@ $tabPlacesLabel = ($ctxType === 'city' || $ctxType === 'activity')
         role="banner">
 
     <div :class="scrolled ? 'shadow-header-scroll' : ''"
-         class="relative border-b border-ink/10 bg-paper/95 backdrop-blur-xl transition-all duration-300">
-        <div class="bo-grain pointer-events-none absolute inset-0"></div>
+         class="relative transition-all duration-300 border-b border-ink/10 bg-paper/95 backdrop-blur-xl">
+        <div class="absolute inset-0 pointer-events-none bo-grain"></div>
 
         <nav class="relative mx-auto flex h-[72px] max-w-[1500px] items-center gap-3 px-4 sm:px-6" aria-label="Navigare principală">
             <!-- Logo -->
             <a href="/" class="group flex shrink-0 items-center gap-2.5" aria-label="<?= htmlspecialchars(SITE_NAME, ENT_QUOTES) ?> — acasă">
-                <span class="grid h-10 w-10 place-items-center rounded-xl bg-vermilion text-paper rotate-[-4deg] shadow-logo transition group-hover:rotate-[4deg] group-hover:scale-105">
-                    <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <span class="grid h-11 w-11 place-items-center rounded-xl bg-vermilion text-paper rotate-[-4deg] shadow-logo transition group-hover:rotate-[4deg] group-hover:scale-105">
+                    <svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                         <path d="M3 9a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2 2 2 0 0 0 0 4 2 2 0 0 1-2 2H5a2 2 0 0 1-2-2 2 2 0 0 0 0-4Z"/>
                         <path d="M9 7v10" stroke-dasharray="2 2"/>
                     </svg>
                 </span>
-                <span class="font-display text-[1.55rem] font-bold leading-none tracking-tight">bilete<span class="text-vermilion">.</span>online</span>
+                <span>
+                    <span class="block text-2xl font-bold leading-none font-display">bilete<span class="text-vermilion">.</span>online</span>
+                    <span class="hidden text-xs font-bold text-ink-soft sm:block">activități, experiențe, locuri de descoperit</span>
+                </span>
             </a>
 
             <!-- Center command-search -->
-            <div class="hidden min-w-0 flex-1 px-2 md:block">
+            <div class="flex-1 hidden min-w-0 px-2 md:block">
                 <button type="button" @click="searchOpen=true"
-                        class="mx-auto flex h-12 w-full max-w-[620px] items-center gap-3 rounded-full border-2 border-ink/15 bg-paper px-4 text-left transition hover:border-ink/40 hover:bg-paper-2">
-                    <svg viewBox="0 0 24 24" class="h-5 w-5 shrink-0 text-ink-soft" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-                    <span class="min-w-0 flex-1 truncate text-sm font-bold text-ink-soft" x-text="searchPlaceholder()"></span>
+                        class="mx-auto flex h-12 w-full max-w-[620px] items-center gap-3 rounded-full border-2 border-ink/15 bg-white px-4 text-left transition hover:border-ink/40 hover:bg-paper-2">
+                    <svg viewBox="0 0 24 24" class="w-5 h-5 shrink-0 text-ink-soft" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+                    <span class="flex-1 min-w-0 text-sm font-bold truncate text-ink-soft" x-text="searchPlaceholder()"></span>
                     <span class="hidden rounded-full bg-paper-2 px-2.5 py-1 text-[11px] font-bold text-ink-soft lg:inline">Ctrl K</span>
                 </button>
             </div>
 
             <!-- Right actions (desktop) -->
-            <div class="ml-auto hidden items-center gap-1 lg:flex" @mouseleave="scheduleMegaClose()" @mouseenter="cancelMegaClose()">
+            <div class="items-center hidden gap-1 ml-auto lg:flex" @mouseleave="scheduleMegaClose()" @mouseenter="cancelMegaClose()">
                 <button @mouseenter="openMega('explore','places')" @focus="openMega('explore','places')" @click="toggleMega('explore','places')"
                         :class="mega==='explore' ? 'bg-paper-2' : 'hover:bg-paper-2'"
                         class="max-w-[220px] truncate rounded-full px-4 py-2.5 text-sm font-bold transition" x-text="primaryExploreLabel()"></button>
@@ -214,8 +217,8 @@ $tabPlacesLabel = ($ctxType === 'city' || $ctxType === 'activity')
                 <a href="/card-cadou" @mouseenter="mega=null" class="rounded-full px-4 py-2.5 text-sm font-bold transition hover:bg-paper-2"<?= $currentPage === 'card-cadou' ? ' aria-current="page"' : '' ?>>Card cadou</a>
 
                 <!-- Cart -->
-                <button @click="openCart()" class="relative grid h-11 w-11 place-items-center rounded-full text-ink transition hover:bg-paper-2" aria-label="Deschide coșul">
-                    <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6h15l-1.5 9h-12z"/><path d="M6 6 5 3H2"/><circle cx="9" cy="20" r="1"/><circle cx="18" cy="20" r="1"/></svg>
+                <button @click="openCart()" class="relative grid transition rounded-full h-11 w-11 place-items-center text-ink hover:bg-paper-2" aria-label="Deschide coșul">
+                    <svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6h15l-1.5 9h-12z"/><path d="M6 6 5 3H2"/><circle cx="9" cy="20" r="1"/><circle cx="18" cy="20" r="1"/></svg>
                     <span x-show="cartCount() > 0" x-cloak class="absolute right-0 top-0 grid h-5 min-w-5 place-items-center rounded-full bg-vermilion px-1 text-[11px] font-bold text-paper" x-text="cartCount()"></span>
                 </button>
 
@@ -233,34 +236,34 @@ $tabPlacesLabel = ($ctxType === 'city' || $ctxType === 'activity')
                 <!-- Logged IN: account dropdown -->
                 <template x-if="loggedIn">
                     <div class="relative" x-cloak>
-                        <button @click="accountOpen=!accountOpen; languageOpen=false; mega=null" class="grid h-11 w-11 place-items-center rounded-full bg-ink text-sm font-bold text-paper transition hover:bg-vermilion" aria-haspopup="menu" :aria-expanded="accountOpen.toString()" x-text="acct.initials">A</button>
+                        <button @click="accountOpen=!accountOpen; languageOpen=false; mega=null" class="grid text-sm font-bold transition rounded-full h-11 w-11 place-items-center bg-ink text-paper hover:bg-vermilion" aria-haspopup="menu" :aria-expanded="accountOpen.toString()" x-text="acct.initials">A</button>
 
                         <div x-show="accountOpen" x-cloak x-transition.origin.top.right @click.outside="accountOpen=false" class="absolute right-0 top-[calc(100%+12px)] w-[360px] overflow-hidden rounded-[2rem] border-2 border-ink bg-paper text-ink shadow-deep" role="menu">
-                            <div class="bo-grain relative">
-                                <div class="relative border-b-2 border-dashed border-ink/15 bg-ink p-5 text-paper">
+                            <div class="relative bo-grain">
+                                <div class="relative p-5 border-b-2 border-dashed border-ink/15 bg-ink text-paper">
                                     <div class="flex items-center gap-3">
-                                        <span class="grid h-12 w-12 place-items-center rounded-full bg-paper text-xl font-bold text-ink" x-text="acct.initials">?</span>
+                                        <span class="grid w-12 h-12 text-xl font-bold rounded-full place-items-center bg-paper text-ink" x-text="acct.initials">?</span>
                                         <div class="min-w-0">
-                                            <p class="font-display text-3xl font-bold leading-none" x-text="acct.firstName">Cont</p>
-                                            <p class="truncate text-sm text-paper/50" x-text="acct.email"></p>
+                                            <p class="text-3xl font-bold leading-none font-display" x-text="acct.firstName">Cont</p>
+                                            <p class="text-sm truncate text-paper/50" x-text="acct.email"></p>
                                         </div>
                                     </div>
-                                    <div class="mt-4 grid grid-cols-3 gap-2 text-center">
-                                        <div class="rounded-2xl bg-paper/10 p-3"><p class="font-display text-2xl font-bold" x-text="stats.tickets"></p><p class="text-[11px] text-paper/50">bilete</p></div>
-                                        <div class="rounded-2xl bg-paper/10 p-3"><p class="font-display text-2xl font-bold" x-text="stats.points"></p><p class="text-[11px] text-paper/50">puncte</p></div>
-                                        <div class="rounded-2xl bg-paper/10 p-3"><p class="font-display text-2xl font-bold"><span x-text="stats.profile"></span>%</p><p class="text-[11px] text-paper/50">profil</p></div>
+                                    <div class="grid grid-cols-3 gap-2 mt-4 text-center">
+                                        <div class="p-3 rounded-2xl bg-paper/10"><p class="text-2xl font-bold font-display" x-text="stats.tickets"></p><p class="text-[11px] text-paper/50">bilete</p></div>
+                                        <div class="p-3 rounded-2xl bg-paper/10"><p class="text-2xl font-bold font-display" x-text="stats.points"></p><p class="text-[11px] text-paper/50">puncte</p></div>
+                                        <div class="p-3 rounded-2xl bg-paper/10"><p class="text-2xl font-bold font-display"><span x-text="stats.profile"></span>%</p><p class="text-[11px] text-paper/50">profil</p></div>
                                     </div>
                                 </div>
                                 <nav class="relative p-3 text-sm font-bold" role="none">
-                                    <a href="/cont" class="flex items-center justify-between rounded-2xl px-4 py-3 transition hover:bg-ink hover:text-paper" role="menuitem"><span>Dashboard</span><span aria-hidden="true">→</span></a>
-                                    <a href="/cont/bilete" class="flex items-center justify-between rounded-2xl px-4 py-3 transition hover:bg-ink hover:text-paper" role="menuitem"><span>Biletele mele</span><span x-show="stats.tickets" class="rounded-full bg-vermilion px-2 py-0.5 text-xs text-paper" x-text="stats.tickets"></span></a>
-                                    <a href="/cont/comenzi" class="flex items-center justify-between rounded-2xl px-4 py-3 transition hover:bg-ink hover:text-paper" role="menuitem"><span>Comenzile mele</span><span x-text="stats.orders"></span></a>
-                                    <a href="/cont/puncte" class="flex items-center justify-between rounded-2xl px-4 py-3 transition hover:bg-ink hover:text-paper" role="menuitem"><span>Punctele mele</span><span x-text="stats.points"></span></a>
-                                    <a href="/cont/recomandari" class="flex items-center justify-between rounded-2xl px-4 py-3 transition hover:bg-ink hover:text-paper" role="menuitem"><span>Recomandări</span><span class="text-vermilion">nou</span></a>
-                                    <a href="/cont/setari" class="flex items-center justify-between rounded-2xl px-4 py-3 transition hover:bg-ink hover:text-paper" role="menuitem"><span>Setări cont</span><span aria-hidden="true">→</span></a>
+                                    <a href="/cont" class="flex items-center justify-between px-4 py-3 transition rounded-2xl hover:bg-ink hover:text-paper" role="menuitem"><span>Dashboard</span><span aria-hidden="true">→</span></a>
+                                    <a href="/cont/bilete" class="flex items-center justify-between px-4 py-3 transition rounded-2xl hover:bg-ink hover:text-paper" role="menuitem"><span>Biletele mele</span><span x-show="stats.tickets" class="rounded-full bg-vermilion px-2 py-0.5 text-xs text-paper" x-text="stats.tickets"></span></a>
+                                    <a href="/cont/comenzi" class="flex items-center justify-between px-4 py-3 transition rounded-2xl hover:bg-ink hover:text-paper" role="menuitem"><span>Comenzile mele</span><span x-text="stats.orders"></span></a>
+                                    <a href="/cont/puncte" class="flex items-center justify-between px-4 py-3 transition rounded-2xl hover:bg-ink hover:text-paper" role="menuitem"><span>Punctele mele</span><span x-text="stats.points"></span></a>
+                                    <a href="/cont/recomandari" class="flex items-center justify-between px-4 py-3 transition rounded-2xl hover:bg-ink hover:text-paper" role="menuitem"><span>Recomandări</span><span class="text-vermilion">nou</span></a>
+                                    <a href="/cont/setari" class="flex items-center justify-between px-4 py-3 transition rounded-2xl hover:bg-ink hover:text-paper" role="menuitem"><span>Setări cont</span><span aria-hidden="true">→</span></a>
                                 </nav>
-                                <div class="relative border-t border-ink/10 p-3">
-                                    <button type="button" @click="logout()" class="flex w-full items-center justify-center rounded-full border-2 border-ink px-4 py-3 text-sm font-bold transition hover:bg-ink hover:text-paper">Ieși din cont</button>
+                                <div class="relative p-3 border-t border-ink/10">
+                                    <button type="button" @click="logout()" class="flex items-center justify-center w-full px-4 py-3 text-sm font-bold transition border-2 rounded-full border-ink hover:bg-ink hover:text-paper">Ieși din cont</button>
                                 </div>
                             </div>
                         </div>
@@ -269,48 +272,48 @@ $tabPlacesLabel = ($ctxType === 'city' || $ctxType === 'activity')
             </div>
 
             <!-- Right actions (mobile) -->
-            <div class="ml-auto flex items-center gap-1 lg:hidden">
-                <button @click="openCart()" class="relative grid h-11 w-11 place-items-center rounded-full text-ink transition hover:bg-paper-2" aria-label="Coș">
-                    <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6h15l-1.5 9h-12z"/><path d="M6 6 5 3H2"/><circle cx="9" cy="20" r="1"/><circle cx="18" cy="20" r="1"/></svg>
+            <div class="flex items-center gap-1 ml-auto lg:hidden">
+                <button @click="openCart()" class="relative grid transition rounded-full h-11 w-11 place-items-center text-ink hover:bg-paper-2" aria-label="Coș">
+                    <svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6h15l-1.5 9h-12z"/><path d="M6 6 5 3H2"/><circle cx="9" cy="20" r="1"/><circle cx="18" cy="20" r="1"/></svg>
                     <span x-show="cartCount() > 0" x-cloak class="absolute right-0 top-0 grid h-5 min-w-5 place-items-center rounded-full bg-vermilion px-1 text-[11px] font-bold text-paper" x-text="cartCount()"></span>
                 </button>
-                <button @click="searchOpen=true" class="grid h-11 w-11 place-items-center rounded-full hover:bg-paper-2" aria-label="Caută">
-                    <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+                <button @click="searchOpen=true" class="grid rounded-full h-11 w-11 place-items-center hover:bg-paper-2" aria-label="Caută">
+                    <svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
                 </button>
-                <button @click="mobileOpen=!mobileOpen" class="grid h-11 w-11 place-items-center rounded-full hover:bg-paper-2" aria-label="Meniu" :aria-expanded="mobileOpen.toString()">
-                    <svg x-show="!mobileOpen" viewBox="0 0 24 24" class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
-                    <svg x-show="mobileOpen" x-cloak viewBox="0 0 24 24" class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6 6 18"/></svg>
+                <button @click="mobileOpen=!mobileOpen" class="grid rounded-full h-11 w-11 place-items-center hover:bg-paper-2" aria-label="Meniu" :aria-expanded="mobileOpen.toString()">
+                    <svg x-show="!mobileOpen" viewBox="0 0 24 24" class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+                    <svg x-show="mobileOpen" x-cloak viewBox="0 0 24 24" class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6 6 18"/></svg>
                 </button>
             </div>
         </nav>
 
         <!-- Language / currency popover -->
         <div x-show="languageOpen" x-cloak x-transition.origin.top.right @click.outside="languageOpen=false" class="absolute right-[88px] top-[calc(100%+10px)] z-[51] hidden w-[320px] rounded-[1.6rem] border-2 border-ink bg-paper p-4 shadow-deep lg:block">
-            <p class="font-display text-3xl font-bold leading-none">Limbă și monedă</p>
-            <div class="mt-4 grid gap-3">
-                <label><span class="mb-1 block text-sm font-bold text-ink-soft">Limbă</span><select class="w-full rounded-2xl border-2 border-ink/10 bg-paper-2 px-4 py-3 font-bold outline-none"><option>Română</option><option disabled>English (în curând)</option></select></label>
-                <label><span class="mb-1 block text-sm font-bold text-ink-soft">Monedă</span><select class="w-full rounded-2xl border-2 border-ink/10 bg-paper-2 px-4 py-3 font-bold outline-none"><option>RON</option><option disabled>EUR (în curând)</option></select></label>
-                <button @click="languageOpen=false" class="rounded-full bg-ink px-5 py-3 font-bold text-paper transition hover:bg-vermilion">Aplică</button>
+            <p class="text-3xl font-bold leading-none font-display">Limbă și monedă</p>
+            <div class="grid gap-3 mt-4">
+                <label><span class="block mb-1 text-sm font-bold text-ink-soft">Limbă</span><select class="w-full px-4 py-3 font-bold border-2 outline-none rounded-2xl border-ink/10 bg-paper-2"><option>Română</option><option disabled>English (în curând)</option></select></label>
+                <label><span class="block mb-1 text-sm font-bold text-ink-soft">Monedă</span><select class="w-full px-4 py-3 font-bold border-2 outline-none rounded-2xl border-ink/10 bg-paper-2"><option>RON</option><option disabled>EUR (în curând)</option></select></label>
+                <button @click="languageOpen=false" class="px-5 py-3 font-bold transition rounded-full bg-ink text-paper hover:bg-vermilion">Aplică</button>
             </div>
         </div>
 
         <!-- Mega menu -->
         <div x-show="mega" x-cloak x-transition.opacity.duration.160ms @mouseenter="cancelMegaClose()" @mouseleave="scheduleMegaClose()"
-             class="absolute inset-x-0 top-full hidden border-b-2 border-ink bg-paper shadow-deep lg:block" role="menu">
-            <div class="bo-grain relative">
+             class="absolute inset-x-0 hidden border-b-2 top-full border-ink bg-paper shadow-deep lg:block" role="menu">
+            <div class="relative bo-grain">
 
                 <!-- EXPLORE / ACTIVITIES mega -->
                 <div x-show="mega==='explore'" class="relative mx-auto grid max-w-[1500px] grid-cols-[300px_1fr] gap-0 px-6 py-6">
-                    <aside class="border-r border-ink/10 pr-5">
-                        <button @mouseenter="megaTab='places'" @focus="megaTab='places'" :class="megaTab==='places' ? 'bg-ink text-paper' : 'hover:bg-paper-2'" class="flex w-full items-center justify-between rounded-2xl px-4 py-3 text-left font-bold transition"><span><?= htmlspecialchars($tabPlacesLabel) ?></span><span>→</span></button>
-                        <button @mouseenter="megaTab='things'" @focus="megaTab='things'" :class="megaTab==='things' ? 'bg-ink text-paper' : 'hover:bg-paper-2'" class="mt-1 flex w-full items-center justify-between rounded-2xl px-4 py-3 text-left font-bold transition"><span>Categorii populare</span><span>→</span></button>
-                        <button @mouseenter="megaTab='nearby'" @focus="megaTab='nearby'" :class="megaTab==='nearby' ? 'bg-ink text-paper' : 'hover:bg-paper-2'" class="mt-1 flex w-full items-center justify-between rounded-2xl px-4 py-3 text-left font-bold transition"><span>Idei rapide</span><span>→</span></button>
+                    <aside class="pr-5 border-r border-ink/10">
+                        <button @mouseenter="megaTab='places'" @focus="megaTab='places'" :class="megaTab==='places' ? 'bg-ink text-paper' : 'hover:bg-paper-2'" class="flex items-center justify-between w-full px-4 py-3 font-bold text-left transition rounded-2xl"><span><?= htmlspecialchars($tabPlacesLabel) ?></span><span>→</span></button>
+                        <button @mouseenter="megaTab='things'" @focus="megaTab='things'" :class="megaTab==='things' ? 'bg-ink text-paper' : 'hover:bg-paper-2'" class="flex items-center justify-between w-full px-4 py-3 mt-1 font-bold text-left transition rounded-2xl"><span>Categorii populare</span><span>→</span></button>
+                        <button @mouseenter="megaTab='nearby'" @focus="megaTab='nearby'" :class="megaTab==='nearby' ? 'bg-ink text-paper' : 'hover:bg-paper-2'" class="flex items-center justify-between w-full px-4 py-3 mt-1 font-bold text-left transition rounded-2xl"><span>Idei rapide</span><span>→</span></button>
 
                         <div class="mt-5 rounded-[1.5rem] bg-mint p-5">
                             <p class="font-mono text-xs tracking-[.16em] text-forest"><?= htmlspecialchars($ctxHero['kicker']) ?></p>
-                            <h3 class="mt-2 font-display text-4xl font-bold leading-none"><?= htmlspecialchars($ctxHero['title']) ?></h3>
+                            <h3 class="mt-2 text-4xl font-bold leading-none font-display"><?= htmlspecialchars($ctxHero['title']) ?></h3>
                             <p class="mt-2 text-sm text-ink-soft"><?= htmlspecialchars($ctxHero['desc']) ?></p>
-                            <a href="<?= htmlspecialchars($ctxHero['href'], ENT_QUOTES) ?>" @click="mega=null" class="mt-4 inline-flex rounded-full bg-forest px-4 py-2 text-sm font-bold text-paper transition hover:bg-ink"><?= htmlspecialchars($ctxHero['cta']) ?></a>
+                            <a href="<?= htmlspecialchars($ctxHero['href'], ENT_QUOTES) ?>" @click="mega=null" class="inline-flex px-4 py-2 mt-4 text-sm font-bold transition rounded-full bg-forest text-paper hover:bg-ink"><?= htmlspecialchars($ctxHero['cta']) ?></a>
                         </div>
                     </aside>
 
@@ -320,18 +323,18 @@ $tabPlacesLabel = ($ctxType === 'city' || $ctxType === 'activity')
                             <div class="flex items-end justify-between gap-6">
                                 <div>
                                     <p class="font-mono text-xs tracking-[.18em] text-ink-soft">ORAȘE</p>
-                                    <h2 class="mt-2 font-display text-5xl font-bold leading-none"><?= htmlspecialchars($tabPlacesLabel) ?></h2>
-                                    <p class="mt-3 max-w-3xl text-ink-soft">Alege un oraș și descoperă activități, ghiduri și locații locale.</p>
+                                    <h2 class="mt-2 text-5xl font-bold leading-none font-display"><?= htmlspecialchars($tabPlacesLabel) ?></h2>
+                                    <p class="max-w-3xl mt-3 text-ink-soft">Alege un oraș și descoperă activități, ghiduri și locații locale.</p>
                                 </div>
-                                <a href="/orase" @click="mega=null" class="shrink-0 rounded-full bg-ink px-5 py-3 font-bold text-paper transition hover:bg-vermilion">Toate orașele</a>
+                                <a href="/orase" @click="mega=null" class="px-5 py-3 font-bold transition rounded-full shrink-0 bg-ink text-paper hover:bg-vermilion">Toate orașele</a>
                             </div>
-                            <div class="mt-7 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                            <div class="grid gap-4 mt-7 md:grid-cols-2 xl:grid-cols-3">
                                 <?php foreach ($navCities as $city): ?>
                                     <a href="<?= htmlspecialchars($city['href'], ENT_QUOTES) ?>" @click="mega=null" class="group rounded-[1.5rem] border border-ink/10 bg-paper-2 p-5 transition hover:-translate-y-0.5 hover:bg-paper hover:shadow-deep">
                                         <div class="flex items-start justify-between gap-4">
                                             <div>
-                                                <span class="rounded-full bg-paper px-3 py-1 text-xs font-bold text-ink-soft">Oraș</span>
-                                                <p class="mt-4 font-display text-3xl font-bold leading-none group-hover:text-vermilion"><?= htmlspecialchars($city['label']) ?></p>
+                                                <span class="px-3 py-1 text-xs font-bold rounded-full bg-paper text-ink-soft">Oraș</span>
+                                                <p class="mt-4 text-3xl font-bold leading-none font-display group-hover:text-vermilion"><?= htmlspecialchars($city['label']) ?></p>
                                                 <p class="mt-2 text-sm text-ink-soft">Activități și experiențe locale</p>
                                             </div>
                                             <span class="text-2xl transition group-hover:translate-x-1">→</span>
@@ -346,18 +349,18 @@ $tabPlacesLabel = ($ctxType === 'city' || $ctxType === 'activity')
                             <div class="flex items-end justify-between gap-6">
                                 <div>
                                     <p class="font-mono text-xs tracking-[.18em] text-ink-soft">ACTIVITĂȚI</p>
-                                    <h2 class="mt-2 font-display text-5xl font-bold leading-none">Alege după ce vrei să faci</h2>
-                                    <p class="mt-3 max-w-3xl text-ink-soft">Categorii clare pentru ieșiri, weekenduri, copii, cadouri și experiențe locale.</p>
+                                    <h2 class="mt-2 text-5xl font-bold leading-none font-display">Alege după ce vrei să faci</h2>
+                                    <p class="max-w-3xl mt-3 text-ink-soft">Categorii clare pentru ieșiri, weekenduri, copii, cadouri și experiențe locale.</p>
                                 </div>
-                                <a href="/categorii" @click="mega=null" class="shrink-0 rounded-full bg-ink px-5 py-3 font-bold text-paper transition hover:bg-vermilion">Toate categoriile</a>
+                                <a href="/categorii" @click="mega=null" class="px-5 py-3 font-bold transition rounded-full shrink-0 bg-ink text-paper hover:bg-vermilion">Toate categoriile</a>
                             </div>
-                            <div class="mt-7 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                            <div class="grid gap-4 mt-7 md:grid-cols-2 xl:grid-cols-3">
                                 <?php foreach ($navCategories as $cat): ?>
                                     <a href="<?= htmlspecialchars($cat['href'], ENT_QUOTES) ?>" @click="mega=null" class="group rounded-[1.5rem] border border-ink/10 bg-paper-2 p-5 transition hover:-translate-y-0.5 hover:bg-paper hover:shadow-deep">
                                         <div class="flex items-start justify-between gap-4">
                                             <div>
-                                                <span class="rounded-full bg-paper px-3 py-1 text-xs font-bold text-ink-soft"><?= !empty($cat['icon_emoji']) ? htmlspecialchars($cat['icon_emoji']) . ' ' : '' ?><?= htmlspecialchars($cat['count'] ?? '') ?></span>
-                                                <p class="mt-4 font-display text-3xl font-bold leading-none group-hover:text-vermilion"><?= htmlspecialchars($cat['label']) ?></p>
+                                                <span class="px-3 py-1 text-xs font-bold rounded-full bg-paper text-ink-soft"><?= !empty($cat['icon_emoji']) ? htmlspecialchars($cat['icon_emoji']) . ' ' : '' ?><?= htmlspecialchars($cat['count'] ?? '') ?></span>
+                                                <p class="mt-4 text-3xl font-bold leading-none font-display group-hover:text-vermilion"><?= htmlspecialchars($cat['label']) ?></p>
                                                 <p class="mt-2 text-sm text-ink-soft">Vezi activitățile din categorie</p>
                                             </div>
                                             <span class="text-2xl transition group-hover:translate-x-1">→</span>
@@ -372,16 +375,16 @@ $tabPlacesLabel = ($ctxType === 'city' || $ctxType === 'activity')
                             <div class="flex items-end justify-between gap-6">
                                 <div>
                                     <p class="font-mono text-xs tracking-[.18em] text-ink-soft">IDEI RAPIDE</p>
-                                    <h2 class="mt-2 font-display text-5xl font-bold leading-none">Scurtături utile</h2>
-                                    <p class="mt-3 max-w-3xl text-ink-soft">Pagini care se potrivesc sezonului și intereselor frecvente.</p>
+                                    <h2 class="mt-2 text-5xl font-bold leading-none font-display">Scurtături utile</h2>
+                                    <p class="max-w-3xl mt-3 text-ink-soft">Pagini care se potrivesc sezonului și intereselor frecvente.</p>
                                 </div>
-                                <a href="/ghiduri" @click="mega=null" class="shrink-0 rounded-full bg-ink px-5 py-3 font-bold text-paper transition hover:bg-vermilion">Vezi ghidurile</a>
+                                <a href="/ghiduri" @click="mega=null" class="px-5 py-3 font-bold transition rounded-full shrink-0 bg-ink text-paper hover:bg-vermilion">Vezi ghidurile</a>
                             </div>
-                            <div class="mt-7 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                            <div class="grid gap-4 mt-7 md:grid-cols-2 xl:grid-cols-3">
                                 <?php foreach ($navQuickSearches as $tag): ?>
                                     <a href="<?= htmlspecialchars($tag['href'], ENT_QUOTES) ?>" @click="mega=null" class="group rounded-[1.5rem] border border-ink/10 bg-paper-2 p-5 transition hover:-translate-y-0.5 hover:bg-paper hover:shadow-deep">
                                         <div class="flex items-center justify-between gap-4">
-                                            <p class="font-display text-3xl font-bold leading-none group-hover:text-vermilion"><?= htmlspecialchars($tag['label']) ?></p>
+                                            <p class="text-3xl font-bold leading-none font-display group-hover:text-vermilion"><?= htmlspecialchars($tag['label']) ?></p>
                                             <span class="text-2xl transition group-hover:translate-x-1">→</span>
                                         </div>
                                     </a>
@@ -393,17 +396,17 @@ $tabPlacesLabel = ($ctxType === 'city' || $ctxType === 'activity')
 
                 <!-- INSPIRATION mega -->
                 <div x-show="mega==='inspiration'" x-cloak class="relative mx-auto grid max-w-[1500px] grid-cols-[300px_1fr] gap-0 px-6 py-6">
-                    <aside class="border-r border-ink/10 pr-5">
+                    <aside class="pr-5 border-r border-ink/10">
                         <p class="mb-3 px-4 font-mono text-xs tracking-[.18em] text-ink-soft">INSPIRAȚIE</p>
-                        <a href="/ghiduri" @click="mega=null" class="flex w-full items-center justify-between rounded-2xl bg-ink px-4 py-3 text-left font-bold text-paper transition hover:bg-vermilion"><span>Toate ghidurile</span><span>→</span></a>
-                        <a href="/activitati-weekend" @click="mega=null" class="mt-1 flex w-full items-center justify-between rounded-2xl px-4 py-3 text-left font-bold transition hover:bg-paper-2"><span>Idei de weekend</span><span>→</span></a>
-                        <a href="/activitati-copii" @click="mega=null" class="mt-1 flex w-full items-center justify-between rounded-2xl px-4 py-3 text-left font-bold transition hover:bg-paper-2"><span>Cu copiii</span><span>→</span></a>
-                        <a href="/card-cadou" @click="mega=null" class="mt-1 flex w-full items-center justify-between rounded-2xl px-4 py-3 text-left font-bold transition hover:bg-paper-2"><span>Experiențe cadou</span><span>→</span></a>
+                        <a href="/ghiduri" @click="mega=null" class="flex items-center justify-between w-full px-4 py-3 font-bold text-left transition rounded-2xl bg-ink text-paper hover:bg-vermilion"><span>Toate ghidurile</span><span>→</span></a>
+                        <a href="/activitati-weekend" @click="mega=null" class="flex items-center justify-between w-full px-4 py-3 mt-1 font-bold text-left transition rounded-2xl hover:bg-paper-2"><span>Idei de weekend</span><span>→</span></a>
+                        <a href="/activitati-copii" @click="mega=null" class="flex items-center justify-between w-full px-4 py-3 mt-1 font-bold text-left transition rounded-2xl hover:bg-paper-2"><span>Cu copiii</span><span>→</span></a>
+                        <a href="/card-cadou" @click="mega=null" class="flex items-center justify-between w-full px-4 py-3 mt-1 font-bold text-left transition rounded-2xl hover:bg-paper-2"><span>Experiențe cadou</span><span>→</span></a>
 
                         <div class="mt-5 rounded-[1.5rem] border border-forest/20 bg-mint p-5">
                             <p class="font-bold text-forest">Ai puncte bonus?</p>
                             <p class="mt-1 text-sm text-ink-soft">Intră în cont și vezi activitățile unde poți aplica reducere.</p>
-                            <a href="/cont/recomandari" @click="mega=null" class="mt-3 inline-flex font-bold text-forest underline-wobble">Vezi recomandări</a>
+                            <a href="/cont/recomandari" @click="mega=null" class="inline-flex mt-3 font-bold text-forest underline-wobble">Vezi recomandări</a>
                         </div>
                     </aside>
 
@@ -411,16 +414,16 @@ $tabPlacesLabel = ($ctxType === 'city' || $ctxType === 'activity')
                         <div class="flex items-end justify-between gap-6">
                             <div>
                                 <p class="font-mono text-xs tracking-[.18em] text-ink-soft">GHIDURI</p>
-                                <h2 class="mt-2 font-display text-5xl font-bold leading-none">Idei și recomandări editoriale</h2>
-                                <p class="mt-3 max-w-3xl text-ink-soft">Ghiduri pentru orașe, weekenduri, atracții și activități de pus pe listă.</p>
+                                <h2 class="mt-2 text-5xl font-bold leading-none font-display">Idei și recomandări editoriale</h2>
+                                <p class="max-w-3xl mt-3 text-ink-soft">Ghiduri pentru orașe, weekenduri, atracții și activități de pus pe listă.</p>
                             </div>
-                            <a href="/ghiduri" @click="mega=null" class="shrink-0 rounded-full bg-ink px-5 py-3 font-bold text-paper transition hover:bg-vermilion">Toate ghidurile</a>
+                            <a href="/ghiduri" @click="mega=null" class="px-5 py-3 font-bold transition rounded-full shrink-0 bg-ink text-paper hover:bg-vermilion">Toate ghidurile</a>
                         </div>
-                        <div class="mt-7 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                        <div class="grid gap-4 mt-7 md:grid-cols-2 xl:grid-cols-3">
                             <?php foreach ($navGuides as $guide): ?>
                                 <a href="<?= htmlspecialchars($guide['href'], ENT_QUOTES) ?>" @click="mega=null" class="group rounded-[1.5rem] border border-ink/10 bg-paper-2 p-5 transition hover:-translate-y-0.5 hover:bg-paper hover:shadow-deep">
-                                    <span class="rounded-full bg-paper px-3 py-1 text-xs font-bold text-ink-soft"><?= htmlspecialchars($guide['meta']) ?></span>
-                                    <p class="mt-4 font-display text-3xl font-bold leading-none group-hover:text-vermilion"><?= htmlspecialchars($guide['title']) ?></p>
+                                    <span class="px-3 py-1 text-xs font-bold rounded-full bg-paper text-ink-soft"><?= htmlspecialchars($guide['meta']) ?></span>
+                                    <p class="mt-4 text-3xl font-bold leading-none font-display group-hover:text-vermilion"><?= htmlspecialchars($guide['title']) ?></p>
                                     <p class="mt-2 text-sm text-ink-soft">Citește ghidul →</p>
                                 </a>
                             <?php endforeach; ?>
@@ -433,26 +436,26 @@ $tabPlacesLabel = ($ctxType === 'city' || $ctxType === 'activity')
         <!-- Mobile menu -->
         <div x-show="mobileOpen" x-cloak x-collapse class="border-t border-ink/10 bg-paper lg:hidden">
             <div class="mx-auto max-w-[1500px] px-4 py-5 sm:px-6">
-                <div x-show="loggedIn" x-cloak class="mb-4 flex items-center gap-3 rounded-2xl border-2 border-ink bg-paper-2 p-4">
-                    <span class="grid h-11 w-11 place-items-center rounded-full bg-forest text-paper font-bold" x-text="acct.initials">?</span>
+                <div x-show="loggedIn" x-cloak class="flex items-center gap-3 p-4 mb-4 border-2 rounded-2xl border-ink bg-paper-2">
+                    <span class="grid font-bold rounded-full h-11 w-11 place-items-center bg-forest text-paper" x-text="acct.initials">?</span>
                     <div class="min-w-0">
                         <p class="font-bold leading-tight" x-text="acct.firstName">Cont</p>
                         <a href="/cont" class="text-sm text-vermilion">Mergi în cont →</a>
                     </div>
                 </div>
 
-                <button @click="searchOpen=true; mobileOpen=false" class="mb-4 flex w-full items-center gap-3 rounded-2xl border-2 border-ink bg-paper-2 px-4 py-4 text-left font-bold">
-                    <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+                <button @click="searchOpen=true; mobileOpen=false" class="flex items-center w-full gap-3 px-4 py-4 mb-4 font-bold text-left border-2 rounded-2xl border-ink bg-paper-2">
+                    <svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
                     <span x-text="searchPlaceholder()">Caută</span>
                 </button>
 
                 <div class="grid gap-3">
-                    <a href="<?= htmlspecialchars($ctxHero['href'], ENT_QUOTES) ?>" class="rounded-2xl bg-ink px-4 py-4 font-display text-3xl font-bold text-paper" x-text="primaryExploreLabel()"><?= htmlspecialchars($ctxExploreLabel) ?></a>
-                    <a href="/categorii" class="rounded-2xl bg-paper-2 px-4 py-4 font-display text-3xl font-bold">Activități</a>
-                    <a href="/orase" class="rounded-2xl bg-paper-2 px-4 py-4 font-display text-3xl font-bold">Orașe</a>
-                    <a href="/operatori" class="rounded-2xl bg-paper-2 px-4 py-4 font-display text-3xl font-bold">Operatori</a>
-                    <a href="/ghiduri" class="rounded-2xl bg-paper-2 px-4 py-4 font-display text-3xl font-bold">Inspirație</a>
-                    <a href="/card-cadou" class="rounded-2xl bg-mint px-4 py-4 font-display text-3xl font-bold text-forest">Card cadou</a>
+                    <a href="<?= htmlspecialchars($ctxHero['href'], ENT_QUOTES) ?>" class="px-4 py-4 text-3xl font-bold rounded-2xl bg-ink font-display text-paper" x-text="primaryExploreLabel()"><?= htmlspecialchars($ctxExploreLabel) ?></a>
+                    <a href="/categorii" class="px-4 py-4 text-3xl font-bold rounded-2xl bg-paper-2 font-display">Activități</a>
+                    <a href="/orase" class="px-4 py-4 text-3xl font-bold rounded-2xl bg-paper-2 font-display">Orașe</a>
+                    <a href="/operatori" class="px-4 py-4 text-3xl font-bold rounded-2xl bg-paper-2 font-display">Operatori</a>
+                    <a href="/ghiduri" class="px-4 py-4 text-3xl font-bold rounded-2xl bg-paper-2 font-display">Inspirație</a>
+                    <a href="/card-cadou" class="px-4 py-4 text-3xl font-bold rounded-2xl bg-mint font-display text-forest">Card cadou</a>
                 </div>
 
                 <div class="mt-5">
@@ -464,11 +467,11 @@ $tabPlacesLabel = ($ctxType === 'city' || $ctxType === 'activity')
                     </div>
                 </div>
 
-                <div class="mt-5 grid grid-cols-2 gap-3">
-                    <button @click="openCart(); mobileOpen=false" class="rounded-full bg-vermilion px-5 py-3 text-center font-bold text-paper">Coș (<span x-text="cartCount()"></span>)</button>
-                    <a x-show="loggedIn" href="/cont" class="rounded-full bg-ink px-5 py-3 text-center font-bold text-paper">Cont</a>
-                    <a x-show="!loggedIn" href="/login" class="rounded-full bg-ink px-5 py-3 text-center font-bold text-paper">Intră în cont</a>
-                    <a href="/recuperare-comanda" class="col-span-2 rounded-full border-2 border-ink px-5 py-3 text-center font-bold">Recuperează comanda</a>
+                <div class="grid grid-cols-2 gap-3 mt-5">
+                    <button @click="openCart(); mobileOpen=false" class="px-5 py-3 font-bold text-center rounded-full bg-vermilion text-paper">Coș (<span x-text="cartCount()"></span>)</button>
+                    <a x-show="loggedIn" href="/cont" class="px-5 py-3 font-bold text-center rounded-full bg-ink text-paper">Cont</a>
+                    <a x-show="!loggedIn" href="/login" class="px-5 py-3 font-bold text-center rounded-full bg-ink text-paper">Intră în cont</a>
+                    <a href="/recuperare-comanda" class="col-span-2 px-5 py-3 font-bold text-center border-2 rounded-full border-ink">Recuperează comanda</a>
                 </div>
             </div>
         </div>
@@ -481,31 +484,31 @@ $tabPlacesLabel = ($ctxType === 'city' || $ctxType === 'activity')
                x-transition:enter="transition ease-out duration-250" x-transition:enter-start="translate-x-full" x-transition:enter-end="translate-x-0"
                x-transition:leave="transition ease-in duration-200" x-transition:leave-start="translate-x-0" x-transition:leave-end="translate-x-full"
                class="bo-grain absolute right-0 top-0 flex h-full w-full max-w-[520px] flex-col overflow-hidden border-l-2 border-ink bg-paper text-ink shadow-deep">
-            <div class="relative border-b-2 border-dashed border-ink/15 bg-ink p-5 text-paper sm:p-6">
+            <div class="relative p-5 border-b-2 border-dashed border-ink/15 bg-ink text-paper sm:p-6">
                 <div class="flex items-start justify-between gap-4">
                     <div>
                         <p class="font-mono text-xs tracking-[.18em] text-ochre">COȘUL TĂU</p>
-                        <h2 class="mt-2 font-display text-5xl font-bold leading-none">Coș</h2>
+                        <h2 class="mt-2 text-5xl font-bold leading-none font-display">Coș</h2>
                         <p class="mt-2 text-paper/60"><span x-text="cartCount()"></span> bilete · subtotal <strong class="text-paper" x-text="formatMoney(cartSubtotal())"></strong></p>
                     </div>
-                    <button @click="cartOpen=false" class="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-paper text-2xl font-bold text-ink transition hover:bg-vermilion hover:text-paper" aria-label="Închide coșul">×</button>
+                    <button @click="cartOpen=false" class="grid text-2xl font-bold transition rounded-full h-11 w-11 shrink-0 place-items-center bg-paper text-ink hover:bg-vermilion hover:text-paper" aria-label="Închide coșul">×</button>
                 </div>
-                <div x-show="loggedIn && stats.points > 0" x-cloak class="mt-5 rounded-2xl border border-paper/10 bg-paper/10 p-4">
+                <div x-show="loggedIn && stats.points > 0" x-cloak class="p-4 mt-5 border rounded-2xl border-paper/10 bg-paper/10">
                     <div class="flex items-center justify-between gap-4">
                         <span class="font-bold">Puncte disponibile</span>
-                        <span class="font-display text-2xl font-bold text-ochre" x-text="stats.points"></span>
+                        <span class="text-2xl font-bold font-display text-ochre" x-text="stats.points"></span>
                     </div>
                     <p class="mt-1 text-sm text-paper/50">Le poți aplica în checkout, dacă activitatea este eligibilă.</p>
                 </div>
             </div>
 
-            <div class="relative flex-1 overflow-auto p-4 sm:p-5">
+            <div class="relative flex-1 p-4 overflow-auto sm:p-5">
                 <template x-if="cartItems.length === 0">
-                    <div class="grid h-full place-items-center text-center">
+                    <div class="grid h-full text-center place-items-center">
                         <div>
-                            <p class="font-display text-5xl font-bold leading-none">Coșul este gol.</p>
+                            <p class="text-5xl font-bold leading-none font-display">Coșul este gol.</p>
                             <p class="mt-3 text-ink-soft">Alege o activitate și adaugă bilete pentru a continua.</p>
-                            <a href="/categorii" class="mt-5 inline-flex rounded-full bg-vermilion px-6 py-4 font-bold text-paper transition hover:bg-vermilion-d">Explorează activități</a>
+                            <a href="/categorii" class="inline-flex px-6 py-4 mt-5 font-bold transition rounded-full bg-vermilion text-paper hover:bg-vermilion-d">Explorează activități</a>
                         </div>
                     </div>
                 </template>
@@ -518,22 +521,22 @@ $tabPlacesLabel = ($ctxType === 'city' || $ctxType === 'activity')
                                 <div class="p-4">
                                     <div class="flex items-start justify-between gap-3">
                                         <div>
-                                            <a :href="item.url" class="font-display text-2xl font-bold leading-none hover:text-vermilion" x-text="item.title"></a>
+                                            <a :href="item.url" class="text-2xl font-bold leading-none font-display hover:text-vermilion" x-text="item.title"></a>
                                             <p class="mt-1 text-sm text-ink-soft" x-text="item.location"></p>
                                         </div>
-                                        <button @click="removeCartItem(item.key)" class="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-rose text-vermilion transition hover:bg-vermilion hover:text-paper" aria-label="Șterge produsul">×</button>
+                                        <button @click="removeCartItem(item.key)" class="grid w-8 h-8 transition rounded-full shrink-0 place-items-center bg-rose text-vermilion hover:bg-vermilion hover:text-paper" aria-label="Șterge produsul">×</button>
                                     </div>
-                                    <div class="mt-3 flex flex-wrap gap-2">
-                                        <span x-show="item.date" class="rounded-full bg-paper-2 px-3 py-1 text-xs font-bold" x-text="item.date"></span>
-                                        <span x-show="item.type" class="rounded-full bg-mint px-3 py-1 text-xs font-bold text-forest" x-text="item.type"></span>
+                                    <div class="flex flex-wrap gap-2 mt-3">
+                                        <span x-show="item.date" class="px-3 py-1 text-xs font-bold rounded-full bg-paper-2" x-text="item.date"></span>
+                                        <span x-show="item.type" class="px-3 py-1 text-xs font-bold rounded-full bg-mint text-forest" x-text="item.type"></span>
                                     </div>
-                                    <div class="mt-4 flex items-center justify-between gap-3">
-                                        <div class="inline-flex items-center overflow-hidden rounded-full border-2 border-ink">
-                                            <button @click="decreaseQty(item.key)" class="grid h-10 w-10 place-items-center font-bold transition hover:bg-ink hover:text-paper" aria-label="Scade">−</button>
-                                            <span class="grid h-10 w-10 place-items-center border-x-2 border-ink font-bold" x-text="item.qty"></span>
-                                            <button @click="increaseQty(item.key)" class="grid h-10 w-10 place-items-center font-bold transition hover:bg-ink hover:text-paper" aria-label="Crește">+</button>
+                                    <div class="flex items-center justify-between gap-3 mt-4">
+                                        <div class="inline-flex items-center overflow-hidden border-2 rounded-full border-ink">
+                                            <button @click="decreaseQty(item.key)" class="grid w-10 h-10 font-bold transition place-items-center hover:bg-ink hover:text-paper" aria-label="Scade">−</button>
+                                            <span class="grid w-10 h-10 font-bold place-items-center border-x-2 border-ink" x-text="item.qty"></span>
+                                            <button @click="increaseQty(item.key)" class="grid w-10 h-10 font-bold transition place-items-center hover:bg-ink hover:text-paper" aria-label="Crește">+</button>
                                         </div>
-                                        <p class="font-display text-2xl font-bold" x-text="formatMoney(item.qty * item.price)"></p>
+                                        <p class="text-2xl font-bold font-display" x-text="formatMoney(item.qty * item.price)"></p>
                                     </div>
                                 </div>
                             </div>
@@ -542,14 +545,14 @@ $tabPlacesLabel = ($ctxType === 'city' || $ctxType === 'activity')
                 </div>
             </div>
 
-            <div class="relative border-t-2 border-dashed border-ink/15 bg-paper-2 p-5 sm:p-6" x-show="cartItems.length">
+            <div class="relative p-5 border-t-2 border-dashed border-ink/15 bg-paper-2 sm:p-6" x-show="cartItems.length">
                 <div class="flex items-end justify-between gap-4">
                     <span class="font-bold">Subtotal</span>
-                    <strong class="font-display text-4xl leading-none" x-text="formatMoney(cartSubtotal())"></strong>
+                    <strong class="text-4xl leading-none font-display" x-text="formatMoney(cartSubtotal())"></strong>
                 </div>
-                <div class="mt-5 grid gap-2">
-                    <a href="/checkout" class="rounded-full bg-vermilion px-6 py-4 text-center font-bold text-paper transition hover:bg-vermilion-d">Continuă la checkout</a>
-                    <a href="/cos" class="rounded-full border-2 border-ink px-6 py-4 text-center font-bold transition hover:bg-ink hover:text-paper">Vezi pagina coșului</a>
+                <div class="grid gap-2 mt-5">
+                    <a href="/checkout" class="px-6 py-4 font-bold text-center transition rounded-full bg-vermilion text-paper hover:bg-vermilion-d">Continuă la checkout</a>
+                    <a href="/cos" class="px-6 py-4 font-bold text-center transition border-2 rounded-full border-ink hover:bg-ink hover:text-paper">Vezi pagina coșului</a>
                 </div>
                 <p class="mt-3 text-xs leading-relaxed text-ink-soft">Taxele finale, comisionul, punctele aplicabile și protecția bilet se calculează în checkout.</p>
             </div>
@@ -559,25 +562,25 @@ $tabPlacesLabel = ($ctxType === 'city' || $ctxType === 'activity')
     <!-- Search overlay -->
     <div x-show="searchOpen" x-cloak x-transition.opacity.duration.180ms class="fixed inset-0 z-[60] bg-ink/75 p-3 backdrop-blur-sm sm:p-5" role="dialog" aria-modal="true" aria-label="Caută pe bilete.online">
         <div @click.outside="searchOpen=false" class="mx-auto mt-12 max-w-4xl overflow-hidden rounded-[2rem] border-2 border-ink bg-paper shadow-deep">
-            <div class="bo-grain relative">
-                <form @submit.prevent="doSearch()" class="relative border-b-2 border-dashed border-ink/15 p-4 sm:p-5">
+            <div class="relative bo-grain">
+                <form @submit.prevent="doSearch()" class="relative p-4 border-b-2 border-dashed border-ink/15 sm:p-5">
                     <div class="flex items-center gap-3">
-                        <svg viewBox="0 0 24 24" class="h-6 w-6 shrink-0 text-ink-soft" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-                        <input x-ref="searchInput" x-model="searchQuery" type="search" :placeholder="searchPlaceholder()" class="w-full bg-transparent py-3 text-xl font-bold outline-none placeholder:text-ink-soft/70 sm:text-2xl">
-                        <button type="button" @click="searchOpen=false" class="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-ink text-xl font-bold text-paper transition hover:bg-vermilion">×</button>
+                        <svg viewBox="0 0 24 24" class="w-6 h-6 shrink-0 text-ink-soft" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+                        <input x-ref="searchInput" x-model="searchQuery" type="search" :placeholder="searchPlaceholder()" class="w-full py-3 text-xl font-bold bg-transparent outline-none placeholder:text-ink-soft/70 sm:text-2xl">
+                        <button type="button" @click="searchOpen=false" class="grid w-10 h-10 text-xl font-bold transition rounded-full shrink-0 place-items-center bg-ink text-paper hover:bg-vermilion">×</button>
                     </div>
                 </form>
 
                 <div class="relative grid max-h-[70vh] overflow-auto lg:grid-cols-[1fr_320px]">
                     <section class="p-5 sm:p-6">
                         <p class="font-mono text-xs tracking-[.18em] text-ink-soft">SUGESTII</p>
-                        <div class="mt-4 grid gap-3">
+                        <div class="grid gap-3 mt-4">
                             <template x-for="item in filteredSearch()" :key="item.href">
-                                <a :href="item.href" class="group rounded-3xl border border-ink/10 bg-paper-2 p-4 transition hover:border-ink hover:bg-paper">
+                                <a :href="item.href" class="p-4 transition border group rounded-3xl border-ink/10 bg-paper-2 hover:border-ink hover:bg-paper">
                                     <div class="flex items-start justify-between gap-4">
                                         <div>
-                                            <span class="rounded-full bg-paper px-3 py-1 text-xs font-bold text-ink-soft" x-text="item.type"></span>
-                                            <h3 class="mt-3 font-display text-3xl font-bold leading-none group-hover:text-vermilion" x-text="item.title"></h3>
+                                            <span class="px-3 py-1 text-xs font-bold rounded-full bg-paper text-ink-soft" x-text="item.type"></span>
+                                            <h3 class="mt-3 text-3xl font-bold leading-none font-display group-hover:text-vermilion" x-text="item.title"></h3>
                                             <p class="mt-1 text-ink-soft" x-text="item.meta"></p>
                                         </div>
                                         <span class="text-2xl transition group-hover:translate-x-1" aria-hidden="true">→</span>
@@ -585,28 +588,28 @@ $tabPlacesLabel = ($ctxType === 'city' || $ctxType === 'activity')
                                 </a>
                             </template>
                             <template x-if="filteredSearch().length === 0">
-                                <button type="button" @click="doSearch()" class="rounded-3xl border-2 border-dashed border-ink/20 p-5 text-left">
+                                <button type="button" @click="doSearch()" class="p-5 text-left border-2 border-dashed rounded-3xl border-ink/20">
                                     <span class="font-bold">Caută „<span x-text="searchQuery"></span>” pe tot site-ul</span>
-                                    <span class="mt-1 block text-sm text-ink-soft">Apasă Enter pentru rezultate complete.</span>
+                                    <span class="block mt-1 text-sm text-ink-soft">Apasă Enter pentru rezultate complete.</span>
                                 </button>
                             </template>
                         </div>
                     </section>
 
-                    <aside class="border-t-2 border-dashed border-ink/15 bg-paper-2/60 p-5 sm:p-6 lg:border-l-2 lg:border-t-0">
+                    <aside class="p-5 border-t-2 border-dashed border-ink/15 bg-paper-2/60 sm:p-6 lg:border-l-2 lg:border-t-0">
                         <p class="font-mono text-xs tracking-[.18em] text-ink-soft">RAPID</p>
-                        <div class="mt-4 flex flex-wrap gap-2">
+                        <div class="flex flex-wrap gap-2 mt-4">
                             <template x-for="tag in quickSearches" :key="tag.href">
-                                <a :href="tag.href" class="rounded-full bg-paper px-4 py-2 text-sm font-bold transition hover:bg-ink hover:text-paper" x-text="tag.label"></a>
+                                <a :href="tag.href" class="px-4 py-2 text-sm font-bold transition rounded-full bg-paper hover:bg-ink hover:text-paper" x-text="tag.label"></a>
                             </template>
                         </div>
-                        <div class="mt-6 rounded-3xl bg-ink p-5 text-paper">
+                        <div class="p-5 mt-6 rounded-3xl bg-ink text-paper">
                             <p class="font-mono text-xs tracking-[.18em] text-paper/40">CONT</p>
-                            <h3 class="mt-2 font-display text-4xl font-bold leading-none">Ai bilete cumpărate?</h3>
+                            <h3 class="mt-2 text-4xl font-bold leading-none font-display">Ai bilete cumpărate?</h3>
                             <p class="mt-3 text-paper/60">Le găsești rapid în cont sau prin recuperare comandă.</p>
-                            <div class="mt-4 flex flex-wrap gap-2">
-                                <a href="/cont/bilete" class="rounded-full bg-vermilion px-4 py-2 text-sm font-bold text-paper">Biletele mele</a>
-                                <a href="/recuperare-comanda" class="rounded-full bg-paper px-4 py-2 text-sm font-bold text-ink">Recuperează</a>
+                            <div class="flex flex-wrap gap-2 mt-4">
+                                <a href="/cont/bilete" class="px-4 py-2 text-sm font-bold rounded-full bg-vermilion text-paper">Biletele mele</a>
+                                <a href="/recuperare-comanda" class="px-4 py-2 text-sm font-bold rounded-full bg-paper text-ink">Recuperează</a>
                             </div>
                         </div>
                     </aside>

@@ -40,8 +40,10 @@ Tabele: `attractions`, `attraction_types`, `interests`, `traveler_types` + pivot
 - [x] F2 — Nearby: `latitude`/`longitude` pe `activities` (backfill din venue) + Haversine în `detailPayload` (`activity.nearby`) + rail „În apropiere" cu distanță reală.
 - [x] F3 — Interese + Traveler types: tabele + pivots + modele + API (payload + filtre `?interests=`/`?traveler_types=`) + Filament (Interest/TravelerType resources + multiselect pe Activitate) + filtre GYG pe `category.php` + badge-uri pe single-activity. Seeder `DiscoveryTaxonomiesSeeder`.
 - [x] F4 — Atracții: `attractions` + `attraction_types` + pivot + modele + `AttractionsController` (`/attractions`, `/attractions/{slug}`) + Filament (Attraction/AttractionType) + secțiune „Atracții" pe `city.php` + „Atracții asociate" pe single-activity + landing `atractie.php` (`/atractie/{slug}`).
-- [ ] F5 — Pagini-destinație + search facetat + badge-uri trust.
-- [ ] F6 — Enrich ghiduri + pagină operator GYG-style.
+- [x] F5 — Search facetat `cauta.php` (q + city/category/price/interests/traveler/sort, server-side, crawlable; reparat: `/cauta` n-avea fișier) + landing-uri discovery `/interese/{slug}` & `/pentru-cine/{slug}` + trust badges pe single-activity.
+- [x] F6 — Ghiduri: rail auto „Activități recomandate" (`$activities` era nedefinit → nu apărea niciodată) peste shortcode-ul `[activities]` manual; trust card pe pagina operatorului. (Pagina operator era deja activity-centric: hero + tab-uri activități/about + sidebar.)
+
+**Toate fazele F0–F6 sunt livrate.** Următorii pași sunt rafinări opționale: pagini-destinație dedicate pentru atracții/atraction-types, search facetat client-side (acum e server-side), badge „instant confirmation" pe carduri în liste, redesign complet operator GYG.
 
 ### Deploy (de rulat pe core)
 ```bash

@@ -234,6 +234,17 @@ require_once __DIR__ . '/../includes/header.php';
                 </div>
             </div>
 
+            <!-- Trust card (F6) -->
+            <div class="rounded-2xl border-2 border-ink/15 bg-paper p-6">
+                <h3 class="mb-4 font-display text-base font-bold">De ce bilete.online</h3>
+                <ul class="space-y-2.5 text-sm font-bold">
+                    <li class="flex items-center gap-2.5"><span class="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-mint text-forest">✓</span>Confirmare instant</li>
+                    <li class="flex items-center gap-2.5"><span class="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-mint text-forest">⌗</span>Bilet digital cu cod QR</li>
+                    <li class="flex items-center gap-2.5"><span class="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-mint text-forest">🔒</span>Plată securizată</li>
+                    <li class="flex items-center gap-2.5"><span class="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-mint text-forest">★</span>Puncte bonus la fiecare comandă</li>
+                </ul>
+            </div>
+
             <!-- Contact Card -->
             <div class="rounded-2xl border-2 border-ink bg-ink p-6 text-paper">
                 <h3 class="mb-2 font-display text-base font-bold">Interesat de colaborare?</h3>

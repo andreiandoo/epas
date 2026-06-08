@@ -327,23 +327,23 @@ include __DIR__ . '/includes/header.php';
             <div>
                 <p class="font-mono text-xs tracking-[.18em] text-vermilion"><?= htmlspecialchars(strtoupper($cityName)) ?> · LUCRURI DE FĂCUT</p>
                 <h1 class="mt-3 font-display text-6xl font-bold leading-[.84] sm:text-7xl lg:text-8xl">Lucruri de făcut în <?= htmlspecialchars($cityName) ?></h1>
-                <p class="mt-6 max-w-4xl text-xl leading-relaxed text-ink-soft">
+                <p class="max-w-4xl mt-6 text-xl leading-relaxed text-ink-soft">
                     <?php if ($cityDescription): ?>
                         <?= htmlspecialchars($cityDescription) ?>
                     <?php else: ?>
                         <?= htmlspecialchars($cityName) ?> combină atracții, muzee, tururi, experiențe de familie, escape rooms și activități outdoor. Alege activități pentru weekend, bilete pentru atracții, tururi culturale sau experiențe cadou — rezervi online cu bilet QR.
                     <?php endif; ?>
                 </p>
-                <form action="/<?= htmlspecialchars($slug, ENT_QUOTES) ?>" method="get" class="mt-7 max-w-3xl rounded-full border-2 border-ink bg-paper p-2 shadow-deep" role="search" aria-label="Caută activități în <?= htmlspecialchars($cityName) ?>">
+                <form action="/<?= htmlspecialchars($slug, ENT_QUOTES) ?>" method="get" class="max-w-3xl p-2 border-2 rounded-full mt-7 border-ink bg-paper shadow-deep" role="search" aria-label="Caută activități în <?= htmlspecialchars($cityName) ?>">
                     <div class="flex items-center gap-2">
-                        <svg viewBox="0 0 24 24" class="ml-3 h-5 w-5 shrink-0 text-ink-soft" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+                        <svg viewBox="0 0 24 24" class="w-5 h-5 ml-3 shrink-0 text-ink-soft" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
                         <label class="sr-only" for="city-search">Caută activități în <?= htmlspecialchars($cityName) ?></label>
-                        <input id="city-search" name="q" class="w-full bg-transparent px-2 py-3 font-bold outline-none placeholder:text-ink-soft/70" placeholder="Caută activități în <?= htmlspecialchars($cityName, ENT_QUOTES) ?>: copii, muzee, escape rooms..." />
-                        <button type="submit" class="shrink-0 rounded-full bg-vermilion px-6 py-3 font-bold text-paper transition hover:bg-vermilion-d">Caută</button>
+                        <input id="city-search" name="q" class="w-full px-2 py-3 font-bold bg-transparent outline-none placeholder:text-ink-soft/70" placeholder="Caută activități în <?= htmlspecialchars($cityName, ENT_QUOTES) ?>: copii, muzee, escape rooms..." />
+                        <button type="submit" class="px-6 py-3 font-bold transition rounded-full shrink-0 bg-vermilion text-paper hover:bg-vermilion-d">Caută</button>
                     </div>
                 </form>
                 <?php if (!empty($topCategories)): ?>
-                <div class="mt-5 flex flex-wrap items-center gap-2 text-sm">
+                <div class="flex flex-wrap items-center gap-2 mt-5 text-sm">
                     <span class="font-bold text-ink-soft">Populare:</span>
                     <?php foreach (array_slice($topCategories, 0, 4) as $cat): ?>
                         <a href="/<?= htmlspecialchars($slug, ENT_QUOTES) ?>?category=<?= htmlspecialchars($cat['slug'], ENT_QUOTES) ?>" class="rounded-full bg-paper-2 border border-ink/10 px-3 py-1.5 font-bold transition hover:bg-ink hover:text-paper">
@@ -358,18 +358,18 @@ include __DIR__ . '/includes/header.php';
             <?php if (count($gallery) >= 1): ?>
                 <div class="grid h-[460px] grid-cols-5 grid-rows-4 gap-3">
                     <button type="button" @click="openG(0)" class="group relative col-span-3 row-span-4 overflow-hidden rounded-[2rem] border-2 border-ink bg-ink">
-                        <img src="<?= htmlspecialchars($gallery[0]['src'], ENT_QUOTES) ?>" alt="<?= htmlspecialchars($gallery[0]['alt'], ENT_QUOTES) ?>" class="h-full w-full object-cover transition duration-500 group-hover:scale-105" loading="lazy">
+                        <img src="<?= htmlspecialchars($gallery[0]['src'], ENT_QUOTES) ?>" alt="<?= htmlspecialchars($gallery[0]['alt'], ENT_QUOTES) ?>" class="object-cover w-full h-full transition duration-500 group-hover:scale-105" loading="lazy">
                         <div class="absolute inset-0 bg-gradient-to-t from-ink/70 via-transparent to-transparent"></div>
-                        <span class="absolute bottom-4 left-4 rounded-full bg-paper px-4 py-2 text-sm font-bold text-ink">Vezi imagini</span>
+                        <span class="absolute px-4 py-2 text-sm font-bold rounded-full bottom-4 left-4 bg-paper text-ink">Vezi imagini</span>
                     </button>
                     <?php for ($gi = 1; $gi <= 4; $gi++): $g = $gallery[$gi] ?? null; ?>
                         <?php if ($g): ?>
                             <button type="button" @click="openG(<?= $gi ?>)" class="group relative col-span-2 row-span-1 overflow-hidden rounded-[1.5rem] border-2 border-ink bg-ink">
-                                <img src="<?= htmlspecialchars($g['src'], ENT_QUOTES) ?>" alt="<?= htmlspecialchars($g['alt'], ENT_QUOTES) ?>" class="h-full w-full object-cover transition duration-500 group-hover:scale-105" loading="lazy">
+                                <img src="<?= htmlspecialchars($g['src'], ENT_QUOTES) ?>" alt="<?= htmlspecialchars($g['alt'], ENT_QUOTES) ?>" class="object-cover w-full h-full transition duration-500 group-hover:scale-105" loading="lazy">
                             </button>
                         <?php else: ?>
                             <div class="col-span-2 row-span-1 grid place-items-center rounded-[1.5rem] border-2 border-ink bg-gradient-to-br <?= ['from-vermilion to-vermilion-d','from-forest to-ink','from-sky to-ink','from-ochre to-vermilion-d'][$gi - 1] ?? 'from-vermilion to-vermilion-d' ?> text-paper">
-                                <span class="font-display text-xl font-bold opacity-80"><?= htmlspecialchars($cityName) ?></span>
+                                <span class="text-xl font-bold font-display opacity-80"><?= htmlspecialchars($cityName) ?></span>
                             </div>
                         <?php endif; ?>
                     <?php endfor; ?>
@@ -378,7 +378,7 @@ include __DIR__ . '/includes/header.php';
                 <div class="grid h-[460px] grid-cols-2 grid-rows-2 gap-3">
                     <?php foreach ([['from-forest to-ink','CITY','Ghid'],['from-vermilion to-vermilion-d','INDOOR','Escape'],['from-sky to-ink','CULTURĂ','Muzee'],['from-ochre to-vermilion-d','OUTDOOR','Aventură']] as $tile): ?>
                         <div class="flex items-end rounded-[1.5rem] border-2 border-ink bg-gradient-to-br <?= $tile[0] ?> p-5 text-paper">
-                            <div><p class="font-mono text-[10px] tracking-wider opacity-80"><?= $tile[1] ?></p><p class="font-display text-3xl font-bold leading-none"><?= $tile[2] ?></p></div>
+                            <div><p class="font-mono text-[10px] tracking-wider opacity-80"><?= $tile[1] ?></p><p class="text-3xl font-bold leading-none font-display"><?= $tile[2] ?></p></div>
                         </div>
                     <?php endforeach; ?>
                 </div>
@@ -388,18 +388,18 @@ include __DIR__ . '/includes/header.php';
 
     <!-- Gallery lightbox -->
     <div x-show="open" x-cloak class="fixed inset-0 z-[90] bg-ink/90 p-4 backdrop-blur-sm" @keydown.escape.window="open=false" @click.self="open=false">
-        <div class="mx-auto flex h-full max-w-6xl flex-col">
-            <div class="mb-4 flex items-center justify-between gap-4 text-paper">
-                <p class="font-display text-3xl font-bold" x-text="g[i] ? g[i].alt : ''"></p>
-                <button @click="open=false" class="grid h-11 w-11 place-items-center rounded-full bg-paper text-2xl font-bold text-ink">×</button>
+        <div class="flex flex-col h-full max-w-6xl mx-auto">
+            <div class="flex items-center justify-between gap-4 mb-4 text-paper">
+                <p class="text-3xl font-bold font-display" x-text="g[i] ? g[i].alt : ''"></p>
+                <button @click="open=false" class="grid text-2xl font-bold rounded-full h-11 w-11 place-items-center bg-paper text-ink">×</button>
             </div>
-            <div class="grid min-h-0 flex-1 place-items-center">
+            <div class="grid flex-1 min-h-0 place-items-center">
                 <img :src="g[i] ? g[i].src : ''" :alt="g[i] ? g[i].alt : ''" class="max-h-full max-w-full rounded-[2rem] object-contain">
             </div>
-            <div class="mt-4 flex items-center justify-center gap-2">
-                <button @click="prev()" class="rounded-full bg-paper px-5 py-3 font-bold text-ink">←</button>
+            <div class="flex items-center justify-center gap-2 mt-4">
+                <button @click="prev()" class="px-5 py-3 font-bold rounded-full bg-paper text-ink">←</button>
                 <span class="text-paper" x-text="(i + 1) + ' / ' + g.length"></span>
-                <button @click="next()" class="rounded-full bg-paper px-5 py-3 font-bold text-ink">→</button>
+                <button @click="next()" class="px-5 py-3 font-bold rounded-full bg-paper text-ink">→</button>
             </div>
         </div>
     </div>
@@ -418,16 +418,6 @@ document.addEventListener('alpine:init', () => {
 });
 </script>
 
-<!-- ============================== QUICK FACTS ============================== -->
-<section class="bg-paper">
-    <div class="mx-auto grid max-w-[1500px] gap-4 px-4 py-6 sm:px-6 md:grid-cols-4">
-        <article class="rounded-[1.5rem] border border-ink/10 bg-paper-2 p-5"><p class="font-mono text-xs tracking-[.16em] text-ink-soft">SEZON BUN</p><p class="mt-2 font-display text-3xl font-bold leading-none">Tot anul</p><p class="mt-2 text-sm text-ink-soft">activități indoor și outdoor în fiecare sezon</p></article>
-        <article class="rounded-[1.5rem] border border-ink/10 bg-paper-2 p-5"><p class="font-mono text-xs tracking-[.16em] text-ink-soft">CITY BREAK</p><p class="mt-2 font-display text-3xl font-bold leading-none">2 – 4 zile</p><p class="mt-2 text-sm text-ink-soft">destul pentru atracții, tururi și experiențe</p></article>
-        <article class="rounded-[1.5rem] border border-ink/10 bg-paper-2 p-5"><p class="font-mono text-xs tracking-[.16em] text-ink-soft">PENTRU FAMILII</p><p class="mt-2 font-display text-3xl font-bold leading-none">multe opțiuni</p><p class="mt-2 text-sm text-ink-soft">muzee interactive, ateliere, parcuri, teatru</p></article>
-        <article class="rounded-[1.5rem] border border-ink/10 bg-paper-2 p-5"><p class="font-mono text-xs tracking-[.16em] text-ink-soft">BILETE</p><p class="mt-2 font-display text-3xl font-bold leading-none">QR digital</p><p class="mt-2 text-sm text-ink-soft">rezervare rapidă și puncte bonus</p></article>
-    </div>
-</section>
-
 <!-- ============================== STICKY SECTION NAV ============================== -->
 <section class="sticky top-[72px] z-40 border-y border-ink/10 bg-paper/95 backdrop-blur-xl">
     <div class="mx-auto flex max-w-[1500px] gap-2 overflow-x-auto px-4 py-3 text-sm font-bold sm:px-6">
@@ -443,28 +433,28 @@ document.addEventListener('alpine:init', () => {
 
 <!-- ============================== ATRACTII (F4) ============================== -->
 <?php if (!empty($cityAttractions)): ?>
-<section id="attractions" class="bg-paper">
+<section id="attractions" class="bg-white">
     <div class="mx-auto max-w-[1500px] px-4 py-12 sm:px-6 lg:py-16">
         <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
             <div>
                 <p class="font-mono text-xs tracking-[.18em] text-vermilion">ATRACȚII DE NERATAT</p>
-                <h2 class="mt-2 font-display text-6xl font-bold leading-none">Atracții pe care merită să le pui pe listă</h2>
+                <h2 class="mt-2 text-6xl font-bold leading-none font-display">Atracții pe care merită să le pui pe listă</h2>
             </div>
         </div>
-        <div class="mt-8 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+        <div class="grid gap-5 mt-8 md:grid-cols-2 xl:grid-cols-4">
             <?php $atBg = ['from-vermilion to-vermilion-d','from-forest to-ink','from-sky to-ink','from-ochre to-vermilion-d']; foreach ($cityAttractions as $ai => $at): ?>
                 <a href="/atractie/<?= htmlspecialchars($at['slug'], ENT_QUOTES) ?>" class="group overflow-hidden rounded-[2rem] border-2 border-ink bg-paper shadow-deep transition hover:-translate-y-0.5">
                     <div class="relative h-56 overflow-hidden">
                         <?php if (!empty($at['image'])): ?>
-                            <img src="<?= htmlspecialchars($at['image'], ENT_QUOTES) ?>" alt="<?= htmlspecialchars($at['name'], ENT_QUOTES) ?>" class="h-full w-full object-cover transition duration-500 group-hover:scale-105" loading="lazy">
+                            <img src="<?= htmlspecialchars($at['image'], ENT_QUOTES) ?>" alt="<?= htmlspecialchars($at['name'], ENT_QUOTES) ?>" class="object-cover w-full h-full transition duration-500 group-hover:scale-105" loading="lazy">
                         <?php else: ?>
-                            <div class="grid h-full place-items-center bg-gradient-to-br <?= $atBg[$ai % count($atBg)] ?> text-paper"><span class="px-4 text-center font-display text-2xl font-bold"><?= htmlspecialchars($at['name']) ?></span></div>
+                            <div class="grid h-full place-items-center bg-gradient-to-br <?= $atBg[$ai % count($atBg)] ?> text-paper"><span class="px-4 text-2xl font-bold text-center font-display"><?= htmlspecialchars($at['name']) ?></span></div>
                         <?php endif; ?>
-                        <?php if (!empty($at['type'])): ?><span class="absolute left-4 top-4 rounded-full bg-paper px-3 py-1 text-xs font-bold text-ink"><?= htmlspecialchars($at['type']) ?></span><?php endif; ?>
-                        <?php if (!empty($at['count'])): ?><span class="absolute right-4 top-4 rounded-full bg-ink/90 px-3 py-1 text-xs font-bold text-paper"><?= (int) $at['count'] ?> activități</span><?php endif; ?>
+                        <?php if (!empty($at['type'])): ?><span class="absolute px-3 py-1 text-xs font-bold rounded-full left-4 top-4 bg-paper text-ink"><?= htmlspecialchars($at['type']) ?></span><?php endif; ?>
+                        <?php if (!empty($at['count'])): ?><span class="absolute px-3 py-1 text-xs font-bold rounded-full right-4 top-4 bg-ink/90 text-paper"><?= (int) $at['count'] ?> activități</span><?php endif; ?>
                     </div>
                     <div class="p-5">
-                        <p class="font-display text-3xl font-bold leading-none group-hover:text-vermilion"><?= htmlspecialchars($at['name']) ?></p>
+                        <p class="text-3xl font-bold leading-none font-display group-hover:text-vermilion"><?= htmlspecialchars($at['name']) ?></p>
                     </div>
                 </a>
             <?php endforeach; ?>
@@ -475,19 +465,19 @@ document.addEventListener('alpine:init', () => {
 
 <!-- ============================== CATEGORY QUICK LINKS ============================== -->
 <?php if (!empty($topCategories)): ?>
-<section id="categorii" class="max-w-7xl mx-auto px-4 sm:px-6 py-12 lg:py-16">
+<section id="categorii" class="px-4 py-12 mx-auto max-w-7xl sm:px-6 lg:py-16">
     <div class="flex items-end justify-between gap-6 mb-8">
         <div>
             <p class="font-mono text-xs tracking-[.2em] text-vermilion mb-2">CATEGORII LOCALE</p>
             <h2 class="font-display text-[clamp(2rem,4vw,3.8rem)] font-700 leading-[0.95]">Alege ce fel de zi vrei în <?= htmlspecialchars($cityName) ?></h2>
         </div>
-        <a href="#activitati" class="hidden sm:inline-flex items-center gap-2 font-700 text-vermilion underline-wobble">
+        <a href="#activitati" class="items-center hidden gap-2 sm:inline-flex font-700 text-vermilion underline-wobble">
             Vezi toate activitățile
             <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.3" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>
         </a>
     </div>
 
-    <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <?php
         $catAccentBg = [
             'vermilion' => 'bg-gradient-to-br from-vermilion to-vermilion-d text-vermilion',
@@ -498,14 +488,14 @@ document.addEventListener('alpine:init', () => {
         foreach ($topCategories as $cat):
             $bgClass = $catAccentBg[$cat['accent']] ?? $catAccentBg['vermilion'];
         ?>
-            <a href="/<?= htmlspecialchars($slug, ENT_QUOTES) ?>?category=<?= htmlspecialchars($cat['slug'], ENT_QUOTES) ?>" class="ticket ticket-lift group border-2 border-ink rounded-2xl overflow-hidden bg-paper" style="--perf:100%">
+            <a href="/<?= htmlspecialchars($slug, ENT_QUOTES) ?>?category=<?= htmlspecialchars($cat['slug'], ENT_QUOTES) ?>" class="overflow-hidden border-2 ticket ticket-lift group border-ink rounded-2xl bg-paper" style="--perf:100%">
                 <div class="duotone h-32 p-5 flex items-end <?= $bgClass ?>">
                     <div class="grid-tex"></div>
                     <span class="relative text-paper/90 font-mono text-[10px] tracking-wider"><?= htmlspecialchars($cat['count']) ?></span>
-                    <span class="absolute top-5 right-5 text-3xl text-paper/40 group-hover:scale-110 transition-transform" aria-hidden="true"><?= htmlspecialchars($cat['icon_emoji'] ?? '🎫') ?></span>
+                    <span class="absolute text-3xl transition-transform top-5 right-5 text-paper/40 group-hover:scale-110" aria-hidden="true"><?= htmlspecialchars($cat['icon_emoji'] ?? '🎫') ?></span>
                 </div>
                 <div class="p-5">
-                    <h3 class="font-display text-2xl font-700 leading-none"><?= htmlspecialchars($cat['label']) ?></h3>
+                    <h3 class="text-2xl leading-none font-display font-700"><?= htmlspecialchars($cat['label']) ?></h3>
                 </div>
             </a>
         <?php endforeach; ?>
@@ -514,25 +504,25 @@ document.addEventListener('alpine:init', () => {
 <?php endif; ?>
 
 <!-- ============================== EVENTS LISTING ============================== -->
-<section id="activitati" x-data="cityFilters()" class="bg-paper-2/70 border-y border-ink/10">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-16 lg:py-20">
+<section id="activitati" x-data="cityFilters()" class="bg-white border-y border-ink/10">
+    <div class="px-4 py-16 mx-auto max-w-7xl sm:px-6 lg:py-20">
 
-        <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
+        <div class="flex flex-col justify-between gap-4 mb-8 sm:flex-row sm:items-end">
             <div>
                 <p class="font-mono text-xs tracking-[.2em] text-vermilion mb-2">LISTĂ LOCALĂ</p>
                 <h2 class="font-display text-[clamp(2rem,4vw,3.5rem)] font-700 leading-[0.95]">
                     Cele mai bune lucruri de făcut în <?= htmlspecialchars($cityName) ?>
                 </h2>
-                <p class="mt-3 text-ink-soft max-w-2xl">
+                <p class="max-w-2xl mt-3 text-ink-soft">
                     <?= (int) ($pagination['total'] ?? 0) ?> <?= ($pagination['total'] ?? 0) === 1 ? 'activitate disponibilă' : 'activități disponibile' ?>
                 </p>
             </div>
         </div>
 
         <!-- FILTER TOOLBAR -->
-        <div class="sticky top-24 z-40 -mx-4 sm:-mx-6 px-4 sm:px-6 py-4 bg-paper/95 backdrop-blur-md border-y border-ink/10 mb-6">
+        <div class="sticky z-40 px-4 py-4 mb-6 -mx-4 top-24 sm:-mx-6 sm:px-6 bg-paper/95 backdrop-blur-md border-y border-ink/10">
             <!-- DESKTOP -->
-            <form method="get" action="/<?= htmlspecialchars($slug, ENT_QUOTES) ?>" class="hidden lg:flex items-center gap-3" @click.outside="open=null">
+            <form method="get" action="/<?= htmlspecialchars($slug, ENT_QUOTES) ?>" class="items-center hidden gap-3 lg:flex" @click.outside="open=null">
                 <?php if ($categoryFilter): ?><input type="hidden" name="category" value="<?= htmlspecialchars($categoryFilter, ENT_QUOTES) ?>"><?php endif; ?>
                 <?php if ($maxPrice !== null): ?><input type="hidden" name="max_price" value="<?= $maxPrice ?>"><?php endif; ?>
                 <?php if ($sort !== 'recommended'): ?><input type="hidden" name="sort" value="<?= htmlspecialchars($sort, ENT_QUOTES) ?>"><?php endif; ?>
@@ -600,7 +590,7 @@ document.addEventListener('alpine:init', () => {
             </form>
 
             <!-- MOBILE -->
-            <form method="get" action="/<?= htmlspecialchars($slug, ENT_QUOTES) ?>" class="lg:hidden flex items-center gap-2">
+            <form method="get" action="/<?= htmlspecialchars($slug, ENT_QUOTES) ?>" class="flex items-center gap-2 lg:hidden">
                 <?php if ($categoryFilter): ?><input type="hidden" name="category" value="<?= htmlspecialchars($categoryFilter, ENT_QUOTES) ?>"><?php endif; ?>
                 <?php if ($maxPrice !== null): ?><input type="hidden" name="max_price" value="<?= $maxPrice ?>"><?php endif; ?>
                 <?php if ($sort !== 'recommended'): ?><input type="hidden" name="sort" value="<?= htmlspecialchars($sort, ENT_QUOTES) ?>"><?php endif; ?>
@@ -624,7 +614,7 @@ document.addEventListener('alpine:init', () => {
                             <svg class="w-3.5 h-3.5 text-ink-soft group-hover:text-vermilion" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
                         </a>
                     <?php endforeach; ?>
-                    <a href="/<?= htmlspecialchars($slug, ENT_QUOTES) ?>" class="text-sm font-600 text-vermilion underline-wobble ml-1">Șterge tot</a>
+                    <a href="/<?= htmlspecialchars($slug, ENT_QUOTES) ?>" class="ml-1 text-sm font-600 text-vermilion underline-wobble">Șterge tot</a>
                 </div>
             <?php endif; ?>
         </div>
@@ -636,9 +626,9 @@ document.addEventListener('alpine:init', () => {
                  x-transition:enter="transition ease-out duration-300" x-transition:enter-start="translate-y-full" x-transition:enter-end="translate-y-0"
                  x-transition:leave="transition ease-in duration-200" x-transition:leave-start="translate-y-0" x-transition:leave-end="translate-y-full"
                  class="absolute bottom-0 inset-x-0 bg-paper rounded-t-3xl border-t-2 border-ink max-h-[88vh] overflow-y-auto">
-                <div class="sticky top-0 bg-paper flex items-center justify-between px-5 py-4 border-b border-ink/10">
-                    <h2 class="font-display text-xl font-700">Filtre</h2>
-                    <button @click="sheet=false" class="grid place-items-center w-9 h-9 rounded-full border-2 border-ink/15" aria-label="Închide">
+                <div class="sticky top-0 flex items-center justify-between px-5 py-4 border-b bg-paper border-ink/10">
+                    <h2 class="text-xl font-display font-700">Filtre</h2>
+                    <button @click="sheet=false" class="grid border-2 rounded-full place-items-center w-9 h-9 border-ink/15" aria-label="Închide">
                         <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
                     </button>
                 </div>
@@ -680,19 +670,19 @@ document.addEventListener('alpine:init', () => {
         </div>
 
         <?php if (empty($cards)): ?>
-            <div class="ticket bg-paper border-2 border-ink rounded-3xl p-10 sm:p-16 text-center" style="--perf:100%">
-                <p class="font-display text-3xl font-700">
+            <div class="p-10 text-center border-2 ticket bg-paper border-ink rounded-3xl sm:p-16" style="--perf:100%">
+                <p class="text-3xl font-display font-700">
                     <?php if ($categoryFilter): ?>
                         Nicio activitate din această categorie în <?= htmlspecialchars($cityName) ?>.
                     <?php else: ?>
                         Încă nu sunt activități listate aici.
                     <?php endif; ?>
                 </p>
-                <p class="text-ink-soft mt-2">Reveniți în curând — operatorii își vor adăuga curând experiențele.</p>
-                <a href="/categorii" class="inline-block mt-5 px-5 py-3 rounded-full bg-ink text-paper font-700 hover:bg-vermilion transition">Vezi alte categorii</a>
+                <p class="mt-2 text-ink-soft">Reveniți în curând — operatorii își vor adăuga curând experiențele.</p>
+                <a href="/categorii" class="inline-block px-5 py-3 mt-5 transition rounded-full bg-ink text-paper font-700 hover:bg-vermilion">Vezi alte categorii</a>
             </div>
         <?php else: ?>
-            <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
                 <?php foreach ($cards as $ev):
                     $evTitle = $ev['title'];
                     $evCat = $ev['cat'];
@@ -701,12 +691,12 @@ document.addEventListener('alpine:init', () => {
                     $evPriceCents = $ev['price_cents'] ?? null;
                     $evPrice = navFormatPriceCents($evPriceCents);
                 ?>
-                    <article class="ticket ticket-lift group bg-paper border-2 border-ink rounded-2xl overflow-hidden flex flex-col" style="--perf:100%">
+                    <article class="flex flex-col overflow-hidden border-2 ticket ticket-lift group bg-paper border-ink rounded-2xl" style="--perf:100%">
                         <a href="<?= htmlspecialchars($evUrl, ENT_QUOTES) ?>" class="block">
                             <?php if ($evCover): ?>
-                                <img src="<?= htmlspecialchars($evCover, ENT_QUOTES) ?>" alt="<?= htmlspecialchars($evTitle, ENT_QUOTES) ?>" class="h-44 w-full object-cover" loading="lazy" width="600" height="320">
+                                <img src="<?= htmlspecialchars($evCover, ENT_QUOTES) ?>" alt="<?= htmlspecialchars($evTitle, ENT_QUOTES) ?>" class="object-cover w-full h-44" loading="lazy" width="600" height="320">
                             <?php else: ?>
-                                <div class="duotone h-36 p-4 bg-gradient-to-br from-vermilion to-vermilion-d text-vermilion">
+                                <div class="p-4 duotone h-36 bg-gradient-to-br from-vermilion to-vermilion-d text-vermilion">
                                     <div class="grid-tex"></div>
                                     <?php if ($evCat): ?>
                                         <span class="relative font-mono text-[10px] text-paper/90 bg-ink/25 px-2 py-1 rounded"><?= htmlspecialchars(strtoupper($evCat)) ?></span>
@@ -715,7 +705,7 @@ document.addEventListener('alpine:init', () => {
                             <?php endif; ?>
                         </a>
 
-                        <div class="p-5 flex-1 flex flex-col">
+                        <div class="flex flex-col flex-1 p-5">
                             <?php if ($evCat): ?>
                                 <p class="font-mono text-[10px] text-ink-soft tracking-wider"><?= htmlspecialchars(strtoupper($evCat)) ?></p>
                             <?php endif; ?>
@@ -723,12 +713,12 @@ document.addEventListener('alpine:init', () => {
                                 <h3 class="font-display text-2xl font-700 leading-tight mt-1.5 group-hover:text-vermilion transition-colors"><?= htmlspecialchars($evTitle) ?></h3>
                             </a>
 
-                            <div class="mt-auto pt-5 flex items-end justify-between gap-3">
+                            <div class="flex items-end justify-between gap-3 pt-5 mt-auto">
                                 <div>
                                     <?php if ($evPriceCents !== null && $evPriceCents > 0): ?>
                                         <p class="text-xs text-ink-soft">de la</p>
                                     <?php endif; ?>
-                                    <p class="font-display text-2xl font-700"><?= htmlspecialchars($evPrice) ?></p>
+                                    <p class="text-2xl font-display font-700"><?= htmlspecialchars($evPrice) ?></p>
                                 </div>
                                 <a href="<?= htmlspecialchars($evUrl, ENT_QUOTES) ?>" class="px-4 py-2.5 rounded-full bg-ink text-paper text-sm font-700 hover:bg-vermilion transition-colors"><?= htmlspecialchars($ev['cta']) ?></a>
                             </div>
@@ -739,7 +729,7 @@ document.addEventListener('alpine:init', () => {
 
             <!-- pagination -->
             <?php if (($pagination['last_page'] ?? 1) > 1): ?>
-                <nav class="mt-10 flex justify-center gap-2 flex-wrap" aria-label="Pagini">
+                <nav class="flex flex-wrap justify-center gap-2 mt-10" aria-label="Pagini">
                     <?php
                     $baseQs = $_GET;
                     unset($baseQs['slug'], $baseQs['page']);
@@ -751,13 +741,13 @@ document.addEventListener('alpine:init', () => {
                     $start = max(1, $end - 6);
                     ?>
                     <?php if ($current > 1): ?>
-                        <a href="<?= htmlspecialchars($baseLink) ?>page=<?= $current - 1 ?>" class="px-4 py-2 rounded-full border-2 border-ink/20 hover:border-ink font-600 text-sm">‹ Anterior</a>
+                        <a href="<?= htmlspecialchars($baseLink) ?>page=<?= $current - 1 ?>" class="px-4 py-2 text-sm border-2 rounded-full border-ink/20 hover:border-ink font-600">‹ Anterior</a>
                     <?php endif; ?>
                     <?php for ($p = $start; $p <= $end; $p++): ?>
                         <a href="<?= htmlspecialchars($baseLink) ?>page=<?= $p ?>" class="px-4 py-2 rounded-full border-2 font-600 text-sm <?= $p === $current ? 'bg-ink text-paper border-ink' : 'border-ink/20 hover:border-ink' ?>"><?= $p ?></a>
                     <?php endfor; ?>
                     <?php if ($current < $last): ?>
-                        <a href="<?= htmlspecialchars($baseLink) ?>page=<?= $current + 1 ?>" class="px-4 py-2 rounded-full border-2 border-ink/20 hover:border-ink font-600 text-sm">Următor ›</a>
+                        <a href="<?= htmlspecialchars($baseLink) ?>page=<?= $current + 1 ?>" class="px-4 py-2 text-sm border-2 rounded-full border-ink/20 hover:border-ink font-600">Următor ›</a>
                     <?php endif; ?>
                 </nav>
             <?php endif; ?>
@@ -775,12 +765,12 @@ document.addEventListener('alpine:init', () => {
 <section id="by-traveler" class="bg-ink text-paper">
     <div class="mx-auto max-w-[1500px] px-4 py-12 sm:px-6 lg:py-16">
         <p class="font-mono text-xs tracking-[.18em] text-ochre">PENTRU CINE</p>
-        <h2 class="mt-2 font-display text-6xl font-bold leading-none">Alege după stilul tău de ieșire în <?= htmlspecialchars($cityName) ?></h2>
-        <div class="mt-8 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+        <h2 class="mt-2 text-6xl font-bold leading-none font-display">Alege după stilul tău de ieșire în <?= htmlspecialchars($cityName) ?></h2>
+        <div class="grid gap-5 mt-8 md:grid-cols-2 xl:grid-cols-4">
             <?php foreach ($travelerTypes as $tt): ?>
                 <a href="<?= htmlspecialchars($tt['href'], ENT_QUOTES) ?>" class="group rounded-[2rem] border border-paper/10 bg-paper/10 p-6 transition hover:-translate-y-0.5 hover:bg-paper hover:text-ink">
                     <p class="text-4xl"><?= $tt['icon'] ?></p>
-                    <p class="mt-5 font-display text-4xl font-bold leading-none group-hover:text-vermilion"><?= htmlspecialchars($tt['title']) ?></p>
+                    <p class="mt-5 text-4xl font-bold leading-none font-display group-hover:text-vermilion"><?= htmlspecialchars($tt['title']) ?></p>
                     <p class="mt-3 text-paper/60 group-hover:text-ink-soft"><?= htmlspecialchars($tt['desc']) ?></p>
                 </a>
             <?php endforeach; ?>
@@ -790,19 +780,19 @@ document.addEventListener('alpine:init', () => {
 
 <?php if (!empty($nearbyCities)): ?>
 <!-- ============================== NEARBY ============================== -->
-<section id="nearby" class="bg-paper">
+<section id="nearby" class="bg-white">
     <div class="mx-auto max-w-[1500px] px-4 py-12 sm:px-6 lg:py-16">
         <p class="font-mono text-xs tracking-[.18em] text-vermilion">ÎN APROPIERE</p>
-        <h2 class="mt-2 font-display text-6xl font-bold leading-none">Alte orașe de explorat lângă <?= htmlspecialchars($cityName) ?></h2>
-        <p class="mt-3 max-w-3xl text-ink-soft">Pentru excursii de o zi, experiențe de weekend sau activități care merg bine împreună cu o vizită în <?= htmlspecialchars($cityName) ?>.</p>
-        <div class="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+        <h2 class="mt-2 text-6xl font-bold leading-none font-display">Alte orașe de explorat lângă <?= htmlspecialchars($cityName) ?></h2>
+        <p class="max-w-3xl mt-3 text-ink-soft">Pentru excursii de o zi, experiențe de weekend sau activități care merg bine împreună cu o vizită în <?= htmlspecialchars($cityName) ?>.</p>
+        <div class="grid gap-4 mt-8 md:grid-cols-2 xl:grid-cols-5">
             <?php $nbBg = ['from-vermilion to-vermilion-d','from-forest to-ink','from-sky to-ink','from-ochre to-vermilion-d','from-ink to-forest']; foreach ($nearbyCities as $ni => $nc): ?>
                 <a href="<?= htmlspecialchars($nc['href'], ENT_QUOTES) ?>" class="group overflow-hidden rounded-[2rem] border-2 border-ink bg-paper shadow-deep transition hover:-translate-y-0.5">
                     <div class="grid h-40 place-items-end bg-gradient-to-br <?= $nbBg[$ni % count($nbBg)] ?> p-4">
                         <span class="font-mono text-[10px] tracking-wider text-paper/80">ORAȘ</span>
                     </div>
                     <div class="p-4">
-                        <p class="font-display text-3xl font-bold leading-none group-hover:text-vermilion"><?= htmlspecialchars($nc['label']) ?></p>
+                        <p class="text-3xl font-bold leading-none font-display group-hover:text-vermilion"><?= htmlspecialchars($nc['label']) ?></p>
                         <p class="mt-1 text-sm text-ink-soft">Activități și experiențe locale</p>
                     </div>
                 </a>
@@ -819,21 +809,21 @@ document.addEventListener('alpine:init', () => {
         <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
             <div>
                 <p class="font-mono text-xs tracking-[.18em] text-ink-soft">ARTICOLE</p>
-                <h2 class="mt-2 font-display text-6xl font-bold leading-none">Ghiduri și idei pentru <?= htmlspecialchars($cityName) ?></h2>
+                <h2 class="mt-2 text-6xl font-bold leading-none font-display">Ghiduri și idei pentru <?= htmlspecialchars($cityName) ?></h2>
             </div>
-            <a href="/ghiduri" class="rounded-full bg-ink px-5 py-3 font-bold text-paper transition hover:bg-vermilion">Toate ghidurile</a>
+            <a href="/ghiduri" class="px-5 py-3 font-bold transition rounded-full bg-ink text-paper hover:bg-vermilion">Toate ghidurile</a>
         </div>
-        <div class="mt-8 grid gap-5 lg:grid-cols-3">
+        <div class="grid gap-5 mt-8 lg:grid-cols-3">
             <?php foreach ($cityGuides as $guide): ?>
                 <a href="<?= htmlspecialchars($guide['href'], ENT_QUOTES) ?>" class="group overflow-hidden rounded-[2rem] border-2 border-ink bg-paper shadow-deep transition hover:-translate-y-0.5">
                     <?php if (!empty($guide['image'])): ?>
-                        <img src="<?= htmlspecialchars($guide['image'], ENT_QUOTES) ?>" alt="<?= htmlspecialchars($guide['title'], ENT_QUOTES) ?>" class="h-56 w-full object-cover transition duration-500 group-hover:scale-105" loading="lazy">
+                        <img src="<?= htmlspecialchars($guide['image'], ENT_QUOTES) ?>" alt="<?= htmlspecialchars($guide['title'], ENT_QUOTES) ?>" class="object-cover w-full h-56 transition duration-500 group-hover:scale-105" loading="lazy">
                     <?php else: ?>
-                        <div class="grid h-56 place-items-center bg-gradient-to-br from-forest to-ink text-paper"><span class="font-display text-2xl font-bold opacity-80">Ghid</span></div>
+                        <div class="grid h-56 place-items-center bg-gradient-to-br from-forest to-ink text-paper"><span class="text-2xl font-bold font-display opacity-80">Ghid</span></div>
                     <?php endif; ?>
                     <div class="p-5">
                         <p class="font-mono text-xs tracking-[.16em] text-ink-soft"><?= htmlspecialchars($guide['kicker']) ?></p>
-                        <p class="mt-2 font-display text-4xl font-bold leading-none group-hover:text-vermilion"><?= htmlspecialchars($guide['title']) ?></p>
+                        <p class="mt-2 text-4xl font-bold leading-none font-display group-hover:text-vermilion"><?= htmlspecialchars($guide['title']) ?></p>
                         <?php if (!empty($guide['excerpt'])): ?><p class="mt-3 line-clamp-3 text-ink-soft"><?= htmlspecialchars($guide['excerpt']) ?></p><?php endif; ?>
                         <p class="mt-4 text-sm font-bold text-vermilion">Citește ghidul →</p>
                     </div>
@@ -857,13 +847,13 @@ document.addEventListener('alpine:init', () => {
      The GYG SDK script is loaded with async+defer so it never blocks
      the LCP — the widget hydrates after the page is interactive.
 -->
-<section id="getyourguide" class="max-w-7xl mx-auto px-4 sm:px-6 py-16 lg:py-20 border-t border-ink/10">
-    <div class="mb-8 max-w-3xl">
+<section id="getyourguide" class="px-4 py-16 mx-auto border-t max-w-7xl sm:px-6 lg:py-20 border-ink/10">
+    <div class="max-w-3xl mb-8">
         <p class="font-mono text-xs tracking-[.2em] text-vermilion mb-3">EXTRA · PRIN PARTENERII NOȘTRI</p>
         <h2 class="font-display text-[clamp(1.8rem,3vw,2.6rem)] font-700 leading-[1.05] mb-3">
             Mai multe activități și tururi în <?= htmlspecialchars($cityName) ?>
         </h2>
-        <p class="text-ink-soft leading-relaxed">
+        <p class="leading-relaxed text-ink-soft">
             Selecție de tururi ghidate, experiențe și activități internaționale, disponibile prin GetYourGuide.
         </p>
     </div>
@@ -880,7 +870,7 @@ document.addEventListener('alpine:init', () => {
 <?php endif; ?>
 
 <!-- ============================== EDITORIAL + CROSS-LINKS ============================== -->
-<section id="ghid-local" class="max-w-7xl mx-auto px-4 sm:px-6 py-20 lg:py-28">
+<section id="ghid-local" class="px-4 py-20 mx-auto max-w-7xl sm:px-6 lg:py-28">
     <div class="grid lg:grid-cols-[1fr_.75fr] gap-14 items-start">
 
         <article class="max-w-3xl">
@@ -915,8 +905,8 @@ document.addEventListener('alpine:init', () => {
             <!-- Local search crosslinks -->
             <?php if (!empty($topCategories)): ?>
             <div class="mt-10">
-                <h3 class="font-display text-3xl font-700">Căutări locale utile</h3>
-                <div class="mt-4 flex flex-wrap gap-2">
+                <h3 class="text-3xl font-display font-700">Căutări locale utile</h3>
+                <div class="flex flex-wrap gap-2 mt-4">
                     <?php foreach ($topCategories as $cat): ?>
                         <a href="/<?= htmlspecialchars($slug, ENT_QUOTES) ?>?category=<?= htmlspecialchars($cat['slug'], ENT_QUOTES) ?>" class="px-3.5 py-1.5 rounded-full bg-paper-2 border border-ink/10 text-sm hover:bg-ink hover:text-paper transition">
                             <?= htmlspecialchars(mb_strtolower($cat['label'])) ?> <?= htmlspecialchars($cityName) ?>
@@ -928,8 +918,8 @@ document.addEventListener('alpine:init', () => {
 
             <!-- Intent crosslinks (SEO gold — connects city pages to intent system) -->
             <div class="mt-8">
-                <h3 class="font-display text-3xl font-700">După ce ai chef</h3>
-                <div class="mt-4 flex flex-wrap gap-2">
+                <h3 class="text-3xl font-display font-700">După ce ai chef</h3>
+                <div class="flex flex-wrap gap-2 mt-4">
                     <a href="/<?= htmlspecialchars($slug, ENT_QUOTES) ?>/activitati-azi" class="px-3.5 py-1.5 rounded-full bg-paper-2 border border-ink/10 text-sm hover:bg-ink hover:text-paper transition">⏰ azi în <?= htmlspecialchars($cityName) ?></a>
                     <a href="/<?= htmlspecialchars($slug, ENT_QUOTES) ?>/activitati-weekend" class="px-3.5 py-1.5 rounded-full bg-paper-2 border border-ink/10 text-sm hover:bg-ink hover:text-paper transition">🎉 weekend</a>
                     <a href="/<?= htmlspecialchars($slug, ENT_QUOTES) ?>/activitati-gratuite" class="px-3.5 py-1.5 rounded-full bg-paper-2 border border-ink/10 text-sm hover:bg-ink hover:text-paper transition">🎁 gratuite</a>
@@ -942,18 +932,18 @@ document.addEventListener('alpine:init', () => {
             <!-- FAQ from admin (if any) -->
             <?php if (!empty($cityFaqs)): ?>
             <div class="mt-10" x-data="{ active: 0 }">
-                <h3 class="font-display text-3xl font-700 mb-5">Întrebări frecvente despre <?= htmlspecialchars($cityName) ?></h3>
+                <h3 class="mb-5 text-3xl font-display font-700">Întrebări frecvente despre <?= htmlspecialchars($cityName) ?></h3>
                 <div class="space-y-3">
                     <?php foreach ($cityFaqs as $i => $f): ?>
-                        <div class="border-2 border-ink rounded-xl overflow-hidden bg-paper">
-                            <button type="button" @click="active = active === <?= $i ?> ? null : <?= $i ?>" :aria-expanded="active === <?= $i ?>" class="w-full flex items-center justify-between gap-4 text-left px-5 py-4">
+                        <div class="overflow-hidden border-2 border-ink rounded-xl bg-paper">
+                            <button type="button" @click="active = active === <?= $i ?> ? null : <?= $i ?>" :aria-expanded="active === <?= $i ?>" class="flex items-center justify-between w-full gap-4 px-5 py-4 text-left">
                                 <span class="font-600 text-[16px]"><?= htmlspecialchars($f['q']) ?></span>
-                                <span class="shrink-0 grid place-items-center w-7 h-7 rounded-full border-2 border-ink transition-transform duration-300" :class="active === <?= $i ?> && 'rotate-45 bg-vermilion border-vermilion text-paper'">
+                                <span class="grid transition-transform duration-300 border-2 rounded-full shrink-0 place-items-center w-7 h-7 border-ink" :class="active === <?= $i ?> && 'rotate-45 bg-vermilion border-vermilion text-paper'">
                                     <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
                                 </span>
                             </button>
                             <div x-show="active === <?= $i ?>" x-collapse x-cloak>
-                                <p class="px-5 pb-5 text-ink-soft leading-relaxed"><?= htmlspecialchars($f['a']) ?></p>
+                                <p class="px-5 pb-5 leading-relaxed text-ink-soft"><?= htmlspecialchars($f['a']) ?></p>
                             </div>
                         </div>
                     <?php endforeach; ?>
@@ -964,22 +954,22 @@ document.addEventListener('alpine:init', () => {
 
         <!-- Sidebar: city snapshot + nearby cities -->
         <aside class="space-y-5">
-            <div class="ticket bg-ink text-paper rounded-2xl p-6 overflow-hidden" style="--perf:100%">
+            <div class="p-6 overflow-hidden ticket bg-ink text-paper rounded-2xl" style="--perf:100%">
                 <p class="font-mono text-[10px] tracking-[.2em] text-ochre"><?= htmlspecialchars(strtoupper($cityName)) ?> PE SCURT</p>
-                <h3 class="font-display text-3xl font-700 mt-2"><?= htmlspecialchars($cityName) ?> pe scurt</h3>
+                <h3 class="mt-2 text-3xl font-display font-700"><?= htmlspecialchars($cityName) ?> pe scurt</h3>
                 <dl class="mt-6 space-y-4">
-                    <div class="flex justify-between gap-6 border-b border-paper/10 pb-3">
+                    <div class="flex justify-between gap-6 pb-3 border-b border-paper/10">
                         <dt class="text-paper/60">Activități listate</dt>
                         <dd class="font-700"><?= $eventCount ?: '—' ?></dd>
                     </div>
                     <?php if ($countyName): ?>
-                    <div class="flex justify-between gap-6 border-b border-paper/10 pb-3">
+                    <div class="flex justify-between gap-6 pb-3 border-b border-paper/10">
                         <dt class="text-paper/60">Județ</dt>
                         <dd class="font-700"><?= htmlspecialchars($countyName) ?></dd>
                     </div>
                     <?php endif; ?>
                     <?php if ($regionName): ?>
-                    <div class="flex justify-between gap-6 border-b border-paper/10 pb-3">
+                    <div class="flex justify-between gap-6 pb-3 border-b border-paper/10">
                         <dt class="text-paper/60">Regiune</dt>
                         <dd class="font-700"><?= htmlspecialchars($regionName) ?></dd>
                     </div>
@@ -996,12 +986,12 @@ document.addEventListener('alpine:init', () => {
             $otherCities = array_filter(navGetCities(20), fn ($c) => $c['slug'] !== $slug);
             if (!empty($otherCities)):
             ?>
-            <div class="bg-paper-2 border-2 border-ink rounded-2xl p-6">
+            <div class="p-6 border-2 bg-paper-2 border-ink rounded-2xl">
                 <p class="font-mono text-[10px] tracking-[.2em] text-vermilion">ALTE ORAȘE</p>
-                <h3 class="font-display text-2xl font-700 mt-2">Poți căuta și aici</h3>
-                <div class="mt-5 grid grid-cols-2 gap-2">
+                <h3 class="mt-2 text-2xl font-display font-700">Poți căuta și aici</h3>
+                <div class="grid grid-cols-2 gap-2 mt-5">
                     <?php foreach (array_slice($otherCities, 0, 8) as $c): ?>
-                        <a href="<?= htmlspecialchars($c['href'], ENT_QUOTES) ?>" class="px-3 py-2 rounded-xl bg-paper border border-ink/10 hover:bg-ink hover:text-paper transition">
+                        <a href="<?= htmlspecialchars($c['href'], ENT_QUOTES) ?>" class="px-3 py-2 transition border rounded-xl bg-paper border-ink/10 hover:bg-ink hover:text-paper">
                             <?= htmlspecialchars($c['label']) ?>
                         </a>
                     <?php endforeach; ?>
@@ -1011,11 +1001,11 @@ document.addEventListener('alpine:init', () => {
             <?php endif; ?>
 
             <!-- Owner CTA -->
-            <div class="bg-vermilion text-paper border-2 border-ink rounded-2xl p-6">
+            <div class="p-6 border-2 bg-vermilion text-paper border-ink rounded-2xl">
                 <p class="font-mono text-[10px] tracking-[.2em] text-paper/75">PENTRU OPERATORI LOCALI</p>
-                <h3 class="font-display text-3xl font-700 mt-2">Ai o activitate în <?= htmlspecialchars($cityName) ?>?</h3>
+                <h3 class="mt-2 text-3xl font-display font-700">Ai o activitate în <?= htmlspecialchars($cityName) ?>?</h3>
                 <p class="mt-3 text-paper/80">Pagină dedicată, bilete QR, disponibilitate online și comision 2%.</p>
-                <a href="/pentru-locatii" class="inline-flex mt-5 px-5 py-3 rounded-full bg-paper text-ink font-700 hover:bg-ink hover:text-paper transition">Listează activitatea</a>
+                <a href="/pentru-locatii" class="inline-flex px-5 py-3 mt-5 transition rounded-full bg-paper text-ink font-700 hover:bg-ink hover:text-paper">Listează activitatea</a>
             </div>
         </aside>
     </div>
