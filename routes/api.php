@@ -1458,6 +1458,14 @@ Route::prefix('marketplace-client')->middleware(['throttle:120,1', 'marketplace.
         ->where('slug', '[a-z0-9-]+')
         ->name('api.marketplace-client.activities.available-dates');
 
+    // Attractions (public, F4): points of interest. Read-only. Empty for
+    // marketplaces that never seeded any, so this is a no-op there.
+    Route::get('/attractions', [\App\Http\Controllers\Api\MarketplaceClient\AttractionsController::class, 'index'])
+        ->name('api.marketplace-client.attractions.index');
+    Route::get('/attractions/{slug}', [\App\Http\Controllers\Api\MarketplaceClient\AttractionsController::class, 'show'])
+        ->where('slug', '[a-z0-9-]+')
+        ->name('api.marketplace-client.attractions.show');
+
     // List favorites
     Route::get("/customer/favorites/artists", [CustomerFavoritesController::class, "listArtists"])
         ->name("api.marketplace-client.favorites.artists");

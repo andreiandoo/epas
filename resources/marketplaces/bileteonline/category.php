@@ -346,6 +346,8 @@ foreach ($activities as $a) {
         'durationLabel'   => $dur > 0 ? ($dur . ' min') : '',
         'languages'       => $langs,
         'features'        => $features,
+        'interests'       => array_values(array_filter(array_map(fn ($i) => $i['slug'] ?? '', (array) ($a['interests'] ?? [])))),
+        'travelerTypes'   => array_values(array_filter(array_map(fn ($t) => $t['slug'] ?? '', (array) ($a['traveler_types'] ?? [])))),
         'badges'          => $badges,
         'freeCancellation' => false,
         'favorite'        => false,
@@ -407,6 +409,23 @@ foreach ($gygActivities as $a) foreach ($a['features'] as $f) $featPresent[$f] =
 $featOptions = [];
 foreach ($featLabels as $fk => $fl) if (isset($featPresent[$fk])) $featOptions[] = ['value' => $fk, 'label' => $fl];
 
+// F3 — interests + traveler types options, built from slug→name maps over the
+// real activity payloads (only values actually present become filters).
+$interestNames = [];
+$travelerNames = [];
+foreach ($activities as $a) {
+    foreach ((array) ($a['interests'] ?? []) as $i) {
+        if (! empty($i['slug'])) $interestNames[$i['slug']] = $i['name'] ?? $i['slug'];
+    }
+    foreach ((array) ($a['traveler_types'] ?? []) as $t) {
+        if (! empty($t['slug'])) $travelerNames[$t['slug']] = $t['name'] ?? $t['slug'];
+    }
+}
+$interestOptions = [];
+foreach ($interestNames as $slugK => $nameK) $interestOptions[] = ['value' => $slugK, 'label' => $nameK];
+$travelerOptions = [];
+foreach ($travelerNames as $slugK => $nameK) $travelerOptions[] = ['value' => $slugK, 'label' => $nameK];
+
 $gygPriceVals = array_filter(array_map(fn ($a) => $a['price'], $gygActivities));
 $gygPriceMax = $gygPriceVals ? (int) (ceil(max($gygPriceVals) / 50) * 50) : 250;
 if ($gygPriceMax < 100) $gygPriceMax = 100;
@@ -418,6 +437,8 @@ $gygSeed = json_encode([
     'categoryOptions' => $catOptions,
     'languageOptions' => $langOptions,
     'featureOptions'  => $featOptions,
+    'interestOptions' => $interestOptions,
+    'travelerOptions' => $travelerOptions,
     'durationOptions' => [
         ['value' => 'short', 'label' => 'Sub 60 min'],
         ['value' => 'medium', 'label' => '60–90 min'],
@@ -621,6 +642,20 @@ include __DIR__ . '/includes/header.php';
                             </template>
                         </div>
                     </template>
+                    <template x-if="topFilterOpen==='interests'">
+                        <div class="grid gap-2 sm:grid-cols-2">
+                            <template x-for="o in interestOptions" :key="o.value">
+                                <label class="flex cursor-pointer items-center gap-3 rounded-2xl bg-paper-2 px-4 py-3 font-bold hover:bg-paper"><input type="checkbox" :value="o.value" x-model="filters.interests" class="h-5 w-5" style="accent-color:#E84527"><span x-text="o.label"></span></label>
+                            </template>
+                        </div>
+                    </template>
+                    <template x-if="topFilterOpen==='traveler'">
+                        <div class="grid gap-2 sm:grid-cols-2">
+                            <template x-for="o in travelerOptions" :key="o.value">
+                                <label class="flex cursor-pointer items-center gap-3 rounded-2xl bg-paper-2 px-4 py-3 font-bold hover:bg-paper"><input type="checkbox" :value="o.value" x-model="filters.travelerTypes" class="h-5 w-5" style="accent-color:#E84527"><span x-text="o.label"></span></label>
+                            </template>
+                        </div>
+                    </template>
                 </div>
                 <div class="mt-5 flex items-center justify-between gap-3 border-t border-ink/10 pt-4">
                     <button @click="clearTopFilter()" class="rounded-full border-2 border-ink px-5 py-3 font-bold hover:bg-ink hover:text-paper">Curăță</button>
@@ -730,6 +765,24 @@ include __DIR__ . '/includes/header.php';
                         <div class="mt-5 grid gap-2 sm:grid-cols-2">
                             <template x-for="o in categoryOptions" :key="o.value">
                                 <label class="flex cursor-pointer items-center gap-3 rounded-2xl bg-paper-2 px-4 py-3 font-bold hover:bg-paper"><input type="checkbox" :value="o.value" x-model="filters.categories" class="h-5 w-5" style="accent-color:#E84527"><span x-text="o.label"></span></label>
+                            </template>
+                        </div>
+                    </div>
+                    <div x-show="modalTab==='interests'">
+                        <h3 class="font-display text-4xl font-bold leading-none">Interese</h3>
+                        <p class="mt-2 text-ink-soft">Alege atmosfera sau tema activității.</p>
+                        <div class="mt-5 grid gap-2 sm:grid-cols-2">
+                            <template x-for="o in interestOptions" :key="o.value">
+                                <label class="flex cursor-pointer items-center gap-3 rounded-2xl bg-paper-2 px-4 py-3 font-bold hover:bg-paper"><input type="checkbox" :value="o.value" x-model="filters.interests" class="h-5 w-5" style="accent-color:#E84527"><span x-text="o.label"></span></label>
+                            </template>
+                        </div>
+                    </div>
+                    <div x-show="modalTab==='traveler'">
+                        <h3 class="font-display text-4xl font-bold leading-none">Pentru cine</h3>
+                        <p class="mt-2 text-ink-soft">Cui i se potrivește activitatea.</p>
+                        <div class="mt-5 grid gap-2 sm:grid-cols-2">
+                            <template x-for="o in travelerOptions" :key="o.value">
+                                <label class="flex cursor-pointer items-center gap-3 rounded-2xl bg-paper-2 px-4 py-3 font-bold hover:bg-paper"><input type="checkbox" :value="o.value" x-model="filters.travelerTypes" class="h-5 w-5" style="accent-color:#E84527"><span x-text="o.label"></span></label>
                             </template>
                         </div>
                     </div>
@@ -861,6 +914,8 @@ function categoryGyg(seed) {
         categoryOptions: (seed && seed.categoryOptions) || [],
         languageOptions: (seed && seed.languageOptions) || [],
         featureOptions: (seed && seed.featureOptions) || [],
+        interestOptions: (seed && seed.interestOptions) || [],
+        travelerOptions: (seed && seed.travelerOptions) || [],
         durationOptions: (seed && seed.durationOptions) || [],
         ratingOptions: (seed && seed.ratingOptions) || [],
         priceCap: (seed && seed.priceMax) || 250,
@@ -868,7 +923,7 @@ function categoryGyg(seed) {
         topFilterOpen: null, filtersModal: false, mapOpen: false,
         modalTab: 'price', sortBy: 'recommended',
         hoveredPin: null, selectedPin: null,
-        filters: { search: '', categories: [], maxPrice: (seed && seed.priceMax) || 250, languages: [], durations: [], features: [], minRating: 0 },
+        filters: { search: '', categories: [], interests: [], travelerTypes: [], maxPrice: (seed && seed.priceMax) || 250, languages: [], durations: [], features: [], minRating: 0 },
 
         init() {
             this.filters.maxPrice = this.priceCap;
@@ -877,6 +932,8 @@ function categoryGyg(seed) {
         openMap() { this.mapOpen = true; this.topFilterOpen = null; },
         topButtons() {
             const b = [{ key: 'search', label: 'Caută' }, { key: 'price', label: 'Preț' }, { key: 'duration', label: 'Durată' }];
+            if (this.interestOptions.length) b.push({ key: 'interests', label: 'Interese' });
+            if (this.travelerOptions.length) b.push({ key: 'traveler', label: 'Pentru cine' });
             if (this.languageOptions.length) b.push({ key: 'languages', label: 'Limbă' });
             if (this.featureOptions.length) b.push({ key: 'features', label: 'Caracteristici' });
             return b;
@@ -884,6 +941,8 @@ function categoryGyg(seed) {
         modalTabs() {
             const t = [];
             if (this.categoryOptions.length) t.push({ key: 'categories', label: 'Categorii' });
+            if (this.interestOptions.length) t.push({ key: 'interests', label: 'Interese' });
+            if (this.travelerOptions.length) t.push({ key: 'traveler', label: 'Pentru cine' });
             t.push({ key: 'price', label: 'Preț' });
             if (this.languageOptions.length) t.push({ key: 'languages', label: 'Limbă' });
             t.push({ key: 'duration', label: 'Durată' });
@@ -896,7 +955,7 @@ function categoryGyg(seed) {
             if (key === 'search') this.$nextTick(() => this.$refs.searchInput && this.$refs.searchInput.focus());
         },
         topFilterMeta() {
-            const m = { search: { kicker: 'CAUTĂ', title: 'Caută în categorie' }, price: { kicker: 'PREȚ', title: 'Bugetul tău' }, duration: { kicker: 'DURATĂ', title: 'Durata activității' }, languages: { kicker: 'LIMBĂ', title: 'Limba activității' }, features: { kicker: 'CARACTERISTICI', title: 'Caracteristici' } };
+            const m = { search: { kicker: 'CAUTĂ', title: 'Caută în categorie' }, price: { kicker: 'PREȚ', title: 'Bugetul tău' }, duration: { kicker: 'DURATĂ', title: 'Durata activității' }, languages: { kicker: 'LIMBĂ', title: 'Limba activității' }, features: { kicker: 'CARACTERISTICI', title: 'Caracteristici' }, interests: { kicker: 'INTERESE', title: 'Ce te atrage' }, traveler: { kicker: 'PENTRU CINE', title: 'Cui i se potrivește' } };
             return m[this.topFilterOpen] || { kicker: 'FILTRU', title: 'Filtru' };
         },
         topFilterActive(key) {
@@ -905,10 +964,14 @@ function categoryGyg(seed) {
             if (key === 'duration') return this.filters.durations.length;
             if (key === 'languages') return this.filters.languages.length;
             if (key === 'features') return this.filters.features.length;
+            if (key === 'interests') return this.filters.interests.length;
+            if (key === 'traveler') return this.filters.travelerTypes.length;
             return false;
         },
         tabHasValue(key) {
             if (key === 'categories') return this.filters.categories.length;
+            if (key === 'interests') return this.filters.interests.length;
+            if (key === 'traveler') return this.filters.travelerTypes.length;
             if (key === 'price') return this.filters.maxPrice < this.priceCap;
             if (key === 'languages') return this.filters.languages.length;
             if (key === 'duration') return this.filters.durations.length;
@@ -923,15 +986,17 @@ function categoryGyg(seed) {
             if (k === 'duration') this.filters.durations = [];
             if (k === 'languages') this.filters.languages = [];
             if (k === 'features') this.filters.features = [];
+            if (k === 'interests') this.filters.interests = [];
+            if (k === 'traveler') this.filters.travelerTypes = [];
         },
         resetFilters() {
-            this.filters = { search: '', categories: [], maxPrice: this.priceCap, languages: [], durations: [], features: [], minRating: 0 };
+            this.filters = { search: '', categories: [], interests: [], travelerTypes: [], maxPrice: this.priceCap, languages: [], durations: [], features: [], minRating: 0 };
             this.sortBy = 'recommended';
         },
         activeFilterCount() {
             let c = 0;
             if (this.filters.search) c++;
-            c += this.filters.categories.length + this.filters.languages.length + this.filters.durations.length + this.filters.features.length;
+            c += this.filters.categories.length + this.filters.interests.length + this.filters.travelerTypes.length + this.filters.languages.length + this.filters.durations.length + this.filters.features.length;
             if (this.filters.maxPrice < this.priceCap) c++;
             if (this.filters.minRating > 0) c++;
             return c;
@@ -940,6 +1005,8 @@ function categoryGyg(seed) {
             const chips = [];
             if (this.filters.search) chips.push({ key: 'search', label: 'Caută: ' + this.filters.search, type: 'search' });
             this.filters.categories.forEach(v => chips.push({ key: 'cat-' + v, label: this.labelFor(this.categoryOptions, v), type: 'category', value: v }));
+            this.filters.interests.forEach(v => chips.push({ key: 'int-' + v, label: this.labelFor(this.interestOptions, v), type: 'interest', value: v }));
+            this.filters.travelerTypes.forEach(v => chips.push({ key: 'trav-' + v, label: this.labelFor(this.travelerOptions, v), type: 'traveler', value: v }));
             if (this.filters.maxPrice < this.priceCap) chips.push({ key: 'price', label: 'Max ' + this.formatMoney(this.filters.maxPrice), type: 'price' });
             this.filters.languages.forEach(v => chips.push({ key: 'lang-' + v, label: this.labelFor(this.languageOptions, v), type: 'language', value: v }));
             this.filters.durations.forEach(v => chips.push({ key: 'dur-' + v, label: this.labelFor(this.durationOptions, v), type: 'duration', value: v }));
@@ -950,6 +1017,8 @@ function categoryGyg(seed) {
         removeChip(chip) {
             if (chip.type === 'search') this.filters.search = '';
             if (chip.type === 'category') this.filters.categories = this.filters.categories.filter(v => v !== chip.value);
+            if (chip.type === 'interest') this.filters.interests = this.filters.interests.filter(v => v !== chip.value);
+            if (chip.type === 'traveler') this.filters.travelerTypes = this.filters.travelerTypes.filter(v => v !== chip.value);
             if (chip.type === 'price') this.filters.maxPrice = this.priceCap;
             if (chip.type === 'language') this.filters.languages = this.filters.languages.filter(v => v !== chip.value);
             if (chip.type === 'duration') this.filters.durations = this.filters.durations.filter(v => v !== chip.value);
@@ -961,6 +1030,8 @@ function categoryGyg(seed) {
             return this.activities.filter(a => {
                 if (q && !JSON.stringify(a).toLowerCase().includes(q)) return false;
                 if (this.filters.categories.length && !this.filters.categories.includes(a.categorySlug)) return false;
+                if (this.filters.interests.length && !this.filters.interests.some(i => (a.interests || []).includes(i))) return false;
+                if (this.filters.travelerTypes.length && !this.filters.travelerTypes.some(t => (a.travelerTypes || []).includes(t))) return false;
                 if (a.price > 0 && a.price > this.filters.maxPrice) return false;
                 if (this.filters.languages.length && !this.filters.languages.some(l => a.languages.includes(l))) return false;
                 if (this.filters.durations.length && !this.filters.durations.includes(a.duration)) return false;

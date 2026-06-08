@@ -53,10 +53,27 @@ class ActivitiesController extends BaseController
                 'category:id,name,slug,parent_id',
                 'subcategory:id,name,slug,parent_id',
                 'organizer:id,name,slug,logo',
+                'interests:id,slug,name,icon_emoji',
+                'travelerTypes:id,slug,name,icon_emoji',
             ]);
 
         if ($citySlug = $request->query('city')) {
             $query->whereHas('city', fn ($q) => $q->where('slug', $citySlug));
+        }
+
+        // F3 — discovery taxonomy filters (comma-separated slugs, OR within a
+        // taxonomy). Defensive: whereHas only adds a constraint when slugs given.
+        if ($interestsParam = $request->query('interests')) {
+            $slugs = array_values(array_filter(array_map('trim', explode(',', (string) $interestsParam))));
+            if ($slugs) {
+                $query->whereHas('interests', fn ($q) => $q->whereIn('slug', $slugs));
+            }
+        }
+        if ($ttParam = $request->query('traveler_types')) {
+            $slugs = array_values(array_filter(array_map('trim', explode(',', (string) $ttParam))));
+            if ($slugs) {
+                $query->whereHas('travelerTypes', fn ($q) => $q->whereIn('slug', $slugs));
+            }
         }
 
         if ($catSlug = $request->query('category')) {
@@ -147,6 +164,10 @@ class ActivitiesController extends BaseController
                     ->orderBy('activity_related.sort_order'),
                 'relatedActivities.city:id,name,slug',
                 'relatedActivities.category:id,name,slug,parent_id',
+                'interests:id,slug,name,icon_emoji',
+                'travelerTypes:id,slug,name,icon_emoji',
+                'attractions' => fn ($q) => $q->where('is_visible', true)->orderBy('activity_attraction.sort_order'),
+                'attractions.type:id,name,icon_emoji',
             ])
             ->first();
 
@@ -269,6 +290,21 @@ class ActivitiesController extends BaseController
                 'is_kid_friendly' => (bool) $activity->is_kid_friendly,
                 'is_accessible'  => (bool) $activity->is_accessible,
             ],
+            // F3 — discovery taxonomies (empty arrays when not eager-loaded).
+            'interests' => $activity->relationLoaded('interests')
+                ? $activity->interests->map(fn ($i) => [
+                    'slug' => $i->slug,
+                    'name' => $this->translate($i->name, $locale),
+                    'icon' => $i->icon_emoji,
+                ])->values()->all()
+                : [],
+            'traveler_types' => $activity->relationLoaded('travelerTypes')
+                ? $activity->travelerTypes->map(fn ($t) => [
+                    'slug' => $t->slug,
+                    'name' => $this->translate($t->name, $locale),
+                    'icon' => $t->icon_emoji,
+                ])->values()->all()
+                : [],
         ];
     }
 
@@ -375,6 +411,15 @@ class ActivitiesController extends BaseController
                 // F2 — proximity rail. Activities within ~75km ordered by real
                 // Haversine distance (activity coords → venue coords fallback).
                 'nearby' => $this->buildNearbyPayload($activity, $locale, 8, 75),
+                // F4 — attractions this activity covers/visits.
+                'attractions' => $activity->relationLoaded('attractions')
+                    ? $activity->attractions->map(fn ($at) => [
+                        'slug'            => $at->slug,
+                        'name'            => $this->translate($at->name, $locale),
+                        'cover_image_url' => $this->resolveStorageUrl($at->cover_image_url),
+                        'type'            => ($at->relationLoaded('type') && $at->type) ? $this->translate($at->type->name, $locale) : null,
+                    ])->values()->all()
+                    : [],
             ]
         );
     }
@@ -434,6 +479,8 @@ class ActivitiesController extends BaseController
                 'category:id,name,slug,parent_id',
                 'organizer:id,name,slug,logo,commission_rate,default_commission_mode,marketplace_client_id',
                 'organizer.marketplaceClient:id,commission_rate,commission_mode',
+                'interests:id,slug,name,icon_emoji',
+                'travelerTypes:id,slug,name,icon_emoji',
             ])
             ->get()
             ->keyBy('id');

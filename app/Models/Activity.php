@@ -252,6 +252,36 @@ class Activity extends Model
             ->orderBy('activity_related.sort_order');
     }
 
+    /**
+     * F3 — Interests taxonomy (thematic angle). Many-to-many.
+     */
+    public function interests(): BelongsToMany
+    {
+        return $this->belongsToMany(\App\Models\Interest::class, 'activity_interest')
+            ->withPivot('sort_order')
+            ->orderBy('activity_interest.sort_order');
+    }
+
+    /**
+     * F3 — Traveler types taxonomy (who it's for). Many-to-many.
+     */
+    public function travelerTypes(): BelongsToMany
+    {
+        return $this->belongsToMany(\App\Models\TravelerType::class, 'activity_traveler_type')
+            ->withPivot('sort_order')
+            ->orderBy('activity_traveler_type.sort_order');
+    }
+
+    /**
+     * F4 — Attractions (POIs this activity is associated with). Many-to-many.
+     */
+    public function attractions(): BelongsToMany
+    {
+        return $this->belongsToMany(\App\Models\Attraction::class, 'activity_attraction')
+            ->withPivot('sort_order')
+            ->orderBy('activity_attraction.sort_order');
+    }
+
     // ============================================================
     // BOOT — slug auto-generation (same pattern as Event)
     // ============================================================

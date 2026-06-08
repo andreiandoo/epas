@@ -273,6 +273,26 @@ try {
     }
 } catch (\Throwable $e) {}
 
+// F4 — Attractions in this city (points of interest). Hidden when none.
+$cityAttractions = [];
+try {
+    $atResp = api_cached("city_attractions_{$slug}", fn () => api_get('/attractions', ['city' => $slug, 'per_page' => 8]), 300);
+    $atRaw = $atResp['data']['items'] ?? $atResp['data']['data'] ?? (is_array($atResp['data'] ?? null) ? $atResp['data'] : []);
+    foreach ((is_array($atRaw) ? $atRaw : []) as $at) {
+        $an = $at['name'] ?? '';
+        $as = $at['slug'] ?? '';
+        if ($an === '' || $as === '') continue;
+        $cityAttractions[] = [
+            'name'  => $an,
+            'slug'  => $as,
+            'image' => $bo_img($at['cover_image_url'] ?? ''),
+            'type'  => $at['type']['name'] ?? '',
+            'count' => $at['activities_count'] ?? null,
+        ];
+        if (count($cityAttractions) >= 8) break;
+    }
+} catch (\Throwable $e) {}
+
 // Traveler types — city-scoped search links (city.php handles ?q), so these
 // always resolve to real filtered results without needing dedicated routes.
 $cityLow = mb_strtolower($cityName);
@@ -412,6 +432,7 @@ document.addEventListener('alpine:init', () => {
 <section class="sticky top-[72px] z-40 border-y border-ink/10 bg-paper/95 backdrop-blur-xl">
     <div class="mx-auto flex max-w-[1500px] gap-2 overflow-x-auto px-4 py-3 text-sm font-bold sm:px-6">
         <a href="#activitati" class="shrink-0 rounded-full bg-ink px-4 py-2.5 text-paper">Top activități</a>
+        <?php if (!empty($cityAttractions)): ?><a href="#attractions" class="shrink-0 rounded-full bg-paper-2 px-4 py-2.5 hover:bg-ink hover:text-paper">Atracții</a><?php endif; ?>
         <a href="#categorii" class="shrink-0 rounded-full bg-paper-2 px-4 py-2.5 hover:bg-ink hover:text-paper">Categorii</a>
         <a href="#by-traveler" class="shrink-0 rounded-full bg-paper-2 px-4 py-2.5 hover:bg-ink hover:text-paper">Pentru cine</a>
         <?php if (!empty($nearbyCities)): ?><a href="#nearby" class="shrink-0 rounded-full bg-paper-2 px-4 py-2.5 hover:bg-ink hover:text-paper">Aproape de <?= htmlspecialchars($cityName) ?></a><?php endif; ?>
@@ -419,6 +440,38 @@ document.addEventListener('alpine:init', () => {
         <a href="#ghid-local" class="shrink-0 rounded-full bg-paper-2 px-4 py-2.5 hover:bg-ink hover:text-paper">FAQ</a>
     </div>
 </section>
+
+<!-- ============================== ATRACTII (F4) ============================== -->
+<?php if (!empty($cityAttractions)): ?>
+<section id="attractions" class="bg-paper">
+    <div class="mx-auto max-w-[1500px] px-4 py-12 sm:px-6 lg:py-16">
+        <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+            <div>
+                <p class="font-mono text-xs tracking-[.18em] text-vermilion">ATRACȚII DE NERATAT</p>
+                <h2 class="mt-2 font-display text-6xl font-bold leading-none">Atracții pe care merită să le pui pe listă</h2>
+            </div>
+        </div>
+        <div class="mt-8 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+            <?php $atBg = ['from-vermilion to-vermilion-d','from-forest to-ink','from-sky to-ink','from-ochre to-vermilion-d']; foreach ($cityAttractions as $ai => $at): ?>
+                <a href="/atractie/<?= htmlspecialchars($at['slug'], ENT_QUOTES) ?>" class="group overflow-hidden rounded-[2rem] border-2 border-ink bg-paper shadow-deep transition hover:-translate-y-0.5">
+                    <div class="relative h-56 overflow-hidden">
+                        <?php if (!empty($at['image'])): ?>
+                            <img src="<?= htmlspecialchars($at['image'], ENT_QUOTES) ?>" alt="<?= htmlspecialchars($at['name'], ENT_QUOTES) ?>" class="h-full w-full object-cover transition duration-500 group-hover:scale-105" loading="lazy">
+                        <?php else: ?>
+                            <div class="grid h-full place-items-center bg-gradient-to-br <?= $atBg[$ai % count($atBg)] ?> text-paper"><span class="px-4 text-center font-display text-2xl font-bold"><?= htmlspecialchars($at['name']) ?></span></div>
+                        <?php endif; ?>
+                        <?php if (!empty($at['type'])): ?><span class="absolute left-4 top-4 rounded-full bg-paper px-3 py-1 text-xs font-bold text-ink"><?= htmlspecialchars($at['type']) ?></span><?php endif; ?>
+                        <?php if (!empty($at['count'])): ?><span class="absolute right-4 top-4 rounded-full bg-ink/90 px-3 py-1 text-xs font-bold text-paper"><?= (int) $at['count'] ?> activități</span><?php endif; ?>
+                    </div>
+                    <div class="p-5">
+                        <p class="font-display text-3xl font-bold leading-none group-hover:text-vermilion"><?= htmlspecialchars($at['name']) ?></p>
+                    </div>
+                </a>
+            <?php endforeach; ?>
+        </div>
+    </div>
+</section>
+<?php endif; ?>
 
 <!-- ============================== CATEGORY QUICK LINKS ============================== -->
 <?php if (!empty($topCategories)): ?>

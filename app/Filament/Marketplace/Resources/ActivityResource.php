@@ -581,6 +581,53 @@ class ActivityResource extends Resource
                                                     ->columnSpanFull(),
                                             ])
                                             ->columns(3),
+
+                                        // F2 Nearby + F3 discovery taxonomies.
+                                        SC\Section::make('Coordonate & descoperire')
+                                            ->description('Coordonatele alimentează „În apropiere". Se moștenesc din venue dacă le lași goale. Interesele și tipurile de călători alimentează filtrele și badge-urile GYG.')
+                                            ->schema([
+                                                Forms\Components\TextInput::make('latitude')
+                                                    ->label('Latitudine')
+                                                    ->numeric()
+                                                    ->step('0.0000001')
+                                                    ->placeholder('ex: 45.6536'),
+                                                Forms\Components\TextInput::make('longitude')
+                                                    ->label('Longitudine')
+                                                    ->numeric()
+                                                    ->step('0.0000001')
+                                                    ->placeholder('ex: 25.6106'),
+
+                                                Forms\Components\Select::make('interests')
+                                                    ->label('Interese')
+                                                    ->relationship('interests', 'slug', fn (Builder $query) => $query->where('marketplace_client_id', $marketplace?->id))
+                                                    ->getOptionLabelFromRecordUsing(fn ($record) => is_array($record->name) ? ($record->name['ro'] ?? $record->name['en'] ?? $record->slug) : $record->name)
+                                                    ->multiple()
+                                                    ->preload()
+                                                    ->searchable()
+                                                    ->visible(fn () => static::marketplaceHasMicroservice('discovery-module'))
+                                                    ->columnSpanFull(),
+
+                                                Forms\Components\Select::make('travelerTypes')
+                                                    ->label('Tipuri de călători')
+                                                    ->relationship('travelerTypes', 'slug', fn (Builder $query) => $query->where('marketplace_client_id', $marketplace?->id))
+                                                    ->getOptionLabelFromRecordUsing(fn ($record) => is_array($record->name) ? ($record->name['ro'] ?? $record->name['en'] ?? $record->slug) : $record->name)
+                                                    ->multiple()
+                                                    ->preload()
+                                                    ->searchable()
+                                                    ->visible(fn () => static::marketplaceHasMicroservice('discovery-module'))
+                                                    ->columnSpanFull(),
+
+                                                Forms\Components\Select::make('attractions')
+                                                    ->label('Atracții asociate')
+                                                    ->relationship('attractions', 'slug', fn (Builder $query) => $query->where('marketplace_client_id', $marketplace?->id))
+                                                    ->getOptionLabelFromRecordUsing(fn ($record) => is_array($record->name) ? ($record->name['ro'] ?? $record->name['en'] ?? $record->slug) : $record->name)
+                                                    ->multiple()
+                                                    ->preload()
+                                                    ->searchable()
+                                                    ->visible(fn () => static::marketplaceHasMicroservice('discovery-module'))
+                                                    ->columnSpanFull(),
+                                            ])
+                                            ->columns(2),
                                     ]),
 
                                 // ====================================================
