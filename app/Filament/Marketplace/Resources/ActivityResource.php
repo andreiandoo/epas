@@ -367,6 +367,16 @@ class ActivityResource extends Resource
         $marketplace = static::getMarketplaceClient();
         $lang = $marketplace?->language ?? 'ro';
 
+        // Discovery taxonomies (interests / traveler types / attractions) are
+        // only wired into the form when the discovery-module is active AND its
+        // tables exist. Using ->visible() isn't enough: a relationship() field
+        // makes EditRecord eager-load the relation on fill, which 500s if the
+        // pivot tables haven't been migrated yet. Gating at build time avoids
+        // touching the relationship at all until everything is in place.
+        $discoveryReady = static::marketplaceHasMicroservice('discovery-module')
+            && DBSchema::hasTable('activity_interest')
+            && DBSchema::hasTable('attractions');
+
         // Reused select option callbacks — keep the Detalii + Locație tabs lean.
         $organizerOptions = fn () => MarketplaceOrganizer::where('marketplace_client_id', $marketplace?->id)
             ->orderBy('name')
@@ -585,7 +595,7 @@ class ActivityResource extends Resource
                                         // F2 Nearby + F3 discovery taxonomies.
                                         SC\Section::make('Coordonate & descoperire')
                                             ->description('Coordonatele alimentează „În apropiere". Se moștenesc din venue dacă le lași goale. Interesele și tipurile de călători alimentează filtrele și badge-urile GYG.')
-                                            ->schema([
+                                            ->schema(array_merge([
                                                 Forms\Components\TextInput::make('latitude')
                                                     ->label('Latitudine')
                                                     ->numeric()
@@ -596,7 +606,7 @@ class ActivityResource extends Resource
                                                     ->numeric()
                                                     ->step('0.0000001')
                                                     ->placeholder('ex: 25.6106'),
-
+                                            ], $discoveryReady ? [
                                                 Forms\Components\Select::make('interests')
                                                     ->label('Interese')
                                                     ->relationship('interests', 'slug', fn (Builder $query) => $query->where('marketplace_client_id', $marketplace?->id))
@@ -604,7 +614,6 @@ class ActivityResource extends Resource
                                                     ->multiple()
                                                     ->preload()
                                                     ->searchable()
-                                                    ->visible(fn () => static::marketplaceHasMicroservice('discovery-module'))
                                                     ->columnSpanFull(),
 
                                                 Forms\Components\Select::make('travelerTypes')
@@ -614,7 +623,6 @@ class ActivityResource extends Resource
                                                     ->multiple()
                                                     ->preload()
                                                     ->searchable()
-                                                    ->visible(fn () => static::marketplaceHasMicroservice('discovery-module'))
                                                     ->columnSpanFull(),
 
                                                 Forms\Components\Select::make('attractions')
@@ -624,9 +632,8 @@ class ActivityResource extends Resource
                                                     ->multiple()
                                                     ->preload()
                                                     ->searchable()
-                                                    ->visible(fn () => static::marketplaceHasMicroservice('discovery-module'))
                                                     ->columnSpanFull(),
-                                            ])
+                                            ] : []))
                                             ->columns(2),
                                     ]),
 

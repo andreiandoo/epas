@@ -49,11 +49,16 @@ if (! function_exists('bo_activity_card_url')) {
     }
 
     function bo_activities_block(string $shortcode): string {
-        preg_match_all('/([a-z_]+)\s*=\s*"([^"]*)"/i', $shortcode, $mm, PREG_SET_ORDER);
+        // RichEditor (TipTap) stores attribute quotes as &quot; entities and may
+        // use curly/typographic quotes. Normalise to straight quotes + accept
+        // both " and ' so the attributes actually parse.
+        $sc = html_entity_decode($shortcode, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $sc = str_replace(['“', '”', '„', '‟', '″', '＂', '«', '»'], '"', $sc);
+        preg_match_all('/([a-z_]+)\s*=\s*["\']([^"\']*)["\']/i', $sc, $mm, PREG_SET_ORDER);
         $attr = [];
         foreach ($mm as $a) $attr[strtolower($a[1])] = $a[2];
 
-        $style = in_array($attr['style'] ?? 'small', ['small', 'large', 'long'], true) ? $attr['style'] : 'small';
+        $style = in_array($attr['style'] ?? 'small', ['small', 'large', 'long'], true) ? ($attr['style'] ?? 'small') : 'small';
 
         $params = [];
         if (! empty($attr['ids'])) {
