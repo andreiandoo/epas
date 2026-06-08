@@ -2200,14 +2200,23 @@ class MarketplaceTaxTemplate extends Model
     {
         if (!$payout->event_id || empty($qtyByType)) return [];
 
-        $tickets = \App\Models\Ticket::with(['order:id,discount_amount,subtotal,created_at'])
+        // Cutoff = payout.created_at. Tickets from orders created AFTER
+        // this payout can't possibly belong to it — they must go on a
+        // later payout. Without this, "latest N" would silently pull in
+        // future-dated orders and overstate the discount.
+        $cutoff = $payout->created_at;
+
+        $tickets = \App\Models\Ticket::with(['ticketType:id,price_cents,sale_price_cents', 'order:id,discount_amount,subtotal,created_at'])
             ->whereHas('ticketType', fn ($qq) => $qq->where('event_id', $payout->event_id))
             ->whereIn('ticket_type_id', array_keys($qtyByType))
             ->whereIn('status', ['valid', 'used'])
-            ->whereHas('order', function ($qq) {
+            ->whereHas('order', function ($qq) use ($cutoff) {
                 $qq->whereIn('status', ['paid', 'confirmed', 'completed'])
                     ->where('source', '!=', 'external_import')
                     ->where('source', '!=', 'pos_app');
+                if ($cutoff) {
+                    $qq->where('created_at', '<=', $cutoff);
+                }
             })
             ->get(['id', 'ticket_type_id', 'order_id', 'price', 'meta', 'status']);
 

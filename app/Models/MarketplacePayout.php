@@ -646,14 +646,22 @@ class MarketplacePayout extends Model
             return (float) ($this->amount ?? $this->gross_amount ?? 0);
         }
 
-        $tickets = \App\Models\Ticket::with(['order:id,created_at'])
+        // Cutoff at payout.created_at — orders created after this payout
+        // belong to a later one. Without it, "latest N" would silently
+        // pull future-dated orders into this payout's total.
+        $cutoff = $this->created_at;
+
+        $tickets = \App\Models\Ticket::with(['ticketType:id,price_cents,sale_price_cents', 'order:id,created_at'])
             ->whereHas('ticketType', fn ($qq) => $qq->where('event_id', $this->event_id))
             ->whereIn('ticket_type_id', array_keys($qtyByType))
             ->whereIn('status', ['valid', 'used'])
-            ->whereHas('order', function ($qq) {
+            ->whereHas('order', function ($qq) use ($cutoff) {
                 $qq->whereIn('status', ['paid', 'confirmed', 'completed'])
                     ->where('source', '!=', 'external_import')
                     ->where('source', '!=', 'pos_app');
+                if ($cutoff) {
+                    $qq->where('created_at', '<=', $cutoff);
+                }
             })
             ->get(['id', 'ticket_type_id', 'order_id', 'price', 'meta', 'status']);
 

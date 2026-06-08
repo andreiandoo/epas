@@ -152,14 +152,19 @@ class PayoutsRecomputeDiscounts extends Command
         }
         if (empty($qtyByType)) return [];
 
-        $tickets = Ticket::with(['order:id,created_at'])
+        $cutoff = $p->created_at;
+
+        $tickets = Ticket::with(['ticketType:id,price_cents,sale_price_cents', 'order:id,created_at'])
             ->whereHas('ticketType', fn ($qq) => $qq->where('event_id', $p->event_id))
             ->whereIn('ticket_type_id', array_keys($qtyByType))
             ->whereIn('status', ['valid', 'used'])
-            ->whereHas('order', function ($qq) {
+            ->whereHas('order', function ($qq) use ($cutoff) {
                 $qq->whereIn('status', ['paid', 'confirmed', 'completed'])
                     ->where('source', '!=', 'external_import')
                     ->where('source', '!=', 'pos_app');
+                if ($cutoff) {
+                    $qq->where('created_at', '<=', $cutoff);
+                }
             })
             ->get(['id', 'ticket_type_id', 'order_id', 'price', 'meta', 'status']);
 
@@ -177,9 +182,10 @@ class PayoutsRecomputeDiscounts extends Command
 
             $sum = 0.0;
             foreach ($group->take($needed) as $t) {
-                $catalog = (float) ($t->attributes['price'] ?? $t->price ?? 0);
-                $eff = (float) $t->getEffectivePrice();
-                $sum += max(0.0, $catalog - $eff);
+                // Use Ticket::getDiscountAmount() — handles NULL price by
+                // falling back to ticketType.price_cents, and reads
+                // meta.discount_amount as the per-ticket discount source.
+                $sum += (float) $t->getDiscountAmount();
             }
             $perType[$ttId] = round($sum, 2);
         }
