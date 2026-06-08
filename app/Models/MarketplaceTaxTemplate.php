@@ -2053,15 +2053,22 @@ class MarketplaceTaxTemplate extends Model
             }
         }
 
-        // Derive the per-ticket effective-price tiers from the underlying
-        // tickets so row 1b reflects what was actually collected, not the
-        // catalog price × qty. Each Ticket::getEffectivePrice() pulls the
-        // discount written at checkout (meta.discount_amount) and falls
-        // back to a proportional split of order.discount_amount — the
-        // same convention payout / refund engines use.
-        // Returns: [ticket_type_id => [effective_price_string => qty]].
-        // Empty when the payout has no event_id or no matching tickets.
-        $effectiveTiersByTtId = self::deriveEffectiveTiersFromTickets($payout, $posTypeIdsSet);
+        // Build qty-per-ticket-type from the saved breakdown so the
+        // derivation knows exactly how many tickets belong to THIS payout
+        // (the period query alone would catch tickets from prior payouts
+        // on the same event when they share period bounds). The derivation
+        // returns one tier per distinct effective-paid-price, using only
+        // the latest N tickets per type — older ones belong to earlier
+        // payouts (which already took them) and are skipped.
+        $qtyByType = [];
+        foreach ($tierRows as $item) {
+            $ttId = (int) ($item['ticket_type_id'] ?? 0);
+            $qty = (int) ($item['quantity'] ?? $item['tickets'] ?? $item['qty'] ?? 0);
+            if ($ttId > 0 && $qty > 0) {
+                $qtyByType[$ttId] = ($qtyByType[$ttId] ?? 0) + $qty;
+            }
+        }
+        $effectiveTiersByTtId = self::deriveEffectiveTiersFromTickets($payout, $posTypeIdsSet, $qtyByType);
 
         $groups = [];
         foreach ($tierRows as $item) {
@@ -2172,53 +2179,69 @@ class MarketplaceTaxTemplate extends Model
     }
 
     /**
-     * Walk every paid+confirmed+completed ticket linked to this payout's
-     * event in the payout's period and group them by (ticket_type_id,
-     * effective_paid_price). Uses Ticket::getEffectivePrice() so the
-     * tiers reflect what was actually collected after promo codes — not
-     * the catalog price stored on tickets.price.
+     * Walk every paid+confirmed+completed ticket for this payout's event
+     * (no period bound — period overlap between payouts on the same event
+     * can let the same ticket fall into more than one period) and pick
+     * exactly $qtyByType[ttId] of the LATEST tickets per type. The older
+     * ones belong to earlier payouts on the same event, which already
+     * took them.
      *
-     * Scope mirrors buildRemainingTicketsItems: skip external_import +
-     * pos_app sources so the breakdown matches what the operator picked
-     * in the payout creation UI.
+     * Per ticket effective paid price = Ticket::getEffectivePrice() which
+     * reads meta.discount_amount written at checkout by CheckoutController
+     * (precise per-ticket value, integer when promo is a percentage of an
+     * integer catalog price). Aggregates into one tier per distinct paid
+     * price → the PDF row 1b shows "70lei*18+56lei*10" instead of a
+     * single averaged "67.78lei*28".
      *
      * Returns [ticket_type_id => [price_string => qty]] keyed by
-     * round(price, 2) so two tickets paid at 49.99 group as one tier.
-     * Empty when the payout has no event_id or no matching tickets.
+     * round(price, 2). Empty when no event_id or no matching tickets.
      */
-    private static function deriveEffectiveTiersFromTickets(MarketplacePayout $payout, array $posTypeIdsSet): array
+    private static function deriveEffectiveTiersFromTickets(MarketplacePayout $payout, array $posTypeIdsSet, array $qtyByType = []): array
     {
-        if (!$payout->event_id) return [];
+        if (!$payout->event_id || empty($qtyByType)) return [];
 
-        $q = \App\Models\Ticket::with(['ticketType:id,event_id', 'order:id,discount_amount,subtotal'])
+        $tickets = \App\Models\Ticket::with(['order:id,discount_amount,subtotal,created_at'])
             ->whereHas('ticketType', fn ($qq) => $qq->where('event_id', $payout->event_id))
+            ->whereIn('ticket_type_id', array_keys($qtyByType))
             ->whereIn('status', ['valid', 'used'])
-            ->whereHas('order', function ($qq) use ($payout) {
+            ->whereHas('order', function ($qq) {
                 $qq->whereIn('status', ['paid', 'confirmed', 'completed'])
                     ->where('source', '!=', 'external_import')
                     ->where('source', '!=', 'pos_app');
-                if ($payout->period_start) {
-                    $qq->where('created_at', '>=', $payout->period_start->copy()->startOfDay());
-                }
-                if ($payout->period_end) {
-                    $qq->where('created_at', '<=', $payout->period_end->copy()->endOfDay());
-                }
-            });
+            })
+            ->get(['id', 'ticket_type_id', 'order_id', 'price', 'meta', 'status']);
 
-        $tickets = $q->get();
         if ($tickets->isEmpty()) return [];
 
+        // Sort once globally by order created_at then ticket id (DESC)
+        // so taking head N gives the latest tickets — which are this
+        // payout's slice when earlier payouts on the same event already
+        // took the oldest. orderBy via the JOIN would require a join in
+        // the original query; sorting on the collection is cheaper and
+        // keeps the query simple.
+        $tickets = $tickets->sortByDesc(function ($t) {
+            return [$t->order?->created_at?->timestamp ?? 0, $t->id];
+        });
+
         $tiers = [];
-        foreach ($tickets as $t) {
-            $ttId = (int) ($t->ticket_type_id ?? 0);
+        $byType = $tickets->groupBy('ticket_type_id');
+        foreach ($byType as $ttId => $typeTickets) {
+            $ttId = (int) $ttId;
             if ($ttId <= 0) continue;
             if (isset($posTypeIdsSet[$ttId])) continue;
 
-            $effective = $t->getEffectivePrice();
-            if ($effective <= 0) continue; // skip invitations / comp tickets
+            $needed = (int) ($qtyByType[$ttId] ?? 0);
+            if ($needed <= 0) continue;
 
-            $priceKey = (string) round($effective, 2);
-            $tiers[$ttId][$priceKey] = ($tiers[$ttId][$priceKey] ?? 0) + 1;
+            // Take only the latest `needed` tickets — anything earlier
+            // belongs to a prior payout on this event.
+            $picked = $typeTickets->take($needed);
+            foreach ($picked as $t) {
+                $effective = $t->getEffectivePrice();
+                if ($effective <= 0) continue; // skip invitations / comp tickets
+                $priceKey = (string) round($effective, 2);
+                $tiers[$ttId][$priceKey] = ($tiers[$ttId][$priceKey] ?? 0) + 1;
+            }
         }
 
         return $tiers;

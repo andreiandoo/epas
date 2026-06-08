@@ -310,23 +310,41 @@ class MarketplacePayout extends Model
             })
             ->get(['id', 'order_id', 'ticket_type_id', 'price', 'meta']);
 
+        // Sort once globally so per-type buckets emerge already in
+        // newest-first order. Slicing the first `remaining` tickets later
+        // gives the latest slice automatically — older tickets land in
+        // prior payouts.
+        $tickets = $tickets->sortByDesc(function ($t) {
+            return [$t->order?->created_at?->timestamp ?? 0, $t->id];
+        });
+
         // Aggregate per type: count + sum of effective per-ticket prices +
-        // qty PER unique effective price (tier_qty). The tier bucket lets us
-        // emit one row per distinct paid price in the PDF — catalog 50 and
-        // promo 40 stay as separate "50lei*2", "40lei*2" parts instead of
-        // averaging into "45lei*4".
+        // qty PER unique effective price (tier_qty) + ordered per-ticket
+        // (catalog, effective) so discount allocation in the loop below
+        // can pick the latest `remaining` tickets and sum (catalog −
+        // effective) directly.
         $perType = [];
         foreach ($tickets as $t) {
             $ttId = (int) $t->ticket_type_id;
             if (!$ttId) continue;
             if (!isset($perType[$ttId])) {
-                $perType[$ttId] = ['qty' => 0, 'effective_total' => 0.0, 'tier_qty' => []];
+                $perType[$ttId] = [
+                    'qty' => 0,
+                    'effective_total' => 0.0,
+                    'tier_qty' => [],
+                    'sorted_tickets' => [],
+                ];
             }
             $perType[$ttId]['qty']++;
+            $rawCatalog = (float) ($t->attributes['price'] ?? $t->price ?? 0);
             $effective = round((float) $t->getEffectivePrice(), 2);
             $perType[$ttId]['effective_total'] += $effective;
             $tierKey = (string) $effective;
             $perType[$ttId]['tier_qty'][$tierKey] = ($perType[$ttId]['tier_qty'][$tierKey] ?? 0) + 1;
+            $perType[$ttId]['sorted_tickets'][] = [
+                'catalog' => $rawCatalog,
+                'effective' => $effective,
+            ];
         }
 
         // Already-paid qty per type from OTHER active deconturi on the same
@@ -374,13 +392,32 @@ class MarketplacePayout extends Model
                 ? $tt->sale_price_cents / 100
                 : ($tt->price_cents ? $tt->price_cents / 100 : 0));
 
-            // Allocate the type's total discount proportionally when only a
-            // slice of the qty is in this payout (the rest is already in
-            // another active decont).
-            $totalDiscountAllType = max(0.0, ($catalogPrice * $totalSold) - (float) $agg['effective_total']);
-            $discountForRemaining = $totalSold > 0
-                ? round($totalDiscountAllType * ($remaining / $totalSold), 2)
-                : 0.0;
+            // Per-row discount = Σ(catalog − effective) over the LATEST
+            // `remaining` tickets of this type. Skips the first `paid`
+            // (oldest) tickets which belong to prior payouts. Reads each
+            // ticket's effective price straight off the stored
+            // meta.discount_amount → integer when the promo percentage
+            // produced an integer per-ticket discount (the typical case).
+            //
+            // The previous formula derived the per-type total from
+            // (catalog × totalSold − effective_total) and then prorated
+            // by remaining/totalSold. That allocation produced fractional
+            // discounts (62.22 for a 28-ticket slice that should have
+            // been 140, since 31 → 28 doesn't scale 140 cleanly) AND
+            // under-attributed when effective_total had per-ticket misses.
+            // Reading directly from the sorted-latest tickets removes both
+            // problems.
+            $discountForRemaining = 0.0;
+            $latestTickets = (array) ($agg['sorted_tickets'] ?? []);
+            if (!empty($latestTickets) && $remaining > 0) {
+                $picked = array_slice($latestTickets, 0, $remaining);
+                foreach ($picked as $pickedTicket) {
+                    $effective = (float) ($pickedTicket['effective'] ?? 0);
+                    $cat = (float) ($pickedTicket['catalog'] ?? 0);
+                    $discountForRemaining += max(0.0, $cat - $effective);
+                }
+                $discountForRemaining = round($discountForRemaining, 2);
+            }
 
             // Commission on CATALOG — marketplace earns its full fee even
             // when the promo cuts the customer-paying side; the discount
@@ -553,22 +590,22 @@ class MarketplacePayout extends Model
      * Final payable amount that matches what the PDF prints on row E
      * ("VALOARE TOTALA de achitat   E = A − B − C − D"):
      *
-     *   organizer_net = Σ(breakdown.price × qty) − actual_discount
+     *   organizer_net = Σ(effective_price_per_ticket) over the LATEST
+     *                   `qty` tickets per type from the saved breakdown.
      *   final         = organizer_net − refund_amount − advance
      *
-     * `actual_discount` is the discount that ACTUALLY belongs to this
-     * payout's tickets. Two cases:
-     *   1. The payout was created with the discount snapshotted onto the
-     *      row (payouts.discount_amount > 0) — trust it. No re-querying,
-     *      no double-counting.
-     *   2. Legacy payouts that saved discount_amount=0 even though their
-     *      period contains discounted orders — query orders.discount_amount
-     *      in the period bounds. This recovers 8876 for payout 3038
-     *      without breaking 3273.16 for payout 3049.
+     * "Effective price" is read straight off Ticket::getEffectivePrice()
+     * which returns price − meta.discount_amount written at checkout.
+     * Per-ticket source of truth — no proportional allocation, no scaling,
+     * no decimals (as long as promo percentages were applied to integer
+     * catalog prices, which is the convention).
+     *
+     * For payouts on the same event split across multiple deconturi: the
+     * "latest N" selector skips the older tickets that belong to prior
+     * payouts, so each ticket lands on exactly one decont.
      *
      * Used by the /marketplace/payouts list column + the decont PDF
-     * row 1a so both surfaces show the same figure the organizer
-     * actually receives.
+     * row 1a so both surfaces show the same figure.
      */
     public function getFinalNetAmountAttribute(): float
     {
@@ -576,68 +613,71 @@ class MarketplacePayout extends Model
             return $this->finalNetAmountCache;
         }
 
-        // Organizer-side gross = sum of breakdown row prices × qty
-        // (EXCLUDES the added-on-top commission share — that belongs to
-        // the marketplace, not the organizer). For payouts with no
-        // breakdown saved (very old rows) fall back to gross_amount.
-        $bd = $this->ticket_breakdown ?? [];
-        $breakdownGross = 0.0;
-        if (!empty($bd)) {
-            foreach ($bd as $item) {
-                $price = (float) ($item['price'] ?? $item['unit_price'] ?? 0);
-                $qty = (int) ($item['quantity'] ?? $item['qty'] ?? 0);
-                if ($qty > 0 && $price > 0) {
-                    $breakdownGross += $price * $qty;
-                }
-            }
-        }
-        if ($breakdownGross <= 0) {
-            $breakdownGross = (float) ($this->gross_amount ?? $this->amount ?? 0);
-        }
-
-        // Trust the stored discount when present; only query orders for
-        // the legacy zero-discount case so we don't double-count.
-        $storedDiscount = (float) ($this->discount_amount ?? 0);
-        if ($storedDiscount > 0) {
-            $discount = $storedDiscount;
-        } else {
-            $discount = $this->event_id ? $this->queryPeriodDiscount() : 0.0;
-        }
+        $organizerNet = $this->computeOrganizerNetFromTickets();
 
         $refund = (float) ($this->refund_amount ?? 0);
         $advance = (float) (($this->payout_method['advance_amount'] ?? null) ?? 0);
 
-        $this->finalNetAmountCache = max(0.0, round($breakdownGross - $discount - $refund - $advance, 2));
+        $this->finalNetAmountCache = max(0.0, round($organizerNet - $refund - $advance, 2));
         return $this->finalNetAmountCache;
     }
 
     /**
-     * Sum of orders.discount_amount over this payout's period for the
-     * payout's event. Used only as a fallback when the payout row itself
-     * has discount_amount=0 (legacy creation path). Static returns
-     * helpful for diagnostics.
+     * Σ(Ticket::getEffectivePrice()) over the LATEST qty tickets per type
+     * (qty taken from this payout's saved ticket_breakdown). Skips POS
+     * type IDs the same way the breakdown snapshot does. Public so the
+     * recompute command + PDF renderer can reuse it.
      */
-    public function queryPeriodDiscount(): float
+    public function computeOrganizerNetFromTickets(): float
     {
-        if (!$this->event_id) return 0.0;
+        if (!$this->event_id) {
+            return (float) ($this->amount ?? 0);
+        }
 
-        $q = \App\Models\Order::query()
-            ->where(function ($q) {
-                $q->where('event_id', $this->event_id)
-                  ->orWhere('marketplace_event_id', $this->event_id);
+        $qtyByType = [];
+        foreach (($this->ticket_breakdown ?? []) as $item) {
+            $ttId = (int) ($item['ticket_type_id'] ?? 0);
+            $qty = (int) ($item['quantity'] ?? $item['qty'] ?? 0);
+            if ($ttId > 0 && $qty > 0) {
+                $qtyByType[$ttId] = ($qtyByType[$ttId] ?? 0) + $qty;
+            }
+        }
+        if (empty($qtyByType)) {
+            return (float) ($this->amount ?? $this->gross_amount ?? 0);
+        }
+
+        $tickets = \App\Models\Ticket::with(['order:id,created_at'])
+            ->whereHas('ticketType', fn ($qq) => $qq->where('event_id', $this->event_id))
+            ->whereIn('ticket_type_id', array_keys($qtyByType))
+            ->whereIn('status', ['valid', 'used'])
+            ->whereHas('order', function ($qq) {
+                $qq->whereIn('status', ['paid', 'confirmed', 'completed'])
+                    ->where('source', '!=', 'external_import')
+                    ->where('source', '!=', 'pos_app');
             })
-            ->whereIn('status', ['paid', 'confirmed', 'completed'])
-            ->where(function ($q) {
-                $q->where('discount_amount', '>', 0)
-                  ->orWhere('promo_discount', '>', 0);
-            });
-        if ($this->period_start) {
-            $q->where('created_at', '>=', $this->period_start->copy()->startOfDay());
+            ->get(['id', 'ticket_type_id', 'order_id', 'price', 'meta', 'status']);
+
+        if ($tickets->isEmpty()) {
+            return (float) ($this->amount ?? 0);
         }
-        if ($this->period_end) {
-            $q->where('created_at', '<=', $this->period_end->copy()->endOfDay());
+
+        $tickets = $tickets->sortByDesc(function ($t) {
+            return [$t->order?->created_at?->timestamp ?? 0, $t->id];
+        });
+
+        $total = 0.0;
+        foreach ($tickets->groupBy('ticket_type_id') as $ttId => $group) {
+            $needed = (int) ($qtyByType[(int) $ttId] ?? 0);
+            if ($needed <= 0) continue;
+            foreach ($group->take($needed) as $t) {
+                $eff = (float) $t->getEffectivePrice();
+                if ($eff > 0) {
+                    $total += $eff;
+                }
+            }
         }
-        return (float) $q->sum('discount_amount');
+
+        return round($total, 2);
     }
 
     protected static function boot()
