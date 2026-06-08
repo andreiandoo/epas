@@ -1925,7 +1925,7 @@ class MarketplaceTaxTemplate extends Model
             // alongside their respective values.
             // getVariablesForContext() is static — helpers must be called
             // via self:: too. The earlier $this-> calls blew up at 1909.
-            $variables['sales_breakdown_rows'] = self::buildPayoutSalesBreakdownRows($payout, $ticketBreakdown, $posTypeIdsSet, $vatAmount, $formatPrice, $totalDiscountAmount);
+            $variables['sales_breakdown_rows'] = self::buildPayoutSalesBreakdownRows($payout, $ticketBreakdown, $posTypeIdsSet, $vatAmount, $formatPrice);
             $variables['refund_breakdown_rows'] = self::buildPayoutRefundBreakdownRows($payout, $formatPrice);
 
             // Preprinted tickets (physical tickets sent by courier)
@@ -2010,7 +2010,7 @@ class MarketplaceTaxTemplate extends Model
      * @param array<int, array<string, mixed>> $ticketBreakdown
      * @param array<int, mixed> $posTypeIdsSet
      */
-    private static function buildPayoutSalesBreakdownRows(MarketplacePayout $payout, array $ticketBreakdown, array $posTypeIdsSet, float $vatAmount, callable $formatPrice, float $totalDiscountAmount = 0.0): string
+    private static function buildPayoutSalesBreakdownRows(MarketplacePayout $payout, array $ticketBreakdown, array $posTypeIdsSet, float $vatAmount, callable $formatPrice): string
     {
         // Expand each saved breakdown row by its `tiers` field when present.
         // buildBreakdownFromSelection writes one tier per distinct paid price
@@ -2053,15 +2053,25 @@ class MarketplaceTaxTemplate extends Model
             }
         }
 
+        // Derive the per-ticket effective-price tiers from the underlying
+        // tickets so row 1b reflects what was actually collected, not the
+        // catalog price × qty. Each Ticket::getEffectivePrice() pulls the
+        // discount written at checkout (meta.discount_amount) and falls
+        // back to a proportional split of order.discount_amount — the
+        // same convention payout / refund engines use.
+        // Returns: [ticket_type_id => [effective_price_string => qty]].
+        // Empty when the payout has no event_id or no matching tickets.
+        $effectiveTiersByTtId = self::deriveEffectiveTiersFromTickets($payout, $posTypeIdsSet);
+
         $groups = [];
         foreach ($tierRows as $item) {
             $ttId = $item['ticket_type_id'] ?? null;
             if ($ttId && isset($posTypeIdsSet[$ttId])) {
                 continue;
             }
-            $price = (float) ($item['price'] ?? $item['unit_price'] ?? 0);
+            $catalogPrice = (float) ($item['price'] ?? $item['unit_price'] ?? 0);
             $qty = (int) ($item['quantity'] ?? $item['tickets'] ?? $item['qty'] ?? 0);
-            if ($qty <= 0 || $price <= 0) continue;
+            if ($qty <= 0 || $catalogPrice <= 0) continue;
 
             $key = self::commissionGroupKey($item);
             if (!isset($groups[$key])) {
@@ -2070,45 +2080,48 @@ class MarketplaceTaxTemplate extends Model
                     'mode' => $item['commission_mode'] ?? null,
                     'qty' => 0,
                     'amount' => 0.0,
-                    'priceParts' => [],
+                    'tierMap' => [], // (price_key) => qty
                 ];
             }
             $groups[$key]['qty'] += $qty;
-            $groups[$key]['amount'] += $price * $qty;
-            $groups[$key]['priceParts'][] = $formatPrice($price) . 'lei*' . $qty;
+
+            // Prefer the per-ticket-type effective tiers from actual tickets.
+            // Only use them when the derived qty matches THIS row's qty —
+            // a mismatch indicates the operator manually shrank the row in
+            // the edit-tickets modal, in which case the derived tiers can't
+            // be trusted. Fall back to catalog price * qty in that case.
+            $rowTierMap = null;
+            if ($ttId !== null && isset($effectiveTiersByTtId[$ttId])) {
+                $derivedTotal = array_sum($effectiveTiersByTtId[$ttId]);
+                if ($derivedTotal === $qty) {
+                    $rowTierMap = $effectiveTiersByTtId[$ttId];
+                }
+            }
+            if ($rowTierMap === null) {
+                $rowTierMap = [(string) round($catalogPrice, 2) => $qty];
+            }
+
+            foreach ($rowTierMap as $priceKey => $tierQty) {
+                $tierPrice = (float) $priceKey;
+                $groups[$key]['amount'] += $tierPrice * $tierQty;
+                $groups[$key]['tierMap'][$priceKey] = ($groups[$key]['tierMap'][$priceKey] ?? 0) + $tierQty;
+            }
         }
 
         if (empty($groups)) return '';
 
-        // Distribute the period's discount across groups proportionally to
-        // each group's gross. Without this, row 1a stays at gross while the
-        // final payable (row E) is reduced — and the template's
-        // "A = 1a + 3a" math no longer adds up. Per-tier breakdowns already
-        // encode each effective price tier (so promo-reduced rows show as
-        // their own 50lei*X part), but legacy / non-tier payouts lose the
-        // discount unless we subtract it here. Last group absorbs any
-        // rounding leftover so the sum stays exact.
-        $totalGross = 0.0;
-        foreach ($groups as $g) {
-            $totalGross += $g['amount'];
-        }
-        $remainingDiscount = $totalDiscountAmount;
-        $groupKeys = array_keys($groups);
-        $lastKey = $groupKeys ? end($groupKeys) : null;
-        foreach ($groupKeys as $key) {
-            if ($totalDiscountAmount > 0 && $totalGross > 0) {
-                if ($key === $lastKey) {
-                    $groups[$key]['discount'] = max(0.0, $remainingDiscount);
-                } else {
-                    $share = $groups[$key]['amount'] / $totalGross;
-                    $deduct = round($totalDiscountAmount * $share, 2);
-                    $groups[$key]['discount'] = $deduct;
-                    $remainingDiscount -= $deduct;
-                }
-            } else {
-                $groups[$key]['discount'] = 0.0;
+        // Build the per-group priceParts label from tierMap. Sorted by
+        // price descending so the higher catalog tier leads the list —
+        // matches the visual ordering operators expect in the PDF.
+        foreach ($groups as &$gRef) {
+            $gRef['priceParts'] = [];
+            $tierMap = $gRef['tierMap'];
+            krsort($tierMap, SORT_NUMERIC);
+            foreach ($tierMap as $priceKey => $tierQty) {
+                $gRef['priceParts'][] = $formatPrice((float) $priceKey) . 'lei*' . $tierQty;
             }
         }
+        unset($gRef);
 
         $letterPairs = [['a','b'], ['c','d'], ['e','f'], ['g','h'], ['i','j']];
         $html = '';
@@ -2122,9 +2135,7 @@ class MarketplaceTaxTemplate extends Model
                     ? 'adăugată la prețul biletului'
                     : 'inclusă în prețul biletului') . '): ' . $rateLabel
                 : '';
-            $groupDiscount = (float) ($g['discount'] ?? 0);
-            $netGroupAmount = max(0.0, $g['amount'] - $groupDiscount);
-            $amountStr = number_format($netGroupAmount, 2);
+            $amountStr = number_format($g['amount'], 2);
             $vatStr = number_format($vatAmount, 2);
             $listLabel = !empty($g['priceParts'])
                 ? ' (' . implode('+', $g['priceParts']) . ')'
@@ -2134,20 +2145,10 @@ class MarketplaceTaxTemplate extends Model
             // red rate value — keeps the row label hierarchy obvious.
             $taxNoteHtml = self::commissionLabelHtml($rateLabel, $mode, 'sale');
 
-            // Discount annotation — only when something was deducted. Sits
-            // on the SAME label cell as the tax note, smaller + gray, so
-            // the operator immediately sees why the value isn't gross *
-            // qty. The breakdown at 1b still shows catalog prices because
-            // that reflects the saved ticket_breakdown faithfully.
-            $discountNoteHtml = $groupDiscount > 0
-                ? ' <span style="font-size:6pt; color:#777;">(brut: ' . number_format($g['amount'], 2)
-                    . ' lei − reducere: ' . number_format($groupDiscount, 2) . ' lei)</span>'
-                : '';
-
             // Value row (1a / 1c / 1e ...).
             $html .= '<tr style="background:#fafafa;">'
                 . '<td style="border:1px solid #ddd; padding:2px 5px; text-align:center; color:#888; font-size:6.5pt;">1' . $valueLetter . '</td>'
-                . '<td style="border:1px solid #ddd; padding:2px 5px; padding-left:6px;">Valoare bilete v&#xe2;ndute' . $taxNoteHtml . $discountNoteHtml . '</td>'
+                . '<td style="border:1px solid #ddd; padding:2px 5px; padding-left:6px;">Valoare bilete v&#xe2;ndute' . $taxNoteHtml . '</td>'
                 . '<td style="border:1px solid #ddd; padding:2px 5px; text-align:center; color:#555;">lei</td>'
                 . '<td style="border:1px solid #ddd; padding:2px 5px; text-align:right; font-weight:bold;">' . $amountStr . '</td>'
                 . '<td style="border:1px solid #ddd; padding:2px 5px; text-align:center; color:#555;">' . $vatStr . '</td>'
@@ -2168,6 +2169,59 @@ class MarketplaceTaxTemplate extends Model
         }
 
         return $html;
+    }
+
+    /**
+     * Walk every paid+confirmed+completed ticket linked to this payout's
+     * event in the payout's period and group them by (ticket_type_id,
+     * effective_paid_price). Uses Ticket::getEffectivePrice() so the
+     * tiers reflect what was actually collected after promo codes — not
+     * the catalog price stored on tickets.price.
+     *
+     * Scope mirrors buildRemainingTicketsItems: skip external_import +
+     * pos_app sources so the breakdown matches what the operator picked
+     * in the payout creation UI.
+     *
+     * Returns [ticket_type_id => [price_string => qty]] keyed by
+     * round(price, 2) so two tickets paid at 49.99 group as one tier.
+     * Empty when the payout has no event_id or no matching tickets.
+     */
+    private static function deriveEffectiveTiersFromTickets(MarketplacePayout $payout, array $posTypeIdsSet): array
+    {
+        if (!$payout->event_id) return [];
+
+        $q = \App\Models\Ticket::with(['ticketType:id,event_id', 'order:id,discount_amount,subtotal'])
+            ->whereHas('ticketType', fn ($qq) => $qq->where('event_id', $payout->event_id))
+            ->whereIn('status', ['valid', 'used'])
+            ->whereHas('order', function ($qq) use ($payout) {
+                $qq->whereIn('status', ['paid', 'confirmed', 'completed'])
+                    ->where('source', '!=', 'external_import')
+                    ->where('source', '!=', 'pos_app');
+                if ($payout->period_start) {
+                    $qq->where('created_at', '>=', $payout->period_start->copy()->startOfDay());
+                }
+                if ($payout->period_end) {
+                    $qq->where('created_at', '<=', $payout->period_end->copy()->endOfDay());
+                }
+            });
+
+        $tickets = $q->get();
+        if ($tickets->isEmpty()) return [];
+
+        $tiers = [];
+        foreach ($tickets as $t) {
+            $ttId = (int) ($t->ticket_type_id ?? 0);
+            if ($ttId <= 0) continue;
+            if (isset($posTypeIdsSet[$ttId])) continue;
+
+            $effective = $t->getEffectivePrice();
+            if ($effective <= 0) continue; // skip invitations / comp tickets
+
+            $priceKey = (string) round($effective, 2);
+            $tiers[$ttId][$priceKey] = ($tiers[$ttId][$priceKey] ?? 0) + 1;
+        }
+
+        return $tiers;
     }
 
     /**
