@@ -1005,8 +1005,20 @@ class PayoutResource extends Resource
                     ->toggleable(),
 
                 Tables\Columns\TextColumn::make('amount')
+                    ->label('Amount')
+                    // Show the FINAL net (row E in the decont PDF) — gross
+                    // − discounts − refunds − advance — so the column
+                    // matches what the organizer actually receives. The
+                    // raw `amount` field stays as gross on the row for
+                    // back-compat with other consumers; we override the
+                    // displayed state only.
+                    ->state(fn ($record) => $record->final_net_amount)
                     ->money('RON')
-                    ->sortable()
+                    ->sortable(query: function ($query, string $direction) {
+                        // Sort still happens on the DB column (close enough
+                        // to the displayed net for ordering purposes).
+                        return $query->orderBy('amount', $direction);
+                    })
                     ->toggleable(),
 
                 Tables\Columns\TextColumn::make('status')

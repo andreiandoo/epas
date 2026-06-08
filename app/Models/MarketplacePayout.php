@@ -541,6 +541,73 @@ class MarketplacePayout extends Model
     /** Per-instance memo for getPosCommissionTotal() — not persisted. */
     protected ?float $posCommissionCache = null;
 
+    /**
+     * Memoized final-net total for getFinalNetAmountAttribute(). Avoids
+     * re-querying orders.discount_amount on every accessor read within
+     * the same request (table column reads it once per row already, but
+     * blade reads / repeated calls within a single request bunch up).
+     */
+    protected ?float $finalNetAmountCache = null;
+
+    /**
+     * Final payable amount that matches what the PDF prints on row E
+     * ("VALOARE TOTALA de achitat   E = A − B − C − D"):
+     *
+     *   amount  (or gross_amount fallback)
+     *   − total discount (per-row breakdown.discount, else order-level sum)
+     *   − refund_amount
+     *   − payout_method.advance_amount
+     *
+     * Used by the /marketplace/payouts list column + any other surface
+     * that wants the "actual money the organizer receives" figure. The
+     * raw amount column on the row stays at gross for back-compat with
+     * downstream consumers that read it.
+     */
+    public function getFinalNetAmountAttribute(): float
+    {
+        if ($this->finalNetAmountCache !== null) {
+            return $this->finalNetAmountCache;
+        }
+
+        $base = (float) ($this->amount ?? $this->gross_amount ?? 0);
+
+        $discount = 0.0;
+        $bd = $this->ticket_breakdown ?? [];
+        $hasPerRowDiscount = !empty($bd) && array_key_exists('discount', $bd[0] ?? []);
+        if ($hasPerRowDiscount) {
+            foreach ($bd as $item) {
+                $discount += (float) ($item['discount'] ?? 0);
+            }
+        } elseif ($this->event_id) {
+            // Fallback: sum order.discount_amount across the period — same
+            // path the PDF generator uses for legacy snapshots that pre-date
+            // the breakdown.discount key.
+            $q = \App\Models\Order::query()
+                ->where(function ($q) {
+                    $q->where('event_id', $this->event_id)
+                      ->orWhere('marketplace_event_id', $this->event_id);
+                })
+                ->whereIn('status', ['paid', 'confirmed', 'completed'])
+                ->where(function ($q) {
+                    $q->where('discount_amount', '>', 0)
+                      ->orWhere('promo_discount', '>', 0);
+                });
+            if ($this->period_start) {
+                $q->where('created_at', '>=', $this->period_start->copy()->startOfDay());
+            }
+            if ($this->period_end) {
+                $q->where('created_at', '<=', $this->period_end->copy()->endOfDay());
+            }
+            $discount = (float) $q->sum('discount_amount');
+        }
+
+        $refund = (float) ($this->refund_amount ?? 0);
+        $advance = (float) (($this->payout_method['advance_amount'] ?? null) ?? 0);
+
+        $this->finalNetAmountCache = max(0.0, round($base - $discount - $refund - $advance, 2));
+        return $this->finalNetAmountCache;
+    }
+
     protected static function boot()
     {
         parent::boot();
