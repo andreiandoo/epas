@@ -35,6 +35,20 @@ Tabele: `attractions`, `attraction_types`, `interests`, `traveler_types` + pivot
 - Claude: model de date, backend (migrări/modele/Filament/API), proxy + wiring template + JS.
 
 ## Status
-- [ ] F0
-- [ ] F1 (în lucru)
-- [ ] F2 — F6
+- [x] F0 — schemă confirmată; microserviciu `discovery-module` creat (seeder auto-activează client 3).
+- [x] F1 — Reviews pe activitate (agregat + endpoint + secțiune) + template v4 GYG single-activity (`single-activitate.php`, slug `/{oras}/{slug}`).
+- [x] F2 — Nearby: `latitude`/`longitude` pe `activities` (backfill din venue) + Haversine în `detailPayload` (`activity.nearby`) + rail „În apropiere" cu distanță reală.
+- [x] F3 — Interese + Traveler types: tabele + pivots + modele + API (payload + filtre `?interests=`/`?traveler_types=`) + Filament (Interest/TravelerType resources + multiselect pe Activitate) + filtre GYG pe `category.php` + badge-uri pe single-activity. Seeder `DiscoveryTaxonomiesSeeder`.
+- [x] F4 — Atracții: `attractions` + `attraction_types` + pivot + modele + `AttractionsController` (`/attractions`, `/attractions/{slug}`) + Filament (Attraction/AttractionType) + secțiune „Atracții" pe `city.php` + „Atracții asociate" pe single-activity + landing `atractie.php` (`/atractie/{slug}`).
+- [ ] F5 — Pagini-destinație + search facetat + badge-uri trust.
+- [ ] F6 — Enrich ghiduri + pagină operator GYG-style.
+
+### Deploy (de rulat pe core)
+```bash
+php artisan migrate
+php artisan db:seed --class=DiscoveryModuleMicroserviceSeeder   # creează microserviciul + activează pt client 3
+php artisan db:seed --class=DiscoveryTaxonomiesSeeder           # interese + traveler types + tipuri atracții
+php artisan optimize:clear && sudo service php8.3-fpm reload
+# apoi deploy-bilete.bat pentru template-urile frontend
+```
+Notă: gating-ul Filament (Interese/Traveler/Atracții) e prin `discovery-module`; resursele apar doar după activarea microserviciului (seeder-ul o face pentru client 3).
