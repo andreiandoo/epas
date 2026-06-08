@@ -319,7 +319,7 @@ class CityResource extends Resource
                 ]), // end RIGHT column
 
                 ]), // end Grid(3)
-            ]);
+            ]) ->columns(1);
     }
 
     public static function table(Table $table): Table
