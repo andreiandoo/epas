@@ -100,7 +100,7 @@ class CouponCodeResource extends Resource
                         Forms\Components\Select::make('status')
                             ->options([
                                 'active' => 'Active',
-                                'inactive' => 'Inactive',
+                                'disabled' => 'Inactive',
                                 'exhausted' => 'Exhausted',
                                 'expired' => 'Expired',
                             ])
@@ -347,7 +347,7 @@ class CouponCodeResource extends Resource
                 Tables\Columns\BadgeColumn::make('status')
                     ->colors([
                         'success' => 'active',
-                        'gray' => 'inactive',
+                        'gray' => 'disabled',
                         'danger' => fn ($state) => in_array($state, ['exhausted', 'expired']),
                     ]),
 
@@ -386,7 +386,7 @@ class CouponCodeResource extends Resource
                 Tables\Filters\SelectFilter::make('status')
                     ->options([
                         'active' => 'Active',
-                        'inactive' => 'Inactive',
+                        'disabled' => 'Inactive',
                         'exhausted' => 'Exhausted',
                         'expired' => 'Expired',
                     ]),
@@ -413,7 +413,7 @@ class CouponCodeResource extends Resource
                     ->color(fn ($record) => $record->status === 'active' ? 'danger' : 'success')
                     ->action(function ($record) {
                         $record->update([
-                            'status' => $record->status === 'active' ? 'inactive' : 'active',
+                            'status' => $record->status === 'active' ? 'disabled' : 'active',
                         ]);
                     })
                     ->requiresConfirmation(),
@@ -432,7 +432,7 @@ class CouponCodeResource extends Resource
                         ->label('Deactivate Selected')
                         ->icon('heroicon-o-x-circle')
                         ->color('danger')
-                        ->action(fn (Collection $records) => $records->each->update(['status' => 'inactive']))
+                        ->action(fn (Collection $records) => $records->each->update(['status' => 'disabled']))
                         ->deselectRecordsAfterCompletion(),
                 ]),
             ])
