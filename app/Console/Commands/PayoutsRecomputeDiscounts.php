@@ -26,7 +26,10 @@ class PayoutsRecomputeDiscounts extends Command
         {--apply : Persist changes (default is dry-run)}
         {--payout= : Recompute a single payout ID}
         {--event= : Recompute all payouts for a single event ID}
-        {--marketplace= : Limit to payouts of a marketplace_client_id}';
+        {--marketplace= : Limit to payouts of a marketplace_client_id}
+        {--update-amount : Also rewrite payouts.amount (default: discount fields only, since legacy amount/gross relationships vary by commission mode)}
+        {--only-decimal-discount : Restrict to payouts whose stored discount_amount has decimals (most likely buggy snapshots)}
+        {--max-delta=0 : Skip changes where |Δ discount| > this (lei, 0 = no cap)}';
 
     protected $description = 'Recompute breakdown.discount + payout.discount_amount + payout.amount from per-ticket meta.discount_amount';
 
@@ -36,21 +39,33 @@ class PayoutsRecomputeDiscounts extends Command
         $payoutId = $this->option('payout');
         $eventId = $this->option('event');
         $marketplaceId = $this->option('marketplace');
+        $updateAmount = (bool) $this->option('update-amount');
+        $onlyDecimal = (bool) $this->option('only-decimal-discount');
+        $maxDelta = (float) $this->option('max-delta');
 
         $q = MarketplacePayout::query()->whereNotNull('event_id');
         if ($payoutId) $q->where('id', (int) $payoutId);
         if ($eventId) $q->where('event_id', (int) $eventId);
         if ($marketplaceId) $q->where('marketplace_client_id', (int) $marketplaceId);
+        if ($onlyDecimal) {
+            $q->whereRaw('discount_amount != FLOOR(discount_amount)');
+        }
 
         $total = (clone $q)->count();
-        $this->info(($apply ? '[APPLY]' : '[DRY-RUN]') . " Scanning {$total} payouts...");
+        $mode = $updateAmount ? 'discount + amount' : 'discount only';
+        $this->info(($apply ? '[APPLY]' : '[DRY-RUN]') . " Scanning {$total} payouts ({$mode})...");
 
         $changed = 0;
         $unchanged = 0;
         $skipped = 0;
+        $skippedByCap = 0;
         $totalDiscountDelta = 0.0;
+        $bigDeltas = [];
 
-        $q->orderBy('id')->chunk(50, function ($chunk) use (&$changed, &$unchanged, &$skipped, &$totalDiscountDelta, $apply) {
+        $q->orderBy('id')->chunk(50, function ($chunk) use (
+            &$changed, &$unchanged, &$skipped, &$skippedByCap, &$totalDiscountDelta, &$bigDeltas,
+            $apply, $updateAmount, $maxDelta
+        ) {
             foreach ($chunk as $p) {
                 $bd = $p->ticket_breakdown ?? [];
                 if (empty($bd)) {
@@ -91,15 +106,24 @@ class PayoutsRecomputeDiscounts extends Command
 
                 $discountDelta = round($newDiscountTotal - $oldDiscountTotal, 2);
                 $amountDelta = round($newAmount - $oldAmount, 2);
-                $totalDiscountDelta += abs($discountDelta);
 
-                if (!$changedRow && abs($discountDelta) < 0.005 && abs($amountDelta) < 0.005) {
+                if (!$changedRow && abs($discountDelta) < 0.005) {
                     $unchanged++;
                     continue;
                 }
 
+                if ($maxDelta > 0 && abs($discountDelta) > $maxDelta) {
+                    $skippedByCap++;
+                    continue;
+                }
+
+                $totalDiscountDelta += abs($discountDelta);
+                if (abs($amountDelta) >= 1000) {
+                    $bigDeltas[] = [$p->id, $p->event_id, $oldAmount, $newAmount, $amountDelta];
+                }
+
                 $this->line(sprintf(
-                    "  payout %d (event %d): discount %s → %s (Δ %s), amount %s → %s (Δ %s)",
+                    "  payout %d (event %d): discount %s → %s (Δ %s)" . ($updateAmount ? ", amount %s → %s (Δ %s)" : "  [amount stays %s; accessor shows %s; Δ +%s ignored]"),
                     $p->id, $p->event_id,
                     number_format($oldDiscountTotal, 2), number_format($newDiscountTotal, 2),
                     ($discountDelta >= 0 ? '+' : '') . number_format($discountDelta, 2),
@@ -108,11 +132,14 @@ class PayoutsRecomputeDiscounts extends Command
                 ));
 
                 if ($apply) {
-                    $p->update([
+                    $payload = [
                         'ticket_breakdown' => $newBd,
                         'discount_amount' => $newDiscountTotal,
-                        'amount' => $newAmount,
-                    ]);
+                    ];
+                    if ($updateAmount) {
+                        $payload['amount'] = $newAmount;
+                    }
+                    $p->update($payload);
                 }
                 $changed++;
             }
@@ -125,11 +152,33 @@ class PayoutsRecomputeDiscounts extends Command
         if ($skipped > 0) {
             $this->warn("Skipped (no breakdown): {$skipped}");
         }
+        if ($skippedByCap > 0) {
+            $this->warn("Skipped (|Δ discount| > {$maxDelta}): {$skippedByCap}");
+        }
         $this->info("Total |Δ discount|: " . number_format($totalDiscountDelta, 2) . ' lei');
+
+        if (!empty($bigDeltas) && !$updateAmount) {
+            $this->newLine();
+            $this->warn("⚠  These payouts have a >1000 lei gap between stored amount and the value computed from per-ticket effective prices.");
+            $this->warn("   Stored amount is preserved (since --update-amount was not passed).");
+            $this->warn("   The list page accessor will show the COMPUTED value via final_net_amount, but the DB row stays untouched.");
+            $this->line("   payout_id | event_id | stored | computed | Δ");
+            foreach (array_slice($bigDeltas, 0, 30) as [$pid, $eid, $oa, $na, $da]) {
+                $this->line(sprintf("   %-9d | %-8d | %10s | %10s | %s",
+                    $pid, $eid, number_format($oa, 2), number_format($na, 2),
+                    ($da >= 0 ? '+' : '') . number_format($da, 2)));
+            }
+            if (count($bigDeltas) > 30) {
+                $this->line("   ... and " . (count($bigDeltas) - 30) . " more.");
+            }
+        }
 
         if (!$apply && $changed > 0) {
             $this->newLine();
             $this->warn('Dry-run — re-run with --apply to persist.');
+            if (!$updateAmount) {
+                $this->line('  (default mode = discount fields only; pass --update-amount to also rewrite payouts.amount)');
+            }
         }
 
         return self::SUCCESS;
