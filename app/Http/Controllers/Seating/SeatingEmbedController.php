@@ -186,9 +186,19 @@ class SeatingEmbedController extends Controller
             }
         }
 
+        // Sort so POS ticket types (is_entry_ticket=true) are iterated LAST.
+        // Some organizers create twin TTs per category — one online and one
+        // POS — assigned to the SAME rows. When both claim a row, the
+        // last-write of `$rowIdToTT[$row->id] = $tt` decides which one the
+        // mobile sees. PostgreSQL doesn't guarantee row order without an
+        // ORDER BY, so without this sort the seats randomly fall on the
+        // non-POS twin and become unselectable in the app. By iterating
+        // POS LAST we guarantee the POS twin always wins the overwrite.
+        $sortedTicketTypes = $ticketTypes->sortBy(fn ($tt) => ($tt->is_entry_ticket ?? false) ? 1 : 0)->values();
+
         $rowIdToTT = [];
         $sectionNameToTT = [];
-        foreach ($ticketTypes as $tt) {
+        foreach ($sortedTicketTypes as $tt) {
             foreach ($tt->seatingRows as $row) {
                 $rowIdToTT[$row->id] = $tt;
             }
