@@ -18,6 +18,7 @@ use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\HtmlString;
 use Illuminate\Support\Str;
 
 /**
@@ -76,8 +77,10 @@ class AttractionResource extends Resource
         return $schema->schema([
             Forms\Components\Hidden::make('marketplace_client_id')->default($marketplace?->id),
 
-            SC\Grid::make(3)->schema([
-                SC\Grid::make(1)->columnSpan(2)->schema([
+            SC\Grid::make(4)->schema([
+
+                // ============ LEFT COLUMN (3/4) ============
+                SC\Grid::make(1)->columnSpan(3)->schema([
                     SC\Section::make('Atracție')->schema([
                         Forms\Components\TextInput::make("name.{$lang}")
                             ->label('Nume')->required()->maxLength(160)->live(onBlur: true)
@@ -88,21 +91,81 @@ class AttractionResource extends Resource
                             }),
                         Forms\Components\TextInput::make('name.en')->label('Nume (EN)')->maxLength(160),
                         Forms\Components\TextInput::make('slug')->label('Slug')->required()->maxLength(191)->rule('alpha_dash'),
-                        Forms\Components\TextInput::make("subtitle.{$lang}")->label('Subtitlu')->maxLength(200),
-                        Forms\Components\Textarea::make("description.{$lang}")->label('Descriere')->rows(5)->columnSpanFull(),
+                        Forms\Components\TextInput::make("subtitle.{$lang}")->label('Subtitlu')->maxLength(200)->columnSpanFull(),
+                        Forms\Components\RichEditor::make("description.{$lang}")
+                            ->label('Descriere')
+                            ->toolbarButtons(['bold', 'italic', 'underline', 'strike', 'link', 'h2', 'h3', 'bulletList', 'orderedList', 'blockquote', 'undo', 'redo'])
+                            ->columnSpanFull(),
                     ])->columns(2),
 
-                    SC\Section::make('Media & locație')->schema([
-                        Forms\Components\TextInput::make('cover_image_url')->label('URL imagine cover')->maxLength(500)->columnSpanFull(),
-                        Forms\Components\TagsInput::make('gallery')->label('Galerie (URL-uri)')->columnSpanFull(),
+                    SC\Section::make('Media')->schema([
+                        Forms\Components\FileUpload::make('cover_image_url')
+                            ->label('Imagine cover')
+                            ->image()
+                            ->disk('public')
+                            ->directory('attractions/covers')
+                            ->visibility('public')
+                            ->imageEditor()
+                            ->columnSpanFull(),
+                        Forms\Components\FileUpload::make('gallery')
+                            ->label('Galerie')
+                            ->image()
+                            ->multiple()
+                            ->reorderable()
+                            ->appendFiles()
+                            ->disk('public')
+                            ->directory('attractions/gallery')
+                            ->visibility('public')
+                            ->columnSpanFull(),
+                    ]),
+
+                    SC\Section::make('Locație')->schema([
                         Forms\Components\TextInput::make('address')->label('Adresă')->maxLength(255)->columnSpanFull(),
-                        Forms\Components\TextInput::make('latitude')->label('Latitudine')->numeric()->step('0.0000001'),
-                        Forms\Components\TextInput::make('longitude')->label('Longitudine')->numeric()->step('0.0000001'),
+                        Forms\Components\TextInput::make('latitude')->label('Latitudine')->numeric()->step('0.0000001')->placeholder('44.4268'),
+                        Forms\Components\TextInput::make('longitude')->label('Longitudine')->numeric()->step('0.0000001')->placeholder('26.1025'),
                     ])->columns(2),
+
+                    SC\Section::make('SEO')
+                        ->description('Titlu + descriere meta pentru rezultatele din motoarele de căutare și share-uri.')
+                        ->schema([
+                            Forms\Components\TextInput::make("seo.title_{$lang}")
+                                ->label('Meta title')
+                                ->maxLength(70)
+                                ->helperText('Ideal 50–60 caractere.')
+                                ->columnSpanFull(),
+                            Forms\Components\Textarea::make("seo.description_{$lang}")
+                                ->label('Meta description')
+                                ->rows(2)
+                                ->maxLength(170)
+                                ->helperText('Ideal 120–160 caractere.')
+                                ->columnSpanFull(),
+                            Forms\Components\TextInput::make("seo.keywords_{$lang}")
+                                ->label('Cuvinte cheie')
+                                ->helperText('Separate prin virgulă (opțional).')
+                                ->columnSpanFull(),
+                        ])->columns(1),
                 ]),
 
+                // ============ RIGHT COLUMN (1/4) ============
                 SC\Grid::make(1)->columnSpan(1)->schema([
-                    SC\Section::make('Clasificare')->schema([
+                    SC\Section::make('Publicare')->schema([
+                        Forms\Components\Placeholder::make('view_link')
+                            ->label('')
+                            ->content(function ($record) use ($marketplace) {
+                                if (! $record || empty($record->slug)) {
+                                    return new HtmlString('<span style="color:#9a917f;font-size:.85rem">Salvează atracția ca să poți vizualiza pagina publică.</span>');
+                                }
+                                $domain = preg_replace('#^https?://#i', '', trim((string) ($marketplace?->domain ?? '')));
+                                $domain = rtrim($domain, '/');
+                                $url = ($domain !== '' ? 'https://' . $domain : '') . '/atractie/' . $record->slug;
+
+                                return new HtmlString(
+                                    '<a href="' . htmlspecialchars($url, ENT_QUOTES) . '" target="_blank" rel="noopener" '
+                                    . 'style="display:inline-flex;gap:.4rem;align-items:center;justify-content:center;width:100%;padding:.6rem .9rem;border-radius:.7rem;background:#1B1714;color:#F4EFE3;font-weight:600;text-decoration:none;">Vizualizează pagina ↗</a>'
+                                );
+                            })
+                            ->visible(fn ($record) => (bool) $record),
+
                         Forms\Components\Select::make('attraction_type_id')->label('Tip')->options($typeOptions)->searchable()->preload(),
                         Forms\Components\Select::make('marketplace_city_id')->label('Oraș')->options($cityOptions)->searchable()->preload(),
                         Forms\Components\TextInput::make('sort_order')->label('Ordine')->numeric()->default(0),
@@ -121,7 +184,7 @@ class AttractionResource extends Resource
 
         return $table
             ->columns([
-                Tables\Columns\ImageColumn::make('cover_image_url')->label('')->height(40)->width(60),
+                Tables\Columns\ImageColumn::make('cover_image_url')->label('')->disk('public')->height(40)->width(60),
                 Tables\Columns\TextColumn::make('name')->label('Nume')
                     ->getStateUsing(fn (Attraction $r) => is_array($r->name) ? ($r->name[$lang] ?? $r->name['ro'] ?? $r->slug) : $r->name)
                     ->searchable(query: fn (Builder $q, string $search) => $q->whereRaw("LOWER(name->>'ro') LIKE ?", ['%' . mb_strtolower($search) . '%'])),

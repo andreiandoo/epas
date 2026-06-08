@@ -56,6 +56,11 @@ class CityResource extends Resource
                 Forms\Components\Hidden::make('marketplace_client_id')
                     ->default($marketplace?->id),
 
+                SC\Grid::make(3)->schema([
+
+                // ============ LEFT COLUMN (2/3) ============
+                SC\Grid::make(1)->columnSpan(2)->schema([
+
                 SC\Section::make('City Details')
                     ->schema([
                         SC\Tabs::make('Name Translations')
@@ -146,110 +151,7 @@ class CityResource extends Resource
                             ->default(0),
                     ])->columns(2),
 
-                SC\Section::make('Location')
-                    ->collapsed()
-                    ->schema([
-                        Forms\Components\TextInput::make('latitude')
-                            ->label('Latitude')
-                            ->numeric()
-                            ->step('0.0000001')
-                            ->placeholder('44.4268'),
-
-                        Forms\Components\TextInput::make('longitude')
-                            ->label('Longitude')
-                            ->numeric()
-                            ->step('0.0000001')
-                            ->placeholder('26.1025'),
-
-                        Forms\Components\TextInput::make('timezone')
-                            ->label('Timezone')
-                            ->placeholder('Europe/Bucharest')
-                            ->maxLength(100),
-
-                        Forms\Components\TextInput::make('population')
-                            ->label('Population')
-                            ->numeric()
-                            ->minValue(0),
-                    ])->columns(2),
-
-                // Affiliate widgets — GetYourGuide. The numeric city id is
-                // visible in the GYG URL after a city search (e.g.
-                // https://www.getyourguide.com/bucharest-l124688/). The
-                // helper link below opens the GYG search pre-filled with
-                // the city name so the operator can grab the id with two
-                // clicks instead of remembering the URL pattern.
-                SC\Section::make('Widget GetYourGuide')
-                    ->description('ID-ul numeric al orașului pe GetYourGuide. Folosit pentru widget-ul de activități afișat pe pagina publică a orașului.')
-                    ->collapsed()
-                    ->schema([
-                        Forms\Components\TextInput::make('getyourguide_city_id')
-                            ->label('GetYourGuide City ID')
-                            ->placeholder('ex. 124688')
-                            ->maxLength(40)
-                            ->helperText(new \Illuminate\Support\HtmlString(
-                                'Caută orașul pe GetYourGuide → ID-ul e numărul după <code>-l</code> în URL (ex. <code>...-l<strong>124688</strong>/</code>).'
-                            ))
-                            ->hintAction(
-                                // Filament 4 uses \Filament\Actions\Action — the old
-                                // Forms\Components\Actions\Action class is gone and
-                                // referencing it 500s the page on load. Reading state
-                                // via the typed Get injection is the v4 way; falls
-                                // back to $record on edit views and stays a search
-                                // home-page link on create.
-                                \Filament\Actions\Action::make('searchOnGyg')
-                                    ->label('Caută pe GetYourGuide ↗')
-                                    ->icon('heroicon-o-magnifying-glass')
-                                    ->url(function (\Filament\Schemas\Components\Utilities\Get $get, $record = null) {
-                                        $name = $get('name');
-                                        if (empty($name) && $record) {
-                                            $name = $record->name;
-                                        }
-                                        if (is_array($name)) {
-                                            $name = $name['ro'] ?? $name['en'] ?? reset($name) ?? '';
-                                        }
-                                        $q = urlencode((string) ($name ?: ''));
-                                        return $q !== ''
-                                            ? "https://www.getyourguide.com/s/?q={$q}"
-                                            : 'https://www.getyourguide.com/s/';
-                                    }, shouldOpenInNewTab: true)
-                            ),
-                    ])->columns(1),
-
-                SC\Section::make('Appearance')
-                    ->collapsed()
-                    ->schema([
-                        Forms\Components\FileUpload::make('image_url')
-                            ->label('City Image')
-                            ->image()
-                            ->disk('public')
-                            ->directory('cities')
-                            ->visibility('public'),
-
-                        Forms\Components\FileUpload::make('cover_image_url')
-                            ->label('Cover Image')
-                            ->image()
-                            ->disk('public')
-                            ->directory('cities/covers')
-                            ->visibility('public'),
-
-                        Forms\Components\TextInput::make('icon')
-                            ->label('Icon')
-                            ->placeholder('heroicon-o-building-library')
-                            ->maxLength(100),
-
-                        Forms\Components\Toggle::make('is_visible')
-                            ->label('Visible')
-                            ->default(true),
-
-                        Forms\Components\Toggle::make('is_featured')
-                            ->label('Featured'),
-
-                        Forms\Components\Toggle::make('is_capital')
-                            ->label('Capital of Region'),
-                    ])->columns(3),
-
                 SC\Section::make('Description')
-                    ->collapsed()
                     ->schema([
                         SC\Tabs::make('Description Translations')
                             ->tabs([
@@ -270,7 +172,6 @@ class CityResource extends Resource
 
                 SC\Section::make('SEO Body — "Tot ce trebuie să știi"')
                     ->description('Titlu + corp rich-text afișat în ghidul local al orașului.')
-                    ->collapsed()
                     ->schema([
                         SC\Tabs::make('SEO Body Translations')
                             ->tabs([
@@ -301,7 +202,6 @@ class CityResource extends Resource
 
                 SC\Section::make('Întrebări frecvente (FAQs)')
                     ->description('Lista de FAQs afișată pe pagina orașului + inclusă ca FAQPage JSON-LD pentru rich SERP. Doar limba primară (RO).')
-                    ->collapsed()
                     ->schema([
                         Forms\Components\Repeater::make('faqs')
                             ->label(false)
@@ -323,6 +223,102 @@ class CityResource extends Resource
                             ->addActionLabel('Adaugă întrebare')
                             ->columnSpanFull(),
                     ])->columns(1),
+
+                ]), // end LEFT column
+
+                // ============ RIGHT COLUMN (1/3) ============
+                SC\Grid::make(1)->columnSpan(1)->schema([
+
+                    SC\Section::make('Locație & coordonate')
+                        ->schema([
+                            Forms\Components\TextInput::make('latitude')
+                                ->label('Latitude')
+                                ->numeric()
+                                ->step('0.0000001')
+                                ->placeholder('44.4268'),
+
+                            Forms\Components\TextInput::make('longitude')
+                                ->label('Longitude')
+                                ->numeric()
+                                ->step('0.0000001')
+                                ->placeholder('26.1025'),
+
+                            Forms\Components\TextInput::make('timezone')
+                                ->label('Timezone')
+                                ->placeholder('Europe/Bucharest')
+                                ->maxLength(100),
+
+                            Forms\Components\TextInput::make('population')
+                                ->label('Population')
+                                ->numeric()
+                                ->minValue(0),
+                        ])->columns(2),
+
+                    SC\Section::make('Aspect & vizibilitate')
+                        ->schema([
+                            Forms\Components\FileUpload::make('image_url')
+                                ->label('City Image')
+                                ->image()
+                                ->disk('public')
+                                ->directory('cities')
+                                ->visibility('public'),
+
+                            Forms\Components\FileUpload::make('cover_image_url')
+                                ->label('Cover Image')
+                                ->image()
+                                ->disk('public')
+                                ->directory('cities/covers')
+                                ->visibility('public'),
+
+                            Forms\Components\TextInput::make('icon')
+                                ->label('Icon')
+                                ->placeholder('heroicon-o-building-library')
+                                ->maxLength(100),
+
+                            Forms\Components\Toggle::make('is_visible')
+                                ->label('Visible')
+                                ->default(true),
+
+                            Forms\Components\Toggle::make('is_featured')
+                                ->label('Featured'),
+
+                            Forms\Components\Toggle::make('is_capital')
+                                ->label('Capital of Region'),
+                        ])->columns(1),
+
+                    SC\Section::make('Widget GetYourGuide')
+                        ->description('ID-ul numeric al orașului pe GetYourGuide, pentru widget-ul de activități de pe pagina publică.')
+                        ->schema([
+                            Forms\Components\TextInput::make('getyourguide_city_id')
+                                ->label('GetYourGuide City ID')
+                                ->placeholder('ex. 124688')
+                                ->maxLength(40)
+                                ->helperText(new \Illuminate\Support\HtmlString(
+                                    'Caută orașul pe GetYourGuide → ID-ul e numărul după <code>-l</code> în URL (ex. <code>...-l<strong>124688</strong>/</code>).'
+                                ))
+                                ->hintAction(
+                                    \Filament\Actions\Action::make('searchOnGyg')
+                                        ->label('Caută pe GetYourGuide ↗')
+                                        ->icon('heroicon-o-magnifying-glass')
+                                        ->url(function (\Filament\Schemas\Components\Utilities\Get $get, $record = null) {
+                                            $name = $get('name');
+                                            if (empty($name) && $record) {
+                                                $name = $record->name;
+                                            }
+                                            if (is_array($name)) {
+                                                $name = $name['ro'] ?? $name['en'] ?? reset($name) ?? '';
+                                            }
+                                            $q = urlencode((string) ($name ?: ''));
+                                            return $q !== ''
+                                                ? "https://www.getyourguide.com/s/?q={$q}"
+                                                : 'https://www.getyourguide.com/s/';
+                                        }, shouldOpenInNewTab: true)
+                                ),
+                        ])->columns(1),
+
+                ]), // end RIGHT column
+
+                ]), // end Grid(3)
             ]);
     }
 
