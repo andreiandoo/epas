@@ -107,7 +107,12 @@ class PayoutsRecomputeDiscounts extends Command
                 $discountDelta = round($newDiscountTotal - $oldDiscountTotal, 2);
                 $amountDelta = round($newAmount - $oldAmount, 2);
 
-                if (!$changedRow && abs($discountDelta) < 0.005) {
+                // Skip only when nothing needs touching. When --update-amount
+                // is on, an unchanged discount but stale amount still counts
+                // as a change (the previous --only-decimal-discount run left
+                // amount untouched on purpose).
+                $needsAmountFix = $updateAmount && abs($amountDelta) >= 0.005;
+                if (!$changedRow && abs($discountDelta) < 0.005 && !$needsAmountFix) {
                     $unchanged++;
                     continue;
                 }
