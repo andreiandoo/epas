@@ -291,6 +291,171 @@ $structuredData[] = [
     ], $faqItems),
 ];
 
+// ============================================================
+// GYG filters + map view — seed REAL activities for client-side
+// filtering. Only filter dimensions backed by real data are exposed
+// (search, subcategories, price, languages, duration, features, rating);
+// start-time / interests / places land with their data modules (F3).
+// ============================================================
+$headerContext = $cityFilter
+    ? ['type' => 'city', 'label' => $heroLocation, 'slug' => $cityFilter]
+    : ['type' => 'category', 'label' => $catName, 'slug' => ($shortSlug ?: $slug)];
+
+$bo_img = function ($u) {
+    $u = (string) $u;
+    if ($u === '') return '';
+    return str_starts_with($u, 'http') ? $u : rtrim(STORAGE_URL, '/') . '/' . ltrim($u, '/');
+};
+
+$gygActivities = [];
+$ix = 0;
+foreach ($activities as $a) {
+    $title = is_array($a['title'] ?? null) ? navFlatName($a['title']) : ($a['title'] ?? '');
+    $aslug = $a['slug'] ?? '';
+    if ($title === '' || $aslug === '') continue;
+    $citySlugA = $a['city']['slug'] ?? '';
+    $href = $citySlugA ? '/' . $citySlugA . '/' . $aslug : '/activitate/' . $aslug;
+    $priceLei = isset($a['cheapest_price_cents']) && $a['cheapest_price_cents'] !== null ? (int) round($a['cheapest_price_cents'] / 100) : 0;
+    $dur = (int) ($a['duration_minutes'] ?? 0);
+    $langs = array_values(array_unique(array_filter(array_map(
+        fn ($l) => strtolower(substr((string) (is_array($l) ? ($l['code'] ?? $l['name'] ?? '') : $l), 0, 2)),
+        (array) ($a['languages_offered'] ?? [])
+    ))));
+    $flags = $a['flags'] ?? [];
+    $features = [];
+    if (!empty($flags['is_kid_friendly'])) $features[] = 'family';
+    if (!empty($flags['is_accessible']))   $features[] = 'wheelchair';
+    if (!empty($flags['is_indoor']))        $features[] = 'indoor';
+    if (!empty($flags['is_outdoor']))       $features[] = 'outdoor';
+    $rev = $a['reviews'] ?? null;
+    $badges = [];
+    if (!empty($flags['is_featured'])) $badges[] = 'Recomandat';
+    $gygActivities[] = [
+        'id'              => (int) ($a['id'] ?? (++$ix)),
+        'title'           => $title,
+        'href'            => $href,
+        'category'        => $a['category']['name'] ?? $catName,
+        'categorySlug'    => $a['category']['slug'] ?? '',
+        'image'           => $bo_img($a['cover_image_url'] ?? ''),
+        'place'           => $a['city']['name'] ?? $heroLocation,
+        'description'     => mb_substr(trim(strip_tags((string) navFlatName($a['short_description'] ?? ''))), 0, 160),
+        'rating'          => $rev && isset($rev['average']) ? round((float) $rev['average'], 1) : 0,
+        'reviews'         => $rev && isset($rev['count']) ? (int) $rev['count'] : 0,
+        'price'           => $priceLei,
+        'duration'        => $dur > 0 ? ($dur < 60 ? 'short' : ($dur <= 90 ? 'medium' : 'long')) : '',
+        'durationLabel'   => $dur > 0 ? ($dur . ' min') : '',
+        'languages'       => $langs,
+        'features'        => $features,
+        'interests'       => array_values(array_filter(array_map(fn ($i) => $i['slug'] ?? '', (array) ($a['interests'] ?? [])))),
+        'travelerTypes'   => array_values(array_filter(array_map(fn ($t) => $t['slug'] ?? '', (array) ($a['traveler_types'] ?? [])))),
+        'badges'          => $badges,
+        'freeCancellation' => false,
+        'favorite'        => false,
+        '_lat'            => isset($a['venue']['lat']) ? (float) $a['venue']['lat'] : (isset($a['latitude']) ? (float) $a['latitude'] : null),
+        '_lng'            => isset($a['venue']['lng']) ? (float) $a['venue']['lng'] : (isset($a['longitude']) ? (float) $a['longitude'] : null),
+    ];
+    $ix++;
+}
+
+// Map pins: normalize real lat/lng into x/y% (bbox); golden-angle scatter when
+// coords are missing so the "map preview" stays evenly populated.
+$withCoords = array_filter($gygActivities, fn ($a) => $a['_lat'] !== null && $a['_lng'] !== null);
+$minLat = $maxLat = $minLng = $maxLng = null;
+if (count($withCoords) >= 2) {
+    $lats = array_column($withCoords, '_lat');
+    $lngs = array_column($withCoords, '_lng');
+    $minLat = min($lats); $maxLat = max($lats); $minLng = min($lngs); $maxLng = max($lngs);
+}
+foreach ($gygActivities as $k => $a) {
+    if ($minLat !== null && $a['_lat'] !== null && $a['_lng'] !== null && ($maxLat - $minLat) > 0 && ($maxLng - $minLng) > 0) {
+        $x = 10 + ($a['_lng'] - $minLng) / ($maxLng - $minLng) * 80;
+        $y = 10 + ($maxLat - $a['_lat']) / ($maxLat - $minLat) * 80;
+    } else {
+        $ang = $k * 137.508 * M_PI / 180;
+        $x = 50 + cos($ang) * (18 + ($k % 4) * 6);
+        $y = 50 + sin($ang) * (14 + ($k % 3) * 7);
+    }
+    $gygActivities[$k]['map'] = ['x' => round(max(6, min(94, $x)), 1), 'y' => round(max(8, min(90, $y)), 1)];
+    unset($gygActivities[$k]['_lat'], $gygActivities[$k]['_lng']);
+}
+$gygActivities = array_values($gygActivities);
+
+// Filter options derived from real data only.
+$catOptions = [];
+foreach ((array) $children as $ch) {
+    $cs = $ch['slug'] ?? ''; $cn = navFlatName($ch['name'] ?? '');
+    if ($cs === '' || $cn === '') continue;
+    $catOptions[] = ['value' => $cs, 'label' => $cn];
+}
+if (empty($catOptions)) {
+    $seenCat = [];
+    foreach ($gygActivities as $a) {
+        $cs = $a['categorySlug'];
+        if ($cs === '' || isset($seenCat[$cs])) continue;
+        $seenCat[$cs] = true;
+        $catOptions[] = ['value' => $cs, 'label' => $a['category']];
+    }
+}
+
+$langLabels = ['ro' => 'Română', 'en' => 'Engleză', 'de' => 'Germană', 'fr' => 'Franceză', 'es' => 'Spaniolă', 'it' => 'Italiană', 'hu' => 'Maghiară'];
+$langPresent = [];
+foreach ($gygActivities as $a) foreach ($a['languages'] as $l) $langPresent[$l] = true;
+$langOptions = [];
+foreach (array_keys($langPresent) as $l) $langOptions[] = ['value' => $l, 'label' => $langLabels[$l] ?? mb_strtoupper($l)];
+
+$featLabels = ['family' => 'Potrivit pentru familie', 'wheelchair' => 'Accesibil', 'indoor' => 'Indoor', 'outdoor' => 'Outdoor'];
+$featPresent = [];
+foreach ($gygActivities as $a) foreach ($a['features'] as $f) $featPresent[$f] = true;
+$featOptions = [];
+foreach ($featLabels as $fk => $fl) if (isset($featPresent[$fk])) $featOptions[] = ['value' => $fk, 'label' => $fl];
+
+// F3 — interests + traveler types options, built from slug→name maps over the
+// real activity payloads (only values actually present become filters).
+$interestNames = [];
+$travelerNames = [];
+foreach ($activities as $a) {
+    foreach ((array) ($a['interests'] ?? []) as $i) {
+        if (! empty($i['slug'])) $interestNames[$i['slug']] = $i['name'] ?? $i['slug'];
+    }
+    foreach ((array) ($a['traveler_types'] ?? []) as $t) {
+        if (! empty($t['slug'])) $travelerNames[$t['slug']] = $t['name'] ?? $t['slug'];
+    }
+}
+$interestOptions = [];
+foreach ($interestNames as $slugK => $nameK) $interestOptions[] = ['value' => $slugK, 'label' => $nameK];
+$travelerOptions = [];
+foreach ($travelerNames as $slugK => $nameK) $travelerOptions[] = ['value' => $slugK, 'label' => $nameK];
+
+$gygPriceVals = array_filter(array_map(fn ($a) => $a['price'], $gygActivities));
+$gygPriceMax = $gygPriceVals ? (int) (ceil(max($gygPriceVals) / 50) * 50) : 250;
+if ($gygPriceMax < 100) $gygPriceMax = 100;
+
+$gygHasRatings = (bool) array_filter($gygActivities, fn ($a) => $a['rating'] > 0);
+
+$gygSeed = json_encode([
+    'activities'      => $gygActivities,
+    'categoryOptions' => $catOptions,
+    'languageOptions' => $langOptions,
+    'featureOptions'  => $featOptions,
+    'interestOptions' => $interestOptions,
+    'travelerOptions' => $travelerOptions,
+    'durationOptions' => [
+        ['value' => 'short', 'label' => 'Sub 60 min'],
+        ['value' => 'medium', 'label' => '60–90 min'],
+        ['value' => 'long', 'label' => '90+ min'],
+    ],
+    'ratingOptions' => [
+        ['value' => 0, 'label' => 'Orice rating'],
+        ['value' => 4, 'label' => '4.0+'],
+        ['value' => 4.5, 'label' => '4.5+'],
+        ['value' => 4.8, 'label' => '4.8+'],
+    ],
+    'priceMax'     => $gygPriceMax,
+    'hasRatings'   => $gygHasRatings,
+    'catName'      => $catName,
+    'cityLabel'    => $cityFilter ? $heroLocation : '',
+], JSON_UNESCAPED_UNICODE);
+
 include __DIR__ . '/includes/head.php';
 include __DIR__ . '/includes/header.php';
 ?>
@@ -421,7 +586,478 @@ include __DIR__ . '/includes/header.php';
 </section>
 <?php endif; ?>
 
-<!-- ============================== FILTRE + REZULTATE ============================== -->
+<!-- ============================== GYG FILTERS + MAP VIEW ============================== -->
+<section x-data="categoryGyg(<?= htmlspecialchars($gygSeed, ENT_QUOTES) ?>)" x-init="init()" class="border-t border-ink/10">
+
+    <!-- Sticky top filter bar -->
+    <div class="sticky top-[72px] z-40 border-b border-ink/10 bg-paper/95 backdrop-blur-xl">
+        <div class="mx-auto max-w-7xl px-4 sm:px-6 py-3">
+            <div class="flex items-center gap-2 overflow-x-auto pb-1">
+                <button @click="openMap()" class="shrink-0 rounded-full border-2 border-ink bg-ink px-4 py-2.5 text-sm font-bold text-paper transition hover:bg-vermilion">Map view</button>
+                <button @click="filtersModal=true" class="shrink-0 rounded-full border-2 border-ink bg-paper px-4 py-2.5 text-sm font-bold transition hover:bg-ink hover:text-paper">Filtre <span x-show="activeFilterCount()" class="ml-1 rounded-full bg-vermilion px-2 py-0.5 text-xs text-paper" x-text="activeFilterCount()"></span></button>
+                <template x-for="b in topButtons()" :key="b.key">
+                    <button @click="openTopFilter(b.key)" class="shrink-0 rounded-full border-2 border-ink/10 bg-paper-2 px-4 py-2.5 text-sm font-bold transition hover:border-ink"><span x-text="b.label"></span><span x-show="topFilterActive(b.key)" class="ml-1 text-vermilion">•</span></button>
+                </template>
+                <button @click="resetFilters()" x-show="activeFilterCount()" x-cloak class="shrink-0 rounded-full px-4 py-2.5 text-sm font-bold text-vermilion hover:bg-rose">Șterge tot</button>
+            </div>
+
+            <!-- Compact top filter popover -->
+            <div x-show="topFilterOpen" x-cloak x-transition @click.outside="topFilterOpen=null" class="absolute left-4 right-4 top-[calc(100%+8px)] z-50 mx-auto max-w-7xl rounded-[2rem] border-2 border-ink bg-paper p-5 shadow-deep sm:left-6 sm:right-6 lg:w-[720px]">
+                <div class="flex items-start justify-between gap-4">
+                    <div>
+                        <p class="font-mono text-xs tracking-[.18em] text-ink-soft" x-text="topFilterMeta().kicker"></p>
+                        <h3 class="font-display text-4xl font-bold leading-none" x-text="topFilterMeta().title"></h3>
+                    </div>
+                    <button @click="topFilterOpen=null" class="grid h-10 w-10 place-items-center rounded-full bg-ink text-xl font-bold text-paper">×</button>
+                </div>
+                <div class="mt-5">
+                    <template x-if="topFilterOpen==='search'">
+                        <input x-ref="searchInput" x-model="filters.search" class="w-full rounded-2xl border-2 border-ink/15 bg-paper px-4 py-3 font-bold outline-none focus:border-vermilion" placeholder="Caută după nume, locație, temă..." />
+                    </template>
+                    <template x-if="topFilterOpen==='price'">
+                        <div>
+                            <div class="flex items-center justify-between"><span class="font-bold">Preț maxim</span><strong x-text="formatMoney(filters.maxPrice)"></strong></div>
+                            <input type="range" min="0" :max="priceCap" step="10" x-model.number="filters.maxPrice" class="mt-4 w-full" style="accent-color:#E84527">
+                            <div class="mt-2 flex justify-between text-xs font-bold text-ink-soft"><span>0 lei</span><span x-text="formatMoney(priceCap)"></span></div>
+                        </div>
+                    </template>
+                    <template x-if="topFilterOpen==='duration'">
+                        <div class="grid gap-2 sm:grid-cols-3">
+                            <template x-for="o in durationOptions" :key="o.value">
+                                <label class="flex cursor-pointer items-center gap-3 rounded-2xl bg-paper-2 px-4 py-3 font-bold hover:bg-paper"><input type="checkbox" :value="o.value" x-model="filters.durations" class="h-5 w-5" style="accent-color:#E84527"><span x-text="o.label"></span></label>
+                            </template>
+                        </div>
+                    </template>
+                    <template x-if="topFilterOpen==='languages'">
+                        <div class="grid gap-2 sm:grid-cols-3">
+                            <template x-for="o in languageOptions" :key="o.value">
+                                <label class="flex cursor-pointer items-center gap-3 rounded-2xl bg-paper-2 px-4 py-3 font-bold hover:bg-paper"><input type="checkbox" :value="o.value" x-model="filters.languages" class="h-5 w-5" style="accent-color:#E84527"><span x-text="o.label"></span></label>
+                            </template>
+                        </div>
+                    </template>
+                    <template x-if="topFilterOpen==='features'">
+                        <div class="grid gap-2 sm:grid-cols-2">
+                            <template x-for="o in featureOptions" :key="o.value">
+                                <label class="flex cursor-pointer items-center gap-3 rounded-2xl bg-paper-2 px-4 py-3 font-bold hover:bg-paper"><input type="checkbox" :value="o.value" x-model="filters.features" class="h-5 w-5" style="accent-color:#E84527"><span x-text="o.label"></span></label>
+                            </template>
+                        </div>
+                    </template>
+                    <template x-if="topFilterOpen==='interests'">
+                        <div class="grid gap-2 sm:grid-cols-2">
+                            <template x-for="o in interestOptions" :key="o.value">
+                                <label class="flex cursor-pointer items-center gap-3 rounded-2xl bg-paper-2 px-4 py-3 font-bold hover:bg-paper"><input type="checkbox" :value="o.value" x-model="filters.interests" class="h-5 w-5" style="accent-color:#E84527"><span x-text="o.label"></span></label>
+                            </template>
+                        </div>
+                    </template>
+                    <template x-if="topFilterOpen==='traveler'">
+                        <div class="grid gap-2 sm:grid-cols-2">
+                            <template x-for="o in travelerOptions" :key="o.value">
+                                <label class="flex cursor-pointer items-center gap-3 rounded-2xl bg-paper-2 px-4 py-3 font-bold hover:bg-paper"><input type="checkbox" :value="o.value" x-model="filters.travelerTypes" class="h-5 w-5" style="accent-color:#E84527"><span x-text="o.label"></span></label>
+                            </template>
+                        </div>
+                    </template>
+                </div>
+                <div class="mt-5 flex items-center justify-between gap-3 border-t border-ink/10 pt-4">
+                    <button @click="clearTopFilter()" class="rounded-full border-2 border-ink px-5 py-3 font-bold hover:bg-ink hover:text-paper">Curăță</button>
+                    <button @click="topFilterOpen=null" class="rounded-full bg-vermilion px-5 py-3 font-bold text-paper hover:bg-vermilion-d">Aplică</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Results -->
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 py-8 lg:py-10">
+        <div class="mb-5 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+                <p class="font-display text-5xl font-bold leading-none"><span x-text="filteredActivities().length"></span> rezultate</p>
+                <p class="mt-2 text-ink-soft">Activitățile sunt ordonate după relevanță, rating și disponibilitate.</p>
+            </div>
+            <label class="flex max-w-sm items-center gap-2">
+                <span class="text-sm font-bold text-ink-soft">Sortare</span>
+                <select class="rounded-2xl border-2 border-ink/15 bg-paper px-4 py-3 font-bold outline-none focus:border-vermilion" x-model="sortBy">
+                    <option value="recommended">Recomandate</option>
+                    <option value="rating" x-show="hasRatings">Rating</option>
+                    <option value="priceAsc">Preț crescător</option>
+                    <option value="priceDesc">Preț descrescător</option>
+                    <option value="duration">Durată scurtă</option>
+                </select>
+            </label>
+        </div>
+
+        <div class="mb-6 flex flex-wrap gap-2" x-show="activeChips().length" x-cloak>
+            <template x-for="chip in activeChips()" :key="chip.key">
+                <button @click="removeChip(chip)" class="rounded-full bg-ink px-4 py-2 text-sm font-bold text-paper"><span x-text="chip.label"></span> ×</button>
+            </template>
+        </div>
+
+        <div class="space-y-5">
+            <template x-for="activity in sortedActivities()" :key="activity.id">
+                <article class="group overflow-hidden rounded-[2rem] border-2 border-ink bg-paper shadow-deep transition hover:-translate-y-0.5">
+                    <div class="grid md:grid-cols-[290px_1fr]">
+                        <a :href="activity.href" class="relative block min-h-[230px] overflow-hidden bg-ink">
+                            <img x-show="activity.image" :src="activity.image" :alt="activity.title" class="h-full w-full object-cover transition duration-500 group-hover:scale-105" loading="lazy">
+                            <div x-show="!activity.image" class="grid h-full place-items-center bg-gradient-to-br from-vermilion to-vermilion-d"><span class="text-5xl opacity-40">🎫</span></div>
+                            <div class="absolute left-4 top-4 flex flex-wrap gap-2">
+                                <template x-for="badge in activity.badges" :key="badge"><span class="rounded-full bg-paper px-3 py-1 text-xs font-bold text-ink" x-text="badge"></span></template>
+                            </div>
+                            <button @click.prevent="activity.favorite=!activity.favorite" class="absolute right-4 top-4 grid h-10 w-10 place-items-center rounded-full bg-paper text-2xl text-ink"><span x-text="activity.favorite ? '♥' : '♡'"></span></button>
+                        </a>
+                        <div class="grid gap-4 p-5 lg:grid-cols-[1fr_220px]">
+                            <div>
+                                <div class="flex flex-wrap gap-2">
+                                    <span x-show="activity.category" class="rounded-full bg-paper-2 px-3 py-1 text-xs font-bold text-ink-soft" x-text="activity.category"></span>
+                                </div>
+                                <a :href="activity.href" class="mt-3 block"><h3 class="font-display text-4xl font-bold leading-none group-hover:text-vermilion" x-text="activity.title"></h3></a>
+                                <p x-show="activity.description" class="mt-3 text-ink-soft" x-text="activity.description"></p>
+                                <div class="mt-4 flex flex-wrap items-center gap-3 text-sm font-bold">
+                                    <template x-if="activity.rating > 0"><span class="text-ochre">★★★★★</span></template>
+                                    <span x-show="activity.rating > 0" x-text="activity.rating"></span>
+                                    <span x-show="activity.reviews > 0" class="text-ink-soft" x-text="'(' + activity.reviews.toLocaleString('ro-RO') + ')'"></span>
+                                    <span x-show="activity.place" class="text-ink-soft">·</span>
+                                    <span x-show="activity.place" x-text="activity.place"></span>
+                                    <span x-show="activity.durationLabel" class="text-ink-soft">·</span>
+                                    <span x-show="activity.durationLabel" x-text="activity.durationLabel"></span>
+                                </div>
+                                <div class="mt-4 flex flex-wrap gap-2">
+                                    <template x-for="feature in activity.features" :key="feature"><span class="rounded-full bg-paper-2 px-3 py-1 text-xs font-bold text-ink-soft" x-text="featureLabel(feature)"></span></template>
+                                </div>
+                            </div>
+                            <aside class="flex flex-col justify-between rounded-3xl bg-paper-2 p-4">
+                                <div>
+                                    <p class="text-sm font-bold text-ink-soft" x-show="activity.price">de la</p>
+                                    <p class="font-display text-4xl font-bold leading-none" x-text="activity.price ? formatMoney(activity.price) : 'Vezi preț'"></p>
+                                    <p x-show="activity.price" class="mt-3 rounded-2xl bg-mint px-3 py-2 text-sm font-bold text-forest" x-text="'+' + Math.floor(activity.price/5) + ' puncte bonus'"></p>
+                                </div>
+                                <a :href="activity.href" class="mt-4 rounded-full bg-vermilion px-5 py-3 text-center font-bold text-paper transition hover:bg-vermilion-d">Vezi bilete</a>
+                            </aside>
+                        </div>
+                    </div>
+                </article>
+            </template>
+
+            <div x-show="filteredActivities().length === 0" x-cloak class="rounded-[2rem] border-2 border-ink bg-paper p-8 text-center">
+                <p class="font-display text-5xl font-bold leading-none">Nu am găsit activități.</p>
+                <p class="mt-3 text-ink-soft">Schimbă filtrele sau resetează căutarea.</p>
+                <button @click="resetFilters()" class="mt-5 rounded-full bg-vermilion px-6 py-4 font-bold text-paper">Resetează filtrele</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters modal -->
+    <div x-show="filtersModal" x-cloak class="fixed inset-0 z-[90] bg-ink/70 p-3 backdrop-blur-sm sm:p-5" role="dialog" aria-modal="true" aria-label="Filtre activități">
+        <div @click.outside="filtersModal=false" class="mx-auto flex max-h-[94vh] w-full max-w-5xl flex-col overflow-hidden rounded-[2rem] border-2 border-ink bg-paper shadow-deep">
+            <div class="flex items-start justify-between gap-4 border-b border-ink/10 p-5 sm:p-6">
+                <div>
+                    <p class="font-mono text-xs tracking-[.18em] text-ink-soft">FILTRE</p>
+                    <h2 class="font-display text-5xl font-bold leading-none">Filtrează activitățile</h2>
+                </div>
+                <button @click="filtersModal=false" class="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-ink text-2xl font-bold text-paper">×</button>
+            </div>
+            <div class="grid min-h-0 flex-1 overflow-auto lg:grid-cols-[260px_1fr]">
+                <aside class="border-b border-ink/10 bg-paper-2 p-4 lg:border-b-0 lg:border-r">
+                    <template x-for="tab in modalTabs()" :key="tab.key">
+                        <button @click="modalTab=tab.key" :class="modalTab===tab.key ? 'bg-ink text-paper' : 'hover:bg-paper'" class="mt-1 flex w-full items-center justify-between rounded-2xl px-4 py-3 text-left font-bold transition"><span x-text="tab.label"></span><span x-show="tabHasValue(tab.key)" class="rounded-full bg-vermilion px-2 py-0.5 text-xs text-paper">•</span></button>
+                    </template>
+                </aside>
+                <section class="p-5 sm:p-6">
+                    <div x-show="modalTab==='categories'">
+                        <h3 class="font-display text-4xl font-bold leading-none">Categorii</h3>
+                        <div class="mt-5 grid gap-2 sm:grid-cols-2">
+                            <template x-for="o in categoryOptions" :key="o.value">
+                                <label class="flex cursor-pointer items-center gap-3 rounded-2xl bg-paper-2 px-4 py-3 font-bold hover:bg-paper"><input type="checkbox" :value="o.value" x-model="filters.categories" class="h-5 w-5" style="accent-color:#E84527"><span x-text="o.label"></span></label>
+                            </template>
+                        </div>
+                    </div>
+                    <div x-show="modalTab==='interests'">
+                        <h3 class="font-display text-4xl font-bold leading-none">Interese</h3>
+                        <p class="mt-2 text-ink-soft">Alege atmosfera sau tema activității.</p>
+                        <div class="mt-5 grid gap-2 sm:grid-cols-2">
+                            <template x-for="o in interestOptions" :key="o.value">
+                                <label class="flex cursor-pointer items-center gap-3 rounded-2xl bg-paper-2 px-4 py-3 font-bold hover:bg-paper"><input type="checkbox" :value="o.value" x-model="filters.interests" class="h-5 w-5" style="accent-color:#E84527"><span x-text="o.label"></span></label>
+                            </template>
+                        </div>
+                    </div>
+                    <div x-show="modalTab==='traveler'">
+                        <h3 class="font-display text-4xl font-bold leading-none">Pentru cine</h3>
+                        <p class="mt-2 text-ink-soft">Cui i se potrivește activitatea.</p>
+                        <div class="mt-5 grid gap-2 sm:grid-cols-2">
+                            <template x-for="o in travelerOptions" :key="o.value">
+                                <label class="flex cursor-pointer items-center gap-3 rounded-2xl bg-paper-2 px-4 py-3 font-bold hover:bg-paper"><input type="checkbox" :value="o.value" x-model="filters.travelerTypes" class="h-5 w-5" style="accent-color:#E84527"><span x-text="o.label"></span></label>
+                            </template>
+                        </div>
+                    </div>
+                    <div x-show="modalTab==='price'">
+                        <h3 class="font-display text-4xl font-bold leading-none">Preț</h3>
+                        <div class="mt-6 rounded-3xl bg-paper-2 p-5">
+                            <div class="flex items-center justify-between"><span class="font-bold">Preț maxim</span><strong x-text="formatMoney(filters.maxPrice)"></strong></div>
+                            <input type="range" min="0" :max="priceCap" step="10" x-model.number="filters.maxPrice" class="mt-5 w-full" style="accent-color:#E84527">
+                            <div class="mt-2 flex justify-between text-xs font-bold text-ink-soft"><span>0 lei</span><span x-text="formatMoney(priceCap)"></span></div>
+                        </div>
+                    </div>
+                    <div x-show="modalTab==='languages'">
+                        <h3 class="font-display text-4xl font-bold leading-none">Limbă</h3>
+                        <div class="mt-5 grid gap-2 sm:grid-cols-3">
+                            <template x-for="o in languageOptions" :key="o.value">
+                                <label class="flex cursor-pointer items-center gap-3 rounded-2xl bg-paper-2 px-4 py-3 font-bold hover:bg-paper"><input type="checkbox" :value="o.value" x-model="filters.languages" class="h-5 w-5" style="accent-color:#E84527"><span x-text="o.label"></span></label>
+                            </template>
+                        </div>
+                    </div>
+                    <div x-show="modalTab==='duration'">
+                        <h3 class="font-display text-4xl font-bold leading-none">Durată</h3>
+                        <div class="mt-5 grid gap-2 sm:grid-cols-3">
+                            <template x-for="o in durationOptions" :key="o.value">
+                                <label class="flex cursor-pointer items-center gap-3 rounded-2xl bg-paper-2 px-4 py-3 font-bold hover:bg-paper"><input type="checkbox" :value="o.value" x-model="filters.durations" class="h-5 w-5" style="accent-color:#E84527"><span x-text="o.label"></span></label>
+                            </template>
+                        </div>
+                    </div>
+                    <div x-show="modalTab==='features'">
+                        <h3 class="font-display text-4xl font-bold leading-none">Caracteristici</h3>
+                        <div class="mt-5 grid gap-2 sm:grid-cols-2">
+                            <template x-for="o in featureOptions" :key="o.value">
+                                <label class="flex cursor-pointer items-center gap-3 rounded-2xl bg-paper-2 px-4 py-3 font-bold hover:bg-paper"><input type="checkbox" :value="o.value" x-model="filters.features" class="h-5 w-5" style="accent-color:#E84527"><span x-text="o.label"></span></label>
+                            </template>
+                        </div>
+                    </div>
+                    <div x-show="modalTab==='rating'">
+                        <h3 class="font-display text-4xl font-bold leading-none">Rating minim</h3>
+                        <div class="mt-5 grid gap-2 sm:grid-cols-4">
+                            <template x-for="o in ratingOptions" :key="o.value">
+                                <button @click="filters.minRating=o.value" :class="filters.minRating===o.value ? 'bg-ink text-paper' : 'bg-paper-2'" class="rounded-2xl px-4 py-4 text-left font-bold hover:bg-ink hover:text-paper"><span class="block text-ochre">★★★★★</span><span x-text="o.label"></span></button>
+                            </template>
+                        </div>
+                    </div>
+                </section>
+            </div>
+            <div class="flex items-center justify-between gap-3 border-t border-ink/10 p-5 sm:p-6">
+                <button @click="resetFilters()" class="rounded-full border-2 border-ink px-5 py-3 font-bold hover:bg-ink hover:text-paper">Șterge tot</button>
+                <button @click="filtersModal=false" class="rounded-full bg-vermilion px-6 py-3 font-bold text-paper hover:bg-vermilion-d">Arată <span x-text="filteredActivities().length"></span> rezultate</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Map view modal -->
+    <div x-show="mapOpen" x-cloak class="fixed inset-0 z-[95] bg-ink/80 p-2 backdrop-blur-sm sm:p-4" role="dialog" aria-modal="true" aria-label="Map view">
+        <div @click.outside="mapOpen=false" class="mx-auto flex h-[96vh] max-w-[1700px] overflow-hidden rounded-[2rem] border-2 border-ink bg-paper shadow-deep">
+            <aside class="flex w-full flex-col border-r border-ink/10 lg:w-1/3">
+                <div class="border-b border-ink/10 p-4">
+                    <div class="flex items-start justify-between gap-4">
+                        <div>
+                            <p class="font-mono text-xs tracking-[.18em] text-ink-soft">MAP VIEW</p>
+                            <h2 class="font-display text-3xl font-bold leading-none"><?= htmlspecialchars($catName) ?><?= $cityFilter ? ' în ' . htmlspecialchars($heroLocation) : '' ?></h2>
+                            <p class="mt-1 text-sm text-ink-soft"><span x-text="filteredActivities().length"></span> rezultate pe hartă</p>
+                        </div>
+                        <button @click="mapOpen=false" class="grid h-10 w-10 place-items-center rounded-full bg-ink text-xl font-bold text-paper">×</button>
+                    </div>
+                    <div class="mt-4 flex gap-2 overflow-x-auto pb-1">
+                        <button @click="filtersModal=true" class="shrink-0 rounded-full bg-ink px-4 py-2 text-sm font-bold text-paper">Filtre</button>
+                        <button @click="openTopFilter('price')" class="shrink-0 rounded-full bg-paper-2 px-4 py-2 text-sm font-bold">Preț</button>
+                        <button @click="openTopFilter('duration')" class="shrink-0 rounded-full bg-paper-2 px-4 py-2 text-sm font-bold">Durată</button>
+                    </div>
+                </div>
+                <div class="flex-1 overflow-auto p-3">
+                    <template x-for="activity in sortedActivities()" :key="'l-'+activity.id">
+                        <button @mouseenter="hoveredPin=activity.id" @mouseleave="hoveredPin=null" @click="selectedPin=activity.id" :class="selectedPin===activity.id ? 'border-vermilion bg-rose' : 'border-ink/10 bg-paper'" class="mb-3 w-full rounded-3xl border-2 p-3 text-left transition hover:border-vermilion">
+                            <div class="grid grid-cols-[92px_1fr] gap-3">
+                                <div class="h-24 w-full overflow-hidden rounded-2xl bg-ink">
+                                    <img x-show="activity.image" :src="activity.image" :alt="activity.title" class="h-full w-full object-cover">
+                                </div>
+                                <div class="min-w-0">
+                                    <p class="line-clamp-2 font-display text-2xl font-bold leading-none" x-text="activity.title"></p>
+                                    <p class="mt-1 text-xs text-ink-soft" x-text="[activity.place, activity.durationLabel].filter(Boolean).join(' · ')"></p>
+                                    <p x-show="activity.rating > 0" class="mt-2 text-sm font-bold"><span class="text-ochre">★★★★★</span> <span x-text="activity.rating"></span></p>
+                                    <p class="mt-1 font-bold" x-text="activity.price ? ('de la ' + formatMoney(activity.price)) : 'Vezi preț'"></p>
+                                </div>
+                            </div>
+                        </button>
+                    </template>
+                </div>
+            </aside>
+
+            <section class="relative hidden flex-1 lg:block">
+                <div class="absolute inset-0" style="background:linear-gradient(90deg,rgba(27,23,20,.06) 1px,transparent 1px),linear-gradient(rgba(27,23,20,.06) 1px,transparent 1px),radial-gradient(circle at 20% 20%,rgba(232,69,39,.14),transparent 22%),radial-gradient(circle at 80% 70%,rgba(30,74,61,.16),transparent 28%),#D9E5D0;background-size:48px 48px,48px 48px,auto,auto,auto"></div>
+                <div class="absolute right-5 top-5 z-10 rounded-full bg-paper px-4 py-2 text-sm font-bold shadow-deep"><?= htmlspecialchars($cityFilter ? $heroLocation : 'România') ?> · map preview</div>
+                <template x-for="activity in sortedActivities()" :key="'pin-'+activity.id">
+                    <button @mouseenter="hoveredPin=activity.id" @mouseleave="hoveredPin=null" @click="selectedPin=activity.id" class="absolute z-20 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-paper px-3 py-2 text-sm font-bold text-paper shadow-deep transition hover:scale-110" :class="selectedPin===activity.id || hoveredPin===activity.id ? 'bg-vermilion' : 'bg-ink'" :style="'left:'+activity.map.x+'%; top:'+activity.map.y+'%;'">
+                        <span x-text="activity.price ? formatMoney(activity.price) : '•'"></span>
+                    </button>
+                </template>
+                <div x-show="selectedActivity()" x-cloak x-transition class="absolute bottom-5 left-5 z-30 w-[420px] overflow-hidden rounded-[2rem] border-2 border-ink bg-paper shadow-deep">
+                    <template x-if="selectedActivity()">
+                        <div>
+                            <div class="h-40 w-full overflow-hidden bg-ink"><img x-show="selectedActivity().image" :src="selectedActivity().image" :alt="selectedActivity().title" class="h-full w-full object-cover"></div>
+                            <div class="p-5">
+                                <div class="flex items-start justify-between gap-4">
+                                    <div>
+                                        <p class="font-display text-3xl font-bold leading-none" x-text="selectedActivity().title"></p>
+                                        <p class="mt-2 text-sm text-ink-soft" x-text="[selectedActivity().place, selectedActivity().durationLabel].filter(Boolean).join(' · ')"></p>
+                                    </div>
+                                    <button @click="selectedPin=null" class="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-ink text-paper">×</button>
+                                </div>
+                                <div class="mt-3 flex items-center justify-between">
+                                    <p x-show="selectedActivity().rating > 0" class="font-bold"><span class="text-ochre">★★★★★</span> <span x-text="selectedActivity().rating"></span></p>
+                                    <p class="font-display text-3xl font-bold" x-text="selectedActivity().price ? formatMoney(selectedActivity().price) : ''"></p>
+                                </div>
+                                <a :href="selectedActivity().href" class="mt-4 block rounded-full bg-vermilion px-5 py-3 text-center font-bold text-paper">Vezi bilete</a>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </section>
+        </div>
+    </div>
+</section>
+
+<script>
+function categoryGyg(seed) {
+    return {
+        activities: (seed && seed.activities) || [],
+        categoryOptions: (seed && seed.categoryOptions) || [],
+        languageOptions: (seed && seed.languageOptions) || [],
+        featureOptions: (seed && seed.featureOptions) || [],
+        interestOptions: (seed && seed.interestOptions) || [],
+        travelerOptions: (seed && seed.travelerOptions) || [],
+        durationOptions: (seed && seed.durationOptions) || [],
+        ratingOptions: (seed && seed.ratingOptions) || [],
+        priceCap: (seed && seed.priceMax) || 250,
+        hasRatings: !!(seed && seed.hasRatings),
+        topFilterOpen: null, filtersModal: false, mapOpen: false,
+        modalTab: 'price', sortBy: 'recommended',
+        hoveredPin: null, selectedPin: null,
+        filters: { search: '', categories: [], interests: [], travelerTypes: [], maxPrice: (seed && seed.priceMax) || 250, languages: [], durations: [], features: [], minRating: 0 },
+
+        init() {
+            this.filters.maxPrice = this.priceCap;
+            this.modalTab = this.categoryOptions.length ? 'categories' : 'price';
+        },
+        openMap() { this.mapOpen = true; this.topFilterOpen = null; },
+        topButtons() {
+            const b = [{ key: 'search', label: 'Caută' }, { key: 'price', label: 'Preț' }, { key: 'duration', label: 'Durată' }];
+            if (this.interestOptions.length) b.push({ key: 'interests', label: 'Interese' });
+            if (this.travelerOptions.length) b.push({ key: 'traveler', label: 'Pentru cine' });
+            if (this.languageOptions.length) b.push({ key: 'languages', label: 'Limbă' });
+            if (this.featureOptions.length) b.push({ key: 'features', label: 'Caracteristici' });
+            return b;
+        },
+        modalTabs() {
+            const t = [];
+            if (this.categoryOptions.length) t.push({ key: 'categories', label: 'Categorii' });
+            if (this.interestOptions.length) t.push({ key: 'interests', label: 'Interese' });
+            if (this.travelerOptions.length) t.push({ key: 'traveler', label: 'Pentru cine' });
+            t.push({ key: 'price', label: 'Preț' });
+            if (this.languageOptions.length) t.push({ key: 'languages', label: 'Limbă' });
+            t.push({ key: 'duration', label: 'Durată' });
+            if (this.featureOptions.length) t.push({ key: 'features', label: 'Caracteristici' });
+            if (this.hasRatings) t.push({ key: 'rating', label: 'Rating' });
+            return t;
+        },
+        openTopFilter(key) {
+            this.topFilterOpen = this.topFilterOpen === key ? null : key;
+            if (key === 'search') this.$nextTick(() => this.$refs.searchInput && this.$refs.searchInput.focus());
+        },
+        topFilterMeta() {
+            const m = { search: { kicker: 'CAUTĂ', title: 'Caută în categorie' }, price: { kicker: 'PREȚ', title: 'Bugetul tău' }, duration: { kicker: 'DURATĂ', title: 'Durata activității' }, languages: { kicker: 'LIMBĂ', title: 'Limba activității' }, features: { kicker: 'CARACTERISTICI', title: 'Caracteristici' }, interests: { kicker: 'INTERESE', title: 'Ce te atrage' }, traveler: { kicker: 'PENTRU CINE', title: 'Cui i se potrivește' } };
+            return m[this.topFilterOpen] || { kicker: 'FILTRU', title: 'Filtru' };
+        },
+        topFilterActive(key) {
+            if (key === 'search') return !!this.filters.search;
+            if (key === 'price') return this.filters.maxPrice < this.priceCap;
+            if (key === 'duration') return this.filters.durations.length;
+            if (key === 'languages') return this.filters.languages.length;
+            if (key === 'features') return this.filters.features.length;
+            if (key === 'interests') return this.filters.interests.length;
+            if (key === 'traveler') return this.filters.travelerTypes.length;
+            return false;
+        },
+        tabHasValue(key) {
+            if (key === 'categories') return this.filters.categories.length;
+            if (key === 'interests') return this.filters.interests.length;
+            if (key === 'traveler') return this.filters.travelerTypes.length;
+            if (key === 'price') return this.filters.maxPrice < this.priceCap;
+            if (key === 'languages') return this.filters.languages.length;
+            if (key === 'duration') return this.filters.durations.length;
+            if (key === 'features') return this.filters.features.length;
+            if (key === 'rating') return this.filters.minRating > 0;
+            return false;
+        },
+        clearTopFilter() {
+            const k = this.topFilterOpen;
+            if (k === 'search') this.filters.search = '';
+            if (k === 'price') this.filters.maxPrice = this.priceCap;
+            if (k === 'duration') this.filters.durations = [];
+            if (k === 'languages') this.filters.languages = [];
+            if (k === 'features') this.filters.features = [];
+            if (k === 'interests') this.filters.interests = [];
+            if (k === 'traveler') this.filters.travelerTypes = [];
+        },
+        resetFilters() {
+            this.filters = { search: '', categories: [], interests: [], travelerTypes: [], maxPrice: this.priceCap, languages: [], durations: [], features: [], minRating: 0 };
+            this.sortBy = 'recommended';
+        },
+        activeFilterCount() {
+            let c = 0;
+            if (this.filters.search) c++;
+            c += this.filters.categories.length + this.filters.interests.length + this.filters.travelerTypes.length + this.filters.languages.length + this.filters.durations.length + this.filters.features.length;
+            if (this.filters.maxPrice < this.priceCap) c++;
+            if (this.filters.minRating > 0) c++;
+            return c;
+        },
+        activeChips() {
+            const chips = [];
+            if (this.filters.search) chips.push({ key: 'search', label: 'Caută: ' + this.filters.search, type: 'search' });
+            this.filters.categories.forEach(v => chips.push({ key: 'cat-' + v, label: this.labelFor(this.categoryOptions, v), type: 'category', value: v }));
+            this.filters.interests.forEach(v => chips.push({ key: 'int-' + v, label: this.labelFor(this.interestOptions, v), type: 'interest', value: v }));
+            this.filters.travelerTypes.forEach(v => chips.push({ key: 'trav-' + v, label: this.labelFor(this.travelerOptions, v), type: 'traveler', value: v }));
+            if (this.filters.maxPrice < this.priceCap) chips.push({ key: 'price', label: 'Max ' + this.formatMoney(this.filters.maxPrice), type: 'price' });
+            this.filters.languages.forEach(v => chips.push({ key: 'lang-' + v, label: this.labelFor(this.languageOptions, v), type: 'language', value: v }));
+            this.filters.durations.forEach(v => chips.push({ key: 'dur-' + v, label: this.labelFor(this.durationOptions, v), type: 'duration', value: v }));
+            this.filters.features.forEach(v => chips.push({ key: 'feat-' + v, label: this.labelFor(this.featureOptions, v), type: 'feature', value: v }));
+            if (this.filters.minRating > 0) chips.push({ key: 'rating', label: this.filters.minRating + '+ stele', type: 'rating' });
+            return chips;
+        },
+        removeChip(chip) {
+            if (chip.type === 'search') this.filters.search = '';
+            if (chip.type === 'category') this.filters.categories = this.filters.categories.filter(v => v !== chip.value);
+            if (chip.type === 'interest') this.filters.interests = this.filters.interests.filter(v => v !== chip.value);
+            if (chip.type === 'traveler') this.filters.travelerTypes = this.filters.travelerTypes.filter(v => v !== chip.value);
+            if (chip.type === 'price') this.filters.maxPrice = this.priceCap;
+            if (chip.type === 'language') this.filters.languages = this.filters.languages.filter(v => v !== chip.value);
+            if (chip.type === 'duration') this.filters.durations = this.filters.durations.filter(v => v !== chip.value);
+            if (chip.type === 'feature') this.filters.features = this.filters.features.filter(v => v !== chip.value);
+            if (chip.type === 'rating') this.filters.minRating = 0;
+        },
+        filteredActivities() {
+            const q = this.filters.search.toLowerCase().trim();
+            return this.activities.filter(a => {
+                if (q && !JSON.stringify(a).toLowerCase().includes(q)) return false;
+                if (this.filters.categories.length && !this.filters.categories.includes(a.categorySlug)) return false;
+                if (this.filters.interests.length && !this.filters.interests.some(i => (a.interests || []).includes(i))) return false;
+                if (this.filters.travelerTypes.length && !this.filters.travelerTypes.some(t => (a.travelerTypes || []).includes(t))) return false;
+                if (a.price > 0 && a.price > this.filters.maxPrice) return false;
+                if (this.filters.languages.length && !this.filters.languages.some(l => a.languages.includes(l))) return false;
+                if (this.filters.durations.length && !this.filters.durations.includes(a.duration)) return false;
+                if (this.filters.features.length && !this.filters.features.every(f => a.features.includes(f))) return false;
+                if (this.filters.minRating > 0 && a.rating < this.filters.minRating) return false;
+                return true;
+            });
+        },
+        sortedActivities() {
+            const list = [...this.filteredActivities()];
+            if (this.sortBy === 'rating') return list.sort((a, b) => b.rating - a.rating);
+            if (this.sortBy === 'priceAsc') return list.sort((a, b) => (a.price || 1e9) - (b.price || 1e9));
+            if (this.sortBy === 'priceDesc') return list.sort((a, b) => b.price - a.price);
+            if (this.sortBy === 'duration') { const o = { short: 1, medium: 2, long: 3, '': 4 }; return list.sort((a, b) => (o[a.duration] || 4) - (o[b.duration] || 4)); }
+            return list.sort((a, b) => (b.rating - a.rating) || (b.reviews - a.reviews));
+        },
+        selectedActivity() { return this.activities.find(a => a.id === this.selectedPin); },
+        labelFor(list, val) { const o = list.find(x => x.value === val); return o ? o.label : val; },
+        featureLabel(val) { return this.labelFor(this.featureOptions, val); },
+        formatMoney(v) { try { return new Intl.NumberFormat('ro-RO', { style: 'currency', currency: 'RON', maximumFractionDigits: 0 }).format(v || 0); } catch (e) { return (v || 0) + ' lei'; } },
+    };
+}
+</script>
+
+<!-- ============================== FILTRE + REZULTATE (legacy server-side — disabled, kept for rollback) ============================== -->
+<?php if (false): ?>
 <section x-data="categoryFilters()" class="max-w-7xl mx-auto px-4 sm:px-6 pt-10">
 
     <!-- sticky filter toolbar -->
@@ -688,6 +1324,7 @@ include __DIR__ . '/includes/header.php';
         </div>
     </div>
 </section>
+<?php endif; /* legacy server-side filter UI */ ?>
 
 <!-- ============================== EDITORIAL + FAQ ============================== -->
 <section class="bg-paper-2 border-y border-ink/10">

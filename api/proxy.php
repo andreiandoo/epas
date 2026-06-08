@@ -749,10 +749,30 @@ switch ($action) {
     // ============================================================
     case 'activities':
         $params = [];
-        foreach (['city', 'category', 'search', 'sort', 'max_price_ron', 'page', 'per_page', 'locale', 'ids'] as $k) {
+        foreach (['city', 'category', 'search', 'sort', 'max_price_ron', 'page', 'per_page', 'locale', 'ids', 'interests', 'traveler_types'] as $k) {
             if (isset($_GET[$k])) $params[$k] = $_GET[$k];
         }
         $endpoint = '/activities' . ($params ? '?' . http_build_query($params) : '');
+        break;
+
+    case 'attractions':
+        $params = [];
+        foreach (['city', 'type', 'featured', 'page', 'per_page', 'locale'] as $k) {
+            if (isset($_GET[$k])) $params[$k] = $_GET[$k];
+        }
+        $endpoint = '/attractions' . ($params ? '?' . http_build_query($params) : '');
+        break;
+
+    case 'attraction':
+        $slug = $_GET['slug'] ?? '';
+        if (!$slug) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing attraction slug']);
+            exit;
+        }
+        $params = [];
+        if (isset($_GET['locale'])) $params['locale'] = $_GET['locale'];
+        $endpoint = '/attractions/' . urlencode($slug) . ($params ? '?' . http_build_query($params) : '');
         break;
 
     case 'activity':

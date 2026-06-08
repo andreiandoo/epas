@@ -71,15 +71,27 @@ $difficultyLabels = ['easy' => 'Ușor', 'medium' => 'Mediu', 'hard' => 'Greu', '
 $langsOffered = array_values(array_map(fn ($l) => $langLabels[$l] ?? ucfirst($l), (array) ($activity['languages_offered'] ?? [])));
 $flags = $activity['flags'] ?? [];
 
-// "Potrivit pentru" (traveler types — derived from flags until F3 taxonomy).
+// "Potrivit pentru" — real traveler types (F3) with flag-derived fallback.
 $suitableFor = [];
-if (! empty($flags['is_kid_friendly'])) $suitableFor[] = 'familii';
-if (! empty($flags['is_accessible'])) $suitableFor[] = 'accesibil';
-if (! empty($flags['is_outdoor'])) $suitableFor[] = 'outdoor';
-if (! empty($flags['is_indoor'])) $suitableFor[] = 'indoor';
-$suitableFor[] = 'cupluri';
-$suitableFor[] = 'grupuri';
+foreach ((array) ($activity['traveler_types'] ?? []) as $tt) {
+    if (! empty($tt['name'])) $suitableFor[] = $tt['name'];
+}
+if (empty($suitableFor)) {
+    if (! empty($flags['is_kid_friendly'])) $suitableFor[] = 'familii';
+    if (! empty($flags['is_accessible'])) $suitableFor[] = 'accesibil';
+    if (! empty($flags['is_outdoor'])) $suitableFor[] = 'outdoor';
+    if (! empty($flags['is_indoor'])) $suitableFor[] = 'indoor';
+    $suitableFor[] = 'cupluri';
+    $suitableFor[] = 'grupuri';
+}
 $suitableFor = array_values(array_unique($suitableFor));
+
+// Interests (F3) — thematic tags. Associated attractions (F4).
+$interestTags = [];
+foreach ((array) ($activity['interests'] ?? []) as $it) {
+    if (! empty($it['name'])) $interestTags[] = trim((($it['icon'] ?? '') ? $it['icon'] . ' ' : '') . $it['name']);
+}
+$activityAttractions = is_array($activity['attractions'] ?? null) ? $activity['attractions'] : [];
 
 // Hero badges.
 $heroBadges = [];
@@ -96,6 +108,11 @@ $pageDescription = $activity['seo']['description'] ?? $activity['short_descripti
 $canonicalUrl    = $citySlug ? (SITE_URL . '/' . $citySlug . '/' . $activity['slug']) : (SITE_URL . '/activitate/' . $activity['slug']);
 $currentPage     = 'activitate';
 $cssBundle       = 'single';
+
+// Context-aware header — "Explorează {oraș}" + nearby framing on the activity page.
+$headerContext = ($cityName && $citySlug)
+    ? ['type' => 'activity', 'label' => $cityName, 'slug' => $citySlug]
+    : ['type' => 'homepage'];
 
 $breadcrumbs = [['name' => 'Acasă', 'url' => SITE_URL . '/']];
 if ($cityName && $citySlug) $breadcrumbs[] = ['name' => $cityName, 'url' => SITE_URL . '/' . $citySlug];
@@ -189,6 +206,13 @@ if (! empty($recs['same_city_same_cat'])) {
 }
 if (! empty($recs['same_city'])) {
     $rails[] = ['kicker' => 'ÎN ACELAȘI ORAȘ', 'title' => $cityName ? "Alte experiențe în {$cityName}" : 'Alte experiențe', 'cards' => $recs['same_city']];
+}
+
+// F2 — proximity rail. Real Haversine distance from the API; cards carry a
+// distance_km the rail card can surface. Placed high (right after the curated
+// recommendations) since "near me" is a primary GYG discovery pattern.
+if (! empty($activity['nearby'])) {
+    $rails[] = ['kicker' => 'ÎN APROPIERE', 'title' => 'Activități în apropiere', 'cards' => $activity['nearby'], 'show_distance' => true];
 }
 
 // Extra GYG-style discovery rails built from a city activities pool. Same pool,
@@ -469,6 +493,12 @@ include __DIR__ . '/includes/header.php';
               <div class="mt-3 flex flex-wrap gap-2">
                 <?php foreach ($suitableFor as $s): ?><span class="rounded-full bg-paper px-3 py-1 text-sm font-bold"><?= htmlspecialchars($s) ?></span><?php endforeach; ?>
               </div>
+              <?php if (! empty($interestTags)): ?>
+                <p class="mt-5 font-bold">Interese</p>
+                <div class="mt-3 flex flex-wrap gap-2">
+                  <?php foreach ($interestTags as $it): ?><span class="rounded-full bg-mint px-3 py-1 text-sm font-bold text-forest"><?= htmlspecialchars($it) ?></span><?php endforeach; ?>
+                </div>
+              <?php endif; ?>
               <?php if (! empty($activity['requirements'])): ?>
                 <p class="mt-5 font-bold">Cerințe</p>
                 <ul class="mt-2 space-y-1.5 text-sm text-ink-soft">
@@ -636,6 +666,38 @@ include __DIR__ . '/includes/header.php';
     </div>
   </section>
 
+  <!-- ATRACTII ASOCIATE (F4) -->
+  <?php if (! empty($activityAttractions)): ?>
+  <section class="bg-paper border-b-2 border-ink">
+    <div class="mx-auto max-w-[1500px] px-4 py-12 sm:px-6 lg:py-16">
+      <div class="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p class="font-mono text-xs tracking-[.18em] text-vermilion">ATRACȚII</p>
+          <h2 class="mt-2 font-display text-4xl font-bold leading-none sm:text-5xl">Atracții pe care le descoperi</h2>
+        </div>
+      </div>
+      <div class="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <?php foreach ($activityAttractions as $at): ?>
+          <a href="/atractie/<?= htmlspecialchars($at['slug'] ?? '', ENT_QUOTES) ?>" class="group overflow-hidden rounded-[1.5rem] border-2 border-ink bg-paper shadow-ticket transition hover:-translate-y-1">
+            <div class="relative h-40 overflow-hidden bg-ink">
+              <?php if (! empty($at['cover_image_url'])): ?>
+                <img src="<?= htmlspecialchars($at['cover_image_url'], ENT_QUOTES) ?>" alt="<?= htmlspecialchars($at['name'] ?? '', ENT_QUOTES) ?>" class="h-full w-full object-cover transition duration-500 group-hover:scale-105" loading="lazy">
+              <?php else: ?>
+                <div class="grid h-full place-items-center bg-gradient-to-br from-forest via-sky to-ink text-paper"><span class="px-3 text-center font-display text-lg font-bold"><?= htmlspecialchars(mb_substr($at['name'] ?? '', 0, 22)) ?></span></div>
+              <?php endif; ?>
+              <?php if (! empty($at['type'])): ?><span class="absolute left-3 top-3 rounded-full bg-paper px-3 py-1 text-xs font-bold text-ink"><?= htmlspecialchars($at['type']) ?></span><?php endif; ?>
+            </div>
+            <div class="p-4">
+              <p class="font-display text-xl font-bold leading-tight line-clamp-2 group-hover:text-vermilion"><?= htmlspecialchars($at['name'] ?? '') ?></p>
+              <p class="mt-2 text-sm font-bold text-vermilion">Vezi atracția →</p>
+            </div>
+          </a>
+        <?php endforeach; ?>
+      </div>
+    </div>
+  </section>
+  <?php endif; ?>
+
   <!-- RECOMMENDATIONS (GYG-style scrollable rails) -->
   <?php foreach ($rails as $idx => $rail): if (empty($rail['cards'])) continue; ?>
   <?php $dark = ($idx === 0); ?>
@@ -659,6 +721,7 @@ include __DIR__ . '/includes/header.php';
                   <div class="grid h-full place-items-center bg-gradient-to-br from-vermilion via-ochre to-forest text-paper"><span class="px-3 text-center font-display text-xl font-bold"><?= htmlspecialchars(mb_substr($c['title'] ?? '', 0, 20)) ?></span></div>
                 <?php endif; ?>
                 <?php if (! empty($c['category']['name'])): ?><span class="absolute left-3 top-3 rounded-full bg-paper px-3 py-1 text-xs font-bold text-ink"><?= htmlspecialchars($c['category']['name']) ?></span><?php endif; ?>
+                <?php if (! empty($rail['show_distance']) && isset($c['distance_km'])): ?><span class="absolute right-3 top-3 rounded-full bg-ink/90 px-3 py-1 text-xs font-bold text-paper"><?= htmlspecialchars(number_format((float) $c['distance_km'], ($c['distance_km'] < 10 ? 1 : 0), ',', '.')) ?> km</span><?php endif; ?>
               </div>
               <div class="p-4">
                 <p class="font-display text-xl font-bold leading-tight line-clamp-2 group-hover:text-vermilion"><?= htmlspecialchars($c['title'] ?? '') ?></p>
