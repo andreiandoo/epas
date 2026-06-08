@@ -505,6 +505,18 @@ include __DIR__ . '/includes/header.php';
                   <?php foreach ($activity['requirements'] as $r): ?><li class="flex gap-2"><span class="text-vermilion">•</span><span><?= htmlspecialchars($r) ?></span></li><?php endforeach; ?>
                 </ul>
               <?php endif; ?>
+
+              <!-- Trust badges (F5) -->
+              <div class="mt-5 border-t-2 border-dashed border-ink/15 pt-4">
+                <p class="font-bold">De ce bilete.online</p>
+                <ul class="mt-3 space-y-2.5 text-sm font-bold">
+                  <li class="flex items-center gap-2.5"><span class="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-mint text-forest">✓</span>Confirmare instant</li>
+                  <li class="flex items-center gap-2.5"><span class="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-mint text-forest">⌗</span>Bilet digital cu cod QR</li>
+                  <?php if (! empty($activity['cancellation_policy'])): ?><li class="flex items-center gap-2.5"><span class="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-mint text-forest">↺</span>Anulare conform politicii afișate</li><?php endif; ?>
+                  <li class="flex items-center gap-2.5"><span class="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-mint text-forest">🔒</span>Plată securizată</li>
+                  <li class="flex items-center gap-2.5"><span class="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-mint text-forest">★</span>Puncte bonus la fiecare comandă</li>
+                </ul>
+              </div>
             </aside>
           </div>
         </section>

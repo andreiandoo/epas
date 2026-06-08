@@ -228,6 +228,35 @@ if (! empty($faqs)) {
     ];
 }
 
+// F6 — auto "Activități recomandate" rail. Editors can also hand-pick activities
+// inline via the [activities] shortcode in the body; this guarantees every guide
+// still ends with a few bookable activities so a guide always converts.
+$activities = [];
+try {
+    $railResp = api_cached('guide_rail_' . $slug, fn () => api_get('/activities', ['per_page' => 12, 'sort' => 'recent']), 300);
+    $railRaw = $railResp['data']['items'] ?? [];
+    foreach ((is_array($railRaw) ? $railRaw : []) as $a) {
+        $t = is_array($a['title'] ?? null) ? ($a['title']['ro'] ?? reset($a['title'])) : ($a['title'] ?? '');
+        $s = $a['slug'] ?? '';
+        if ($t === '' || $s === '') continue;
+        $cs = $a['city']['slug'] ?? '';
+        $img = (string) ($a['cover_image_url'] ?? '');
+        if ($img !== '' && ! str_starts_with($img, 'http')) $img = rtrim(STORAGE_URL, '/') . '/' . ltrim($img, '/');
+        $activities[] = [
+            'slug'     => $s,
+            'url'      => $cs ? '/' . $cs . '/' . $s : '/activitate/' . $s,
+            'title'    => $t,
+            'image'    => $img,
+            'category' => $a['category']['name'] ?? '',
+            'price'    => ! empty($a['cheapest_price_cents']) ? ('de la ' . number_format($a['cheapest_price_cents'] / 100, 0, ',', '.') . ' lei') : '',
+        ];
+        if (count($activities) >= 6) break;
+    }
+} catch (\Throwable $e) {
+    $activities = [];
+}
+?>
+<?php
 include __DIR__ . '/includes/head.php';
 include __DIR__ . '/includes/header.php';
 ?>
