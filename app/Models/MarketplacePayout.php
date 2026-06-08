@@ -553,15 +553,22 @@ class MarketplacePayout extends Model
      * Final payable amount that matches what the PDF prints on row E
      * ("VALOARE TOTALA de achitat   E = A − B − C − D"):
      *
-     *   amount  (or gross_amount fallback)
-     *   − total discount (per-row breakdown.discount, else order-level sum)
-     *   − refund_amount
-     *   − payout_method.advance_amount
+     *   organizer_net = Σ(breakdown.price × qty) − actual_discount
+     *   final         = organizer_net − refund_amount − advance
      *
-     * Used by the /marketplace/payouts list column + any other surface
-     * that wants the "actual money the organizer receives" figure. The
-     * raw amount column on the row stays at gross for back-compat with
-     * downstream consumers that read it.
+     * `actual_discount` is the discount that ACTUALLY belongs to this
+     * payout's tickets. Two cases:
+     *   1. The payout was created with the discount snapshotted onto the
+     *      row (payouts.discount_amount > 0) — trust it. No re-querying,
+     *      no double-counting.
+     *   2. Legacy payouts that saved discount_amount=0 even though their
+     *      period contains discounted orders — query orders.discount_amount
+     *      in the period bounds. This recovers 8876 for payout 3038
+     *      without breaking 3273.16 for payout 3049.
+     *
+     * Used by the /marketplace/payouts list column + the decont PDF
+     * row 1a so both surfaces show the same figure the organizer
+     * actually receives.
      */
     public function getFinalNetAmountAttribute(): float
     {
@@ -569,43 +576,68 @@ class MarketplacePayout extends Model
             return $this->finalNetAmountCache;
         }
 
-        $base = (float) ($this->amount ?? $this->gross_amount ?? 0);
-
-        $discount = 0.0;
+        // Organizer-side gross = sum of breakdown row prices × qty
+        // (EXCLUDES the added-on-top commission share — that belongs to
+        // the marketplace, not the organizer). For payouts with no
+        // breakdown saved (very old rows) fall back to gross_amount.
         $bd = $this->ticket_breakdown ?? [];
-        $hasPerRowDiscount = !empty($bd) && array_key_exists('discount', $bd[0] ?? []);
-        if ($hasPerRowDiscount) {
+        $breakdownGross = 0.0;
+        if (!empty($bd)) {
             foreach ($bd as $item) {
-                $discount += (float) ($item['discount'] ?? 0);
+                $price = (float) ($item['price'] ?? $item['unit_price'] ?? 0);
+                $qty = (int) ($item['quantity'] ?? $item['qty'] ?? 0);
+                if ($qty > 0 && $price > 0) {
+                    $breakdownGross += $price * $qty;
+                }
             }
-        } elseif ($this->event_id) {
-            // Fallback: sum order.discount_amount across the period — same
-            // path the PDF generator uses for legacy snapshots that pre-date
-            // the breakdown.discount key.
-            $q = \App\Models\Order::query()
-                ->where(function ($q) {
-                    $q->where('event_id', $this->event_id)
-                      ->orWhere('marketplace_event_id', $this->event_id);
-                })
-                ->whereIn('status', ['paid', 'confirmed', 'completed'])
-                ->where(function ($q) {
-                    $q->where('discount_amount', '>', 0)
-                      ->orWhere('promo_discount', '>', 0);
-                });
-            if ($this->period_start) {
-                $q->where('created_at', '>=', $this->period_start->copy()->startOfDay());
-            }
-            if ($this->period_end) {
-                $q->where('created_at', '<=', $this->period_end->copy()->endOfDay());
-            }
-            $discount = (float) $q->sum('discount_amount');
+        }
+        if ($breakdownGross <= 0) {
+            $breakdownGross = (float) ($this->gross_amount ?? $this->amount ?? 0);
+        }
+
+        // Trust the stored discount when present; only query orders for
+        // the legacy zero-discount case so we don't double-count.
+        $storedDiscount = (float) ($this->discount_amount ?? 0);
+        if ($storedDiscount > 0) {
+            $discount = $storedDiscount;
+        } else {
+            $discount = $this->event_id ? $this->queryPeriodDiscount() : 0.0;
         }
 
         $refund = (float) ($this->refund_amount ?? 0);
         $advance = (float) (($this->payout_method['advance_amount'] ?? null) ?? 0);
 
-        $this->finalNetAmountCache = max(0.0, round($base - $discount - $refund - $advance, 2));
+        $this->finalNetAmountCache = max(0.0, round($breakdownGross - $discount - $refund - $advance, 2));
         return $this->finalNetAmountCache;
+    }
+
+    /**
+     * Sum of orders.discount_amount over this payout's period for the
+     * payout's event. Used only as a fallback when the payout row itself
+     * has discount_amount=0 (legacy creation path). Static returns
+     * helpful for diagnostics.
+     */
+    public function queryPeriodDiscount(): float
+    {
+        if (!$this->event_id) return 0.0;
+
+        $q = \App\Models\Order::query()
+            ->where(function ($q) {
+                $q->where('event_id', $this->event_id)
+                  ->orWhere('marketplace_event_id', $this->event_id);
+            })
+            ->whereIn('status', ['paid', 'confirmed', 'completed'])
+            ->where(function ($q) {
+                $q->where('discount_amount', '>', 0)
+                  ->orWhere('promo_discount', '>', 0);
+            });
+        if ($this->period_start) {
+            $q->where('created_at', '>=', $this->period_start->copy()->startOfDay());
+        }
+        if ($this->period_end) {
+            $q->where('created_at', '<=', $this->period_end->copy()->endOfDay());
+        }
+        return (float) $q->sum('discount_amount');
     }
 
     protected static function boot()
