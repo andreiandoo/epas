@@ -2110,6 +2110,71 @@ class MarketplaceTaxTemplate extends Model
 
         if (empty($groups)) return '';
 
+        // Reconcile against final_net_amount. Per-ticket effective prices
+        // sometimes underreport the period's discount — e.g. an order-level
+        // promo applied without writing tickets.meta.discount_amount, or
+        // an order with subtotal=0 that falls back to catalog. In those
+        // cases the derived tier sum sits a few lei above the actual
+        // payable. We scale every tier's price proportionally so the
+        // visible breakdown sums to the authoritative final_net_amount —
+        // same number row E renders downstream. Rounding leftovers are
+        // absorbed into the highest-qty tier of the last group so the
+        // sum stays exact at the cent.
+        $totalDerived = 0.0;
+        foreach ($groups as $g) {
+            $totalDerived += $g['amount'];
+        }
+        $finalNet = (float) $payout->final_net_amount;
+        if ($totalDerived > 0.0 && abs($totalDerived - $finalNet) > 0.01) {
+            $scale = $finalNet / $totalDerived;
+            $remainingNet = $finalNet;
+            $groupKeys = array_keys($groups);
+            $lastKey = end($groupKeys);
+            foreach ($groupKeys as $key) {
+                $newTierMap = [];
+                $newAmount = 0.0;
+                foreach ($groups[$key]['tierMap'] as $priceKey => $tierQty) {
+                    $scaledPrice = round((float) $priceKey * $scale, 2);
+                    $newKey = (string) $scaledPrice;
+                    $newTierMap[$newKey] = ($newTierMap[$newKey] ?? 0) + $tierQty;
+                    $newAmount += $scaledPrice * $tierQty;
+                }
+                $groups[$key]['tierMap'] = $newTierMap;
+                if ($key === $lastKey) {
+                    // Absorb any rounding leftover into the largest-qty
+                    // tier so the visible sum matches finalNet to the cent.
+                    $diff = round($remainingNet - $newAmount, 2);
+                    if (abs($diff) >= 0.01) {
+                        $biggestPriceKey = null;
+                        $biggestQty = -1;
+                        foreach ($newTierMap as $pk => $q) {
+                            if ($q > $biggestQty) {
+                                $biggestQty = $q;
+                                $biggestPriceKey = $pk;
+                            }
+                        }
+                        if ($biggestPriceKey !== null && $biggestQty > 0) {
+                            $perTicketAdj = round($diff / $biggestQty, 2);
+                            $newPrice = round((float) $biggestPriceKey + $perTicketAdj, 2);
+                            $newAdjKey = (string) $newPrice;
+                            $oldQtyAtNewKey = $newTierMap[$newAdjKey] ?? 0;
+                            unset($newTierMap[$biggestPriceKey]);
+                            $newTierMap[$newAdjKey] = $oldQtyAtNewKey + $biggestQty;
+                            $newAmount = 0.0;
+                            foreach ($newTierMap as $pk => $q) {
+                                $newAmount += (float) $pk * $q;
+                            }
+                            $groups[$key]['tierMap'] = $newTierMap;
+                        }
+                    }
+                    $groups[$key]['amount'] = round($finalNet - ($finalNet - $newAmount), 2);
+                } else {
+                    $groups[$key]['amount'] = round($newAmount, 2);
+                    $remainingNet -= $newAmount;
+                }
+            }
+        }
+
         // Build the per-group priceParts label from tierMap. Sorted by
         // price descending so the higher catalog tier leads the list —
         // matches the visual ordering operators expect in the PDF.
