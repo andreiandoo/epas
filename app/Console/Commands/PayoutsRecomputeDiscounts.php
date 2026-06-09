@@ -73,7 +73,7 @@ class PayoutsRecomputeDiscounts extends Command
                     continue;
                 }
 
-                $newDiscountByType = $this->computeDiscountPerType($p);
+                $newDataByType = $this->computeDiscountPerType($p);
 
                 $newBd = [];
                 $totalNewDiscount = 0.0;
@@ -87,7 +87,10 @@ class PayoutsRecomputeDiscounts extends Command
                     $mode = $item['commission_mode'] ?? null;
                     $oldDisc = (float) ($item['discount'] ?? 0);
                     $oldNet = (float) ($item['net'] ?? 0);
-                    $newDisc = round((float) ($newDiscountByType[$ttId] ?? 0), 2);
+                    $oldTiers = is_array($item['tiers'] ?? null) ? $item['tiers'] : [];
+                    $typeData = $newDataByType[$ttId] ?? ['discount' => 0.0, 'tiers' => []];
+                    $newDisc = round((float) $typeData['discount'], 2);
+                    $newTiers = $typeData['tiers'];
 
                     if (abs($oldDisc - $newDisc) > 0.005) {
                         $changedRow = true;
@@ -108,6 +111,15 @@ class PayoutsRecomputeDiscounts extends Command
                         $changedRow = true;
                     }
 
+                    // Tier shape comparison — the PDF expands stale tiers
+                    // BEFORE the derivation runs, so they need to be in
+                    // sync with the per-ticket effective price split.
+                    $oldTierFingerprint = self::tierFingerprint($oldTiers);
+                    $newTierFingerprint = self::tierFingerprint($newTiers);
+                    if ($oldTierFingerprint !== $newTierFingerprint) {
+                        $changedRow = true;
+                    }
+
                     $item['discount'] = $newDisc;
                     $item['net'] = $rowNet;
                     // Refresh gross + commission_amount too so they're not
@@ -115,6 +127,13 @@ class PayoutsRecomputeDiscounts extends Command
                     // from the formula (rare, but covers any drift).
                     $item['gross'] = round($rowGross, 2);
                     $item['commission_amount'] = round($rowComm, 2);
+                    // Only replace tiers when we actually derived new ones
+                    // (typeData has tiers). Empty tiers means the type
+                    // wasn't queryable — leave old stored ones rather than
+                    // wipe them.
+                    if (!empty($newTiers)) {
+                        $item['tiers'] = $newTiers;
+                    }
                     $newBd[] = $item;
 
                     if ($qty > 0 && $price > 0) {
@@ -214,9 +233,40 @@ class PayoutsRecomputeDiscounts extends Command
     }
 
     /**
-     * Per-ticket-type discount for THIS payout, using the same
-     * "latest N tickets per type" selector the PDF / model accessor use.
-     * Returns [ticket_type_id => Σ(catalog − effective)].
+     * Order-independent fingerprint for a tiers array so we can detect
+     * when stored tiers and freshly-derived tiers represent the same
+     * (price, qty) set. Whitespace + key order ignored.
+     */
+    protected static function tierFingerprint(array $tiers): string
+    {
+        $pairs = [];
+        foreach ($tiers as $t) {
+            $p = (string) round((float) ($t['price'] ?? 0), 2);
+            $q = (int) ($t['qty'] ?? 0);
+            if ($q > 0) {
+                $pairs[] = $p . ':' . $q;
+            }
+        }
+        sort($pairs);
+        return implode(',', $pairs);
+    }
+
+    /**
+     * Per-ticket-type discount + effective-price tiers for THIS payout,
+     * using the same "latest N tickets per type" selector the PDF /
+     * accessor use.
+     *
+     * Returns:
+     *   [ticket_type_id => [
+     *      'discount' => Σ(catalog − effective) for picked tickets,
+     *      'tiers'    => [{price, qty}, ...] sorted DESC by price,
+     *   ]]
+     *
+     * The PDF expands breakdown[].tiers into per-row tier lines before
+     * grouping, so if we leave a stale tiers array on the saved row the
+     * row 1a / row 1b output stays wrong even after discount + net are
+     * fixed. Returning the fresh tier shape lets the recompute loop
+     * persist it alongside the new discount.
      */
     protected function computeDiscountPerType(MarketplacePayout $p): array
     {
@@ -259,13 +309,23 @@ class PayoutsRecomputeDiscounts extends Command
             if ($needed <= 0) continue;
 
             $sum = 0.0;
+            $tierBuckets = []; // price_string => qty
             foreach ($group->take($needed) as $t) {
-                // Use Ticket::getDiscountAmount() — handles NULL price by
-                // falling back to ticketType.price_cents, and reads
-                // meta.discount_amount as the per-ticket discount source.
                 $sum += (float) $t->getDiscountAmount();
+                $eff = round((float) $t->getEffectivePrice(), 2);
+                $key = (string) $eff;
+                $tierBuckets[$key] = ($tierBuckets[$key] ?? 0) + 1;
             }
-            $perType[$ttId] = round($sum, 2);
+            krsort($tierBuckets, SORT_NUMERIC);
+            $tiers = [];
+            foreach ($tierBuckets as $priceKey => $qty) {
+                $tiers[] = ['price' => (float) $priceKey, 'qty' => (int) $qty];
+            }
+
+            $perType[$ttId] = [
+                'discount' => round($sum, 2),
+                'tiers' => $tiers,
+            ];
         }
 
         return $perType;
