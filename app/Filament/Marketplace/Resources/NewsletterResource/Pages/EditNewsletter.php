@@ -45,24 +45,47 @@ class EditNewsletter extends EditRecord
         if (!$r) return null;
 
         $sent = (int) ($r->sent_count ?? 0);
-        $opened = (int) ($r->opened_count ?? 0);
-        $clicked = (int) ($r->clicked_count ?? 0);
+        // Raw aggregate counters incremented on every pixel/click hit. These
+        // OVERCOUNT relative to humans — Gmail/Yahoo image proxies prefetch
+        // the pixel on delivery, mail clients refetch on scroll-back, multi-
+        // device opens stack. We keep them as "total hits" for transparency
+        // but headline the unique numbers below.
+        $openHits = (int) ($r->opened_count ?? 0);
+        $clickHits = (int) ($r->clicked_count ?? 0);
         $purchases = (int) ($r->purchase_count ?? 0);
         $revenueCents = (int) ($r->purchase_amount_cents ?? 0);
 
-        $uniqueOpens = MarketplaceNewsletterLinkEvent::where('newsletter_id', $r->id)
+        // Unique opens/clicks = distinct recipients that hit the pixel or a
+        // tracked link. Rows with recipient_id IS NULL come from edge cases
+        // (preview, forwarded mail decoded against a different APP_KEY) and
+        // can't be deduped; they're omitted so this stays a true lower-bound
+        // unique count instead of being inflated by an unbounded NULL bucket.
+        $uniqueOpens = (int) MarketplaceNewsletterLinkEvent::where('newsletter_id', $r->id)
             ->where('event_type', MarketplaceNewsletterLinkEvent::TYPE_OPEN)
-            ->count();
-        $uniqueClicks = MarketplaceNewsletterLinkEvent::where('newsletter_id', $r->id)
+            ->whereNotNull('recipient_id')
+            ->distinct('recipient_id')
+            ->count('recipient_id');
+        $uniqueClicks = (int) MarketplaceNewsletterLinkEvent::where('newsletter_id', $r->id)
             ->where('event_type', MarketplaceNewsletterLinkEvent::TYPE_CLICK)
-            ->count();
+            ->whereNotNull('recipient_id')
+            ->distinct('recipient_id')
+            ->count('recipient_id');
 
-        if ($sent + $opened + $clicked + $purchases === 0) return null;
+        if ($sent + $openHits + $clickHits + $purchases === 0) return null;
 
-        $openRate = $sent > 0 ? round(($opened / $sent) * 100, 1) : 0;
-        $clickRate = $sent > 0 ? round(($clicked / $sent) * 100, 1) : 0;
-        $ctor = $opened > 0 ? round(($clicked / $opened) * 100, 1) : 0;
-        $convRate = $clicked > 0 ? round(($purchases / $clicked) * 100, 1) : 0;
+        // Rates are computed from UNIQUE actors / sent so a recipient who
+        // opens 20 times doesn't push open_rate over 100%. We cap at 100 as
+        // a defensive measure (forwarded mail could occasionally push it
+        // above when recipient_id is populated by edge cases).
+        $openRate = $sent > 0 ? min(100, round(($uniqueOpens / $sent) * 100, 1)) : 0;
+        $clickRate = $sent > 0 ? min(100, round(($uniqueClicks / $sent) * 100, 1)) : 0;
+        $ctor = $uniqueOpens > 0 ? min(100, round(($uniqueClicks / $uniqueOpens) * 100, 1)) : 0;
+        $convRate = $uniqueClicks > 0 ? min(100, round(($purchases / $uniqueClicks) * 100, 1)) : 0;
+
+        // Raw hits multiplier (e.g. "1242 / 487 = 2.6× hits per unique
+        // opener") — quick signal for how aggressive the image proxies are.
+        $hitsRatio = $uniqueOpens > 0 ? round($openHits / $uniqueOpens, 1) : null;
+
         $currency = $r->marketplaceClient?->currency ?? 'RON';
         $revenue = number_format($revenueCents / 100, 2, ',', '.') . ' ' . $currency;
 
@@ -72,11 +95,17 @@ class EditNewsletter extends EditRecord
             . ($sub ? '<div style="font-size:11px;color:#6b7280;margin-top:2px;">' . e($sub) . '</div>' : '')
             . '</div>';
 
+        $openSub = "{$openRate}% open rate"
+            . ($openHits !== $uniqueOpens ? " · {$openHits} hit-uri totale" : '')
+            . ($hitsRatio && $hitsRatio > 1 ? " ({$hitsRatio}×/persoană)" : '');
+        $clickSub = "{$clickRate}% click rate"
+            . ($clickHits !== $uniqueClicks ? " · {$clickHits} click-uri totale" : '');
+
         $html = '<div style="display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 0 0;">'
             . $cell('Trimise', $sent)
-            . $cell('Deschideri', $opened, "{$openRate}% open rate · {$uniqueOpens} unic")
-            . $cell('Click-uri', $clicked, "{$clickRate}% click rate · {$uniqueClicks} unic")
-            . $cell('CTOR', "{$ctor}%", 'click ÷ open')
+            . $cell('Deschideri', $uniqueOpens, $openSub)
+            . $cell('Click-uri', $uniqueClicks, $clickSub)
+            . $cell('CTOR', "{$ctor}%", 'click ÷ open (unic)')
             . $cell('Cumpărări', $purchases, "{$convRate}% conv. rate")
             . $cell('Venit atribuit', $revenue, 'plătit prin newsletter')
             . '</div>';

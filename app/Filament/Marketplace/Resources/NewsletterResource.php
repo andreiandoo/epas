@@ -1087,10 +1087,17 @@ class NewsletterResource extends Resource
 
                             $sent = (int) $record->sent_count;
                             $total = (int) $record->total_recipients;
-                            $opened = (int) $record->opened_count;
-                            $clicked = (int) $record->clicked_count;
-                            $openRate = $record->open_rate;
-                            $clickRate = $record->click_rate;
+                            $openHits = (int) $record->opened_count;
+                            $clickHits = (int) $record->clicked_count;
+                            // Headline numbers + rates use distinct recipients so
+                            // image-proxy prefetch (Gmail/Yahoo) and multi-device
+                            // re-opens don't inflate the displayed open rate above
+                            // 100%. Raw hit totals are still surfaced below as
+                            // breakdown rows for transparency.
+                            $opened = (int) $record->unique_opens_count;
+                            $clicked = (int) $record->unique_clicks_count;
+                            $openRate = $sent > 0 ? min(100.0, round(($opened / $sent) * 100, 2)) : 0;
+                            $clickRate = $sent > 0 ? min(100.0, round(($clicked / $sent) * 100, 2)) : 0;
 
                             // Two prominent KPI tiles (Trimis + Open rate),
                             // followed by a compact details list.
@@ -1114,8 +1121,14 @@ class NewsletterResource extends Resource
                             if ((int) $record->failed_count > 0) {
                                 $html .= '<div class="flex items-center justify-between"><span class="text-gray-600">Eșuate</span><span class="font-semibold text-red-600">' . number_format((int) $record->failed_count) . '</span></div>';
                             }
-                            $html .= '<div class="flex items-center justify-between"><span class="text-gray-600">Deschise</span><span class="font-semibold">' . number_format($opened) . ' (' . $openRate . '%)</span></div>';
-                            $html .= '<div class="flex items-center justify-between"><span class="text-gray-600">Click-uri</span><span class="font-semibold">' . number_format($clicked) . ' (' . $clickRate . '%)</span></div>';
+                            $html .= '<div class="flex items-center justify-between"><span class="text-gray-600">Deschise (unic)</span><span class="font-semibold">' . number_format($opened) . ' (' . $openRate . '%)</span></div>';
+                            if ($openHits !== $opened) {
+                                $html .= '<div class="flex items-center justify-between"><span class="text-gray-500 text-[11px]">↳ hit-uri totale pe pixel</span><span class="text-gray-500 text-[11px]">' . number_format($openHits) . '</span></div>';
+                            }
+                            $html .= '<div class="flex items-center justify-between"><span class="text-gray-600">Click-uri (unic)</span><span class="font-semibold">' . number_format($clicked) . ' (' . $clickRate . '%)</span></div>';
+                            if ($clickHits !== $clicked) {
+                                $html .= '<div class="flex items-center justify-between"><span class="text-gray-500 text-[11px]">↳ click-uri totale</span><span class="text-gray-500 text-[11px]">' . number_format($clickHits) . '</span></div>';
+                            }
                             if ((int) $record->unsubscribed_count > 0) {
                                 $html .= '<div class="flex items-center justify-between"><span class="text-gray-600">Dezabonări</span><span class="font-semibold text-amber-600">' . number_format((int) $record->unsubscribed_count) . '</span></div>';
                             }

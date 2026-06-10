@@ -1080,7 +1080,14 @@ class MarketplaceNewsletter extends Model
     }
 
     /**
-     * Get open rate
+     * Get open rate (raw hits / sent, capped at 100%).
+     *
+     * NOTE: this uses the raw aggregate `opened_count` which is incremented
+     * on EVERY pixel hit (Gmail/Yahoo image proxies, scroll-back refetch,
+     * multi-device opens), so it is structurally inflated against the
+     * number of real openers. Capped at 100% so list-view tables don't
+     * surface absurd "158%" numbers; for the detailed unique-actor metric
+     * see {@see getUniqueOpensCountAttribute()} (used by EditNewsletter).
      */
     public function getOpenRateAttribute(): float
     {
@@ -1088,19 +1095,47 @@ class MarketplaceNewsletter extends Model
             return 0;
         }
 
-        return round(($this->opened_count / $this->sent_count) * 100, 2);
+        return min(100.0, round(($this->opened_count / $this->sent_count) * 100, 2));
     }
 
     /**
-     * Get click rate
+     * Get click rate (clicks / sent, industry-standard).
+     *
+     * Previously this computed clicks / opens — that's CTOR, not click
+     * rate, and it tracked the inflated `opened_count` denominator. Now
+     * matches what email marketing platforms label as "click rate" and
+     * what EditNewsletter shows as the rate badge.
      */
     public function getClickRateAttribute(): float
     {
-        if ($this->opened_count === 0) {
+        if ($this->sent_count === 0) {
             return 0;
         }
 
-        return round(($this->clicked_count / $this->opened_count) * 100, 2);
+        return min(100.0, round(($this->clicked_count / $this->sent_count) * 100, 2));
+    }
+
+    /**
+     * Distinct-recipient opens. Rows with recipient_id NULL (preview hits,
+     * legacy tokens) are skipped so the count stays a true lower bound
+     * instead of being inflated by an unbounded anonymous bucket.
+     */
+    public function getUniqueOpensCountAttribute(): int
+    {
+        return (int) MarketplaceNewsletterLinkEvent::where('newsletter_id', $this->id)
+            ->where('event_type', MarketplaceNewsletterLinkEvent::TYPE_OPEN)
+            ->whereNotNull('recipient_id')
+            ->distinct('recipient_id')
+            ->count('recipient_id');
+    }
+
+    public function getUniqueClicksCountAttribute(): int
+    {
+        return (int) MarketplaceNewsletterLinkEvent::where('newsletter_id', $this->id)
+            ->where('event_type', MarketplaceNewsletterLinkEvent::TYPE_CLICK)
+            ->whereNotNull('recipient_id')
+            ->distinct('recipient_id')
+            ->count('recipient_id');
     }
 
     /**
