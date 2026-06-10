@@ -613,12 +613,16 @@ class MarketplacePayout extends Model
             return $this->finalNetAmountCache;
         }
 
+        // computeOrganizerNetFromTickets already filters the underlying
+        // tickets query by status IN ('valid', 'used'), so refunded
+        // tickets are excluded from $organizerNet. Subtracting
+        // $this->refund_amount on top of that was a DOUBLE deduction
+        // — payout 3052 came out as 2,920 instead of 3,200 (refund
+        // nominal 280 subtracted twice).
         $organizerNet = $this->computeOrganizerNetFromTickets();
-
-        $refund = (float) ($this->refund_amount ?? 0);
         $advance = (float) (($this->payout_method['advance_amount'] ?? null) ?? 0);
 
-        $this->finalNetAmountCache = max(0.0, round($organizerNet - $refund - $advance, 2));
+        $this->finalNetAmountCache = max(0.0, round($organizerNet - $advance, 2));
         return $this->finalNetAmountCache;
     }
 

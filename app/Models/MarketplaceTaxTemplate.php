@@ -1869,32 +1869,40 @@ class MarketplaceTaxTemplate extends Model
             }
             $variables['total_discount_amount'] = number_format($totalDiscountAmount, 2);
 
-            // Both row 1a (payout_net_amount) and the final payable
-            // (payout_amount) are now post-discount. The breakdown label at
-            // 1b lists each effective-price tier separately, so the gross
-            // sum implied by the label already excludes discounts — no need
-            // for a separate row 1c. Removing that row keeps the document
-            // internally consistent without a discount-aware deduction line.
-            if ($totalDiscountAmount > 0) {
-                $payoutAmountAfterDiscount = max(0.0, $payoutAmount - $totalDiscountAmount);
-                $variables['payout_amount'] = number_format($payoutAmountAfterDiscount, 2);
-                $variables['payout_net_amount'] = number_format($payoutAmountAfterDiscount, 2);
-            }
-
-            // Apply refund + advance deductions to the FINAL payable line
-            // (payout_amount = row E in the decont template, formula
-            // "E = A - B - C - D"). Row 1a (payout_net_amount) and row 2a
-            // (total_refunded_amount) stay independent — A and B are
-            // separate inputs and the template adds them up itself. Without
-            // this override the PDF would show E = ticket_net (= A),
-            // ignoring the refund the operator linked to this payout.
+            // Row 1a (payout_net_amount) is the GROSS-sold-including-refunds
+            // value the operator expects in A=1a+3a. It equals the active
+            // ticket net (post-discount, refunded tickets already excluded
+            // by the ticket-status filter in computeOrganizerNetFromTickets)
+            // PLUS the refund nominal added back. That way the template's
+            // formula E = A − B − C − D resolves to organizer_net (active
+            // post-discount) when B=2a is the same refund nominal.
+            //
+            // Row E (payout_amount) is computed directly from
+            // computeOrganizerNetFromTickets minus advance — refund is NOT
+            // subtracted here because the underlying query already excludes
+            // refunded tickets. The previous code subtracted refund a
+            // SECOND time here, which gave payout 3052 an `amount` of 2,920
+            // instead of 3,200 (and propagated the same double-subtraction
+            // to the PDF's "VALOARE TOTALA").
             $refundDeduction = (float) ($payout->refund_amount ?? 0);
             $advanceDeduction = (float) ($payout->payout_method['advance_amount'] ?? 0);
-            if ($refundDeduction > 0 || $advanceDeduction > 0) {
-                $currentPayoutAmount = (float) str_replace(',', '', $variables['payout_amount'] ?? '0');
-                $finalAmount = max(0.0, $currentPayoutAmount - $refundDeduction - $advanceDeduction);
-                $variables['payout_amount'] = number_format($finalAmount, 2);
-            }
+
+            $organizerNetFromTickets = method_exists($payout, 'computeOrganizerNetFromTickets')
+                ? $payout->computeOrganizerNetFromTickets()
+                : max(0.0, $payoutAmount - $totalDiscountAmount);
+
+            // Row 1a — gross sold incl. refunded tickets nominally added back.
+            $variables['payout_net_amount'] = number_format(
+                max(0.0, $organizerNetFromTickets + $refundDeduction),
+                2
+            );
+
+            // Row E — active post-discount, advance subtracted, refund NOT
+            // subtracted (already excluded via Ticket status filter).
+            $variables['payout_amount'] = number_format(
+                max(0.0, $organizerNetFromTickets - $advanceDeduction),
+                2
+            );
             // Sortat după număr de utilizări desc, "COD (xN)" format.
             arsort($promoCodes);
             $codeStrings = [];
@@ -2070,33 +2078,59 @@ class MarketplaceTaxTemplate extends Model
         }
         $effectiveTiersByTtId = self::deriveEffectiveTiersFromTickets($payout, $posTypeIdsSet, $qtyByType);
 
+        // Refund nominal allocated per commission-rule group. Each
+        // refunded ticket maps to a breakdown row (by ticket_type_id),
+        // which carries the rule key. The refund nominal is added back
+        // into row 1a (operator's accounting convention: 1a = gross
+        // sold incl. refunded, then row 2a subtracts it in the
+        // template's E = A − B formula).
+        $refundAllocByGroup = self::allocateRefundByCommissionGroup($payout, $ticketBreakdown, $posTypeIdsSet);
+
         $groups = [];
-        foreach ($tierRows as $item) {
-            $ttId = $item['ticket_type_id'] ?? null;
-            if ($ttId && isset($posTypeIdsSet[$ttId])) {
-                continue;
-            }
-            $catalogPrice = (float) ($item['price'] ?? $item['unit_price'] ?? 0);
-            $qty = (int) ($item['quantity'] ?? $item['tickets'] ?? $item['qty'] ?? 0);
+
+        // Pass 1: row amount = face × qty − row.discount. Iterates the
+        // ORIGINAL breakdown rows (not the expanded tier rows) so the
+        // discount column is counted exactly once even when a row was
+        // expanded into multiple tiers via the `tiers` field. The
+        // previous code summed Σ(tierPrice × tierQty) which gave a
+        // per-ticket-meta net that DOESN'T match the payout breakdown's
+        // row discount, so 1a value drifted from organizer_net by tens
+        // of lei (Cat I: 1904 instead of 1820 on payout 3052).
+        foreach ($ticketBreakdown as $row) {
+            $ttId = $row['ticket_type_id'] ?? null;
+            if ($ttId && isset($posTypeIdsSet[$ttId])) continue;
+            $catalogPrice = (float) ($row['price'] ?? $row['unit_price'] ?? 0);
+            $qty = (int) ($row['quantity'] ?? $row['tickets'] ?? $row['qty'] ?? 0);
+            $discount = (float) ($row['discount'] ?? 0);
             if ($qty <= 0 || $catalogPrice <= 0) continue;
 
-            $key = self::commissionGroupKey($item);
+            $key = self::commissionGroupKey($row);
             if (!isset($groups[$key])) {
                 $groups[$key] = [
-                    'label' => self::commissionRateLabel($item),
-                    'mode' => $item['commission_mode'] ?? null,
+                    'label' => self::commissionRateLabel($row),
+                    'mode' => $row['commission_mode'] ?? null,
                     'qty' => 0,
                     'amount' => 0.0,
-                    'tierMap' => [], // (price_key) => qty
+                    'tierMap' => [],
                 ];
             }
             $groups[$key]['qty'] += $qty;
+            $groups[$key]['amount'] += max(0.0, $catalogPrice * $qty - $discount);
+        }
 
-            // Prefer the per-ticket-type effective tiers from actual tickets.
-            // Only use them when the derived qty matches THIS row's qty —
-            // a mismatch indicates the operator manually shrank the row in
-            // the edit-tickets modal, in which case the derived tiers can't
-            // be trusted. Fall back to catalog price * qty in that case.
+        // Pass 2: tierMap from the expanded tier rows for the 1b label
+        // ("70lei*24+56lei*4+..."). The label is informational about
+        // the per-ticket prices actually paid; the 1a value comes from
+        // pass 1.
+        foreach ($tierRows as $item) {
+            $ttId = $item['ticket_type_id'] ?? null;
+            if ($ttId && isset($posTypeIdsSet[$ttId])) continue;
+            $catalogPrice = (float) ($item['price'] ?? $item['unit_price'] ?? 0);
+            $qty = (int) ($item['quantity'] ?? $item['tickets'] ?? $item['qty'] ?? 0);
+            if ($qty <= 0 || $catalogPrice <= 0) continue;
+            $key = self::commissionGroupKey($item);
+            if (!isset($groups[$key])) continue;
+
             $rowTierMap = null;
             if ($ttId !== null && isset($effectiveTiersByTtId[$ttId])) {
                 $derivedTotal = array_sum($effectiveTiersByTtId[$ttId]);
@@ -2107,11 +2141,17 @@ class MarketplaceTaxTemplate extends Model
             if ($rowTierMap === null) {
                 $rowTierMap = [(string) round($catalogPrice, 2) => $qty];
             }
-
             foreach ($rowTierMap as $priceKey => $tierQty) {
-                $tierPrice = (float) $priceKey;
-                $groups[$key]['amount'] += $tierPrice * $tierQty;
                 $groups[$key]['tierMap'][$priceKey] = ($groups[$key]['tierMap'][$priceKey] ?? 0) + $tierQty;
+            }
+        }
+
+        // Pass 3: add refund nominal per group → 1a = gross sold incl.
+        // refunded. Template's E = A − B brings it back down to active
+        // post-discount net.
+        foreach ($refundAllocByGroup as $key => $refundAmt) {
+            if (isset($groups[$key])) {
+                $groups[$key]['amount'] += $refundAmt;
             }
         }
 
@@ -2176,6 +2216,58 @@ class MarketplaceTaxTemplate extends Model
         }
 
         return $html;
+    }
+
+    /**
+     * Allocate $payout->refund_amount across the commission-rule groups
+     * derived from $ticketBreakdown. Each refund item maps to a ticket
+     * → ticket_type_id → breakdown row → commissionGroupKey. Pro-rated
+     * per refund item count (refund_amount / count). For single-rule
+     * payouts the entire refund_amount lands in one group (the common
+     * case on Ambilet). Multi-rule payouts split the refund across
+     * groups proportionally to refunded ticket count per group.
+     *
+     * @return array<string,float>  ['6%' => 280.00, ...]
+     */
+    private static function allocateRefundByCommissionGroup(
+        MarketplacePayout $payout,
+        array $ticketBreakdown,
+        array $posTypeIdsSet
+    ): array {
+        $refundTotal = (float) ($payout->refund_amount ?? 0);
+        if ($refundTotal <= 0) return [];
+
+        $refundItems = \App\Models\MarketplaceRefundItem::whereHas(
+            'refundRequest',
+            fn ($q) => $q->where('marketplace_payout_id', $payout->id)
+        )->get(['id', 'ticket_id', 'amount']);
+        $itemCount = $refundItems->count();
+        if ($itemCount === 0) return [];
+
+        $ticketIds = $refundItems->pluck('ticket_id')->filter()->all();
+        $ticketTypeByTicket = \App\Models\Ticket::whereIn('id', $ticketIds)
+            ->pluck('ticket_type_id', 'id')
+            ->toArray();
+
+        $rowByTicketType = [];
+        foreach ($ticketBreakdown as $row) {
+            $ttId = (int) ($row['ticket_type_id'] ?? 0);
+            if ($ttId <= 0 || isset($posTypeIdsSet[$ttId])) continue;
+            $rowByTicketType[$ttId] = $row;
+        }
+
+        $perItem = $refundTotal / $itemCount;
+        $allocByGroup = [];
+        foreach ($refundItems as $ri) {
+            $ttId = (int) ($ticketTypeByTicket[$ri->ticket_id] ?? 0);
+            if ($ttId <= 0) continue;
+            $row = $rowByTicketType[$ttId] ?? null;
+            if (!$row) continue;
+            $key = self::commissionGroupKey($row);
+            $allocByGroup[$key] = ($allocByGroup[$key] ?? 0) + $perItem;
+        }
+
+        return $allocByGroup;
     }
 
     /**
