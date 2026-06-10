@@ -1,0 +1,291 @@
+<?php
+
+namespace App\Console\Commands;
+
+use App\Models\Attraction;
+use App\Models\AttractionType;
+use App\Models\MarketplaceCity;
+use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+
+/**
+ * Import attractions (points of interest) from the bilete.online CSV into the
+ * `attractions` table, mapping the `tip` column onto existing attraction_types
+ * and `oras` onto existing marketplace_cities, and downloading the
+ * `imagine_principala` URL into the public disk as the cover image.
+ *
+ * CSV columns: nume, nume_en, slug, subtitlu, descriere, oras, judet, tip,
+ *   adresa, latitudine, longitudine, meta_title, meta_description,
+ *   cuvinte_cheie, imagine_principala, galerie_foto
+ *
+ * Idempotent: upserts on (marketplace_client_id, slug). Re-running refreshes
+ * the text fields; the cover image is only (re)downloaded when missing, or with
+ * --force-images. Run a fast text-only pass first with --no-images, then a
+ * second pass for images if you like.
+ *
+ * Examples:
+ *   php artisan import:bilete-attractions --no-images
+ *   php artisan import:bilete-attractions --offset=0 --limit=500
+ *   php artisan import:bilete-attractions --force-images
+ */
+class ImportBileteAttractionsCommand extends Command
+{
+    protected $signature = 'import:bilete-attractions
+        {--file= : CSV path (defaults to the bundled atractii_romania_final_import.csv)}
+        {--marketplace=3 : marketplace_client_id}
+        {--limit=0 : Max data rows to process (0 = all)}
+        {--offset=0 : Skip the first N data rows}
+        {--no-images : Skip downloading cover images (fast text-only pass)}
+        {--force-images : Re-download cover even if one is already set}
+        {--no-create-types : Do NOT auto-create attraction types missing from DB}
+        {--dry-run : Parse + map but write nothing}';
+
+    protected $description = 'Import attractions from CSV (maps types + cities, downloads cover images).';
+
+    private array $cityMap = [];   // normalized city name => id
+    private array $typeMap = [];   // type slug => id
+
+    public function handle(): int
+    {
+        $file = $this->option('file')
+            ?: base_path('resources/marketplaces/bileteonline/csvs/atractii_romania_final_import.csv');
+        $clientId = (int) $this->option('marketplace');
+        $limit    = (int) $this->option('limit');
+        $offset   = (int) $this->option('offset');
+        $doImages = ! $this->option('no-images');
+        $forceImg = (bool) $this->option('force-images');
+        $createTypes = ! $this->option('no-create-types');
+        $dry      = (bool) $this->option('dry-run');
+
+        if (! is_file($file)) {
+            $this->error("CSV not found: {$file}");
+            return self::FAILURE;
+        }
+
+        $this->preloadLookups($clientId);
+        $this->info('Loaded ' . count($this->cityMap) . ' city keys, ' . count($this->typeMap) . ' type keys for client #' . $clientId . '.');
+
+        $fh = fopen($file, 'r');
+        if (! $fh) {
+            $this->error('Cannot open CSV.');
+            return self::FAILURE;
+        }
+
+        // Header (strip UTF-8 BOM from the first cell). escape='' = standard CSV
+        // ("" escapes a quote), and silences the PHP 8.4 fgetcsv deprecation.
+        $header = fgetcsv($fh, 0, ',', '"', '');
+        if (! $header) {
+            $this->error('Empty CSV.');
+            fclose($fh);
+            return self::FAILURE;
+        }
+        $header[0] = preg_replace('/^\xEF\xBB\xBF/', '', (string) $header[0]);
+        $col = array_flip(array_map(fn ($h) => trim((string) $h), $header));
+
+        foreach (['nume', 'slug', 'tip', 'oras'] as $req) {
+            if (! isset($col[$req])) {
+                $this->error("Missing required column: {$req}");
+                fclose($fh);
+                return self::FAILURE;
+            }
+        }
+
+        $get = fn (array $row, string $k) => isset($col[$k]) ? trim((string) ($row[$col[$k]] ?? '')) : '';
+
+        $stats = ['read' => 0, 'created' => 0, 'updated' => 0, 'skipped' => 0,
+            'img_ok' => 0, 'img_fail' => 0, 'img_skip' => 0, 'city_miss' => 0, 'type_new' => 0];
+        $rowIndex = 0;
+
+        while (($row = fgetcsv($fh, 0, ',', '"', '')) !== false) {
+            $rowIndex++;
+            if ($rowIndex <= $offset) continue;
+            if ($limit > 0 && $stats['read'] >= $limit) break;
+            $stats['read']++;
+
+            $nume = $get($row, 'nume');
+            $slug = $get($row, 'slug') ?: Str::slug($nume);
+            if ($nume === '' || $slug === '') {
+                $stats['skipped']++;
+                continue;
+            }
+
+            // Resolve type (auto-create when missing + allowed).
+            $tip = $get($row, 'tip');
+            $typeId = $this->resolveType($tip, $clientId, $createTypes, $dry, $stats);
+
+            // Resolve city (best-effort; null when not present in marketplace_cities).
+            $oras = $get($row, 'oras');
+            $cityId = $this->resolveCity($oras);
+            if ($oras !== '' && $cityId === null) $stats['city_miss']++;
+
+            $numeEn = $get($row, 'nume_en');
+            $name = ['ro' => $nume];
+            if ($numeEn !== '') $name['en'] = $numeEn;
+
+            $lat = $get($row, 'latitudine');
+            $lng = $get($row, 'longitudine');
+
+            $seo = array_filter([
+                'title_ro'       => $get($row, 'meta_title'),
+                'description_ro' => $get($row, 'meta_description'),
+                'keywords_ro'    => $get($row, 'cuvinte_cheie'),
+            ], fn ($v) => $v !== '');
+
+            $payload = [
+                'attraction_type_id'  => $typeId,
+                'marketplace_city_id' => $cityId,
+                'name'                => $name,
+                'subtitle'            => ($s = $get($row, 'subtitlu')) !== '' ? ['ro' => $s] : null,
+                'description'         => ($d = $get($row, 'descriere')) !== '' ? ['ro' => $d] : null,
+                'address'             => ($a = $get($row, 'adresa')) !== '' ? $a : null,
+                'latitude'            => is_numeric($lat) ? (float) $lat : null,
+                'longitude'           => is_numeric($lng) ? (float) $lng : null,
+                'seo'                 => $seo ?: null,
+                'is_visible'          => true,
+            ];
+
+            if ($dry) {
+                $stats[Attraction::where('marketplace_client_id', $clientId)->where('slug', $slug)->exists() ? 'updated' : 'created']++;
+            } else {
+                $existing = Attraction::where('marketplace_client_id', $clientId)->where('slug', $slug)->first();
+                $isNew = ! $existing;
+                /** @var Attraction $attraction */
+                $attraction = Attraction::updateOrCreate(
+                    ['marketplace_client_id' => $clientId, 'slug' => $slug],
+                    $payload
+                );
+                $stats[$isNew ? 'created' : 'updated']++;
+
+                // Cover image — only when wanted, present, and (missing or forced).
+                if ($doImages) {
+                    $imgUrl = $get($row, 'imagine_principala');
+                    if ($imgUrl !== '' && ($forceImg || empty($attraction->cover_image_url))) {
+                        $path = $this->downloadImage($imgUrl, $slug, $clientId);
+                        if ($path) {
+                            $attraction->forceFill(['cover_image_url' => $path])->save();
+                            $stats['img_ok']++;
+                        } else {
+                            $stats['img_fail']++;
+                        }
+                    } else {
+                        $stats['img_skip']++;
+                    }
+                }
+            }
+
+            if ($stats['read'] % 100 === 0) {
+                $this->line(sprintf(
+                    '… %d read | %d new, %d upd | img %d ok/%d fail | %d city-miss',
+                    $stats['read'], $stats['created'], $stats['updated'], $stats['img_ok'], $stats['img_fail'], $stats['city_miss']
+                ));
+            }
+        }
+
+        fclose($fh);
+
+        $this->newLine();
+        $this->info('Done.');
+        $this->table(['metric', 'count'], collect($stats)->map(fn ($v, $k) => [$k, $v])->values()->all());
+
+        if ($stats['city_miss'] > 0) {
+            $this->warn($stats['city_miss'] . ' rows had a city not present in marketplace_cities (saved with city = null).');
+        }
+        if (! $doImages) {
+            $this->warn('Images skipped. Re-run without --no-images (optionally with --force-images) to fetch covers.');
+        }
+
+        return self::SUCCESS;
+    }
+
+    private function preloadLookups(int $clientId): void
+    {
+        foreach (MarketplaceCity::where('marketplace_client_id', $clientId)->get(['id', 'name', 'slug']) as $c) {
+            $ro = is_array($c->name) ? ($c->name['ro'] ?? $c->name['en'] ?? '') : (string) $c->name;
+            if ($ro !== '') {
+                $this->cityMap[$this->norm($ro)] = $c->id;
+                $this->cityMap[Str::slug($ro)] = $c->id;
+            }
+            if ($c->slug) $this->cityMap[$c->slug] = $c->id;
+        }
+
+        foreach (AttractionType::where('marketplace_client_id', $clientId)->get(['id', 'name', 'slug']) as $t) {
+            $ro = is_array($t->name) ? ($t->name['ro'] ?? $t->name['en'] ?? '') : (string) $t->name;
+            if ($t->slug) $this->typeMap[$t->slug] = $t->id;
+            if ($ro !== '') $this->typeMap[Str::slug($ro)] = $t->id;
+        }
+    }
+
+    private function norm(string $s): string
+    {
+        return mb_strtolower(trim($s), 'UTF-8');
+    }
+
+    private function resolveCity(string $oras): ?int
+    {
+        if ($oras === '') return null;
+        return $this->cityMap[$this->norm($oras)]
+            ?? $this->cityMap[Str::slug($oras)]
+            ?? null;
+    }
+
+    private function resolveType(string $tip, int $clientId, bool $createTypes, bool $dry, array &$stats): ?int
+    {
+        if ($tip === '') return null;
+        $slug = Str::slug($tip);
+        if (isset($this->typeMap[$slug])) return $this->typeMap[$slug];
+        if (! $createTypes || $dry) {
+            return null;
+        }
+        $type = AttractionType::create([
+            'marketplace_client_id' => $clientId,
+            'slug'                  => $slug,
+            'name'                  => ['ro' => $tip],
+            'is_visible'            => true,
+        ]);
+        $this->typeMap[$slug] = $type->id;
+        $stats['type_new']++;
+        return $type->id;
+    }
+
+    private function downloadImage(string $url, string $slug, int $clientId): ?string
+    {
+        try {
+            $resp = Http::withHeaders([
+                'User-Agent' => 'TixelloBot/1.0 (+https://bilete.online; attractions import)',
+                'Accept'     => 'image/*',
+            ])->timeout(25)->retry(1, 250)->get($url);
+
+            if (! $resp->ok()) return null;
+
+            $body = $resp->body();
+            if (strlen($body) < 200) return null; // error page / empty
+
+            $ct = strtolower((string) $resp->header('Content-Type'));
+            if ($ct !== '' && ! str_contains($ct, 'image')) return null;
+
+            $ext = match (true) {
+                str_contains($ct, 'jpeg'), str_contains($ct, 'jpg') => 'jpg',
+                str_contains($ct, 'png')  => 'png',
+                str_contains($ct, 'webp') => 'webp',
+                str_contains($ct, 'svg')  => 'svg',
+                str_contains($ct, 'gif')  => 'gif',
+                default => $this->extFromUrl($url),
+            };
+
+            $path = "attractions/covers/{$clientId}/" . Str::slug($slug) . '.' . $ext;
+            Storage::disk('public')->put($path, $body);
+            return $path;
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
+
+    private function extFromUrl(string $url): string
+    {
+        $p = strtolower(pathinfo((string) parse_url($url, PHP_URL_PATH), PATHINFO_EXTENSION));
+        $p = $p === 'jpeg' ? 'jpg' : $p;
+        return in_array($p, ['jpg', 'png', 'webp', 'svg', 'gif'], true) ? $p : 'jpg';
+    }
+}
