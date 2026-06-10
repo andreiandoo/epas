@@ -686,7 +686,48 @@ class NewsletterResource extends Resource
                                         'events_next_week',
                                         'events_next_month',
                                     ]))
-                                    ->helperText('Pe layout-urile "primul fullwidth", evenimentul de pe poziția 1 (cel mai apropiat ca dată) folosește imaginea landscape.')
+                                    ->live()
+                                    ->helperText('Pe layout-urile "primul fullwidth", evenimentul promovat folosește imaginea landscape. Implicit este primul ca dată, dar poți alege oricare din evenimentele selectate.')
+                                    ->columnSpanFull(),
+
+                                // Hero override — when one of the "primul
+                                // fullwidth" layouts is picked, the admin can
+                                // override which event from the multi-select
+                                // is promoted to the landscape hero. The
+                                // chosen event is then NOT also rendered in
+                                // the column grid below (renderer drops it).
+                                // Options are seeded from the current
+                                // event_ids picks, so the dropdown reflects
+                                // exactly the events the admin has chosen
+                                // for the section.
+                                Forms\Components\Select::make('hero_event_id')
+                                    ->label('Eveniment promovat (fullwidth)')
+                                    ->placeholder('Implicit: primul ca dată')
+                                    ->options(function ($get) {
+                                        $ids = (array) ($get('event_ids') ?? []);
+                                        if (empty($ids)) return [];
+                                        return Event::with('venue')
+                                            ->whereIn('id', $ids)
+                                            ->get()
+                                            ->mapWithKeys(fn (Event $e) => [$e->id => static::formatEventOption($e)])
+                                            ->toArray();
+                                    })
+                                    ->getOptionLabelUsing(function ($value) {
+                                        $e = Event::with('venue')->find($value);
+                                        return $e ? static::formatEventOption($e) : null;
+                                    })
+                                    ->visible(fn ($get) => in_array($get('display_layout'), [
+                                        '2_cols_first_hero',
+                                        '3_cols_first_hero',
+                                    ]) && in_array($get('type'), [
+                                        'recommended_events',
+                                        'hand_picked_events',
+                                        'events_next_week',
+                                        'events_next_month',
+                                    ]))
+                                    ->searchable()
+                                    ->live()
+                                    ->helperText('Alege ce eveniment apare ca hero landscape în partea de sus. Va fi eliminat automat din grila de coloane de mai jos pentru a evita duplicarea.')
                                     ->columnSpanFull(),
 
                                 // Button fields. Defaults (#A51C30 brand red,

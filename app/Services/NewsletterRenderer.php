@@ -336,7 +336,10 @@ class NewsletterRenderer
         if ($events->isEmpty()) return '';
 
         $layout = $section['display_layout'] ?? '2_cols';
-        return $this->renderEventCardsSection($title, $events, $marketplace, $layout);
+        $heroEventId = isset($section['hero_event_id']) && $section['hero_event_id'] !== '' && $section['hero_event_id'] !== null
+            ? (int) $section['hero_event_id']
+            : null;
+        return $this->renderEventCardsSection($title, $events, $marketplace, $layout, $heroEventId);
     }
 
     protected function renderButton(array $section): string
@@ -389,23 +392,41 @@ class NewsletterRenderer
     // =========================================
 
     /**
-     * @param  string  $layout  one of: 2_cols | 3_cols | 2_cols_first_hero | 3_cols_first_hero
+     * @param  string    $layout       one of: 2_cols | 3_cols | 2_cols_first_hero | 3_cols_first_hero
+     * @param  int|null  $heroEventId  optional override — when set on a *_first_hero
+     *                                 layout, this event is promoted to hero instead
+     *                                 of the chronologically-first one. It is also
+     *                                 removed from the column grid to avoid showing
+     *                                 the same event twice.
      */
-    protected function renderEventCardsSection(string $title, Collection $events, MarketplaceClient $marketplace, string $layout = '2_cols'): string
+    protected function renderEventCardsSection(string $title, Collection $events, MarketplaceClient $marketplace, string $layout = '2_cols', ?int $heroEventId = null): string
     {
         $titleHtml = '<h2 style="font-size: 22px; font-weight: 700; color: #1f2937; margin: 24px 0 16px 0; font-family: Arial, sans-serif;">' . e($title) . '</h2>';
 
         $events = $events->values();
         $cardsHtml = '';
 
-        // Hero-first variants: first event is a 100% landscape card, the
+        // Hero-first variants: a single event is a 100% landscape card, the
         // remainder flows into a 2- or 3-column grid below.
         $heroFirst = in_array($layout, ['2_cols_first_hero', '3_cols_first_hero'], true);
         $remainderCols = in_array($layout, ['3_cols', '3_cols_first_hero'], true) ? 3 : 2;
 
         if ($heroFirst && $events->isNotEmpty()) {
-            $cardsHtml .= $this->renderHeroEventRow($events->first(), $marketplace);
-            $remaining = $events->slice(1)->values();
+            // Resolve which event becomes the hero. Admin override wins when
+            // the picked id is actually in the selected pool; otherwise we
+            // fall back to the chronologically-first event (already sorted
+            // by renderManualEventList).
+            $hero = $heroEventId
+                ? $events->firstWhere('id', $heroEventId)
+                : null;
+            if (!$hero) {
+                $hero = $events->first();
+            }
+
+            $cardsHtml .= $this->renderHeroEventRow($hero, $marketplace);
+            // Strip the hero out of the remainder — comparing by id keeps
+            // this safe whether the hero was the first event or any other.
+            $remaining = $events->reject(fn ($e) => (int) $e->id === (int) $hero->id)->values();
         } else {
             $remaining = $events;
         }
