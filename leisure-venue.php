@@ -374,6 +374,8 @@ require_once __DIR__ . '/includes/head.php';
                 'trail_duration' => 'Durată',
                 'trail_elevation' => 'Diferență',
                 'trail_starts_from' => 'Pornește din:',
+                'closed_today' => 'Închis astăzi',
+                'check_schedule' => 'Verificați programul',
             ],
             'hu' => [
                 'step1' => '1./2. lépés',
@@ -444,6 +446,8 @@ require_once __DIR__ . '/includes/head.php';
                 'trail_duration' => 'Időtartam',
                 'trail_elevation' => 'Szintkülönbség',
                 'trail_starts_from' => 'Indul innen:',
+                'closed_today' => 'Ma zárva',
+                'check_schedule' => 'Ellenőrizze a nyitvatartást',
             ],
             'en' => [
                 'step1' => 'Step 1 of 2',
@@ -514,6 +518,8 @@ require_once __DIR__ . '/includes/head.php';
                 'trail_duration' => 'Duration',
                 'trail_elevation' => 'Elevation',
                 'trail_starts_from' => 'Starts from:',
+                'closed_today' => 'Closed today',
+                'check_schedule' => 'Check schedule',
             ],
         ],
     ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
@@ -1933,19 +1939,36 @@ function reservationPage() {
             return map[cat] || '✨';
         },
         get currentScheduleLabel() {
-            // Returneaza programul pe ziua curenta (sau "Verificați programul" fallback)
+            // Returneaza programul pe ziua curenta (sau "Verificați programul" fallback).
+            // Suporta atat noua structura `schedule_list` (array de {day,open,close})
+            // cat si vechea `schedule` (object cu chei zile) ca fallback.
             const seasons = (DATA.venue_config || {}).seasons || [];
-            if (seasons.length === 0) return 'Verificați programul';
+            if (seasons.length === 0) return t('check_schedule') || 'Verificați programul';
             const today = new Date().toISOString().slice(5, 10); // MM-DD
             const dayKey = ['sun','mon','tue','wed','thu','fri','sat'][new Date().getDay()];
+            const seasonName = (s) => (typeof s.name === 'string'
+                ? s.name
+                : (s.name?.[PUBLIC_LOCALE] || s.name?.ro || ''));
             for (const s of seasons) {
                 const start = s.start || '01-01', end = s.end || '12-31';
                 const inSeason = start <= end ? (today >= start && today <= end) : (today >= start || today <= end);
-                if (inSeason && s.schedule && s.schedule[dayKey] && s.schedule[dayKey].open) {
-                    return (s.name || 'Program') + ': ' + s.schedule[dayKey].open + ' – ' + s.schedule[dayKey].close;
+                if (!inSeason) continue;
+                // Schema noua: schedule_list (array de {day, open, close})
+                if (Array.isArray(s.schedule_list)) {
+                    for (const entry of s.schedule_list) {
+                        if (entry && entry.day === dayKey && entry.open) {
+                            const name = seasonName(s) || (t('label_program') || 'Program');
+                            return name + ': ' + entry.open + ' – ' + (entry.close || '');
+                        }
+                    }
+                }
+                // Schema veche: schedule object cu chei zile
+                if (s.schedule && s.schedule[dayKey] && s.schedule[dayKey].open) {
+                    const name = seasonName(s) || (t('label_program') || 'Program');
+                    return name + ': ' + s.schedule[dayKey].open + ' – ' + s.schedule[dayKey].close;
                 }
             }
-            return 'Închis astăzi';
+            return t('closed_today') || 'Închis astăzi';
         },
 
         scrollToServices() {

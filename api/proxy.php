@@ -1909,6 +1909,15 @@ switch ($action) {
         $requiresAuth = true;
         break;
 
+    case 'organizer.event.leisure.upload-image':
+        $eventId = (int) ($_GET['event'] ?? 0);
+        if (!$eventId) { http_response_code(400); echo json_encode(['error' => 'Missing event id']); exit; }
+        $method = 'POST';
+        $endpoint = '/organizer/events/' . $eventId . '/leisure/upload-image';
+        $requiresAuth = true;
+        $isMultipart = true;
+        break;
+
     case 'organizer.event.leisure.products.collection':
         $eventId = (int) ($_GET['event'] ?? 0);
         if (!$eventId) { http_response_code(400); echo json_encode(['error' => 'Missing event id']); exit; }
