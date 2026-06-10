@@ -752,8 +752,12 @@ foreach (['slug', '_route', '_path'] as $_drop) {
                     <p class="text-forest-700/70">Nu sunt bilete disponibile pentru această dată.</p>
                 </div>
 
-                <div x-show="selectedDate && !loadingTickets && accessTickets.length > 0" class="space-y-3">
-                    <template x-for="ticket in accessTickets" :key="ticket.id">
+                <div x-show="selectedDate && !loadingTickets && accessTickets.length > 0" class="space-y-6">
+                    <template x-for="(grp, gi) in accessTicketsGrouped" :key="grp.id">
+                        <div class="space-y-3">
+                            <!-- Header categorie (ascuns daca name e gol → backward compat fara categorii) -->
+                            <h3 x-show="grp.name" class="font-display text-xl font-bold text-ink mt-2" x-text="grp.name"></h3>
+                            <template x-for="ticket in grp.items" :key="ticket.id">
                         <div class="bg-white rounded-2xl p-5 lg:p-6 border-2 transition-all"
                              :class="ticket.qty > 0 ? 'border-forest-500 shadow-md' : 'border-transparent hover:border-forest-200'">
                             <div class="flex items-start gap-4">
@@ -871,6 +875,8 @@ foreach (['slug', '_route', '_path'] as $_drop) {
                                     </template>
                                 </div>
                             </div>
+                        </div>
+                            </template>
                         </div>
                     </template>
                 </div>
@@ -1480,6 +1486,7 @@ function reservationPage() {
         loadingTickets: false,
         monthCache: {},        // 'YYYY-MM' -> { dates: { 'YYYY-MM-DD': { status } } }
         ticketsRaw: [],        // toate ticket types pentru data selectata (din API)
+        ticketCategoriesRaw: [], // C2: categorii custom pentru grupare bilete
         qtyById: {},           // { ticketTypeId: qty } sau { 'ticketTypeId|variantId': qty }
         variantSelectedByTicket: {}, // { ticketId: variantId } — varianta activă pe card
         addonQtyByKey: {},     // { 'ticketCartKey::addonId': qty } — add-ons selectate per linie de cart
@@ -1573,6 +1580,8 @@ function reservationPage() {
                 const resp = await AmbiletAPI.get(`/marketplace-events/${SLUG}/date-availability`, params);
                 if (resp && resp.is_open) {
                     this.ticketsRaw = resp.ticket_types || [];
+                    // C2 — categorii custom pentru gruparea biletelor (din venue_config.ticket_categories)
+                    this.ticketCategoriesRaw = Array.isArray(resp.ticket_categories) ? resp.ticket_categories : [];
                     if (resp.commission) this.commission = resp.commission;
                     // Init qty map pentru ambele scenarii (cu/fara variants)
                     this.ticketsRaw.forEach(t => {
@@ -1637,6 +1646,34 @@ function reservationPage() {
         },
         get services() {
             return this._ticketsWithQty.filter(t => (t.service_category || 'access') !== 'access');
+        },
+        // C2 — Grupare bilete acces pe ticket_categories (definite de organizator
+        // in /organizator/leisure tab Produse → Categorii afișare). Daca nu sunt
+        // categorii configurate sau niciun bilet nu are ticket_group asignat,
+        // returnam un singur grup fara header (backward compat).
+        get accessTicketsGrouped() {
+            const cats = Array.isArray(this.ticketCategoriesRaw) ? this.ticketCategoriesRaw : [];
+            const all = this.accessTickets;
+            if (!cats.length) {
+                return [{ id: '__all__', name: '', items: all }];
+            }
+            const byId = {};
+            const ungrouped = [];
+            for (const t of all) {
+                const gid = t.ticket_group;
+                const cat = gid ? cats.find(c => c.id === gid) : null;
+                if (cat) { (byId[cat.id] ||= []).push(t); }
+                else { ungrouped.push(t); }
+            }
+            const groups = [];
+            for (const c of cats) {
+                const items = byId[c.id] || [];
+                if (items.length) groups.push({ id: c.id, name: c.name, items });
+            }
+            if (ungrouped.length) {
+                groups.push({ id: '__none__', name: '', items: ungrouped });
+            }
+            return groups;
         },
         get anyRequiresAccess() {
             return this.services.some(s => !!s.requires_access_ticket);

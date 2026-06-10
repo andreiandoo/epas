@@ -119,6 +119,28 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             </div>
 
             <div id="pr-loading" class="p-8 text-center"><div class="inline-block w-6 h-6 border-2 rounded-full border-primary border-t-transparent animate-spin"></div></div>
+
+            <!-- C2: Categorii afișare bilete (grupare custom pe pagina publica) -->
+            <details class="bg-white border border-border rounded-2xl">
+                <summary class="px-5 py-4 cursor-pointer font-semibold text-secondary flex items-center justify-between hover:bg-slate-50 rounded-2xl">
+                    <span class="flex items-center gap-2">
+                        🗂️ Categorii afișare bilete
+                        <span title="Grupează vizual tipurile de bilete pe pagina publică (ex: „Bilete individuale", „Bilete de familie", „Bilete de grup"). Ordinea categoriilor o stabilești prin drag&drop. La fiecare produs alegi categoria din modalul de editare." class="cursor-help text-primary text-base">ℹ️</span>
+                        <span id="cat-count" class="text-xs text-muted font-normal"></span>
+                    </span>
+                    <svg class="w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                </summary>
+                <div class="px-5 pb-5 pt-2 space-y-3 border-t border-border">
+                    <p class="text-xs text-muted">💡 Categoriile permit gruparea biletelor pe pagina publică (ex: „Bilete individuale", „Pachete familie"). Trage rândurile pentru a re-ordona. Produsele neasignate vor apărea în secțiunea „Alte produse".</p>
+                    <div id="cat-list" class="space-y-2"></div>
+                    <div class="flex items-center justify-between gap-2">
+                        <button type="button" id="cat-add-btn" class="px-3 py-1.5 text-sm font-medium text-primary bg-primary/10 hover:bg-primary/20 rounded-lg">+ Adaugă categorie</button>
+                        <button type="button" id="cat-save-btn" class="px-4 py-1.5 text-sm font-semibold bg-primary text-white rounded-lg hover:bg-primary-dark disabled:opacity-50">Salvează categoriile</button>
+                    </div>
+                    <p id="cat-msg" class="text-xs hidden"></p>
+                </div>
+            </details>
+
             <div id="pr-empty" class="hidden p-8 text-center bg-white border rounded-2xl border-border text-muted">Niciun produs încă. Apasă „Adaugă produs" ca să creezi primul bilet.</div>
             <div id="pr-list" class="hidden space-y-3"></div>
         </div>
@@ -160,6 +182,15 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                         <select id="pr-f-issuer" class="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg">
                             <option value="primary">Principală</option>
                             <option value="secondary">Secundară</option>
+                        </select>
+                    </label>
+                    <label class="block">
+                        <span class="text-xs font-semibold text-muted uppercase tracking-wider flex items-center gap-1.5">
+                            <span>Categorie afișare</span>
+                            <span title="Grupul în care apare produsul pe pagina publică. Setezi categoriile disponibile în secțiunea „🗂️ Categorii afișare bilete" de mai sus.&#10;Lasă „Alte produse" dacă nu vrei să-l grupezi." class="cursor-help text-primary">ℹ️</span>
+                        </span>
+                        <select id="pr-f-group" class="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg">
+                            <option value="">— Alte produse —</option>
                         </select>
                     </label>
                     <label class="block">
@@ -1193,14 +1224,27 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
     const CAT_LABEL = { access: '🎟️ Acces', parking: '🚗 Parcare', rental: '🛶 Închiriere', activity: '🎯 Activitate', extra: '➕ Extra', package: '🎁 Pachet' };
     const CAT_COLOR = { access: 'blue', parking: 'violet', rental: 'amber', activity: 'emerald', extra: 'slate', package: 'rose' };
 
+    // C2 — cache categorii (din /leisure/config) + sync cu products
+    let categoriesCache = [];
+
     async function loadProducts() {
         if (!currentEventId) return;
         $('pr-loading').classList.remove('hidden');
         $('pr-list').classList.add('hidden');
         $('pr-empty').classList.add('hidden');
         try {
-            const res = await AmbiletAPI.get(`/organizer/events/${currentEventId}/leisure/products`);
-            productsCache = res.data?.products || [];
+            // Load products + categorii in paralel (config endpoint le include pe ambele)
+            const [resProducts, resConfig] = await Promise.all([
+                AmbiletAPI.get(`/organizer/events/${currentEventId}/leisure/products`),
+                AmbiletAPI.get(`/organizer/events/${currentEventId}/leisure/config`),
+            ]);
+            productsCache = resProducts.data?.products || [];
+            categoriesCache = (resConfig.data?.ticket_categories || []).map(c => ({
+                id: String(c.id || ''),
+                name: c.name || '',
+                sort_order: parseInt(c.sort_order ?? 0, 10),
+            })).filter(c => c.id && c.name);
+            renderCategoryList();
             renderProducts();
         } catch (e) {
             console.error('[leisure-products] load failed', e);
@@ -1211,6 +1255,141 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         }
     }
 
+    // C2 — Render lista categorii custom (cu drag&drop reorder + delete inline)
+    function renderCategoryList() {
+        const list = $('cat-list');
+        if (!list) return;
+        $('cat-count').textContent = categoriesCache.length ? `(${categoriesCache.length})` : '';
+        if (!categoriesCache.length) {
+            list.innerHTML = '<p class="text-xs text-muted italic py-2">Nicio categorie definită. Adaugă una pentru a grupa biletele pe pagina publică.</p>';
+            return;
+        }
+        list.innerHTML = categoriesCache.map((c, i) => `
+            <div class="cat-row flex items-center gap-2 p-2 bg-slate-50 rounded-lg cursor-move" draggable="true" data-cat-idx="${i}">
+                <span class="text-muted text-lg select-none" title="Trage pentru a reordona">⋮⋮</span>
+                <input type="text" data-cat-name class="flex-1 px-2 py-1 text-sm border border-border rounded bg-white" placeholder="ex: Bilete individuale" value="${escapeHtml(c.name)}">
+                <code class="text-[10px] text-muted bg-white border border-border rounded px-1.5 py-1" title="ID intern, folosit la asocierea biletelor. Nu se schimbă după creare.">${escapeHtml(c.id)}</code>
+                <button type="button" data-cat-rm class="text-rose-600 hover:bg-rose-100 px-2 py-1 rounded text-sm" title="Șterge categoria (biletele rămân ne-asignate)">🗑</button>
+            </div>
+        `).join('');
+
+        // Bind events
+        list.querySelectorAll('[data-cat-name]').forEach((inp, i) => {
+            inp.addEventListener('input', () => { categoriesCache[i].name = inp.value; });
+        });
+        list.querySelectorAll('[data-cat-rm]').forEach((btn, i) => {
+            btn.addEventListener('click', () => {
+                if (!confirm('Ștergi categoria? Biletele asociate vor apărea ne-grupate.')) return;
+                categoriesCache.splice(i, 1);
+                renderCategoryList();
+            });
+        });
+
+        // Drag&drop reorder
+        let dragIdx = null;
+        list.querySelectorAll('.cat-row').forEach((row) => {
+            row.addEventListener('dragstart', (e) => {
+                dragIdx = parseInt(row.dataset.catIdx, 10);
+                row.classList.add('opacity-50');
+            });
+            row.addEventListener('dragend', () => {
+                row.classList.remove('opacity-50');
+            });
+            row.addEventListener('dragover', (e) => { e.preventDefault(); row.classList.add('ring-2','ring-primary'); });
+            row.addEventListener('dragleave', () => row.classList.remove('ring-2','ring-primary'));
+            row.addEventListener('drop', (e) => {
+                e.preventDefault();
+                row.classList.remove('ring-2','ring-primary');
+                const dropIdx = parseInt(row.dataset.catIdx, 10);
+                if (dragIdx === null || dropIdx === dragIdx) return;
+                const moved = categoriesCache.splice(dragIdx, 1)[0];
+                categoriesCache.splice(dropIdx, 0, moved);
+                renderCategoryList();
+            });
+        });
+    }
+
+    // C2 — Populeaza dropdown-ul categorie in modal produs
+    function renderCategoryOptions() {
+        const sel = $('pr-f-group');
+        if (!sel) return;
+        const current = sel.value;
+        sel.innerHTML = '<option value="">— Alte produse —</option>' +
+            categoriesCache.map(c => `<option value="${escapeHtml(c.id)}">${escapeHtml(c.name)}</option>`).join('');
+        sel.value = current;
+    }
+
+    // C2 — Genereaza un ID pentru categorie noua (slug-like)
+    function generateCategoryId(name) {
+        const slug = (name || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+        const base = slug || 'cat';
+        let id = base, n = 2;
+        while (categoriesCache.some(c => c.id === id)) {
+            id = base + '-' + n; n++;
+        }
+        return id;
+    }
+
+    async function saveCategoriesList() {
+        if (!currentEventId) return;
+        // Validare: nume non-empty per item; renumberez sort_order la 10/20/30/...
+        const cleaned = categoriesCache
+            .map((c, i) => ({
+                id: c.id,
+                name: (c.name || '').trim(),
+                sort_order: (i + 1) * 10,
+            }))
+            .filter(c => c.id && c.name);
+        const btn = $('cat-save-btn');
+        const msg = $('cat-msg');
+        if (btn) { btn.disabled = true; btn.textContent = 'Se salvează…'; }
+        if (msg) msg.classList.add('hidden');
+        try {
+            await AmbiletAPI.put(`/organizer/events/${currentEventId}/leisure/venue-config`, {
+                venue_config: { ticket_categories: cleaned },
+            });
+            categoriesCache = cleaned;
+            renderCategoryList();
+            renderProducts();
+            if (msg) { msg.textContent = '✓ Categoriile au fost salvate.'; msg.className = 'text-xs text-emerald-700'; msg.classList.remove('hidden'); }
+        } catch (e) {
+            console.error('[cat-save]', e);
+            if (msg) { msg.textContent = 'Eroare la salvare: ' + (e?.message || 'necunoscut'); msg.className = 'text-xs text-rose-600'; msg.classList.remove('hidden'); }
+        } finally {
+            if (btn) { btn.disabled = false; btn.textContent = 'Salvează categoriile'; }
+        }
+    }
+
+    function renderProductCardHtml(p) {
+        const cat = p.service_category || 'access';
+        const color = CAT_COLOR[cat] || 'slate';
+        const icon = (p.meta?.icon) || '';
+        const inactive = !p.is_active;
+        return `<div class="pr-row bg-white border rounded-2xl border-border ${inactive ? 'opacity-60' : ''}" draggable="true" data-product-id="${p.id}">
+            <div class="px-5 py-4 flex items-center gap-4">
+                <span class="text-muted text-lg select-none cursor-move" title="Trage pentru a reordona">⋮⋮</span>
+                <div class="text-2xl">${icon || '🎫'}</div>
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <span class="font-bold text-secondary truncate">${escapeHtml(p.name)}</span>
+                        <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-${color}-100 text-${color}-800">${CAT_LABEL[cat] || cat}</span>
+                        <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-slate-100 text-slate-700">${p.issuing_company === 'secondary' ? 'SC2' : 'SC1'}</span>
+                        ${inactive ? '<span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-100 text-rose-700">INACTIV</span>' : ''}
+                    </div>
+                    ${p.description ? `<div class="text-xs text-muted mt-0.5 truncate">${escapeHtml(p.description)}</div>` : ''}
+                    <div class="text-xs text-muted mt-1">
+                        ${p.daily_capacity ? `📅 ${p.daily_capacity}/zi · ` : ''}${p.capacity ? `Stoc total: ${p.capacity}` : 'Stoc nelimitat'}
+                    </div>
+                </div>
+                <div class="text-right">
+                    <div class="text-xl font-bold text-${color}-700">${Number(p.price).toFixed(2)}</div>
+                    <div class="text-[10px] text-muted">${p.currency || 'RON'} / ${(p.meta?.unit_label) || 'buc'}</div>
+                </div>
+                <button data-edit-id="${p.id}" class="ml-2 px-3 py-1.5 text-xs font-medium border border-border rounded-lg hover:bg-slate-50">Editează</button>
+            </div>
+        </div>`;
+    }
+
     function renderProducts() {
         if (!productsCache.length) {
             $('pr-empty').classList.remove('hidden');
@@ -1219,36 +1398,87 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         }
         $('pr-empty').classList.add('hidden');
         $('pr-list').classList.remove('hidden');
-        $('pr-list').innerHTML = productsCache.map(p => {
-            const cat = p.service_category || 'access';
-            const color = CAT_COLOR[cat] || 'slate';
-            const icon = (p.meta?.icon) || '';
-            const inactive = !p.is_active;
-            return `<div class="bg-white border rounded-2xl border-border ${inactive ? 'opacity-60' : ''}">
-                <div class="px-5 py-4 flex items-center gap-4">
-                    <div class="text-2xl">${icon || '🎫'}</div>
-                    <div class="flex-1 min-w-0">
-                        <div class="flex items-center gap-2 flex-wrap">
-                            <span class="font-bold text-secondary truncate">${escapeHtml(p.name)}</span>
-                            <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-${color}-100 text-${color}-800">${CAT_LABEL[cat] || cat}</span>
-                            <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-slate-100 text-slate-700">${p.issuing_company === 'secondary' ? 'SC2' : 'SC1'}</span>
-                            ${inactive ? '<span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-100 text-rose-700">INACTIV</span>' : ''}
-                        </div>
-                        ${p.description ? `<div class="text-xs text-muted mt-0.5 truncate">${escapeHtml(p.description)}</div>` : ''}
-                        <div class="text-xs text-muted mt-1">
-                            ${p.daily_capacity ? `📅 ${p.daily_capacity}/zi · ` : ''}${p.capacity ? `Stoc total: ${p.capacity}` : 'Stoc nelimitat'}
-                        </div>
-                    </div>
-                    <div class="text-right">
-                        <div class="text-xl font-bold text-${color}-700">${Number(p.price).toFixed(2)}</div>
-                        <div class="text-[10px] text-muted">${p.currency || 'RON'} / ${(p.meta?.unit_label) || 'buc'}</div>
-                    </div>
-                    <button data-edit-id="${p.id}" class="ml-2 px-3 py-1.5 text-xs font-medium border border-border rounded-lg hover:bg-slate-50">Editează</button>
+
+        // C2: grupare produse pe ticket_categories. Categoriile au ordinea din
+        // categoriesCache (deja sortate dupa sort_order). Produsele fara
+        // category match apar in "Alte produse".
+        const groupsByCategoryId = {};
+        const ungrouped = [];
+        for (const p of productsCache) {
+            const gid = p.ticket_group;
+            const exists = gid && categoriesCache.some(c => c.id === gid);
+            if (exists) {
+                (groupsByCategoryId[gid] ||= []).push(p);
+            } else {
+                ungrouped.push(p);
+            }
+        }
+
+        const sections = [];
+        for (const cat of categoriesCache) {
+            const items = groupsByCategoryId[cat.id] || [];
+            if (!items.length) continue;
+            sections.push({ id: cat.id, name: cat.name, items });
+        }
+        if (ungrouped.length) {
+            sections.push({ id: '__none__', name: 'Alte produse', items: ungrouped });
+        }
+
+        $('pr-list').innerHTML = sections.map(sec => `
+            <div class="space-y-2" data-cat-section="${escapeHtml(sec.id)}">
+                <div class="flex items-center gap-2 mt-3 mb-1">
+                    <span class="text-xs uppercase tracking-wider text-muted font-bold">${escapeHtml(sec.name)}</span>
+                    <span class="text-[10px] text-muted">(${sec.items.length})</span>
                 </div>
-            </div>`;
-        }).join('');
+                ${sec.items.map(renderProductCardHtml).join('')}
+            </div>
+        `).join('');
+
+        // Bind edit + drag&drop sortare in interiorul fiecarei categorii
         $('pr-list').querySelectorAll('button[data-edit-id]').forEach(btn => {
             btn.addEventListener('click', () => openProductModal(parseInt(btn.dataset.editId, 10)));
+        });
+        bindProductDragAndDrop();
+    }
+
+    // C2.6 — Drag&drop sortare in interiorul fiecarei categorii. Folosim
+    // POST /leisure/products/reorder (endpoint existent) cu lista de IDs noua.
+    function bindProductDragAndDrop() {
+        let dragEl = null;
+        $('pr-list').querySelectorAll('.pr-row').forEach(row => {
+            row.addEventListener('dragstart', () => {
+                dragEl = row;
+                row.classList.add('opacity-50');
+            });
+            row.addEventListener('dragend', () => {
+                row.classList.remove('opacity-50');
+                dragEl = null;
+            });
+            row.addEventListener('dragover', (e) => { e.preventDefault(); });
+            row.addEventListener('drop', async (e) => {
+                e.preventDefault();
+                if (!dragEl || dragEl === row) return;
+                // Reorder DOAR in interiorul aceleiași secțiuni (categoriei)
+                const dragSection = dragEl.closest('[data-cat-section]');
+                const dropSection = row.closest('[data-cat-section]');
+                if (dragSection !== dropSection) return;
+                // Reordoneaza DOM
+                const rect = row.getBoundingClientRect();
+                const before = (e.clientY - rect.top) < (rect.height / 2);
+                row.parentNode.insertBefore(dragEl, before ? row : row.nextSibling);
+                // Trimite ordine la backend pentru TOATE produsele in ordinea curentă (toate secțiunile)
+                const allIds = Array.from($('pr-list').querySelectorAll('.pr-row')).map(r => parseInt(r.dataset.productId, 10));
+                try {
+                    await AmbiletAPI.post(`/organizer/events/${currentEventId}/leisure/products/reorder`, { ids: allIds });
+                    // Update cache local (re-sortez productsCache dupa ordinea DOM)
+                    const idOrder = new Map(allIds.map((id, i) => [id, i]));
+                    productsCache.sort((a, b) => (idOrder.get(a.id) ?? 999) - (idOrder.get(b.id) ?? 999));
+                } catch (err) {
+                    console.error('[products-reorder]', err);
+                    alert('Eroare la salvare ordine: ' + (err?.message || 'necunoscut'));
+                    renderProducts(); // revert
+                }
+            });
         });
     }
 
@@ -1259,6 +1489,9 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         $('pr-f-name').value = p?.name || '';
         $('pr-f-category').value = p?.service_category || 'access';
         $('pr-f-issuer').value = p?.issuing_company || 'primary';
+        // C2: categorie afișare (folosim ticket_group ca FK la categoria custom)
+        renderCategoryOptions();
+        $('pr-f-group').value = p?.ticket_group || '';
         $('pr-f-price').value = p ? Number(p.price).toFixed(2) : '';
         $('pr-f-capacity').value = p?.capacity || '';
         $('pr-f-dailycap').value = p?.daily_capacity || '';
@@ -1661,6 +1894,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             name: $('pr-f-name').value.trim(),
             service_category: cat,
             issuing_company: $('pr-f-issuer').value,
+            ticket_group: $('pr-f-group').value || null,
             price: parseFloat($('pr-f-price').value) || 0,
             capacity: $('pr-f-capacity').value ? parseInt($('pr-f-capacity').value, 10) : null,
             daily_capacity: $('pr-f-dailycap').value ? parseInt($('pr-f-dailycap').value, 10) : null,
@@ -1729,6 +1963,14 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 
     function setupProductsHandlers() {
         const addBtn = $('pr-add-btn'); if (addBtn) addBtn.addEventListener('click', () => openProductModal(null));
+        // C2: Categorii — add + save
+        const catAdd = $('cat-add-btn'); if (catAdd) catAdd.addEventListener('click', () => {
+            const name = prompt('Nume categorie nouă (ex: Bilete individuale):', '');
+            if (!name || !name.trim()) return;
+            categoriesCache.push({ id: generateCategoryId(name.trim()), name: name.trim(), sort_order: (categoriesCache.length + 1) * 10 });
+            renderCategoryList();
+        });
+        const catSave = $('cat-save-btn'); if (catSave) catSave.addEventListener('click', saveCategoriesList);
         const closeBtn = $('pr-modal-close'); if (closeBtn) closeBtn.addEventListener('click', closeProductModal);
         const cancelBtn = $('pr-f-cancel'); if (cancelBtn) cancelBtn.addEventListener('click', closeProductModal);
 
