@@ -392,18 +392,29 @@ class NewsletterRenderer
     // =========================================
 
     /**
-     * @param  string    $layout       one of: 2_cols | 3_cols | 2_cols_first_hero | 3_cols_first_hero
-     * @param  int|null  $heroEventId  optional override — when set on a *_first_hero
-     *                                 layout, this event is promoted to hero instead
+     * @param  string    $layout       one of: 2_cols | 3_cols | 2_cols_first_hero
+     *                                 | 3_cols_first_hero | 2_cols_mixed
+     * @param  int|null  $heroEventId  optional override — when set on a hero-bearing
+     *                                 layout (*_first_hero or 2_cols_mixed), this
+     *                                 event is promoted to the FIRST hero instead
      *                                 of the chronologically-first one. It is also
-     *                                 removed from the column grid to avoid showing
-     *                                 the same event twice.
+     *                                 removed from the column grid so it doesn't
+     *                                 render twice. On 2_cols_mixed, subsequent
+     *                                 heroes are picked chronologically from what
+     *                                 remains.
      */
     protected function renderEventCardsSection(string $title, Collection $events, MarketplaceClient $marketplace, string $layout = '2_cols', ?int $heroEventId = null): string
     {
         $titleHtml = '<h2 style="font-size: 22px; font-weight: 700; color: #1f2937; margin: 24px 0 16px 0; font-family: Arial, sans-serif;">' . e($title) . '</h2>';
 
         $events = $events->values();
+
+        // 2_cols_mixed has its own loop because the hero / grid alternation
+        // doesn't fit the single hero + flat grid shape the other layouts use.
+        if ($layout === '2_cols_mixed') {
+            return $titleHtml . $this->renderMixedTwoColsLayout($events, $marketplace, $heroEventId);
+        }
+
         $cardsHtml = '';
 
         // Hero-first variants: a single event is a 100% landscape card, the
@@ -440,6 +451,61 @@ class NewsletterRenderer
         }
 
         return $titleHtml . $cardsHtml;
+    }
+
+    /**
+     * "2 coloane, mixt" — repeating block of {1 hero landscape, then up to
+     * 4 events in a 2x2 grid}. Keeps going until the events run out. The
+     * admin's hero override (if any) decides only the FIRST hero; later
+     * heroes are pulled chronologically from the queue.
+     *
+     * Example with 13 events:
+     *   E1 (hero) → E2 E3 / E4 E5 → E6 (hero) → E7 E8 / E9 E10 →
+     *   E11 (hero) → E12 E13
+     *
+     * Trailing rows render whatever is left (so a final partial row of 1
+     * card is fine — same fallback as the standalone 2-col grid).
+     */
+    protected function renderMixedTwoColsLayout(Collection $events, MarketplaceClient $marketplace, ?int $heroEventId = null): string
+    {
+        if ($events->isEmpty()) return '';
+
+        // Reorder so the override event is at the head of the queue. Any
+        // events before it slide one position back. Without this, "give me
+        // E3 as the first hero" would still let E1/E2 land in the leading
+        // grid before E3 — confusing for the admin.
+        $queue = $events->values();
+        if ($heroEventId) {
+            $hero = $queue->firstWhere('id', $heroEventId);
+            if ($hero) {
+                $queue = $queue
+                    ->reject(fn ($e) => (int) $e->id === (int) $hero->id)
+                    ->prepend($hero)
+                    ->values();
+            }
+        }
+
+        $html = '';
+        $remaining = $queue;
+        $heroBudget = 4; // events to show as 2x2 grid between heroes
+
+        while ($remaining->isNotEmpty()) {
+            // 1) Hero row — take the next event off the queue.
+            $hero = $remaining->first();
+            $html .= $this->renderHeroEventRow($hero, $marketplace);
+            $remaining = $remaining->slice(1)->values();
+
+            if ($remaining->isEmpty()) break;
+
+            // 2) Up to 4 events in a 2x2 grid below the hero. If fewer
+            //    remain, render whatever's left — the 2-col grid helper
+            //    already handles odd counts with an empty trailing cell.
+            $block = $remaining->take($heroBudget);
+            $html .= $this->renderEventGridTwoCols($block, $marketplace);
+            $remaining = $remaining->slice($heroBudget)->values();
+        }
+
+        return $html;
     }
 
     protected function renderEventGridTwoCols(Collection $events, MarketplaceClient $marketplace): string

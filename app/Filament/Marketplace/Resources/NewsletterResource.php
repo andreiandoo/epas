@@ -678,6 +678,7 @@ class NewsletterResource extends Resource
                                         '3_cols' => '3 coloane',
                                         '2_cols_first_hero' => '2 coloane, primul fullwidth (landscape)',
                                         '3_cols_first_hero' => '3 coloane, primul fullwidth (landscape)',
+                                        '2_cols_mixed' => '2 coloane, mixt (alternează fullwidth + 2 rânduri de 2 coloane)',
                                     ])
                                     ->default('2_cols')
                                     ->visible(fn ($get) => in_array($get('type'), [
@@ -719,6 +720,7 @@ class NewsletterResource extends Resource
                                     ->visible(fn ($get) => in_array($get('display_layout'), [
                                         '2_cols_first_hero',
                                         '3_cols_first_hero',
+                                        '2_cols_mixed',
                                     ]) && in_array($get('type'), [
                                         'recommended_events',
                                         'hand_picked_events',
@@ -727,7 +729,7 @@ class NewsletterResource extends Resource
                                     ]))
                                     ->searchable()
                                     ->live()
-                                    ->helperText('Alege ce eveniment apare ca hero landscape în partea de sus. Va fi eliminat automat din grila de coloane de mai jos pentru a evita duplicarea.')
+                                    ->helperText('Alege ce eveniment apare ca PRIMUL hero landscape. Va fi eliminat din grila de coloane pentru a evita duplicarea. Pe layout-ul "mixt", heroes ulteriori sunt aleși cronologic din evenimentele rămase.')
                                     ->columnSpanFull(),
 
                                 // Button fields. Defaults (#A51C30 brand red,
