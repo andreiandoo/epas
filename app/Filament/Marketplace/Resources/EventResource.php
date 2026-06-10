@@ -1661,16 +1661,13 @@ class EventResource extends Resource
                                                         SC\Grid::make(4)->schema([
                                                             Forms\Components\TextInput::make('name')
                                                                 ->label($t('Nume sezon', 'Season name'))
-                                                                ->placeholder($t('ex: Vară', 'e.g. Summer'))
-                                                                ->required(),
+                                                                ->placeholder($t('ex: Vară', 'e.g. Summer')),
                                                             Forms\Components\TextInput::make('start')
                                                                 ->label($t('Început (LL-ZZ)', 'Start (MM-DD)'))
-                                                                ->placeholder('04-01')
-                                                                ->required(),
+                                                                ->placeholder('04-01'),
                                                             Forms\Components\TextInput::make('end')
                                                                 ->label($t('Sfârșit (LL-ZZ)', 'End (MM-DD)'))
-                                                                ->placeholder('10-31')
-                                                                ->required(),
+                                                                ->placeholder('10-31'),
                                                             Forms\Components\TextInput::make('last_entry')
                                                                 ->label($t('Ultima intrare', 'Last entry'))
                                                                 ->placeholder('18:30')
@@ -1693,8 +1690,7 @@ class EventResource extends Resource
                                                                         'wed' => $t('Miercuri', 'Wednesday'), 'thu' => $t('Joi', 'Thursday'),
                                                                         'fri' => $t('Vineri', 'Friday'), 'sat' => $t('Sâmbătă', 'Saturday'),
                                                                         'sun' => $t('Duminică', 'Sunday'),
-                                                                    ])
-                                                                    ->required(),
+                                                                    ]),
                                                                 Forms\Components\TextInput::make('open')
                                                                     ->label($t('Deschidere', 'Open'))
                                                                     ->placeholder('09:00'),
@@ -1882,7 +1878,6 @@ class EventResource extends Resource
                                                         SC\Grid::make(2)->schema([
                                                             Forms\Components\TextInput::make('name')
                                                                 ->label($t('Nume', 'Name'))
-                                                                ->required()
                                                                 ->placeholder('Lacul Sfânta Ana'),
                                                             Forms\Components\TextInput::make('badge')
                                                                 ->label($t('Badge (cu emoji)', 'Badge (with emoji)'))
@@ -1999,7 +1994,6 @@ class EventResource extends Resource
                                                     ->schema([
                                                         Forms\Components\TextInput::make('name')
                                                             ->label($t('Nume traseu', 'Trail name'))
-                                                            ->required()
                                                             ->placeholder('Băile Tușnad → Lacul Sf. Ana'),
                                                         Forms\Components\Textarea::make('description')
                                                             ->label($t('Descriere', 'Description'))
@@ -2186,8 +2180,7 @@ class EventResource extends Resource
                                                     ->schema([
                                                         SC\Grid::make(2)->schema([
                                                             Forms\Components\TextInput::make('name')
-                                                                ->label($t('Nume hotel', 'Hotel name'))
-                                                                ->required(),
+                                                                ->label($t('Nume hotel', 'Hotel name')),
                                                             Forms\Components\TextInput::make('subtitle')
                                                                 ->label($t('Subtitlu (stele/categorie)', 'Subtitle (stars/category)'))
                                                                 ->placeholder($t('ex: 4★ Băile Tușnad', 'e.g. 4★ Băile Tușnad')),
@@ -2236,8 +2229,7 @@ class EventResource extends Resource
                                                                     'mp4' => 'MP4 (self-hosted)',
                                                                 ])
                                                                 ->default('youtube')
-                                                                ->live()
-                                                                ->required(),
+                                                                ->live(),
                                                             Forms\Components\TextInput::make('title')
                                                                 ->label($t('Titlu', 'Title'))
                                                                 ->placeholder($t('ex: Vizită Tinov Mohoș', 'e.g. Tinov tour')),
@@ -2274,18 +2266,20 @@ class EventResource extends Resource
                                                     ->label('')
                                                     ->schema([
                                                         Forms\Components\TextInput::make('q')
-                                                            ->label($t('Întrebare', 'Question'))
-                                                            ->required(),
+                                                            ->label($t('Întrebare', 'Question')),
                                                         Forms\Components\RichEditor::make('a')
                                                             ->label($t('Răspuns', 'Answer'))
                                                             ->toolbarButtons(['bold', 'italic', 'link', 'bulletList', 'orderedList']),
+                                                        // 🌐 Traduceri opt-in. Folosim Textarea în loc de RichEditor — RichEditor
+                                                        // nested în Repeater item poate crea conflicte cu Livewire state (cauza
+                                                        // erorii silent la save raportată de Sf. Ana).
                                                         SC\Fieldset::make('🌐 ' . $t('Traduceri (HU + EN)', 'Translations (HU + EN)'))
                                                             ->columns(2)
                                                             ->schema([
                                                                 Forms\Components\TextInput::make('translations.hu.q')->label('🇭🇺 ' . $t('Întrebare (HU)', 'Question (HU)')),
-                                                                Forms\Components\RichEditor::make('translations.hu.a')->label('🇭🇺 ' . $t('Răspuns (HU)', 'Answer (HU)'))->toolbarButtons(['bold', 'italic', 'link', 'bulletList', 'orderedList']),
                                                                 Forms\Components\TextInput::make('translations.en.q')->label('🇬🇧 Question (EN)'),
-                                                                Forms\Components\RichEditor::make('translations.en.a')->label('🇬🇧 Answer (EN)')->toolbarButtons(['bold', 'italic', 'link', 'bulletList', 'orderedList']),
+                                                                Forms\Components\Textarea::make('translations.hu.a')->label('🇭🇺 ' . $t('Răspuns (HU)', 'Answer (HU)'))->rows(3)->helperText($t('Text simplu — fără HTML.', 'Plain text — no HTML.')),
+                                                                Forms\Components\Textarea::make('translations.en.a')->label('🇬🇧 Answer (EN)')->rows(3)->helperText($t('Plain text — no HTML.', 'Plain text — no HTML.')),
                                                             ]),
                                                     ])
                                                     ->itemLabel(fn (array $state): ?string => $state['q'] ?? null)
