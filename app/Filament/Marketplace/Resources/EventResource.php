@@ -1674,15 +1674,9 @@ class EventResource extends Resource
                                                                 ->helperText($t('Vânzarea online se blochează după această oră', 'Online sales blocked after this time')),
                                                         ]),
                                                         // 🌐 Traduceri opt-in nume sezon HU + EN
-                                                        Forms\Components\Placeholder::make('_tr_hdr_season')
-                                                            ->label('')
-                                                            ->content(new \Illuminate\Support\HtmlString(
-                                                                '<div style="border-top:1px dashed #cbd5e1;margin-top:8px;padding-top:8px;font-size:11px;font-weight:600;color:#0891b2;">🌐 ' . $t('Traduceri nume sezon (HU + EN) — opțional', 'Season name translations — optional') . '</div>'
-                                                            ))
-                                                            ->columnSpanFull(),
                                                         SC\Grid::make(2)->schema([
-                                                            Forms\Components\TextInput::make('translations.hu.name')->label('🇭🇺 ' . $t('Nume (HU)', 'Name (HU)')),
-                                                            Forms\Components\TextInput::make('translations.en.name')->label('🇬🇧 Name (EN)'),
+                                                            Forms\Components\TextInput::make('translations.hu.name')->label('🇭🇺 ' . $t('Nume sezon (HU) — opțional', 'Season name (HU) — optional')),
+                                                            Forms\Components\TextInput::make('translations.en.name')->label('🇬🇧 ' . $t('Season name (EN) — optional', 'Season name (EN) — optional')),
                                                         ]),
                                                         Forms\Components\Repeater::make('schedule_list')
                                                             ->label($t('Program pe zile', 'Daily schedule'))
@@ -1851,12 +1845,6 @@ class EventResource extends Resource
                                                                 ->label($t('Valoare', 'Value'))
                                                                 ->placeholder($t('ex: Zonă cu urși', 'e.g. Bear area')),
                                                         ]),
-                                                        Forms\Components\Placeholder::make('_tr_hdr')
-                                                            ->label('')
-                                                            ->content(new \Illuminate\Support\HtmlString(
-                                                                '<div style="border-top:1px dashed #cbd5e1;margin-top:8px;padding-top:8px;font-size:11px;font-weight:600;color:#0891b2;">🌐 ' . $t('Traduceri (HU + EN) — opțional', 'Translations (HU + EN) — optional') . '</div>'
-                                                            ))
-                                                            ->columnSpanFull(),
                                                         SC\Grid::make(2)
                                                             ->schema([
                                                                 SC\Grid::make(2)->schema([
@@ -1909,15 +1897,9 @@ class EventResource extends Resource
                                                                 ->placeholder('linear-gradient(135deg, #A5F3FC, #22D3EE)'),
                                                         ]),
                                                         // 🌐 Traduceri opt-in (HU + EN)
-                                                        Forms\Components\Placeholder::make('_tr_hdr_attr')
-                                                            ->label('')
-                                                            ->content(new \Illuminate\Support\HtmlString(
-                                                                '<div style="border-top:1px dashed #cbd5e1;margin-top:8px;padding-top:8px;font-size:11px;font-weight:600;color:#0891b2;">🌐 ' . $t('Traduceri (HU + EN) — opțional', 'Translations (HU + EN) — optional') . '</div>'
-                                                            ))
-                                                            ->columnSpanFull(),
                                                         SC\Grid::make(2)->schema([
-                                                            Forms\Components\TextInput::make('translations.hu.name')->label('🇭🇺 Nume (HU)'),
-                                                            Forms\Components\TextInput::make('translations.en.name')->label('🇬🇧 Name (EN)'),
+                                                            Forms\Components\TextInput::make('translations.hu.name')->label('🇭🇺 Nume (HU) — opțional'),
+                                                            Forms\Components\TextInput::make('translations.en.name')->label('🇬🇧 Name (EN) — optional'),
                                                             Forms\Components\Textarea::make('translations.hu.description')->label('🇭🇺 ' . $t('Descriere (HU)', 'Description (HU)'))->rows(3),
                                                             Forms\Components\Textarea::make('translations.en.description')->label('🇬🇧 ' . $t('Descriere (EN)', 'Description (EN)'))->rows(3),
                                                             Forms\Components\TagsInput::make('translations.hu.bullets')->label('🇭🇺 ' . $t('Bullets (HU)', 'Bullets (HU)'))->placeholder($t('Tastează HU + Enter', 'Type HU + Enter')),
@@ -1947,12 +1929,6 @@ class EventResource extends Resource
                                                                 ->label($t('Etichetă', 'Label'))
                                                                 ->placeholder($t('ex: Ani de la formare', 'e.g. Years since formation')),
                                                         ]),
-                                                        Forms\Components\Placeholder::make('_tr_hdr')
-                                                            ->label('')
-                                                            ->content(new \Illuminate\Support\HtmlString(
-                                                                '<div style="border-top:1px dashed #cbd5e1;margin-top:8px;padding-top:8px;font-size:11px;font-weight:600;color:#0891b2;">🌐 ' . $t('Traduceri (HU + EN) — opțional', 'Translations (HU + EN) — optional') . '</div>'
-                                                            ))
-                                                            ->columnSpanFull(),
                                                         SC\Grid::make(2)
                                                             ->schema([
                                                                 SC\Grid::make(2)->schema([
@@ -1986,12 +1962,6 @@ class EventResource extends Resource
                                                                 ->label($t('Nume latin', 'Latin name'))
                                                                 ->placeholder('Drosera rotundifolia'),
                                                         ]),
-                                                        Forms\Components\Placeholder::make('_tr_hdr')
-                                                            ->label('')
-                                                            ->content(new \Illuminate\Support\HtmlString(
-                                                                '<div style="border-top:1px dashed #cbd5e1;margin-top:8px;padding-top:8px;font-size:11px;font-weight:600;color:#0891b2;">🌐 ' . $t('Traduceri (HU + EN) — opțional', 'Translations (HU + EN) — optional') . '</div>'
-                                                            ))
-                                                            ->columnSpanFull(),
                                                         SC\Grid::make(2)
                                                             ->schema([
                                                                 SC\Grid::make(2)->schema([
@@ -2057,12 +2027,6 @@ class EventResource extends Resource
                                                             ->helperText($t('Opțional, pentru afișaj pe hartă', 'Optional, for map display'))
                                                             ->dehydrateStateUsing(fn ($state) => is_string($state) && trim($state) !== '' ? json_decode($state, true) : null)
                                                             ->afterStateHydrated(fn ($component, $state) => $component->state(is_array($state) ? json_encode($state) : ($state ?? ''))),
-                                                        Forms\Components\Placeholder::make('_tr_hdr')
-                                                            ->label('')
-                                                            ->content(new \Illuminate\Support\HtmlString(
-                                                                '<div style="border-top:1px dashed #cbd5e1;margin-top:8px;padding-top:8px;font-size:11px;font-weight:600;color:#0891b2;">🌐 ' . $t('Traduceri (HU + EN) — opțional', 'Translations (HU + EN) — optional') . '</div>'
-                                                            ))
-                                                            ->columnSpanFull(),
                                                         SC\Grid::make(2)
                                                             ->schema([
                                                                 SC\Grid::make(2)->schema([
@@ -2138,12 +2102,6 @@ class EventResource extends Resource
                                                             ->rows(2),
                                                         Forms\Components\TextInput::make('note')
                                                             ->label($t('Notă (mic, gri)', 'Note (small, gray)')),
-                                                        Forms\Components\Placeholder::make('_tr_hdr')
-                                                            ->label('')
-                                                            ->content(new \Illuminate\Support\HtmlString(
-                                                                '<div style="border-top:1px dashed #cbd5e1;margin-top:8px;padding-top:8px;font-size:11px;font-weight:600;color:#0891b2;">🌐 ' . $t('Traduceri (HU + EN) — opțional', 'Translations (HU + EN) — optional') . '</div>'
-                                                            ))
-                                                            ->columnSpanFull(),
                                                         SC\Grid::make(2)
                                                             ->schema([
                                                                 SC\Grid::make(2)->schema([
@@ -2304,12 +2262,6 @@ class EventResource extends Resource
                                                         // 🌐 Traduceri opt-in. Folosim Textarea în loc de RichEditor — RichEditor
                                                         // nested în Repeater item poate crea conflicte cu Livewire state (cauza
                                                         // erorii silent la save raportată de Sf. Ana).
-                                                        Forms\Components\Placeholder::make('_tr_hdr')
-                                                            ->label('')
-                                                            ->content(new \Illuminate\Support\HtmlString(
-                                                                '<div style="border-top:1px dashed #cbd5e1;margin-top:8px;padding-top:8px;font-size:11px;font-weight:600;color:#0891b2;">🌐 ' . $t('Traduceri (HU + EN) — opțional', 'Translations (HU + EN) — optional') . '</div>'
-                                                            ))
-                                                            ->columnSpanFull(),
                                                         SC\Grid::make(2)
                                                             ->schema([
                                                                 Forms\Components\TextInput::make('translations.hu.q')->label('🇭🇺 ' . $t('Întrebare (HU)', 'Question (HU)')),
