@@ -1273,6 +1273,40 @@ class LeisureController extends BaseController
      * Faza 1: marcam invoice_status='requested' + invoice_number generat secvential.
      * Faza 2 (TODO): genereaza PDF + integrare e-Factura ANAF prin EFacturaService.
      */
+    /**
+     * POST /marketplace-client/organizer/events/{event}/leisure/upload-image
+     *
+     * Upload imagine card pentru un produs leisure. Acceptat multipart cu campul
+     * `image` (jpeg/png/webp, max 10MB). Returnam URL public pentru a fi salvat in
+     * meta.image al TicketType-ului prin endpoint-ul existent /products/{id}.
+     */
+    public function uploadProductImage(Request $request, int $event): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+        $marketplace = $organizer->marketplaceClient;
+
+        $eventModel = Event::query()
+            ->where('id', $event)
+            ->where('marketplace_client_id', $marketplace->id)
+            ->first();
+
+        if (!$eventModel) {
+            return $this->error('Event not found', 404);
+        }
+
+        $request->validate([
+            'image' => 'required|image|mimes:jpeg,png,webp|max:10240',
+        ]);
+
+        $path = $request->file('image')->store('events/' . $eventModel->id . '/products', 'public');
+        $url = \Illuminate\Support\Facades\Storage::disk('public')->url($path);
+
+        return $this->success([
+            'path' => $path,
+            'url' => $url,
+        ], 'Imagine încărcată');
+    }
+
     public function generateInvoice(Request $request, int $order): JsonResponse
     {
         $organizer = $this->requireOrganizer($request);

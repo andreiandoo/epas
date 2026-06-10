@@ -130,7 +130,11 @@ class DateAvailabilityController extends BaseController
                 $available = (int) $tt->daily_capacity;
                 $effectivePrice = $event->getEffectivePrice($tt, $dateStr);
             } else {
-                $available = $tt->available_quantity ?? null; // null = unlimited
+                // available_quantity = PHP_INT_MAX cand quota_total e NULL sau <0 (unlimited).
+                // Frontend leisure-venue.js trateaza `null` ca unlimited (NU buton dezactivat).
+                // Convertim PHP_INT_MAX → null ca să afișăm corect produsele cu stoc nelimitat.
+                $rawAvail = $tt->available_quantity;
+                $available = ($rawAvail === null || $rawAvail >= PHP_INT_MAX) ? null : $rawAvail;
                 $effectivePrice = $event->getEffectivePrice($tt, $dateStr);
             }
 

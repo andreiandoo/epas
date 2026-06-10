@@ -1899,6 +1899,9 @@ Route::prefix('marketplace-client/organizer')->middleware(['throttle:120,1', 'ma
         Route::delete('/events/{event}/leisure/products/{product}', [OrganizerLeisureController::class, 'productDestroy'])
             ->whereNumber('event')->whereNumber('product')
             ->name('api.marketplace-client.organizer.leisure.products.destroy');
+        Route::post('/events/{event}/leisure/upload-image', [OrganizerLeisureController::class, 'uploadProductImage'])
+            ->whereNumber('event')
+            ->name('api.marketplace-client.organizer.leisure.upload-image');
 
         // F7 — Boats + Rentals
         Route::get('/events/{event}/leisure/boats', [OrganizerLeisureController::class, 'boatsIndex'])

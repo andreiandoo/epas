@@ -396,6 +396,7 @@ const AmbiletAPI = {
         if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/shifts/)) return 'organizer.event.leisure.shifts.collection';
         if (endpoint.match(/\/organizer\/venues\/\d+\/gates\/\d+/)) return 'organizer.venue-gates.item';
         if (endpoint.match(/\/organizer\/venues\/\d+\/gates/)) return 'organizer.venue-gates.collection';
+        if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/upload-image/)) return 'organizer.event.leisure.upload-image';
         if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/products\/reorder/)) return 'organizer.event.leisure.products.reorder';
         if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/products\/\d+/)) return 'organizer.event.leisure.products.item';
         if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/products/)) return 'organizer.event.leisure.products.collection';
@@ -2193,6 +2194,14 @@ const AmbiletAPI = {
  * Mirrors AmbiletAPI.post but doesn't JSON-encode the body so cURL on
  * the proxy side ships a real multipart/form-data request upstream.
  */
+/**
+ * Public alias for multipart POST. Mirror la AmbiletAPI.post dar pentru FormData.
+ * Folosit la upload de imagini, atasamente etc.
+ */
+AmbiletAPI.upload = async function(endpointPath, formData) {
+    return AmbiletAPI._postMultipart(endpointPath, formData);
+};
+
 AmbiletAPI._postMultipart = async function(endpointPath, formData) {
     const action = AmbiletAPI.getProxyAction(endpointPath);
     const params = AmbiletAPI.getProxyParams(endpointPath);

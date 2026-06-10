@@ -527,12 +527,24 @@ class TicketType extends Model
         $this->attributes['status'] = $value ? 'active' : 'hidden';
     }
 
-    // Accessor for available_quantity (computed from quota_total - quota_sold)
-    // quota_total = -1 means unlimited
+    // Accessor for available_quantity (computed from quota_total - quota_sold).
+    // Ambele NULL si -1 inseamna "stoc nelimitat" (compat cu UI care nu seteaza
+    // -1 explicit; storage poate fi NULL pentru produse fara cap):
+    //   - quota_total === null → unlimited
+    //   - quota_total < 0       → unlimited (legacy convention)
+    //   - >= 0                   → max(0, quota_total - quota_sold)
+    //
+    // Bug fixat: anterior `null < 0` ↘ false ↘ max(0, null - 0) = 0 → frontend
+    // tratau produsul ca sold-out (buton + dezactivat).
     protected function availableQuantity(): Attribute
     {
         return Attribute::make(
-            get: fn () => $this->quota_total < 0 ? PHP_INT_MAX : max(0, $this->quota_total - ($this->quota_sold ?? 0))
+            get: function () {
+                if ($this->quota_total === null || $this->quota_total < 0) {
+                    return PHP_INT_MAX;
+                }
+                return max(0, $this->quota_total - ($this->quota_sold ?? 0));
+            }
         );
     }
 

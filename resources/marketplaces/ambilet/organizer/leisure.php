@@ -132,11 +132,17 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 </div>
                 <div class="grid md:grid-cols-2 gap-4">
                     <label class="block md:col-span-2">
-                        <span class="text-xs font-semibold text-muted uppercase tracking-wider">Nume *</span>
+                        <span class="text-xs font-semibold text-muted uppercase tracking-wider flex items-center gap-1.5">
+                            <span>Nume *</span>
+                            <span title="Numele afișat clienților pe pagina publică ambilet.ro și pe biletul PDF. Ex: „Bilet adult", „Parcare auto", „Ghidaj"." class="cursor-help text-primary">ℹ️</span>
+                        </span>
                         <input id="pr-f-name" type="text" class="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg" placeholder="ex: Bilet adult, Parcare auto, Ghidaj…">
                     </label>
                     <label class="block">
-                        <span class="text-xs font-semibold text-muted uppercase tracking-wider">Categorie serviciu *</span>
+                        <span class="text-xs font-semibold text-muted uppercase tracking-wider flex items-center gap-1.5">
+                            <span>Categorie serviciu *</span>
+                            <span title="Determină grupul în care apare produsul + ce reguli aplică:&#10;• Acces = bilet de intrare în locație&#10;• Parcare = loc parcare auto&#10;• Închiriere = bărci, kayak, sănii — cu inventar fizic limitat&#10;• Activitate = ghidaj, ture cu operator — slots pe oră&#10;• Extra = servicii adiționale (apă, hartă)&#10;• Pachet = combinație de produse cu preț redus" class="cursor-help text-primary">ℹ️</span>
+                        </span>
                         <select id="pr-f-category" class="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg">
                             <option value="access">🎟️ Acces (bilet intrare)</option>
                             <option value="parking">🚗 Parcare</option>
@@ -147,45 +153,84 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                         </select>
                     </label>
                     <label class="block">
-                        <span class="text-xs font-semibold text-muted uppercase tracking-wider">Societate emitentă</span>
+                        <span class="text-xs font-semibold text-muted uppercase tracking-wider flex items-center gap-1.5">
+                            <span>Societate emitentă</span>
+                            <span title="Care din cele 2 societăți fiscale ale tale emite biletul + factura pentru acest produs. Important pentru raportare contabilă separată." class="cursor-help text-primary">ℹ️</span>
+                        </span>
                         <select id="pr-f-issuer" class="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg">
                             <option value="primary">Principală</option>
                             <option value="secondary">Secundară</option>
                         </select>
                     </label>
                     <label class="block">
-                        <span class="text-xs font-semibold text-muted uppercase tracking-wider">Preț online (RON) *</span>
+                        <span class="text-xs font-semibold text-muted uppercase tracking-wider flex items-center gap-1.5">
+                            <span>Preț online (RON) *</span>
+                            <span title="Prețul afișat și plătit pe pagina publică ambilet.ro (vânzare online). Include sau exclude comisionul în funcție de modul setat pe contul tău." class="cursor-help text-primary">ℹ️</span>
+                        </span>
                         <input id="pr-f-price" type="number" min="0" step="0.01" class="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg" placeholder="0.00">
                     </label>
                     <label class="block">
-                        <span class="text-xs font-semibold text-muted uppercase tracking-wider">Preț POS (la fața locului)</span>
+                        <span class="text-xs font-semibold text-muted uppercase tracking-wider flex items-center gap-1.5">
+                            <span>Preț POS (la fața locului)</span>
+                            <span title="Prețul folosit la vânzarea on-site prin /organizator/leisure-pos (casierie fizică). De obicei mai mare decât prețul online (fără reducere booking).&#10;Lasă gol = se folosește prețul online.&#10;Setarea acestui preț activează produsul în panoul POS." class="cursor-help text-primary">ℹ️</span>
+                        </span>
                         <input id="pr-f-pos-price" type="number" min="0" step="0.01" class="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg" placeholder="lasă gol = preț online">
-                        <span class="text-[10px] text-muted">Folosit doar la vânzarea on-site prin POS.</span>
                     </label>
                     <label class="block">
-                        <span class="text-xs font-semibold text-muted uppercase tracking-wider">Stoc total (opțional)</span>
+                        <span class="text-xs font-semibold text-muted uppercase tracking-wider flex items-center gap-1.5">
+                            <span>Stoc total (opțional)</span>
+                            <span title="Stocul TOTAL disponibil pentru tot sezonul / toată durata evenimentului.&#10;Lasă gol = stoc nelimitat (folosit pentru bilete acces care nu au cap)." class="cursor-help text-primary">ℹ️</span>
+                        </span>
                         <input id="pr-f-capacity" type="number" min="0" class="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg" placeholder="lăsa gol = nelimitat">
                     </label>
                     <label class="block">
-                        <span class="text-xs font-semibold text-muted uppercase tracking-wider">Capacitate zilnică (opțional)</span>
+                        <span class="text-xs font-semibold text-muted uppercase tracking-wider flex items-center gap-1.5">
+                            <span>Capacitate zilnică (opțional)</span>
+                            <span title="Stoc disponibil PE ZI calendaristică. Util când vrei să limitezi câți clienți poți primi într-o zi (ex: 500 bilete/zi).&#10;Lasă gol pentru fără limită zilnică." class="cursor-help text-primary">ℹ️</span>
+                        </span>
                         <input id="pr-f-dailycap" type="number" min="0" class="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg" placeholder="ex: 500">
                     </label>
                     <label class="block">
-                        <span class="text-xs font-semibold text-muted uppercase tracking-wider">Durată serviciu (min)</span>
+                        <span class="text-xs font-semibold text-muted uppercase tracking-wider flex items-center gap-1.5">
+                            <span>Durată serviciu (min)</span>
+                            <span title="Cât durează serviciul, în minute. Folosit pentru închirieri (calupuri de timp) sau activități (slots pe oră).&#10;Ex: barcă 30 min = 30, ghidaj 2h = 120." class="cursor-help text-primary">ℹ️</span>
+                        </span>
                         <input id="pr-f-duration" type="number" min="0" class="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg" placeholder="ex: 60">
                     </label>
                     <label class="block">
-                        <span class="text-xs font-semibold text-muted uppercase tracking-wider">Iconiță (emoji)</span>
+                        <span class="text-xs font-semibold text-muted uppercase tracking-wider flex items-center gap-1.5">
+                            <span>Iconiță (emoji)</span>
+                            <span title="Emoji afișat în badge-ul rotund din stânga numelui pe pagina publică. Ex: 🎟️ pentru bilet, 🚗 pentru parcare, 🛶 pentru barcă." class="cursor-help text-primary">ℹ️</span>
+                        </span>
                         <input id="pr-f-icon" type="text" maxlength="6" class="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg" placeholder="🎟️">
                     </label>
                     <label class="block">
-                        <span class="text-xs font-semibold text-muted uppercase tracking-wider">Etichetă unitate</span>
+                        <span class="text-xs font-semibold text-muted uppercase tracking-wider flex items-center gap-1.5">
+                            <span>Etichetă unitate</span>
+                            <span title="Mic, gri, afișat sub preț. Spune clientului ce unitate de măsură reprezintă prețul.&#10;Ex: „/ bilet", „/ mașină / 3h", „/ persoană / zi"." class="cursor-help text-primary">ℹ️</span>
+                        </span>
                         <input id="pr-f-unit" type="text" class="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg" placeholder="bilet, persoană, oră, zi…">
                     </label>
-                    <label class="block md:col-span-2">
-                        <span class="text-xs font-semibold text-muted uppercase tracking-wider">URL imagine card (opțional)</span>
-                        <input id="pr-f-image" type="url" class="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg" placeholder="https://...">
-                    </label>
+                    <div class="block md:col-span-2">
+                        <span class="text-xs font-semibold text-muted uppercase tracking-wider flex items-center gap-1.5">
+                            <span>Imagine card (opțional)</span>
+                            <span title="Imagine afișată în cardul de serviciu pe pagina publică ambilet.ro. Recomandat: 800×600px sau 4:3. Maxim 10MB.&#10;Pentru servicii ne-acces (parcare, închiriere, activitate) — apare ca preview deasupra prețului.&#10;Pentru bilete acces — opțional, înlocuiește iconița emoji." class="cursor-help text-primary text-base">ℹ️</span>
+                        </span>
+                        <input id="pr-f-image" type="hidden">
+                        <!-- Drag & drop zone pentru imagine card produs -->
+                        <div id="pr-f-image-zone" class="mt-1 relative border-2 border-dashed border-border rounded-lg p-4 text-center cursor-pointer hover:border-primary hover:bg-primary/5 transition-colors">
+                            <input id="pr-f-image-file" type="file" accept="image/jpeg,image/png,image/webp" class="absolute inset-0 opacity-0 cursor-pointer">
+                            <div id="pr-f-image-empty" class="space-y-1.5">
+                                <p class="text-sm text-secondary"><span class="font-medium text-primary">Click</span> sau drag&drop o imagine</p>
+                                <p class="text-[10px] text-muted">JPG, PNG sau WebP · max 10MB · recomandat 800×600px</p>
+                            </div>
+                            <div id="pr-f-image-preview" class="hidden">
+                                <img id="pr-f-image-thumb" src="" alt="" class="mx-auto h-32 w-auto rounded">
+                                <button type="button" id="pr-f-image-remove" class="mt-2 text-[11px] text-rose-600 hover:text-rose-800 font-medium">🗑 Șterge imagine</button>
+                            </div>
+                            <div id="pr-f-image-uploading" class="hidden text-xs text-primary">⏳ Se încarcă...</div>
+                        </div>
+                    </div>
                     <label class="block md:col-span-2">
                         <span class="text-xs font-semibold text-muted uppercase tracking-wider">Descriere scurtă</span>
                         <textarea id="pr-f-description" rows="2" class="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg" placeholder="Descriere..."></textarea>
@@ -1220,7 +1265,10 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         $('pr-f-duration').value = p?.service_duration_minutes || '';
         $('pr-f-icon').value = p?.meta?.icon || '';
         $('pr-f-unit').value = p?.meta?.unit_label || '';
-        $('pr-f-image').value = p?.meta?.image || p?.meta?.image_url || '';
+        // C1: imagine card — populare hidden input + preview drag&drop
+        const imgUrl = p?.meta?.image || p?.meta?.image_url || '';
+        $('pr-f-image').value = imgUrl;
+        renderProductImagePreview(imgUrl);
         $('pr-f-description').value = p?.description || '';
         $('pr-f-includes').value = Array.isArray(p?.meta?.includes) ? p.meta.includes.join('\n') : (p?.meta?.includes || '');
         $('pr-f-terms').value = p?.usage_terms || '';
@@ -1554,6 +1602,54 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         editingProductId = null;
     }
 
+    // C1 — preview / upload imagine card produs
+    function renderProductImagePreview(url) {
+        const empty = $('pr-f-image-empty');
+        const preview = $('pr-f-image-preview');
+        const upl = $('pr-f-image-uploading');
+        const thumb = $('pr-f-image-thumb');
+        if (upl) upl.classList.add('hidden');
+        if (url) {
+            if (thumb) thumb.src = url;
+            if (empty) empty.classList.add('hidden');
+            if (preview) preview.classList.remove('hidden');
+        } else {
+            if (thumb) thumb.src = '';
+            if (empty) empty.classList.remove('hidden');
+            if (preview) preview.classList.add('hidden');
+        }
+    }
+
+    async function handleImageFile(file) {
+        if (!file || !currentEventId) return;
+        // Validare client-side (max 10MB, image MIME)
+        if (file.size > 10 * 1024 * 1024) {
+            alert('Imagine prea mare (max 10MB).');
+            return;
+        }
+        if (!/^image\/(jpeg|png|webp)$/.test(file.type)) {
+            alert('Format invalid. Acceptate: JPG, PNG, WebP.');
+            return;
+        }
+        const empty = $('pr-f-image-empty');
+        const upl = $('pr-f-image-uploading');
+        if (empty) empty.classList.add('hidden');
+        if (upl) upl.classList.remove('hidden');
+        try {
+            const fd = new FormData();
+            fd.append('image', file);
+            const res = await AmbiletAPI.upload(`/organizer/events/${currentEventId}/leisure/upload-image`, fd);
+            const url = res?.data?.url || res?.url || '';
+            if (!url) throw new Error('Upload reușit dar fără URL');
+            $('pr-f-image').value = url;
+            renderProductImagePreview(url);
+        } catch (e) {
+            console.error('[leisure-upload]', e);
+            alert('Eroare la upload: ' + (e?.message || 'necunoscut'));
+            renderProductImagePreview($('pr-f-image').value || '');
+        }
+    }
+
     async function saveProduct() {
         const includesText = $('pr-f-includes').value.trim();
         const includes = includesText ? includesText.split('\n').map(s => s.trim()).filter(Boolean) : [];
@@ -1635,9 +1731,31 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         const addBtn = $('pr-add-btn'); if (addBtn) addBtn.addEventListener('click', () => openProductModal(null));
         const closeBtn = $('pr-modal-close'); if (closeBtn) closeBtn.addEventListener('click', closeProductModal);
         const cancelBtn = $('pr-f-cancel'); if (cancelBtn) cancelBtn.addEventListener('click', closeProductModal);
+
+        // C1 — Drag & drop pentru imagine card produs.
+        // Upload-ul pleaca catre /organizer/events/{eventId}/leisure/upload-image (multipart).
+        const imgZone = $('pr-f-image-zone');
+        const imgFileInput = $('pr-f-image-file');
+        const imgRemoveBtn = $('pr-f-image-remove');
+        if (imgFileInput) imgFileInput.addEventListener('change', (e) => handleImageFile(e.target.files?.[0]));
+        if (imgZone) {
+            imgZone.addEventListener('dragover', (e) => { e.preventDefault(); imgZone.classList.add('bg-primary/10', 'border-primary'); });
+            imgZone.addEventListener('dragleave', () => { imgZone.classList.remove('bg-primary/10', 'border-primary'); });
+            imgZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                imgZone.classList.remove('bg-primary/10', 'border-primary');
+                const f = e.dataTransfer?.files?.[0];
+                if (f) handleImageFile(f);
+            });
+        }
+        if (imgRemoveBtn) imgRemoveBtn.addEventListener('click', () => {
+            $('pr-f-image').value = '';
+            renderProductImagePreview('');
+        });
         const saveBtn = $('pr-f-save'); if (saveBtn) saveBtn.addEventListener('click', saveProduct);
         const delBtn = $('pr-f-delete'); if (delBtn) delBtn.addEventListener('click', deleteProduct);
-        const modal = $('pr-modal'); if (modal) modal.addEventListener('click', (e) => { if (e.target === modal) closeProductModal(); });
+        // C4a: modal-ul se inchide DOAR pe X / Renunta — nu mai inchidem la click outside,
+        // ca utilizatorul sa nu piarda datele introduse accidental dand click in afara modalului.
         // Variants: add row + show/hide on category change
         const varAdd = $('pr-f-variant-add'); if (varAdd) varAdd.addEventListener('click', () => $('pr-f-variants-list').appendChild(makeVariantRow({})));
         const catSel = $('pr-f-category'); if (catSel) catSel.addEventListener('change', updateVariantsVisibility);

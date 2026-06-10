@@ -90,10 +90,12 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     </summary>
                     <div class="mt-3 space-y-2">
                         <input id="lv-co-name" type="text" placeholder="Denumire firmă" class="w-full px-2 py-1.5 text-sm border border-border rounded">
-                        <div class="grid grid-cols-2 gap-2">
-                            <input id="lv-co-cui" type="text" placeholder="CUI / CIF (ex: RO12345678)" class="px-2 py-1.5 text-sm border border-border rounded">
-                            <input id="lv-co-reg" type="text" placeholder="Nr. Reg. Com. (ex: J40/123/2024)" class="px-2 py-1.5 text-sm border border-border rounded">
+                        <div class="grid grid-cols-12 gap-2 items-center">
+                            <input id="lv-co-cui" type="text" placeholder="CUI / CIF (ex: RO12345678)" class="col-span-5 px-2 py-1.5 text-sm border border-border rounded">
+                            <button id="lv-co-anaf-btn" type="button" class="col-span-3 px-2 py-1.5 text-xs font-semibold bg-primary text-white rounded hover:bg-primary-dark disabled:opacity-50">🔎 ANAF</button>
+                            <input id="lv-co-reg" type="text" placeholder="Nr. Reg. Com." class="col-span-4 px-2 py-1.5 text-sm border border-border rounded">
                         </div>
+                        <p id="lv-co-anaf-msg" class="text-[10px] hidden"></p>
                         <input id="lv-co-address" type="text" placeholder="Sediu (adresă completă)" class="w-full px-2 py-1.5 text-sm border border-border rounded">
                         <div class="grid grid-cols-2 gap-2">
                             <input id="lv-co-iban" type="text" placeholder="IBAN (opțional)" class="px-2 py-1.5 text-sm border border-border rounded">
@@ -645,6 +647,40 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         document.querySelectorAll('.lv-pay-btn').forEach(b => b.addEventListener('click', () => selectPayment(b.dataset.pay)));
         document.querySelectorAll('.lv-lang-btn').forEach(b => b.addEventListener('click', () => selectLocale(b.dataset.lang)));
         $('lv-checkout').addEventListener('click', checkout);
+
+        // ANAF lookup: completeaza automat denumire/sediu/reg.com/oras pe baza CUI.
+        // Endpoint reutilizat: POST /organizer/verify-cui (folosit deja la onboarding).
+        $('lv-co-anaf-btn')?.addEventListener('click', async () => {
+            const cuiRaw = $('lv-co-cui').value.trim();
+            const msg = $('lv-co-anaf-msg');
+            const btn = $('lv-co-anaf-btn');
+            if (!cuiRaw) {
+                msg.textContent = 'Introdu un CUI mai întâi.';
+                msg.className = 'text-[10px] text-rose-600 mt-1';
+                msg.classList.remove('hidden');
+                return;
+            }
+            btn.disabled = true; btn.textContent = '…';
+            msg.classList.add('hidden');
+            try {
+                const res = await AmbiletAPI.post('/organizer/verify-cui', { cui: cuiRaw });
+                const d = res.data || {};
+                if (d.company_name) $('lv-co-name').value = d.company_name;
+                if (d.reg_com) $('lv-co-reg').value = d.reg_com;
+                // Concatenez address + city + county pentru sediu
+                const addrParts = [d.address, d.city, d.county].filter(Boolean);
+                if (addrParts.length) $('lv-co-address').value = addrParts.join(', ');
+                msg.textContent = '✓ Date completate din ANAF' + (d.is_active === false ? ' (firmă inactivă)' : '');
+                msg.className = 'text-[10px] text-emerald-700 mt-1';
+                msg.classList.remove('hidden');
+            } catch (e) {
+                msg.textContent = 'CUI invalid sau ANAF indisponibil.';
+                msg.className = 'text-[10px] text-rose-600 mt-1';
+                msg.classList.remove('hidden');
+            } finally {
+                btn.disabled = false; btn.textContent = '🔎 ANAF';
+            }
+        });
     });
 })();
 </script>
