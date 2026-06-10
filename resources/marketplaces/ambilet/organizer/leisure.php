@@ -2115,19 +2115,24 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         });
 
         // Populate FAQ list
+        // Helper: normalize array vs object (Filament Repeater UUID-keyed) la array plain
+        const toArr = (v) => Array.isArray(v) ? v : (v && typeof v === 'object' ? Object.values(v) : []);
+
         const faqList = $('faq-list');
         if (faqList) {
             faqList.innerHTML = '';
-            (currentVenueConfig.faqs || []).forEach((f, i) => faqList.appendChild(makeFaqRow(f.q || '', f.a || '', i, f.translations || {})));
-            if ((currentVenueConfig.faqs || []).length === 0) faqList.appendChild(makeFaqRow('', '', 0));
+            const faqs = toArr(currentVenueConfig.faqs);
+            faqs.forEach((f, i) => faqList.appendChild(makeFaqRow(f.q || '', f.a || '', i, f.translations || {})));
+            if (faqs.length === 0) faqList.appendChild(makeFaqRow('', '', 0));
         }
 
         // Populate stats highlights
         const statsList = $('stats-list');
         if (statsList) {
             statsList.innerHTML = '';
-            (currentVenueConfig.stats_highlights || []).forEach((s, i) => statsList.appendChild(makeStatRow(s.value || '', s.label || '', i, s.translations || {})));
-            if ((currentVenueConfig.stats_highlights || []).length === 0) statsList.appendChild(makeStatRow('', '', 0));
+            const stats = toArr(currentVenueConfig.stats_highlights);
+            stats.forEach((s, i) => statsList.appendChild(makeStatRow(s.value || '', s.label || '', i, s.translations || {})));
+            if (stats.length === 0) statsList.appendChild(makeStatRow('', '', 0));
         }
 
         // Hydrate new repeaters
@@ -2152,7 +2157,16 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         const list = $(listId);
         if (!list) return;
         list.innerHTML = '';
-        (Array.isArray(data) ? data : []).forEach((item) => list.appendChild(factory(item || {})));
+        // Filament Repeater stochează items ca object {uuid: item, ...} (cu chei UUID),
+        // organizer panel folosește array plain. Convertim object → array via Object.values
+        // ca să afișăm corect și datele salvate prin Filament admin.
+        let items = [];
+        if (Array.isArray(data)) {
+            items = data;
+        } else if (data && typeof data === 'object') {
+            items = Object.values(data);
+        }
+        items.forEach((item) => list.appendChild(factory(item || {})));
     }
 
     function makeFaqRow(q, a, idx, translations) {
