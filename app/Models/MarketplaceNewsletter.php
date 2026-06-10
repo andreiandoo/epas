@@ -29,6 +29,8 @@ class MarketplaceNewsletter extends Model
         'target_city_ids',
         'target_category_ids',
         'target_artist_ids',
+        'exclude_recent_recipients',
+        'recent_recipient_window_hours',
         'source_email_template_id',
         'status',
         'scheduled_at',
@@ -54,6 +56,8 @@ class MarketplaceNewsletter extends Model
         'target_city_ids' => 'array',
         'target_category_ids' => 'array',
         'target_artist_ids' => 'array',
+        'exclude_recent_recipients' => 'boolean',
+        'recent_recipient_window_hours' => 'integer',
         'scheduled_at' => 'datetime',
         'started_at' => 'datetime',
         'completed_at' => 'datetime',
@@ -253,13 +257,92 @@ class MarketplaceNewsletter extends Model
             return collect(); // nothing selected
         }
         if ($filterIds === null) {
-            return $baseIds->unique()->values();
+            $resolved = $baseIds->unique()->values();
+        } elseif (!$hasBase) {
+            $resolved = $filterIds->unique()->values();
+        } else {
+            // Both → intersect.
+            $resolved = $baseIds->unique()->intersect($filterIds->unique())->values();
         }
-        if (!$hasBase) {
-            return $filterIds->unique()->values();
+
+        // Apply the optional "skip recipients who already received another
+        // newsletter from this marketplace in the last N hours" filter at
+        // the very end so it never widens the audience and works the same
+        // for base-only / filter-only / intersected paths. Called by both
+        // the read-only count and the send-time build, so the displayed
+        // number always matches what'll go out.
+        return $this->applyRecentRecipientFilter($resolved, $clientId);
+    }
+
+    /**
+     * Strip customer ids whose email already received a newsletter from this
+     * marketplace within `recent_recipient_window_hours`. Compares on the
+     * recipients.email column (already lowercased at send time) — that's
+     * authoritative even if a customer record was later renamed/merged.
+     */
+    protected function applyRecentRecipientFilter(\Illuminate\Support\Collection $ids, int $clientId): \Illuminate\Support\Collection
+    {
+        if (!$this->exclude_recent_recipients || $ids->isEmpty()) {
+            return $ids;
         }
-        // Both → intersect.
-        return $baseIds->unique()->intersect($filterIds->unique())->values();
+        $recentEmails = $this->getRecentRecipientEmails($clientId);
+        if ($recentEmails->isEmpty()) {
+            return $ids;
+        }
+        // Pull just the email column for the candidate ids and drop matches.
+        $candidates = MarketplaceCustomer::whereIn('id', $ids->all())
+            ->pluck('email', 'id')
+            ->map(fn ($e) => mb_strtolower((string) $e));
+        $skip = $recentEmails->flip(); // O(1) lookup
+        return $candidates->reject(fn ($email) => isset($skip[$email]))->keys()->values();
+    }
+
+    /**
+     * Lowercased emails that received a `sent` newsletter from this
+     * marketplace within the dedup window. Excludes the current draft so
+     * editing this newsletter doesn't filter itself.
+     */
+    public function getRecentRecipientEmails(?int $clientId = null): \Illuminate\Support\Collection
+    {
+        $clientId = $clientId ?? ($this->marketplace_client_id ?? $this->marketplaceClient?->id);
+        if (!$clientId) return collect();
+
+        $hours = max(1, (int) ($this->recent_recipient_window_hours ?: 48));
+        $cutoff = now()->subHours($hours);
+
+        return MarketplaceNewsletterRecipient::query()
+            ->where('marketplace_newsletter_recipients.status', 'sent')
+            ->where('marketplace_newsletter_recipients.sent_at', '>=', $cutoff)
+            ->when($this->exists && $this->id, fn ($q) => $q->where('newsletter_id', '!=', $this->id))
+            ->join('marketplace_newsletters', 'marketplace_newsletter_recipients.newsletter_id', '=', 'marketplace_newsletters.id')
+            ->where('marketplace_newsletters.marketplace_client_id', $clientId)
+            ->pluck('marketplace_newsletter_recipients.email')
+            ->map(fn ($e) => mb_strtolower((string) $e))
+            ->unique()
+            ->values();
+    }
+
+    /**
+     * How many of the current targeting's email-space recipients overlap the
+     * "recently mailed" set. Used by the Filament placeholder to show "X of Y
+     * will be skipped" before the admin saves the toggle.
+     */
+    public function getRecentRecipientOverlapCount(): int
+    {
+        $clientId = $this->marketplace_client_id ?? $this->marketplaceClient?->id;
+        if (!$clientId) return 0;
+
+        $recent = $this->getRecentRecipientEmails($clientId);
+        if ($recent->isEmpty()) return 0;
+
+        // Cheaper than re-running collectRecipientEmails when caller already
+        // has them; for the placeholder we compute fresh.
+        $audience = $this->collectRecipientEmails();
+        if ($audience->isEmpty()) return 0;
+
+        $audience = $audience->map(fn ($e) => mb_strtolower((string) $e));
+        $skip = $recent->flip();
+        return $audience->filter(fn ($e) => isset($skip[$e]))->count();
     }
 
     /**
@@ -815,9 +898,25 @@ class MarketplaceNewsletter extends Model
 
         // ---- Combine using the same semantics as resolveRecipientCustomerIds.
         if (!$hasBase && $filterEmails === null) return collect();
-        if ($filterEmails === null) return $baseEmails->values();
-        if (!$hasBase) return $filterEmails->values();
-        return $baseEmails->intersect($filterEmails)->values();
+        if ($filterEmails === null) {
+            $combined = $baseEmails->values();
+        } elseif (!$hasBase) {
+            $combined = $filterEmails->values();
+        } else {
+            $combined = $baseEmails->intersect($filterEmails)->values();
+        }
+
+        // Recent-recipient dedup (parity with resolveRecipientCustomerIds)
+        // so the surfaced count matches what'll actually be mailed.
+        if ($this->exclude_recent_recipients) {
+            $recent = $this->getRecentRecipientEmails($clientId);
+            if ($recent->isNotEmpty()) {
+                $skip = $recent->flip();
+                $combined = $combined->reject(fn ($email) => isset($skip[$email]))->values();
+            }
+        }
+
+        return $combined;
     }
 
     /**

@@ -667,6 +667,28 @@ class NewsletterResource extends Resource
                                     ->maxLength(120)
                                     ->columnSpanFull(),
 
+                                // Layout picker — column count for the rendered
+                                // grid. "first_hero" variants promote the first
+                                // event to a full-width landscape card and flow
+                                // the rest into a 2- or 3-column grid below.
+                                Forms\Components\Select::make('display_layout')
+                                    ->label('Aranjare carduri')
+                                    ->options([
+                                        '2_cols' => '2 coloane',
+                                        '3_cols' => '3 coloane',
+                                        '2_cols_first_hero' => '2 coloane, primul fullwidth (landscape)',
+                                        '3_cols_first_hero' => '3 coloane, primul fullwidth (landscape)',
+                                    ])
+                                    ->default('2_cols')
+                                    ->visible(fn ($get) => in_array($get('type'), [
+                                        'recommended_events',
+                                        'hand_picked_events',
+                                        'events_next_week',
+                                        'events_next_month',
+                                    ]))
+                                    ->helperText('Pe layout-urile "primul fullwidth", evenimentul de pe poziția 1 (cel mai apropiat ca dată) folosește imaginea landscape.')
+                                    ->columnSpanFull(),
+
                                 // Button fields. Defaults (#A51C30 brand red,
                                 // "Click aici" label) are applied via the
                                 // afterStateUpdated hook on the type Select
@@ -817,6 +839,10 @@ class NewsletterResource extends Resource
                             $instance->target_city_ids = $get('target_city_ids') ?? [];
                             $instance->target_category_ids = $get('target_category_ids') ?? [];
                             $instance->target_artist_ids = $get('target_artist_ids') ?? [];
+                            // Honour the dedup toggle live so the total
+                            // updates the moment the admin flips it.
+                            $instance->exclude_recent_recipients = (bool) $get('exclude_recent_recipients');
+                            $instance->recent_recipient_window_hours = (int) ($get('recent_recipient_window_hours') ?: 48);
 
                             $hasTargeting = !empty($instance->target_lists)
                                 || !empty($instance->target_tags)
@@ -864,6 +890,84 @@ class NewsletterResource extends Resource
 
                             return new HtmlString($html);
                         }),
+                    // Recent-recipient dedup. The placeholder tells the admin
+                    // how many of the targeted recipients already received
+                    // ANOTHER newsletter from this marketplace within the
+                    // toggle's window (default 48h). When the toggle is on,
+                    // those emails get stripped at recipient-build time so
+                    // the same person isn't mailed twice in quick succession.
+                    Forms\Components\Placeholder::make('recent_recipient_overlap')
+                        ->label('Destinatari care au primit alt newsletter recent')
+                        ->content(function (SGet $get) use ($marketplace) {
+                            $instance = new MarketplaceNewsletter();
+                            $instance->marketplace_client_id = $marketplace?->id;
+                            $instance->target_lists = $get('target_lists') ?? [];
+                            $instance->target_tags = $get('target_tags') ?? [];
+                            $instance->target_event_ids = $get('target_event_ids') ?? [];
+                            $instance->target_organizer_ids = $get('target_organizer_ids') ?? [];
+                            $instance->target_city_ids = $get('target_city_ids') ?? [];
+                            $instance->target_category_ids = $get('target_category_ids') ?? [];
+                            $instance->target_artist_ids = $get('target_artist_ids') ?? [];
+                            $instance->recent_recipient_window_hours = (int) ($get('recent_recipient_window_hours') ?: 48);
+
+                            // Force OFF for the overlap calculation — we want
+                            // to count overlap against the FULL audience, not
+                            // after dedup (which would always be 0 when on).
+                            $instance->exclude_recent_recipients = false;
+
+                            $hasTargeting = !empty($instance->target_lists)
+                                || !empty($instance->target_tags)
+                                || !empty($instance->target_event_ids)
+                                || !empty($instance->target_organizer_ids)
+                                || !empty($instance->target_city_ids)
+                                || !empty($instance->target_category_ids)
+                                || !empty($instance->target_artist_ids);
+                            if (!$hasTargeting) {
+                                return new HtmlString('<span class="text-gray-500 text-xs">Selectează audiența pentru a vedea suprapunerea</span>');
+                            }
+
+                            try {
+                                $overlap = $instance->getRecentRecipientOverlapCount();
+                            } catch (\Throwable $e) {
+                                return new HtmlString('<span class="text-red-600 text-xs">Eroare: ' . e($e->getMessage()) . '</span>');
+                            }
+
+                            $hours = $instance->recent_recipient_window_hours;
+                            $isOn = (bool) $get('exclude_recent_recipients');
+                            $color = $isOn ? '#f59e0b' : '#6b7280';
+                            $label = $isOn
+                                ? sprintf('vor fi <strong>excluși</strong> (au primit alt newsletter în ultimele %dh)', $hours)
+                                : sprintf('au primit alt newsletter în ultimele %dh', $hours);
+                            $hint = $isOn
+                                ? '<div class="text-xs text-amber-600 mt-1">Vor primi: <strong>' . number_format($instance->getRecipientCount()) . '</strong> (după excludere)</div>'
+                                : '<div class="text-xs text-gray-500 mt-1">Activează toggle-ul de mai jos pentru a-i exclude din această trimitere.</div>';
+
+                            return new HtmlString(
+                                '<div>' .
+                                    '<div class="text-2xl font-bold" style="color:' . $color . ';">' . number_format($overlap) . '</div>' .
+                                    '<div class="text-xs text-gray-600">' . $label . '</div>' .
+                                    $hint .
+                                '</div>'
+                            );
+                        }),
+
+                    Forms\Components\Toggle::make('exclude_recent_recipients')
+                        ->label('Exclude destinatarii care au primit newsletter recent')
+                        ->helperText('Când e activ, email-urile care au primit deja un newsletter de la acest marketplace în fereastra de mai jos sunt sărite din trimiterea curentă.')
+                        ->default(false)
+                        ->live(),
+
+                    Forms\Components\TextInput::make('recent_recipient_window_hours')
+                        ->label('Fereastră (ore)')
+                        ->helperText('Câte ore în urmă să verificăm. Implicit 48h.')
+                        ->numeric()
+                        ->minValue(1)
+                        ->maxValue(720)
+                        ->default(48)
+                        ->live()
+                        ->visible(fn (SGet $get) => (bool) $get('exclude_recent_recipients'))
+                        ->suffix('ore'),
+
                     Forms\Components\Placeholder::make('targeted_events_summary')
                         ->label('Evenimente țintă')
                         ->content(function (SGet $get) {

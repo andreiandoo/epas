@@ -315,14 +315,28 @@ class NewsletterRenderer
         $eventIds = $section['event_ids'] ?? [];
         if (empty($eventIds)) return '';
 
+        // Sort the picked events chronologically (closest first) regardless of
+        // the order the admin checked them in. `start_date` is a mode-aware
+        // accessor on Event that returns `event_date` for single_day,
+        // `range_start_date` for range, the first slot date for multi_day,
+        // and `recurring_start_date` for recurring. Carbon-castable, so
+        // sortBy/Carbon parse keeps mixed types working.
         $events = Event::with('venue')
             ->whereIn('id', $eventIds)
             ->get()
-            ->sortBy(fn ($event) => array_search($event->id, $eventIds));
+            ->sortBy(function ($event) {
+                $d = $event->start_date;
+                if (!$d) return PHP_INT_MAX;
+                if ($d instanceof \DateTimeInterface) return $d->getTimestamp();
+                $ts = strtotime((string) $d);
+                return $ts === false ? PHP_INT_MAX : $ts;
+            })
+            ->values();
 
         if ($events->isEmpty()) return '';
 
-        return $this->renderEventCardsSection($title, $events, $marketplace);
+        $layout = $section['display_layout'] ?? '2_cols';
+        return $this->renderEventCardsSection($title, $events, $marketplace, $layout);
     }
 
     protected function renderButton(array $section): string
@@ -374,39 +388,156 @@ class NewsletterRenderer
     // Event Card Rendering
     // =========================================
 
-    protected function renderEventCardsSection(string $title, Collection $events, MarketplaceClient $marketplace): string
+    /**
+     * @param  string  $layout  one of: 2_cols | 3_cols | 2_cols_first_hero | 3_cols_first_hero
+     */
+    protected function renderEventCardsSection(string $title, Collection $events, MarketplaceClient $marketplace, string $layout = '2_cols'): string
     {
         $titleHtml = '<h2 style="font-size: 22px; font-weight: 700; color: #1f2937; margin: 24px 0 16px 0; font-family: Arial, sans-serif;">' . e($title) . '</h2>';
 
+        $events = $events->values();
         $cardsHtml = '';
-        $chunks = $events->chunk(2);
 
-        foreach ($chunks as $pair) {
-            $cards = $pair->values();
-            $card1 = $this->renderSingleEventCard($cards[0], $marketplace);
-            $card2 = isset($cards[1]) ? $this->renderSingleEventCard($cards[1], $marketplace) : '<td width="48%" valign="top" style="padding: 8px;"></td>';
+        // Hero-first variants: first event is a 100% landscape card, the
+        // remainder flows into a 2- or 3-column grid below.
+        $heroFirst = in_array($layout, ['2_cols_first_hero', '3_cols_first_hero'], true);
+        $remainderCols = in_array($layout, ['3_cols', '3_cols_first_hero'], true) ? 3 : 2;
 
-            $cardsHtml .= <<<HTML
-            <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom: 4px;">
-                <tr>
-                    {$card1}
-                    <td width="4%"></td>
-                    {$card2}
-                </tr>
-            </table>
-            HTML;
+        if ($heroFirst && $events->isNotEmpty()) {
+            $cardsHtml .= $this->renderHeroEventRow($events->first(), $marketplace);
+            $remaining = $events->slice(1)->values();
+        } else {
+            $remaining = $events;
+        }
+
+        if ($remaining->isNotEmpty()) {
+            if ($remainderCols === 3) {
+                $cardsHtml .= $this->renderEventGridThreeCols($remaining, $marketplace);
+            } else {
+                $cardsHtml .= $this->renderEventGridTwoCols($remaining, $marketplace);
+            }
         }
 
         return $titleHtml . $cardsHtml;
     }
 
-    protected function renderSingleEventCard(Event $event, MarketplaceClient $marketplace): string
+    protected function renderEventGridTwoCols(Collection $events, MarketplaceClient $marketplace): string
+    {
+        $html = '';
+        foreach ($events->chunk(2) as $pair) {
+            $row = $pair->values();
+            $c1 = $this->renderSingleEventCard($row[0], $marketplace, '2_cols');
+            $c2 = isset($row[1]) ? $this->renderSingleEventCard($row[1], $marketplace, '2_cols') : '<td width="48%" valign="top" style="padding: 8px;"></td>';
+            $html .= <<<HTML
+            <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom: 4px;">
+                <tr>
+                    {$c1}
+                    <td width="4%"></td>
+                    {$c2}
+                </tr>
+            </table>
+            HTML;
+        }
+        return $html;
+    }
+
+    protected function renderEventGridThreeCols(Collection $events, MarketplaceClient $marketplace): string
+    {
+        $html = '';
+        foreach ($events->chunk(3) as $trio) {
+            $row = $trio->values();
+            $c1 = $this->renderSingleEventCard($row[0], $marketplace, '3_cols');
+            $c2 = isset($row[1]) ? $this->renderSingleEventCard($row[1], $marketplace, '3_cols') : '<td width="32%" valign="top" style="padding: 6px;"></td>';
+            $c3 = isset($row[2]) ? $this->renderSingleEventCard($row[2], $marketplace, '3_cols') : '<td width="32%" valign="top" style="padding: 6px;"></td>';
+            $html .= <<<HTML
+            <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom: 4px;">
+                <tr>
+                    {$c1}
+                    <td width="2%"></td>
+                    {$c2}
+                    <td width="2%"></td>
+                    {$c3}
+                </tr>
+            </table>
+            HTML;
+        }
+        return $html;
+    }
+
+    /**
+     * Hero variant: full-width landscape (hero_image preferred), date strip
+     * over the bottom of the image, title/venue/CTA below. Email-safe — no
+     * position:absolute; the "overlay" is a real <td> with brand-red bg
+     * sitting on the next row, painted to look attached to the image.
+     */
+    protected function renderHeroEventRow(Event $event, MarketplaceClient $marketplace): string
     {
         $name = e($this->eventTitle($event));
         $time = $this->eventStartTime($event);
-        // Use mode-aware label so range/multi_day events render correctly;
-        // append start_time only for single_day events (range/multi already
-        // imply a span — adding a single ", HH:mm" would be misleading).
+        $label = $event->displayDateLabel();
+        $isSingleDay = ($event->duration_mode ?? 'single_day') === 'single_day' || $event->duration_mode === null;
+        $dateStr = $label ? $label . ($isSingleDay && $time ? ", {$time}" : '') : '';
+        $date = e($dateStr);
+
+        $venueName = $this->eventVenueName($event);
+        $venueCity = $this->eventVenueCity($event);
+        $venue = e(trim($venueName . ($venueName && $venueCity ? ', ' : '') . $venueCity));
+
+        // Hero variant prefers the landscape hero_image. Falls back through
+        // homepage/featured/poster — same order eventImage('hero') already
+        // uses internally.
+        $imageRaw = $this->eventImage($event, 'hero');
+        $image = $imageRaw !== '' ? $this->resolveImageUrl($imageRaw, $marketplace) : '';
+        $eventUrl = e($this->getEventUrl($event, $marketplace));
+
+        $priceLabel = $this->getEventPrice($event, $marketplace);
+        $ctaText = $priceLabel !== '' ? 'De la ' . e($priceLabel) : 'Detalii';
+
+        $imageHtml = '';
+        if ($image) {
+            // Landscape — taller than the column cards so it acts as a real
+            // hero. 280px keeps the email bounded; object-fit:cover crops
+            // safely for arbitrary aspect ratios.
+            $imageHtml = '<tr><td style="font-size:0;line-height:0;"><img src="' . e($image) . '" width="100%" style="display:block;width:100%;height:280px;object-fit:cover;border-radius:10px 10px 0 0;" alt="' . $name . '" /></td></tr>';
+        }
+
+        $dateStrip = $date !== ''
+            ? '<tr><td style="background:#A51C30;color:#ffffff;font-family:Arial,Helvetica,sans-serif;font-size:13px;font-weight:700;padding:8px 14px;letter-spacing:0.3px;">' . $date . '</td></tr>'
+            : '';
+
+        return <<<HTML
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom: 6px;">
+            <tr>
+                <td valign="top" style="padding: 8px;">
+                    <a href="{$eventUrl}" target="_blank" style="display:block;color:inherit;text-decoration:none;">
+                        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;background:#ffffff;">
+                            {$imageHtml}
+                            {$dateStrip}
+                            <tr><td style="padding:14px 16px;font-family:Arial,Helvetica,sans-serif;">
+                                <p style="font-size:18px;font-weight:bold;margin:0 0 6px;color:#1f2937;font-family:Arial,Helvetica,sans-serif;">{$name}</p>
+                                <p style="font-size:13px;color:#6b7280;margin:0 0 12px;font-family:Arial,Helvetica,sans-serif;">{$venue}</p>
+                                <span style="display:inline-block;padding:9px 18px;background:#A51C30;color:#fff;border-radius:4px;font-size:13px;font-family:Arial,Helvetica,sans-serif;font-weight:600;">{$ctaText}</span>
+                            </td></tr>
+                        </table>
+                    </a>
+                </td>
+            </tr>
+        </table>
+        HTML;
+    }
+
+    /**
+     * Grid card (2-col or 3-col). Date is rendered as a strip directly over
+     * the bottom edge of the poster — variant A, email-safe (no
+     * position:absolute). Outlook + Gmail + Apple Mail all paint this
+     * correctly. The poster height differs by column count:
+     *   2_cols → 355px (full vertical poster on a wide column)
+     *   3_cols → 255px (still poster aspect, narrower column)
+     */
+    protected function renderSingleEventCard(Event $event, MarketplaceClient $marketplace, string $variant = '2_cols'): string
+    {
+        $name = e($this->eventTitle($event));
+        $time = $this->eventStartTime($event);
         $label = $event->displayDateLabel();
         $isSingleDay = ($event->duration_mode ?? 'single_day') === 'single_day' || $event->duration_mode === null;
         $dateStr = $label ? $label . ($isSingleDay && $time ? ", {$time}" : '') : '';
@@ -418,33 +549,45 @@ class NewsletterRenderer
         $image = $imageRaw !== '' ? $this->resolveImageUrl($imageRaw, $marketplace) : '';
         $eventUrl = e($this->getEventUrl($event, $marketplace));
 
-        // Use the shared helper so we honor sale_price_cents > 0 and fall
-        // back to price_cents. The TicketType $price accessor returns
-        // null when no sale is active, which (after number_format) was
-        // rendering as the bogus "De la 0 RON" pill on every card.
         $priceLabel = $this->getEventPrice($event, $marketplace);
         $ctaText = $priceLabel !== '' ? 'De la ' . e($priceLabel) : 'Detalii';
 
+        // Variant geometry. The outer <td> width controls grid placement;
+        // the inner img height + font sizes scale with the column count.
+        $variantCfg = $variant === '3_cols'
+            ? ['cell_width' => '32%', 'cell_padding' => '6px', 'poster_h' => 255, 'title_size' => 14, 'meta_size' => 12, 'cta_size' => 12]
+            : ['cell_width' => '48%', 'cell_padding' => '8px', 'poster_h' => 355, 'title_size' => 15, 'meta_size' => 13, 'cta_size' => 13];
+
+        $cellWidth = $variantCfg['cell_width'];
+        $cellPadding = $variantCfg['cell_padding'];
+        $posterH = $variantCfg['poster_h'];
+        $titleSize = $variantCfg['title_size'];
+        $metaSize = $variantCfg['meta_size'];
+        $ctaSize = $variantCfg['cta_size'];
+
         $imageHtml = '';
         if ($image) {
-            $imageHtml = '<tr><td><img src="' . e($image) . '" width="100%" style="display:block;border-radius:8px 8px 0 0;height:160px;object-fit:cover;" alt="' . $name . '" /></td></tr>';
+            // font-size:0 / line-height:0 on the wrapping td kills the rogue
+            // 3-4px gap some clients add under inline-block images.
+            $imageHtml = '<tr><td style="font-size:0;line-height:0;"><img src="' . e($image) . '" width="100%" style="display:block;width:100%;height:' . $posterH . 'px;object-fit:cover;border-radius:8px 8px 0 0;" alt="' . $name . '" /></td></tr>';
         }
 
-        // Whole card is one clickable target — admin asked the entire
-        // card to be a link, not just the price pill. Color:inherit +
-        // text-decoration:none on the wrapping <a> keeps the inner
-        // typography intact; the visual "button" is just a styled span
-        // sitting inside the same anchor.
+        // Date strip — sits directly under the poster, painted in brand red
+        // with white text. Reads as if it were overlaid on the image.
+        $dateStrip = $date !== ''
+            ? '<tr><td style="background:#A51C30;color:#ffffff;font-family:Arial,Helvetica,sans-serif;font-size:12px;font-weight:700;padding:6px 12px;letter-spacing:0.3px;">' . $date . '</td></tr>'
+            : '';
+
         return <<<HTML
-        <td width="48%" valign="top" style="padding: 8px;">
+        <td width="{$cellWidth}" valign="top" style="padding: {$cellPadding};">
             <a href="{$eventUrl}" target="_blank" style="display:block;color:inherit;text-decoration:none;">
                 <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;background:#ffffff;">
                     {$imageHtml}
+                    {$dateStrip}
                     <tr><td style="padding:12px;font-family:Arial, Helvetica, sans-serif;">
-                        <p style="font-size:15px;font-weight:bold;margin:0 0 4px;color:#1f2937;font-family:Arial, Helvetica, sans-serif;">{$name}</p>
-                        <p style="font-size:13px;color:#6b7280;margin:0 0 4px;font-family:Arial, Helvetica, sans-serif;">{$date}</p>
-                        <p style="font-size:13px;color:#6b7280;margin:0 0 10px;font-family:Arial, Helvetica, sans-serif;">{$venue}</p>
-                        <span style="display:inline-block;padding:8px 16px;background:#A51C30;color:#fff;border-radius:4px;font-size:13px;font-family:Arial, Helvetica, sans-serif;font-weight:600;">{$ctaText}</span>
+                        <p style="font-size:{$titleSize}px;font-weight:bold;margin:0 0 4px;color:#1f2937;font-family:Arial, Helvetica, sans-serif;">{$name}</p>
+                        <p style="font-size:{$metaSize}px;color:#6b7280;margin:0 0 10px;font-family:Arial, Helvetica, sans-serif;">{$venue}</p>
+                        <span style="display:inline-block;padding:8px 16px;background:#A51C30;color:#fff;border-radius:4px;font-size:{$ctaSize}px;font-family:Arial, Helvetica, sans-serif;font-weight:600;">{$ctaText}</span>
                     </td></tr>
                 </table>
             </a>
@@ -563,7 +706,7 @@ class NewsletterRenderer
             <table role="presentation" width="600" border="0" cellpadding="0" cellspacing="0" style="width:600px; max-width:600px; margin:0 auto;">
                 <tr>
                     <td align="center" style="padding:14px 30px 0px 30px; font-family:Arial,Helvetica,sans-serif; font-size:12px; line-height:18px; color:#a8a8a8;">
-                        {$name} îți recomandă concertele care merită trăite live.
+                        {$name} îți recomandă evenimentele care merită trăite live.
                     </td>
                 </tr>
             </table>
