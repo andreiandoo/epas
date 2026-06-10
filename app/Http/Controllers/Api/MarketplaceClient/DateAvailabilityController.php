@@ -378,6 +378,26 @@ class DateAvailabilityController extends BaseController
             }
         }
 
+        // C2: categorii custom (sortate) pentru grupare pe pagina publica.
+        // Numele poate fi multi-locale (object) sau string simplu → aplicam locale.
+        $venueConfigAll = is_array($event->venue_config ?? null) ? $event->venue_config : [];
+        $rawCategories = is_array($venueConfigAll['ticket_categories'] ?? null) ? $venueConfigAll['ticket_categories'] : [];
+        usort($rawCategories, function ($a, $b) {
+            return (int) ($a['sort_order'] ?? 0) <=> (int) ($b['sort_order'] ?? 0);
+        });
+        $ticketCategories = array_map(function ($c) use ($publicLocale) {
+            $name = $c['name'] ?? '';
+            // Suport name = string sau {ro/hu/en/...} cu fallback la RO
+            if (is_array($name)) {
+                $name = $name[$publicLocale] ?? $name['ro'] ?? $name['en'] ?? (reset($name) ?: '');
+            }
+            return [
+                'id' => (string) ($c['id'] ?? ''),
+                'name' => (string) $name,
+                'sort_order' => (int) ($c['sort_order'] ?? 0),
+            ];
+        }, $rawCategories);
+
         return response()->json([
             'date' => $dateStr,
             'is_open' => true,
@@ -385,6 +405,7 @@ class DateAvailabilityController extends BaseController
             'operating_hours' => $operatingHours,
             'season' => $season ? ['name' => $season['name'] ?? null] : null,
             'commission' => $commission,
+            'ticket_categories' => $ticketCategories,
             'ticket_types' => $ticketData,
         ]);
     }

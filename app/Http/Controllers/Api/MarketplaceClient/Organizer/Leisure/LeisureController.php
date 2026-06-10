@@ -87,6 +87,18 @@ class LeisureController extends BaseController
             ];
         }
 
+        // C2: categorii custom pentru gruparea tipurilor de bilete (afișare pe
+        // pagina publica + organizator panel). Stocate in venue_config.ticket_categories
+        // ca [{id, name, sort_order}]. Sortate after sort_order asc, name asc.
+        $venueConfig = is_array($eventModel->venue_config ?? null) ? $eventModel->venue_config : [];
+        $ticketCategories = is_array($venueConfig['ticket_categories'] ?? null) ? $venueConfig['ticket_categories'] : [];
+        usort($ticketCategories, function ($a, $b) {
+            $sa = (int) ($a['sort_order'] ?? 0);
+            $sb = (int) ($b['sort_order'] ?? 0);
+            if ($sa !== $sb) return $sa <=> $sb;
+            return strcmp((string) ($a['name'] ?? ''), (string) ($b['name'] ?? ''));
+        });
+
         return $this->success([
             'event' => [
                 'id' => $eventModel->id,
@@ -100,6 +112,7 @@ class LeisureController extends BaseController
             ] : null,
             'commission' => $commission,
             'issuers' => $issuers,
+            'ticket_categories' => $ticketCategories,
             'ticket_types' => $ticketTypes->map(function (TicketType $tt) use ($ticketTypes) {
                 $variants = [];
                 $rawVariants = is_array($tt->meta) ? ($tt->meta['variants'] ?? null) : null;
@@ -353,6 +366,8 @@ class LeisureController extends BaseController
             'quick_stats', 'gallery', 'videos', 'nearby_hotels',
             'faqs', 'bundle_discounts',
             'sections', 'section_order',
+            // C2: categorii custom de afișare pentru tipurile de bilete (id, name, sort_order)
+            'ticket_categories',
         ];
 
         $merged = $current;
@@ -1608,6 +1623,14 @@ class LeisureController extends BaseController
         if (!$tt) return $this->error('Product not found', 404);
 
         $data = $this->validateProduct($request, $tt->id);
+
+        // C2: permite resetarea explicită a ticket_group la NULL (atunci când
+        // utilizatorul alege "— Alte produse —" în modal). validateProduct
+        // filtrează NULL prin array_filter → re-aplicam manual câmpurile
+        // nullable care vin cu null explicit din payload.
+        if ($request->exists('ticket_group')) {
+            $data['ticket_group'] = $request->input('ticket_group') ?: null;
+        }
 
         $meta = $this->extractProductMeta($request);
         if ($meta !== null) {
