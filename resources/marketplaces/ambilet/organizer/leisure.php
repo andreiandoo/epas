@@ -2135,9 +2135,15 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         hydrateRepeater('trails-list', currentVenueConfig.trails, makeTrailRow);
         hydrateRepeater('gallery-list', currentVenueConfig.gallery, makeGalleryRow);
         hydrateRepeater('videos-list', currentVenueConfig.videos, makeVideoRow);
-        hydrateRepeater('pois-list', currentVenueConfig.map_pois, makePoiRow);
+        // Fix: Filament stochează POI-urile sub `map_config.pois` (nested), organizer
+        // citea/scria `map_pois` (top-level) → POI-urile dispăreau între cele 2 paneluri.
+        hydrateRepeater('pois-list', (currentVenueConfig.map_config && currentVenueConfig.map_config.pois) || currentVenueConfig.map_pois, makePoiRow);
         hydrateRepeater('hotels-list', currentVenueConfig.nearby_hotels, makeHotelRow);
-        hydrateRepeater('flora-list', currentVenueConfig.flora_species, makeFloraRow);
+        // Fix bug raportat: organizer panel citea/scria `flora_species` dar Filament + pagina
+        // publică folosesc `flora`. Datele salvate prin organizer panel ajungeau în câmp diferit
+        // → speciile dispăreau pe public. Acum citim `flora` (cu fallback la `flora_species`
+        // pentru date legacy care n-au fost migrate).
+        hydrateRepeater('flora-list', currentVenueConfig.flora || currentVenueConfig.flora_species, makeFloraRow);
         hydrateRepeater('seasons-list', currentVenueConfig.seasons, makeSeasonRow);
         hydrateRepeater('getting-list', currentVenueConfig.getting_there, makeGettingRow);
     }
@@ -2237,15 +2243,18 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
     }
 
     function makeAttractionRow(d) {
+        // Bug-fix: Filament + pagina publică folosesc `name`; organizer panel salva `title`.
+        // Acum citim/salvăm `name` (cu fallback la `title` pentru date legacy).
+        const attractionName = d.name || d.title || '';
         return repWrap(`
             <div class="grid grid-cols-1 md:grid-cols-6 gap-2 items-start">
                 <input type="text" data-rep="icon" maxlength="6" class="md:col-span-1 px-3 py-2 border border-border rounded-lg bg-white" placeholder="🏞️" value="${escapeHtml(d.icon || '')}">
-                <input type="text" data-rep="title" class="md:col-span-5 px-3 py-2 border border-border rounded-lg bg-white" placeholder="Titlu atracție" value="${escapeHtml(d.title || '')}">
+                <input type="text" data-rep="name" class="md:col-span-5 px-3 py-2 border border-border rounded-lg bg-white" placeholder="Titlu atracție" value="${escapeHtml(attractionName)}">
                 <input type="url" data-rep="image" class="md:col-span-6 px-3 py-2 border border-border rounded-lg bg-white" placeholder="URL imagine (opțional)" value="${escapeHtml(d.image || '')}">
                 <textarea data-rep="description" rows="2" class="md:col-span-6 px-3 py-2 border border-border rounded-lg bg-white" placeholder="Descriere scurtă">${escapeHtml(d.description || '')}</textarea>
             </div>
             ${makeTranslationFields(d, [
-                {key: 'title', label: 'Titlu'},
+                {key: 'name', label: 'Titlu'},
                 {key: 'description', label: 'Descriere', type: 'textarea'},
             ])}
             <div class="text-right mt-2"><button type="button" data-rm class="text-xs text-rose-600 hover:bg-rose-100 px-2 py-1 rounded">🗑 Șterge</button></div>
@@ -2389,6 +2398,9 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 <p class="text-xs font-semibold text-muted uppercase tracking-wider mb-2">Program pe zile</p>
                 <div class="space-y-2 season-days">${scheduleRows}</div>
             </div>
+            ${makeTranslationFields(d, [
+                {key: 'name', label: 'Nume sezon'},
+            ])}
             <div class="text-right"><button type="button" data-rm class="text-xs text-rose-600 hover:bg-rose-100 px-2 py-1 rounded">🗑 Șterge sezon</button></div>
         `;
         const rm = wrap.querySelector('[data-rm]');
@@ -2422,7 +2434,13 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 const key = el.dataset.rep;
                 let val = el.value;
                 if (typeof val === 'string') val = val.trim();
-                if (val !== '' && val !== null && val !== undefined) item[key] = val;
+                if (val === '' || val === null || val === undefined) return;
+                // Suport chei nested (translations.hu.name) prin setNested
+                if (key.indexOf('.') !== -1) {
+                    setNested(item, key, val);
+                } else {
+                    item[key] = val;
+                }
             });
             // schedule_list: agreggate by data-day-key + data-day-field
             const dayInputs = row.querySelectorAll('[data-day-key]');
@@ -2545,9 +2563,12 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         payload.trails = collectRepeater('trails-list');
         payload.gallery = collectRepeater('gallery-list');
         payload.videos = collectRepeater('videos-list');
-        payload.map_pois = collectRepeater('pois-list');
+        // Bug-fix: salvăm nested la map_config.pois (sincron cu Filament + pagina publică)
+        if (!payload.map_config) payload.map_config = {};
+        payload.map_config.pois = collectRepeater('pois-list');
         payload.nearby_hotels = collectRepeater('hotels-list');
-        payload.flora_species = collectRepeater('flora-list');
+        // Bug-fix: salvăm la cheia corectă `flora` (sincron cu Filament + pagina publică)
+        payload.flora = collectRepeater('flora-list');
         payload.getting_there = collectRepeater('getting-list');
         payload.seasons = collectSeasons();
 
