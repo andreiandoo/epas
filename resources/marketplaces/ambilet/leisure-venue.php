@@ -1202,9 +1202,28 @@ foreach (['slug', '_route', '_path'] as $_drop) {
         </div>
         <div class="grid md:grid-cols-<?= min(count($seasons), 2) ?> gap-6">
             <?php
-            $dayLabels = ['mon'=>'Luni','tue'=>'Marți','wed'=>'Miercuri','thu'=>'Joi','fri'=>'Vineri','sat'=>'Sâmbătă','sun'=>'Duminică'];
+            // Etichete zile per locale (RO/HU/EN). Pentru alte locale → fallback RO.
+            $dayLabelsByLocale = [
+                'ro' => ['mon'=>'Luni','tue'=>'Marți','wed'=>'Miercuri','thu'=>'Joi','fri'=>'Vineri','sat'=>'Sâmbătă','sun'=>'Duminică'],
+                'hu' => ['mon'=>'Hétfő','tue'=>'Kedd','wed'=>'Szerda','thu'=>'Csütörtök','fri'=>'Péntek','sat'=>'Szombat','sun'=>'Vasárnap'],
+                'en' => ['mon'=>'Monday','tue'=>'Tuesday','wed'=>'Wednesday','thu'=>'Thursday','fri'=>'Friday','sat'=>'Saturday','sun'=>'Sunday'],
+            ];
+            $closedLabelByLocale = ['ro' => 'Închis', 'hu' => 'Zárva', 'en' => 'Closed'];
+            $dayLabels   = $dayLabelsByLocale[$publicLocale] ?? $dayLabelsByLocale['ro'];
+            $closedLabel = $closedLabelByLocale[$publicLocale] ?? $closedLabelByLocale['ro'];
             foreach ($seasons as $idx => $season):
-                $schedule = $season['schedule'] ?? [];
+                // Schema actuală: schedule_list (array de {day, open, close})
+                // Schema legacy: schedule (object cu chei zile)
+                $schedule = [];
+                if (is_array($season['schedule_list'] ?? null)) {
+                    foreach ($season['schedule_list'] as $entry) {
+                        if (is_array($entry) && !empty($entry['day'])) {
+                            $schedule[$entry['day']] = ['open' => $entry['open'] ?? null, 'close' => $entry['close'] ?? null];
+                        }
+                    }
+                } elseif (is_array($season['schedule'] ?? null)) {
+                    $schedule = $season['schedule'];
+                }
             ?>
             <div class="bg-white rounded-3xl p-8 <?= $idx === 0 ? 'border-2 border-forest-500 relative' : 'border-2 border-forest-100' ?>">
                 <?php if ($idx === 0): ?>
@@ -1232,7 +1251,7 @@ foreach (['slug', '_route', '_path'] as $_drop) {
                         <?php if ($hrs && !empty($hrs['open'])): ?>
                         <span class="text-ink font-semibold"><?= htmlspecialchars($hrs['open']) ?> – <?= htmlspecialchars($hrs['close'] ?? '') ?></span>
                         <?php else: ?>
-                        <span class="text-red-600 font-semibold">Închis</span>
+                        <span class="text-red-600 font-semibold"><?= htmlspecialchars($closedLabel) ?></span>
                         <?php endif; ?>
                     </div>
                     <?php endforeach; ?>

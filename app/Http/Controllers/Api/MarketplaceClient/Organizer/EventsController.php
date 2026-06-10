@@ -4251,16 +4251,13 @@ class EventsController extends BaseController
         }
 
         $this->ensureVenueGatesTable();
-        // Bug-fix: filtrare pe organizer. Portile cu marketplace_organizer_id=NULL
-        // sunt "legacy / shared" si raman vizibile pentru toti (backward compat).
-        // Portile create dupa migratia 2026_06_03_120000 au organizer-ul setat →
-        // vizibile DOAR pentru el. Daca un alt organizer foloseste acelasi venue,
-        // nu mai vede portile altora.
+        // Filtrare strictă pe organizer (vezi migratia 2026_06_10_120000 care a
+        // backfilled portile legacy cu organizer_id-ul venue-urilor cu un singur
+        // owner). Doar portile DEZNT setate (NULL pe venue partajat de multi
+        // organizatori) raman invizibile pentru toți — utilizatorul si le poate
+        // recrea explicit dacă vrea să le foloseasca.
         $gates = $venue->gates()
-            ->where(function ($q) use ($organizer) {
-                $q->whereNull('marketplace_organizer_id')
-                  ->orWhere('marketplace_organizer_id', $organizer->id);
-            })
+            ->where('marketplace_organizer_id', $organizer->id)
             ->orderBy('sort_order')
             ->get();
 
