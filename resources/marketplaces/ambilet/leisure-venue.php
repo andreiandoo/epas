@@ -376,6 +376,10 @@ require_once __DIR__ . '/includes/head.php';
                 'trail_starts_from' => 'Pornește din:',
                 'closed_today' => 'Închis astăzi',
                 'check_schedule' => 'Verificați programul',
+                'book_access' => 'Rezervă accesul →',
+                'book_access_short' => 'Rezervă acces →',
+                'open_in_maps' => 'Deschide în Google Maps',
+                'send_whatsapp' => 'Trimite pe WhatsApp',
             ],
             'hu' => [
                 'step1' => '1./2. lépés',
@@ -448,6 +452,10 @@ require_once __DIR__ . '/includes/head.php';
                 'trail_starts_from' => 'Indul innen:',
                 'closed_today' => 'Ma zárva',
                 'check_schedule' => 'Ellenőrizze a nyitvatartást',
+                'book_access' => 'Foglalj belépőt →',
+                'book_access_short' => 'Foglalás →',
+                'open_in_maps' => 'Megnyitás Google Térképen',
+                'send_whatsapp' => 'Üzenet WhatsAppon',
             ],
             'en' => [
                 'step1' => 'Step 1 of 2',
@@ -520,6 +528,10 @@ require_once __DIR__ . '/includes/head.php';
                 'trail_starts_from' => 'Starts from:',
                 'closed_today' => 'Closed today',
                 'check_schedule' => 'Check schedule',
+                'book_access' => 'Book access →',
+                'book_access_short' => 'Book →',
+                'open_in_maps' => 'Open in Google Maps',
+                'send_whatsapp' => 'Send via WhatsApp',
             ],
         ],
     ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
@@ -542,7 +554,7 @@ require_once __DIR__ . '/includes/head.php';
             <a href="#despre" class="px-4 py-1.5 text-white/80 hover:text-white text-sm font-medium transition-colors rounded-full hover:bg-white/10" data-i18n="nav_about">Despre</a>
             <a href="#cum-ajungi" class="px-4 py-1.5 text-white/80 hover:text-white text-sm font-medium transition-colors rounded-full hover:bg-white/10" data-i18n="nav_directions">Cum ajungi</a>
         </div>
-        <a href="#bilete" class="bg-white/15 backdrop-blur text-white px-4 py-2 rounded-full text-sm font-semibold hover:bg-white/25 transition-colors">Rezervă acces →</a>
+        <a href="#bilete" class="bg-white/15 backdrop-blur text-white px-4 py-2 rounded-full text-sm font-semibold hover:bg-white/25 transition-colors" data-i18n="book_access_short">Rezervă acces →</a>
     </div>
 </nav>
 
@@ -600,7 +612,7 @@ foreach (['slug', '_route', '_path'] as $_drop) {
             <?php endif; ?>
 
             <div class="flex flex-wrap items-center gap-4 mt-8">
-                <a href="#bilete" class="lv-btn bg-white text-forest-800 hover:bg-lake-50">Rezervă accesul →</a>
+                <a href="#bilete" class="lv-btn bg-white text-forest-800 hover:bg-lake-50" data-i18n="book_access">Rezervă accesul →</a>
                 <?php if (!empty($trails)): ?>
                 <a href="#trasee" class="lv-btn bg-transparent text-white border border-white/30 hover:bg-white/10" data-i18n="see_trails">Vezi traseele turistice</a>
                 <?php endif; ?>
@@ -752,49 +764,49 @@ foreach (['slug', '_route', '_path'] as $_drop) {
                     <p class="text-forest-700/70">Nu sunt bilete disponibile pentru această dată.</p>
                 </div>
 
-                <div x-show="selectedDate && !loadingTickets && accessTickets.length > 0" class="space-y-6">
+                <div x-show="selectedDate && !loadingTickets && accessTickets.length > 0" class="space-y-4">
                     <template x-for="(grp, gi) in accessTicketsGrouped" :key="grp.id">
-                        <div class="space-y-3">
+                        <div class="space-y-2">
                             <!-- Header categorie (ascuns daca name e gol → backward compat fara categorii) -->
-                            <h3 x-show="grp.name" class="font-display text-xl font-bold text-ink mt-2" x-text="grp.name"></h3>
+                            <h3 x-show="grp.name" class="font-display text-lg lg:text-xl font-bold text-ink mt-2 flex items-center gap-2">
+                                <span x-text="grp.name"></span>
+                                <span class="text-xs font-normal text-forest-700/50" x-text="'(' + grp.items.length + ')'"></span>
+                            </h3>
                             <template x-for="ticket in grp.items" :key="ticket.id">
-                        <div class="bg-white rounded-2xl p-5 lg:p-6 border-2 transition-all"
+                        <div class="bg-white rounded-xl p-3 lg:p-4 border-2 transition-all"
                              :class="ticket.qty > 0 ? 'border-forest-500 shadow-md' : 'border-transparent hover:border-forest-200'">
-                            <div class="flex items-start gap-4">
-                                <div class="w-12 h-12 lg:w-14 lg:h-14 rounded-2xl flex items-center justify-center flex-shrink-0 transition-colors"
+                            <div class="flex items-start gap-3">
+                                <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors"
                                      :class="ticket.qty > 0 ? 'bg-forest-600 text-white' : 'bg-forest-50 text-forest-700'">
-                                    <span class="text-2xl" x-text="ticket.icon || '🎟️'"></span>
+                                    <span class="text-xl" x-text="ticket.icon || '🎟️'"></span>
                                 </div>
                                 <div class="flex-1 min-w-0">
-                                    <div class="flex items-center gap-2 flex-wrap mb-1">
-                                        <h3 class="font-display text-lg lg:text-xl font-bold text-ink" x-text="ticket.name"></h3>
-                                        <span x-show="ticket.is_parking" class="lv-badge bg-lake-100 text-lake-800 text-xs">🅿️ Parcare inclusă</span>
-                                        <span x-show="ticket.service_category === 'package'" class="lv-badge bg-rose-100 text-rose-800 text-xs font-bold">🎁 PACHET</span>
-                                        <span x-show="ticket.package_savings > 0" class="lv-badge bg-emerald-100 text-emerald-800 text-xs font-bold">
-                                            <span data-i18n="savings_short">Economisești</span> <span x-text="parseFloat(ticket.package_savings).toFixed(2)"></span> RON
+                                    <div class="flex items-center gap-1.5 flex-wrap">
+                                        <h3 class="font-display text-base lg:text-lg font-bold text-ink leading-snug" x-text="ticket.name"></h3>
+                                        <span x-show="ticket.is_parking" class="lv-badge bg-lake-100 text-lake-800 text-[10px] !py-0.5">🅿️</span>
+                                        <span x-show="ticket.service_category === 'package'" class="lv-badge bg-rose-100 text-rose-800 text-[10px] font-bold !py-0.5">🎁</span>
+                                        <span x-show="ticket.package_savings > 0" class="lv-badge bg-emerald-100 text-emerald-800 text-[10px] font-bold !py-0.5">
+                                            -<span x-text="parseFloat(ticket.package_savings).toFixed(0)"></span> RON
                                         </span>
                                     </div>
-                                    <p x-show="ticket.description" class="text-sm text-forest-700/70 mb-3" x-text="ticket.description"></p>
-                                    <!-- Lista componentelor (pentru pachet) -->
-                                    <div x-show="ticket.service_category === 'package' && ticket.package_outputs && ticket.package_outputs.length > 0" class="mt-2 p-3 bg-rose-50 rounded-lg">
-                                        <p class="text-[10px] uppercase tracking-wider text-rose-700 font-bold mb-1.5" data-i18n="package_includes">Include în pachet</p>
-                                        <ul class="space-y-1">
+                                    <p x-show="ticket.description" class="text-xs text-forest-700/70 mt-0.5 line-clamp-2" x-text="ticket.description"></p>
+                                    <!-- Lista componentelor (pentru pachet) — compact -->
+                                    <div x-show="ticket.service_category === 'package' && ticket.package_outputs && ticket.package_outputs.length > 0" class="mt-1.5 p-2 bg-rose-50 rounded-lg text-xs">
+                                        <p class="text-[10px] uppercase tracking-wider text-rose-700 font-bold mb-1" data-i18n="package_includes">Include în pachet</p>
+                                        <ul class="space-y-0.5">
                                             <template x-for="comp in (ticket.package_outputs || [])" :key="comp.ticket_type_id + (comp.variant_id || '')">
-                                                <li class="text-sm text-rose-900 flex items-start gap-1.5">
+                                                <li class="text-rose-900 flex items-start gap-1">
                                                     <span class="text-rose-600">•</span>
-                                                    <span><strong x-text="comp.qty + '×'"></strong> <span x-text="comp.component_name"></span><span x-show="comp.variant_id" class="text-rose-700/70"> · <span x-text="comp.variant_id"></span></span></span>
+                                                    <span><strong x-text="comp.qty + '×'"></strong> <span x-text="comp.component_name"></span></span>
                                                 </li>
                                             </template>
                                         </ul>
-                                        <p x-show="ticket.package_components_sum > 0" class="mt-2 text-xs text-rose-700/80">
-                                            Valoare individuală: <s><span x-text="parseFloat(ticket.package_components_sum).toFixed(2)"></span> RON</s>
-                                        </p>
                                     </div>
-                                    <!-- Includes — pillule beneficii -->
-                                    <div x-show="ticket.includes && ticket.includes.length > 0" class="flex flex-wrap gap-1.5 mt-2">
+                                    <!-- Includes — pillule beneficii, mai compact -->
+                                    <div x-show="ticket.includes && ticket.includes.length > 0" class="flex flex-wrap gap-1 mt-1.5">
                                         <template x-for="inc in ticket.includes" :key="inc">
-                                            <span class="inline-flex items-center gap-1 text-xs px-2 py-1 bg-forest-50 text-forest-800 rounded-md">
-                                                <svg class="w-3 h-3 text-forest-500" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                                            <span class="inline-flex items-center gap-0.5 text-[11px] px-1.5 py-0.5 bg-forest-50 text-forest-800 rounded">
+                                                <svg class="w-2.5 h-2.5 text-forest-500" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
                                                 <span x-text="inc"></span>
                                             </span>
                                         </template>
@@ -841,19 +853,18 @@ foreach (['slug', '_route', '_path'] as $_drop) {
                                     <span class="text-xs text-forest-700/70" x-text="physicalAvailableLabel(ticket)"></span>
                                 </div>
                             </div>
-                            <div class="flex items-center justify-between pt-4 mt-4 border-t border-forest-100">
+                            <div class="flex items-center justify-between pt-2.5 mt-2.5 border-t border-forest-100">
                                 <div>
-                                    <p class="font-display text-2xl lg:text-3xl font-bold text-ink leading-none">
+                                    <p class="font-display text-xl lg:text-2xl font-bold text-ink leading-none">
                                         <span x-text="displayPriceFor(ticket).toFixed(2)"></span>
-                                        <span class="text-sm font-medium text-forest-700/60" x-text="ticket.currency || 'RON'"></span>
+                                        <span class="text-xs font-medium text-forest-700/60" x-text="ticket.currency || 'RON'"></span>
                                     </p>
-                                    <p x-show="ticket.unit_label" class="text-xs text-forest-700/60 mt-1" x-text="ticket.unit_label"></p>
-                                    <p x-show="!ticket.unit_label && ticket.requires_vehicle_info" class="text-xs text-forest-700/60 mt-1">Necesită nr. înmatriculare</p>
+                                    <p x-show="ticket.unit_label" class="text-[10px] text-forest-700/60 mt-0.5" x-text="ticket.unit_label"></p>
                                 </div>
-                                <div class="flex items-center gap-3">
-                                    <button @click="decrementTicket(ticket)" :disabled="qtyForTicket(ticket) === 0" class="lv-qty-btn">−</button>
-                                    <span class="w-6 text-center font-bold text-lg text-ink" x-text="qtyForTicket(ticket)"></span>
-                                    <button @click="incrementTicket(ticket)" :disabled="ticket.available !== null && qtyForTicket(ticket) >= ticket.available" class="lv-qty-btn bg-forest-700 text-white border-forest-700 hover:bg-forest-800 hover:border-forest-800">+</button>
+                                <div class="flex items-center gap-2">
+                                    <button @click="decrementTicket(ticket)" :disabled="qtyForTicket(ticket) === 0" class="lv-qty-btn !w-8 !h-8 !text-base">−</button>
+                                    <span class="w-6 text-center font-bold text-base text-ink" x-text="qtyForTicket(ticket)"></span>
+                                    <button @click="incrementTicket(ticket)" :disabled="ticket.available !== null && qtyForTicket(ticket) >= ticket.available" class="lv-qty-btn !w-8 !h-8 !text-base bg-forest-700 text-white border-forest-700 hover:bg-forest-800 hover:border-forest-800">+</button>
                                 </div>
                             </div>
                             <!-- Add-ons (apar doar dacă ticket are cantitate > 0) -->
@@ -1199,7 +1210,18 @@ foreach (['slug', '_route', '_path'] as $_drop) {
                 <?php if ($idx === 0): ?>
                 <span class="absolute -top-3 left-8 lv-badge bg-forest-700 text-white">☀️ Activ</span>
                 <?php endif; ?>
-                <h3 class="font-display text-2xl font-bold text-ink mb-1"><?= htmlspecialchars($season['name'] ?? 'Sezon') ?></h3>
+                <?php
+                // Traduceri nume sezon: prefera translations[locale].name → name[locale] → name (string)
+                $sName = '';
+                if (!empty($season['translations'][$publicLocale]['name'])) {
+                    $sName = $season['translations'][$publicLocale]['name'];
+                } elseif (is_array($season['name'] ?? null)) {
+                    $sName = $season['name'][$publicLocale] ?? $season['name']['ro'] ?? '';
+                } else {
+                    $sName = $season['name'] ?? 'Sezon';
+                }
+                ?>
+                <h3 class="font-display text-2xl font-bold text-ink mb-1"><?= htmlspecialchars($sName ?: 'Sezon') ?></h3>
                 <?php if (!empty($season['start']) && !empty($season['end'])): ?>
                 <p class="text-sm text-forest-700/60 mb-6"><?= htmlspecialchars($season['start']) ?> – <?= htmlspecialchars($season['end']) ?></p>
                 <?php endif; ?>
@@ -1258,7 +1280,7 @@ foreach (['slug', '_route', '_path'] as $_drop) {
             <?php if ($directionsUrl): ?>
             <a href="<?= htmlspecialchars($directionsUrl) ?>" target="_blank" rel="noopener" class="lv-btn lv-btn-primary">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/></svg>
-                Deschide în Google Maps
+                <span data-i18n="open_in_maps">Deschide în Google Maps</span>
             </a>
             <?php endif; ?>
             <?php if ($contactPhone):
@@ -1268,7 +1290,7 @@ foreach (['slug', '_route', '_path'] as $_drop) {
             ?>
             <a href="https://wa.me/<?= $waNumber ?>?text=<?= $waMessage ?>" target="_blank" rel="noopener" class="lv-btn lv-btn-secondary">
                 <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-                Trimite pe WhatsApp
+                <span data-i18n="send_whatsapp">Trimite pe WhatsApp</span>
             </a>
             <?php endif; ?>
         </div>
@@ -1363,7 +1385,7 @@ foreach (['slug', '_route', '_path'] as $_drop) {
                 <div class="w-10 h-10 bg-lake-400 rounded-xl flex items-center justify-center flex-shrink-0 font-bold text-forest-900" x-text="cartCount"></div>
                 <div class="text-left min-w-0">
                     <p class="font-bold text-sm" x-text="cartCount + ' ' + (cartCount === 1 ? t('tickets_selected_one') : t('tickets_selected_many'))"></p>
-                    <p class="text-xs text-white/60 truncate" x-text="selectedDate ? 'Pentru ' + formatDate(selectedDate) : 'Alege data'"></p>
+                    <p class="text-xs text-white/60 truncate" x-text="selectedDate ? (t('cart_for') + ' ' + formatDate(selectedDate)) : t('choose_date')"></p>
                 </div>
             </div>
             <div class="text-right flex-shrink-0">
@@ -1948,7 +1970,10 @@ function reservationPage() {
         formatDate(d) {
             if (!d) return '';
             const date = new Date(d + 'T00:00:00');
-            return date.toLocaleDateString('ro-RO', { weekday: 'long', day: 'numeric', month: 'long' });
+            // Mapare locale → cod browser pentru toLocaleDateString
+            const localeMap = { ro: 'ro-RO', hu: 'hu-HU', en: 'en-GB' };
+            const loc = localeMap[PUBLIC_LOCALE] || 'ro-RO';
+            return date.toLocaleDateString(loc, { weekday: 'long', day: 'numeric', month: 'long' });
         },
         formatDuration(min) {
             if (!min) return '';
@@ -1983,9 +2008,17 @@ function reservationPage() {
             if (seasons.length === 0) return t('check_schedule') || 'Verificați programul';
             const today = new Date().toISOString().slice(5, 10); // MM-DD
             const dayKey = ['sun','mon','tue','wed','thu','fri','sat'][new Date().getDay()];
-            const seasonName = (s) => (typeof s.name === 'string'
-                ? s.name
-                : (s.name?.[PUBLIC_LOCALE] || s.name?.ro || ''));
+            // Suport 2 stocări: season.translations.hu/en.name (Filament) SAU
+            // season.name = {ro,hu,en} (legacy) SAU string simplu RO.
+            const seasonName = (s) => {
+                if (s?.translations && s.translations[PUBLIC_LOCALE]?.name) {
+                    return s.translations[PUBLIC_LOCALE].name;
+                }
+                if (typeof s.name === 'object' && s.name) {
+                    return s.name[PUBLIC_LOCALE] || s.name.ro || s.name.en || '';
+                }
+                return s?.name || '';
+            };
             for (const s of seasons) {
                 const start = s.start || '01-01', end = s.end || '12-31';
                 const inSeason = start <= end ? (today >= start && today <= end) : (today >= start || today <= end);

@@ -1676,6 +1676,13 @@ class EventResource extends Resource
                                                                 ->placeholder('18:30')
                                                                 ->helperText($t('Vânzarea online se blochează după această oră', 'Online sales blocked after this time')),
                                                         ]),
+                                                        // 🌐 Traduceri opt-in nume sezon HU + EN
+                                                        SC\Fieldset::make('🌐 ' . $t('Traduceri nume sezon (HU + EN)', 'Season name translations (HU + EN)'))
+                                                            ->columns(2)
+                                                            ->schema([
+                                                                Forms\Components\TextInput::make('translations.hu.name')->label('🇭🇺 ' . $t('Nume (HU)', 'Name (HU)')),
+                                                                Forms\Components\TextInput::make('translations.en.name')->label('🇬🇧 Name (EN)'),
+                                                            ]),
                                                         Forms\Components\Repeater::make('schedule_list')
                                                             ->label($t('Program pe zile', 'Daily schedule'))
                                                             ->schema([

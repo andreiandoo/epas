@@ -323,6 +323,7 @@ class DateAvailabilityController extends BaseController
                 'name' => $name,
                 'description' => $description,
                 'group' => $tt->ticket_group,
+                'ticket_group' => $tt->ticket_group,
                 'base_price' => (float) ($tt->price_max ?? $tt->price ?? 0),
                 'effective_price' => $effectivePrice,
                 'currency' => $tt->currency ?? 'RON',
