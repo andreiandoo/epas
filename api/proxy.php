@@ -711,6 +711,8 @@ switch ($action) {
         }
         $params = [];
         if (isset($_GET['preview'])) $params['preview'] = $_GET['preview'];
+        // B7: forward locale pentru evenimentele leisure_venue (translate-uri Event)
+        if (isset($_GET['lang'])) $params['lang'] = $_GET['lang'];
         $endpoint = '/events/' . urlencode($slug) . ($params ? '?' . http_build_query($params) : '');
         break;
 
@@ -738,6 +740,8 @@ switch ($action) {
         if (isset($_GET['month'])) $params['month'] = $_GET['month'];
         // Forward preview flag pentru evenimente draft (is_published=false)
         if (isset($_GET['preview'])) $params['preview'] = $_GET['preview'];
+        // C2/B1: forward locale (lang) pentru randare multi-limbă a traducerilor
+        if (isset($_GET['lang'])) $params['lang'] = $_GET['lang'];
         $endpoint = '/marketplace-events/' . urlencode($slug) . '/date-availability?' . http_build_query($params);
         break;
 

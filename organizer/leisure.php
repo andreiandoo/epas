@@ -1241,9 +1241,13 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             productsCache = resProducts.data?.products || [];
             categoriesCache = (resConfig.data?.ticket_categories || []).map(c => ({
                 id: String(c.id || ''),
+                // name poate fi string sau {ro,hu,en} — pastram structura completa
                 name: c.name || '',
                 sort_order: parseInt(c.sort_order ?? 0, 10),
-            })).filter(c => c.id && c.name);
+            })).filter(c => {
+                const n = typeof c.name === 'string' ? c.name : (c.name?.ro || c.name?.en || '');
+                return c.id && n;
+            });
             renderCategoryList();
             renderProducts();
         } catch (e) {
@@ -1264,18 +1268,45 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             list.innerHTML = '<p class="text-xs text-muted italic py-2">Nicio categorie definită. Adaugă una pentru a grupa biletele pe pagina publică.</p>';
             return;
         }
+        // Helper: nume RO din c.name (poate fi string sau {ro,hu,en})
+        const nameRo = (c) => typeof c.name === 'string' ? c.name : (c.name?.ro || '');
+        const nameHu = (c) => typeof c.name === 'object' ? (c.name?.hu || '') : (c.translations?.hu || '');
+        const nameEn = (c) => typeof c.name === 'object' ? (c.name?.en || '') : (c.translations?.en || '');
+
         list.innerHTML = categoriesCache.map((c, i) => `
-            <div class="cat-row flex items-center gap-2 p-2 bg-slate-50 rounded-lg cursor-move" draggable="true" data-cat-idx="${i}">
-                <span class="text-muted text-lg select-none" title="Trage pentru a reordona">⋮⋮</span>
-                <input type="text" data-cat-name class="flex-1 px-2 py-1 text-sm border border-border rounded bg-white" placeholder="ex: Bilete individuale" value="${escapeHtml(c.name)}">
-                <code class="text-[10px] text-muted bg-white border border-border rounded px-1.5 py-1" title="ID intern, folosit la asocierea biletelor. Nu se schimbă după creare.">${escapeHtml(c.id)}</code>
-                <button type="button" data-cat-rm class="text-rose-600 hover:bg-rose-100 px-2 py-1 rounded text-sm" title="Șterge categoria (biletele rămân ne-asignate)">🗑</button>
+            <div class="cat-row p-2 bg-slate-50 rounded-lg" data-cat-idx="${i}">
+                <div class="flex items-center gap-2" draggable="true" data-cat-drag>
+                    <span class="text-muted text-lg select-none cursor-move" title="Trage pentru a reordona">⋮⋮</span>
+                    <input type="text" data-cat-name data-tr-locale="ro" class="flex-1 px-2 py-1 text-sm border border-border rounded bg-white" placeholder="🇷🇴 ex: Bilete individuale" value="${escapeHtml(nameRo(c))}">
+                    <code class="text-[10px] text-muted bg-white border border-border rounded px-1.5 py-1" title="ID intern, folosit la asocierea biletelor. Nu se schimbă după creare.">${escapeHtml(c.id)}</code>
+                    <button type="button" data-cat-rm class="text-rose-600 hover:bg-rose-100 px-2 py-1 rounded text-sm" title="Șterge categoria (biletele rămân ne-asignate)">🗑</button>
+                </div>
+                <details class="mt-1.5">
+                    <summary class="text-[10px] text-amber-900 cursor-pointer hover:underline pl-7">🌐 Traduceri HU + EN (opțional)</summary>
+                    <div class="grid grid-cols-2 gap-2 mt-1.5 pl-7">
+                        <input type="text" data-cat-name data-tr-locale="hu" class="px-2 py-1 text-xs border border-amber-300 rounded bg-white" placeholder="🇭🇺 nume HU" value="${escapeHtml(nameHu(c))}">
+                        <input type="text" data-cat-name data-tr-locale="en" class="px-2 py-1 text-xs border border-amber-300 rounded bg-white" placeholder="🇬🇧 EN name" value="${escapeHtml(nameEn(c))}">
+                    </div>
+                </details>
             </div>
         `).join('');
 
-        // Bind events
-        list.querySelectorAll('[data-cat-name]').forEach((inp, i) => {
-            inp.addEventListener('input', () => { categoriesCache[i].name = inp.value; });
+        // Bind input updates — sincronizam name = {ro,hu,en} ca obiect daca avem traduceri.
+        list.querySelectorAll('[data-cat-name]').forEach((inp) => {
+            inp.addEventListener('input', () => {
+                const row = inp.closest('.cat-row');
+                const i = parseInt(row.dataset.catIdx, 10);
+                const loc = inp.dataset.trLocale;
+                const roVal = row.querySelector('[data-cat-name][data-tr-locale="ro"]')?.value || '';
+                const huVal = row.querySelector('[data-cat-name][data-tr-locale="hu"]')?.value || '';
+                const enVal = row.querySelector('[data-cat-name][data-tr-locale="en"]')?.value || '';
+                // Daca avem traduceri completate, stocam ca obiect; altfel string simplu
+                if (huVal.trim() || enVal.trim()) {
+                    categoriesCache[i].name = { ro: roVal, hu: huVal, en: enVal };
+                } else {
+                    categoriesCache[i].name = roVal;
+                }
+            });
         });
         list.querySelectorAll('[data-cat-rm]').forEach((btn, i) => {
             btn.addEventListener('click', () => {
@@ -1285,16 +1316,20 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             });
         });
 
-        // Drag&drop reorder
+        // Drag&drop reorder (handle pe data-cat-drag, drop target pe .cat-row)
         let dragIdx = null;
-        list.querySelectorAll('.cat-row').forEach((row) => {
-            row.addEventListener('dragstart', (e) => {
+        list.querySelectorAll('[data-cat-drag]').forEach((handle) => {
+            handle.addEventListener('dragstart', () => {
+                const row = handle.closest('.cat-row');
                 dragIdx = parseInt(row.dataset.catIdx, 10);
                 row.classList.add('opacity-50');
             });
-            row.addEventListener('dragend', () => {
+            handle.addEventListener('dragend', () => {
+                const row = handle.closest('.cat-row');
                 row.classList.remove('opacity-50');
             });
+        });
+        list.querySelectorAll('.cat-row').forEach((row) => {
             row.addEventListener('dragover', (e) => { e.preventDefault(); row.classList.add('ring-2','ring-primary'); });
             row.addEventListener('dragleave', () => row.classList.remove('ring-2','ring-primary'));
             row.addEventListener('drop', (e) => {
@@ -1309,13 +1344,14 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         });
     }
 
-    // C2 — Populeaza dropdown-ul categorie in modal produs
+    // C2 — Populeaza dropdown-ul categorie in modal produs (afișează RO din obiect)
     function renderCategoryOptions() {
         const sel = $('pr-f-group');
         if (!sel) return;
         const current = sel.value;
+        const labelOf = (c) => typeof c.name === 'string' ? c.name : (c.name?.ro || c.name?.en || c.id);
         sel.innerHTML = '<option value="">— Alte produse —</option>' +
-            categoriesCache.map(c => `<option value="${escapeHtml(c.id)}">${escapeHtml(c.name)}</option>`).join('');
+            categoriesCache.map(c => `<option value="${escapeHtml(c.id)}">${escapeHtml(labelOf(c))}</option>`).join('');
         sel.value = current;
     }
 
@@ -1334,12 +1370,31 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         if (!currentEventId) return;
         // Validare: nume non-empty per item; renumberez sort_order la 10/20/30/...
         const cleaned = categoriesCache
-            .map((c, i) => ({
-                id: c.id,
-                name: (c.name || '').trim(),
-                sort_order: (i + 1) * 10,
-            }))
-            .filter(c => c.id && c.name);
+            .map((c, i) => {
+                // name poate fi string sau {ro,hu,en}. Pastram structura ne-empty.
+                let cleanName = c.name;
+                if (typeof cleanName === 'object' && cleanName) {
+                    const tr = {};
+                    for (const loc of ['ro','hu','en']) {
+                        const v = (cleanName[loc] || '').trim();
+                        if (v) tr[loc] = v;
+                    }
+                    cleanName = Object.keys(tr).length ? tr : '';
+                    // Daca avem DOAR ro completat, simplifica la string
+                    if (cleanName && Object.keys(tr).length === 1 && tr.ro) cleanName = tr.ro;
+                } else if (typeof cleanName === 'string') {
+                    cleanName = cleanName.trim();
+                }
+                return {
+                    id: c.id,
+                    name: cleanName,
+                    sort_order: (i + 1) * 10,
+                };
+            })
+            .filter(c => {
+                const n = typeof c.name === 'string' ? c.name : (c.name?.ro || c.name?.en || c.name?.hu || '');
+                return c.id && n;
+            });
         const btn = $('cat-save-btn');
         const msg = $('cat-msg');
         if (btn) { btn.disabled = true; btn.textContent = 'Se salvează…'; }
@@ -1414,11 +1469,12 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             }
         }
 
+        const labelOf = (c) => typeof c.name === 'string' ? c.name : (c.name?.ro || c.name?.en || c.id);
         const sections = [];
         for (const cat of categoriesCache) {
             const items = groupsByCategoryId[cat.id] || [];
             if (!items.length) continue;
-            sections.push({ id: cat.id, name: cat.name, items });
+            sections.push({ id: cat.id, name: labelOf(cat), items });
         }
         if (ungrouped.length) {
             sections.push({ id: '__none__', name: 'Alte produse', items: ungrouped });
