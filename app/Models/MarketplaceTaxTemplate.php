@@ -2240,7 +2240,7 @@ class MarketplaceTaxTemplate extends Model
         $refundItems = \App\Models\MarketplaceRefundItem::whereHas(
             'refundRequest',
             fn ($q) => $q->where('marketplace_payout_id', $payout->id)
-        )->get(['id', 'ticket_id', 'amount']);
+        )->get(['id', 'ticket_id']);
         $itemCount = $refundItems->count();
         if ($itemCount === 0) return [];
 
