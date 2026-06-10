@@ -159,7 +159,16 @@ if ($publicLocale !== 'ro') {
     }
 }
 
-// Safety warning (titlu + body), salvat in venue_config.safety_warning.translations[locale].{title,body}
+// Map config
+$mapConfig = $venueConfig['map_config'] ?? [];
+$mapCenter = $mapConfig['center'] ?? null; // [lat, lng]
+$mapZoom = $mapConfig['zoom'] ?? 12;
+$mapPois = $mapConfig['pois'] ?? [];
+
+// Safety warning — declarat înainte de traducere (bug fix: înainte era folosit ca null)
+$safetyWarning = $venueConfig['safety_warning'] ?? null;
+
+// Aplica traduceri safety_warning (titlu + body) din venue_config.safety_warning.translations[locale]
 if ($safetyWarning && is_array($safetyWarning) && $publicLocale !== 'ro') {
     $swTr = $safetyWarning['translations'][$publicLocale] ?? null;
     if (is_array($swTr)) {
@@ -167,15 +176,6 @@ if ($safetyWarning && is_array($safetyWarning) && $publicLocale !== 'ro') {
         if (!empty($swTr['body']))  $safetyWarning['body']  = $swTr['body'];
     }
 }
-
-// Map config
-$mapConfig = $venueConfig['map_config'] ?? [];
-$mapCenter = $mapConfig['center'] ?? null; // [lat, lng]
-$mapZoom = $mapConfig['zoom'] ?? 12;
-$mapPois = $mapConfig['pois'] ?? [];
-
-// Safety warning
-$safetyWarning = $venueConfig['safety_warning'] ?? null;
 
 // Build issuers map (organizer e SIBLING al cheii event in raspuns)
 $organizer = $eventPreload['data']['organizer']
@@ -1142,7 +1142,7 @@ foreach (['slug', '_route', '_path'] as $_drop) {
                         <?= htmlspecialchars($a['badge']) ?>
                     </span>
                     <?php endif; ?>
-                    <h3 class="font-display text-3xl font-bold text-ink mb-4"><?= htmlspecialchars($a['name'] ?? '') ?></h3>
+                    <h3 class="font-display text-3xl font-bold text-ink mb-4"><?= htmlspecialchars($a['name'] ?? $a['title'] ?? '') ?></h3>
                     <p class="text-forest-800 leading-relaxed mb-4"><?= htmlspecialchars($a['description'] ?? '') ?></p>
                     <?php if (!empty($a['bullets'])): ?>
                     <ul class="space-y-2 text-sm text-forest-800">
@@ -1202,9 +1202,28 @@ foreach (['slug', '_route', '_path'] as $_drop) {
         </div>
         <div class="grid md:grid-cols-<?= min(count($seasons), 2) ?> gap-6">
             <?php
-            $dayLabels = ['mon'=>'Luni','tue'=>'Marți','wed'=>'Miercuri','thu'=>'Joi','fri'=>'Vineri','sat'=>'Sâmbătă','sun'=>'Duminică'];
+            // Etichete zile per locale (RO/HU/EN). Pentru alte locale → fallback RO.
+            $dayLabelsByLocale = [
+                'ro' => ['mon'=>'Luni','tue'=>'Marți','wed'=>'Miercuri','thu'=>'Joi','fri'=>'Vineri','sat'=>'Sâmbătă','sun'=>'Duminică'],
+                'hu' => ['mon'=>'Hétfő','tue'=>'Kedd','wed'=>'Szerda','thu'=>'Csütörtök','fri'=>'Péntek','sat'=>'Szombat','sun'=>'Vasárnap'],
+                'en' => ['mon'=>'Monday','tue'=>'Tuesday','wed'=>'Wednesday','thu'=>'Thursday','fri'=>'Friday','sat'=>'Saturday','sun'=>'Sunday'],
+            ];
+            $closedLabelByLocale = ['ro' => 'Închis', 'hu' => 'Zárva', 'en' => 'Closed'];
+            $dayLabels   = $dayLabelsByLocale[$publicLocale] ?? $dayLabelsByLocale['ro'];
+            $closedLabel = $closedLabelByLocale[$publicLocale] ?? $closedLabelByLocale['ro'];
             foreach ($seasons as $idx => $season):
-                $schedule = $season['schedule'] ?? [];
+                // Schema actuală: schedule_list (array de {day, open, close})
+                // Schema legacy: schedule (object cu chei zile)
+                $schedule = [];
+                if (is_array($season['schedule_list'] ?? null)) {
+                    foreach ($season['schedule_list'] as $entry) {
+                        if (is_array($entry) && !empty($entry['day'])) {
+                            $schedule[$entry['day']] = ['open' => $entry['open'] ?? null, 'close' => $entry['close'] ?? null];
+                        }
+                    }
+                } elseif (is_array($season['schedule'] ?? null)) {
+                    $schedule = $season['schedule'];
+                }
             ?>
             <div class="bg-white rounded-3xl p-8 <?= $idx === 0 ? 'border-2 border-forest-500 relative' : 'border-2 border-forest-100' ?>">
                 <?php if ($idx === 0): ?>
@@ -1232,7 +1251,7 @@ foreach (['slug', '_route', '_path'] as $_drop) {
                         <?php if ($hrs && !empty($hrs['open'])): ?>
                         <span class="text-ink font-semibold"><?= htmlspecialchars($hrs['open']) ?> – <?= htmlspecialchars($hrs['close'] ?? '') ?></span>
                         <?php else: ?>
-                        <span class="text-red-600 font-semibold">Închis</span>
+                        <span class="text-red-600 font-semibold"><?= htmlspecialchars($closedLabel) ?></span>
                         <?php endif; ?>
                     </div>
                     <?php endforeach; ?>
