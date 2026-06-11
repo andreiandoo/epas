@@ -40,6 +40,7 @@ class ImportBileteAttractionsCommand extends Command
         {--no-images : Skip downloading cover images (fast text-only pass)}
         {--force-images : Re-download cover even if one is already set}
         {--no-create-types : Do NOT auto-create attraction types missing from DB}
+        {--relink-cities : Only pass: re-link city = null attractions using aggressive name normalisation (no new cities, no other writes)}
         {--dry-run : Parse + map but write nothing}';
 
     protected $description = 'Import attractions from CSV (maps types + cities, downloads cover images).';
@@ -62,6 +63,10 @@ class ImportBileteAttractionsCommand extends Command
         if (! is_file($file)) {
             $this->error("CSV not found: {$file}");
             return self::FAILURE;
+        }
+
+        if ($this->option('relink-cities')) {
+            return $this->relinkCities($file, $clientId, $dry);
         }
 
         $this->preloadLookups($clientId);
@@ -206,8 +211,12 @@ class ImportBileteAttractionsCommand extends Command
             if ($ro !== '') {
                 $this->cityMap[$this->norm($ro)] = $c->id;
                 $this->cityMap[Str::slug($ro)] = $c->id;
+                $this->cityMap[$this->cityKey($ro)] = $c->id; // aggressive (â/î, separators)
             }
-            if ($c->slug) $this->cityMap[$c->slug] = $c->id;
+            if ($c->slug) {
+                $this->cityMap[$c->slug] = $c->id;
+                $this->cityMap[$this->cityKey($c->slug)] = $c->id;
+            }
         }
 
         foreach (AttractionType::where('marketplace_client_id', $clientId)->get(['id', 'name', 'slug']) as $t) {
@@ -222,12 +231,102 @@ class ImportBileteAttractionsCommand extends Command
         return mb_strtolower(trim($s), 'UTF-8');
     }
 
+    /**
+     * Aggressive city key for recovery matching: lowercase, fold Romanian
+     * diacritics (â and î both → 'a' so Târgu == Tîrgu), drop admin prefixes
+     * (municipiul/orașul/comuna/satul/sectorul), then strip every non-alnum so
+     * "Cluj-Napoca" == "Cluj Napoca". Lossy by design — used only as a fallback.
+     */
+    private function cityKey(string $s): string
+    {
+        $s = mb_strtolower(trim($s), 'UTF-8');
+        $s = strtr($s, [
+            'ă' => 'a', 'â' => 'a', 'î' => 'a',
+            'ș' => 's', 'ş' => 's', 'ț' => 't', 'ţ' => 't',
+            'á' => 'a', 'é' => 'e', 'í' => 'i', 'ó' => 'o', 'ú' => 'u', 'ü' => 'u', 'ö' => 'o',
+        ]);
+        $s = preg_replace('/\b(municipiul|orasul|comuna|satul|sectorul|sector)\b/u', ' ', $s);
+        $s = preg_replace('/[^a-z0-9]+/', '', $s);
+        return $s;
+    }
+
     private function resolveCity(string $oras): ?int
     {
         if ($oras === '') return null;
         return $this->cityMap[$this->norm($oras)]
             ?? $this->cityMap[Str::slug($oras)]
+            ?? $this->cityMap[$this->cityKey($oras)]
             ?? null;
+    }
+
+    /**
+     * --relink-cities pass: only fills marketplace_city_id on attractions that
+     * currently have it null, using the aggressive matcher. Creates no cities,
+     * touches no other field. Reports recovered + the top genuinely-missing
+     * city names so you can decide which (if any) to add by hand.
+     */
+    private function relinkCities(string $file, int $clientId, bool $dry): int
+    {
+        $this->preloadLookups($clientId);
+        $this->info('Loaded ' . count($this->cityMap) . ' city keys for client #' . $clientId . '.');
+
+        // slug => oras from the CSV.
+        $fh = fopen($file, 'r');
+        $header = fgetcsv($fh, 0, ',', '"', '');
+        $header[0] = preg_replace('/^\xEF\xBB\xBF/', '', (string) $header[0]);
+        $col = array_flip(array_map(fn ($h) => trim((string) $h), $header));
+        $slugToOras = [];
+        while (($row = fgetcsv($fh, 0, ',', '"', '')) !== false) {
+            $slug = trim((string) ($row[$col['slug']] ?? '')) ?: Str::slug(trim((string) ($row[$col['nume']] ?? '')));
+            $oras = trim((string) ($row[$col['oras']] ?? ''));
+            if ($slug !== '' && $oras !== '') $slugToOras[$slug] = $oras;
+        }
+        fclose($fh);
+
+        $recovered = 0;
+        $stillNull = 0;
+        $remaining = [];
+
+        Attraction::where('marketplace_client_id', $clientId)
+            ->whereNull('marketplace_city_id')
+            ->select('id', 'slug')
+            ->chunkById(500, function ($chunk) use (&$recovered, &$stillNull, &$remaining, $slugToOras, $dry) {
+                foreach ($chunk as $att) {
+                    $oras = $slugToOras[$att->slug] ?? '';
+                    if ($oras === '') {
+                        $stillNull++;
+                        continue;
+                    }
+                    $cid = $this->resolveCity($oras);
+                    if ($cid) {
+                        if (! $dry) {
+                            $att->forceFill(['marketplace_city_id' => $cid])->save();
+                        }
+                        $recovered++;
+                    } else {
+                        $stillNull++;
+                        $remaining[$oras] = ($remaining[$oras] ?? 0) + 1;
+                    }
+                }
+            });
+
+        arsort($remaining);
+        $this->newLine();
+        $this->info(($dry ? '[dry-run] ' : '') . "Recovered {$recovered} city links; {$stillNull} still null ("
+            . count($remaining) . ' distinct cities genuinely missing from marketplace_cities).');
+        if ($remaining) {
+            $this->line('Top genuinely-missing cities (name × attractions):');
+            $i = 0;
+            foreach ($remaining as $o => $n) {
+                $this->line("  • {$o} ({$n})");
+                if (++$i >= 30) {
+                    $this->line('  …');
+                    break;
+                }
+            }
+        }
+
+        return self::SUCCESS;
     }
 
     private function resolveType(string $tip, int $clientId, bool $createTypes, bool $dry, array &$stats): ?int
