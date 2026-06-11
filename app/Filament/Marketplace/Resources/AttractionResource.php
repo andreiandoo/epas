@@ -20,6 +20,7 @@ use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Schema as DBSchema;
 use Illuminate\Support\HtmlString;
 use Illuminate\Support\Str;
 
@@ -63,6 +64,7 @@ class AttractionResource extends Resource
     {
         $marketplace = static::getMarketplaceClient();
         $lang = $marketplace->language ?? $marketplace->locale ?? 'ro';
+        $hasCounty = DBSchema::hasColumn('attractions', 'marketplace_county_id');
 
         $typeOptions = AttractionType::query()
             ->where('marketplace_client_id', $marketplace?->id)
@@ -177,14 +179,16 @@ class AttractionResource extends Resource
                         Forms\Components\Select::make('attraction_type_id')->label('Tip')->options($typeOptions)->searchable()->preload(),
                         Forms\Components\Select::make('marketplace_city_id')->label('Oraș')->options($cityOptions)->searchable()->preload()
                             ->live()
-                            ->afterStateUpdated(function ($state, \Filament\Schemas\Components\Utilities\Set $set, \Filament\Schemas\Components\Utilities\Get $get) {
+                            ->afterStateUpdated(function ($state, \Filament\Schemas\Components\Utilities\Set $set) use ($hasCounty) {
                                 // Auto-fill judet from the chosen city's county.
-                                if ($state) {
+                                if ($hasCounty && $state) {
                                     $cid = MarketplaceCity::find($state)?->county_id;
                                     if ($cid) $set('marketplace_county_id', $cid);
                                 }
                             }),
                         Forms\Components\Select::make('marketplace_county_id')->label('Județ')->options($countyOptions)->searchable()->preload()
+                            ->visible($hasCounty)
+                            ->dehydrated($hasCounty)
                             ->helperText('Se completează automat din oraș; setează manual când nu există oraș.'),
                         Forms\Components\TextInput::make('sort_order')->label('Ordine')->numeric()->default(0),
                         Forms\Components\Toggle::make('is_featured')->label('Recomandată')->default(false),
@@ -200,8 +204,15 @@ class AttractionResource extends Resource
         $marketplace = static::getMarketplaceClient();
         $lang = $marketplace->language ?? $marketplace->locale ?? 'ro';
 
+        // Defensive: the county column ships before the migration may have run.
+        $hasCounty = DBSchema::hasColumn('attractions', 'marketplace_county_id');
+        $eager = ['type:id,name', 'city:id,name'];
+        if ($hasCounty) {
+            $eager[] = 'county:id,name,code';
+        }
+
         return $table
-            ->modifyQueryUsing(fn (Builder $q) => $q->with(['type:id,name', 'city:id,name', 'county:id,name,code']))
+            ->modifyQueryUsing(fn (Builder $q) => $q->with($eager))
             ->columns([
                 Tables\Columns\ImageColumn::make('cover_image_url')->label('')->disk('public')->height(40)->width(60),
                 Tables\Columns\TextColumn::make('name')->label('Nume')
@@ -213,6 +224,7 @@ class AttractionResource extends Resource
                     ->getStateUsing(fn (Attraction $r) => $r->city && is_array($r->city->name) ? ($r->city->name[$lang] ?? $r->city->name['ro'] ?? '') : ''),
                 Tables\Columns\TextColumn::make('county.name')->label('Județ')
                     ->getStateUsing(fn (Attraction $r) => $r->county ? ((is_array($r->county->name) ? ($r->county->name[$lang] ?? $r->county->name['ro'] ?? '') : (string) $r->county->name) . ($r->county->code ? ' (' . $r->county->code . ')' : '')) : '')
+                    ->visible($hasCounty)
                     ->toggleable(),
                 Tables\Columns\TextColumn::make('activities_count')->label('Activități')->counts('activities')->badge(),
                 Tables\Columns\IconColumn::make('is_featured')->label('Recom.')->boolean(),
