@@ -206,27 +206,19 @@ class AttractionResource extends Resource
 
         // Defensive: the county column ships before the migration may have run.
         $hasCounty = DBSchema::hasColumn('attractions', 'marketplace_county_id');
-        // Unconstrained eager load (no :columns) — the column-constrained form can
-        // trip Eloquent's relation matching inside Filament's table render.
-        $eager = ['type', 'city'];
-        if ($hasCounty) {
-            $eager[] = 'county';
-        }
 
         return $table
-            // Eager-load only — with() is lazy so it's safe even when Filament
-            // evaluates modifyQueryUsing early (during Table::getModel(), the
-            // builder has no model yet). withCount()/counts() resolve the relation
-            // immediately there → "activities() on null", so the count lives on the
-            // column via getStateUsing (a real model per row). Display columns use
-            // NON-relationship names so Filament never runs relationship-column
-            // resolution either.
-            ->modifyQueryUsing(fn (Builder $q) => $q->with($eager))
+            // No modifyQueryUsing / searchable(query:) / relationship columns /
+            // counts() on this table. Every one of those makes Filament run a
+            // relationship- or closure-based query operation during its table
+            // boot/render, where the builder can be model-less for this resource
+            // (super-admin context), producing "newQueryWithoutRelationships() on
+            // null" / "activities() on null". All values come from getStateUsing
+            // on a real model per row; relations lazy-load (fine for an admin list).
             ->columns([
                 Tables\Columns\ImageColumn::make('cover_image_url')->label('')->disk('public')->height(40)->width(60),
                 Tables\Columns\TextColumn::make('name')->label('Nume')
-                    ->getStateUsing(fn (Attraction $r) => is_array($r->name) ? ($r->name[$lang] ?? $r->name['ro'] ?? $r->slug) : $r->name)
-                    ->searchable(query: fn (Builder $q, string $search) => $q->whereRaw("LOWER(name->>'ro') LIKE ?", ['%' . mb_strtolower($search) . '%'])),
+                    ->getStateUsing(fn (Attraction $r) => is_array($r->name) ? ($r->name[$lang] ?? $r->name['ro'] ?? $r->slug) : $r->name),
                 Tables\Columns\TextColumn::make('tip_label')->label('Tip')
                     ->getStateUsing(fn (Attraction $r) => $r->type && is_array($r->type->name) ? ($r->type->name[$lang] ?? $r->type->name['ro'] ?? '') : ''),
                 Tables\Columns\TextColumn::make('oras_label')->label('Oraș')
