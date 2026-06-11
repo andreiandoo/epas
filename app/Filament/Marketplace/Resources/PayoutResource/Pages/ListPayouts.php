@@ -1372,7 +1372,16 @@ class ListPayouts extends ListRecords
             $netRevenueFromBreakdown += (float) $row['net'];
         }
 
-        // Refunds (also exclude pos_app for same reason as above)
+        // Refunds (also exclude pos_app for same reason as above). Surfaced
+        // as informational only — refunds are NOT automatically subtracted
+        // from `balance` or `net` anymore. Operators link refunds
+        // explicitly on the payout-detail edit page (via the existing
+        // refund-selection UI), and the PDF generator uses
+        // payout->refund_amount to render the 1a / 2a / E rows. Auto-
+        // subtracting refunds here led to the modal showing 2,899 RON
+        // "Sold disponibil" for payouts where the operator expected
+        // 3,200 RON — and the generated PDF didn't agree either, because
+        // payout->refund_amount stayed at 0 until manually linked.
         $refundedAmount = (float) Order::where(function ($q) use ($event) {
                 $q->where('event_id', $event->id)->orWhere('marketplace_event_id', $event->id);
             })
@@ -1380,7 +1389,9 @@ class ListPayouts extends ListRecords
             ->where('source', '!=', 'pos_app')
             ->sum(\DB::raw('COALESCE(refund_amount, total)'));
 
-        $netRevenue = $netRevenueFromBreakdown - $refundedAmount;
+        // Net = breakdown net only. Refunds excluded from balance math but
+        // still surfaced via 'refunds' for the modal info line.
+        $netRevenue = $netRevenueFromBreakdown;
 
         // Previous payouts
         $paidPayouts = (float) MarketplacePayout::where('marketplace_organizer_id', $organizer->id)
@@ -1558,9 +1569,13 @@ class ListPayouts extends ListRecords
             $html .= '<div class="flex justify-between"><span class="text-gray-600 dark:text-gray-400">Taxe / Asigurări (extras):</span><span class="font-mono font-medium text-sky-600 dark:text-sky-400">-' . number_format($totalExtras, 2) . ' RON</span></div>';
         }
         if ($totalRefundedAmount > 0) {
-            $html .= '<div class="flex justify-between text-red-600 dark:text-red-400"><span>Retururi (' . $totalRefundedCount . ' comenzi):</span><span class="font-mono font-medium">-' . number_format($totalRefundedAmount, 2) . ' RON</span></div>';
+            $html .= '<div class="flex justify-between text-red-600 dark:text-red-400">'
+                . '<span>Retururi disponibile (' . $totalRefundedCount . ' comenzi):</span>'
+                . '<span class="font-mono font-medium">' . number_format($totalRefundedAmount, 2) . ' RON</span>'
+                . '</div>'
+                . '<div class="text-xs text-gray-400 italic -mt-0.5">Informativ — NU se scad automat din sold. Le legi explicit pe payout după creare (din Edit → "Rambursări care intră în decontul curent").</div>';
         }
-        $html .= '<div class="flex justify-between pt-1 border-t border-gray-200 dark:border-white/10"><span class="text-gray-700 dark:text-gray-300 font-medium">Net (brut organizator):</span><span class="font-mono font-medium">' . number_format(max(0, $totalNet - $totalRefundedAmount), 2) . ' RON</span></div>';
+        $html .= '<div class="flex justify-between pt-1 border-t border-gray-200 dark:border-white/10"><span class="text-gray-700 dark:text-gray-300 font-medium">Net (brut organizator):</span><span class="font-mono font-medium">' . number_format($totalNet, 2) . ' RON</span></div>';
 
         // Previous payouts
         if ($previousPayouts->isNotEmpty()) {
