@@ -3,6 +3,7 @@
 namespace App\Observers;
 
 use App\Models\MarketplacePayout;
+use App\Models\MarketplaceRefundRequest;
 use App\Models\MarketplaceTaxTemplate;
 use App\Models\MarketplaceTaxRegistry;
 use App\Models\OrganizerDocument;
@@ -20,6 +21,35 @@ class MarketplacePayoutObserver
         // Generate decont when status changes to completed
         if ($payout->isDirty('status') && in_array($payout->status, ['approved', 'completed'])) {
             $this->generateDecont($payout);
+        }
+    }
+
+    /**
+     * Handle the MarketplacePayout "deleting" event (fires for both soft
+     * delete and hard delete). Releases any refund requests linked to
+     * this payout back into the unlinked pool so they're available for
+     * future deconts. Without this, deleting a payout would leave its
+     * refunds dangling with marketplace_payout_id pointing at a
+     * (soft-)deleted row — the manual-decont modal's picker filters by
+     * whereNull('marketplace_payout_id') and excludes them, making it
+     * impossible to attach those refunds to a replacement payout.
+     */
+    public function deleting(MarketplacePayout $payout): void
+    {
+        try {
+            $released = MarketplaceRefundRequest::where('marketplace_payout_id', $payout->id)
+                ->update(['marketplace_payout_id' => null]);
+            if ($released > 0) {
+                Log::info('Payout deletion released refund requests back to pool', [
+                    'payout_id' => $payout->id,
+                    'released_count' => $released,
+                ]);
+            }
+        } catch (\Throwable $e) {
+            Log::warning('Failed to release refunds on payout deletion', [
+                'payout_id' => $payout->id,
+                'error' => $e->getMessage(),
+            ]);
         }
     }
 
