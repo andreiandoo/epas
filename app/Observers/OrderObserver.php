@@ -287,7 +287,13 @@ class OrderObserver
             'recipient_id' => null,
         ]);
 
-        $amountCents = (int) ($order->total_cents ?? round(((float) ($order->total ?? 0)) * 100));
+        // total_cents is a real DB column but isn't always populated on
+        // marketplace orders — CheckoutController writes only `total`
+        // (the RON float), leaving total_cents=0. ?? returns the left
+        // operand on 0 too (it only short-circuits on null), so the
+        // previous form floored revenue at 0 even when total was 83.74.
+        // Pick the first NON-ZERO source instead.
+        $amountCents = (int) ($order->total_cents ?: round(((float) ($order->total ?? 0)) * 100));
         if ($amountCents < 0) $amountCents = 0;
 
         $newsletter->increment('purchase_count');
