@@ -1319,12 +1319,22 @@ class NewsletterResource extends Resource
                 // for success-status orders attributed to this newsletter.
                 // Avoids N+1 the table column would otherwise trigger and
                 // keeps sort-by-commission working without a stored column.
-                return $query->selectSub(
-                    \App\Models\Order::selectRaw('COALESCE(SUM(commission_amount), 0)')
-                        ->whereColumn('newsletter_attribution_id', 'marketplace_newsletters.id')
-                        ->whereIn('status', ['paid', 'confirmed', 'completed', 'partially_refunded']),
-                    'commission_attributed'
-                );
+                //
+                // selectSub() goes through addSelect() under the hood,
+                // which REPLACES the default `*` projection. Without the
+                // explicit table.* below, the rows came back with only
+                // the subquery column and Filament couldn't resolve `id`
+                // to build the edit URL → "Missing parameter: record" 500
+                // on /marketplace/newsletters.
+                $table = (new \App\Models\MarketplaceNewsletter())->getTable();
+                return $query
+                    ->addSelect($table . '.*')
+                    ->selectSub(
+                        \App\Models\Order::selectRaw('COALESCE(SUM(commission_amount), 0)')
+                            ->whereColumn('newsletter_attribution_id', $table . '.id')
+                            ->whereIn('status', ['paid', 'confirmed', 'completed', 'partially_refunded']),
+                        'commission_attributed'
+                    );
             })
             ->defaultSort('created_at', 'desc')
             ->filters([
