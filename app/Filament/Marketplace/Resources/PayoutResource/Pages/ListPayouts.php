@@ -241,6 +241,97 @@ class ListPayouts extends ListRecords
                     })
                     ->visible(fn (Get $get) => $get('event_id') !== null),
 
+                // Refund picker — operator opts in to including refunds in
+                // this new decont right from the create modal. Mirrors the
+                // edit-page picker (ViewPayout.php) so operators don't
+                // need a two-step Create-then-Edit. On submit, the action
+                // handler reads `included_refund_ids`, links them via
+                // syncIncludedRefunds(), and stores `refund_amount` on
+                // the payout. The PDF then renders 1a/2a/E correctly.
+                \Filament\Forms\Components\CheckboxList::make('included_refund_ids')
+                    ->label('Rambursări incluse în acest decont')
+                    ->helperText('Bifează rambursările care intră în decontul curent — valoarea lor se scade din suma de plată și apar în PDF.')
+                    ->options(function (Get $get) {
+                        $eventId = $get('event_id');
+                        if (!$eventId) return [];
+                        return \App\Models\MarketplaceRefundRequest::query()
+                            ->whereIn('status', [
+                                \App\Models\MarketplaceRefundRequest::STATUS_REFUNDED,
+                                \App\Models\MarketplaceRefundRequest::STATUS_PARTIALLY_REFUNDED,
+                            ])
+                            ->whereHas('order', function ($q) use ($eventId) {
+                                $q->where('event_id', $eventId)->orWhere('marketplace_event_id', $eventId);
+                            })
+                            ->whereNull('marketplace_payout_id') // unlinked only — already-linked stay on their payout
+                            ->orderByDesc('completed_at')
+                            ->get(['id', 'reference', 'approved_amount', 'completed_at'])
+                            ->mapWithKeys(fn ($r) => [
+                                $r->id => sprintf(
+                                    '%s · %s RON · %s',
+                                    $r->reference,
+                                    number_format((float) $r->approved_amount, 2),
+                                    optional($r->completed_at)->format('d.m.Y') ?: '—'
+                                ),
+                            ])
+                            ->all();
+                    })
+                    ->live()
+                    ->columns(1)
+                    ->bulkToggleable()
+                    ->columnSpanFull()
+                    ->afterStateUpdated(function ($state, Get $get, Set $set) {
+                        // Recompute net_amount to reflect refund deduction in
+                        // real time so the operator sees the final payable
+                        // before submit. Falls back to the event balance
+                        // when no tickets are selected.
+                        $event = Event::find($get('event_id'));
+                        if (!$event) return;
+                        $fin = self::calculateEventFinancials($event);
+                        $populated = $get('payout_tickets') ?? [];
+                        $hasTickets = collect($populated)->sum(fn ($t) => (int) ($t['qty'] ?? 0)) > 0;
+
+                        $baseTicketNet = 0.0;
+                        if ($hasTickets) {
+                            foreach ($populated as $t) {
+                                $qty = (int) ($t['qty'] ?? 0);
+                                if ($qty <= 0) continue;
+                                $unit = (float) ($t['unit_price'] ?? 0);
+                                $commPer = (float) ($t['commission_per_ticket'] ?? 0);
+                                $rowMode = $t['commission_mode'] ?? 'included';
+                                $isOnTop = in_array($rowMode, ['added_on_top', 'on_top'], true);
+                                $baseTicketNet += $qty * $unit + ($isOnTop ? $qty * $commPer : 0) - $qty * $commPer;
+                            }
+                            $baseTicketNet -= (float) ($get('discount_amount') ?? 0);
+                        } else {
+                            $baseTicketNet = (float) ($fin['balance'] ?? 0);
+                        }
+
+                        $refundIds = is_array($state) ? array_values(array_filter($state)) : [];
+                        $refundTotal = 0.0;
+                        if (!empty($refundIds)) {
+                            $refundTotal = (float) \App\Models\MarketplaceRefundItem::query()
+                                ->whereIn('refund_request_id', $refundIds)
+                                ->where('status', 'refunded')
+                                ->sum('face_value');
+                        }
+
+                        $set('net_amount', number_format(max(0, $baseTicketNet - $refundTotal), 2, '.', ''));
+                    })
+                    ->visible(function (Get $get) {
+                        $eventId = $get('event_id');
+                        if (!$eventId) return false;
+                        return \App\Models\MarketplaceRefundRequest::query()
+                            ->whereIn('status', [
+                                \App\Models\MarketplaceRefundRequest::STATUS_REFUNDED,
+                                \App\Models\MarketplaceRefundRequest::STATUS_PARTIALLY_REFUNDED,
+                            ])
+                            ->whereHas('order', function ($q) use ($eventId) {
+                                $q->where('event_id', $eventId)->orWhere('marketplace_event_id', $eventId);
+                            })
+                            ->whereNull('marketplace_payout_id')
+                            ->exists();
+                    }),
+
                 Forms\Components\Placeholder::make('no_bank_account_warning')
                     ->label('')
                     ->content(function (Get $get) {
@@ -1573,7 +1664,7 @@ class ListPayouts extends ListRecords
                 . '<span>Retururi disponibile (' . $totalRefundedCount . ' comenzi):</span>'
                 . '<span class="font-mono font-medium">' . number_format($totalRefundedAmount, 2) . ' RON</span>'
                 . '</div>'
-                . '<div class="text-xs text-gray-400 italic -mt-0.5">Informativ — NU se scad automat din sold. Le legi explicit pe payout după creare (din Edit → "Rambursări care intră în decontul curent").</div>';
+                . '<div class="text-xs text-gray-400 italic -mt-0.5">Bifează mai jos cele pe care vrei să le incluzi în acest decont — Sold disponibil se recalculează live.</div>';
         }
         $html .= '<div class="flex justify-between pt-1 border-t border-gray-200 dark:border-white/10"><span class="text-gray-700 dark:text-gray-300 font-medium">Net (brut organizator):</span><span class="font-mono font-medium">' . number_format($totalNet, 2) . ' RON</span></div>';
 
