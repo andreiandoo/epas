@@ -218,7 +218,8 @@ class AttractionResource extends Resource
             ->columns([
                 Tables\Columns\ImageColumn::make('cover_image_url')->label('')->disk('public')->height(40)->width(60),
                 Tables\Columns\TextColumn::make('name')->label('Nume')
-                    ->getStateUsing(fn (Attraction $r) => is_array($r->name) ? ($r->name[$lang] ?? $r->name['ro'] ?? $r->slug) : $r->name),
+                    ->getStateUsing(fn (Attraction $r) => is_array($r->name) ? ($r->name[$lang] ?? $r->name['ro'] ?? $r->slug) : $r->name)
+                    ->searchable(query: fn (Builder $q, string $search) => $q->whereRaw("LOWER(name->>'ro') LIKE ?", ['%' . mb_strtolower($search) . '%'])),
                 Tables\Columns\TextColumn::make('tip_label')->label('Tip')
                     ->getStateUsing(fn (Attraction $r) => $r->type && is_array($r->type->name) ? ($r->type->name[$lang] ?? $r->type->name['ro'] ?? '') : ''),
                 Tables\Columns\TextColumn::make('oras_label')->label('Oraș')
