@@ -118,6 +118,7 @@ class ContactListResource extends Resource
                                         ],
                                         'Purchases' => [
                                             'has_purchases' => 'Has made at least one purchase',
+                                            'has_failed_purchase_attempt' => 'Tried to buy but never succeeded (remarketing)',
                                             'purchase_count' => 'Number of purchases',
                                             'purchased_category' => 'Purchased from category',
                                         ],

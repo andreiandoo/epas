@@ -39,6 +39,7 @@ class MarketplaceContactList extends Model
         'newsletter_subscribed' => 'Subscribed to newsletter',
         'newsletter_unsubscribed' => 'Unsubscribed from newsletter',
         'has_purchases' => 'Has made at least one purchase',
+        'has_failed_purchase_attempt' => 'Has tried to buy but never succeeded (cancelled/failed/refunded, remarketing)',
         'has_no_account' => 'Has no registered account (guest only)',
         'has_account' => 'Has a registered account',
         'no_account_or_unsubscribed' => 'No account OR not subscribed (re-engagement)',
@@ -153,6 +154,21 @@ class MarketplaceContactList extends Model
                       ->orWhereHas('orders', function ($oq) {
                           $oq->whereIn('status', MarketplaceCustomer::SUCCESS_ORDER_STATUSES);
                       });
+                });
+                break;
+
+            case 'has_failed_purchase_attempt':
+                // Remarketing cohort: customers who tried to buy (have
+                // orders in cancelled/failed/refunded) but never closed
+                // a successful one. Excludes both "real buyers who also
+                // had an earlier failed attempt" (they did buy in the
+                // end) and "never tried anything". On Ambilet this is
+                // ~6200 customers — mostly card-decline / abandon-checkout
+                // / full-refund cohorts.
+                $query->whereHas('orders', function ($oq) {
+                    $oq->whereIn('status', ['cancelled', 'failed', 'refunded']);
+                })->whereDoesntHave('orders', function ($oq) {
+                    $oq->whereIn('status', MarketplaceCustomer::SUCCESS_ORDER_STATUSES);
                 });
                 break;
 
