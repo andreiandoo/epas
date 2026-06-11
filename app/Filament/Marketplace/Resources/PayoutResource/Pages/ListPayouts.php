@@ -1556,13 +1556,25 @@ class ListPayouts extends ListRecords
         $hasDiscountAny = array_sum(array_map(fn ($r) => (float) ($r['discount'] ?? 0), $perType)) > 0.01;
         $hasExtrasAny = array_sum(array_map(fn ($r) => (float) ($r['extras'] ?? 0), $perType)) > 0.01;
 
-        $totalRefundedAmount = (float) $financials['refunds'];
-        $totalRefundedCount = (int) Order::where(function ($q) use ($event) {
+        // Refunds eligible for THIS new decont = refund requests that are
+        // refunded/partially_refunded AND not yet linked to any payout.
+        // Counting ALL refunded ORDERS for the event (the previous logic)
+        // was misleading: a refund that's already on a prior payout shows
+        // as "available" here but can't actually be picked below, leaving
+        // the operator confused why the CheckboxList is empty under a
+        // line that says "1 comenzi disponibile".
+        $availableRefunds = \App\Models\MarketplaceRefundRequest::query()
+            ->whereIn('status', [
+                \App\Models\MarketplaceRefundRequest::STATUS_REFUNDED,
+                \App\Models\MarketplaceRefundRequest::STATUS_PARTIALLY_REFUNDED,
+            ])
+            ->whereHas('order', function ($q) use ($event) {
                 $q->where('event_id', $event->id)->orWhere('marketplace_event_id', $event->id);
             })
-            ->where('status', 'refunded')
-            ->where('source', '!=', 'pos_app')
-            ->count();
+            ->whereNull('marketplace_payout_id')
+            ->get(['id', 'approved_amount']);
+        $totalRefundedAmount = (float) $availableRefunds->sum('approved_amount');
+        $totalRefundedCount = $availableRefunds->count();
 
         // Previous payouts for this event (status badges + list)
         $previousPayouts = \App\Models\MarketplacePayout::where('marketplace_organizer_id', $organizer->id)
