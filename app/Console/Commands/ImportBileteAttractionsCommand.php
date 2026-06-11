@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Models\Attraction;
 use App\Models\AttractionType;
 use App\Models\MarketplaceCity;
+use App\Models\MarketplaceCounty;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
@@ -41,12 +42,16 @@ class ImportBileteAttractionsCommand extends Command
         {--force-images : Re-download cover even if one is already set}
         {--no-create-types : Do NOT auto-create attraction types missing from DB}
         {--relink-cities : Only pass: re-link city = null attractions using aggressive name normalisation (no new cities, no other writes)}
+        {--create-cities : Create marketplace_cities for genuinely-missing localities that have at least --min-attractions, then relink (is_visible=false)}
+        {--min-attractions=4 : Threshold for --create-cities}
         {--dry-run : Parse + map but write nothing}';
 
     protected $description = 'Import attractions from CSV (maps types + cities, downloads cover images).';
 
     private array $cityMap = [];   // normalized city name => id
     private array $typeMap = [];   // type slug => id
+    private array $countyMap = []; // normalized judet => ['id' => , 'region_id' => ]
+    private array $citySlugs = []; // existing/created city slugs (client-scoped) for uniqueness
 
     public function handle(): int
     {
@@ -63,6 +68,10 @@ class ImportBileteAttractionsCommand extends Command
         if (! is_file($file)) {
             $this->error("CSV not found: {$file}");
             return self::FAILURE;
+        }
+
+        if ($this->option('create-cities')) {
+            return $this->createCitiesAndRelink($file, $clientId, max(1, (int) $this->option('min-attractions')), $dry);
         }
 
         if ($this->option('relink-cities')) {
@@ -204,6 +213,158 @@ class ImportBileteAttractionsCommand extends Command
         return self::SUCCESS;
     }
 
+    /**
+     * --create-cities pass: create marketplace_cities (is_visible=false) for
+     * genuinely-missing localities that have >= $threshold attractions, map
+     * `judet` -> existing county, set a centroid lat/lng from the attractions,
+     * then relink. Created cities are hidden so /orase stays clean until you
+     * review them.
+     */
+    private function createCitiesAndRelink(string $file, int $clientId, int $threshold, bool $dry): int
+    {
+        $this->preloadLookups($clientId);
+        $this->preloadCounties($clientId);
+        $this->info('Loaded ' . count($this->countyMap) . ' county keys; min-attractions = ' . $threshold . ($dry ? ' (dry-run)' : ''));
+
+        // One CSV pass: slug=>oras (for relink) + group genuinely-missing oras.
+        $fh = fopen($file, 'r');
+        $header = fgetcsv($fh, 0, ',', '"', '');
+        $header[0] = preg_replace('/^\xEF\xBB\xBF/', '', (string) $header[0]);
+        $col = array_flip(array_map(fn ($h) => trim((string) $h), $header));
+
+        $slugToOras = [];
+        $groups = []; // cityKey => ['name','judet','count','latSum','lngSum','coordN']
+        while (($row = fgetcsv($fh, 0, ',', '"', '')) !== false) {
+            $oras = trim((string) ($row[$col['oras']] ?? ''));
+            $slug = trim((string) ($row[$col['slug']] ?? '')) ?: Str::slug(trim((string) ($row[$col['nume']] ?? '')));
+            if ($slug !== '' && $oras !== '') $slugToOras[$slug] = $oras;
+            if ($oras === '' || $this->resolveCity($oras) !== null) {
+                continue; // empty or already an existing city → not missing
+            }
+            $k = $this->cityKey($oras);
+            if ($k === '') continue;
+            if (! isset($groups[$k])) {
+                $groups[$k] = ['name' => $oras, 'judet' => trim((string) ($row[$col['judet']] ?? '')), 'count' => 0, 'latSum' => 0.0, 'lngSum' => 0.0, 'coordN' => 0];
+            }
+            $groups[$k]['count']++;
+            if ($groups[$k]['judet'] === '' && ($j = trim((string) ($row[$col['judet']] ?? ''))) !== '') {
+                $groups[$k]['judet'] = $j;
+            }
+            $lat = $row[$col['latitudine']] ?? '';
+            $lng = $row[$col['longitudine']] ?? '';
+            if (is_numeric($lat) && is_numeric($lng)) {
+                $groups[$k]['latSum'] += (float) $lat;
+                $groups[$k]['lngSum'] += (float) $lng;
+                $groups[$k]['coordN']++;
+            }
+        }
+        fclose($fh);
+
+        // Create cities above threshold.
+        $created = 0;
+        $countyMiss = 0;
+        $eligible = array_filter($groups, fn ($g) => $g['count'] >= $threshold);
+        uasort($eligible, fn ($a, $b) => $b['count'] <=> $a['count']);
+        $this->info(count($eligible) . ' localities meet the threshold (out of ' . count($groups) . ' missing).');
+
+        foreach ($eligible as $g) {
+            $county = $this->resolveCounty($g['judet']);
+            if ($g['judet'] !== '' && ! $county) $countyMiss++;
+            $slug = $this->uniqueCitySlug($g['name'], $g['judet']);
+            $lat = $g['coordN'] > 0 ? round($g['latSum'] / $g['coordN'], 7) : null;
+            $lng = $g['coordN'] > 0 ? round($g['lngSum'] / $g['coordN'], 7) : null;
+
+            if (! $dry) {
+                $city = MarketplaceCity::create([
+                    'marketplace_client_id' => $clientId,
+                    'name'      => ['ro' => $g['name']],
+                    'slug'      => $slug,
+                    'county_id' => $county['id'] ?? null,
+                    'region_id' => $county['region_id'] ?? null,
+                    'country'   => 'RO',
+                    'latitude'  => $lat,
+                    'longitude' => $lng,
+                    'is_visible' => false,
+                ]);
+                // Register so the relink below + later rows find it.
+                $this->cityMap[$this->norm($g['name'])] = $city->id;
+                $this->cityMap[Str::slug($g['name'])] = $city->id;
+                $this->cityMap[$this->cityKey($g['name'])] = $city->id;
+            }
+            $created++;
+        }
+
+        // Relink null-city attractions (now that new cities exist).
+        $recovered = 0;
+        $stillNull = 0;
+        if (! $dry) {
+            Attraction::where('marketplace_client_id', $clientId)
+                ->whereNull('marketplace_city_id')
+                ->select('id', 'slug')
+                ->chunkById(500, function ($chunk) use (&$recovered, &$stillNull, $slugToOras) {
+                    foreach ($chunk as $att) {
+                        $oras = $slugToOras[$att->slug] ?? '';
+                        $cid = $oras !== '' ? $this->resolveCity($oras) : null;
+                        if ($cid) {
+                            $att->forceFill(['marketplace_city_id' => $cid])->save();
+                            $recovered++;
+                        } else {
+                            $stillNull++;
+                        }
+                    }
+                });
+        }
+
+        $this->newLine();
+        $this->info(($dry ? '[dry-run] would create ' : 'Created ') . $created . ' cities (is_visible=false)'
+            . ($dry ? '.' : "; relinked {$recovered} attractions; {$stillNull} still null."));
+        if ($countyMiss > 0) {
+            $this->warn($countyMiss . ' created cities had a judet not matched to a county (county_id = null).');
+        }
+        if (! $dry) {
+            $this->line('Review + publish the new cities at /marketplace/cities (filter: not visible).');
+        }
+
+        return self::SUCCESS;
+    }
+
+    private function preloadCounties(int $clientId): void
+    {
+        foreach (MarketplaceCounty::where('marketplace_client_id', $clientId)->get(['id', 'name', 'slug', 'code', 'region_id']) as $c) {
+            $val = ['id' => $c->id, 'region_id' => $c->region_id];
+            $ro = is_array($c->name) ? ($c->name['ro'] ?? $c->name['en'] ?? '') : (string) $c->name;
+            if ($ro !== '') {
+                $this->countyMap[$this->cityKey($ro)] = $val;
+                $this->countyMap[$this->norm($ro)] = $val;
+            }
+            if ($c->slug) $this->countyMap[$this->cityKey($c->slug)] = $val;
+            if ($c->code) $this->countyMap[$this->cityKey((string) $c->code)] = $val;
+        }
+    }
+
+    private function resolveCounty(string $judet): ?array
+    {
+        if ($judet === '') return null;
+        return $this->countyMap[$this->cityKey($judet)]
+            ?? $this->countyMap[$this->norm($judet)]
+            ?? null;
+    }
+
+    private function uniqueCitySlug(string $name, string $judet): string
+    {
+        $base = Str::slug($name) ?: 'oras';
+        $slug = $base;
+        if (isset($this->citySlugs[$slug]) && $judet !== '') {
+            $slug = $base . '-' . Str::slug($judet);
+        }
+        $i = 2;
+        while (isset($this->citySlugs[$slug])) {
+            $slug = $base . '-' . $i++;
+        }
+        $this->citySlugs[$slug] = true;
+        return $slug;
+    }
+
     private function preloadLookups(int $clientId): void
     {
         foreach (MarketplaceCity::where('marketplace_client_id', $clientId)->get(['id', 'name', 'slug']) as $c) {
@@ -216,6 +377,7 @@ class ImportBileteAttractionsCommand extends Command
             if ($c->slug) {
                 $this->cityMap[$c->slug] = $c->id;
                 $this->cityMap[$this->cityKey($c->slug)] = $c->id;
+                $this->citySlugs[$c->slug] = true;
             }
         }
 
