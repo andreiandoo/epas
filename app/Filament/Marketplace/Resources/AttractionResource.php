@@ -214,21 +214,26 @@ class AttractionResource extends Resource
         }
 
         return $table
-            ->modifyQueryUsing(fn (Builder $q) => $q->with($eager))
+            // Eager-load + count applied manually here. Display columns below use
+            // NON-relationship names (tip_label/oras_label/judet_label) so Filament
+            // never engages its relationship-column resolution (applyEagerLoading /
+            // hasRelationship), which was throwing newQueryWithoutRelationships()
+            // on null inside the table render. Values come from getStateUsing.
+            ->modifyQueryUsing(fn (Builder $q) => $q->with($eager)->withCount('activities'))
             ->columns([
                 Tables\Columns\ImageColumn::make('cover_image_url')->label('')->disk('public')->height(40)->width(60),
                 Tables\Columns\TextColumn::make('name')->label('Nume')
                     ->getStateUsing(fn (Attraction $r) => is_array($r->name) ? ($r->name[$lang] ?? $r->name['ro'] ?? $r->slug) : $r->name)
                     ->searchable(query: fn (Builder $q, string $search) => $q->whereRaw("LOWER(name->>'ro') LIKE ?", ['%' . mb_strtolower($search) . '%'])),
-                Tables\Columns\TextColumn::make('type.name')->label('Tip')
+                Tables\Columns\TextColumn::make('tip_label')->label('Tip')
                     ->getStateUsing(fn (Attraction $r) => $r->type && is_array($r->type->name) ? ($r->type->name[$lang] ?? $r->type->name['ro'] ?? '') : ''),
-                Tables\Columns\TextColumn::make('city.name')->label('Oraș')
+                Tables\Columns\TextColumn::make('oras_label')->label('Oraș')
                     ->getStateUsing(fn (Attraction $r) => $r->city && is_array($r->city->name) ? ($r->city->name[$lang] ?? $r->city->name['ro'] ?? '') : ''),
-                Tables\Columns\TextColumn::make('county.name')->label('Județ')
+                Tables\Columns\TextColumn::make('judet_label')->label('Județ')
                     ->getStateUsing(fn (Attraction $r) => $r->county ? ((is_array($r->county->name) ? ($r->county->name[$lang] ?? $r->county->name['ro'] ?? '') : (string) $r->county->name) . ($r->county->code ? ' (' . $r->county->code . ')' : '')) : '')
                     ->visible($hasCounty)
                     ->toggleable(),
-                Tables\Columns\TextColumn::make('activities_count')->label('Activități')->counts('activities')->badge(),
+                Tables\Columns\TextColumn::make('activities_count')->label('Activități')->badge(),
                 Tables\Columns\IconColumn::make('is_featured')->label('Recom.')->boolean(),
                 Tables\Columns\ToggleColumn::make('is_visible')->label('Vizibilă'),
             ])
