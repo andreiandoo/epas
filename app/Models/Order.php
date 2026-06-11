@@ -37,6 +37,7 @@ class Order extends Model
         'marketplace_client_id',
         'marketplace_organizer_id',
         'newsletter_attribution_id',
+        'attribution_method',
         'marketplace_customer_id',
         'marketplace_event_id',
         'event_id',

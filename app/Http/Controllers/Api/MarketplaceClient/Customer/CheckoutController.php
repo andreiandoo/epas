@@ -992,6 +992,11 @@ class CheckoutController extends BaseController
                 'marketplace_client_id' => $client->id,
                 'marketplace_organizer_id' => $isMultiEvent ? null : $primaryOrganizerId,
                 'newsletter_attribution_id' => $newsletterAttributionId,
+                // Strict path: the order carries the ?nl= URL param /
+                // localStorage value. Loose 'email_match' is set later by
+                // OrderObserver when the URL flow misses (in-app browser,
+                // cross-device, cleared storage).
+                'attribution_method' => $newsletterAttributionId ? 'url_param' : null,
                 'tenant_id' => $primaryEvent?->tenant_id,
                 'marketplace_customer_id' => $customer->id,
                 'event_id' => $isMultiEvent ? null : ($primaryEvent?->id),

@@ -55,6 +55,29 @@ class EditNewsletter extends EditRecord
         $purchases = (int) ($r->purchase_count ?? 0);
         $revenueCents = (int) ($r->purchase_amount_cents ?? 0);
 
+        // Split the cached aggregate by attribution_method so we can show
+        // strict (URL flow) vs loose (post-purchase email match) cohorts
+        // separately. NULL is treated as strict for legacy orders that
+        // predate the column. Reads orders directly so the breakdown
+        // reflects current DB truth, not the cached counters (which lump
+        // both methods together).
+        $strictAgg = \App\Models\Order::where('newsletter_attribution_id', $r->id)
+            ->whereIn('status', ['paid', 'confirmed', 'completed', 'partially_refunded'])
+            ->where(function ($q) {
+                $q->where('attribution_method', 'url_param')->orWhereNull('attribution_method');
+            })
+            ->selectRaw('COUNT(*) as c, COALESCE(SUM(total), 0) as t')
+            ->first();
+        $looseAgg = \App\Models\Order::where('newsletter_attribution_id', $r->id)
+            ->whereIn('status', ['paid', 'confirmed', 'completed', 'partially_refunded'])
+            ->where('attribution_method', 'email_match')
+            ->selectRaw('COUNT(*) as c, COALESCE(SUM(total), 0) as t')
+            ->first();
+        $strictCount = (int) ($strictAgg->c ?? 0);
+        $strictRevenue = (float) ($strictAgg->t ?? 0);
+        $looseCount = (int) ($looseAgg->c ?? 0);
+        $looseRevenue = (float) ($looseAgg->t ?? 0);
+
         // Unique opens/clicks = distinct recipients that hit the pixel or a
         // tracked link. Rows with recipient_id IS NULL come from edge cases
         // (preview, forwarded mail decoded against a different APP_KEY) and
@@ -101,13 +124,26 @@ class EditNewsletter extends EditRecord
         $clickSub = "{$clickRate}% click rate"
             . ($clickHits !== $uniqueClicks ? " · {$clickHits} click-uri totale" : '');
 
+        $purchasesSub = "{$convRate}% conv. rate";
+        if ($looseCount > 0) {
+            $purchasesSub .= " · {$strictCount} URL + {$looseCount} email-match";
+        }
+        $revenueSub = 'plătit prin newsletter';
+        if ($looseRevenue > 0 && $strictRevenue > 0) {
+            $strictFmt = number_format($strictRevenue, 2, ',', '.');
+            $looseFmt = number_format($looseRevenue, 2, ',', '.');
+            $revenueSub .= " · {$strictFmt} sigur + {$looseFmt} email-match";
+        } elseif ($looseRevenue > 0) {
+            $revenueSub .= ' · 100% prin email-match (URL tracking ratat)';
+        }
+
         $html = '<div style="display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 0 0;">'
             . $cell('Trimise', $sent)
             . $cell('Deschideri', $uniqueOpens, $openSub)
             . $cell('Click-uri', $uniqueClicks, $clickSub)
             . $cell('CTOR', "{$ctor}%", 'click ÷ open (unic)')
-            . $cell('Cumpărări', $purchases, "{$convRate}% conv. rate")
-            . $cell('Venit atribuit', $revenue, 'plătit prin newsletter')
+            . $cell('Cumpărări', $purchases, $purchasesSub)
+            . $cell('Venit atribuit', $revenue, $revenueSub)
             . '</div>';
 
         return new HtmlString($html);

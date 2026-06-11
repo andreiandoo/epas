@@ -228,12 +228,23 @@ class OrderObserver
                 }
             }
 
-            // Newsletter purchase attribution. When the order carries a
-            // newsletter_attribution_id (set by the marketplace JS layer
-            // from the `nl=` URL param / localStorage), credit it to
-            // that campaign: log a TYPE_PURCHASE event and bump the
-            // aggregates so the EditNewsletter stats panel reflects
-            // revenue + conversion immediately.
+            // Newsletter purchase attribution. Strict path: order carries a
+            // newsletter_attribution_id set by the marketplace JS layer from
+            // the `nl=` URL param / localStorage. Loose fallback: if no
+            // attribution arrived through that path, look up the customer
+            // email against recent (default 14d) click events and credit
+            // the most recent matching newsletter — covers in-app browsers,
+            // cross-device flows, cleared localStorage.
+            if (!$order->newsletter_attribution_id) {
+                try {
+                    $this->tryEmailMatchAttribution($order);
+                } catch (\Throwable $e) {
+                    Log::warning('Newsletter email-match attribution failed', [
+                        'order_id' => $order->id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
             if ($order->newsletter_attribution_id) {
                 try {
                     $this->creditNewsletterAttribution($order);
@@ -253,6 +264,63 @@ class OrderObserver
                 'error_class' => get_class($e),
             ]);
         }
+    }
+
+    /**
+     * Loose email-match attribution: when an order completes without a
+     * newsletter_attribution_id (URL flow missed — in-app browser, cross-
+     * device purchase, cleared localStorage), look up the customer email
+     * against recent newsletter recipients who clicked a tracked link.
+     * Credit the most recent matching campaign (last-touch attribution)
+     * and tag the order with attribution_method='email_match' so reports
+     * can split strict vs loose conversions.
+     *
+     * Defaults to a 14-day lookback. Skips orders that already have an
+     * attribution_method set (won't overwrite the URL-param path).
+     */
+    protected function tryEmailMatchAttribution(Order $order): void
+    {
+        if ($order->newsletter_attribution_id) return;
+        if ($order->attribution_method) return;
+
+        $email = strtolower(trim((string) ($order->customer_email ?? '')));
+        if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) return;
+        if (!$order->marketplace_client_id) return;
+
+        $lookbackDays = (int) config('newsletter.email_match_lookback_days', 14);
+        if ($lookbackDays <= 0) return;
+        $cutoff = now()->subDays($lookbackDays);
+
+        // Pick the most recent click from a recipient whose email matches
+        // this order's customer_email, scoped to the same marketplace so
+        // a click on Ambilet doesn't credit a Tics newsletter. Returns
+        // (newsletter_id, last_click) for the winning row.
+        $match = DB::table('marketplace_newsletter_link_events as e')
+            ->join('marketplace_newsletter_recipients as r', 'r.id', '=', 'e.recipient_id')
+            ->join('marketplace_newsletters as n', 'n.id', '=', 'e.newsletter_id')
+            ->where('n.marketplace_client_id', $order->marketplace_client_id)
+            ->where('e.event_type', \App\Models\MarketplaceNewsletterLinkEvent::TYPE_CLICK)
+            ->where('e.created_at', '>=', $cutoff)
+            ->whereRaw('LOWER(TRIM(r.email)) = ?', [$email])
+            ->where('e.created_at', '<=', $order->created_at ?? now())
+            ->orderByDesc('e.created_at')
+            ->select('e.newsletter_id', 'e.created_at as click_at')
+            ->first();
+
+        if (!$match) return;
+
+        // Persist quietly so we don't re-trigger the observer's updated()
+        // logic and double-credit ourselves.
+        $order->newsletter_attribution_id = (int) $match->newsletter_id;
+        $order->attribution_method = 'email_match';
+        $order->saveQuietly();
+
+        Log::info('Newsletter email-match attribution applied', [
+            'order_id' => $order->id,
+            'newsletter_id' => $order->newsletter_attribution_id,
+            'customer_email' => $email,
+            'click_at' => $match->click_at,
+        ]);
     }
 
     /**
