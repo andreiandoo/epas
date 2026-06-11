@@ -214,12 +214,14 @@ class AttractionResource extends Resource
         }
 
         return $table
-            // Eager-load + count applied manually here. Display columns below use
-            // NON-relationship names (tip_label/oras_label/judet_label) so Filament
-            // never engages its relationship-column resolution (applyEagerLoading /
-            // hasRelationship), which was throwing newQueryWithoutRelationships()
-            // on null inside the table render. Values come from getStateUsing.
-            ->modifyQueryUsing(fn (Builder $q) => $q->with($eager)->withCount('activities'))
+            // Eager-load only — with() is lazy so it's safe even when Filament
+            // evaluates modifyQueryUsing early (during Table::getModel(), the
+            // builder has no model yet). withCount()/counts() resolve the relation
+            // immediately there → "activities() on null", so the count lives on the
+            // column via getStateUsing (a real model per row). Display columns use
+            // NON-relationship names so Filament never runs relationship-column
+            // resolution either.
+            ->modifyQueryUsing(fn (Builder $q) => $q->with($eager))
             ->columns([
                 Tables\Columns\ImageColumn::make('cover_image_url')->label('')->disk('public')->height(40)->width(60),
                 Tables\Columns\TextColumn::make('name')->label('Nume')
@@ -233,7 +235,9 @@ class AttractionResource extends Resource
                     ->getStateUsing(fn (Attraction $r) => $r->county ? ((is_array($r->county->name) ? ($r->county->name[$lang] ?? $r->county->name['ro'] ?? '') : (string) $r->county->name) . ($r->county->code ? ' (' . $r->county->code . ')' : '')) : '')
                     ->visible($hasCounty)
                     ->toggleable(),
-                Tables\Columns\TextColumn::make('activities_count')->label('Activități')->badge(),
+                Tables\Columns\TextColumn::make('activities_count')->label('Activități')
+                    ->getStateUsing(fn (Attraction $r) => $r->activities()->count())
+                    ->badge(),
                 Tables\Columns\IconColumn::make('is_featured')->label('Recom.')->boolean(),
                 Tables\Columns\ToggleColumn::make('is_visible')->label('Vizibilă'),
             ])
