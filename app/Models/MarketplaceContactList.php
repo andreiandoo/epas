@@ -458,8 +458,15 @@ class MarketplaceContactList extends Model
      * as customers. Without this step the Organizatori list ended at
      * 516 of 548 organizers because the 32 missing ones had no
      * customer row yet.
+     *
+     * When $prune is true (default), customers that no longer match the
+     * rules are marked unsubscribed in the pivot. The Cumpărători list
+     * had drifted ~6200 rows above the real buyer pool because the prior
+     * additive-only sync never removed customers whose orders had since
+     * been cancelled or whose accounts were soft-deleted. With prune on,
+     * the list always reflects the rule-matched cohort exactly.
      */
-    public function syncSubscribers(): int
+    public function syncSubscribers(bool $prune = true): int
     {
         if (!$this->isDynamic()) {
             return 0;
@@ -474,6 +481,8 @@ class MarketplaceContactList extends Model
 
         // Customers to add
         $toAdd = $matchingCustomerIds->diff($currentSubscriberIds);
+        // Customers to remove (currently subscribed but no longer matching).
+        $toRemove = $prune ? $currentSubscriberIds->diff($matchingCustomerIds) : collect();
 
         // Bulk-upsert in chunks. The previous foreach + syncWithoutDetaching
         // form fired ~2 queries per customer (one EXISTS + one INSERT),
@@ -497,6 +506,20 @@ class MarketplaceContactList extends Model
                 ['list_id', 'marketplace_customer_id'],
                 ['status', 'subscribed_at', 'updated_at']
             );
+        }
+
+        // Mark non-matching members as unsubscribed (don't delete — keeps
+        // the audit trail of who used to be on the list and when they
+        // left, same as a manual unsubscribe).
+        foreach ($toRemove->chunk(5000) as $chunk) {
+            DB::table('marketplace_contact_list_members')
+                ->where('list_id', $listId)
+                ->whereIn('marketplace_customer_id', $chunk->all())
+                ->update([
+                    'status' => 'unsubscribed',
+                    'unsubscribed_at' => $now,
+                    'updated_at' => $now,
+                ]);
         }
 
         // Update sync timestamp
