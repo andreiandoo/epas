@@ -54,14 +54,16 @@ class ListAttractions extends ListRecords
 
     public function getTabs(): array
     {
-        // Use whereRaw (parenthesised) rather than where(Closure): a nested
-        // where-closure makes Eloquent call $this->model->newQueryWithoutRelationships(),
-        // which 500s inside Filament's table render in some query contexts.
+        // The param MUST be named $query: Tab::modifyQuery() applies the modifier
+        // via Filament's evaluate(['query' => $query]), which injects by parameter
+        // NAME. A param named $q is left null → the active tab 500s. (The default
+        // 'all' tab never evaluates a modifier, which is why the list itself loaded.)
+        // whereRaw (parenthesised) avoids the where(Closure) path entirely.
         $pg = DB::getDriverName() === 'pgsql';
-        $noImage = fn (Builder $q) => $q->whereRaw("(cover_image_url is null or cover_image_url = '')");
-        $noCity  = fn (Builder $q) => $q->whereNull('marketplace_city_id');
-        $noAddr  = fn (Builder $q) => $q->whereRaw("(address is null or address = '')");
-        $noGall  = fn (Builder $q) => $q->whereRaw($pg
+        $noImage = fn (Builder $query) => $query->whereRaw("(cover_image_url is null or cover_image_url = '')");
+        $noCity  = fn (Builder $query) => $query->whereNull('marketplace_city_id');
+        $noAddr  = fn (Builder $query) => $query->whereRaw("(address is null or address = '')");
+        $noGall  = fn (Builder $query) => $query->whereRaw($pg
             ? "(gallery is null or gallery::text in ('[]', 'null', '{}'))"
             : "(gallery is null or gallery = '[]' or gallery = '')");
 
