@@ -600,48 +600,6 @@ class ListPayouts extends ListRecords
                     ->visible(fn (Get $get) => $get('event_id') !== null && $get('has_balance'))
                     ->columnSpanFull(),
 
-                // Refund picker — operator chooses which event refunds are
-                // accounted for IN this new payout. Each checked refund's
-                // amount is deducted from the payout's net (the operator
-                // sees this in the form totals after clicking Recalculează).
-                // Only unattached refunds appear here — refunds already
-                // linked to another payout are filtered out.
-                Forms\Components\CheckboxList::make('included_refund_ids')
-                    ->label('Rambursări incluse în acest decont')
-                    ->helperText('Bifează rambursările care intră în decontul curent. Valoarea lor se scade din suma de plată și apar în documentul PDF.')
-                    ->options(function (Get $get) {
-                        $eventId = $get('event_id');
-                        if (!$eventId) return [];
-
-                        return \App\Models\MarketplaceRefundRequest::query()
-                            ->whereIn('status', [
-                                \App\Models\MarketplaceRefundRequest::STATUS_REFUNDED,
-                                \App\Models\MarketplaceRefundRequest::STATUS_PARTIALLY_REFUNDED,
-                            ])
-                            ->where(function ($q) use ($eventId) {
-                                $q->whereHas('order', function ($q2) use ($eventId) {
-                                    $q2->where('event_id', $eventId)
-                                        ->orWhere('marketplace_event_id', $eventId);
-                                });
-                            })
-                            ->whereNull('marketplace_payout_id')
-                            ->orderByDesc('completed_at')
-                            ->get(['id', 'reference', 'approved_amount', 'completed_at'])
-                            ->mapWithKeys(fn ($r) => [
-                                $r->id => sprintf(
-                                    '%s · %s RON · %s',
-                                    $r->reference,
-                                    number_format((float) $r->approved_amount, 2),
-                                    $r->completed_at?->format('d.m.Y') ?? '—'
-                                ),
-                            ])
-                            ->all();
-                    })
-                    ->columns(1)
-                    ->bulkToggleable()
-                    ->visible(fn (Get $get) => $get('event_id') !== null && $get('has_balance'))
-                    ->columnSpanFull(),
-
                 // Recalculate button
                 \Filament\Schemas\Components\Actions::make([
                     \Filament\Actions\Action::make('recalculate_payout')
