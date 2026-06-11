@@ -25,6 +25,7 @@ class Attraction extends Model
         'marketplace_client_id',
         'attraction_type_id',
         'marketplace_city_id',
+        'marketplace_county_id',
         'slug',
         'name',
         'subtitle',
@@ -68,6 +69,11 @@ class Attraction extends Model
     public function city(): BelongsTo
     {
         return $this->belongsTo(MarketplaceCity::class, 'marketplace_city_id');
+    }
+
+    public function county(): BelongsTo
+    {
+        return $this->belongsTo(MarketplaceCounty::class, 'marketplace_county_id');
     }
 
     public function activities(): BelongsToMany

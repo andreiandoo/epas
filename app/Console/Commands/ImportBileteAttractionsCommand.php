@@ -44,6 +44,7 @@ class ImportBileteAttractionsCommand extends Command
         {--relink-cities : Only pass: re-link city = null attractions using aggressive name normalisation (no new cities, no other writes)}
         {--create-cities : Create marketplace_cities for genuinely-missing localities that have at least --min-attractions, then relink (is_visible=false)}
         {--min-attractions=4 : Threshold for --create-cities}
+        {--backfill-counties : Only pass: fill marketplace_county_id from the linked city county, falling back to the CSV judet column}
         {--dry-run : Parse + map but write nothing}';
 
     protected $description = 'Import attractions from CSV (maps types + cities, downloads cover images).';
@@ -68,6 +69,10 @@ class ImportBileteAttractionsCommand extends Command
         if (! is_file($file)) {
             $this->error("CSV not found: {$file}");
             return self::FAILURE;
+        }
+
+        if ($this->option('backfill-counties')) {
+            return $this->backfillCounties($file, $clientId, $dry);
         }
 
         if ($this->option('create-cities')) {
@@ -324,6 +329,65 @@ class ImportBileteAttractionsCommand extends Command
         if (! $dry) {
             $this->line('Review + publish the new cities at /marketplace/cities (filter: not visible).');
         }
+
+        return self::SUCCESS;
+    }
+
+    /**
+     * --backfill-counties pass: fills marketplace_county_id on attractions that
+     * have it null. Prefers the linked city's county; falls back to the CSV
+     * `judet` column (mapped to an existing county). No other field touched.
+     */
+    private function backfillCounties(string $file, int $clientId, bool $dry): int
+    {
+        $this->preloadCounties($clientId);
+        $cityCounty = MarketplaceCity::where('marketplace_client_id', $clientId)->pluck('county_id', 'id')->toArray();
+
+        // slug => judet from CSV.
+        $fh = fopen($file, 'r');
+        $header = fgetcsv($fh, 0, ',', '"', '');
+        $header[0] = preg_replace('/^\xEF\xBB\xBF/', '', (string) $header[0]);
+        $col = array_flip(array_map(fn ($h) => trim((string) $h), $header));
+        $slugToJudet = [];
+        while (($row = fgetcsv($fh, 0, ',', '"', '')) !== false) {
+            $slug = trim((string) ($row[$col['slug']] ?? '')) ?: Str::slug(trim((string) ($row[$col['nume']] ?? '')));
+            $judet = trim((string) ($row[$col['judet']] ?? ''));
+            if ($slug !== '' && $judet !== '') $slugToJudet[$slug] = $judet;
+        }
+        fclose($fh);
+
+        $fromCity = 0;
+        $fromCsv = 0;
+        $still = 0;
+
+        Attraction::where('marketplace_client_id', $clientId)
+            ->whereNull('marketplace_county_id')
+            ->select('id', 'slug', 'marketplace_city_id')
+            ->chunkById(500, function ($chunk) use (&$fromCity, &$fromCsv, &$still, $cityCounty, $slugToJudet, $dry) {
+                foreach ($chunk as $att) {
+                    $cid = null;
+                    $src = '';
+                    if ($att->marketplace_city_id && ! empty($cityCounty[$att->marketplace_city_id])) {
+                        $cid = $cityCounty[$att->marketplace_city_id];
+                        $src = 'city';
+                    } elseif (($j = $slugToJudet[$att->slug] ?? '') !== '') {
+                        $county = $this->resolveCounty($j);
+                        if ($county) {
+                            $cid = $county['id'];
+                            $src = 'csv';
+                        }
+                    }
+                    if ($cid) {
+                        if (! $dry) $att->forceFill(['marketplace_county_id' => $cid])->save();
+                        $src === 'city' ? $fromCity++ : $fromCsv++;
+                    } else {
+                        $still++;
+                    }
+                }
+            });
+
+        $this->newLine();
+        $this->info(($dry ? '[dry-run] ' : '') . "County backfill: {$fromCity} from city, {$fromCsv} from CSV judet, {$still} still null.");
 
         return self::SUCCESS;
     }

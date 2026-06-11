@@ -7,6 +7,8 @@ use App\Filament\Marketplace\Resources\AttractionResource\Pages;
 use App\Models\Attraction;
 use App\Models\AttractionType;
 use App\Models\MarketplaceCity;
+use App\Models\MarketplaceCounty;
+use Filament\Actions\BulkAction;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\BulkActionGroup;
@@ -72,6 +74,12 @@ class AttractionResource extends Resource
             ->where('marketplace_client_id', $marketplace?->id)
             ->get()
             ->mapWithKeys(fn ($c) => [$c->id => is_array($c->name) ? ($c->name[$lang] ?? $c->name['ro'] ?? $c->slug) : $c->name])
+            ->all();
+
+        $countyOptions = MarketplaceCounty::query()
+            ->where('marketplace_client_id', $marketplace?->id)
+            ->orderBy('code')->get()
+            ->mapWithKeys(fn ($c) => [$c->id => (is_array($c->name) ? ($c->name[$lang] ?? $c->name['ro'] ?? '') : (string) $c->name) . ($c->code ? ' (' . $c->code . ')' : '')])
             ->all();
 
         return $schema->schema([
@@ -167,7 +175,17 @@ class AttractionResource extends Resource
                             ->visible(fn ($record) => (bool) $record),
 
                         Forms\Components\Select::make('attraction_type_id')->label('Tip')->options($typeOptions)->searchable()->preload(),
-                        Forms\Components\Select::make('marketplace_city_id')->label('Oraș')->options($cityOptions)->searchable()->preload(),
+                        Forms\Components\Select::make('marketplace_city_id')->label('Oraș')->options($cityOptions)->searchable()->preload()
+                            ->live()
+                            ->afterStateUpdated(function ($state, \Filament\Schemas\Components\Utilities\Set $set, \Filament\Schemas\Components\Utilities\Get $get) {
+                                // Auto-fill judet from the chosen city's county.
+                                if ($state) {
+                                    $cid = MarketplaceCity::find($state)?->county_id;
+                                    if ($cid) $set('marketplace_county_id', $cid);
+                                }
+                            }),
+                        Forms\Components\Select::make('marketplace_county_id')->label('Județ')->options($countyOptions)->searchable()->preload()
+                            ->helperText('Se completează automat din oraș; setează manual când nu există oraș.'),
                         Forms\Components\TextInput::make('sort_order')->label('Ordine')->numeric()->default(0),
                         Forms\Components\Toggle::make('is_featured')->label('Recomandată')->default(false),
                         Forms\Components\Toggle::make('is_visible')->label('Vizibilă')->default(true),
@@ -183,6 +201,7 @@ class AttractionResource extends Resource
         $lang = $marketplace->language ?? $marketplace->locale ?? 'ro';
 
         return $table
+            ->modifyQueryUsing(fn (Builder $q) => $q->with(['type:id,name', 'city:id,name', 'county:id,name,code']))
             ->columns([
                 Tables\Columns\ImageColumn::make('cover_image_url')->label('')->disk('public')->height(40)->width(60),
                 Tables\Columns\TextColumn::make('name')->label('Nume')
@@ -192,13 +211,33 @@ class AttractionResource extends Resource
                     ->getStateUsing(fn (Attraction $r) => $r->type && is_array($r->type->name) ? ($r->type->name[$lang] ?? $r->type->name['ro'] ?? '') : ''),
                 Tables\Columns\TextColumn::make('city.name')->label('Oraș')
                     ->getStateUsing(fn (Attraction $r) => $r->city && is_array($r->city->name) ? ($r->city->name[$lang] ?? $r->city->name['ro'] ?? '') : ''),
+                Tables\Columns\TextColumn::make('county.name')->label('Județ')
+                    ->getStateUsing(fn (Attraction $r) => $r->county ? ((is_array($r->county->name) ? ($r->county->name[$lang] ?? $r->county->name['ro'] ?? '') : (string) $r->county->name) . ($r->county->code ? ' (' . $r->county->code . ')' : '')) : '')
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('activities_count')->label('Activități')->counts('activities')->badge(),
                 Tables\Columns\IconColumn::make('is_featured')->label('Recom.')->boolean(),
                 Tables\Columns\ToggleColumn::make('is_visible')->label('Vizibilă'),
             ])
             ->defaultSort('sort_order')
             ->recordActions([EditAction::make(), DeleteAction::make()])
-            ->toolbarActions([BulkActionGroup::make([DeleteBulkAction::make()])]);
+            ->toolbarActions([
+                BulkActionGroup::make([
+                    BulkAction::make('mark_featured')
+                        ->label('Marchează recomandat')
+                        ->icon('heroicon-o-star')
+                        ->color('warning')
+                        ->requiresConfirmation()
+                        ->action(fn ($records) => $records->each->update(['is_featured' => true]))
+                        ->deselectRecordsAfterCompletion(),
+                    BulkAction::make('unmark_featured')
+                        ->label('Scoate recomandat')
+                        ->icon('heroicon-o-star')
+                        ->color('gray')
+                        ->action(fn ($records) => $records->each->update(['is_featured' => false]))
+                        ->deselectRecordsAfterCompletion(),
+                    DeleteBulkAction::make(),
+                ]),
+            ]);
     }
 
     public static function getPages(): array
