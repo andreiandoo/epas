@@ -634,13 +634,11 @@ const CartPage = {
         pointsEl.classList.add('points-animation');
     },
 
-    /**
-     * Format an event date for the cart row, honouring festival/range
-     * shape ("10 - 12 Iun 2026") when the cart item carries range_*/end_date
-     * info. Performance-specific dates (multi-day with a single picked slot)
-     * keep using the existing single-date renderer because the buyer chose a
-     * specific date — showing the whole range would be misleading.
-     */
+    // Format an event date for the cart row, honouring festival/range shape
+    // ("10 - 12 Iun 2026") when the cart item carries range_x or end_date
+    // info. Performance-specific dates (multi-day with a single picked slot)
+    // keep using the existing single-date renderer because the buyer chose a
+    // specific date — showing the whole range would be misleading.
     formatItemDate(item, fallbackDate) {
         if (item && item.event && item.event.performance_date) {
             return AmbiletUtils.formatDate(item.event.performance_date, 'medium');
