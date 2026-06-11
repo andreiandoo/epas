@@ -855,6 +855,11 @@ class MarketplaceEventsController extends BaseController
                 'is_sold_out' => (bool) ($event->is_sold_out ?? false),
                 'is_cancelled' => (bool) ($event->is_cancelled ?? false),
                 'cancel_reason' => $event->is_cancelled ? ($event->cancel_reason ?? null) : null,
+                // Organizer flipped "Doar la intrare" — online ticket types
+                // stay visible (admin may keep a stock buffer) but the public
+                // page forces them as unavailable and surfaces a banner that
+                // routes the buyer to the door instead.
+                'door_sales_only' => (bool) ($event->door_sales_only ?? false),
                 'is_postponed' => (bool) ($event->is_postponed ?? false),
                 'postponed_reason' => $event->is_postponed ? ($event->postponed_reason ?? null) : null,
                 'postponed_date' => $event->is_postponed && $event->postponed_date ? $event->postponed_date->format('Y-m-d') : null,

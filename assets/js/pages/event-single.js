@@ -680,6 +680,12 @@ const EventPage = {
             is_sold_out: eventData.is_sold_out || false,
             is_cancelled: eventData.is_cancelled || false,
             cancel_reason: eventData.cancel_reason || null,
+            // "Doar la intrare" — when the organizer flips this in admin,
+            // every online ticket type is forced as unavailable and a banner
+            // explains that tickets are available only at the venue door.
+            // The POS-only ticket type is already filtered out by the API
+            // (is_entry_ticket=true rows never reach this payload).
+            door_sales_only: eventData.door_sales_only || false,
             is_postponed: eventData.is_postponed || false,
             postponed_reason: eventData.postponed_reason || null,
             postponed_date: eventData.postponed_date || null,
@@ -2071,7 +2077,13 @@ const EventPage = {
             }
         }
         var eventIsSoldOut = this.event.is_sold_out || false;
-        var eventDisabled = eventIsCancelled || eventIsPostponed || eventIsSoldOut;
+        // "Doar la intrare" — treated as a global disabler for ALL online
+        // ticket types so admin doesn't have to manually zero out each stock
+        // when sales move to the door. POS rows are already API-filtered out
+        // before they reach this.ticketTypes, so this safely covers the
+        // remaining online types regardless of their `available` value.
+        var eventIsDoorSalesOnly = this.event.door_sales_only || false;
+        var eventDisabled = eventIsCancelled || eventIsPostponed || eventIsSoldOut || eventIsDoorSalesOnly;
 
         // Render performance selector pills for multi-day events
         var perfSelectorHtml = this.renderPerformanceSelector();
@@ -2123,16 +2135,18 @@ const EventPage = {
                 availabilityHtml = '<span class="text-xs font-semibold text-orange-500">Eveniment amânat</span>';
             } else if (eventIsSoldOut) {
                 availabilityHtml = '<span class="text-xs font-semibold text-gray-500">Sold Out</span>';
+            } else if (eventIsDoorSalesOnly) {
+                availabilityHtml = '<span class="text-xs font-semibold text-amber-600">Doar la intrare</span>';
             } else if (isSoldOut) {
                 availabilityHtml = '<span class="text-xs font-semibold text-gray-400">Indisponibil</span>';
-            } else if (tt.available <= 1) {
-                availabilityHtml = '<span class="text-xs font-semibold text-primary">🔥 Ultimul bilet</span>';
-            } else if (tt.available <= 5) {
-                availabilityHtml = '<span class="text-xs font-semibold text-primary">🔥 Ultimele ' + tt.available + ' disponibile</span>';
-            } else if (tt.available <= 20) {
-                availabilityHtml = '<span class="text-xs font-semibold text-primary">🔥 Doar ' + tt.available + ' disponibile</span>';
-            } else if (tt.available < 40) {
-                availabilityHtml = '<span class="text-xs font-semibold text-success">⚡ ' + tt.available + ' disponibile</span>';
+            // } else if (tt.available <= 1) {
+            //     availabilityHtml = '<span class="text-xs font-semibold text-primary">🔥 Ultimul bilet</span>';
+            // } else if (tt.available <= 5) {
+            //     availabilityHtml = '<span class="text-xs font-semibold text-primary">🔥 Ultimele ' + tt.available + ' disponibile</span>';
+            // } else if (tt.available <= 20) {
+            //     availabilityHtml = '<span class="text-xs font-semibold text-primary">🔥 Doar ' + tt.available + ' disponibile</span>';
+            // } else if (tt.available < 40) {
+            //     availabilityHtml = '<span class="text-xs font-semibold text-success">⚡ ' + tt.available + ' disponibile</span>';
             } else {
                 availabilityHtml = '<span class="text-xs font-semibold text-success"></span>';
             }
@@ -2346,7 +2360,26 @@ const EventPage = {
             ticketCardsHtml = ticketCards.map(function(c) { return c.html; }).join('');
         }
 
-        container.innerHTML = perfSelectorHtml + ticketCardsHtml;
+        // "Doar la intrare" — banner under the ticket-types list explaining
+        // that online sales are closed and the door is open. Rendered below
+        // (not above) so the disabled ticket cards stay visible as context,
+        // matching the admin's mental model of "I see what's on sale but
+        // can't buy it online".
+        var doorSalesBanner = '';
+        if (eventIsDoorSalesOnly && !eventIsCancelled && !eventIsPostponed) {
+            doorSalesBanner =
+                '<div class="mt-4 p-4 rounded-xl border border-amber-200 bg-amber-50 flex items-start gap-3">' +
+                    '<svg class="flex-shrink-0 w-5 h-5 mt-0.5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
+                        '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>' +
+                    '</svg>' +
+                    '<div>' +
+                        '<p class="text-sm font-semibold text-amber-900">Biletele online s-au epuizat</p>' +
+                        '<p class="mt-1 text-sm text-amber-800">Mai există bilete disponibile doar la acces, la intrarea în eveniment.</p>' +
+                    '</div>' +
+                '</div>';
+        }
+
+        container.innerHTML = perfSelectorHtml + ticketCardsHtml + doorSalesBanner;
 
         // Bind performance pill click handlers
         container.querySelectorAll('.perf-pill').forEach(function(btn) {
