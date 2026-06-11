@@ -1271,6 +1271,40 @@ class NewsletterResource extends Resource
                     ->label('Open Rate')
                     ->suffix('%')
                     ->visible(fn () => true),
+                Tables\Columns\TextColumn::make('click_rate')
+                    ->label('Click Rate')
+                    ->state(function ($record) {
+                        $sent = (int) ($record->sent_count ?? 0);
+                        if ($sent <= 0) return '—';
+                        $clicks = (int) ($record->clicked_count ?? 0);
+                        return min(100, round(($clicks / $sent) * 100, 1)) . '%';
+                    })
+                    ->toggleable(),
+                Tables\Columns\TextColumn::make('purchase_count')
+                    ->label('Comenzi')
+                    ->numeric()
+                    ->sortable()
+                    ->placeholder('—'),
+                Tables\Columns\TextColumn::make('purchase_amount_cents')
+                    ->label('Venit')
+                    ->state(function ($record) {
+                        $cents = (int) ($record->purchase_amount_cents ?? 0);
+                        if ($cents <= 0) return '—';
+                        $currency = $record->marketplaceClient?->currency ?? 'RON';
+                        return number_format($cents / 100, 2, ',', '.') . ' ' . $currency;
+                    })
+                    ->sortable(),
+                Tables\Columns\TextColumn::make('commission_attributed')
+                    ->label('Comision')
+                    ->state(function ($record) {
+                        if (!isset($record->commission_attributed)) return '—';
+                        $val = (float) $record->commission_attributed;
+                        if ($val <= 0) return '—';
+                        $currency = $record->marketplaceClient?->currency ?? 'RON';
+                        return number_format($val, 2, ',', '.') . ' ' . $currency;
+                    })
+                    ->sortable()
+                    ->tooltip('Comisionul marketplace-ului încasat din comenzile atribuite acestui newsletter (sum commission_amount pe orders cu status success).'),
                 Tables\Columns\TextColumn::make('scheduled_at')
                     ->label('Scheduled')
                     ->dateTime()
@@ -1280,6 +1314,18 @@ class NewsletterResource extends Resource
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
+            ->modifyQueryUsing(function ($query) {
+                // Single subquery per row to attach SUM(commission_amount)
+                // for success-status orders attributed to this newsletter.
+                // Avoids N+1 the table column would otherwise trigger and
+                // keeps sort-by-commission working without a stored column.
+                return $query->selectSub(
+                    \App\Models\Order::selectRaw('COALESCE(SUM(commission_amount), 0)')
+                        ->whereColumn('newsletter_attribution_id', 'marketplace_newsletters.id')
+                        ->whereIn('status', ['paid', 'confirmed', 'completed', 'partially_refunded']),
+                    'commission_attributed'
+                );
+            })
             ->defaultSort('created_at', 'desc')
             ->filters([
                 Tables\Filters\SelectFilter::make('status')
