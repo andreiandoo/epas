@@ -459,14 +459,19 @@ class MarketplaceContactList extends Model
      * 516 of 548 organizers because the 32 missing ones had no
      * customer row yet.
      *
-     * When $prune is true (default), customers that no longer match the
-     * rules are marked unsubscribed in the pivot. The Cumpărători list
-     * had drifted ~6200 rows above the real buyer pool because the prior
-     * additive-only sync never removed customers whose orders had since
-     * been cancelled or whose accounts were soft-deleted. With prune on,
-     * the list always reflects the rule-matched cohort exactly.
+     * $prune defaults to FALSE so the sync stays additive. The
+     * Cumpărători list looked like it drifted ~6200 rows above the real
+     * buyer pool, but most of those "stale" rows are actually beneficiar
+     * emails (the attendee_email on tickets bought by someone else —
+     * gift-card / family / friends scenarios) that were enrolled in the
+     * list by a separate seed path and don't appear in
+     * buildMatchingCustomersQuery. Pruning them would silently delete
+     * legitimate audience the marketplace owner wants to keep.
+     *
+     * Pass $prune=true only when you truly want a hard rule-match
+     * rebuild (e.g. a brand-new list, or after fixing a buggy rule).
      */
-    public function syncSubscribers(bool $prune = true): int
+    public function syncSubscribers(bool $prune = false): int
     {
         if (!$this->isDynamic()) {
             return 0;
