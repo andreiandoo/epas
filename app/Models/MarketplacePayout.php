@@ -1054,10 +1054,21 @@ class MarketplacePayout extends Model
             return [];
         }
 
+        // Filter by event via the ORDER (which always has event_id /
+        // marketplace_event_id), not via the refund_request column.
+        // marketplace_refund_requests.marketplace_event_id is nullable
+        // and legacy refunds were created without it being backfilled,
+        // so a strict `where marketplace_event_id = X` skipped real
+        // refunded commissions. The order is the source of truth.
         $items = \App\Models\MarketplaceRefundItem::query()
             ->whereHas('refundRequest', function ($q) {
-                $q->where('marketplace_event_id', $this->event_id)
-                    ->where('marketplace_organizer_id', $this->marketplace_organizer_id);
+                $q->whereHas('order', function ($oq) {
+                    $oq->where(function ($w) {
+                        $w->where('event_id', $this->event_id)
+                          ->orWhere('marketplace_event_id', $this->event_id);
+                    });
+                })
+                ->where('marketplace_organizer_id', $this->marketplace_organizer_id);
             })
             ->where('commission_refunded', true)
             ->where('status', 'refunded')

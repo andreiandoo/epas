@@ -868,7 +868,14 @@ class ViewPayout extends ViewRecord
                         . number_format($total, 2) . ' RON' . $breakdown
                         . '. După emitere, butonul dispare de pe toate deconturile evenimentului.';
                 })
-                ->visible(fn () => $this->record->getEventPosInvoice() === null
+                // Allow ONE invoice per PAYOUT (not per event). Previously
+                // the check was `getEventPosInvoice() === null`, which
+                // hid the button on every decont of the event once any
+                // single decont had emitted an invoice. Operators need
+                // to be able to emit one invoice per decont when sales /
+                // refunds keep arriving across multiple deconts of the
+                // same event.
+                ->visible(fn () => $this->record->posInvoice === null
                     && $this->record->isEventFinished()
                     && ($this->record->getPosCommissionTotal() > 0
                         || $this->record->getRefundedCommissionTotalForEvent() > 0)
