@@ -113,10 +113,20 @@ class NewsletterResource extends Resource
             });
         }
         if ($search !== '') {
-            $query->where(function ($q) use ($search) {
-                $q->where('title->ro', 'ilike', "%{$search}%")
-                    ->orWhere('title->en', 'ilike', "%{$search}%")
-                    ->orWhere('slug', 'ilike', "%{$search}%");
+            // Tokenize on whitespace so a search like "cargo flex" matches
+            // any event whose title (ro or en) or slug contains BOTH words
+            // — in any order, any position. Each token is AND-ed; within a
+            // token the three columns are OR-ed.
+            $tokens = preg_split('/\s+/', trim($search), -1, PREG_SPLIT_NO_EMPTY);
+            $query->where(function ($q) use ($tokens) {
+                foreach ($tokens as $token) {
+                    $like = '%' . $token . '%';
+                    $q->where(function ($w) use ($like) {
+                        $w->where('title->ro', 'ilike', $like)
+                            ->orWhere('title->en', 'ilike', $like)
+                            ->orWhere('slug', 'ilike', $like);
+                    });
+                }
             });
         }
 
@@ -391,7 +401,15 @@ class NewsletterResource extends Resource
                         ->label('Evenimente — către cumpărătorii biletelor')
                         ->multiple()
                         ->searchable()
-                        ->live(onBlur: true)
+                        // No ->live() here on purpose. Each pill selection
+                        // in a multi-select with live() triggers a Livewire
+                        // form re-render that destroys the dropdown DOM and
+                        // closes it, forcing the admin to click "select" and
+                        // retype the search every time. Nothing observes
+                        // target_event_ids reactively (the recipient-count
+                        // placeholder picks the value up at action time),
+                        // so we drop live() and the dropdown stays open
+                        // between selections.
                         // Initial dropdown content reacts to the city
                         // filter — selecting cities pre-fills the events
                         // dropdown without requiring the admin to type
