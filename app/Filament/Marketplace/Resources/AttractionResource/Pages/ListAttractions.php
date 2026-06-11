@@ -20,17 +20,16 @@ class ListAttractions extends ListRecords
 
     public function getTabs(): array
     {
-        $noImage = fn (Builder $q) => $q->where(fn ($x) => $x->whereNull('cover_image_url')->orWhere('cover_image_url', ''));
+        // Use whereRaw (parenthesised) rather than where(Closure): a nested
+        // where-closure makes Eloquent call $this->model->newQueryWithoutRelationships(),
+        // which 500s inside Filament's table render in some query contexts.
+        $pg = DB::getDriverName() === 'pgsql';
+        $noImage = fn (Builder $q) => $q->whereRaw("(cover_image_url is null or cover_image_url = '')");
         $noCity  = fn (Builder $q) => $q->whereNull('marketplace_city_id');
-        $noAddr  = fn (Builder $q) => $q->where(fn ($x) => $x->whereNull('address')->orWhere('address', ''));
-        $noGall  = fn (Builder $q) => $q->where(function ($x) {
-            $x->whereNull('gallery');
-            if (DB::getDriverName() === 'pgsql') {
-                $x->orWhereRaw("gallery::text in ('[]', 'null', '{}')");
-            } else {
-                $x->orWhere('gallery', '[]')->orWhere('gallery', '');
-            }
-        });
+        $noAddr  = fn (Builder $q) => $q->whereRaw("(address is null or address = '')");
+        $noGall  = fn (Builder $q) => $q->whereRaw($pg
+            ? "(gallery is null or gallery::text in ('[]', 'null', '{}'))"
+            : "(gallery is null or gallery = '[]' or gallery = '')");
 
         $count = fn (callable $mod) => $mod($this->getResource()::getEloquentQuery())->count();
 

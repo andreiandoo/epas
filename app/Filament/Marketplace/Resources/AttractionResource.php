@@ -206,9 +206,11 @@ class AttractionResource extends Resource
 
         // Defensive: the county column ships before the migration may have run.
         $hasCounty = DBSchema::hasColumn('attractions', 'marketplace_county_id');
-        $eager = ['type:id,name', 'city:id,name'];
+        // Unconstrained eager load (no :columns) — the column-constrained form can
+        // trip Eloquent's relation matching inside Filament's table render.
+        $eager = ['type', 'city'];
         if ($hasCounty) {
-            $eager[] = 'county:id,name,code';
+            $eager[] = 'county';
         }
 
         return $table

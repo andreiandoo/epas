@@ -87,7 +87,7 @@ class MarketplaceNewsletterRecipient extends Model
     /**
      * Mark as bounced
      */
-    public function markBounced(string $reason = null): void
+    public function markBounced(?string $reason = null): void
     {
         $this->update([
             'status' => 'bounced',
