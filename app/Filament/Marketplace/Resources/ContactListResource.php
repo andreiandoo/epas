@@ -121,6 +121,11 @@ class ContactListResource extends Resource
                                             'purchase_count' => 'Number of purchases',
                                             'purchased_category' => 'Purchased from category',
                                         ],
+                                        'Account' => [
+                                            'has_no_account' => 'Has no registered account (guest only)',
+                                            'has_account' => 'Has a registered account',
+                                            'no_account_or_unsubscribed' => 'No account OR not subscribed (re-engagement)',
+                                        ],
                                         'Support' => [
                                             'has_refund_request' => 'Has requested refund',
                                         ],

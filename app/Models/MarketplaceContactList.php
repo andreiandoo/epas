@@ -39,6 +39,9 @@ class MarketplaceContactList extends Model
         'newsletter_subscribed' => 'Subscribed to newsletter',
         'newsletter_unsubscribed' => 'Unsubscribed from newsletter',
         'has_purchases' => 'Has made at least one purchase',
+        'has_no_account' => 'Has no registered account (guest only)',
+        'has_account' => 'Has a registered account',
+        'no_account_or_unsubscribed' => 'No account OR not subscribed (re-engagement)',
         'purchase_count' => 'Has made X purchases',
         'purchased_category' => 'Purchased from category',
         'purchased_genre' => 'Purchased from genre',
@@ -141,7 +144,55 @@ class MarketplaceContactList extends Model
                 break;
 
             case 'has_purchases':
-                $query->where('total_orders', '>', 0);
+                // total_orders is denormalized and can drift (legacy imports,
+                // background-job failures). OR-fall back to a real EXISTS on
+                // the orders table so we don't lose buyers whose counter is
+                // stale at 0 while real success-status orders exist.
+                $query->where(function ($q) {
+                    $q->where('total_orders', '>', 0)
+                      ->orWhereHas('orders', function ($oq) {
+                          $oq->whereIn('status', MarketplaceCustomer::SUCCESS_ORDER_STATUSES);
+                      });
+                });
+                break;
+
+            case 'has_no_account':
+                // Guest customer: never registered, only transactional data.
+                // Both password (bcrypt) and wp_password_hash (legacy WP
+                // phpass migration) must be empty for the customer to count
+                // as "no account".
+                $query->where(function ($q) {
+                    $q->whereNull('password')->orWhere('password', '');
+                })->where(function ($q) {
+                    $q->whereNull('wp_password_hash')->orWhere('wp_password_hash', '');
+                });
+                break;
+
+            case 'has_account':
+                $query->where(function ($q) {
+                    $q->whereNotNull('password')->where('password', '!=', '')
+                      ->orWhere(function ($q2) {
+                          $q2->whereNotNull('wp_password_hash')->where('wp_password_hash', '!=', '');
+                      });
+                });
+                break;
+
+            case 'no_account_or_unsubscribed':
+                // OR combo for the re-engagement cohort: customers who are
+                // either guest (no account yet) OR not opted into marketing.
+                // The contact list system only AND-s rules, so this single
+                // rule expresses the OR that the UI repeater can't otherwise
+                // model.
+                $query->where(function ($q) {
+                    $q->where(function ($q2) {
+                        $q2->where(function ($q3) {
+                            $q3->whereNull('password')->orWhere('password', '');
+                        })->where(function ($q3) {
+                            $q3->whereNull('wp_password_hash')->orWhere('wp_password_hash', '');
+                        });
+                    })->orWhere('accepts_marketing', false)
+                      ->orWhereNull('accepts_marketing');
+                });
                 break;
 
             case 'purchase_count':
