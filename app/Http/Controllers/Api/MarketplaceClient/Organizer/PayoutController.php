@@ -1,0 +1,718 @@
+<?php
+
+namespace App\Http\Controllers\Api\MarketplaceClient\Organizer;
+
+use App\Http\Controllers\Api\MarketplaceClient\BaseController;
+use App\Models\Event;
+use App\Models\MarketplaceOrganizer;
+use App\Models\MarketplacePayout;
+use App\Models\MarketplaceTransaction;
+use App\Models\Order;
+use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
+
+class PayoutController extends BaseController
+{
+    /**
+     * Get balance overview
+     */
+    public function balance(Request $request): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+
+        $minimumPayout = $organizer->getMinimumPayoutAmount();
+        $canRequestPayout = $organizer->hasMinimumPayoutBalance()
+            && !$organizer->hasPendingPayout()
+            && !empty($organizer->payout_details);
+
+        return $this->success([
+            'balance' => [
+                'available' => (float) $organizer->available_balance,
+                'pending' => (float) $organizer->pending_balance,
+                'total' => (float) $organizer->total_balance,
+                'total_paid_out' => (float) $organizer->total_paid_out,
+            ],
+            'payout_settings' => [
+                'minimum_amount' => $minimumPayout,
+                'currency' => 'RON',
+                'has_payout_details' => !empty($organizer->payout_details),
+            ],
+            'can_request_payout' => $canRequestPayout,
+            'pending_payout' => $organizer->hasPendingPayout()
+                ? $this->formatPayout($organizer->getPendingPayout())
+                : null,
+        ]);
+    }
+
+    /**
+     * Get combined finance overview (balance + recent transactions + payouts + events)
+     */
+    public function finance(Request $request): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+
+        // Calculate total paid out from completed payouts
+        $totalPaidOut = (float) MarketplacePayout::where('marketplace_organizer_id', $organizer->id)
+            ->where('status', 'completed')
+            ->sum('amount');
+
+        // Get recent transactions (with order and payout relationships for event_id)
+        $transactions = MarketplaceTransaction::where('marketplace_organizer_id', $organizer->id)
+            ->with(['order:id,event_id', 'payout:id,event_id'])
+            ->orderByDesc('created_at')
+            ->limit(20)
+            ->get()
+            ->map(function ($tx) {
+                // Get event_id from order (for sale/commission/refund) or from payout (for payout transactions)
+                $eventId = $tx->order?->event_id ?? $tx->payout?->event_id;
+
+                return [
+                    'id' => $tx->id,
+                    'type' => $tx->type,
+                    'type_label' => $tx->getTypeLabel(),
+                    'amount' => (float) $tx->amount,
+                    'balance_after' => (float) $tx->balance_after,
+                    'currency' => $tx->currency,
+                    'description' => $tx->description,
+                    'order_id' => $tx->order_id,
+                    'event_id' => $eventId,
+                    'payout_id' => $tx->marketplace_payout_id,
+                    'date' => $tx->created_at->toIso8601String(),
+                    'created_at' => $tx->created_at->toIso8601String(),
+                ];
+            });
+
+        // Get recent payouts
+        $payouts = MarketplacePayout::where('marketplace_organizer_id', $organizer->id)
+            ->orderByDesc('created_at')
+            ->limit(10)
+            ->get()
+            ->map(function ($payout) {
+                return $this->formatPayout($payout);
+            });
+
+        // Get events with their balances
+        $events = Event::where('marketplace_organizer_id', $organizer->id)
+            ->where('marketplace_client_id', $organizer->marketplace_client_id)
+            ->with('ticketTypes')
+            ->orderByDesc('created_at')
+            ->get()
+            ->map(function ($event) use ($organizer) {
+                // Get completed orders for this event
+                $eventId = $event->id;
+                $completedOrders = Order::where('marketplace_organizer_id', $organizer->id)
+                    ->whereIn('status', ['paid', 'confirmed', 'completed'])
+                    ->where(function ($q) use ($eventId) {
+                        $q->where('event_id', $eventId)
+                          ->orWhere('marketplace_event_id', $eventId);
+                    })
+                    ->withCount('tickets')
+                    ->get();
+
+                $commissionMode = $event->getEffectiveCommissionMode();
+                $commissionRate = $event->getEffectiveCommissionRate();
+
+                // Per-ticket-type net/commission, matching EventsController::analytics()
+                // so the Sold page columns (Venituri nete / Comision) track the
+                // Report page cards exactly. Using Ticket.price straight blows up
+                // when invitations / free tickets sit at 0, and commission = gross
+                // minus that gives inflated commission.
+                $defaultRate = (float) ($commissionRate ?? 5);
+                $defaultMode = $commissionMode ?? 'included';
+                $ttIds = $event->ticketTypes->pluck('id')->all();
+                $validCountsByType = [];
+                if (!empty($ttIds)) {
+                    $validCountsByType = \App\Models\Ticket::whereIn('ticket_type_id', $ttIds)
+                        ->whereIn('status', ['valid', 'used'])
+                        ->where(function ($q) {
+                            $q->whereDoesntHave('order')
+                              ->orWhereHas('order', fn ($qq) => $qq->whereIn('status', ['paid', 'confirmed', 'completed'])
+                                  ->where('source', '!=', 'external_import'));
+                        })
+                        ->selectRaw('ticket_type_id, COUNT(*) as cnt')
+                        ->groupBy('ticket_type_id')
+                        ->pluck('cnt', 'ticket_type_id')
+                        ->all();
+                }
+
+                $netRevenue = 0.0;
+                $commissionAmount = 0.0;
+                foreach ($event->ticketTypes as $tt) {
+                    $validCount = (int) ($validCountsByType[$tt->id] ?? 0);
+                    if ($validCount === 0) continue;
+
+                    $basePriceCents = ((int) ($tt->sale_price_cents ?? 0)) > 0
+                        ? (int) $tt->sale_price_cents
+                        : (int) ($tt->price_cents ?? 0);
+                    $basePrice = $basePriceCents / 100;
+
+                    $effective = $tt->getEffectiveCommission($defaultRate, $defaultMode);
+                    $mode = $effective['mode'];
+                    $commPerTicket = (float) $tt->calculateCommission($basePrice, $defaultRate, $defaultMode);
+                    $netPerTicket = in_array($mode, ['on_top', 'added_on_top'], true)
+                        ? $basePrice
+                        : max(0.0, $basePrice - $commPerTicket);
+
+                    $netRevenue += $netPerTicket * $validCount;
+                    $commissionAmount += $commPerTicket * $validCount;
+                }
+                $netRevenue = round($netRevenue, 2);
+                $commissionAmount = round($commissionAmount, 2);
+                // Gross from the organizer's perspective = net + commission (what
+                // the ticket costs the buyer, excluding platform extras like
+                // insurance / cultural card surcharge which the organizer never sees).
+                $grossRevenue = round($netRevenue + $commissionAmount, 2);
+
+                // Get payouts for this event (if tracked per event)
+                $eventPayouts = MarketplacePayout::where('marketplace_organizer_id', $organizer->id)
+                    ->where('event_id', $event->id)
+                    ->where('status', 'completed')
+                    ->sum('amount');
+
+                // Calculate pending balance for this event
+                $eventPendingPayouts = MarketplacePayout::where('marketplace_organizer_id', $organizer->id)
+                    ->where('event_id', $event->id)
+                    ->whereIn('status', ['pending', 'approved', 'processing'])
+                    ->sum('amount');
+
+                $eventAvailableBalance = $netRevenue - $eventPayouts - $eventPendingPayouts;
+
+                // Get event title
+                $title = is_array($event->title)
+                    ? ($event->title['ro'] ?? $event->title['en'] ?? array_values($event->title)[0] ?? 'Untitled')
+                    : ($event->title ?? 'Untitled');
+
+                // Get venue info
+                $venue = $event->venue;
+                $venueName = null;
+                $venueCity = null;
+                if ($venue) {
+                    $venueName = is_array($venue->name)
+                        ? ($venue->name['ro'] ?? $venue->name['en'] ?? collect($venue->name)->first() ?? null)
+                        : ($venue->name ?? null);
+                    $venueCity = $venue->city;
+                }
+
+                return [
+                    'id' => $event->id,
+                    'title' => $title,
+                    'image' => $this->getStorageUrl($event->poster_url),
+                    'starts_at' => $event->event_date?->toIso8601String() ?? $event->starts_at?->toIso8601String(),
+                    'start_time' => $event->start_time,
+                    'venue_name' => $venueName,
+                    'venue_city' => $venueCity,
+                    'status' => $event->is_published ? 'published' : 'draft',
+                    'is_past' => $event->event_date ? $event->event_date->isPast() : false,
+                    'commission_rate' => $commissionRate,
+                    'commission_mode' => $commissionMode,
+                    'gross_revenue' => $grossRevenue,
+                    'net_revenue' => $netRevenue,
+                    'commission_amount' => $commissionAmount,
+                    'total_paid_out' => (float) $eventPayouts,
+                    'pending_payout' => (float) $eventPendingPayouts,
+                    'available_balance' => max(0, $eventAvailableBalance),
+                    'tickets_sold' => \App\Models\Ticket::whereIn('order_id', $completedOrders->pluck('id'))
+                        ->whereNotIn('status', ['cancelled', 'refunded', 'void'])
+                        ->count(),
+                ];
+            });
+
+        return $this->success([
+            'available_balance' => (float) $organizer->available_balance,
+            'pending_balance' => (float) $organizer->pending_balance,
+            'total_paid_out' => $totalPaidOut,
+            'commission_rate' => $organizer->getEffectiveCommissionRate(),
+            'commission_mode' => $organizer->getEffectiveCommissionMode(),
+            'transactions' => $transactions,
+            'payouts' => $payouts,
+            'events' => $events,
+        ]);
+    }
+
+    /**
+     * Get transaction history
+     */
+    public function transactions(Request $request): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+
+        $query = MarketplaceTransaction::where('marketplace_organizer_id', $organizer->id);
+
+        // Filters
+        if ($request->has('type')) {
+            $query->where('type', $request->type);
+        }
+
+        if ($request->has('from_date')) {
+            $query->whereDate('created_at', '>=', $request->from_date);
+        }
+
+        if ($request->has('to_date')) {
+            $query->whereDate('created_at', '<=', $request->to_date);
+        }
+
+        $query->orderByDesc('created_at');
+
+        $perPage = min((int) $request->input('per_page', 20), 100);
+        $transactions = $query->paginate($perPage);
+
+        return $this->paginated($transactions, function ($tx) {
+            return [
+                'id' => $tx->id,
+                'type' => $tx->type,
+                'type_label' => $tx->getTypeLabel(),
+                'amount' => (float) $tx->amount,
+                'balance_after' => (float) $tx->balance_after,
+                'currency' => $tx->currency,
+                'description' => $tx->description,
+                'order_id' => $tx->order_id,
+                'payout_id' => $tx->marketplace_payout_id,
+                'created_at' => $tx->created_at->toIso8601String(),
+            ];
+        });
+    }
+
+    /**
+     * Get payout history
+     */
+    public function payouts(Request $request): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+
+        $query = MarketplacePayout::where('marketplace_organizer_id', $organizer->id);
+
+        // Filters
+        if ($request->has('status')) {
+            $query->where('status', $request->status);
+        }
+
+        $query->orderByDesc('created_at');
+
+        $perPage = min((int) $request->input('per_page', 20), 50);
+        $payouts = $query->paginate($perPage);
+
+        return $this->paginated($payouts, function ($payout) {
+            return $this->formatPayout($payout);
+        });
+    }
+
+    /**
+     * Get single payout details
+     */
+    public function showPayout(Request $request, int $payoutId): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+
+        $payout = MarketplacePayout::where('id', $payoutId)
+            ->where('marketplace_organizer_id', $organizer->id)
+            ->first();
+
+        if (!$payout) {
+            return $this->error('Payout not found', 404);
+        }
+
+        return $this->success([
+            'payout' => $this->formatPayoutDetailed($payout),
+        ]);
+    }
+
+    /**
+     * Request a new payout
+     */
+    public function requestPayout(Request $request): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+
+        $validated = $request->validate([
+            'amount' => 'nullable|numeric|min:1',
+            'event_id' => 'nullable|integer|exists:events,id',
+            'bank_account_id' => 'nullable|integer',
+            'notes' => 'nullable|string|max:500',
+        ]);
+
+        // Get bank account - either from request or primary
+        $bankAccount = null;
+        if (!empty($validated['bank_account_id'])) {
+            $bankAccount = $organizer->bankAccounts()->find($validated['bank_account_id']);
+            if (!$bankAccount) {
+                return $this->error('Contul bancar selectat nu a fost găsit', 400);
+            }
+        } else {
+            $bankAccount = $organizer->bankAccounts()->where('is_primary', true)->first()
+                ?? $organizer->bankAccounts()->first();
+        }
+
+        // Validate payout details exist (bank account or legacy payout_details)
+        if (!$bankAccount && empty($organizer->payout_details)) {
+            return $this->error('Te rugăm să adaugi un cont bancar în Setări înainte de a solicita plata', 400);
+        }
+
+        $eventId = $validated['event_id'] ?? null;
+
+        // Check for pending payout (per event if specified)
+        $pendingPayoutQuery = MarketplacePayout::where('marketplace_organizer_id', $organizer->id)
+            ->whereIn('status', ['pending', 'approved', 'processing']);
+
+        if ($eventId) {
+            $pendingPayoutQuery->where('event_id', $eventId);
+        }
+
+        if ($pendingPayoutQuery->exists()) {
+            return $this->error('Ai deja o cerere de plată în așteptare pentru acest eveniment', 400);
+        }
+
+        // Use requested amount or available balance
+        $requestedAmount = $validated['amount'] ?? (float) $organizer->available_balance;
+
+        // Validate minimum payout
+        $minimumAmount = $organizer->getMinimumPayoutAmount();
+        if ($requestedAmount < $minimumAmount) {
+            return $this->error("Suma minimă pentru retragere este {$minimumAmount} RON", 400);
+        }
+
+        // Validate available balance
+        if (!$organizer->canRequestPayout($requestedAmount)) {
+            return $this->error('Sold insuficient disponibil', 400);
+        }
+
+        try {
+            DB::beginTransaction();
+
+            // Calculate breakdown using the strict-datetime resolver so
+            // consecutive payouts don't overlap. For per-event payouts this
+            // also picks up pending/approved/processing priors (the old
+            // status='completed' filter missed in-flight payouts and
+            // re-included their tickets).
+            $event = $eventId ? Event::find($eventId) : null;
+            if ($event) {
+                $periodStartCarbon = MarketplacePayout::resolveNextPeriodStart($eventId, $organizer->id, $event);
+            } else {
+                // Organizer-level payout (all events) — fall back to the
+                // legacy period_end-based resolver. Per-event slicing isn't
+                // applicable here because the payout spans every event.
+                $lastPayout = $organizer->payouts()
+                    ->whereIn('status', ['completed'])
+                    ->orderByDesc('period_end')
+                    ->first();
+                $periodStartCarbon = $lastPayout?->period_end?->copy()->addDay()
+                    ?? \Illuminate\Support\Carbon::parse($organizer->created_at);
+            }
+            $periodEndCarbon = now();
+
+            $periodStart = $periodStartCarbon->toDateString();
+            $periodEnd = $periodEndCarbon->toDateString();
+
+            // Get commission rate from event if specified, otherwise use organizer's.
+            // $event was already resolved above for the period calculation.
+            $commissionRate = $event
+                ? $event->getEffectiveCommissionRate()
+                : $organizer->getEffectiveCommissionRate();
+            $commissionMode = $event
+                ? $event->getEffectiveCommissionMode()
+                : $organizer->getEffectiveCommissionMode();
+
+            // Calculate gross amount based on commission mode
+            if ($commissionMode === 'added_on_top') {
+                // Organizer gets full amount, commission was added on top
+                $grossAmount = $requestedAmount;
+                $commissionAmount = 0;
+            } else {
+                // Commission is included
+                $grossAmount = $requestedAmount / (1 - $commissionRate / 100);
+                $commissionAmount = $grossAmount - $requestedAmount;
+            }
+
+            // Build payout method info from bank account or legacy payout_details
+            $payoutMethod = $bankAccount ? [
+                'type' => 'bank_transfer',
+                'bank_account_id' => $bankAccount->id,
+                'bank_name' => $bankAccount->bank_name,
+                'iban' => $bankAccount->iban,
+                'account_holder' => $bankAccount->account_holder,
+            ] : $organizer->payout_details;
+
+            // Build the ticket breakdown via SalesBreakdownService (same source of
+            // truth as the event-edit "Vânzări" tab). Only when scoped to a
+            // specific event — period payouts span all events of the organizer
+            // and would need a different aggregation. exactBounds=true so the
+            // cut at periodStart is strict and consecutive payouts don't
+            // re-include the previous payout's tickets.
+            $ticketBreakdown = null;
+            if ($event) {
+                $service = app(\App\Services\Marketplace\SalesBreakdownService::class);
+                $rows = $service->buildForPayout(
+                    $event,
+                    $periodStartCarbon,
+                    $periodEndCarbon,
+                    exactBounds: true
+                );
+                $ticketBreakdown = !empty($rows) ? $rows : null;
+            }
+
+            // Create payout request
+            $payout = MarketplacePayout::create([
+                'marketplace_client_id' => $organizer->marketplace_client_id,
+                'marketplace_organizer_id' => $organizer->id,
+                'event_id' => $eventId,
+                'amount' => $requestedAmount,
+                'currency' => 'RON',
+                'period_start' => $periodStart,
+                'period_end' => $periodEnd,
+                'gross_amount' => $grossAmount,
+                'commission_amount' => $commissionAmount,
+                'fees_amount' => 0,
+                'adjustments_amount' => 0,
+                'status' => 'pending',
+                'payout_method' => $payoutMethod,
+                'organizer_notes' => $validated['notes'] ?? null,
+                'ticket_breakdown' => $ticketBreakdown,
+                'commission_mode' => $commissionMode,
+            ]);
+
+            // Reserve the balance
+            $organizer->reserveBalanceForPayout($requestedAmount);
+
+            // Send notifications
+            $payout->notifyOrganizer('submitted');
+            $payout->notifyAdmins();
+
+            DB::commit();
+
+            return $this->success([
+                'payout' => $this->formatPayoutDetailed($payout),
+                'balance' => [
+                    'available' => (float) $organizer->fresh()->available_balance,
+                    'pending' => (float) $organizer->fresh()->pending_balance,
+                ],
+            ], 'Payout request submitted successfully', 201);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return $this->error('Failed to create payout request: ' . $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * Cancel a pending payout request
+     */
+    public function cancelPayout(Request $request, int $payoutId): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+
+        $payout = MarketplacePayout::where('id', $payoutId)
+            ->where('marketplace_organizer_id', $organizer->id)
+            ->first();
+
+        if (!$payout) {
+            return $this->error('Payout not found', 404);
+        }
+
+        if (!$payout->canBeCancelled()) {
+            return $this->error('This payout request cannot be cancelled', 400);
+        }
+
+        try {
+            DB::beginTransaction();
+
+            // Return the balance
+            $organizer->returnPendingBalance($payout->amount);
+
+            // Cancel the payout
+            $payout->cancel();
+
+            DB::commit();
+
+            return $this->success([
+                'balance' => [
+                    'available' => (float) $organizer->fresh()->available_balance,
+                    'pending' => (float) $organizer->fresh()->pending_balance,
+                ],
+            ], 'Payout request cancelled');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return $this->error('Failed to cancel payout request', 500);
+        }
+    }
+
+    /**
+     * Get monthly statements
+     */
+    public function statements(Request $request): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+
+        $year = $request->input('year', now()->year);
+
+        $statements = [];
+
+        for ($month = 1; $month <= 12; $month++) {
+            $startDate = Carbon::create($year, $month, 1)->startOfMonth();
+            $endDate = Carbon::create($year, $month, 1)->endOfMonth();
+
+            if ($startDate > now()) {
+                break;
+            }
+
+            // Get transactions for this month
+            $monthTransactions = $organizer->transactions()
+                ->whereBetween('created_at', [$startDate, $endDate])
+                ->get();
+
+            $sales = $monthTransactions->where('type', 'sale')->sum('amount');
+            $commissions = abs($monthTransactions->where('type', 'commission')->sum('amount'));
+            $refunds = abs($monthTransactions->where('type', 'refund')->sum('amount'));
+            $payouts = abs($monthTransactions->where('type', 'payout')->sum('amount'));
+
+            $statements[] = [
+                'month' => $startDate->format('Y-m'),
+                'month_name' => $startDate->format('F Y'),
+                'sales' => (float) $sales,
+                'commissions' => (float) $commissions,
+                'refunds' => (float) $refunds,
+                'payouts' => (float) $payouts,
+                'net' => (float) ($sales - $commissions - $refunds),
+            ];
+        }
+
+        return $this->success([
+            'year' => $year,
+            'statements' => array_reverse($statements),
+        ]);
+    }
+
+    /**
+     * Require authenticated organizer
+     */
+    protected function requireOrganizer(Request $request): MarketplaceOrganizer
+    {
+        $organizer = $request->user();
+
+        if (!$organizer instanceof MarketplaceOrganizer) {
+            abort(401, 'Unauthorized');
+        }
+
+        return $organizer;
+    }
+
+    /**
+     * Format payout for list
+     */
+    protected function formatPayout(MarketplacePayout $payout): array
+    {
+        // Get event title
+        $eventTitle = null;
+        if ($payout->event_id) {
+            $event = \App\Models\Event::find($payout->event_id);
+            if ($event) {
+                $eventTitle = is_array($event->title)
+                    ? ($event->title['ro'] ?? $event->title['en'] ?? collect($event->title)->first() ?? null)
+                    : ($event->title ?? null);
+            }
+        }
+
+        $data = [
+            'id' => $payout->id,
+            'reference' => $payout->reference,
+            'amount' => (float) $payout->amount,
+            'currency' => $payout->currency,
+            'status' => $payout->status,
+            'status_label' => $payout->status_label,
+            'account' => $payout->payout_method['iban'] ?? null,
+            'event_id' => $payout->event_id,
+            'event_title' => $eventTitle,
+            'period_start' => $payout->period_start?->toDateString(),
+            'period_end' => $payout->period_end?->toDateString(),
+            'created_at' => $payout->created_at->toIso8601String(),
+            'completed_at' => $payout->completed_at?->toIso8601String(),
+        ];
+
+        // Include rejection reason for rejected payouts
+        if ($payout->status === 'rejected' && $payout->rejection_reason) {
+            $data['rejection_reason'] = $payout->rejection_reason;
+        }
+
+        return $data;
+    }
+
+    /**
+     * Format payout with details
+     */
+    protected function formatPayoutDetailed(MarketplacePayout $payout): array
+    {
+        // Resolve event title the same way formatPayout() does so the detail
+        // modal can display "Eveniment: <name>" instead of a blank cell.
+        $eventTitle = null;
+        if ($payout->event_id) {
+            $event = \App\Models\Event::find($payout->event_id);
+            if ($event) {
+                $eventTitle = is_array($event->title)
+                    ? ($event->title['ro'] ?? $event->title['en'] ?? collect($event->title)->first() ?? null)
+                    : ($event->title ?? null);
+            }
+        }
+
+        return [
+            'id' => $payout->id,
+            'reference' => $payout->reference,
+            'amount' => (float) $payout->amount,
+            'currency' => $payout->currency,
+            'status' => $payout->status,
+            'status_label' => $payout->status_label,
+            'event_id' => $payout->event_id,
+            'event_title' => $eventTitle,
+            'period_start' => $payout->period_start->toDateString(),
+            'period_end' => $payout->period_end->toDateString(),
+            'breakdown' => [
+                'gross_amount' => (float) $payout->gross_amount,
+                'commission_amount' => (float) $payout->commission_amount,
+                'fees_amount' => (float) $payout->fees_amount,
+                'adjustments_amount' => (float) $payout->adjustments_amount,
+                'adjustments_note' => $payout->adjustments_note,
+                'net_amount' => (float) $payout->amount,
+            ],
+            'payout_method' => [
+                'bank_name' => $payout->payout_method['bank_name'] ?? null,
+                'iban' => $payout->payout_method['iban'] ?? null,
+                'account_holder' => $payout->payout_method['account_holder'] ?? null,
+            ],
+            'organizer_notes' => $payout->organizer_notes,
+            'rejection_reason' => $payout->rejection_reason,
+            'payment_reference' => $payout->payment_reference,
+            'payment_notes' => $payout->payment_notes,
+            'approved_at' => $payout->approved_at?->toIso8601String(),
+            'processed_at' => $payout->processed_at?->toIso8601String(),
+            'completed_at' => $payout->completed_at?->toIso8601String(),
+            'rejected_at' => $payout->rejected_at?->toIso8601String(),
+            'created_at' => $payout->created_at->toIso8601String(),
+            'can_cancel' => $payout->canBeCancelled(),
+        ];
+    }
+
+    /**
+     * Get full storage URL for an image path
+     */
+    protected function getStorageUrl(?string $path): ?string
+    {
+        if (empty($path)) {
+            return null;
+        }
+        // If it's already a full URL, return as-is
+        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+            return $path;
+        }
+
+        // Get the core storage base URL
+        $baseUrl = rtrim(config('app.url'), '/') . '/storage';
+
+        // Clean the path - remove leading slashes and 'storage/' prefix if present
+        $cleanPath = ltrim($path, '/');
+        if (str_starts_with($cleanPath, 'storage/')) {
+            $cleanPath = substr($cleanPath, 8);
+        }
+
+        return $baseUrl . '/' . $cleanPath;
+    }
+}

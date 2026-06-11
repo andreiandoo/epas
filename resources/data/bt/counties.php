@@ -1,0 +1,23 @@
+<?php
+return [
+    'Bumthang ',
+    'Chukha ',
+    'Dagana ',
+    'Gasa ',
+    'Haa ',
+    'Lhuntse ',
+    'Mongar ',
+    'Paro ',
+    'Pemagatshel ',
+    'Punakha ',
+    'Samdrup Jongkhar ',
+    'Samtse ',
+    'Sarpang ',
+    'Thimphu ',
+    'Trashi Yangtse	',
+    'Trashigang ',
+    'Trongsa ',
+    'Tsirang ',
+    'Wangdue Phodrang ',
+    'Zhemgang ',
+];

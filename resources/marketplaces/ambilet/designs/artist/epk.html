@@ -1,0 +1,1145 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart EPK — Ambilet Artist</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'sans': ['Plus Jakarta Sans', 'sans-serif'],
+                        'display': ['Playfair Display', 'serif'],
+                    },
+                    colors: {
+                        'primary': '#A51C30',
+                        'primary-dark': '#8B1728',
+                        'secondary': '#1E293B',
+                        'accent': '#E67E22',
+                        'surface': '#F8FAFC',
+                        'muted': '#64748B',
+                        'border': '#E2E8F0',
+                        'success': '#10B981',
+                        'warning': '#F59E0B',
+                        'error': '#EF4444',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.625rem 1.25rem; border-radius: 0.75rem; font-weight: 600; font-size: 0.875rem; transition: all 0.15s; cursor: pointer; border: none; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-primary { background: #A51C30; color: white; }
+        .btn-primary:hover:not(:disabled) { background: #8B1728; }
+        .btn-secondary { background: white; color: #1E293B; border: 1px solid #E2E8F0; }
+        .btn-secondary:hover:not(:disabled) { background: #F8FAFC; }
+        .btn-sm { padding: 0.4rem 0.875rem; font-size: 0.8125rem; }
+        .input, .form-input { width: 100%; padding: 0.625rem 0.875rem; border: 1px solid #E2E8F0; border-radius: 0.75rem; font-size: 0.875rem; background: white; }
+        .input:focus, .form-input:focus { outline: none; border-color: #A51C30; box-shadow: 0 0 0 3px rgba(165,28,48,0.1); }
+        .badge { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.2rem 0.625rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; }
+        .pro-badge { background: linear-gradient(135deg, #E67E22, #A51C30); color: white; font-size: 0.625rem; font-weight: 700; padding: 0.1rem 0.4rem; border-radius: 0.25rem; letter-spacing: 0.5px; }
+
+        /* Public EPK styles */
+        .epk-public { background: #0a0a0f; color: white; font-family: 'Plus Jakarta Sans', sans-serif; }
+        .epk-display { font-family: 'Playfair Display', serif; }
+        .epk-stat-glow { background: radial-gradient(circle at 50% 0%, rgba(230, 126, 34, 0.15), transparent 50%); }
+
+        .drag-handle { cursor: move; opacity: 0.4; transition: opacity 0.15s; }
+        .section-card:hover .drag-handle { opacity: 1; }
+    </style>
+</head>
+<body class="min-h-screen bg-surface font-sans" x-data="smartEpk()">
+    <!-- Sidebar -->
+    <aside class="fixed left-0 top-0 h-full w-64 bg-secondary text-white z-50 hidden lg:flex flex-col">
+        <div class="p-6 border-b border-white/10">
+            <a href="/" class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-primary rounded-xl flex items-center justify-center">
+                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/>
+                    </svg>
+                </div>
+                <div>
+                    <span class="text-xl font-extrabold block leading-none">AMBILET</span>
+                    <span class="text-xs text-white/50 mt-1 block">Portal Artist</span>
+                </div>
+            </a>
+        </div>
+
+        <nav class="p-4 space-y-1 flex-1 overflow-y-auto">
+            <a href="/artist/dashboard.html" class="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:bg-white/10 hover:text-white transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+                Dashboard
+            </a>
+            <a href="/artist/profile.html" class="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:bg-white/10 hover:text-white transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/></svg>
+                Detalii Artist
+            </a>
+            <a href="/artist/events.html" class="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:bg-white/10 hover:text-white transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                Evenimente
+            </a>
+
+            <!-- Extended dropdown -->
+            <div class="pt-3">
+                <button @click="extendedOpen = !extendedOpen" class="w-full flex items-center justify-between px-4 py-2 text-xs uppercase tracking-wider text-white/40 font-bold hover:text-white/70 transition-colors">
+                    <span class="flex items-center gap-2">
+                        Extended
+                        <span class="pro-badge">PRO</span>
+                    </span>
+                    <svg class="w-4 h-4 transition-transform" :class="extendedOpen ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                    </svg>
+                </button>
+                <div x-show="extendedOpen" x-transition class="space-y-1 mt-1">
+                    <a href="/artist/audience.html" class="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:bg-white/10 hover:text-white transition-colors">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                        Audiență
+                    </a>
+                    <a href="/artist/booking.html" class="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:bg-white/10 hover:text-white transition-colors">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                        Booking
+                        <span class="ml-auto bg-primary text-white text-xs font-bold px-1.5 py-0.5 rounded-full">3</span>
+                    </a>
+                    <a href="/artist/epk.html" class="flex items-center gap-3 px-4 py-3 rounded-xl bg-white/10 text-white font-medium">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                        Smart EPK
+                    </a>
+                    <a href="/artist/tour.html" class="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:bg-white/10 hover:text-white transition-colors">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/></svg>
+                        Turnee
+                    </a>
+                </div>
+            </div>
+
+            <div class="pt-3">
+                <a href="/artist/settings.html" class="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:bg-white/10 hover:text-white transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                    Setări Cont
+                </a>
+                <a href="/artist/help.html" class="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:bg-white/10 hover:text-white transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    Ajutor
+                </a>
+            </div>
+        </nav>
+
+        <div class="p-4 border-t border-white/10">
+            <button class="flex items-center gap-3 px-4 py-3 w-full rounded-xl text-white/70 hover:bg-error/20 hover:text-error transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+                Deconectare
+            </button>
+        </div>
+    </aside>
+
+    <!-- Mobile Header -->
+    <header class="lg:hidden fixed top-0 left-0 right-0 bg-white border-b border-border z-40">
+        <div class="flex items-center justify-between px-4 py-3">
+            <button @click="mobileMenu = !mobileMenu" class="p-2 hover:bg-surface rounded-lg">
+                <svg class="w-6 h-6 text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                </svg>
+            </button>
+            <span class="font-bold text-secondary">Smart EPK</span>
+            <div class="w-10"></div>
+        </div>
+    </header>
+
+    <!-- Mobile Menu -->
+    <div x-show="mobileMenu" x-transition.opacity class="lg:hidden fixed inset-0 bg-black/50 z-50" @click="mobileMenu = false" style="display: none;"></div>
+    <aside x-show="mobileMenu" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="-translate-x-full" x-transition:enter-end="translate-x-0" x-transition:leave="transition ease-in duration-150" x-transition:leave-start="translate-x-0" x-transition:leave-end="-translate-x-full" class="lg:hidden fixed left-0 top-0 h-full w-64 bg-secondary text-white z-50 overflow-y-auto" style="display: none;">
+        <div class="p-6 border-b border-white/10 flex items-center justify-between">
+            <span class="text-xl font-extrabold">AMBILET</span>
+            <button @click="mobileMenu = false" class="p-2 text-white/70">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+        </div>
+        <nav class="p-4 space-y-1">
+            <a href="/artist/dashboard.html" class="block px-4 py-3 rounded-xl text-white/70 hover:bg-white/10">Dashboard</a>
+            <a href="/artist/profile.html" class="block px-4 py-3 rounded-xl text-white/70 hover:bg-white/10">Detalii Artist</a>
+            <a href="/artist/events.html" class="block px-4 py-3 rounded-xl text-white/70 hover:bg-white/10">Evenimente</a>
+            <p class="px-4 py-2 text-xs uppercase tracking-wider text-white/40 font-bold mt-3">Extended <span class="pro-badge">PRO</span></p>
+            <a href="/artist/audience.html" class="block px-4 py-3 rounded-xl text-white/70 hover:bg-white/10">Audiență</a>
+            <a href="/artist/booking.html" class="block px-4 py-3 rounded-xl text-white/70 hover:bg-white/10">Booking</a>
+            <a href="/artist/epk.html" class="block px-4 py-3 rounded-xl bg-white/10 text-white font-medium">Smart EPK</a>
+            <a href="/artist/tour.html" class="block px-4 py-3 rounded-xl text-white/70 hover:bg-white/10">Turnee</a>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="lg:ml-64 pt-16 lg:pt-0 min-h-screen">
+        <div class="p-4 lg:p-8">
+            <!-- Page Header -->
+            <div class="mb-6">
+                <div class="flex items-center gap-2 mb-2">
+                    <span class="pro-badge">PRO</span>
+                    <span class="text-xs text-muted uppercase tracking-wider font-semibold">Extended Artist · Smart Electronic Press Kit</span>
+                </div>
+                <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+                    <div>
+                        <h1 class="text-2xl lg:text-3xl font-bold text-secondary">Smart EPK</h1>
+                        <p class="text-muted mt-1">Press kit dinamic, share-uibil, cu stats verificate din platformă</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button @click="copyUrl()" class="btn btn-secondary btn-sm">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+                            <span x-text="urlCopied ? 'Copiat!' : 'Copiază link'"></span>
+                        </button>
+                        <button @click="setTab('preview')" class="btn btn-primary btn-sm">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                            Vezi public
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- URL bar -->
+            <div class="bg-white border border-border rounded-2xl p-4 mb-6 flex items-center gap-3 flex-wrap">
+                <div class="flex items-center gap-2 px-3 py-2 bg-surface rounded-lg flex-1 min-w-0">
+                    <svg class="w-4 h-4 text-muted flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+                    <span class="font-mono text-sm text-secondary truncate">ambilet.ro/epk/<span class="font-semibold" x-text="activeVersion.slug"></span></span>
+                </div>
+                <div class="flex gap-2">
+                    <button class="btn btn-secondary btn-sm" title="QR code">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"/></svg>
+                        QR
+                    </button>
+                    <button class="btn btn-secondary btn-sm">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/></svg>
+                        Share
+                    </button>
+                </div>
+            </div>
+
+            <!-- Tabs -->
+            <div class="bg-white rounded-2xl border border-border overflow-hidden">
+                <div class="border-b border-border overflow-x-auto">
+                    <div class="flex gap-1 p-2 min-w-max">
+                        <template x-for="t in tabs" :key="t.id">
+                            <button @click="setTab(t.id)"
+                                    :class="tab === t.id ? 'bg-primary text-white' : 'text-muted hover:bg-surface hover:text-secondary'"
+                                    class="px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors flex items-center gap-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" x-html="t.icon"></svg>
+                                <span x-text="t.label"></span>
+                            </button>
+                        </template>
+                    </div>
+                </div>
+
+                <!-- ============ TAB: EDITOR ============ -->
+                <div x-show="tab === 'editor'" class="p-6">
+                    <div class="grid lg:grid-cols-12 gap-6">
+                        <!-- Left: section list -->
+                        <div class="lg:col-span-4">
+                            <div class="sticky top-6">
+                                <div class="flex items-center justify-between mb-3">
+                                    <h3 class="font-bold text-secondary">Secțiuni</h3>
+                                    <span class="text-xs text-muted"><span x-text="enabledSections.length"></span>/<span x-text="sections.length"></span> active</span>
+                                </div>
+                                <p class="text-xs text-muted mb-4">Activează/dezactivează secțiunile. Trage pentru a le reordona.</p>
+
+                                <div class="space-y-2">
+                                    <template x-for="(section, idx) in sections" :key="section.id">
+                                        <div @click="selectedSection = section.id"
+                                             :class="[
+                                                 selectedSection === section.id ? 'border-primary bg-primary/5' : 'border-border bg-white',
+                                                 !section.enabled ? 'opacity-50' : ''
+                                             ]"
+                                             class="section-card border rounded-xl p-3 cursor-pointer hover:border-primary/30 transition-colors flex items-center gap-3">
+                                            <svg class="drag-handle w-4 h-4 text-muted flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+                                            <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" :class="section.enabled ? 'bg-primary/10' : 'bg-surface'">
+                                                <svg class="w-4 h-4" :class="section.enabled ? 'text-primary' : 'text-muted'" fill="none" stroke="currentColor" viewBox="0 0 24 24" x-html="section.icon"></svg>
+                                            </div>
+                                            <div class="flex-1 min-w-0">
+                                                <p class="font-semibold text-sm text-secondary truncate" x-text="section.label"></p>
+                                                <p class="text-xs text-muted truncate" x-text="section.summary"></p>
+                                            </div>
+                                            <label class="relative inline-flex items-center cursor-pointer flex-shrink-0" @click.stop>
+                                                <input type="checkbox" x-model="section.enabled" class="sr-only peer">
+                                                <div class="w-9 h-5 bg-surface peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-border after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-success"></div>
+                                            </label>
+                                        </div>
+                                    </template>
+                                </div>
+
+                                <!-- Branding -->
+                                <div class="mt-6 p-4 bg-surface rounded-xl">
+                                    <h4 class="font-bold text-secondary text-sm mb-3">Branding</h4>
+                                    <div class="space-y-3">
+                                        <div>
+                                            <label class="block text-xs text-muted mb-1">Culoare accent</label>
+                                            <div class="flex gap-2">
+                                                <template x-for="c in accentColors" :key="c">
+                                                    <button @click="branding.accent = c" :style="`background: ${c}`" :class="branding.accent === c ? 'ring-2 ring-offset-2 ring-secondary' : ''" class="w-8 h-8 rounded-lg transition-all"></button>
+                                                </template>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs text-muted mb-1">Template</label>
+                                            <select x-model="branding.template" class="form-input text-sm">
+                                                <option value="modern">Modern (default)</option>
+                                                <option value="classic">Clasic</option>
+                                                <option value="minimal">Minimalist</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Right: section editor -->
+                        <div class="lg:col-span-8">
+                            <template x-for="section in sections" :key="section.id + '-edit'">
+                                <div x-show="selectedSection === section.id">
+                                    <div class="bg-white border border-border rounded-2xl p-6">
+                                        <div class="flex items-center justify-between mb-6 pb-4 border-b border-border">
+                                            <div>
+                                                <h3 class="font-bold text-secondary text-lg" x-text="section.label"></h3>
+                                                <p class="text-sm text-muted" x-text="section.description"></p>
+                                            </div>
+                                            <span class="badge" :class="section.enabled ? 'bg-success/10 text-success' : 'bg-muted/10 text-muted'">
+                                                <span x-text="section.enabled ? 'Activă' : 'Inactivă'"></span>
+                                            </span>
+                                        </div>
+
+                                        <!-- Section-specific editors -->
+                                        <template x-if="section.id === 'hero'">
+                                            <div class="space-y-4">
+                                                <div>
+                                                    <label class="block text-sm font-medium text-secondary mb-2">Nume artist</label>
+                                                    <input type="text" x-model="data.stage_name" class="form-input">
+                                                </div>
+                                                <div>
+                                                    <label class="block text-sm font-medium text-secondary mb-2">Tagline</label>
+                                                    <input type="text" x-model="data.tagline" maxlength="120" class="form-input">
+                                                    <p class="text-xs text-muted mt-1"><span x-text="(data.tagline || '').length"></span>/120</p>
+                                                </div>
+                                                <div class="grid sm:grid-cols-2 gap-4">
+                                                    <div>
+                                                        <label class="block text-sm font-medium text-secondary mb-2">Cover image</label>
+                                                        <div class="aspect-video bg-gradient-to-br from-secondary to-primary-dark rounded-xl flex items-center justify-center text-white/70 cursor-pointer hover:opacity-80 transition-opacity">
+                                                            <span class="text-sm">+ Schimbă cover</span>
+                                                        </div>
+                                                    </div>
+                                                    <div>
+                                                        <label class="block text-sm font-medium text-secondary mb-2">Avatar</label>
+                                                        <div class="aspect-video bg-surface border-2 border-dashed border-border rounded-xl flex items-center justify-center text-muted cursor-pointer hover:border-primary/30 transition-colors">
+                                                            <span class="text-sm">+ Schimbă avatar</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </template>
+
+                                        <template x-if="section.id === 'stats'">
+                                            <div>
+                                                <div class="bg-blue-50 border border-blue-200 rounded-xl p-3 mb-4 flex items-start gap-2">
+                                                    <svg class="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                                                    <p class="text-xs text-blue-900">Aceste cifre vin <strong>direct din platformă</strong>. Sunt verificate, nu pot fi editate manual — ceea ce le face creditabile pentru organizatori.</p>
+                                                </div>
+                                                <div class="grid sm:grid-cols-2 gap-3">
+                                                    <template x-for="stat in stats" :key="stat.label">
+                                                        <div class="border border-border rounded-xl p-4 flex items-center justify-between">
+                                                            <div>
+                                                                <p class="text-xs text-muted uppercase tracking-wider font-semibold" x-text="stat.label"></p>
+                                                                <p class="text-2xl font-bold text-secondary mt-1" x-text="stat.value"></p>
+                                                            </div>
+                                                            <label class="relative inline-flex items-center cursor-pointer">
+                                                                <input type="checkbox" x-model="stat.show" class="sr-only peer">
+                                                                <div class="w-9 h-5 bg-surface peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-border after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-success"></div>
+                                                            </label>
+                                                        </div>
+                                                    </template>
+                                                </div>
+                                            </div>
+                                        </template>
+
+                                        <template x-if="section.id === 'bio'">
+                                            <div class="space-y-4">
+                                                <div>
+                                                    <label class="block text-sm font-medium text-secondary mb-2">Bio scurt (pentru carduri)</label>
+                                                    <textarea x-model="data.bio_short" rows="3" maxlength="280" class="form-input"></textarea>
+                                                    <p class="text-xs text-muted mt-1"><span x-text="(data.bio_short || '').length"></span>/280</p>
+                                                </div>
+                                                <div>
+                                                    <label class="block text-sm font-medium text-secondary mb-2">Bio extins</label>
+                                                    <textarea x-model="data.bio_long" rows="8" class="form-input"></textarea>
+                                                </div>
+                                            </div>
+                                        </template>
+
+                                        <template x-if="section.id === 'gallery'">
+                                            <div>
+                                                <p class="text-sm text-muted mb-3">3-12 imagini. Click pe o imagine pentru a o seta ca principală.</p>
+                                                <div class="grid grid-cols-3 sm:grid-cols-4 gap-3">
+                                                    <template x-for="(img, i) in data.gallery" :key="i">
+                                                        <div class="relative aspect-square bg-gradient-to-br from-secondary to-primary-dark rounded-lg overflow-hidden group cursor-pointer">
+                                                            <span x-show="i === 0" class="absolute top-1 left-1 text-[10px] bg-primary text-white px-1.5 py-0.5 rounded font-bold">PRINCIPAL</span>
+                                                            <button class="absolute top-1 right-1 w-6 h-6 bg-error text-white rounded-full opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                                                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                                                            </button>
+                                                        </div>
+                                                    </template>
+                                                    <button class="aspect-square border-2 border-dashed border-border rounded-lg flex items-center justify-center text-muted hover:border-primary/30 hover:text-primary transition-colors">
+                                                        <span class="text-2xl">+</span>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </template>
+
+                                        <template x-if="section.id === 'spotify'">
+                                            <div>
+                                                <label class="block text-sm font-medium text-secondary mb-2">Link Spotify</label>
+                                                <input type="url" x-model="data.spotify_url" class="form-input" placeholder="https://open.spotify.com/artist/...">
+                                                <p class="text-xs text-muted mt-2">Acceptă: artist, album sau playlist. Embed-ul se generează automat.</p>
+                                            </div>
+                                        </template>
+
+                                        <template x-if="section.id === 'youtube'">
+                                            <div>
+                                                <label class="block text-sm font-medium text-secondary mb-2">Videoclipuri YouTube (max 3)</label>
+                                                <div class="space-y-2">
+                                                    <template x-for="(v, i) in data.youtube_videos" :key="i">
+                                                        <div class="flex gap-2">
+                                                            <input type="url" x-model="data.youtube_videos[i]" class="form-input flex-1" placeholder="https://youtube.com/watch?v=...">
+                                                            <button @click="data.youtube_videos.splice(i, 1)" class="p-2.5 text-muted hover:text-error rounded-lg hover:bg-error/5">
+                                                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                                            </button>
+                                                        </div>
+                                                    </template>
+                                                    <button x-show="data.youtube_videos.length < 3" @click="data.youtube_videos.push('')" class="text-sm text-primary font-medium hover:underline">+ Adaugă video</button>
+                                                </div>
+                                            </div>
+                                        </template>
+
+                                        <template x-if="section.id === 'achievements'">
+                                            <div>
+                                                <p class="text-sm text-muted mb-3">Realizări notabile, cronologic descrescător.</p>
+                                                <div class="space-y-2">
+                                                    <template x-for="(a, i) in data.achievements" :key="i">
+                                                        <div class="flex gap-2">
+                                                            <input type="number" x-model="a.year" placeholder="An" class="form-input w-24">
+                                                            <input type="text" x-model="a.text" placeholder="Realizare" class="form-input flex-1">
+                                                        </div>
+                                                    </template>
+                                                </div>
+                                                <button class="text-sm text-primary font-medium hover:underline mt-2">+ Adaugă realizare</button>
+                                            </div>
+                                        </template>
+
+                                        <template x-if="section.id === 'press_quotes'">
+                                            <div>
+                                                <p class="text-sm text-muted mb-3">Citate din presă cu sursă și link.</p>
+                                                <div class="space-y-3">
+                                                    <template x-for="(q, i) in data.press_quotes" :key="i">
+                                                        <div class="border border-border rounded-xl p-3">
+                                                            <textarea x-model="q.text" rows="2" class="form-input mb-2" placeholder="Citat..."></textarea>
+                                                            <div class="grid grid-cols-2 gap-2">
+                                                                <input type="text" x-model="q.source" class="form-input" placeholder="Sursă (ex: Adevărul)">
+                                                                <input type="url" x-model="q.url" class="form-input" placeholder="Link">
+                                                            </div>
+                                                        </div>
+                                                    </template>
+                                                </div>
+                                                <button class="text-sm text-primary font-medium hover:underline mt-2">+ Adaugă citat</button>
+                                            </div>
+                                        </template>
+
+                                        <template x-if="section.id === 'past_events'">
+                                            <div>
+                                                <p class="text-sm text-muted mb-3">Evenimente trecute. Bifează pentru a le ascunde de pe EPK.</p>
+                                                <div class="space-y-2">
+                                                    <template x-for="ev in data.past_events" :key="ev.id">
+                                                        <div class="flex items-center gap-3 p-3 border border-border rounded-xl">
+                                                            <div class="w-10 h-10 rounded-lg bg-surface flex flex-col items-center justify-center flex-shrink-0">
+                                                                <span class="text-xs font-bold text-primary leading-none" x-text="ev.day"></span>
+                                                                <span class="text-[10px] text-muted uppercase" x-text="ev.month"></span>
+                                                            </div>
+                                                            <div class="flex-1 min-w-0">
+                                                                <p class="font-medium text-sm text-secondary truncate" x-text="ev.title"></p>
+                                                                <p class="text-xs text-muted truncate"><span x-text="ev.venue"></span> · <span x-text="ev.audience.toLocaleString('ro-RO')"></span> bilete</p>
+                                                            </div>
+                                                            <label class="flex items-center gap-2">
+                                                                <input type="checkbox" x-model="ev.hidden" class="w-4 h-4 rounded">
+                                                                <span class="text-xs text-muted">Ascunde</span>
+                                                            </label>
+                                                        </div>
+                                                    </template>
+                                                </div>
+                                            </div>
+                                        </template>
+
+                                        <template x-if="section.id === 'rider'">
+                                            <div class="space-y-4">
+                                                <div class="flex items-center gap-3 p-4 border border-border rounded-xl">
+                                                    <svg class="w-8 h-8 text-accent flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                                                    <div class="flex-1">
+                                                        <p class="font-medium text-secondary">Rider tehnic</p>
+                                                        <p class="text-xs text-muted">tech-rider.pdf · 2.4 MB</p>
+                                                    </div>
+                                                    <button class="btn btn-secondary btn-sm">Înlocuiește</button>
+                                                </div>
+                                                <div class="flex items-center gap-3 p-4 border border-border rounded-xl">
+                                                    <svg class="w-8 h-8 text-accent flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"/></svg>
+                                                    <div class="flex-1">
+                                                        <p class="font-medium text-secondary">Stage plan</p>
+                                                        <p class="text-xs text-muted">stage-plan.pdf · 890 KB</p>
+                                                    </div>
+                                                    <button class="btn btn-secondary btn-sm">Înlocuiește</button>
+                                                </div>
+                                                <label class="flex items-center gap-2 cursor-pointer pt-2">
+                                                    <input type="checkbox" x-model="data.rider_gated" class="w-4 h-4 rounded text-primary">
+                                                    <span class="text-sm text-secondary">Cere email înainte de descărcare (generează lead)</span>
+                                                </label>
+                                            </div>
+                                        </template>
+
+                                        <template x-if="section.id === 'social'">
+                                            <div class="space-y-3">
+                                                <template x-for="s in socialPlatforms" :key="s.key">
+                                                    <div>
+                                                        <label class="block text-sm font-medium text-secondary mb-1" x-text="s.label"></label>
+                                                        <input type="url" x-model="data.social[s.key]" :placeholder="s.placeholder" class="form-input">
+                                                    </div>
+                                                </template>
+                                            </div>
+                                        </template>
+
+                                        <template x-if="section.id === 'contact'">
+                                            <div class="space-y-3">
+                                                <div>
+                                                    <label class="block text-sm font-medium text-secondary mb-1">Email contact</label>
+                                                    <input type="email" x-model="data.contact_email" class="form-input">
+                                                </div>
+                                                <div>
+                                                    <label class="block text-sm font-medium text-secondary mb-1">Telefon</label>
+                                                    <input type="tel" x-model="data.contact_phone" class="form-input">
+                                                </div>
+                                                <label class="flex items-center gap-2 cursor-pointer pt-2">
+                                                    <input type="checkbox" x-model="data.show_booking_cta" class="w-4 h-4 rounded text-primary">
+                                                    <span class="text-sm text-secondary">Afișează buton „Cere booking" → trimite în Booking Marketplace</span>
+                                                </label>
+                                            </div>
+                                        </template>
+
+                                        <div class="mt-6 pt-6 border-t border-border flex justify-end gap-2">
+                                            <button class="btn btn-secondary btn-sm">Anulează</button>
+                                            <button class="btn btn-primary btn-sm">Salvează</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ============ TAB: ANALYTICS ============ -->
+                <div x-show="tab === 'analytics'" class="p-6">
+                    <!-- KPIs -->
+                    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                        <div class="bg-white border border-border rounded-2xl p-5">
+                            <p class="text-xs text-muted uppercase tracking-wider font-semibold mb-2">Vizualizări (30 zile)</p>
+                            <p class="text-2xl font-bold text-secondary">2.847</p>
+                            <p class="text-xs text-success mt-1">+34% vs perioada anterioară</p>
+                        </div>
+                        <div class="bg-white border border-border rounded-2xl p-5">
+                            <p class="text-xs text-muted uppercase tracking-wider font-semibold mb-2">Vizitatori unici</p>
+                            <p class="text-2xl font-bold text-secondary">1.923</p>
+                            <p class="text-xs text-success mt-1">+28%</p>
+                        </div>
+                        <div class="bg-white border border-border rounded-2xl p-5">
+                            <p class="text-xs text-muted uppercase tracking-wider font-semibold mb-2">Timp mediu pe pagină</p>
+                            <p class="text-2xl font-bold text-secondary">3:42</p>
+                            <p class="text-xs text-muted mt-1">Bun (>2 min)</p>
+                        </div>
+                        <div class="bg-white border border-border rounded-2xl p-5">
+                            <p class="text-xs text-muted uppercase tracking-wider font-semibold mb-2">CTA „Cere booking"</p>
+                            <p class="text-2xl font-bold text-secondary">47</p>
+                            <p class="text-xs text-success mt-1">2.4% conversion rate</p>
+                        </div>
+                    </div>
+
+                    <!-- Charts -->
+                    <div class="grid lg:grid-cols-2 gap-6 mb-6">
+                        <div class="bg-white border border-border rounded-2xl p-5">
+                            <h3 class="font-bold text-secondary mb-1">Trafic zilnic</h3>
+                            <p class="text-sm text-muted mb-4">Vizualizări în ultimele 30 de zile</p>
+                            <div class="relative h-[260px]">
+                                <canvas id="trafficChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="bg-white border border-border rounded-2xl p-5">
+                            <h3 class="font-bold text-secondary mb-1">Surse de trafic</h3>
+                            <p class="text-sm text-muted mb-4">De unde vin vizitatorii</p>
+                            <div class="relative h-[260px]">
+                                <canvas id="sourcesChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Hot leads -->
+                    <div class="bg-white border border-border rounded-2xl p-5 mb-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <div>
+                                <h3 class="font-bold text-secondary flex items-center gap-2">
+                                    🔥 Hot Leads
+                                </h3>
+                                <p class="text-sm text-muted">Vizitatori care au revenit de mai multe ori — semnal puternic de interes</p>
+                            </div>
+                            <span class="badge bg-error/10 text-error">3 active</span>
+                        </div>
+
+                        <div class="space-y-3">
+                            <template x-for="lead in hotLeads" :key="lead.id">
+                                <div class="flex items-center gap-4 p-4 bg-error/5 border border-error/20 rounded-xl">
+                                    <div class="w-10 h-10 rounded-full bg-gradient-to-br from-error to-primary flex items-center justify-center text-white font-bold flex-shrink-0" x-text="lead.initials"></div>
+                                    <div class="flex-1 min-w-0">
+                                        <p class="font-bold text-secondary" x-text="lead.name"></p>
+                                        <p class="text-xs text-muted">
+                                            <span x-text="lead.type"></span> ·
+                                            <span x-text="lead.city"></span> ·
+                                            ultima vizită <span x-text="lead.lastVisit"></span>
+                                        </p>
+                                    </div>
+                                    <div class="text-right hidden sm:block">
+                                        <p class="text-lg font-bold text-error" x-text="lead.visits + ' vizite'"></p>
+                                        <p class="text-xs text-muted" x-text="lead.timeSpent + ' total'"></p>
+                                    </div>
+                                    <button class="btn btn-primary btn-sm">Contact</button>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+
+                    <!-- Sections engagement -->
+                    <div class="grid lg:grid-cols-2 gap-6">
+                        <div class="bg-white border border-border rounded-2xl p-5">
+                            <h3 class="font-bold text-secondary mb-4">Engagement pe secțiuni</h3>
+                            <p class="text-sm text-muted mb-4">Cât % din vizitatori ajung la fiecare secțiune</p>
+                            <div class="space-y-3">
+                                <template x-for="se in sectionEngagement" :key="se.name">
+                                    <div>
+                                        <div class="flex items-center justify-between text-sm mb-1">
+                                            <span class="font-medium text-secondary" x-text="se.name"></span>
+                                            <span class="text-muted"><span x-text="se.pct"></span>%</span>
+                                        </div>
+                                        <div class="h-2 bg-surface rounded-full overflow-hidden">
+                                            <div class="h-full bg-primary rounded-full" :style="`width: ${se.pct}%`"></div>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+
+                        <div class="bg-white border border-border rounded-2xl p-5">
+                            <h3 class="font-bold text-secondary mb-4">Acțiuni cele mai frecvente</h3>
+                            <div class="space-y-3">
+                                <template x-for="a in topActions" :key="a.label">
+                                    <div class="flex items-center justify-between p-3 bg-surface rounded-xl">
+                                        <div class="flex items-center gap-3">
+                                            <span class="text-2xl" x-text="a.icon"></span>
+                                            <span class="font-medium text-secondary text-sm" x-text="a.label"></span>
+                                        </div>
+                                        <span class="font-bold text-secondary" x-text="a.count.toLocaleString('ro-RO')"></span>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ============ TAB: VERSIONS ============ -->
+                <div x-show="tab === 'versions'" class="p-6">
+                    <div class="flex items-center justify-between mb-6">
+                        <div>
+                            <h2 class="text-lg font-bold text-secondary">Variante EPK</h2>
+                            <p class="text-sm text-muted">Creează versiuni adaptate pentru diferite tipuri de organizatori</p>
+                        </div>
+                        <button class="btn btn-primary btn-sm">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
+                            Variantă nouă
+                        </button>
+                    </div>
+
+                    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <template x-for="v in versions" :key="v.id">
+                            <div class="border-2 rounded-2xl overflow-hidden transition-all hover:shadow-md"
+                                 :class="v.id === activeVersion.id ? 'border-primary' : 'border-border'">
+                                <div class="aspect-video relative" :style="`background: ${v.preview}`">
+                                    <span x-show="v.id === activeVersion.id" class="absolute top-2 left-2 badge bg-primary text-white">Activă</span>
+                                    <div class="absolute bottom-2 right-2 flex gap-1">
+                                        <button class="w-7 h-7 bg-white/90 backdrop-blur rounded-lg flex items-center justify-center text-secondary hover:bg-white transition-colors">
+                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="p-4">
+                                    <div class="flex items-center justify-between mb-2">
+                                        <h4 class="font-bold text-secondary" x-text="v.name"></h4>
+                                        <span class="text-xs text-muted" x-text="v.target"></span>
+                                    </div>
+                                    <p class="text-xs text-muted font-mono mb-3">/<span x-text="v.slug"></span></p>
+
+                                    <div class="grid grid-cols-3 gap-2 text-center mb-3">
+                                        <div>
+                                            <p class="text-xs text-muted">Vizite</p>
+                                            <p class="text-sm font-bold text-secondary" x-text="v.views.toLocaleString('ro-RO')"></p>
+                                        </div>
+                                        <div>
+                                            <p class="text-xs text-muted">Convers.</p>
+                                            <p class="text-sm font-bold text-secondary" x-text="v.conversion + '%'"></p>
+                                        </div>
+                                        <div>
+                                            <p class="text-xs text-muted">Secțiuni</p>
+                                            <p class="text-sm font-bold text-secondary" x-text="v.sections + '/13'"></p>
+                                        </div>
+                                    </div>
+
+                                    <div class="flex gap-1">
+                                        <button @click="activeVersion = v" :disabled="v.id === activeVersion.id" class="btn btn-secondary btn-sm flex-1">
+                                            <span x-text="v.id === activeVersion.id ? 'Activă' : 'Setează activă'"></span>
+                                        </button>
+                                        <button class="btn btn-secondary btn-sm">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+
+                        <!-- Add new card -->
+                        <div class="border-2 border-dashed border-border rounded-2xl flex flex-col items-center justify-center p-8 text-center hover:border-primary/30 hover:bg-primary/5 cursor-pointer transition-all min-h-[280px]">
+                            <div class="w-12 h-12 bg-surface rounded-full flex items-center justify-center mb-3">
+                                <svg class="w-6 h-6 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
+                            </div>
+                            <p class="font-semibold text-secondary">Variantă nouă</p>
+                            <p class="text-xs text-muted mt-1">Pornește de la zero sau duplică o existentă</p>
+                        </div>
+                    </div>
+
+                    <!-- Suggestion -->
+                    <div class="mt-6 bg-gradient-to-br from-accent/5 to-primary/5 border border-accent/20 rounded-2xl p-5 flex items-start gap-3">
+                        <div class="w-10 h-10 bg-accent/10 rounded-xl flex items-center justify-center flex-shrink-0">
+                            <svg class="w-5 h-5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                        </div>
+                        <div>
+                            <p class="font-bold text-secondary mb-1">💡 Sugestie</p>
+                            <p class="text-sm text-secondary">Ai primit recent 5 cereri pentru evenimente corporate. Crearea unei variante „EPK Corporate" cu focus pe profesionalism și varietate ar putea crește rata de acceptare cu 15-20%.</p>
+                            <button class="btn btn-primary btn-sm mt-3">Creează „EPK Corporate"</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ============ TAB: PUBLIC PREVIEW ============ -->
+                <div x-show="tab === 'preview'" class="bg-secondary">
+                    <!-- Preview controls -->
+                    <div class="bg-secondary border-b border-white/10 p-4 flex items-center justify-between flex-wrap gap-3">
+                        <div class="flex items-center gap-3">
+                            <span class="text-white/60 text-sm">Previzualizare:</span>
+                            <div class="inline-flex bg-white/5 rounded-lg p-1">
+                                <button @click="previewDevice = 'desktop'" :class="previewDevice === 'desktop' ? 'bg-white/15 text-white' : 'text-white/50 hover:text-white'" class="px-3 py-1 rounded text-sm font-medium transition-colors">Desktop</button>
+                                <button @click="previewDevice = 'mobile'" :class="previewDevice === 'mobile' ? 'bg-white/15 text-white' : 'text-white/50 hover:text-white'" class="px-3 py-1 rounded text-sm font-medium transition-colors">Mobil</button>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2 text-white/60 text-sm">
+                            <span>Versiune:</span>
+                            <span class="text-white font-medium" x-text="activeVersion.name"></span>
+                        </div>
+                    </div>
+
+                    <!-- Public EPK render -->
+                    <div class="epk-public" :class="previewDevice === 'mobile' ? 'max-w-md mx-auto' : ''">
+                        <!-- Hero -->
+                        <section class="relative min-h-[80vh] flex items-end overflow-hidden">
+                            <!-- BG image / gradient -->
+                            <div class="absolute inset-0 bg-gradient-to-br from-secondary via-primary-dark to-black"></div>
+                            <div class="absolute inset-0" style="background: radial-gradient(circle at 30% 50%, rgba(165,28,48,0.4), transparent 60%)"></div>
+                            <div class="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent"></div>
+
+                            <!-- Top bar -->
+                            <div class="absolute top-0 left-0 right-0 z-10 p-6 flex items-center justify-between">
+                                <span class="text-white/60 text-xs uppercase tracking-[0.2em]">Electronic Press Kit</span>
+                                <span class="text-white/60 text-xs flex items-center gap-2">
+                                    <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a8 8 0 100 16 8 8 0 000-16zm3.707 7.293a1 1 0 010 1.414l-3 3a1 1 0 01-1.414 0l-1.5-1.5a1 1 0 111.414-1.414l.793.793 2.293-2.293a1 1 0 011.414 0z"/></svg>
+                                    Verified by Ambilet
+                                </span>
+                            </div>
+
+                            <div class="relative z-10 px-6 lg:px-12 pb-12 lg:pb-20 max-w-5xl">
+                                <p class="text-white/60 text-sm uppercase tracking-[0.3em] mb-4">Trupă · Rock Alternativ</p>
+                                <h1 class="epk-display text-6xl lg:text-9xl font-black text-white leading-[0.85] mb-6" x-text="data.stage_name"></h1>
+                                <p class="text-xl lg:text-2xl text-white/80 max-w-2xl font-light" x-text="data.tagline"></p>
+
+                                <!-- Quick badges -->
+                                <div class="flex flex-wrap gap-2 mt-8">
+                                    <span class="px-3 py-1 bg-white/10 backdrop-blur rounded-full text-xs text-white">📍 București</span>
+                                    <span class="px-3 py-1 bg-white/10 backdrop-blur rounded-full text-xs text-white">🎵 Rock · Indie · Alternative</span>
+                                    <span class="px-3 py-1 bg-white/10 backdrop-blur rounded-full text-xs text-white">⭐ Activ din 2018</span>
+                                </div>
+                            </div>
+                        </section>
+
+                        <!-- VERIFIED STATS - the killer feature -->
+                        <section class="epk-stat-glow py-20 px-6 lg:px-12 border-t border-white/5">
+                            <div class="max-w-5xl mx-auto">
+                                <div class="text-center mb-12">
+                                    <p class="text-accent text-xs uppercase tracking-[0.3em] font-bold mb-3">Date Verificate · Din Platformă</p>
+                                    <h2 class="epk-display text-4xl lg:text-5xl font-bold text-white">Cifre care nu mint</h2>
+                                </div>
+
+                                <div class="grid grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8">
+                                    <template x-for="stat in stats.filter(s => s.show)" :key="stat.label">
+                                        <div class="text-center">
+                                            <p class="epk-display text-5xl lg:text-7xl font-black text-white mb-2" x-text="stat.value"></p>
+                                            <p class="text-white/60 text-xs lg:text-sm uppercase tracking-wider" x-text="stat.label"></p>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                        </section>
+
+                        <!-- Bio -->
+                        <section class="py-20 px-6 lg:px-12 border-t border-white/5">
+                            <div class="max-w-3xl mx-auto">
+                                <p class="text-accent text-xs uppercase tracking-[0.3em] font-bold mb-3">Biografie</p>
+                                <h2 class="epk-display text-4xl lg:text-5xl font-bold text-white mb-8">Cine suntem</h2>
+                                <p class="text-xl text-white/80 leading-relaxed mb-6 font-light" x-text="data.bio_short"></p>
+                                <p class="text-white/70 leading-relaxed" x-text="data.bio_long"></p>
+
+                                <!-- Achievements -->
+                                <div class="mt-12 space-y-4 pt-8 border-t border-white/10">
+                                    <p class="text-white/60 text-xs uppercase tracking-[0.2em] font-bold mb-4">Realizări</p>
+                                    <template x-for="a in data.achievements" :key="a.year + a.text">
+                                        <div class="flex gap-6 py-3 border-b border-white/5">
+                                            <span class="epk-display text-2xl font-bold text-accent w-20 flex-shrink-0" x-text="a.year"></span>
+                                            <p class="text-white/80" x-text="a.text"></p>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                        </section>
+
+                        <!-- Gallery -->
+                        <section class="py-20 px-6 lg:px-12 border-t border-white/5">
+                            <div class="max-w-6xl mx-auto">
+                                <p class="text-accent text-xs uppercase tracking-[0.3em] font-bold mb-3">Imagini</p>
+                                <h2 class="epk-display text-4xl lg:text-5xl font-bold text-white mb-8">Live on stage</h2>
+                                <div class="grid grid-cols-2 lg:grid-cols-3 gap-4">
+                                    <template x-for="(g, i) in data.gallery" :key="i">
+                                        <div class="aspect-square rounded-xl overflow-hidden" :class="i === 0 ? 'lg:col-span-2 lg:row-span-2 lg:aspect-auto' : ''" :style="`background: ${g}`"></div>
+                                    </template>
+                                </div>
+                            </div>
+                        </section>
+
+                        <!-- Spotify -->
+                        <section class="py-20 px-6 lg:px-12 border-t border-white/5">
+                            <div class="max-w-3xl mx-auto">
+                                <p class="text-accent text-xs uppercase tracking-[0.3em] font-bold mb-3">Muzică</p>
+                                <h2 class="epk-display text-4xl lg:text-5xl font-bold text-white mb-8">Asculta-ne</h2>
+                                <div class="bg-[#1DB954]/10 border border-[#1DB954]/30 rounded-2xl p-8 flex items-center gap-6">
+                                    <svg class="w-16 h-16 text-[#1DB954] flex-shrink-0" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.42 1.56-.299.421-1.02.599-1.56.3z"/></svg>
+                                    <div class="flex-1">
+                                        <p class="text-white font-bold text-lg">The Rockers</p>
+                                        <p class="text-white/60 text-sm mb-3">12 albume · 234k ascultători lunari</p>
+                                        <a href="#" class="inline-flex items-center gap-2 text-[#1DB954] hover:text-white transition-colors text-sm font-medium">
+                                            Deschide pe Spotify →
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+
+                        <!-- Press quotes -->
+                        <section class="py-20 px-6 lg:px-12 border-t border-white/5">
+                            <div class="max-w-4xl mx-auto">
+                                <p class="text-accent text-xs uppercase tracking-[0.3em] font-bold mb-3">Au scris despre noi</p>
+                                <h2 class="epk-display text-4xl lg:text-5xl font-bold text-white mb-12">Ce zice presa</h2>
+                                <div class="grid lg:grid-cols-2 gap-6">
+                                    <template x-for="q in data.press_quotes" :key="q.source">
+                                        <blockquote class="border-l-2 border-accent pl-6 py-2">
+                                            <p class="text-xl text-white/90 font-light italic mb-3 leading-relaxed">"<span x-text="q.text"></span>"</p>
+                                            <footer class="text-sm text-white/50" x-text="'— ' + q.source"></footer>
+                                        </blockquote>
+                                    </template>
+                                </div>
+                            </div>
+                        </section>
+
+                        <!-- Past events showcase -->
+                        <section class="py-20 px-6 lg:px-12 border-t border-white/5">
+                            <div class="max-w-5xl mx-auto">
+                                <p class="text-accent text-xs uppercase tracking-[0.3em] font-bold mb-3">Istoric</p>
+                                <h2 class="epk-display text-4xl lg:text-5xl font-bold text-white mb-12">Concerte memorabile</h2>
+                                <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    <template x-for="ev in data.past_events.filter(e => !e.hidden)" :key="ev.id">
+                                        <div class="bg-white/5 backdrop-blur rounded-xl p-5 hover:bg-white/10 transition-colors">
+                                            <p class="text-white/40 text-xs mb-2"><span x-text="ev.day"></span> <span x-text="ev.month"></span> <span x-text="ev.year"></span></p>
+                                            <p class="text-white font-bold text-lg leading-tight mb-2" x-text="ev.title"></p>
+                                            <p class="text-white/60 text-sm mb-3" x-text="ev.venue"></p>
+                                            <p class="text-accent text-2xl font-bold"><span x-text="ev.audience.toLocaleString('ro-RO')"></span> <span class="text-sm text-white/40 font-normal">bilete</span></p>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                        </section>
+
+                        <!-- Booking CTA -->
+                        <section class="py-32 px-6 lg:px-12 border-t border-white/5 relative overflow-hidden">
+                            <div class="absolute inset-0" style="background: radial-gradient(circle at 50% 50%, rgba(165,28,48,0.3), transparent 70%)"></div>
+                            <div class="relative z-10 max-w-3xl mx-auto text-center">
+                                <p class="text-accent text-xs uppercase tracking-[0.3em] font-bold mb-3">Disponibili pentru</p>
+                                <h2 class="epk-display text-5xl lg:text-7xl font-black text-white mb-6">Booking</h2>
+                                <p class="text-xl text-white/70 mb-10">Concerte · Festivaluri · Evenimente private · Corporate</p>
+
+                                <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                                    <button class="btn bg-accent text-white hover:bg-accent/90 px-8 py-4 text-base">
+                                        Cere booking →
+                                    </button>
+                                    <button class="btn bg-white/10 backdrop-blur text-white hover:bg-white/20 px-8 py-4 text-base">
+                                        Descarcă press kit (PDF)
+                                    </button>
+                                </div>
+
+                                <div class="mt-12 pt-12 border-t border-white/10 grid grid-cols-2 gap-8 text-left max-w-md mx-auto">
+                                    <div>
+                                        <p class="text-white/40 text-xs uppercase tracking-wider mb-1">Email</p>
+                                        <p class="text-white text-sm" x-text="data.contact_email"></p>
+                                    </div>
+                                    <div>
+                                        <p class="text-white/40 text-xs uppercase tracking-wider mb-1">Telefon</p>
+                                        <p class="text-white text-sm" x-text="data.contact_phone"></p>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+
+                        <!-- Footer -->
+                        <footer class="py-12 px-6 lg:px-12 border-t border-white/10 text-center">
+                            <div class="flex items-center justify-center gap-4 mb-6">
+                                <a href="#" class="w-10 h-10 bg-white/5 hover:bg-white/15 rounded-full flex items-center justify-center text-white transition-colors"><svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M22.46 6c-.77.35-1.6.58-2.46.69.88-.53 1.56-1.37 1.88-2.38-.83.5-1.75.85-2.72 1.05C18.37 4.5 17.26 4 16 4c-2.35 0-4.27 1.92-4.27 4.29 0 .34.04.67.11.98C8.28 9.09 5.11 7.38 3 4.79c-.37.63-.58 1.37-.58 2.15 0 1.49.75 2.81 1.91 3.56-.71 0-1.37-.2-1.95-.5v.03c0 2.08 1.48 3.82 3.44 4.21a4.22 4.22 0 0 1-1.93.07 4.28 4.28 0 0 0 4 2.98 8.521 8.521 0 0 1-5.33 1.84c-.34 0-.68-.02-1.02-.06C3.44 20.29 5.7 21 8.12 21 16 21 20.33 14.46 20.33 8.79c0-.19 0-.37-.01-.56.84-.6 1.56-1.36 2.14-2.23z"/></svg></a>
+                                <a href="#" class="w-10 h-10 bg-white/5 hover:bg-white/15 rounded-full flex items-center justify-center text-white transition-colors"><svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.04C6.5 2.04 2 6.53 2 12.06c0 5 3.66 9.15 8.44 9.9v-7H7.9v-2.9h2.54V9.85c0-2.51 1.49-3.89 3.78-3.89 1.09 0 2.23.19 2.23.19v2.47h-1.26c-1.24 0-1.63.77-1.63 1.56v1.88h2.78l-.45 2.9h-2.33v7a10 10 0 0 0 8.44-9.9c0-5.53-4.5-10.02-10-10.02z"/></svg></a>
+                                <a href="#" class="w-10 h-10 bg-white/5 hover:bg-white/15 rounded-full flex items-center justify-center text-white transition-colors"><svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M7.8 2h8.4C19.4 2 22 4.6 22 7.8v8.4a5.8 5.8 0 0 1-5.8 5.8H7.8C4.6 22 2 19.4 2 16.2V7.8A5.8 5.8 0 0 1 7.8 2m-.2 2A3.6 3.6 0 0 0 4 7.6v8.8C4 18.39 5.61 20 7.6 20h8.8a3.6 3.6 0 0 0 3.6-3.6V7.6C20 5.61 18.39 4 16.4 4H7.6m9.65 1.5a1.25 1.25 0 0 1 1.25 1.25A1.25 1.25 0 0 1 17.25 8 1.25 1.25 0 0 1 16 6.75a1.25 1.25 0 0 1 1.25-1.25M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3z"/></svg></a>
+                                <a href="#" class="w-10 h-10 bg-white/5 hover:bg-white/15 rounded-full flex items-center justify-center text-white transition-colors"><svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg></a>
+                            </div>
+                            <p class="text-white/40 text-xs mb-2">Powered by <span class="text-white/70">Ambilet</span></p>
+                            <p class="text-white/30 text-xs font-mono">ambilet.ro/epk/<span x-text="activeVersion.slug"></span></p>
+                        </footer>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        function smartEpk() {
+            return {
+                mobileMenu: false,
+                extendedOpen: true,
+                tab: 'editor',
+                selectedSection: 'hero',
+                previewDevice: 'desktop',
+                urlCopied: false,
+                charts: {},
+
+                tabs: [
+                    { id: 'editor', label: 'Editor', icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>' },
+                    { id: 'analytics', label: 'Analytics', icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>' },
+                    { id: 'versions', label: 'Variante', icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2"/>' },
+                    { id: 'preview', label: 'Preview public', icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>' },
+                ],
+
+                accentColors: ['#A51C30', '#E67E22', '#10B981', '#3B82F6', '#8B5CF6', '#EC4899'],
+
+                branding: {
+                    accent: '#E67E22',
+                    template: 'modern',
+                },
+
+                sections: [
+                    { id: 'hero', label: 'Hero', summary: 'Nume, tagline, cover', description: 'Prima impresie a vizitatorului. Includ numele de scenă, tagline-ul și imaginea de cover.', icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V6z"/>', enabled: true },
+                    { id: 'stats', label: 'Stats verificate', summary: '5 metrici live din platformă', description: 'Cifre creditabile direct din baza de date Ambilet. Nu pot fi falsificate.', icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2"/>', enabled: true },
+                    { id: 'bio', label: 'Biografie', summary: 'Scurt + extins', description: 'Spune-le organizatorilor cine ești și ce te face memorabil.', icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>', enabled: true },
+                    { id: 'gallery', label: 'Galerie foto', summary: '8 imagini active', description: 'Imagini de pe scenă, de la repetiții, portrete. Recomandat 8-12.', icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>', enabled: true },
+                    { id: 'spotify', label: 'Spotify', summary: 'Embed muzică', description: 'Player integrat cu artistul, album sau playlist.', icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/>', enabled: true },
+                    { id: 'youtube', label: 'YouTube', summary: '2 videoclipuri', description: 'Videoclipuri embed (max 3). Cele mai relevante pentru profilul tău.', icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>', enabled: true },
+                    { id: 'achievements', label: 'Realizări', summary: '4 evenimente notabile', description: 'Premii, festivaluri majore, momente cheie din carieră.', icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/>', enabled: true },
+                    { id: 'press_quotes', label: 'Press quotes', summary: '3 citate', description: 'Citate din articole de presă cu sursă și link.', icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-4 4z"/>', enabled: true },
+                    { id: 'past_events', label: 'Concerte trecute', summary: '6 evenimente afișate', description: 'Showcase de evenimente trecute cu audiență. Date verificate din platformă.', icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>', enabled: true },
+                    { id: 'rider', label: 'Rider tehnic', summary: 'PDF + stage plan', description: 'Documente tehnice descărcabile. Opțional: cere email înainte (lead capture).', icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>', enabled: false },
+                    { id: 'social', label: 'Social media', summary: '4 platforme', description: 'Iconițe link către Facebook, Instagram, TikTok, etc.', icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/>', enabled: true },
+                    { id: 'contact', label: 'Contact + Booking CTA', summary: 'Email, telefon, buton booking', description: 'Cum poate organizatorul să te contacteze. Butonul „Cere booking" duce în marketplace.', icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>', enabled: true },
+                    { id: 'upcoming', label: 'Concerte viitoare', summary: 'Auto din platformă', description: 'Lista evenimentelor active cu link către pagina de bilete.', icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>', enabled: false },
+                ],
+
+                stats: [
+                    { label: 'Bilete vândute', value: '47k', show: true },
+                    { label: 'Concerte', value: '127', show: true },
+                    { label: 'Orașe', value: '23', show: true },
+                    { label: 'Țări', value: '5', show: true },
+                    { label: 'Audiență max', value: '8.4k', show: false },
+                ],
+
+                socialPlatforms: [
+                    { key: 'website', label: 'Website', placeholder: 'https://...' },
+                    { key: 'facebook', label: 'Facebook', placeholder: 'https://facebook.com/...' },
+                    { key: 'instagram', label: 'Instagram', placeholder: 'https://instagram.com/...' },
+                    { key: 'tiktok', label: 'TikTok', placeholder: 'https://tiktok.com/@...' },
+                    { key: 'youtube', label: 'YouTube', placeholder: 'https://youtube.com/@...' },
+                ],
+
+                data: {
+                    stage_name: 'The Rockers',
+                    tagline: 'Rock alternativ care-ți zguduie pământul de sub picioare',
+                    bio_short: 'Trupă de rock alternativ din București, formată în 2018. Concerte energice, texte în română și o atitudine care nu se vinde.',
+                    bio_long: 'Formată în 2018 într-un garaj din Berceni, The Rockers a evoluat în 6 ani de la o trupă de cover-uri la un nume care umple sălile mari ale României. Cu trei albume lansate independent, două turnee naționale și apariții la cele mai mari festivaluri locale, suntem o formație care livrează consistență și energie pe scenă. Texte în română, sunet aspru, performanță live care nu se traduce în înregistrare. Asta suntem.',
+                    gallery: [
+                        'linear-gradient(135deg, #A51C30, #1E293B)',
+                        'linear-gradient(135deg, #E67E22, #A51C30)',
+                        'linear-gradient(135deg, #1E293B, #8B1728)',
+                        'linear-gradient(135deg, #A51C30, #E67E22)',
+                        'linear-gradient(135deg, #8B1728, #1E293B)',
+                        'linear-gradient(135deg, #E67E22, #1E293B)',
+                        'linear-gradient(135deg, #A51C30, #8B1728)',
+                        'linear-gradient(135deg, #1E293B, #A51C30)',
+                    ],
+                    spotify_url: 'https://open.spotify.com/artist/0OdUWJ0sBjDrqHygGUXeCF',
+                    youtube_videos: ['https://youtube.com/watch?v=abc', 'https://youtube.com/watch?v=def'],
+                    achievements: [
+                        { year: 2024, text: 'Cap de afiș la Festival Untold' },
+                        { year: 2023, text: 'Premiul Muzical al Anului — Best Rock Act' },
+                        { year: 2022, text: 'Cap de afiș la Festivalul Electric Castle' },
+                        { year: 2021, text: 'Tour național sold-out, 18 orașe' },
+                    ],
+                    press_quotes: [
+                        { text: 'Una dintre cele mai consistente trupe live din România actuală. Energia lor pe scenă e contagioasă.', source: 'Adevărul', url: '#' },
+                        { text: 'Refuză să facă compromisuri muzicale și asta îi face cu adevărat speciali în peisajul autohton.', source: 'Hotnews', url: '#' },
+                        { text: 'Texte care lovesc, riff-uri care rămân. Rock românesc făcut cum trebuie.', source: 'Pro TV Music', url: '#' },
+                    ],
+                    past_events: [
+                        { id: 1, day: 22, month: 'iul', year: 2024, title: 'Festival Mamaia', venue: 'Plaja Centrală, Mamaia', audience: 4832, hidden: false },
+                        { id: 2, day: 15, month: 'iun', year: 2024, title: 'Concert Polivalentă', venue: 'Sala Polivalentă, București', audience: 2487, hidden: false },
+                        { id: 3, day: 12, month: 'apr', year: 2024, title: 'Cluj Arena Spring', venue: 'Cluj Arena, Cluj-Napoca', audience: 3214, hidden: false },
+                        { id: 4, day: 8, month: 'oct', year: 2023, title: 'Iași Live', venue: 'Sala Sporturilor, Iași', audience: 1823, hidden: false },
+                        { id: 5, day: 16, month: 'aug', year: 2023, title: 'Untold Festival', venue: 'Cluj-Napoca', audience: 8400, hidden: false },
+                        { id: 6, day: 4, month: 'iun', year: 2023, title: 'Electric Castle', venue: 'Bonțida', audience: 6200, hidden: false },
+                    ],
+                    rider_gated: false,
+                    contact_email: 'booking@therockers.ro',
+                    contact_phone: '+40 7XX XXX XXX',
+                    show_booking_cta: true,
+                    social: {
+                        website: 'https://therockers.ro',
+                        facebook: 'https://facebook.com/therockers',
+                        instagram: 'https://instagram.com/therockers',
+                        tiktok: '',
+                        youtube: 'https://youtube.com/@therockers',
+                    },
+                },
+
+                versions: [
+                    { id: 1, name: 'Default', target: 'Universal', slug: 'the-rockers', preview: 'linear-gradient(135deg, #A51C30, #1E293B)', views: 2847, conversion: 2.4, sections: 11 },
+                    { id: 2, name: 'EPK Festival', target: 'Festival-uri', slug: 'the-rockers/festival', preview: 'linear-gradient(135deg, #E67E22, #A51C30)', views: 1240, conversion: 4.1, sections: 9 },
+                    { id: 3, name: 'EPK Club', target: 'Cluburi & bars', slug: 'the-rockers/club', preview: 'linear-gradient(135deg, #1E293B, #8B1728)', views: 678, conversion: 3.2, sections: 8 },
+                ],
+
+                hotLeads: [
+                    { id: 1, initials: 'EC', name: 'Electric Castle Productions', type: 'Organizator festival', city: 'Cluj-Napoca', visits: 5, lastVisit: 'acum 2 ore', timeSpent: '14 min' },
+                    { id: 2, initials: 'BK', name: 'Berăria H Booking', type: 'Venue', city: 'București', visits: 4, lastVisit: 'ieri', timeSpent: '8 min' },
+                    { id: 3, initials: 'SV', name: 'Summer Vibes', type: 'Organizator festival', city: 'Mamaia', visits: 3, lastVisit: 'acum 3 zile', timeSpent: '11 min' },
+                ],
+
+                sectionEngagement: [
+                    { name: 'Hero', pct: 100 },
+                    { name: 'Stats verificate', pct: 92 },
+                    { name: 'Biografie', pct: 78 },
+                    { name: 'Galerie', pct: 71 },
+                    { name: 'Spotify', pct: 64 },
+                    { name: 'Past events', pct: 58 },
+                    { name: 'Press quotes', pct: 47 },
+                    { name: 'Booking CTA', pct: 32 },
+                ],
+
+                topActions: [
+                    { icon: '🎯', label: 'Click „Cere booking"', count: 47 },
+                    { icon: '📥', label: 'Download Press Kit', count: 89 },
+                    { icon: '📥', label: 'Download Rider tehnic', count: 32 },
+                    { icon: '🎵', label: 'Click Spotify', count: 312 },
+                    { icon: '📞', label: 'Click telefon', count: 18 },
+                    { icon: '📧', label: 'Click email', count: 28 },
+                ],
+
+                get enabledSections() { return this.sections.filter(s => s.enabled); },
+                get activeVersion() { return this.versions[0]; },
+
+                copyUrl() {
+                    navigator.clipboard?.writeText('https://ambilet.ro/epk/' + this.activeVersion.slug);
+                    this.urlCopied = true;
+                    setTimeout(() => this.urlCopied = false, 2000);
+                },
+
+                setTab(id) {
+                    this.tab = id;
+                    this.$nextTick(() => this.renderTab(id));
+                },
+
+                init() {
+                    this.$nextTick(() => this.renderTab('editor'));
+                },
+
+                renderTab(id) {
+                    if (id === 'analytics') {
+                        this.renderTrafficChart();
+                        this.renderSourcesChart();
+                    }
+                },
+
+                destroyChart(key) {
+                    if (this.charts[key]) { this.charts[key].destroy(); delete this.charts[key]; }
+                },
+
+                renderTrafficChart() {
+                    this.destroyChart('traffic');
+                    const el = document.getElementById('trafficChart');
+                    if (!el || typeof Chart === 'undefined') return;
+                    const labels = Array.from({ length: 30 }, (_, i) => i + 1);
+                    const data = Array.from({ length: 30 }, () => Math.floor(Math.random() * 80) + 40);
+                    this.charts.traffic = new Chart(el.getContext('2d'), {
+                        type: 'line',
+                        data: { labels, datasets: [{ data, borderColor: '#A51C30', backgroundColor: 'rgba(165,28,48,0.1)', fill: true, tension: 0.4, pointRadius: 0, borderWidth: 2 }] },
+                        options: {
+                            responsive: true, maintainAspectRatio: false,
+                            plugins: { legend: { display: false }, tooltip: { backgroundColor: '#1E293B', padding: 12, cornerRadius: 8 } },
+                            scales: { y: { beginAtZero: true, grid: { color: '#E2E8F0' } }, x: { grid: { display: false } } }
+                        }
+                    });
+                },
+
+                renderSourcesChart() {
+                    this.destroyChart('sources');
+                    const el = document.getElementById('sourcesChart');
+                    if (!el || typeof Chart === 'undefined') return;
+                    this.charts.sources = new Chart(el.getContext('2d'), {
+                        type: 'doughnut',
+                        data: {
+                            labels: ['Direct (link)', 'Booking Marketplace', 'Email organizator', 'Social media', 'Search'],
+                            datasets: [{ data: [42, 28, 15, 10, 5], backgroundColor: ['#A51C30', '#E67E22', '#10B981', '#3B82F6', '#94A3B8'], borderWidth: 0 }]
+                        },
+                        options: {
+                            responsive: true, maintainAspectRatio: false, cutout: '60%',
+                            plugins: { legend: { position: 'right', labels: { padding: 12, font: { size: 12 } } }, tooltip: { backgroundColor: '#1E293B', padding: 12, cornerRadius: 8, callbacks: { label: (c) => c.label + ': ' + c.parsed + '%' } } }
+                        }
+                    });
+                },
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,978 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tour Optimizer — Ambilet Artist</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { 'sans': ['Plus Jakarta Sans', 'sans-serif'] },
+                    colors: {
+                        'primary': '#A51C30',
+                        'primary-dark': '#8B1728',
+                        'secondary': '#1E293B',
+                        'accent': '#E67E22',
+                        'surface': '#F8FAFC',
+                        'muted': '#64748B',
+                        'border': '#E2E8F0',
+                        'success': '#10B981',
+                        'warning': '#F59E0B',
+                        'error': '#EF4444',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.625rem 1.25rem; border-radius: 0.75rem; font-weight: 600; font-size: 0.875rem; transition: all 0.15s; cursor: pointer; border: none; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-primary { background: #A51C30; color: white; }
+        .btn-primary:hover:not(:disabled) { background: #8B1728; }
+        .btn-secondary { background: white; color: #1E293B; border: 1px solid #E2E8F0; }
+        .btn-secondary:hover:not(:disabled) { background: #F8FAFC; }
+        .btn-sm { padding: 0.4rem 0.875rem; font-size: 0.8125rem; }
+        .input, .form-input { width: 100%; padding: 0.625rem 0.875rem; border: 1px solid #E2E8F0; border-radius: 0.75rem; font-size: 0.875rem; background: white; }
+        .input:focus, .form-input:focus { outline: none; border-color: #A51C30; box-shadow: 0 0 0 3px rgba(165,28,48,0.1); }
+        .badge { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.2rem 0.625rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; }
+        .pro-badge { background: linear-gradient(135deg, #E67E22, #A51C30); color: white; font-size: 0.625rem; font-weight: 700; padding: 0.1rem 0.4rem; border-radius: 0.25rem; letter-spacing: 0.5px; }
+        #opportunityMap, #plannerMap { z-index: 1; }
+    </style>
+</head>
+<body class="min-h-screen bg-surface font-sans" x-data="tourOptimizer()">
+    <!-- Sidebar -->
+    <aside class="fixed left-0 top-0 h-full w-64 bg-secondary text-white z-50 hidden lg:flex flex-col">
+        <div class="p-6 border-b border-white/10">
+            <a href="/" class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-primary rounded-xl flex items-center justify-center">
+                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/>
+                    </svg>
+                </div>
+                <div>
+                    <span class="text-xl font-extrabold block leading-none">AMBILET</span>
+                    <span class="text-xs text-white/50 mt-1 block">Portal Artist</span>
+                </div>
+            </a>
+        </div>
+
+        <nav class="p-4 space-y-1 flex-1 overflow-y-auto">
+            <a href="/artist/dashboard.html" class="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:bg-white/10 hover:text-white transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+                Dashboard
+            </a>
+            <a href="/artist/profile.html" class="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:bg-white/10 hover:text-white transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/></svg>
+                Detalii Artist
+            </a>
+            <a href="/artist/events.html" class="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:bg-white/10 hover:text-white transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                Evenimente
+            </a>
+
+            <!-- Extended dropdown -->
+            <div class="pt-3">
+                <button @click="extendedOpen = !extendedOpen" class="w-full flex items-center justify-between px-4 py-2 text-xs uppercase tracking-wider text-white/40 font-bold hover:text-white/70 transition-colors">
+                    <span class="flex items-center gap-2">
+                        Extended
+                        <span class="pro-badge">PRO</span>
+                    </span>
+                    <svg class="w-4 h-4 transition-transform" :class="extendedOpen ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                    </svg>
+                </button>
+                <div x-show="extendedOpen" x-transition class="space-y-1 mt-1">
+                    <a href="/artist/audience.html" class="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:bg-white/10 hover:text-white transition-colors">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                        Audiență
+                    </a>
+                    <a href="/artist/booking.html" class="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:bg-white/10 hover:text-white transition-colors">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                        Booking
+                        <span class="ml-auto bg-primary text-white text-xs font-bold px-1.5 py-0.5 rounded-full">3</span>
+                    </a>
+                    <a href="/artist/epk.html" class="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:bg-white/10 hover:text-white transition-colors">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                        Smart EPK
+                    </a>
+                    <a href="/artist/tour.html" class="flex items-center gap-3 px-4 py-3 rounded-xl bg-white/10 text-white font-medium">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/></svg>
+                        Turnee
+                    </a>
+                </div>
+            </div>
+
+            <div class="pt-3">
+                <a href="/artist/settings.html" class="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:bg-white/10 hover:text-white transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                    Setări Cont
+                </a>
+                <a href="/artist/help.html" class="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:bg-white/10 hover:text-white transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    Ajutor
+                </a>
+            </div>
+        </nav>
+
+        <div class="p-4 border-t border-white/10">
+            <button class="flex items-center gap-3 px-4 py-3 w-full rounded-xl text-white/70 hover:bg-error/20 hover:text-error transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+                Deconectare
+            </button>
+        </div>
+    </aside>
+
+    <!-- Mobile Header -->
+    <header class="lg:hidden fixed top-0 left-0 right-0 bg-white border-b border-border z-40">
+        <div class="flex items-center justify-between px-4 py-3">
+            <button @click="mobileMenu = !mobileMenu" class="p-2 hover:bg-surface rounded-lg">
+                <svg class="w-6 h-6 text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                </svg>
+            </button>
+            <span class="font-bold text-secondary">Turnee</span>
+            <div class="w-10"></div>
+        </div>
+    </header>
+
+    <!-- Mobile Menu -->
+    <div x-show="mobileMenu" x-transition.opacity class="lg:hidden fixed inset-0 bg-black/50 z-50" @click="mobileMenu = false" style="display: none;"></div>
+    <aside x-show="mobileMenu" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="-translate-x-full" x-transition:enter-end="translate-x-0" x-transition:leave="transition ease-in duration-150" x-transition:leave-start="translate-x-0" x-transition:leave-end="-translate-x-full" class="lg:hidden fixed left-0 top-0 h-full w-64 bg-secondary text-white z-50 overflow-y-auto" style="display: none;">
+        <div class="p-6 border-b border-white/10 flex items-center justify-between">
+            <span class="text-xl font-extrabold">AMBILET</span>
+            <button @click="mobileMenu = false" class="p-2 text-white/70">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+        </div>
+        <nav class="p-4 space-y-1">
+            <a href="/artist/dashboard.html" class="block px-4 py-3 rounded-xl text-white/70 hover:bg-white/10">Dashboard</a>
+            <a href="/artist/profile.html" class="block px-4 py-3 rounded-xl text-white/70 hover:bg-white/10">Detalii Artist</a>
+            <a href="/artist/events.html" class="block px-4 py-3 rounded-xl text-white/70 hover:bg-white/10">Evenimente</a>
+            <p class="px-4 py-2 text-xs uppercase tracking-wider text-white/40 font-bold mt-3">Extended <span class="pro-badge">PRO</span></p>
+            <a href="/artist/audience.html" class="block px-4 py-3 rounded-xl text-white/70 hover:bg-white/10">Audiență</a>
+            <a href="/artist/booking.html" class="block px-4 py-3 rounded-xl text-white/70 hover:bg-white/10">Booking</a>
+            <a href="/artist/epk.html" class="block px-4 py-3 rounded-xl text-white/70 hover:bg-white/10">Smart EPK</a>
+            <a href="/artist/tour.html" class="block px-4 py-3 rounded-xl bg-white/10 text-white font-medium">Turnee</a>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="lg:ml-64 pt-16 lg:pt-0 min-h-screen">
+        <div class="p-4 lg:p-8">
+            <!-- Page Header -->
+            <div class="mb-6">
+                <div class="flex items-center gap-2 mb-2">
+                    <span class="pro-badge">PRO</span>
+                    <span class="text-xs text-muted uppercase tracking-wider font-semibold">Extended Artist · Tour Optimizer</span>
+                </div>
+                <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+                    <div>
+                        <h1 class="text-2xl lg:text-3xl font-bold text-secondary">Tour Optimizer</h1>
+                        <p class="text-muted mt-1">Planifică turnee strategice pe baza datelor reale despre fanii tăi</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button class="btn btn-secondary btn-sm">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                            Export PDF
+                        </button>
+                        <button @click="setTab('planner')" class="btn btn-primary btn-sm">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
+                            Tour nou
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Insight strip -->
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                <div class="bg-white border border-border rounded-2xl p-5">
+                    <p class="text-xs text-muted uppercase tracking-wider font-semibold mb-2">Orașe oportunitate</p>
+                    <p class="text-2xl font-bold text-secondary">8</p>
+                    <p class="text-xs text-success mt-1">cu fani neexploatați</p>
+                </div>
+                <div class="bg-white border border-border rounded-2xl p-5">
+                    <p class="text-xs text-muted uppercase tracking-wider font-semibold mb-2">Fani „dormiți"</p>
+                    <p class="text-2xl font-bold text-secondary">2.341</p>
+                    <p class="text-xs text-warning mt-1">nu au mai venit &gt;12 luni</p>
+                </div>
+                <div class="bg-white border border-border rounded-2xl p-5">
+                    <p class="text-xs text-muted uppercase tracking-wider font-semibold mb-2">Bilete predictibile</p>
+                    <p class="text-2xl font-bold text-secondary">~9.200</p>
+                    <p class="text-xs text-muted mt-1">tour 5 orașe optimizat</p>
+                </div>
+                <div class="bg-white border border-border rounded-2xl p-5">
+                    <p class="text-xs text-muted uppercase tracking-wider font-semibold mb-2">Scenarii salvate</p>
+                    <p class="text-2xl font-bold text-secondary">3</p>
+                    <p class="text-xs text-muted mt-1">2 active · 1 draft</p>
+                </div>
+            </div>
+
+            <!-- Tabs -->
+            <div class="bg-white rounded-2xl border border-border overflow-hidden">
+                <div class="border-b border-border overflow-x-auto">
+                    <div class="flex gap-1 p-2 min-w-max">
+                        <template x-for="t in tabs" :key="t.id">
+                            <button @click="setTab(t.id)"
+                                    :class="tab === t.id ? 'bg-primary text-white' : 'text-muted hover:bg-surface hover:text-secondary'"
+                                    class="px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors flex items-center gap-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" x-html="t.icon"></svg>
+                                <span x-text="t.label"></span>
+                            </button>
+                        </template>
+                    </div>
+                </div>
+
+                <!-- ============ TAB: HARTĂ OPORTUNITĂȚI ============ -->
+                <div x-show="tab === 'opportunities'" class="p-6">
+                    <div class="grid lg:grid-cols-3 gap-6">
+                        <!-- Map -->
+                        <div class="lg:col-span-2">
+                            <div class="flex items-center justify-between mb-4">
+                                <div>
+                                    <h2 class="text-lg font-bold text-secondary">Hartă oportunități</h2>
+                                    <p class="text-sm text-muted">Densitate fani vs. concerte cântate. Verde = activ, galben = e timp de revenire, roșu = dormit / nou.</p>
+                                </div>
+                            </div>
+
+                            <div id="opportunityMap" class="rounded-xl overflow-hidden border border-border" style="height: 540px;"></div>
+
+                            <!-- Map legend -->
+                            <div class="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+                                <div class="flex items-center gap-2">
+                                    <span class="w-3 h-3 rounded-full bg-success"></span>
+                                    <span class="text-muted">Activ recent</span>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <span class="w-3 h-3 rounded-full bg-warning"></span>
+                                    <span class="text-muted">Revenire necesară</span>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <span class="w-3 h-3 rounded-full bg-error"></span>
+                                    <span class="text-muted">Dormit / Neexplorat</span>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <span class="w-3 h-3 rounded-full ring-2 ring-accent ring-offset-1"></span>
+                                    <span class="text-muted">Recomandare top</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Recommendations sidebar -->
+                        <div>
+                            <h3 class="font-bold text-secondary mb-3">Top recomandări</h3>
+                            <p class="text-xs text-muted mb-4">Orașe cu cel mai mare potențial nemonetizat</p>
+
+                            <div class="space-y-3">
+                                <template x-for="(rec, idx) in recommendations" :key="rec.city">
+                                    <div class="border border-border rounded-xl p-4 hover:border-primary/30 hover:shadow-sm transition-all">
+                                        <div class="flex items-start justify-between mb-2">
+                                            <div class="flex items-center gap-2">
+                                                <span class="w-6 h-6 rounded-md bg-primary/10 text-primary text-xs font-bold flex items-center justify-center" x-text="idx + 1"></span>
+                                                <h4 class="font-bold text-secondary" x-text="rec.city"></h4>
+                                            </div>
+                                            <span class="badge text-xs" :class="opportunityBadgeClass(rec.status)" x-text="rec.statusLabel"></span>
+                                        </div>
+
+                                        <p class="text-xs text-muted mb-3" x-text="rec.reason"></p>
+
+                                        <div class="grid grid-cols-2 gap-2 text-xs mb-3">
+                                            <div class="bg-surface rounded-lg p-2">
+                                                <p class="text-muted">Fani locali</p>
+                                                <p class="font-bold text-secondary" x-text="rec.fans.toLocaleString('ro-RO')"></p>
+                                            </div>
+                                            <div class="bg-surface rounded-lg p-2">
+                                                <p class="text-muted">Predicție</p>
+                                                <p class="font-bold text-secondary" x-text="rec.prediction"></p>
+                                            </div>
+                                        </div>
+
+                                        <button @click="addToPlanner(rec)" class="btn btn-secondary btn-sm w-full">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
+                                            Adaugă în planner
+                                        </button>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Bottom: dormant fans alert -->
+                    <div class="mt-8 grid lg:grid-cols-2 gap-6">
+                        <div class="border-2 border-warning/30 bg-warning/5 rounded-2xl p-5">
+                            <div class="flex items-start gap-3">
+                                <div class="w-10 h-10 bg-warning/20 rounded-xl flex items-center justify-center flex-shrink-0">
+                                    <svg class="w-5 h-5 text-warning" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                </div>
+                                <div class="flex-1">
+                                    <p class="font-bold text-secondary mb-1">⚠️ Atenție: 1.247 fani din Timișoara n-au mai venit de 14 luni</p>
+                                    <p class="text-sm text-muted mb-3">Risc churn ridicat. O dată în Q3 ar putea recupera 60-70% din audiență.</p>
+                                    <button @click="addCity('Timișoara'); setTab('planner')" class="btn btn-primary btn-sm">Planifică Timișoara</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="border-2 border-primary/30 bg-primary/5 rounded-2xl p-5">
+                            <div class="flex items-start gap-3">
+                                <div class="w-10 h-10 bg-primary/20 rounded-xl flex items-center justify-center flex-shrink-0">
+                                    <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                                </div>
+                                <div class="flex-1">
+                                    <p class="font-bold text-secondary mb-1">⚡ Oportunitate: 832 fani în Brașov</p>
+                                    <p class="text-sm text-muted mb-3">Niciodată cântat acolo. Fani câștigați prin festivaluri vecine. Predicție: 600-800 bilete într-un venue mediu.</p>
+                                    <button @click="addCity('Brașov'); setTab('planner')" class="btn btn-primary btn-sm">Adaugă Brașov</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ============ TAB: TOUR PLANNER ============ -->
+                <div x-show="tab === 'planner'" class="p-6">
+                    <div class="grid lg:grid-cols-12 gap-6">
+                        <!-- Left: input form -->
+                        <div class="lg:col-span-4">
+                            <div class="space-y-5 sticky top-6">
+                                <!-- Tour name -->
+                                <div class="bg-white border border-border rounded-2xl p-5">
+                                    <label class="block text-xs uppercase tracking-wider font-bold text-muted mb-2">Nume turneu</label>
+                                    <input type="text" x-model="planner.name" class="form-input mb-3">
+
+                                    <label class="block text-xs uppercase tracking-wider font-bold text-muted mb-2">Perioadă</label>
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <input type="date" x-model="planner.startDate" class="form-input text-sm">
+                                        <input type="date" x-model="planner.endDate" class="form-input text-sm">
+                                    </div>
+                                </div>
+
+                                <!-- Cities -->
+                                <div class="bg-white border border-border rounded-2xl p-5">
+                                    <div class="flex items-center justify-between mb-3">
+                                        <label class="text-xs uppercase tracking-wider font-bold text-muted">Orașe în turneu</label>
+                                        <span class="text-xs text-muted" x-text="planner.cities.length + ' selectate'"></span>
+                                    </div>
+
+                                    <div class="space-y-2 mb-3">
+                                        <template x-for="(city, idx) in planner.cities" :key="city.name">
+                                            <div class="flex items-center gap-2 p-2 bg-surface rounded-lg">
+                                                <span class="w-6 h-6 rounded bg-primary/10 text-primary text-xs font-bold flex items-center justify-center" x-text="idx + 1"></span>
+                                                <span class="flex-1 text-sm font-medium text-secondary" x-text="city.name"></span>
+                                                <span x-show="city.fixed" class="badge bg-warning/10 text-warning text-xs">📌 Fix</span>
+                                                <button @click="city.fixed = !city.fixed" class="p-1 text-muted hover:text-secondary" :title="city.fixed ? 'Permite mutare' : 'Fixează data'">
+                                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/></svg>
+                                                </button>
+                                                <button @click="planner.cities.splice(idx, 1)" class="p-1 text-muted hover:text-error">
+                                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                                                </button>
+                                            </div>
+                                        </template>
+                                    </div>
+
+                                    <div class="relative">
+                                        <input type="text" x-model="cityInput" @keydown.enter.prevent="addCityFromInput()" placeholder="Adaugă oraș (Enter)" class="form-input text-sm">
+                                    </div>
+
+                                    <div class="flex flex-wrap gap-1 mt-3">
+                                        <template x-for="quick in ['București', 'Cluj', 'Iași', 'Brașov', 'Timișoara', 'Constanța']">
+                                            <button @click="addCity(quick)" class="text-xs px-2 py-1 bg-surface text-muted rounded hover:bg-primary/10 hover:text-primary transition-colors">+ <span x-text="quick"></span></button>
+                                        </template>
+                                    </div>
+                                </div>
+
+                                <!-- Constraints -->
+                                <div class="bg-white border border-border rounded-2xl p-5">
+                                    <label class="block text-xs uppercase tracking-wider font-bold text-muted mb-3">Constrângeri</label>
+
+                                    <div class="space-y-3">
+                                        <div>
+                                            <label class="block text-xs text-muted mb-1">Distanță max între date (km)</label>
+                                            <input type="range" x-model="planner.maxDistance" min="100" max="1500" step="50" class="w-full">
+                                            <p class="text-xs text-secondary font-bold mt-1" x-text="planner.maxDistance + ' km'"></p>
+                                        </div>
+
+                                        <div>
+                                            <label class="block text-xs text-muted mb-1">Zile minime între concerte</label>
+                                            <input type="range" x-model="planner.minDaysBetween" min="1" max="7" class="w-full">
+                                            <p class="text-xs text-secondary font-bold mt-1" x-text="planner.minDaysBetween + ' zile'"></p>
+                                        </div>
+
+                                        <div>
+                                            <label class="block text-xs text-muted mb-1">Buget total (RON)</label>
+                                            <input type="number" x-model="planner.budget" class="form-input text-sm">
+                                        </div>
+
+                                        <label class="flex items-center gap-2 cursor-pointer">
+                                            <input type="checkbox" x-model="planner.includeBorder" class="w-4 h-4 rounded text-primary">
+                                            <span class="text-xs text-secondary">Include orașe cross-border (CEE)</span>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <button @click="optimizeTour()" class="btn btn-primary w-full">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                                    Optimizează rută
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Right: result -->
+                        <div class="lg:col-span-8">
+                            <div x-show="!planner.optimized">
+                                <div class="bg-surface border border-dashed border-border rounded-2xl p-12 text-center">
+                                    <div class="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4">
+                                        <svg class="w-8 h-8 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/></svg>
+                                    </div>
+                                    <p class="font-medium text-secondary">Adaugă orașe și apasă „Optimizează rută"</p>
+                                    <p class="text-sm text-muted mt-1">Algoritm-ul va calcula ordinea optimă, distanțe și predicții bilete</p>
+                                </div>
+                            </div>
+
+                            <div x-show="planner.optimized">
+                                <!-- Summary stats -->
+                                <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+                                    <div class="bg-white border border-border rounded-xl p-4">
+                                        <p class="text-xs text-muted uppercase tracking-wider font-semibold">Distanță totală</p>
+                                        <p class="text-xl font-bold text-secondary mt-1">2.847 km</p>
+                                    </div>
+                                    <div class="bg-white border border-border rounded-xl p-4">
+                                        <p class="text-xs text-muted uppercase tracking-wider font-semibold">Durată</p>
+                                        <p class="text-xl font-bold text-secondary mt-1">14 zile</p>
+                                    </div>
+                                    <div class="bg-white border border-border rounded-xl p-4">
+                                        <p class="text-xs text-muted uppercase tracking-wider font-semibold">Cost transport</p>
+                                        <p class="text-xl font-bold text-secondary mt-1">~8.500 RON</p>
+                                    </div>
+                                    <div class="bg-white border border-border rounded-xl p-4">
+                                        <p class="text-xs text-muted uppercase tracking-wider font-semibold">Bilete prognozate</p>
+                                        <p class="text-xl font-bold text-success mt-1">~9.200</p>
+                                    </div>
+                                </div>
+
+                                <!-- Map with route -->
+                                <div id="plannerMap" class="rounded-xl overflow-hidden border border-border mb-4" style="height: 360px;"></div>
+
+                                <!-- Route timeline -->
+                                <div class="bg-white border border-border rounded-2xl p-5">
+                                    <h3 class="font-bold text-secondary mb-4">Itinerar optim</h3>
+                                    <div class="space-y-2">
+                                        <template x-for="(stop, idx) in optimizedRoute" :key="idx">
+                                            <div class="flex items-center gap-3 p-3 rounded-xl hover:bg-surface transition-colors">
+                                                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary-dark text-white font-bold flex items-center justify-center flex-shrink-0" x-text="idx + 1"></div>
+                                                <div class="flex-1 min-w-0">
+                                                    <div class="flex items-center gap-2 flex-wrap">
+                                                        <p class="font-bold text-secondary" x-text="stop.city"></p>
+                                                        <span x-show="stop.fixed" class="badge bg-warning/10 text-warning text-xs">📌 Fix</span>
+                                                    </div>
+                                                    <p class="text-xs text-muted" x-text="stop.date + ' · ' + stop.day"></p>
+                                                </div>
+                                                <div class="text-right hidden sm:block flex-shrink-0">
+                                                    <p class="text-xs text-muted">Predicție</p>
+                                                    <p class="text-sm font-bold text-secondary" x-text="stop.prediction + ' bilete'"></p>
+                                                </div>
+                                                <div class="text-right flex-shrink-0">
+                                                    <p class="text-xs text-muted" x-show="stop.distance">Spre următor</p>
+                                                    <p class="text-xs font-medium text-muted" x-show="stop.distance" x-text="stop.distance + ' km'"></p>
+                                                </div>
+                                            </div>
+                                        </template>
+                                    </div>
+
+                                    <div class="flex gap-2 mt-6 pt-6 border-t border-border">
+                                        <button class="btn btn-primary btn-sm">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                                            Salvează scenariu
+                                        </button>
+                                        <button class="btn btn-secondary btn-sm">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                                            Trimite în Booking
+                                        </button>
+                                        <button class="btn btn-secondary btn-sm">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3"/></svg>
+                                            Export PDF
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ============ TAB: PREDICȚII ============ -->
+                <div x-show="tab === 'predictions'" class="p-6">
+                    <div class="mb-6">
+                        <h2 class="text-lg font-bold text-secondary">Predicții bilete</h2>
+                        <p class="text-sm text-muted">Estimat per oraș în 3 scenarii de mărime venue, pe baza fanilor locali, retenției istorice și sezonalității</p>
+                    </div>
+
+                    <!-- City selector -->
+                    <div class="bg-surface rounded-xl p-4 mb-6">
+                        <div class="flex flex-wrap gap-2 items-center">
+                            <span class="text-xs text-muted uppercase tracking-wider font-bold">Filtrează:</span>
+                            <button @click="predictionFilter = 'all'" :class="predictionFilter === 'all' ? 'bg-primary text-white' : 'bg-white text-muted'" class="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors">Toate</button>
+                            <button @click="predictionFilter = 'high'" :class="predictionFilter === 'high' ? 'bg-primary text-white' : 'bg-white text-muted'" class="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors">Potențial mare</button>
+                            <button @click="predictionFilter = 'sleeping'" :class="predictionFilter === 'sleeping' ? 'bg-primary text-white' : 'bg-white text-muted'" class="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors">Dormit</button>
+                            <button @click="predictionFilter = 'new'" :class="predictionFilter === 'new' ? 'bg-primary text-white' : 'bg-white text-muted'" class="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors">Neexplorat</button>
+                        </div>
+                    </div>
+
+                    <!-- Predictions table -->
+                    <div class="overflow-x-auto -mx-6 px-6">
+                        <table class="w-full">
+                            <thead>
+                                <tr class="border-b border-border">
+                                    <th class="text-left text-xs uppercase tracking-wider font-bold text-muted py-3 px-2">Oraș</th>
+                                    <th class="text-right text-xs uppercase tracking-wider font-bold text-muted py-3 px-2">Fani locali</th>
+                                    <th class="text-center text-xs uppercase tracking-wider font-bold text-muted py-3 px-2">Venue mic<br><span class="font-normal lowercase">(300-500)</span></th>
+                                    <th class="text-center text-xs uppercase tracking-wider font-bold text-muted py-3 px-2">Venue mediu<br><span class="font-normal lowercase">(800-1500)</span></th>
+                                    <th class="text-center text-xs uppercase tracking-wider font-bold text-muted py-3 px-2">Venue mare<br><span class="font-normal lowercase">(2500+)</span></th>
+                                    <th class="text-left text-xs uppercase tracking-wider font-bold text-muted py-3 px-2">Status</th>
+                                    <th class="text-right text-xs uppercase tracking-wider font-bold text-muted py-3 px-2"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template x-for="p in filteredPredictions" :key="p.city">
+                                    <tr class="border-b border-border hover:bg-surface transition-colors">
+                                        <td class="py-3 px-2">
+                                            <p class="font-medium text-secondary" x-text="p.city"></p>
+                                            <p class="text-xs text-muted" x-text="p.note"></p>
+                                        </td>
+                                        <td class="py-3 px-2 text-right font-bold text-secondary" x-text="p.fans.toLocaleString('ro-RO')"></td>
+                                        <td class="py-3 px-2 text-center">
+                                            <p class="text-sm font-bold text-secondary" x-text="p.small.estimate"></p>
+                                            <p class="text-xs text-muted" x-text="p.small.confidence + '%'"></p>
+                                        </td>
+                                        <td class="py-3 px-2 text-center">
+                                            <p class="text-sm font-bold text-secondary" x-text="p.medium.estimate"></p>
+                                            <p class="text-xs text-muted" x-text="p.medium.confidence + '%'"></p>
+                                        </td>
+                                        <td class="py-3 px-2 text-center">
+                                            <p class="text-sm font-bold text-secondary" x-text="p.large.estimate"></p>
+                                            <p class="text-xs text-muted" x-text="p.large.confidence + '%'"></p>
+                                        </td>
+                                        <td class="py-3 px-2">
+                                            <span class="badge text-xs" :class="opportunityBadgeClass(p.status)" x-text="p.statusLabel"></span>
+                                        </td>
+                                        <td class="py-3 px-2 text-right">
+                                            <button @click="addCity(p.city); setTab('planner')" class="text-primary text-sm font-medium hover:underline whitespace-nowrap">+ Planner</button>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Day-of-week chart -->
+                    <div class="grid lg:grid-cols-2 gap-6 mt-8">
+                        <div class="bg-white border border-border rounded-2xl p-5">
+                            <h3 class="font-bold text-secondary mb-1">Performanță pe ziua săptămânii</h3>
+                            <p class="text-sm text-muted mb-4">Vânzări medii pe eveniment, agregat per oraș</p>
+                            <div class="relative h-[260px]">
+                                <canvas id="weekdayChart"></canvas>
+                            </div>
+                        </div>
+
+                        <div class="bg-white border border-border rounded-2xl p-5">
+                            <h3 class="font-bold text-secondary mb-1">Sezonalitate</h3>
+                            <p class="text-sm text-muted mb-4">Vânzări lunare medii pe ultimele 24 de luni</p>
+                            <div class="relative h-[260px]">
+                                <canvas id="seasonChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Methodology -->
+                    <div class="mt-6 bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-start gap-3">
+                        <svg class="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        <div class="text-sm text-blue-900">
+                            <p class="font-semibold">Cum sunt calculate predicțiile</p>
+                            <p class="text-blue-800 mt-0.5">Algoritm-ul folosește numărul de fani locali, retenția lor istorică, sezonul calendaristic, ziua săptămânii și concurența locală (alți artiști din platformă cu evenimente în aceleași zile). Procentul de încredere reflectă cât de mult se bazează pe date reale vs. inferențe.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ============ TAB: SCENARII SALVATE ============ -->
+                <div x-show="tab === 'scenarios'" class="p-6">
+                    <div class="flex items-center justify-between mb-6">
+                        <div>
+                            <h2 class="text-lg font-bold text-secondary">Scenarii salvate</h2>
+                            <p class="text-sm text-muted">Compară opțiuni de turneu side-by-side</p>
+                        </div>
+                        <button @click="setTab('planner')" class="btn btn-primary btn-sm">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
+                            Scenariu nou
+                        </button>
+                    </div>
+
+                    <!-- Scenarios cards grid -->
+                    <div class="grid lg:grid-cols-3 gap-4 mb-8">
+                        <template x-for="s in scenarios" :key="s.id">
+                            <div class="border-2 rounded-2xl overflow-hidden transition-all hover:shadow-md"
+                                 :class="s.active ? 'border-primary' : 'border-border'">
+                                <div class="aspect-video relative" :style="`background: ${s.preview}`">
+                                    <span x-show="s.active" class="absolute top-2 left-2 badge bg-primary text-white">Activ</span>
+                                    <span x-show="s.draft" class="absolute top-2 left-2 badge bg-muted text-white">Draft</span>
+                                    <div class="absolute bottom-3 left-3 right-3 text-white">
+                                        <p class="font-extrabold text-lg leading-tight" x-text="s.name"></p>
+                                        <p class="text-xs opacity-80" x-text="s.subtitle"></p>
+                                    </div>
+                                </div>
+                                <div class="p-4">
+                                    <div class="grid grid-cols-3 gap-2 text-center mb-3">
+                                        <div>
+                                            <p class="text-xs text-muted">Orașe</p>
+                                            <p class="text-sm font-bold text-secondary" x-text="s.cities"></p>
+                                        </div>
+                                        <div>
+                                            <p class="text-xs text-muted">Bilete prog.</p>
+                                            <p class="text-sm font-bold text-secondary" x-text="s.predictedTickets"></p>
+                                        </div>
+                                        <div>
+                                            <p class="text-xs text-muted">Cost</p>
+                                            <p class="text-sm font-bold text-secondary" x-text="s.cost"></p>
+                                        </div>
+                                    </div>
+                                    <p class="text-xs text-muted mb-3" x-text="s.dateRange"></p>
+                                    <div class="flex gap-1">
+                                        <button class="btn btn-secondary btn-sm flex-1">Deschide</button>
+                                        <button class="btn btn-secondary btn-sm">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+
+                    <!-- Side-by-side comparison -->
+                    <div class="bg-white border border-border rounded-2xl p-5">
+                        <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
+                            <h3 class="font-bold text-secondary">Comparație side-by-side</h3>
+                            <div class="flex gap-2">
+                                <select class="form-input w-auto text-sm">
+                                    <option>Tour Vară 2026 (5 orașe)</option>
+                                    <option>Tour Vară 2026 (3 orașe)</option>
+                                </select>
+                                <span class="text-muted self-center">vs</span>
+                                <select class="form-input w-auto text-sm">
+                                    <option>Tour Vară 2026 (3 orașe)</option>
+                                    <option>Tour Vară 2026 (5 orașe)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="grid lg:grid-cols-2 gap-4">
+                            <div class="border-2 border-primary rounded-xl p-5">
+                                <div class="flex items-center justify-between mb-4">
+                                    <h4 class="font-bold text-secondary">A · Tour Vară (5 orașe)</h4>
+                                    <span class="badge bg-primary text-white">Recomandat</span>
+                                </div>
+                                <div class="space-y-3">
+                                    <div class="flex justify-between"><span class="text-sm text-muted">Orașe</span><span class="font-bold text-secondary">5</span></div>
+                                    <div class="flex justify-between"><span class="text-sm text-muted">Durată</span><span class="font-bold text-secondary">14 zile</span></div>
+                                    <div class="flex justify-between"><span class="text-sm text-muted">Distanță</span><span class="font-bold text-secondary">2.847 km</span></div>
+                                    <div class="flex justify-between"><span class="text-sm text-muted">Cost transport</span><span class="font-bold text-secondary">8.500 RON</span></div>
+                                    <div class="flex justify-between"><span class="text-sm text-muted">Bilete prognozate</span><span class="font-bold text-success">9.200</span></div>
+                                    <div class="flex justify-between"><span class="text-sm text-muted">Venit estimat</span><span class="font-bold text-success">~340.000 RON</span></div>
+                                    <div class="flex justify-between"><span class="text-sm text-muted">ROI</span><span class="font-bold text-success">~40x</span></div>
+                                </div>
+                            </div>
+
+                            <div class="border-2 border-border rounded-xl p-5">
+                                <div class="flex items-center justify-between mb-4">
+                                    <h4 class="font-bold text-secondary">B · Tour Vară (3 orașe)</h4>
+                                </div>
+                                <div class="space-y-3">
+                                    <div class="flex justify-between items-center"><span class="text-sm text-muted">Orașe</span><span><span class="font-bold text-secondary">3</span> <span class="badge bg-error/10 text-error ml-2 text-xs">-2</span></span></div>
+                                    <div class="flex justify-between items-center"><span class="text-sm text-muted">Durată</span><span><span class="font-bold text-secondary">8 zile</span> <span class="badge bg-success/10 text-success ml-2 text-xs">-6 zile</span></span></div>
+                                    <div class="flex justify-between items-center"><span class="text-sm text-muted">Distanță</span><span><span class="font-bold text-secondary">1.420 km</span> <span class="badge bg-success/10 text-success ml-2 text-xs">-50%</span></span></div>
+                                    <div class="flex justify-between items-center"><span class="text-sm text-muted">Cost transport</span><span><span class="font-bold text-secondary">4.200 RON</span> <span class="badge bg-success/10 text-success ml-2 text-xs">-50%</span></span></div>
+                                    <div class="flex justify-between items-center"><span class="text-sm text-muted">Bilete prognozate</span><span><span class="font-bold text-secondary">5.800</span> <span class="badge bg-error/10 text-error ml-2 text-xs">-37%</span></span></div>
+                                    <div class="flex justify-between items-center"><span class="text-sm text-muted">Venit estimat</span><span><span class="font-bold text-secondary">~210.000 RON</span> <span class="badge bg-error/10 text-error ml-2 text-xs">-38%</span></span></div>
+                                    <div class="flex justify-between"><span class="text-sm text-muted">ROI</span><span class="font-bold text-secondary">~50x</span></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-6 p-4 bg-success/5 border border-success/20 rounded-xl">
+                            <p class="text-sm text-secondary">
+                                <strong class="text-success">💡 Recomandare:</strong> Tour A generează cu 130.000 RON mai mult venit. Tour B are ROI mai bun, dar oportunitatea pe Brașov + Iași va dispărea în Q3 (festivaluri concurente). Decizie: A dacă obiectivul e venit total, B dacă obiectivul e eficiență marginală.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        function tourOptimizer() {
+            return {
+                mobileMenu: false,
+                extendedOpen: true,
+                tab: 'opportunities',
+                cityInput: '',
+                predictionFilter: 'all',
+                charts: {},
+                opportunityMap: null,
+                plannerMap: null,
+                plannerRouteLayer: null,
+
+                tabs: [
+                    { id: 'opportunities', label: 'Hartă oportunități', icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>' },
+                    { id: 'planner', label: 'Tour Planner', icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/>' },
+                    { id: 'predictions', label: 'Predicții', icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>' },
+                    { id: 'scenarios', label: 'Scenarii salvate', icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>' },
+                ],
+
+                // Reference data: cities with lat/lng + fan count + last event
+                cityData: {
+                    'București':    { lat: 44.4268, lng: 26.1025, fans: 4231, monthsAgo: 1, status: 'active' },
+                    'Cluj-Napoca':  { lat: 46.7712, lng: 23.6236, fans: 1847, monthsAgo: 3, status: 'active' },
+                    'Iași':         { lat: 47.1585, lng: 27.6014, fans: 1234, monthsAgo: 8, status: 'warm' },
+                    'Timișoara':    { lat: 45.7489, lng: 21.2087, fans: 1089, monthsAgo: 14, status: 'sleeping' },
+                    'Brașov':       { lat: 45.6427, lng: 25.5887, fans: 832,  monthsAgo: null, status: 'new' },
+                    'Constanța':    { lat: 44.1598, lng: 28.6348, fans: 671,  monthsAgo: 2, status: 'active' },
+                    'Sibiu':        { lat: 45.7983, lng: 24.1256, fans: 543,  monthsAgo: 9, status: 'warm' },
+                    'Oradea':       { lat: 47.0465, lng: 21.9189, fans: 421,  monthsAgo: 6, status: 'warm' },
+                    'Galați':       { lat: 45.4353, lng: 28.0080, fans: 312,  monthsAgo: 23, status: 'sleeping' },
+                    'Ploiești':     { lat: 44.9362, lng: 26.0125, fans: 287,  monthsAgo: 20, status: 'sleeping' },
+                    'Bacău':        { lat: 46.5670, lng: 26.9146, fans: 198,  monthsAgo: 25, status: 'sleeping' },
+                    'Craiova':      { lat: 44.3302, lng: 23.7949, fans: 256,  monthsAgo: null, status: 'new' },
+                    'Pitești':      { lat: 44.8565, lng: 24.8692, fans: 184,  monthsAgo: null, status: 'new' },
+                },
+
+                recommendations: [
+                    { city: 'Brașov',     fans: 832,  prediction: '600-800', status: 'new',      statusLabel: 'Neexplorat', reason: 'Fani câștigați prin festivalurile vecine. Nu am cântat acolo niciodată.' },
+                    { city: 'Timișoara',  fans: 1089, prediction: '650-900', status: 'sleeping', statusLabel: 'Dormit',     reason: '1.247 fani n-au venit de 14 luni. Risc churn ridicat.' },
+                    { city: 'Iași',       fans: 1234, prediction: '700-1100', status: 'warm',     statusLabel: 'Recomandat', reason: 'Ultimul concert acum 8 luni. Audiența retenție 78%.' },
+                    { city: 'Sibiu',      fans: 543,  prediction: '350-500', status: 'warm',     statusLabel: 'Recomandat', reason: 'Festival local Sibiu Open câștigă în iulie — sinergie potențială.' },
+                ],
+
+                planner: {
+                    name: 'Tour Vară 2026',
+                    startDate: '2026-07-01',
+                    endDate: '2026-07-30',
+                    cities: [
+                        { name: 'București', fixed: true },
+                        { name: 'Cluj-Napoca', fixed: false },
+                        { name: 'Iași', fixed: false },
+                    ],
+                    maxDistance: 600,
+                    minDaysBetween: 2,
+                    budget: 80000,
+                    includeBorder: false,
+                    optimized: true,
+                },
+
+                optimizedRoute: [
+                    { city: 'București',  date: '5 iul 2026',  day: 'Sâmbătă',  prediction: 1850, distance: 446,  fixed: true,  lat: 44.4268, lng: 26.1025 },
+                    { city: 'Brașov',     date: '8 iul 2026',  day: 'Marți',    prediction: 720,  distance: 263,  fixed: false, lat: 45.6427, lng: 25.5887 },
+                    { city: 'Iași',       date: '12 iul 2026', day: 'Sâmbătă',  prediction: 980,  distance: 412,  fixed: false, lat: 47.1585, lng: 27.6014 },
+                    { city: 'Cluj-Napoca',date: '16 iul 2026', day: 'Joi',      prediction: 1640, distance: 332,  fixed: false, lat: 46.7712, lng: 23.6236 },
+                    { city: 'Timișoara',  date: '19 iul 2026', day: 'Duminică', prediction: 820,  distance: null, fixed: false, lat: 45.7489, lng: 21.2087 },
+                ],
+
+                predictions: [
+                    { city: 'București',   fans: 4231, note: 'Bază · ultimul concert luna trecută',     small: { estimate: '450', confidence: 92 }, medium: { estimate: '1.300', confidence: 88 }, large: { estimate: '2.100', confidence: 78 }, status: 'active',   statusLabel: 'Activ' },
+                    { city: 'Cluj-Napoca', fans: 1847, note: '4 concerte · retenție 82%',                small: { estimate: '420', confidence: 89 }, medium: { estimate: '1.180', confidence: 84 }, large: { estimate: '1.640', confidence: 71 }, status: 'active',   statusLabel: 'Activ' },
+                    { city: 'Iași',        fans: 1234, note: 'Ultimul concert acum 8 luni',              small: { estimate: '380', confidence: 76 }, medium: { estimate: '900',   confidence: 72 }, large: { estimate: '1.100', confidence: 58 }, status: 'warm',     statusLabel: 'Recomandare' },
+                    { city: 'Timișoara',   fans: 1089, note: '14 luni dormit · risc churn',              small: { estimate: '320', confidence: 65 }, medium: { estimate: '750',   confidence: 60 }, large: { estimate: '900',   confidence: 48 }, status: 'sleeping', statusLabel: 'Dormit' },
+                    { city: 'Brașov',      fans: 832,  note: 'Niciodată cântat · fani din festivaluri', small: { estimate: '280', confidence: 58 }, medium: { estimate: '600',   confidence: 52 }, large: { estimate: '750',   confidence: 38 }, status: 'new',      statusLabel: 'Neexplorat' },
+                    { city: 'Constanța',   fans: 671,  note: 'Sezonalitate puternică vară',              small: { estimate: '230', confidence: 78 }, medium: { estimate: '530',   confidence: 73 }, large: { estimate: '650',   confidence: 60 }, status: 'active',   statusLabel: 'Activ' },
+                    { city: 'Sibiu',       fans: 543,  note: 'Recomandare overlap festival local',       small: { estimate: '210', confidence: 70 }, medium: { estimate: '440',   confidence: 65 }, large: { estimate: '520',   confidence: 50 }, status: 'warm',     statusLabel: 'Recomandare' },
+                    { city: 'Oradea',      fans: 421,  note: '1 concert · ultimul acum 6 luni',          small: { estimate: '170', confidence: 68 }, medium: { estimate: '350',   confidence: 60 }, large: { estimate: '410',   confidence: 45 }, status: 'warm',     statusLabel: 'Recomandare' },
+                    { city: 'Craiova',     fans: 256,  note: 'Niciodată · audiență mică dar loială',     small: { estimate: '110', confidence: 52 }, medium: { estimate: '220',   confidence: 45 }, large: { estimate: '260',   confidence: 30 }, status: 'new',      statusLabel: 'Neexplorat' },
+                    { city: 'Galați',      fans: 312,  note: '23 luni dormit',                           small: { estimate: '95',  confidence: 42 }, medium: { estimate: '210',   confidence: 38 }, large: { estimate: '260',   confidence: 25 }, status: 'sleeping', statusLabel: 'Dormit' },
+                ],
+
+                scenarios: [
+                    { id: 1, name: 'Tour Vară 2026', subtitle: '5 orașe · 14 zile', cities: 5, predictedTickets: '9.2k', cost: '8.5k RON', dateRange: '5-19 iulie 2026', preview: 'linear-gradient(135deg, #A51C30, #1E293B)', active: true,  draft: false },
+                    { id: 2, name: 'Tour Vară (3)',  subtitle: 'Variantă scurtă',    cities: 3, predictedTickets: '5.8k', cost: '4.2k RON', dateRange: '5-13 iulie 2026', preview: 'linear-gradient(135deg, #E67E22, #A51C30)', active: false, draft: false },
+                    { id: 3, name: 'Mini-tour Cluj',  subtitle: 'Focus Transilvania', cities: 4, predictedTickets: '3.8k', cost: '3.1k RON', dateRange: '20-26 sept 2026', preview: 'linear-gradient(135deg, #1E293B, #E67E22)', active: false, draft: true  },
+                ],
+
+                get filteredPredictions() {
+                    if (this.predictionFilter === 'all') return this.predictions;
+                    return this.predictions.filter(p => p.status === this.predictionFilter);
+                },
+
+                opportunityBadgeClass(s) {
+                    return ({
+                        active: 'bg-success/10 text-success',
+                        warm: 'bg-warning/10 text-warning',
+                        sleeping: 'bg-error/10 text-error',
+                        new: 'bg-primary/10 text-primary',
+                    })[s] || 'bg-muted/10 text-muted';
+                },
+
+                addCity(name) {
+                    if (!this.planner.cities.find(c => c.name === name)) {
+                        this.planner.cities.push({ name, fixed: false });
+                    }
+                },
+
+                addCityFromInput() {
+                    if (this.cityInput.trim()) {
+                        this.addCity(this.cityInput.trim());
+                        this.cityInput = '';
+                    }
+                },
+
+                addToPlanner(rec) {
+                    this.addCity(rec.city);
+                    this.setTab('planner');
+                },
+
+                optimizeTour() {
+                    this.planner.optimized = true;
+                    this.$nextTick(() => this.renderPlannerMap());
+                },
+
+                setTab(id) {
+                    this.tab = id;
+                    this.$nextTick(() => this.renderTab(id));
+                },
+
+                init() {
+                    this.$nextTick(() => this.renderTab('opportunities'));
+                },
+
+                renderTab(id) {
+                    if (id === 'opportunities') this.renderOpportunityMap();
+                    else if (id === 'planner') this.renderPlannerMap();
+                    else if (id === 'predictions') {
+                        this.renderWeekdayChart();
+                        this.renderSeasonChart();
+                    }
+                },
+
+                destroyChart(key) {
+                    if (this.charts[key]) { this.charts[key].destroy(); delete this.charts[key]; }
+                },
+
+                renderOpportunityMap() {
+                    if (!this.opportunityMap) {
+                        this.opportunityMap = L.map('opportunityMap').setView([45.9432, 24.9668], 6);
+                        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+                            attribution: '&copy; OpenStreetMap, &copy; CARTO',
+                            maxZoom: 19,
+                        }).addTo(this.opportunityMap);
+                    } else {
+                        this.opportunityMap.eachLayer(layer => {
+                            if (layer instanceof L.Marker || layer instanceof L.CircleMarker) {
+                                this.opportunityMap.removeLayer(layer);
+                            }
+                        });
+                    }
+
+                    const colorMap = { active: '#10B981', warm: '#F59E0B', sleeping: '#EF4444', new: '#A51C30' };
+                    const recCities = this.recommendations.map(r => r.city);
+
+                    Object.entries(this.cityData).forEach(([name, c]) => {
+                        const isRec = recCities.includes(name);
+                        const size = Math.max(28, Math.min(60, c.fans / 80));
+                        const ringColor = isRec ? '#E67E22' : 'white';
+                        const ringWidth = isRec ? 3 : 2;
+                        const icon = L.divIcon({
+                            html: `<div style="background:${colorMap[c.status]};color:white;border-radius:50%;width:${size}px;height:${size}px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:11px;border:${ringWidth}px solid ${ringColor};box-shadow:0 2px 8px rgba(0,0,0,0.3)">${c.fans > 999 ? Math.round(c.fans/1000) + 'k' : c.fans}</div>`,
+                            className: '',
+                            iconSize: [size, size],
+                        });
+                        const marker = L.marker([c.lat, c.lng], { icon }).addTo(this.opportunityMap);
+                        const monthsText = c.monthsAgo === null ? 'Niciodată' : c.monthsAgo + ' luni de la ultim concert';
+                        marker.bindPopup(`<strong>${name}</strong><br>${c.fans.toLocaleString('ro-RO')} fani locali<br><small>${monthsText}</small>`);
+                    });
+
+                    setTimeout(() => this.opportunityMap.invalidateSize(), 100);
+                },
+
+                renderPlannerMap() {
+                    if (!this.planner.optimized) return;
+
+                    if (!this.plannerMap) {
+                        this.plannerMap = L.map('plannerMap').setView([45.9432, 24.9668], 6);
+                        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+                            attribution: '&copy; OpenStreetMap, &copy; CARTO',
+                            maxZoom: 19,
+                        }).addTo(this.plannerMap);
+                    } else {
+                        this.plannerMap.eachLayer(layer => {
+                            if (layer instanceof L.Marker || layer instanceof L.Polyline) {
+                                this.plannerMap.removeLayer(layer);
+                            }
+                        });
+                    }
+
+                    // Numbered pins for each stop
+                    const points = [];
+                    this.optimizedRoute.forEach((stop, idx) => {
+                        const icon = L.divIcon({
+                            html: `<div style="background:#A51C30;color:white;border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:14px;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.4)">${idx + 1}</div>`,
+                            className: '',
+                            iconSize: [36, 36],
+                        });
+                        L.marker([stop.lat, stop.lng], { icon }).addTo(this.plannerMap)
+                            .bindPopup(`<strong>${idx + 1}. ${stop.city}</strong><br>${stop.date}<br>${stop.prediction} bilete prognozate`);
+                        points.push([stop.lat, stop.lng]);
+                    });
+
+                    // Connecting line
+                    L.polyline(points, { color: '#A51C30', weight: 3, opacity: 0.8, dashArray: '8, 8' }).addTo(this.plannerMap);
+
+                    // Fit bounds
+                    if (points.length > 0) {
+                        this.plannerMap.fitBounds(points, { padding: [40, 40] });
+                    }
+
+                    setTimeout(() => this.plannerMap.invalidateSize(), 100);
+                },
+
+                renderWeekdayChart() {
+                    this.destroyChart('weekday');
+                    const el = document.getElementById('weekdayChart');
+                    if (!el || typeof Chart === 'undefined') return;
+                    this.charts.weekday = new Chart(el.getContext('2d'), {
+                        type: 'bar',
+                        data: {
+                            labels: ['Lun', 'Mar', 'Mie', 'Joi', 'Vin', 'Sâm', 'Dum'],
+                            datasets: [{ data: [320, 410, 480, 720, 1340, 1820, 1240], backgroundColor: ['#94A3B8', '#94A3B8', '#94A3B8', '#E67E22', '#A51C30', '#A51C30', '#E67E22'], borderRadius: 6 }]
+                        },
+                        options: {
+                            responsive: true, maintainAspectRatio: false,
+                            plugins: { legend: { display: false }, tooltip: { backgroundColor: '#1E293B', padding: 12, cornerRadius: 8, callbacks: { label: (c) => c.parsed.y + ' bilete medie' } } },
+                            scales: { y: { beginAtZero: true, grid: { color: '#E2E8F0' } }, x: { grid: { display: false } } }
+                        }
+                    });
+                },
+
+                renderSeasonChart() {
+                    this.destroyChart('season');
+                    const el = document.getElementById('seasonChart');
+                    if (!el || typeof Chart === 'undefined') return;
+                    this.charts.season = new Chart(el.getContext('2d'), {
+                        type: 'line',
+                        data: {
+                            labels: ['Ian', 'Feb', 'Mar', 'Apr', 'Mai', 'Iun', 'Iul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+                            datasets: [{ data: [380, 420, 580, 720, 1180, 1620, 1840, 1720, 1280, 980, 720, 480], borderColor: '#A51C30', backgroundColor: 'rgba(165,28,48,0.1)', fill: true, tension: 0.4, pointRadius: 4, borderWidth: 2 }]
+                        },
+                        options: {
+                            responsive: true, maintainAspectRatio: false,
+                            plugins: { legend: { display: false }, tooltip: { backgroundColor: '#1E293B', padding: 12, cornerRadius: 8, callbacks: { label: (c) => c.parsed.y + ' bilete medie/eveniment' } } },
+                            scales: { y: { beginAtZero: true, grid: { color: '#E2E8F0' } }, x: { grid: { display: false } } }
+                        }
+                    });
+                },
+            }
+        }
+    </script>
+</body>
+</html>

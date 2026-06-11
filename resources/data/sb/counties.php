@@ -1,0 +1,13 @@
+<?php
+return [
+    'Central',
+    'Choiseul',
+    'Guadalcanal',
+    'Honiara',
+    'Isabel',
+    'Makira-Ulawa',
+    'Malaita',
+    'Rennell and Bellona',
+    'Temotu',
+    'Western',
+];

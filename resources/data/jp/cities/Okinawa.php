@@ -1,0 +1,117 @@
+<?php
+return [
+    [
+        'id'        => 63292,
+        'name'      => 'Chatan',
+        'latitude'  => '26.32009910',
+        'longitude' => '127.76368270',
+    ],
+    [
+        'id'        => 63387,
+        'name'      => 'Ginowan Shi',
+        'latitude'  => '26.28149680',
+        'longitude' => '127.77849160',
+    ],
+    [
+        'id'        => 63400,
+        'name'      => 'Gushikawa',
+        'latitude'  => '26.35891020',
+        'longitude' => '127.86758780',
+    ],
+    [
+        'id'        => 63493,
+        'name'      => 'Hirara',
+        'latitude'  => '24.92643100',
+        'longitude' => '125.24111510',
+    ],
+    [
+        'id'        => 63590,
+        'name'      => 'Ishigaki',
+        'latitude'  => '24.34444410',
+        'longitude' => '124.18518570',
+    ],
+    [
+        'id'        => 63596,
+        'name'      => 'Ishikawa',
+        'latitude'  => '26.43454260',
+        'longitude' => '127.82530550',
+    ],
+    [
+        'id'        => 63612,
+        'name'      => 'Itoman',
+        'latitude'  => '26.12342010',
+        'longitude' => '127.66604600',
+    ],
+    [
+        'id'        => 63757,
+        'name'      => 'Katsuren-haebaru',
+        'latitude'  => '26.32475820',
+        'longitude' => '127.87873300',
+    ],
+    [
+        'id'        => 64002,
+        'name'      => 'Miyakojima Shi',
+        'latitude'  => '24.80546470',
+        'longitude' => '125.28112960',
+    ],
+    [
+        'id'        => 64076,
+        'name'      => 'Nago',
+        'latitude'  => '26.59195990',
+        'longitude' => '127.97747590',
+    ],
+    [
+        'id'        => 64079,
+        'name'      => 'Naha',
+        'latitude'  => '26.21223450',
+        'longitude' => '127.67914520',
+    ],
+    [
+        'id'        => 64083,
+        'name'      => 'Nakagami-gun',
+        'latitude'  => '26.40293430',
+        'longitude' => '127.67380810',
+    ],
+    [
+        'id'        => 64100,
+        'name'      => 'Nanjō',
+        'latitude'  => '26.16320920',
+        'longitude' => '127.77055630',
+    ],
+    [
+        'id'        => 64200,
+        'name'      => 'Okinawa',
+        'latitude'  => '26.47489480',
+        'longitude' => '127.91146870',
+    ],
+    [
+        'id'        => 64201,
+        'name'      => 'Okinawa Shi',
+        'latitude'  => '26.33437380',
+        'longitude' => '127.80565970',
+    ],
+    [
+        'id'        => 64504,
+        'name'      => 'Tomigusuku',
+        'latitude'  => '26.17719960',
+        'longitude' => '127.68128290',
+    ],
+    [
+        'id'        => 64596,
+        'name'      => 'Urasoe Shi',
+        'latitude'  => '26.24592420',
+        'longitude' => '127.72197690',
+    ],
+    [
+        'id'        => 64600,
+        'name'      => 'Uruma Shi',
+        'latitude'  => '26.37914960',
+        'longitude' => '127.85731070',
+    ],
+    [
+        'id'        => 64677,
+        'name'      => 'Yonakuni',
+        'latitude'  => '24.46667000',
+        'longitude' => '123.00000000',
+    ],
+];

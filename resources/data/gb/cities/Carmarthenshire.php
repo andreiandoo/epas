@@ -1,0 +1,105 @@
+<?php
+return [
+    [
+        'id'        => 48180,
+        'name'      => 'Aberporth',
+        'latitude'  => '52.13248000',
+        'longitude' => '-4.54173000',
+    ],
+    [
+        'id'        => 48862,
+        'name'      => 'Carmarthen',
+        'latitude'  => '51.85552000',
+        'longitude' => '-4.30535000',
+    ],
+    [
+        'id'        => 48863,
+        'name'      => 'Carmarthenshire',
+        'latitude'  => '51.83333000',
+        'longitude' => '-4.16667000',
+    ],
+    [
+        'id'        => 49172,
+        'name'      => 'Cross Hands',
+        'latitude'  => '51.79306000',
+        'longitude' => '-4.08750000',
+    ],
+    [
+        'id'        => 50138,
+        'name'      => 'Kidwelly',
+        'latitude'  => '51.73639000',
+        'longitude' => '-4.30333000',
+    ],
+    [
+        'id'        => 50344,
+        'name'      => 'Llandeilo',
+        'latitude'  => '51.88459000',
+        'longitude' => '-3.99154000',
+    ],
+    [
+        'id'        => 50345,
+        'name'      => 'Llandovery',
+        'latitude'  => '51.99415000',
+        'longitude' => '-3.79637000',
+    ],
+    [
+        'id'        => 50348,
+        'name'      => 'Llandybie',
+        'latitude'  => '51.82044000',
+        'longitude' => '-4.00710000',
+    ],
+    [
+        'id'        => 50349,
+        'name'      => 'Llandysul',
+        'latitude'  => '52.04166000',
+        'longitude' => '-4.30909000',
+    ],
+    [
+        'id'        => 50370,
+        'name'      => 'Llansteffan',
+        'latitude'  => '51.77222000',
+        'longitude' => '-4.39139000',
+    ],
+    [
+        'id'        => 50708,
+        'name'      => 'Newcastle Emlyn',
+        'latitude'  => '52.04056000',
+        'longitude' => '-4.46670000',
+    ],
+    [
+        'id'        => 50878,
+        'name'      => 'Pencader',
+        'latitude'  => '52.00080000',
+        'longitude' => '-4.26575000',
+    ],
+    [
+        'id'        => 50942,
+        'name'      => 'Pontyates',
+        'latitude'  => '51.75182000',
+        'longitude' => '-4.21718000',
+    ],
+    [
+        'id'        => 50943,
+        'name'      => 'Pontyberem',
+        'latitude'  => '51.77826000',
+        'longitude' => '-4.16890000',
+    ],
+    [
+        'id'        => 51167,
+        'name'      => 'Saint Clears',
+        'latitude'  => '51.81989000',
+        'longitude' => '-4.49783000',
+    ],
+    [
+        'id'        => 51671,
+        'name'      => 'Trimsaran',
+        'latitude'  => '51.71988000',
+        'longitude' => '-4.24168000',
+    ],
+    [
+        'id'        => 51677,
+        'name'      => 'Tumble',
+        'latitude'  => '51.78361000',
+        'longitude' => '-4.10972000',
+    ],
+];

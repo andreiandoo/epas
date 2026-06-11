@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ghid Organizatori — AmBilet.ro</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #F8FAFC; color: #1E293B; }
+
+        .header { height: 72px; background: #fff; border-bottom: 1px solid #E2E8F0; display: flex; align-items: center; justify-content: space-between; padding: 0 48px; position: sticky; top: 0; z-index: 100; }
+        .logo { display: flex; align-items: center; gap: 12px; text-decoration: none; }
+        .logo-icon { width: 40px; height: 40px; }
+        .logo-text { font-size: 22px; font-weight: 800; display: flex; }
+        .logo-text-am { color: #1E293B; }
+        .logo-text-bilet { color: #A51C30; }
+        .header-btn { padding: 12px 24px; background: linear-gradient(135deg, #A51C30, #C41E3A); color: white; text-decoration: none; border-radius: 10px; font-size: 14px; font-weight: 700; transition: all 0.3s; }
+        .header-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(165, 28, 48, 0.3); }
+
+        /* Hero */
+        .hero { background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%); padding: 100px 48px; position: relative; overflow: hidden; }
+        .hero::before { content: ''; position: absolute; top: -300px; right: -200px; width: 800px; height: 800px; background: radial-gradient(circle, rgba(165, 28, 48, 0.2) 0%, transparent 70%); }
+        .hero::after { content: ''; position: absolute; bottom: -200px; left: -100px; width: 500px; height: 500px; background: radial-gradient(circle, rgba(165, 28, 48, 0.1) 0%, transparent 70%); }
+        .hero-container { max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr; gap: 60px; align-items: center; position: relative; z-index: 1; }
+        .hero-content { }
+        .hero-badge { display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; background: rgba(165, 28, 48, 0.2); border: 1px solid rgba(165, 28, 48, 0.3); border-radius: 100px; font-size: 13px; font-weight: 600; color: #f87171; margin-bottom: 24px; }
+        .hero h1 { font-size: 52px; font-weight: 800; color: white; margin-bottom: 20px; letter-spacing: -1.5px; line-height: 1.1; }
+        .hero h1 span { color: #f87171; }
+        .hero p { font-size: 18px; color: rgba(255,255,255,0.7); line-height: 1.7; margin-bottom: 32px; }
+        .hero-btns { display: flex; gap: 16px; }
+        .btn { display: inline-flex; align-items: center; gap: 10px; padding: 16px 32px; border-radius: 12px; font-size: 15px; font-weight: 700; text-decoration: none; transition: all 0.3s; }
+        .btn-primary { background: linear-gradient(135deg, #A51C30, #C41E3A); color: white; }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 12px 32px rgba(165, 28, 48, 0.4); }
+        .btn-secondary { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; }
+        .btn-secondary:hover { background: rgba(255,255,255,0.15); }
+        .btn svg { width: 20px; height: 20px; }
+        .hero-visual { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 24px; padding: 32px; backdrop-filter: blur(10px); }
+        .hero-mockup { background: #1E293B; border-radius: 16px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+        .mockup-header { height: 40px; background: #0F172A; display: flex; align-items: center; padding: 0 16px; gap: 8px; }
+        .mockup-dot { width: 12px; height: 12px; border-radius: 50%; }
+        .mockup-dot.red { background: #ef4444; }
+        .mockup-dot.yellow { background: #eab308; }
+        .mockup-dot.green { background: #22c55e; }
+        .mockup-content { padding: 24px; }
+        .mockup-stat-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 20px; }
+        .mockup-stat { background: rgba(255,255,255,0.05); border-radius: 12px; padding: 16px; text-align: center; }
+        .mockup-stat-value { font-size: 24px; font-weight: 800; color: #f87171; }
+        .mockup-stat-label { font-size: 11px; color: rgba(255,255,255,0.5); margin-top: 4px; }
+        .mockup-chart { height: 120px; background: linear-gradient(to top, rgba(165, 28, 48, 0.3), transparent); border-radius: 12px; position: relative; overflow: hidden; }
+        .mockup-chart::before { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, #A51C30, #f87171); }
+        .mockup-bars { display: flex; align-items: flex-end; justify-content: space-around; height: 100%; padding: 16px; }
+        .mockup-bar { width: 20px; background: linear-gradient(to top, #A51C30, #f87171); border-radius: 4px 4px 0 0; }
+
+        .main { max-width: 1200px; margin: 0 auto; padding: 80px 48px; }
+        .section { margin-bottom: 100px; }
+        .section-label { display: inline-block; padding: 6px 14px; background: linear-gradient(135deg, #A51C30, #C41E3A); border-radius: 6px; font-size: 12px; font-weight: 700; color: white; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 24px; }
+        .section-header { text-align: center; margin-bottom: 48px; }
+        .section-title { font-size: 40px; font-weight: 800; color: #1E293B; margin-bottom: 16px; letter-spacing: -1px; }
+        .section-desc { font-size: 18px; color: #64748B; max-width: 600px; margin: 0 auto; line-height: 1.6; }
+
+        /* Features */
+        .features-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px; }
+        .feature-card { background: white; border-radius: 24px; padding: 36px; border: 1px solid #E2E8F0; transition: all 0.3s; }
+        .feature-card:hover { transform: translateY(-8px); box-shadow: 0 20px 60px rgba(0,0,0,0.08); border-color: #A51C30; }
+        .feature-icon { width: 64px; height: 64px; border-radius: 16px; background: linear-gradient(135deg, rgba(165, 28, 48, 0.1), rgba(165, 28, 48, 0.05)); display: flex; align-items: center; justify-content: center; margin-bottom: 24px; color: #A51C30; }
+        .feature-icon svg { width: 32px; height: 32px; }
+        .feature-card h3 { font-size: 20px; font-weight: 700; color: #1E293B; margin-bottom: 12px; }
+        .feature-card p { font-size: 15px; color: #64748B; line-height: 1.6; }
+
+        /* How it works */
+        .steps-container { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; position: relative; }
+        .steps-container::before { content: ''; position: absolute; top: 48px; left: 15%; right: 15%; height: 2px; background: linear-gradient(90deg, #E2E8F0, #A51C30, #A51C30, #E2E8F0); z-index: 0; }
+        .step-card { text-align: center; position: relative; z-index: 1; }
+        .step-number { width: 96px; height: 96px; border-radius: 50%; background: white; border: 3px solid #E2E8F0; display: flex; align-items: center; justify-content: center; margin: 0 auto 24px; font-size: 36px; font-weight: 800; color: #CBD5E1; transition: all 0.3s; }
+        .step-card:hover .step-number { border-color: #A51C30; color: #A51C30; background: linear-gradient(135deg, rgba(165, 28, 48, 0.05), rgba(165, 28, 48, 0.02)); }
+        .step-card h4 { font-size: 18px; font-weight: 700; color: #1E293B; margin-bottom: 8px; }
+        .step-card p { font-size: 14px; color: #64748B; line-height: 1.5; max-width: 200px; margin: 0 auto; }
+
+        /* Benefits */
+        .benefits-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; }
+        .benefit-card { display: flex; gap: 20px; background: white; border-radius: 20px; padding: 32px; border: 1px solid #E2E8F0; transition: all 0.3s; }
+        .benefit-card:hover { box-shadow: 0 12px 40px rgba(0,0,0,0.06); }
+        .benefit-icon { width: 56px; height: 56px; border-radius: 14px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .benefit-icon.green { background: #D1FAE5; color: #059669; }
+        .benefit-icon.blue { background: #DBEAFE; color: #2563EB; }
+        .benefit-icon.purple { background: #EDE9FE; color: #7C3AED; }
+        .benefit-icon.orange { background: #FED7AA; color: #EA580C; }
+        .benefit-icon.red { background: rgba(165, 28, 48, 0.1); color: #A51C30; }
+        .benefit-icon.cyan { background: #CFFAFE; color: #0891B2; }
+        .benefit-icon svg { width: 28px; height: 28px; }
+        .benefit-content h4 { font-size: 18px; font-weight: 700; color: #1E293B; margin-bottom: 8px; }
+        .benefit-content p { font-size: 14px; color: #64748B; line-height: 1.6; }
+
+        /* Testimonials */
+        .testimonials-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px; }
+        .testimonial-card { background: white; border-radius: 24px; padding: 36px; border: 1px solid #E2E8F0; position: relative; }
+        .testimonial-quote { font-size: 16px; color: #334155; line-height: 1.7; margin-bottom: 24px; font-style: italic; }
+        .testimonial-quote::before { content: '"'; position: absolute; top: 20px; left: 28px; font-size: 60px; font-weight: 800; color: rgba(165, 28, 48, 0.1); line-height: 1; font-family: Georgia, serif; }
+        .testimonial-author { display: flex; align-items: center; gap: 14px; }
+        .testimonial-avatar { width: 48px; height: 48px; border-radius: 50%; background: linear-gradient(135deg, #A51C30, #C41E3A); display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; color: white; }
+        .testimonial-info { }
+        .testimonial-name { font-size: 15px; font-weight: 700; color: #1E293B; }
+        .testimonial-role { font-size: 13px; color: #64748B; }
+        .testimonial-stars { display: flex; gap: 4px; margin-top: 4px; }
+        .testimonial-stars svg { width: 14px; height: 14px; color: #FBBF24; fill: #FBBF24; }
+
+        /* Pricing highlight */
+        .pricing-highlight { background: linear-gradient(135deg, #1E293B, #334155); border-radius: 32px; padding: 60px; display: grid; grid-template-columns: 1fr 1fr; gap: 60px; align-items: center; position: relative; overflow: hidden; }
+        .pricing-highlight::before { content: ''; position: absolute; top: -100px; right: -100px; width: 300px; height: 300px; background: radial-gradient(circle, rgba(165, 28, 48, 0.2), transparent 70%); }
+        .pricing-content { position: relative; z-index: 1; }
+        .pricing-content h3 { font-size: 32px; font-weight: 800; color: white; margin-bottom: 16px; }
+        .pricing-content p { font-size: 17px; color: rgba(255,255,255,0.7); line-height: 1.7; margin-bottom: 24px; }
+        .pricing-points { list-style: none; }
+        .pricing-points li { display: flex; align-items: center; gap: 12px; padding: 10px 0; font-size: 15px; color: rgba(255,255,255,0.9); }
+        .pricing-points li svg { width: 20px; height: 20px; color: #10B981; }
+        .pricing-card-wrapper { position: relative; z-index: 1; }
+        .pricing-card { background: white; border-radius: 24px; padding: 40px; text-align: center; }
+        .pricing-badge { display: inline-block; padding: 6px 14px; background: linear-gradient(135deg, #A51C30, #C41E3A); border-radius: 100px; font-size: 12px; font-weight: 700; color: white; margin-bottom: 20px; }
+        .pricing-amount { font-size: 56px; font-weight: 800; color: #1E293B; line-height: 1; }
+        .pricing-amount span { font-size: 20px; font-weight: 500; color: #64748B; }
+        .pricing-desc { font-size: 15px; color: #64748B; margin: 16px 0 24px; }
+        .pricing-card .btn { width: 100%; justify-content: center; }
+
+        /* FAQ */
+        .faq-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; }
+        .faq-card { background: white; border-radius: 16px; padding: 28px; border: 1px solid #E2E8F0; }
+        .faq-card h4 { font-size: 16px; font-weight: 700; color: #1E293B; margin-bottom: 12px; display: flex; align-items: flex-start; gap: 12px; }
+        .faq-card h4 svg { width: 20px; height: 20px; color: #A51C30; flex-shrink: 0; margin-top: 2px; }
+        .faq-card p { font-size: 14px; color: #64748B; line-height: 1.6; padding-left: 32px; }
+
+        /* CTA */
+        .cta-section { background: linear-gradient(135deg, #A51C30, #7f1627); border-radius: 32px; padding: 80px; text-align: center; position: relative; overflow: hidden; }
+        .cta-section::before { content: ''; position: absolute; top: -100px; left: -100px; width: 300px; height: 300px; background: radial-gradient(circle, rgba(255,255,255,0.1), transparent 70%); }
+        .cta-section::after { content: ''; position: absolute; bottom: -100px; right: -100px; width: 300px; height: 300px; background: radial-gradient(circle, rgba(255,255,255,0.08), transparent 70%); }
+        .cta-content { position: relative; z-index: 1; }
+        .cta-content h2 { font-size: 44px; font-weight: 800; color: white; margin-bottom: 16px; }
+        .cta-content p { font-size: 18px; color: rgba(255,255,255,0.85); margin-bottom: 32px; max-width: 500px; margin-left: auto; margin-right: auto; }
+        .cta-btns { display: flex; gap: 16px; justify-content: center; }
+        .cta-btn-white { background: white; color: #A51C30; }
+        .cta-btn-white:hover { transform: translateY(-2px); box-shadow: 0 12px 32px rgba(0,0,0,0.2); }
+        .cta-btn-outline { background: transparent; border: 2px solid rgba(255,255,255,0.4); color: white; }
+        .cta-btn-outline:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.6); }
+
+        .footer { padding: 32px 48px; border-top: 1px solid #E2E8F0; text-align: center; margin-top: 80px; }
+        .footer-text { font-size: 14px; color: #94A3B8; }
+
+        @media (max-width: 1024px) {
+            .hero-container { grid-template-columns: 1fr; text-align: center; }
+            .hero-btns { justify-content: center; }
+            .hero-visual { max-width: 500px; margin: 0 auto; }
+            .features-grid { grid-template-columns: repeat(2, 1fr); }
+            .steps-container { grid-template-columns: repeat(2, 1fr); }
+            .steps-container::before { display: none; }
+            .testimonials-grid { grid-template-columns: 1fr; }
+            .pricing-highlight { grid-template-columns: 1fr; }
+            .faq-grid { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 768px) {
+            .header { padding: 0 24px; }
+            .hero { padding: 60px 24px; }
+            .hero h1 { font-size: 36px; }
+            .main { padding: 60px 24px; }
+            .features-grid, .benefits-grid { grid-template-columns: 1fr; }
+            .steps-container { grid-template-columns: 1fr; gap: 40px; }
+            .pricing-highlight { padding: 40px 24px; }
+            .cta-section { padding: 48px 24px; }
+            .cta-content h2 { font-size: 32px; }
+            .cta-btns { flex-direction: column; }
+            .hero-btns { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <a href="/" class="logo">
+            <svg class="logo-icon" viewBox="0 0 48 48" fill="none"><defs><linearGradient id="logoGrad" x1="6" y1="10" x2="42" y2="38"><stop stop-color="#A51C30"/><stop offset="1" stop-color="#C41E3A"/></linearGradient></defs><path d="M8 13C8 10.79 9.79 9 12 9H36C38.21 9 40 10.79 40 13V19C37.79 19 36 20.79 36 23V25C36 27.21 37.79 29 40 29V35C40 37.21 38.21 39 36 39H12C9.79 39 8 37.21 8 35V29C10.21 29 12 27.21 12 25V23C12 20.79 10.21 19 8 19V13Z" fill="url(#logoGrad)"/><line x1="17" y1="15" x2="31" y2="15" stroke="white" stroke-opacity="0.25" stroke-width="1.5" stroke-linecap="round"/><line x1="15" y1="19" x2="33" y2="19" stroke="white" stroke-opacity="0.35" stroke-width="1.5" stroke-linecap="round"/><rect x="20" y="27" width="8" height="8" rx="1.5" fill="white"/></svg>
+            <div class="logo-text"><span class="logo-text-am">Am</span><span class="logo-text-bilet">Bilet</span></div>
+        </a>
+        <a href="/register/organizer" class="header-btn">Creează cont organizator</a>
+    </header>
+
+    <section class="hero">
+        <div class="hero-container">
+            <div class="hero-content">
+                <div class="hero-badge">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                    Ghid pentru organizatori
+                </div>
+                <h1>Vinde bilete <span>simplu și rapid</span></h1>
+                <p>Platforma completă de ticketing pentru organizatorii de evenimente din România. Creează evenimente, vinde bilete și gestionează participanții — totul într-un singur loc.</p>
+                <div class="hero-btns">
+                    <a href="/register/organizer" class="btn btn-primary">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><path d="M20 8v6"/><path d="M23 11h-6"/></svg>
+                        Începe gratuit
+                    </a>
+                    <a href="#demo" class="btn btn-secondary">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                        Vezi demo
+                    </a>
+                </div>
+            </div>
+            <div class="hero-visual">
+                <div class="hero-mockup">
+                    <div class="mockup-header">
+                        <div class="mockup-dot red"></div>
+                        <div class="mockup-dot yellow"></div>
+                        <div class="mockup-dot green"></div>
+                    </div>
+                    <div class="mockup-content">
+                        <div class="mockup-stat-row">
+                            <div class="mockup-stat">
+                                <div class="mockup-stat-value">2,847</div>
+                                <div class="mockup-stat-label">Bilete vândute</div>
+                            </div>
+                            <div class="mockup-stat">
+                                <div class="mockup-stat-value">89%</div>
+                                <div class="mockup-stat-label">Check-in rate</div>
+                            </div>
+                            <div class="mockup-stat">
+                                <div class="mockup-stat-value">142K</div>
+                                <div class="mockup-stat-label">Venituri (RON)</div>
+                            </div>
+                        </div>
+                        <div class="mockup-chart">
+                            <div class="mockup-bars">
+                                <div class="mockup-bar" style="height: 30%;"></div>
+                                <div class="mockup-bar" style="height: 45%;"></div>
+                                <div class="mockup-bar" style="height: 35%;"></div>
+                                <div class="mockup-bar" style="height: 60%;"></div>
+                                <div class="mockup-bar" style="height: 50%;"></div>
+                                <div class="mockup-bar" style="height: 75%;"></div>
+                                <div class="mockup-bar" style="height: 90%;"></div>
+                                <div class="mockup-bar" style="height: 70%;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <main class="main">
+        <!-- Features -->
+        <section class="section">
+            <div class="section-header">
+                <div class="section-label">Funcționalități</div>
+                <h2 class="section-title">Tot ce ai nevoie pentru evenimente de succes</h2>
+                <p class="section-desc">De la crearea evenimentului până la rapoartele finale, avem totul acoperit.</p>
+            </div>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
+                    <h3>Creare eveniment rapidă</h3>
+                    <p>Creează un eveniment complet în mai puțin de 5 minute. Interfață intuitivă, fără complicații tehnice.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 9a3 3 0 0 1 3 3v1a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-1a3 3 0 0 1 0-6V5a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v1a3 3 0 0 1-3 3Z"/></svg></div>
+                    <h3>Tipuri de bilete flexibile</h3>
+                    <p>General, VIP, early bird, grupuri — creează oricâte categorii de bilete cu prețuri și disponibilități diferite.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg></div>
+                    <h3>Plăți securizate</h3>
+                    <p>Integrare cu procesatori de plăți de încredere. Suport pentru carduri, Apple Pay, Google Pay.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="7.5 4.21 12 6.81 16.5 4.21"/><polyline points="7.5 19.79 7.5 14.6 3 12"/><polyline points="21 12 16.5 14.6 16.5 19.79"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></div>
+                    <h3>Dashboard complet</h3>
+                    <p>Monitorizează vânzările în timp real. Grafice, statistici și rapoarte detaliate la un click distanță.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg></div>
+                    <h3>Aplicație check-in</h3>
+                    <p>Scanează biletele cu telefonul. Funcționează offline, sincronizare automată când revii online.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+                    <h3>Gestiune echipă</h3>
+                    <p>Adaugă membri în echipă cu roluri diferite: admin, manager, check-in staff. Control total.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- How it works -->
+        <section class="section">
+            <div class="section-header">
+                <div class="section-label">Cum funcționează</div>
+                <h2 class="section-title">4 pași către primul tău eveniment</h2>
+            </div>
+            <div class="steps-container">
+                <div class="step-card">
+                    <div class="step-number">1</div>
+                    <h4>Creează contul</h4>
+                    <p>Înregistrează-te gratuit în mai puțin de 2 minute. Nu ai nevoie de card.</p>
+                </div>
+                <div class="step-card">
+                    <div class="step-number">2</div>
+                    <h4>Configurează evenimentul</h4>
+                    <p>Adaugă detalii, imagini, tipuri de bilete și prețuri.</p>
+                </div>
+                <div class="step-card">
+                    <div class="step-number">3</div>
+                    <h4>Publică și promovează</h4>
+                    <p>Evenimentul devine live. Distribuie link-ul și începe să vinzi.</p>
+                </div>
+                <div class="step-card">
+                    <div class="step-number">4</div>
+                    <h4>Gestionează și încasează</h4>
+                    <p>Urmărește vânzările, fă check-in și primești banii rapid.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Benefits -->
+        <section class="section">
+            <div class="section-header">
+                <div class="section-label">De ce AmBilet</div>
+                <h2 class="section-title">Beneficiile platformei noastre</h2>
+            </div>
+            <div class="benefits-grid">
+                <div class="benefit-card">
+                    <div class="benefit-icon green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
+                    <div class="benefit-content">
+                        <h4>Comisioane mici, transparente</h4>
+                        <p>Știi exact cât plătești. Fără costuri ascunse, fără surprize. Primele 100 de bilete gratuit.</p>
+                    </div>
+                </div>
+                <div class="benefit-card">
+                    <div class="benefit-icon blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+                    <div class="benefit-content">
+                        <h4>Plăți rapide</h4>
+                        <p>Primești banii în cont în maxim 3 zile lucrătoare după eveniment.</p>
+                    </div>
+                </div>
+                <div class="benefit-card">
+                    <div class="benefit-icon purple"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg></div>
+                    <div class="benefit-content">
+                        <h4>Branding personalizat</h4>
+                        <p>Pagina evenimentului cu logo-ul și culorile tale. Bilete personalizate cu brandul tău.</p>
+                    </div>
+                </div>
+                <div class="benefit-card">
+                    <div class="benefit-icon orange"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>
+                    <div class="benefit-content">
+                        <h4>Rapoarte fiscale automate</h4>
+                        <p>Export-uri pentru contabilitate, facturi automate, conformitate fiscală 100%.</p>
+                    </div>
+                </div>
+                <div class="benefit-card">
+                    <div class="benefit-icon red"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
+                    <div class="benefit-content">
+                        <h4>Suport dedicat</h4>
+                        <p>Echipă de suport în limba română, disponibilă să te ajute oricând ai nevoie.</p>
+                    </div>
+                </div>
+                <div class="benefit-card">
+                    <div class="benefit-icon cyan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
+                    <div class="benefit-content">
+                        <h4>Uptime 99.9%</h4>
+                        <p>Infrastructură robustă care nu cade niciodată. Nici măcar în ziua evenimentului tău.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Testimonials -->
+        <section class="section">
+            <div class="section-header">
+                <div class="section-label">Testimoniale</div>
+                <h2 class="section-title">Ce spun organizatorii despre noi</h2>
+            </div>
+            <div class="testimonials-grid">
+                <div class="testimonial-card">
+                    <p class="testimonial-quote">Am trecut de la o platformă internațională la AmBilet și nu regret. Suportul în română și comisioanele mai mici fac diferența.</p>
+                    <div class="testimonial-author">
+                        <div class="testimonial-avatar">MC</div>
+                        <div class="testimonial-info">
+                            <div class="testimonial-name">Mihai Constantinescu</div>
+                            <div class="testimonial-role">Organizator concerte</div>
+                            <div class="testimonial-stars">
+                                <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                                <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                                <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                                <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                                <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="testimonial-card">
+                    <p class="testimonial-quote">Dashboard-ul e genial. Văd în timp real câte bilete s-au vândut și pot lua decizii rapide pentru promovare.</p>
+                    <div class="testimonial-author">
+                        <div class="testimonial-avatar">AD</div>
+                        <div class="testimonial-info">
+                            <div class="testimonial-name">Ana Dumitrescu</div>
+                            <div class="testimonial-role">Festival organizer</div>
+                            <div class="testimonial-stars">
+                                <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                                <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                                <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                                <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                                <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="testimonial-card">
+                    <p class="testimonial-quote">Aplicația de check-in a fost salvatoare. Am scanat 500 de bilete în 30 de minute fără nicio problemă.</p>
+                    <div class="testimonial-author">
+                        <div class="testimonial-avatar">IP</div>
+                        <div class="testimonial-info">
+                            <div class="testimonial-name">Ion Popescu</div>
+                            <div class="testimonial-role">Event manager</div>
+                            <div class="testimonial-stars">
+                                <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                                <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                                <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                                <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                                <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Pricing highlight -->
+        <section class="section">
+            <div class="pricing-highlight">
+                <div class="pricing-content">
+                    <h3>Prețuri corecte, fără surprize</h3>
+                    <p>Comisioane transparente care includ toate costurile de procesare. Nu există taxe ascunse.</p>
+                    <ul class="pricing-points">
+                        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>Primele 100 bilete gratuit</li>
+                        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>Procesare plăți inclusă</li>
+                        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>Evenimente gratuite = 0 costuri</li>
+                        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>Fără taxe de setup sau lunare</li>
+                    </ul>
+                </div>
+                <div class="pricing-card-wrapper">
+                    <div class="pricing-card">
+                        <div class="pricing-badge">Cel mai popular</div>
+                        <div class="pricing-amount">2% <span>+ 1 RON/bilet</span></div>
+                        <p class="pricing-desc">Plătești doar când vinzi. Niciun cost fix.</p>
+                        <a href="/fees" class="btn btn-primary">Vezi toate planurile</a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- FAQ -->
+        <section class="section">
+            <div class="section-header">
+                <div class="section-label">Întrebări frecvente</div>
+                <h2 class="section-title">Ai întrebări? Avem răspunsuri</h2>
+            </div>
+            <div class="faq-grid">
+                <div class="faq-card">
+                    <h4><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Cât durează să creez un cont?</h4>
+                    <p>Mai puțin de 2 minute. Completezi datele de bază și poți începe imediat să creezi primul eveniment.</p>
+                </div>
+                <div class="faq-card">
+                    <h4><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Am nevoie de cunoștințe tehnice?</h4>
+                    <p>Nu. Interfața e intuitivă și ghidată pas cu pas. Dacă ai folosit vreodată un formular online, te vei descurca.</p>
+                </div>
+                <div class="faq-card">
+                    <h4><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Pot organiza evenimente gratuite?</h4>
+                    <p>Da, evenimentele cu intrare gratuită sunt 100% gratuite pe platformă. Fără niciun cost.</p>
+                </div>
+                <div class="faq-card">
+                    <h4><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Când primesc banii din vânzări?</h4>
+                    <p>În maxim 3 zile lucrătoare după eveniment. Pentru clienții Pro și Enterprise, oferim opțiuni mai rapide.</p>
+                </div>
+                <div class="faq-card">
+                    <h4><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Pot personaliza pagina evenimentului?</h4>
+                    <p>Da. Poți adăuga logo, imagini, descrieri formatate și chiar CSS custom pentru clienții Pro.</p>
+                </div>
+                <div class="faq-card">
+                    <h4><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Oferiți suport în ziua evenimentului?</h4>
+                    <p>Da. Echipa noastră e disponibilă și în weekend sau în afara orelor de program pentru evenimente importante.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- CTA -->
+        <div class="cta-section">
+            <div class="cta-content">
+                <h2>Gata să începi?</h2>
+                <p>Alătură-te celor 200+ organizatori care au ales AmBilet pentru evenimentele lor.</p>
+                <div class="cta-btns">
+                    <a href="/register/organizer" class="btn cta-btn-white">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><path d="M20 8v6"/><path d="M23 11h-6"/></svg>
+                        Creează cont gratuit
+                    </a>
+                    <a href="/contact" class="btn cta-btn-outline">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                        Contactează-ne
+                    </a>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer"><p class="footer-text">© 2024 AmBilet.ro — Toate drepturile rezervate. Powered by TIXELLO</p></footer>
+</body>
+</html>

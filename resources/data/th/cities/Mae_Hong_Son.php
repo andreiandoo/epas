@@ -1,0 +1,51 @@
+<?php
+return [
+    [
+        'id'        => 105434,
+        'name'      => 'Amphoe Khun Yuam',
+        'latitude'  => '18.82643000',
+        'longitude' => '97.93303000',
+    ],
+    [
+        'id'        => 105502,
+        'name'      => 'Amphoe Mae La Noi',
+        'latitude'  => '18.47823000',
+        'longitude' => '97.98295000',
+    ],
+    [
+        'id'        => 105512,
+        'name'      => 'Amphoe Mae Sariang',
+        'latitude'  => '18.26474000',
+        'longitude' => '97.77057000',
+    ],
+    [
+        'id'        => 105550,
+        'name'      => 'Amphoe Mueang Mae Hong Son',
+        'latitude'  => '19.28862000',
+        'longitude' => '98.00607000',
+    ],
+    [
+        'id'        => 105699,
+        'name'      => 'Amphoe Pai',
+        'latitude'  => '19.36036000',
+        'longitude' => '98.40638000',
+    ],
+    [
+        'id'        => 105711,
+        'name'      => 'Amphoe Pang Mapha',
+        'latitude'  => '19.60451000',
+        'longitude' => '98.20560000',
+    ],
+    [
+        'id'        => 106248,
+        'name'      => 'Amphoe Sop Moei',
+        'latitude'  => '17.96333000',
+        'longitude' => '97.93149000',
+    ],
+    [
+        'id'        => 106563,
+        'name'      => 'Mae Hong Son',
+        'latitude'  => '19.30029000',
+        'longitude' => '97.96852000',
+    ],
+];

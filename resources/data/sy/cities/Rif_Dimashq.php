@@ -1,0 +1,117 @@
+<?php
+return [
+    [
+        'id'        => 105081,
+        'name'      => '‘Irbīn',
+        'latitude'  => '33.53719000',
+        'longitude' => '36.36635000',
+    ],
+    [
+        'id'        => 104947,
+        'name'      => 'Al Kiswah',
+        'latitude'  => '33.35810000',
+        'longitude' => '36.24190000',
+    ],
+    [
+        'id'        => 104954,
+        'name'      => 'Al Quţayfah',
+        'latitude'  => '33.73848000',
+        'longitude' => '36.60071000',
+    ],
+    [
+        'id'        => 104965,
+        'name'      => 'Al-Zabadani District',
+        'latitude'  => '33.70819000',
+        'longitude' => '36.11198000',
+    ],
+    [
+        'id'        => 104968,
+        'name'      => 'An Nabk',
+        'latitude'  => '34.02403000',
+        'longitude' => '36.72848000',
+    ],
+    [
+        'id'        => 104980,
+        'name'      => 'At Tall',
+        'latitude'  => '33.61033000',
+        'longitude' => '36.31070000',
+    ],
+    [
+        'id'        => 104982,
+        'name'      => 'Az Zabadānī',
+        'latitude'  => '33.72488000',
+        'longitude' => '36.10050000',
+    ],
+    [
+        'id'        => 104995,
+        'name'      => 'Dārayyā',
+        'latitude'  => '33.45835000',
+        'longitude' => '36.23256000',
+    ],
+    [
+        'id'        => 104991,
+        'name'      => 'Dayr al ‘Aşāfīr',
+        'latitude'  => '33.46585000',
+        'longitude' => '36.42044000',
+    ],
+    [
+        'id'        => 104994,
+        'name'      => 'Douma',
+        'latitude'  => '33.57175000',
+        'longitude' => '36.40270000',
+    ],
+    [
+        'id'        => 105077,
+        'name'      => 'Ḩarastā',
+        'latitude'  => '33.55869000',
+        'longitude' => '36.36515000',
+    ],
+    [
+        'id'        => 105009,
+        'name'      => 'Jaramānā',
+        'latitude'  => '33.48620000',
+        'longitude' => '36.34614000',
+    ],
+    [
+        'id'        => 105011,
+        'name'      => 'Jayrūd',
+        'latitude'  => '33.80709000',
+        'longitude' => '36.73861000',
+    ],
+    [
+        'id'        => 105032,
+        'name'      => 'Ma‘lūlā',
+        'latitude'  => '33.84529000',
+        'longitude' => '36.54514000',
+    ],
+    [
+        'id'        => 105033,
+        'name'      => 'Medaya',
+        'latitude'  => '33.69032000',
+        'longitude' => '36.10354000',
+    ],
+    [
+        'id'        => 105041,
+        'name'      => 'Qārah',
+        'latitude'  => '34.15558000',
+        'longitude' => '36.74284000',
+    ],
+    [
+        'id'        => 105040,
+        'name'      => 'Qaţanā',
+        'latitude'  => '33.43757000',
+        'longitude' => '36.07888000',
+    ],
+    [
+        'id'        => 105070,
+        'name'      => 'Şaydnāyā',
+        'latitude'  => '33.69473000',
+        'longitude' => '36.37146000',
+    ],
+    [
+        'id'        => 105065,
+        'name'      => 'Yabrūd',
+        'latitude'  => '33.96921000',
+        'longitude' => '36.65729000',
+    ],
+];

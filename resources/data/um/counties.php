@@ -1,0 +1,12 @@
+<?php
+return [
+    'Baker Island',
+    'Howland Island',
+    'Jarvis Island',
+    'Johnston Atoll',
+    'Kingman Reef',
+    'Midway Islands',
+    'Navassa Island',
+    'Palmyra Atoll',
+    'Wake Island',
+];

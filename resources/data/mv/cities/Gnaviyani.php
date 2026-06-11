@@ -1,0 +1,9 @@
+<?php
+return [
+    [
+        'id'        => 67927,
+        'name'      => 'Fuvahmulah',
+        'latitude'  => '-0.29878000',
+        'longitude' => '73.42403000',
+    ],
+];

@@ -1,0 +1,81 @@
+<?php
+return [
+    [
+        'id'        => 19137,
+        'name'      => 'Babanki',
+        'latitude'  => '6.11667000',
+        'longitude' => '10.25000000',
+    ],
+    [
+        'id'        => 19141,
+        'name'      => 'Bali',
+        'latitude'  => '5.88737000',
+        'longitude' => '10.01176000',
+    ],
+    [
+        'id'        => 19142,
+        'name'      => 'Bamenda',
+        'latitude'  => '5.95970000',
+        'longitude' => '10.14597000',
+    ],
+    [
+        'id'        => 19151,
+        'name'      => 'Batibo',
+        'latitude'  => '5.83580000',
+        'longitude' => '9.85530000',
+    ],
+    [
+        'id'        => 19155,
+        'name'      => 'Belo',
+        'latitude'  => '6.13333000',
+        'longitude' => '10.25000000',
+    ],
+    [
+        'id'        => 19159,
+        'name'      => 'Boyo',
+        'latitude'  => '6.36365000',
+        'longitude' => '10.35540000',
+    ],
+    [
+        'id'        => 19180,
+        'name'      => 'Fundong',
+        'latitude'  => '6.25000000',
+        'longitude' => '10.26667000',
+    ],
+    [
+        'id'        => 19185,
+        'name'      => 'Jakiri',
+        'latitude'  => '6.10000000',
+        'longitude' => '10.65000000',
+    ],
+    [
+        'id'        => 19193,
+        'name'      => 'Kumbo',
+        'latitude'  => '6.20000000',
+        'longitude' => '10.66667000',
+    ],
+    [
+        'id'        => 19214,
+        'name'      => 'Mbengwi',
+        'latitude'  => '6.01667000',
+        'longitude' => '10.00000000',
+    ],
+    [
+        'id'        => 19222,
+        'name'      => 'Mme-Bafumen',
+        'latitude'  => '6.33333000',
+        'longitude' => '10.23333000',
+    ],
+    [
+        'id'        => 19241,
+        'name'      => 'Njinikom',
+        'latitude'  => '6.23333000',
+        'longitude' => '10.28333000',
+    ],
+    [
+        'id'        => 19263,
+        'name'      => 'Wum',
+        'latitude'  => '6.38333000',
+        'longitude' => '10.06667000',
+    ],
+];

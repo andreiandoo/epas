@@ -1,0 +1,9 @@
+<?php
+return [
+    [
+        'id'        => 102909,
+        'name'      => 'Bel Ombre',
+        'latitude'  => '-4.61667000',
+        'longitude' => '55.41667000',
+    ],
+];

@@ -1,0 +1,33 @@
+<?php
+return [
+    [
+        'id'        => 150078,
+        'name'      => 'Ain Ben Tili',
+        'latitude'  => '25.99444444',
+        'longitude' => '-9.55333333',
+    ],
+    [
+        'id'        => 150079,
+        'name'      => 'Chegga',
+        'latitude'  => '25.37194444',
+        'longitude' => '-5.78666667',
+    ],
+    [
+        'id'        => 150080,
+        'name'      => 'Fderîck',
+        'latitude'  => '22.67777778',
+        'longitude' => '-12.70750000',
+    ],
+    [
+        'id'        => 150081,
+        'name'      => 'Zouérat',
+        'latitude'  => '22.73444444',
+        'longitude' => '-12.47250000',
+    ],
+    [
+        'id'        => 67756,
+        'name'      => 'Zouerate',
+        'latitude'  => '22.73542000',
+        'longitude' => '-12.47134000',
+    ],
+];

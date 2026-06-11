@@ -1,0 +1,1227 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!--
+    TEMPLATE: City listing page for bilete.online
+    Replace placeholders:
+    {{CITY_NAME}}, {{CITY_SLUG}}, {{COUNTY_NAME}}, {{ACTIVITY_COUNT}}, {{LOWEST_PRICE}}, {{UPDATED_AT}}
+    Canonical pattern: https://bilete.online/{{CITY_SLUG}}
+    Optional category city pages: /{{CITY_SLUG}}/escape-rooms, /{{CITY_SLUG}}/muzee etc.
+  -->
+
+  <!-- ===================== SEO CORE ===================== -->
+  <title>Activități în Brașov — bilete online pentru escape rooms, muzee, aventură & experiențe | bilete.online</title>
+  <meta name="description" content="Descoperă cele mai bune activități din Brașov: escape rooms, muzee, parcuri de aventură, experiențe pentru copii, natură și tururi. Compară prețuri, verifică programul și rezervă online cu bilet QR." />
+  <meta name="keywords" content="activități Brașov, ce să faci în Brașov, bilete Brașov, escape room Brașov, muzee Brașov, activități copii Brașov, experiențe Brașov, parc aventură Brașov, bilete online Brașov" />
+  <link rel="canonical" href="https://bilete.online/brasov" />
+  <meta name="robots" content="index, follow, max-image-preview:large" />
+  <meta name="theme-color" content="#1B1714" />
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="bilete.online" />
+  <meta property="og:title" content="Activități în Brașov — bilete online pentru lucruri de făcut" />
+  <meta property="og:description" content="Escape rooms, muzee, parcuri de aventură, activități pentru copii și experiențe de agrement în Brașov. Rezervi online, intri cu QR." />
+  <meta property="og:url" content="https://bilete.online/brasov" />
+  <meta property="og:locale" content="ro_RO" />
+  <meta property="og:image" content="https://bilete.online/assets/og/brasov-activitati.jpg" />
+  <meta property="og:image:alt" content="Activități și experiențe de agrement în Brașov listate pe bilete.online" />
+
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Activități în Brașov — bilete online | bilete.online" />
+  <meta name="twitter:description" content="Găsește experiențe, escape rooms, muzee și activități pentru copii în Brașov. Rezervi rapid, intri cu QR." />
+  <meta name="twitter:image" content="https://bilete.online/assets/og/brasov-activitati.jpg" />
+
+  <!-- ===================== STRUCTURED DATA ===================== -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "Acasă", "item": "https://bilete.online/" },
+      { "@type": "ListItem", "position": 2, "name": "Orașe", "item": "https://bilete.online/orase" },
+      { "@type": "ListItem", "position": 3, "name": "Brașov", "item": "https://bilete.online/brasov" }
+    ]
+  }
+  </script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    "name": "Activități în Brașov",
+    "alternateName": "Ce să faci în Brașov",
+    "url": "https://bilete.online/brasov",
+    "inLanguage": "ro-RO",
+    "description": "Pagină locală cu activități, bilete și experiențe de agrement disponibile în Brașov.",
+    "isPartOf": {
+      "@type": "WebSite",
+      "name": "bilete.online",
+      "url": "https://bilete.online/",
+      "publisher": { "@type": "Organization", "name": "Tixello", "url": "https://tixello.ro/" }
+    },
+    "about": {
+      "@type": "City",
+      "name": "Brașov",
+      "address": {
+        "@type": "PostalAddress",
+        "addressLocality": "Brașov",
+        "addressRegion": "Brașov",
+        "addressCountry": "RO"
+      }
+    },
+    "mainEntity": {
+      "@type": "ItemList",
+      "name": "Activități listate în Brașov",
+      "itemListOrder": "https://schema.org/ItemListOrderDescending",
+      "numberOfItems": 12,
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "url": "https://bilete.online/brasov/escape-room-camera-13",
+          "name": "Camera 13 — Escape Room Brașov"
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "url": "https://bilete.online/brasov/parc-aventura-brasov",
+          "name": "Parc de Aventură Brașov"
+        },
+        {
+          "@type": "ListItem",
+          "position": 3,
+          "url": "https://bilete.online/brasov/muzeul-interactiv-de-stiinta",
+          "name": "Muzeul Interactiv de Știință"
+        }
+      ]
+    }
+  }
+  </script>
+
+  <!-- Optional, useful when the city page has an integrated search box -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "bilete.online",
+    "url": "https://bilete.online/",
+    "inLanguage": "ro-RO",
+    "potentialAction": {
+      "@type": "SearchAction",
+      "target": { "@type": "EntryPoint", "urlTemplate": "https://bilete.online/cauta?q={search_term_string}" },
+      "query-input": "required name=search_term_string"
+    }
+  }
+  </script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "Ce activități pot rezerva online în Brașov?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Pe bilete.online poți rezerva activități precum escape rooms, muzee, parcuri de aventură, experiențe pentru copii, tururi, ateliere și alte activități de agrement disponibile în Brașov."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Pot cumpăra bilete pentru activități în Brașov în aceeași zi?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Da, multe activități acceptă rezervări în aceeași zi, în funcție de disponibilitate. Activitățile marcate cu rezervare instantă confirmă locul imediat după plată."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Există activități pentru copii în Brașov?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Da. Poți filtra lista după activități pentru familie și copii: muzee interactive, parcuri de aventură, ateliere creative, experiențe indoor și activități potrivite pentru weekend."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Cum primesc biletul după cumpărare?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "După plată primești biletul cu cod QR pe email și în contul tău bilete.online. La intrare prezinți codul QR de pe telefon."
+        }
+      }
+    ]
+  }
+  </script>
+
+  <!-- ===================== FONTS ===================== -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;0,9..144,900;1,9..144,500&family=Hanken+Grotesk:wght@400;500;600;700&family=Spline+Sans+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+
+  <!-- ===================== TAILWIND ===================== -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            paper:'#F4EFE3',
+            'paper-2':'#EBE2CF',
+            'paper-3':'#E2D7BF',
+            ink:'#1B1714',
+            'ink-2':'#2E2820',
+            'ink-soft':'#5A4F41',
+            vermilion:'#E84527',
+            'vermilion-d':'#C5371C',
+            forest:'#1E4A3D',
+            'forest-l':'#2E6553',
+            ochre:'#DA9A33',
+            sky:'#2C5F8A'
+          },
+          fontFamily: {
+            display:['Fraunces','Georgia','serif'],
+            sans:['"Hanken Grotesk"','system-ui','sans-serif'],
+            mono:['"Spline Sans Mono"','ui-monospace','monospace']
+          },
+          boxShadow: {
+            brutal:'8px 8px 0 rgba(27,23,20,.95)',
+            soft:'0 30px 80px -45px rgba(27,23,20,.65)'
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- ===================== ALPINE ===================== -->
+  <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+  <style>
+    :root { --paper:#F4EFE3; }
+    html { scroll-behavior:smooth; }
+    body { background:#F4EFE3; color:#1B1714; font-feature-settings:"ss01","cv01"; }
+    [x-cloak]{ display:none !important; }
+
+    .font-display { font-optical-sizing:auto; font-variation-settings:"SOFT" 0,"WONK" 1; letter-spacing:-0.018em; }
+    .ital { font-style:italic; }
+
+    .grain::after{
+      content:"";
+      position:fixed;
+      inset:0;
+      z-index:60;
+      pointer-events:none;
+      opacity:.05;
+      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+      mix-blend-mode:multiply;
+    }
+
+    .ticket{ position:relative; isolation:isolate; }
+    .ticket .perf{
+      position:absolute;
+      top:0;
+      bottom:0;
+      left:var(--perf,68%);
+      width:0;
+      border-left:2px dashed rgba(27,23,20,.28);
+    }
+    .ticket .notch{
+      position:absolute;
+      left:var(--perf,68%);
+      width:18px;
+      height:18px;
+      border-radius:9999px;
+      background:var(--punch,#F4EFE3);
+      transform:translateX(-50%);
+      border:2px dashed rgba(27,23,20,.18);
+    }
+    .ticket .notch.top{ top:-9px; }
+    .ticket .notch.bot{ bottom:-9px; }
+
+    .ticket-lift{ transition:transform .45s cubic-bezier(.2,.8,.2,1), box-shadow .45s; }
+    .ticket-lift:hover{ transform:translateY(-6px) rotate(-.35deg); box-shadow:0 26px 50px -28px rgba(27,23,20,.55); }
+
+    .duotone{ position:relative; overflow:hidden; }
+    .duotone .grid-tex{
+      position:absolute;
+      inset:0;
+      opacity:.5;
+      background-image:radial-gradient(currentColor 1px, transparent 1.4px);
+      background-size:13px 13px;
+      mix-blend-mode:overlay;
+    }
+
+    .underline-wobble{
+      background-image:linear-gradient(currentColor,currentColor);
+      background-size:100% 2px;
+      background-repeat:no-repeat;
+      background-position:0 100%;
+      transition:background-size .3s;
+    }
+    .underline-wobble:hover{ background-size:0% 2px; }
+
+    .stamp{ border:2px solid currentColor; border-radius:9999px; }
+    .no-bar::-webkit-scrollbar{ display:none; }
+    .no-bar{ -ms-overflow-style:none; scrollbar-width:none; }
+
+    @keyframes marquee{ from{transform:translateX(0)} to{transform:translateX(-50%)} }
+    .marquee{ animation:marquee 36s linear infinite; }
+    .marquee-wrap:hover .marquee{ animation-play-state:paused; }
+
+    @keyframes floaty{ 0%,100%{ transform:translateY(0) rotate(-2deg) } 50%{ transform:translateY(-12px) rotate(2deg) } }
+    .floaty{ animation:floaty 7s ease-in-out infinite; }
+
+    .focus-ring:focus{ outline:3px solid rgba(232,69,39,.35); outline-offset:3px; }
+
+    .activity-card[data-featured="true"]{ box-shadow:0 0 0 3px rgba(232,69,39,.18), 8px 8px 0 rgba(27,23,20,.95); }
+
+    @media (prefers-reduced-motion: reduce){
+      html{ scroll-behavior:auto; }
+      .marquee,.floaty{ animation:none !important; }
+      .ticket-lift:hover{ transform:none; }
+    }
+  </style>
+</head>
+
+<body class="grain font-sans antialiased selection:bg-vermilion selection:text-paper"
+      x-data="cityPage()">
+
+  <!-- ====================================================== HEADER ====================================================== -->
+  <header x-data="{ open:false, scrolled:false, mega:false, user:false }"
+          x-init="window.addEventListener('scroll',()=>scrolled = window.scrollY>20)"
+          @keydown.escape.window="mega=false; user=false; open=false"
+          class="sticky top-0 z-50">
+    <div class="bg-ink text-paper/80 text-[11px] sm:text-xs font-mono tracking-wider">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 h-8 flex items-center justify-between">
+        <span class="flex items-center gap-2">
+          <span class="inline-block w-1.5 h-1.5 rounded-full bg-vermilion animate-pulse"></span>
+          ADMISSION · BRAȘOV · AGREMENT
+        </span>
+        <span class="hidden sm:flex items-center gap-4">
+          <a href="/#card-cadou" class="text-ochre underline-wobble">Carduri cadou</a>
+          <span class="text-paper/40">operat de <a href="https://tixello.ro" class="text-ochre underline-wobble">Tixello</a></span>
+        </span>
+      </div>
+    </div>
+
+    <div :class="scrolled ? 'bg-paper/95 backdrop-blur-md border-b border-ink/10 shadow-[0_10px_30px_-22px_rgba(27,23,20,.6)]' : 'bg-paper/70 backdrop-blur-sm border-b border-ink/5'"
+         class="transition-all duration-300">
+      <nav class="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
+        <a href="/" class="flex items-center gap-2.5 group shrink-0">
+          <span class="relative grid place-items-center w-9 h-9 bg-vermilion text-paper rounded-md rotate-[-4deg] group-hover:rotate-[4deg] transition-transform duration-300 shadow-[0_6px_14px_-6px_rgba(232,69,39,.9)]">
+            <svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2 2 2 0 0 0 0 4 2 2 0 0 1-2 2H5a2 2 0 0 1-2-2 2 2 0 0 0 0-4Z"/><path d="M9 7v10" stroke-dasharray="2 2"/></svg>
+          </span>
+          <span class="font-display text-xl font-700 tracking-tight">bilete<span class="text-vermilion">.</span>online</span>
+        </a>
+
+        <div class="hidden lg:flex items-center gap-1 text-[15px] font-500" @mouseleave="mega=false">
+          <button @mouseenter="mega=true" @click="mega=!mega" :aria-expanded="mega"
+                  :class="mega ? 'bg-ink text-paper' : 'hover:bg-ink/5'"
+                  class="flex items-center gap-1.5 px-3.5 py-2 rounded-full transition-colors duration-200">
+            Explorează
+            <svg :class="mega && 'rotate-180'" class="w-4 h-4 transition-transform duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m6 9 6 6 6-6"/></svg>
+          </button>
+          <a @mouseenter="mega=false" href="#activitati" class="px-3 py-2 rounded-full hover:bg-ink/5 transition">Activități</a>
+          <a @mouseenter="mega=false" href="#ghid-local" class="px-3 py-2 rounded-full hover:bg-ink/5 transition">Ghid local</a>
+          <a @mouseenter="mega=false" href="#faq" class="px-3 py-2 rounded-full hover:bg-ink/5 transition">Întrebări</a>
+
+          <div x-show="mega" x-cloak
+               x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 -translate-y-2" x-transition:enter-end="opacity-100 translate-y-0"
+               x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
+               class="fixed left-1/2 -translate-x-1/2 top-24 w-[min(1080px,calc(100vw-2rem))] grain">
+            <div class="bg-paper border-2 border-ink rounded-2xl shadow-[0_40px_80px_-40px_rgba(27,23,20,.7)] overflow-hidden grid grid-cols-12">
+              <div class="col-span-7 p-7 border-r-2 border-dashed border-ink/15">
+                <p class="font-mono text-[10px] tracking-[.2em] text-ink-soft mb-4">EXPLOREAZĂ ÎN BRAȘOV</p>
+                <div class="grid grid-cols-2 gap-1.5">
+                  <a href="/brasov/escape-rooms" class="mega-link group flex items-start gap-3 p-3 rounded-xl hover:bg-paper-2">
+                    <span class="grid place-items-center w-10 h-10 rounded-lg bg-vermilion/10 text-vermilion shrink-0 group-hover:bg-vermilion group-hover:text-paper transition-colors">
+                      <svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M7 14a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm2-3h10m-3-2v4"/></svg>
+                    </span>
+                    <span><span class="block font-600 leading-tight">Escape rooms</span><span class="block text-xs text-ink-soft mt-0.5">camere de evadare în oraș</span></span>
+                  </a>
+                  <a href="/brasov/muzee" class="mega-link group flex items-start gap-3 p-3 rounded-xl hover:bg-paper-2">
+                    <span class="grid place-items-center w-10 h-10 rounded-lg bg-forest/10 text-forest shrink-0 group-hover:bg-forest group-hover:text-paper transition-colors">
+                      <svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 21h18M5 21V9l7-5 7 5v12M9 21v-6h6v6"/></svg>
+                    </span>
+                    <span><span class="block font-600 leading-tight">Muzee & expoziții</span><span class="block text-xs text-ink-soft mt-0.5">cultură, știință, istorie</span></span>
+                  </a>
+                  <a href="/brasov/parcuri-aventura" class="mega-link group flex items-start gap-3 p-3 rounded-xl hover:bg-paper-2">
+                    <span class="grid place-items-center w-10 h-10 rounded-lg bg-ochre/15 text-ochre shrink-0 group-hover:bg-ochre group-hover:text-paper transition-colors">
+                      <svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 2 4 22h16L12 2Zm0 7-3 8m3-8 3 8"/></svg>
+                    </span>
+                    <span><span class="block font-600 leading-tight">Aventură</span><span class="block text-xs text-ink-soft mt-0.5">tiroliene, trasee, outdoor</span></span>
+                  </a>
+                  <a href="/brasov/familie-copii" class="mega-link group flex items-start gap-3 p-3 rounded-xl hover:bg-paper-2">
+                    <span class="grid place-items-center w-10 h-10 rounded-lg bg-sky/10 text-sky shrink-0 group-hover:bg-sky group-hover:text-paper transition-colors">
+                      <svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 21s-7-4.5-9.5-9A4.5 4.5 0 0 1 12 6a4.5 4.5 0 0 1 9.5 6c-2.5 4.5-9.5 9-9.5 9Z"/></svg>
+                    </span>
+                    <span><span class="block font-600 leading-tight">Familie & copii</span><span class="block text-xs text-ink-soft mt-0.5">activități prietenoase</span></span>
+                  </a>
+                </div>
+              </div>
+              <div class="col-span-5 p-7 bg-paper-2/40">
+                <p class="font-mono text-[10px] tracking-[.2em] text-ink-soft mb-4">ORAȘE APROPIATE</p>
+                <div class="grid grid-cols-2 gap-x-5 gap-y-2 text-[15px]">
+                  <a href="/rasnov" class="mega-link py-1 hover:text-vermilion">Râșnov</a>
+                  <a href="/bran" class="mega-link py-1 hover:text-vermilion">Bran</a>
+                  <a href="/sinaia" class="mega-link py-1 hover:text-vermilion">Sinaia</a>
+                  <a href="/predeal" class="mega-link py-1 hover:text-vermilion">Predeal</a>
+                  <a href="/busteni" class="mega-link py-1 hover:text-vermilion">Bușteni</a>
+                  <a href="/sibiu" class="mega-link py-1 hover:text-vermilion">Sibiu</a>
+                </div>
+                <a href="/orase" class="mt-4 inline-flex text-sm font-600 text-vermilion underline-wobble">Vezi toate orașele →</a>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2 sm:gap-3 shrink-0">
+          <a href="/#owneri" class="hidden md:inline-flex px-4 py-2 rounded-full border-2 border-ink text-sm font-600 hover:bg-ink hover:text-paper transition-colors duration-300">Listează-ți locația</a>
+          <button @click="open=!open" class="lg:hidden grid place-items-center w-10 h-10 rounded-md border border-ink/15" aria-label="Meniu">
+            <svg x-show="!open" viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+            <svg x-show="open" x-cloak viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6 6 18"/></svg>
+          </button>
+        </div>
+      </nav>
+
+      <div x-show="open" x-cloak x-transition.origin.top class="lg:hidden border-t border-ink/10 bg-paper px-5 py-5 text-lg font-500 max-h-[80vh] overflow-y-auto">
+        <a @click="open=false" href="#activitati" class="block py-2">Activități în Brașov</a>
+        <a @click="open=false" href="#categorii" class="block py-2">Categorii populare</a>
+        <a @click="open=false" href="#ghid-local" class="block py-2">Ghid local</a>
+        <a @click="open=false" href="#faq" class="block py-2">Întrebări frecvente</a>
+        <a @click="open=false" href="/#owneri" class="block mt-3 px-4 py-3 rounded-full bg-ink text-paper text-center font-600">Listează-ți locația</a>
+      </div>
+    </div>
+  </header>
+
+  <main id="top">
+
+    <!-- ====================================================== HERO ====================================================== -->
+    <section class="relative overflow-hidden">
+      <div class="absolute inset-0 pointer-events-none">
+        <div class="absolute -top-24 right-[-8rem] w-[520px] h-[520px] rounded-full bg-vermilion/10 blur-3xl"></div>
+        <div class="absolute bottom-[-12rem] left-[-8rem] w-[520px] h-[520px] rounded-full bg-forest/10 blur-3xl"></div>
+      </div>
+
+      <div class="relative max-w-7xl mx-auto px-4 sm:px-6 py-16 lg:py-24 grid lg:grid-cols-[1.05fr_.95fr] gap-12 items-center">
+        <div>
+          <nav aria-label="Breadcrumb" class="mb-8">
+            <ol class="flex flex-wrap items-center gap-2 text-sm text-ink-soft">
+              <li><a href="/" class="hover:text-vermilion underline-wobble">Acasă</a></li>
+              <li aria-hidden="true">/</li>
+              <li><a href="/orase" class="hover:text-vermilion underline-wobble">Orașe</a></li>
+              <li aria-hidden="true">/</li>
+              <li aria-current="page" class="text-ink font-600">Brașov</li>
+            </ol>
+          </nav>
+
+          <div class="flex flex-wrap gap-2 mb-5">
+            <span class="stamp inline-flex items-center gap-2 px-3 py-1.5 text-xs font-mono tracking-wider text-vermilion bg-vermilion/5">
+              <span class="w-1.5 h-1.5 rounded-full bg-vermilion"></span> 64 ACTIVITĂȚI
+            </span>
+            <span class="stamp inline-flex items-center gap-2 px-3 py-1.5 text-xs font-mono tracking-wider text-forest bg-forest/5">
+              BRAȘOV · JUDEȚUL BRAȘOV
+            </span>
+            <span class="stamp inline-flex items-center gap-2 px-3 py-1.5 text-xs font-mono tracking-wider text-ochre bg-ochre/10">
+              DE LA 25 LEI
+            </span>
+          </div>
+
+          <h1 class="font-display text-[clamp(3rem,8vw,7.7rem)] font-700 leading-[0.88] tracking-tight">
+            Activități în <span class="ital text-vermilion">Brașov</span>
+          </h1>
+
+          <p class="mt-7 text-xl sm:text-2xl text-ink-soft leading-relaxed max-w-2xl">
+            Găsește rapid ce să faci în Brașov: escape rooms, muzee, parcuri de aventură, experiențe pentru copii, tururi și activități indoor sau outdoor. Rezervi online, primești bilet QR și intri fără cozi inutile.
+          </p>
+
+          <!-- Local intent search box -->
+          <form action="/cauta" method="get" class="mt-8 max-w-2xl" role="search" aria-label="Caută activități în Brașov">
+            <div class="ticket bg-paper border-2 border-ink rounded-2xl p-2 sm:p-3 shadow-brutal" style="--perf:100%">
+              <div class="grid sm:grid-cols-[1fr_auto] gap-2">
+                <label class="sr-only" for="city-search">Caută activități în Brașov</label>
+                <div class="flex items-center gap-3 px-3 py-2 bg-paper-2 rounded-xl border border-ink/10">
+                  <svg viewBox="0 0 24 24" class="w-5 h-5 text-ink-soft shrink-0" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+                  <input id="city-search"
+                         name="q"
+                         value=""
+                         @input="query = $event.target.value"
+                         placeholder="Caută: escape room, muzeu, copii, aventură..."
+                         class="w-full bg-transparent outline-none text-base placeholder:text-ink-soft/70" />
+                  <input type="hidden" name="oras" value="brasov" />
+                </div>
+                <button type="submit" class="px-6 py-3 rounded-xl bg-ink text-paper font-700 hover:bg-vermilion transition-colors">
+                  Caută
+                </button>
+              </div>
+            </div>
+          </form>
+
+          <div class="mt-6 flex flex-wrap gap-2 text-sm">
+            <span class="text-ink-soft mr-1">Căutări populare:</span>
+            <a href="/brasov/escape-rooms" class="px-3 py-1.5 rounded-full bg-paper-2 border border-ink/10 hover:bg-ink hover:text-paper transition">escape room Brașov</a>
+            <a href="/brasov/familie-copii" class="px-3 py-1.5 rounded-full bg-paper-2 border border-ink/10 hover:bg-ink hover:text-paper transition">activități copii Brașov</a>
+            <a href="/brasov/muzee" class="px-3 py-1.5 rounded-full bg-paper-2 border border-ink/10 hover:bg-ink hover:text-paper transition">muzee Brașov</a>
+            <a href="/brasov/weekend" class="px-3 py-1.5 rounded-full bg-paper-2 border border-ink/10 hover:bg-ink hover:text-paper transition">ce faci în weekend</a>
+          </div>
+        </div>
+
+        <!-- visual city collage -->
+        <div class="relative min-h-[520px] hidden lg:block">
+          <div class="absolute inset-0 rounded-[2rem] bg-ink rotate-2"></div>
+          <div class="relative h-[520px] rounded-[2rem] overflow-hidden border-2 border-ink bg-paper shadow-soft">
+            <div class="absolute inset-0 grid grid-cols-2 grid-rows-2 gap-2 p-2">
+              <figure class="duotone rounded-[1.35rem] bg-gradient-to-br from-forest-l to-forest text-forest flex items-end p-5">
+                <div class="grid-tex"></div>
+                <img src="/assets/cities/brasov/hero-tampa.jpg" alt="Vedere spre Tâmpa și centrul Brașovului, punct de pornire pentru activități locale" class="absolute inset-0 w-full h-full object-cover opacity-30 mix-blend-luminosity" />
+                <figcaption class="relative text-paper">
+                  <p class="font-mono text-[10px] tracking-wider opacity-80">CITY GUIDE</p>
+                  <p class="font-display text-3xl font-700 leading-none">Brașov</p>
+                </figcaption>
+              </figure>
+              <figure class="duotone rounded-[1.35rem] bg-gradient-to-br from-vermilion to-vermilion-d text-vermilion flex items-end p-5 translate-y-8">
+                <div class="grid-tex"></div>
+                <img src="/assets/cities/brasov/escape-room.jpg" alt="Echipă de prieteni într-un escape room din Brașov" class="absolute inset-0 w-full h-full object-cover opacity-30 mix-blend-luminosity" />
+                <figcaption class="relative text-paper">
+                  <p class="font-mono text-[10px] tracking-wider opacity-80">INDOOR</p>
+                  <p class="font-display text-3xl font-700 leading-none">Escape</p>
+                </figcaption>
+              </figure>
+              <figure class="duotone rounded-[1.35rem] bg-gradient-to-br from-sky to-ink text-sky flex items-end p-5 -translate-y-4">
+                <div class="grid-tex"></div>
+                <img src="/assets/cities/brasov/museum.jpg" alt="Vizitatori într-un muzeu interactiv din Brașov" class="absolute inset-0 w-full h-full object-cover opacity-30 mix-blend-luminosity" />
+                <figcaption class="relative text-paper">
+                  <p class="font-mono text-[10px] tracking-wider opacity-80">CULTURĂ</p>
+                  <p class="font-display text-3xl font-700 leading-none">Muzee</p>
+                </figcaption>
+              </figure>
+              <figure class="duotone rounded-[1.35rem] bg-gradient-to-br from-ochre to-vermilion-d text-ochre flex items-end p-5">
+                <div class="grid-tex"></div>
+                <img src="/assets/cities/brasov/adventure.jpg" alt="Traseu de aventură și activități outdoor lângă Brașov" class="absolute inset-0 w-full h-full object-cover opacity-30 mix-blend-luminosity" />
+                <figcaption class="relative text-paper">
+                  <p class="font-mono text-[10px] tracking-wider opacity-80">OUTDOOR</p>
+                  <p class="font-display text-3xl font-700 leading-none">Aventură</p>
+                </figcaption>
+              </figure>
+            </div>
+
+            <div class="absolute left-6 bottom-6 right-6 ticket bg-paper text-ink border-2 border-ink rounded-2xl p-5 shadow-brutal" style="--perf:72%">
+              <div class="perf"></div><span class="notch top"></span><span class="notch bot"></span>
+              <div class="grid grid-cols-[1fr_auto] gap-6 items-center">
+                <div>
+                  <p class="font-mono text-[10px] tracking-[.2em] text-ink-soft">BRAȘOV CITY PASS</p>
+                  <p class="font-display text-2xl font-700 leading-tight mt-1">Rezervă experiențe locale în 30 de secunde</p>
+                </div>
+                <div class="text-right">
+                  <p class="font-mono text-[10px] text-ink-soft">DE LA</p>
+                  <p class="font-display text-3xl font-700 text-vermilion">25 lei</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="absolute -right-7 -top-6 floaty stamp bg-paper border-2 border-ink px-5 py-3 shadow-brutal rotate-6">
+            <p class="font-mono text-[10px] tracking-[.2em] text-vermilion">QR READY</p>
+            <p class="font-display text-xl font-700">bilete instant</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====================================================== LOCAL SEO STRIP ====================================================== -->
+    <section class="border-y border-ink/10 bg-ink text-paper overflow-hidden marquee-wrap">
+      <div class="marquee flex whitespace-nowrap py-3 font-mono text-xs tracking-[.18em] text-paper/75">
+        <span class="mx-6">CE SĂ FACI ÎN BRAȘOV</span>
+        <span class="mx-6 text-ochre">ESCAPE ROOMS BRAȘOV</span>
+        <span class="mx-6">ACTIVITĂȚI COPII BRAȘOV</span>
+        <span class="mx-6 text-ochre">MUZEE BRAȘOV</span>
+        <span class="mx-6">PARC AVENTURĂ BRAȘOV</span>
+        <span class="mx-6 text-ochre">BILETE ONLINE BRAȘOV</span>
+        <span class="mx-6">CE SĂ FACI ÎN BRAȘOV</span>
+        <span class="mx-6 text-ochre">ESCAPE ROOMS BRAȘOV</span>
+        <span class="mx-6">ACTIVITĂȚI COPII BRAȘOV</span>
+        <span class="mx-6 text-ochre">MUZEE BRAȘOV</span>
+        <span class="mx-6">PARC AVENTURĂ BRAȘOV</span>
+        <span class="mx-6 text-ochre">BILETE ONLINE BRAȘOV</span>
+      </div>
+    </section>
+
+    <!-- ====================================================== CATEGORY QUICK LINKS ====================================================== -->
+    <section id="categorii" class="max-w-7xl mx-auto px-4 sm:px-6 py-12 lg:py-16">
+      <div class="flex items-end justify-between gap-6 mb-8">
+        <div>
+          <p class="font-mono text-xs tracking-[.2em] text-vermilion mb-2">CATEGORII LOCALE</p>
+          <h2 class="font-display text-[clamp(2rem,4vw,3.8rem)] font-700 leading-[0.95]">Alege ce fel de zi vrei în Brașov</h2>
+        </div>
+        <a href="#activitati" class="hidden sm:inline-flex items-center gap-2 font-700 text-vermilion underline-wobble">Vezi toate activitățile
+          <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>
+        </a>
+      </div>
+
+      <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <template x-for="cat in categories" :key="cat.slug">
+          <a :href="cat.url" class="ticket ticket-lift group border-2 border-ink rounded-2xl overflow-hidden bg-paper" style="--perf:100%">
+            <div class="duotone h-36 p-5 flex items-end"
+                 :class="{
+                   'bg-gradient-to-br from-vermilion to-vermilion-d text-vermilion':cat.color==='vermilion',
+                   'bg-gradient-to-br from-forest-l to-forest text-forest':cat.color==='forest',
+                   'bg-gradient-to-br from-sky to-ink text-sky':cat.color==='sky',
+                   'bg-gradient-to-br from-ochre to-vermilion-d text-ochre':cat.color==='ochre'
+                 }">
+              <div class="grid-tex"></div>
+              <span class="relative text-paper/90 font-mono text-[10px] tracking-wider" x-text="cat.count + ' OPȚIUNI'"></span>
+              <svg viewBox="0 0 24 24" class="absolute top-5 right-5 w-10 h-10 text-paper/30 group-hover:scale-110 group-hover:rotate-6 transition-transform duration-500" fill="none" stroke="currentColor" stroke-width="1.5"><path :d="cat.icon"></path></svg>
+            </div>
+            <div class="p-5">
+              <h3 class="font-display text-2xl font-700 leading-none" x-text="cat.name"></h3>
+              <p class="text-sm text-ink-soft mt-2" x-text="cat.desc"></p>
+            </div>
+          </a>
+        </template>
+      </div>
+    </section>
+
+    <!-- ====================================================== FILTERED LISTING ====================================================== -->
+    <section id="activitati" class="bg-paper-2/70 border-y border-ink/10">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 py-16 lg:py-20">
+        <div class="grid lg:grid-cols-[320px_1fr] gap-8 lg:gap-12">
+
+          <!-- Filters -->
+          <aside class="lg:sticky lg:top-28 self-start">
+            <div class="ticket bg-paper border-2 border-ink rounded-2xl p-5 shadow-brutal" style="--perf:100%">
+              <div class="flex items-center justify-between gap-4 mb-5">
+                <div>
+                  <p class="font-mono text-[10px] tracking-[.2em] text-vermilion">FILTRARE</p>
+                  <h2 class="font-display text-2xl font-700">Activități în Brașov</h2>
+                </div>
+                <button @click="resetFilters()" class="text-sm font-700 text-vermilion underline-wobble">Reset</button>
+              </div>
+
+              <div class="space-y-5">
+                <div>
+                  <label for="filter-query" class="block text-sm font-700 mb-2">Caută în listă</label>
+                  <input id="filter-query"
+                         type="search"
+                         x-model="query"
+                         placeholder="muzeu, copii, natură..."
+                         class="focus-ring w-full px-4 py-3 rounded-xl border-2 border-ink bg-paper-2 outline-none" />
+                </div>
+
+                <div>
+                  <p class="block text-sm font-700 mb-2">Categorie</p>
+                  <div class="grid grid-cols-2 gap-2">
+                    <template x-for="option in categoryOptions" :key="option.value">
+                      <button @click="category = option.value"
+                              :class="category === option.value ? 'bg-ink text-paper border-ink' : 'bg-paper-2 border-ink/15 hover:border-ink'"
+                              class="px-3 py-2 rounded-xl border-2 text-sm font-700 transition">
+                        <span x-text="option.label"></span>
+                      </button>
+                    </template>
+                  </div>
+                </div>
+
+                <div>
+                  <label for="max-price" class="flex items-center justify-between gap-4 text-sm font-700 mb-2">
+                    <span>Preț maxim</span>
+                    <span class="font-mono text-vermilion" x-text="maxPrice + ' lei'"></span>
+                  </label>
+                  <input id="max-price" type="range" min="25" max="300" step="5" x-model.number="maxPrice" class="w-full accent-vermilion" />
+                </div>
+
+                <div>
+                  <p class="block text-sm font-700 mb-2">Potrivit pentru</p>
+                  <div class="space-y-2">
+                    <label class="flex items-center gap-3 cursor-pointer">
+                      <input type="checkbox" value="copii" x-model="audiences" class="w-4 h-4 accent-vermilion">
+                      <span>Copii / familie</span>
+                    </label>
+                    <label class="flex items-center gap-3 cursor-pointer">
+                      <input type="checkbox" value="prieteni" x-model="audiences" class="w-4 h-4 accent-vermilion">
+                      <span>Prieteni</span>
+                    </label>
+                    <label class="flex items-center gap-3 cursor-pointer">
+                      <input type="checkbox" value="cuplu" x-model="audiences" class="w-4 h-4 accent-vermilion">
+                      <span>Cuplu</span>
+                    </label>
+                    <label class="flex items-center gap-3 cursor-pointer">
+                      <input type="checkbox" value="team-building" x-model="audiences" class="w-4 h-4 accent-vermilion">
+                      <span>Team-building</span>
+                    </label>
+                  </div>
+                </div>
+
+                <div>
+                  <label for="sort" class="block text-sm font-700 mb-2">Sortează</label>
+                  <select id="sort" x-model="sort" class="focus-ring w-full px-4 py-3 rounded-xl border-2 border-ink bg-paper-2 outline-none">
+                    <option value="recommended">Recomandate</option>
+                    <option value="price-asc">Preț crescător</option>
+                    <option value="rating-desc">Rating descrescător</option>
+                    <option value="duration-asc">Durată mai scurtă</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="mt-6 pt-5 border-t-2 border-dashed border-ink/15">
+                <p class="font-mono text-[10px] tracking-[.2em] text-ink-soft">REZULTATE</p>
+                <p class="font-display text-3xl font-700"><span x-text="filteredActivities.length"></span> activități</p>
+                <p class="text-sm text-ink-soft mt-1">Actualizat: mai 2026</p>
+              </div>
+            </div>
+          </aside>
+
+          <!-- Cards -->
+          <div>
+            <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6">
+              <div>
+                <p class="font-mono text-xs tracking-[.2em] text-vermilion mb-2">LISTĂ LOCALĂ</p>
+                <h2 class="font-display text-[clamp(2rem,4vw,3.5rem)] font-700 leading-[0.95]">
+                  Cele mai bune lucruri de făcut în Brașov
+                </h2>
+                <p class="mt-3 text-ink-soft max-w-2xl">
+                  Filtrează după categorie, buget și tip de ieșire. Fiecare card trebuie să ducă spre un landing page single activity optimizat SEO.
+                </p>
+              </div>
+            </div>
+
+            <div class="grid md:grid-cols-2 xl:grid-cols-3 gap-5">
+              <template x-for="item in filteredActivities" :key="item.slug">
+                <article class="activity-card ticket ticket-lift bg-paper border-2 border-ink rounded-2xl overflow-hidden flex flex-col"
+                         :data-featured="item.featured ? 'true' : 'false'"
+                         style="--perf:100%">
+                  <a :href="item.url" class="block group">
+                    <div class="relative h-48 duotone flex items-start justify-between p-4"
+                         :class="{
+                          'bg-gradient-to-br from-vermilion to-vermilion-d text-vermilion': item.color==='vermilion',
+                          'bg-gradient-to-br from-forest-l to-forest text-forest': item.color==='forest',
+                          'bg-gradient-to-br from-sky to-ink text-sky': item.color==='sky',
+                          'bg-gradient-to-br from-ochre to-vermilion-d text-ochre': item.color==='ochre'
+                         }">
+                      <div class="grid-tex"></div>
+                      <img :src="item.image" :alt="item.alt" class="absolute inset-0 w-full h-full object-cover opacity-35 mix-blend-luminosity group-hover:scale-105 transition-transform duration-700" />
+                      <span class="relative font-mono text-[10px] tracking-wider text-paper/90 bg-ink/30 px-2 py-1 rounded" x-text="item.categoryLabel.toUpperCase()"></span>
+                      <span x-show="item.instant" class="relative font-mono text-[10px] tracking-wider text-paper bg-vermilion px-2 py-1 rounded">INSTANT</span>
+                    </div>
+                  </a>
+
+                  <div class="p-5 flex-1 flex flex-col">
+                    <div class="flex items-center justify-between gap-3">
+                      <p class="font-mono text-[10px] tracking-wider text-ink-soft" x-text="item.neighborhood.toUpperCase() + ' · ' + item.duration + ' MIN'"></p>
+                      <span class="flex items-center gap-1 text-sm font-700">
+                        <svg viewBox="0 0 24 24" class="w-4 h-4 text-ochre" fill="currentColor"><path d="m12 2 3 7 7 .5-5.5 4.5 2 7L12 17l-6.5 4 2-7L2 9.5 9 9z"/></svg>
+                        <span x-text="item.rating"></span>
+                      </span>
+                    </div>
+
+                    <a :href="item.url" class="group">
+                      <h3 class="font-display text-2xl font-700 leading-[1.02] mt-2 group-hover:text-vermilion transition" x-text="item.title"></h3>
+                    </a>
+                    <p class="text-sm text-ink-soft mt-2 leading-relaxed" x-text="item.description"></p>
+
+                    <div class="mt-4 flex flex-wrap gap-1.5">
+                      <template x-for="tag in item.tags" :key="tag">
+                        <span class="px-2.5 py-1 rounded-full bg-paper-2 border border-ink/10 text-xs font-600" x-text="tag"></span>
+                      </template>
+                    </div>
+
+                    <div class="mt-auto pt-5 flex items-end justify-between gap-4">
+                      <div>
+                        <p class="text-xs text-ink-soft">de la</p>
+                        <p><span class="font-display text-3xl font-700" x-text="item.price"></span><span class="text-sm text-ink-soft"> lei</span></p>
+                      </div>
+                      <a :href="item.url" class="px-4 py-2.5 rounded-full bg-ink text-paper text-sm font-700 hover:bg-vermilion transition-colors">Vezi bilete</a>
+                    </div>
+                  </div>
+                </article>
+              </template>
+            </div>
+
+            <div x-show="filteredActivities.length === 0" x-cloak class="ticket bg-paper border-2 border-ink rounded-2xl p-10 text-center">
+              <p class="font-display text-3xl font-700">Nu am găsit activități pe filtrele alese.</p>
+              <p class="text-ink-soft mt-2">Încearcă să crești bugetul sau să resetezi categoria.</p>
+              <button @click="resetFilters()" class="mt-5 px-5 py-3 rounded-full bg-ink text-paper font-700 hover:bg-vermilion transition">Resetează filtrele</button>
+            </div>
+
+            <div class="mt-8 text-center">
+              <button class="px-6 py-3 rounded-full border-2 border-ink bg-paper hover:bg-ink hover:text-paper font-700 transition">Încarcă mai multe activități</button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ====================================================== SEO EDITORIAL HUB ====================================================== -->
+    <section id="ghid-local" class="max-w-7xl mx-auto px-4 sm:px-6 py-20 lg:py-28">
+      <div class="grid lg:grid-cols-[1fr_.75fr] gap-14 items-start">
+        <article class="max-w-3xl">
+          <p class="font-mono text-xs tracking-[.2em] text-vermilion mb-3">GHID LOCAL SEO</p>
+          <h2 class="font-display text-[clamp(2.1rem,4vw,4.8rem)] font-700 leading-[0.92] mb-7">
+            Ce să faci în Brașov: idei pentru weekend, familie, prieteni sau o zi liberă.
+          </h2>
+
+          <div class="space-y-5 text-[17px] leading-relaxed text-ink-soft">
+            <p>
+              Brașov este unul dintre cele mai bune orașe din România pentru experiențe scurte, ușor de planificat: poți combina o plimbare în centrul vechi cu un <a href="/brasov/escape-rooms" class="text-vermilion underline-wobble">escape room în Brașov</a>, o vizită la <a href="/brasov/muzee" class="text-vermilion underline-wobble">muzee și expoziții</a>, o activitate pentru copii sau o ieșire de aventură în apropiere.
+            </p>
+            <p>
+              Această pagină adună activitățile disponibile în oraș și în zona apropiată, cu informații utile despre preț, durată, public potrivit, disponibilitate și tipul de bilet. Scopul este să poți alege rapid între activități indoor, experiențe outdoor, opțiuni pentru familie sau ieșiri de grup.
+            </p>
+            <p>
+              Pentru că fiecare activitate are propria pagină dedicată, poți verifica înainte de cumpărare detalii precum programul, regulile de acces, vârsta recomandată, locația exactă, politica de anulare și ce primești concret după rezervare. După plată, biletul ajunge pe email și poate fi scanat la intrare direct de pe telefon.
+            </p>
+          </div>
+
+          <div class="mt-10 grid sm:grid-cols-2 gap-4">
+            <div class="bg-paper-2 border-2 border-ink rounded-2xl p-5">
+              <p class="font-mono text-[10px] tracking-[.2em] text-vermilion">PENTRU FAMILII</p>
+              <h3 class="font-display text-2xl font-700 mt-2">Activități cu copii în Brașov</h3>
+              <p class="text-ink-soft mt-2">Alege muzee interactive, ateliere, experiențe scurte sau activități indoor potrivite pentru vreme schimbătoare.</p>
+              <a href="/brasov/familie-copii" class="inline-flex mt-4 text-vermilion font-700 underline-wobble">Vezi activități pentru copii →</a>
+            </div>
+            <div class="bg-paper-2 border-2 border-ink rounded-2xl p-5">
+              <p class="font-mono text-[10px] tracking-[.2em] text-forest">PENTRU GRUPURI</p>
+              <h3 class="font-display text-2xl font-700 mt-2">Ieșiri cu prietenii sau colegii</h3>
+              <p class="text-ink-soft mt-2">Escape rooms, provocări de echipă, aventură și activități potrivite pentru aniversări sau team-building.</p>
+              <a href="/brasov/team-building" class="inline-flex mt-4 text-vermilion font-700 underline-wobble">Vezi idei de grup →</a>
+            </div>
+          </div>
+
+          <div class="mt-10">
+            <h3 class="font-display text-3xl font-700">Căutări locale utile</h3>
+            <div class="mt-4 flex flex-wrap gap-2">
+              <a href="/brasov/escape-rooms" class="px-3.5 py-1.5 rounded-full bg-paper-2 border border-ink/10 text-sm hover:bg-ink hover:text-paper transition">escape room Brașov</a>
+              <a href="/brasov/muzee" class="px-3.5 py-1.5 rounded-full bg-paper-2 border border-ink/10 text-sm hover:bg-ink hover:text-paper transition">muzee Brașov bilete</a>
+              <a href="/brasov/parcuri-aventura" class="px-3.5 py-1.5 rounded-full bg-paper-2 border border-ink/10 text-sm hover:bg-ink hover:text-paper transition">parc aventură Brașov</a>
+              <a href="/brasov/indoor" class="px-3.5 py-1.5 rounded-full bg-paper-2 border border-ink/10 text-sm hover:bg-ink hover:text-paper transition">activități indoor Brașov</a>
+              <a href="/brasov/weekend" class="px-3.5 py-1.5 rounded-full bg-paper-2 border border-ink/10 text-sm hover:bg-ink hover:text-paper transition">ce să faci în Brașov weekend</a>
+              <a href="/brasov/cupluri" class="px-3.5 py-1.5 rounded-full bg-paper-2 border border-ink/10 text-sm hover:bg-ink hover:text-paper transition">activități de cuplu Brașov</a>
+            </div>
+          </div>
+        </article>
+
+        <aside class="space-y-5">
+          <div class="ticket bg-ink text-paper rounded-2xl p-6 overflow-hidden" style="--perf:100%">
+            <p class="font-mono text-[10px] tracking-[.2em] text-ochre">CITY SNAPSHOT</p>
+            <h3 class="font-display text-3xl font-700 mt-2">Brașov pe scurt</h3>
+            <dl class="mt-6 space-y-4">
+              <div class="flex justify-between gap-6 border-b border-paper/10 pb-3">
+                <dt class="text-paper/60">Activități listate</dt>
+                <dd class="font-700">64</dd>
+              </div>
+              <div class="flex justify-between gap-6 border-b border-paper/10 pb-3">
+                <dt class="text-paper/60">Categorii principale</dt>
+                <dd class="font-700">8</dd>
+              </div>
+              <div class="flex justify-between gap-6 border-b border-paper/10 pb-3">
+                <dt class="text-paper/60">Preț de pornire</dt>
+                <dd class="font-700">25 lei</dd>
+              </div>
+              <div class="flex justify-between gap-6">
+                <dt class="text-paper/60">Bilete QR</dt>
+                <dd class="font-700 text-ochre">Da</dd>
+              </div>
+            </dl>
+          </div>
+
+          <div class="bg-paper-2 border-2 border-ink rounded-2xl p-6">
+            <p class="font-mono text-[10px] tracking-[.2em] text-vermilion">ORAȘE APROPIATE</p>
+            <h3 class="font-display text-2xl font-700 mt-2">Poți căuta și în apropiere</h3>
+            <div class="mt-5 grid grid-cols-2 gap-2">
+              <a href="/rasnov" class="px-3 py-2 rounded-xl bg-paper border border-ink/10 hover:bg-ink hover:text-paper transition">Râșnov</a>
+              <a href="/bran" class="px-3 py-2 rounded-xl bg-paper border border-ink/10 hover:bg-ink hover:text-paper transition">Bran</a>
+              <a href="/predeal" class="px-3 py-2 rounded-xl bg-paper border border-ink/10 hover:bg-ink hover:text-paper transition">Predeal</a>
+              <a href="/sinaia" class="px-3 py-2 rounded-xl bg-paper border border-ink/10 hover:bg-ink hover:text-paper transition">Sinaia</a>
+              <a href="/busteni" class="px-3 py-2 rounded-xl bg-paper border border-ink/10 hover:bg-ink hover:text-paper transition">Bușteni</a>
+              <a href="/sibiu" class="px-3 py-2 rounded-xl bg-paper border border-ink/10 hover:bg-ink hover:text-paper transition">Sibiu</a>
+            </div>
+          </div>
+
+          <div class="bg-vermilion text-paper border-2 border-ink rounded-2xl p-6 shadow-brutal">
+            <p class="font-mono text-[10px] tracking-[.2em] text-paper/75">PENTRU OPERATORI LOCALI</p>
+            <h3 class="font-display text-3xl font-700 mt-2">Ai o activitate în Brașov?</h3>
+            <p class="mt-3 text-paper/80">Primești pagină dedicată, bilete QR, disponibilitate online și infrastructură Tixello.</p>
+            <a href="/listeaza-locatia" class="inline-flex mt-5 px-5 py-3 rounded-full bg-paper text-ink font-700 hover:bg-ink hover:text-paper transition">Listează activitatea</a>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- ====================================================== MAP / NEIGHBORHOODS ====================================================== -->
+    <section class="bg-paper-2 border-y border-ink/10">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 py-16 lg:py-20">
+        <div class="grid lg:grid-cols-[.85fr_1fr] gap-10 items-center">
+          <div>
+            <p class="font-mono text-xs tracking-[.2em] text-vermilion mb-3">ZONE DIN ORAȘ</p>
+            <h2 class="font-display text-[clamp(2rem,4vw,3.8rem)] font-700 leading-[0.95]">Activități în Brașov după zonă</h2>
+            <p class="mt-5 text-lg text-ink-soft leading-relaxed">
+              Pentru paginile de oraș, poți genera pagini secundare după cartier sau zonă turistică atunci când ai suficient conținut: Centrul Vechi, Poiana Brașov, Tractorul, Noua, Răcădău sau împrejurimi.
+            </p>
+            <div class="mt-6 flex flex-wrap gap-2">
+              <a href="/brasov/centrul-vechi" class="px-3 py-1.5 rounded-full bg-paper border border-ink/10 hover:bg-ink hover:text-paper transition">Centrul Vechi</a>
+              <a href="/brasov/poiana-brasov" class="px-3 py-1.5 rounded-full bg-paper border border-ink/10 hover:bg-ink hover:text-paper transition">Poiana Brașov</a>
+              <a href="/brasov/noua" class="px-3 py-1.5 rounded-full bg-paper border border-ink/10 hover:bg-ink hover:text-paper transition">Noua</a>
+              <a href="/brasov/racadau" class="px-3 py-1.5 rounded-full bg-paper border border-ink/10 hover:bg-ink hover:text-paper transition">Răcădău</a>
+            </div>
+          </div>
+
+          <div class="relative h-[420px] rounded-[2rem] border-2 border-ink bg-paper overflow-hidden shadow-brutal">
+            <div class="absolute inset-0 opacity-20" style="background-image:linear-gradient(#1B1714 1px,transparent 1px),linear-gradient(90deg,#1B1714 1px,transparent 1px);background-size:36px 36px"></div>
+            <div class="absolute inset-6 rounded-[1.5rem] border-2 border-dashed border-ink/30"></div>
+            <div class="absolute left-[22%] top-[22%]">
+              <a href="/brasov/centrul-vechi" class="group block">
+                <span class="grid place-items-center w-12 h-12 rounded-full bg-vermilion text-paper border-2 border-ink shadow-brutal group-hover:scale-110 transition">12</span>
+                <span class="block mt-3 px-3 py-1 rounded-full bg-paper border border-ink text-sm font-700">Centrul Vechi</span>
+              </a>
+            </div>
+            <div class="absolute right-[20%] top-[30%]">
+              <a href="/brasov/poiana-brasov" class="group block">
+                <span class="grid place-items-center w-12 h-12 rounded-full bg-forest text-paper border-2 border-ink shadow-brutal group-hover:scale-110 transition">9</span>
+                <span class="block mt-3 px-3 py-1 rounded-full bg-paper border border-ink text-sm font-700">Poiana</span>
+              </a>
+            </div>
+            <div class="absolute left-[38%] bottom-[22%]">
+              <a href="/brasov/noua" class="group block">
+                <span class="grid place-items-center w-12 h-12 rounded-full bg-sky text-paper border-2 border-ink shadow-brutal group-hover:scale-110 transition">7</span>
+                <span class="block mt-3 px-3 py-1 rounded-full bg-paper border border-ink text-sm font-700">Noua</span>
+              </a>
+            </div>
+            <p class="absolute left-6 bottom-6 font-mono text-[10px] tracking-[.2em] text-ink-soft">MAP PLACEHOLDER · ÎNLOCUIEȘTE CU HARTĂ REALĂ / MAPBOX / GOOGLE</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====================================================== FAQ ====================================================== -->
+    <section id="faq" class="max-w-7xl mx-auto px-4 sm:px-6 py-20 lg:py-28">
+      <div class="grid lg:grid-cols-[.7fr_1fr] gap-12">
+        <div>
+          <p class="font-mono text-xs tracking-[.2em] text-vermilion mb-3">FAQ LOCAL</p>
+          <h2 class="font-display text-[clamp(2rem,4vw,4rem)] font-700 leading-[0.95]">Întrebări frecvente despre activitățile din Brașov</h2>
+          <p class="mt-5 text-ink-soft text-lg leading-relaxed">FAQ-ul trebuie să fie specific orașului. Evită răspunsurile generice copiate identic pe toate paginile de oraș.</p>
+        </div>
+
+        <div x-data="{ active:0 }" class="space-y-3">
+          <template x-for="(f,i) in faqs" :key="i">
+            <div class="border-2 border-ink rounded-2xl overflow-hidden bg-paper">
+              <button @click="active = active===i ? null : i" class="w-full flex items-center justify-between gap-4 text-left px-5 py-4">
+                <span class="font-700 text-[17px]" x-text="f.q"></span>
+                <span class="shrink-0 grid place-items-center w-8 h-8 rounded-full border-2 border-ink transition-transform duration-300" :class="active===i && 'rotate-45 bg-vermilion border-vermilion text-paper'">
+                  <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg>
+                </span>
+              </button>
+              <div x-show="active===i" x-collapse x-cloak>
+                <p class="px-5 pb-5 text-ink-soft leading-relaxed" x-text="f.a"></p>
+              </div>
+            </div>
+          </template>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====================================================== INTERNAL LINKS ====================================================== -->
+    <section class="bg-ink text-paper">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 py-16">
+        <div class="grid lg:grid-cols-[1.2fr_1fr_1fr] gap-10">
+          <div>
+            <p class="font-mono text-xs tracking-[.2em] text-ochre mb-3">DISCOVERABILITY</p>
+            <h2 class="font-display text-4xl font-700 leading-none">Linkuri interne pentru SEO local</h2>
+            <p class="mt-4 text-paper/65 leading-relaxed">Folosește această zonă pentru legături către categorii, orașe apropiate și pagini tematice. Ajută utilizatorul să continue explorarea și distribuie autoritatea internă către paginile importante.</p>
+          </div>
+          <div>
+            <h3 class="font-700 text-paper mb-4">Activități populare</h3>
+            <ul class="space-y-2 text-paper/65">
+              <li><a href="/brasov/escape-rooms" class="hover:text-ochre underline-wobble">Escape rooms în Brașov</a></li>
+              <li><a href="/brasov/muzee" class="hover:text-ochre underline-wobble">Muzee în Brașov</a></li>
+              <li><a href="/brasov/parcuri-aventura" class="hover:text-ochre underline-wobble">Parcuri de aventură în Brașov</a></li>
+              <li><a href="/brasov/familie-copii" class="hover:text-ochre underline-wobble">Activități pentru copii în Brașov</a></li>
+              <li><a href="/brasov/weekend" class="hover:text-ochre underline-wobble">Ce să faci în Brașov în weekend</a></li>
+            </ul>
+          </div>
+          <div>
+            <h3 class="font-700 text-paper mb-4">Orașe & zone apropiate</h3>
+            <ul class="space-y-2 text-paper/65">
+              <li><a href="/bran" class="hover:text-ochre underline-wobble">Activități în Bran</a></li>
+              <li><a href="/rasnov" class="hover:text-ochre underline-wobble">Activități în Râșnov</a></li>
+              <li><a href="/sinaia" class="hover:text-ochre underline-wobble">Activități în Sinaia</a></li>
+              <li><a href="/predeal" class="hover:text-ochre underline-wobble">Activități în Predeal</a></li>
+              <li><a href="/orase" class="hover:text-ochre underline-wobble">Toate orașele</a></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ====================================================== FOOTER ====================================================== -->
+  <footer class="bg-ink text-paper/70 border-t border-paper/10">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-14">
+      <div class="grid md:grid-cols-[1.4fr_1fr_1fr_1fr] gap-10">
+        <div>
+          <a href="/" class="flex items-center gap-2.5 group shrink-0 text-paper">
+            <span class="grid place-items-center w-9 h-9 bg-vermilion text-paper rounded-md rotate-[-4deg]">
+              <svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2 2 2 0 0 0 0 4 2 2 0 0 1-2 2H5a2 2 0 0 1-2-2 2 2 0 0 0 0-4Z"/><path d="M9 7v10" stroke-dasharray="2 2"/></svg>
+            </span>
+            <span class="font-display text-xl font-700">bilete<span class="text-vermilion">.</span>online</span>
+          </a>
+          <p class="mt-4 max-w-sm">Bilete online pentru activități, experiențe de agrement și lucruri de făcut în orașele din România.</p>
+          <p class="mt-4 font-mono text-[11px] text-paper/45">Operat tehnologic de Tixello.</p>
+        </div>
+
+        <div>
+          <h4 class="text-paper font-700 mb-4">Categorii</h4>
+          <ul class="space-y-2">
+            <li><a href="/escape-rooms" class="hover:text-ochre">Escape rooms</a></li>
+            <li><a href="/muzee" class="hover:text-ochre">Muzee</a></li>
+            <li><a href="/parcuri-aventura" class="hover:text-ochre">Parcuri de aventură</a></li>
+            <li><a href="/experiente" class="hover:text-ochre">Experiențe</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <h4 class="text-paper font-700 mb-4">Orașe</h4>
+          <ul class="space-y-2">
+            <li><a href="/bucuresti" class="hover:text-ochre">București</a></li>
+            <li><a href="/brasov" class="hover:text-ochre">Brașov</a></li>
+            <li><a href="/cluj-napoca" class="hover:text-ochre">Cluj-Napoca</a></li>
+            <li><a href="/constanta" class="hover:text-ochre">Constanța</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <h4 class="text-paper font-700 mb-4">Platformă</h4>
+          <ul class="space-y-2">
+            <li><a href="/cum-functioneaza" class="hover:text-ochre">Cum funcționează</a></li>
+            <li><a href="/card-cadou" class="hover:text-ochre">Card cadou</a></li>
+            <li><a href="/listeaza-locatia" class="hover:text-ochre">Listează locația</a></li>
+            <li><a href="/contact" class="hover:text-ochre">Contact</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="mt-12 pt-8 border-t border-paper/10 flex flex-col sm:flex-row justify-between gap-4 text-sm text-paper/45">
+        <p>© 2026 bilete.online. Toate drepturile rezervate.</p>
+        <p><a href="/termeni" class="hover:text-ochre">Termeni</a> · <a href="/confidentialitate" class="hover:text-ochre">Confidențialitate</a> · <a href="/cookies" class="hover:text-ochre">Cookies</a></p>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    function cityPage(){
+      return {
+        query:'',
+        category:'all',
+        maxPrice:300,
+        audiences:[],
+        sort:'recommended',
+
+        categoryOptions:[
+          { value:'all', label:'Toate' },
+          { value:'escape', label:'Escape' },
+          { value:'museum', label:'Muzee' },
+          { value:'adventure', label:'Aventură' },
+          { value:'family', label:'Familie' },
+          { value:'nature', label:'Natură' },
+          { value:'workshop', label:'Ateliere' }
+        ],
+
+        categories:[
+          { slug:'escape', name:'Escape rooms', desc:'Camere de evadare pentru prieteni, cupluri sau team-building.', count:14, color:'vermilion', url:'/brasov/escape-rooms', icon:'M7 14a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm2-3h10m-3-2v4' },
+          { slug:'museum', name:'Muzee', desc:'Expoziții, muzee interactive și experiențe culturale.', count:18, color:'forest', url:'/brasov/muzee', icon:'M3 21h18M5 21V9l7-5 7 5v12M9 21v-6h6v6' },
+          { slug:'adventure', name:'Aventură', desc:'Trasee, tiroliene, activități outdoor și provocări.', count:11, color:'ochre', url:'/brasov/parcuri-aventura', icon:'M12 2 4 22h16L12 2Zm0 7-3 8m3-8 3 8' },
+          { slug:'family', name:'Familie & copii', desc:'Activități potrivite pentru copii, părinți și weekend.', count:21, color:'sky', url:'/brasov/familie-copii', icon:'M12 21s-7-4.5-9.5-9A4.5 4.5 0 0 1 12 6a4.5 4.5 0 0 1 9.5 6c-2.5 4.5-9.5 9-9.5 9Z' }
+        ],
+
+        activities:[
+          {
+            title:'Camera 13 — Escape Room Brașov',
+            slug:'camera-13',
+            url:'/brasov/escape-room-camera-13',
+            category:'escape',
+            categoryLabel:'Escape room',
+            neighborhood:'Centrul Vechi',
+            duration:60,
+            price:150,
+            rating:4.9,
+            color:'vermilion',
+            instant:true,
+            featured:true,
+            audience:['prieteni','cuplu','team-building'],
+            tags:['2-6 persoane','dificultate medie','indoor'],
+            description:'O cameră de evadare cinematică, potrivită pentru grupuri care vor o provocare scurtă și intensă.',
+            image:'/assets/activities/brasov/camera-13.jpg',
+            alt:'Decor cinematic din Camera 13, escape room în Brașov'
+          },
+          {
+            title:'Parc de Aventură Brașov',
+            slug:'parc-aventura',
+            url:'/brasov/parc-aventura-brasov',
+            category:'adventure',
+            categoryLabel:'Aventură',
+            neighborhood:'Noua',
+            duration:120,
+            price:65,
+            rating:4.8,
+            color:'ochre',
+            instant:true,
+            featured:true,
+            audience:['copii','prieteni','team-building'],
+            tags:['outdoor','copii 7+','trasee'],
+            description:'Trasee suspendate, tiroliene și activități outdoor pentru familie, prieteni sau grupuri.',
+            image:'/assets/activities/brasov/parc-aventura.jpg',
+            alt:'Trasee suspendate într-un parc de aventură din Brașov'
+          },
+          {
+            title:'Muzeul Interactiv de Știință',
+            slug:'muzeu-stiinta',
+            url:'/brasov/muzeul-interactiv-de-stiinta',
+            category:'museum',
+            categoryLabel:'Muzeu',
+            neighborhood:'Centrul Vechi',
+            duration:90,
+            price:35,
+            rating:4.7,
+            color:'forest',
+            instant:false,
+            featured:false,
+            audience:['copii','cuplu'],
+            tags:['familie','educativ','indoor'],
+            description:'Experimente, instalații interactive și explicații clare pentru copii curioși și adulți.',
+            image:'/assets/activities/brasov/muzeu-stiinta.jpg',
+            alt:'Copii explorând o expoziție interactivă de știință în Brașov'
+          },
+          {
+            title:'Tur ghidat Brașov medieval',
+            slug:'tur-medieval',
+            url:'/brasov/tur-ghidat-brasov-medieval',
+            category:'museum',
+            categoryLabel:'Tur cultural',
+            neighborhood:'Piața Sfatului',
+            duration:120,
+            price:55,
+            rating:4.8,
+            color:'sky',
+            instant:true,
+            featured:false,
+            audience:['prieteni','cuplu','copii'],
+            tags:['istorie','outdoor','ghid local'],
+            description:'Un traseu pietonal prin povești, legende și repere istorice din centrul vechi.',
+            image:'/assets/activities/brasov/tur-medieval.jpg',
+            alt:'Tur ghidat prin centrul istoric al Brașovului'
+          },
+          {
+            title:'Atelier de ceramică pentru familie',
+            slug:'atelier-ceramica',
+            url:'/brasov/atelier-ceramica-familie',
+            category:'workshop',
+            categoryLabel:'Atelier',
+            neighborhood:'Răcădău',
+            duration:90,
+            price:80,
+            rating:4.9,
+            color:'vermilion',
+            instant:false,
+            featured:false,
+            audience:['copii','cuplu'],
+            tags:['creativ','familie','indoor'],
+            description:'Modelezi, pictezi și pleci cu o piesă făcută de tine. Potrivit pentru copii și adulți.',
+            image:'/assets/activities/brasov/atelier-ceramica.jpg',
+            alt:'Mâini modelând lut la un atelier de ceramică în Brașov'
+          },
+          {
+            title:'Experiență natură: observare faună',
+            slug:'observare-fauna',
+            url:'/brasov/experienta-natura-observare-fauna',
+            category:'nature',
+            categoryLabel:'Natură',
+            neighborhood:'Împrejurimi',
+            duration:180,
+            price:120,
+            rating:4.6,
+            color:'forest',
+            instant:false,
+            featured:false,
+            audience:['prieteni','cuplu'],
+            tags:['outdoor','ghid','natură'],
+            description:'Ieșire ghidată în zone naturale din apropierea Brașovului, cu focus pe observație și siguranță.',
+            image:'/assets/activities/brasov/observare-fauna.jpg',
+            alt:'Peisaj natural lângă Brașov pentru o activitate ghidată de observare a faunei'
+          }
+        ],
+
+        faqs:[
+          {
+            q:'Ce activități pot rezerva online în Brașov?',
+            a:'Poți rezerva escape rooms, muzee, parcuri de aventură, ateliere, tururi ghidate, activități pentru copii și experiențe outdoor disponibile în Brașov sau în apropiere.'
+          },
+          {
+            q:'Pot cumpăra bilete pentru activități în Brașov în aceeași zi?',
+            a:'Da, multe activități acceptă rezervări în aceeași zi. Caută activitățile marcate cu „Instant” dacă vrei confirmare imediată după plată.'
+          },
+          {
+            q:'Ce activități sunt potrivite pentru copii în Brașov?',
+            a:'Pentru copii sunt potrivite muzeele interactive, atelierele creative, parcurile de aventură cu trasee pe vârste, activitățile indoor și experiențele educative.'
+          },
+          {
+            q:'Cum aleg între activități indoor și outdoor?',
+            a:'Folosește filtrele de categorie și tagurile de pe carduri. Pentru vreme schimbătoare, escape rooms, muzee și atelierele indoor sunt cele mai sigure opțiuni.'
+          },
+          {
+            q:'Cum primesc biletul după cumpărare?',
+            a:'După plată primești biletul cu cod QR pe email și în cont. La intrare îl prezinți de pe telefon, fără să fie obligatoriu să îl tipărești.'
+          }
+        ],
+
+        get filteredActivities(){
+          let q = this.query.trim().toLowerCase();
+
+          let results = this.activities.filter(item => {
+            let matchQuery = !q || [
+              item.title,
+              item.categoryLabel,
+              item.neighborhood,
+              item.description,
+              item.tags.join(' ')
+            ].join(' ').toLowerCase().includes(q);
+
+            let matchCategory = this.category === 'all' || item.category === this.category;
+            let matchPrice = item.price <= this.maxPrice;
+            let matchAudience = this.audiences.length === 0 || this.audiences.some(a => item.audience.includes(a));
+
+            return matchQuery && matchCategory && matchPrice && matchAudience;
+          });
+
+          if(this.sort === 'price-asc'){
+            results = [...results].sort((a,b) => a.price - b.price);
+          }
+          if(this.sort === 'rating-desc'){
+            results = [...results].sort((a,b) => b.rating - a.rating);
+          }
+          if(this.sort === 'duration-asc'){
+            results = [...results].sort((a,b) => a.duration - b.duration);
+          }
+          if(this.sort === 'recommended'){
+            results = [...results].sort((a,b) => Number(b.featured) - Number(a.featured) || b.rating - a.rating);
+          }
+
+          return results;
+        },
+
+        resetFilters(){
+          this.query = '';
+          this.category = 'all';
+          this.maxPrice = 300;
+          this.audiences = [];
+          this.sort = 'recommended';
+        }
+      }
+    }
+  </script>
+</body>
+</html>

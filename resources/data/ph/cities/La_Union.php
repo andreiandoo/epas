@@ -1,0 +1,123 @@
+<?php
+return [
+    [
+        'id'        => 145788,
+        'name'      => 'Agoo',
+        'latitude'  => '16.33614330',
+        'longitude' => '120.32866980',
+    ],
+    [
+        'id'        => 145802,
+        'name'      => 'Aringay',
+        'latitude'  => '16.41146870',
+        'longitude' => '120.31937570',
+    ],
+    [
+        'id'        => 145808,
+        'name'      => 'Bacnotan',
+        'latitude'  => '16.74118340',
+        'longitude' => '120.30198850',
+    ],
+    [
+        'id'        => 145812,
+        'name'      => 'Bagulin',
+        'latitude'  => '16.60255580',
+        'longitude' => '120.41348280',
+    ],
+    [
+        'id'        => 145814,
+        'name'      => 'Balaoan',
+        'latitude'  => '16.80407950',
+        'longitude' => '120.30901140',
+    ],
+    [
+        'id'        => 145822,
+        'name'      => 'Bangar',
+        'latitude'  => '16.87838470',
+        'longitude' => '120.39295890',
+    ],
+    [
+        'id'        => 145837,
+        'name'      => 'Bauang',
+        'latitude'  => '16.51931970',
+        'longitude' => '120.30573150',
+    ],
+    [
+        'id'        => 154567,
+        'name'      => 'Burgos',
+        'latitude'  => '16.51504470',
+        'longitude' => '120.43624770',
+    ],
+    [
+        'id'        => 145866,
+        'name'      => 'Caba',
+        'latitude'  => '16.44088260',
+        'longitude' => '120.30396900',
+    ],
+    [
+        'id'        => 154568,
+        'name'      => 'Luna',
+        'latitude'  => '16.83983670',
+        'longitude' => '120.29631100',
+    ],
+    [
+        'id'        => 154569,
+        'name'      => 'Naguilian',
+        'latitude'  => '16.52619680',
+        'longitude' => '120.33800370',
+    ],
+    [
+        'id'        => 146033,
+        'name'      => 'Pugo',
+        'latitude'  => '16.32067460',
+        'longitude' => '120.40029370',
+    ],
+    [
+        'id'        => 154570,
+        'name'      => 'Rosario',
+        'latitude'  => '16.25208970',
+        'longitude' => '120.37562910',
+    ],
+    [
+        'id'        => 154571,
+        'name'      => 'San Fernando',
+        'latitude'  => '16.60841830',
+        'longitude' => '120.27705910',
+    ],
+    [
+        'id'        => 146059,
+        'name'      => 'San Gabriel',
+        'latitude'  => '16.67845410',
+        'longitude' => '120.40863520',
+    ],
+    [
+        'id'        => 154572,
+        'name'      => 'San Juan',
+        'latitude'  => '16.66942090',
+        'longitude' => '120.29936580',
+    ],
+    [
+        'id'        => 154573,
+        'name'      => 'Santo Tomas',
+        'latitude'  => '16.27557210',
+        'longitude' => '120.31343630',
+    ],
+    [
+        'id'        => 146087,
+        'name'      => 'Santol',
+        'latitude'  => '16.76492150',
+        'longitude' => '120.40582320',
+    ],
+    [
+        'id'        => 146096,
+        'name'      => 'Sudipen',
+        'latitude'  => '16.85439840',
+        'longitude' => '120.41354260',
+    ],
+    [
+        'id'        => 146122,
+        'name'      => 'Tubao',
+        'latitude'  => '16.34900490',
+        'longitude' => '120.38316140',
+    ],
+];

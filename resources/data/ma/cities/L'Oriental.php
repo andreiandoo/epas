@@ -1,0 +1,123 @@
+<?php
+return [
+    [
+        'id'        => 67051,
+        'name'      => 'Ahfir',
+        'latitude'  => '34.95368000',
+        'longitude' => '-2.10027000',
+    ],
+    [
+        'id'        => 67075,
+        'name'      => 'Aïn Beni Mathar',
+        'latitude'  => '34.00970000',
+        'longitude' => '-2.03238000',
+    ],
+    [
+        'id'        => 67054,
+        'name'      => 'Al Aaroui',
+        'latitude'  => '35.01090000',
+        'longitude' => '-3.00938000',
+    ],
+    [
+        'id'        => 67080,
+        'name'      => 'Berkane',
+        'latitude'  => '34.61000000',
+        'longitude' => '-2.57000000',
+    ],
+    [
+        'id'        => 67087,
+        'name'      => 'Bouarfa',
+        'latitude'  => '32.53379000',
+        'longitude' => '-1.96209000',
+    ],
+    [
+        'id'        => 67104,
+        'name'      => 'Debdou',
+        'latitude'  => '33.98228000',
+        'longitude' => '-3.04263000',
+    ],
+    [
+        'id'        => 67107,
+        'name'      => 'Driouch Province',
+        'latitude'  => '34.97670000',
+        'longitude' => '-3.38842000',
+    ],
+    [
+        'id'        => 67108,
+        'name'      => 'El Aïoun',
+        'latitude'  => '34.58319000',
+        'longitude' => '-2.50612000',
+    ],
+    [
+        'id'        => 67119,
+        'name'      => 'Figuig',
+        'latitude'  => '32.83333000',
+        'longitude' => '-2.25000000',
+    ],
+    [
+        'id'        => 67129,
+        'name'      => 'Guercif Province',
+        'latitude'  => '34.25041000',
+        'longitude' => '-3.32542000',
+    ],
+    [
+        'id'        => 67141,
+        'name'      => 'Jerada',
+        'latitude'  => '34.23662000',
+        'longitude' => '-2.04284000',
+    ],
+    [
+        'id'        => 67157,
+        'name'      => 'Madagh',
+        'latitude'  => '35.01032000',
+        'longitude' => '-2.33701000',
+    ],
+    [
+        'id'        => 67166,
+        'name'      => 'Midar',
+        'latitude'  => '34.94025000',
+        'longitude' => '-3.53311000',
+    ],
+    [
+        'id'        => 67173,
+        'name'      => 'Nador',
+        'latitude'  => '35.00000000',
+        'longitude' => '-3.00000000',
+    ],
+    [
+        'id'        => 67186,
+        'name'      => 'Oujda-Angad',
+        'latitude'  => '34.23600000',
+        'longitude' => '-2.29400000',
+    ],
+    [
+        'id'        => 67198,
+        'name'      => 'Saidia',
+        'latitude'  => '35.08195000',
+        'longitude' => '-2.22897000',
+    ],
+    [
+        'id'        => 67201,
+        'name'      => 'Selouane',
+        'latitude'  => '35.07313000',
+        'longitude' => '-2.94230000',
+    ],
+    [
+        'id'        => 67238,
+        'name'      => 'Taourirt',
+        'latitude'  => '34.40731000',
+        'longitude' => '-2.89732000',
+    ],
+    [
+        'id'        => 67260,
+        'name'      => 'Tiztoutine',
+        'latitude'  => '34.97159000',
+        'longitude' => '-3.15273000',
+    ],
+    [
+        'id'        => 67267,
+        'name'      => 'Zaïo',
+        'latitude'  => '34.94282000',
+        'longitude' => '-2.73290000',
+    ],
+];

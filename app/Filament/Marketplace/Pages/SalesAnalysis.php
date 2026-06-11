@@ -1,0 +1,297 @@
+<?php
+
+namespace App\Filament\Marketplace\Pages;
+
+use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
+use App\Services\Marketplace\SalesAnalysisService;
+use BackedEnum;
+use Filament\Pages\Page;
+use Illuminate\Support\Facades\Cache;
+use Livewire\Attributes\Url;
+use Symfony\Component\HttpFoundation\StreamedResponse;
+
+class SalesAnalysis extends Page
+{
+    use HasMarketplaceContext;
+
+    protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-chart-bar-square';
+    protected static ?string $navigationLabel = 'Sales Analysis';
+    protected static \UnitEnum|string|null $navigationGroup = 'Sales';
+    protected static ?int $navigationSort = 5;
+    protected string $view = 'filament.marketplace.pages.sales-analysis';
+
+    #[Url]
+    public string $dateRange = '90d';
+
+    #[Url]
+    public string $activeTab = 'patterns';
+
+    #[Url]
+    public string $categoryFilter = '';
+
+    #[Url]
+    public string $currencyFilter = '';
+
+    #[Url]
+    public bool $compareMode = false;
+
+    public function getTitle(): string
+    {
+        return 'Sales Analysis';
+    }
+
+    public function getHeading(): ?string
+    {
+        return null;
+    }
+
+    protected function getService(): ?SalesAnalysisService
+    {
+        $marketplace = static::getMarketplaceClient();
+        if (!$marketplace) return null;
+
+        return new SalesAnalysisService(
+            $marketplace->id,
+            $this->dateRange,
+            $this->categoryFilter ? (int) $this->categoryFilter : null,
+            $this->currencyFilter ?: null,
+        );
+    }
+
+    public function updatedDateRange(): void
+    {
+        $this->dispatch('filters-updated');
+    }
+
+    public function updatedCategoryFilter(): void
+    {
+        $this->dispatch('filters-updated');
+    }
+
+    public function updatedCurrencyFilter(): void
+    {
+        $this->dispatch('filters-updated');
+    }
+
+    public function setTab(string $tab): void
+    {
+        $this->activeTab = $tab;
+    }
+
+    public function exportCsv(): StreamedResponse
+    {
+        $service = $this->getService();
+        if (!$service) {
+            abort(404);
+        }
+
+        $tab = $this->activeTab;
+        $filename = "sales-analysis-{$tab}-" . now()->format('Y-m-d') . '.csv';
+
+        return response()->streamDownload(function () use ($service, $tab) {
+            $handle = fopen('php://output', 'w');
+            fputcsv($handle, ['Sales Analysis Export - ' . ucfirst($tab) . ' - ' . now()->format('d/m/Y H:i')], escape: '\\');
+            fputcsv($handle, [], escape: '\\');
+
+            match ($tab) {
+                'patterns' => $this->exportPatterns($handle, $service),
+                'predictions' => $this->exportPredictions($handle, $service),
+                'optimization' => $this->exportOptimization($handle, $service),
+                'audience' => $this->exportAudience($handle, $service),
+                'operational' => $this->exportOperational($handle, $service),
+                default => null,
+            };
+
+            fclose($handle);
+        }, $filename, ['Content-Type' => 'text/csv']);
+    }
+
+    protected function exportPatterns($handle, SalesAnalysisService $service): void
+    {
+        $dow = $service->getDayOfWeekRevenue();
+        fputcsv($handle, ['Day of Week Revenue'], escape: '\\');
+        fputcsv($handle, ['Zi', 'Revenue', 'Comenzi'], escape: '\\');
+        foreach ($dow['labels'] as $i => $label) {
+            fputcsv($handle, [$label, $dow['revenue'][$i], $dow['orders'][$i]], escape: '\\');
+        }
+        fputcsv($handle, [], escape: '\\');
+
+        $peak = $service->getPeakSalesWindows();
+        fputcsv($handle, ['Peak Sales Windows'], escape: '\\');
+        fputcsv($handle, ['Zi', 'Interval', 'Revenue', 'Comenzi'], escape: '\\');
+        foreach ($peak as $w) {
+            fputcsv($handle, [$w['day'], $w['hour'], $w['revenue'], $w['orders']], escape: '\\');
+        }
+    }
+
+    protected function exportPredictions($handle, SalesAnalysisService $service): void
+    {
+        $season = $service->getSeasonalityIndex();
+        fputcsv($handle, ['Seasonality Index'], escape: '\\');
+        fputcsv($handle, ['Luna', 'Index'], escape: '\\');
+        foreach ($season['labels'] as $i => $label) {
+            fputcsv($handle, [$label, $season['index'][$i]], escape: '\\');
+        }
+        fputcsv($handle, [], escape: '\\');
+
+        $velocity = $service->getSalesVelocity();
+        fputcsv($handle, ['Sales Velocity'], escape: '\\');
+        fputcsv($handle, ['Eveniment', 'Categorie', 'Bilete/zi', 'Sold %'], escape: '\\');
+        foreach ($velocity as $v) {
+            fputcsv($handle, [$v['name'], $v['category'], $v['tickets_per_day'], $v['sell_through']], escape: '\\');
+        }
+    }
+
+    protected function exportOptimization($handle, SalesAnalysisService $service): void
+    {
+        $golden = $service->getGoldenPriceZone();
+        fputcsv($handle, ['Golden Price Zone'], escape: '\\');
+        fputcsv($handle, ['Categorie', 'Min Pret', 'Max Pret', 'Golden Min', 'Golden Max', 'Golden %', 'Total Vandut'], escape: '\\');
+        foreach ($golden as $g) {
+            fputcsv($handle, [$g['category'], $g['min_price'], $g['max_price'], $g['golden_min'], $g['golden_max'], $g['golden_pct'], $g['total_sold']], escape: '\\');
+        }
+        fputcsv($handle, [], escape: '\\');
+
+        $pareto = $service->getRevenueConcentration();
+        fputcsv($handle, ['Revenue Concentration'], escape: '\\');
+        fputcsv($handle, ['Eveniment', 'Revenue', '%', 'Cumulativ %'], escape: '\\');
+        foreach ($pareto as $p) {
+            fputcsv($handle, [$p['name'], $p['revenue'], $p['pct'], $p['cumulative_pct']], escape: '\\');
+        }
+    }
+
+    protected function exportAudience($handle, SalesAnalysisService $service): void
+    {
+        $geo = $service->getGeographicRevenue();
+        fputcsv($handle, ['Geographic Revenue'], escape: '\\');
+        fputcsv($handle, ['Oras', 'Revenue', 'Comenzi'], escape: '\\');
+        foreach ($geo as $g) {
+            fputcsv($handle, [$g['city'], $g['revenue'], $g['orders']], escape: '\\');
+        }
+        fputcsv($handle, [], escape: '\\');
+
+        $rfm = $service->getRfmSegmentation();
+        fputcsv($handle, ['RFM Segmentation'], escape: '\\');
+        fputcsv($handle, ['Segment', 'Clienti'], escape: '\\');
+        foreach ($rfm['segments'] as $seg => $count) {
+            fputcsv($handle, [$seg, $count], escape: '\\');
+        }
+    }
+
+    protected function exportOperational($handle, SalesAnalysisService $service): void
+    {
+        $orgs = $service->getOrganizerLeaderboard();
+        fputcsv($handle, ['Organizer Leaderboard'], escape: '\\');
+        fputcsv($handle, ['Organizator', 'Revenue', 'Bilete', 'Events'], escape: '\\');
+        foreach ($orgs as $o) {
+            fputcsv($handle, [$o['name'], $o['revenue'], $o['tickets'], $o['events']], escape: '\\');
+        }
+    }
+
+    public function getCurrencySymbol(): string
+    {
+        $marketplace = static::getMarketplaceClient();
+        $currency = $marketplace?->currency ?? 'EUR';
+        return match (strtoupper($currency)) {
+            'RON' => 'RON ',
+            'USD' => '$',
+            'GBP' => "\u{00A3}",
+            'CHF' => 'CHF ',
+            default => "\u{20AC}",
+        };
+    }
+
+    public function getViewData(): array
+    {
+        $marketplace = static::getMarketplaceClient();
+        if (!$marketplace) {
+            return ['marketplace' => null];
+        }
+
+        $emptyKpis = ['total_revenue' => 0, 'total_orders' => 0, 'total_tickets' => 0, 'avg_order_value' => 0, 'revenue_change' => 0, 'orders_change' => 0, 'tickets_change' => 0, 'repeat_rate' => 0, 'best_day' => '-', 'trend' => []];
+
+        try {
+            $service = $this->getService();
+            $cacheKey = "sa_{$marketplace->id}_{$this->dateRange}_{$this->categoryFilter}_{$this->currencyFilter}";
+
+            // KPI stats
+            $kpis = Cache::remember("{$cacheKey}_kpis", 900, fn() => $service->getKpiStats());
+
+            // Tab-specific data
+            $tabData = Cache::remember("{$cacheKey}_{$this->activeTab}", 900, function () use ($service) {
+                return match ($this->activeTab) {
+                    'patterns' => [
+                        'dowRevenue' => $service->getDayOfWeekRevenue(),
+                        'dowTickets' => $service->getDayOfWeekTickets(),
+                        'categoryDay' => $service->getCategoryDayHeatmap(),
+                        'hourly' => $service->getHourlyHeatmap(),
+                        'peakWindows' => $service->getPeakSalesWindows(),
+                    ],
+                    'predictions' => [
+                        'monthlyForecast' => $service->getMonthlyForecast(),
+                        'yearlyForecast' => $service->getYearlyForecast(),
+                        'seasonality' => $service->getSeasonalityIndex(),
+                        'salesVelocity' => $service->getSalesVelocity(),
+                    ],
+                    'optimization' => [
+                        'goldenPrice' => $service->getGoldenPriceZone(),
+                        'priceVolume' => $service->getPriceVolumeAnalysis(),
+                        'pareto' => $service->getRevenueConcentration(),
+                        'repeatCustomer' => $service->getRepeatCustomerAnalysis(),
+                        'leadTime' => $service->getBookingLeadTime(),
+                        'refundRate' => $service->getRefundRateByCategory(),
+                    ],
+                    'audience' => [
+                        'rfm' => $service->getRfmSegmentation(),
+                        'geographic' => $service->getGeographicRevenue(),
+                        'affinity' => $service->getCrossCategoryAffinity(),
+                        'cohort' => $service->getCohortAnalysis(),
+                    ],
+                    'operational' => [
+                        'organizers' => $service->getOrganizerLeaderboard(),
+                        'capacity' => $service->getCapacityUtilization(),
+                        'discount' => $service->getDiscountImpact(),
+                        'payments' => $service->getPaymentMethodDistribution(),
+                        'refundTimeline' => $service->getRefundTimeline(),
+                    ],
+                    default => [],
+                };
+            });
+
+            // Insights
+            $insights = Cache::remember("{$cacheKey}_{$this->activeTab}_insights", 900, fn() => $service->generateInsights($this->activeTab));
+
+            // Category filter options
+            $categories = \App\Models\MarketplaceEventCategory::where('marketplace_client_id', $marketplace->id)
+                ->where('is_visible', true)
+                ->orderBy('sort_order')
+                ->get()
+                ->mapWithKeys(fn($cat) => [$cat->id => $cat->getLocalizedName('ro')]);
+
+            return [
+                'marketplace' => $marketplace,
+                'kpis' => $kpis,
+                'tabData' => $tabData,
+                'insights' => $insights,
+                'categories' => $categories,
+                'currencySymbol' => $this->getCurrencySymbol(),
+            ];
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::channel('marketplace')->error('SalesAnalysis error', [
+                'message' => $e->getMessage(),
+                'file' => $e->getFile() . ':' . $e->getLine(),
+                'trace' => substr($e->getTraceAsString(), 0, 2000),
+            ]);
+
+            return [
+                'marketplace' => $marketplace,
+                'error' => $e->getMessage(),
+                'kpis' => $emptyKpis,
+                'tabData' => [],
+                'insights' => [],
+                'categories' => collect(),
+                'currencySymbol' => $this->getCurrencySymbol(),
+            ];
+        }
+    }
+}

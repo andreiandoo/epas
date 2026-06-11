@@ -1,0 +1,131 @@
+<?php
+
+namespace App\Models;
+
+use App\Models\MarketplaceClient;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
+class TrackingIntegration extends Model
+{
+    protected $fillable = [
+        'marketplace_client_id',
+        'tenant_id',
+        'marketplace_organizer_id',
+        'provider',
+        'enabled',
+        'consent_category',
+        'settings',
+    ];
+
+    protected $casts = [
+        'enabled' => 'boolean',
+        'settings' => 'array',
+    ];
+
+    /**
+     * Get the tenant that owns this integration
+     */
+    public function tenant(): BelongsTo
+    {
+        return $this->belongsTo(Tenant::class);
+    }
+
+    /**
+     * Get the marketplace organizer that owns this integration
+     */
+    public function marketplaceOrganizer(): BelongsTo
+    {
+        return $this->belongsTo(MarketplaceOrganizer::class);
+    }
+
+    /**
+     * Scope to enabled integrations only
+     */
+    public function scopeEnabled($query)
+    {
+        return $query->where('enabled', true);
+    }
+
+    /**
+     * Scope to specific provider
+     */
+    public function scopeProvider($query, string $provider)
+    {
+        return $query->where('provider', $provider);
+    }
+
+    /**
+     * Scope to specific consent category
+     */
+    public function scopeConsentCategory($query, string $category)
+    {
+        return $query->where('consent_category', $category);
+    }
+
+    /**
+     * Get provider-specific ID (measurement_id, container_id, pixel_id, conversion_id)
+     */
+    public function getProviderId(): ?string
+    {
+        $settings = $this->settings ?? [];
+
+        return match ($this->provider) {
+            'ga4' => $settings['measurement_id'] ?? null,
+            'gtm' => $settings['container_id'] ?? null,
+            'meta' => $settings['pixel_id'] ?? null,
+            'tiktok' => $settings['pixel_id'] ?? null,
+            // Google Ads conversion tracking — uses AW-XXXXXX format,
+            // distinct from GA4's G-XXXXXX measurement IDs.
+            'google_ads' => $settings['conversion_id'] ?? null,
+            default => null,
+        };
+    }
+
+    /**
+     * Get injection location (head, body)
+     */
+    public function getInjectAt(): string
+    {
+        return $this->settings['inject_at'] ?? 'head';
+    }
+
+    /**
+     * Get page scope (all, public, admin)
+     */
+    public function getPageScope(): string
+    {
+        return $this->settings['page_scope'] ?? 'public';
+    }
+
+    /**
+     * Check if should inject on current page
+     */
+    public function shouldInjectOnPage(string $currentScope): bool
+    {
+        $pageScope = $this->getPageScope();
+
+        if ($pageScope === 'all') {
+            return true;
+        }
+
+        return $pageScope === $currentScope;
+    }
+
+    /**
+     * Get all settings
+     */
+    public function getSettings(): array
+    {
+        return $this->settings ?? [];
+    }
+    /**
+     * Get the marketplace client that owns this record
+     */
+    public function marketplaceClient()
+    {
+        return $this->belongsTo(MarketplaceClient::class);
+    }
+
+}

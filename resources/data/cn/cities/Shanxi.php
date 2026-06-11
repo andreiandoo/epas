@@ -1,0 +1,111 @@
+<?php
+return [
+    [
+        'id'        => 19378,
+        'name'      => 'Changzhi',
+        'latitude'  => '36.18389000',
+        'longitude' => '113.10528000',
+    ],
+    [
+        'id'        => 19436,
+        'name'      => 'Datong',
+        'latitude'  => '40.09361000',
+        'longitude' => '113.29139000',
+    ],
+    [
+        'id'        => 19437,
+        'name'      => 'Datong Shi',
+        'latitude'  => '40.10484000',
+        'longitude' => '113.63334000',
+    ],
+    [
+        'id'        => 19580,
+        'name'      => 'Gutao',
+        'latitude'  => '37.20250000',
+        'longitude' => '112.17806000',
+    ],
+    [
+        'id'        => 19722,
+        'name'      => 'Jiexiu',
+        'latitude'  => '37.02444000',
+        'longitude' => '111.91250000',
+    ],
+    [
+        'id'        => 19729,
+        'name'      => 'Jincheng',
+        'latitude'  => '35.50222000',
+        'longitude' => '112.83278000',
+    ],
+    [
+        'id'        => 19751,
+        'name'      => 'Jinzhong Shi',
+        'latitude'  => '37.43597000',
+        'longitude' => '113.08783000',
+    ],
+    [
+        'id'        => 19838,
+        'name'      => 'Linfen',
+        'latitude'  => '36.08889000',
+        'longitude' => '111.51889000',
+    ],
+    [
+        'id'        => 19896,
+        'name'      => 'Lüliang',
+        'latitude'  => '37.73563000',
+        'longitude' => '111.30538000',
+    ],
+    [
+        'id'        => 20127,
+        'name'      => 'Shuozhou',
+        'latitude'  => '39.31583000',
+        'longitude' => '112.42250000',
+    ],
+    [
+        'id'        => 20162,
+        'name'      => 'Taiyuan',
+        'latitude'  => '37.86944000',
+        'longitude' => '112.56028000',
+    ],
+    [
+        'id'        => 20307,
+        'name'      => 'Xintian',
+        'latitude'  => '35.61358000',
+        'longitude' => '111.35660000',
+    ],
+    [
+        'id'        => 20316,
+        'name'      => 'Xinzhi',
+        'latitude'  => '36.49889000',
+        'longitude' => '111.70472000',
+    ],
+    [
+        'id'        => 20318,
+        'name'      => 'Xinzhou',
+        'latitude'  => '38.40917000',
+        'longitude' => '112.73333000',
+    ],
+    [
+        'id'        => 20345,
+        'name'      => 'Yangquan',
+        'latitude'  => '37.85750000',
+        'longitude' => '113.56333000',
+    ],
+    [
+        'id'        => 20391,
+        'name'      => 'Yuanping',
+        'latitude'  => '38.71528000',
+        'longitude' => '112.75750000',
+    ],
+    [
+        'id'        => 20394,
+        'name'      => 'Yuci',
+        'latitude'  => '37.68028000',
+        'longitude' => '112.73194000',
+    ],
+    [
+        'id'        => 20400,
+        'name'      => 'Yuncheng',
+        'latitude'  => '35.02306000',
+        'longitude' => '110.99278000',
+    ],
+];

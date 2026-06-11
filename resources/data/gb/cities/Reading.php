@@ -1,0 +1,105 @@
+<?php
+return [
+    [
+        'id'        => 48421,
+        'name'      => 'Basingstoke',
+        'latitude'  => '51.26249000',
+        'longitude' => '-1.08708000',
+    ],
+    [
+        'id'        => 48473,
+        'name'      => 'Benson',
+        'latitude'  => '51.62073000',
+        'longitude' => '-1.10979000',
+    ],
+    [
+        'id'        => 48658,
+        'name'      => 'Bramley',
+        'latitude'  => '51.32677000',
+        'longitude' => '-1.05938000',
+    ],
+    [
+        'id'        => 48820,
+        'name'      => 'Calcot',
+        'latitude'  => '51.44058000',
+        'longitude' => '-1.05091000',
+    ],
+    [
+        'id'        => 48930,
+        'name'      => 'Charvil',
+        'latitude'  => '51.47573000',
+        'longitude' => '-0.88591000',
+    ],
+    [
+        'id'        => 49904,
+        'name'      => 'Henley-on-Thames',
+        'latitude'  => '51.53333000',
+        'longitude' => '-0.90000000',
+    ],
+    [
+        'id'        => 50426,
+        'name'      => 'Lower Earley',
+        'latitude'  => '51.42708000',
+        'longitude' => '-0.91979000',
+    ],
+    [
+        'id'        => 50801,
+        'name'      => 'Old Basing',
+        'latitude'  => '51.26667000',
+        'longitude' => '-1.03333000',
+    ],
+    [
+        'id'        => 50849,
+        'name'      => 'Pangbourne',
+        'latitude'  => '51.48370000',
+        'longitude' => '-1.08519000',
+    ],
+    [
+        'id'        => 51045,
+        'name'      => 'Reading',
+        'latitude'  => '51.45625000',
+        'longitude' => '-0.97113000',
+    ],
+    [
+        'id'        => 51116,
+        'name'      => 'Rotherfield Peppard',
+        'latitude'  => '51.53064000',
+        'longitude' => '-0.97847000',
+    ],
+    [
+        'id'        => 51266,
+        'name'      => 'Sherborne St John',
+        'latitude'  => '51.29705000',
+        'longitude' => '-1.11387000',
+    ],
+    [
+        'id'        => 51343,
+        'name'      => 'Sonning Common',
+        'latitude'  => '51.51873000',
+        'longitude' => '-0.97753000',
+    ],
+    [
+        'id'        => 51489,
+        'name'      => 'Stratfield Mortimer',
+        'latitude'  => '51.37339000',
+        'longitude' => '-1.03495000',
+    ],
+    [
+        'id'        => 51590,
+        'name'      => 'Theale',
+        'latitude'  => '51.43694000',
+        'longitude' => '-1.07700000',
+    ],
+    [
+        'id'        => 51733,
+        'name'      => 'Wallingford',
+        'latitude'  => '51.59982000',
+        'longitude' => '-1.12480000',
+    ],
+    [
+        'id'        => 51750,
+        'name'      => 'Wargrave',
+        'latitude'  => '51.50068000',
+        'longitude' => '-0.86577000',
+    ],
+];

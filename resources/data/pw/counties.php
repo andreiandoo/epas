@@ -1,0 +1,19 @@
+<?php
+return [
+    'Aimeliik',
+    'Airai',
+    'Angaur',
+    'Hatohobei',
+    'Kayangel',
+    'Koror',
+    'Melekeok',
+    'Ngaraard',
+    'Ngarchelong',
+    'Ngardmau',
+    'Ngatpang',
+    'Ngchesar',
+    'Ngeremlengui',
+    'Ngiwal',
+    'Peleliu',
+    'Sonsorol',
+];

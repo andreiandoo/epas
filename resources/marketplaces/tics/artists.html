@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Artiști — TICS.ro | Descoperă artiștii tăi preferați</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>tailwind.config={theme:{extend:{fontFamily:{sans:['Inter','system-ui','sans-serif']}}}}</script>
+    <style>
+        *{-webkit-font-smoothing:antialiased}html{scroll-behavior:smooth}body{font-family:'Inter',system-ui,sans-serif}
+        ::-webkit-scrollbar{width:6px;height:6px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:#d1d5db;border-radius:3px}.no-scrollbar::-webkit-scrollbar{display:none}
+        .artist-card{transition:all .25s ease}.artist-card:hover{transform:translateY(-4px);box-shadow:0 20px 40px -12px rgba(0,0,0,.12)}.artist-card:hover .artist-img{transform:scale(1.08)}.artist-img{transition:transform .5s ease}
+        .chip-active{background:#111827 !important;color:white !important}
+        .letter-btn{transition:all .15s ease}.letter-btn:hover{background:#f3f4f6}.letter-btn.active{background:#111827;color:white}
+        .pulse{animation:pulse 2s ease-in-out infinite}@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+        .search-dropdown{display:none}.search-dropdown.active{display:block}
+        .hot-badge{background:linear-gradient(135deg,#ff6b6b 0%,#ee5a24 100%)}.new-badge{background:linear-gradient(135deg,#00b894 0%,#00cec9 100%)}
+        .follow-btn{transition:all .2s ease}.follow-btn:hover{transform:scale(1.05)}.follow-btn:active{transform:scale(.95)}
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Header -->
+    <header class="sticky top-0 z-40 bg-white border-b border-gray-200">
+        <div class="max-w-[1600px] mx-auto px-4 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <a href="/" class="flex items-center gap-2"><div class="w-8 h-8 bg-gray-900 rounded-lg flex items-center justify-center"><span class="text-white font-bold text-sm">T</span></div><span class="font-bold text-lg hidden sm:block">TICS</span></a>
+                <div class="hidden md:flex flex-1 max-w-xl mx-6 relative">
+                    <div class="w-full flex items-center bg-gray-100 rounded-full px-4 py-2.5 focus-within:ring-2 focus-within:ring-gray-900 focus-within:bg-white transition-all">
+                        <svg class="w-5 h-5 text-gray-400 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                        <input type="text" id="searchInput" placeholder="Caută artiști, trupe, genuri muzicale..." class="flex-1 bg-transparent outline-none text-gray-900 placeholder:text-gray-400">
+                        <kbd class="hidden lg:inline-flex px-2 py-1 bg-gray-200 rounded text-xs text-gray-500 ml-2">⌘K</kbd>
+                    </div>
+                    <div id="searchDropdown" class="search-dropdown absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden z-50">
+                        <div class="p-4">
+                            <p class="text-xs font-medium text-gray-400 uppercase tracking-wider mb-3">Artiști populari</p>
+                            <a href="#" class="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-xl transition-colors"><img src="https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=60&h=60&fit=crop" class="w-12 h-12 rounded-full object-cover"><div class="flex-1 min-w-0"><p class="font-medium text-gray-900 truncate">The Motans</p><p class="text-sm text-gray-500">Pop • 245K urmăritori</p></div><span class="px-2 py-1 bg-indigo-100 text-indigo-700 text-xs font-medium rounded-full">3 ev.</span></a>
+                            <a href="#" class="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-xl transition-colors"><img src="https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=60&h=60&fit=crop" class="w-12 h-12 rounded-full object-cover"><div class="flex-1 min-w-0"><p class="font-medium text-gray-900 truncate">Subcarpați</p><p class="text-sm text-gray-500">Hip-Hop / Folk • 189K urmăritori</p></div></a>
+                        </div>
+                        <div class="border-t border-gray-100 p-4 bg-gray-50">
+                            <p class="text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">Căutări recente</p>
+                            <div class="flex flex-wrap gap-2">
+                                <span class="px-3 py-1.5 bg-white border border-gray-200 rounded-full text-sm text-gray-600 hover:border-gray-300 cursor-pointer">Carla's Dreams</span>
+                                <span class="px-3 py-1.5 bg-white border border-gray-200 rounded-full text-sm text-gray-600 hover:border-gray-300 cursor-pointer">Irina Rimes</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex items-center gap-1">
+                    <button class="md:hidden p-2.5 hover:bg-gray-100 rounded-full"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg></button>
+                    <a href="#" class="hidden sm:flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-colors"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg><span class="hidden lg:inline">Favorite</span></a>
+                    <a href="#" class="hidden sm:flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-colors"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg><span class="hidden lg:inline">Coș</span><span class="w-5 h-5 bg-indigo-600 text-white text-xs font-bold rounded-full flex items-center justify-center">2</span></a>
+                    <div class="w-px h-6 bg-gray-200 mx-2 hidden sm:block"></div>
+                    <a href="#" class="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900">Conectare</a>
+                    <a href="#" class="px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-full hover:bg-gray-800">Înregistrare</a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Genre Categories Bar -->
+    <div class="sticky top-16 z-30 bg-white border-b border-gray-200">
+        <div class="max-w-[1600px] mx-auto px-4 lg:px-8">
+            <div class="flex items-center gap-2 py-3 overflow-x-auto no-scrollbar">
+                <button class="chip-active px-4 py-2 rounded-full border border-gray-200 text-sm font-medium whitespace-nowrap transition-colors">Toți</button>
+                <button class="px-4 py-2 rounded-full border border-gray-200 text-sm font-medium text-gray-600 whitespace-nowrap hover:border-gray-300 transition-colors">🎤 Pop</button>
+                <button class="px-4 py-2 rounded-full border border-gray-200 text-sm font-medium text-gray-600 whitespace-nowrap hover:border-gray-300 transition-colors">🎸 Rock</button>
+                <button class="px-4 py-2 rounded-full border border-gray-200 text-sm font-medium text-gray-600 whitespace-nowrap hover:border-gray-300 transition-colors">🎧 Electronică</button>
+                <button class="px-4 py-2 rounded-full border border-gray-200 text-sm font-medium text-gray-600 whitespace-nowrap hover:border-gray-300 transition-colors">🎵 Hip-Hop</button>
+                <button class="px-4 py-2 rounded-full border border-gray-200 text-sm font-medium text-gray-600 whitespace-nowrap hover:border-gray-300 transition-colors">😂 Stand-up</button>
+                <button class="px-4 py-2 rounded-full border border-gray-200 text-sm font-medium text-gray-600 whitespace-nowrap hover:border-gray-300 transition-colors">🎭 Teatru</button>
+                <button class="px-4 py-2 rounded-full border border-gray-200 text-sm font-medium text-gray-600 whitespace-nowrap hover:border-gray-300 transition-colors">🎷 Jazz & Blues</button>
+                <button class="px-4 py-2 rounded-full border border-gray-200 text-sm font-medium text-gray-600 whitespace-nowrap hover:border-gray-300 transition-colors">🎻 Clasică</button>
+                <button class="px-4 py-2 rounded-full border border-gray-200 text-sm font-medium text-gray-600 whitespace-nowrap hover:border-gray-300 transition-colors">🪗 Folk / Etno</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main (full width, no sidebar) -->
+    <main class="max-w-[1600px] mx-auto px-4 lg:px-8 py-6">
+
+        <!-- Alphabet Letter Filter -->
+        <div class="bg-white rounded-2xl border border-gray-200 p-3 mb-6">
+            <div class="flex items-center gap-1 flex-wrap justify-center">
+                <button class="letter-btn active w-10 h-9 rounded-lg text-xs font-semibold flex items-center justify-center" onclick="filterByLetter(this,'all')">Toți</button>
+                <div class="w-px h-6 bg-gray-200 mx-0.5"></div>
+                <button class="letter-btn w-8 h-9 rounded-lg text-sm font-medium text-gray-600 flex items-center justify-center" onclick="filterByLetter(this,'A')">A</button>
+                <button class="letter-btn w-8 h-9 rounded-lg text-sm font-medium text-gray-600 flex items-center justify-center" onclick="filterByLetter(this,'B')">B</button>
+                <button class="letter-btn w-8 h-9 rounded-lg text-sm font-medium text-gray-600 flex items-center justify-center" onclick="filterByLetter(this,'C')">C</button>
+                <button class="letter-btn w-8 h-9 rounded-lg text-sm font-medium text-gray-600 flex items-center justify-center" onclick="filterByLetter(this,'D')">D</button>
+                <button class="letter-btn w-8 h-9 rounded-lg text-sm font-medium text-gray-600 flex items-center justify-center" onclick="filterByLetter(this,'E')">E</button>
+                <button class="letter-btn w-8 h-9 rounded-lg text-sm font-medium text-gray-600 flex items-center justify-center" onclick="filterByLetter(this,'F')">F</button>
+                <button class="letter-btn w-8 h-9 rounded-lg text-sm font-medium text-gray-600 flex items-center justify-center" onclick="filterByLetter(this,'G')">G</button>
+                <button class="letter-btn w-8 h-9 rounded-lg text-sm font-medium text-gray-600 flex items-center justify-center" onclick="filterByLetter(this,'H')">H</button>
+                <button class="letter-btn w-8 h-9 rounded-lg text-sm font-medium text-gray-600 flex items-center justify-center" onclick="filterByLetter(this,'I')">I</button>
+                <button class="letter-btn w-8 h-9 rounded-lg text-sm font-medium text-gray-600 flex items-center justify-center" onclick="filterByLetter(this,'J')">J</button>
+                <button class="letter-btn w-8 h-9 rounded-lg text-sm font-medium text-gray-600 flex items-center justify-center" onclick="filterByLetter(this,'K')">K</button>
+                <button class="letter-btn w-8 h-9 rounded-lg text-sm font-medium text-gray-600 flex items-center justify-center" onclick="filterByLetter(this,'L')">L</button>
+                <button class="letter-btn w-8 h-9 rounded-lg text-sm font-medium text-gray-600 flex items-center justify-center" onclick="filterByLetter(this,'M')">M</button>
+                <button class="letter-btn w-8 h-9 rounded-lg text-sm font-medium text-gray-600 flex items-center justify-center" onclick="filterByLetter(this,'N')">N</button>
+                <button class="letter-btn w-8 h-9 rounded-lg text-sm font-medium text-gray-600 flex items-center justify-center" onclick="filterByLetter(this,'O')">O</button>
+                <button class="letter-btn w-8 h-9 rounded-lg text-sm font-medium text-gray-600 flex items-center justify-center" onclick="filterByLetter(this,'P')">P</button>
+                <button class="letter-btn w-8 h-9 rounded-lg text-sm font-medium text-gray-600 flex items-center justify-center" onclick="filterByLetter(this,'Q')">Q</button>
+                <button class="letter-btn w-8 h-9 rounded-lg text-sm font-medium text-gray-600 flex items-center justify-center" onclick="filterByLetter(this,'R')">R</button>
+                <button class="letter-btn w-8 h-9 rounded-lg text-sm font-medium text-gray-600 flex items-center justify-center" onclick="filterByLetter(this,'S')">S</button>
+                <button class="letter-btn w-8 h-9 rounded-lg text-sm font-medium text-gray-600 flex items-center justify-center" onclick="filterByLetter(this,'Ș')">Ș</button>
+                <button class="letter-btn w-8 h-9 rounded-lg text-sm font-medium text-gray-600 flex items-center justify-center" onclick="filterByLetter(this,'T')">T</button>
+                <button class="letter-btn w-8 h-9 rounded-lg text-sm font-medium text-gray-600 flex items-center justify-center" onclick="filterByLetter(this,'Ț')">Ț</button>
+                <button class="letter-btn w-8 h-9 rounded-lg text-sm font-medium text-gray-600 flex items-center justify-center" onclick="filterByLetter(this,'U')">U</button>
+                <button class="letter-btn w-8 h-9 rounded-lg text-sm font-medium text-gray-600 flex items-center justify-center" onclick="filterByLetter(this,'V')">V</button>
+                <button class="letter-btn w-8 h-9 rounded-lg text-sm font-medium text-gray-600 flex items-center justify-center" onclick="filterByLetter(this,'W')">W</button>
+                <button class="letter-btn w-8 h-9 rounded-lg text-sm font-medium text-gray-600 flex items-center justify-center" onclick="filterByLetter(this,'X')">X</button>
+                <button class="letter-btn w-8 h-9 rounded-lg text-sm font-medium text-gray-600 flex items-center justify-center" onclick="filterByLetter(this,'Y')">Y</button>
+                <button class="letter-btn w-8 h-9 rounded-lg text-sm font-medium text-gray-600 flex items-center justify-center" onclick="filterByLetter(this,'Z')">Z</button>
+                <div class="w-px h-6 bg-gray-200 mx-0.5"></div>
+                <button class="letter-btn w-8 h-9 rounded-lg text-sm font-medium text-gray-600 flex items-center justify-center" onclick="filterByLetter(this,'#')">#</button>
+            </div>
+        </div>
+
+        <!-- Results header (no grid/list toggle) -->
+        <div class="flex items-center justify-between mb-6">
+            <div>
+                <h1 class="text-xl font-bold text-gray-900">Toți artiștii</h1>
+                <p class="text-sm text-gray-500 mt-0.5">280 artiști găsiți</p>
+            </div>
+            <select class="bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-medium text-gray-700 cursor-pointer focus:outline-none focus:ring-2 focus:ring-gray-900/10">
+                <option>Popularitate</option>
+                <option>A → Z</option>
+                <option>Z → A</option>
+                <option>Cele mai multe ev.</option>
+                <option>Adăugat recent</option>
+                <option>În trend</option>
+            </select>
+        </div>
+
+        <!-- Featured Artists - Horizontal Scroll -->
+        <div class="mb-8">
+            <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center gap-2"><h2 class="text-lg font-semibold text-gray-900">🔥 Artiști în trend</h2><span class="w-2 h-2 bg-green-500 rounded-full pulse"></span></div>
+                <a href="#" class="text-sm font-medium text-indigo-600 hover:underline">Vezi toți →</a>
+            </div>
+            <div class="flex gap-4 overflow-x-auto no-scrollbar pb-2">
+                <a href="artist.html" class="flex-shrink-0 w-64 artist-card bg-white rounded-2xl overflow-hidden border border-gray-200 group"><div class="relative h-40 overflow-hidden"><img src="https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=500&h=300&fit=crop" class="absolute inset-0 w-full h-full object-cover artist-img"><div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div><div class="absolute top-3 left-3"><span class="hot-badge px-2.5 py-1 rounded-full text-xs font-semibold text-white">🔥 #1 Trend</span></div><div class="absolute bottom-3 left-3 right-3"><div class="flex items-center gap-2"><img src="https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=80&h=80&fit=crop" class="w-10 h-10 rounded-full border-2 border-white object-cover"><div><div class="flex items-center gap-1"><h3 class="font-semibold text-white text-sm">Carla's Dreams</h3><svg class="w-4 h-4 text-blue-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg></div><p class="text-white/80 text-xs">Pop • 312K urmăritori</p></div></div></div></div><div class="p-3 flex items-center justify-between"><span class="text-xs text-indigo-600 font-medium">5 ev.</span><button class="follow-btn px-3 py-1.5 bg-gray-900 text-white text-xs font-medium rounded-full hover:bg-gray-800">Urmărește</button></div></a>
+                <a href="artist.html" class="flex-shrink-0 w-64 artist-card bg-white rounded-2xl overflow-hidden border border-gray-200 group"><div class="relative h-40 overflow-hidden"><img src="https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=500&h=300&fit=crop" class="absolute inset-0 w-full h-full object-cover artist-img"><div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div><div class="absolute top-3 left-3"><span class="hot-badge px-2.5 py-1 rounded-full text-xs font-semibold text-white">🔥 #2 Trend</span></div><div class="absolute bottom-3 left-3 right-3"><div class="flex items-center gap-2"><img src="https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=80&h=80&fit=crop" class="w-10 h-10 rounded-full border-2 border-white object-cover"><div><div class="flex items-center gap-1"><h3 class="font-semibold text-white text-sm">Subcarpați</h3><svg class="w-4 h-4 text-blue-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg></div><p class="text-white/80 text-xs">Hip-Hop / Folk • 189K urmăritori</p></div></div></div></div><div class="p-3 flex items-center justify-between"><span class="text-xs text-indigo-600 font-medium">3 ev.</span><button class="follow-btn px-3 py-1.5 bg-gray-900 text-white text-xs font-medium rounded-full hover:bg-gray-800">Urmărește</button></div></a>
+                <a href="artist.html" class="flex-shrink-0 w-64 artist-card bg-white rounded-2xl overflow-hidden border border-gray-200 group"><div class="relative h-40 overflow-hidden"><img src="https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=500&h=300&fit=crop" class="absolute inset-0 w-full h-full object-cover artist-img"><div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div><div class="absolute top-3 left-3"><span class="new-badge px-2.5 py-1 rounded-full text-xs font-semibold text-white">✨ Nou pe TICS</span></div><div class="absolute bottom-3 left-3 right-3"><div class="flex items-center gap-2"><img src="https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=80&h=80&fit=crop" class="w-10 h-10 rounded-full border-2 border-white object-cover"><div><h3 class="font-semibold text-white text-sm">The Motans</h3><p class="text-white/80 text-xs">Pop • 245K urmăritori</p></div></div></div></div><div class="p-3 flex items-center justify-between"><span class="text-xs text-indigo-600 font-medium">2 ev.</span><button class="follow-btn px-3 py-1.5 bg-gray-900 text-white text-xs font-medium rounded-full hover:bg-gray-800">Urmărește</button></div></a>
+                <a href="artist.html" class="flex-shrink-0 w-64 artist-card bg-white rounded-2xl overflow-hidden border border-gray-200 group"><div class="relative h-40 overflow-hidden"><img src="https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=500&h=300&fit=crop" class="absolute inset-0 w-full h-full object-cover artist-img"><div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div><div class="absolute top-3 left-3"><span class="hot-badge px-2.5 py-1 rounded-full text-xs font-semibold text-white">🔥 #4 Trend</span></div><div class="absolute bottom-3 left-3 right-3"><div class="flex items-center gap-2"><img src="https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=80&h=80&fit=crop" class="w-10 h-10 rounded-full border-2 border-white object-cover"><div><div class="flex items-center gap-1"><h3 class="font-semibold text-white text-sm">Irina Rimes</h3><svg class="w-4 h-4 text-blue-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg></div><p class="text-white/80 text-xs">Pop • 278K urmăritori</p></div></div></div></div><div class="p-3 flex items-center justify-between"><span class="text-xs text-indigo-600 font-medium">4 ev.</span><button class="follow-btn px-3 py-1.5 bg-gray-100 text-gray-900 text-xs font-medium rounded-full hover:bg-gray-200 border border-gray-200">Urmărești ✓</button></div></a>
+            </div>
+        </div>
+
+        <!-- All Artists Grid -->
+        <h2 class="text-lg font-semibold text-gray-900 mb-4">Toți artiștii</h2>
+        <div class="grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5" id="artistsGrid">
+
+            <a href="artist.html" class="artist-card bg-white rounded-2xl overflow-hidden border border-gray-200 group" data-name="Carla's Dreams">
+                <div class="relative aspect-[4/3] overflow-hidden">
+                    <img src="https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400&h=300&fit=crop" alt="" class="absolute inset-0 w-full h-full object-cover artist-img">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent"></div>
+                    <button class="absolute top-3 right-3 w-8 h-8 bg-white/90 rounded-full flex items-center justify-center hover:bg-white transition-colors"><svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg></button>
+                    <div class="absolute bottom-3 left-3 flex items-center gap-2"><span class="px-2.5 py-1 bg-gray-900/80 backdrop-blur text-white text-xs font-medium rounded-full">Pop</span><span class="px-2.5 py-1 bg-gray-900/80 backdrop-blur text-white text-xs font-medium rounded-full">Românesc</span></div>
+                </div>
+                <div class="p-4">
+                    <div class="flex items-start justify-between mb-2">
+                        <div class="flex items-center gap-2">
+                            <img src="https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=80&h=80&fit=crop" class="w-10 h-10 rounded-full object-cover border-2 border-gray-100">
+                            <div><div class="flex items-center gap-1"><h3 class="font-semibold text-gray-900 group-hover:text-indigo-600 transition-colors">Carla's Dreams</h3><svg class="w-4 h-4 text-blue-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg></div><p class="text-xs text-gray-500">312K urmăritori</p></div>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
+                        <div class="flex items-center gap-3 text-xs text-gray-500"><span class="flex items-center gap-1"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>5 ev.</span></div>
+                        <button class="follow-btn px-3 py-1.5 bg-gray-900 text-white hover:bg-gray-800 text-xs font-medium rounded-full">Urmărește</button>
+                    </div>
+                </div>
+            </a>
+            <a href="artist.html" class="artist-card bg-white rounded-2xl overflow-hidden border border-gray-200 group" data-name="Subcarpați">
+                <div class="relative aspect-[4/3] overflow-hidden">
+                    <img src="https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=400&h=300&fit=crop" alt="" class="absolute inset-0 w-full h-full object-cover artist-img">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent"></div>
+                    <button class="absolute top-3 right-3 w-8 h-8 bg-white/90 rounded-full flex items-center justify-center hover:bg-white transition-colors"><svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg></button>
+                    <div class="absolute bottom-3 left-3 flex items-center gap-2"><span class="px-2.5 py-1 bg-gray-900/80 backdrop-blur text-white text-xs font-medium rounded-full">Hip-Hop</span><span class="px-2.5 py-1 bg-gray-900/80 backdrop-blur text-white text-xs font-medium rounded-full">Folk</span></div>
+                </div>
+                <div class="p-4">
+                    <div class="flex items-start justify-between mb-2">
+                        <div class="flex items-center gap-2">
+                            <img src="https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=80&h=80&fit=crop" class="w-10 h-10 rounded-full object-cover border-2 border-gray-100">
+                            <div><div class="flex items-center gap-1"><h3 class="font-semibold text-gray-900 group-hover:text-indigo-600 transition-colors">Subcarpați</h3><svg class="w-4 h-4 text-blue-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg></div><p class="text-xs text-gray-500">189K urmăritori</p></div>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
+                        <div class="flex items-center gap-3 text-xs text-gray-500"><span class="flex items-center gap-1"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>3 ev.</span></div>
+                        <button class="follow-btn px-3 py-1.5 bg-gray-900 text-white hover:bg-gray-800 text-xs font-medium rounded-full">Urmărește</button>
+                    </div>
+                </div>
+            </a>
+            <a href="artist.html" class="artist-card bg-white rounded-2xl overflow-hidden border border-gray-200 group" data-name="The Motans">
+                <div class="relative aspect-[4/3] overflow-hidden">
+                    <img src="https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=400&h=300&fit=crop" alt="" class="absolute inset-0 w-full h-full object-cover artist-img">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent"></div>
+                    <button class="absolute top-3 right-3 w-8 h-8 bg-white/90 rounded-full flex items-center justify-center hover:bg-white transition-colors"><svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg></button>
+                    <div class="absolute bottom-3 left-3 flex items-center gap-2"><span class="px-2.5 py-1 bg-gray-900/80 backdrop-blur text-white text-xs font-medium rounded-full">Pop</span></div>
+                </div>
+                <div class="p-4">
+                    <div class="flex items-start justify-between mb-2">
+                        <div class="flex items-center gap-2">
+                            <img src="https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=80&h=80&fit=crop" class="w-10 h-10 rounded-full object-cover border-2 border-gray-100">
+                            <div><h3 class="font-semibold text-gray-900 group-hover:text-indigo-600 transition-colors">The Motans</h3><p class="text-xs text-gray-500">245K urmăritori</p></div>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
+                        <div class="flex items-center gap-3 text-xs text-gray-500"><span class="flex items-center gap-1"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>2 ev.</span></div>
+                        <button class="follow-btn px-3 py-1.5 bg-gray-900 text-white hover:bg-gray-800 text-xs font-medium rounded-full">Urmărește</button>
+                    </div>
+                </div>
+            </a>
+            <a href="artist.html" class="artist-card bg-white rounded-2xl overflow-hidden border border-gray-200 group" data-name="Irina Rimes">
+                <div class="relative aspect-[4/3] overflow-hidden">
+                    <img src="https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=400&h=300&fit=crop" alt="" class="absolute inset-0 w-full h-full object-cover artist-img">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent"></div>
+                    <button class="absolute top-3 right-3 w-8 h-8 bg-white/90 rounded-full flex items-center justify-center hover:bg-white transition-colors"><svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg></button>
+                    <div class="absolute bottom-3 left-3 flex items-center gap-2"><span class="px-2.5 py-1 bg-gray-900/80 backdrop-blur text-white text-xs font-medium rounded-full">Pop</span></div>
+                </div>
+                <div class="p-4">
+                    <div class="flex items-start justify-between mb-2">
+                        <div class="flex items-center gap-2">
+                            <img src="https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=80&h=80&fit=crop" class="w-10 h-10 rounded-full object-cover border-2 border-gray-100">
+                            <div><div class="flex items-center gap-1"><h3 class="font-semibold text-gray-900 group-hover:text-indigo-600 transition-colors">Irina Rimes</h3><svg class="w-4 h-4 text-blue-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg></div><p class="text-xs text-gray-500">278K urmăritori</p></div>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
+                        <div class="flex items-center gap-3 text-xs text-gray-500"><span class="flex items-center gap-1"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>4 ev.</span></div>
+                        <button class="follow-btn px-3 py-1.5 bg-gray-100 text-gray-900 hover:bg-gray-200 border border-gray-200 text-xs font-medium rounded-full">Urmărești ✓</button>
+                    </div>
+                </div>
+            </a>
+            <a href="artist.html" class="artist-card bg-white rounded-2xl overflow-hidden border border-gray-200 group" data-name="INNA">
+                <div class="relative aspect-[4/3] overflow-hidden">
+                    <img src="https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400&h=300&fit=crop" alt="" class="absolute inset-0 w-full h-full object-cover artist-img">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent"></div>
+                    <button class="absolute top-3 right-3 w-8 h-8 bg-white/90 rounded-full flex items-center justify-center hover:bg-white transition-colors"><svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg></button>
+                    <div class="absolute bottom-3 left-3 flex items-center gap-2"><span class="px-2.5 py-1 bg-gray-900/80 backdrop-blur text-white text-xs font-medium rounded-full">Pop</span><span class="px-2.5 py-1 bg-gray-900/80 backdrop-blur text-white text-xs font-medium rounded-full">Dance</span></div>
+                </div>
+                <div class="p-4">
+                    <div class="flex items-start justify-between mb-2">
+                        <div class="flex items-center gap-2">
+                            <img src="https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=80&h=80&fit=crop" class="w-10 h-10 rounded-full object-cover border-2 border-gray-100">
+                            <div><div class="flex items-center gap-1"><h3 class="font-semibold text-gray-900 group-hover:text-indigo-600 transition-colors">INNA</h3><svg class="w-4 h-4 text-blue-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg></div><p class="text-xs text-gray-500">512K urmăritori</p></div>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
+                        <div class="flex items-center gap-3 text-xs text-gray-500"><span class="flex items-center gap-1"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>3 ev.</span></div>
+                        <button class="follow-btn px-3 py-1.5 bg-gray-900 text-white hover:bg-gray-800 text-xs font-medium rounded-full">Urmărește</button>
+                    </div>
+                </div>
+            </a>
+            <a href="artist.html" class="artist-card bg-white rounded-2xl overflow-hidden border border-gray-200 group" data-name="Smiley">
+                <div class="relative aspect-[4/3] overflow-hidden">
+                    <img src="https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=400&h=300&fit=crop" alt="" class="absolute inset-0 w-full h-full object-cover artist-img">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent"></div>
+                    <button class="absolute top-3 right-3 w-8 h-8 bg-white/90 rounded-full flex items-center justify-center hover:bg-white transition-colors"><svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg></button>
+                    <div class="absolute bottom-3 left-3 flex items-center gap-2"><span class="px-2.5 py-1 bg-gray-900/80 backdrop-blur text-white text-xs font-medium rounded-full">Pop</span></div>
+                </div>
+                <div class="p-4">
+                    <div class="flex items-start justify-between mb-2">
+                        <div class="flex items-center gap-2">
+                            <img src="https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=80&h=80&fit=crop" class="w-10 h-10 rounded-full object-cover border-2 border-gray-100">
+                            <div><div class="flex items-center gap-1"><h3 class="font-semibold text-gray-900 group-hover:text-indigo-600 transition-colors">Smiley</h3><svg class="w-4 h-4 text-blue-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg></div><p class="text-xs text-gray-500">198K urmăritori</p></div>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
+                        <div class="flex items-center gap-3 text-xs text-gray-500"><span class="flex items-center gap-1"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>3 ev.</span></div>
+                        <button class="follow-btn px-3 py-1.5 bg-gray-900 text-white hover:bg-gray-800 text-xs font-medium rounded-full">Urmărește</button>
+                    </div>
+                </div>
+            </a>
+            <a href="artist.html" class="artist-card bg-white rounded-2xl overflow-hidden border border-gray-200 group" data-name="Vita de Vie">
+                <div class="relative aspect-[4/3] overflow-hidden">
+                    <img src="https://images.unsplash.com/photo-1429962714451-bb934ecdc4ec?w=400&h=300&fit=crop" alt="" class="absolute inset-0 w-full h-full object-cover artist-img">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent"></div>
+                    <button class="absolute top-3 right-3 w-8 h-8 bg-white/90 rounded-full flex items-center justify-center hover:bg-white transition-colors"><svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg></button>
+                    <div class="absolute bottom-3 left-3 flex items-center gap-2"><span class="px-2.5 py-1 bg-gray-900/80 backdrop-blur text-white text-xs font-medium rounded-full">Rock</span><span class="px-2.5 py-1 bg-gray-900/80 backdrop-blur text-white text-xs font-medium rounded-full">Alternativ</span></div>
+                </div>
+                <div class="p-4">
+                    <div class="flex items-start justify-between mb-2">
+                        <div class="flex items-center gap-2">
+                            <img src="https://images.unsplash.com/photo-1429962714451-bb934ecdc4ec?w=80&h=80&fit=crop" class="w-10 h-10 rounded-full object-cover border-2 border-gray-100">
+                            <div><h3 class="font-semibold text-gray-900 group-hover:text-indigo-600 transition-colors">Vita de Vie</h3><p class="text-xs text-gray-500">98K urmăritori</p></div>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
+                        <div class="flex items-center gap-3 text-xs text-gray-500"><span class="flex items-center gap-1"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>2 ev.</span></div>
+                        <button class="follow-btn px-3 py-1.5 bg-gray-900 text-white hover:bg-gray-800 text-xs font-medium rounded-full">Urmărește</button>
+                    </div>
+                </div>
+            </a>
+            <a href="artist.html" class="artist-card bg-white rounded-2xl overflow-hidden border border-gray-200 group" data-name="Luiza Zan">
+                <div class="relative aspect-[4/3] overflow-hidden">
+                    <img src="https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=400&h=300&fit=crop" alt="" class="absolute inset-0 w-full h-full object-cover artist-img">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent"></div>
+                    <button class="absolute top-3 right-3 w-8 h-8 bg-white/90 rounded-full flex items-center justify-center hover:bg-white transition-colors"><svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg></button>
+                    <div class="absolute bottom-3 left-3 flex items-center gap-2"><span class="px-2.5 py-1 bg-gray-900/80 backdrop-blur text-white text-xs font-medium rounded-full">Jazz</span></div>
+                </div>
+                <div class="p-4">
+                    <div class="flex items-start justify-between mb-2">
+                        <div class="flex items-center gap-2">
+                            <img src="https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=80&h=80&fit=crop" class="w-10 h-10 rounded-full object-cover border-2 border-gray-100">
+                            <div><h3 class="font-semibold text-gray-900 group-hover:text-indigo-600 transition-colors">Luiza Zan</h3><p class="text-xs text-gray-500">42K urmăritori</p></div>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
+                        <div class="flex items-center gap-3 text-xs text-gray-500"><span class="flex items-center gap-1"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>3 ev.</span></div>
+                        <button class="follow-btn px-3 py-1.5 bg-gray-900 text-white hover:bg-gray-800 text-xs font-medium rounded-full">Urmărește</button>
+                    </div>
+                </div>
+            </a>
+            <a href="artist.html" class="artist-card bg-white rounded-2xl overflow-hidden border border-gray-200 group" data-name="Delia">
+                <div class="relative aspect-[4/3] overflow-hidden">
+                    <img src="https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=400&h=300&fit=crop" alt="" class="absolute inset-0 w-full h-full object-cover artist-img">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent"></div>
+                    <button class="absolute top-3 right-3 w-8 h-8 bg-white/90 rounded-full flex items-center justify-center hover:bg-white transition-colors"><svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg></button>
+                    <div class="absolute bottom-3 left-3 flex items-center gap-2"><span class="px-2.5 py-1 bg-gray-900/80 backdrop-blur text-white text-xs font-medium rounded-full">Pop</span></div>
+                </div>
+                <div class="p-4">
+                    <div class="flex items-start justify-between mb-2">
+                        <div class="flex items-center gap-2">
+                            <img src="https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=80&h=80&fit=crop" class="w-10 h-10 rounded-full object-cover border-2 border-gray-100">
+                            <div><div class="flex items-center gap-1"><h3 class="font-semibold text-gray-900 group-hover:text-indigo-600 transition-colors">Delia</h3><svg class="w-4 h-4 text-blue-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg></div><p class="text-xs text-gray-500">356K urmăritori</p></div>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
+                        <div class="flex items-center gap-3 text-xs text-gray-500"><span class="flex items-center gap-1"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>6 ev.</span></div>
+                        <button class="follow-btn px-3 py-1.5 bg-gray-900 text-white hover:bg-gray-800 text-xs font-medium rounded-full">Urmărește</button>
+                    </div>
+                </div>
+            </a>
+            <a href="artist.html" class="artist-card bg-white rounded-2xl overflow-hidden border border-gray-200 group" data-name="Grasu XXL">
+                <div class="relative aspect-[4/3] overflow-hidden">
+                    <img src="https://images.unsplash.com/photo-1524368535928-5b5e00ddc76b?w=400&h=300&fit=crop" alt="" class="absolute inset-0 w-full h-full object-cover artist-img">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent"></div>
+                    <button class="absolute top-3 right-3 w-8 h-8 bg-white/90 rounded-full flex items-center justify-center hover:bg-white transition-colors"><svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg></button>
+                    <div class="absolute bottom-3 left-3 flex items-center gap-2"><span class="px-2.5 py-1 bg-gray-900/80 backdrop-blur text-white text-xs font-medium rounded-full">Hip-Hop</span></div>
+                </div>
+                <div class="p-4">
+                    <div class="flex items-start justify-between mb-2">
+                        <div class="flex items-center gap-2">
+                            <img src="https://images.unsplash.com/photo-1524368535928-5b5e00ddc76b?w=80&h=80&fit=crop" class="w-10 h-10 rounded-full object-cover border-2 border-gray-100">
+                            <div><h3 class="font-semibold text-gray-900 group-hover:text-indigo-600 transition-colors">Grasu XXL</h3><p class="text-xs text-gray-500">134K urmăritori</p></div>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
+                        <div class="flex items-center gap-3 text-xs text-gray-500"><span class="flex items-center gap-1"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>1 ev.</span></div>
+                        <button class="follow-btn px-3 py-1.5 bg-gray-900 text-white hover:bg-gray-800 text-xs font-medium rounded-full">Urmărește</button>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <!-- Pagination -->
+        <div class="flex items-center justify-center gap-2 mt-10">
+            <button class="w-10 h-10 rounded-full border border-gray-200 flex items-center justify-center text-gray-400 cursor-not-allowed"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg></button>
+            <button class="w-10 h-10 rounded-full bg-gray-900 text-white text-sm font-medium">1</button>
+            <button class="w-10 h-10 rounded-full border border-gray-200 text-gray-600 text-sm font-medium hover:border-gray-300 transition-colors">2</button>
+            <button class="w-10 h-10 rounded-full border border-gray-200 text-gray-600 text-sm font-medium hover:border-gray-300 transition-colors">3</button>
+            <span class="text-gray-400">...</span>
+            <button class="w-10 h-10 rounded-full border border-gray-200 text-gray-600 text-sm font-medium hover:border-gray-300 transition-colors">12</button>
+            <button class="w-10 h-10 rounded-full border border-gray-200 flex items-center justify-center text-gray-600 hover:border-gray-300 transition-colors"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg></button>
+        </div>
+    </main>
+
+    <script>
+    function filterByLetter(btn, letter) {
+        document.querySelectorAll('.letter-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const cards = document.querySelectorAll('#artistsGrid > .artist-card');
+        let count = 0;
+        cards.forEach(card => {
+            if (letter === 'all') { card.style.display = ''; count++; return; }
+            const name = card.dataset.name || '';
+            const firstChar = name.charAt(0).toUpperCase();
+            if (letter === '#') {
+                const show = /^[^A-ZĂÂÎȘȚa-zăâîșț]/.test(name);
+                card.style.display = show ? '' : 'none';
+                if (show) count++;
+            } else {
+                const match = firstChar === letter;
+                card.style.display = match ? '' : 'none';
+                if (match) count++;
+            }
+        });
+    }
+
+    const searchInput = document.getElementById('searchInput');
+    const searchDropdown = document.getElementById('searchDropdown');
+    searchInput?.addEventListener('focus', () => searchDropdown?.classList.add('active'));
+    document.addEventListener('click', (e) => {
+        if (!searchInput?.contains(e.target) && !searchDropdown?.contains(e.target)) {
+            searchDropdown?.classList.remove('active');
+        }
+    });
+
+    document.querySelectorAll('.sticky .no-scrollbar button').forEach(chip => {
+        chip.addEventListener('click', function() {
+            this.parentElement.querySelectorAll('button').forEach(c => c.classList.remove('chip-active'));
+            this.classList.add('chip-active');
+        });
+    });
+
+    document.querySelectorAll('.follow-btn').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            if (this.textContent.includes('Urmărești')) {
+                this.textContent = 'Urmărește';
+                this.classList.remove('bg-gray-100', 'text-gray-900', 'border', 'border-gray-200');
+                this.classList.add('bg-gray-900', 'text-white');
+            } else {
+                this.textContent = 'Urmărești ✓';
+                this.classList.add('bg-gray-100', 'text-gray-900', 'border', 'border-gray-200');
+                this.classList.remove('bg-gray-900', 'text-white');
+            }
+        });
+    });
+    </script>
+</body>
+</html>

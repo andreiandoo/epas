@@ -1,0 +1,123 @@
+<?php
+return [
+    [
+        'id'        => 22015,
+        'name'      => 'Aradíppou',
+        'latitude'  => '34.95151000',
+        'longitude' => '33.59199000',
+    ],
+    [
+        'id'        => 22019,
+        'name'      => 'Athíenou',
+        'latitude'  => '35.06180000',
+        'longitude' => '33.54156000',
+    ],
+    [
+        'id'        => 22024,
+        'name'      => 'Dhromolaxia',
+        'latitude'  => '34.87551000',
+        'longitude' => '33.58684000',
+    ],
+    [
+        'id'        => 22049,
+        'name'      => 'Kíti',
+        'latitude'  => '34.84696000',
+        'longitude' => '33.57344000',
+    ],
+    [
+        'id'        => 22039,
+        'name'      => 'Kofínou',
+        'latitude'  => '34.82449000',
+        'longitude' => '33.39130000',
+    ],
+    [
+        'id'        => 22042,
+        'name'      => 'Kolossi',
+        'latitude'  => '34.66865000',
+        'longitude' => '32.93375000',
+    ],
+    [
+        'id'        => 22050,
+        'name'      => 'Kórnos',
+        'latitude'  => '34.92396000',
+        'longitude' => '33.39764000',
+    ],
+    [
+        'id'        => 22051,
+        'name'      => 'Larnaca',
+        'latitude'  => '34.92291000',
+        'longitude' => '33.62330000',
+    ],
+    [
+        'id'        => 22057,
+        'name'      => 'Livádia',
+        'latitude'  => '34.95118000',
+        'longitude' => '33.62658000',
+    ],
+    [
+        'id'        => 22062,
+        'name'      => 'Meneou',
+        'latitude'  => '34.86114000',
+        'longitude' => '33.59516000',
+    ],
+    [
+        'id'        => 22064,
+        'name'      => 'Mosfilotí',
+        'latitude'  => '34.95256000',
+        'longitude' => '33.42511000',
+    ],
+    [
+        'id'        => 22087,
+        'name'      => 'Pérgamos',
+        'latitude'  => '35.04167000',
+        'longitude' => '33.70833000',
+    ],
+    [
+        'id'        => 22076,
+        'name'      => 'Perivólia',
+        'latitude'  => '34.83355000',
+        'longitude' => '33.58196000',
+    ],
+    [
+        'id'        => 22079,
+        'name'      => 'Psevdás',
+        'latitude'  => '34.94653000',
+        'longitude' => '33.46277000',
+    ],
+    [
+        'id'        => 22089,
+        'name'      => 'Pýla',
+        'latitude'  => '35.01237000',
+        'longitude' => '33.69188000',
+    ],
+    [
+        'id'        => 22093,
+        'name'      => 'Tersefánou',
+        'latitude'  => '34.85411000',
+        'longitude' => '33.54746000',
+    ],
+    [
+        'id'        => 22094,
+        'name'      => 'Troúlloi',
+        'latitude'  => '35.03203000',
+        'longitude' => '33.61501000',
+    ],
+    [
+        'id'        => 22099,
+        'name'      => 'Voróklini',
+        'latitude'  => '34.98600000',
+        'longitude' => '33.65387000',
+    ],
+    [
+        'id'        => 22100,
+        'name'      => 'Xylofágou',
+        'latitude'  => '34.97743000',
+        'longitude' => '33.84894000',
+    ],
+    [
+        'id'        => 22101,
+        'name'      => 'Xylotymbou',
+        'latitude'  => '35.01720000',
+        'longitude' => '33.74245000',
+    ],
+];

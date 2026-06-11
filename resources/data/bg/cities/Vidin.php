@@ -1,0 +1,123 @@
+<?php
+return [
+    [
+        'id'        => 9271,
+        'name'      => 'Belogradchik',
+        'latitude'  => '43.62722000',
+        'longitude' => '22.68361000',
+    ],
+    [
+        'id'        => 9284,
+        'name'      => 'Boynitsa',
+        'latitude'  => '43.95650000',
+        'longitude' => '22.53255000',
+    ],
+    [
+        'id'        => 9287,
+        'name'      => 'Bregovo',
+        'latitude'  => '44.15167000',
+        'longitude' => '22.64250000',
+    ],
+    [
+        'id'        => 9303,
+        'name'      => 'Chuprene',
+        'latitude'  => '43.51806000',
+        'longitude' => '22.66611000',
+    ],
+    [
+        'id'        => 9309,
+        'name'      => 'Dimovo',
+        'latitude'  => '43.74167000',
+        'longitude' => '22.72694000',
+    ],
+    [
+        'id'        => 9317,
+        'name'      => 'Drenovets',
+        'latitude'  => '43.69134000',
+        'longitude' => '22.97365000',
+    ],
+    [
+        'id'        => 9320,
+        'name'      => 'Dunavtsi',
+        'latitude'  => '43.92111000',
+        'longitude' => '22.82111000',
+    ],
+    [
+        'id'        => 9336,
+        'name'      => 'Gramada',
+        'latitude'  => '43.83738000',
+        'longitude' => '22.65279000',
+    ],
+    [
+        'id'        => 9380,
+        'name'      => 'Kula',
+        'latitude'  => '43.88833000',
+        'longitude' => '22.52139000',
+    ],
+    [
+        'id'        => 9396,
+        'name'      => 'Makresh',
+        'latitude'  => '43.76794000',
+        'longitude' => '22.66406000',
+    ],
+    [
+        'id'        => 9411,
+        'name'      => 'Novo Selo',
+        'latitude'  => '44.16214000',
+        'longitude' => '22.78376000',
+    ],
+    [
+        'id'        => 9426,
+        'name'      => 'Obshtina Belogradchik',
+        'latitude'  => '43.65000000',
+        'longitude' => '22.60000000',
+    ],
+    [
+        'id'        => 9438,
+        'name'      => 'Obshtina Boynitsa',
+        'latitude'  => '44.00000000',
+        'longitude' => '22.55000000',
+    ],
+    [
+        'id'        => 9456,
+        'name'      => 'Obshtina Dimovo',
+        'latitude'  => '43.75000000',
+        'longitude' => '22.81667000',
+    ],
+    [
+        'id'        => 9483,
+        'name'      => 'Obshtina Gramada',
+        'latitude'  => '43.83333000',
+        'longitude' => '22.65000000',
+    ],
+    [
+        'id'        => 9517,
+        'name'      => 'Obshtina Kula',
+        'latitude'  => '43.90000000',
+        'longitude' => '22.56667000',
+    ],
+    [
+        'id'        => 9577,
+        'name'      => 'Obshtina Ruzhintsi',
+        'latitude'  => '43.65000000',
+        'longitude' => '22.90000000',
+    ],
+    [
+        'id'        => 9630,
+        'name'      => 'Obshtina Vidin',
+        'latitude'  => '44.00000000',
+        'longitude' => '22.83333000',
+    ],
+    [
+        'id'        => 9676,
+        'name'      => 'Ruzhintsi',
+        'latitude'  => '43.62179000',
+        'longitude' => '22.83286000',
+    ],
+    [
+        'id'        => 9741,
+        'name'      => 'Vidin',
+        'latitude'  => '43.99159000',
+        'longitude' => '22.88236000',
+    ],
+];

@@ -1,0 +1,123 @@
+<?php
+return [
+    [
+        'id'        => 103007,
+        'name'      => 'Arboga',
+        'latitude'  => '59.39387000',
+        'longitude' => '15.83882000',
+    ],
+    [
+        'id'        => 103029,
+        'name'      => 'Barkarö',
+        'latitude'  => '59.54935000',
+        'longitude' => '16.50740000',
+    ],
+    [
+        'id'        => 103119,
+        'name'      => 'Dingtuna',
+        'latitude'  => '59.57279000',
+        'longitude' => '16.38722000',
+    ],
+    [
+        'id'        => 103144,
+        'name'      => 'Enhagen-Ekbacken',
+        'latitude'  => '59.56543000',
+        'longitude' => '16.53045000',
+    ],
+    [
+        'id'        => 103155,
+        'name'      => 'Fagersta',
+        'latitude'  => '60.00418000',
+        'longitude' => '15.79316000',
+    ],
+    [
+        'id'        => 103255,
+        'name'      => 'Hallstahammar',
+        'latitude'  => '59.61395000',
+        'longitude' => '16.22846000',
+    ],
+    [
+        'id'        => 103333,
+        'name'      => 'Hökåsen',
+        'latitude'  => '59.66667000',
+        'longitude' => '16.58333000',
+    ],
+    [
+        'id'        => 103349,
+        'name'      => 'Irsta',
+        'latitude'  => '59.60000000',
+        'longitude' => '16.70000000',
+    ],
+    [
+        'id'        => 103407,
+        'name'      => 'Kolbäck',
+        'latitude'  => '59.56516000',
+        'longitude' => '16.23037000',
+    ],
+    [
+        'id'        => 103408,
+        'name'      => 'Kolsva',
+        'latitude'  => '59.60000000',
+        'longitude' => '15.83333000',
+    ],
+    [
+        'id'        => 103442,
+        'name'      => 'Köping',
+        'latitude'  => '59.51404000',
+        'longitude' => '15.99255000',
+    ],
+    [
+        'id'        => 103428,
+        'name'      => 'Kungsör',
+        'latitude'  => '59.42245000',
+        'longitude' => '16.09656000',
+    ],
+    [
+        'id'        => 103579,
+        'name'      => 'Norberg',
+        'latitude'  => '60.06505000',
+        'longitude' => '15.92366000',
+    ],
+    [
+        'id'        => 103642,
+        'name'      => 'Ramnäs',
+        'latitude'  => '59.76667000',
+        'longitude' => '16.20000000',
+    ],
+    [
+        'id'        => 103675,
+        'name'      => 'Sala',
+        'latitude'  => '59.91993000',
+        'longitude' => '16.60655000',
+    ],
+    [
+        'id'        => 103705,
+        'name'      => 'Skinnskatteberg',
+        'latitude'  => '59.83028000',
+        'longitude' => '15.69337000',
+    ],
+    [
+        'id'        => 103713,
+        'name'      => 'Skultuna',
+        'latitude'  => '59.71667000',
+        'longitude' => '16.41667000',
+    ],
+    [
+        'id'        => 103790,
+        'name'      => 'Surahammar',
+        'latitude'  => '59.70725000',
+        'longitude' => '16.22188000',
+    ],
+    [
+        'id'        => 103848,
+        'name'      => 'Tillberga',
+        'latitude'  => '59.68333000',
+        'longitude' => '16.61667000',
+    ],
+    [
+        'id'        => 103972,
+        'name'      => 'Västerås',
+        'latitude'  => '59.64914000',
+        'longitude' => '16.56445000',
+    ],
+];

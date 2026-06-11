@@ -1,0 +1,21 @@
+<?php
+return [
+    'Attapeu',
+    'Bokeo',
+    'Bolikhamsai',
+    'Champasak',
+    'Houaphanh',
+    'Khammouane',
+    'Luang Namtha',
+    'Luang Prabang',
+    'Oudomxay',
+    'Phongsaly',
+    'Sainyabuli',
+    'Salavan',
+    'Savannakhet',
+    'Sekong',
+    'Vientiane',
+    'Vientiane',
+    'Xaisomboun',
+    'Xiangkhouang',
+];

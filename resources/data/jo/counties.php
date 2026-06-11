@@ -1,0 +1,15 @@
+<?php
+return [
+    'Ajloun',
+    'Amman',
+    'Aqaba',
+    'Balqa',
+    'Irbid',
+    'Jerash',
+    'Karak',
+    'Ma\'an',
+    'Madaba',
+    'Mafraq',
+    'Tafilah',
+    'Zarqa',
+];

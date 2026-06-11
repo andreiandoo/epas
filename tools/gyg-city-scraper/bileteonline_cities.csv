@@ -1,0 +1,265 @@
+id,slug,name
+789,bucuresti,București
+790,voluntari,Voluntari
+791,popesti-leordeni,Popești-Leordeni
+792,bragadiru,Bragadiru
+793,buftea,Buftea
+794,pantelimon,Pantelimon
+795,otopeni,Otopeni
+796,chitila,Chitila
+797,magurele,Măgurele
+798,cluj-napoca,Cluj-Napoca
+799,turda,Turda
+800,dej,Dej
+801,campia-turzii,"Câmpia Turzii"
+802,gherla,Gherla
+803,huedin,Huedin
+804,floresti,Florești
+805,baciu,Baciu
+806,timisoara,Timișoara
+807,lugoj,Lugoj
+808,sannicolau-mare,"Sânnicolau Mare"
+809,jimbolia,Jimbolia
+810,faget,Făget
+811,buzias,Buziaș
+812,deta,Deta
+813,recas,Recaș
+814,giroc,Giroc
+815,dumbravita,Dumbrăvița
+816,constanta,Constanța
+817,mangalia,Mangalia
+818,medgidia,Medgidia
+819,navodari,Năvodari
+820,cernavoda,Cernavodă
+821,mamaia,Mamaia
+822,eforie-nord,"Eforie Nord"
+823,eforie-sud,"Eforie Sud"
+824,neptun,Neptun
+825,costinesti,Costinești
+826,vama-veche,"Vama Veche"
+827,brasov,Brașov
+828,fagaras,Făgăraș
+829,sacele,Săcele
+830,codlea,Codlea
+831,rasnov,Râșnov
+832,zarnesti,Zărnești
+833,predeal,Predeal
+834,poiana-brasov,"Poiana Brașov"
+835,bran,Bran
+836,iasi,Iași
+837,pascani,Pașcani
+838,targu-frumos,"Târgu Frumos"
+839,harlau,Hârlău
+840,ploiesti,Ploiești
+841,campina,Câmpina
+842,baicoi,Băicoi
+843,breaza,Breaza
+844,sinaia,Sinaia
+845,busteni,Bușteni
+846,azuga,Azuga
+847,comarnic,Comarnic
+848,valenii-de-munte,"Vălenii de Munte"
+849,sibiu,Sibiu
+850,medias,Mediaș
+851,cisnadie,Cisnădie
+852,avrig,Avrig
+853,dumbraveni,Dumbrăveni
+854,talmaciu,Tălmaciu
+855,paltinis,Păltiniș
+856,targu-mures,"Târgu Mureș"
+857,reghin,Reghin
+858,sighisoara,Sighișoara
+859,tarnaveni,Târnăveni
+860,ludus,Luduș
+861,sovata,Sovata
+862,craiova,Craiova
+863,bailesti,Băilești
+864,calafat,Calafat
+865,filiasi,Filiași
+866,segarcea,Segarcea
+867,galati,Galați
+868,tecuci,Tecuci
+869,targu-bujor,"Târgu Bujor"
+870,beresti,Berești
+871,pitesti,Pitești
+872,campulung,Câmpulung
+873,curtea-de-arges,"Curtea de Argeș"
+874,mioveni,Mioveni
+875,costesti,Costești
+876,topoloveni,Topoloveni
+877,arad,Arad
+878,ineu,Ineu
+879,lipova,Lipova
+880,pecica,Pecica
+881,curtici,Curtici
+882,nadlac,Nădlac
+883,chisineu-cris,Chișineu-Criș
+884,oradea,Oradea
+885,salonta,Salonta
+886,marghita,Marghita
+887,beius,Beiuș
+888,alesd,Aleșd
+889,stei,Ștei
+890,baile-felix,"Băile Felix"
+891,baile-1-mai,"Băile 1 Mai"
+892,bacau,Bacău
+893,onesti,Onești
+894,moinesti,Moinești
+895,comanesti,Comănești
+896,buhusi,Buhuși
+897,darmanesti,Dărmănești
+898,targu-ocna,"Târgu Ocna"
+899,slanic-moldova,"Slănic Moldova"
+900,deva,Deva
+901,hunedoara,Hunedoara
+902,petrosani,Petroșani
+903,lupeni,Lupeni
+904,vulcan,Vulcan
+905,orastie,Orăștie
+906,brad,Brad
+907,calan,Călan
+908,sarmizegetusa,Sarmizegetusa
+909,suceava,Suceava
+910,falticeni,Fălticeni
+911,radauti,Rădăuți
+912,campulung-moldovenesc,"Câmpulung Moldovenesc"
+913,vatra-dornei,"Vatra Dornei"
+914,gura-humorului,"Gura Humorului"
+915,siret,Siret
+916,alba-iulia,"Alba Iulia"
+917,aiud,Aiud
+918,blaj,Blaj
+919,sebes,Sebeș
+920,cugir,Cugir
+921,ocna-mures,"Ocna Mureș"
+922,campeni,Câmpeni
+923,buzau,Buzău
+924,ramnicu-sarat,"Râmnicu Sărat"
+925,nehoiu,Nehoiu
+926,patarlagele,Pătârlagele
+927,pogoanele,Pogoanele
+928,botosani,Botoșani
+929,dorohoi,Dorohoi
+930,darabani,Darabani
+931,saveni,Săveni
+932,bistrita,Bistrița
+933,nasaud,Năsăud
+934,beclean,Beclean
+935,sangeorz-bai,Sângeorz-Băi
+936,braila,Brăila
+937,ianca,Ianca
+938,insuratei,Însurăței
+939,faurei,Făurei
+940,resita,Reșița
+941,caransebes,Caransebeș
+942,bocsa,Bocșa
+943,oravita,Oravița
+944,moldova-noua,"Moldova Nouă"
+945,anina,Anina
+946,baile-herculane,"Băile Herculane"
+947,calarasi,Călărași
+948,oltenita,Oltenița
+949,budesti,Budești
+950,fundulea,Fundulea
+951,lehliu-gara,"Lehliu Gară"
+952,sfantu-gheorghe,"Sfântu Gheorghe"
+953,targu-secuiesc,"Târgu Secuiesc"
+954,covasna,Covasna
+955,baraolt,Baraolt
+956,intorsura-buzaului,"Întorsura Buzăului"
+957,targoviste,Târgoviște
+958,moreni,Moreni
+959,pucioasa,Pucioasa
+960,gaesti,Găești
+961,titu,Titu
+962,fieni,Fieni
+963,targu-jiu,"Târgu Jiu"
+964,motru,Motru
+965,rovinari,Rovinari
+966,bumbesti-jiu,Bumbești-Jiu
+967,targu-carbunesti,"Târgu Cărbunești"
+968,novaci,Novaci
+969,ranca,Rânca
+970,giurgiu,Giurgiu
+971,bolintin-vale,Bolintin-Vale
+972,mihailesti,Mihăilești
+973,miercurea-ciuc,"Miercurea Ciuc"
+974,odorheiu-secuiesc,"Odorheiu Secuiesc"
+975,gheorgheni,Gheorgheni
+976,toplita,Toplița
+977,cristuru-secuiesc,"Cristuru Secuiesc"
+978,balan,Bălan
+979,borsec,Borsec
+980,praid,Praid
+981,lacul-rosu,"Lacul Roșu"
+982,slobozia,Slobozia
+983,fetesti,Fetești
+984,urziceni,Urziceni
+985,tandarei,Țăndărei
+986,amara,Amara
+987,baia-mare,"Baia Mare"
+988,sighetu-marmatiei,"Sighetu Marmației"
+989,borsa,Borșa
+990,baia-sprie,"Baia Sprie"
+991,cavnic,Cavnic
+992,viseu-de-sus,"Vișeu de Sus"
+993,seini,Seini
+994,tautii-magheraus,Tăuții-Măgherăuș
+995,sapanta,Săpânța
+996,drobeta-turnu-severin,"Drobeta-Turnu Severin"
+997,orsova,Orșova
+998,strehaia,Strehaia
+999,vanju-mare,"Vânju Mare"
+1000,baia-de-arama,"Baia de Aramă"
+1001,piatra-neamt,"Piatra Neamț"
+1002,roman,Roman
+1003,targu-neamt,"Târgu Neamț"
+1004,bicaz,Bicaz
+1005,roznov,Roznov
+1006,durau,Durău
+1007,slatina,Slatina
+1008,caracal,Caracal
+1009,corabia,Corabia
+1010,bals,Balș
+1011,scornicesti,Scornicești
+1012,draganesti-olt,Drăgănești-Olt
+1013,satu-mare,"Satu Mare"
+1014,carei,Carei
+1015,negresti-oas,Negrești-Oaș
+1016,tasnad,Tășnad
+1017,livada,Livada
+1018,ardud,Ardud
+1019,zalau,Zalău
+1020,simleu-silvaniei,"Șimleu Silvaniei"
+1021,jibou,Jibou
+1022,cehu-silvaniei,"Cehu Silvaniei"
+1023,alexandria,Alexandria
+1024,rosiori-de-vede,"Roșiori de Vede"
+1025,turnu-magurele,"Turnu Măgurele"
+1026,zimnicea,Zimnicea
+1027,videle,Videle
+1028,tulcea,Tulcea
+1029,macin,Măcin
+1030,babadag,Babadag
+1031,isaccea,Isaccea
+1032,sulina,Sulina
+1033,murighiol,Murighiol
+1034,ramnicu-valcea,"Râmnicu Vâlcea"
+1035,dragasani,Drăgășani
+1036,baile-govora,"Băile Govora"
+1037,baile-olanesti,"Băile Olănești"
+1038,calimanesti,Călimănești
+1039,horezu,Horezu
+1040,brezoi,Brezoi
+1041,berbesti,Berbești
+1042,voineasa,Voineasa
+1043,vaslui,Vaslui
+1044,barlad,Bârlad
+1045,husi,Huși
+1046,negresti,Negrești
+1047,murgeni,Murgeni
+1048,focsani,Focșani
+1049,adjud,Adjud
+1050,marasesti,Mărășești
+1051,panciu,Panciu
+1052,odobesti,Odobești

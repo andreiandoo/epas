@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Setări — TICS Organizer</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>tailwind.config={theme:{extend:{fontFamily:{'sans':['Inter','system-ui','sans-serif']}}}}</script>
+    <style>
+        *{-webkit-font-smoothing:antialiased}
+        body{font-family:'Inter',system-ui,sans-serif}
+        .sidebar-link{transition:all 0.2s}
+        .sidebar-link:hover{background:rgba(99,102,241,0.1);color:#6366f1}
+        .sidebar-link.active{background:rgba(99,102,241,0.1);color:#6366f1;border-right:3px solid #6366f1}
+        .tab-btn.active{border-color:#6366f1;color:#6366f1}
+        .tab-content{display:none}
+        .tab-content.active{display:block}
+        .input-field:focus{border-color:#6366f1;box-shadow:0 0 0 4px rgba(99,102,241,0.1)}
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="flex">
+        <!-- Sidebar -->
+        <aside class="fixed left-0 top-0 bottom-0 w-64 bg-white border-r border-gray-200 z-40 flex flex-col">
+            <div class="p-5 border-b border-gray-100">
+                <a href="tics-org-dashboard.html" class="flex items-center gap-2">
+                    <div class="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center"><span class="text-white font-bold">T</span></div>
+                    <div><span class="font-bold text-lg">TICS</span><span class="text-xs text-gray-400 block -mt-1">Organizer</span></div>
+                </a>
+            </div>
+            <nav class="flex-1 p-3 space-y-1 overflow-y-auto">
+                <a href="tics-org-dashboard.html" class="sidebar-link flex items-center gap-3 px-4 py-3 text-sm text-gray-600 rounded-xl"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6z"/></svg>Dashboard</a>
+                <a href="tics-org-events.html" class="sidebar-link flex items-center gap-3 px-4 py-3 text-sm text-gray-600 rounded-xl"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>Evenimente</a>
+                <a href="tics-org-orders.html" class="sidebar-link flex items-center gap-3 px-4 py-3 text-sm text-gray-600 rounded-xl"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/></svg>Comenzi</a>
+                <a href="tics-org-attendees.html" class="sidebar-link flex items-center gap-3 px-4 py-3 text-sm text-gray-600 rounded-xl"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7"/></svg>Participanți</a>
+                <a href="tics-org-analytics.html" class="sidebar-link flex items-center gap-3 px-4 py-3 text-sm text-gray-600 rounded-xl"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2z"/></svg>Analiză</a>
+                <a href="tics-org-payouts.html" class="sidebar-link flex items-center gap-3 px-4 py-3 text-sm text-gray-600 rounded-xl"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2"/></svg>Plăți</a>
+                <a href="tics-org-scanner.html" class="sidebar-link flex items-center gap-3 px-4 py-3 text-sm text-gray-600 rounded-xl"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4"/></svg>Scanner</a>
+                <div class="pt-4 mt-4 border-t border-gray-100">
+                    <a href="tics-org-team.html" class="sidebar-link flex items-center gap-3 px-4 py-3 text-sm text-gray-600 rounded-xl"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1z"/></svg>Echipă</a>
+                    <a href="tics-org-settings.html" class="sidebar-link active flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>Setări</a>
+                </div>
+            </nav>
+            <div class="p-4 border-t border-gray-100">
+                <div class="flex items-center gap-3">
+                    <img src="https://i.pravatar.cc/40?img=12" class="w-10 h-10 rounded-xl">
+                    <div class="flex-1 min-w-0"><p class="text-sm font-medium text-gray-900 truncate">Live Events SRL</p><p class="text-xs text-gray-500 truncate">contact@liveevents.ro</p></div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main -->
+        <main class="flex-1 ml-64">
+            <header class="sticky top-0 z-30 bg-white border-b border-gray-200">
+                <div class="px-8 py-4">
+                    <h1 class="text-2xl font-bold text-gray-900">Setări</h1>
+                    <p class="text-sm text-gray-500">Configurează contul și organizația</p>
+                </div>
+                <!-- Tabs -->
+                <div class="px-8 flex gap-6 border-t border-gray-100">
+                    <button onclick="switchTab('profile')" class="tab-btn active py-4 border-b-2 border-transparent text-sm font-medium" data-tab="profile">Profil organizație</button>
+                    <button onclick="switchTab('bank')" class="tab-btn py-4 border-b-2 border-transparent text-sm font-medium text-gray-500 hover:text-gray-700" data-tab="bank">Cont bancar</button>
+                    <button onclick="switchTab('notifications')" class="tab-btn py-4 border-b-2 border-transparent text-sm font-medium text-gray-500 hover:text-gray-700" data-tab="notifications">Notificări</button>
+                    <button onclick="switchTab('integrations')" class="tab-btn py-4 border-b-2 border-transparent text-sm font-medium text-gray-500 hover:text-gray-700" data-tab="integrations">Integrări</button>
+                </div>
+            </header>
+
+            <div class="p-8">
+                <!-- TAB 1: PROFIL ORGANIZAȚIE -->
+                <div id="tab-profile" class="tab-content active max-w-3xl">
+                    <div class="bg-white rounded-2xl border border-gray-200 p-6 mb-6">
+                        <h2 class="text-lg font-bold text-gray-900 mb-4">Informații organizație</h2>
+                        <div class="space-y-4">
+                            <div class="flex items-center gap-4 mb-6">
+                                <div class="w-20 h-20 bg-gray-200 rounded-xl flex items-center justify-center">
+                                    <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                </div>
+                                <div>
+                                    <button class="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-xl hover:bg-indigo-700">Schimbă logo</button>
+                                    <p class="text-xs text-gray-500 mt-1">PNG, JPG până la 2MB</p>
+                                </div>
+                            </div>
+                            <div><label class="block text-sm font-medium text-gray-700 mb-2">Nume organizație *</label><input type="text" value="Live Events SRL" class="input-field w-full px-4 py-3 border border-gray-200 rounded-xl outline-none"></div>
+                            <div class="grid sm:grid-cols-2 gap-4">
+                                <div><label class="block text-sm font-medium text-gray-700 mb-2">CUI / CIF</label><input type="text" value="RO12345678" class="input-field w-full px-4 py-3 border border-gray-200 rounded-xl outline-none"></div>
+                                <div><label class="block text-sm font-medium text-gray-700 mb-2">Nr. Reg. Com.</label><input type="text" value="J40/1234/2020" class="input-field w-full px-4 py-3 border border-gray-200 rounded-xl outline-none"></div>
+                            </div>
+                            <div><label class="block text-sm font-medium text-gray-700 mb-2">Adresă sediu</label><input type="text" value="Str. Exemplu nr. 10, București" class="input-field w-full px-4 py-3 border border-gray-200 rounded-xl outline-none"></div>
+                            <div class="grid sm:grid-cols-2 gap-4">
+                                <div><label class="block text-sm font-medium text-gray-700 mb-2">Email contact</label><input type="email" value="contact@liveevents.ro" class="input-field w-full px-4 py-3 border border-gray-200 rounded-xl outline-none"></div>
+                                <div><label class="block text-sm font-medium text-gray-700 mb-2">Telefon</label><input type="tel" value="+40 721 234 567" class="input-field w-full px-4 py-3 border border-gray-200 rounded-xl outline-none"></div>
+                            </div>
+                            <div><label class="block text-sm font-medium text-gray-700 mb-2">Website</label><input type="url" value="https://liveevents.ro" class="input-field w-full px-4 py-3 border border-gray-200 rounded-xl outline-none"></div>
+                            <div><label class="block text-sm font-medium text-gray-700 mb-2">Descriere companie</label><textarea rows="3" class="input-field w-full px-4 py-3 border border-gray-200 rounded-xl outline-none resize-none" placeholder="Scurtă descriere a organizației...">Live Events SRL organizează evenimente culturale și de divertisment în România din 2020.</textarea></div>
+                        </div>
+                        <div class="flex justify-end mt-6"><button class="px-6 py-3 bg-indigo-600 text-white font-medium rounded-xl hover:bg-indigo-700">Salvează modificările</button></div>
+                    </div>
+
+                    <div class="bg-white rounded-2xl border border-gray-200 p-6 mb-6">
+                        <h2 class="text-lg font-bold text-gray-900 mb-4">Personalizare pagini</h2>
+                        <div class="space-y-4">
+                            <div><label class="block text-sm font-medium text-gray-700 mb-2">Culoare principală</label><div class="flex items-center gap-3"><input type="color" value="#6366f1" class="w-12 h-12 rounded-lg cursor-pointer border-0"><span class="text-sm text-gray-500">#6366F1</span></div></div>
+                            <div><label class="block text-sm font-medium text-gray-700 mb-2">Subdomeniu personalizat</label><div class="flex"><span class="px-4 py-3 bg-gray-100 border border-r-0 border-gray-200 rounded-l-xl text-gray-500">https://</span><input type="text" value="liveevents" class="flex-1 px-4 py-3 border border-gray-200 outline-none"><span class="px-4 py-3 bg-gray-100 border border-l-0 border-gray-200 rounded-r-xl text-gray-500">.tics.ro</span></div></div>
+                            <div><label class="block text-sm font-medium text-gray-700 mb-2">Banner personalizat</label><div class="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-indigo-400 cursor-pointer"><p class="text-sm text-gray-500">Încarcă banner (1200x300px)</p></div></div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-2xl border border-red-200 p-6">
+                        <h2 class="text-lg font-bold text-red-600 mb-2">Zona periculoasă</h2>
+                        <p class="text-sm text-gray-500 mb-4">Aceste acțiuni sunt ireversibile</p>
+                        <button class="px-4 py-2 border border-red-300 text-red-600 text-sm font-medium rounded-xl hover:bg-red-50">Dezactivează contul de organizator</button>
+                    </div>
+                </div>
+
+                <!-- TAB 2: CONT BANCAR -->
+                <div id="tab-bank" class="tab-content max-w-3xl">
+                    <div class="bg-white rounded-2xl border border-gray-200 p-6 mb-6">
+                        <h2 class="text-lg font-bold text-gray-900 mb-4">Cont bancar pentru plăți</h2>
+                        <div class="p-4 bg-green-50 border border-green-200 rounded-xl mb-6">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center"><svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg></div>
+                                <div><p class="font-medium text-green-800">Cont verificat</p><p class="text-sm text-green-600">Plățile vor fi transferate în acest cont</p></div>
+                            </div>
+                        </div>
+                        <div class="space-y-4">
+                            <div><label class="block text-sm font-medium text-gray-700 mb-2">Titular cont *</label><input type="text" value="Live Events SRL" class="input-field w-full px-4 py-3 border border-gray-200 rounded-xl outline-none"></div>
+                            <div><label class="block text-sm font-medium text-gray-700 mb-2">IBAN *</label><input type="text" value="RO49 INGB 0000 9999 0123 4521" class="input-field w-full px-4 py-3 border border-gray-200 rounded-xl outline-none font-mono"></div>
+                            <div class="grid sm:grid-cols-2 gap-4">
+                                <div><label class="block text-sm font-medium text-gray-700 mb-2">Bancă *</label><select class="input-field w-full px-4 py-3 border border-gray-200 rounded-xl outline-none"><option selected>ING Bank</option><option>BCR</option><option>BRD</option><option>Banca Transilvania</option><option>Raiffeisen</option><option>UniCredit</option></select></div>
+                                <div><label class="block text-sm font-medium text-gray-700 mb-2">BIC/SWIFT</label><input type="text" value="INGBROBU" class="input-field w-full px-4 py-3 border border-gray-200 rounded-xl outline-none font-mono"></div>
+                            </div>
+                        </div>
+                        <div class="flex justify-end mt-6"><button class="px-6 py-3 bg-indigo-600 text-white font-medium rounded-xl hover:bg-indigo-700">Actualizează cont</button></div>
+                    </div>
+
+                    <div class="bg-white rounded-2xl border border-gray-200 p-6">
+                        <h2 class="text-lg font-bold text-gray-900 mb-4">Setări plăți</h2>
+                        <div class="space-y-4">
+                            <div><label class="block text-sm font-medium text-gray-700 mb-2">Frecvență plăți</label><select class="input-field w-full px-4 py-3 border border-gray-200 rounded-xl outline-none"><option>Zilnic (balanță minimă 100 RON)</option><option selected>Săptămânal (luni)</option><option>Bi-săptămânal</option><option>Lunar</option></select></div>
+                            <div><label class="block text-sm font-medium text-gray-700 mb-2">Sumă minimă pentru transfer</label><input type="number" value="500" class="input-field w-full px-4 py-3 border border-gray-200 rounded-xl outline-none"><p class="text-xs text-gray-500 mt-1">Transferurile se fac doar când balanța depășește această sumă</p></div>
+                            <label class="flex items-center gap-3 cursor-pointer"><input type="checkbox" checked class="w-5 h-5 rounded border-gray-300 text-indigo-600"><span class="text-sm text-gray-700">Primește notificare la fiecare transfer</span></label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 3: NOTIFICĂRI -->
+                <div id="tab-notifications" class="tab-content max-w-3xl">
+                    <div class="bg-white rounded-2xl border border-gray-200 p-6 mb-6">
+                        <h2 class="text-lg font-bold text-gray-900 mb-4">Notificări Email</h2>
+                        <div class="space-y-4">
+                            <label class="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+                                <div><p class="font-medium text-gray-900">Vânzare nouă</p><p class="text-sm text-gray-500">Email la fiecare bilet vândut</p></div>
+                                <input type="checkbox" class="w-5 h-5 rounded border-gray-300 text-indigo-600">
+                            </label>
+                            <label class="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+                                <div><p class="font-medium text-gray-900">Raport zilnic</p><p class="text-sm text-gray-500">Sumar zilnic cu vânzările</p></div>
+                                <input type="checkbox" checked class="w-5 h-5 rounded border-gray-300 text-indigo-600">
+                            </label>
+                            <label class="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+                                <div><p class="font-medium text-gray-900">Raport săptămânal</p><p class="text-sm text-gray-500">Sumar săptămânal cu statistici</p></div>
+                                <input type="checkbox" checked class="w-5 h-5 rounded border-gray-300 text-indigo-600">
+                            </label>
+                            <label class="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+                                <div><p class="font-medium text-gray-900">Sold out</p><p class="text-sm text-gray-500">Când o categorie de bilete e epuizată</p></div>
+                                <input type="checkbox" checked class="w-5 h-5 rounded border-gray-300 text-indigo-600">
+                            </label>
+                            <label class="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+                                <div><p class="font-medium text-gray-900">Plată efectuată</p><p class="text-sm text-gray-500">Când banii sunt transferați în cont</p></div>
+                                <input type="checkbox" checked class="w-5 h-5 rounded border-gray-300 text-indigo-600">
+                            </label>
+                            <label class="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+                                <div><p class="font-medium text-gray-900">Cerere rambursare</p><p class="text-sm text-gray-500">Când un client cere rambursare</p></div>
+                                <input type="checkbox" checked class="w-5 h-5 rounded border-gray-300 text-indigo-600">
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-2xl border border-gray-200 p-6">
+                        <h2 class="text-lg font-bold text-gray-900 mb-4">Notificări Push</h2>
+                        <div class="space-y-4">
+                            <label class="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+                                <div><p class="font-medium text-gray-900">Vânzări în timp real</p><p class="text-sm text-gray-500">Notificare push pentru fiecare vânzare</p></div>
+                                <input type="checkbox" class="w-5 h-5 rounded border-gray-300 text-indigo-600">
+                            </label>
+                            <label class="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+                                <div><p class="font-medium text-gray-900">Check-in participanți</p><p class="text-sm text-gray-500">Notificare la check-in</p></div>
+                                <input type="checkbox" class="w-5 h-5 rounded border-gray-300 text-indigo-600">
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 4: INTEGRĂRI -->
+                <div id="tab-integrations" class="tab-content max-w-3xl">
+                    <div class="bg-white rounded-2xl border border-gray-200 p-6 mb-6">
+                        <h2 class="text-lg font-bold text-gray-900 mb-4">Integrări disponibile</h2>
+                        <div class="space-y-4">
+                            <!-- Google Analytics -->
+                            <div class="flex items-center justify-between p-4 border border-gray-200 rounded-xl">
+                                <div class="flex items-center gap-4">
+                                    <div class="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center"><svg class="w-6 h-6 text-orange-600" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg></div>
+                                    <div><p class="font-medium text-gray-900">Google Analytics</p><p class="text-sm text-gray-500">Urmărește traficul și conversiile</p></div>
+                                </div>
+                                <button class="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-xl hover:bg-indigo-700">Conectează</button>
+                            </div>
+                            <!-- Facebook Pixel -->
+                            <div class="flex items-center justify-between p-4 border border-gray-200 rounded-xl">
+                                <div class="flex items-center gap-4">
+                                    <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center"><svg class="w-6 h-6 text-blue-600" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg></div>
+                                    <div><p class="font-medium text-gray-900">Facebook Pixel</p><p class="text-sm text-gray-500">Remarketing și tracking conversii</p></div>
+                                </div>
+                                <span class="px-3 py-1 bg-green-100 text-green-700 text-sm font-medium rounded-full">Conectat</span>
+                            </div>
+                            <!-- Mailchimp -->
+                            <div class="flex items-center justify-between p-4 border border-gray-200 rounded-xl">
+                                <div class="flex items-center gap-4">
+                                    <div class="w-12 h-12 bg-yellow-100 rounded-xl flex items-center justify-center"><svg class="w-6 h-6 text-yellow-600" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg></div>
+                                    <div><p class="font-medium text-gray-900">Mailchimp</p><p class="text-sm text-gray-500">Sincronizare listă de emailuri</p></div>
+                                </div>
+                                <button class="px-4 py-2 bg-white border border-gray-200 text-gray-700 text-sm font-medium rounded-xl hover:bg-gray-50">Conectează</button>
+                            </div>
+                            <!-- Zapier -->
+                            <div class="flex items-center justify-between p-4 border border-gray-200 rounded-xl">
+                                <div class="flex items-center gap-4">
+                                    <div class="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center"><span class="text-2xl">⚡</span></div>
+                                    <div><p class="font-medium text-gray-900">Zapier</p><p class="text-sm text-gray-500">Automatizează cu 5000+ aplicații</p></div>
+                                </div>
+                                <button class="px-4 py-2 bg-white border border-gray-200 text-gray-700 text-sm font-medium rounded-xl hover:bg-gray-50">Conectează</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-2xl border border-gray-200 p-6">
+                        <h2 class="text-lg font-bold text-gray-900 mb-4">API & Webhooks</h2>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Cheie API</label>
+                                <div class="flex gap-2">
+                                    <input type="password" value="sk_live_xxxxxxxxxxxxxxxxxx" class="flex-1 px-4 py-3 border border-gray-200 rounded-xl font-mono text-sm" readonly>
+                                    <button class="px-4 py-3 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200">Arată</button>
+                                    <button class="px-4 py-3 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200">Copiază</button>
+                                </div>
+                                <p class="text-xs text-gray-500 mt-1">Nu partaja această cheie. <a href="#" class="text-indigo-600 hover:underline">Documentație API</a></p>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Webhook URL</label>
+                                <input type="url" placeholder="https://yoursite.com/webhook" class="input-field w-full px-4 py-3 border border-gray-200 rounded-xl outline-none">
+                                <p class="text-xs text-gray-500 mt-1">Vom trimite evenimente (vânzări, check-in) la acest URL</p>
+                            </div>
+                            <button class="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-xl hover:bg-indigo-700">Salvează webhook</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => { b.classList.remove('active'); b.classList.add('text-gray-500'); });
+            document.getElementById('tab-' + tabName).classList.add('active');
+            const btn = document.querySelector('.tab-btn[data-tab="' + tabName + '"]');
+            btn.classList.add('active');
+            btn.classList.remove('text-gray-500');
+        }
+    </script>
+</body>
+</html>

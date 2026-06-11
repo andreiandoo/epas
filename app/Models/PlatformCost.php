@@ -1,0 +1,107 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+
+class PlatformCost extends Model
+{
+    protected $fillable = [
+        'name',
+        'category',
+        'description',
+        'amount',
+        'currency',
+        'billing_cycle',
+        'start_date',
+        'end_date',
+        'is_active',
+        'metadata',
+    ];
+
+    protected $casts = [
+        'amount' => 'decimal:2',
+        'is_active' => 'boolean',
+        'start_date' => 'date',
+        'end_date' => 'date',
+        'metadata' => 'array',
+    ];
+
+    public const CATEGORY_LABELS = [
+        'server' => 'Server / Hosting',
+        'domain' => 'Domain',
+        'cdn' => 'CDN',
+        'service' => 'Service / SaaS',
+        'marketing' => 'Marketing',
+        'company_general' => 'Company General',
+        'salaries' => 'Salaries',
+        'accounting' => 'Accounting',
+        'company_taxes' => 'Company Taxes',
+        'other' => 'Other',
+    ];
+
+    public function getCategoryLabelAttribute(): string
+    {
+        return self::CATEGORY_LABELS[$this->category] ?? $this->category;
+    }
+
+    /**
+     * Calculate the next payment date based on start_date and billing_cycle.
+     */
+    public function getNextPaymentDateAttribute(): ?\Carbon\Carbon
+    {
+        if ($this->billing_cycle === 'one_time' || !$this->start_date || !$this->is_active) {
+            return null;
+        }
+
+        $interval = $this->billing_cycle === 'yearly' ? 'addYear' : 'addMonth';
+        $next = $this->start_date->copy();
+
+        while ($next->lte(now())) {
+            $next->{$interval}();
+        }
+
+        return $next;
+    }
+
+    /**
+     * Check if payment is due within N days.
+     */
+    public function isDueSoon(int $days = 5): bool
+    {
+        $next = $this->next_payment_date;
+        return $next && $next->diffInDays(now(), absolute: true) <= $days && $next->gte(now());
+    }
+
+    /**
+     * Get the monthly equivalent cost
+     */
+    public function getMonthlyAmountAttribute(): float
+    {
+        return match ($this->billing_cycle) {
+            'yearly' => $this->amount / 12,
+            'one_time' => 0, // One-time costs are not recurring
+            default => $this->amount,
+        };
+    }
+
+    /**
+     * Scope for active costs
+     */
+    public function scopeActive($query)
+    {
+        return $query->where('is_active', true)
+            ->where(function ($q) {
+                $q->whereNull('end_date')
+                    ->orWhere('end_date', '>=', now());
+            });
+    }
+
+    /**
+     * Scope for recurring costs (monthly/yearly)
+     */
+    public function scopeRecurring($query)
+    {
+        return $query->whereIn('billing_cycle', ['monthly', 'yearly']);
+    }
+}

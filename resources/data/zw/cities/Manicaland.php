@@ -1,0 +1,105 @@
+<?php
+return [
+    [
+        'id'        => 131410,
+        'name'      => 'Buhera District',
+        'latitude'  => '-19.45658000',
+        'longitude' => '31.93156000',
+    ],
+    [
+        'id'        => 131417,
+        'name'      => 'Chimanimani',
+        'latitude'  => '-19.80000000',
+        'longitude' => '32.86667000',
+    ],
+    [
+        'id'        => 131418,
+        'name'      => 'Chimanimani District',
+        'latitude'  => '-19.78295000',
+        'longitude' => '32.73338000',
+    ],
+    [
+        'id'        => 131420,
+        'name'      => 'Chipinge',
+        'latitude'  => '-20.18833000',
+        'longitude' => '32.62365000',
+    ],
+    [
+        'id'        => 131421,
+        'name'      => 'Chipinge District',
+        'latitude'  => '-20.54959000',
+        'longitude' => '32.43110000',
+    ],
+    [
+        'id'        => 131430,
+        'name'      => 'Dorowa Mining Lease',
+        'latitude'  => '-19.06667000',
+        'longitude' => '31.75000000',
+    ],
+    [
+        'id'        => 131444,
+        'name'      => 'Headlands',
+        'latitude'  => '-18.27733000',
+        'longitude' => '32.05150000',
+    ],
+    [
+        'id'        => 131464,
+        'name'      => 'Makoni District',
+        'latitude'  => '-18.33550000',
+        'longitude' => '32.14650000',
+    ],
+    [
+        'id'        => 131480,
+        'name'      => 'Mutare',
+        'latitude'  => '-18.97070000',
+        'longitude' => '32.67086000',
+    ],
+    [
+        'id'        => 131481,
+        'name'      => 'Mutare District',
+        'latitude'  => '-19.25512000',
+        'longitude' => '32.44327000',
+    ],
+    [
+        'id'        => 131482,
+        'name'      => 'Mutasa District',
+        'latitude'  => '-18.66283000',
+        'longitude' => '32.74547000',
+    ],
+    [
+        'id'        => 131489,
+        'name'      => 'Nyanga',
+        'latitude'  => '-18.21667000',
+        'longitude' => '32.75000000',
+    ],
+    [
+        'id'        => 131490,
+        'name'      => 'Nyanga District',
+        'latitude'  => '-17.92951000',
+        'longitude' => '32.76561000',
+    ],
+    [
+        'id'        => 131491,
+        'name'      => 'Nyazura',
+        'latitude'  => '-18.70587000',
+        'longitude' => '32.16796000',
+    ],
+    [
+        'id'        => 131492,
+        'name'      => 'Odzi',
+        'latitude'  => '-18.96167000',
+        'longitude' => '32.40557000',
+    ],
+    [
+        'id'        => 131493,
+        'name'      => 'Penhalonga',
+        'latitude'  => '-18.89112000',
+        'longitude' => '32.69781000',
+    ],
+    [
+        'id'        => 131497,
+        'name'      => 'Rusape',
+        'latitude'  => '-18.52785000',
+        'longitude' => '32.12843000',
+    ],
+];

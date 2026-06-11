@@ -1,0 +1,14 @@
+<?php
+return [
+    'Balzers',
+    'Eschen',
+    'Gamprin',
+    'Mauren',
+    'Planken',
+    'Ruggell',
+    'Schaan',
+    'Schellenberg',
+    'Triesen',
+    'Triesenberg',
+    'Vaduz',
+];

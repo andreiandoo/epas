@@ -1,0 +1,105 @@
+<?php
+return [
+    [
+        'id'        => 105212,
+        'name'      => 'Amphoe Ban Pho',
+        'latitude'  => '13.61000000',
+        'longitude' => '101.07838000',
+    ],
+    [
+        'id'        => 105226,
+        'name'      => 'Amphoe Bang Khla',
+        'latitude'  => '13.74186000',
+        'longitude' => '101.20754000',
+    ],
+    [
+        'id'        => 105233,
+        'name'      => 'Amphoe Bang Nam Priao',
+        'latitude'  => '13.88034000',
+        'longitude' => '101.03232000',
+    ],
+    [
+        'id'        => 105236,
+        'name'      => 'Amphoe Bang Pakong',
+        'latitude'  => '13.53241000',
+        'longitude' => '100.96045000',
+    ],
+    [
+        'id'        => 105408,
+        'name'      => 'Amphoe Khlong Khuean',
+        'latitude'  => '13.77961000',
+        'longitude' => '101.15633000',
+    ],
+    [
+        'id'        => 105535,
+        'name'      => 'Amphoe Mueang Chachoengsao',
+        'latitude'  => '13.71758000',
+        'longitude' => '101.02152000',
+    ],
+    [
+        'id'        => 105729,
+        'name'      => 'Amphoe Phanom Sarakham',
+        'latitude'  => '13.73806000',
+        'longitude' => '101.41202000',
+    ],
+    [
+        'id'        => 105788,
+        'name'      => 'Amphoe Plaeng Yao',
+        'latitude'  => '13.56381000',
+        'longitude' => '101.33972000',
+    ],
+    [
+        'id'        => 105806,
+        'name'      => 'Amphoe Ratchasan',
+        'latitude'  => '13.78660000',
+        'longitude' => '101.28136000',
+    ],
+    [
+        'id'        => 106185,
+        'name'      => 'Amphoe Sanam Chai Khet',
+        'latitude'  => '13.62612000',
+        'longitude' => '101.65475000',
+    ],
+    [
+        'id'        => 106286,
+        'name'      => 'Amphoe Tha Takiap',
+        'latitude'  => '13.39510000',
+        'longitude' => '101.73457000',
+    ],
+    [
+        'id'        => 106427,
+        'name'      => 'Bang Khla',
+        'latitude'  => '13.72144000',
+        'longitude' => '101.20814000',
+    ],
+    [
+        'id'        => 106437,
+        'name'      => 'Bang Nam Priao',
+        'latitude'  => '13.84739000',
+        'longitude' => '101.05306000',
+    ],
+    [
+        'id'        => 106439,
+        'name'      => 'Bang Pakong',
+        'latitude'  => '13.54297000',
+        'longitude' => '100.99333000',
+    ],
+    [
+        'id'        => 106460,
+        'name'      => 'Chachoengsao',
+        'latitude'  => '13.68820000',
+        'longitude' => '101.07156000',
+    ],
+    [
+        'id'        => 106523,
+        'name'      => 'Khlong Khuean',
+        'latitude'  => '13.79131000',
+        'longitude' => '101.16353000',
+    ],
+    [
+        'id'        => 106623,
+        'name'      => 'Phanom Sarakham',
+        'latitude'  => '13.74872000',
+        'longitude' => '101.34888000',
+    ],
+];

@@ -1,0 +1,111 @@
+<?php
+return [
+    [
+        'id'        => 107104,
+        'name'      => 'Akçaabat',
+        'latitude'  => '41.01970000',
+        'longitude' => '39.56293000',
+    ],
+    [
+        'id'        => 107171,
+        'name'      => 'Araklı',
+        'latitude'  => '40.74000000',
+        'longitude' => '39.96000000',
+    ],
+    [
+        'id'        => 107191,
+        'name'      => 'Arsin',
+        'latitude'  => '40.86743000',
+        'longitude' => '39.92938000',
+    ],
+    [
+        'id'        => 107348,
+        'name'      => 'Beşikdüzü',
+        'latitude'  => '41.05202000',
+        'longitude' => '39.23294000',
+    ],
+    [
+        'id'        => 108785,
+        'name'      => 'Çarşıbaşı',
+        'latitude'  => '41.04203000',
+        'longitude' => '39.40035000',
+    ],
+    [
+        'id'        => 108801,
+        'name'      => 'Çaykara',
+        'latitude'  => '40.74267000',
+        'longitude' => '40.23175000',
+    ],
+    [
+        'id'        => 107483,
+        'name'      => 'Dernekpazarı',
+        'latitude'  => '40.79658000',
+        'longitude' => '40.24460000',
+    ],
+    [
+        'id'        => 107544,
+        'name'      => 'Düzköy',
+        'latitude'  => '40.87461000',
+        'longitude' => '39.41536000',
+    ],
+    [
+        'id'        => 107815,
+        'name'      => 'Hayrat',
+        'latitude'  => '40.88530000',
+        'longitude' => '40.36495000',
+    ],
+    [
+        'id'        => 108073,
+        'name'      => 'Köprübaşı',
+        'latitude'  => '40.80692000',
+        'longitude' => '40.11439000',
+    ],
+    [
+        'id'        => 108165,
+        'name'      => 'Maçka',
+        'latitude'  => '40.72127000',
+        'longitude' => '39.59786000',
+    ],
+    [
+        'id'        => 108261,
+        'name'      => 'Of',
+        'latitude'  => '40.94055000',
+        'longitude' => '40.25918000',
+    ],
+    [
+        'id'        => 108282,
+        'name'      => 'Ortahisar',
+        'latitude'  => '40.88029000',
+        'longitude' => '39.88998000',
+    ],
+    [
+        'id'        => 108930,
+        'name'      => 'Şalpazarı',
+        'latitude'  => '40.93826000',
+        'longitude' => '39.19006000',
+    ],
+    [
+        'id'        => 108524,
+        'name'      => 'Sürmene',
+        'latitude'  => '40.90588000',
+        'longitude' => '40.12792000',
+    ],
+    [
+        'id'        => 108583,
+        'name'      => 'Tonya',
+        'latitude'  => '40.88402000',
+        'longitude' => '39.28486000',
+    ],
+    [
+        'id'        => 108645,
+        'name'      => 'Vakfıkebir',
+        'latitude'  => '41.04583000',
+        'longitude' => '39.27639000',
+    ],
+    [
+        'id'        => 108733,
+        'name'      => 'Yomra',
+        'latitude'  => '40.95326000',
+        'longitude' => '39.85546000',
+    ],
+];

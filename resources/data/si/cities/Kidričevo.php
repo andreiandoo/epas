@@ -1,0 +1,9 @@
+<?php
+return [
+    [
+        'id'        => 104135,
+        'name'      => 'Kidričevo',
+        'latitude'  => '46.40361000',
+        'longitude' => '15.79111000',
+    ],
+];

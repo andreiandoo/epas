@@ -1,0 +1,111 @@
+<?php
+return [
+    [
+        'id'        => 53882,
+        'name'      => 'Camasca',
+        'latitude'  => '14.00000000',
+        'longitude' => '-88.38333000',
+    ],
+    [
+        'id'        => 53907,
+        'name'      => 'Colomoncagua',
+        'latitude'  => '13.97245000',
+        'longitude' => '-88.27673000',
+    ],
+    [
+        'id'        => 53910,
+        'name'      => 'Concepción',
+        'latitude'  => '14.04725000',
+        'longitude' => '-88.31942000',
+    ],
+    [
+        'id'        => 53935,
+        'name'      => 'Dolores',
+        'latitude'  => '14.26188000',
+        'longitude' => '-88.35787000',
+    ],
+    [
+        'id'        => 54027,
+        'name'      => 'Intibucá',
+        'latitude'  => '14.43000000',
+        'longitude' => '-88.17000000',
+    ],
+    [
+        'id'        => 54034,
+        'name'      => 'Jesús de Otoro',
+        'latitude'  => '14.48333000',
+        'longitude' => '-87.98333000',
+    ],
+    [
+        'id'        => 54035,
+        'name'      => 'Jiquinlaca',
+        'latitude'  => '14.00000000',
+        'longitude' => '-88.35000000',
+    ],
+    [
+        'id'        => 54054,
+        'name'      => 'La Esperanza',
+        'latitude'  => '14.31111000',
+        'longitude' => '-88.18056000',
+    ],
+    [
+        'id'        => 54114,
+        'name'      => 'Magdalena',
+        'latitude'  => '13.92452000',
+        'longitude' => '-88.36675000',
+    ],
+    [
+        'id'        => 54122,
+        'name'      => 'Masaguara',
+        'latitude'  => '14.40428000',
+        'longitude' => '-87.98247000',
+    ],
+    [
+        'id'        => 54213,
+        'name'      => 'San Antonio',
+        'latitude'  => '13.95043000',
+        'longitude' => '-88.46493000',
+    ],
+    [
+        'id'        => 54232,
+        'name'      => 'San Francisco de Opalaca',
+        'latitude'  => '14.58441000',
+        'longitude' => '-88.30253000',
+    ],
+    [
+        'id'        => 54238,
+        'name'      => 'San Isidro',
+        'latitude'  => '14.56763000',
+        'longitude' => '-88.11743000',
+    ],
+    [
+        'id'        => 54256,
+        'name'      => 'San Juan',
+        'latitude'  => '14.42127000',
+        'longitude' => '-88.41953000',
+    ],
+    [
+        'id'        => 54274,
+        'name'      => 'San Marcos de la Sierra',
+        'latitude'  => '14.13236000',
+        'longitude' => '-88.24690000',
+    ],
+    [
+        'id'        => 54277,
+        'name'      => 'San Miguelito',
+        'latitude'  => '14.34875000',
+        'longitude' => '-88.33983000',
+    ],
+    [
+        'id'        => 54304,
+        'name'      => 'Santa Lucía',
+        'latitude'  => '13.90812000',
+        'longitude' => '-88.41566000',
+    ],
+    [
+        'id'        => 54368,
+        'name'      => 'Yamaranguila',
+        'latitude'  => '14.26826000',
+        'longitude' => '-88.24652000',
+    ],
+];

@@ -1,0 +1,117 @@
+<?php
+return [
+    [
+        'id'        => 104942,
+        'name'      => 'Ad Dānā',
+        'latitude'  => '36.21254000',
+        'longitude' => '36.76998000',
+    ],
+    [
+        'id'        => 104973,
+        'name'      => 'Arīḩā',
+        'latitude'  => '35.81374000',
+        'longitude' => '36.60964000',
+    ],
+    [
+        'id'        => 104972,
+        'name'      => 'Armanāz',
+        'latitude'  => '36.08363000',
+        'longitude' => '36.50310000',
+    ],
+    [
+        'id'        => 104985,
+        'name'      => 'Binnish',
+        'latitude'  => '35.95664000',
+        'longitude' => '36.71380000',
+    ],
+    [
+        'id'        => 104989,
+        'name'      => 'Darkūsh',
+        'latitude'  => '35.99180000',
+        'longitude' => '36.39361000',
+    ],
+    [
+        'id'        => 104999,
+        'name'      => 'Harem District',
+        'latitude'  => '36.14014000',
+        'longitude' => '36.56535000',
+    ],
+    [
+        'id'        => 105078,
+        'name'      => 'Ḩārim',
+        'latitude'  => '36.21176000',
+        'longitude' => '36.52078000',
+    ],
+    [
+        'id'        => 105002,
+        'name'      => 'Idlib',
+        'latitude'  => '35.93062000',
+        'longitude' => '36.63393000',
+    ],
+    [
+        'id'        => 105012,
+        'name'      => 'Jisr al-Shughur District',
+        'latitude'  => '35.87756000',
+        'longitude' => '36.32901000',
+    ],
+    [
+        'id'        => 105013,
+        'name'      => 'Jisr ash Shughūr',
+        'latitude'  => '35.81418000',
+        'longitude' => '36.31983000',
+    ],
+    [
+        'id'        => 105017,
+        'name'      => 'Kafr Takhārīm',
+        'latitude'  => '36.11680000',
+        'longitude' => '36.51522000',
+    ],
+    [
+        'id'        => 105020,
+        'name'      => 'Kafranbel',
+        'latitude'  => '35.61376000',
+        'longitude' => '36.56449000',
+    ],
+    [
+        'id'        => 105023,
+        'name'      => 'Khān Shaykhūn',
+        'latitude'  => '35.44208000',
+        'longitude' => '36.65095000',
+    ],
+    [
+        'id'        => 105031,
+        'name'      => 'Ma‘arratmişrīn',
+        'latitude'  => '36.01152000',
+        'longitude' => '36.67183000',
+    ],
+    [
+        'id'        => 105026,
+        'name'      => 'Maarrat al-Nu\'man District',
+        'latitude'  => '35.53858000',
+        'longitude' => '36.79193000',
+    ],
+    [
+        'id'        => 105044,
+        'name'      => 'Salqīn',
+        'latitude'  => '36.13865000',
+        'longitude' => '36.45244000',
+    ],
+    [
+        'id'        => 105046,
+        'name'      => 'Sarāqib',
+        'latitude'  => '35.86447000',
+        'longitude' => '36.80591000',
+    ],
+    [
+        'id'        => 105045,
+        'name'      => 'Sarmīn',
+        'latitude'  => '35.90403000',
+        'longitude' => '36.72501000',
+    ],
+    [
+        'id'        => 105054,
+        'name'      => 'Taftanāz',
+        'latitude'  => '35.99832000',
+        'longitude' => '36.78579000',
+    ],
+];

@@ -1,0 +1,111 @@
+<?php
+return [
+    [
+        'id'        => 80558,
+        'name'      => 'Ambo',
+        'latitude'  => '-10.13083000',
+        'longitude' => '-76.20472000',
+    ],
+    [
+        'id'        => 80646,
+        'name'      => 'Huacaybamba',
+        'latitude'  => '-8.99480000',
+        'longitude' => '-76.81027000',
+    ],
+    [
+        'id'        => 80665,
+        'name'      => 'Huánuco',
+        'latitude'  => '-9.93062000',
+        'longitude' => '-76.24223000',
+    ],
+    [
+        'id'        => 80691,
+        'name'      => 'La Unión',
+        'latitude'  => '-9.82702000',
+        'longitude' => '-76.80199000',
+    ],
+    [
+        'id'        => 80699,
+        'name'      => 'Lauricocha',
+        'latitude'  => '-10.20055000',
+        'longitude' => '-76.70359000',
+    ],
+    [
+        'id'        => 80703,
+        'name'      => 'Llata',
+        'latitude'  => '-9.41667000',
+        'longitude' => '-76.78333000',
+    ],
+    [
+        'id'        => 80771,
+        'name'      => 'Provincia de Ambo',
+        'latitude'  => '-10.16667000',
+        'longitude' => '-76.16667000',
+    ],
+    [
+        'id'        => 80821,
+        'name'      => 'Provincia de Dos de Mayo',
+        'latitude'  => '-9.91667000',
+        'longitude' => '-76.75000000',
+    ],
+    [
+        'id'        => 80828,
+        'name'      => 'Provincia de Huamalíes',
+        'latitude'  => '-9.25000000',
+        'longitude' => '-76.50000000',
+    ],
+    [
+        'id'        => 80842,
+        'name'      => 'Provincia de Huánuco',
+        'latitude'  => '-9.66667000',
+        'longitude' => '-76.08333000',
+    ],
+    [
+        'id'        => 80855,
+        'name'      => 'Provincia de Leoncio Prado',
+        'latitude'  => '-9.16667000',
+        'longitude' => '-76.00000000',
+    ],
+    [
+        'id'        => 80859,
+        'name'      => 'Provincia de Marañón',
+        'latitude'  => '-8.75000000',
+        'longitude' => '-76.66667000',
+    ],
+    [
+        'id'        => 80869,
+        'name'      => 'Provincia de Pachitea',
+        'latitude'  => '-9.95262000',
+        'longitude' => '-75.81390000',
+    ],
+    [
+        'id'        => 80917,
+        'name'      => 'Puerto Inca',
+        'latitude'  => '-9.36696000',
+        'longitude' => '-75.08958000',
+    ],
+    [
+        'id'        => 80952,
+        'name'      => 'San Miguel de Cauri',
+        'latitude'  => '-10.13818000',
+        'longitude' => '-76.62288000',
+    ],
+    [
+        'id'        => 80992,
+        'name'      => 'Tingo María',
+        'latitude'  => '-9.29532000',
+        'longitude' => '-75.99574000',
+    ],
+    [
+        'id'        => 81014,
+        'name'      => 'Yanacancha',
+        'latitude'  => '-10.24111000',
+        'longitude' => '-76.64556000',
+    ],
+    [
+        'id'        => 81016,
+        'name'      => 'Yarowilca',
+        'latitude'  => '-9.80263000',
+        'longitude' => '-76.59516000',
+    ],
+];

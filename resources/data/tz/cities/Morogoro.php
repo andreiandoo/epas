@@ -1,0 +1,111 @@
+<?php
+return [
+    [
+        'id'        => 109070,
+        'name'      => 'Geiro',
+        'latitude'  => '-6.15000000',
+        'longitude' => '36.86667000',
+    ],
+    [
+        'id'        => 109073,
+        'name'      => 'Ifakara',
+        'latitude'  => '-8.13333000',
+        'longitude' => '36.68333000',
+    ],
+    [
+        'id'        => 109106,
+        'name'      => 'Kidatu',
+        'latitude'  => '-7.69916000',
+        'longitude' => '36.95722000',
+    ],
+    [
+        'id'        => 109107,
+        'name'      => 'Kidodi',
+        'latitude'  => '-7.60361000',
+        'longitude' => '37.00438000',
+    ],
+    [
+        'id'        => 109115,
+        'name'      => 'Kilosa',
+        'latitude'  => '-6.83333000',
+        'longitude' => '36.98333000',
+    ],
+    [
+        'id'        => 109116,
+        'name'      => 'Kimamba',
+        'latitude'  => '-6.78333000',
+        'longitude' => '37.13333000',
+    ],
+    [
+        'id'        => 109123,
+        'name'      => 'Kisanga',
+        'latitude'  => '-7.43622000',
+        'longitude' => '37.70337000',
+    ],
+    [
+        'id'        => 109149,
+        'name'      => 'Lupiro',
+        'latitude'  => '-8.38333000',
+        'longitude' => '36.66667000',
+    ],
+    [
+        'id'        => 109155,
+        'name'      => 'Magole',
+        'latitude'  => '-6.37697000',
+        'longitude' => '37.37373000',
+    ],
+    [
+        'id'        => 109160,
+        'name'      => 'Mahenge',
+        'latitude'  => '-8.68333000',
+        'longitude' => '36.71667000',
+    ],
+    [
+        'id'        => 109170,
+        'name'      => 'Malinyi',
+        'latitude'  => '-8.93333000',
+        'longitude' => '36.13333000',
+    ],
+    [
+        'id'        => 109197,
+        'name'      => 'Mikumi',
+        'latitude'  => '-7.40409000',
+        'longitude' => '36.98309000',
+    ],
+    [
+        'id'        => 109206,
+        'name'      => 'Mlimba',
+        'latitude'  => '-8.80000000',
+        'longitude' => '35.81667000',
+    ],
+    [
+        'id'        => 109208,
+        'name'      => 'Morogoro',
+        'latitude'  => '-6.82102000',
+        'longitude' => '37.66122000',
+    ],
+    [
+        'id'        => 109213,
+        'name'      => 'Msowero',
+        'latitude'  => '-6.53333000',
+        'longitude' => '37.20000000',
+    ],
+    [
+        'id'        => 109216,
+        'name'      => 'Mtimbira',
+        'latitude'  => '-8.78333000',
+        'longitude' => '36.35000000',
+    ],
+    [
+        'id'        => 109228,
+        'name'      => 'Mvomero District',
+        'latitude'  => '-6.30000000',
+        'longitude' => '37.45000000',
+    ],
+    [
+        'id'        => 109252,
+        'name'      => 'Ngerengere',
+        'latitude'  => '-6.75000000',
+        'longitude' => '38.11667000',
+    ],
+];

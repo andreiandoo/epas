@@ -1,0 +1,11 @@
+<?php
+return [
+    'Barbuda',
+    'Redonda',
+    'Saint George',
+    'Saint John',
+    'Saint Mary',
+    'Saint Paul',
+    'Saint Peter',
+    'Saint Philip',
+];

@@ -1,0 +1,2549 @@
+<?php
+
+namespace App\Http\Controllers\Api\MarketplaceClient\Organizer\Leisure;
+
+use App\Http\Controllers\Api\MarketplaceClient\BaseController;
+use App\Models\BoatRental;
+use App\Models\Event;
+use App\Models\LeisureBoat;
+use App\Models\LeisureResourceLock;
+use App\Models\LeisureShift;
+use App\Models\MarketplaceOrganizer;
+use App\Models\MarketplaceOrganizerTeamMember;
+use App\Models\Order;
+use App\Models\OrderItem;
+use App\Models\Ticket;
+use App\Models\TicketType;
+use Carbon\Carbon;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
+
+/**
+ * Leisure venue endpoints (F1 — minim viabil).
+ *
+ * Activate doar pentru evenimente cu display_template === 'leisure_venue'.
+ * Filtreaza pe marketplace_client_id al organizatorului autenticat.
+ *
+ * Modelul fiscal: organizatorul poate avea 2 societati emitente
+ * (primary = company_*, secondary = secondary_company_*). Fiecare TicketType
+ * are issuing_company ('primary'|'secondary'|NULL=primary).
+ */
+class LeisureController extends BaseController
+{
+    /**
+     * GET /marketplace-client/organizer/events/{event}/leisure/config
+     *
+     * Returneaza configurarea leisure: ticket types cu societatea emitenta efectiva
+     * + datele celor 2 societati ale organizatorului (primary intotdeauna,
+     * secondary doar daca has_secondary_issuer=true).
+     */
+    public function config(Request $request, int $event): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+        $marketplace = $organizer->marketplaceClient;
+
+        $eventModel = Event::query()
+            ->where('id', $event)
+            ->where('marketplace_client_id', $marketplace->id)
+            ->first();
+
+        if (!$eventModel) {
+            return $this->error('Event not found', 404);
+        }
+
+        if (($eventModel->display_template ?? 'standard') !== 'leisure_venue') {
+            return $this->error('Event is not a leisure venue', 422);
+        }
+
+        // Organizatorul evenimentului (in cazul multi-organizer marketplace,
+        // poate diferi de organizer-ul autentificat — folosim cel al evenimentului
+        // pentru datele juridice).
+        $eventOrganizer = $eventModel->marketplace_organizer_id
+            ? MarketplaceOrganizer::find($eventModel->marketplace_organizer_id)
+            : $organizer;
+
+        $ticketTypes = TicketType::query()
+            ->where('event_id', $eventModel->id)
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->get();
+
+        $issuers = [
+            'primary' => $eventOrganizer?->getIssuerData('primary') ?? [],
+        ];
+        if ($eventOrganizer?->has_secondary_issuer) {
+            $issuers['secondary'] = $eventOrganizer->getIssuerData('secondary');
+        }
+
+        // Comision la nivel de organizator (folosit pentru calcul live in POS)
+        $commission = ['rate' => 0.0, 'fixed' => 0.0, 'mode' => 'included'];
+        if ($eventOrganizer) {
+            $commission = [
+                'rate' => (float) $eventOrganizer->getEffectiveCommissionRate(),
+                'fixed' => (float) ($eventOrganizer->fixed_commission_default ?? 0),
+                'mode' => $eventOrganizer->getEffectiveCommissionMode(),
+            ];
+        }
+
+        // C2: categorii custom pentru gruparea tipurilor de bilete (afișare pe
+        // pagina publica + organizator panel). Stocate in venue_config.ticket_categories
+        // ca [{id, name, sort_order}]. Sortate after sort_order asc, name asc.
+        $venueConfig = is_array($eventModel->venue_config ?? null) ? $eventModel->venue_config : [];
+        $ticketCategories = is_array($venueConfig['ticket_categories'] ?? null) ? $venueConfig['ticket_categories'] : [];
+        usort($ticketCategories, function ($a, $b) {
+            $sa = (int) ($a['sort_order'] ?? 0);
+            $sb = (int) ($b['sort_order'] ?? 0);
+            if ($sa !== $sb) return $sa <=> $sb;
+            return strcmp((string) ($a['name'] ?? ''), (string) ($b['name'] ?? ''));
+        });
+
+        return $this->success([
+            'event' => [
+                'id' => $eventModel->id,
+                'title' => $this->localizedTitle($eventModel),
+                'display_template' => $eventModel->display_template,
+            ],
+            'organizer' => $eventOrganizer ? [
+                'id' => $eventOrganizer->id,
+                'name' => $eventOrganizer->name,
+                'has_secondary_issuer' => (bool) $eventOrganizer->has_secondary_issuer,
+            ] : null,
+            'commission' => $commission,
+            'issuers' => $issuers,
+            'ticket_categories' => $ticketCategories,
+            'ticket_types' => $ticketTypes->map(function (TicketType $tt) use ($ticketTypes) {
+                $variants = [];
+                $rawVariants = is_array($tt->meta) ? ($tt->meta['variants'] ?? null) : null;
+                if (is_array($rawVariants)) {
+                    foreach ($rawVariants as $v) {
+                        if (!is_array($v) || empty($v['label'])) continue;
+                        $variants[] = [
+                            'id' => $v['id'] ?? \Illuminate\Support\Str::slug($v['label']),
+                            'label' => $v['label'],
+                            'duration_minutes' => isset($v['duration_minutes']) ? (int) $v['duration_minutes'] : null,
+                            'price' => isset($v['price']) ? (float) $v['price'] : (float) ($tt->price_max ?? $tt->price ?? 0),
+                        ];
+                    }
+                }
+
+                // Add-ons (F2: ex Sanii tractare extra)
+                $addons = [];
+                $rawAddons = is_array($tt->meta) ? ($tt->meta['addons'] ?? null) : null;
+                if (is_array($rawAddons)) {
+                    foreach ($rawAddons as $a) {
+                        if (!is_array($a) || empty($a['label'])) continue;
+                        $addons[] = [
+                            'id' => $a['id'] ?? \Illuminate\Support\Str::slug($a['label']),
+                            'label' => $a['label'],
+                            'price' => (float) ($a['price'] ?? 0),
+                            'included_qty' => max(0, (int) ($a['included_qty'] ?? 0)),
+                            'max_per_unit' => max(0, (int) ($a['max_per_unit'] ?? 5)),
+                        ];
+                    }
+                }
+
+                // Pachete: enrich outputs cu nume + preț component
+                $packageOutputs = [];
+                $packageSum = 0.0;
+                $rawOutputs = is_array($tt->meta) ? ($tt->meta['package_outputs'] ?? null) : null;
+                $price = (float) ($tt->price_max ?? $tt->price ?? 0);
+                if (is_array($rawOutputs) && ($tt->effective_service_category === 'package')) {
+                    foreach ($rawOutputs as $row) {
+                        if (!is_array($row) || empty($row['ticket_type_id'])) continue;
+                        $compTt = $ticketTypes->firstWhere('id', $row['ticket_type_id']);
+                        if (!$compTt) continue;
+                        $compPrice = (float) ($compTt->price_max ?? $compTt->price ?? 0);
+                        if (!empty($row['variant_id']) && is_array($compTt->meta['variants'] ?? null)) {
+                            foreach ($compTt->meta['variants'] as $cv) {
+                                if (!is_array($cv) || empty($cv['label'])) continue;
+                                $cvid = $cv['id'] ?? \Illuminate\Support\Str::slug($cv['label']);
+                                if ($cvid === $row['variant_id']) {
+                                    $compPrice = (float) ($cv['price'] ?? $compPrice);
+                                    break;
+                                }
+                            }
+                        }
+                        $qty = (int) ($row['qty'] ?? 1);
+                        $packageSum += $compPrice * $qty;
+                        $packageOutputs[] = [
+                            'ticket_type_id' => (int) $row['ticket_type_id'],
+                            'variant_id' => $row['variant_id'] ?? null,
+                            'qty' => $qty,
+                            'component_name' => is_array($compTt->name) ? ($compTt->name['ro'] ?? reset($compTt->name)) : $compTt->name,
+                            'component_unit_price' => $compPrice,
+                        ];
+                    }
+                }
+
+                // Expun top-level field-urile pos_* + access_requirement + slots/inventory
+                // ca POS frontend-ul (leisure-pos.php) si mobile app-ul sa filtreze
+                // corect produsele si sa afiseze pretul POS. Frontend foloseste deja
+                // t.pos_price direct (linia 130+ in leisure-pos.php) — fara expunere
+                // explicita, valoarea era 'undefined' si toate produsele cu doar
+                // pos_price setat erau ascunse din POS panel.
+                $metaArr = is_array($tt->meta) ? $tt->meta : [];
+                return [
+                    'id' => $tt->id,
+                    'name' => $tt->name,
+                    'sku' => $tt->sku,
+                    'price' => $price,
+                    'price_max' => (float) ($tt->price_max ?? 0),
+                    'service_category' => $tt->effective_service_category,
+                    'is_parking' => (bool) $tt->is_parking,
+                    'requires_vehicle_info' => (bool) $tt->requires_vehicle_info,
+                    'daily_capacity' => $tt->daily_capacity,
+                    'ticket_group' => $tt->ticket_group,
+                    'issuing_company' => $tt->effective_issuing_company,
+                    'issuing_explicit' => (bool) $tt->issuing_company,
+                    'meta' => $metaArr ?: (object) [],
+                    'variants' => $variants,
+                    'addons' => $addons,
+                    'package_outputs' => $packageOutputs,
+                    'package_components_sum' => round($packageSum, 2),
+                    'package_savings' => $packageOutputs ? round($packageSum - $price, 2) : 0,
+                    // Top-level mirror pentru meta-uri folosite la POS gating + UI
+                    'pos_price' => (isset($metaArr['pos_price']) && $metaArr['pos_price'] !== '' && $metaArr['pos_price'] !== null)
+                        ? (float) $metaArr['pos_price'] : null,
+                    'pos_only' => (bool) ($metaArr['pos_only'] ?? false),
+                    'is_child_ticket' => (bool) ($metaArr['is_child_ticket'] ?? false),
+                    'access_requirement' => in_array($metaArr['access_requirement'] ?? null, ['none','any','adult_only'], true)
+                        ? $metaArr['access_requirement']
+                        : 'none',
+                    'slots_config' => is_array($metaArr['slots_config'] ?? null) ? $metaArr['slots_config'] : null,
+                    'physical_inventory' => is_array($metaArr['physical_inventory'] ?? null) ? $metaArr['physical_inventory'] : null,
+                ];
+            })->all(),
+        ]);
+    }
+
+    /**
+     * GET /marketplace-client/organizer/events/{event}/leisure/reports/by-issuer?from=&to=
+     *
+     * Break-down vanzari pe societate emitenta a organizatorului (primary | secondary)
+     * pentru perioada specificata.
+     */
+    public function reportsByIssuer(Request $request, int $event): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+        $marketplace = $organizer->marketplaceClient;
+
+        $eventModel = Event::query()
+            ->where('id', $event)
+            ->where('marketplace_client_id', $marketplace->id)
+            ->first();
+
+        if (!$eventModel) {
+            return $this->error('Event not found', 404);
+        }
+
+        $validated = $request->validate([
+            'from' => 'nullable|date',
+            'to' => 'nullable|date|after_or_equal:from',
+        ]);
+
+        $from = isset($validated['from'])
+            ? Carbon::parse($validated['from'])->startOfDay()
+            : Carbon::today()->subDays(30)->startOfDay();
+        $to = isset($validated['to'])
+            ? Carbon::parse($validated['to'])->endOfDay()
+            : Carbon::today()->endOfDay();
+
+        $eventOrganizer = $eventModel->marketplace_organizer_id
+            ? MarketplaceOrganizer::find($eventModel->marketplace_organizer_id)
+            : $organizer;
+
+        $orders = Order::query()
+            ->where('event_id', $eventModel->id)
+            ->whereIn('status', ['completed', 'paid'])
+            ->whereBetween('paid_at', [$from, $to])
+            ->with([
+                'tickets:id,order_id,ticket_type_id,price,status',
+                'tickets.ticketType:id,name,issuing_company,service_category',
+            ])
+            ->get(['id', 'event_id', 'paid_at', 'status', 'currency']);
+
+        $buckets = [
+            'primary' => $this->emptyBucket(),
+            'secondary' => $this->emptyBucket(),
+        ];
+
+        foreach ($orders as $order) {
+            foreach ($order->tickets as $ticket) {
+                if (in_array($ticket->status, ['cancelled', 'refunded'], true)) {
+                    continue;
+                }
+
+                $tt = $ticket->ticketType;
+                $company = $tt?->effective_issuing_company ?: 'primary';
+                if (!isset($buckets[$company])) {
+                    $buckets[$company] = $this->emptyBucket();
+                }
+
+                $bucket = &$buckets[$company];
+                $bucket['orders'][$order->id] = true;
+                $bucket['tickets_count']++;
+                $bucket['subtotal'] += (float) ($ticket->price ?? 0);
+
+                $cat = $tt?->effective_service_category ?? 'access';
+                if (!isset($bucket['by_category'][$cat])) {
+                    $bucket['by_category'][$cat] = ['count' => 0, 'subtotal' => 0.0];
+                }
+                $bucket['by_category'][$cat]['count']++;
+                $bucket['by_category'][$cat]['subtotal'] += (float) ($ticket->price ?? 0);
+                unset($bucket);
+            }
+        }
+
+        $rows = [];
+        foreach ($buckets as $company => $b) {
+            // Skip secondary daca nu are date si nu e activat pe organizer
+            if ($company === 'secondary'
+                && $b['tickets_count'] === 0
+                && !$eventOrganizer?->has_secondary_issuer) {
+                continue;
+            }
+
+            $rows[] = [
+                'company' => $company,
+                'issuer' => $eventOrganizer?->getIssuerData($company),
+                'orders_count' => count($b['orders']),
+                'tickets_count' => $b['tickets_count'],
+                'subtotal' => round($b['subtotal'], 2),
+                'by_category' => $b['by_category'],
+            ];
+        }
+
+        return $this->success([
+            'event_id' => $eventModel->id,
+            'from' => $from->toDateString(),
+            'to' => $to->toDateString(),
+            'currency' => $orders->first()?->currency ?? 'RON',
+            'rows' => $rows,
+        ]);
+    }
+
+    /**
+     * PUT /marketplace-client/organizer/events/{event}/leisure/venue-config
+     *
+     * Self-service editor pentru continutul venue_config (hero, FAQ, attractions,
+     * trails, etc.). Organizatorul rezervatiei poate modifica fara sa intre in
+     * Filament admin Tixello.
+     *
+     * Cheile array (faqs, trails, etc.) sunt INLOCUITE complet ca sa permita
+     * stergerea/reordonarea elementelor.
+     */
+    public function updateVenueConfig(Request $request, int $event): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+        $marketplace = $organizer->marketplaceClient;
+
+        $eventModel = Event::query()
+            ->where('id', $event)
+            ->where('marketplace_client_id', $marketplace->id)
+            ->where('marketplace_organizer_id', $organizer->id)
+            ->first();
+
+        if (!$eventModel) {
+            return $this->error('Event not found or access denied', 404);
+        }
+
+        if (($eventModel->display_template ?? 'standard') !== 'leisure_venue') {
+            return $this->error('Event is not a leisure venue', 422);
+        }
+
+        $validated = $request->validate([
+            'venue_config' => 'required|array',
+        ]);
+
+        $current = $eventModel->venue_config ?? [];
+        $incoming = $validated['venue_config'];
+
+        $listKeys = [
+            'hero_badges', 'amenities', 'closed_dates', 'pricing_rules', 'seasons',
+            'attractions', 'stats_highlights', 'flora', 'trails', 'getting_there',
+            'quick_stats', 'gallery', 'videos', 'nearby_hotels',
+            'faqs', 'bundle_discounts',
+            'sections', 'section_order',
+            // C2: categorii custom de afișare pentru tipurile de bilete (id, name, sort_order)
+            'ticket_categories',
+        ];
+
+        $merged = $current;
+        foreach ($incoming as $key => $value) {
+            if (in_array($key, $listKeys, true)) {
+                $merged[$key] = $value;
+            } elseif (is_array($value) && isset($merged[$key]) && is_array($merged[$key])) {
+                $merged[$key] = array_replace_recursive($merged[$key], $value);
+            } else {
+                $merged[$key] = $value;
+            }
+        }
+
+        $eventModel->venue_config = $merged;
+        $eventModel->save();
+
+        return $this->success([
+            'venue_config' => $merged,
+            'updated_keys' => array_keys($incoming),
+        ], 'Conținut actualizat cu succes');
+    }
+
+    /**
+     * GET /marketplace-client/organizer/events/{event}/leisure/participants
+     *     ?from=&to=&search=&page=&per_page=
+     *
+     * Listă tickete vândute (= participanți) cu filtre dată + search + paginare.
+     */
+    public function participants(Request $request, int $event): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+        $marketplace = $organizer->marketplaceClient;
+
+        $eventModel = Event::query()
+            ->where('id', $event)
+            ->where('marketplace_client_id', $marketplace->id)
+            ->first();
+
+        if (!$eventModel) {
+            return $this->error('Event not found', 404);
+        }
+
+        $validated = $request->validate([
+            'from' => 'nullable|date',
+            'to' => 'nullable|date|after_or_equal:from',
+            'search' => 'nullable|string|max:100',
+            'per_page' => 'nullable|integer|min:1|max:200',
+            'page' => 'nullable|integer|min:1',
+        ]);
+
+        $from = isset($validated['from'])
+            ? Carbon::parse($validated['from'])->startOfDay()
+            : Carbon::today()->subDays(30)->startOfDay();
+        $to = isset($validated['to'])
+            ? Carbon::parse($validated['to'])->endOfDay()
+            : Carbon::today()->endOfDay();
+        $perPage = (int) ($validated['per_page'] ?? 50);
+        $search = $validated['search'] ?? null;
+
+        $query = \App\Models\Ticket::query()
+            ->whereHas('order', fn ($q) => $q
+                ->where('event_id', $eventModel->id)
+                ->whereIn('status', ['completed', 'paid'])
+                ->whereBetween('paid_at', [$from, $to]))
+            ->with([
+                'order:id,customer_name,customer_email,customer_phone,paid_at,status,total',
+                'ticketType:id,name,service_category,issuing_company,valid_date',
+            ]);
+
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('code', 'ilike', "%{$search}%")
+                  ->orWhere('barcode', 'ilike', "%{$search}%")
+                  ->orWhereHas('order', fn ($oq) => $oq
+                      ->where('customer_name', 'ilike', "%{$search}%")
+                      ->orWhere('customer_email', 'ilike', "%{$search}%"));
+            });
+        }
+
+        $paginator = $query->orderByDesc('id')->paginate($perPage);
+
+        // Aggregare stats (total, checked-in, no-show) — query separat pe acelasi filter
+        $statsQuery = \App\Models\Ticket::query()
+            ->whereHas('order', fn ($q) => $q
+                ->where('event_id', $eventModel->id)
+                ->whereIn('status', ['completed', 'paid'])
+                ->whereBetween('paid_at', [$from, $to]));
+        $totalTickets = (clone $statsQuery)->count();
+        $checkedIn = (clone $statsQuery)->whereNotNull('checked_in_at')->count();
+        $rate = $totalTickets > 0 ? round($checkedIn / $totalTickets * 100, 1) : 0;
+
+        $rows = $paginator->getCollection()->map(function ($t) {
+            $metaVisit = is_array($t->meta ?? null) ? ($t->meta['visit_date'] ?? null) : null;
+            $visit = $metaVisit
+                ?? optional($t->ticketType?->valid_date)->toDateString()
+                ?? optional($t->order?->paid_at)->toDateString();
+            return [
+                'id' => $t->id,
+                'code' => $t->code,
+                'barcode' => $t->barcode,
+                'customer_name' => $t->order->customer_name ?? null,
+                'customer_email' => $t->order->customer_email ?? null,
+                'ticket_type' => $t->ticketType->name ?? null,
+                'service_category' => $t->ticketType->service_category ?? 'access',
+                'issuing_company' => $t->ticketType->issuing_company ?? 'primary',
+                'visit_date' => $visit,
+                'status' => $t->status,
+                'checked_in_at' => optional($t->checked_in_at)->toIso8601String(),
+            ];
+        });
+
+        return $this->success([
+            'from' => $from->toDateString(),
+            'to' => $to->toDateString(),
+            'stats' => [
+                'total' => $totalTickets,
+                'checked_in' => $checkedIn,
+                'no_show' => max(0, $totalTickets - $checkedIn),
+                'rate' => $rate,
+            ],
+            'rows' => $rows,
+            'meta' => [
+                'current_page' => $paginator->currentPage(),
+                'last_page' => $paginator->lastPage(),
+                'per_page' => $paginator->perPage(),
+                'total' => $paginator->total(),
+            ],
+        ]);
+    }
+
+    /**
+     * GET /marketplace-client/organizer/events/{event}/leisure/sales-timeline
+     *     ?from=&to=&group_by=day|week|month
+     *
+     * Time series vânzări — pentru chart-uri pe pagina Sales.
+     */
+    public function salesTimeline(Request $request, int $event): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+        $marketplace = $organizer->marketplaceClient;
+
+        $eventModel = Event::query()
+            ->where('id', $event)
+            ->where('marketplace_client_id', $marketplace->id)
+            ->first();
+
+        if (!$eventModel) {
+            return $this->error('Event not found', 404);
+        }
+
+        $validated = $request->validate([
+            'from' => 'nullable|date',
+            'to' => 'nullable|date|after_or_equal:from',
+            'group_by' => 'nullable|in:day,week,month',
+        ]);
+
+        $from = isset($validated['from'])
+            ? Carbon::parse($validated['from'])->startOfDay()
+            : Carbon::today()->subDays(7)->startOfDay();
+        $to = isset($validated['to'])
+            ? Carbon::parse($validated['to'])->endOfDay()
+            : Carbon::today()->endOfDay();
+        $groupBy = $validated['group_by'] ?? 'day';
+
+        $orders = Order::query()
+            ->where('event_id', $eventModel->id)
+            ->whereIn('status', ['completed', 'paid'])
+            ->whereBetween('paid_at', [$from, $to])
+            ->with(['tickets:id,order_id,ticket_type_id,price,status', 'tickets.ticketType:id,service_category'])
+            ->get(['id', 'event_id', 'paid_at', 'status', 'total', 'currency']);
+
+        // Format key per groupBy
+        $fmtKey = function ($carbon) use ($groupBy) {
+            if ($groupBy === 'month') return $carbon->format('Y-m');
+            if ($groupBy === 'week')  return $carbon->format('o-W'); // ISO week
+            return $carbon->toDateString();
+        };
+
+        $buckets = [];
+        $totalRevenue = 0.0;
+        $totalTickets = 0;
+        $totalOrders = $orders->count();
+        $byCategory = [];
+
+        foreach ($orders as $order) {
+            $key = $fmtKey($order->paid_at);
+            if (!isset($buckets[$key])) {
+                $buckets[$key] = ['date' => $key, 'orders' => 0, 'tickets' => 0, 'revenue' => 0.0];
+            }
+            $buckets[$key]['orders']++;
+            $rev = (float) ($order->total ?? 0);
+            $buckets[$key]['revenue'] += $rev;
+            $totalRevenue += $rev;
+
+            foreach ($order->tickets as $ticket) {
+                if (in_array($ticket->status, ['cancelled', 'refunded'], true)) continue;
+                $buckets[$key]['tickets']++;
+                $totalTickets++;
+                $cat = $ticket->ticketType->service_category ?? 'access';
+                $byCategory[$cat] = ($byCategory[$cat] ?? 0) + 1;
+            }
+        }
+
+        ksort($buckets);
+
+        return $this->success([
+            'from' => $from->toDateString(),
+            'to' => $to->toDateString(),
+            'group_by' => $groupBy,
+            'currency' => $orders->first()?->currency ?? 'RON',
+            'rows' => array_values($buckets),
+            'totals' => [
+                'orders' => $totalOrders,
+                'tickets' => $totalTickets,
+                'revenue' => round($totalRevenue, 2),
+                'avg_order' => $totalOrders > 0 ? round($totalRevenue / $totalOrders, 2) : 0,
+            ],
+            'by_category' => $byCategory,
+        ]);
+    }
+
+    /**
+     * GET /marketplace-client/organizer/events/{event}/leisure/dashboard/live
+     *
+     * Snapshot real-time: vândut azi, scanat azi, ocupare curentă, venit azi,
+     * activitate pe porți (ultima oră, grupată pe bucket-uri de 5 min)
+     * și stream cu ultimele 20 activități (vânzări + scanări).
+     */
+    public function dashboardLive(Request $request, int $event): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+        $marketplace = $organizer->marketplaceClient;
+
+        $eventModel = Event::query()
+            ->where('id', $event)
+            ->where('marketplace_client_id', $marketplace->id)
+            ->first();
+
+        if (!$eventModel) {
+            return $this->error('Event not found', 404);
+        }
+
+        $todayStart = Carbon::today()->startOfDay();
+        $todayEnd = Carbon::today()->endOfDay();
+        $hourAgo = Carbon::now()->subHour();
+
+        // Stats azi
+        $ordersToday = Order::query()
+            ->where('event_id', $eventModel->id)
+            ->whereIn('status', ['paid', 'completed'])
+            ->whereBetween('paid_at', [$todayStart, $todayEnd])
+            ->get(['id', 'total', 'currency', 'paid_at', 'customer_name']);
+
+        $todayRevenue = round((float) $ordersToday->sum('total'), 2);
+        $todayOrders = $ordersToday->count();
+
+        $todaySoldTickets = (int) \App\Models\Ticket::query()
+            ->whereHas('order', fn ($q) => $q
+                ->where('event_id', $eventModel->id)
+                ->whereIn('status', ['paid', 'completed'])
+                ->whereBetween('paid_at', [$todayStart, $todayEnd]))
+            ->whereNotIn('status', ['cancelled', 'refunded'])
+            ->count();
+
+        $todayCheckedIn = (int) \App\Models\Ticket::query()
+            ->whereHas('order', fn ($q) => $q->where('event_id', $eventModel->id))
+            ->whereBetween('checked_in_at', [$todayStart, $todayEnd])
+            ->count();
+
+        $occupancy = max(0, $todayCheckedIn);
+
+        // Activitate ultima oră — check-ins grupate pe bucket 5 minute
+        $recentScans = \App\Models\Ticket::query()
+            ->whereHas('order', fn ($q) => $q->where('event_id', $eventModel->id))
+            ->where('checked_in_at', '>=', $hourAgo)
+            ->with(['ticketType:id,name,service_category'])
+            ->orderByDesc('checked_in_at')
+            ->limit(50)
+            ->get(['id', 'order_id', 'ticket_type_id', 'code', 'checked_in_at']);
+
+        $buckets = [];
+        foreach ($recentScans as $s) {
+            $ts = $s->checked_in_at;
+            if (!$ts) continue;
+            $bucketMinute = (int) floor($ts->minute / 5) * 5;
+            $key = $ts->copy()->minute($bucketMinute)->second(0)->format('H:i');
+            if (!isset($buckets[$key])) $buckets[$key] = ['time' => $key, 'count' => 0];
+            $buckets[$key]['count']++;
+        }
+        ksort($buckets);
+
+        // Stream — combinăm orders recente (vânzări) + check-ins recente
+        $recentOrders = Order::query()
+            ->where('event_id', $eventModel->id)
+            ->whereIn('status', ['paid', 'completed'])
+            ->where('paid_at', '>=', $hourAgo)
+            ->orderByDesc('paid_at')
+            ->limit(20)
+            ->get(['id', 'customer_name', 'total', 'currency', 'paid_at']);
+
+        $stream = [];
+        foreach ($recentOrders as $o) {
+            $stream[] = [
+                'type' => 'sale',
+                'at' => optional($o->paid_at)->toIso8601String(),
+                'ts' => optional($o->paid_at)->timestamp ?? 0,
+                'label' => 'Vânzare nouă',
+                'detail' => ($o->customer_name ?? 'Client') . ' · ' . number_format((float) $o->total, 2) . ' RON',
+                'order_id' => $o->id,
+            ];
+        }
+        foreach ($recentScans as $s) {
+            $stream[] = [
+                'type' => 'scan',
+                'at' => optional($s->checked_in_at)->toIso8601String(),
+                'ts' => optional($s->checked_in_at)->timestamp ?? 0,
+                'label' => 'Check-in',
+                'detail' => ($s->ticketType->name ?? 'Bilet') . ' · cod ' . ($s->code ?: '—'),
+                'ticket_id' => $s->id,
+            ];
+        }
+        usort($stream, fn ($a, $b) => ($b['ts'] ?? 0) <=> ($a['ts'] ?? 0));
+        $stream = array_slice($stream, 0, 20);
+
+        return $this->success([
+            'now' => Carbon::now()->toIso8601String(),
+            'stats' => [
+                'sold_today' => $todaySoldTickets,
+                'scanned_today' => $todayCheckedIn,
+                'occupancy' => $occupancy,
+                'revenue_today' => $todayRevenue,
+                'orders_today' => $todayOrders,
+            ],
+            'gates_activity' => array_values($buckets),
+            'stream' => $stream,
+        ]);
+    }
+
+    /**
+     * POST /marketplace-client/organizer/events/{event}/leisure/pos-sale
+     *
+     * Body: {
+     *   date: 'YYYY-MM-DD',
+     *   items: [{ticket_type_id, qty}, ...],
+     *   customer: { name?, email?, phone? },
+     *   payment_method: 'cash'|'card'|'invoice'
+     * }
+     *
+     * Creează Order + OrderItems + Tickets atomic (status='paid') pentru vânzare on-site.
+     * Întoarce structura pentru chitanță print.
+     */
+    public function posSale(Request $request, int $event): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+        $marketplace = $organizer->marketplaceClient;
+
+        $eventModel = Event::query()
+            ->where('id', $event)
+            ->where('marketplace_client_id', $marketplace->id)
+            ->first();
+
+        if (!$eventModel) {
+            return $this->error('Event not found', 404);
+        }
+
+        $validated = $request->validate([
+            'date' => 'nullable|date',
+            'items' => 'required|array|min:1|max:50',
+            'items.*.ticket_type_id' => 'required|integer|exists:ticket_types,id',
+            'items.*.qty' => 'required|integer|min:1|max:100',
+            'items.*.variant_id' => 'nullable|string|max:64',
+            'items.*.slot_time' => 'nullable|string|regex:/^\d{2}:\d{2}$/',
+            'items.*.start_time' => 'nullable|string|regex:/^\d{2}:\d{2}$/',
+            'items.*.addons' => 'nullable|array|max:20',
+            'items.*.addons.*.addon_id' => 'required_with:items.*.addons|string|max:64',
+            'items.*.addons.*.qty' => 'required_with:items.*.addons|integer|min:0|max:500',
+            'customer.name' => 'nullable|string|max:120',
+            'customer.email' => 'nullable|email|max:120',
+            'customer.phone' => 'nullable|string|max:30',
+            'customer.vehicle_plate' => 'nullable|string|max:20',
+            // Date firma (opțional) — pentru emitere factură pe persoană juridică
+            'company.name' => 'nullable|string|max:200',
+            'company.cui' => 'nullable|string|max:30',
+            'company.reg_no' => 'nullable|string|max:60',
+            'company.address' => 'nullable|string|max:255',
+            'company.iban' => 'nullable|string|max:34',
+            'company.contact_person' => 'nullable|string|max:120',
+            'generate_invoice' => 'nullable|boolean',
+            // Locale preferat al clientului (RO/EN/HU/...). Optional. Daca lipseste,
+            // Order.locale ramane NULL si pipeline-ul foloseste 'ro' ca fallback.
+            'locale' => 'nullable|string|max:8',
+            'payment_method' => 'required|in:cash,card,invoice',
+        ]);
+
+        // Captura locale efectiv (whitelist din config) — zero risc de injectie.
+        $availableLocales = config('locales.available', []);
+        $posLocale = null;
+        if (!empty($validated['locale']) && in_array($validated['locale'], $availableLocales, true)) {
+            $posLocale = $validated['locale'];
+        }
+
+        $visitDate = isset($validated['date'])
+            ? Carbon::parse($validated['date'])->toDateString()
+            : Carbon::today()->toDateString();
+
+        // Fetch ticket types valid pentru event
+        $ttIds = collect($validated['items'])->pluck('ticket_type_id')->unique();
+        $types = TicketType::query()
+            ->whereIn('id', $ttIds)
+            ->where('event_id', $eventModel->id)
+            ->get()
+            ->keyBy('id');
+
+        if ($types->count() !== $ttIds->count()) {
+            return $this->error('Unele tipuri de bilet nu aparțin acestui eveniment.', 422);
+        }
+
+        // F6 — validare asociere acces (1:1 între produs și bilet acces)
+        // Calculează în cart:
+        //   - count_access_any = total bilete acces (adult + copil)
+        //   - count_access_adult = total bilete acces ADULT (is_child_ticket=false)
+        //   - count_requires_any = total qty produse cu access_requirement='any'
+        //   - count_requires_adult = total qty produse cu access_requirement='adult_only'
+        $countAccessAny = 0;
+        $countAccessAdult = 0;
+        $countRequiresAny = 0;
+        $countRequiresAdult = 0;
+        foreach ($validated['items'] as $row) {
+            $tt = $types->get($row['ticket_type_id']);
+            if (!$tt) continue;
+            $qty = (int) ($row['qty'] ?? 1);
+            $cat = $tt->effective_service_category;
+            $accessReq = $tt->meta['access_requirement'] ?? null;
+            if (!in_array($accessReq, ['none', 'any', 'adult_only'], true)) {
+                $accessReq = ($tt->requires_access_ticket ?? false) ? 'any' : 'none';
+            }
+            $isChild = (bool) ($tt->meta['is_child_ticket'] ?? false);
+            if ($cat === 'access') {
+                $countAccessAny += $qty;
+                if (!$isChild) $countAccessAdult += $qty;
+            }
+            if ($accessReq === 'any') $countRequiresAny += $qty;
+            if ($accessReq === 'adult_only') $countRequiresAdult += $qty;
+        }
+        if ($countRequiresAny > $countAccessAny) {
+            return $this->error('Produse care necesită bilet acces (' . $countRequiresAny . ') dar în coș sunt doar ' . $countAccessAny . ' bilete acces.', 422);
+        }
+        if ($countRequiresAdult > $countAccessAdult) {
+            return $this->error('Produse care necesită bilet acces ADULT (' . $countRequiresAdult . ') dar în coș sunt doar ' . $countAccessAdult . ' bilete acces adult.', 422);
+        }
+
+        // Comision la nivel de organizator (max procentual sau fix per bilet)
+        $commissionRate = (float) $organizer->getEffectiveCommissionRate();
+        $commissionFixed = (float) ($organizer->fixed_commission_default ?? 0);
+        $commissionMode = $organizer->getEffectiveCommissionMode();
+        $commissionOnTop = ($commissionMode === 'added_on_top');
+
+        // Calculează subtotal + comision per linie
+        $subtotal = 0.0;
+        $commissionTotal = 0.0;
+        $items = [];
+        foreach ($validated['items'] as $row) {
+            $tt = $types->get($row['ticket_type_id']);
+            if (!$tt) continue;
+
+            // Rezolvă varianta selectată (dacă e cazul)
+            $variant = null;
+            $rawVariants = is_array($tt->meta) ? ($tt->meta['variants'] ?? null) : null;
+            if (!empty($row['variant_id']) && is_array($rawVariants)) {
+                foreach ($rawVariants as $v) {
+                    if (!is_array($v) || empty($v['label'])) continue;
+                    $vid = $v['id'] ?? \Illuminate\Support\Str::slug($v['label']);
+                    if ($vid === $row['variant_id']) { $variant = $v; break; }
+                }
+            }
+            $unit = $variant !== null && isset($variant['price'])
+                ? (float) $variant['price']
+                : (float) ($tt->price_max ?? $tt->price ?? 0);
+            // F9: dacă produsul are pos_price configurat, folosim prețul POS în loc de cel online
+            $posPrice = $tt->meta['pos_price'] ?? null;
+            if ($variant === null && $posPrice !== null && $posPrice !== '') {
+                $unit = (float) $posPrice;
+            }
+
+            $qty = (int) $row['qty'];
+
+            // F3: slot booking (Vaporașe etc.)
+            $slotsConfig = is_array($tt->meta['slots_config'] ?? null) ? $tt->meta['slots_config'] : null;
+            $slotTime = null;
+            $slotMeta = null;
+            if ($slotsConfig && !empty($slotsConfig['enabled'])) {
+                $slotTime = $row['slot_time'] ?? null;
+                if (!$slotTime) {
+                    return $this->error('Lipsește slot_time pentru produsul "' . (is_array($tt->name) ? reset($tt->name) : $tt->name) . '"', 422);
+                }
+                $capacity = max(1, (int) ($slotsConfig['capacity_per_slot'] ?? 1));
+                $perSlot = ($slotsConfig['unit_pricing'] ?? 'per_person') === 'per_slot';
+                $consume = $perSlot ? $capacity : $qty;
+                // Sumă rezervări existente pe acel slot+dată
+                $soldOnSlot = (int) OrderItem::query()
+                    ->where('ticket_type_id', $tt->id)
+                    ->whereHas('order', fn ($q) => $q->whereIn('status', ['paid', 'completed', 'pending']))
+                    ->whereRaw("meta->>'visit_date' = ?", [$visitDate])
+                    ->whereRaw("meta->>'slot_time' = ?", [$slotTime])
+                    ->sum('quantity');
+                if ($soldOnSlot + $consume > $capacity) {
+                    return $this->error('Cursa de la ' . $slotTime . ' este aproape plină (rămân ' . max(0, $capacity - $soldOnSlot) . ' locuri).', 422);
+                }
+                $slotMeta = [
+                    'slot_time' => $slotTime,
+                    'duration_minutes' => (int) ($slotsConfig['duration_minutes'] ?? 30),
+                    'unit_pricing' => $slotsConfig['unit_pricing'] ?? 'per_person',
+                ];
+            }
+
+            // F5: physical inventory lock (Bărci etc.)
+            $physical = is_array($tt->meta['physical_inventory'] ?? null) ? $tt->meta['physical_inventory'] : null;
+            $physicalMeta = null;
+            if ($physical && !empty($physical['enabled'])) {
+                $startTime = $row['start_time'] ?? $row['slot_time'] ?? null;
+                $duration = (int) ($variant['duration_minutes'] ?? $tt->service_duration_minutes ?? 60);
+                if (!$startTime) {
+                    return $this->error('Lipsește start_time / slot_time pentru rezervare interval pe "' . (is_array($tt->name) ? reset($tt->name) : $tt->name) . '"', 422);
+                }
+                $start = Carbon::parse($visitDate . ' ' . $startTime);
+                $end = $start->copy()->addMinutes($duration);
+                $count = max(1, (int) ($physical['count'] ?? 1));
+                $availableUnits = LeisureResourceLock::availableForInterval($tt->id, $count, $start, $end);
+                if ($availableUnits < $qty) {
+                    return $this->error('Doar ' . $availableUnits . ' unități fizice libere în intervalul ' . $start->format('H:i') . '-' . $end->format('H:i') . '.', 422);
+                }
+                $physicalMeta = [
+                    'start_at' => $start->toIso8601String(),
+                    'end_at' => $end->toIso8601String(),
+                    'start_time' => $startTime,
+                    'duration_minutes' => $duration,
+                    'physical_inventory' => true,
+                ];
+            }
+
+            $line = round($unit * $qty, 2);
+
+            // Add-ons (F2): calcul paid_qty = total_qty - parent_qty * included_qty
+            $addonsResolved = [];
+            $addonsTotal = 0.0;
+            if (!empty($row['addons']) && is_array($row['addons']) && !empty($tt->meta['addons']) && is_array($tt->meta['addons'])) {
+                $addonsByid = [];
+                foreach ($tt->meta['addons'] as $a) {
+                    if (!is_array($a) || empty($a['label'])) continue;
+                    $aid = $a['id'] ?? \Illuminate\Support\Str::slug($a['label']);
+                    $addonsByid[$aid] = $a;
+                }
+                foreach ($row['addons'] as $reqAddon) {
+                    if (empty($reqAddon['addon_id'])) continue;
+                    $aid = $reqAddon['addon_id'];
+                    $aDef = $addonsByid[$aid] ?? null;
+                    if (!$aDef) continue;
+                    $totalAddonQty = max(0, (int) ($reqAddon['qty'] ?? 0));
+                    if ($totalAddonQty === 0) continue;
+
+                    $includedPerTicket = max(0, (int) ($aDef['included_qty'] ?? 0));
+                    $maxPaidPerTicket = max(0, (int) ($aDef['max_per_unit'] ?? 5));
+                    $freePool = $includedPerTicket * $qty;
+                    $maxTotal = ($includedPerTicket + $maxPaidPerTicket) * $qty;
+                    if ($totalAddonQty > $maxTotal) {
+                        return $this->error('Add-on "' . $aDef['label'] . '" depășește maximul (' . $maxTotal . ' pentru ' . $qty . ' bilete).', 422);
+                    }
+                    $paidQty = max(0, $totalAddonQty - $freePool);
+                    $unitPriceAddon = (float) ($aDef['price'] ?? 0);
+                    $addonLine = round($unitPriceAddon * $paidQty, 2);
+                    $addonsTotal += $addonLine;
+                    $addonsResolved[] = [
+                        'addon_id' => $aid,
+                        'label' => $aDef['label'],
+                        'total_qty' => $totalAddonQty,
+                        'free_qty' => min($freePool, $totalAddonQty),
+                        'paid_qty' => $paidQty,
+                        'unit_price' => $unitPriceAddon,
+                        'line_total' => $addonLine,
+                    ];
+                }
+            }
+
+            $line += round($addonsTotal, 2);
+            $subtotal += $line;
+
+            // Comision per bilet emis: max(unit * rate%, fixed) doar dacă 'added_on_top'
+            $commissionPerTicket = 0.0;
+            if ($commissionOnTop) {
+                $commissionPerTicket = max($unit * $commissionRate / 100, $commissionFixed);
+                $commissionTotal += round($commissionPerTicket * $qty, 2);
+            }
+
+            $items[] = [
+                'ticket_type' => $tt,
+                'qty' => $qty,
+                'unit_price' => $unit,
+                'line_total' => $line,
+                'commission_per_ticket' => round($commissionPerTicket, 2),
+                'variant' => $variant ? [
+                    'id' => $variant['id'] ?? \Illuminate\Support\Str::slug($variant['label']),
+                    'label' => $variant['label'],
+                    'duration_minutes' => $variant['duration_minutes'] ?? null,
+                ] : null,
+                'addons' => $addonsResolved,
+                'addons_total' => round($addonsTotal, 2),
+                'slot' => $slotMeta,
+                'physical' => $physicalMeta,
+            ];
+        }
+        $subtotal = round($subtotal, 2);
+        $commissionTotal = round($commissionTotal, 2);
+        $total = round($subtotal + $commissionTotal, 2);
+
+        $paymentMethod = $validated['payment_method'];
+        $now = Carbon::now();
+
+        $order = null;
+        $issued = [];
+
+        try {
+            DB::beginTransaction();
+
+            $order = Order::create([
+                'tenant_id' => $eventModel->tenant_id,
+                'marketplace_client_id' => $marketplace->id,
+                'marketplace_organizer_id' => $organizer->id,
+                'event_id' => $eventModel->id,
+                'order_number' => 'POS-' . strtoupper(Str::random(10)),
+                'customer_name' => $validated['customer']['name'] ?? 'POS — vânzare on-site',
+                'customer_email' => $validated['customer']['email'] ?? 'pos@ambilet.ro',
+                'customer_phone' => $validated['customer']['phone'] ?? null,
+                'subtotal' => $subtotal,
+                'discount_amount' => 0,
+                'total' => $total,
+                'currency' => 'RON',
+                'locale' => $posLocale,
+                'status' => $paymentMethod === 'invoice' ? 'pending' : 'paid',
+                'payment_status' => $paymentMethod === 'invoice' ? 'pending' : 'paid',
+                'payment_processor' => 'pos',
+                'payment_reference' => 'pos-' . $paymentMethod,
+                'paid_at' => $paymentMethod === 'invoice' ? null : $now,
+                'source' => 'pos',
+                'meta' => array_merge([
+                    'pos' => true,
+                    'payment_method' => $paymentMethod,
+                    'visit_date' => $visitDate,
+                    'vehicle_plate' => $validated['customer']['vehicle_plate'] ?? null,
+                    'cashier_organizer_id' => $organizer->id,
+                    'commission_total' => $commissionTotal,
+                    'commission_rate' => $commissionRate,
+                    'commission_fixed' => $commissionFixed,
+                    'commission_mode' => $commissionMode,
+                ], (!empty($validated['company']['cui']) || !empty($validated['company']['name'])) ? [
+                    // Date firma client (pentru factura B2B). Doar daca operatorul le-a introdus.
+                    'company_billing' => array_filter([
+                        'name' => $validated['company']['name'] ?? null,
+                        'cui' => $validated['company']['cui'] ?? null,
+                        'reg_no' => $validated['company']['reg_no'] ?? null,
+                        'address' => $validated['company']['address'] ?? null,
+                        'iban' => $validated['company']['iban'] ?? null,
+                        'contact_person' => $validated['company']['contact_person'] ?? null,
+                    ], fn ($v) => $v !== null && $v !== ''),
+                    'invoice_requested' => !empty($validated['generate_invoice']),
+                ] : []),
+            ]);
+
+            foreach ($items as $it) {
+                $tt = $it['ticket_type'];
+                $variantMeta = $it['variant'] ?? null;
+                $displayName = is_array($tt->name) ? ($tt->name['ro'] ?? reset($tt->name)) : $tt->name;
+                if ($variantMeta) {
+                    $displayName .= ' — ' . $variantMeta['label'];
+                }
+
+                $isPackage = (($tt->service_category ?? null) === 'package');
+                $packageOutputs = is_array($tt->meta['package_outputs'] ?? null)
+                    ? $tt->meta['package_outputs']
+                    : [];
+
+                $orderItem = OrderItem::create([
+                    'order_id' => $order->id,
+                    'ticket_type_id' => $tt->id,
+                    'name' => $displayName,
+                    'quantity' => $it['qty'],
+                    'unit_price' => $it['unit_price'],
+                    'total' => $it['line_total'],
+                    'meta' => array_filter([
+                        'service_category' => $tt->service_category ?? 'access',
+                        'issuing_company' => $tt->issuing_company ?? 'primary',
+                        'visit_date' => $visitDate,
+                        'variant' => $variantMeta,
+                        'package' => $isPackage,
+                        'package_outputs' => $isPackage ? $packageOutputs : null,
+                        'addons' => !empty($it['addons']) ? $it['addons'] : null,
+                        'addons_total' => $it['addons_total'] ?? 0,
+                        'slot_time' => $it['slot'] ? ($it['slot']['slot_time'] ?? null) : null,
+                        'slot_duration' => $it['slot'] ? ($it['slot']['duration_minutes'] ?? null) : null,
+                        'physical' => $it['physical'] ?? null,
+                    ]),
+                ]);
+
+                // F5: creează lock-ul fizic dacă produsul are physical_inventory
+                if (!empty($it['physical']) && is_array($it['physical'])) {
+                    LeisureResourceLock::create([
+                        'event_id' => $eventModel->id,
+                        'ticket_type_id' => $tt->id,
+                        'order_id' => $order->id,
+                        'order_item_id' => $orderItem->id,
+                        'start_at' => $it['physical']['start_at'],
+                        'end_at' => $it['physical']['end_at'],
+                        'qty' => $it['qty'],
+                        'status' => 'active',
+                    ]);
+                }
+
+                if ($isPackage && !empty($packageOutputs)) {
+                    // Fan-out: pentru fiecare bucată de pachet cumpărată, emite N tickets per component
+                    $componentIds = collect($packageOutputs)->pluck('ticket_type_id')->filter()->unique();
+                    $componentTypes = TicketType::query()
+                        ->whereIn('id', $componentIds)
+                        ->where('event_id', $eventModel->id)
+                        ->get()
+                        ->keyBy('id');
+
+                    $packagesQty = (int) $it['qty'];
+                    for ($p = 0; $p < $packagesQty; $p++) {
+                        $packageCode = strtoupper(Str::random(10));
+                        // Bilet "umbrella" pentru pachet (status valid dar fără scanare directă)
+                        $pkgTicket = Ticket::create([
+                            'order_id' => $order->id,
+                            'order_item_id' => $orderItem->id,
+                            'ticket_type_id' => $tt->id,
+                            'event_id' => $eventModel->id,
+                            'tenant_id' => $eventModel->tenant_id,
+                            'marketplace_client_id' => $marketplace->id,
+                            'code' => $packageCode,
+                            'barcode' => $packageCode,
+                            'locale' => $posLocale,
+                            'status' => $paymentMethod === 'invoice' ? 'pending' : 'valid',
+                            'price' => $it['unit_price'],
+                            'attendee_name' => $validated['customer']['name'] ?? null,
+                            'attendee_email' => $validated['customer']['email'] ?? null,
+                            'meta' => array_filter([
+                                'pos' => true,
+                                'visit_date' => $visitDate,
+                                'service_category' => 'package',
+                                'issuing_company' => $tt->issuing_company ?? 'primary',
+                                'is_package_umbrella' => true,
+                                'package_outputs' => $packageOutputs,
+                            ]),
+                        ]);
+                        $issued[] = [
+                            'id' => $pkgTicket->id,
+                            'code' => $pkgTicket->code,
+                            'ticket_type' => $displayName . ' (pachet)',
+                            'service_category' => 'package',
+                            'price' => $it['unit_price'],
+                            'variant' => null,
+                        ];
+
+                        // Componentele reale (scanabile, fără preț propriu — prețul = 0)
+                        foreach ($packageOutputs as $row) {
+                            if (empty($row['ticket_type_id'])) continue;
+                            $compTt = $componentTypes->get($row['ticket_type_id']);
+                            if (!$compTt) continue;
+                            $compQty = (int) ($row['qty'] ?? 1);
+                            $compVariant = null;
+                            if (!empty($row['variant_id']) && is_array($compTt->meta['variants'] ?? null)) {
+                                foreach ($compTt->meta['variants'] as $cv) {
+                                    if (!is_array($cv) || empty($cv['label'])) continue;
+                                    $cvid = $cv['id'] ?? Str::slug($cv['label']);
+                                    if ($cvid === $row['variant_id']) {
+                                        $compVariant = [
+                                            'id' => $cvid,
+                                            'label' => $cv['label'],
+                                            'duration_minutes' => $cv['duration_minutes'] ?? null,
+                                        ];
+                                        break;
+                                    }
+                                }
+                            }
+                            $compDisplay = is_array($compTt->name) ? ($compTt->name['ro'] ?? reset($compTt->name)) : $compTt->name;
+                            if ($compVariant) $compDisplay .= ' — ' . $compVariant['label'];
+
+                            for ($c = 0; $c < $compQty; $c++) {
+                                $code = strtoupper(Str::random(10));
+                                $compTicket = Ticket::create([
+                                    'order_id' => $order->id,
+                                    'order_item_id' => $orderItem->id,
+                                    'ticket_type_id' => $compTt->id,
+                                    'event_id' => $eventModel->id,
+                                    'tenant_id' => $eventModel->tenant_id,
+                                    'marketplace_client_id' => $marketplace->id,
+                                    'code' => $code,
+                                    'barcode' => $code,
+                                    'locale' => $posLocale,
+                                    'status' => $paymentMethod === 'invoice' ? 'pending' : 'valid',
+                                    'price' => 0, // componenta = $0, prețul e în pachet
+                                    'attendee_name' => $validated['customer']['name'] ?? null,
+                                    'attendee_email' => $validated['customer']['email'] ?? null,
+                                    'meta' => array_filter([
+                                        'pos' => true,
+                                        'visit_date' => $visitDate,
+                                        'service_category' => $compTt->service_category ?? 'access',
+                                        'issuing_company' => $compTt->issuing_company ?? 'primary',
+                                        'variant' => $compVariant,
+                                        'from_package' => true,
+                                        'parent_package_ticket_id' => $pkgTicket->id,
+                                    ]),
+                                ]);
+                                $issued[] = [
+                                    'id' => $compTicket->id,
+                                    'code' => $compTicket->code,
+                                    'ticket_type' => $compDisplay,
+                                    'service_category' => $compTt->service_category ?? 'access',
+                                    'price' => 0,
+                                    'variant' => $compVariant,
+                                    'from_package' => true,
+                                ];
+                            }
+                        }
+                    }
+                } else {
+                    // Flow standard (non-pachet)
+                    for ($i = 0; $i < $it['qty']; $i++) {
+                        $code = strtoupper(Str::random(10));
+                        $ticket = Ticket::create([
+                            'order_id' => $order->id,
+                            'order_item_id' => $orderItem->id,
+                            'ticket_type_id' => $tt->id,
+                            'event_id' => $eventModel->id,
+                            'tenant_id' => $eventModel->tenant_id,
+                            'marketplace_client_id' => $marketplace->id,
+                            'code' => $code,
+                            'barcode' => $code,
+                            'locale' => $posLocale,
+                            'status' => $paymentMethod === 'invoice' ? 'pending' : 'valid',
+                            'price' => $it['unit_price'],
+                            'attendee_name' => $validated['customer']['name'] ?? null,
+                            'attendee_email' => $validated['customer']['email'] ?? null,
+                            'meta' => array_filter([
+                                'pos' => true,
+                                'visit_date' => $visitDate,
+                                'service_category' => $tt->service_category ?? 'access',
+                                'issuing_company' => $tt->issuing_company ?? 'primary',
+                                'variant' => $variantMeta,
+                            ]),
+                        ]);
+                        $issued[] = [
+                            'id' => $ticket->id,
+                            'code' => $ticket->code,
+                            'ticket_type' => $displayName,
+                            'service_category' => $tt->service_category ?? 'access',
+                            'price' => $it['unit_price'],
+                            'variant' => $variantMeta,
+                        ];
+                    }
+                }
+            }
+
+            DB::commit();
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return $this->error('Eroare la procesarea vânzării: ' . $e->getMessage(), 500);
+        }
+
+        // Datele pentru chitanță 80mm
+        $issuer = $organizer->getIssuerData('primary');
+
+        return $this->success([
+            'order' => [
+                'id' => $order->id,
+                'order_number' => $order->order_number,
+                'paid_at' => optional($order->paid_at)->toIso8601String(),
+                'total' => (float) $order->total,
+                'subtotal' => (float) $order->subtotal,
+                'commission_total' => $commissionTotal,
+                'currency' => $order->currency,
+                'payment_method' => $paymentMethod,
+                'status' => $order->status,
+                'visit_date' => $visitDate,
+            ],
+            'customer' => [
+                'name' => $order->customer_name,
+                'email' => $order->customer_email,
+                'phone' => $order->customer_phone,
+            ],
+            'company_billing' => is_array($order->meta['company_billing'] ?? null) ? $order->meta['company_billing'] : null,
+            'invoice_requested' => (bool) ($order->meta['invoice_requested'] ?? false),
+            'issuer' => $issuer,
+            'items' => array_map(function ($it) {
+                $baseName = is_array($it['ticket_type']->name) ? ($it['ticket_type']->name['ro'] ?? reset($it['ticket_type']->name)) : $it['ticket_type']->name;
+                $name = $it['variant'] ? ($baseName . ' — ' . $it['variant']['label']) : $baseName;
+                return [
+                    'name' => $name,
+                    'qty' => $it['qty'],
+                    'unit_price' => $it['unit_price'],
+                    'line_total' => $it['line_total'],
+                    'commission_per_ticket' => $it['commission_per_ticket'] ?? 0,
+                    'service_category' => $it['ticket_type']->service_category ?? 'access',
+                    'variant' => $it['variant'],
+                    'addons' => $it['addons'] ?? [],
+                    'addons_total' => $it['addons_total'] ?? 0,
+                ];
+            }, $items),
+            'tickets' => $issued,
+        ]);
+    }
+
+    /**
+     * POST /marketplace-client/organizer/orders/{order}/generate-invoice
+     *
+     * Genereaza factura B2B pentru o comanda POS care a fost emisa cu date firma.
+     * Foloseste order.meta.company_billing (CUI, denumire, adresa) ca destinatar
+     * si datele organizatorului (primary issuer) ca emitent.
+     *
+     * Faza 1: marcam invoice_status='requested' + invoice_number generat secvential.
+     * Faza 2 (TODO): genereaza PDF + integrare e-Factura ANAF prin EFacturaService.
+     */
+    /**
+     * POST /marketplace-client/organizer/events/{event}/leisure/upload-image
+     *
+     * Upload imagine card pentru un produs leisure. Acceptat multipart cu campul
+     * `image` (jpeg/png/webp, max 10MB). Returnam URL public pentru a fi salvat in
+     * meta.image al TicketType-ului prin endpoint-ul existent /products/{id}.
+     */
+    public function uploadProductImage(Request $request, int $event): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+        $marketplace = $organizer->marketplaceClient;
+
+        $eventModel = Event::query()
+            ->where('id', $event)
+            ->where('marketplace_client_id', $marketplace->id)
+            ->first();
+
+        if (!$eventModel) {
+            return $this->error('Event not found', 404);
+        }
+
+        $request->validate([
+            'image' => 'required|image|mimes:jpeg,png,webp|max:10240',
+        ]);
+
+        $path = $request->file('image')->store('events/' . $eventModel->id . '/products', 'public');
+        $url = \Illuminate\Support\Facades\Storage::disk('public')->url($path);
+
+        return $this->success([
+            'path' => $path,
+            'url' => $url,
+        ], 'Imagine încărcată');
+    }
+
+    public function generateInvoice(Request $request, int $order): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+        $marketplace = $organizer->marketplaceClient;
+
+        $orderModel = Order::query()
+            ->where('id', $order)
+            ->where('marketplace_client_id', $marketplace->id)
+            ->where('marketplace_organizer_id', $organizer->id)
+            ->first();
+
+        if (!$orderModel) {
+            return $this->error('Order not found', 404);
+        }
+
+        $meta = is_array($orderModel->meta) ? $orderModel->meta : [];
+        $company = $meta['company_billing'] ?? null;
+
+        if (!is_array($company) || (empty($company['cui']) && empty($company['name']))) {
+            return $this->error('Comanda nu are date firmă pentru emiterea unei facturi.', 422);
+        }
+
+        // Daca s-a generat deja o factura, returnam datele existente.
+        if (!empty($meta['invoice_number'])) {
+            return $this->success([
+                'order_id' => $orderModel->id,
+                'invoice_number' => $meta['invoice_number'],
+                'invoice_status' => $meta['invoice_status'] ?? 'requested',
+                'invoice_url' => $meta['invoice_url'] ?? null,
+                'already_generated' => true,
+            ]);
+        }
+
+        // Numar factura secvential per organizator (POS-INV-{NNNN})
+        $lastInvOrder = Order::query()
+            ->where('marketplace_organizer_id', $organizer->id)
+            ->whereRaw("meta->>'invoice_number' IS NOT NULL")
+            ->orderByDesc('id')
+            ->first();
+        $nextNumber = 1;
+        if ($lastInvOrder && !empty($lastInvOrder->meta['invoice_number'])) {
+            $nextNumber = ((int) preg_replace('/\D/', '', $lastInvOrder->meta['invoice_number'])) + 1;
+        }
+        $invoiceNumber = 'POS-INV-' . str_pad((string) $nextNumber, 6, '0', STR_PAD_LEFT);
+
+        $issuer = $organizer->getIssuerData('primary') ?? [];
+
+        $meta['invoice_number'] = $invoiceNumber;
+        $meta['invoice_status'] = 'requested';
+        $meta['invoice_issued_at'] = Carbon::now()->toIso8601String();
+        $meta['invoice_issuer'] = $issuer;
+        // invoice_url va fi populat de un job care genereaza PDF + trimite la e-Factura.
+        // Pentru moment, link catre detaliul comenzii in panou admin.
+        $meta['invoice_url'] = null;
+
+        $orderModel->meta = $meta;
+        $orderModel->save();
+
+        return $this->success([
+            'order_id' => $orderModel->id,
+            'invoice_number' => $invoiceNumber,
+            'invoice_status' => 'requested',
+            'invoice_url' => null,
+            'company_billing' => $company,
+            'issuer' => $issuer,
+            'message' => 'Factura ' . $invoiceNumber . ' a fost înregistrată. Generarea PDF + transmitere la ANAF e-Factura se procesează automat.',
+        ]);
+    }
+
+    /**
+     * GET /marketplace-client/organizer/events/{event}/leisure/shifts?week=YYYY-MM-DD
+     *
+     * Listă turnete pentru săptămâna care conține `week` (default: săptămâna curentă).
+     */
+    public function shiftsIndex(Request $request, int $event): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+        $marketplace = $organizer->marketplaceClient;
+
+        $eventModel = Event::query()
+            ->where('id', $event)
+            ->where('marketplace_client_id', $marketplace->id)
+            ->first();
+
+        if (!$eventModel) {
+            return $this->error('Event not found', 404);
+        }
+
+        $weekParam = $request->query('week');
+        $base = $weekParam ? Carbon::parse($weekParam) : Carbon::today();
+        $weekStart = $base->copy()->startOfWeek(Carbon::MONDAY)->startOfDay();
+        $weekEnd = $weekStart->copy()->endOfWeek(Carbon::SUNDAY)->endOfDay();
+
+        $shifts = LeisureShift::query()
+            ->where('event_id', $eventModel->id)
+            ->whereBetween('start_at', [$weekStart, $weekEnd])
+            ->with(['teamMember:id,name,email,role'])
+            ->orderBy('start_at')
+            ->get();
+
+        $members = MarketplaceOrganizerTeamMember::query()
+            ->where('marketplace_organizer_id', $organizer->id)
+            ->where('status', 'active')
+            ->orderBy('name')
+            ->get(['id', 'name', 'email', 'role']);
+
+        return $this->success([
+            'week_start' => $weekStart->toDateString(),
+            'week_end' => $weekEnd->toDateString(),
+            'members' => $members,
+            'shifts' => $shifts->map(fn ($s) => [
+                'id' => $s->id,
+                'team_member_id' => $s->team_member_id,
+                'member_name' => $s->teamMember->name ?? null,
+                'start_at' => optional($s->start_at)->toIso8601String(),
+                'end_at' => optional($s->end_at)->toIso8601String(),
+                'role' => $s->role,
+                'gate' => $s->gate,
+                'notes' => $s->notes,
+            ])->values(),
+        ]);
+    }
+
+    /**
+     * POST /marketplace-client/organizer/events/{event}/leisure/shifts
+     */
+    public function shiftStore(Request $request, int $event): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+        $marketplace = $organizer->marketplaceClient;
+
+        $eventModel = Event::query()
+            ->where('id', $event)
+            ->where('marketplace_client_id', $marketplace->id)
+            ->first();
+
+        if (!$eventModel) {
+            return $this->error('Event not found', 404);
+        }
+
+        $validated = $request->validate([
+            'team_member_id' => 'nullable|integer|exists:marketplace_organizer_team_members,id',
+            'start_at' => 'required|date',
+            'end_at' => 'required|date|after:start_at',
+            'role' => 'required|in:gate_scanner,sales_operator,shift_manager,accountant,operator_boats,operator_pontoon,operator_pontoon_rental,operator_sled,operator_tow_validation,admin_mobile,field_seller',
+            'gate' => 'nullable|string|max:32',
+            'notes' => 'nullable|string|max:500',
+        ]);
+
+        $shift = LeisureShift::create([
+            'marketplace_organizer_id' => $organizer->id,
+            'event_id' => $eventModel->id,
+            'team_member_id' => $validated['team_member_id'] ?? null,
+            'start_at' => Carbon::parse($validated['start_at']),
+            'end_at' => Carbon::parse($validated['end_at']),
+            'role' => $validated['role'],
+            'gate' => $validated['gate'] ?? null,
+            'notes' => $validated['notes'] ?? null,
+            'created_by' => $organizer->id,
+        ]);
+
+        return $this->success(['id' => $shift->id], 'Turnetă creată', 201);
+    }
+
+    /**
+     * PUT /marketplace-client/organizer/events/{event}/leisure/shifts/{shift}
+     */
+    public function shiftUpdate(Request $request, int $event, int $shift): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+
+        $shiftModel = LeisureShift::query()
+            ->where('id', $shift)
+            ->where('marketplace_organizer_id', $organizer->id)
+            ->where('event_id', $event)
+            ->first();
+
+        if (!$shiftModel) {
+            return $this->error('Shift not found', 404);
+        }
+
+        $validated = $request->validate([
+            'team_member_id' => 'nullable|integer|exists:marketplace_organizer_team_members,id',
+            'start_at' => 'nullable|date',
+            'end_at' => 'nullable|date|after:start_at',
+            'role' => 'nullable|in:gate_scanner,sales_operator,shift_manager,accountant,operator_boats,operator_pontoon,operator_pontoon_rental,operator_sled,operator_tow_validation,admin_mobile,field_seller',
+            'gate' => 'nullable|string|max:32',
+            'notes' => 'nullable|string|max:500',
+        ]);
+
+        $shiftModel->fill(array_filter($validated, fn ($v) => $v !== null && $v !== ''));
+        $shiftModel->save();
+
+        return $this->success(['id' => $shiftModel->id], 'Turnetă actualizată');
+    }
+
+    /**
+     * DELETE /marketplace-client/organizer/events/{event}/leisure/shifts/{shift}
+     */
+    public function shiftDestroy(Request $request, int $event, int $shift): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+
+        $shiftModel = LeisureShift::query()
+            ->where('id', $shift)
+            ->where('marketplace_organizer_id', $organizer->id)
+            ->where('event_id', $event)
+            ->first();
+
+        if (!$shiftModel) {
+            return $this->error('Shift not found', 404);
+        }
+
+        $shiftModel->delete();
+        return $this->success(['id' => $shift], 'Turnetă ștearsă');
+    }
+
+    /**
+     * GET /marketplace-client/organizer/events/{event}/leisure/products
+     *
+     * Listă completă produse (TicketType) cu toate câmpurile editabile prin panou.
+     */
+    public function productsIndex(Request $request, int $event): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+        $marketplace = $organizer->marketplaceClient;
+
+        $eventModel = Event::query()
+            ->where('id', $event)
+            ->where('marketplace_client_id', $marketplace->id)
+            ->first();
+
+        if (!$eventModel) {
+            return $this->error('Event not found', 404);
+        }
+
+        $types = TicketType::query()
+            ->where('event_id', $eventModel->id)
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->get();
+
+        return $this->success([
+            'products' => $types->map(fn (TicketType $t) => $this->presentProduct($t))->all(),
+        ]);
+    }
+
+    /**
+     * POST /marketplace-client/organizer/events/{event}/leisure/products
+     */
+    public function productStore(Request $request, int $event): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+        $marketplace = $organizer->marketplaceClient;
+
+        $eventModel = Event::query()
+            ->where('id', $event)
+            ->where('marketplace_client_id', $marketplace->id)
+            ->first();
+
+        if (!$eventModel) {
+            return $this->error('Event not found', 404);
+        }
+
+        $data = $this->validateProduct($request);
+        $data['event_id'] = $eventModel->id;
+        $data['sort_order'] = (int) (TicketType::where('event_id', $eventModel->id)->max('sort_order') ?? 0) + 10;
+        $data['is_active'] = $data['is_active'] ?? true;
+
+        $meta = $this->extractProductMeta($request);
+        if ($meta !== null) $data['meta'] = $meta;
+
+        $tt = TicketType::create($data);
+
+        return $this->success(['product' => $this->presentProduct($tt)], 'Produs creat', 201);
+    }
+
+    /**
+     * PUT /marketplace-client/organizer/events/{event}/leisure/products/{product}
+     */
+    public function productUpdate(Request $request, int $event, int $product): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+        $marketplace = $organizer->marketplaceClient;
+
+        $eventModel = Event::query()
+            ->where('id', $event)
+            ->where('marketplace_client_id', $marketplace->id)
+            ->first();
+
+        if (!$eventModel) {
+            return $this->error('Event not found', 404);
+        }
+
+        $tt = TicketType::query()
+            ->where('id', $product)
+            ->where('event_id', $eventModel->id)
+            ->first();
+        if (!$tt) return $this->error('Product not found', 404);
+
+        $data = $this->validateProduct($request, $tt->id);
+
+        // C2: permite resetarea explicită a ticket_group la NULL (atunci când
+        // utilizatorul alege "— Alte produse —" în modal). validateProduct
+        // filtrează NULL prin array_filter → re-aplicam manual câmpurile
+        // nullable care vin cu null explicit din payload.
+        if ($request->exists('ticket_group')) {
+            $data['ticket_group'] = $request->input('ticket_group') ?: null;
+        }
+
+        $meta = $this->extractProductMeta($request);
+        if ($meta !== null) {
+            $existing = is_array($tt->meta) ? $tt->meta : [];
+            $data['meta'] = array_merge($existing, $meta);
+        }
+
+        $tt->fill($data);
+        $tt->save();
+
+        return $this->success(['product' => $this->presentProduct($tt->fresh())], 'Produs actualizat');
+    }
+
+    /**
+     * DELETE /marketplace-client/organizer/events/{event}/leisure/products/{product}
+     */
+    public function productDestroy(Request $request, int $event, int $product): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+        $marketplace = $organizer->marketplaceClient;
+
+        $eventModel = Event::query()
+            ->where('id', $event)
+            ->where('marketplace_client_id', $marketplace->id)
+            ->first();
+        if (!$eventModel) return $this->error('Event not found', 404);
+
+        $tt = TicketType::query()
+            ->where('id', $product)
+            ->where('event_id', $eventModel->id)
+            ->first();
+        if (!$tt) return $this->error('Product not found', 404);
+
+        // Refuz ștergerea dacă există bilete emise (siguranță)
+        $issued = Ticket::where('ticket_type_id', $tt->id)->limit(1)->exists();
+        if ($issued) {
+            return $this->error('Există bilete emise pentru acest produs. Dezactivează în loc să ștergi.', 422);
+        }
+
+        $tt->delete();
+        return $this->success(['id' => $product], 'Produs șters');
+    }
+
+    /**
+     * POST /marketplace-client/organizer/events/{event}/leisure/products/reorder
+     * Body: { ids: [12, 5, 18, ...] }
+     */
+    public function productsReorder(Request $request, int $event): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+        $marketplace = $organizer->marketplaceClient;
+
+        $eventModel = Event::query()
+            ->where('id', $event)
+            ->where('marketplace_client_id', $marketplace->id)
+            ->first();
+        if (!$eventModel) return $this->error('Event not found', 404);
+
+        $validated = $request->validate(['ids' => 'required|array', 'ids.*' => 'integer']);
+        $order = 10;
+        foreach ($validated['ids'] as $id) {
+            TicketType::where('id', $id)->where('event_id', $eventModel->id)->update(['sort_order' => $order]);
+            $order += 10;
+        }
+        return $this->success(['count' => count($validated['ids'])], 'Ordine actualizată');
+    }
+
+    protected function validateProduct(Request $request, ?int $skipId = null): array
+    {
+        $rules = [
+            'name' => 'required|string|max:160',
+            'sku' => 'nullable|string|max:64',
+            'description' => 'nullable|string|max:2000',
+            'service_category' => 'nullable|in:access,parking,rental,activity,extra,package',
+            'issuing_company' => 'nullable|in:primary,secondary',
+            'price' => 'nullable|numeric|min:0|max:999999',
+            'price_max' => 'nullable|numeric|min:0|max:999999',
+            'currency' => 'nullable|string|size:3',
+            'capacity' => 'nullable|integer|min:0',
+            'daily_capacity' => 'nullable|integer|min:0',
+            'service_duration_minutes' => 'nullable|integer|min:0|max:1440',
+            'product_description' => 'nullable|string|max:10000',
+            'usage_terms' => 'nullable|string|max:10000',
+            'is_parking' => 'nullable|boolean',
+            'requires_vehicle_info' => 'nullable|boolean',
+            'requires_access_ticket' => 'nullable|boolean',
+            'is_active' => 'nullable|boolean',
+            'ticket_group' => 'nullable|string|max:64',
+            'min_per_order' => 'nullable|integer|min:0',
+            'max_per_order' => 'nullable|integer|min:0',
+            'sales_start_at' => 'nullable|date',
+            'sales_end_at' => 'nullable|date',
+            'valid_date' => 'nullable|date',
+        ];
+
+        $validated = $request->validate($rules);
+
+        // Conversie tipuri pentru tabel
+        $out = array_filter($validated, fn ($v) => $v !== null);
+
+        // price -> price_max (compat schema)
+        if (isset($out['price']) && !isset($out['price_max'])) {
+            $out['price_max'] = $out['price'];
+        }
+        if (!isset($out['currency'])) {
+            $out['currency'] = 'RON';
+        }
+
+        return $out;
+    }
+
+    protected function extractProductMeta(Request $request): ?array
+    {
+        $meta = $request->input('meta');
+        if (!is_array($meta)) return null;
+
+        // whitelist meta keys safe pentru organizer
+        $allowed = [
+            'icon', 'image', 'image_url', 'unit_label', 'includes',
+            'package_outputs', 'badge', 'color', 'variants', 'addons',
+            'slots_config', 'physical_inventory',
+            'pos_price', 'is_child_ticket', 'access_requirement', 'blocked_time_ranges',
+            'pos_only',
+            // Multi-locale (B2): traduceri opt-in pe name/description/etc. + pe variants/addons.
+            'translations',
+        ];
+        $filtered = array_intersect_key($meta, array_flip($allowed));
+
+        // Normalize variants: ensure id slug, prețul ca float, durata ca int
+        if (isset($filtered['variants']) && is_array($filtered['variants'])) {
+            $normalized = [];
+            foreach ($filtered['variants'] as $v) {
+                if (!is_array($v) || empty($v['label'])) continue;
+                $id = isset($v['id']) && $v['id'] !== ''
+                    ? preg_replace('/[^a-z0-9-]+/i', '-', strtolower($v['id']))
+                    : \Illuminate\Support\Str::slug($v['label']);
+                $normalized[] = [
+                    'id' => substr($id, 0, 32) ?: 'v',
+                    'label' => (string) $v['label'],
+                    'duration_minutes' => isset($v['duration_minutes']) ? (int) $v['duration_minutes'] : null,
+                    'price' => isset($v['price']) ? (float) $v['price'] : 0.0,
+                ];
+            }
+            $filtered['variants'] = $normalized;
+        }
+
+        // Normalize addons (F2)
+        if (isset($filtered['addons']) && is_array($filtered['addons'])) {
+            $normalizedAddons = [];
+            foreach ($filtered['addons'] as $a) {
+                if (!is_array($a) || empty($a['label'])) continue;
+                $id = isset($a['id']) && $a['id'] !== ''
+                    ? preg_replace('/[^a-z0-9-]+/i', '-', strtolower($a['id']))
+                    : \Illuminate\Support\Str::slug($a['label']);
+                $normalizedAddons[] = [
+                    'id' => substr($id, 0, 32) ?: 'a',
+                    'label' => (string) $a['label'],
+                    'price' => isset($a['price']) ? (float) $a['price'] : 0.0,
+                    'included_qty' => max(0, (int) ($a['included_qty'] ?? 0)),
+                    'max_per_unit' => max(0, (int) ($a['max_per_unit'] ?? 5)),
+                ];
+            }
+            $filtered['addons'] = $normalizedAddons;
+        }
+
+        // Normalize pos_price + is_child_ticket + access_requirement
+        if (isset($filtered['pos_price'])) {
+            $filtered['pos_price'] = $filtered['pos_price'] !== null && $filtered['pos_price'] !== '' ? (float) $filtered['pos_price'] : null;
+        }
+        if (isset($filtered['is_child_ticket'])) {
+            $filtered['is_child_ticket'] = (bool) $filtered['is_child_ticket'];
+        }
+        if (isset($filtered['pos_only'])) {
+            $filtered['pos_only'] = (bool) $filtered['pos_only'];
+        }
+        if (isset($filtered['access_requirement'])) {
+            $val = $filtered['access_requirement'];
+            $filtered['access_requirement'] = in_array($val, ['none', 'any', 'adult_only'], true) ? $val : 'none';
+        }
+
+        // Normalize blocked_time_ranges (F10 — informativ)
+        if (isset($filtered['blocked_time_ranges']) && is_array($filtered['blocked_time_ranges'])) {
+            $normalizedRanges = [];
+            foreach ($filtered['blocked_time_ranges'] as $r) {
+                if (!is_array($r) || empty($r['date']) || empty($r['start_time']) || empty($r['end_time'])) continue;
+                $normalizedRanges[] = [
+                    'date' => substr((string) $r['date'], 0, 10),
+                    'start_time' => substr((string) $r['start_time'], 0, 5),
+                    'end_time' => substr((string) $r['end_time'], 0, 5),
+                    'reason' => isset($r['reason']) ? substr((string) $r['reason'], 0, 200) : null,
+                ];
+            }
+            $filtered['blocked_time_ranges'] = $normalizedRanges;
+        }
+
+        // Normalize package_outputs (F4)
+        if (isset($filtered['package_outputs']) && is_array($filtered['package_outputs'])) {
+            $normalizedOutputs = [];
+            foreach ($filtered['package_outputs'] as $row) {
+                if (!is_array($row) || empty($row['ticket_type_id'])) continue;
+                $normalizedOutputs[] = [
+                    'ticket_type_id' => (int) $row['ticket_type_id'],
+                    'variant_id' => !empty($row['variant_id']) ? (string) $row['variant_id'] : null,
+                    'qty' => max(1, (int) ($row['qty'] ?? 1)),
+                ];
+            }
+            $filtered['package_outputs'] = $normalizedOutputs;
+        }
+
+        return $filtered;
+    }
+
+    protected function presentProduct(TicketType $t): array
+    {
+        $variants = [];
+        $rawVariants = is_array($t->meta) ? ($t->meta['variants'] ?? null) : null;
+        if (is_array($rawVariants)) {
+            foreach ($rawVariants as $v) {
+                if (!is_array($v) || empty($v['label'])) continue;
+                $variants[] = [
+                    'id' => $v['id'] ?? \Illuminate\Support\Str::slug($v['label']),
+                    'label' => $v['label'],
+                    'duration_minutes' => isset($v['duration_minutes']) ? (int) $v['duration_minutes'] : null,
+                    'price' => isset($v['price']) ? (float) $v['price'] : (float) ($t->price_max ?? $t->price ?? 0),
+                ];
+            }
+        }
+
+        $packageOutputs = is_array($t->meta) ? ($t->meta['package_outputs'] ?? null) : null;
+        $packageOutputs = is_array($packageOutputs) ? $packageOutputs : [];
+
+        $addons = [];
+        $rawAddons = is_array($t->meta) ? ($t->meta['addons'] ?? null) : null;
+        if (is_array($rawAddons)) {
+            foreach ($rawAddons as $a) {
+                if (!is_array($a) || empty($a['label'])) continue;
+                $addons[] = [
+                    'id' => $a['id'] ?? \Illuminate\Support\Str::slug($a['label']),
+                    'label' => $a['label'],
+                    'price' => (float) ($a['price'] ?? 0),
+                    'included_qty' => max(0, (int) ($a['included_qty'] ?? 0)),
+                    'max_per_unit' => max(0, (int) ($a['max_per_unit'] ?? 5)),
+                ];
+            }
+        }
+
+        return [
+            'id' => $t->id,
+            'name' => $t->name,
+            'sku' => $t->sku,
+            'description' => $t->description,
+            'service_category' => $t->effective_service_category,
+            'issuing_company' => $t->effective_issuing_company,
+            'price' => (float) ($t->price_max ?? $t->price ?? 0),
+            'price_max' => (float) ($t->price_max ?? 0),
+            'currency' => $t->currency,
+            'capacity' => $t->capacity,
+            'daily_capacity' => $t->daily_capacity,
+            'is_active' => (bool) $t->is_active,
+            'is_parking' => (bool) $t->is_parking,
+            'requires_vehicle_info' => (bool) $t->requires_vehicle_info,
+            'requires_access_ticket' => (bool) $t->requires_access_ticket,
+            'service_duration_minutes' => $t->service_duration_minutes,
+            'product_description' => $t->product_description,
+            'usage_terms' => $t->usage_terms,
+            'ticket_group' => $t->ticket_group,
+            'min_per_order' => $t->min_per_order,
+            'max_per_order' => $t->max_per_order,
+            'sales_start_at' => optional($t->sales_start_at)->toIso8601String(),
+            'sales_end_at' => optional($t->sales_end_at)->toIso8601String(),
+            'valid_date' => optional($t->valid_date)->toDateString(),
+            'sort_order' => $t->sort_order,
+            'meta' => is_array($t->meta) ? $t->meta : (object) [],
+            'variants' => $variants,
+            'addons' => $addons,
+            'slots_config' => is_array($t->meta['slots_config'] ?? null) ? $t->meta['slots_config'] : null,
+            'physical_inventory' => is_array($t->meta['physical_inventory'] ?? null) ? $t->meta['physical_inventory'] : null,
+            'pos_price' => isset($t->meta['pos_price']) && $t->meta['pos_price'] !== '' ? (float) $t->meta['pos_price'] : null,
+            'pos_only' => (bool) ($t->meta['pos_only'] ?? false),
+            'is_child_ticket' => (bool) ($t->meta['is_child_ticket'] ?? false),
+            'access_requirement' => in_array($t->meta['access_requirement'] ?? null, ['none', 'any', 'adult_only'], true)
+                ? $t->meta['access_requirement']
+                : ((bool) $t->requires_access_ticket ? 'any' : 'none'),
+            'blocked_time_ranges' => is_array($t->meta['blocked_time_ranges'] ?? null) ? $t->meta['blocked_time_ranges'] : [],
+            'package_outputs' => $packageOutputs,
+        ];
+    }
+
+    /**
+     * GET /marketplace-client/organizer/events/{event}/leisure/raport?from=&to=
+     *
+     * Raport agregat: by_ticket_type, by_source (online vs POS),
+     * by_cashier (operator POS) cu totaluri venit + bilete + comenzi.
+     */
+    public function raport(Request $request, int $event): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+        $marketplace = $organizer->marketplaceClient;
+
+        $eventModel = Event::query()
+            ->where('id', $event)
+            ->where('marketplace_client_id', $marketplace->id)
+            ->first();
+        if (!$eventModel) return $this->error('Event not found', 404);
+
+        $validated = $request->validate([
+            'from' => 'nullable|date',
+            'to' => 'nullable|date|after_or_equal:from',
+        ]);
+
+        $from = isset($validated['from'])
+            ? Carbon::parse($validated['from'])->startOfDay()
+            : Carbon::today()->subDays(30)->startOfDay();
+        $to = isset($validated['to'])
+            ? Carbon::parse($validated['to'])->endOfDay()
+            : Carbon::today()->endOfDay();
+
+        $orders = Order::query()
+            ->where('event_id', $eventModel->id)
+            ->whereIn('status', ['completed', 'paid'])
+            ->whereBetween('paid_at', [$from, $to])
+            ->with(['tickets:id,order_id,ticket_type_id,price,status', 'tickets.ticketType:id,name,service_category,issuing_company'])
+            ->get(['id', 'event_id', 'paid_at', 'status', 'total', 'currency', 'source', 'meta']);
+
+        $byTicketType = [];
+        $bySource = [];
+        $byCashier = [];
+        $totalRevenue = 0.0;
+        $totalTickets = 0;
+        $totalOrders = $orders->count();
+
+        foreach ($orders as $o) {
+            $rev = (float) ($o->total ?? 0);
+            $totalRevenue += $rev;
+
+            // Source: pos vs online
+            $source = $o->source === 'pos' ? 'pos' : ($o->source ?: 'online');
+            if ($source !== 'pos') $source = 'online';
+            if (!isset($bySource[$source])) $bySource[$source] = ['source' => $source, 'orders' => 0, 'tickets' => 0, 'revenue' => 0.0];
+            $bySource[$source]['orders']++;
+            $bySource[$source]['revenue'] += $rev;
+
+            // Cashier (operator POS) — din meta.cashier_organizer_id
+            $cashierId = $o->meta['cashier_organizer_id'] ?? null;
+            $cashierKey = $cashierId ? "org_{$cashierId}" : 'online';
+            if (!isset($byCashier[$cashierKey])) $byCashier[$cashierKey] = ['cashier_id' => $cashierId, 'cashier_label' => $cashierId ? "Operator #{$cashierId}" : 'Online (auto)', 'orders' => 0, 'tickets' => 0, 'revenue' => 0.0];
+            $byCashier[$cashierKey]['orders']++;
+            $byCashier[$cashierKey]['revenue'] += $rev;
+
+            foreach ($o->tickets as $t) {
+                if (in_array($t->status, ['cancelled', 'refunded'], true)) continue;
+                $totalTickets++;
+                $bySource[$source]['tickets']++;
+                $byCashier[$cashierKey]['tickets']++;
+
+                $ttId = $t->ticket_type_id;
+                $ttName = $t->ticketType->name ?? "Tip #{$ttId}";
+                if (is_array($ttName)) $ttName = $ttName['ro'] ?? reset($ttName);
+                $key = "tt_{$ttId}";
+                if (!isset($byTicketType[$key])) {
+                    $byTicketType[$key] = [
+                        'ticket_type_id' => $ttId,
+                        'name' => $ttName,
+                        'service_category' => $t->ticketType->service_category ?? 'access',
+                        'issuing_company' => $t->ticketType->issuing_company ?? 'primary',
+                        'tickets' => 0,
+                        'revenue' => 0.0,
+                    ];
+                }
+                $byTicketType[$key]['tickets']++;
+                $byTicketType[$key]['revenue'] += (float) ($t->price ?? 0);
+            }
+        }
+
+        // Round totals
+        $totalRevenue = round($totalRevenue, 2);
+        foreach ($bySource as &$row) $row['revenue'] = round($row['revenue'], 2);
+        foreach ($byCashier as &$row) $row['revenue'] = round($row['revenue'], 2);
+        foreach ($byTicketType as &$row) $row['revenue'] = round($row['revenue'], 2);
+        unset($row);
+
+        return $this->success([
+            'from' => $from->toDateString(),
+            'to' => $to->toDateString(),
+            'currency' => $orders->first()?->currency ?? 'RON',
+            'totals' => [
+                'orders' => $totalOrders,
+                'tickets' => $totalTickets,
+                'revenue' => $totalRevenue,
+                'avg_order' => $totalOrders > 0 ? round($totalRevenue / $totalOrders, 2) : 0,
+            ],
+            'by_source' => array_values($bySource),
+            'by_ticket_type' => array_values($byTicketType),
+            'by_cashier' => array_values($byCashier),
+        ]);
+    }
+
+    // ========================================================================
+    // F7 — Bărci: tabel boats + rentals (timer + calup recalculare)
+    // ========================================================================
+
+    /**
+     * GET /marketplace-client/organizer/events/{event}/leisure/boats?ticket_type_id=X
+     * Listă bărci pentru un produs (rental). Sincronizează automat dacă lipsesc.
+     */
+    public function boatsIndex(Request $request, int $event): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+        $marketplace = $organizer->marketplaceClient;
+        $eventModel = Event::where('id', $event)->where('marketplace_client_id', $marketplace->id)->first();
+        if (!$eventModel) return $this->error('Event not found', 404);
+
+        $validated = $request->validate(['ticket_type_id' => 'required|integer']);
+        $tt = TicketType::where('id', $validated['ticket_type_id'])->where('event_id', $eventModel->id)->first();
+        if (!$tt) return $this->error('Ticket type not found', 404);
+
+        $boats = LeisureBoat::query()
+            ->where('ticket_type_id', $tt->id)
+            ->orderBy('number')
+            ->get();
+
+        // Atașează rental activ dacă există
+        $activeRentals = BoatRental::query()
+            ->whereIn('boat_id', $boats->pluck('id'))
+            ->where('status', 'active')
+            ->get()
+            ->keyBy('boat_id');
+
+        return $this->success([
+            'boats' => $boats->map(function ($b) use ($activeRentals) {
+                $active = $activeRentals->get($b->id);
+                return [
+                    'id' => $b->id,
+                    'number' => $b->number,
+                    'label' => $b->label ?: ('Barca #' . $b->number),
+                    'qr_code' => $b->qr_code,
+                    'status' => $b->status,
+                    'active_rental' => $active ? [
+                        'id' => $active->id,
+                        'started_at' => $active->started_at->toIso8601String(),
+                        'planned_end_at' => $active->planned_end_at->toIso8601String(),
+                    ] : null,
+                ];
+            })->values(),
+        ]);
+    }
+
+    /**
+     * POST /marketplace-client/organizer/events/{event}/leisure/boats/sync
+     * Sincronizează numărul de bărci pentru un produs cu meta.physical_inventory.count.
+     */
+    public function boatsSync(Request $request, int $event): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+        $marketplace = $organizer->marketplaceClient;
+        $eventModel = Event::where('id', $event)->where('marketplace_client_id', $marketplace->id)->first();
+        if (!$eventModel) return $this->error('Event not found', 404);
+
+        $validated = $request->validate(['ticket_type_id' => 'required|integer']);
+        $tt = TicketType::where('id', $validated['ticket_type_id'])->where('event_id', $eventModel->id)->first();
+        if (!$tt) return $this->error('Ticket type not found', 404);
+
+        $physical = is_array($tt->meta['physical_inventory'] ?? null) ? $tt->meta['physical_inventory'] : null;
+        if (!$physical || empty($physical['enabled'])) {
+            return $this->error('Produsul nu are inventar fizic activat (meta.physical_inventory.enabled).', 422);
+        }
+        $targetCount = max(1, (int) ($physical['count'] ?? 1));
+        $current = LeisureBoat::where('ticket_type_id', $tt->id)->count();
+
+        $created = 0;
+        $deactivated = 0;
+        if ($current < $targetCount) {
+            // Adaug bărci noi (numere consecutive)
+            $maxNumber = (int) LeisureBoat::where('ticket_type_id', $tt->id)->max('number');
+            for ($i = $maxNumber + 1; $i <= $maxNumber + ($targetCount - $current); $i++) {
+                LeisureBoat::create([
+                    'event_id' => $eventModel->id,
+                    'ticket_type_id' => $tt->id,
+                    'number' => $i,
+                    'status' => 'available',
+                ]);
+                $created++;
+            }
+        } elseif ($current > $targetCount) {
+            // Marchez ca retired pe cele suplimentare (NU le șterg dacă au rentals istorice)
+            $extraIds = LeisureBoat::where('ticket_type_id', $tt->id)
+                ->orderByDesc('number')
+                ->take($current - $targetCount)
+                ->pluck('id');
+            LeisureBoat::whereIn('id', $extraIds)->update(['status' => 'retired']);
+            $deactivated = $extraIds->count();
+        }
+
+        return $this->success([
+            'target' => $targetCount,
+            'before' => $current,
+            'created' => $created,
+            'deactivated' => $deactivated,
+            'total_now' => LeisureBoat::where('ticket_type_id', $tt->id)->where('status', '!=', 'retired')->count(),
+        ], 'Sincronizare completă');
+    }
+
+    /**
+     * GET /marketplace-client/organizer/events/{event}/leisure/active-rentals?ticket_type_id=X
+     */
+    public function activeRentals(Request $request, int $event): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+        $marketplace = $organizer->marketplaceClient;
+        $eventModel = Event::where('id', $event)->where('marketplace_client_id', $marketplace->id)->first();
+        if (!$eventModel) return $this->error('Event not found', 404);
+
+        $query = BoatRental::query()
+            ->where('event_id', $eventModel->id)
+            ->where('status', 'active')
+            ->with(['boat:id,number,label', 'ticketType:id,name'])
+            ->orderBy('started_at');
+
+        if ($request->filled('ticket_type_id')) {
+            $query->where('ticket_type_id', (int) $request->input('ticket_type_id'));
+        }
+
+        return $this->success([
+            'rentals' => $query->get()->map(function ($r) {
+                return [
+                    'id' => $r->id,
+                    'boat_id' => $r->boat_id,
+                    'boat_number' => $r->boat?->number,
+                    'boat_label' => $r->boat?->label ?: ('Barca #' . $r->boat?->number),
+                    'started_at' => $r->started_at->toIso8601String(),
+                    'planned_end_at' => $r->planned_end_at->toIso8601String(),
+                    'calup_duration_minutes' => $r->calup_duration_minutes,
+                    'calupuri_planned' => $r->calupuri_planned,
+                    'calup_unit_price' => (float) $r->calup_unit_price,
+                    'ticket_type' => is_array($r->ticketType?->name) ? ($r->ticketType->name['ro'] ?? reset($r->ticketType->name)) : $r->ticketType?->name,
+                ];
+            })->values(),
+        ]);
+    }
+
+    /**
+     * POST /marketplace-client/organizer/events/{event}/leisure/boat-rentals/start
+     * Body: { ticket_type_id, boat_id, rental_ticket_id? sau access_ticket_id?, calupuri?: 1, variant_id? }
+     *
+     * Pornește cursa pe o barcă. Dacă rental_ticket_id e dat, atașează-l;
+     * altfel emite un Ticket nou (flow on-site: cumpărare imediată).
+     */
+    public function rentalStart(Request $request, int $event): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+        $marketplace = $organizer->marketplaceClient;
+        $eventModel = Event::where('id', $event)->where('marketplace_client_id', $marketplace->id)->first();
+        if (!$eventModel) return $this->error('Event not found', 404);
+
+        $validated = $request->validate([
+            'ticket_type_id' => 'required|integer',
+            'boat_id' => 'required|integer',
+            'rental_ticket_id' => 'nullable|integer',
+            'access_ticket_id' => 'nullable|integer',
+            'calupuri' => 'nullable|integer|min:1|max:48',
+            'variant_id' => 'nullable|string|max:64',
+            'started_by_member_id' => 'nullable|integer',
+            'notes' => 'nullable|string|max:500',
+        ]);
+
+        $tt = TicketType::where('id', $validated['ticket_type_id'])->where('event_id', $eventModel->id)->first();
+        if (!$tt) return $this->error('Ticket type not found', 404);
+
+        $boat = LeisureBoat::where('id', $validated['boat_id'])->where('ticket_type_id', $tt->id)->first();
+        if (!$boat) return $this->error('Barca nu există pentru acest produs.', 404);
+        if ($boat->status !== 'available') return $this->error('Barca nu e disponibilă (status: ' . $boat->status . ')', 422);
+
+        // Verifică dacă barca are deja un rental activ
+        $existingActive = BoatRental::where('boat_id', $boat->id)->where('status', 'active')->exists();
+        if ($existingActive) return $this->error('Barca are deja o cursă activă. Închide-o prima dată.', 422);
+
+        // Rezolvă varianta pentru a calcula calup_duration_minutes + unit_price
+        $variant = null;
+        if (!empty($validated['variant_id']) && is_array($tt->meta['variants'] ?? null)) {
+            foreach ($tt->meta['variants'] as $v) {
+                if (!is_array($v) || empty($v['label'])) continue;
+                $vid = $v['id'] ?? Str::slug($v['label']);
+                if ($vid === $validated['variant_id']) { $variant = $v; break; }
+            }
+        }
+
+        $calupDurationMinutes = (int) ($variant['duration_minutes'] ?? 30);
+        // Dacă durata e 60 (1h), calupul e tot 30min, deci calupuri_planned = 2
+        $calupBase = 30;
+        $calupuriPlanned = max(1, (int) ($validated['calupuri'] ?? ceil($calupDurationMinutes / $calupBase)));
+        $calupUnitPrice = (float) ($variant['price'] ?? $tt->price_max ?? $tt->price ?? 0) / max(1, $calupuriPlanned);
+
+        $now = Carbon::now();
+        $plannedEnd = $now->copy()->addMinutes($calupBase * $calupuriPlanned);
+
+        $rental = BoatRental::create([
+            'event_id' => $eventModel->id,
+            'ticket_type_id' => $tt->id,
+            'boat_id' => $boat->id,
+            'rental_ticket_id' => $validated['rental_ticket_id'] ?? null,
+            'access_ticket_id' => $validated['access_ticket_id'] ?? null,
+            'started_by_member_id' => $validated['started_by_member_id'] ?? null,
+            'started_at' => $now,
+            'planned_end_at' => $plannedEnd,
+            'calup_duration_minutes' => $calupBase,
+            'calup_unit_price' => round($calupUnitPrice, 2),
+            'calupuri_planned' => $calupuriPlanned,
+            'status' => 'active',
+            'notes' => $validated['notes'] ?? null,
+        ]);
+
+        // Marchează barca în uz
+        $boat->update(['status' => 'in_use']);
+
+        // Marchează biletul rental ca "used" dacă există
+        if (!empty($validated['rental_ticket_id'])) {
+            Ticket::where('id', $validated['rental_ticket_id'])->update(['status' => 'used', 'checked_in_at' => $now]);
+        }
+        if (!empty($validated['access_ticket_id'])) {
+            $accessTicket = Ticket::find($validated['access_ticket_id']);
+            if ($accessTicket && empty($accessTicket->checked_in_at)) {
+                $accessTicket->update(['checked_in_at' => $now]);
+            }
+        }
+
+        return $this->success([
+            'rental' => [
+                'id' => $rental->id,
+                'boat_number' => $boat->number,
+                'started_at' => $rental->started_at->toIso8601String(),
+                'planned_end_at' => $rental->planned_end_at->toIso8601String(),
+                'calupuri_planned' => $rental->calupuri_planned,
+                'calup_unit_price' => (float) $rental->calup_unit_price,
+            ],
+        ], 'Cursă pornită');
+    }
+
+    /**
+     * POST /marketplace-client/organizer/events/{event}/leisure/boat-rentals/{rental}/end
+     * Închide timer-ul (operator). Calculează calupuri_actual + extra_charge dar nu emite ticket încă.
+     */
+    public function rentalEnd(Request $request, int $event, int $rental): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+        $marketplace = $organizer->marketplaceClient;
+        $eventModel = Event::where('id', $event)->where('marketplace_client_id', $marketplace->id)->first();
+        if (!$eventModel) return $this->error('Event not found', 404);
+
+        $r = BoatRental::where('id', $rental)->where('event_id', $eventModel->id)->first();
+        if (!$r) return $this->error('Cursa nu există.', 404);
+        if ($r->status !== 'active') return $this->error('Cursa nu e activă (status: ' . $r->status . ')', 422);
+
+        $now = Carbon::now();
+        $r->ended_at = $now;
+        $r->calupuri_actual = $r->calculateActualCalupuri();
+        $extraCalupuri = max(0, $r->calupuri_actual - $r->calupuri_planned);
+        $r->extra_charge_total = round($extraCalupuri * (float) $r->calup_unit_price, 2);
+        $r->status = 'ended';
+        $r->save();
+
+        return $this->success([
+            'rental_id' => $r->id,
+            'started_at' => $r->started_at->toIso8601String(),
+            'ended_at' => $r->ended_at->toIso8601String(),
+            'duration_minutes' => $r->started_at->diffInMinutes($r->ended_at),
+            'calupuri_planned' => $r->calupuri_planned,
+            'calupuri_actual' => $r->calupuri_actual,
+            'extra_calupuri' => $extraCalupuri,
+            'calup_unit_price' => (float) $r->calup_unit_price,
+            'extra_charge_total' => (float) $r->extra_charge_total,
+        ], $extraCalupuri > 0
+            ? "Cursă încheiată. Clientul a depășit cu {$extraCalupuri} calup(uri) — încasează {$r->extra_charge_total} RON."
+            : 'Cursă încheiată în limita planificată.');
+    }
+
+    /**
+     * POST /marketplace-client/organizer/events/{event}/leisure/boat-rentals/{rental}/finalize
+     * Finalizează complet: emite ticket extra pentru calupurile suplimentare (dacă există),
+     * eliberează barca.
+     */
+    public function rentalFinalize(Request $request, int $event, int $rental): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+        $marketplace = $organizer->marketplaceClient;
+        $eventModel = Event::where('id', $event)->where('marketplace_client_id', $marketplace->id)->first();
+        if (!$eventModel) return $this->error('Event not found', 404);
+
+        $r = BoatRental::where('id', $rental)->where('event_id', $eventModel->id)->first();
+        if (!$r) return $this->error('Cursa nu există.', 404);
+        if ($r->status !== 'ended') return $this->error('Cursa trebuie închisă (end) înainte de finalizare.', 422);
+
+        $now = Carbon::now();
+        $extraTicketId = null;
+
+        try {
+            DB::beginTransaction();
+
+            if ($r->extra_charge_total > 0 && $r->order_id) {
+                // Adăugare OrderItem suplimentar + Ticket extra pentru calupurile depășite
+                $tt = TicketType::find($r->ticket_type_id);
+                $extraCalupuri = max(0, $r->calupuri_actual - $r->calupuri_planned);
+                $orderItem = OrderItem::create([
+                    'order_id' => $r->order_id,
+                    'ticket_type_id' => $tt->id,
+                    'name' => 'Calup suplimentar 30min × ' . $extraCalupuri,
+                    'quantity' => $extraCalupuri,
+                    'unit_price' => $r->calup_unit_price,
+                    'total' => $r->extra_charge_total,
+                    'meta' => [
+                        'service_category' => $tt->service_category ?? 'rental',
+                        'visit_date' => Carbon::today()->toDateString(),
+                        'rental_extra_calup' => true,
+                        'rental_id' => $r->id,
+                    ],
+                ]);
+                $code = strtoupper(Str::random(10));
+                $extraTicket = Ticket::create([
+                    'order_id' => $r->order_id,
+                    'order_item_id' => $orderItem->id,
+                    'ticket_type_id' => $tt->id,
+                    'event_id' => $eventModel->id,
+                    'tenant_id' => $eventModel->tenant_id,
+                    'marketplace_client_id' => $marketplace->id,
+                    'code' => $code,
+                    'barcode' => $code,
+                    // Bilet extra calup — mosteneste locale-ul din order-ul original
+                    // ca sa fie tradus corect daca clientul a comandat in HU/EN.
+                    'locale' => Order::find($r->order_id)?->locale,
+                    'status' => 'used',
+                    'price' => $r->extra_charge_total,
+                    'checked_in_at' => $now,
+                    'meta' => [
+                        'pos' => true,
+                        'rental_extra_calup' => true,
+                        'rental_id' => $r->id,
+                        'extra_calupuri' => $extraCalupuri,
+                    ],
+                ]);
+                $extraTicketId = $extraTicket->id;
+
+                // Update order total
+                if ($r->order) {
+                    $r->order->update([
+                        'subtotal' => round((float) $r->order->subtotal + $r->extra_charge_total, 2),
+                        'total' => round((float) $r->order->total + $r->extra_charge_total, 2),
+                    ]);
+                }
+            }
+
+            $r->update([
+                'finalized_at' => $now,
+                'extra_ticket_id' => $extraTicketId,
+                'status' => 'finalized',
+            ]);
+
+            // Eliberează barca
+            $r->boat?->update(['status' => 'available']);
+
+            // Eliberează lock-ul pe resource (dacă există pe order_item)
+            if ($r->order_item_id) {
+                LeisureResourceLock::where('order_item_id', $r->order_item_id)->update(['status' => 'released']);
+            }
+
+            DB::commit();
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return $this->error('Eroare la finalizare: ' . $e->getMessage(), 500);
+        }
+
+        return $this->success([
+            'rental_id' => $r->id,
+            'extra_ticket_id' => $extraTicketId,
+            'extra_charge_total' => (float) $r->extra_charge_total,
+            'boat_status' => 'available',
+        ], 'Cursă finalizată');
+    }
+
+    // ========================================================================
+    // F11 — Shift activ pentru rolul curent al operatorului
+    // ========================================================================
+
+    /**
+     * GET /marketplace-client/organizer/me/active-shift
+     * Returnează shift-ul activ acum pentru organizer-ul autentificat (sau pentru un team_member specific).
+     * Folosit de mobile app pentru a determina rolul curent.
+     */
+    public function myActiveShift(Request $request): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+        $now = Carbon::now();
+        $teamMemberId = $request->query('team_member_id');
+
+        // Determina team_member curent (din token name = "team-member-{id}").
+        $currentTeamMember = null;
+        if (!$teamMemberId) {
+            $tokenName = $request->user()->currentAccessToken()->name ?? '';
+            if (str_starts_with($tokenName, 'team-member-')) {
+                $teamMemberId = (int) str_replace('team-member-', '', $tokenName);
+            }
+        }
+        if ($teamMemberId) {
+            $currentTeamMember = MarketplaceOrganizerTeamMember::find($teamMemberId);
+            if ($currentTeamMember && $currentTeamMember->marketplace_organizer_id !== $organizer->id) {
+                $currentTeamMember = null;
+            }
+        }
+
+        $query = LeisureShift::query()
+            ->where('marketplace_organizer_id', $organizer->id)
+            ->where('start_at', '<=', $now)
+            ->where('end_at', '>=', $now);
+
+        if ($teamMemberId) {
+            $query->where('team_member_id', (int) $teamMemberId);
+        }
+
+        $shifts = $query->orderByDesc('start_at')->get();
+
+        // Fallback: daca nu exista shift activ, foloseste leisure_role static al team_member-ului.
+        $fallbackRole = null;
+        if ($shifts->isEmpty() && $currentTeamMember && $currentTeamMember->leisure_role) {
+            $fallbackRole = $this->leisureRoleToShiftRole($currentTeamMember->leisure_role);
+        }
+
+        return $this->success([
+            'now' => $now->toIso8601String(),
+            'shifts' => $shifts->map(fn ($s) => [
+                'id' => $s->id,
+                'team_member_id' => $s->team_member_id,
+                'role' => $s->role,
+                'gate' => $s->gate,
+                'start_at' => $s->start_at->toIso8601String(),
+                'end_at' => $s->end_at->toIso8601String(),
+                'allowed_features' => $this->featuresForRole($s->role),
+            ])->values(),
+            'fallback_role' => $fallbackRole,
+            'fallback_features' => $fallbackRole ? $this->featuresForRole($fallbackRole) : [],
+            'team_member' => $currentTeamMember ? [
+                'id' => (string) $currentTeamMember->id,
+                'name' => $currentTeamMember->name,
+                'role' => $currentTeamMember->role,
+                'leisure_role' => $currentTeamMember->leisure_role,
+            ] : null,
+        ]);
+    }
+
+    /**
+     * Mapeaza leisure_role (din team_members) la role (din leisure_shifts) astfel
+     * incat mobile app foloseste acelasi switch.
+     */
+    protected function leisureRoleToShiftRole(?string $leisureRole): ?string
+    {
+        return match ($leisureRole) {
+            'check_in'           => 'gate_scanner',
+            'rental_boats'       => 'operator_boats',
+            'rental_pontoon'     => 'operator_pontoon_rental',
+            'validation_pontoon' => 'operator_pontoon',
+            'rental_sled'        => 'operator_sled',
+            'validation_tow'     => 'operator_tow_validation',
+            'pos_cashier'        => 'sales_operator',
+            'admin_mobile'       => 'admin_mobile',
+            default              => null,
+        };
+    }
+
+    /**
+     * Lista feature-uri permise per rol (folosit la UI gating).
+     */
+    protected function featuresForRole(?string $role): array
+    {
+        return match ($role) {
+            'gate_scanner' => ['checkin'],
+            'sales_operator' => ['pos', 'checkin'],
+            'shift_manager' => ['pos', 'checkin', 'reports', 'team'],
+            'accountant' => ['reports', 'finance'],
+            'operator_boats' => ['boat_rentals', 'checkin', 'pos'],
+            'operator_pontoon' => ['pontoon_validation', 'checkin'],
+            'operator_pontoon_rental' => ['pontoon_rental', 'pos'],
+            'operator_sled' => ['sled_rentals', 'pos'],
+            'operator_tow_validation' => ['tow_validation', 'checkin'],
+            'admin_mobile' => ['pos', 'checkin', 'reports', 'boat_rentals', 'pontoon_validation', 'pontoon_rental', 'sled_rentals', 'tow_validation'],
+            'field_seller' => ['pos_mobile', 'checkin'],
+            default => [],
+        };
+    }
+
+    protected function emptyBucket(): array
+    {
+        return [
+            'orders' => [],
+            'tickets_count' => 0,
+            'subtotal' => 0.0,
+            'by_category' => [],
+        ];
+    }
+
+    protected function requireOrganizer(Request $request): MarketplaceOrganizer
+    {
+        $organizer = $request->user();
+
+        if (!$organizer instanceof MarketplaceOrganizer) {
+            abort(401, 'Unauthorized');
+        }
+
+        return $organizer;
+    }
+
+    protected function localizedTitle(Event $event): string
+    {
+        $title = $event->title;
+        if (is_array($title)) {
+            return $title['ro'] ?? $title['en'] ?? (reset($title) ?: '');
+        }
+        return (string) ($title ?? '');
+    }
+}

@@ -1,0 +1,21 @@
+<?php
+return [
+    'Bengo',
+    'Benguela',
+    'Bié',
+    'Cabinda',
+    'Cuando Cubango',
+    'Cuanza',
+    'Cuanza Norte',
+    'Cunene',
+    'Huambo',
+    'Huíla',
+    'Luanda',
+    'Lunda Norte',
+    'Lunda Sul',
+    'Malanje',
+    'Moxico',
+    'Namibe',
+    'Uíge',
+    'Zaire',
+];

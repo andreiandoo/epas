@@ -1,0 +1,13 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* aceste căi relative trebuie să existe în containerul node */
+@import "/vendor/filament/support/resources/css/theme.css";
+@import "/vendor/filament/forms/resources/css/theme.css";
+@import "/vendor/filament/tables/resources/css/theme.css";
+@import "/vendor/filament/notifications/resources/css/theme.css";
+
+@layer base {
+  body { border-top: 2px solid rgba(0,0,0,.06); }
+}

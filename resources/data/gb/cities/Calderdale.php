@@ -1,0 +1,117 @@
+<?php
+return [
+    [
+        'id'        => 48387,
+        'name'      => 'Barkisland',
+        'latitude'  => '53.67614000',
+        'longitude' => '-1.91840000',
+    ],
+    [
+        'id'        => 48412,
+        'name'      => 'Barrowford',
+        'latitude'  => '53.84650000',
+        'longitude' => '-2.21838000',
+    ],
+    [
+        'id'        => 48823,
+        'name'      => 'Calderdale',
+        'latitude'  => '53.70000000',
+        'longitude' => '-2.00000000',
+    ],
+    [
+        'id'        => 49074,
+        'name'      => 'Colne',
+        'latitude'  => '53.85713000',
+        'longitude' => '-2.16851000',
+    ],
+    [
+        'id'        => 49106,
+        'name'      => 'Cornholme',
+        'latitude'  => '53.73230000',
+        'longitude' => '-2.13851000',
+    ],
+    [
+        'id'        => 49375,
+        'name'      => 'Earby',
+        'latitude'  => '53.91546000',
+        'longitude' => '-2.14285000',
+    ],
+    [
+        'id'        => 49594,
+        'name'      => 'Foulridge',
+        'latitude'  => '53.87579000',
+        'longitude' => '-2.16864000',
+    ],
+    [
+        'id'        => 49628,
+        'name'      => 'Gargrave',
+        'latitude'  => '53.98353000',
+        'longitude' => '-2.10459000',
+    ],
+    [
+        'id'        => 49784,
+        'name'      => 'Halifax',
+        'latitude'  => '53.71667000',
+        'longitude' => '-1.85000000',
+    ],
+    [
+        'id'        => 49854,
+        'name'      => 'Haworth',
+        'latitude'  => '53.82905000',
+        'longitude' => '-1.94827000',
+    ],
+    [
+        'id'        => 49881,
+        'name'      => 'Hebden Bridge',
+        'latitude'  => '53.74093000',
+        'longitude' => '-2.01337000',
+    ],
+    [
+        'id'        => 50432,
+        'name'      => 'Luddenden Foot',
+        'latitude'  => '53.71873000',
+        'longitude' => '-1.94582000',
+    ],
+    [
+        'id'        => 50657,
+        'name'      => 'Mytholmroyd',
+        'latitude'  => '53.73065000',
+        'longitude' => '-1.98258000',
+    ],
+    [
+        'id'        => 50674,
+        'name'      => 'Nelson',
+        'latitude'  => '53.83333000',
+        'longitude' => '-2.20000000',
+    ],
+    [
+        'id'        => 50839,
+        'name'      => 'Oxenhope',
+        'latitude'  => '53.81233000',
+        'longitude' => '-1.95196000',
+    ],
+    [
+        'id'        => 51087,
+        'name'      => 'Ripponden',
+        'latitude'  => '53.67449000',
+        'longitude' => '-1.94183000',
+    ],
+    [
+        'id'        => 51384,
+        'name'      => 'Sowerby Bridge',
+        'latitude'  => '53.70903000',
+        'longitude' => '-1.90929000',
+    ],
+    [
+        'id'        => 51636,
+        'name'      => 'Todmorden',
+        'latitude'  => '53.71434000',
+        'longitude' => '-2.09701000',
+    ],
+    [
+        'id'        => 51736,
+        'name'      => 'Walsden',
+        'latitude'  => '53.69361000',
+        'longitude' => '-2.10001000',
+    ],
+];

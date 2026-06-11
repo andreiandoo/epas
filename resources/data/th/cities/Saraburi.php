@@ -1,0 +1,111 @@
+<?php
+return [
+    [
+        'id'        => 105204,
+        'name'      => 'Amphoe Ban Mo',
+        'latitude'  => '14.60804000',
+        'longitude' => '100.72404000',
+    ],
+    [
+        'id'        => 105277,
+        'name'      => 'Amphoe Chaloem Phra Kiat',
+        'latitude'  => '14.65671000',
+        'longitude' => '100.90838000',
+    ],
+    [
+        'id'        => 105332,
+        'name'      => 'Amphoe Don Phut',
+        'latitude'  => '14.60758000',
+        'longitude' => '100.61578000',
+    ],
+    [
+        'id'        => 105365,
+        'name'      => 'Amphoe Kaeng Khoi',
+        'latitude'  => '14.58166000',
+        'longitude' => '101.05297000',
+    ],
+    [
+        'id'        => 105529,
+        'name'      => 'Amphoe Muak Lek',
+        'latitude'  => '14.77706000',
+        'longitude' => '101.27151000',
+    ],
+    [
+        'id'        => 105587,
+        'name'      => 'Amphoe Mueang Sara Buri',
+        'latitude'  => '14.49721000',
+        'longitude' => '100.93829000',
+    ],
+    [
+        'id'        => 105662,
+        'name'      => 'Amphoe Nong Don',
+        'latitude'  => '14.68880000',
+        'longitude' => '100.68527000',
+    ],
+    [
+        'id'        => 105667,
+        'name'      => 'Amphoe Nong Khae',
+        'latitude'  => '14.38125000',
+        'longitude' => '100.86451000',
+    ],
+    [
+        'id'        => 105679,
+        'name'      => 'Amphoe Nong Saeng',
+        'latitude'  => '14.48283000',
+        'longitude' => '100.80463000',
+    ],
+    [
+        'id'        => 105762,
+        'name'      => 'Amphoe Phra Phutthabat',
+        'latitude'  => '14.71912000',
+        'longitude' => '100.80622000',
+    ],
+    [
+        'id'        => 106193,
+        'name'      => 'Amphoe Sao Hai',
+        'latitude'  => '14.57549000',
+        'longitude' => '100.84390000',
+    ],
+    [
+        'id'        => 106338,
+        'name'      => 'Amphoe Wang Muang',
+        'latitude'  => '14.82287000',
+        'longitude' => '101.13346000',
+    ],
+    [
+        'id'        => 106369,
+        'name'      => 'Amphoe Wihan Daeng',
+        'latitude'  => '14.33435000',
+        'longitude' => '100.96458000',
+    ],
+    [
+        'id'        => 106400,
+        'name'      => 'Ban Mo',
+        'latitude'  => '14.61544000',
+        'longitude' => '100.72731000',
+    ],
+    [
+        'id'        => 106505,
+        'name'      => 'Kaeng Khoi',
+        'latitude'  => '14.58617000',
+        'longitude' => '100.99758000',
+    ],
+    [
+        'id'        => 106598,
+        'name'      => 'Nong Khae',
+        'latitude'  => '14.34062000',
+        'longitude' => '100.86733000',
+    ],
+    [
+        'id'        => 106645,
+        'name'      => 'Phra Phutthabat',
+        'latitude'  => '14.72526000',
+        'longitude' => '100.79536000',
+    ],
+    [
+        'id'        => 106688,
+        'name'      => 'Saraburi',
+        'latitude'  => '14.53333000',
+        'longitude' => '100.91667000',
+    ],
+];

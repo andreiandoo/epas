@@ -1,0 +1,9 @@
+<?php
+return [
+    [
+        'id'        => 66564,
+        'name'      => 'Butha-Buthe',
+        'latitude'  => '-28.76659000',
+        'longitude' => '28.24937000',
+    ],
+];

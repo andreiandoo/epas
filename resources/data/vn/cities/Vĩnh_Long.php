@@ -1,0 +1,123 @@
+<?php
+return [
+    [
+        'id'        => 130635,
+        'name'      => 'Ấp Tân Ngãi',
+        'latitude'  => '10.23333000',
+        'longitude' => '106.28333000',
+    ],
+    [
+        'id'        => 130180,
+        'name'      => 'Bến Tre',
+        'latitude'  => '10.24147000',
+        'longitude' => '106.37585000',
+    ],
+    [
+        'id'        => 130215,
+        'name'      => 'Huyện Ba Tri',
+        'latitude'  => '10.06627000',
+        'longitude' => '106.60554000',
+    ],
+    [
+        'id'        => 130226,
+        'name'      => 'Huyện Bình Đại',
+        'latitude'  => '10.19354000',
+        'longitude' => '106.64455000',
+    ],
+    [
+        'id'        => 130265,
+        'name'      => 'Huyện Càng Long',
+        'latitude'  => '9.95883000',
+        'longitude' => '106.21395000',
+    ],
+    [
+        'id'        => 130272,
+        'name'      => 'Huyện Cầu Kè',
+        'latitude'  => '9.86738000',
+        'longitude' => '106.07916000',
+    ],
+    [
+        'id'        => 130273,
+        'name'      => 'Huyện Cầu Ngang',
+        'latitude'  => '9.77186000',
+        'longitude' => '106.43654000',
+    ],
+    [
+        'id'        => 130250,
+        'name'      => 'Huyện Châu Thành',
+        'latitude'  => '10.29212000',
+        'longitude' => '106.30827000',
+    ],
+    [
+        'id'        => 130261,
+        'name'      => 'Huyện Chợ Lách',
+        'latitude'  => '10.22674000',
+        'longitude' => '106.17077000',
+    ],
+    [
+        'id'        => 130291,
+        'name'      => 'Huyện Giồng Trôm',
+        'latitude'  => '10.15909000',
+        'longitude' => '106.47004000',
+    ],
+    [
+        'id'        => 130342,
+        'name'      => 'Huyện Long Hồ',
+        'latitude'  => '10.21640000',
+        'longitude' => '105.98483000',
+    ],
+    [
+        'id'        => 130357,
+        'name'      => 'Huyện Mang Thít',
+        'latitude'  => '10.18731000',
+        'longitude' => '106.07472000',
+    ],
+    [
+        'id'        => 130428,
+        'name'      => 'Huyện Tam Bình',
+        'latitude'  => '10.08127000',
+        'longitude' => '105.95352000',
+    ],
+    [
+        'id'        => 130449,
+        'name'      => 'Huyện Thạnh Phú',
+        'latitude'  => '9.92993000',
+        'longitude' => '106.54316000',
+    ],
+    [
+        'id'        => 130460,
+        'name'      => 'Huyện Tiểu Cần',
+        'latitude'  => '9.80350000',
+        'longitude' => '106.20594000',
+    ],
+    [
+        'id'        => 130465,
+        'name'      => 'Huyện Trà Cú',
+        'latitude'  => '9.69706000',
+        'longitude' => '106.29423000',
+    ],
+    [
+        'id'        => 130468,
+        'name'      => 'Huyện Trà Ôn',
+        'latitude'  => '9.97522000',
+        'longitude' => '106.00957000',
+    ],
+    [
+        'id'        => 130505,
+        'name'      => 'Huyện Vũng Liêm',
+        'latitude'  => '10.08717000',
+        'longitude' => '106.16038000',
+    ],
+    [
+        'id'        => 130617,
+        'name'      => 'Trà Vinh',
+        'latitude'  => '9.94719000',
+        'longitude' => '106.34225000',
+    ],
+    [
+        'id'        => 130624,
+        'name'      => 'Vĩnh Long',
+        'latitude'  => '10.25369000',
+        'longitude' => '105.97220000',
+    ],
+];

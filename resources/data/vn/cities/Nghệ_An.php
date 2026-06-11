@@ -1,0 +1,111 @@
+<?php
+return [
+    [
+        'id'        => 130212,
+        'name'      => 'Huyện Anh Sơn',
+        'latitude'  => '18.92902000',
+        'longitude' => '105.08294000',
+    ],
+    [
+        'id'        => 130264,
+        'name'      => 'Huyện Con Cuông',
+        'latitude'  => '19.03898000',
+        'longitude' => '104.80353000',
+    ],
+    [
+        'id'        => 130279,
+        'name'      => 'Huyện Diễn Châu',
+        'latitude'  => '18.98892000',
+        'longitude' => '105.57625000',
+    ],
+    [
+        'id'        => 130532,
+        'name'      => 'Huyện Đô Lương',
+        'latitude'  => '18.89259000',
+        'longitude' => '105.34027000',
+    ],
+    [
+        'id'        => 130310,
+        'name'      => 'Huyện Hưng Nguyên',
+        'latitude'  => '18.67811000',
+        'longitude' => '105.62523000',
+    ],
+    [
+        'id'        => 130339,
+        'name'      => 'Huyện Kỳ Sơn',
+        'latitude'  => '19.42397000',
+        'longitude' => '104.22199000',
+    ],
+    [
+        'id'        => 130378,
+        'name'      => 'Huyện Nam Đàn',
+        'latitude'  => '18.67041000',
+        'longitude' => '105.52575000',
+    ],
+    [
+        'id'        => 130381,
+        'name'      => 'Huyện Nghi Lộc',
+        'latitude'  => '18.83131000',
+        'longitude' => '105.62411000',
+    ],
+    [
+        'id'        => 130385,
+        'name'      => 'Huyện Nghĩa Đàn',
+        'latitude'  => '19.38234000',
+        'longitude' => '105.44072000',
+    ],
+    [
+        'id'        => 130411,
+        'name'      => 'Huyện Quế Phong',
+        'latitude'  => '19.70177000',
+        'longitude' => '104.87913000',
+    ],
+    [
+        'id'        => 130413,
+        'name'      => 'Huyện Quỳ Châu',
+        'latitude'  => '19.55707000',
+        'longitude' => '105.09173000',
+    ],
+    [
+        'id'        => 130414,
+        'name'      => 'Huyện Quỳ Hợp',
+        'latitude'  => '19.32514000',
+        'longitude' => '105.16009000',
+    ],
+    [
+        'id'        => 130415,
+        'name'      => 'Huyện Quỳnh Lưu',
+        'latitude'  => '19.22717000',
+        'longitude' => '105.64354000',
+    ],
+    [
+        'id'        => 130436,
+        'name'      => 'Huyện Thanh Chương',
+        'latitude'  => '18.73929000',
+        'longitude' => '105.24053000',
+    ],
+    [
+        'id'        => 130492,
+        'name'      => 'Huyện Tương Dương',
+        'latitude'  => '19.30979000',
+        'longitude' => '104.57788000',
+    ],
+    [
+        'id'        => 130520,
+        'name'      => 'Huyện Yên Thành',
+        'latitude'  => '19.02724000',
+        'longitude' => '105.43649000',
+    ],
+    [
+        'id'        => 130622,
+        'name'      => 'Vinh',
+        'latitude'  => '18.67337000',
+        'longitude' => '105.69232000',
+    ],
+    [
+        'id'        => 130629,
+        'name'      => 'Yên Vinh',
+        'latitude'  => '18.66667000',
+        'longitude' => '105.66667000',
+    ],
+];

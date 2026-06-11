@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ePas Seating Widget - Example</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+            background: #f9fafb;
+        }
+
+        .demo-container {
+            background: white;
+            padding: 2rem;
+            border-radius: 1rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            margin-top: 0;
+            color: #111827;
+        }
+
+        .info-box {
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .info-box h3 {
+            margin-top: 0;
+            color: #1e40af;
+        }
+
+        .info-box code {
+            background: #dbeafe;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            font-family: 'Courier New', monospace;
+            font-size: 0.875rem;
+        }
+
+        #widget-status {
+            margin-top: 2rem;
+            padding: 1rem;
+            background: #f3f4f6;
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
+        }
+
+        #widget-status h3 {
+            margin-top: 0;
+            font-size: 1rem;
+        }
+
+        #event-log {
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.75rem;
+            background: #111827;
+            color: #10b981;
+            padding: 1rem;
+            border-radius: 0.5rem;
+        }
+
+        .log-entry {
+            margin-bottom: 0.25rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="demo-container">
+        <h1>ePas Seating Widget Demo</h1>
+
+        <div class="info-box">
+            <h3>How to Use</h3>
+            <p>This is a demonstration of the embeddable seating widget. To use it on your website:</p>
+            <ol>
+                <li>Include the script: <code>&lt;script src="/js/epas-seating.js"&gt;&lt;/script&gt;</code></li>
+                <li>Create a container: <code>&lt;div id="seating-widget"&gt;&lt;/div&gt;</code></li>
+                <li>Initialize the widget with your event ID</li>
+            </ol>
+        </div>
+
+        <!-- Widget Container -->
+        <div id="seating-widget"></div>
+
+        <!-- Status Panel -->
+        <div id="widget-status">
+            <h3>Widget Status</h3>
+            <p><strong>Session UID:</strong> <span id="session-uid">-</span></p>
+            <p><strong>Selected Seats:</strong> <span id="selected-count">0</span></p>
+            <p><strong>Event Log:</strong></p>
+            <div id="event-log"></div>
+        </div>
+    </div>
+
+    <!-- Include the widget script -->
+    <script src="/js/epas-seating.js"></script>
+
+    <!-- Initialize the widget -->
+    <script>
+        // Configuration
+        const config = {
+            apiBaseUrl: '/api/public',
+            eventId: 1, // Replace with actual event ID
+            containerId: 'seating-widget',
+            maxSeats: 10,
+
+            // Callbacks
+            onSeatsSelected: (seats) => {
+                log('Seats selected:', seats);
+                document.getElementById('selected-count').textContent = seats.length;
+            },
+
+            onHoldExpired: () => {
+                log('Hold expired!', null, 'warning');
+                alert('Your seat hold has expired. Please select seats again.');
+            },
+
+            onError: (error) => {
+                log('Error:', error.message, 'error');
+                console.error('[Widget Error]', error);
+            },
+        };
+
+        // Initialize widget
+        const widget = new EPasSeating(config);
+
+        // Log helper
+        function log(message, data = null, type = 'info') {
+            const logEl = document.getElementById('event-log');
+            const timestamp = new Date().toLocaleTimeString();
+            const color = type === 'error' ? '#ef4444' : type === 'warning' ? '#f59e0b' : '#10b981';
+
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            entry.style.color = color;
+            entry.textContent = `[${timestamp}] ${message}`;
+
+            if (data) {
+                entry.textContent += ` ${JSON.stringify(data)}`;
+            }
+
+            logEl.appendChild(entry);
+            logEl.scrollTop = logEl.scrollHeight;
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                log('Initializing widget...');
+                await widget.init();
+                log('Widget initialized successfully');
+
+                // Display session UID
+                document.getElementById('session-uid').textContent = widget.state.sessionUid;
+
+            } catch (error) {
+                log('Initialization failed:', error.message, 'error');
+            }
+        });
+
+        // Example: Programmatic seat selection (for testing)
+        window.testSelectSeat = function(seatUid) {
+            widget.toggleSeatSelection(seatUid);
+        };
+
+        // Example: Get current selection
+        window.getCurrentSelection = function() {
+            return widget.state.selectedSeats;
+        };
+
+        // Example: Destroy widget
+        window.destroyWidget = function() {
+            widget.destroy();
+            log('Widget destroyed');
+        };
+    </script>
+</body>
+</html>

@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#1B1714" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;0,9..144,900;1,9..144,500&family=Hanken+Grotesk:wght@400;500;600;700;800&family=Spline+Sans+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: { extend: {
+        colors: {
+          paper:'#F4EFE3','paper-2':'#EBE2CF','paper-3':'#E2D7BF',
+          ink:'#1B1714','ink-2':'#2E2820','ink-soft':'#5A4F41',
+          vermilion:'#E84527','vermilion-d':'#C5371C',
+          forest:'#1E4A3D','forest-l':'#2E6553',ochre:'#DA9A33',sky:'#2C5F8A',
+          mint:'#D7E8D3', rose:'#F2C7B8'
+        },
+        fontFamily: {
+          display:['Fraunces','Georgia','serif'],
+          sans:['"Hanken Grotesk"','system-ui','sans-serif'],
+          mono:['"Spline Sans Mono"','ui-monospace','monospace']
+        },
+        boxShadow: {
+          ticket:'0 28px 60px -36px rgba(27,23,20,.58)'
+        }
+      }}
+    }
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <style>
+    :root { --paper:#F4EFE3; }
+    html { scroll-behavior:smooth; }
+    body { background:#F4EFE3; color:#1B1714; font-feature-settings:"ss01","cv01"; }
+    .font-display { font-optical-sizing:auto; font-variation-settings:"SOFT" 0,"WONK" 1; letter-spacing:-.018em; }
+    .grain::after{ content:""; position:fixed; inset:0; z-index:60; pointer-events:none; opacity:.05;
+      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); mix-blend-mode:multiply; }
+    .ticket{ position:relative; isolation:isolate; }
+    .ticket .perf{ position:absolute; top:0; bottom:0; left:var(--perf,68%); width:0; border-left:2px dashed rgba(27,23,20,.28); }
+    .ticket .notch{ position:absolute; left:var(--perf,68%); width:18px; height:18px; border-radius:9999px; background:var(--punch,#F4EFE3); transform:translateX(-50%); border:2px dashed rgba(27,23,20,.18); }
+    .ticket .notch.top{ top:-9px; } .ticket .notch.bot{ bottom:-9px; }
+    .stamp{ border:2px solid currentColor; border-radius:9999px; }
+    .underline-wobble{ background-image:linear-gradient(currentColor,currentColor); background-size:100% 2px; background-repeat:no-repeat; background-position:0 100%; transition:background-size .3s; }
+    .underline-wobble:hover{ background-size:0% 2px; }
+    .no-bar::-webkit-scrollbar{ display:none; } .no-bar{ -ms-overflow-style:none; scrollbar-width:none; }
+    .step-active{ background:#1B1714; color:#F4EFE3; border-color:#1B1714; }
+    .field{ width:100%; border:2px solid rgba(27,23,20,.16); background:rgba(255,255,255,.28); border-radius:1rem; padding:.85rem 1rem; outline:none; transition:border-color .2s, box-shadow .2s, background .2s; }
+    .field:focus{ border-color:#E84527; box-shadow:0 0 0 4px rgba(232,69,39,.12); background:#F4EFE3; }
+    [x-cloak]{ display:none !important; }
+    @media (prefers-reduced-motion: reduce){ html{scroll-behavior:auto;} *{animation:none!important;transition:none!important;} }
+  </style>
+
+  <title>Comandă confirmată — bilete.online</title>
+  <meta name="description" content="Comanda ta a fost confirmată. Descarcă biletele, adaugă activitățile în calendar și verifică detaliile comenzii." />
+  <meta name="robots" content="noindex, follow, noarchive, max-image-preview:large" />
+  <link rel="canonical" href="https://bilete.online/comanda-confirmata" />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Comandă confirmată — bilete.online" />
+  <meta property="og:description" content="Biletele tale au fost emise și pot fi descărcate instant." />
+  <script type="application/ld+json">
+  {"@context":"https://schema.org","@type":"WebPage","name":"Comandă confirmată","url":"https://bilete.online/comanda-confirmata","isPartOf":{"@type":"WebSite","name":"bilete.online","url":"https://bilete.online/"},"inLanguage":"ro-RO"}
+  </script>
+</head>
+<body class="grain font-sans antialiased selection:bg-vermilion selection:text-paper" x-data="thankYouPage()">
+
+<header x-data="{open:false, scrolled:false}" x-init="window.addEventListener('scroll',()=>scrolled=window.scrollY>20)" class="sticky top-0 z-50">
+  <div class="bg-ink text-paper/80 text-[11px] sm:text-xs font-mono tracking-wider">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 h-8 flex items-center justify-between">
+      <span class="flex items-center gap-2"><span class="inline-block w-1.5 h-1.5 rounded-full bg-vermilion"></span> ADMISSION · ROMÂNIA · AGREMENT</span>
+      <span class="hidden sm:flex items-center gap-4"><a href="/card-cadou" class="text-ochre underline-wobble">Carduri cadou</a><span class="text-paper/40">operat de <a href="https://tixello.ro" class="text-ochre underline-wobble">Tixello</a></span></span>
+    </div>
+  </div>
+  <div :class="scrolled ? 'bg-paper/95 backdrop-blur-md border-b border-ink/10 shadow-[0_10px_30px_-22px_rgba(27,23,20,.6)]' : 'bg-paper/70 backdrop-blur-sm border-b border-ink/5'" class="transition-all duration-300">
+    <nav class="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
+      <a href="/" class="flex items-center gap-2.5 group shrink-0" aria-label="bilete.online">
+        <span class="relative grid place-items-center w-9 h-9 bg-vermilion text-paper rounded-md rotate-[-4deg] group-hover:rotate-[4deg] transition-transform duration-300 shadow-[0_6px_14px_-6px_rgba(232,69,39,.9)]">
+          <svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2 2 2 0 0 0 0 4 2 2 0 0 1-2 2H5a2 2 0 0 1-2-2 2 2 0 0 0 0-4Z"/><path d="M9 7v10" stroke-dasharray="2 2"/></svg>
+        </span>
+        <span class="font-display text-xl font-bold tracking-tight">bilete<span class="text-vermilion">.</span>online</span>
+      </a>
+      <div class="hidden lg:flex items-center gap-1 text-[15px] font-medium">
+        <a href="/categorii" class="px-3 py-2 rounded-full hover:bg-ink/5 transition">Categorii</a>
+        <a href="/orase" class="px-3 py-2 rounded-full hover:bg-ink/5 transition">Orașe</a>
+        <a href="/card-cadou" class="px-3 py-2 rounded-full hover:bg-ink/5 transition">Carduri cadou</a>
+        <a href="/ajutor" class="px-3 py-2 rounded-full hover:bg-ink/5 transition">Ajutor</a>
+      </div>
+      <div class="flex items-center gap-2">
+        <a href="/cont/bilete" class="hidden sm:inline-flex px-4 py-2 rounded-full border-2 border-ink text-sm font-semibold hover:bg-ink hover:text-paper transition">Biletele mele</a>
+        <button @click="open=!open" class="lg:hidden grid place-items-center w-10 h-10 rounded-md border border-ink/15" aria-label="Meniu">
+          <svg x-show="!open" viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+          <svg x-show="open" x-cloak viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6 6 18"/></svg>
+        </button>
+      </div>
+    </nav>
+    <div x-show="open" x-cloak x-transition.origin.top class="lg:hidden border-t border-ink/10 bg-paper px-5 py-5 text-lg font-medium">
+      <a @click="open=false" href="/categorii" class="block py-2">Categorii</a>
+      <a @click="open=false" href="/orase" class="block py-2">Orașe</a>
+      <a @click="open=false" href="/card-cadou" class="block py-2">Carduri cadou</a>
+      <a @click="open=false" href="/ajutor" class="block py-2">Ajutor</a>
+    </div>
+  </div>
+</header>
+
+<main>
+  <section class="relative overflow-hidden border-b-2 border-ink">
+    <div class="absolute inset-0 bg-[radial-gradient(circle_at_80%_20%,rgba(232,69,39,.25),transparent_32%),radial-gradient(circle_at_20%_70%,rgba(30,74,61,.22),transparent_34%)]"></div>
+    <div class="relative max-w-7xl mx-auto px-4 sm:px-6 py-14 sm:py-20">
+      <div class="grid lg:grid-cols-[1fr_420px] gap-10 items-center">
+        <div>
+          <p class="stamp inline-flex px-3 py-1 text-xs font-mono tracking-[.18em] text-forest bg-paper/70">PASUL 3 · COMANDĂ CONFIRMATĂ</p>
+          <h1 class="mt-5 font-display text-5xl sm:text-7xl font-bold leading-[.9]">Biletele tale sunt gata.</h1>
+          <p class="mt-5 max-w-2xl text-xl text-ink-soft">Comanda <strong class="text-ink" x-text="order.number"></strong> a fost confirmată. Am trimis biletele și pe email, dar le poți descărca imediat de aici.</p>
+          <div class="mt-8 flex flex-wrap gap-3">
+            <button @click="downloadAll()" class="rounded-full bg-vermilion text-paper px-6 py-4 font-bold hover:bg-vermilion-d transition">Descarcă toate biletele</button>
+            <button @click="addAllToCalendar()" class="rounded-full border-2 border-ink px-6 py-4 font-bold hover:bg-ink hover:text-paper transition">Adaugă toate în calendar</button>
+          </div>
+        </div>
+        <aside class="ticket bg-ink text-paper rounded-3xl overflow-hidden shadow-ticket rotate-[-1deg]" style="--perf:100%">
+          <div class="p-6 border-b-2 border-dashed border-paper/20">
+            <p class="font-mono text-xs tracking-[.18em] text-paper/50">BONUS WALLET</p>
+            <h2 class="mt-2 font-display text-4xl font-bold" x-text="'+' + order.pointsEarned + ' puncte'"></h2>
+            <p class="mt-2 text-paper/60">Le poți folosi la următoarea comandă pentru discount.</p>
+          </div>
+          <div class="p-6 bg-paper text-ink">
+            <p class="text-sm text-ink-soft">Total plătit</p>
+            <p class="font-display text-4xl font-bold" x-text="money(order.total)"></p>
+            <p class="mt-2 text-xs font-mono text-ink-soft" x-text="'Plătit prin ' + order.paymentMethod"></p>
+          </div>
+        </aside>
+      </div>
+    </div>
+  </section>
+
+  <section class="max-w-7xl mx-auto px-4 sm:px-6 py-12 grid lg:grid-cols-[1fr_380px] gap-8 items-start">
+    <div>
+      <section class="rounded-3xl border-2 border-ink bg-paper overflow-hidden">
+        <div class="p-5 sm:p-6 border-b-2 border-dashed border-ink/15 flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h2 class="font-display text-3xl font-bold">Bilete emise</h2>
+            <p class="text-ink-soft">Scanează codul QR la intrare sau descarcă PDF-ul.</p>
+          </div>
+          <button @click="downloadAll()" class="rounded-full bg-ink text-paper px-5 py-3 font-bold hover:bg-vermilion transition">Download PDF</button>
+        </div>
+        <div class="divide-y-2 divide-dashed divide-ink/10">
+          <template x-for="ticket in tickets" :key="ticket.code">
+            <article class="grid md:grid-cols-[1fr_190px] gap-0">
+              <div class="p-5 sm:p-6">
+                <div class="flex flex-wrap gap-2">
+                  <span class="px-2.5 py-1 rounded-full bg-vermilion/10 text-vermilion text-xs font-bold" x-text="ticket.category"></span>
+                  <span class="px-2.5 py-1 rounded-full bg-forest/10 text-forest text-xs font-bold" x-text="ticket.status"></span>
+                </div>
+                <h3 class="mt-3 font-display text-2xl font-bold" x-text="ticket.title"></h3>
+                <dl class="mt-4 grid sm:grid-cols-2 gap-3 text-sm">
+                  <div><dt class="font-mono text-[10px] tracking-[.18em] text-ink-soft uppercase">Beneficiar</dt><dd class="font-bold" x-text="ticket.holder"></dd></div>
+                  <div><dt class="font-mono text-[10px] tracking-[.18em] text-ink-soft uppercase">Cod bilet</dt><dd class="font-bold" x-text="ticket.code"></dd></div>
+                  <div><dt class="font-mono text-[10px] tracking-[.18em] text-ink-soft uppercase">Data & ora</dt><dd class="font-bold" x-text="ticket.date + ' · ' + ticket.time"></dd></div>
+                  <div><dt class="font-mono text-[10px] tracking-[.18em] text-ink-soft uppercase">Locație</dt><dd class="font-bold" x-text="ticket.venue"></dd></div>
+                </dl>
+                <div class="mt-5 flex flex-wrap gap-3">
+                  <button @click="downloadTicket(ticket)" class="rounded-full bg-vermilion text-paper px-4 py-2.5 font-bold hover:bg-vermilion-d transition">Descarcă bilet</button>
+                  <button @click="addToCalendar(ticket)" class="rounded-full border-2 border-ink px-4 py-2.5 font-bold hover:bg-ink hover:text-paper transition">Adaugă în calendar</button>
+                  <a :href="ticket.activityUrl" class="rounded-full border-2 border-ink/15 px-4 py-2.5 font-bold hover:border-ink transition">Vezi activitatea</a>
+                </div>
+              </div>
+              <div class="p-5 sm:p-6 bg-paper-2/70 grid place-items-center border-t-2 md:border-t-0 md:border-l-2 border-dashed border-ink/15">
+                <div class="w-36 h-36 bg-paper border-2 border-ink rounded-2xl grid place-items-center text-center">
+                  <svg viewBox="0 0 120 120" class="w-28 h-28" aria-hidden="true">
+                    <rect width="120" height="120" fill="#F4EFE3"/><path d="M8 8h32v32H8zM80 8h32v32H80zM8 80h32v32H8z" fill="#1B1714"/><path d="M16 16h16v16H16zM88 16h16v16H88zM16 88h16v16H16z" fill="#F4EFE3"/><path d="M54 12h8v8h-8zm12 0h8v20h-8zM52 52h12v12H52zm20 0h8v8h-8zm12 12h24v8H84zm-28 18h8v24h-8zm16 0h12v12H72zm24 12h12v16H96zM44 72h20v8H44z" fill="#1B1714"/>
+                  </svg>
+                  <span class="sr-only">Cod QR pentru bilet</span>
+                </div>
+              </div>
+            </article>
+          </template>
+        </div>
+      </section>
+
+      <section class="mt-8 rounded-3xl border-2 border-forest/30 bg-mint p-5 sm:p-6">
+        <h2 class="font-display text-3xl font-bold">Ce urmează?</h2>
+        <div class="mt-5 grid md:grid-cols-3 gap-4">
+          <div class="rounded-2xl bg-paper border border-ink/10 p-4"><p class="font-bold">1. Verifică emailul</p><p class="mt-1 text-sm text-ink-soft">Biletele au fost trimise la adresa comenzii.</p></div>
+          <div class="rounded-2xl bg-paper border border-ink/10 p-4"><p class="font-bold">2. Adaugă în calendar</p><p class="mt-1 text-sm text-ink-soft">Primești reminder înainte de activitate.</p></div>
+          <div class="rounded-2xl bg-paper border border-ink/10 p-4"><p class="font-bold">3. Arată QR-ul</p><p class="mt-1 text-sm text-ink-soft">Nu trebuie să printezi biletul.</p></div>
+        </div>
+      </section>
+
+      <section class="mt-8">
+        <div class="flex items-end justify-between gap-4">
+          <div><p class="font-mono text-xs tracking-[.18em] text-ink-soft">RECOMANDĂRI</p><h2 class="font-display text-3xl font-bold">Poate te interesează și</h2></div>
+          <a href="/brasov" class="hidden sm:inline-flex font-bold text-vermilion underline-wobble">Vezi activități în Brașov</a>
+        </div>
+        <div class="mt-5 grid md:grid-cols-3 gap-4">
+          <template x-for="rec in recommendations" :key="rec.title">
+            <a :href="rec.url" class="group rounded-3xl border-2 border-ink/15 bg-paper overflow-hidden hover:border-ink transition">
+              <img :src="rec.image" :alt="'Imagine pentru ' + rec.title" class="h-40 w-full object-cover group-hover:scale-[1.03] transition duration-500" loading="lazy">
+              <div class="p-4"><p class="text-xs font-bold text-vermilion" x-text="rec.category"></p><h3 class="mt-1 font-display text-xl font-bold" x-text="rec.title"></h3><p class="mt-2 text-sm text-ink-soft" x-text="rec.price"></p></div>
+            </a>
+          </template>
+        </div>
+      </section>
+    </div>
+
+    <aside class="lg:sticky lg:top-28 space-y-4">
+      <section class="rounded-3xl border-2 border-ink bg-paper p-6">
+        <p class="font-mono text-xs tracking-[.18em] text-ink-soft">DETALII COMANDĂ</p>
+        <h2 class="mt-2 font-display text-3xl font-bold" x-text="order.number"></h2>
+        <dl class="mt-5 space-y-3 text-sm">
+          <div class="flex justify-between gap-4"><dt class="text-ink-soft">Data comenzii</dt><dd class="font-bold" x-text="order.date"></dd></div>
+          <div class="flex justify-between gap-4"><dt class="text-ink-soft">Email</dt><dd class="font-bold" x-text="order.email"></dd></div>
+          <div class="flex justify-between gap-4"><dt class="text-ink-soft">Metodă plată</dt><dd class="font-bold" x-text="order.paymentMethod"></dd></div>
+          <div class="flex justify-between gap-4"><dt class="text-ink-soft">Status</dt><dd class="font-bold text-forest">Confirmată</dd></div>
+        </dl>
+      </section>
+      <section class="rounded-3xl border-2 border-ink bg-ink text-paper p-6">
+        <p class="font-mono text-xs tracking-[.18em] text-paper/45">TOTALURI</p>
+        <div class="mt-4 space-y-2 text-sm">
+          <div class="flex justify-between"><span class="text-paper/60">Bilete</span><strong x-text="money(order.subtotal)"></strong></div>
+          <div class="flex justify-between"><span class="text-paper/60">Comision platformă</span><strong x-text="money(order.platformFee)"></strong></div>
+          <div class="flex justify-between"><span class="text-paper/60">Taxă procesare</span><strong x-text="money(order.processingFee)"></strong></div>
+          <div class="flex justify-between"><span class="text-paper/60">Protecție bilet</span><strong x-text="money(order.protection)"></strong></div>
+          <div class="pt-3 mt-3 border-t border-paper/15 flex justify-between text-lg"><span>Total</span><strong class="font-display text-3xl" x-text="money(order.total)"></strong></div>
+        </div>
+      </section>
+      <section class="rounded-3xl border-2 border-ink/15 bg-paper-2/70 p-6">
+        <h2 class="font-display text-2xl font-bold">Ai nevoie de ajutor?</h2>
+        <p class="mt-2 text-ink-soft">Dacă nu ai primit emailul sau ai nevoie de modificări, contactează suportul cu numărul comenzii.</p>
+        <a href="/ajutor" class="mt-4 inline-flex rounded-full bg-ink text-paper px-5 py-3 font-bold hover:bg-vermilion transition">Contact suport</a>
+      </section>
+    </aside>
+  </section>
+</main>
+
+<footer class="border-t-2 border-ink bg-ink text-paper mt-20">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 py-12 grid md:grid-cols-4 gap-8">
+    <div class="md:col-span-2">
+      <p class="font-display text-3xl font-bold">bilete<span class="text-vermilion">.</span>online</p>
+      <p class="mt-3 max-w-lg text-paper/65">Bilete pentru activități, experiențe și locuri unde chiar mergi să faci ceva. Rezervi online, primești QR, intri rapid.</p>
+    </div>
+    <nav aria-label="Linkuri utile">
+      <p class="font-mono text-xs tracking-[.2em] text-paper/40 mb-3">PLATFORMĂ</p>
+      <a class="block py-1.5 text-paper/70 hover:text-ochre" href="/categorii">Categorii</a>
+      <a class="block py-1.5 text-paper/70 hover:text-ochre" href="/orase">Orașe</a>
+      <a class="block py-1.5 text-paper/70 hover:text-ochre" href="/card-cadou">Card cadou</a>
+    </nav>
+    <nav aria-label="Legal">
+      <p class="font-mono text-xs tracking-[.2em] text-paper/40 mb-3">LEGAL</p>
+      <a class="block py-1.5 text-paper/70 hover:text-ochre" href="/termeni-si-conditii">Termeni și condiții</a>
+      <a class="block py-1.5 text-paper/70 hover:text-ochre" href="/politica-de-confidentialitate">Confidențialitate</a>
+      <a class="block py-1.5 text-paper/70 hover:text-ochre" href="/politica-retur">Politica de retur</a>
+    </nav>
+  </div>
+  <div class="border-t border-paper/10 py-4 text-center text-xs font-mono text-paper/40">© 2026 bilete.online · operat de Tixello</div>
+</footer>
+
+<script>
+function thankYouPage(){
+  return {
+    order:{number:'#BO-2026-004218',date:'22 mai 2026, 12:48',email:'andrei@example.ro',paymentMethod:'Card bancar',subtotal:316,platformFee:6.32,processingFee:5.83,protection:60,total:388.15,pointsEarned:158},
+    tickets:[
+      {title:'Camera 13 — Escape Room',category:'Escape room',status:'Valid',holder:'Andrei Năstase',code:'BO-C13-8K2M',date:'31 mai 2026',time:'18:30',venue:'Mystery Rooms Brașov',activityUrl:'/escape-rooms/camera-13-brasov'},
+      {title:'Camera 13 — Escape Room',category:'Escape room',status:'Valid',holder:'Maria Năstase',code:'BO-C13-9P4Q',date:'31 mai 2026',time:'18:30',venue:'Mystery Rooms Brașov',activityUrl:'/escape-rooms/camera-13-brasov'},
+      {title:'Tur ghidat la Peștera Valea Cetății',category:'Natură',status:'Valid',holder:'Andrei Năstase',code:'BO-PVC-2A7L',date:'1 iunie 2026',time:'11:00',venue:'Peștera Valea Cetății',activityUrl:'/activitati/pestera-valea-cetatii'}
+    ],
+    recommendations:[
+      {title:'Muzeul de Artă Brașov',category:'Muzeu',price:'de la 25 lei',url:'/activitati/muzeul-de-arta-brasov',image:'https://images.unsplash.com/photo-1566127444979-b3d2b654e3d7?auto=format&fit=crop&w=700&q=80'},
+      {title:'Parc de aventură în Brașov',category:'Aventură',price:'de la 65 lei',url:'/activitati/parc-aventura-brasov',image:'https://images.unsplash.com/photo-1528543606781-2f6e6857f318?auto=format&fit=crop&w=700&q=80'},
+      {title:'Observatorul de urși',category:'Natură',price:'de la 90 lei',url:'/activitati/observator-ursi-brasov',image:'https://images.unsplash.com/photo-1544717297-fa95b6ee9643?auto=format&fit=crop&w=700&q=80'}
+    ],
+    money(v){ return new Intl.NumberFormat('ro-RO',{style:'currency',currency:'RON',maximumFractionDigits:2}).format(v); },
+    downloadAll(){ alert('Aici conectezi endpoint-ul /orders/{id}/tickets.pdf'); },
+    downloadTicket(ticket){ alert('Descarcă PDF pentru ' + ticket.code); },
+    addAllToCalendar(){ alert('Generează .ics pentru toate activitățile'); },
+    addToCalendar(ticket){ alert('Generează .ics pentru ' + ticket.title); }
+  }
+}
+</script>
+</body>
+</html>

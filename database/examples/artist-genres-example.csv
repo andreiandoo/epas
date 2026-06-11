@@ -1,0 +1,13 @@
+name,slug,description,parent_slug
+Rock,rock,Rock music,
+Pop,pop,Pop music,
+Jazz,jazz,Jazz music,
+Electronic,electronic,Electronic music,
+Classical,classical,Classical music,
+Hip Hop,hip-hop,Hip hop and rap music,
+Alternative Rock,alternative-rock,Alternative rock,rock
+Hard Rock,hard-rock,Hard rock,rock
+Indie Pop,indie-pop,Independent pop,pop
+House,house,House music,electronic
+Techno,techno,Techno music,electronic
+Trap,trap,Trap music,hip-hop

@@ -1,0 +1,123 @@
+<?php
+return [
+    [
+        'id'        => 48367,
+        'name'      => 'Banbury',
+        'latitude'  => '52.06320000',
+        'longitude' => '-1.34222000',
+    ],
+    [
+        'id'        => 48665,
+        'name'      => 'Braunston',
+        'latitude'  => '52.28979000',
+        'longitude' => '-1.20266000',
+    ],
+    [
+        'id'        => 48754,
+        'name'      => 'Bugbrooke',
+        'latitude'  => '52.21006000',
+        'longitude' => '-1.01304000',
+    ],
+    [
+        'id'        => 48806,
+        'name'      => 'Byfield',
+        'latitude'  => '52.17546000',
+        'longitude' => '-1.24566000',
+    ],
+    [
+        'id'        => 49246,
+        'name'      => 'Daventry',
+        'latitude'  => '52.25688000',
+        'longitude' => '-1.16066000',
+    ],
+    [
+        'id'        => 49345,
+        'name'      => 'Dunchurch',
+        'latitude'  => '52.33757000',
+        'longitude' => '-1.29136000',
+    ],
+    [
+        'id'        => 49430,
+        'name'      => 'Eattington',
+        'latitude'  => '52.13333000',
+        'longitude' => '-1.60000000',
+    ],
+    [
+        'id'        => 49578,
+        'name'      => 'Flore',
+        'latitude'  => '52.23647000',
+        'longitude' => '-1.05726000',
+    ],
+    [
+        'id'        => 49803,
+        'name'      => 'Harbury',
+        'latitude'  => '52.23537000',
+        'longitude' => '-1.45706000',
+    ],
+    [
+        'id'        => 49949,
+        'name'      => 'Hinton',
+        'latitude'  => '52.16798000',
+        'longitude' => '-1.21837000',
+    ],
+    [
+        'id'        => 50153,
+        'name'      => 'Kilsby',
+        'latitude'  => '52.33375000',
+        'longitude' => '-1.17505000',
+    ],
+    [
+        'id'        => 50160,
+        'name'      => 'Kineton',
+        'latitude'  => '52.15645000',
+        'longitude' => '-1.51148000',
+    ],
+    [
+        'id'        => 50396,
+        'name'      => 'Long Itchington',
+        'latitude'  => '52.28396000',
+        'longitude' => '-1.39243000',
+    ],
+    [
+        'id'        => 50424,
+        'name'      => 'Lower Brailes',
+        'latitude'  => '52.05034000',
+        'longitude' => '-1.54176000',
+    ],
+    [
+        'id'        => 50677,
+        'name'      => 'Nether Heyford',
+        'latitude'  => '52.22123000',
+        'longitude' => '-1.03452000',
+    ],
+    [
+        'id'        => 51141,
+        'name'      => 'Rugby',
+        'latitude'  => '52.37092000',
+        'longitude' => '-1.26417000',
+    ],
+    [
+        'id'        => 51285,
+        'name'      => 'Shipston on Stour',
+        'latitude'  => '52.06057000',
+        'longitude' => '-1.62778000',
+    ],
+    [
+        'id'        => 51370,
+        'name'      => 'Southam',
+        'latitude'  => '52.25266000',
+        'longitude' => '-1.38840000',
+    ],
+    [
+        'id'        => 51458,
+        'name'      => 'Stockton',
+        'latitude'  => '52.27181000',
+        'longitude' => '-1.36055000',
+    ],
+    [
+        'id'        => 51783,
+        'name'      => 'Weedon Beck',
+        'latitude'  => '52.22955000',
+        'longitude' => '-1.08371000',
+    ],
+];

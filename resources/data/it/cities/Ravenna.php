@@ -1,0 +1,111 @@
+<?php
+return [
+    [
+        'id'        => 135403,
+        'name'      => 'Alfonsine',
+        'latitude'  => '44.50768000',
+        'longitude' => '12.03743000',
+    ],
+    [
+        'id'        => 135748,
+        'name'      => 'Bagnacavallo',
+        'latitude'  => '44.41402000',
+        'longitude' => '11.97813000',
+    ],
+    [
+        'id'        => 135750,
+        'name'      => 'Bagnara di Romagna',
+        'latitude'  => '44.38930000',
+        'longitude' => '11.82726000',
+    ],
+    [
+        'id'        => 136341,
+        'name'      => 'Brisighella',
+        'latitude'  => '44.22228000',
+        'longitude' => '11.77358000',
+    ],
+    [
+        'id'        => 137078,
+        'name'      => 'Casola Valsenio',
+        'latitude'  => '44.22443000',
+        'longitude' => '11.62487000',
+    ],
+    [
+        'id'        => 137131,
+        'name'      => 'Castel Bolognese',
+        'latitude'  => '44.31981000',
+        'longitude' => '11.79903000',
+    ],
+    [
+        'id'        => 137591,
+        'name'      => 'Cervia',
+        'latitude'  => '44.26204000',
+        'longitude' => '12.34812000',
+    ],
+    [
+        'id'        => 137974,
+        'name'      => 'Conselice',
+        'latitude'  => '44.51163000',
+        'longitude' => '11.82848000',
+    ],
+    [
+        'id'        => 138111,
+        'name'      => 'Cotignola',
+        'latitude'  => '44.38572000',
+        'longitude' => '11.93852000',
+    ],
+    [
+        'id'        => 138403,
+        'name'      => 'Faenza',
+        'latitude'  => '44.29007000',
+        'longitude' => '11.87948000',
+    ],
+    [
+        'id'        => 138761,
+        'name'      => 'Fusignano',
+        'latitude'  => '44.46656000',
+        'longitude' => '11.95636000',
+    ],
+    [
+        'id'        => 139648,
+        'name'      => 'Lugo',
+        'latitude'  => '44.42137000',
+        'longitude' => '11.91094000',
+    ],
+    [
+        'id'        => 139971,
+        'name'      => 'Massa Lombarda',
+        'latitude'  => '44.44703000',
+        'longitude' => '11.82095000',
+    ],
+    [
+        'id'        => 59299,
+        'name'      => 'Ravenna',
+        'latitude'  => '44.41344000',
+        'longitude' => '12.20121000',
+    ],
+    [
+        'id'        => 59393,
+        'name'      => 'Riolo Terme',
+        'latitude'  => '44.27609000',
+        'longitude' => '11.72722000',
+    ],
+    [
+        'id'        => 59704,
+        'name'      => 'Russi',
+        'latitude'  => '44.37645000',
+        'longitude' => '12.03335000',
+    ],
+    [
+        'id'        => 60326,
+        'name'      => 'Sant\'Agata sul Santerno',
+        'latitude'  => '44.44351000',
+        'longitude' => '11.86112000',
+    ],
+    [
+        'id'        => 60905,
+        'name'      => 'Solarolo',
+        'latitude'  => '44.35892000',
+        'longitude' => '11.84661000',
+    ],
+];

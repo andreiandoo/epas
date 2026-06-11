@@ -1,0 +1,105 @@
+<?php
+return [
+    [
+        'id'        => 130209,
+        'name'      => 'Huyện An Lão',
+        'latitude'  => '14.55676000',
+        'longitude' => '108.80100000',
+    ],
+    [
+        'id'        => 130258,
+        'name'      => 'Huyện Chư Păh',
+        'latitude'  => '14.15941000',
+        'longitude' => '107.98411000',
+    ],
+    [
+        'id'        => 130257,
+        'name'      => 'Huyện Chư Prông',
+        'latitude'  => '13.59976000',
+        'longitude' => '107.81099000',
+    ],
+    [
+        'id'        => 130259,
+        'name'      => 'Huyện Chư Sê',
+        'latitude'  => '13.74254000',
+        'longitude' => '108.08663000',
+    ],
+    [
+        'id'        => 130549,
+        'name'      => 'Huyện Đức Cơ',
+        'latitude'  => '13.78454000',
+        'longitude' => '107.66970000',
+    ],
+    [
+        'id'        => 130298,
+        'name'      => 'Huyện Hoài Nhơn',
+        'latitude'  => '14.50535000',
+        'longitude' => '109.02315000',
+    ],
+    [
+        'id'        => 130320,
+        'name'      => 'Huyện Ia Grai',
+        'latitude'  => '13.98937000',
+        'longitude' => '107.73740000',
+    ],
+    [
+        'id'        => 130322,
+        'name'      => 'Huyện KBang',
+        'latitude'  => '14.30506000',
+        'longitude' => '108.49779000',
+    ],
+    [
+        'id'        => 130335,
+        'name'      => 'Huyện Kông Chro',
+        'latitude'  => '13.73519000',
+        'longitude' => '108.59697000',
+    ],
+    [
+        'id'        => 130334,
+        'name'      => 'Huyện Krông Pa',
+        'latitude'  => '13.23152000',
+        'longitude' => '108.65494000',
+    ],
+    [
+        'id'        => 130358,
+        'name'      => 'Huyện Mang Yang',
+        'latitude'  => '13.92840000',
+        'longitude' => '108.30246000',
+    ],
+    [
+        'id'        => 130397,
+        'name'      => 'Huyện Phù Mỹ',
+        'latitude'  => '14.22304000',
+        'longitude' => '109.08611000',
+    ],
+    [
+        'id'        => 130490,
+        'name'      => 'Huyện Tây Sơn',
+        'latitude'  => '13.94306000',
+        'longitude' => '108.87999000',
+    ],
+    [
+        'id'        => 130476,
+        'name'      => 'Huyện Tuy Phước',
+        'latitude'  => '13.84564000',
+        'longitude' => '109.15275000',
+    ],
+    [
+        'id'        => 130503,
+        'name'      => 'Huyện Vĩnh Thạnh',
+        'latitude'  => '14.21100000',
+        'longitude' => '108.74389000',
+    ],
+    [
+        'id'        => 130583,
+        'name'      => 'Pleiku',
+        'latitude'  => '13.98333000',
+        'longitude' => '108.00000000',
+    ],
+    [
+        'id'        => 130584,
+        'name'      => 'Qui Nhon',
+        'latitude'  => '13.77648000',
+        'longitude' => '109.22367000',
+    ],
+];

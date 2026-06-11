@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blog — AmBilet.ro</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #F8FAFC; color: #1E293B; }
+
+        .header { height: 72px; background: #fff; border-bottom: 1px solid #E2E8F0; display: flex; align-items: center; padding: 0 48px; position: sticky; top: 0; z-index: 100; }
+        .logo { display: flex; align-items: center; gap: 12px; text-decoration: none; }
+        .logo-icon { width: 40px; height: 40px; }
+        .logo-text { font-size: 22px; font-weight: 800; display: flex; }
+        .logo-text-am { color: #1E293B; }
+        .logo-text-bilet { color: #A51C30; }
+
+        .hero { background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%); padding: 80px 48px; position: relative; overflow: hidden; }
+        .hero::before { content: ''; position: absolute; top: -200px; right: -200px; width: 600px; height: 600px; background: radial-gradient(circle, rgba(165, 28, 48, 0.15) 0%, transparent 70%); }
+        .hero-content { max-width: 800px; margin: 0 auto; text-align: center; position: relative; z-index: 1; }
+        .hero h1 { font-size: 48px; font-weight: 800; color: white; margin-bottom: 16px; }
+        .hero p { font-size: 18px; color: rgba(255,255,255,0.7); line-height: 1.6; }
+
+        .main { max-width: 1200px; margin: 0 auto; padding: 60px 48px; }
+
+        /* Categories */
+        .categories { display: flex; gap: 12px; margin-bottom: 48px; flex-wrap: wrap; justify-content: center; }
+        .category-btn { padding: 10px 20px; background: white; border: 1px solid #E2E8F0; border-radius: 100px; font-size: 14px; font-weight: 600; color: #64748B; cursor: pointer; transition: all 0.2s; text-decoration: none; }
+        .category-btn:hover { border-color: #A51C30; color: #A51C30; }
+        .category-btn.active { background: linear-gradient(135deg, #A51C30, #C41E3A); border-color: transparent; color: white; }
+
+        /* Featured Article */
+        .featured { margin-bottom: 60px; }
+        .featured-card { display: grid; grid-template-columns: 1.2fr 1fr; gap: 48px; background: white; border-radius: 24px; overflow: hidden; border: 1px solid #E2E8F0; transition: all 0.3s; }
+        .featured-card:hover { box-shadow: 0 20px 60px rgba(0,0,0,0.1); transform: translateY(-4px); }
+        .featured-image { height: 400px; background: linear-gradient(135deg, #A51C30, #7f1627); position: relative; overflow: hidden; }
+        .featured-image img { width: 100%; height: 100%; object-fit: cover; }
+        .featured-image-placeholder { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
+        .featured-image-placeholder svg { width: 80px; height: 80px; color: rgba(255,255,255,0.3); }
+        .featured-content { padding: 48px 48px 48px 0; display: flex; flex-direction: column; justify-content: center; }
+        .featured-badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; background: linear-gradient(135deg, #A51C30, #C41E3A); border-radius: 6px; font-size: 11px; font-weight: 700; color: white; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 16px; width: fit-content; }
+        .featured-meta { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; }
+        .featured-category { font-size: 13px; font-weight: 600; color: #A51C30; }
+        .featured-date { font-size: 13px; color: #94A3B8; }
+        .featured-title { font-size: 32px; font-weight: 800; color: #1E293B; line-height: 1.3; margin-bottom: 16px; }
+        .featured-title a { color: inherit; text-decoration: none; }
+        .featured-title a:hover { color: #A51C30; }
+        .featured-excerpt { font-size: 16px; color: #64748B; line-height: 1.7; margin-bottom: 24px; }
+        .featured-author { display: flex; align-items: center; gap: 12px; }
+        .featured-author-avatar { width: 44px; height: 44px; border-radius: 50%; background: linear-gradient(135deg, #E2E8F0, #CBD5E1); display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; color: #64748B; }
+        .featured-author-info { }
+        .featured-author-name { font-size: 14px; font-weight: 600; color: #1E293B; }
+        .featured-author-role { font-size: 13px; color: #94A3B8; }
+
+        /* Articles Grid */
+        .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 32px; }
+        .section-title { font-size: 24px; font-weight: 700; color: #1E293B; }
+        .section-link { font-size: 14px; font-weight: 600; color: #A51C30; text-decoration: none; display: flex; align-items: center; gap: 6px; }
+        .section-link:hover { text-decoration: underline; }
+        .section-link svg { width: 16px; height: 16px; }
+
+        .articles-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px; margin-bottom: 60px; }
+        .article-card { background: white; border-radius: 20px; overflow: hidden; border: 1px solid #E2E8F0; transition: all 0.3s; }
+        .article-card:hover { box-shadow: 0 12px 40px rgba(0,0,0,0.08); transform: translateY(-4px); }
+        .article-image { height: 200px; background: linear-gradient(135deg, #E2E8F0, #CBD5E1); position: relative; overflow: hidden; }
+        .article-image img { width: 100%; height: 100%; object-fit: cover; }
+        .article-image-placeholder { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
+        .article-image-placeholder svg { width: 48px; height: 48px; color: #94A3B8; }
+        .article-content { padding: 24px; }
+        .article-meta { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+        .article-category { font-size: 12px; font-weight: 600; color: #A51C30; background: rgba(165, 28, 48, 0.1); padding: 4px 10px; border-radius: 4px; }
+        .article-date { font-size: 12px; color: #94A3B8; }
+        .article-title { font-size: 18px; font-weight: 700; color: #1E293B; line-height: 1.4; margin-bottom: 12px; }
+        .article-title a { color: inherit; text-decoration: none; }
+        .article-title a:hover { color: #A51C30; }
+        .article-excerpt { font-size: 14px; color: #64748B; line-height: 1.6; margin-bottom: 16px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+        .article-footer { display: flex; align-items: center; justify-content: space-between; padding-top: 16px; border-top: 1px solid #F1F5F9; }
+        .article-author { display: flex; align-items: center; gap: 8px; }
+        .article-author-avatar { width: 28px; height: 28px; border-radius: 50%; background: #E2E8F0; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: #64748B; }
+        .article-author-name { font-size: 13px; font-weight: 500; color: #64748B; }
+        .article-read-time { font-size: 12px; color: #94A3B8; display: flex; align-items: center; gap: 4px; }
+        .article-read-time svg { width: 14px; height: 14px; }
+
+        /* Newsletter */
+        .newsletter { background: linear-gradient(135deg, #1E293B, #334155); border-radius: 24px; padding: 60px; text-align: center; position: relative; overflow: hidden; margin-bottom: 60px; }
+        .newsletter::before { content: ''; position: absolute; top: -100px; right: -100px; width: 300px; height: 300px; background: radial-gradient(circle, rgba(165, 28, 48, 0.2), transparent 70%); }
+        .newsletter-content { position: relative; z-index: 1; max-width: 500px; margin: 0 auto; }
+        .newsletter h2 { font-size: 28px; font-weight: 800; color: white; margin-bottom: 12px; }
+        .newsletter p { font-size: 16px; color: rgba(255,255,255,0.7); margin-bottom: 32px; }
+        .newsletter-form { display: flex; gap: 12px; }
+        .newsletter-input { flex: 1; padding: 16px 20px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 12px; font-size: 15px; color: white; font-family: inherit; }
+        .newsletter-input::placeholder { color: rgba(255,255,255,0.5); }
+        .newsletter-input:focus { outline: none; border-color: #A51C30; background: rgba(255,255,255,0.15); }
+        .newsletter-btn { padding: 16px 28px; background: linear-gradient(135deg, #A51C30, #C41E3A); border: none; border-radius: 12px; font-size: 15px; font-weight: 700; color: white; cursor: pointer; transition: all 0.3s; font-family: inherit; }
+        .newsletter-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(165, 28, 48, 0.4); }
+
+        /* Pagination */
+        .pagination { display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .pagination-btn { width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; background: white; border: 1px solid #E2E8F0; border-radius: 10px; font-size: 14px; font-weight: 600; color: #64748B; text-decoration: none; transition: all 0.2s; }
+        .pagination-btn:hover { border-color: #A51C30; color: #A51C30; }
+        .pagination-btn.active { background: linear-gradient(135deg, #A51C30, #C41E3A); border-color: transparent; color: white; }
+        .pagination-btn.arrow { background: #F8FAFC; }
+        .pagination-btn.arrow:hover { background: #A51C30; color: white; }
+        .pagination-btn svg { width: 18px; height: 18px; }
+
+        .footer { padding: 32px 48px; border-top: 1px solid #E2E8F0; text-align: center; margin-top: 60px; }
+        .footer-text { font-size: 14px; color: #94A3B8; }
+
+        @media (max-width: 1024px) {
+            .articles-grid { grid-template-columns: repeat(2, 1fr); }
+            .featured-card { grid-template-columns: 1fr; }
+            .featured-content { padding: 32px; }
+            .featured-image { height: 300px; }
+        }
+        @media (max-width: 768px) {
+            .header, .main { padding-left: 24px; padding-right: 24px; }
+            .hero { padding: 60px 24px; }
+            .hero h1 { font-size: 36px; }
+            .articles-grid { grid-template-columns: 1fr; }
+            .newsletter { padding: 40px 24px; }
+            .newsletter-form { flex-direction: column; }
+            .featured-title { font-size: 24px; }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <a href="/" class="logo">
+            <svg class="logo-icon" viewBox="0 0 48 48" fill="none"><defs><linearGradient id="logoGrad" x1="6" y1="10" x2="42" y2="38"><stop stop-color="#A51C30"/><stop offset="1" stop-color="#C41E3A"/></linearGradient></defs><path d="M8 13C8 10.79 9.79 9 12 9H36C38.21 9 40 10.79 40 13V19C37.79 19 36 20.79 36 23V25C36 27.21 37.79 29 40 29V35C40 37.21 38.21 39 36 39H12C9.79 39 8 37.21 8 35V29C10.21 29 12 27.21 12 25V23C12 20.79 10.21 19 8 19V13Z" fill="url(#logoGrad)"/><line x1="17" y1="15" x2="31" y2="15" stroke="white" stroke-opacity="0.25" stroke-width="1.5" stroke-linecap="round"/><line x1="15" y1="19" x2="33" y2="19" stroke="white" stroke-opacity="0.35" stroke-width="1.5" stroke-linecap="round"/><rect x="20" y="27" width="8" height="8" rx="1.5" fill="white"/></svg>
+            <div class="logo-text"><span class="logo-text-am">Am</span><span class="logo-text-bilet">Bilet</span></div>
+        </a>
+    </header>
+
+    <section class="hero">
+        <div class="hero-content">
+            <h1>Blog</h1>
+            <p>Noutăți, ghiduri și inspirație din lumea evenimentelor</p>
+        </div>
+    </section>
+
+    <main class="main">
+        <!-- Categories -->
+        <div class="categories">
+            <a href="#" class="category-btn active">Toate</a>
+            <a href="#" class="category-btn">Industrie</a>
+            <a href="#" class="category-btn">Pentru organizatori</a>
+            <a href="#" class="category-btn">Ghiduri</a>
+            <a href="#" class="category-btn">Interviuri</a>
+            <a href="#" class="category-btn">Noutăți</a>
+        </div>
+
+        <!-- Featured Article -->
+        <div class="featured">
+            <div class="featured-card">
+                <div class="featured-image">
+                    <div class="featured-image-placeholder">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+                    </div>
+                </div>
+                <div class="featured-content">
+                    <div class="featured-badge">Articol principal</div>
+                    <div class="featured-meta">
+                        <span class="featured-category">Industrie</span>
+                        <span class="featured-date">20 Decembrie 2024</span>
+                    </div>
+                    <h2 class="featured-title"><a href="/blog/article">Tendințe în industria evenimentelor pentru 2025: Ce ne așteaptă?</a></h2>
+                    <p class="featured-excerpt">De la experiențe hibride la personalizare avansată și sustenabilitate, explorăm principalele tendințe care vor defini industria evenimentelor în anul care vine.</p>
+                    <div class="featured-author">
+                        <div class="featured-author-avatar">MA</div>
+                        <div class="featured-author-info">
+                            <div class="featured-author-name">Maria Alexandrescu</div>
+                            <div class="featured-author-role">Editor șef</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Articles Grid -->
+        <div class="section-header">
+            <h2 class="section-title">Articole recente</h2>
+        </div>
+        <div class="articles-grid">
+            <article class="article-card">
+                <div class="article-image">
+                    <div class="article-image-placeholder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></div>
+                </div>
+                <div class="article-content">
+                    <div class="article-meta">
+                        <span class="article-category">Ghiduri</span>
+                        <span class="article-date">18 Dec 2024</span>
+                    </div>
+                    <h3 class="article-title"><a href="#">Cum să creezi o strategie de prețuri pentru bilete</a></h3>
+                    <p class="article-excerpt">Ghid complet pentru stabilirea prețurilor optime: early bird, last minute și tot ce trebuie să știi.</p>
+                    <div class="article-footer">
+                        <div class="article-author">
+                            <div class="article-author-avatar">IP</div>
+                            <span class="article-author-name">Ion Popescu</span>
+                        </div>
+                        <span class="article-read-time"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>8 min</span>
+                    </div>
+                </div>
+            </article>
+
+            <article class="article-card">
+                <div class="article-image">
+                    <div class="article-image-placeholder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></div>
+                </div>
+                <div class="article-content">
+                    <div class="article-meta">
+                        <span class="article-category">Interviuri</span>
+                        <span class="article-date">15 Dec 2024</span>
+                    </div>
+                    <h3 class="article-title"><a href="#">Interviu cu Echo Events: Secretele unui organizator de succes</a></h3>
+                    <p class="article-excerpt">Am stat de vorbă cu echipa Echo Events despre cum au crescut de la 0 la 50.000 de participanți.</p>
+                    <div class="article-footer">
+                        <div class="article-author">
+                            <div class="article-author-avatar">AD</div>
+                            <span class="article-author-name">Ana Dumitrescu</span>
+                        </div>
+                        <span class="article-read-time"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>12 min</span>
+                    </div>
+                </div>
+            </article>
+
+            <article class="article-card">
+                <div class="article-image">
+                    <div class="article-image-placeholder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></div>
+                </div>
+                <div class="article-content">
+                    <div class="article-meta">
+                        <span class="article-category">Noutăți</span>
+                        <span class="article-date">12 Dec 2024</span>
+                    </div>
+                    <h3 class="article-title"><a href="#">AmBilet lansează noul sistem de check-in cu NFC</a></h3>
+                    <p class="article-excerpt">Descoperă cum poți valida biletele în mai puțin de o secundă cu noua noastră tehnologie.</p>
+                    <div class="article-footer">
+                        <div class="article-author">
+                            <div class="article-author-avatar">MA</div>
+                            <span class="article-author-name">Maria Alexandrescu</span>
+                        </div>
+                        <span class="article-read-time"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>5 min</span>
+                    </div>
+                </div>
+            </article>
+
+            <article class="article-card">
+                <div class="article-image">
+                    <div class="article-image-placeholder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></div>
+                </div>
+                <div class="article-content">
+                    <div class="article-meta">
+                        <span class="article-category">Pentru organizatori</span>
+                        <span class="article-date">10 Dec 2024</span>
+                    </div>
+                    <h3 class="article-title"><a href="#">5 greșeli comune în promovarea evenimentelor</a></h3>
+                    <p class="article-excerpt">Evită aceste capcane frecvente și maximizează vizibilitatea evenimentului tău.</p>
+                    <div class="article-footer">
+                        <div class="article-author">
+                            <div class="article-author-avatar">CM</div>
+                            <span class="article-author-name">Cristian Matei</span>
+                        </div>
+                        <span class="article-read-time"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>6 min</span>
+                    </div>
+                </div>
+            </article>
+
+            <article class="article-card">
+                <div class="article-image">
+                    <div class="article-image-placeholder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></div>
+                </div>
+                <div class="article-content">
+                    <div class="article-meta">
+                        <span class="article-category">Industrie</span>
+                        <span class="article-date">8 Dec 2024</span>
+                    </div>
+                    <h3 class="article-title"><a href="#">Raport: Piața evenimentelor din România în 2024</a></h3>
+                    <p class="article-excerpt">Analiză detaliată a pieței: cifre, tendințe și previziuni pentru următorii ani.</p>
+                    <div class="article-footer">
+                        <div class="article-author">
+                            <div class="article-author-avatar">IP</div>
+                            <span class="article-author-name">Ion Popescu</span>
+                        </div>
+                        <span class="article-read-time"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>15 min</span>
+                    </div>
+                </div>
+            </article>
+
+            <article class="article-card">
+                <div class="article-image">
+                    <div class="article-image-placeholder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></div>
+                </div>
+                <div class="article-content">
+                    <div class="article-meta">
+                        <span class="article-category">Ghiduri</span>
+                        <span class="article-date">5 Dec 2024</span>
+                    </div>
+                    <h3 class="article-title"><a href="#">Cum să folosești social media pentru promovare</a></h3>
+                    <p class="article-excerpt">Strategii dovedite pentru Instagram, TikTok și Facebook care aduc participanți.</p>
+                    <div class="article-footer">
+                        <div class="article-author">
+                            <div class="article-author-avatar">AD</div>
+                            <span class="article-author-name">Ana Dumitrescu</span>
+                        </div>
+                        <span class="article-read-time"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>10 min</span>
+                    </div>
+                </div>
+            </article>
+        </div>
+
+        <!-- Newsletter -->
+        <div class="newsletter">
+            <div class="newsletter-content">
+                <h2>Abonează-te la newsletter</h2>
+                <p>Primește cele mai noi articole și noutăți direct în inbox.</p>
+                <div class="newsletter-form">
+                    <input type="email" class="newsletter-input" placeholder="Adresa ta de email">
+                    <button class="newsletter-btn">Abonează-te</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pagination -->
+        <div class="pagination">
+            <a href="#" class="pagination-btn arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg></a>
+            <a href="#" class="pagination-btn active">1</a>
+            <a href="#" class="pagination-btn">2</a>
+            <a href="#" class="pagination-btn">3</a>
+            <a href="#" class="pagination-btn">4</a>
+            <a href="#" class="pagination-btn arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></a>
+        </div>
+    </main>
+
+    <footer class="footer"><p class="footer-text">© 2024 AmBilet.ro — Toate drepturile rezervate. Powered by TIXELLO</p></footer>
+</body>
+</html>

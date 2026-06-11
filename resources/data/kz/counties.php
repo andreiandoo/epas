@@ -1,0 +1,23 @@
+<?php
+return [
+    'Abai',
+    'Akmola',
+    'Aktobe',
+    'Almaty',
+    'Almaty',
+    'Astana',
+    'Atyrau',
+    'East Kazakhstan',
+    'Jambyl',
+    'Jetisu',
+    'Karaganda',
+    'Kostanay',
+    'Kyzylorda',
+    'Mangystau',
+    'North Kazakhstan',
+    'Pavlodar',
+    'Shymkent',
+    'Turkistan',
+    'Ulytau',
+    'West Kazakhstan',
+];

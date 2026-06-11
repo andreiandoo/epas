@@ -1,0 +1,105 @@
+<?php
+return [
+    [
+        'id'        => 48166,
+        'name'      => 'Abercynon',
+        'latitude'  => '51.64548000',
+        'longitude' => '-3.32727000',
+    ],
+    [
+        'id'        => 48167,
+        'name'      => 'Aberdare',
+        'latitude'  => '51.71438000',
+        'longitude' => '-3.44918000',
+    ],
+    [
+        'id'        => 49546,
+        'name'      => 'Ferndale',
+        'latitude'  => '51.66056000',
+        'longitude' => '-3.44750000',
+    ],
+    [
+        'id'        => 49641,
+        'name'      => 'Gilfach Goch',
+        'latitude'  => '51.59213000',
+        'longitude' => '-3.47296000',
+    ],
+    [
+        'id'        => 50374,
+        'name'      => 'Llwynypia',
+        'latitude'  => '51.63333000',
+        'longitude' => '-3.45000000',
+    ],
+    [
+        'id'        => 50642,
+        'name'      => 'Mountain Ash',
+        'latitude'  => '51.68361000',
+        'longitude' => '-3.38008000',
+    ],
+    [
+        'id'        => 50799,
+        'name'      => 'Ogmore Vale',
+        'latitude'  => '51.60230000',
+        'longitude' => '-3.54217000',
+    ],
+    [
+        'id'        => 50890,
+        'name'      => 'Pentre',
+        'latitude'  => '51.65429000',
+        'longitude' => '-3.49133000',
+    ],
+    [
+        'id'        => 50945,
+        'name'      => 'Pontycymer',
+        'latitude'  => '51.61118000',
+        'longitude' => '-3.58421000',
+    ],
+    [
+        'id'        => 50947,
+        'name'      => 'Pontypridd',
+        'latitude'  => '51.60210000',
+        'longitude' => '-3.34211000',
+    ],
+    [
+        'id'        => 50991,
+        'name'      => 'Price Town',
+        'latitude'  => '51.61832000',
+        'longitude' => '-3.53662000',
+    ],
+    [
+        'id'        => 51067,
+        'name'      => 'Rhondda',
+        'latitude'  => '51.65896000',
+        'longitude' => '-3.44885000',
+    ],
+    [
+        'id'        => 51068,
+        'name'      => 'Rhondda Cynon Taf',
+        'latitude'  => '51.66667000',
+        'longitude' => '-3.50000000',
+    ],
+    [
+        'id'        => 51641,
+        'name'      => 'Tonypandy',
+        'latitude'  => '51.62202000',
+        'longitude' => '-3.45544000',
+    ],
+    [
+        'id'        => 51642,
+        'name'      => 'Tonyrefail',
+        'latitude'  => '51.58402000',
+        'longitude' => '-3.43041000',
+    ],
+    [
+        'id'        => 51667,
+        'name'      => 'Treorchy',
+        'latitude'  => '51.65958000',
+        'longitude' => '-3.50587000',
+    ],
+    [
+        'id'        => 52023,
+        'name'      => 'Ynysybwl',
+        'latitude'  => '51.63922000',
+        'longitude' => '-3.36036000',
+    ],
+];

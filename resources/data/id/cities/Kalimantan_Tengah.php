@@ -1,0 +1,105 @@
+<?php
+return [
+    [
+        'id'        => 56342,
+        'name'      => 'Kabupaten Barito Selatan',
+        'latitude'  => '-1.86667000',
+        'longitude' => '114.73333000',
+    ],
+    [
+        'id'        => 56343,
+        'name'      => 'Kabupaten Barito Timur',
+        'latitude'  => '-1.93333000',
+        'longitude' => '115.10000000',
+    ],
+    [
+        'id'        => 56344,
+        'name'      => 'Kabupaten Barito Utara',
+        'latitude'  => '-0.98333000',
+        'longitude' => '115.10000000',
+    ],
+    [
+        'id'        => 56415,
+        'name'      => 'Kabupaten Gunung Mas',
+        'latitude'  => '-0.95000000',
+        'longitude' => '113.50000000',
+    ],
+    [
+        'id'        => 56437,
+        'name'      => 'Kabupaten Kapuas',
+        'latitude'  => '-2.01667000',
+        'longitude' => '114.38333000',
+    ],
+    [
+        'id'        => 56443,
+        'name'      => 'Kabupaten Katingan',
+        'latitude'  => '-2.06667000',
+        'longitude' => '113.40000000',
+    ],
+    [
+        'id'        => 56469,
+        'name'      => 'Kabupaten Kotawaringin Barat',
+        'latitude'  => '-2.40000000',
+        'longitude' => '111.73333000',
+    ],
+    [
+        'id'        => 56470,
+        'name'      => 'Kabupaten Kotawaringin Timur',
+        'latitude'  => '-2.08333000',
+        'longitude' => '112.75000000',
+    ],
+    [
+        'id'        => 56482,
+        'name'      => 'Kabupaten Lamandau',
+        'latitude'  => '-1.83828000',
+        'longitude' => '111.28690000',
+    ],
+    [
+        'id'        => 56547,
+        'name'      => 'Kabupaten Murung Raya',
+        'latitude'  => '-0.01667000',
+        'longitude' => '114.26667000',
+    ],
+    [
+        'id'        => 56601,
+        'name'      => 'Kabupaten Pulang Pisau',
+        'latitude'  => '-3.11858000',
+        'longitude' => '113.86230000',
+    ],
+    [
+        'id'        => 56625,
+        'name'      => 'Kabupaten Seruyan',
+        'latitude'  => '-2.33333000',
+        'longitude' => '112.25000000',
+    ],
+    [
+        'id'        => 56646,
+        'name'      => 'Kabupaten Sukamara',
+        'latitude'  => '-2.62675000',
+        'longitude' => '111.23681000',
+    ],
+    [
+        'id'        => 56823,
+        'name'      => 'Kualakapuas',
+        'latitude'  => '-3.00913000',
+        'longitude' => '114.38759000',
+    ],
+    [
+        'id'        => 56897,
+        'name'      => 'Palangkaraya',
+        'latitude'  => '-2.20833000',
+        'longitude' => '113.91667000',
+    ],
+    [
+        'id'        => 56911,
+        'name'      => 'Pangkalanbuun',
+        'latitude'  => '-2.68320000',
+        'longitude' => '111.62590000',
+    ],
+    [
+        'id'        => 56961,
+        'name'      => 'Sampit',
+        'latitude'  => '-2.53150000',
+        'longitude' => '112.94960000',
+    ],
+];

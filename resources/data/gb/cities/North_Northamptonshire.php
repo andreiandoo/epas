@@ -1,0 +1,123 @@
+<?php
+return [
+    [
+        'id'        => 48709,
+        'name'      => 'Brixworth',
+        'latitude'  => '52.32912000',
+        'longitude' => '-0.90350000',
+    ],
+    [
+        'id'        => 48790,
+        'name'      => 'Burton Latimer',
+        'latitude'  => '52.36368000',
+        'longitude' => '-0.67853000',
+    ],
+    [
+        'id'        => 49117,
+        'name'      => 'Cottingham',
+        'latitude'  => '52.50243000',
+        'longitude' => '-0.75540000',
+    ],
+    [
+        'id'        => 49157,
+        'name'      => 'Crick',
+        'latitude'  => '52.34808000',
+        'longitude' => '-1.13708000',
+    ],
+    [
+        'id'        => 49275,
+        'name'      => 'Desborough',
+        'latitude'  => '52.44183000',
+        'longitude' => '-0.82126000',
+    ],
+    [
+        'id'        => 49634,
+        'name'      => 'Geddington',
+        'latitude'  => '52.43757000',
+        'longitude' => '-0.68965000',
+    ],
+    [
+        'id'        => 49813,
+        'name'      => 'Harpole',
+        'latitude'  => '52.24246000',
+        'longitude' => '-0.98937000',
+    ],
+    [
+        'id'        => 50033,
+        'name'      => 'Husbands Bosworth',
+        'latitude'  => '52.45232000',
+        'longitude' => '-1.05557000',
+    ],
+    [
+        'id'        => 50129,
+        'name'      => 'Kettering',
+        'latitude'  => '52.39836000',
+        'longitude' => '-0.72571000',
+    ],
+    [
+        'id'        => 50214,
+        'name'      => 'Kislingbury',
+        'latitude'  => '52.22976000',
+        'longitude' => '-0.97914000',
+    ],
+    [
+        'id'        => 50392,
+        'name'      => 'Long Buckby',
+        'latitude'  => '52.30260000',
+        'longitude' => '-1.08113000',
+    ],
+    [
+        'id'        => 50440,
+        'name'      => 'Lutterworth',
+        'latitude'  => '52.45634000',
+        'longitude' => '-1.20218000',
+    ],
+    [
+        'id'        => 50500,
+        'name'      => 'Market Harborough',
+        'latitude'  => '52.47760000',
+        'longitude' => '-0.92053000',
+    ],
+    [
+        'id'        => 50773,
+        'name'      => 'Northampton',
+        'latitude'  => '52.25000000',
+        'longitude' => '-0.88333000',
+    ],
+    [
+        'id'        => 50774,
+        'name'      => 'Northamptonshire',
+        'latitude'  => '52.25000000',
+        'longitude' => '-0.83333000',
+    ],
+    [
+        'id'        => 51122,
+        'name'      => 'Rothwell',
+        'latitude'  => '52.41667000',
+        'longitude' => '-0.80000000',
+    ],
+    [
+        'id'        => 51392,
+        'name'      => 'Spratton',
+        'latitude'  => '52.32447000',
+        'longitude' => '-0.95386000',
+    ],
+    [
+        'id'        => 51542,
+        'name'      => 'Sywell',
+        'latitude'  => '52.29856000',
+        'longitude' => '-0.79728000',
+    ],
+    [
+        'id'        => 51785,
+        'name'      => 'Welford',
+        'latitude'  => '52.41706000',
+        'longitude' => '-1.05871000',
+    ],
+    [
+        'id'        => 51818,
+        'name'      => 'West Haddon',
+        'latitude'  => '52.34168000',
+        'longitude' => '-1.07804000',
+    ],
+];

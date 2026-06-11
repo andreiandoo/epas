@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Șterge cont — TICS.ro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 min-h-screen" style="font-family:'Inter',sans-serif">
+    <header class="bg-white border-b border-gray-200">
+        <div class="max-w-2xl mx-auto px-4 py-4 flex items-center justify-between">
+            <a href="tics-homepage.html" class="flex items-center gap-2"><div class="w-10 h-10 bg-gray-900 rounded-xl flex items-center justify-center"><span class="text-white font-bold">T</span></div><span class="font-bold text-xl">TICS</span></a>
+            <a href="user-settings.html" class="text-sm text-gray-600">Anulează</a>
+        </div>
+    </header>
+    <div class="max-w-2xl mx-auto px-4 py-12">
+        <div class="bg-white rounded-2xl border border-red-200 p-8">
+            <div class="w-16 h-16 bg-red-100 rounded-2xl flex items-center justify-center mx-auto mb-6"><span class="text-3xl">⚠️</span></div>
+            <h1 class="text-2xl font-bold text-gray-900 text-center mb-2">Ești sigur că vrei să ștergi contul?</h1>
+            <p class="text-gray-500 text-center mb-8">Această acțiune este permanentă și nu poate fi anulată.</p>
+            <div class="bg-red-50 rounded-xl p-4 mb-6">
+                <p class="font-semibold text-red-800 mb-2">Ce se va întâmpla:</p>
+                <ul class="text-sm text-red-700 space-y-1">
+                    <li>• Toate datele tale vor fi șterse definitiv</li>
+                    <li>• Biletele viitoare vor fi anulate (fără rambursare automată)</li>
+                    <li>• Vei pierde cele 850 de puncte TICS</li>
+                    <li>• Nu vei mai putea recupera istoricul comenzilor</li>
+                </ul>
+            </div>
+            <div class="space-y-4">
+                <div><label class="block text-sm font-medium text-gray-700 mb-2">Motivul ștergerii (opțional)</label><select class="w-full px-4 py-3 border border-gray-200 rounded-xl"><option>Selectează un motiv</option><option>Nu mai folosesc platforma</option><option>Am găsit o alternativă mai bună</option><option>Prea multe emailuri</option><option>Probleme de confidențialitate</option><option>Altul</option></select></div>
+                <div><label class="block text-sm font-medium text-gray-700 mb-2">Scrie "STERGE" pentru a confirma</label><input type="text" class="w-full px-4 py-3 border border-gray-200 rounded-xl" placeholder="STERGE"></div>
+                <div><label class="block text-sm font-medium text-gray-700 mb-2">Parola curentă</label><input type="password" class="w-full px-4 py-3 border border-gray-200 rounded-xl"></div>
+            </div>
+            <div class="flex gap-4 mt-8">
+                <a href="user-settings.html" class="flex-1 py-3 bg-gray-100 text-gray-700 text-center font-medium rounded-xl hover:bg-gray-200">Anulează</a>
+                <button class="flex-1 py-3 bg-red-600 text-white font-medium rounded-xl hover:bg-red-700">Șterge contul definitiv</button>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

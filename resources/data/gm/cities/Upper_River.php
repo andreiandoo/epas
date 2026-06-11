@@ -1,0 +1,123 @@
+<?php
+return [
+    [
+        'id'        => 52218,
+        'name'      => 'Bakadagy',
+        'latitude'  => '13.30000000',
+        'longitude' => '-14.38333000',
+    ],
+    [
+        'id'        => 52225,
+        'name'      => 'Basse Santa Su',
+        'latitude'  => '13.30995000',
+        'longitude' => '-14.21373000',
+    ],
+    [
+        'id'        => 52226,
+        'name'      => 'Brifu',
+        'latitude'  => '13.50000000',
+        'longitude' => '-13.93333000',
+    ],
+    [
+        'id'        => 52232,
+        'name'      => 'Daba Kunda',
+        'latitude'  => '13.31667000',
+        'longitude' => '-14.30000000',
+    ],
+    [
+        'id'        => 52235,
+        'name'      => 'Demba Kunda',
+        'latitude'  => '13.25000000',
+        'longitude' => '-14.26667000',
+    ],
+    [
+        'id'        => 52237,
+        'name'      => 'Diabugu',
+        'latitude'  => '13.38333000',
+        'longitude' => '-14.40000000',
+    ],
+    [
+        'id'        => 52238,
+        'name'      => 'Diabugu Basilla',
+        'latitude'  => '13.33333000',
+        'longitude' => '-13.95000000',
+    ],
+    [
+        'id'        => 52245,
+        'name'      => 'Fulladu East',
+        'latitude'  => '13.33333000',
+        'longitude' => '-14.25000000',
+    ],
+    [
+        'id'        => 52251,
+        'name'      => 'Gunjur Kuta',
+        'latitude'  => '13.53333000',
+        'longitude' => '-14.11667000',
+    ],
+    [
+        'id'        => 52263,
+        'name'      => 'Kantora',
+        'latitude'  => '13.41667000',
+        'longitude' => '-13.91667000',
+    ],
+    [
+        'id'        => 52273,
+        'name'      => 'Koina',
+        'latitude'  => '13.48333000',
+        'longitude' => '-13.86667000',
+    ],
+    [
+        'id'        => 52279,
+        'name'      => 'Kumbija',
+        'latitude'  => '13.26667000',
+        'longitude' => '-14.18333000',
+    ],
+    [
+        'id'        => 52293,
+        'name'      => 'Nyamanari',
+        'latitude'  => '13.33333000',
+        'longitude' => '-13.86667000',
+    ],
+    [
+        'id'        => 52295,
+        'name'      => 'Perai',
+        'latitude'  => '13.38333000',
+        'longitude' => '-14.03333000',
+    ],
+    [
+        'id'        => 52297,
+        'name'      => 'Sabi',
+        'latitude'  => '13.23333000',
+        'longitude' => '-14.20000000',
+    ],
+    [
+        'id'        => 52300,
+        'name'      => 'Sandu',
+        'latitude'  => '13.41667000',
+        'longitude' => '-14.36667000',
+    ],
+    [
+        'id'        => 52308,
+        'name'      => 'Sudowol',
+        'latitude'  => '13.36667000',
+        'longitude' => '-13.96667000',
+    ],
+    [
+        'id'        => 52311,
+        'name'      => 'Sun Kunda',
+        'latitude'  => '13.38333000',
+        'longitude' => '-13.85000000',
+    ],
+    [
+        'id'        => 52312,
+        'name'      => 'Sutukoba',
+        'latitude'  => '13.50000000',
+        'longitude' => '-14.01667000',
+    ],
+    [
+        'id'        => 52320,
+        'name'      => 'Wuli',
+        'latitude'  => '13.50000000',
+        'longitude' => '-14.08333000',
+    ],
+];

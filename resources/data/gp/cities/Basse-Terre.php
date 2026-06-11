@@ -1,0 +1,111 @@
+<?php
+return [
+    [
+        'id'        => 154948,
+        'name'      => 'Baie-Mahault',
+        'latitude'  => '16.24976070',
+        'longitude' => '-61.67750720',
+    ],
+    [
+        'id'        => 154949,
+        'name'      => 'Baillif',
+        'latitude'  => '16.04973310',
+        'longitude' => '-61.75705910',
+    ],
+    [
+        'id'        => 154950,
+        'name'      => 'Basse-Terre',
+        'latitude'  => '15.99916310',
+        'longitude' => '-61.74998100',
+    ],
+    [
+        'id'        => 154951,
+        'name'      => 'Bouillante',
+        'latitude'  => '16.13869370',
+        'longitude' => '-61.79898970',
+    ],
+    [
+        'id'        => 154952,
+        'name'      => 'Capesterre-Belle-Eau',
+        'latitude'  => '16.04854020',
+        'longitude' => '-61.70210450',
+    ],
+    [
+        'id'        => 154953,
+        'name'      => 'Deshaies',
+        'latitude'  => '16.31936050',
+        'longitude' => '-61.82425780',
+    ],
+    [
+        'id'        => 154954,
+        'name'      => 'Gourbeyre',
+        'latitude'  => '16.00565950',
+        'longitude' => '-61.73023870',
+    ],
+    [
+        'id'        => 154955,
+        'name'      => 'Goyave',
+        'latitude'  => '16.12310770',
+        'longitude' => '-61.69740210',
+    ],
+    [
+        'id'        => 154956,
+        'name'      => 'Lamentin',
+        'latitude'  => '16.24431320',
+        'longitude' => '-61.75191940',
+    ],
+    [
+        'id'        => 154957,
+        'name'      => 'Petit-Bourg',
+        'latitude'  => '16.16948810',
+        'longitude' => '-61.74043310',
+    ],
+    [
+        'id'        => 154958,
+        'name'      => 'Pointe-Noire',
+        'latitude'  => '16.22702770',
+        'longitude' => '-61.80631220',
+    ],
+    [
+        'id'        => 154959,
+        'name'      => 'Saint-Claude',
+        'latitude'  => '16.04057440',
+        'longitude' => '-61.73648730',
+    ],
+    [
+        'id'        => 154960,
+        'name'      => 'Sainte-Rose',
+        'latitude'  => '16.29372520',
+        'longitude' => '-61.76595760',
+    ],
+    [
+        'id'        => 154961,
+        'name'      => 'Terre-de-Bas',
+        'latitude'  => '15.85541960',
+        'longitude' => '-61.65329200',
+    ],
+    [
+        'id'        => 154962,
+        'name'      => 'Terre-de-Haut',
+        'latitude'  => '15.85803760',
+        'longitude' => '-61.60960980',
+    ],
+    [
+        'id'        => 154963,
+        'name'      => 'Trois-Rivières',
+        'latitude'  => '15.99313620',
+        'longitude' => '-61.69052960',
+    ],
+    [
+        'id'        => 154964,
+        'name'      => 'Vieux-Fort',
+        'latitude'  => '15.96070380',
+        'longitude' => '-61.71351770',
+    ],
+    [
+        'id'        => 154965,
+        'name'      => 'Vieux-Habitants',
+        'latitude'  => '16.08466180',
+        'longitude' => '-61.79939230',
+    ],
+];

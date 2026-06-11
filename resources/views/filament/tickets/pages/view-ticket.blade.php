@@ -1,0 +1,507 @@
+<x-filament-panels::page>
+    @php
+        $ticket = $this->record;
+        $event = $ticket->ticketType?->event;
+        $eventTitle = is_array($event?->title) ? ($event->title['en'] ?? $event->title['ro'] ?? reset($event->title)) : ($event?->title ?? '');
+        $venue = $event?->venue;
+        $venueName = $venue ? ($venue->getTranslation('name', app()->getLocale()) ?? 'N/A') : 'N/A';
+        $beneficiary = $ticket->meta['beneficiary'] ?? null;
+        $currentPanelId = filament()->getCurrentPanel()->getId();
+        $isAdminPanel = $currentPanelId === 'admin';
+        $isMarketplacePanel = $currentPanelId === 'marketplace';
+
+        // Resolve seat info using the Ticket model helper (meta → EventSeat → uid parsing)
+        $seatDetails = $ticket->getSeatDetails();
+        $seatSection = $seatDetails['section_name'] ?? null;
+        $seatRow = $seatDetails['row_label'] ?? null;
+        $seatNumber = $seatDetails['seat_number'] ?? null;
+        $seatLabel = $ticket->seat_label ?? null;
+        $hasSeatInfo = $seatLabel || $seatSection || $seatRow || $seatNumber;
+        $isRefundable = (bool) ($ticket->marketplaceTicketType?->is_refundable ?? $ticket->ticketType?->is_refundable ?? false);
+        $hasInsurance = (bool) ($ticket->meta['has_insurance'] ?? false);
+        $insuranceAmount = $ticket->meta['insurance_amount'] ?? null;
+    @endphp
+
+    <div class="grid grid-cols-1 gap-6 lg:grid-cols-4">
+        {{-- Left Column: QR Code --}}
+        <div class="lg:col-span-1">
+            <div class="sticky p-6 bg-white border border-gray-200 shadow-sm top-20 dark:bg-gray-800 rounded-xl dark:border-gray-700">
+                <div class="text-center">
+                    <div class="inline-block p-3 bg-white border-2 border-gray-100 rounded-lg">
+                        <img
+                            src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={{ urlencode($ticket->getVerifyUrl()) }}&color=181622&margin=0"
+                            alt="QR Code"
+                            class="w-40 h-40"
+                        />
+                    </div>
+                    <p class="mt-3 font-mono text-xl font-bold text-gray-900 dark:text-white">{{ $ticket->code }}</p>
+                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Cod scanabil la intrare</p>
+
+                    @if($ticket->barcode)
+                        <div class="mt-3 pt-3 border-t border-gray-200 dark:border-gray-600">
+                            <p class="text-xs font-medium text-gray-500 dark:text-gray-400">Barcode</p>
+                            <p class="mt-1 font-mono text-xs text-gray-700 dark:text-gray-300 break-all">{{ $ticket->barcode }}</p>
+                        </div>
+                    @endif
+
+                    {{-- Status Badge — check-in takes precedence over plain
+                         "Valid" because check-in flow leaves status='valid'
+                         and only sets checked_in_at. Without this override the
+                         badge would say "Valid" for a ticket the gate already
+                         scanned in, which is misleading for the operator. --}}
+                    <div class="mt-4 space-y-2">
+                        @if($ticket->checked_in_at && !in_array($ticket->status, ['cancelled', 'void', 'refunded']))
+                            <span class="inline-flex items-center px-3 py-1.5 text-sm font-semibold rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                                ✓ Check-in
+                            </span>
+                        @else
+                            <span class="inline-flex items-center px-3 py-1.5 text-sm font-semibold rounded-full
+                                @if($ticket->status === 'valid') bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200
+                                @elseif($ticket->status === 'used') bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200
+                                @elseif($ticket->status === 'cancelled' || $ticket->status === 'void') bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200
+                                @else bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200
+                                @endif">
+                                @if($ticket->status === 'valid') ✓ Valid
+                                @elseif($ticket->status === 'used') ✓ Utilizat
+                                @elseif($ticket->status === 'cancelled') ✗ Anulat
+                                @elseif($ticket->status === 'void') ✗ Anulat
+                                @else {{ ucfirst($ticket->status) }}
+                                @endif
+                            </span>
+                        @endif
+                        <div class="flex flex-wrap justify-center gap-1">
+                            @if($hasInsurance)
+                                <span class="inline-flex items-center px-3 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300">
+                                    ✓ Asigurat{{ $insuranceAmount ? ' (' . number_format($insuranceAmount, 2) . ' ' . ($ticket->order?->currency ?? 'RON') . ')' : '' }}
+                                </span>
+                            @elseif($isRefundable)
+                                <span class="inline-flex items-center px-3 py-1 text-xs font-medium rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300">
+                                    ↩ Returnabil
+                                </span>
+                            @else
+                                <span class="inline-flex items-center px-3 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400">
+                                    ✗ Nereturnabil
+                                </span>
+                            @endif
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {{-- Right Column: Details --}}
+        <div class="space-y-4 lg:col-span-3">
+            {{-- Ticket Details --}}
+            <div class="p-5 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
+                <h3 class="mb-3 text-sm font-semibold tracking-wider text-gray-400 uppercase dark:text-gray-500">Detalii bilet</h3>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Tip bilet</span>
+                        <p class="text-base font-semibold text-gray-900 dark:text-white">{{ $ticket->marketplaceTicketType?->name ?? $ticket->ticketType?->name ?? 'N/A' }}</p>
+                    </div>
+                    @if($hasSeatInfo)
+                        @if($seatSection)
+                            <div>
+                                <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Secțiune</span>
+                                <p class="text-base font-semibold text-gray-900 dark:text-white">{{ $seatSection }}</p>
+                            </div>
+                        @endif
+                        @if($seatRow)
+                            <div>
+                                <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Rând</span>
+                                <p class="text-base font-semibold text-gray-900 dark:text-white">{{ $seatRow }}</p>
+                            </div>
+                        @endif
+                        @if($seatNumber)
+                            <div>
+                                <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Loc</span>
+                                <p class="text-base font-semibold text-gray-900 dark:text-white">{{ $seatNumber }}</p>
+                            </div>
+                        @endif
+                        @if($seatLabel && !$seatSection && !$seatRow && !$seatNumber)
+                            <div>
+                                <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Loc (ID)</span>
+                                <p class="text-base font-semibold text-gray-900 dark:text-white">{{ $seatLabel }}</p>
+                            </div>
+                        @endif
+                    @endif
+                    <div>
+                        <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Preț</span>
+                        @if($ticket->hasDiscount())
+                            <p class="text-base font-semibold text-emerald-600 dark:text-emerald-400">
+                                {{ number_format($ticket->getEffectivePrice(), 2) }} {{ $ticket->order?->currency ?? $ticket->ticketType?->currency ?? 'RON' }}
+                                <span class="ml-1 text-xs text-gray-400 dark:text-gray-500 line-through font-normal">
+                                    {{ number_format((float) ($ticket->price ?? 0), 2) }}
+                                </span>
+                            </p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                Reducere aplicată: {{ number_format($ticket->getDiscountAmount(), 2) }} {{ $ticket->order?->currency ?? 'RON' }}
+                            </p>
+                        @else
+                            <p class="text-base font-semibold text-gray-900 dark:text-white">
+                                {{ number_format($ticket->getEffectivePrice() ?: (($ticket->ticketType?->price_cents ?? 0) / 100), 2) }} {{ $ticket->order?->currency ?? $ticket->ticketType?->currency ?? 'RON' }}
+                            </p>
+                        @endif
+                    </div>
+                    <div>
+                        <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Creat la</span>
+                        <p class="text-base text-gray-900 dark:text-white">{{ \App\Support\MarketplaceTz::fmt($ticket->created_at, 'd M Y, H:i', $ticket->order?->marketplaceClient) }}</p>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Check-in Details — only shown after the ticket has been
+                 scanned at the gate. checked_in_at lives in UTC, formatted
+                 here in the marketplace timezone via MarketplaceTz so the
+                 displayed timestamp matches when the operator actually
+                 scanned (e.g. 19:19 RO, not 16:19 UTC). --}}
+            @if($ticket->checked_in_at)
+                @php
+                    $checkInSourceLabel = match ($ticket->checked_in_via) {
+                        'organizer_app' => 'Aplicație organizator (mobil)',
+                        'venue_app'     => 'Aplicație locație (mobil)',
+                        'pos_app'       => 'POS automat (la vânzare)',
+                        'staff_app'     => 'Aplicație staff festival',
+                        'activities_app'=> 'Aplicație activități',
+                        'leisure_app'   => 'Aplicație leisure',
+                        'manual'        => 'Manual (cont organizator)',
+                        default         => $ticket->checked_in_via ?: 'Necunoscut (înainte de tracking sursă)',
+                    };
+                @endphp
+                <div class="p-5 bg-blue-50 border border-blue-200 shadow-sm dark:bg-blue-900/20 dark:border-blue-800 rounded-xl">
+                    <h3 class="mb-3 text-sm font-semibold tracking-wider text-blue-700 uppercase dark:text-blue-300 flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        Check-in efectuat
+                    </h3>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Data și ora</span>
+                            <p class="text-base font-semibold text-gray-900 dark:text-white">{{ \App\Support\MarketplaceTz::fmt($ticket->checked_in_at, 'd M Y, H:i:s', $ticket->order?->marketplaceClient) }}</p>
+                        </div>
+                        <div>
+                            <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Scanat de</span>
+                            <p class="text-base font-semibold text-gray-900 dark:text-white">{{ $ticket->checked_in_by ?: '—' }}</p>
+                        </div>
+                        <div class="col-span-2">
+                            <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Sursa scanării</span>
+                            <p class="text-base text-gray-900 dark:text-white">{{ $checkInSourceLabel }}</p>
+                        </div>
+                    </div>
+                </div>
+            @endif
+
+            {{-- Event Details --}}
+            @if($event)
+                <div class="p-5 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
+                    <h3 class="mb-3 text-sm font-semibold tracking-wider text-gray-400 uppercase dark:text-gray-500">Eveniment</h3>
+                    <div class="flex items-start gap-4">
+                        @if($event->poster_url)
+                            <img src="{{ Storage::disk('public')->url($event->poster_url) }}" alt="{{ $eventTitle }}" class="object-cover rounded-lg" style="max-width: 100px; height: auto;">
+                        @endif
+                        <div class="flex-1">
+                            <p class="text-lg font-bold text-gray-900 dark:text-white">
+                                @if($isAdminPanel)
+                                    <a href="{{ \App\Filament\Resources\Events\EventResource::getUrl('edit', ['record' => $event]) }}" class="text-primary-600 hover:underline">
+                                        {{ $eventTitle }}
+                                    </a>
+                                @elseif($isMarketplacePanel)
+                                    <a href="{{ \App\Filament\Marketplace\Resources\EventResource::getUrl('edit', ['record' => $event]) }}" class="text-primary-600 hover:underline">
+                                        {{ $eventTitle }}
+                                    </a>
+                                @else
+                                    <a href="{{ \App\Filament\Tenant\Resources\EventResource::getUrl('edit', ['record' => $event]) }}" class="text-primary-600 hover:underline">
+                                        {{ $eventTitle }}
+                                    </a>
+                                @endif
+                            </p>
+                            <div class="flex flex-wrap mt-2 text-sm text-gray-600 gap-x-4 gap-y-1 dark:text-gray-300">
+                                <span class="flex items-center">
+                                    <x-heroicon-o-calendar class="w-4 h-4 mr-1 text-gray-400" />
+                                    {{ $event->event_date ? $event->event_date->format('d M Y') : 'TBA' }}
+                                </span>
+                                @if($event->start_time)
+                                    <span class="flex items-center">
+                                        <x-heroicon-o-clock class="w-4 h-4 mr-1 text-gray-400" />
+                                        {{ $event->start_time }}
+                                    </span>
+                                @endif
+                                @if($venue)
+                                    <span class="flex items-center">
+                                        <x-heroicon-o-map-pin class="w-4 h-4 mr-1 text-gray-400" />
+                                        {{ $venueName }}{{ $venue->city ? ', ' . $venue->city : '' }}
+                                    </span>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            @endif
+
+            {{-- Order & Customer --}}
+            @if($ticket->order)
+                <div class="p-5 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
+                    <h3 class="mb-3 text-sm font-semibold tracking-wider text-gray-400 uppercase dark:text-gray-500">Comandă & Client</h3>
+                    <div class="grid grid-cols-2 gap-4 lg:grid-cols-3">
+                        <div>
+                            <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Nr. comandă</span>
+                            <p class="text-base font-semibold text-gray-900 dark:text-white">
+                                @if($isAdminPanel)
+                                    <a href="{{ \App\Filament\Resources\Orders\OrderResource::getUrl('view', ['record' => $ticket->order]) }}" class="text-primary-600 hover:underline">
+                                        #{{ str_pad($ticket->order->id, 6, '0', STR_PAD_LEFT) }}
+                                    </a>
+                                    @if($ticket->order->order_number)
+                                        <span class="ml-1 text-sm text-gray-500 dark:text-gray-400">({{ $ticket->order->order_number }})</span>
+                                    @endif
+                                @elseif($isMarketplacePanel)
+                                    <a href="{{ \App\Filament\Marketplace\Resources\OrderResource::getUrl('view', ['record' => $ticket->order]) }}" class="text-primary-600 hover:underline">
+                                        #{{ str_pad($ticket->order->id, 6, '0', STR_PAD_LEFT) }}
+                                    </a>
+                                    @if($ticket->order->order_number)
+                                        <span class="ml-1 text-sm text-gray-500 dark:text-gray-400">({{ $ticket->order->order_number }})</span>
+                                    @endif
+                                @else
+                                    <a href="{{ \App\Filament\Tenant\Resources\OrderResource::getUrl('view', ['record' => $ticket->order]) }}" class="text-primary-600 hover:underline">
+                                        #{{ str_pad($ticket->order->id, 6, '0', STR_PAD_LEFT) }}
+                                    </a>
+                                    @if($ticket->order->order_number)
+                                        <span class="ml-1 text-sm text-gray-500 dark:text-gray-400">({{ $ticket->order->order_number }})</span>
+                                    @endif
+                                @endif
+                            </p>
+                        </div>
+                        @if($ticket->order->marketplaceOrganizer)
+                            <div>
+                                <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Organizator</span>
+                                <p class="text-base text-gray-900 dark:text-white">
+                                    {{ $ticket->order->marketplaceOrganizer->company_name ?? $ticket->order->marketplaceOrganizer->name ?? '' }}
+                                </p>
+                            </div>
+                        @elseif($ticket->order->tenant)
+                            <div>
+                                <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Organizator</span>
+                                <p class="text-base text-gray-900 dark:text-white">
+                                    @if($isAdminPanel)
+                                        <a href="{{ \App\Filament\Resources\Tenants\TenantResource::getUrl('edit', ['record' => $ticket->order->tenant]) }}" class="text-primary-600 hover:underline">
+                                            {{ $ticket->order->tenant->name }}
+                                        </a>
+                                    @else
+                                        {{ $ticket->order->tenant->name }}
+                                    @endif
+                                </p>
+                            </div>
+                        @endif
+                        @if($ticket->order->source === 'external_import')
+                            <div>
+                                <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Sursă import</span>
+                                <p class="text-base text-indigo-400">
+                                    🌐 {{ $ticket->order->meta['external_platform'] ?? $ticket->order->meta['imported_from'] ?? 'Extern' }}
+                                </p>
+                            </div>
+                        @endif
+                        @php
+                            $customerName = $ticket->order->customer_name
+                                ?? ($ticket->order->meta['customer_name'] ?? null)
+                                ?? $ticket->order->marketplaceCustomer?->name
+                                ?? $ticket->order->customer?->full_name
+                                ?? 'N/A';
+                            $customerLink = null;
+                            if ($isMarketplacePanel && $ticket->order->marketplace_customer_id) {
+                                $customerLink = \App\Filament\Marketplace\Resources\MarketplaceCustomerResource::getUrl('edit', ['record' => $ticket->order->marketplace_customer_id]);
+                            } elseif ($isAdminPanel && $ticket->order->customer_id) {
+                                $customerLink = \App\Filament\Resources\Customers\CustomerResource::getUrl('edit', ['record' => $ticket->order->customer_id]);
+                            }
+                        @endphp
+                        <div>
+                            <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Client</span>
+                            <p class="text-base text-gray-900 dark:text-white">
+                                @if($customerLink)
+                                    <a href="{{ $customerLink }}" class="text-primary-600 hover:underline">{{ $customerName }}</a>
+                                @else
+                                    {{ $customerName }}
+                                @endif
+                            </p>
+                        </div>
+                        <div>
+                            <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Email</span>
+                            <p class="text-base text-gray-900 dark:text-white">
+                                @if($customerLink)
+                                    <a href="{{ $customerLink }}" class="text-primary-600 hover:underline">{{ $ticket->order->customer_email }}</a>
+                                @else
+                                    <a href="mailto:{{ $ticket->order->customer_email }}" class="text-primary-600 hover:underline">{{ $ticket->order->customer_email }}</a>
+                                @endif
+                            </p>
+                        </div>
+                        @if($ticket->order->meta['customer_phone'] ?? null)
+                            <div>
+                                <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Telefon</span>
+                                <p class="text-base text-gray-900 dark:text-white">
+                                    <a href="tel:{{ $ticket->order->meta['customer_phone'] }}" class="text-primary-600 hover:underline">
+                                        {{ $ticket->order->meta['customer_phone'] }}
+                                    </a>
+                                </p>
+                            </div>
+                        @endif
+                        <div>
+                            <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Status comandă</span>
+                            <p class="text-base">
+                                <span class="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full
+                                    @if(in_array($ticket->order->status, ['paid', 'confirmed', 'completed'])) bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300
+                                    @elseif($ticket->order->status === 'pending') bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300
+                                    @elseif(in_array($ticket->order->status, ['cancelled', 'refunded'])) bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300
+                                    @else bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300
+                                    @endif">
+                                    {{ ucfirst($ticket->order->status) }}
+                                </span>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            @endif
+
+            {{-- Transfer history --}}
+            @php
+                $ticketMeta = is_array($ticket->meta) ? $ticket->meta : [];
+                $transferHistory = $ticketMeta['transfers'] ?? [];
+            @endphp
+            @if(!empty($transferHistory))
+                <div class="p-5 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
+                    <h3 class="mb-3 text-sm font-semibold tracking-wider text-gray-400 uppercase dark:text-gray-500">Istoric transferuri</h3>
+                    <ol class="relative border-l border-gray-200 dark:border-gray-700 ml-2 space-y-4">
+                        @foreach(array_reverse($transferHistory) as $transfer)
+                            <li class="ml-4">
+                                <div class="absolute w-2.5 h-2.5 bg-blue-500 rounded-full mt-1.5 -left-1.5 border border-white dark:border-gray-800"></div>
+                                <time class="text-xs font-normal leading-none text-gray-400 dark:text-gray-500">
+                                    {{ isset($transfer['at']) ? \App\Support\MarketplaceTz::fmt($transfer['at'], 'd.m.Y H:i', $ticket->order?->marketplaceClient) : '—' }}
+                                </time>
+                                <p class="mt-1 text-sm text-gray-900 dark:text-gray-100">
+                                    De la
+                                    <strong>{{ $transfer['from_name'] ?? '—' }}</strong>
+                                    @if($transfer['from_email'] ?? null)
+                                        <span class="text-gray-500 dark:text-gray-400">({{ $transfer['from_email'] }})</span>
+                                    @endif
+                                    către
+                                    <strong>{{ $transfer['to_name'] ?? '—' }}</strong>
+                                    @if($transfer['to_email'] ?? null)
+                                        <span class="text-gray-500 dark:text-gray-400">({{ $transfer['to_email'] }})</span>
+                                    @endif
+                                </p>
+                                @if(($transfer['ip_address'] ?? null) || ($transfer['user_agent'] ?? null))
+                                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                        @if($transfer['ip_address'] ?? null)
+                                            <span class="font-mono">IP {{ $transfer['ip_address'] }}</span>
+                                        @endif
+                                        @if($transfer['user_agent'] ?? null)
+                                            <span class="block truncate" title="{{ $transfer['user_agent'] }}">{{ \Illuminate\Support\Str::limit($transfer['user_agent'], 90) }}</span>
+                                        @endif
+                                    </p>
+                                @endif
+                            </li>
+                        @endforeach
+                    </ol>
+                </div>
+            @endif
+
+            {{-- Beneficiary --}}
+            @if($beneficiary)
+                <div class="p-5 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
+                    <h3 class="mb-3 text-sm font-semibold tracking-wider text-gray-400 uppercase dark:text-gray-500">Beneficiar bilet</h3>
+                    <div class="grid grid-cols-2 gap-4 lg:grid-cols-3">
+                        <div>
+                            <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Nume</span>
+                            <p class="text-base font-semibold text-gray-900 dark:text-white">{{ $beneficiary['name'] ?? 'N/A' }}</p>
+                        </div>
+                        @if($beneficiary['email'] ?? null)
+                            <div>
+                                <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Email</span>
+                                <p class="text-base text-gray-900 dark:text-white">{{ $beneficiary['email'] }}</p>
+                            </div>
+                        @endif
+                        @if($beneficiary['phone'] ?? null)
+                            <div>
+                                <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Telefon</span>
+                                <p class="text-base text-gray-900 dark:text-white">{{ $beneficiary['phone'] }}</p>
+                            </div>
+                        @endif
+                    </div>
+                </div>
+            @endif
+
+            {{-- Seat allocation activity log (log_name='seat_allocation') --}}
+            @php
+                $seatAllocActivities = \Spatie\Activitylog\Models\Activity::query()
+                    ->where('log_name', 'seat_allocation')
+                    ->where('subject_type', \App\Models\Ticket::class)
+                    ->where('subject_id', $ticket->id)
+                    ->orderByDesc('id')
+                    ->limit(30)
+                    ->get();
+            @endphp
+            <div class="p-5 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
+                <h3 class="mb-3 text-sm font-semibold tracking-wider text-gray-400 uppercase dark:text-gray-500">
+                    Istoric alocare loc
+                </h3>
+                @if($seatAllocActivities->isEmpty())
+                    <p class="text-sm text-gray-500 dark:text-gray-400 italic">
+                        Nicio alocare manuală de loc înregistrată pentru acest bilet. Locul curent (dacă există) a fost atribuit automat la checkout.
+                    </p>
+                @else
+                    <ol class="relative border-l border-gray-200 dark:border-gray-700 ml-2">
+                        @foreach($seatAllocActivities as $act)
+                            @php
+                                $props = $act->properties ?? collect();
+                                if ($props instanceof \Illuminate\Support\Collection) $props = $props->all();
+                                $causer = null;
+                                if (!empty($act->causer_id) && !empty($act->causer_type) && class_exists($act->causer_type)) {
+                                    $causer = $act->causer_type::find($act->causer_id);
+                                }
+                                $causerName = $causer?->name ?? $causer?->full_name ?? null;
+                                $causerEmail = $causer?->email ?? null;
+                                $seatHuman = trim(
+                                    (string) ($props['section_name'] ?? '') .
+                                    (!empty($props['row_label']) ? ', Rând ' . $props['row_label'] : '') .
+                                    (!empty($props['seat_label_field']) ? ', Loc ' . $props['seat_label_field'] : '')
+                                );
+                                $actionLabel = ($props['action_type'] ?? 'allocated') === 'reassigned' ? 'Reasignare' : 'Alocare manuală';
+                                $dotColor = ($props['action_type'] ?? 'allocated') === 'reassigned' ? 'bg-amber-500' : 'bg-indigo-500';
+                            @endphp
+                            <li class="mb-4 ml-4">
+                                <div class="absolute w-2.5 h-2.5 {{ $dotColor }} rounded-full mt-1.5 -left-1.5 border border-white dark:border-gray-800"></div>
+                                <time class="text-xs font-normal leading-none text-gray-400 dark:text-gray-500">
+                                    {{ \App\Support\MarketplaceTz::fmt($act->created_at, 'd.m.Y H:i', $ticket->order?->marketplaceClient) }} · {{ $causerName ?? $causerEmail ?? '— sistem —' }}
+                                </time>
+                                <p class="mt-1 text-sm text-gray-900 dark:text-gray-100">
+                                    <strong>{{ $actionLabel }}</strong>:
+                                    <span class="font-mono text-xs">{{ $props['seat_uid'] ?? '—' }}</span>
+                                    @if($seatHuman) <span class="text-gray-500 dark:text-gray-400">({{ $seatHuman }})</span> @endif
+                                    @if(!empty($props['previous_seat_uid']))
+                                        <span class="block mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                                            Loc anterior eliberat: <span class="font-mono">{{ $props['previous_seat_uid'] }}</span> (→ available)
+                                        </span>
+                                    @endif
+                                </p>
+                                @if(!empty($props['reason']))
+                                    <p class="mt-1 text-xs text-gray-600 dark:text-gray-400 italic">
+                                        Motiv: {{ $props['reason'] }}
+                                    </p>
+                                @endif
+                                @if(!empty($props['order_number']) || !empty($props['customer_email']))
+                                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                        @if(!empty($props['order_number']))
+                                            Comandă <strong>{{ $props['order_number'] }}</strong>
+                                        @endif
+                                        @if(!empty($props['customer_name']) || !empty($props['customer_email']))
+                                            · {{ $props['customer_name'] ?? '' }}
+                                            @if(!empty($props['customer_email']))
+                                                <span class="text-gray-400">({{ $props['customer_email'] }})</span>
+                                            @endif
+                                        @endif
+                                    </p>
+                                @endif
+                            </li>
+                        @endforeach
+                    </ol>
+                @endif
+            </div>
+        </div>
+    </div>
+</x-filament-panels::page>

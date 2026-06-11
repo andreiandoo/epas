@@ -1,0 +1,117 @@
+<?php
+return [
+    [
+        'id'        => 144386,
+        'name'      => 'Barobo',
+        'latitude'  => '8.48629260',
+        'longitude' => '126.02381030',
+    ],
+    [
+        'id'        => 81652,
+        'name'      => 'Bayabas',
+        'latitude'  => '8.97600390',
+        'longitude' => '126.22479810',
+    ],
+    [
+        'id'        => 81737,
+        'name'      => 'Bislig',
+        'latitude'  => '8.20949370',
+        'longitude' => '126.17006570',
+    ],
+    [
+        'id'        => 82000,
+        'name'      => 'Cagwait',
+        'latitude'  => '8.89139090',
+        'longitude' => '126.08204640',
+    ],
+    [
+        'id'        => 82128,
+        'name'      => 'Cantilan',
+        'latitude'  => '9.30891160',
+        'longitude' => '125.73361670',
+    ],
+    [
+        'id'        => 154830,
+        'name'      => 'Carmen',
+        'latitude'  => '9.18191620',
+        'longitude' => '125.76301380',
+    ],
+    [
+        'id'        => 82181,
+        'name'      => 'Carrascal',
+        'latitude'  => '9.38185070',
+        'longitude' => '125.71434770',
+    ],
+    [
+        'id'        => 82299,
+        'name'      => 'Cortes',
+        'latitude'  => '9.23184780',
+        'longitude' => '126.07008520',
+    ],
+    [
+        'id'        => 82693,
+        'name'      => 'Hinatuan',
+        'latitude'  => '8.41820630',
+        'longitude' => '126.25166010',
+    ],
+    [
+        'id'        => 83025,
+        'name'      => 'Lanuza',
+        'latitude'  => '9.16889840',
+        'longitude' => '125.82760140',
+    ],
+    [
+        'id'        => 83074,
+        'name'      => 'Lianga',
+        'latitude'  => '8.63875520',
+        'longitude' => '126.00824420',
+    ],
+    [
+        'id'        => 83140,
+        'name'      => 'Lingig',
+        'latitude'  => '8.09757550',
+        'longitude' => '126.21147900',
+    ],
+    [
+        'id'        => 83313,
+        'name'      => 'Madrid',
+        'latitude'  => '9.21161400',
+        'longitude' => '125.73095610',
+    ],
+    [
+        'id'        => 83582,
+        'name'      => 'Marihatag',
+        'latitude'  => '8.78798430',
+        'longitude' => '125.79982840',
+    ],
+    [
+        'id'        => 154831,
+        'name'      => 'San Agustin',
+        'latitude'  => '8.72141430',
+        'longitude' => '125.94712060',
+    ],
+    [
+        'id'        => 154832,
+        'name'      => 'San Miguel',
+        'latitude'  => '8.94834480',
+        'longitude' => '125.81438340',
+    ],
+    [
+        'id'        => 84936,
+        'name'      => 'Tagbina',
+        'latitude'  => '8.42775660',
+        'longitude' => '126.03745740',
+    ],
+    [
+        'id'        => 84944,
+        'name'      => 'Tago',
+        'latitude'  => '8.97204320',
+        'longitude' => '125.94527530',
+    ],
+    [
+        'id'        => 85031,
+        'name'      => 'Tandag',
+        'latitude'  => '9.09298150',
+        'longitude' => '125.96729090',
+    ],
+];

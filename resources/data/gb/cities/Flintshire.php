@@ -1,0 +1,105 @@
+<?php
+return [
+    [
+        'id'        => 48335,
+        'name'      => 'Bagillt',
+        'latitude'  => '53.26540000',
+        'longitude' => '-3.16551000',
+    ],
+    [
+        'id'        => 48730,
+        'name'      => 'Broughton',
+        'latitude'  => '53.16303000',
+        'longitude' => '-2.99309000',
+    ],
+    [
+        'id'        => 48750,
+        'name'      => 'Buckley',
+        'latitude'  => '53.16667000',
+        'longitude' => '-3.08333000',
+    ],
+    [
+        'id'        => 49123,
+        'name'      => 'County of Flintshire',
+        'latitude'  => '53.25000000',
+        'longitude' => '-3.16667000',
+    ],
+    [
+        'id'        => 49254,
+        'name'      => 'Deeside',
+        'latitude'  => '53.20053000',
+        'longitude' => '-3.03841000',
+    ],
+    [
+        'id'        => 49372,
+        'name'      => 'Dyserth',
+        'latitude'  => '53.30032000',
+        'longitude' => '-3.41262000',
+    ],
+    [
+        'id'        => 49574,
+        'name'      => 'Flint',
+        'latitude'  => '53.24488000',
+        'longitude' => '-3.13231000',
+    ],
+    [
+        'id'        => 49740,
+        'name'      => 'Greenfield',
+        'latitude'  => '53.28333000',
+        'longitude' => '-3.21667000',
+    ],
+    [
+        'id'        => 49756,
+        'name'      => 'Gronant',
+        'latitude'  => '53.33669000',
+        'longitude' => '-3.36031000',
+    ],
+    [
+        'id'        => 49850,
+        'name'      => 'Hawarden',
+        'latitude'  => '53.18478000',
+        'longitude' => '-3.02578000',
+    ],
+    [
+        'id'        => 49973,
+        'name'      => 'Holywell',
+        'latitude'  => '53.27466000',
+        'longitude' => '-3.22895000',
+    ],
+    [
+        'id'        => 50273,
+        'name'      => 'Leeswood',
+        'latitude'  => '53.13347000',
+        'longitude' => '-3.09466000',
+    ],
+    [
+        'id'        => 50614,
+        'name'      => 'Mold',
+        'latitude'  => '53.16674000',
+        'longitude' => '-3.14143000',
+    ],
+    [
+        'id'        => 50636,
+        'name'      => 'Mostyn',
+        'latitude'  => '53.31271000',
+        'longitude' => '-3.26765000',
+    ],
+    [
+        'id'        => 50779,
+        'name'      => 'Northop',
+        'latitude'  => '53.20692000',
+        'longitude' => '-3.13277000',
+    ],
+    [
+        'id'        => 50892,
+        'name'      => 'Penyffordd',
+        'latitude'  => '53.14829000',
+        'longitude' => '-3.04584000',
+    ],
+    [
+        'id'        => 50984,
+        'name'      => 'Prestatyn',
+        'latitude'  => '53.33748000',
+        'longitude' => '-3.40776000',
+    ],
+];

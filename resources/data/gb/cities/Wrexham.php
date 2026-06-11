@@ -1,0 +1,105 @@
+<?php
+return [
+    [
+        'id'        => 48737,
+        'name'      => 'Brymbo',
+        'latitude'  => '53.06667000',
+        'longitude' => '-3.06667000',
+    ],
+    [
+        'id'        => 48810,
+        'name'      => 'Caergwrle',
+        'latitude'  => '53.10953000',
+        'longitude' => '-3.03808000',
+    ],
+    [
+        'id'        => 48976,
+        'name'      => 'Chirk',
+        'latitude'  => '52.93586000',
+        'longitude' => '-3.05738000',
+    ],
+    [
+        'id'        => 49057,
+        'name'      => 'Coedpoeth',
+        'latitude'  => '53.05391000',
+        'longitude' => '-3.06234000',
+    ],
+    [
+        'id'        => 49596,
+        'name'      => 'Four Crosses',
+        'latitude'  => '52.75941000',
+        'longitude' => '-3.08106000',
+    ],
+    [
+        'id'        => 49749,
+        'name'      => 'Gresford',
+        'latitude'  => '53.08539000',
+        'longitude' => '-2.97062000',
+    ],
+    [
+        'id'        => 49763,
+        'name'      => 'Guilsfield',
+        'latitude'  => '52.69634000',
+        'longitude' => '-3.15712000',
+    ],
+    [
+        'id'        => 49983,
+        'name'      => 'Hope',
+        'latitude'  => '53.11667000',
+        'longitude' => '-3.03333000',
+    ],
+    [
+        'id'        => 50355,
+        'name'      => 'Llanfyllin',
+        'latitude'  => '52.76570000',
+        'longitude' => '-3.27187000',
+    ],
+    [
+        'id'        => 50358,
+        'name'      => 'Llangollen',
+        'latitude'  => '52.96829000',
+        'longitude' => '-3.17127000',
+    ],
+    [
+        'id'        => 50493,
+        'name'      => 'Marchwiel',
+        'latitude'  => '53.02390000',
+        'longitude' => '-2.96106000',
+    ],
+    [
+        'id'        => 50836,
+        'name'      => 'Overton',
+        'latitude'  => '52.96667000',
+        'longitude' => '-2.93333000',
+    ],
+    [
+        'id'        => 51070,
+        'name'      => 'Rhosllanerchrugog',
+        'latitude'  => '53.00974000',
+        'longitude' => '-3.05814000',
+    ],
+    [
+        'id'        => 51112,
+        'name'      => 'Rossett',
+        'latitude'  => '53.10921000',
+        'longitude' => '-2.94478000',
+    ],
+    [
+        'id'        => 51136,
+        'name'      => 'Ruabon',
+        'latitude'  => '52.98780000',
+        'longitude' => '-3.03883000',
+    ],
+    [
+        'id'        => 51668,
+        'name'      => 'Treuddyn',
+        'latitude'  => '53.11480000',
+        'longitude' => '-3.12003000',
+    ],
+    [
+        'id'        => 51998,
+        'name'      => 'Wrexham',
+        'latitude'  => '53.00000000',
+        'longitude' => '-3.00000000',
+    ],
+];

@@ -1,0 +1,275 @@
+<?php
+
+namespace App\Filament\Marketplace\Resources;
+
+use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
+use App\Filament\Marketplace\Resources\TaxRegistryResource\Pages;
+use App\Models\MarketplaceTaxRegistry;
+use App\Services\LocationService;
+use Filament\Forms;
+use Filament\Resources\Resource;
+use Filament\Schemas\Schema;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Utilities\Get as SGet;
+use Filament\Schemas\Components\Utilities\Set as SSet;
+use Filament\Tables;
+use Filament\Tables\Table;
+use Filament\Actions\EditAction;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteBulkAction;
+use Illuminate\Database\Eloquent\Builder;
+
+class TaxRegistryResource extends Resource
+{
+    use HasMarketplaceContext;
+
+    protected static ?string $model = MarketplaceTaxRegistry::class;
+
+    protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-building-library';
+
+    protected static \UnitEnum|string|null $navigationGroup = 'Settings';
+
+    protected static ?int $navigationSort = 1;
+
+    protected static ?string $navigationLabel = 'Tax Registry';
+
+    protected static ?string $modelLabel = 'Tax Registry Entry';
+
+    protected static ?string $pluralModelLabel = 'Tax Registry';
+
+    protected static ?string $slug = 'tax-registry';
+
+    public static function getEloquentQuery(): Builder
+    {
+        $marketplace = static::getMarketplaceClient();
+        return parent::getEloquentQuery()->where('marketplace_client_id', $marketplace?->id);
+    }
+
+    public static function form(Schema $schema): Schema
+    {
+        $locationService = app(LocationService::class);
+        $countries = $locationService->getCountries();
+
+        return $schema
+            ->columns(1)
+            ->components([
+                Section::make('Tax Registry')
+                    ->icon('heroicon-o-building-library')
+                    ->schema([
+                        Forms\Components\Select::make('country')
+                            ->label('Country')
+                            ->options($countries)
+                            ->default('Romania')
+                            ->required()
+                            ->searchable()
+                            ->live()
+                            ->afterStateUpdated(function (SSet $set) {
+                                $set('county', null);
+                                $set('city', null);
+                            }),
+
+                        // County / City as text inputs with autocomplete
+                        // suggestions instead of strict Selects. The dataset
+                        // ships English county names ("Bucharest" not
+                        // "București") and only a curated city list per
+                        // county — both fail the implicit Select::in
+                        // validator when the user types the Romanian /
+                        // diacritic-stripped form or a town the dataset
+                        // misses. Free text accepts everything; the
+                        // datalist still suggests what's available.
+                        Forms\Components\TextInput::make('county')
+                            ->label('County / Județ')
+                            ->maxLength(255)
+                            ->live(onBlur: true)
+                            ->datalist(function (SGet $get) use ($locationService) {
+                                $country = $get('country');
+                                if (!$country) return [];
+                                $code = $locationService->getCountryCode($country);
+                                if (!$code) return [];
+                                return array_values($locationService->getStates($code));
+                            })
+                            ->helperText('Sugestii din dataset (datalist). Poți tasta orice — București, Bucuresti, Ilfov etc.'),
+
+                        Forms\Components\TextInput::make('city')
+                            ->label('City / Oraș')
+                            ->maxLength(255)
+                            ->datalist(function (SGet $get) use ($locationService) {
+                                $country = $get('country');
+                                $county = $get('county');
+                                if (!$country || !$county) return [];
+                                $code = $locationService->getCountryCode($country);
+                                if (!$code) return [];
+                                return array_values($locationService->getCities($code, $county));
+                            })
+                            ->helperText('Pentru sectoarele Bucureștiului: County = "Bucharest" → datalist va sugera Sector 1-6.'),
+
+                        Forms\Components\TextInput::make('commune')
+                            ->label('Comună / Sector')
+                            ->maxLength(255)
+                            ->placeholder('ex: Comuna Berceni, sau Sector 1 dacă City nu acoperă cazul')
+                            ->helperText('Câmp liber pentru subdiviziuni (comune, sectoare etc.) care nu apar în lista City.'),
+
+                        Forms\Components\TextInput::make('name')
+                            ->label('Name')
+                            ->required()
+                            ->maxLength(255)
+                            ->placeholder('Company or Person Name'),
+
+                        Forms\Components\TextInput::make('subname')
+                            ->label('Subname / Department')
+                            ->maxLength(255)
+                            ->placeholder('Optional subdivision'),
+
+                        Forms\Components\Textarea::make('address')
+                            ->label('Address')
+                            ->rows(2)
+                            ->columnSpanFull(),
+
+                        Forms\Components\Textarea::make('directions')
+                            ->label('Indicații')
+                            ->rows(3)
+                            ->columnSpanFull()
+                            ->placeholder('Indicații de acces, puncte de reper, etc.'),
+
+                        Forms\Components\TextInput::make('phone')
+                            ->label('Phone')
+                            ->maxLength(255)
+                            ->placeholder('ex: 021 318 03 40 / 0312 256 411 (poate conține mai multe numere, fax, etc.)'),
+
+                        Forms\Components\TextInput::make('email')
+                            ->label('Email')
+                            ->email()
+                            ->maxLength(255),
+
+                        Forms\Components\TextInput::make('email2')
+                            ->label('Email 2')
+                            ->email()
+                            ->maxLength(255),
+
+                        Forms\Components\TextInput::make('website_url')
+                            ->label('Website URL')
+                            ->url()
+                            ->maxLength(255)
+                            ->placeholder('https://...'),
+
+                        Forms\Components\TextInput::make('cif')
+                            ->label('CIF / Tax ID')
+                            ->maxLength(50)
+                            ->placeholder('e.g., RO12345678'),
+
+                        Forms\Components\TextInput::make('iban')
+                            ->label('IBAN')
+                            ->maxLength(50)
+                            ->placeholder('e.g., RO49AAAA1B31007593840000'),
+
+                        Forms\Components\TextInput::make('siruta_code')
+                            ->label('Cod SIRUTA')
+                            ->maxLength(50),
+
+                        Forms\Components\TextInput::make('tax_rate')
+                            ->label('Cotă')
+                            ->helperText('Procent de impozitare (ex: 2 sau 5)')
+                            ->numeric()
+                            ->minValue(0)
+                            ->maxValue(100)
+                            ->step(0.01)
+                            ->suffix('%'),
+
+                        Forms\Components\FileUpload::make('coat_of_arms')
+                            ->label('Stema')
+                            ->helperText('Imagine PNG/JPG cu stema unității administrativ-teritoriale.')
+                            ->disk('public')
+                            ->directory('tax-registry-coat-of-arms')
+                            ->image()
+                            ->imageEditor()
+                            ->acceptedFileTypes(['image/png', 'image/jpeg'])
+                            ->maxSize(2048)
+                            ->downloadable()
+                            ->openable()
+                            ->columnSpanFull(),
+
+                        Forms\Components\Toggle::make('is_active')
+                            ->label('Active')
+                            ->default(true),
+                    ])
+                    ->columns(2),
+            ]);
+    }
+
+    public static function table(Table $table): Table
+    {
+        return $table
+            ->columns([
+                Tables\Columns\TextColumn::make('name')
+                    ->label('Name')
+                    ->searchable()
+                    ->sortable()
+                    ->description(fn ($record) => $record->subname),
+
+                Tables\Columns\TextColumn::make('cif')
+                    ->label('CIF')
+                    ->searchable()
+                    ->sortable(),
+
+                Tables\Columns\TextColumn::make('county')
+                    ->label('County')
+                    ->sortable()
+                    ->toggleable(),
+
+                Tables\Columns\TextColumn::make('city')
+                    ->label('City')
+                    ->sortable()
+                    ->toggleable(),
+
+                Tables\Columns\TextColumn::make('email')
+                    ->label('Email')
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+
+                Tables\Columns\TextColumn::make('phone')
+                    ->label('Phone')
+                    ->toggleable(isToggledHiddenByDefault: true),
+
+                Tables\Columns\IconColumn::make('is_active')
+                    ->label('Active')
+                    ->boolean()
+                    ->sortable(),
+
+                Tables\Columns\TextColumn::make('updated_at')
+                    ->label('Last Modified')
+                    ->dateTime('d M Y, H:i')
+                    ->sortable(),
+            ])
+            ->defaultSort('updated_at', 'desc')
+            ->filters([
+                Tables\Filters\TernaryFilter::make('is_active')
+                    ->label('Active'),
+
+                Tables\Filters\SelectFilter::make('county')
+                    ->label('County')
+                    ->options(function () {
+                        $locationService = app(LocationService::class);
+                        return $locationService->getStates('ro');
+                    }),
+            ])
+            ->recordActions([
+                EditAction::make(),
+                DeleteAction::make(),
+            ])
+            ->toolbarActions([
+                BulkActionGroup::make([
+                    DeleteBulkAction::make(),
+                ]),
+            ]);
+    }
+
+    public static function getPages(): array
+    {
+        return [
+            'index' => Pages\ListTaxRegistries::route('/'),
+            'create' => Pages\CreateTaxRegistry::route('/create'),
+            'edit' => Pages\EditTaxRegistry::route('/{record}/edit'),
+        ];
+    }
+}

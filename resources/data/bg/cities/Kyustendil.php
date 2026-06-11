@@ -1,0 +1,105 @@
+<?php
+return [
+    [
+        'id'        => 9276,
+        'name'      => 'Boboshevo',
+        'latitude'  => '42.15296000',
+        'longitude' => '23.00146000',
+    ],
+    [
+        'id'        => 9277,
+        'name'      => 'Bobov Dol',
+        'latitude'  => '42.36256000',
+        'longitude' => '23.00324000',
+    ],
+    [
+        'id'        => 9321,
+        'name'      => 'Dupnitsa',
+        'latitude'  => '42.26667000',
+        'longitude' => '23.11667000',
+    ],
+    [
+        'id'        => 9367,
+        'name'      => 'Kocherinovo',
+        'latitude'  => '42.08439000',
+        'longitude' => '23.05710000',
+    ],
+    [
+        'id'        => 9381,
+        'name'      => 'Kyustendil',
+        'latitude'  => '42.28389000',
+        'longitude' => '22.69111000',
+    ],
+    [
+        'id'        => 9407,
+        'name'      => 'Nevestino',
+        'latitude'  => '42.25551000',
+        'longitude' => '22.85175000',
+    ],
+    [
+        'id'        => 9430,
+        'name'      => 'Obshtina Boboshevo',
+        'latitude'  => '42.18333000',
+        'longitude' => '23.02731000',
+    ],
+    [
+        'id'        => 9431,
+        'name'      => 'Obshtina Bobov Dol',
+        'latitude'  => '42.31667000',
+        'longitude' => '22.98333000',
+    ],
+    [
+        'id'        => 9467,
+        'name'      => 'Obshtina Dupnitsa',
+        'latitude'  => '42.28333000',
+        'longitude' => '23.15000000',
+    ],
+    [
+        'id'        => 9504,
+        'name'      => 'Obshtina Kocherinovo',
+        'latitude'  => '42.09909000',
+        'longitude' => '23.02942000',
+    ],
+    [
+        'id'        => 9518,
+        'name'      => 'Obshtina Kyustendil',
+        'latitude'  => '42.28333000',
+        'longitude' => '22.68333000',
+    ],
+    [
+        'id'        => 9539,
+        'name'      => 'Obshtina Nevestino',
+        'latitude'  => '42.16667000',
+        'longitude' => '22.83333000',
+    ],
+    [
+        'id'        => 9572,
+        'name'      => 'Obshtina Rila',
+        'latitude'  => '42.15000000',
+        'longitude' => '23.31667000',
+    ],
+    [
+        'id'        => 9583,
+        'name'      => 'Obshtina Sapareva Banya',
+        'latitude'  => '42.28333000',
+        'longitude' => '23.31667000',
+    ],
+    [
+        'id'        => 9614,
+        'name'      => 'Obshtina Treklyano',
+        'latitude'  => '42.55000000',
+        'longitude' => '22.60000000',
+    ],
+    [
+        'id'        => 9671,
+        'name'      => 'Rila',
+        'latitude'  => '42.13333000',
+        'longitude' => '23.13333000',
+    ],
+    [
+        'id'        => 9682,
+        'name'      => 'Sapareva Banya',
+        'latitude'  => '42.28333000',
+        'longitude' => '23.26667000',
+    ],
+];

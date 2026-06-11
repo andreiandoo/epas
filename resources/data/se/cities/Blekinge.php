@@ -1,0 +1,105 @@
+<?php
+return [
+    [
+        'id'        => 103094,
+        'name'      => 'Bräkne-Hoby',
+        'latitude'  => '56.23333000',
+        'longitude' => '15.11667000',
+    ],
+    [
+        'id'        => 103321,
+        'name'      => 'Hällevik',
+        'latitude'  => '56.01667000',
+        'longitude' => '14.70000000',
+    ],
+    [
+        'id'        => 103270,
+        'name'      => 'Hasslö',
+        'latitude'  => '56.11667000',
+        'longitude' => '15.48333000',
+    ],
+    [
+        'id'        => 103359,
+        'name'      => 'Jämjö',
+        'latitude'  => '56.19187000',
+        'longitude' => '15.84115000',
+    ],
+    [
+        'id'        => 103360,
+        'name'      => 'Jämshög',
+        'latitude'  => '56.23333000',
+        'longitude' => '14.51667000',
+    ],
+    [
+        'id'        => 103371,
+        'name'      => 'Kallinge',
+        'latitude'  => '56.24841000',
+        'longitude' => '15.28721000',
+    ],
+    [
+        'id'        => 103377,
+        'name'      => 'Karlshamn',
+        'latitude'  => '56.17060000',
+        'longitude' => '14.86188000',
+    ],
+    [
+        'id'        => 103381,
+        'name'      => 'Karlskrona',
+        'latitude'  => '56.16156000',
+        'longitude' => '15.58661000',
+    ],
+    [
+        'id'        => 103539,
+        'name'      => 'Mjällby',
+        'latitude'  => '56.05000000',
+        'longitude' => '14.68333000',
+    ],
+    [
+        'id'        => 103570,
+        'name'      => 'Mörrum',
+        'latitude'  => '56.19281000',
+        'longitude' => '14.74739000',
+    ],
+    [
+        'id'        => 103605,
+        'name'      => 'Nättraby',
+        'latitude'  => '56.20000000',
+        'longitude' => '15.51667000',
+    ],
+    [
+        'id'        => 103612,
+        'name'      => 'Olofström',
+        'latitude'  => '56.27730000',
+        'longitude' => '14.53402000',
+    ],
+    [
+        'id'        => 103672,
+        'name'      => 'Rödeby',
+        'latitude'  => '56.26078000',
+        'longitude' => '15.62143000',
+    ],
+    [
+        'id'        => 103655,
+        'name'      => 'Ronneby',
+        'latitude'  => '56.20999000',
+        'longitude' => '15.27602000',
+    ],
+    [
+        'id'        => 103830,
+        'name'      => 'Sölvesborg',
+        'latitude'  => '56.05205000',
+        'longitude' => '14.57525000',
+    ],
+    [
+        'id'        => 103779,
+        'name'      => 'Sturkö',
+        'latitude'  => '56.08333000',
+        'longitude' => '15.70000000',
+    ],
+    [
+        'id'        => 103801,
+        'name'      => 'Svängsta',
+        'latitude'  => '56.26667000',
+        'longitude' => '14.76667000',
+    ],
+];

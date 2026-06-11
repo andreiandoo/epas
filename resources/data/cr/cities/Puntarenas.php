@@ -1,0 +1,117 @@
+<?php
+return [
+    [
+        'id'        => 21654,
+        'name'      => 'Buenos Aires',
+        'latitude'  => '9.11667000',
+        'longitude' => '-83.25000000',
+    ],
+    [
+        'id'        => 21656,
+        'name'      => 'Canoas',
+        'latitude'  => '8.53305000',
+        'longitude' => '-82.83844000',
+    ],
+    [
+        'id'        => 21661,
+        'name'      => 'Chacarita',
+        'latitude'  => '9.98424000',
+        'longitude' => '-84.77892000',
+    ],
+    [
+        'id'        => 21662,
+        'name'      => 'Ciudad Cortés',
+        'latitude'  => '8.95988000',
+        'longitude' => '-83.52381000',
+    ],
+    [
+        'id'        => 21666,
+        'name'      => 'Corredor',
+        'latitude'  => '8.64002000',
+        'longitude' => '-82.94600000',
+    ],
+    [
+        'id'        => 21667,
+        'name'      => 'Corredores',
+        'latitude'  => '8.58333000',
+        'longitude' => '-82.91667000',
+    ],
+    [
+        'id'        => 21669,
+        'name'      => 'Coto Brus',
+        'latitude'  => '8.88333000',
+        'longitude' => '-82.96667000',
+    ],
+    [
+        'id'        => 21677,
+        'name'      => 'Esparza',
+        'latitude'  => '10.00000000',
+        'longitude' => '-84.66667000',
+    ],
+    [
+        'id'        => 21681,
+        'name'      => 'Garabito',
+        'latitude'  => '9.61903000',
+        'longitude' => '-84.62013000',
+    ],
+    [
+        'id'        => 21683,
+        'name'      => 'Golfito',
+        'latitude'  => '8.60000000',
+        'longitude' => '-83.12000000',
+    ],
+    [
+        'id'        => 21693,
+        'name'      => 'Jacó',
+        'latitude'  => '9.61497000',
+        'longitude' => '-84.62975000',
+    ],
+    [
+        'id'        => 21709,
+        'name'      => 'Miramar',
+        'latitude'  => '10.09250000',
+        'longitude' => '-84.72978000',
+    ],
+    [
+        'id'        => 21711,
+        'name'      => 'Montes de Oro',
+        'latitude'  => '10.10000000',
+        'longitude' => '-84.75000000',
+    ],
+    [
+        'id'        => 21720,
+        'name'      => 'Osa',
+        'latitude'  => '8.83333000',
+        'longitude' => '-83.50000000',
+    ],
+    [
+        'id'        => 21724,
+        'name'      => 'Paquera',
+        'latitude'  => '9.82005000',
+        'longitude' => '-84.93513000',
+    ],
+    [
+        'id'        => 21726,
+        'name'      => 'Parrita',
+        'latitude'  => '9.55000000',
+        'longitude' => '-84.33333000',
+    ],
+    [
+        'id'        => 21734,
+        'name'      => 'Puntarenas',
+        'latitude'  => '9.97625000',
+        'longitude' => '-84.83836000',
+    ],
+    [
+        'id'        => 21738,
+        'name'      => 'Quepos',
+        'latitude'  => '9.43187000',
+        'longitude' => '-84.16141000',
+    ],
+    [
+        'id'        => 21773,
+        'name'      => 'San Vito',
+        'latitude'  => '8.82079000',
+        'longitude' => '-82.97092000',
+    ],
+];

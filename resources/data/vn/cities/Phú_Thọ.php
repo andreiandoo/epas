@@ -1,0 +1,123 @@
+<?php
+return [
+    [
+        'id'        => 130559,
+        'name'      => 'Hòa Bình',
+        'latitude'  => '20.81717000',
+        'longitude' => '105.33759000',
+    ],
+    [
+        'id'        => 130225,
+        'name'      => 'Huyện Bình Xuyên',
+        'latitude'  => '21.30561000',
+        'longitude' => '105.66225000',
+    ],
+    [
+        'id'        => 130275,
+        'name'      => 'Huyện Cẩm Khê',
+        'latitude'  => '21.40683000',
+        'longitude' => '105.09845000',
+    ],
+    [
+        'id'        => 130245,
+        'name'      => 'Huyện Cao Phong',
+        'latitude'  => '20.69532000',
+        'longitude' => '105.33559000',
+    ],
+    [
+        'id'        => 130530,
+        'name'      => 'Huyện Đoan Hùng',
+        'latitude'  => '21.61776000',
+        'longitude' => '105.16110000',
+    ],
+    [
+        'id'        => 130312,
+        'name'      => 'Huyện Hạ Hòa',
+        'latitude'  => '21.57763000',
+        'longitude' => '104.99464000',
+    ],
+    [
+        'id'        => 130338,
+        'name'      => 'Huyện Kỳ Sơn',
+        'latitude'  => '20.89631000',
+        'longitude' => '105.39659000',
+    ],
+    [
+        'id'        => 130350,
+        'name'      => 'Huyện Lạc Thủy',
+        'latitude'  => '20.49794000',
+        'longitude' => '105.74092000',
+    ],
+    [
+        'id'        => 130203,
+        'name'      => 'Huyen Lam Thao',
+        'latitude'  => '21.29971000',
+        'longitude' => '105.31119000',
+    ],
+    [
+        'id'        => 130349,
+        'name'      => 'Huyện Lương Sơn',
+        'latitude'  => '20.87650000',
+        'longitude' => '105.51219000',
+    ],
+    [
+        'id'        => 130429,
+        'name'      => 'Huyện Tam Dương',
+        'latitude'  => '21.36189000',
+        'longitude' => '105.55690000',
+    ],
+    [
+        'id'        => 130432,
+        'name'      => 'Huyện Tam Đảo',
+        'latitude'  => '21.45690000',
+        'longitude' => '105.59460000',
+    ],
+    [
+        'id'        => 130484,
+        'name'      => 'Huyện Tân Lạc',
+        'latitude'  => '20.60557000',
+        'longitude' => '105.23399000',
+    ],
+    [
+        'id'        => 130434,
+        'name'      => 'Huyện Thanh Ba',
+        'latitude'  => '21.47816000',
+        'longitude' => '105.15881000',
+    ],
+    [
+        'id'        => 130514,
+        'name'      => 'Huyện Yên Lạc',
+        'latitude'  => '21.21845000',
+        'longitude' => '105.57586000',
+    ],
+    [
+        'id'        => 130515,
+        'name'      => 'Huyện Yên Lập',
+        'latitude'  => '21.35569000',
+        'longitude' => '105.00493000',
+    ],
+    [
+        'id'        => 130603,
+        'name'      => 'Thành Phố Việt Trì',
+        'latitude'  => '21.32958000',
+        'longitude' => '105.39217000',
+    ],
+    [
+        'id'        => 130615,
+        'name'      => 'Thị xã Phú Thọ',
+        'latitude'  => '21.41664000',
+        'longitude' => '105.23636000',
+    ],
+    [
+        'id'        => 130623,
+        'name'      => 'Việt Trì',
+        'latitude'  => '21.32274000',
+        'longitude' => '105.40198000',
+    ],
+    [
+        'id'        => 130625,
+        'name'      => 'Vĩnh Yên',
+        'latitude'  => '21.30891000',
+        'longitude' => '105.60489000',
+    ],
+];

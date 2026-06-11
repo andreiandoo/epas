@@ -1,0 +1,32 @@
+{
+    "core": "1.0.0",
+    "services": {
+        "Accounting": "1.0.0",
+        "Alerts": "1.0.0",
+        "Analytics": "1.0.0",
+        "Api": "1.0.0",
+        "Audit": "1.0.0",
+        "CRM": "1.0.0",
+        "Cache": "1.0.0",
+        "DoorSales": "1.0.0",
+        "EFactura": "1.0.0",
+        "FeatureFlags": "1.0.0",
+        "GroupBooking": "1.0.0",
+        "Health": "1.0.0",
+        "Insurance": "1.0.0",
+        "Invitations": "1.0.0",
+        "Metrics": "1.0.0",
+        "Monitoring": "1.0.0",
+        "PaymentProcessors": "1.0.0",
+        "PromoCodes": "1.0.0",
+        "Seating": "1.0.0",
+        "Stripe": "1.0.0",
+        "TicketCustomizer": "1.0.0",
+        "Tracking": "1.0.0",
+        "Waitlist": "1.0.0",
+        "Wallet": "1.0.0",
+        "Webhooks": "1.0.0",
+        "WhatsApp": "1.0.0"
+    },
+    "lastUpdated": "2025-11-22T00:00:00Z"
+}

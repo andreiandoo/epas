@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arena Națională — TICS.ro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>tailwind.config={theme:{extend:{fontFamily:{'sans':['Inter','system-ui','sans-serif']}}}}</script>
+    <style>*{-webkit-font-smoothing:antialiased}body{font-family:'Inter',system-ui,sans-serif}</style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <header class="bg-white border-b border-gray-200 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+            <a href="tics-homepage.html" class="flex items-center gap-2"><div class="w-10 h-10 bg-gray-900 rounded-xl flex items-center justify-center"><span class="text-white font-bold">T</span></div><span class="font-bold text-xl">TICS</span></a>
+            <a href="tics-login.html" class="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-xl">Intră în cont</a>
+        </div>
+    </header>
+
+    <!-- Venue Hero -->
+    <section class="relative h-96">
+        <img src="https://images.unsplash.com/photo-1522158637959-30385a09e0da?w=1600&h=500&fit=crop" class="w-full h-full object-cover">
+        <div class="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
+        <div class="absolute bottom-0 left-0 right-0 p-8">
+            <div class="max-w-7xl mx-auto">
+                <div class="flex items-center gap-2 text-gray-300 text-sm mb-3">
+                    <a href="tics-homepage.html" class="hover:text-white">Acasă</a><span>/</span>
+                    <a href="tics-city.html" class="hover:text-white">București</a><span>/</span>
+                    <span class="text-white">Arena Națională</span>
+                </div>
+                <h1 class="text-4xl md:text-5xl font-bold text-white mb-2">Arena Națională</h1>
+                <p class="text-xl text-gray-300">📍 Bulevardul Basarabia 37-39, București</p>
+            </div>
+        </div>
+    </section>
+
+    <div class="max-w-7xl mx-auto px-4 py-12">
+        <div class="grid lg:grid-cols-3 gap-8">
+            <div class="lg:col-span-2 space-y-8">
+                <!-- Stats -->
+                <div class="grid grid-cols-4 gap-4">
+                    <div class="bg-white rounded-xl border border-gray-200 p-4 text-center">
+                        <p class="text-2xl font-bold text-indigo-600">55.000</p>
+                        <p class="text-sm text-gray-500">Capacitate</p>
+                    </div>
+                    <div class="bg-white rounded-xl border border-gray-200 p-4 text-center">
+                        <p class="text-2xl font-bold text-gray-900">12</p>
+                        <p class="text-sm text-gray-500">Evenimente</p>
+                    </div>
+                    <div class="bg-white rounded-xl border border-gray-200 p-4 text-center">
+                        <p class="text-2xl font-bold text-gray-900">2011</p>
+                        <p class="text-sm text-gray-500">Deschis</p>
+                    </div>
+                    <div class="bg-white rounded-xl border border-gray-200 p-4 text-center">
+                        <p class="text-2xl font-bold text-amber-500">⭐ 4.7</p>
+                        <p class="text-sm text-gray-500">Rating</p>
+                    </div>
+                </div>
+
+                <!-- Upcoming Events -->
+                <div>
+                    <h2 class="text-2xl font-bold text-gray-900 mb-6">🎫 Evenimente viitoare</h2>
+                    <div class="space-y-4">
+                        <a href="tics-event.html" class="flex items-center gap-4 bg-white rounded-2xl border border-gray-200 p-4 hover:shadow-lg transition-shadow">
+                            <img src="https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=100&h=80&fit=crop" class="w-24 h-16 object-cover rounded-lg">
+                            <div class="flex-1">
+                                <p class="text-sm text-gray-500">14 Feb 2026 • 18:00</p>
+                                <h3 class="font-bold text-gray-900">Coldplay: Music of the Spheres</h3>
+                            </div>
+                            <div class="text-right">
+                                <p class="font-bold text-indigo-600">de la 149 RON</p>
+                            </div>
+                        </a>
+                        <a href="tics-event.html" class="flex items-center gap-4 bg-white rounded-2xl border border-gray-200 p-4 hover:shadow-lg transition-shadow">
+                            <img src="https://images.unsplash.com/photo-1560184897-ae75f418493e?w=100&h=80&fit=crop" class="w-24 h-16 object-cover rounded-lg">
+                            <div class="flex-1">
+                                <p class="text-sm text-gray-500">8 Mar 2026 • 20:00</p>
+                                <h3 class="font-bold text-gray-900">FCSB vs Dinamo - Derby</h3>
+                            </div>
+                            <div class="text-right">
+                                <p class="font-bold text-indigo-600">de la 45 RON</p>
+                            </div>
+                        </a>
+                        <a href="tics-event.html" class="flex items-center gap-4 bg-white rounded-2xl border border-gray-200 p-4 hover:shadow-lg transition-shadow">
+                            <img src="https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=100&h=80&fit=crop" class="w-24 h-16 object-cover rounded-lg">
+                            <div class="flex-1">
+                                <p class="text-sm text-gray-500">1 Mai 2026 • 19:00</p>
+                                <h3 class="font-bold text-gray-900">Ed Sheeran - Mathematics Tour</h3>
+                            </div>
+                            <div class="text-right">
+                                <p class="font-bold text-indigo-600">de la 199 RON</p>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- About -->
+                <div class="bg-white rounded-2xl border border-gray-200 p-6">
+                    <h2 class="text-xl font-bold text-gray-900 mb-4">Despre locație</h2>
+                    <p class="text-gray-600 leading-relaxed">Arena Națională este cel mai mare stadion din România, fiind inaugurat în 2011. Cu o capacitate de 55.000 de locuri, găzduiește meciuri de fotbal, concerte și alte evenimente de mare anvergură.</p>
+                    <p class="text-gray-600 leading-relaxed mt-4">Stadioul dispune de facilități moderne incluzând parcări subterane, restaurante, zone VIP și acces facil cu transportul în comun.</p>
+                </div>
+
+                <!-- Gallery -->
+                <div>
+                    <h2 class="text-xl font-bold text-gray-900 mb-4">📸 Galerie</h2>
+                    <div class="grid grid-cols-4 gap-3">
+                        <img src="https://images.unsplash.com/photo-1522158637959-30385a09e0da?w=200&h=150&fit=crop" class="rounded-xl w-full h-24 object-cover">
+                        <img src="https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=200&h=150&fit=crop" class="rounded-xl w-full h-24 object-cover">
+                        <img src="https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=200&h=150&fit=crop" class="rounded-xl w-full h-24 object-cover">
+                        <img src="https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=200&h=150&fit=crop" class="rounded-xl w-full h-24 object-cover">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sidebar -->
+            <div class="space-y-6">
+                <div class="bg-white rounded-2xl border border-gray-200 p-6">
+                    <h3 class="font-bold text-gray-900 mb-4">📍 Locație & Transport</h3>
+                    <div class="aspect-video bg-gray-200 rounded-xl mb-4 flex items-center justify-center text-gray-500">🗺️ Google Maps</div>
+                    <p class="text-sm text-gray-600 mb-4">Bulevardul Basarabia 37-39, Sector 2, București</p>
+                    <div class="space-y-2 text-sm">
+                        <div class="flex items-center gap-2"><span>🚇</span><span class="text-gray-600">Metrou: Piața Muncii (10 min)</span></div>
+                        <div class="flex items-center gap-2"><span>🚌</span><span class="text-gray-600">Autobuz: 311, 330</span></div>
+                        <div class="flex items-center gap-2"><span>🚗</span><span class="text-gray-600">Parcare: 2.000 locuri</span></div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl border border-gray-200 p-6">
+                    <h3 class="font-bold text-gray-900 mb-4">ℹ️ Informații utile</h3>
+                    <div class="space-y-3 text-sm">
+                        <div class="flex justify-between"><span class="text-gray-500">Tip:</span><span class="text-gray-900">Stadion</span></div>
+                        <div class="flex justify-between"><span class="text-gray-500">Acoperit:</span><span class="text-gray-900">Da (retractabil)</span></div>
+                        <div class="flex justify-between"><span class="text-gray-500">Accesibilitate:</span><span class="text-gray-900">♿ Da</span></div>
+                        <div class="flex justify-between"><span class="text-gray-500">Food & Drinks:</span><span class="text-gray-900">Da</span></div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl border border-gray-200 p-6">
+                    <h3 class="font-bold text-gray-900 mb-4">🔗 Contact</h3>
+                    <div class="space-y-2 text-sm">
+                        <a href="#" class="flex items-center gap-2 text-indigo-600 hover:underline">🌐 arena-nationala.ro</a>
+                        <a href="#" class="flex items-center gap-2 text-indigo-600 hover:underline">📞 +40 21 xxx xxxx</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="bg-gray-900 text-white py-8"><div class="max-w-7xl mx-auto px-4 text-center"><p class="text-gray-400">© 2026 TICS.ro</p></div></footer>
+</body>
+</html>

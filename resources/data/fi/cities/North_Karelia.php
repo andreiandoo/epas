@@ -1,0 +1,111 @@
+<?php
+return [
+    [
+        'id'        => 38745,
+        'name'      => 'Eno',
+        'latitude'  => '62.80511000',
+        'longitude' => '30.15422000',
+    ],
+    [
+        'id'        => 38786,
+        'name'      => 'Ilomantsi',
+        'latitude'  => '62.67162000',
+        'longitude' => '30.93276000',
+    ],
+    [
+        'id'        => 38798,
+        'name'      => 'Joensuu',
+        'latitude'  => '62.60118000',
+        'longitude' => '29.76316000',
+    ],
+    [
+        'id'        => 38805,
+        'name'      => 'Juuka',
+        'latitude'  => '63.23333000',
+        'longitude' => '29.25000000',
+    ],
+    [
+        'id'        => 38848,
+        'name'      => 'Kesälahti',
+        'latitude'  => '61.89752000',
+        'longitude' => '29.83494000',
+    ],
+    [
+        'id'        => 38850,
+        'name'      => 'Kiihtelysvaara',
+        'latitude'  => '62.49525000',
+        'longitude' => '30.25081000',
+    ],
+    [
+        'id'        => 38858,
+        'name'      => 'Kitee',
+        'latitude'  => '62.10000000',
+        'longitude' => '30.15000000',
+    ],
+    [
+        'id'        => 38867,
+        'name'      => 'Kontiolahti',
+        'latitude'  => '62.76023000',
+        'longitude' => '29.84711000',
+    ],
+    [
+        'id'        => 38912,
+        'name'      => 'Lieksa',
+        'latitude'  => '63.31667000',
+        'longitude' => '30.01667000',
+    ],
+    [
+        'id'        => 38916,
+        'name'      => 'Liperi',
+        'latitude'  => '62.53333000',
+        'longitude' => '29.36667000',
+    ],
+    [
+        'id'        => 38957,
+        'name'      => 'Nurmes',
+        'latitude'  => '63.54205000',
+        'longitude' => '29.13965000',
+    ],
+    [
+        'id'        => 38968,
+        'name'      => 'Outokumpu',
+        'latitude'  => '62.72685000',
+        'longitude' => '29.01592000',
+    ],
+    [
+        'id'        => 38989,
+        'name'      => 'Polvijärvi',
+        'latitude'  => '62.85000000',
+        'longitude' => '29.36667000',
+    ],
+    [
+        'id'        => 39007,
+        'name'      => 'Pyhäselkä',
+        'latitude'  => '62.43333000',
+        'longitude' => '29.96667000',
+    ],
+    [
+        'id'        => 39033,
+        'name'      => 'Rääkkylä',
+        'latitude'  => '62.31667000',
+        'longitude' => '29.61667000',
+    ],
+    [
+        'id'        => 39077,
+        'name'      => 'Tohmajärvi',
+        'latitude'  => '62.18333000',
+        'longitude' => '30.38333000',
+    ],
+    [
+        'id'        => 39083,
+        'name'      => 'Tuupovaara',
+        'latitude'  => '62.48372000',
+        'longitude' => '30.62731000',
+    ],
+    [
+        'id'        => 39097,
+        'name'      => 'Valtimo',
+        'latitude'  => '63.66667000',
+        'longitude' => '28.80000000',
+    ],
+];

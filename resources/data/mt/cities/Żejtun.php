@@ -1,0 +1,9 @@
+<?php
+return [
+    [
+        'id'        => 67824,
+        'name'      => 'Żejtun',
+        'latitude'  => '35.85583000',
+        'longitude' => '14.53306000',
+    ],
+];

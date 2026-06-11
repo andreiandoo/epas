@@ -1,0 +1,111 @@
+<?php
+return [
+    [
+        'id'        => 54424,
+        'name'      => 'Brodarica',
+        'latitude'  => '43.68000000',
+        'longitude' => '15.91972000',
+    ],
+    [
+        'id'        => 54468,
+        'name'      => 'Drniš',
+        'latitude'  => '43.86250000',
+        'longitude' => '16.15556000',
+    ],
+    [
+        'id'        => 54512,
+        'name'      => 'Grad Drniš',
+        'latitude'  => '43.83333000',
+        'longitude' => '16.16667000',
+    ],
+    [
+        'id'        => 54572,
+        'name'      => 'Grad Šibenik',
+        'latitude'  => '43.73576000',
+        'longitude' => '15.89602000',
+    ],
+    [
+        'id'        => 54646,
+        'name'      => 'Kistanje',
+        'latitude'  => '43.98278000',
+        'longitude' => '15.96500000',
+    ],
+    [
+        'id'        => 54652,
+        'name'      => 'Knin',
+        'latitude'  => '44.04063000',
+        'longitude' => '16.19662000',
+    ],
+    [
+        'id'        => 54745,
+        'name'      => 'Murter',
+        'latitude'  => '43.82043000',
+        'longitude' => '15.58988000',
+    ],
+    [
+        'id'        => 54746,
+        'name'      => 'Murter-Kornati',
+        'latitude'  => '43.80959000',
+        'longitude' => '15.60024000',
+    ],
+    [
+        'id'        => 54808,
+        'name'      => 'Pirovac',
+        'latitude'  => '43.81917000',
+        'longitude' => '15.67278000',
+    ],
+    [
+        'id'        => 54839,
+        'name'      => 'Primošten',
+        'latitude'  => '43.58632000',
+        'longitude' => '15.92302000',
+    ],
+    [
+        'id'        => 54843,
+        'name'      => 'Promina',
+        'latitude'  => '43.95798000',
+        'longitude' => '16.09737000',
+    ],
+    [
+        'id'        => 54864,
+        'name'      => 'Rogoznica',
+        'latitude'  => '43.52472000',
+        'longitude' => '15.97000000',
+    ],
+    [
+        'id'        => 54865,
+        'name'      => 'Rogoznica Općina',
+        'latitude'  => '43.53620000',
+        'longitude' => '15.97086000',
+    ],
+    [
+        'id'        => 55030,
+        'name'      => 'Šibenik',
+        'latitude'  => '43.72722000',
+        'longitude' => '15.90583000',
+    ],
+    [
+        'id'        => 54894,
+        'name'      => 'Skradin',
+        'latitude'  => '43.82028000',
+        'longitude' => '15.92361000',
+    ],
+    [
+        'id'        => 54936,
+        'name'      => 'Tisno',
+        'latitude'  => '43.80417000',
+        'longitude' => '15.64333000',
+    ],
+    [
+        'id'        => 54940,
+        'name'      => 'Tribunj',
+        'latitude'  => '43.75547000',
+        'longitude' => '15.74444000',
+    ],
+    [
+        'id'        => 54981,
+        'name'      => 'Vodice',
+        'latitude'  => '43.76083000',
+        'longitude' => '15.78278000',
+    ],
+];

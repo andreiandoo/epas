@@ -1,0 +1,21 @@
+<?php
+return [
+    'Atlántida',
+    'Bay Islands',
+    'Choluteca',
+    'Colón',
+    'Comayagua',
+    'Copán',
+    'Cortés',
+    'El Paraíso',
+    'Francisco Morazán',
+    'Gracias a Dios',
+    'Intibucá',
+    'La Paz',
+    'Lempira',
+    'Ocotepeque',
+    'Olancho',
+    'Santa Bárbara',
+    'Valle',
+    'Yoro',
+];

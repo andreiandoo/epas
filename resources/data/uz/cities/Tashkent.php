@@ -1,0 +1,117 @@
+<?php
+return [
+    [
+        'id'        => 129896,
+        'name'      => 'Angren',
+        'latitude'  => '41.01667000',
+        'longitude' => '70.14361000',
+    ],
+    [
+        'id'        => 129900,
+        'name'      => 'Bekobod',
+        'latitude'  => '40.22083000',
+        'longitude' => '69.26972000',
+    ],
+    [
+        'id'        => 129907,
+        'name'      => 'Bo‘ka',
+        'latitude'  => '40.81108000',
+        'longitude' => '69.19417000',
+    ],
+    [
+        'id'        => 129914,
+        'name'      => 'Chinoz',
+        'latitude'  => '40.93633000',
+        'longitude' => '68.76128000',
+    ],
+    [
+        'id'        => 129915,
+        'name'      => 'Chirchiq',
+        'latitude'  => '41.46889000',
+        'longitude' => '69.58222000',
+    ],
+    [
+        'id'        => 129930,
+        'name'      => 'G‘azalkent',
+        'latitude'  => '41.55806000',
+        'longitude' => '69.77083000',
+    ],
+    [
+        'id'        => 129936,
+        'name'      => 'Iskandar',
+        'latitude'  => '41.55389000',
+        'longitude' => '69.70083000',
+    ],
+    [
+        'id'        => 129953,
+        'name'      => 'Kyzyldzhar',
+        'latitude'  => '41.56667000',
+        'longitude' => '70.01667000',
+    ],
+    [
+        'id'        => 129966,
+        'name'      => 'Ohangaron',
+        'latitude'  => '40.90639000',
+        'longitude' => '69.63833000',
+    ],
+    [
+        'id'        => 129967,
+        'name'      => 'Olmaliq',
+        'latitude'  => '40.84472000',
+        'longitude' => '69.59833000',
+    ],
+    [
+        'id'        => 129974,
+        'name'      => 'Parkent',
+        'latitude'  => '41.29444000',
+        'longitude' => '69.67639000',
+    ],
+    [
+        'id'        => 129979,
+        'name'      => 'Piskent',
+        'latitude'  => '40.89722000',
+        'longitude' => '69.35056000',
+    ],
+    [
+        'id'        => 129982,
+        'name'      => 'Qibray',
+        'latitude'  => '41.38972000',
+        'longitude' => '69.46500000',
+    ],
+    [
+        'id'        => 129994,
+        'name'      => 'Salor',
+        'latitude'  => '41.37222000',
+        'longitude' => '69.38167000',
+    ],
+    [
+        'id'        => 130010,
+        'name'      => 'Tŭytepa',
+        'latitude'  => '41.03210000',
+        'longitude' => '69.36253000',
+    ],
+    [
+        'id'        => 130028,
+        'name'      => 'Ŭrtaowul',
+        'latitude'  => '41.18667000',
+        'longitude' => '69.14528000',
+    ],
+    [
+        'id'        => 130020,
+        'name'      => 'Yangiobod',
+        'latitude'  => '41.11919000',
+        'longitude' => '70.09406000',
+    ],
+    [
+        'id'        => 130024,
+        'name'      => 'Yangiyŭl',
+        'latitude'  => '41.11202000',
+        'longitude' => '69.04710000',
+    ],
+    [
+        'id'        => 130026,
+        'name'      => 'Zafar',
+        'latitude'  => '40.98333000',
+        'longitude' => '68.90000000',
+    ],
+];

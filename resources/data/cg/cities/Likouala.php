@@ -1,0 +1,9 @@
+<?php
+return [
+    [
+        'id'        => 17344,
+        'name'      => 'Impfondo',
+        'latitude'  => '1.61804000',
+        'longitude' => '18.05981000',
+    ],
+];

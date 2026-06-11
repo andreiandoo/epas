@@ -1,0 +1,123 @@
+<?php
+return [
+    [
+        'id'        => 48219,
+        'name'      => 'Alfreton',
+        'latitude'  => '53.09766000',
+        'longitude' => '-1.38376000',
+    ],
+    [
+        'id'        => 48287,
+        'name'      => 'Ashbourne',
+        'latitude'  => '53.01667000',
+        'longitude' => '-1.73333000',
+    ],
+    [
+        'id'        => 48465,
+        'name'      => 'Belper',
+        'latitude'  => '53.02330000',
+        'longitude' => '-1.48119000',
+    ],
+    [
+        'id'        => 48551,
+        'name'      => 'Blackwell',
+        'latitude'  => '53.11667000',
+        'longitude' => '-1.33333000',
+    ],
+    [
+        'id'        => 49167,
+        'name'      => 'Cromford',
+        'latitude'  => '53.10848000',
+        'longitude' => '-1.56014000',
+    ],
+    [
+        'id'        => 49336,
+        'name'      => 'Duffield',
+        'latitude'  => '52.98627000',
+        'longitude' => '-1.48865000',
+    ],
+    [
+        'id'        => 49491,
+        'name'      => 'Etwall',
+        'latitude'  => '52.88353000',
+        'longitude' => '-1.60023000',
+    ],
+    [
+        'id'        => 49873,
+        'name'      => 'Heage',
+        'latitude'  => '53.05050000',
+        'longitude' => '-1.44688000',
+    ],
+    [
+        'id'        => 50141,
+        'name'      => 'Kilburn',
+        'latitude'  => '53.00580000',
+        'longitude' => '-1.43869000',
+    ],
+    [
+        'id'        => 50327,
+        'name'      => 'Little Eaton',
+        'latitude'  => '52.97028000',
+        'longitude' => '-1.45950000',
+    ],
+    [
+        'id'        => 50526,
+        'name'      => 'Matlock',
+        'latitude'  => '53.13838000',
+        'longitude' => '-1.55560000',
+    ],
+    [
+        'id'        => 50532,
+        'name'      => 'Mayfield',
+        'latitude'  => '53.00000000',
+        'longitude' => '-1.76667000',
+    ],
+    [
+        'id'        => 50911,
+        'name'      => 'Pilsley',
+        'latitude'  => '53.15000000',
+        'longitude' => '-1.36667000',
+    ],
+    [
+        'id'        => 50915,
+        'name'      => 'Pinxton',
+        'latitude'  => '53.09062000',
+        'longitude' => '-1.31767000',
+    ],
+    [
+        'id'        => 51085,
+        'name'      => 'Ripley',
+        'latitude'  => '53.03333000',
+        'longitude' => '-1.40000000',
+    ],
+    [
+        'id'        => 51289,
+        'name'      => 'Shirland',
+        'latitude'  => '53.12155000',
+        'longitude' => '-1.40464000',
+    ],
+    [
+        'id'        => 51367,
+        'name'      => 'South Wingfield',
+        'latitude'  => '53.09593000',
+        'longitude' => '-1.43998000',
+    ],
+    [
+        'id'        => 51557,
+        'name'      => 'Tansley',
+        'latitude'  => '53.13197000',
+        'longitude' => '-1.51882000',
+    ],
+    [
+        'id'        => 51617,
+        'name'      => 'Tibshelf',
+        'latitude'  => '53.14436000',
+        'longitude' => '-1.34056000',
+    ],
+    [
+        'id'        => 51940,
+        'name'      => 'Wirksworth',
+        'latitude'  => '53.08232000',
+        'longitude' => '-1.57391000',
+    ],
+];

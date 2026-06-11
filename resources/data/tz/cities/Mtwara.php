@@ -1,0 +1,117 @@
+<?php
+return [
+    [
+        'id'        => 109062,
+        'name'      => 'Chiungutwa',
+        'latitude'  => '-10.88333000',
+        'longitude' => '38.98333000',
+    ],
+    [
+        'id'        => 109129,
+        'name'      => 'Kitama',
+        'latitude'  => '-10.71667000',
+        'longitude' => '39.73333000',
+    ],
+    [
+        'id'        => 109130,
+        'name'      => 'Kitangari',
+        'latitude'  => '-10.65000000',
+        'longitude' => '39.33333000',
+    ],
+    [
+        'id'        => 109145,
+        'name'      => 'Luchingu',
+        'latitude'  => '-10.90000000',
+        'longitude' => '39.33333000',
+    ],
+    [
+        'id'        => 109147,
+        'name'      => 'Lukuledi',
+        'latitude'  => '-10.56667000',
+        'longitude' => '38.80000000',
+    ],
+    [
+        'id'        => 109148,
+        'name'      => 'Lulindi',
+        'latitude'  => '-10.81667000',
+        'longitude' => '39.13333000',
+    ],
+    [
+        'id'        => 109153,
+        'name'      => 'Madimba',
+        'latitude'  => '-10.40000000',
+        'longitude' => '40.33333000',
+    ],
+    [
+        'id'        => 109162,
+        'name'      => 'Mahuta',
+        'latitude'  => '-10.86667000',
+        'longitude' => '39.45000000',
+    ],
+    [
+        'id'        => 109176,
+        'name'      => 'Masasi',
+        'latitude'  => '-10.71667000',
+        'longitude' => '38.80000000',
+    ],
+    [
+        'id'        => 109177,
+        'name'      => 'Masuguru',
+        'latitude'  => '-11.36667000',
+        'longitude' => '38.41667000',
+    ],
+    [
+        'id'        => 109220,
+        'name'      => 'Mtwara',
+        'latitude'  => '-10.26667000',
+        'longitude' => '40.18333000',
+    ],
+    [
+        'id'        => 109237,
+        'name'      => 'Namalenga',
+        'latitude'  => '-10.95000000',
+        'longitude' => '39.10000000',
+    ],
+    [
+        'id'        => 109240,
+        'name'      => 'Namikupa',
+        'latitude'  => '-10.83333000',
+        'longitude' => '39.60000000',
+    ],
+    [
+        'id'        => 109241,
+        'name'      => 'Nanganga',
+        'latitude'  => '-10.38333000',
+        'longitude' => '39.15000000',
+    ],
+    [
+        'id'        => 109242,
+        'name'      => 'Nangomba',
+        'latitude'  => '-10.90000000',
+        'longitude' => '38.50000000',
+    ],
+    [
+        'id'        => 109244,
+        'name'      => 'Nanhyanga',
+        'latitude'  => '-10.80000000',
+        'longitude' => '39.55000000',
+    ],
+    [
+        'id'        => 109246,
+        'name'      => 'Nanyamba',
+        'latitude'  => '-10.68333000',
+        'longitude' => '39.83333000',
+    ],
+    [
+        'id'        => 109249,
+        'name'      => 'Newala Kisimani',
+        'latitude'  => '-10.95000000',
+        'longitude' => '39.28333000',
+    ],
+    [
+        'id'        => 109288,
+        'name'      => 'Tandahimba',
+        'latitude'  => '-10.75000000',
+        'longitude' => '39.63333000',
+    ],
+];

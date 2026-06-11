@@ -1,0 +1,20 @@
+<?php
+return [
+    'Boaco',
+    'Carazo',
+    'Chinandega',
+    'Chontales',
+    'Estelí',
+    'Granada',
+    'Jinotega',
+    'León',
+    'Madriz',
+    'Managua',
+    'Masaya',
+    'Matagalpa',
+    'North Caribbean Coast',
+    'Nueva Segovia',
+    'Río San Juan',
+    'Rivas',
+    'South Caribbean Coast',
+];

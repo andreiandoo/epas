@@ -1,0 +1,657 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "EPAS Microservices API",
+    "description": "API documentation for EPAS microservices infrastructure including WhatsApp, eFactura, Accounting, Insurance, and more.",
+    "version": "1.0.0",
+    "contact": {
+      "name": "EPAS API Support",
+      "email": "api@epas.com"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://api.epas.com/api",
+      "description": "Production server"
+    },
+    {
+      "url": "http://localhost/api",
+      "description": "Local development server"
+    }
+  ],
+  "security": [
+    {
+      "ApiKeyAuth": []
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "ApiKeyAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-API-Key",
+        "description": "API key for authentication. Get your API key from the tenant dashboard."
+      }
+    },
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": false
+          },
+          "error": {
+            "type": "string",
+            "example": "Resource not found"
+          }
+        }
+      },
+      "ApiKey": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "scopes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "status": {
+            "type": "string",
+            "enum": ["active", "inactive", "revoked"]
+          },
+          "rate_limit": {
+            "type": "integer"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "last_used_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        }
+      },
+      "AuditLog": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "action": {
+            "type": "string"
+          },
+          "resource_type": {
+            "type": "string",
+            "nullable": true
+          },
+          "resource_id": {
+            "type": "string",
+            "nullable": true
+          },
+          "actor_name": {
+            "type": "string"
+          },
+          "severity": {
+            "type": "string",
+            "enum": ["low", "medium", "high", "critical"]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "HealthCheck": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": ["healthy", "degraded", "unhealthy"]
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "checks": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "object",
+              "properties": {
+                "status": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "Subscription": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "microservice_id": {
+            "type": "string"
+          },
+          "microservice_name": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["active", "suspended", "expired"]
+          },
+          "activated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        }
+      }
+    },
+    "responses": {
+      "UnauthorizedError": {
+        "description": "API key is missing or invalid",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "ForbiddenError": {
+        "description": "Insufficient permissions for this operation",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "NotFoundError": {
+        "description": "Resource not found",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "RateLimitError": {
+        "description": "Rate limit exceeded",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "success": {
+                  "type": "boolean",
+                  "example": false
+                },
+                "error": {
+                  "type": "string",
+                  "example": "Rate limit exceeded"
+                },
+                "retry_after": {
+                  "type": "integer",
+                  "description": "Seconds until next request allowed"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "API Keys",
+      "description": "Manage tenant API keys"
+    },
+    {
+      "name": "Audit Logs",
+      "description": "View audit trail"
+    },
+    {
+      "name": "Health",
+      "description": "System health monitoring"
+    },
+    {
+      "name": "Metrics",
+      "description": "Usage metrics and analytics"
+    },
+    {
+      "name": "Subscriptions",
+      "description": "Microservice subscriptions"
+    },
+    {
+      "name": "Admin",
+      "description": "Administrative endpoints"
+    }
+  ],
+  "paths": {
+    "/v1/tenant/api-keys": {
+      "get": {
+        "tags": ["API Keys"],
+        "summary": "List all API keys",
+        "description": "Returns all API keys for the authenticated tenant",
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ApiKey"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitError"
+          }
+        }
+      },
+      "post": {
+        "tags": ["API Keys"],
+        "summary": "Create a new API key",
+        "description": "Generates a new API key with specified scopes and rate limits",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["name"],
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "Descriptive name for the API key",
+                    "example": "Production API Key"
+                  },
+                  "scopes": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Permission scopes",
+                    "example": ["whatsapp:send", "efactura:submit"]
+                  },
+                  "rate_limit": {
+                    "type": "integer",
+                    "description": "Requests per hour",
+                    "example": 1000
+                  },
+                  "allowed_ips": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "ipv4"
+                    },
+                    "description": "IP whitelist (optional)",
+                    "example": ["192.168.1.1"]
+                  },
+                  "expires_at": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": "Expiration date (optional)"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "API key created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "key_id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "api_key": {
+                          "type": "string",
+                          "description": "IMPORTANT: Save this key - it won't be shown again"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "scopes": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error"
+          }
+        }
+      }
+    },
+    "/v1/tenant/api-keys/scopes": {
+      "get": {
+        "tags": ["API Keys"],
+        "summary": "Get available scopes",
+        "description": "Returns all available permission scopes",
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "string",
+                        "description": "Scope description"
+                      },
+                      "example": {
+                        "*": "Full access to all microservices",
+                        "whatsapp:send": "Send WhatsApp messages",
+                        "efactura:submit": "Submit invoices to ANAF"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/tenant/audit": {
+      "get": {
+        "tags": ["Audit Logs"],
+        "summary": "Get audit logs",
+        "description": "Returns audit logs for the authenticated tenant with optional filtering",
+        "parameters": [
+          {
+            "name": "action",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filter by action type"
+          },
+          {
+            "name": "resource_type",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filter by resource type"
+          },
+          {
+            "name": "severity",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["low", "medium", "high", "critical"]
+            },
+            "description": "Filter by severity level"
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "description": "Start date for filtering"
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "description": "End date for filtering"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 50,
+              "maximum": 100
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/AuditLog"
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "count": {
+                          "type": "integer"
+                        },
+                        "limit": {
+                          "type": "integer"
+                        },
+                        "offset": {
+                          "type": "integer"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/tenant/health": {
+      "get": {
+        "tags": ["Health"],
+        "summary": "Get system health status",
+        "description": "Returns overall health status of all microservices",
+        "responses": {
+          "200": {
+            "description": "System is healthy or degraded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/HealthCheck"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "System is unhealthy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/HealthCheck"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/tenant/subscriptions": {
+      "get": {
+        "tags": ["Subscriptions"],
+        "summary": "Get active subscriptions",
+        "description": "Returns all active microservice subscriptions for the tenant",
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Subscription"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/tenant/metrics": {
+      "get": {
+        "tags": ["Metrics"],
+        "summary": "Get usage metrics",
+        "description": "Returns usage metrics for microservices",
+        "parameters": [
+          {
+            "name": "microservice_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filter by microservice"
+          },
+          {
+            "name": "metric_type",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filter by metric type"
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    }
+  }
+}

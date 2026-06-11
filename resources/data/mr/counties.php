@@ -1,0 +1,18 @@
+<?php
+return [
+    'Adrar',
+    'Assaba',
+    'Brakna',
+    'Dakhlet Nouadhibou',
+    'Gorgol',
+    'Guidimaka',
+    'Hodh Ech Chargui',
+    'Hodh El Gharbi',
+    'Inchiri',
+    'Nouakchott-Nord',
+    'Nouakchott-Ouest',
+    'Nouakchott-Sud',
+    'Tagant',
+    'Tiris Zemmour',
+    'Trarza',
+];

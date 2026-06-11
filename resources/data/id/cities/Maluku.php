@@ -1,0 +1,75 @@
+<?php
+return [
+    [
+        'id'        => 56175,
+        'name'      => 'Amahai',
+        'latitude'  => '-3.33984000',
+        'longitude' => '128.91975000',
+    ],
+    [
+        'id'        => 56178,
+        'name'      => 'Ambon',
+        'latitude'  => '-3.69583000',
+        'longitude' => '128.18333000',
+    ],
+    [
+        'id'        => 56384,
+        'name'      => 'Kabupaten Buru',
+        'latitude'  => '-3.32767000',
+        'longitude' => '126.68413000',
+    ],
+    [
+        'id'        => 56385,
+        'name'      => 'Kabupaten Buru Selatan',
+        'latitude'  => '-3.52187000',
+        'longitude' => '126.59271000',
+    ],
+    [
+        'id'        => 56451,
+        'name'      => 'Kabupaten Kepulauan Aru',
+        'latitude'  => '-6.17059000',
+        'longitude' => '134.46991000',
+    ],
+    [
+        'id'        => 56513,
+        'name'      => 'Kabupaten Maluku Barat Daya',
+        'latitude'  => '-7.82960000',
+        'longitude' => '126.17386000',
+    ],
+    [
+        'id'        => 56514,
+        'name'      => 'Kabupaten Maluku Tengah',
+        'latitude'  => '-3.29167000',
+        'longitude' => '128.96750000',
+    ],
+    [
+        'id'        => 56515,
+        'name'      => 'Kabupaten Maluku Tenggara',
+        'latitude'  => '-5.75000000',
+        'longitude' => '132.73333000',
+    ],
+    [
+        'id'        => 56516,
+        'name'      => 'Kabupaten Maluku Tenggara Barat',
+        'latitude'  => '-7.61186000',
+        'longitude' => '131.38000000',
+    ],
+    [
+        'id'        => 56621,
+        'name'      => 'Kabupaten Seram Bagian Barat',
+        'latitude'  => '-3.10270000',
+        'longitude' => '128.42996000',
+    ],
+    [
+        'id'        => 56622,
+        'name'      => 'Kabupaten Seram Bagian Timur',
+        'latitude'  => '-3.39851000',
+        'longitude' => '130.39167000',
+    ],
+    [
+        'id'        => 57041,
+        'name'      => 'Tual',
+        'latitude'  => '-5.62878000',
+        'longitude' => '132.75229000',
+    ],
+];

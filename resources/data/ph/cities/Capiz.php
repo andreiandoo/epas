@@ -1,0 +1,105 @@
+<?php
+return [
+    [
+        'id'        => 82306,
+        'name'      => 'Cuartero',
+        'latitude'  => '11.31111010',
+        'longitude' => '122.60093620',
+    ],
+    [
+        'id'        => 82373,
+        'name'      => 'Dao',
+        'latitude'  => '11.38463020',
+        'longitude' => '122.62605390',
+    ],
+    [
+        'id'        => 82483,
+        'name'      => 'Dumalag',
+        'latitude'  => '11.31440130',
+        'longitude' => '122.58094210',
+    ],
+    [
+        'id'        => 82491,
+        'name'      => 'Dumarao',
+        'latitude'  => '11.24865090',
+        'longitude' => '122.58841560',
+    ],
+    [
+        'id'        => 82777,
+        'name'      => 'Ivisan',
+        'latitude'  => '11.53959440',
+        'longitude' => '122.59857730',
+    ],
+    [
+        'id'        => 82788,
+        'name'      => 'Jamindan',
+        'latitude'  => '11.36204270',
+        'longitude' => '122.06424130',
+    ],
+    [
+        'id'        => 83262,
+        'name'      => 'Maayon',
+        'latitude'  => '11.35103460',
+        'longitude' => '122.68252910',
+    ],
+    [
+        'id'        => 83478,
+        'name'      => 'Mambusao',
+        'latitude'  => '11.42048940',
+        'longitude' => '122.50974250',
+    ],
+    [
+        'id'        => 83953,
+        'name'      => 'Panay',
+        'latitude'  => '11.54337730',
+        'longitude' => '122.76938030',
+    ],
+    [
+        'id'        => 83991,
+        'name'      => 'Panitan',
+        'latitude'  => '11.44930670',
+        'longitude' => '122.69672480',
+    ],
+    [
+        'id'        => 154503,
+        'name'      => 'Pilar',
+        'latitude'  => '11.46380810',
+        'longitude' => '122.94014050',
+    ],
+    [
+        'id'        => 84161,
+        'name'      => 'Pontevedra',
+        'latitude'  => '11.42837570',
+        'longitude' => '122.79748990',
+    ],
+    [
+        'id'        => 84173,
+        'name'      => 'President Roxas',
+        'latitude'  => '11.42874670',
+        'longitude' => '122.96658030',
+    ],
+    [
+        'id'        => 84363,
+        'name'      => 'Roxas City',
+        'latitude'  => '11.56447990',
+        'longitude' => '122.67955860',
+    ],
+    [
+        'id'        => 84745,
+        'name'      => 'Sapian',
+        'latitude'  => '11.51377930',
+        'longitude' => '122.51823980',
+    ],
+    [
+        'id'        => 84786,
+        'name'      => 'Sigma',
+        'latitude'  => '11.42368430',
+        'longitude' => '122.58432940',
+    ],
+    [
+        'id'        => 154504,
+        'name'      => 'Tapaz',
+        'latitude'  => '11.24319750',
+        'longitude' => '122.06439140',
+    ],
+];

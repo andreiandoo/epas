@@ -1,0 +1,117 @@
+<?php
+return [
+    [
+        'id'        => 55018,
+        'name'      => 'Čačinci',
+        'latitude'  => '45.60389000',
+        'longitude' => '17.87028000',
+    ],
+    [
+        'id'        => 55019,
+        'name'      => 'Čađavica',
+        'latitude'  => '45.74417000',
+        'longitude' => '17.85472000',
+    ],
+    [
+        'id'        => 54446,
+        'name'      => 'Crnac',
+        'latitude'  => '45.69611000',
+        'longitude' => '17.93722000',
+    ],
+    [
+        'id'        => 54539,
+        'name'      => 'Grad Orahovica',
+        'latitude'  => '45.53333000',
+        'longitude' => '17.90000000',
+    ],
+    [
+        'id'        => 54550,
+        'name'      => 'Grad Slatina',
+        'latitude'  => '45.70000000',
+        'longitude' => '17.70000000',
+    ],
+    [
+        'id'        => 54560,
+        'name'      => 'Grad Virovitica',
+        'latitude'  => '45.83167000',
+        'longitude' => '17.38483000',
+    ],
+    [
+        'id'        => 54576,
+        'name'      => 'Gradina',
+        'latitude'  => '45.85423000',
+        'longitude' => '17.51109000',
+    ],
+    [
+        'id'        => 54732,
+        'name'      => 'Mikleuš',
+        'latitude'  => '45.61861000',
+        'longitude' => '17.80389000',
+    ],
+    [
+        'id'        => 54756,
+        'name'      => 'Nova Bukovica',
+        'latitude'  => '45.66472000',
+        'longitude' => '17.76694000',
+    ],
+    [
+        'id'        => 54786,
+        'name'      => 'Orahovica',
+        'latitude'  => '45.54000000',
+        'longitude' => '17.88472000',
+    ],
+    [
+        'id'        => 54809,
+        'name'      => 'Pitomača',
+        'latitude'  => '45.95056000',
+        'longitude' => '17.22944000',
+    ],
+    [
+        'id'        => 54861,
+        'name'      => 'Rezovac',
+        'latitude'  => '45.78333000',
+        'longitude' => '17.41667000',
+    ],
+    [
+        'id'        => 54895,
+        'name'      => 'Slatina',
+        'latitude'  => '45.70333000',
+        'longitude' => '17.70278000',
+    ],
+    [
+        'id'        => 54903,
+        'name'      => 'Sopje',
+        'latitude'  => '45.80111000',
+        'longitude' => '17.74250000',
+    ],
+    [
+        'id'        => 55036,
+        'name'      => 'Špišić Bukovica',
+        'latitude'  => '45.85740000',
+        'longitude' => '17.30089000',
+    ],
+    [
+        'id'        => 54920,
+        'name'      => 'Suhopolje',
+        'latitude'  => '45.79972000',
+        'longitude' => '17.49917000',
+    ],
+    [
+        'id'        => 54973,
+        'name'      => 'Virovitica',
+        'latitude'  => '45.83194000',
+        'longitude' => '17.38389000',
+    ],
+    [
+        'id'        => 54985,
+        'name'      => 'Voćin',
+        'latitude'  => '45.61778000',
+        'longitude' => '17.54778000',
+    ],
+    [
+        'id'        => 55008,
+        'name'      => 'Zdenci',
+        'latitude'  => '45.58917000',
+        'longitude' => '17.95028000',
+    ],
+];

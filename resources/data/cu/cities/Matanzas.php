@@ -1,0 +1,111 @@
+<?php
+return [
+    [
+        'id'        => 21802,
+        'name'      => 'Alacranes',
+        'latitude'  => '22.76719000',
+        'longitude' => '-81.56803000',
+    ],
+    [
+        'id'        => 21817,
+        'name'      => 'Bolondrón',
+        'latitude'  => '22.76307000',
+        'longitude' => '-81.44780000',
+    ],
+    [
+        'id'        => 21824,
+        'name'      => 'Calimete',
+        'latitude'  => '22.53420000',
+        'longitude' => '-80.91105000',
+    ],
+    [
+        'id'        => 21846,
+        'name'      => 'Cárdenas',
+        'latitude'  => '23.03661000',
+        'longitude' => '-81.20596000',
+    ],
+    [
+        'id'        => 21838,
+        'name'      => 'Colón',
+        'latitude'  => '22.72064000',
+        'longitude' => '-80.90492000',
+    ],
+    [
+        'id'        => 21870,
+        'name'      => 'Jagüey Grande',
+        'latitude'  => '22.52694000',
+        'longitude' => '-81.12861000',
+    ],
+    [
+        'id'        => 21879,
+        'name'      => 'Jovellanos',
+        'latitude'  => '22.80375000',
+        'longitude' => '-81.19127000',
+    ],
+    [
+        'id'        => 21885,
+        'name'      => 'Limonar',
+        'latitude'  => '22.95035000',
+        'longitude' => '-81.41059000',
+    ],
+    [
+        'id'        => 21886,
+        'name'      => 'Los Arabos',
+        'latitude'  => '22.72969000',
+        'longitude' => '-80.72081000',
+    ],
+    [
+        'id'        => 21891,
+        'name'      => 'Manguito',
+        'latitude'  => '22.58733000',
+        'longitude' => '-80.91451000',
+    ],
+    [
+        'id'        => 21896,
+        'name'      => 'Martí',
+        'latitude'  => '22.94714000',
+        'longitude' => '-80.91902000',
+    ],
+    [
+        'id'        => 21897,
+        'name'      => 'Matanzas',
+        'latitude'  => '23.04111000',
+        'longitude' => '-81.57750000',
+    ],
+    [
+        'id'        => 21912,
+        'name'      => 'Municipio de Cárdenas',
+        'latitude'  => '22.98978000',
+        'longitude' => '-81.23520000',
+    ],
+    [
+        'id'        => 21924,
+        'name'      => 'Municipio de Matanzas',
+        'latitude'  => '23.05000000',
+        'longitude' => '-81.58333000',
+    ],
+    [
+        'id'        => 21941,
+        'name'      => 'Pedro Betancourt',
+        'latitude'  => '22.72709000',
+        'longitude' => '-81.28963000',
+    ],
+    [
+        'id'        => 21942,
+        'name'      => 'Perico',
+        'latitude'  => '22.76987000',
+        'longitude' => '-81.01830000',
+    ],
+    [
+        'id'        => 21979,
+        'name'      => 'Unión de Reyes',
+        'latitude'  => '22.79505000',
+        'longitude' => '-81.53617000',
+    ],
+    [
+        'id'        => 21980,
+        'name'      => 'Varadero',
+        'latitude'  => '23.15678000',
+        'longitude' => '-81.24441000',
+    ],
+];

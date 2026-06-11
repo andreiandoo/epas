@@ -1,0 +1,111 @@
+<?php
+return [
+    [
+        'id'        => 79062,
+        'name'      => 'Balsfjord',
+        'latitude'  => '69.24024000',
+        'longitude' => '19.22653000',
+    ],
+    [
+        'id'        => 79064,
+        'name'      => 'Bardu',
+        'latitude'  => '68.86058000',
+        'longitude' => '18.35052000',
+    ],
+    [
+        'id'        => 79107,
+        'name'      => 'Dyrøy',
+        'latitude'  => '69.09154000',
+        'longitude' => '17.69094000',
+    ],
+    [
+        'id'        => 79188,
+        'name'      => 'Gratangen',
+        'latitude'  => '68.69273000',
+        'longitude' => '17.53186000',
+    ],
+    [
+        'id'        => 79208,
+        'name'      => 'Harstad',
+        'latitude'  => '68.79896000',
+        'longitude' => '16.52930000',
+    ],
+    [
+        'id'        => 79250,
+        'name'      => 'Ibestad',
+        'latitude'  => '68.77866000',
+        'longitude' => '17.17661000',
+    ],
+    [
+        'id'        => 79266,
+        'name'      => 'Karlsøy',
+        'latitude'  => '69.96185000',
+        'longitude' => '19.61811000',
+    ],
+    [
+        'id'        => 79296,
+        'name'      => 'Kvæfjord',
+        'latitude'  => '68.77201000',
+        'longitude' => '16.17294000',
+    ],
+    [
+        'id'        => 79297,
+        'name'      => 'Kvænangen',
+        'latitude'  => '69.93890000',
+        'longitude' => '22.04935000',
+    ],
+    [
+        'id'        => 79306,
+        'name'      => 'Lavangen',
+        'latitude'  => '68.74722000',
+        'longitude' => '17.80558000',
+    ],
+    [
+        'id'        => 79338,
+        'name'      => 'Lyngen',
+        'latitude'  => '69.57621000',
+        'longitude' => '20.21702000',
+    ],
+    [
+        'id'        => 79379,
+        'name'      => 'Målselv',
+        'latitude'  => '69.12389000',
+        'longitude' => '18.61498000',
+    ],
+    [
+        'id'        => 79409,
+        'name'      => 'Nordreisa',
+        'latitude'  => '69.76825000',
+        'longitude' => '21.02569000',
+    ],
+    [
+        'id'        => 79474,
+        'name'      => 'Salangen',
+        'latitude'  => '68.87669000',
+        'longitude' => '17.83375000',
+    ],
+    [
+        'id'        => 79511,
+        'name'      => 'Skjervøy',
+        'latitude'  => '70.03379000',
+        'longitude' => '20.97365000',
+    ],
+    [
+        'id'        => 79585,
+        'name'      => 'Sørreisa',
+        'latitude'  => '69.14697000',
+        'longitude' => '18.15629000',
+    ],
+    [
+        'id'        => 79551,
+        'name'      => 'Storfjord',
+        'latitude'  => '69.26860000',
+        'longitude' => '19.96089000',
+    ],
+    [
+        'id'        => 79608,
+        'name'      => 'Tromsø',
+        'latitude'  => '69.64961000',
+        'longitude' => '18.95702000',
+    ],
+];

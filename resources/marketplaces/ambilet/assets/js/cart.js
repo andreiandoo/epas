@@ -1,0 +1,914 @@
+/**
+ * Ambilet.ro - Shopping Cart Manager
+ * Handles cart operations with localStorage persistence
+ */
+
+const AmbiletCart = {
+    // Storage key
+    STORAGE_KEY: 'ambilet_cart',
+    PROMO_KEY: 'ambilet_cart_promo',
+    RESERVATION_KEY: 'ambilet_cart_reservation',
+
+    /**
+     * Get cart from localStorage
+     */
+    getCart() {
+        const cart = localStorage.getItem(this.STORAGE_KEY);
+        return cart ? JSON.parse(cart) : { items: [], updatedAt: null };
+    },
+
+    /**
+     * Save cart to localStorage.
+     *
+     * Every cart mutation funnels through here. Triggers a best-effort
+     * promo revalidation so the stored discountAmount tracks the new
+     * cart contents — covers internal callers (addItem / updateQuantity
+     * / removeItem) AND any external code that mutates via the `save()`
+     * alias (CartPage). Also dispatches `ambilet:cart:update` so any
+     * mounted cart UI re-renders.
+     */
+    saveCart(cart) {
+        cart.updatedAt = new Date().toISOString();
+        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(cart));
+
+        // Dispatch cart update event
+        window.dispatchEvent(new CustomEvent('ambilet:cart:update', {
+            detail: { cart, itemCount: this.getItemCount() }
+        }));
+
+        // Revalidate any applied promo against the new cart contents.
+        // Skip when called during revalidatePromoCode itself (the only
+        // place that touches the PROMO_KEY without also rewriting cart
+        // items, so we'd never recurse here — defensive check anyway).
+        try {
+            if (typeof this.revalidatePromoCode === 'function') {
+                this.revalidatePromoCode().catch(function () { /* best effort */ });
+            }
+        } catch (e) { /* never break the save */ }
+    },
+
+    /**
+     * Add item to cart
+     */
+    addItem(eventId, eventData, ticketTypeId, ticketTypeData, quantity = 1, meta = null, options = {}) {
+        // Support alternative signature: addItem(eventData, ticketTypeData, quantity, meta)
+        if (typeof eventId === 'object' && eventId !== null) {
+            meta = ticketTypeId; // 4th arg
+            quantity = ticketTypeData || 1; // 3rd arg
+            ticketTypeData = eventData; // 2nd arg
+            eventData = eventId; // 1st arg
+            ticketTypeId = ticketTypeData.id;
+            eventId = eventData.id;
+        }
+        // When options.replace is set, an existing line's quantity is SET to
+        // `quantity` (absolute) instead of accumulated. Callers whose quantity
+        // selector already mirrors the cart (e.g. the event page after a
+        // bfcache "back") must use replace so re-submitting doesn't double-count.
+        const replaceQuantity = !!(options && options.replace);
+        const cart = this.getCart();
+        const perfId = eventData.performance_id || 0;
+        const visitDate = meta?.visit_date || eventData.visit_date || '';
+        const itemKey = `${eventId}_${ticketTypeId}${perfId ? '_' + perfId : ''}${visitDate ? '_' + visitDate : ''}`;
+
+        // Find existing item
+        const existingIndex = cart.items.findIndex(item => item.key === itemKey);
+
+        if (existingIndex >= 0) {
+            // Update quantity (replace = set absolute, otherwise accumulate)
+            if (replaceQuantity) {
+                cart.items[existingIndex].quantity = quantity;
+            } else {
+                cart.items[existingIndex].quantity += quantity;
+            }
+        } else {
+            // Add new item
+            cart.items.push({
+                key: itemKey,
+                eventId,
+                event: {
+                    id: eventData.id,
+                    title: eventData.title,
+                    slug: eventData.slug,
+                    date: eventData.start_date,
+                    time: eventData.start_time,
+                    // Persist enough of the schedule shape that the cart page
+                    // can render a date RANGE (festival "10 - 12 Iun 2026"),
+                    // not just the start date. Without these, /cos rendered
+                    // only `date` and dropped the end.
+                    duration_mode: eventData.duration_mode || null,
+                    end_date: eventData.end_date || null,
+                    range_start_date: eventData.range_start_date || null,
+                    range_end_date: eventData.range_end_date || null,
+                    range_start_time: eventData.range_start_time || null,
+                    range_end_time: eventData.range_end_time || null,
+                    image: eventData.image || eventData.featured_image,
+                    venue: eventData.venue,
+                    city: eventData.venue?.city,
+                    taxes: eventData.taxes || [],
+                    target_price: eventData.target_price || null,
+                    commission_rate: eventData.commission_rate || 5,
+                    commission_mode: eventData.commission_mode || 'included',
+                    preview_token: eventData.preview_token || null,
+                    performance_id: eventData.performance_id || null,
+                    performance_date: eventData.performance_date || null,
+                    performance_time: eventData.performance_time || null,
+                    performance_label: eventData.performance_label || null
+                },
+                ticketTypeId,
+                ticketType: {
+                    id: ticketTypeData.id,
+                    name: ticketTypeData.name,
+                    price: ticketTypeData.price,
+                    originalPrice: ticketTypeData.original_price,
+                    description: ticketTypeData.description,
+                    min_per_order: ticketTypeData.min_per_order || 1,
+                    max_per_order: ticketTypeData.max_per_order || 10,
+                    multiplier: ticketTypeData.multiplier || 1, // Step increment for cart +/- buttons
+                    commission: ticketTypeData.commission || null, // Per-ticket commission settings
+                    is_refundable: ticketTypeData.is_refundable || false,
+                    is_parking: ticketTypeData.is_parking || false,
+                    requires_vehicle_info: ticketTypeData.requires_vehicle_info || false
+                },
+                quantity,
+                meta: meta || null,
+                addedAt: new Date().toISOString()
+            });
+        }
+
+        this.saveCart(cart);
+        // saveCart triggers revalidatePromoCode internally — see its
+        // doc comment.
+
+        // Start/reset reservation timer when adding items
+        this.startReservationTimer();
+
+        this.showNotification(`${ticketTypeData.name} adăugat în coș!`);
+
+        // CAPI AddToCart (Layer B bridge — backend forwards to Meta Graph API)
+        try {
+            if (window.EPASTracking && typeof EPASTracking.trackAddToCart === 'function') {
+                EPASTracking.trackAddToCart(
+                    eventId,
+                    ticketTypeId,
+                    quantity,
+                    ticketTypeData.price || 0,
+                    'RON',
+                    {
+                        marketplace_event_id: eventId,
+                        content_name: ticketTypeData.name || null,
+                    }
+                );
+            }
+        } catch (e) {
+            // Tracking must never break cart logic
+        }
+
+        return cart;
+    },
+
+    /**
+     * Update item quantity
+     */
+    updateQuantity(itemKey, quantity) {
+        const cart = this.getCart();
+        const index = cart.items.findIndex(item => item.key === itemKey);
+
+        if (index >= 0) {
+            if (quantity <= 0) {
+                // Remove item if quantity is 0 or less; release seats first
+                const [removed] = cart.items.splice(index, 1);
+                this._releaseItemSeats(removed);
+            } else {
+                cart.items[index].quantity = quantity;
+            }
+            this.saveCart(cart);
+            // saveCart triggers revalidatePromoCode internally.
+        }
+
+        return cart;
+    },
+
+    /**
+     * Release held seats for a cart item via API (best-effort).
+     * Silently skips items without seats and never throws — local cart
+     * mutation must proceed even if the network call fails.
+     */
+    _releaseItemSeats(item) {
+        if (!item || !item.seat_uids || item.seat_uids.length === 0 || !item.event_seating_id) {
+            return Promise.resolve();
+        }
+        if (typeof AmbiletAPI === 'undefined' || !AmbiletAPI.delete) {
+            return Promise.resolve();
+        }
+        return AmbiletAPI.delete('/cart/seats', {
+            event_seating_id: item.event_seating_id,
+            seat_uids: item.seat_uids
+        }).catch(function() {
+            // Best-effort release — cleanup job handles unreleased seats
+        });
+    },
+
+    /**
+     * Remove item from cart. Releases any held seats via API before mutating storage.
+     */
+    removeItem(itemKey) {
+        const cart = this.getCart();
+        const index = cart.items.findIndex(item => item.key === itemKey);
+
+        if (index >= 0) {
+            const removed = cart.items.splice(index, 1)[0];
+            this._releaseItemSeats(removed);
+            this.saveCart(cart);
+            // saveCart triggers revalidatePromoCode internally. When
+            // the cart becomes empty, revalidate detects that and drops
+            // the stored promo automatically.
+            this.showNotification(`${removed.ticketType.name} eliminat din coș`);
+        }
+
+        return cart;
+    },
+
+    /**
+     * Clear entire cart. Releases all held seats unless skipRelease is set
+     * (used after a successful checkout where seats are already sold).
+     */
+    clearCart(options = {}) {
+        if (!options.skipRelease) {
+            const current = this.getCart();
+            (current.items || []).forEach(item => this._releaseItemSeats(item));
+        }
+
+        const cart = { items: [], updatedAt: new Date().toISOString() };
+        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(cart));
+        localStorage.removeItem(this.PROMO_KEY);
+        localStorage.removeItem(this.RESERVATION_KEY);
+        // Also clear cart_end_time used by cart.php
+        localStorage.removeItem('cart_end_time');
+
+        window.dispatchEvent(new CustomEvent('ambilet:cart:clear'));
+        window.dispatchEvent(new CustomEvent('ambilet:cart:update', {
+            detail: { cart, itemCount: 0 }
+        }));
+
+        return cart;
+    },
+
+    /**
+     * Get total number of items in cart
+     */
+    getItemCount() {
+        const cart = this.getCart();
+        return cart.items.reduce((total, item) => total + item.quantity, 0);
+    },
+
+    /**
+     * Calculate cart subtotal
+     */
+    getSubtotal() {
+        const cart = this.getCart();
+        return cart.items.reduce((total, item) => {
+            return total + (item.ticketType.price * item.quantity);
+        }, 0);
+    },
+
+    /**
+     * Calculate total savings (from discounted tickets)
+     */
+    getSavings() {
+        const cart = this.getCart();
+        return cart.items.reduce((total, item) => {
+            if (item.ticketType.originalPrice && item.ticketType.originalPrice > item.ticketType.price) {
+                return total + ((item.ticketType.originalPrice - item.ticketType.price) * item.quantity);
+            }
+            return total;
+        }, 0);
+    },
+
+    /**
+     * Get savings with ticket names for display message
+     * Returns { amount: number, ticketNames: string[] }
+     */
+    getSavingsWithTickets() {
+        const cart = this.getCart();
+        let totalSavings = 0;
+        const ticketNames = [];
+
+        cart.items.forEach(item => {
+            if (item.ticketType.originalPrice && item.ticketType.originalPrice > item.ticketType.price) {
+                totalSavings += (item.ticketType.originalPrice - item.ticketType.price) * item.quantity;
+                ticketNames.push(item.ticketType.name);
+            }
+        });
+
+        return {
+            amount: totalSavings,
+            ticketNames: [...new Set(ticketNames)] // Remove duplicates
+        };
+    },
+
+    /**
+     * Get ALL taxes from cart items (stored when adding to cart from event page)
+     * Returns taxes from first cart item or empty array if not available
+     */
+    getTaxes() {
+        const items = this.getItems();
+        if (items.length > 0 && items[0].event?.taxes?.length > 0) {
+            // Return ALL active taxes (both included in price and added on top)
+            return items[0].event.taxes.filter(t => t.is_active !== false);
+        }
+        return [];
+    },
+
+    /**
+     * Calculate total taxes based on configured taxes
+     */
+    getTotalTaxes() {
+        const subtotal = this.getSubtotal();
+        const taxes = this.getTaxes();
+        let totalTaxes = 0;
+
+        taxes.forEach(tax => {
+            if (!tax.is_active) return;
+            if (tax.value_type === 'percent') {
+                totalTaxes += subtotal * (tax.value / 100);
+            } else if (tax.value_type === 'fixed') {
+                totalTaxes += tax.value * this.getItemCount();
+            }
+        });
+
+        return totalTaxes;
+    },
+
+    /**
+     * Calculate Red Cross tax (legacy method for backwards compatibility)
+     * @deprecated Use getTotalTaxes() instead
+     */
+    getRedCrossTax() {
+        return this.getTotalTaxes();
+    },
+
+    /**
+     * Calculate commission for a single ticket type
+     * @param {Object} item - Cart item with ticketType and event data
+     * @returns {Object} Commission details: { amount, rate, fixed, mode, type }
+     */
+    calculateItemCommission(item) {
+        const basePrice = item.ticketType.price || 0;
+        const commission = item.ticketType.commission;
+
+        // If ticket has per-ticket commission settings
+        if (commission && commission.type) {
+            let amount = 0;
+            switch (commission.type) {
+                case 'percentage':
+                    amount = basePrice * ((commission.rate || 0) / 100);
+                    break;
+                case 'fixed':
+                    amount = commission.fixed || 0;
+                    break;
+                case 'both':
+                    amount = (basePrice * ((commission.rate || 0) / 100)) + (commission.fixed || 0);
+                    break;
+            }
+            return {
+                amount: amount,
+                rate: commission.rate || 0,
+                fixed: commission.fixed || 0,
+                mode: commission.mode || 'included',
+                type: commission.type
+            };
+        }
+
+        // Fall back to event-level commission
+        const eventRate = item.event?.commission_rate || 5;
+        const eventMode = item.event?.commission_mode || 'included';
+        return {
+            amount: basePrice * (eventRate / 100),
+            rate: eventRate,
+            fixed: 0,
+            mode: eventMode,
+            type: 'percentage'
+        };
+    },
+
+    /**
+     * Calculate total commission for all items in cart
+     * @returns {number} Total commission amount
+     */
+    getTotalCommission() {
+        const cart = this.getCart();
+        return cart.items.reduce((total, item) => {
+            const commission = this.calculateItemCommission(item);
+            return total + (commission.amount * item.quantity);
+        }, 0);
+    },
+
+    /**
+     * Get commission breakdown by item for reporting
+     * @returns {Array} Array of { item, commission, quantity, total }
+     */
+    getCommissionBreakdown() {
+        const cart = this.getCart();
+        return cart.items.map(item => {
+            const commission = this.calculateItemCommission(item);
+            return {
+                ticketName: item.ticketType.name,
+                eventTitle: item.event.title,
+                basePrice: item.ticketType.price,
+                commission: commission,
+                quantity: item.quantity,
+                totalCommission: commission.amount * item.quantity
+            };
+        });
+    },
+
+    /**
+     * Calculate points to be earned
+     */
+    getPointsEarned() {
+        return Math.floor(this.getSubtotal() * AMBILET_CONFIG.POINTS_PER_CURRENCY);
+    },
+
+    /**
+     * Get applied promo code
+     */
+    getPromoCode() {
+        const promo = localStorage.getItem(this.PROMO_KEY);
+        return promo ? JSON.parse(promo) : null;
+    },
+
+    /**
+     * Apply promo code
+     */
+    async applyPromoCode(code) {
+        const cart = this.getCart();
+        if (cart.items.length === 0) {
+            return { success: false, message: 'Coșul este gol' };
+        }
+
+        try {
+            // Get first event ID for validation (simplified)
+            const eventId = cart.items[0].eventId;
+            const subtotal = this.getSubtotal();
+            const ticketCount = this.getItemCount();
+
+            // Build cart items with ticket_type_id for ticket-type-specific discounts
+            const items = cart.items.map(item => ({
+                event_id: item.eventId,
+                ticket_type_id: item.ticketTypeId,
+                quantity: item.quantity,
+                unit_price: item.ticketType?.price || 0,
+                total: (item.ticketType?.price || 0) * item.quantity
+            }));
+
+            const response = await AmbiletAPI.validatePromoCode(
+                code,
+                eventId,
+                subtotal,
+                ticketCount,
+                AmbiletAuth.getCustomerData()?.email,
+                items
+            );
+
+            if (response.success) {
+                // Use the backend-calculated discount amount (respects ticket type restrictions)
+                const discountData = response.data.discount || {};
+                const promoCode = response.data.promo_code || {};
+                const promoData = {
+                    code: code,
+                    type: response.data.discount_type || promoCode.type,
+                    value: response.data.discount_value || promoCode.value,
+                    discountAmount: discountData.amount || response.data.discount_amount || 0,
+                    appliedToLabel: promoCode.applied_to_label || null,
+                    appliedAt: new Date().toISOString()
+                };
+
+                localStorage.setItem(this.PROMO_KEY, JSON.stringify(promoData));
+
+                window.dispatchEvent(new CustomEvent('ambilet:cart:promo', {
+                    detail: { promo: promoData }
+                }));
+
+                this.showNotification(`Cod promoțional "${code}" aplicat cu succes!`, 'success');
+                return { success: true, promo: promoData };
+            }
+
+            return { success: false, message: response.message || 'Cod invalid' };
+        } catch (error) {
+            return { success: false, message: error.message };
+        }
+    },
+
+    /**
+     * Re-validate the currently applied promo against the current cart
+     * state. Called after any mutation that can change the subtotal or
+     * item composition (quantity change, item removal, item add). If the
+     * backend says the code no longer applies (min tickets not met,
+     * applicable ticket types removed, etc.) we drop it cleanly and
+     * notify the user. Otherwise the stored discountAmount is refreshed
+     * so getPromoDiscount() reflects the new cart.
+     *
+     * Returns a Promise<{ updated, removed, reason }>.
+     */
+    async revalidatePromoCode() {
+        const promo = this.getPromoCode();
+        if (!promo || !promo.code) {
+            return { updated: false, removed: false };
+        }
+
+        const cart = this.getCart();
+        if (!cart.items || cart.items.length === 0) {
+            // Nothing left to validate against — drop silently.
+            localStorage.removeItem(this.PROMO_KEY);
+            window.dispatchEvent(new CustomEvent('ambilet:cart:promo', {
+                detail: { promo: null }
+            }));
+            return { updated: false, removed: true, reason: 'empty_cart' };
+        }
+
+        if (typeof AmbiletAPI === 'undefined' || !AmbiletAPI.validatePromoCode) {
+            return { updated: false, removed: false };
+        }
+
+        try {
+            const eventId = cart.items[0].eventId;
+            const subtotal = this.getSubtotal();
+            const ticketCount = this.getItemCount();
+            const items = cart.items.map(item => ({
+                event_id: item.eventId,
+                ticket_type_id: item.ticketTypeId,
+                quantity: item.quantity,
+                unit_price: item.ticketType?.price || 0,
+                total: (item.ticketType?.price || 0) * item.quantity
+            }));
+
+            const response = await AmbiletAPI.validatePromoCode(
+                promo.code,
+                eventId,
+                subtotal,
+                ticketCount,
+                (typeof AmbiletAuth !== 'undefined' ? AmbiletAuth.getCustomerData()?.email : null),
+                items
+            );
+
+            if (response && response.success) {
+                const discountData = response.data?.discount || {};
+                const promoCodePayload = response.data?.promo_code || {};
+                const newDiscount = parseFloat(discountData.amount ?? response.data?.discount_amount ?? 0) || 0;
+
+                const fresh = Object.assign({}, promo, {
+                    type: response.data?.discount_type || promoCodePayload.type || promo.type,
+                    value: response.data?.discount_value || promoCodePayload.value || promo.value,
+                    discountAmount: newDiscount,
+                    appliedToLabel: promoCodePayload.applied_to_label || promo.appliedToLabel || null,
+                    revalidatedAt: new Date().toISOString()
+                });
+
+                localStorage.setItem(this.PROMO_KEY, JSON.stringify(fresh));
+                window.dispatchEvent(new CustomEvent('ambilet:cart:promo', {
+                    detail: { promo: fresh }
+                }));
+                return { updated: true, removed: false };
+            }
+
+            // Backend rejected the code at the new cart state — drop it
+            // so the user doesn't carry an unusable code into checkout.
+            localStorage.removeItem(this.PROMO_KEY);
+            window.dispatchEvent(new CustomEvent('ambilet:cart:promo', {
+                detail: { promo: null }
+            }));
+            const msg = response?.message || 'Codul promoțional nu mai este valid pentru coșul actual';
+            this.showNotification(msg, 'info');
+            return { updated: false, removed: true, reason: msg };
+        } catch (error) {
+            // Distinguish a deliberate backend rejection from a real
+            // network blip. AmbiletAPI throws APIError on every non-2xx,
+            // so a 4xx (e.g. "promo no longer applies to current cart"
+            // when the only eligible items were removed) lands here too.
+            // For 4xx we DROP the promo so the discount stops applying
+            // immediately. For 0 / 5xx (true network / server hiccup)
+            // we leave the stored promo in place — checkout will
+            // revalidate one more time before charging.
+            const status = error && typeof error.status === 'number' ? error.status : 0;
+            const isClientRejection = status >= 400 && status < 500;
+            if (isClientRejection) {
+                localStorage.removeItem(this.PROMO_KEY);
+                window.dispatchEvent(new CustomEvent('ambilet:cart:promo', {
+                    detail: { promo: null }
+                }));
+                const msg = (error && error.message)
+                    ? error.message
+                    : 'Codul promoțional nu mai este valid pentru coșul actual';
+                this.showNotification(msg, 'info');
+                return { updated: false, removed: true, reason: msg };
+            }
+            return { updated: false, removed: false, reason: 'network_error' };
+        }
+    },
+
+    /**
+     * Remove promo code
+     */
+    removePromoCode() {
+        localStorage.removeItem(this.PROMO_KEY);
+
+        window.dispatchEvent(new CustomEvent('ambilet:cart:promo', {
+            detail: { promo: null }
+        }));
+
+        this.showNotification('Cod promoțional eliminat');
+    },
+
+    /**
+     * Get discount amount from promo code.
+     *
+     * Safety: the stored discountAmount was the backend's authoritative
+     * answer at apply-time (and after each cart mutation via
+     * revalidatePromoCode). Even so, defensively clamp it to the
+     * current subtotal — a stale value left over from a failed
+     * revalidation network call would otherwise wipe the cart total
+     * below zero.
+     */
+    getPromoDiscount() {
+        const promo = this.getPromoCode();
+        if (!promo) return 0;
+
+        const subtotal = this.getSubtotal();
+        let amount;
+        if (promo.discountAmount !== undefined && promo.discountAmount !== null) {
+            amount = parseFloat(promo.discountAmount) || 0;
+        } else if (promo.type === 'percentage') {
+            amount = subtotal * (promo.value / 100);
+        } else {
+            amount = Math.min(promo.value, subtotal);
+        }
+        // Never let the discount exceed what's actually in the cart.
+        return Math.max(0, Math.min(amount, subtotal));
+    },
+
+    /**
+     * Calculate grand total
+     */
+    getTotal() {
+        const subtotal = this.getSubtotal();
+        const tax = this.getRedCrossTax();
+        const discount = this.getPromoDiscount();
+
+        return Math.max(0, subtotal + tax - discount);
+    },
+
+    /**
+     * Get cart summary
+     */
+    getSummary() {
+        const savingsInfo = this.getSavingsWithTickets();
+        return {
+            items: this.getCart().items,
+            itemCount: this.getItemCount(),
+            subtotal: this.getSubtotal(),
+            savings: savingsInfo.amount,
+            savingsTicketNames: savingsInfo.ticketNames,
+            taxes: this.getTaxes(),
+            totalTaxes: this.getTotalTaxes(),
+            redCrossTax: this.getRedCrossTax(), // Legacy support
+            promoCode: this.getPromoCode(),
+            promoDiscount: this.getPromoDiscount(),
+            total: this.getTotal(),
+            pointsEarned: this.getPointsEarned(),
+            totalCommission: this.getTotalCommission(),
+            commissionBreakdown: this.getCommissionBreakdown()
+        };
+    },
+
+    // ==================== RESERVATION TIMER ====================
+
+    /**
+     * Start reservation timer
+     */
+    startReservationTimer() {
+        const expiresAt = new Date(Date.now() + AMBILET_CONFIG.CART_RESERVATION_MINUTES * 60 * 1000);
+        localStorage.setItem(this.RESERVATION_KEY, expiresAt.toISOString());
+
+        // Also set cart_end_time for global timer bar compatibility
+        localStorage.setItem('cart_end_time', expiresAt.getTime().toString());
+
+        window.dispatchEvent(new CustomEvent('ambilet:cart:reservation', {
+            detail: { expiresAt: expiresAt.toISOString() }
+        }));
+
+        return expiresAt;
+    },
+
+    /**
+     * Get reservation expiry time
+     */
+    getReservationExpiry() {
+        const expiry = localStorage.getItem(this.RESERVATION_KEY);
+        return expiry ? new Date(expiry) : null;
+    },
+
+    /**
+     * Check if reservation is expired
+     */
+    isReservationExpired() {
+        const expiry = this.getReservationExpiry();
+        if (!expiry) return true;
+        return new Date() >= expiry;
+    },
+
+    /**
+     * Get remaining reservation time in seconds
+     */
+    getRemainingTime() {
+        const expiry = this.getReservationExpiry();
+        if (!expiry) return 0;
+
+        const remaining = Math.max(0, expiry.getTime() - Date.now());
+        return Math.floor(remaining / 1000);
+    },
+
+    /**
+     * Format remaining time as MM:SS
+     */
+    formatRemainingTime() {
+        const seconds = this.getRemainingTime();
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    },
+
+    /**
+     * Clear reservation
+     */
+    clearReservation() {
+        localStorage.removeItem(this.RESERVATION_KEY);
+    },
+
+    // ==================== UI HELPERS ====================
+
+    /**
+     * Show notification toast
+     */
+    showNotification(message, type = 'info') {
+        window.dispatchEvent(new CustomEvent('ambilet:notification', {
+            detail: { message, type }
+        }));
+    },
+
+    /**
+     * Update cart badge in header
+     */
+    updateCartBadge() {
+        const count = this.getItemCount();
+        const badges = document.querySelectorAll('[data-cart-count]');
+
+        badges.forEach(badge => {
+            badge.textContent = count;
+            badge.style.display = count > 0 ? '' : 'none';
+        });
+    },
+
+    /**
+     * Check if cart has items from multiple events
+     */
+    hasMultipleEvents() {
+        const cart = this.getCart();
+        const eventIds = new Set(cart.items.map(item => item.eventId));
+        return eventIds.size > 1;
+    },
+
+    /**
+     * Get items grouped by event
+     */
+    getItemsByEvent() {
+        const cart = this.getCart();
+        const grouped = {};
+
+        cart.items.forEach(item => {
+            if (!grouped[item.eventId]) {
+                grouped[item.eventId] = {
+                    event: item.event,
+                    items: []
+                };
+            }
+            grouped[item.eventId].items.push(item);
+        });
+
+        return grouped;
+    },
+
+    /**
+     * Initialize cart (call on page load)
+     */
+    init() {
+        // Update cart badge
+        this.updateCartBadge();
+
+        // Listen for storage changes (multi-tab sync)
+        window.addEventListener('storage', (e) => {
+            if (e.key === this.STORAGE_KEY) {
+                this.updateCartBadge();
+                window.dispatchEvent(new CustomEvent('ambilet:cart:sync', {
+                    detail: { cart: this.getCart() }
+                }));
+            }
+        });
+
+        // Listen for cart updates
+        window.addEventListener('ambilet:cart:update', () => {
+            this.updateCartBadge();
+        });
+
+        // Check reservation expiry on load and clear if expired
+        if (this.getItemCount() > 0 && this.isReservationExpired()) {
+            this.handleReservationExpired();
+        }
+
+        // Start periodic check for reservation expiry (every 5 seconds)
+        this.startExpiryCheck();
+    },
+
+    /**
+     * Handle cart reservation expiration
+     */
+    handleReservationExpired() {
+        const hadItems = this.getItemCount() > 0;
+
+        // Clear the cart
+        this.clearCart();
+
+        // Dispatch specific expiration event for UI updates
+        window.dispatchEvent(new CustomEvent('ambilet:cart:expired', {
+            detail: { hadItems }
+        }));
+
+        // Show notification to user
+        if (hadItems) {
+            this.showNotification('Timpul de rezervare a expirat. Coșul a fost golit.', 'warning');
+        }
+    },
+
+    /**
+     * Start periodic check for reservation expiry
+     */
+    startExpiryCheck() {
+        // Clear any existing interval
+        if (this._expiryCheckInterval) {
+            clearInterval(this._expiryCheckInterval);
+        }
+
+        // Check every 5 seconds
+        this._expiryCheckInterval = setInterval(() => {
+            if (this.getItemCount() > 0 && this.isReservationExpired()) {
+                this.handleReservationExpired();
+            }
+        }, 5000);
+    },
+
+    /**
+     * Stop periodic expiry check
+     */
+    stopExpiryCheck() {
+        if (this._expiryCheckInterval) {
+            clearInterval(this._expiryCheckInterval);
+            this._expiryCheckInterval = null;
+        }
+    },
+
+    /**
+     * Get cart items array (alias for CartPage compatibility)
+     */
+    getItems() {
+        return this.getCart().items || [];
+    },
+
+    /**
+     * Save items array (alias for CartPage compatibility).
+     * Routes through saveCart() so the revalidation hook fires for
+     * external callers (CartPage.updateQuantity / removeItem) that
+     * write via this entry point.
+     */
+    save(items) {
+        this.saveCart({ items: items, updatedAt: new Date().toISOString() });
+    },
+
+    /**
+     * Alias for clearCart (CartPage compatibility)
+     */
+    clear(options = {}) {
+        return this.clearCart(options);
+    }
+};
+
+// Expose to window so other scripts (header.js cart drawer, page modules)
+// can find the real cart object. Classic <script> top-level `const` does
+// NOT create a window property, so without this assignment header.js's
+// `if (window.AmbiletCart)` check sees undefined and builds a stub
+// without saveCart/removeItem — bypassing revalidatePromoCode on every
+// drawer mutation.
+window.AmbiletCart = AmbiletCart;
+
+// Initialize on DOM ready
+document.addEventListener('DOMContentLoaded', () => {
+    AmbiletCart.init();
+});

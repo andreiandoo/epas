@@ -1,0 +1,105 @@
+<?php
+return [
+    [
+        'id'        => 107309,
+        'name'      => 'Bağlar',
+        'latitude'  => '37.91068000',
+        'longitude' => '40.22627000',
+    ],
+    [
+        'id'        => 107362,
+        'name'      => 'Bismil',
+        'latitude'  => '37.84514000',
+        'longitude' => '40.65931000',
+    ],
+    [
+        'id'        => 108822,
+        'name'      => 'Çermik',
+        'latitude'  => '38.13538000',
+        'longitude' => '39.44500000',
+    ],
+    [
+        'id'        => 108854,
+        'name'      => 'Çınar',
+        'latitude'  => '37.72562000',
+        'longitude' => '40.41484000',
+    ],
+    [
+        'id'        => 108851,
+        'name'      => 'Çüngüş',
+        'latitude'  => '38.20798000',
+        'longitude' => '39.28554000',
+    ],
+    [
+        'id'        => 107491,
+        'name'      => 'Dicle',
+        'latitude'  => '38.36571000',
+        'longitude' => '40.06450000',
+    ],
+    [
+        'id'        => 107625,
+        'name'      => 'Eğil',
+        'latitude'  => '38.25748000',
+        'longitude' => '40.07435000',
+    ],
+    [
+        'id'        => 107592,
+        'name'      => 'Ergani',
+        'latitude'  => '38.26899000',
+        'longitude' => '39.75446000',
+    ],
+    [
+        'id'        => 107790,
+        'name'      => 'Hani',
+        'latitude'  => '38.40741000',
+        'longitude' => '40.38578000',
+    ],
+    [
+        'id'        => 107817,
+        'name'      => 'Hazro',
+        'latitude'  => '38.24903000',
+        'longitude' => '40.77129000',
+    ],
+    [
+        'id'        => 107948,
+        'name'      => 'Kayapınar',
+        'latitude'  => '37.93800000',
+        'longitude' => '40.17310000',
+    ],
+    [
+        'id'        => 108008,
+        'name'      => 'Kocaköy',
+        'latitude'  => '38.28889000',
+        'longitude' => '40.49786000',
+    ],
+    [
+        'id'        => 108040,
+        'name'      => 'Kulp',
+        'latitude'  => '38.49754000',
+        'longitude' => '41.00668000',
+    ],
+    [
+        'id'        => 108130,
+        'name'      => 'Lice',
+        'latitude'  => '38.45821000',
+        'longitude' => '40.63888000',
+    ],
+    [
+        'id'        => 108463,
+        'name'      => 'Silvan',
+        'latitude'  => '38.13708000',
+        'longitude' => '41.00817000',
+    ],
+    [
+        'id'        => 108506,
+        'name'      => 'Sur',
+        'latitude'  => '37.91356000',
+        'longitude' => '40.23743000',
+    ],
+    [
+        'id'        => 108716,
+        'name'      => 'Yenişehir',
+        'latitude'  => '37.91373000',
+        'longitude' => '40.20610000',
+    ],
+];

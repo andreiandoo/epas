@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Săli de concerte — TICS.ro | Locații pentru evenimente</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>tailwind.config={theme:{extend:{fontFamily:{sans:['Inter','system-ui','sans-serif']}}}}</script>
+    <style>
+        *{-webkit-font-smoothing:antialiased}html{scroll-behavior:smooth}body{font-family:'Inter',system-ui,sans-serif}
+        ::-webkit-scrollbar{width:6px;height:6px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:#d1d5db;border-radius:3px}.no-scrollbar::-webkit-scrollbar{display:none}
+        .venue-card{transition:all .25s ease}.venue-card:hover{transform:translateY(-4px);box-shadow:0 20px 40px -12px rgba(0,0,0,.12)}.venue-card:hover .venue-img{transform:scale(1.05)}.venue-img{transition:transform .5s ease}
+        .chip-active{background:#111827 !important;color:white !important;border-color:#111827 !important}
+        .cat-card{transition:all .25s ease}.cat-card:hover{transform:translateY(-2px);box-shadow:0 8px 24px -8px rgba(0,0,0,.1)}.cat-card.active{border-color:#6366f1;background:linear-gradient(135deg,rgba(99,102,241,.04),rgba(139,92,246,.04))}
+        .city-chip{transition:all .15s ease}.city-chip:hover{background:#f3f4f6}.city-chip.active{background:#111827;color:white}
+        @keyframes fadeInUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}.animate-fadeInUp{animation:fadeInUp .5s ease forwards}
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Header -->
+    <header class="sticky top-0 z-40 bg-white/95 backdrop-blur-lg border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center gap-4">
+                    <a href="/" class="p-2 hover:bg-gray-100 rounded-full transition-all"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg></a>
+                    <a href="/" class="flex items-center gap-2 group"><div class="w-8 h-8 bg-gray-900 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform"><span class="text-white font-bold text-sm">T</span></div><span class="font-bold text-lg hidden sm:block">TICS</span></a>
+                </div>
+                <div class="hidden md:flex flex-1 max-w-lg mx-6">
+                    <div class="w-full flex items-center bg-gray-100 rounded-full px-4 py-2.5 focus-within:ring-2 focus-within:ring-gray-900 focus-within:bg-white transition-all">
+                        <svg class="w-5 h-5 text-gray-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                        <input type="text" placeholder="Caută locații, săli de concerte..." class="flex-1 bg-transparent outline-none text-gray-900 placeholder:text-gray-400">
+                    </div>
+                </div>
+                <div class="flex items-center gap-1">
+                    <a href="#" class="relative flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-all"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg><span class="w-5 h-5 bg-indigo-600 text-white text-xs font-bold rounded-full flex items-center justify-center">2</span></a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Page Header -->
+    <div class="bg-white border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 lg:px-8 py-8">
+            <div class="flex items-center gap-2 text-sm text-gray-500 mb-4">
+                <a href="/" class="hover:text-gray-900 transition-colors">Acasă</a><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                <a href="#" class="hover:text-gray-900 transition-colors">Locații</a><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                <span class="text-gray-900 font-medium">Săli de concerte</span>
+            </div>
+            <h1 class="text-2xl lg:text-3xl font-bold text-gray-900 mb-2">Săli de concerte</h1>
+            <p class="text-gray-600 max-w-2xl">Descoperă cele mai bune săli de concerte din România. De la arene mari la cluburi intime, găsește locația perfectă pentru următorul eveniment.</p>
+        </div>
+    </div>
+
+    <!-- Venue Category Tabs -->
+    <div class="bg-white border-b border-gray-200 sticky top-16 z-30">
+        <div class="max-w-7xl mx-auto px-4 lg:px-8">
+            <div class="flex items-center gap-3 py-3 overflow-x-auto no-scrollbar">
+                <a href="#" class="cat-card active flex items-center gap-2.5 px-4 py-2.5 rounded-xl border border-gray-200 whitespace-nowrap group"><span class="text-lg">🏟️</span><div><p class="font-medium text-sm text-gray-900">Săli de concerte</p><p class="text-xs text-gray-500">48 locații</p></div></a>
+                <a href="#" class="cat-card flex items-center gap-2.5 px-4 py-2.5 rounded-xl border border-gray-200 whitespace-nowrap group"><span class="text-lg">🎪</span><div><p class="font-medium text-sm text-gray-600 group-hover:text-gray-900">Festivaluri & Open Air</p><p class="text-xs text-gray-500">23 locații</p></div></a>
+                <a href="#" class="cat-card flex items-center gap-2.5 px-4 py-2.5 rounded-xl border border-gray-200 whitespace-nowrap group"><span class="text-lg">🎭</span><div><p class="font-medium text-sm text-gray-600 group-hover:text-gray-900">Teatre & Opere</p><p class="text-xs text-gray-500">36 locații</p></div></a>
+                <a href="#" class="cat-card flex items-center gap-2.5 px-4 py-2.5 rounded-xl border border-gray-200 whitespace-nowrap group"><span class="text-lg">🍸</span><div><p class="font-medium text-sm text-gray-600 group-hover:text-gray-900">Cluburi & Baruri</p><p class="text-xs text-gray-500">92 locații</p></div></a>
+                <a href="#" class="cat-card flex items-center gap-2.5 px-4 py-2.5 rounded-xl border border-gray-200 whitespace-nowrap group"><span class="text-lg">🏢</span><div><p class="font-medium text-sm text-gray-600 group-hover:text-gray-900">Centre conferințe</p><p class="text-xs text-gray-500">18 locații</p></div></a>
+                <a href="#" class="cat-card flex items-center gap-2.5 px-4 py-2.5 rounded-xl border border-gray-200 whitespace-nowrap group"><span class="text-lg">🌳</span><div><p class="font-medium text-sm text-gray-600 group-hover:text-gray-900">Parcuri & Grădini</p><p class="text-xs text-gray-500">15 locații</p></div></a>
+            </div>
+        </div>
+    </div>
+
+    <main class="max-w-7xl mx-auto px-4 lg:px-8 py-8">
+
+        <!-- City Filter -->
+        <div class="flex items-center gap-2 mb-6 overflow-x-auto no-scrollbar pb-1">
+            <span class="text-xs text-gray-400 font-medium uppercase tracking-wider whitespace-nowrap mr-1">Oraș:</span>
+            <button class="city-chip active px-3.5 py-1.5 rounded-full border border-gray-200 text-xs font-medium whitespace-nowrap" onclick="toggleCity(this)">Toate</button>
+            <button class="city-chip px-3.5 py-1.5 rounded-full border border-gray-200 text-xs font-medium text-gray-600 whitespace-nowrap" onclick="toggleCity(this)">București <span class="text-gray-400 ml-0.5">18</span></button>
+            <button class="city-chip px-3.5 py-1.5 rounded-full border border-gray-200 text-xs font-medium text-gray-600 whitespace-nowrap" onclick="toggleCity(this)">Cluj-Napoca <span class="text-gray-400 ml-0.5">9</span></button>
+            <button class="city-chip px-3.5 py-1.5 rounded-full border border-gray-200 text-xs font-medium text-gray-600 whitespace-nowrap" onclick="toggleCity(this)">Timișoara <span class="text-gray-400 ml-0.5">6</span></button>
+            <button class="city-chip px-3.5 py-1.5 rounded-full border border-gray-200 text-xs font-medium text-gray-600 whitespace-nowrap" onclick="toggleCity(this)">Iași <span class="text-gray-400 ml-0.5">5</span></button>
+            <button class="city-chip px-3.5 py-1.5 rounded-full border border-gray-200 text-xs font-medium text-gray-600 whitespace-nowrap" onclick="toggleCity(this)">Brașov <span class="text-gray-400 ml-0.5">4</span></button>
+            <button class="city-chip px-3.5 py-1.5 rounded-full border border-gray-200 text-xs font-medium text-gray-600 whitespace-nowrap" onclick="toggleCity(this)">Sibiu <span class="text-gray-400 ml-0.5">3</span></button>
+            <button class="city-chip px-3.5 py-1.5 rounded-full border border-gray-200 text-xs font-medium text-gray-600 whitespace-nowrap" onclick="toggleCity(this)">Constanța <span class="text-gray-400 ml-0.5">3</span></button>
+        </div>
+
+        <!-- Results count + sort -->
+        <div class="flex items-center justify-between mb-6">
+            <p class="text-sm text-gray-500"><span class="font-semibold text-gray-900">48</span> locații găsite</p>
+            <select class="bg-white border border-gray-200 rounded-xl px-3 py-2 text-sm font-medium text-gray-700 cursor-pointer focus:outline-none"><option>Cele mai populare</option><option>Capacitate ↓</option><option>Capacitate ↑</option><option>Cele mai multe ev.</option><option>A → Z</option></select>
+        </div>
+
+        <!-- Venues Grid -->
+        <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+
+            <!-- Venue Card 1 — Featured -->
+            <a href="#" class="venue-card sm:col-span-2 lg:col-span-2 bg-white rounded-2xl overflow-hidden border border-gray-200 group">
+                <div class="flex flex-col sm:flex-row">
+                    <div class="relative sm:w-72 aspect-video sm:aspect-auto overflow-hidden flex-shrink-0">
+                        <img src="https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?w=600&h=400&fit=crop" class="absolute inset-0 w-full h-full object-cover venue-img">
+                        <div class="absolute top-3 left-3"><span class="px-2.5 py-1 bg-yellow-400 text-yellow-900 text-xs font-bold rounded-full">⭐ Recomandat</span></div>
+                    </div>
+                    <div class="flex-1 p-5">
+                        <div class="flex items-start justify-between mb-2">
+                            <div>
+                                <h3 class="font-semibold text-gray-900 text-lg group-hover:text-indigo-600 transition-colors">Sala Palatului</h3>
+                                <p class="text-sm text-gray-500 flex items-center gap-1 mt-0.5"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>București</p>
+                            </div>
+                            <div class="flex items-center gap-1 px-2.5 py-1 bg-yellow-50 rounded-lg"><svg class="w-4 h-4 text-yellow-500" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg><span class="text-sm font-semibold text-gray-900">4.8</span></div>
+                        </div>
+                        <p class="text-sm text-gray-600 mb-3 line-clamp-2">Cea mai prestigioasă sală de spectacole din București, cu o capacitate de peste 4.000 de locuri și o acustică excepțională.</p>
+                        <div class="flex flex-wrap items-center gap-2 mb-3">
+                            <span class="px-2.5 py-1 bg-gray-100 text-gray-700 text-xs font-medium rounded-full">4.000+ locuri</span>
+                            <span class="px-2.5 py-1 bg-gray-100 text-gray-700 text-xs font-medium rounded-full">Scaune</span>
+                            <span class="px-2.5 py-1 bg-gray-100 text-gray-700 text-xs font-medium rounded-full">Parcare</span>
+                            <span class="px-2.5 py-1 bg-gray-100 text-gray-700 text-xs font-medium rounded-full">Accesibil</span>
+                        </div>
+                        <div class="flex items-center justify-between pt-3 border-t border-gray-100">
+                            <div class="flex items-center gap-1 text-sm"><span class="text-indigo-600 font-semibold">12 ev.</span><span class="text-gray-400">viitoare</span></div>
+                            <span class="text-sm font-medium text-indigo-600 group-hover:underline">Vezi detalii →</span>
+                        </div>
+                    </div>
+                </div>
+            </a>
+
+            <!-- Venue Card 2 -->
+            <a href="#" class="venue-card bg-white rounded-2xl overflow-hidden border border-gray-200 group">
+                <div class="relative aspect-[4/3] overflow-hidden"><img src="https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400&h=300&fit=crop" class="absolute inset-0 w-full h-full object-cover venue-img"><div class="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent"></div></div>
+                <div class="p-4">
+                    <div class="flex items-start justify-between mb-1">
+                        <h3 class="font-semibold text-gray-900 group-hover:text-indigo-600 transition-colors">Arenele Romane</h3>
+                        <div class="flex items-center gap-0.5"><svg class="w-3.5 h-3.5 text-yellow-500" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg><span class="text-xs font-semibold text-gray-700">4.6</span></div>
+                    </div>
+                    <p class="text-sm text-gray-500 flex items-center gap-1 mb-3"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>București</p>
+                    <div class="flex flex-wrap gap-1.5 mb-3"><span class="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full">5.000 locuri</span><span class="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full">Open Air</span></div>
+                    <div class="flex items-center justify-between pt-3 border-t border-gray-100"><span class="text-xs text-indigo-600 font-medium">8 ev.</span><span class="text-xs font-medium text-gray-400 group-hover:text-indigo-600 transition-colors">Detalii →</span></div>
+                </div>
+            </a>
+
+            <!-- Venue Card 3 -->
+            <a href="#" class="venue-card bg-white rounded-2xl overflow-hidden border border-gray-200 group">
+                <div class="relative aspect-[4/3] overflow-hidden"><img src="https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?w=400&h=300&fit=crop" class="absolute inset-0 w-full h-full object-cover venue-img"><div class="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent"></div></div>
+                <div class="p-4">
+                    <div class="flex items-start justify-between mb-1">
+                        <h3 class="font-semibold text-gray-900 group-hover:text-indigo-600 transition-colors">Fratelli Studios</h3>
+                        <div class="flex items-center gap-0.5"><svg class="w-3.5 h-3.5 text-yellow-500" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg><span class="text-xs font-semibold text-gray-700">4.5</span></div>
+                    </div>
+                    <p class="text-sm text-gray-500 flex items-center gap-1 mb-3"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>București</p>
+                    <div class="flex flex-wrap gap-1.5 mb-3"><span class="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full">2.500 locuri</span><span class="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full">Indoor</span></div>
+                    <div class="flex items-center justify-between pt-3 border-t border-gray-100"><span class="text-xs text-indigo-600 font-medium">6 ev.</span><span class="text-xs font-medium text-gray-400 group-hover:text-indigo-600 transition-colors">Detalii →</span></div>
+                </div>
+            </a>
+
+            <!-- Venue Card 4 -->
+            <a href="#" class="venue-card bg-white rounded-2xl overflow-hidden border border-gray-200 group">
+                <div class="relative aspect-[4/3] overflow-hidden"><img src="https://images.unsplash.com/photo-1429962714451-bb934ecdc4ec?w=400&h=300&fit=crop" class="absolute inset-0 w-full h-full object-cover venue-img"><div class="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent"></div></div>
+                <div class="p-4">
+                    <div class="flex items-start justify-between mb-1">
+                        <h3 class="font-semibold text-gray-900 group-hover:text-indigo-600 transition-colors">Form Space</h3>
+                        <div class="flex items-center gap-0.5"><svg class="w-3.5 h-3.5 text-yellow-500" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg><span class="text-xs font-semibold text-gray-700">4.7</span></div>
+                    </div>
+                    <p class="text-sm text-gray-500 flex items-center gap-1 mb-3"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>Cluj-Napoca</p>
+                    <div class="flex flex-wrap gap-1.5 mb-3"><span class="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full">1.200 locuri</span><span class="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full">Indoor</span></div>
+                    <div class="flex items-center justify-between pt-3 border-t border-gray-100"><span class="text-xs text-indigo-600 font-medium">9 ev.</span><span class="text-xs font-medium text-gray-400 group-hover:text-indigo-600 transition-colors">Detalii →</span></div>
+                </div>
+            </a>
+
+            <!-- Venue Card 5 -->
+            <a href="#" class="venue-card bg-white rounded-2xl overflow-hidden border border-gray-200 group">
+                <div class="relative aspect-[4/3] overflow-hidden"><img src="https://images.unsplash.com/photo-1524368535928-5b5e00ddc76b?w=400&h=300&fit=crop" class="absolute inset-0 w-full h-full object-cover venue-img"><div class="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent"></div></div>
+                <div class="p-4">
+                    <div class="flex items-start justify-between mb-1">
+                        <h3 class="font-semibold text-gray-900 group-hover:text-indigo-600 transition-colors">Filarmonica Brașov</h3>
+                        <div class="flex items-center gap-0.5"><svg class="w-3.5 h-3.5 text-yellow-500" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg><span class="text-xs font-semibold text-gray-700">4.9</span></div>
+                    </div>
+                    <p class="text-sm text-gray-500 flex items-center gap-1 mb-3"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>Brașov</p>
+                    <div class="flex flex-wrap gap-1.5 mb-3"><span class="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full">800 locuri</span><span class="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full">Indoor</span></div>
+                    <div class="flex items-center justify-between pt-3 border-t border-gray-100"><span class="text-xs text-indigo-600 font-medium">4 ev.</span><span class="text-xs font-medium text-gray-400 group-hover:text-indigo-600 transition-colors">Detalii →</span></div>
+                </div>
+            </a>
+        </div>
+
+        <!-- Pagination -->
+        <div class="flex items-center justify-center gap-2 mt-10">
+            <button class="w-10 h-10 rounded-full border border-gray-200 flex items-center justify-center text-gray-400 cursor-not-allowed"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg></button>
+            <button class="w-10 h-10 rounded-full bg-gray-900 text-white text-sm font-medium">1</button>
+            <button class="w-10 h-10 rounded-full border border-gray-200 text-gray-600 text-sm font-medium hover:border-gray-300 transition-colors">2</button>
+            <button class="w-10 h-10 rounded-full border border-gray-200 text-gray-600 text-sm font-medium hover:border-gray-300 transition-colors">3</button>
+            <button class="w-10 h-10 rounded-full border border-gray-200 flex items-center justify-center text-gray-600 hover:border-gray-300 transition-colors"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg></button>
+        </div>
+    </main>
+
+    <script>
+    function toggleCity(btn){document.querySelectorAll('.city-chip').forEach(c=>{c.classList.remove('active');c.style.background='';c.style.color=''});btn.classList.add('active')}
+    </script>
+</body>
+</html>

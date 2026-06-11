@@ -1,0 +1,117 @@
+<?php
+return [
+    [
+        'id'        => 81254,
+        'name'      => 'Anahawan',
+        'latitude'  => '10.29867120',
+        'longitude' => '125.12734260',
+    ],
+    [
+        'id'        => 154807,
+        'name'      => 'Bontoc',
+        'latitude'  => '10.39098860',
+        'longitude' => '124.84611830',
+    ],
+    [
+        'id'        => 82698,
+        'name'      => 'Hinunangan',
+        'latitude'  => '10.40165330',
+        'longitude' => '125.07599430',
+    ],
+    [
+        'id'        => 82699,
+        'name'      => 'Hinundayan',
+        'latitude'  => '10.35112960',
+        'longitude' => '125.13178430',
+    ],
+    [
+        'id'        => 83076,
+        'name'      => 'Libagon',
+        'latitude'  => '10.33199360',
+        'longitude' => '124.98050770',
+    ],
+    [
+        'id'        => 154808,
+        'name'      => 'Liloan',
+        'latitude'  => '10.15314300',
+        'longitude' => '125.07522190',
+    ],
+    [
+        'id'        => 148073,
+        'name'      => 'Limasawa',
+        'latitude'  => '9.93029600',
+        'longitude' => '125.02857590',
+    ],
+    [
+        'id'        => 154809,
+        'name'      => 'Maasin',
+        'latitude'  => '10.19185120',
+        'longitude' => '124.69086000',
+    ],
+    [
+        'id'        => 83307,
+        'name'      => 'Macrohon',
+        'latitude'  => '10.07632580',
+        'longitude' => '124.86723260',
+    ],
+    [
+        'id'        => 83448,
+        'name'      => 'Malitbog',
+        'latitude'  => '10.17879150',
+        'longitude' => '124.87276870',
+    ],
+    [
+        'id'        => 154810,
+        'name'      => 'Padre Burgos',
+        'latitude'  => '10.06473260',
+        'longitude' => '124.95474000',
+    ],
+    [
+        'id'        => 84115,
+        'name'      => 'Pintuyan',
+        'latitude'  => '9.98011720',
+        'longitude' => '125.15860650',
+    ],
+    [
+        'id'        => 84399,
+        'name'      => 'Saint Bernard',
+        'latitude'  => '10.29378360',
+        'longitude' => '125.03719890',
+    ],
+    [
+        'id'        => 154811,
+        'name'      => 'San Francisco',
+        'latitude'  => '10.07114780',
+        'longitude' => '125.08208830',
+    ],
+    [
+        'id'        => 154812,
+        'name'      => 'San Juan',
+        'latitude'  => '10.28594090',
+        'longitude' => '125.11916720',
+    ],
+    [
+        'id'        => 84605,
+        'name'      => 'San Ricardo',
+        'latitude'  => '9.98692060',
+        'longitude' => '125.17637330',
+    ],
+    [
+        'id'        => 84791,
+        'name'      => 'Silago',
+        'latitude'  => '10.53432970',
+        'longitude' => '125.03676970',
+    ],
+    [
+        'id'        => 154813,
+        'name'      => 'Sogod',
+        'latitude'  => '10.44834400',
+        'longitude' => '124.90862460',
+    ],
+    [
+        'id'        => 85161,
+        'name'      => 'Tomas Oppus',
+        'latitude'  => '10.27468320',
+        'longitude' => '124.90472220',
+    ],
+];

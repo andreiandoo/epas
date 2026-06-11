@@ -1,0 +1,934 @@
+const CartPage = {
+    timerInterval: null,
+    endTime: null,
+    appliedPromo: null,
+    discount: 0,
+    taxes: [], // Dynamic taxes from API/config
+
+    async init() {
+        await this.loadTaxes();
+        this.setupTimer();
+        this.loadExistingPromo();
+        this.render();
+
+        // Re-render when BileteOnlineCart re-validates the promo against new
+        // cart contents. The qty-change path (CartPage.updateQuantity)
+        // calls BileteOnlineCart.save() → saveCart() → revalidatePromoCode()
+        // asynchronously, so by the time this.render() runs the local
+        // discount snapshot is still stale. The async revalidate
+        // dispatches `ambilet:cart:promo` when it lands; we re-render
+        // then so the total updates with the fresh value.
+        const onPromoChanged = () => {
+            const promo = BileteOnlineCart.getPromoCode();
+            if (promo) {
+                this.appliedPromo = promo.code;
+            } else {
+                this.appliedPromo = null;
+            }
+            this.render();
+        };
+        // cart.js dispatches `bileteonline:cart:*` events. The `ambilet:*`
+        // names below are legacy aliases from when this code was copied
+        // from the ambilet marketplace — they NEVER fire on bilete.online,
+        // so the cart page wasn't re-rendering on quantity changes etc.
+        // Listen to both names for safety during the rename window.
+        window.addEventListener('ambilet:cart:promo', onPromoChanged);
+        window.addEventListener('bileteonline:cart:promo', onPromoChanged);
+        window.addEventListener('ambilet:cart:update', () => this.render());
+        window.addEventListener('bileteonline:cart:update', () => this.render());
+    },
+
+    /**
+     * Load taxes from cart items or use defaults from config
+     */
+    async loadTaxes() {
+        // First, try to get taxes from cart items (stored when adding to cart)
+        const items = BileteOnlineCart.getItems();
+        if (items.length > 0 && items[0].event?.taxes?.length > 0) {
+            // Show ALL taxes (both included in price and added on top)
+            this.taxes = items[0].event.taxes.filter(t => t.is_active !== false);
+            return;
+        }
+
+        try {
+            // Try to load taxes from API
+            if (typeof BileteOnlineAPI !== 'undefined') {
+                const response = await BileteOnlineAPI.get('/config/taxes');
+                if (response.success && response.data?.taxes) {
+                    this.taxes = response.data.taxes;
+                    return;
+                }
+            }
+        } catch (e) {
+            // Falls back to empty taxes array below
+        }
+
+        // Fallback - no hardcoded taxes, they come from DB via cart items
+        this.taxes = [];
+    },
+
+    setupTimer() {
+        const savedEndTime = localStorage.getItem('cart_end_time');
+        const items = BileteOnlineCart.getItems();
+
+        if (items.length === 0) {
+            localStorage.removeItem('cart_end_time');
+            document.getElementById('timer-bar').classList.add('hidden');
+            return;
+        }
+
+        if (savedEndTime && parseInt(savedEndTime) > Date.now()) {
+            this.endTime = parseInt(savedEndTime);
+        } else {
+            this.endTime = Date.now() + (15 * 60 * 1000); // 15 minutes
+            localStorage.setItem('cart_end_time', this.endTime);
+        }
+
+        this.updateCountdown();
+        this.timerInterval = setInterval(() => this.updateCountdown(), 1000);
+    },
+
+    warningShown: false,  // Track if 5-minute warning was shown
+
+    updateCountdown() {
+        const remaining = Math.max(0, this.endTime - Date.now());
+        const minutes = Math.floor(remaining / 60000);
+        const seconds = Math.floor((remaining % 60000) / 1000);
+
+        const countdownEl = document.getElementById('countdown');
+        const timerBar = document.getElementById('timer-bar');
+        countdownEl.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+
+        if (remaining <= 0) {
+            clearInterval(this.timerInterval);
+            countdownEl.textContent = '00:00';
+            countdownEl.classList.remove('text-warning');
+            countdownEl.classList.add('text-primary');
+
+            // Release held seats via API before clearing cart
+            this.releaseAllSeats().then(() => {
+                BileteOnlineCart.clear({ skipRelease: true });
+                localStorage.removeItem('cart_end_time');
+                this.render();
+                if (typeof BileteOnlineNotifications !== 'undefined') {
+                    BileteOnlineNotifications.warning('Timpul de rezervare a expirat. Locurile au fost eliberate.');
+                }
+            });
+        } else if (remaining < 60000) {
+            // Less than 1 minute - make it red/urgent
+            countdownEl.classList.remove('text-warning');
+            countdownEl.classList.add('text-primary');
+            if (timerBar) {
+                timerBar.classList.remove('bg-warning/10', 'border-warning/20');
+                timerBar.classList.add('bg-red-50', 'border-red-200');
+            }
+        } else if (remaining <= 5 * 60 * 1000 && !this.warningShown) {
+            // 5 minutes remaining - show warning notification
+            this.warningShown = true;
+            countdownEl.classList.remove('text-warning');
+            countdownEl.classList.add('text-orange-500');
+            if (timerBar) {
+                timerBar.classList.add('animate-pulse');
+            }
+            if (typeof BileteOnlineNotifications !== 'undefined') {
+                BileteOnlineNotifications.warning('Mai ai doar 5 minute pentru a finaliza comanda! După expirare, locurile vor fi eliberate.');
+            }
+        }
+    },
+
+    /**
+     * Release all held seats via API
+     */
+    async releaseAllSeats() {
+        const items = BileteOnlineCart.getItems();
+
+        for (const item of items) {
+            // Check if this item has held seats
+            if (item.seat_uids && item.seat_uids.length > 0 && item.event_seating_id) {
+                try {
+                    await BileteOnlineAPI.delete('/cart/seats', {
+                        event_seating_id: item.event_seating_id,
+                        seat_uids: item.seat_uids
+                    });
+                } catch (error) {
+                    // Continue even if release fails - cleanup job will handle it
+                }
+            }
+        }
+    },
+
+    render() {
+        const items = BileteOnlineCart.getItems();
+
+        const loading = document.getElementById('cart-loading');
+        const container = document.getElementById('cartPageItems');
+        const emptyState = document.getElementById('emptyCart');
+        const summarySection = document.getElementById('summary-section');
+        const promoSection = document.getElementById('promo-section');
+        const timerBar = document.getElementById('timer-bar');
+
+        loading.classList.add('hidden');
+
+        if (items.length === 0) {
+            container.classList.add('hidden');
+            summarySection.classList.add('hidden');
+            promoSection.classList.add('hidden');
+            timerBar.classList.add('hidden');
+            emptyState.classList.remove('hidden');
+            // Reset the "N bilete" counter in the page header (and the
+            // hidden summary block) — they're cosmetic so leaving them
+            // stale doesn't break anything, but it shows e.g.
+            // "1 bilete" next to "Coșul tău este gol" after the user
+            // clears the cart. Zeroing them keeps the UI honest.
+            const totalItemsEl = document.getElementById('totalItems');
+            if (totalItemsEl) totalItemsEl.textContent = '0';
+            const summaryItemsEl = document.getElementById('summaryItems');
+            if (summaryItemsEl) summaryItemsEl.textContent = '0';
+            return;
+        }
+
+        emptyState.classList.add('hidden');
+        container.classList.remove('hidden');
+        summarySection.classList.remove('hidden');
+        promoSection.classList.remove('hidden');
+        timerBar.classList.remove('hidden');
+
+        try {
+            const html = items.map((item, index) => this.renderCartItem(item, index)).join('');
+            container.innerHTML = html;
+            this.updateSummary();
+        } catch (error) {
+            // Don't swallow render failures silently — they're the only
+            // signal we have when a cart item shape changes (e.g. an
+            // activity item field rename) and the page ends up empty.
+            console.error('[CartPage] render failed:', error, items);
+        }
+    },
+
+    /**
+     * Render an activity cart line. Simpler than event lines — activities
+     * sell by (slot date + start time + variant) instead of (event +
+     * ticket type), so quantity-controls double as participant-count
+     * controls and the variant's capacity_share is informational.
+     */
+    renderActivityCartItem(item, index) {
+        const itemKey = item.key || index;
+        const a = item.activity || {};
+        const v = item.variant || {};
+        const quantity = item.participants_count || item.quantity || 1;
+        const price = (typeof v.price === 'number' ? v.price : item.price) || 0;
+        const lineTotal = price * quantity;
+
+        const imgSrc = (typeof getStorageUrl === 'function' && a.image)
+            ? getStorageUrl(a.image)
+            : (a.image || '/assets/images/placeholder-activity.svg');
+
+        const title = a.title || 'Activitate';
+        const variantName = v.name || 'Bilet';
+        const slotDate = item.booking_date || '';
+        const slotStart = (item.slot_start_time || '').substring(0, 5);
+        const slotEnd = (item.slot_end_time || '').substring(0, 5);
+        const venueLine = [a.venue, a.city].filter(Boolean).join(' · ');
+
+        let formattedDate = slotDate;
+        try {
+            if (typeof BileteOnlineUtils !== 'undefined' && BileteOnlineUtils.formatDate) {
+                formattedDate = BileteOnlineUtils.formatDate(slotDate, 'medium');
+            }
+        } catch (e) { /* fall back to raw YYYY-MM-DD */ }
+
+        const slotLine = slotStart
+            ? `${formattedDate} · ${slotStart}${slotEnd ? '–' + slotEnd : ''}`
+            : formattedDate;
+
+        return '<div class="bg-paper border-2 border-ink/10 cart-item rounded-3xl" data-item-key="' + itemKey + '" data-index="' + index + '">' +
+            '<div class="flex gap-4 p-4">' +
+                '<div class="w-24 h-24 overflow-hidden rounded-2xl shrink-0 bg-paper-2 border border-ink/10 mobile:w-14 mobile:h-14">' +
+                    '<img src="' + imgSrc + '" alt="' + title + '" class="object-cover w-full h-full" loading="lazy" onerror="this.style.display=\'none\'">' +
+                '</div>' +
+                '<div class="flex-1 min-w-0">' +
+                    '<div class="flex items-start justify-between gap-3">' +
+                        '<div class="min-w-0">' +
+                            '<p class="text-[10px] font-mono tracking-[.18em] text-vermilion">ACTIVITATE</p>' +
+                            '<h3 class="font-display text-xl font-bold truncate">' + title + '</h3>' +
+                            '<p class="text-sm text-ink-soft truncate">' + slotLine + '</p>' +
+                            (venueLine ? '<p class="text-xs text-ink-soft truncate">' + venueLine + '</p>' : '') +
+                        '</div>' +
+                        '<button onclick="CartPage.removeItem(' + index + ')" aria-label="Șterge rezervarea" class="self-start p-2 rounded-full text-ink-soft hover:text-vermilion hover:bg-paper-2 transition">' +
+                            '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>' +
+                        '</button>' +
+                    '</div>' +
+                    '<div class="flex items-center justify-between gap-3 mt-3">' +
+                        '<div>' +
+                            '<span class="inline-flex items-center px-2 py-0.5 rounded-full bg-ochre/15 text-ochre text-xs font-bold">' + variantName + '</span>' +
+                        '</div>' +
+                        '<div class="flex items-center gap-2">' +
+                            '<button onclick="CartPage.updateQuantity(' + index + ', -1)" aria-label="Scade nr. participanți" class="flex items-center justify-center w-8 h-8 rounded-full bg-paper border-2 border-ink/10 hover:border-ink transition">' +
+                                '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/></svg>' +
+                            '</button>' +
+                            '<span class="w-8 font-bold text-center font-mono">' + quantity + '</span>' +
+                            '<button onclick="CartPage.updateQuantity(' + index + ', 1)" aria-label="Crește nr. participanți" class="flex items-center justify-center w-8 h-8 rounded-full bg-paper border-2 border-ink/10 hover:border-ink transition">' +
+                                '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>' +
+                            '</button>' +
+                        '</div>' +
+                        '<div class="text-right">' +
+                            '<div class="text-xs text-ink-soft font-mono">' + price.toFixed(2) + ' lei × ' + quantity + '</div>' +
+                            '<div class="font-display text-xl font-bold text-vermilion">' + lineTotal.toFixed(2) + ' lei</div>' +
+                        '</div>' +
+                    '</div>' +
+                '</div>' +
+            '</div>' +
+        '</div>';
+    },
+
+    renderCartItem(item, index) {
+        // Activity items take a separate, simpler card. Event-style code
+        // below assumes a ticketType + event date — activities have a
+        // slot date + variant instead.
+        if (item.type === 'activity') {
+            return this.renderActivityCartItem(item, index);
+        }
+
+        // Handle both BileteOnlineCart format and legacy format
+        const itemKey = item.key || index;
+        const eventImage = getStorageUrl(item.event?.image || item.event_image);
+        const eventTitle = item.event?.title || item.event_title || 'Eveniment';
+        const eventDate = item.event?.performance_date || item.event?.date || item.event_date || '';
+        const venueName = item.event?.venue?.name || item.event?.venue || item.venue_name || '';
+        const ticketTypeName = item.ticketType?.name || item.ticket_type_name || 'Bilet';
+        const ticketDescription = item.ticketType?.description || '';
+        const price = item.ticketType?.price || item.price || 0;
+        const originalPrice = item.ticketType?.originalPrice || item.original_price || 0;
+        const quantity = item.quantity || 1;
+        const seats = item.seats || [];
+        const hasSeats = seats.length > 0 || (item.seat_uids && item.seat_uids.length > 0);
+        const eventSlug = item.event?.slug || '';
+
+        // Get per-ticket commission or fall back to event-level
+        const commission = BileteOnlineCart.calculateItemCommission(item);
+        const commissionMode = commission.mode || 'included';
+
+        const hasDiscount = originalPrice && originalPrice > price;
+        const discountPercent = hasDiscount ? Math.round((1 - price / originalPrice) * 100) : 0;
+        const formattedDate = eventDate ? BileteOnlineUtils.formatDate(eventDate, 'medium') : '';
+
+        // Calculate commission - price is always base price
+        let commissionAmount = 0;
+        if (commissionMode === 'added_on_top') {
+            commissionAmount = commission.amount;
+        }
+        const totalWithCommission = price + commissionAmount;
+
+        // Build tooltip HTML with price breakdown
+        let tooltipHtml = '<p class="pb-2 mb-3 text-sm font-semibold border-b border-white/20">Detalii preț bilet ' + ticketTypeName + '</p>' +
+            '<div class="space-y-2 text-xs">' +
+                '<div class="flex justify-between"><span class="text-white/90">Preț bilet:</span><span>' + price.toFixed(2) + ' lei</span></div>';
+
+        if (commissionMode === 'added_on_top' && commissionAmount > 0) {
+            // Build commission description based on type
+            let commissionLabel = 'Taxe procesare';
+            if (commission.type === 'percentage') {
+                commissionLabel += ' (' + commission.rate + '%)';
+            } else if (commission.type === 'fixed') {
+                commissionLabel += ' (fix)';
+            } else if (commission.type === 'both') {
+                commissionLabel += ' (' + commission.rate + '% + ' + commission.fixed.toFixed(2) + ' lei)';
+            }
+            tooltipHtml += '<div class="flex justify-between"><span class="text-white/90">' + commissionLabel + ':</span><span>+' + commissionAmount.toFixed(2) + ' lei</span></div>' +
+                '<div class="flex justify-between pt-2 mt-2 border-t border-white/20"><span class="font-semibold">Total la plată:</span><span class="font-semibold">' + totalWithCommission.toFixed(2) + ' lei</span></div>';
+        }
+
+        tooltipHtml += '</div>';
+
+        return '<div class="bg-white border-2 cart-item rounded-2xl border-border" data-item-key="' + itemKey + '" data-index="' + index + '">' +
+            '<div class="flex gap-4 p-3">' +
+                '<div class="w-24 h-24 overflow-hidden rounded-xl shrink-0 mobile:w-12 mobile:h-12">' +
+                    '<img src="' + eventImage + '" alt="' + eventTitle + '" class="object-cover w-full h-full" loading="lazy">' +
+                '</div>' +
+                '<div class="flex-1 min-w-0">' +
+                    '<div class="flex items-center justify-between">' +
+                        '<div class="flex-1 min-w-0">' +
+                            '<h3 class="font-semibold truncate text-secondary">' + eventTitle + '</h3>' +
+                            '<p class="text-sm text-muted">' +
+                                formattedDate +
+                                (venueName ? ' • ' + venueName : '') +
+                            '</p>' +
+                        '</div>' +
+                        '<button onclick="CartPage.removeItem(' + index + ')" aria-label="Șterge" class="self-start p-2 transition-colors rounded-lg text-muted hover:text-error hover:bg-red-50">' +
+                            '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
+                                '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>' +
+                            '</svg>' +
+                        '</button>' +
+                    '</div>' +
+                    '<div class="flex items-center justify-between mt-1 mobile:hidden">' +
+                        '<div class="relative inline-block tooltip-trigger">' +
+                            '<div class="flex items-center gap-2">' +
+                                '<span class="inline-flex items-center py-1 text-sm font-semibold text-secondary">' + ticketTypeName +
+                                    (hasDiscount ? ' <span class="discount-badge text-white text-[10px] font-bold py-0.5 px-1.5 rounded-full ml-1">-' + discountPercent + '%</span>' : '') +
+                                '</span>' +
+                                '<svg class="w-4 h-4 text-muted cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>' +
+                            '</div>' +
+                            (ticketDescription ? '<p class="text-xs text-muted mt-0.5">' + ticketDescription + '</p>' : '') +
+                            (seats.length > 0 ? '<p class="mt-1 mr-4 text-xs text-primary"><svg class="inline w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/></svg>' + this.formatSeats(seats) + '</p>' : '') +
+                            '<div class="absolute left-0 z-10 p-4 mt-2 text-white shadow-xl tooltip top-full w-72 bg-secondary rounded-xl">' + tooltipHtml + '</div>' +
+                        '</div>' +
+                        (hasSeats ?
+                        '<div class="flex items-center gap-2 ml-auto mr-8">' +
+                            '<span class="w-8 font-semibold text-center">' + quantity + '</span>' +
+                            '<a href="/bilete/' + eventSlug + '" class="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-primary border border-primary/30 rounded-lg hover:bg-primary/5 transition-colors flex-none">' +
+                                '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>' +
+                                'Adaugă locuri' +
+                            '</a>' +
+                        '</div>' :
+                        '<div class="flex items-center gap-2 ml-auto mr-8">' +
+                            '<button onclick="CartPage.updateQuantity(' + index + ', -1)" aria-label="Scade cantitatea" class="flex items-center justify-center w-8 h-8 border rounded-lg border-border hover:bg-surface">' +
+                                '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
+                                    '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/>' +
+                                '</svg>' +
+                            '</button>' +
+                            '<span class="w-8 font-semibold text-center">' + quantity + '</span>' +
+                            '<button onclick="CartPage.updateQuantity(' + index + ', 1)" aria-label="Crește cantitatea" class="flex items-center justify-center w-8 h-8 border rounded-lg border-border hover:bg-surface">' +
+                                '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
+                                    '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>' +
+                                '</svg>' +
+                            '</button>' +
+                        '</div>') +
+                        '<div class="flex-none text-right">' +
+                            (hasDiscount ? '<div class="text-sm line-through text-muted">' + BileteOnlineUtils.formatCurrency(originalPrice * quantity) + '</div>' : '') +
+                            '<div class="font-bold text-primary">' + BileteOnlineUtils.formatCurrency(price * quantity) + '</div>' +
+                        '</div>' +
+                    '</div>' +
+                '</div>' +
+            '</div>' +
+            '<div class="items-center justify-between hidden px-2 pb-2 mobile:flex">' +
+                '<div class="relative inline-block tooltip-trigger">' +
+                    '<div class="flex items-center gap-2">' +
+                        '<span class="w-8 font-semibold text-center">' + quantity + ' x </span>' +
+                        '<span class="inline-flex items-center py-1 pr-2 text-sm font-semibold text-secondary">' + ticketTypeName +
+                            (hasDiscount ? ' <span class="discount-badge text-white text-[10px] font-bold py-0.5 px-1.5 rounded-full ml-1">-' + discountPercent + '%</span>' : '') +
+                        '</span>' +
+                        '<svg class="w-4 h-4 text-muted cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>' +
+                    '</div>' +
+                    (ticketDescription ? '<p class="text-xs text-muted mt-0.5">' + ticketDescription + '</p>' : '') +
+                    (seats.length > 0 ? '<p class="mt-1 mr-4 text-xs text-primary"><svg class="inline w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/></svg>' + this.formatSeats(seats) + '</p>' : '') +
+                    '<div class="absolute left-0 z-10 p-4 mt-2 text-white shadow-xl tooltip top-full w-72 bg-secondary rounded-xl">' + tooltipHtml + '</div>' +
+                '</div>' +
+                '<div class="flex-none text-right">' +
+                    '<div class="flex items-center gap-2">' +
+                        (hasDiscount ? '<div class="text-sm line-through text-muted">' + BileteOnlineUtils.formatCurrency(originalPrice * quantity) + '</div>' : '') +
+                        '<div class="font-bold text-primary">' + BileteOnlineUtils.formatCurrency(price * quantity) + '</div>' +
+                    '</div>' +
+                    (hasSeats ?
+                    '<div class="flex items-center gap-2 ml-auto">' +
+                        '<a href="/bilete/' + eventSlug + '" class="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-primary border border-primary/30 rounded-lg hover:bg-primary/5 transition-colors flex-none">' +
+                            '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>' +
+                            'Adaugă locuri' +
+                        '</a>' +
+                    '</div>' :
+                    '<div class="flex items-center gap-2 ml-auto">' +
+                        '<button onclick="CartPage.updateQuantity(' + index + ', -1)" aria-label="Scade cantitatea" class="flex items-center justify-center w-8 h-8 border rounded-lg border-border hover:bg-surface">' +
+                            '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
+                                '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/>' +
+                            '</svg>' +
+                        '</button>' +
+                        '<span class="w-8 font-semibold text-center">' + quantity + '</span>' +
+                        '<button onclick="CartPage.updateQuantity(' + index + ', 1)" aria-label="Crește cantitatea" class="flex items-center justify-center w-8 h-8 border rounded-lg border-border hover:bg-surface">' +
+                            '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
+                                '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>' +
+                            '</svg>' +
+                        '</button>' +
+                    '</div>') +
+                '</div>' +
+            '</div>' +
+        '</div>';
+    },
+
+    updateQuantity(index, delta) {
+        const items = BileteOnlineCart.getItems();
+        if (!items[index]) return;
+
+        const item = items[index];
+
+        // For seated cart items quantity is bound to the picked seats —
+        // bumping qty without picking more seats produced ghost tickets
+        // with no seat_uid on the checkout. Force the user back to the
+        // event page where they can re-open the seat picker.
+        const hasHeldSeats = Array.isArray(item.seat_uids) && item.seat_uids.length > 0;
+        if (hasHeldSeats) {
+            if (typeof BileteOnlineNotifications !== 'undefined') {
+                BileteOnlineNotifications.warning('Pentru bilete cu locuri specifice, schimbă cantitatea din pagina evenimentului — alege/elimină locurile pe hartă.');
+            }
+            return;
+        }
+
+        const currentQty = item.quantity;
+        let newQty = currentQty + delta;
+        const minQty = item.ticketType?.min_per_order || item.min_per_order || 1;
+        const maxQty = item.ticketType?.max_per_order || item.max_per_order || item.max_quantity || 10;
+
+        if (delta > 0 && newQty > maxQty) {
+            if (typeof BileteOnlineNotifications !== 'undefined') {
+                BileteOnlineNotifications.warning(`Poți cumpăra maximum ${maxQty} bilete de acest tip`);
+            }
+            return;
+        }
+
+        if (delta < 0 && newQty < minQty && newQty > 0) {
+            // Going below min - remove entirely
+            this.removeItem(index);
+            return;
+        }
+
+        if (newQty < 1) {
+            this.removeItem(index);
+        } else {
+            items[index].quantity = newQty;
+            BileteOnlineCart.save(items);
+            this.render();
+        }
+    },
+
+    async removeItem(index) {
+        const items = BileteOnlineCart.getItems();
+        const item = items[index];
+        const itemEl = document.querySelector(`[data-index="${index}"]`) || document.querySelector(`.cart-item:nth-child(${index + 1})`);
+
+        // Release seats if this item has them
+        if (item && item.seat_uids && item.seat_uids.length > 0 && item.event_seating_id) {
+            try {
+                await BileteOnlineAPI.delete('/cart/seats', {
+                    event_seating_id: item.event_seating_id,
+                    seat_uids: item.seat_uids
+                });
+            } catch (error) {
+                // Continue with removal even if API fails — cleanup job handles
+            }
+        }
+
+        if (itemEl) {
+            itemEl.style.opacity = '0';
+            itemEl.style.transform = 'translateX(-20px)';
+            itemEl.style.transition = 'all 0.3s ease';
+            setTimeout(() => {
+                items.splice(index, 1);
+                BileteOnlineCart.save(items);
+                this.render();
+
+                if (items.length === 0) {
+                    localStorage.removeItem('cart_end_time');
+                    if (this.timerInterval) {
+                        clearInterval(this.timerInterval);
+                    }
+                }
+            }, 300);
+        }
+    },
+
+    updateSummary() {
+        const items = BileteOnlineCart.getItems();
+        let baseSubtotal = 0;  // Subtotal without commission
+        let totalCommission = 0;  // Total commission
+        let totalItems = 0;
+        let savings = 0;
+        const savingsTickets = [];
+        let hasAddedOnTopCommission = false;
+
+        // Group items by event. Activities use a different item shape
+        // (item.activity + item.variant + item.participants_count) than
+        // event tickets (item.event + item.ticketType + item.quantity), so
+        // we normalize here before grouping. Without this branch, activities
+        // landed in the "0 bilete, 0.00 lei" bucket because the legacy
+        // ticketType lookups returned undefined.
+        const eventGroups = {};
+        items.forEach(item => {
+            const isActivity = item.type === 'activity';
+
+            const eventId    = isActivity
+                ? ('activity-' + (item.activity?.id || item.activity_id || 'unknown'))
+                : (item.eventId || item.event?.id || 'unknown');
+            const eventTitle = isActivity
+                ? (item.activity?.title || item.activity?.name || 'Activitate')
+                : (item.event?.title || item.event?.name || 'Eveniment');
+            const eventDate  = isActivity
+                ? (item.booking_date || '')
+                : (item.event?.performance_date || item.event?.date || item.event_date || '');
+            const venueName  = isActivity
+                ? (item.activity?.venue || '')
+                : (item.event?.venue?.name || (typeof item.event?.venue === 'string' ? item.event.venue : '') || item.venue_name || '');
+            const cityName   = isActivity
+                ? (item.activity?.city || '')
+                : (item.event?.city?.name || item.event?.city || item.event?.venue?.city || '');
+
+            if (!eventGroups[eventId]) {
+                eventGroups[eventId] = {
+                    title: eventTitle,
+                    date: eventDate,
+                    venue: venueName,
+                    city: cityName,
+                    tickets: [],
+                    subtotal: 0,
+                    commission: 0,
+                    isActivity: isActivity
+                };
+            }
+
+            const price = isActivity
+                ? ((typeof item.variant?.price === 'number' ? item.variant.price : item.price) || 0)
+                : (item.ticketType?.price || item.price || 0);
+            const originalPrice = isActivity
+                ? (item.variant?.originalPrice || item.original_price || 0)
+                : (item.ticketType?.originalPrice || item.original_price || 0);
+            const ticketName = isActivity
+                ? (item.variant?.name || 'Bilet')
+                : (item.ticketType?.name || item.ticket_type_name || 'Bilet');
+            const quantity = isActivity
+                ? (item.participants_count || item.quantity || 1)
+                : (item.quantity || 1);
+
+            // Calculate per-ticket commission using cart helper
+            const commission = BileteOnlineCart.calculateItemCommission(item);
+            let itemCommission = 0;
+            if (commission.mode === 'added_on_top') {
+                itemCommission = commission.amount;
+                hasAddedOnTopCommission = true;
+            }
+
+            const lineTotal = price * quantity;
+            const commissionTotal = itemCommission * quantity;
+
+            baseSubtotal += lineTotal;
+            totalCommission += commissionTotal;
+            totalItems += quantity;
+            eventGroups[eventId].subtotal += lineTotal;
+            eventGroups[eventId].commission += commissionTotal;
+
+            eventGroups[eventId].tickets.push({
+                name: ticketName,
+                qty: quantity,
+                basePrice: price,
+                lineTotal: lineTotal,
+                commission: commission,
+                commissionTotal: commissionTotal,
+                hasDiscount: originalPrice && originalPrice > price,
+                originalPrice: originalPrice
+            });
+
+            // Calculate savings for discounted items
+            if (originalPrice && originalPrice > price) {
+                const itemSavings = (originalPrice - price) * quantity;
+                savings += itemSavings;
+                savingsTickets.push(ticketName);
+            }
+        });
+
+        // Total = base prices + commission (no other taxes).
+        // Read the live discount from BileteOnlineCart every time we render
+        // instead of relying on this.discount, which used to cache the
+        // value at apply-time and went stale after any qty change. The
+        // single source of truth is BileteOnlineCart.getPromoDiscount() —
+        // it already clamps against subtotal and reflects the latest
+        // backend revalidation result.
+        const subtotalWithCommission = baseSubtotal + totalCommission;
+        let liveDiscount = 0;
+        try {
+            liveDiscount = (typeof BileteOnlineCart !== 'undefined' && typeof BileteOnlineCart.getPromoDiscount === 'function')
+                ? BileteOnlineCart.getPromoDiscount()
+                : (this.discount || 0);
+        } catch (e) {
+            liveDiscount = this.discount || 0;
+        }
+        // Defensive clamp — the discount must never exceed the displayed
+        // subtotal (with commission), otherwise the total would go
+        // negative and the cart would silently zero out.
+        if (liveDiscount > subtotalWithCommission) liveDiscount = subtotalWithCommission;
+        // Keep this.discount in sync for callers that still read it.
+        this.discount = liveDiscount;
+        const subtotalAfterDiscount = subtotalWithCommission - liveDiscount;
+
+        // Payment processing fee preview (Stripe et al.). Computed against
+        // (subtotal + commission - discount) to match the order snapshot —
+        // ProcessingFeeCalculator on the server applies on the same base.
+        // Pre-warmed via BileteOnlineCart.init(); if it hasn't loaded yet
+        // (slow network) we render fee=0 now and refresh once it arrives.
+        let processingFee = { amount: 0, percent_rate: 0, fixed: 0, provider: null, label: '', pass_to_customer: false };
+        try {
+            if (typeof BileteOnlineCart !== 'undefined' && typeof BileteOnlineCart.computeProcessingFee === 'function') {
+                processingFee = BileteOnlineCart.computeProcessingFee(subtotalAfterDiscount);
+                // Lazy-load + re-render once if the config wasn't there yet.
+                if (! BileteOnlineCart.getPaymentFeeConfig() && BileteOnlineCart.loadPaymentFeeConfig) {
+                    if (! this._feeConfigReloadScheduled) {
+                        this._feeConfigReloadScheduled = true;
+                        BileteOnlineCart.loadPaymentFeeConfig().then(cfg => {
+                            if (cfg) this.updateSummary();
+                        });
+                    }
+                }
+            }
+        } catch (e) {}
+
+        // Cart page total = tickets + ticketing commission (− discount) ONLY.
+        // The payment transaction fee depends on the chosen payment method, so
+        // it is applied & shown at checkout, not here.
+        let total = subtotalAfterDiscount;
+        const points = Math.floor(total / 10);
+
+        // Update DOM. Subtotal now shows BASE prices only — the platform
+        // commission gets its own row below so the customer can see exactly
+        // what they're paying for instead of having it rolled into one
+        // ambiguous "subtotal" number.
+        document.getElementById('totalItems').textContent = totalItems;
+        document.getElementById('summaryItems').textContent = totalItems;
+        document.getElementById('subtotal').textContent = BileteOnlineUtils.formatCurrency(baseSubtotal);
+
+        // Platform commission row (added on top, organizer-configured rate)
+        const commRow = document.getElementById('platformCommissionRow');
+        if (commRow) {
+            if (hasAddedOnTopCommission && totalCommission > 0) {
+                commRow.classList.remove('hidden');
+                document.getElementById('platformCommissionAmount').textContent = BileteOnlineUtils.formatCurrency(totalCommission);
+                // Surface the rate — "Comision platformă (2%)".
+                const lbl = document.getElementById('platformCommissionLabel');
+                if (lbl) {
+                    // Derive effective % from the actual amount so multi-item
+                    // carts with different rates collapse to an average that
+                    // customers can still verify with their calculator.
+                    const ratePct = baseSubtotal > 0
+                        ? (totalCommission / baseSubtotal * 100).toFixed(1).replace(/\.0$/, '')
+                        : '';
+                    lbl.textContent = 'Comision ticketing' + (ratePct ? ' (' + ratePct + '%)' : '');
+                }
+            } else {
+                commRow.classList.add('hidden');
+            }
+        }
+
+        // The payment transaction fee is NOT shown on the cart page — it moves
+        // to checkout (where the payment method, each with its own fee, is
+        // chosen). Always keep the row hidden here.
+        const feeRow = document.getElementById('processingFeeRow');
+        if (feeRow) feeRow.classList.add('hidden');
+
+        // Render breakdown in taxes container - grouped by event
+        const taxesContainer = document.getElementById('taxesContainer');
+        if (taxesContainer) {
+            let breakdownHtml = '';
+            const eventIds = Object.keys(eventGroups);
+            const hasMultipleEvents = eventIds.length > 1;
+
+            eventIds.forEach(function(eventId, eventIndex) {
+                const group = eventGroups[eventId];
+
+                // Show event title only if multiple events
+                if (hasMultipleEvents) {
+                    if (eventIndex > 0) {
+                        breakdownHtml += '<div class="pt-3 mt-3 border-t border-border"></div>';
+                    }
+                    // Build event info string: title (date, venue, city)
+                    var eventInfo = group.title;
+                    var details = [];
+                    if (group.date) details.push(BileteOnlineUtils.formatDate(group.date, 'short'));
+                    if (group.venue) details.push(group.venue);
+                    if (group.city && group.city !== group.venue) details.push(group.city);
+                    if (details.length > 0) {
+                        eventInfo += ' <span class="font-normal text-muted">(' + details.join(', ') + ')</span>';
+                    }
+                    breakdownHtml += '<div class="mb-2 text-sm font-bold text-secondary">' + eventInfo + '</div>';
+                }
+
+                // Show each ticket type
+                group.tickets.forEach(function(ticket) {
+                    breakdownHtml += '<div class="flex justify-between text-sm">' +
+                        '<span class="text-muted">' + ticket.qty + 'x ' + ticket.name + '</span>' +
+                        '<span class="font-medium">' + BileteOnlineUtils.formatCurrency(ticket.lineTotal) + '</span>' +
+                    '</div>';
+                });
+            });
+
+            // Commission used to be rendered here as a generic "Taxe procesare"
+            // line, but it's now surfaced separately in #platformCommissionRow
+            // with the explicit "Comision platformă (X%)" label between
+            // Subtotal and Taxa procesare card. Keeping it here too would
+            // double-charge visually.
+
+            taxesContainer.innerHTML = breakdownHtml;
+        }
+
+        document.getElementById('totalPrice').textContent = BileteOnlineUtils.formatCurrency(total);
+
+        // Discount row — use the live value computed above (liveDiscount)
+        // so a stale this.discount can't show a non-zero amount when the
+        // promo has been revalidated to 0 / removed.
+        if (liveDiscount > 0) {
+            document.getElementById('discountRow').classList.remove('hidden');
+            document.getElementById('discountAmount').textContent = `-${BileteOnlineUtils.formatCurrency(liveDiscount)}`;
+        } else {
+            document.getElementById('discountRow').classList.add('hidden');
+        }
+
+        // Savings row with ticket name
+        if (savings > 0) {
+            document.getElementById('savingsRow').classList.remove('hidden');
+            document.getElementById('savings').textContent = BileteOnlineUtils.formatCurrency(savings);
+
+            // Update the savings text to include ticket name(s)
+            const savingsTextEl = document.getElementById('savingsText');
+            if (savingsTextEl && savingsTickets.length > 0) {
+                const ticketNames = [...new Set(savingsTickets)].join(', ');
+                savingsTextEl.textContent = `Alegând ${ticketNames} ai economisit:`;
+            }
+        } else {
+            document.getElementById('savingsRow').classList.add('hidden');
+        }
+
+        // Points animation
+        const pointsEl = document.getElementById('pointsEarned');
+        pointsEl.textContent = points;
+        pointsEl.classList.remove('points-animation');
+        void pointsEl.offsetWidth; // Force reflow
+        pointsEl.classList.add('points-animation');
+    },
+
+    /**
+     * Format seat information for display
+     */
+    formatSeats(seats) {
+        if (!seats || seats.length === 0) return '';
+
+        // Group seats by section and row
+        const grouped = {};
+        seats.forEach(seat => {
+            const key = (seat.section || 'Secțiune') + ' - Rând ' + (seat.row || '?');
+            if (!grouped[key]) grouped[key] = [];
+            grouped[key].push(seat.seat || seat.label || '?');
+        });
+
+        // Format output
+        const parts = [];
+        Object.keys(grouped).forEach(key => {
+            const seatLabels = grouped[key].join(', ');
+            parts.push(key + ': Loc ' + seatLabels);
+        });
+
+        return parts.join(' | ');
+    },
+
+    // Markup for the applied-promo message. Includes an "×" button so the
+    // user can actually remove the code after applying it.
+    renderAppliedPromoMessage(promo, prefix) {
+        const label = promo.type === 'percentage'
+            ? `-${promo.value}% reducere`
+            : `-${BileteOnlineUtils.formatCurrency(promo.value)} reducere`;
+        const appliedTo = promo.appliedToLabel
+            ? `<br><span class="text-xs text-muted">Aplicat pe: ${promo.appliedToLabel}</span>`
+            : '';
+        const codeSuffix = prefix.includes(':') ? '' : ` (${promo.code})`;
+        return `<span class="inline-flex items-start gap-2">
+                    <span class="flex-1">${prefix} ${label}${codeSuffix}${appliedTo}</span>
+                    <button type="button" onclick="CartPage.removePromo()" class="flex-shrink-0 inline-flex items-center justify-center w-6 h-6 text-muted hover:text-primary hover:bg-primary/10 rounded-full transition-colors" aria-label="Elimină codul promoțional" title="Elimină codul">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </span>`;
+    },
+
+    async applyPromo() {
+        const code = document.getElementById('promoCode').value.trim().toUpperCase();
+        const messageEl = document.getElementById('promoMessage');
+
+        if (!code) {
+            messageEl.textContent = 'Te rugăm să introduci un cod promoțional';
+            messageEl.className = 'mt-2 text-sm text-muted';
+            messageEl.classList.remove('hidden');
+            return;
+        }
+
+        // Disable button during validation
+        const btn = document.querySelector('#promo-section button');
+        if (btn) { btn.disabled = true; btn.textContent = 'Se verifică...'; }
+
+        const result = await BileteOnlineCart.applyPromoCode(code);
+
+        if (result.success) {
+            const promo = result.promo;
+            this.discount = BileteOnlineCart.getPromoDiscount();
+            this.appliedPromo = code;
+
+            messageEl.innerHTML = this.renderAppliedPromoMessage(promo, '✓ Cod aplicat!');
+            messageEl.className = 'mt-2 text-sm text-success';
+            messageEl.classList.remove('hidden');
+
+            document.getElementById('promoCode').disabled = true;
+            if (btn) { btn.textContent = 'Aplicat'; btn.disabled = true; }
+
+            this.updateSummary();
+        } else {
+            messageEl.textContent = '✗ ' + (result.message || 'Cod invalid sau expirat');
+            messageEl.className = 'mt-2 text-sm text-primary';
+            messageEl.classList.remove('hidden');
+            if (btn) { btn.disabled = false; btn.textContent = 'Aplică'; }
+        }
+    },
+
+    // Clear the applied promo code and reset the UI so a new code can be entered.
+    removePromo() {
+        BileteOnlineCart.removePromoCode();
+        this.appliedPromo = null;
+        this.discount = 0;
+
+        const messageEl = document.getElementById('promoMessage');
+        if (messageEl) {
+            messageEl.innerHTML = '';
+            messageEl.classList.add('hidden');
+        }
+        const input = document.getElementById('promoCode');
+        if (input) { input.value = ''; input.disabled = false; }
+        const btn = document.querySelector('#promo-section button');
+        if (btn) { btn.textContent = 'Aplică'; btn.disabled = false; }
+
+        this.updateSummary();
+    },
+
+    loadExistingPromo() {
+        const promo = BileteOnlineCart.getPromoCode();
+        if (!promo) return;
+
+        // If the cart is empty, any promo left in storage is stale (e.g. the
+        // previous order finished but the cart was reopened before storage
+        // cleared) — wipe it so the new order starts fresh.
+        if (BileteOnlineCart.getItemCount() === 0) {
+            BileteOnlineCart.removePromoCode();
+            return;
+        }
+
+        this.discount = BileteOnlineCart.getPromoDiscount();
+        this.appliedPromo = promo.code;
+
+        const messageEl = document.getElementById('promoMessage');
+        if (messageEl) {
+            messageEl.innerHTML = this.renderAppliedPromoMessage(promo, `✓ Cod aplicat: ${promo.code}`);
+            messageEl.className = 'mt-2 text-sm text-success';
+            messageEl.classList.remove('hidden');
+        }
+        const input = document.getElementById('promoCode');
+        if (input) { input.value = promo.code; input.disabled = true; }
+        const btn = document.querySelector('#promo-section button');
+        if (btn) { btn.textContent = 'Aplicat'; btn.disabled = true; }
+    }
+};
+
+document.addEventListener('DOMContentLoaded', () => CartPage.init());
+
+// Listen for cart expiration event from cart.js
+// `ambilet:` alias kept for the legacy listener; `bileteonline:` is what
+// cart.js actually dispatches on this marketplace.
+function _onCartExpired() {
+    if (CartPage.timerInterval) {
+        clearInterval(CartPage.timerInterval);
+    }
+    localStorage.removeItem('cart_end_time');
+    CartPage.render();
+}
+window.addEventListener('ambilet:cart:expired', _onCartExpired);
+window.addEventListener('bileteonline:cart:expired', _onCartExpired);
+
+// Initialize featured carousel
+document.addEventListener('DOMContentLoaded', () => FeaturedCarousel.init());

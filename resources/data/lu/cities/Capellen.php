@@ -1,0 +1,105 @@
+<?php
+return [
+    [
+        'id'        => 66726,
+        'name'      => 'Bascharage',
+        'latitude'  => '49.56727000',
+        'longitude' => '5.90730000',
+    ],
+    [
+        'id'        => 66745,
+        'name'      => 'Bridel',
+        'latitude'  => '49.65579000',
+        'longitude' => '6.07999000',
+    ],
+    [
+        'id'        => 66747,
+        'name'      => 'Capellen',
+        'latitude'  => '49.64500000',
+        'longitude' => '5.99083000',
+    ],
+    [
+        'id'        => 66748,
+        'name'      => 'Clemency',
+        'latitude'  => '49.59667000',
+        'longitude' => '5.87583000',
+    ],
+    [
+        'id'        => 66759,
+        'name'      => 'Dippach',
+        'latitude'  => '49.58701000',
+        'longitude' => '5.98330000',
+    ],
+    [
+        'id'        => 66762,
+        'name'      => 'Eischen',
+        'latitude'  => '49.68556000',
+        'longitude' => '5.87861000',
+    ],
+    [
+        'id'        => 66773,
+        'name'      => 'Garnich',
+        'latitude'  => '49.61667000',
+        'longitude' => '5.95250000',
+    ],
+    [
+        'id'        => 66778,
+        'name'      => 'Hautcharage',
+        'latitude'  => '49.57499000',
+        'longitude' => '5.90970000',
+    ],
+    [
+        'id'        => 66783,
+        'name'      => 'Hobscheid',
+        'latitude'  => '49.68861000',
+        'longitude' => '5.91472000',
+    ],
+    [
+        'id'        => 66793,
+        'name'      => 'Käerjeng',
+        'latitude'  => '49.58311000',
+        'longitude' => '5.89892000',
+    ],
+    [
+        'id'        => 66788,
+        'name'      => 'Kehlen',
+        'latitude'  => '49.66833000',
+        'longitude' => '6.03583000',
+    ],
+    [
+        'id'        => 66791,
+        'name'      => 'Koerich',
+        'latitude'  => '49.67000000',
+        'longitude' => '5.95000000',
+    ],
+    [
+        'id'        => 66792,
+        'name'      => 'Kopstal',
+        'latitude'  => '49.66444000',
+        'longitude' => '6.07306000',
+    ],
+    [
+        'id'        => 66802,
+        'name'      => 'Mamer',
+        'latitude'  => '49.62750000',
+        'longitude' => '6.02333000',
+    ],
+    [
+        'id'        => 66839,
+        'name'      => 'Schouweiler',
+        'latitude'  => '49.58250000',
+        'longitude' => '5.95639000',
+    ],
+    [
+        'id'        => 66842,
+        'name'      => 'Septfontaines',
+        'latitude'  => '49.70111000',
+        'longitude' => '5.96722000',
+    ],
+    [
+        'id'        => 66845,
+        'name'      => 'Steinfort',
+        'latitude'  => '49.66139000',
+        'longitude' => '5.91917000',
+    ],
+];

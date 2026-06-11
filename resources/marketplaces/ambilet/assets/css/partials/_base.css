@@ -1,0 +1,62 @@
+/**
+ * Ambilet.ro - Custom Styles
+ * Supplements Tailwind CSS with custom styles
+ */
+
+/* Fonts: loaded via head.php (preload + swap), not here */
+
+/* ==================== CSS VARIABLES ==================== */
+:root {
+    --primary: #A51C30;
+    --primary-dark: #8B1728;
+    --primary-light: #C41E3A;
+    --secondary: #1E293B;
+    --accent: #E67E22;
+    --surface: #F8FAFC;
+    --muted: #64748B;
+    --border: #E2E8F0;
+    --success: #10B981;
+    --warning: #F59E0B;
+    --error: #EF4444;
+}
+
+/* ==================== BASE ==================== */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    background-color: #fff;
+    color: var(--secondary);
+    line-height: 1.6;
+}
+
+/* ==================== SCROLLBAR ==================== */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: #F1F5F9;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--primary);
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--primary-dark);
+}
+
+a:hover {
+    text-decoration: none;
+}

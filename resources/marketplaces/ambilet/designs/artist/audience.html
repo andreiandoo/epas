@@ -1,0 +1,1105 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audiență — Ambilet Artist</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { 'sans': ['Plus Jakarta Sans', 'sans-serif'] },
+                    colors: {
+                        'primary': '#A51C30',
+                        'primary-dark': '#8B1728',
+                        'secondary': '#1E293B',
+                        'accent': '#E67E22',
+                        'surface': '#F8FAFC',
+                        'muted': '#64748B',
+                        'border': '#E2E8F0',
+                        'success': '#10B981',
+                        'warning': '#F59E0B',
+                        'error': '#EF4444',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.625rem 1.25rem; border-radius: 0.75rem; font-weight: 600; font-size: 0.875rem; transition: all 0.15s; cursor: pointer; border: none; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-primary { background: #A51C30; color: white; }
+        .btn-primary:hover:not(:disabled) { background: #8B1728; }
+        .btn-secondary { background: white; color: #1E293B; border: 1px solid #E2E8F0; }
+        .btn-secondary:hover:not(:disabled) { background: #F8FAFC; }
+        .btn-sm { padding: 0.4rem 0.875rem; font-size: 0.8125rem; }
+        .input, .form-input { width: 100%; padding: 0.625rem 0.875rem; border: 1px solid #E2E8F0; border-radius: 0.75rem; font-size: 0.875rem; background: white; }
+        .input:focus, .form-input:focus { outline: none; border-color: #A51C30; box-shadow: 0 0 0 3px rgba(165,28,48,0.1); }
+        .badge { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.2rem 0.625rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; }
+        #fanMap { z-index: 1; }
+        .pro-badge { background: linear-gradient(135deg, #E67E22, #A51C30); color: white; font-size: 0.625rem; font-weight: 700; padding: 0.1rem 0.4rem; border-radius: 0.25rem; letter-spacing: 0.5px; }
+    </style>
+</head>
+<body class="min-h-screen bg-surface font-sans" x-data="fanCrm()">
+    <!-- Sidebar -->
+    <aside class="fixed left-0 top-0 h-full w-64 bg-secondary text-white z-50 hidden lg:flex flex-col">
+        <div class="p-6 border-b border-white/10">
+            <a href="/" class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-primary rounded-xl flex items-center justify-center">
+                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/>
+                    </svg>
+                </div>
+                <div>
+                    <span class="text-xl font-extrabold block leading-none">AMBILET</span>
+                    <span class="text-xs text-white/50 mt-1 block">Portal Artist</span>
+                </div>
+            </a>
+        </div>
+
+        <nav class="p-4 space-y-1 flex-1 overflow-y-auto">
+            <a href="/artist/dashboard.html" class="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:bg-white/10 hover:text-white transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+                Dashboard
+            </a>
+            <a href="/artist/profile.html" class="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:bg-white/10 hover:text-white transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/></svg>
+                Detalii Artist
+            </a>
+            <a href="/artist/events.html" class="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:bg-white/10 hover:text-white transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                Evenimente
+            </a>
+
+            <!-- Extended dropdown -->
+            <div class="pt-3">
+                <button @click="extendedOpen = !extendedOpen" class="w-full flex items-center justify-between px-4 py-2 text-xs uppercase tracking-wider text-white/40 font-bold hover:text-white/70 transition-colors">
+                    <span class="flex items-center gap-2">
+                        Extended
+                        <span class="pro-badge">PRO</span>
+                    </span>
+                    <svg class="w-4 h-4 transition-transform" :class="extendedOpen ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                    </svg>
+                </button>
+                <div x-show="extendedOpen" x-transition class="space-y-1 mt-1">
+                    <a href="/artist/audience.html" class="flex items-center gap-3 px-4 py-3 rounded-xl bg-white/10 text-white font-medium">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                        Audiență
+                    </a>
+                    <a href="/artist/booking.html" class="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:bg-white/10 hover:text-white transition-colors">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                        Booking
+                    </a>
+                    <a href="/artist/epk.html" class="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:bg-white/10 hover:text-white transition-colors">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                        Smart EPK
+                    </a>
+                    <a href="/artist/tour.html" class="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:bg-white/10 hover:text-white transition-colors">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/></svg>
+                        Turnee
+                    </a>
+                </div>
+            </div>
+
+            <div class="pt-3">
+                <a href="/artist/settings.html" class="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:bg-white/10 hover:text-white transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                    Setări Cont
+                </a>
+                <a href="/artist/help.html" class="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:bg-white/10 hover:text-white transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    Ajutor
+                </a>
+            </div>
+        </nav>
+
+        <div class="p-4 border-t border-white/10">
+            <button class="flex items-center gap-3 px-4 py-3 w-full rounded-xl text-white/70 hover:bg-error/20 hover:text-error transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+                Deconectare
+            </button>
+        </div>
+    </aside>
+
+    <!-- Mobile Header -->
+    <header class="lg:hidden fixed top-0 left-0 right-0 bg-white border-b border-border z-40">
+        <div class="flex items-center justify-between px-4 py-3">
+            <button @click="mobileMenu = !mobileMenu" class="p-2 hover:bg-surface rounded-lg">
+                <svg class="w-6 h-6 text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                </svg>
+            </button>
+            <span class="font-bold text-secondary">Audiență</span>
+            <div class="w-10"></div>
+        </div>
+    </header>
+
+    <!-- Mobile Menu -->
+    <div x-show="mobileMenu" x-transition.opacity class="lg:hidden fixed inset-0 bg-black/50 z-50" @click="mobileMenu = false" style="display: none;"></div>
+    <aside x-show="mobileMenu" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="-translate-x-full" x-transition:enter-end="translate-x-0" x-transition:leave="transition ease-in duration-150" x-transition:leave-start="translate-x-0" x-transition:leave-end="-translate-x-full" class="lg:hidden fixed left-0 top-0 h-full w-64 bg-secondary text-white z-50 overflow-y-auto" style="display: none;">
+        <div class="p-6 border-b border-white/10 flex items-center justify-between">
+            <span class="text-xl font-extrabold">AMBILET</span>
+            <button @click="mobileMenu = false" class="p-2 text-white/70">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+        </div>
+        <nav class="p-4 space-y-1">
+            <a href="/artist/dashboard.html" class="block px-4 py-3 rounded-xl text-white/70 hover:bg-white/10">Dashboard</a>
+            <a href="/artist/profile.html" class="block px-4 py-3 rounded-xl text-white/70 hover:bg-white/10">Detalii Artist</a>
+            <a href="/artist/events.html" class="block px-4 py-3 rounded-xl text-white/70 hover:bg-white/10">Evenimente</a>
+            <p class="px-4 py-2 text-xs uppercase tracking-wider text-white/40 font-bold mt-3">Extended <span class="pro-badge">PRO</span></p>
+            <a href="/artist/audience.html" class="block px-4 py-3 rounded-xl bg-white/10 text-white font-medium">Audiență</a>
+            <a href="/artist/booking.html" class="block px-4 py-3 rounded-xl text-white/70 hover:bg-white/10">Booking</a>
+            <a href="/artist/epk.html" class="block px-4 py-3 rounded-xl text-white/70 hover:bg-white/10">Smart EPK</a>
+            <a href="/artist/tour.html" class="block px-4 py-3 rounded-xl text-white/70 hover:bg-white/10">Turnee</a>
+            <a href="/artist/settings.html" class="block px-4 py-3 rounded-xl text-white/70 hover:bg-white/10 mt-3">Setări Cont</a>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="lg:ml-64 pt-16 lg:pt-0 min-h-screen">
+        <div class="p-4 lg:p-8">
+            <!-- Page Header -->
+            <div class="mb-6">
+                <div class="flex items-center gap-2 mb-2">
+                    <span class="pro-badge">PRO</span>
+                    <span class="text-xs text-muted uppercase tracking-wider font-semibold">Extended Artist · Audience Analytics</span>
+                </div>
+                <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+                    <div>
+                        <h1 class="text-2xl lg:text-3xl font-bold text-secondary">Audiența ta</h1>
+                        <p class="text-muted mt-1">Cine sunt fanii tăi, de unde vin, cât de loiali sunt</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <select x-model="period" class="form-input w-auto text-sm">
+                            <option value="all">Tot timpul</option>
+                            <option value="ytd">An curent (YTD)</option>
+                            <option value="12m">Ultimele 12 luni</option>
+                            <option value="6m">Ultimele 6 luni</option>
+                            <option value="3m">Ultimele 3 luni</option>
+                        </select>
+                        <button class="btn btn-secondary btn-sm">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                            Export
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- KPI Cards -->
+            <div class="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+                <div class="bg-white rounded-2xl border border-border p-5">
+                    <p class="text-xs text-muted uppercase tracking-wider font-semibold mb-2">Total fani</p>
+                    <p class="text-2xl font-bold text-secondary">12.847</p>
+                    <p class="text-xs text-success font-medium mt-1 flex items-center gap-1">
+                        <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M5.293 9.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 7.414V15a1 1 0 11-2 0V7.414L6.707 9.707a1 1 0 01-1.414 0z"/></svg>
+                        +18% vs perioada anterioară
+                    </p>
+                </div>
+                <div class="bg-white rounded-2xl border border-border p-5">
+                    <p class="text-xs text-muted uppercase tracking-wider font-semibold mb-2">Fani noi</p>
+                    <p class="text-2xl font-bold text-secondary">2.341</p>
+                    <p class="text-xs text-success font-medium mt-1 flex items-center gap-1">
+                        <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M5.293 9.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 7.414V15a1 1 0 11-2 0V7.414L6.707 9.707a1 1 0 01-1.414 0z"/></svg>
+                        +24%
+                    </p>
+                </div>
+                <div class="bg-white rounded-2xl border border-border p-5">
+                    <p class="text-xs text-muted uppercase tracking-wider font-semibold mb-2">Rată retenție</p>
+                    <p class="text-2xl font-bold text-secondary">38%</p>
+                    <p class="text-xs text-muted mt-1">vin la 2+ evenimente</p>
+                </div>
+                <div class="bg-white rounded-2xl border border-border p-5">
+                    <p class="text-xs text-muted uppercase tracking-wider font-semibold mb-2">LTV mediu</p>
+                    <p class="text-2xl font-bold text-secondary">187 RON</p>
+                    <p class="text-xs text-success font-medium mt-1 flex items-center gap-1">
+                        <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M5.293 9.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 7.414V15a1 1 0 11-2 0V7.414L6.707 9.707a1 1 0 01-1.414 0z"/></svg>
+                        +12 RON
+                    </p>
+                </div>
+                <div class="bg-white rounded-2xl border border-border p-5">
+                    <p class="text-xs text-muted uppercase tracking-wider font-semibold mb-2">Orașe acoperite</p>
+                    <p class="text-2xl font-bold text-secondary">47</p>
+                    <p class="text-xs text-muted mt-1">12 țări</p>
+                </div>
+            </div>
+
+            <!-- Tabs -->
+            <div class="bg-white rounded-2xl border border-border overflow-hidden mb-6">
+                <div class="border-b border-border overflow-x-auto">
+                    <div class="flex gap-1 p-2 min-w-max">
+                        <template x-for="t in tabs" :key="t.id">
+                            <button @click="setTab(t.id)"
+                                    :class="tab === t.id ? 'bg-primary text-white' : 'text-muted hover:bg-surface hover:text-secondary'"
+                                    class="px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors flex items-center gap-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" x-html="t.icon"></svg>
+                                <span x-text="t.label"></span>
+                            </button>
+                        </template>
+                    </div>
+                </div>
+
+                <!-- ============ TAB: OVERVIEW ============ -->
+                <div x-show="tab === 'overview'" class="p-6">
+                    <div class="grid lg:grid-cols-3 gap-6">
+                        <!-- Trend audiență -->
+                        <div class="lg:col-span-2">
+                            <div class="flex items-center justify-between mb-4">
+                                <div>
+                                    <h2 class="text-lg font-bold text-secondary">Creștere audiență</h2>
+                                    <p class="text-sm text-muted">Fani noi vs. recurenți, lunar</p>
+                                </div>
+                                <div class="flex gap-2">
+                                    <span class="badge bg-primary/10 text-primary"><span class="w-2 h-2 rounded-full bg-primary"></span>Noi</span>
+                                    <span class="badge bg-accent/10 text-accent"><span class="w-2 h-2 rounded-full bg-accent"></span>Recurenți</span>
+                                </div>
+                            </div>
+                            <div class="relative h-[280px]">
+                                <canvas id="growthChart"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Distribuție pe tip de fan -->
+                        <div>
+                            <h2 class="text-lg font-bold text-secondary mb-4">Tipuri de fani</h2>
+                            <div class="relative h-[200px] mb-4">
+                                <canvas id="fanTypeChart"></canvas>
+                            </div>
+                            <div class="space-y-2">
+                                <div class="flex items-center justify-between text-sm">
+                                    <span class="flex items-center gap-2"><span class="w-3 h-3 rounded-sm bg-primary"></span>VIP</span>
+                                    <span class="font-semibold text-secondary">847 (7%)</span>
+                                </div>
+                                <div class="flex items-center justify-between text-sm">
+                                    <span class="flex items-center gap-2"><span class="w-3 h-3 rounded-sm bg-accent"></span>Loiali</span>
+                                    <span class="font-semibold text-secondary">2.341 (18%)</span>
+                                </div>
+                                <div class="flex items-center justify-between text-sm">
+                                    <span class="flex items-center gap-2"><span class="w-3 h-3 rounded-sm bg-success"></span>Noi</span>
+                                    <span class="font-semibold text-secondary">3.892 (30%)</span>
+                                </div>
+                                <div class="flex items-center justify-between text-sm">
+                                    <span class="flex items-center gap-2"><span class="w-3 h-3 rounded-sm bg-warning"></span>Dormiți</span>
+                                    <span class="font-semibold text-secondary">5.767 (45%)</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Insight cards -->
+                    <div class="grid md:grid-cols-3 gap-4 mt-8">
+                        <div class="border border-border rounded-xl p-5 hover:border-primary/30 transition-colors">
+                            <div class="flex items-start gap-3">
+                                <div class="w-10 h-10 rounded-lg bg-success/10 flex items-center justify-center flex-shrink-0">
+                                    <svg class="w-5 h-5 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+                                </div>
+                                <div class="min-w-0">
+                                    <p class="text-xs text-success font-bold uppercase tracking-wider">Trend pozitiv</p>
+                                    <p class="text-sm text-secondary font-medium mt-1">Creștere de 24% fani noi în ultimele 3 luni, în special din Cluj și Iași.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="border border-border rounded-xl p-5 hover:border-primary/30 transition-colors">
+                            <div class="flex items-start gap-3">
+                                <div class="w-10 h-10 rounded-lg bg-warning/10 flex items-center justify-center flex-shrink-0">
+                                    <svg class="w-5 h-5 text-warning" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                                </div>
+                                <div class="min-w-0">
+                                    <p class="text-xs text-warning font-bold uppercase tracking-wider">Atenție</p>
+                                    <p class="text-sm text-secondary font-medium mt-1">1.247 fani din Timișoara n-au mai venit de >12 luni. Risc churn ridicat.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="border border-border rounded-xl p-5 hover:border-primary/30 transition-colors">
+                            <div class="flex items-start gap-3">
+                                <div class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                                    <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                                </div>
+                                <div class="min-w-0">
+                                    <p class="text-xs text-primary font-bold uppercase tracking-wider">Oportunitate</p>
+                                    <p class="text-sm text-secondary font-medium mt-1">832 fani din Brașov, dar n-ai cântat acolo niciodată. Recomandăm o dată.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ============ TAB: HARTĂ ============ -->
+                <div x-show="tab === 'map'" class="p-6">
+                    <div class="grid lg:grid-cols-3 gap-6">
+                        <div class="lg:col-span-2">
+                            <div class="flex items-center justify-between mb-4">
+                                <div>
+                                    <h2 class="text-lg font-bold text-secondary">Distribuție geografică</h2>
+                                    <p class="text-sm text-muted">Heatmap intensitate fani per zonă</p>
+                                </div>
+                                <div class="flex gap-2 text-xs">
+                                    <button @click="mapView = 'heat'" :class="mapView === 'heat' ? 'bg-primary text-white' : 'bg-surface text-muted'" class="px-3 py-1.5 rounded-lg font-medium transition-colors">Heatmap</button>
+                                    <button @click="mapView = 'pins'" :class="mapView === 'pins' ? 'bg-primary text-white' : 'bg-surface text-muted'" class="px-3 py-1.5 rounded-lg font-medium transition-colors">Pini</button>
+                                </div>
+                            </div>
+                            <div id="fanMap" class="rounded-xl overflow-hidden border border-border" style="height: 500px;"></div>
+                        </div>
+
+                        <div>
+                            <h2 class="text-lg font-bold text-secondary mb-4">Top orașe</h2>
+                            <div class="space-y-2">
+                                <template x-for="(city, idx) in topCities" :key="city.name">
+                                    <div class="flex items-center gap-3 p-3 rounded-xl hover:bg-surface transition-colors">
+                                        <span class="w-7 h-7 rounded-lg bg-primary/10 text-primary text-xs font-bold flex items-center justify-center flex-shrink-0" x-text="idx + 1"></span>
+                                        <div class="flex-1 min-w-0">
+                                            <p class="font-semibold text-secondary truncate" x-text="city.name"></p>
+                                            <p class="text-xs text-muted">
+                                                <span x-text="city.fans.toLocaleString('ro-RO')"></span> fani ·
+                                                <span x-text="city.events"></span> evenimente
+                                            </p>
+                                        </div>
+                                        <div class="text-right flex-shrink-0">
+                                            <span class="badge text-xs"
+                                                  :class="city.trend === 'up' ? 'bg-success/10 text-success' : city.trend === 'down' ? 'bg-error/10 text-error' : 'bg-muted/10 text-muted'">
+                                                <span x-text="city.trendValue"></span>
+                                            </span>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Țări -->
+                    <div class="mt-8 grid md:grid-cols-2 gap-6">
+                        <div>
+                            <h3 class="text-base font-bold text-secondary mb-3">Distribuție pe țări</h3>
+                            <div class="space-y-2">
+                                <template x-for="country in countries" :key="country.name">
+                                    <div>
+                                        <div class="flex items-center justify-between text-sm mb-1">
+                                            <span class="font-medium text-secondary flex items-center gap-2">
+                                                <span x-text="country.flag"></span>
+                                                <span x-text="country.name"></span>
+                                            </span>
+                                            <span class="text-muted"><span x-text="country.fans.toLocaleString('ro-RO')"></span> · <span x-text="country.pct"></span>%</span>
+                                        </div>
+                                        <div class="h-2 bg-surface rounded-full overflow-hidden">
+                                            <div class="h-full bg-primary rounded-full" :style="`width: ${country.pct}%`"></div>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+
+                        <div>
+                            <h3 class="text-base font-bold text-secondary mb-3">Orașe „dormite" (oportunități)</h3>
+                            <p class="text-xs text-muted mb-3">Orașe cu fani mulți unde n-ai cântat recent</p>
+                            <div class="space-y-2">
+                                <template x-for="city in dormantCities" :key="city.name">
+                                    <div class="flex items-center justify-between p-3 bg-warning/5 border border-warning/20 rounded-xl">
+                                        <div>
+                                            <p class="font-semibold text-secondary text-sm" x-text="city.name"></p>
+                                            <p class="text-xs text-muted"><span x-text="city.fans"></span> fani · ultimul concert: <span x-text="city.lastEvent"></span></p>
+                                        </div>
+                                        <span class="badge bg-warning/10 text-warning"><span x-text="city.monthsAgo"></span> luni</span>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ============ TAB: SEGMENTE ============ -->
+                <div x-show="tab === 'segments'" class="p-6">
+                    <div class="flex items-center justify-between mb-6">
+                        <div>
+                            <h2 class="text-lg font-bold text-secondary">Segmente de audiență</h2>
+                            <p class="text-sm text-muted">Grupează fanii după criterii și salvează pentru reutilizare</p>
+                        </div>
+                        <button class="btn btn-primary btn-sm">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
+                            Segment nou
+                        </button>
+                    </div>
+
+                    <!-- Predefinite -->
+                    <div class="mb-8">
+                        <h3 class="text-sm font-bold text-muted uppercase tracking-wider mb-3">Predefinite</h3>
+                        <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                            <template x-for="seg in predefinedSegments" :key="seg.id">
+                                <div class="border border-border rounded-xl p-5 hover:border-primary/30 hover:shadow-sm transition-all cursor-pointer">
+                                    <div class="flex items-start justify-between mb-3">
+                                        <div class="w-10 h-10 rounded-lg flex items-center justify-center" :class="seg.bg">
+                                            <svg class="w-5 h-5" :class="seg.color" fill="none" stroke="currentColor" viewBox="0 0 24 24" x-html="seg.icon"></svg>
+                                        </div>
+                                        <span class="text-xs text-muted font-medium" x-text="seg.criteria"></span>
+                                    </div>
+                                    <h4 class="font-bold text-secondary" x-text="seg.name"></h4>
+                                    <p class="text-xs text-muted mt-1" x-text="seg.description"></p>
+                                    <div class="flex items-baseline justify-between mt-4 pt-4 border-t border-border">
+                                        <p class="text-2xl font-bold text-secondary" x-text="seg.count.toLocaleString('ro-RO')"></p>
+                                        <span class="text-xs text-muted"><span x-text="seg.pct"></span>% din total</span>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+
+                    <!-- Custom -->
+                    <div>
+                        <h3 class="text-sm font-bold text-muted uppercase tracking-wider mb-3">Segmentele tale</h3>
+                        <div class="bg-surface rounded-xl border border-dashed border-border p-8 text-center">
+                            <svg class="w-12 h-12 text-muted/40 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/></svg>
+                            <p class="font-medium text-secondary">Niciun segment custom încă</p>
+                            <p class="text-sm text-muted mt-1">Combină filtre (oraș, frecvență, valoare) pentru a-ți crea propriile segmente</p>
+                            <button class="btn btn-primary btn-sm mt-4">Construiește primul segment</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ============ TAB: LISTA FANI ============ -->
+                <div x-show="tab === 'fans'" class="p-6">
+                    <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 mb-6">
+                        <div>
+                            <h2 class="text-lg font-bold text-secondary">Listă fani</h2>
+                            <p class="text-sm text-muted">Doar fanii care au dat opt-in pentru partajare cu tine</p>
+                        </div>
+                        <div class="flex gap-2">
+                            <div class="relative">
+                                <svg class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                                <input type="text" x-model="fanSearch" placeholder="Caută fan..." class="form-input pl-9 text-sm w-64">
+                            </div>
+                            <select x-model="fanSegment" class="form-input w-auto text-sm">
+                                <option value="">Toate segmentele</option>
+                                <option value="vip">VIP</option>
+                                <option value="loyal">Loiali</option>
+                                <option value="new">Noi</option>
+                                <option value="dormant">Dormiți</option>
+                            </select>
+                            <button class="btn btn-secondary btn-sm">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3"/></svg>
+                                CSV
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto -mx-6 px-6">
+                        <table class="w-full">
+                            <thead>
+                                <tr class="border-b border-border">
+                                    <th class="text-left text-xs uppercase tracking-wider font-bold text-muted py-3 px-2">Fan</th>
+                                    <th class="text-left text-xs uppercase tracking-wider font-bold text-muted py-3 px-2">Oraș</th>
+                                    <th class="text-left text-xs uppercase tracking-wider font-bold text-muted py-3 px-2">Segment</th>
+                                    <th class="text-right text-xs uppercase tracking-wider font-bold text-muted py-3 px-2">Evenimente</th>
+                                    <th class="text-right text-xs uppercase tracking-wider font-bold text-muted py-3 px-2">LTV</th>
+                                    <th class="text-left text-xs uppercase tracking-wider font-bold text-muted py-3 px-2">Ultimul</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template x-for="fan in filteredFans" :key="fan.id">
+                                    <tr class="border-b border-border hover:bg-surface transition-colors">
+                                        <td class="py-3 px-2">
+                                            <div class="flex items-center gap-3">
+                                                <div class="w-9 h-9 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white font-bold text-xs flex-shrink-0" x-text="fan.initials"></div>
+                                                <span class="font-medium text-secondary" x-text="fan.name"></span>
+                                            </div>
+                                        </td>
+                                        <td class="py-3 px-2 text-sm text-muted" x-text="fan.city"></td>
+                                        <td class="py-3 px-2">
+                                            <span class="badge text-xs" :class="segmentBadgeClass(fan.segment)" x-text="segmentLabel(fan.segment)"></span>
+                                        </td>
+                                        <td class="py-3 px-2 text-right font-semibold text-secondary" x-text="fan.events"></td>
+                                        <td class="py-3 px-2 text-right font-semibold text-secondary"><span x-text="fan.ltv.toLocaleString('ro-RO')"></span> RON</td>
+                                        <td class="py-3 px-2 text-sm text-muted" x-text="fan.lastEvent"></td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="flex items-center justify-between mt-6 pt-6 border-t border-border">
+                        <p class="text-sm text-muted">Afișezi <span x-text="filteredFans.length"></span> din <span x-text="fans.length"></span> fani opt-in</p>
+                        <div class="flex gap-1">
+                            <button class="px-3 py-1.5 rounded-lg bg-surface text-muted text-sm font-medium hover:bg-border">Anterior</button>
+                            <button class="px-3 py-1.5 rounded-lg bg-primary text-white text-sm font-medium">1</button>
+                            <button class="px-3 py-1.5 rounded-lg bg-surface text-muted text-sm font-medium hover:bg-border">2</button>
+                            <button class="px-3 py-1.5 rounded-lg bg-surface text-muted text-sm font-medium hover:bg-border">3</button>
+                            <button class="px-3 py-1.5 rounded-lg bg-surface text-muted text-sm font-medium hover:bg-border">Următor</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ============ TAB: COHORT ============ -->
+                <div x-show="tab === 'cohort'" class="p-6">
+                    <div class="mb-6">
+                        <h2 class="text-lg font-bold text-secondary">Retenție pe cohort</h2>
+                        <p class="text-sm text-muted">Cât din fanii achiziționați într-o lună revin la concerte ulterioare</p>
+                    </div>
+
+                    <div class="overflow-x-auto -mx-6 px-6">
+                        <table class="w-full text-sm">
+                            <thead>
+                                <tr>
+                                    <th class="text-left p-2 font-semibold text-muted">Cohort</th>
+                                    <th class="text-center p-2 font-semibold text-muted">Fani</th>
+                                    <th class="text-center p-2 font-semibold text-muted">M+1</th>
+                                    <th class="text-center p-2 font-semibold text-muted">M+3</th>
+                                    <th class="text-center p-2 font-semibold text-muted">M+6</th>
+                                    <th class="text-center p-2 font-semibold text-muted">M+12</th>
+                                    <th class="text-center p-2 font-semibold text-muted">M+24</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template x-for="row in cohortData" :key="row.month">
+                                    <tr class="border-t border-border">
+                                        <td class="p-2 font-medium text-secondary whitespace-nowrap" x-text="row.month"></td>
+                                        <td class="text-center p-2 font-semibold text-secondary" x-text="row.size"></td>
+                                        <template x-for="(val, i) in row.values" :key="i">
+                                            <td class="p-2 text-center">
+                                                <span x-show="val !== null" class="inline-block px-3 py-1.5 rounded-lg font-semibold" :class="cohortCellClass(val)" :style="`background-color: rgba(165, 28, 48, ${(val || 0) / 100 * 0.85})`" x-text="val !== null ? val + '%' : ''"></span>
+                                                <span x-show="val === null" class="text-muted/30">—</span>
+                                            </td>
+                                        </template>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="mt-6 grid md:grid-cols-3 gap-4">
+                        <div class="bg-surface rounded-xl p-4">
+                            <p class="text-xs text-muted uppercase tracking-wider font-semibold mb-1">Retenție medie M+3</p>
+                            <p class="text-2xl font-bold text-secondary">42%</p>
+                        </div>
+                        <div class="bg-surface rounded-xl p-4">
+                            <p class="text-xs text-muted uppercase tracking-wider font-semibold mb-1">Retenție medie M+12</p>
+                            <p class="text-2xl font-bold text-secondary">23%</p>
+                        </div>
+                        <div class="bg-surface rounded-xl p-4">
+                            <p class="text-xs text-muted uppercase tracking-wider font-semibold mb-1">Cel mai bun cohort</p>
+                            <p class="text-2xl font-bold text-secondary">Iun '23</p>
+                            <p class="text-xs text-muted">52% retenție M+12</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ============ TAB: DEMOGRAFIE ============ -->
+                <div x-show="tab === 'demographics'" class="p-6">
+                    <div class="grid md:grid-cols-2 gap-6 mb-6">
+                        <div>
+                            <h2 class="text-lg font-bold text-secondary mb-1">Vârstă</h2>
+                            <p class="text-sm text-muted mb-4">Distribuție pe intervale (date agregate)</p>
+                            <div class="relative h-[220px]">
+                                <canvas id="ageChart"></canvas>
+                            </div>
+                        </div>
+                        <div>
+                            <h2 class="text-lg font-bold text-secondary mb-1">Gender split</h2>
+                            <p class="text-sm text-muted mb-4">Doar pentru fanii care au declarat</p>
+                            <div class="relative h-[220px]">
+                                <canvas id="genderChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid md:grid-cols-2 gap-6">
+                        <div>
+                            <h2 class="text-lg font-bold text-secondary mb-3">Surse de trafic</h2>
+                            <div class="space-y-2">
+                                <template x-for="src in trafficSources" :key="src.name">
+                                    <div>
+                                        <div class="flex items-center justify-between text-sm mb-1">
+                                            <span class="font-medium text-secondary" x-text="src.name"></span>
+                                            <span class="text-muted"><span x-text="src.pct"></span>%</span>
+                                        </div>
+                                        <div class="h-2 bg-surface rounded-full overflow-hidden">
+                                            <div class="h-full rounded-full" :class="src.color" :style="`width: ${src.pct}%`"></div>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                        <div>
+                            <h2 class="text-lg font-bold text-secondary mb-3">Categorii bilet preferate</h2>
+                            <div class="space-y-2">
+                                <template x-for="cat in ticketCategories" :key="cat.name">
+                                    <div class="flex items-center justify-between p-3 bg-surface rounded-xl">
+                                        <span class="font-medium text-secondary text-sm" x-text="cat.name"></span>
+                                        <div class="text-right">
+                                            <p class="text-sm font-bold text-secondary"><span x-text="cat.pct"></span>%</p>
+                                            <p class="text-xs text-muted"><span x-text="cat.count.toLocaleString('ro-RO')"></span> bilete</p>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ============ TAB: COMPARAȚII ============ -->
+                <div x-show="tab === 'compare'" class="p-6">
+                    <div class="mb-6">
+                        <h2 class="text-lg font-bold text-secondary">Comparații</h2>
+                        <p class="text-sm text-muted">Compară perioade, evenimente sau turnee între ele</p>
+                    </div>
+
+                    <div class="bg-surface rounded-xl p-5 mb-6">
+                        <p class="text-xs text-muted uppercase tracking-wider font-semibold mb-3">Tip comparație</p>
+                        <div class="flex flex-wrap gap-2">
+                            <button @click="compareType = 'period'" :class="compareType === 'period' ? 'bg-primary text-white' : 'bg-white text-muted border border-border'" class="px-4 py-2 rounded-lg text-sm font-medium transition-colors">An vs. an</button>
+                            <button @click="compareType = 'tour'" :class="compareType === 'tour' ? 'bg-primary text-white' : 'bg-white text-muted border border-border'" class="px-4 py-2 rounded-lg text-sm font-medium transition-colors">Turneu vs. turneu</button>
+                            <button @click="compareType = 'event'" :class="compareType === 'event' ? 'bg-primary text-white' : 'bg-white text-muted border border-border'" class="px-4 py-2 rounded-lg text-sm font-medium transition-colors">Eveniment vs. eveniment</button>
+                            <button @click="compareType = 'avg'" :class="compareType === 'avg' ? 'bg-primary text-white' : 'bg-white text-muted border border-border'" class="px-4 py-2 rounded-lg text-sm font-medium transition-colors">Eveniment vs. medie</button>
+                        </div>
+                    </div>
+
+                    <div class="grid md:grid-cols-2 gap-4 mb-6">
+                        <div>
+                            <label class="block text-xs uppercase tracking-wider font-bold text-muted mb-2">A</label>
+                            <select class="form-input">
+                                <option>2024 (an complet)</option>
+                                <option>Tour „Acoustic Spring 2024"</option>
+                                <option>Concert Polivalentă · 12 mai 2024</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs uppercase tracking-wider font-bold text-muted mb-2">B</label>
+                            <select class="form-input">
+                                <option>2023 (an complet)</option>
+                                <option>Tour „Winter Tour 2023"</option>
+                                <option>Concert Polivalentă · 8 mai 2023</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Side-by-side -->
+                    <div class="grid md:grid-cols-2 gap-4">
+                        <div class="border-2 border-primary rounded-2xl p-5">
+                            <div class="flex items-center justify-between mb-4">
+                                <h3 class="font-bold text-secondary">A · 2024</h3>
+                                <span class="badge bg-primary text-white">Bază</span>
+                            </div>
+                            <div class="space-y-3">
+                                <div class="flex justify-between"><span class="text-sm text-muted">Total fani</span><span class="font-bold text-secondary">12.847</span></div>
+                                <div class="flex justify-between"><span class="text-sm text-muted">Evenimente</span><span class="font-bold text-secondary">23</span></div>
+                                <div class="flex justify-between"><span class="text-sm text-muted">Bilete vândute</span><span class="font-bold text-secondary">28.412</span></div>
+                                <div class="flex justify-between"><span class="text-sm text-muted">Audiență medie/eveniment</span><span class="font-bold text-secondary">1.235</span></div>
+                                <div class="flex justify-between"><span class="text-sm text-muted">Orașe acoperite</span><span class="font-bold text-secondary">12</span></div>
+                                <div class="flex justify-between"><span class="text-sm text-muted">LTV mediu</span><span class="font-bold text-secondary">187 RON</span></div>
+                            </div>
+                        </div>
+                        <div class="border-2 border-border rounded-2xl p-5">
+                            <div class="flex items-center justify-between mb-4">
+                                <h3 class="font-bold text-secondary">B · 2023</h3>
+                            </div>
+                            <div class="space-y-3">
+                                <div class="flex justify-between items-center"><span class="text-sm text-muted">Total fani</span><span><span class="font-bold text-secondary">10.892</span> <span class="badge bg-success/10 text-success ml-2">+18%</span></span></div>
+                                <div class="flex justify-between items-center"><span class="text-sm text-muted">Evenimente</span><span><span class="font-bold text-secondary">19</span> <span class="badge bg-success/10 text-success ml-2">+21%</span></span></div>
+                                <div class="flex justify-between items-center"><span class="text-sm text-muted">Bilete vândute</span><span><span class="font-bold text-secondary">22.150</span> <span class="badge bg-success/10 text-success ml-2">+28%</span></span></div>
+                                <div class="flex justify-between items-center"><span class="text-sm text-muted">Audiență medie/eveniment</span><span><span class="font-bold text-secondary">1.166</span> <span class="badge bg-success/10 text-success ml-2">+6%</span></span></div>
+                                <div class="flex justify-between items-center"><span class="text-sm text-muted">Orașe acoperite</span><span><span class="font-bold text-secondary">9</span> <span class="badge bg-success/10 text-success ml-2">+33%</span></span></div>
+                                <div class="flex justify-between items-center"><span class="text-sm text-muted">LTV mediu</span><span><span class="font-bold text-secondary">175 RON</span> <span class="badge bg-success/10 text-success ml-2">+7%</span></span></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-6 relative h-[280px] bg-white rounded-2xl border border-border p-5">
+                        <canvas id="compareChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- ============ TAB: VIP ============ -->
+                <div x-show="tab === 'vip'" class="p-6">
+                    <div class="flex items-center justify-between mb-6">
+                        <div>
+                            <h2 class="text-lg font-bold text-secondary">Top 10 Fani VIP</h2>
+                            <p class="text-sm text-muted">Cei mai loiali și valoroși fani ai tăi</p>
+                        </div>
+                    </div>
+
+                    <div class="space-y-3">
+                        <template x-for="(vip, idx) in topVips" :key="vip.id">
+                            <div class="flex items-center gap-4 p-4 bg-white rounded-2xl border border-border hover:border-primary/30 transition-colors">
+                                <div class="text-2xl font-extrabold text-primary w-10 text-center flex-shrink-0">
+                                    <span x-text="'#' + (idx + 1)"></span>
+                                </div>
+                                <div class="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white font-bold flex-shrink-0" x-text="vip.initials"></div>
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center gap-2 flex-wrap">
+                                        <p class="font-bold text-secondary" x-text="vip.name"></p>
+                                        <span class="badge bg-primary/10 text-primary">VIP</span>
+                                        <span x-show="vip.years >= 3" class="badge bg-accent/10 text-accent">Veteran</span>
+                                    </div>
+                                    <p class="text-sm text-muted mt-0.5">
+                                        <span x-text="vip.city"></span> · cu tine din <span x-text="vip.since"></span>
+                                    </p>
+                                </div>
+                                <div class="hidden sm:block text-right flex-shrink-0">
+                                    <p class="text-xs text-muted uppercase tracking-wider">Evenimente</p>
+                                    <p class="text-xl font-bold text-secondary" x-text="vip.events"></p>
+                                </div>
+                                <div class="text-right flex-shrink-0">
+                                    <p class="text-xs text-muted uppercase tracking-wider">LTV</p>
+                                    <p class="text-xl font-bold text-secondary"><span x-text="vip.ltv.toLocaleString('ro-RO')"></span></p>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Privacy notice -->
+            <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-start gap-3">
+                <svg class="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                <div class="text-sm text-blue-900">
+                    <p class="font-semibold">Date conforme GDPR</p>
+                    <p class="text-blue-800 mt-0.5">Datele agregate (hărți, statistici, segmente) folosesc toți fanii anonim. Datele individuale (lista fani, top VIP) afișează doar fanii care au dat opt-in explicit la checkout pentru partajare cu tine.</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        function fanCrm() {
+            return {
+                mobileMenu: false,
+                extendedOpen: true,
+                tab: 'overview',
+                period: 'all',
+                mapView: 'heat',
+                compareType: 'period',
+                fanSearch: '',
+                fanSegment: '',
+
+                // Charts instances (so we can destroy/recreate on tab switch)
+                charts: {},
+                map: null,
+                heatLayer: null,
+                pinLayer: null,
+
+                tabs: [
+                    { id: 'overview', label: 'Overview', icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>' },
+                    { id: 'map', label: 'Hartă', icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>' },
+                    { id: 'segments', label: 'Segmente', icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/>' },
+                    { id: 'fans', label: 'Listă fani', icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>' },
+                    { id: 'cohort', label: 'Cohort', icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>' },
+                    { id: 'demographics', label: 'Demografie', icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"/>' },
+                    { id: 'compare', label: 'Comparații', icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>' },
+                    { id: 'vip', label: 'VIP', icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/>' },
+                ],
+
+                topCities: [
+                    { name: 'București', fans: 4231, events: 8, trend: 'up', trendValue: '+22%' },
+                    { name: 'Cluj-Napoca', fans: 1847, events: 4, trend: 'up', trendValue: '+34%' },
+                    { name: 'Iași', fans: 1234, events: 3, trend: 'up', trendValue: '+12%' },
+                    { name: 'Timișoara', fans: 1089, events: 2, trend: 'down', trendValue: '-8%' },
+                    { name: 'Brașov', fans: 832, events: 0, trend: 'flat', trendValue: 'nou' },
+                    { name: 'Constanța', fans: 671, events: 2, trend: 'up', trendValue: '+5%' },
+                    { name: 'Sibiu', fans: 543, events: 1, trend: 'flat', trendValue: '0%' },
+                    { name: 'Oradea', fans: 421, events: 1, trend: 'up', trendValue: '+15%' },
+                ],
+
+                countries: [
+                    { name: 'România', flag: '🇷🇴', fans: 11234, pct: 87 },
+                    { name: 'Republica Moldova', flag: '🇲🇩', fans: 743, pct: 6 },
+                    { name: 'Ungaria', flag: '🇭🇺', fans: 412, pct: 3 },
+                    { name: 'Germania', flag: '🇩🇪', fans: 234, pct: 2 },
+                    { name: 'Italia', flag: '🇮🇹', fans: 124, pct: 1 },
+                    { name: 'Altele', flag: '🌍', fans: 100, pct: 1 },
+                ],
+
+                dormantCities: [
+                    { name: 'Timișoara', fans: 1089, lastEvent: 'mar 2024', monthsAgo: 14 },
+                    { name: 'Galați', fans: 432, lastEvent: 'iun 2023', monthsAgo: 23 },
+                    { name: 'Ploiești', fans: 287, lastEvent: 'sep 2023', monthsAgo: 20 },
+                    { name: 'Bacău', fans: 198, lastEvent: 'apr 2023', monthsAgo: 25 },
+                ],
+
+                predefinedSegments: [
+                    { id: 'vip', name: 'VIP', description: '3+ evenimente și top 10% pe spend', criteria: 'auto', count: 847, pct: 7, bg: 'bg-primary/10', color: 'text-primary', icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/>' },
+                    { id: 'loyal', name: 'Loiali', description: 'Au revenit la 2+ evenimente', criteria: 'auto', count: 2341, pct: 18, bg: 'bg-accent/10', color: 'text-accent', icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>' },
+                    { id: 'new', name: 'Noi', description: 'Primul eveniment în ultimele 6 luni', criteria: 'auto', count: 3892, pct: 30, bg: 'bg-success/10', color: 'text-success', icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>' },
+                    { id: 'dormant', name: 'Dormiți', description: '>12 luni de la ultimul eveniment', criteria: 'auto', count: 5767, pct: 45, bg: 'bg-warning/10', color: 'text-warning', icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>' },
+                    { id: 'local', name: 'Locali', description: 'Toate evenimentele în același oraș', criteria: 'auto', count: 4123, pct: 32, bg: 'bg-blue-500/10', color: 'text-blue-600', icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>' },
+                    { id: 'travelers', name: 'Călători', description: 'Evenimente în 2+ orașe', criteria: 'auto', count: 1234, pct: 10, bg: 'bg-purple-500/10', color: 'text-purple-600', icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/>' },
+                ],
+
+                fans: [
+                    { id: 1, name: 'Maria Popescu', initials: 'MP', city: 'București', segment: 'vip', events: 12, ltv: 4280, lastEvent: 'acum 2 săpt' },
+                    { id: 2, name: 'Andrei Ionescu', initials: 'AI', city: 'Cluj-Napoca', segment: 'vip', events: 9, ltv: 3120, lastEvent: 'acum 1 lună' },
+                    { id: 3, name: 'Elena Dumitrescu', initials: 'ED', city: 'București', segment: 'loyal', events: 5, ltv: 1450, lastEvent: 'acum 3 săpt' },
+                    { id: 4, name: 'Mihai Stan', initials: 'MS', city: 'Iași', segment: 'loyal', events: 4, ltv: 1180, lastEvent: 'acum 2 luni' },
+                    { id: 5, name: 'Ana Constantin', initials: 'AC', city: 'Brașov', segment: 'new', events: 1, ltv: 280, lastEvent: 'acum 3 săpt' },
+                    { id: 6, name: 'Cristian Marinescu', initials: 'CM', city: 'Timișoara', segment: 'dormant', events: 3, ltv: 890, lastEvent: 'acum 14 luni' },
+                    { id: 7, name: 'Gabriela Radu', initials: 'GR', city: 'Constanța', segment: 'loyal', events: 6, ltv: 1620, lastEvent: 'acum 1 lună' },
+                    { id: 8, name: 'Florin Vasile', initials: 'FV', city: 'București', segment: 'vip', events: 14, ltv: 5230, lastEvent: 'acum 1 săpt' },
+                    { id: 9, name: 'Ioana Niculescu', initials: 'IN', city: 'Sibiu', segment: 'new', events: 1, ltv: 220, lastEvent: 'acum 2 luni' },
+                    { id: 10, name: 'Bogdan Pop', initials: 'BP', city: 'Cluj-Napoca', segment: 'loyal', events: 4, ltv: 1080, lastEvent: 'acum 6 săpt' },
+                ],
+
+                cohortData: [
+                    { month: 'Ian 2024', size: 412, values: [78, 52, 38, 24, null] },
+                    { month: 'Feb 2024', size: 389, values: [82, 48, 41, 28, null] },
+                    { month: 'Mar 2024', size: 456, values: [75, 55, 42, null, null] },
+                    { month: 'Apr 2024', size: 523, values: [80, 58, 35, null, null] },
+                    { month: 'Mai 2024', size: 678, values: [85, 62, null, null, null] },
+                    { month: 'Iun 2024', size: 712, values: [88, 60, null, null, null] },
+                    { month: 'Iul 2024', size: 645, values: [83, 56, null, null, null] },
+                    { month: 'Aug 2024', size: 589, values: [79, null, null, null, null] },
+                    { month: 'Sep 2024', size: 534, values: [81, null, null, null, null] },
+                    { month: 'Oct 2024', size: 612, values: [76, null, null, null, null] },
+                    { month: 'Nov 2024', size: 489, values: [null, null, null, null, null] },
+                ],
+
+                trafficSources: [
+                    { name: 'Search organic', pct: 38, color: 'bg-primary' },
+                    { name: 'Social media (FB/IG)', pct: 27, color: 'bg-accent' },
+                    { name: 'Email organizator', pct: 15, color: 'bg-success' },
+                    { name: 'Partajare directă (link)', pct: 12, color: 'bg-blue-500' },
+                    { name: 'Profil Ambilet', pct: 8, color: 'bg-purple-500' },
+                ],
+
+                ticketCategories: [
+                    { name: 'General', pct: 62, count: 17615 },
+                    { name: 'VIP', pct: 18, count: 5114 },
+                    { name: 'Early bird', pct: 12, count: 3409 },
+                    { name: 'Premium', pct: 8, count: 2274 },
+                ],
+
+                topVips: [
+                    { id: 1, name: 'Florin Vasile', initials: 'FV', city: 'București', since: '2019', years: 6, events: 14, ltv: 5230 },
+                    { id: 2, name: 'Maria Popescu', initials: 'MP', city: 'București', since: '2020', years: 5, events: 12, ltv: 4280 },
+                    { id: 3, name: 'Alexandru Marin', initials: 'AM', city: 'Cluj-Napoca', since: '2018', years: 7, events: 11, ltv: 3940 },
+                    { id: 4, name: 'Andrei Ionescu', initials: 'AI', city: 'Cluj-Napoca', since: '2021', years: 4, events: 9, ltv: 3120 },
+                    { id: 5, name: 'Diana Sava', initials: 'DS', city: 'Iași', since: '2020', years: 5, events: 8, ltv: 2780 },
+                    { id: 6, name: 'Răzvan Coman', initials: 'RC', city: 'București', since: '2022', years: 3, events: 7, ltv: 2340 },
+                    { id: 7, name: 'Gabriela Radu', initials: 'GR', city: 'Constanța', since: '2021', years: 4, events: 6, ltv: 1620 },
+                    { id: 8, name: 'Tudor Albu', initials: 'TA', city: 'București', since: '2022', years: 3, events: 6, ltv: 1580 },
+                    { id: 9, name: 'Sorina Mihai', initials: 'SM', city: 'Brașov', since: '2023', years: 2, events: 5, ltv: 1490 },
+                    { id: 10, name: 'Cristina Lupu', initials: 'CL', city: 'Cluj-Napoca', since: '2021', years: 4, events: 5, ltv: 1450 },
+                ],
+
+                get filteredFans() {
+                    let list = [...this.fans];
+                    if (this.fanSearch.trim()) {
+                        const q = this.fanSearch.toLowerCase().trim();
+                        list = list.filter(f => f.name.toLowerCase().includes(q) || f.city.toLowerCase().includes(q));
+                    }
+                    if (this.fanSegment) {
+                        list = list.filter(f => f.segment === this.fanSegment);
+                    }
+                    return list;
+                },
+
+                segmentLabel(s) {
+                    return ({ vip: 'VIP', loyal: 'Loial', new: 'Nou', dormant: 'Dormit' })[s] || s;
+                },
+                segmentBadgeClass(s) {
+                    return ({
+                        vip: 'bg-primary/10 text-primary',
+                        loyal: 'bg-accent/10 text-accent',
+                        new: 'bg-success/10 text-success',
+                        dormant: 'bg-warning/10 text-warning',
+                    })[s] || 'bg-muted/10 text-muted';
+                },
+                cohortCellClass(val) {
+                    if (val === null) return '';
+                    if (val >= 60) return 'text-white';
+                    if (val >= 30) return 'text-white';
+                    return 'text-secondary';
+                },
+
+                setTab(id) {
+                    this.tab = id;
+                    // Recreate charts/map after tab switch (so they size correctly)
+                    this.$nextTick(() => this.renderTab(id));
+                },
+
+                init() {
+                    this.$nextTick(() => this.renderTab('overview'));
+                },
+
+                renderTab(id) {
+                    if (id === 'overview') {
+                        this.renderGrowthChart();
+                        this.renderFanTypeChart();
+                    } else if (id === 'map') {
+                        this.renderMap();
+                    } else if (id === 'demographics') {
+                        this.renderAgeChart();
+                        this.renderGenderChart();
+                    } else if (id === 'compare') {
+                        this.renderCompareChart();
+                    }
+                },
+
+                destroyChart(key) {
+                    if (this.charts[key]) {
+                        this.charts[key].destroy();
+                        delete this.charts[key];
+                    }
+                },
+
+                renderGrowthChart() {
+                    this.destroyChart('growth');
+                    const el = document.getElementById('growthChart');
+                    if (!el || typeof Chart === 'undefined') return;
+                    const labels = ['Mai', 'Iun', 'Iul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Ian', 'Feb', 'Mar', 'Apr'];
+                    this.charts.growth = new Chart(el.getContext('2d'), {
+                        type: 'bar',
+                        data: {
+                            labels,
+                            datasets: [
+                                { label: 'Noi', data: [180, 245, 312, 198, 234, 287, 156, 142, 412, 389, 456, 523], backgroundColor: '#A51C30', borderRadius: 6 },
+                                { label: 'Recurenți', data: [140, 168, 198, 156, 187, 212, 134, 121, 287, 312, 345, 389], backgroundColor: '#E67E22', borderRadius: 6 },
+                            ]
+                        },
+                        options: {
+                            responsive: true, maintainAspectRatio: false,
+                            plugins: { legend: { display: false }, tooltip: { backgroundColor: '#1E293B', padding: 12, cornerRadius: 8 } },
+                            scales: {
+                                y: { beginAtZero: true, grid: { color: '#E2E8F0' }, ticks: { color: '#64748B' }, stacked: true },
+                                x: { grid: { display: false }, ticks: { color: '#64748B' }, stacked: true }
+                            }
+                        }
+                    });
+                },
+
+                renderFanTypeChart() {
+                    this.destroyChart('fanType');
+                    const el = document.getElementById('fanTypeChart');
+                    if (!el || typeof Chart === 'undefined') return;
+                    this.charts.fanType = new Chart(el.getContext('2d'), {
+                        type: 'doughnut',
+                        data: {
+                            labels: ['VIP', 'Loiali', 'Noi', 'Dormiți'],
+                            datasets: [{
+                                data: [847, 2341, 3892, 5767],
+                                backgroundColor: ['#A51C30', '#E67E22', '#10B981', '#F59E0B'],
+                                borderWidth: 0,
+                            }]
+                        },
+                        options: {
+                            responsive: true, maintainAspectRatio: false, cutout: '65%',
+                            plugins: { legend: { display: false }, tooltip: { backgroundColor: '#1E293B', padding: 12, cornerRadius: 8 } }
+                        }
+                    });
+                },
+
+                renderMap() {
+                    if (!this.map) {
+                        this.map = L.map('fanMap').setView([45.9432, 24.9668], 6);
+                        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+                            attribution: '&copy; OpenStreetMap, &copy; CARTO',
+                            maxZoom: 19,
+                        }).addTo(this.map);
+                    }
+
+                    if (this.heatLayer) this.map.removeLayer(this.heatLayer);
+                    if (this.pinLayer) this.map.removeLayer(this.pinLayer);
+
+                    // Cities with rough lat/lng + fan counts as heatmap intensity
+                    const cityCoords = [
+                        [44.4268, 26.1025, 4231], // București
+                        [46.7712, 23.6236, 1847], // Cluj
+                        [47.1585, 27.6014, 1234], // Iași
+                        [45.7489, 21.2087, 1089], // Timișoara
+                        [45.6427, 25.5887, 832],  // Brașov
+                        [44.1598, 28.6348, 671],  // Constanța
+                        [45.7983, 24.1256, 543],  // Sibiu
+                        [47.0465, 21.9189, 421],  // Oradea
+                        [45.4353, 28.0080, 312],  // Galați
+                        [44.9362, 26.0125, 287],  // Ploiești
+                        [46.5670, 26.9146, 198],  // Bacău
+                    ];
+
+                    if (this.mapView === 'heat') {
+                        const heatPoints = cityCoords.map(([lat, lng, count]) => [lat, lng, count / 50]);
+                        this.heatLayer = L.heatLayer(heatPoints, {
+                            radius: 35, blur: 25, maxZoom: 10,
+                            gradient: { 0.2: '#3b82f6', 0.4: '#10b981', 0.6: '#f59e0b', 0.8: '#E67E22', 1.0: '#A51C30' }
+                        }).addTo(this.map);
+                    } else {
+                        this.pinLayer = L.layerGroup();
+                        cityCoords.forEach(([lat, lng, count]) => {
+                            const size = Math.max(20, Math.min(60, count / 80));
+                            const icon = L.divIcon({
+                                html: `<div style="background:#A51C30;color:white;border-radius:50%;width:${size}px;height:${size}px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:11px;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3)">${count > 999 ? Math.round(count/1000) + 'k' : count}</div>`,
+                                className: '',
+                                iconSize: [size, size],
+                            });
+                            L.marker([lat, lng], { icon }).addTo(this.pinLayer);
+                        });
+                        this.pinLayer.addTo(this.map);
+                    }
+
+                    setTimeout(() => this.map.invalidateSize(), 100);
+                },
+
+                renderAgeChart() {
+                    this.destroyChart('age');
+                    const el = document.getElementById('ageChart');
+                    if (!el || typeof Chart === 'undefined') return;
+                    this.charts.age = new Chart(el.getContext('2d'), {
+                        type: 'bar',
+                        data: {
+                            labels: ['18-24', '25-34', '35-44', '45-54', '55+'],
+                            datasets: [{ data: [18, 42, 24, 11, 5], backgroundColor: '#A51C30', borderRadius: 6 }]
+                        },
+                        options: {
+                            responsive: true, maintainAspectRatio: false,
+                            plugins: { legend: { display: false }, tooltip: { backgroundColor: '#1E293B', padding: 12, cornerRadius: 8, callbacks: { label: (c) => c.parsed.y + '%' } } },
+                            scales: { y: { beginAtZero: true, ticks: { callback: (v) => v + '%' } }, x: { grid: { display: false } } }
+                        }
+                    });
+                },
+
+                renderGenderChart() {
+                    this.destroyChart('gender');
+                    const el = document.getElementById('genderChart');
+                    if (!el || typeof Chart === 'undefined') return;
+                    this.charts.gender = new Chart(el.getContext('2d'), {
+                        type: 'doughnut',
+                        data: {
+                            labels: ['Femei', 'Bărbați', 'Altele/Nedeclarat'],
+                            datasets: [{ data: [54, 42, 4], backgroundColor: ['#A51C30', '#1E293B', '#94A3B8'], borderWidth: 0 }]
+                        },
+                        options: {
+                            responsive: true, maintainAspectRatio: false, cutout: '60%',
+                            plugins: { legend: { position: 'bottom', labels: { padding: 15, font: { size: 12 } } }, tooltip: { backgroundColor: '#1E293B', padding: 12, cornerRadius: 8, callbacks: { label: (c) => c.label + ': ' + c.parsed + '%' } } }
+                        }
+                    });
+                },
+
+                renderCompareChart() {
+                    this.destroyChart('compare');
+                    const el = document.getElementById('compareChart');
+                    if (!el || typeof Chart === 'undefined') return;
+                    this.charts.compare = new Chart(el.getContext('2d'), {
+                        type: 'line',
+                        data: {
+                            labels: ['Ian', 'Feb', 'Mar', 'Apr', 'Mai', 'Iun', 'Iul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+                            datasets: [
+                                { label: '2024', data: [412, 389, 456, 523, 678, 712, 645, 589, 534, 612, 489, 408], borderColor: '#A51C30', backgroundColor: 'rgba(165,28,48,0.1)', fill: true, tension: 0.4, borderWidth: 2 },
+                                { label: '2023', data: [298, 312, 387, 425, 512, 587, 534, 478, 412, 489, 398, 360], borderColor: '#94A3B8', backgroundColor: 'rgba(148,163,184,0.05)', fill: true, tension: 0.4, borderWidth: 2, borderDash: [5, 5] },
+                            ]
+                        },
+                        options: {
+                            responsive: true, maintainAspectRatio: false,
+                            plugins: { legend: { position: 'top', labels: { padding: 15 } }, tooltip: { backgroundColor: '#1E293B', padding: 12, cornerRadius: 8 } },
+                            scales: { y: { beginAtZero: true, grid: { color: '#E2E8F0' } }, x: { grid: { display: false } } }
+                        }
+                    });
+                },
+            }
+        }
+    </script>
+</body>
+</html>

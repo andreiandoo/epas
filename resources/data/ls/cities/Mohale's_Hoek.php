@@ -1,0 +1,9 @@
+<?php
+return [
+    [
+        'id'        => 66569,
+        'name'      => 'Mohale’s Hoek',
+        'latitude'  => '-30.15137000',
+        'longitude' => '27.47691000',
+    ],
+];

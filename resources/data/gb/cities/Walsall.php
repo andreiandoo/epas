@@ -1,0 +1,105 @@
+<?php
+return [
+    [
+        'id'        => 48215,
+        'name'      => 'Aldridge',
+        'latitude'  => '52.60549000',
+        'longitude' => '-1.91715000',
+    ],
+    [
+        'id'        => 48574,
+        'name'      => 'Bloxwich',
+        'latitude'  => '52.61806000',
+        'longitude' => '-2.00431000',
+    ],
+    [
+        'id'        => 48732,
+        'name'      => 'Brownhills',
+        'latitude'  => '52.63333000',
+        'longitude' => '-1.93333000',
+    ],
+    [
+        'id'        => 48781,
+        'name'      => 'Burntwood',
+        'latitude'  => '52.68075000',
+        'longitude' => '-1.92759000',
+    ],
+    [
+        'id'        => 48845,
+        'name'      => 'Cannock',
+        'latitude'  => '52.69045000',
+        'longitude' => '-2.03085000',
+    ],
+    [
+        'id'        => 48931,
+        'name'      => 'Chasetown',
+        'latitude'  => '52.67232000',
+        'longitude' => '-1.92535000',
+    ],
+    [
+        'id'        => 49235,
+        'name'      => 'Darlaston',
+        'latitude'  => '52.56667000',
+        'longitude' => '-2.03333000',
+    ],
+    [
+        'id'        => 49536,
+        'name'      => 'Fazeley',
+        'latitude'  => '52.61443000',
+        'longitude' => '-1.69850000',
+    ],
+    [
+        'id'        => 49735,
+        'name'      => 'Great Wyrley',
+        'latitude'  => '52.66277000',
+        'longitude' => '-2.01111000',
+    ],
+    [
+        'id'        => 50299,
+        'name'      => 'Lichfield',
+        'latitude'  => '52.68154000',
+        'longitude' => '-1.82549000',
+    ],
+    [
+        'id'        => 50784,
+        'name'      => 'Norton Canes',
+        'latitude'  => '52.67142000',
+        'longitude' => '-1.96262000',
+    ],
+    [
+        'id'        => 50869,
+        'name'      => 'Pelsall',
+        'latitude'  => '52.62910000',
+        'longitude' => '-1.96738000',
+    ],
+    [
+        'id'        => 51259,
+        'name'      => 'Shenstone',
+        'latitude'  => '52.63802000',
+        'longitude' => '-1.84147000',
+    ],
+    [
+        'id'        => 51497,
+        'name'      => 'Streetly',
+        'latitude'  => '52.58333000',
+        'longitude' => '-1.88333000',
+    ],
+    [
+        'id'        => 51552,
+        'name'      => 'Tamworth',
+        'latitude'  => '52.63399000',
+        'longitude' => '-1.69587000',
+    ],
+    [
+        'id'        => 51735,
+        'name'      => 'Walsall',
+        'latitude'  => '52.58333000',
+        'longitude' => '-2.00000000',
+    ],
+    [
+        'id'        => 51882,
+        'name'      => 'Whittington',
+        'latitude'  => '52.67372000',
+        'longitude' => '-1.76091000',
+    ],
+];

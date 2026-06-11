@@ -1,0 +1,39 @@
+<?php
+return [
+    [
+        'id'        => 155014,
+        'name'      => 'Bras-Panon',
+        'latitude'  => '-21.03158160',
+        'longitude' => '55.54416340',
+    ],
+    [
+        'id'        => 155015,
+        'name'      => 'La Plaine-des-Palmistes',
+        'latitude'  => '-21.15295070',
+        'longitude' => '55.56180140',
+    ],
+    [
+        'id'        => 155016,
+        'name'      => 'Saint-André',
+        'latitude'  => '-20.95677270',
+        'longitude' => '55.55486740',
+    ],
+    [
+        'id'        => 155017,
+        'name'      => 'Saint-Benoît',
+        'latitude'  => '-21.08859460',
+        'longitude' => '55.46640760',
+    ],
+    [
+        'id'        => 155018,
+        'name'      => 'Sainte-Rose',
+        'latitude'  => '-21.17782890',
+        'longitude' => '55.65939810',
+    ],
+    [
+        'id'        => 155019,
+        'name'      => 'Salazie',
+        'latitude'  => '-21.05240970',
+        'longitude' => '55.43213370',
+    ],
+];

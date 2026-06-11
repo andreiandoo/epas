@@ -1,0 +1,856 @@
+const UserTickets = {
+    tickets: { upcoming: [], past: [] },
+    qrCodes: {}, // Cache generated QR codes
+
+    async init() {
+        if (!BileteOnlineAuth.isAuthenticated()) {
+            window.location.href = '/autentificare?redirect=/cont/bilete';
+            return;
+        }
+        this.loadUserInfo();
+        await this.loadTickets();
+    },
+
+    loadUserInfo() {
+        const user = BileteOnlineAuth.getUser();
+        if (user) {
+            const initials = user.name?.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() || 'U';
+            const avatar = document.getElementById('header-user-avatar');
+            if (avatar) avatar.innerHTML = `<span class="text-sm font-bold text-white">${initials}</span>`;
+            const points = document.getElementById('header-user-points');
+            if (points) points.textContent = (user.points || 0).toLocaleString();
+        }
+    },
+
+    async loadTickets() {
+        try {
+            // Use getAllTickets to get all tickets (upcoming + past)
+            const response = await BileteOnlineAPI.customer.getAllTickets('all');
+            if (response.success && response.data) {
+                const tickets = response.data.tickets || response.data || [];
+                // API already provides is_upcoming flag
+                this.tickets.upcoming = tickets.filter(t => t.event?.is_upcoming === true);
+                this.tickets.past = tickets.filter(t => t.event?.is_upcoming === false);
+                // Sort upcoming by date ASC (closest events first)
+                this.tickets.upcoming.sort((a, b) => new Date(a.event?.date) - new Date(b.event?.date));
+                // Sort past by date DESC (most recent first)
+                this.tickets.past.sort((a, b) => new Date(b.event?.date) - new Date(a.event?.date));
+            } else {
+                console.warn('No ticket data in API response');
+                this.tickets.upcoming = [];
+                this.tickets.past = [];
+            }
+        } catch (error) {
+            console.error('Error loading tickets:', error);
+            this.tickets.upcoming = [];
+            this.tickets.past = [];
+        }
+
+        document.getElementById('upcoming-count').textContent = this.tickets.upcoming.length;
+        document.getElementById('past-count').textContent = this.tickets.past.length;
+
+        this.renderUpcoming();
+        this.renderPast();
+
+        if (this.tickets.upcoming.length === 0 && this.tickets.past.length === 0) {
+            document.getElementById('tab-upcoming').classList.add('hidden');
+            document.getElementById('empty-state').classList.remove('hidden');
+        }
+    },
+
+
+    // Generate QR code using QRCode.js library (with fallback to external API)
+    async generateQRCode(code, elementId) {
+        const element = document.getElementById(elementId);
+        if (!element) return;
+
+        // Check cache first
+        if (this.qrCodes[code]) {
+            element.innerHTML = '';
+            element.appendChild(this.qrCodes[code].cloneNode(true));
+            return;
+        }
+
+        // Check if QRCode library is available
+        if (typeof QRCode !== 'undefined' && QRCode.toCanvas) {
+            try {
+                const canvas = document.createElement('canvas');
+                await QRCode.toCanvas(canvas, code, {
+                    width: 120,
+                    margin: 0,
+                    color: { dark: '#181622', light: '#ffffff' }
+                });
+                this.qrCodes[code] = canvas;
+                element.innerHTML = '';
+                element.appendChild(canvas);
+                return;
+            } catch (error) {
+                console.warn('QR canvas generation failed, using API fallback:', error.message);
+            }
+        }
+
+        // Fallback to external API (always works, no JS library needed)
+        const img = document.createElement('img');
+        img.src = `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(code)}&color=181622&margin=0`;
+        img.alt = 'QR';
+        img.className = 'w-full h-full';
+        img.style.maxWidth = '120px';
+        this.qrCodes[code] = img;
+        element.innerHTML = '';
+        element.appendChild(img);
+    },
+
+    // Format date display â€” handles festivals/multi-day (start - end), single day uses start only
+    formatDateDisplay(event) {
+        const start = event.date_formatted || (event.date ? this.formatDateShort(event.date) : '');
+        if (event.end_date_formatted && event.end_date_formatted !== start) {
+            return `${start} - ${event.end_date_formatted}`;
+        }
+        return start;
+    },
+
+    // Format time display with doors. Returns empty string for multi-day events
+    // because a single startâ€“end time across different dates is meaningless.
+    formatTimeDisplay(event) {
+        if (event.end_date && event.end_date !== event.date) {
+            return ''; // multi-day: hide time, the date range tells the story
+        }
+        let timeStr = '';
+        if (event.time) {
+            timeStr = event.time;
+            if (event.doors_time) {
+                timeStr += ` (Porti: ${event.doors_time})`;
+            }
+            if (event.end_time) {
+                timeStr += ` - ${event.end_time}`;
+            }
+        } else if (event.doors_time) {
+            timeStr = `Porti: ${event.doors_time}`;
+        }
+        return timeStr;
+    },
+
+    renderUpcoming() {
+        const container = document.getElementById('tab-upcoming');
+        if (this.tickets.upcoming.length === 0) {
+            container.innerHTML = '<p class="py-8 text-center text-muted">Nu ai bilete pentru evenimente viitoare.</p>';
+            return;
+        }
+
+        // Group tickets by event
+        const groupedByEvent = {};
+        this.tickets.upcoming.forEach(ticket => {
+            const eventId = ticket.event?.id || 'unknown';
+            if (!groupedByEvent[eventId]) {
+                groupedByEvent[eventId] = {
+                    event: ticket.event,
+                    tickets: []
+                };
+            }
+            groupedByEvent[eventId].tickets.push(ticket);
+        });
+
+        const eventGroups = Object.values(groupedByEvent);
+        const self = this;
+
+        container.innerHTML = eventGroups.map((group, idx) => {
+            const event = group.event || {};
+            const tickets = group.tickets || [];
+            const daysUntil = event.date ? Math.ceil((new Date(event.date) - new Date()) / (1000 * 60 * 60 * 24)) : 0;
+            const timeDisplay = self.formatTimeDisplay(event);
+
+            return `
+            <div class="overflow-hidden bg-white border ticket-card rounded-2xl border-border">
+                <!-- Event Header -->
+                <div class="p-5 border-b lg:p-6 border-border">
+                    <div class="flex gap-4">
+                        ${event.image ? `
+                        <div class="flex-shrink-0 w-20 h-20 overflow-hidden lg:w-24 lg:h-24 rounded-xl">
+                            <img src="${getStorageUrl(event.image)}" class="object-cover w-full h-full" alt="" loading="lazy">
+                        </div>` : ''}
+                        <div class="flex-1 min-w-0">
+                            <div class="flex flex-wrap items-center gap-2 mb-2">
+                                <span class="px-2 py-0.5 ${daysUntil <= 7 ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning'} text-xs font-bold rounded">IN ${daysUntil} ZILE</span>
+                                <span class="px-2 py-0.5 bg-surface text-secondary text-xs font-semibold rounded">${tickets.length}x ${tickets[0]?.type || 'Bilet'}</span>
+                            </div>
+                            <h2 class="text-lg font-bold truncate lg:text-xl text-secondary">${event.name || 'Eveniment'}</h2>
+                            <div class="flex flex-wrap mt-3 text-sm gap-x-4 gap-y-1">
+                                <span class="flex items-center gap-1.5 text-secondary">
+                                    <svg class="w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                    ${self.formatDateDisplay(event)}
+                                </span>
+                                ${timeDisplay ? `
+                                <span class="flex items-center gap-1.5 text-secondary">
+                                    <svg class="w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                    ${timeDisplay}
+                                </span>` : ''}
+                                ${event.venue ? `
+                                <span class="flex items-center gap-1.5 text-secondary">
+                                    <svg class="w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>
+                                    ${event.venue}${event.city ? ', ' + event.city : ''}
+                                </span>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tickets Grid -->
+                <div class="p-5 lg:p-6 bg-surface/50">
+                    <div class="flex items-center justify-between mb-4">
+                        <p class="text-sm font-semibold text-secondary">${tickets.length > 1 ? 'Biletele tale' : 'Biletul tÄƒu'}</p>
+                        <div class="flex gap-2 no-print">
+                            <button onclick="UserTickets.printEventTickets(${idx})" class="flex items-center gap-1.5 px-3 py-1.5 bg-white text-secondary text-xs font-medium rounded-lg border border-border hover:border-primary hover:text-primary transition-colors">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+                                PrinteazÄƒ
+                            </button>
+                            <button onclick="UserTickets.showCalendarOptions(${idx})" class="flex items-center gap-1.5 px-3 py-1.5 bg-white text-secondary text-xs font-medium rounded-lg border border-border hover:border-primary hover:text-primary transition-colors">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                Calendar
+                            </button>
+                            <button onclick="UserTickets.openTransferModal(${idx})" class="flex items-center gap-1.5 px-3 py-1.5 bg-white text-secondary text-xs font-medium rounded-lg border border-border hover:border-primary hover:text-primary transition-colors">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
+                                TransferÄƒ
+                            </button>
+                        </div>
+                    </div>
+                    <div class="relative tickets-collapsible-wrap" data-event-idx="${idx}">
+                        <div class="tickets-collapsible${tickets.length > 2 ? ' mobile-collapsed' : ''}" data-event-idx="${idx}">
+                            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-${Math.min(tickets.length, 4)} gap-3">
+                                ${tickets.map((t, i) => `
+                                <div class="p-3 text-center bg-white border ticket-qr rounded-xl border-border" onclick="UserTickets.showQRModal('${t.code}', '${(t.type || 'Bilet').replace(/'/g, "\\'")}', '${(t.attendee_name || '').replace(/'/g, "\\'")}', '${(event.name || 'Eveniment').replace(/'/g, "\\'")}', '${(self.formatSeatInfo(t.seat) || '').replace(/'/g, "\\'")}', '${(t.ticket_series || '').replace(/'/g, "\\'")}')">
+                                    <div class="flex items-center justify-between mb-2">
+                                        <span class="text-xs text-muted">#${i + 1}</span>
+                                        <span class="px-1.5 py-0.5 ${t.status === 'valid' ? 'bg-success/10 text-success' : t.status === 'used' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'} text-[10px] font-bold rounded uppercase">${t.status === 'valid' ? 'VALID' : t.status === 'used' ? 'FOLOSIT' : t.status?.toUpperCase()}</span>
+                                    </div>
+                                    <div id="qr-${t.code.replace(/[^a-zA-Z0-9]/g, '')}" class="w-full aspect-square bg-white flex items-center justify-center mb-2 mx-auto max-w-[120px]">
+                                        <div class="w-6 h-6 border-2 rounded-full animate-spin border-primary border-t-transparent"></div>
+                                    </div>
+                                    ${t.attendee_name ? `<p class="text-[10px] text-secondary font-medium truncate">${t.attendee_name}</p>` : ''}
+                                    <p class="text-[10px] text-muted font-mono truncate">${t.code}</p>
+                                    ${t.ticket_series ? `<p class="text-[10px] text-muted font-mono truncate">Serie: ${t.ticket_series}</p>` : ''}
+                                    <p class="mt-1 text-xs font-medium text-secondary">${t.type}</p>
+                                    ${t.seat ? `<p class="mt-1 px-1.5 py-0.5 bg-primary/5 text-primary text-[11px] font-medium rounded inline-block">${[t.seat.section_name, t.seat.row_label ? 'R' + t.seat.row_label : '', t.seat.seat_number ? 'Loc ' + t.seat.seat_number : ''].filter(Boolean).join(' / ')}</p>` : ''}
+                                    <button onclick="event.stopPropagation(); UserTickets.downloadTicketPDF(${t.id})" class="flex items-center justify-center gap-1 w-full mt-2 px-2 py-1.5 text-[10px] font-semibold text-primary bg-primary/5 rounded-lg hover:bg-primary/10 transition-colors no-print">
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                                        PDF
+                                    </button>
+                                </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                        ${tickets.length > 2 ? `
+                        <div class="tickets-show-all mobile-only" data-event-idx="${idx}">
+                            <button onclick="UserTickets.expandTickets(${idx})" class="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold transition-colors rounded-lg text-primary hover:bg-primary/10">
+                                Vezi toate ${tickets.length} biletele
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                            </button>
+                        </div>` : ''}
+                    </div>
+                </div>
+            </div>
+        `}).join('');
+
+        // Store grouped data for calendar function
+        this.eventGroups = eventGroups;
+
+        // Generate QR codes after rendering
+        setTimeout(() => {
+            eventGroups.forEach(group => {
+                group.tickets.forEach(t => {
+                    const elementId = 'qr-' + t.code.replace(/[^a-zA-Z0-9]/g, '');
+                    this.generateQRCode(t.code, elementId);
+                });
+            });
+        }, 100);
+    },
+
+    renderPast() {
+        const container = document.getElementById('tab-past');
+        if (this.tickets.past.length === 0) {
+            container.innerHTML = '<p class="py-8 text-center text-muted">Nu ai bilete pentru evenimente trecute.</p>';
+            return;
+        }
+
+        // Group tickets by event
+        const groupedByEvent = {};
+        this.tickets.past.forEach(ticket => {
+            const eventId = ticket.event?.id || 'unknown';
+            if (!groupedByEvent[eventId]) {
+                groupedByEvent[eventId] = {
+                    event: ticket.event,
+                    tickets: []
+                };
+            }
+            groupedByEvent[eventId].tickets.push(ticket);
+        });
+
+        const eventGroups = Object.values(groupedByEvent);
+
+        container.innerHTML = eventGroups.map(group => {
+            const event = group.event || {};
+            const tickets = group.tickets || [];
+            const hasCheckedIn = tickets.some(t => t.checked_in);
+
+            return `
+            <div class="p-4 bg-white border opacity-75 rounded-xl border-border lg:p-5">
+                <div class="flex gap-4">
+                    ${event.image ? `
+                    <div class="flex-shrink-0 w-16 h-16 overflow-hidden rounded-lg lg:w-20 lg:h-20 grayscale">
+                        <img src="${getStorageUrl(event.image)}" class="object-cover w-full h-full" alt="" loading="lazy">
+                    </div>` : ''}
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-2 mb-1">
+                            <span class="px-2 py-0.5 bg-muted/20 text-muted text-xs font-bold rounded">INCHEIAT</span>
+                            ${hasCheckedIn ? '<span class="px-2 py-0.5 bg-success/10 text-success text-xs font-bold rounded">CHECK-IN OK</span>' : ''}
+                        </div>
+                        <h3 class="font-semibold text-secondary">${event.name || 'Eveniment'}</h3>
+                        <p class="text-sm text-muted">${this.formatDateDisplay(event)}${event.venue ? ' - ' + event.venue : ''}</p>
+                        <p class="mt-1 text-xs text-muted">${tickets.length}x ${tickets[0]?.type || 'Bilet'}</p>
+                    </div>
+                </div>
+            </div>
+        `}).join('');
+    },
+
+    showTab(tabName) {
+        document.getElementById('tab-upcoming').classList.add('hidden');
+        document.getElementById('tab-past').classList.add('hidden');
+
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.classList.remove('active');
+            btn.classList.add('text-muted', 'bg-surface');
+        });
+
+        document.getElementById('tab-' + tabName).classList.remove('hidden');
+        document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+        document.querySelector(`[data-tab="${tabName}"]`).classList.remove('text-muted', 'bg-surface');
+    },
+
+    expandTickets(eventIdx) {
+        const collapsible = document.querySelector(`.tickets-collapsible[data-event-idx="${eventIdx}"]`);
+        const showAllBtn = document.querySelector(`.tickets-show-all[data-event-idx="${eventIdx}"]`);
+        if (collapsible) {
+            collapsible.classList.remove('mobile-collapsed');
+        }
+        if (showAllBtn) {
+            showAllBtn.style.display = 'none';
+        }
+    },
+
+    // Format seat info for display
+    formatSeatInfo(seat) {
+        if (!seat) return '';
+        return [seat.section_name, seat.row_label ? 'R' + seat.row_label : '', seat.seat_number ? 'Loc ' + seat.seat_number : ''].filter(Boolean).join(' / ');
+    },
+
+    // Show QR Modal
+    async showQRModal(code, type, attendeeName, eventName, seatInfo, ticketSeries) {
+        const backdrop = document.getElementById('qr-modal-backdrop');
+        document.getElementById('qr-modal-title').textContent = eventName;
+        document.getElementById('qr-modal-attendee').textContent = attendeeName || '';
+        document.getElementById('qr-modal-code').textContent = code;
+        document.getElementById('qr-modal-type').textContent = type;
+        const seatEl = document.getElementById('qr-modal-seat');
+        if (seatEl) {
+            seatEl.textContent = seatInfo || '';
+            seatEl.style.display = seatInfo ? 'block' : 'none';
+        }
+        // Show ticket series below the code
+        let seriesEl = document.getElementById('qr-modal-series');
+        if (!seriesEl) {
+            const codeEl = document.getElementById('qr-modal-code');
+            if (codeEl) {
+                seriesEl = document.createElement('p');
+                seriesEl.id = 'qr-modal-series';
+                seriesEl.style.cssText = 'font-family:monospace;font-size:12px;color:#6b7280;margin-top:4px;';
+                codeEl.parentNode.insertBefore(seriesEl, codeEl.nextSibling);
+            }
+        }
+        if (seriesEl) {
+            seriesEl.textContent = ticketSeries ? 'Serie: ' + ticketSeries : '';
+            seriesEl.style.display = ticketSeries ? 'block' : 'none';
+        }
+
+        const qrContainer = document.getElementById('qr-modal-qr');
+        qrContainer.innerHTML = '<div class="flex items-center justify-center h-full"><div class="w-8 h-8 border-4 rounded-full animate-spin border-primary border-t-transparent"></div></div>';
+
+        backdrop.classList.add('active');
+        document.body.style.overflow = 'hidden';
+
+        // Generate larger QR code for modal
+        if (typeof QRCode !== 'undefined' && QRCode.toCanvas) {
+            try {
+                const canvas = document.createElement('canvas');
+                await QRCode.toCanvas(canvas, code, {
+                    width: 280,
+                    margin: 1,
+                    color: { dark: '#181622', light: '#ffffff' }
+                });
+                qrContainer.innerHTML = '';
+                qrContainer.appendChild(canvas);
+                return;
+            } catch (error) {
+                // Fall through to API fallback
+            }
+        }
+        // Fallback to external API
+        qrContainer.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=280x280&data=${encodeURIComponent(code)}&color=181622&margin=0" alt="QR" style="width:100%;height:100%">`;
+
+    },
+
+    hideQRModal(event) {
+        if (event && event.target !== event.currentTarget) return;
+        document.getElementById('qr-modal-backdrop').classList.remove('active');
+        document.body.style.overflow = '';
+    },
+
+    formatDate(dateStr) {
+        if (!dateStr) return 'DatÄƒ necunoscutÄƒ';
+        const date = new Date(dateStr);
+        if (isNaN(date.getTime())) return 'DatÄƒ necunoscutÄƒ';
+        const days = ['DuminicÄƒ', 'Luni', 'MarÈ›i', 'Miercuri', 'Joi', 'Vineri', 'SÃ¢mbÄƒtÄƒ'];
+        const months = ['Ianuarie', 'Februarie', 'Martie', 'Aprilie', 'Mai', 'Iunie', 'Iulie', 'August', 'Septembrie', 'Octombrie', 'Noiembrie', 'Decembrie'];
+        return `${days[date.getDay()]}, ${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()}`;
+    },
+
+    formatDateShort(dateStr) {
+        if (!dateStr) return 'â€”';
+        const date = new Date(dateStr);
+        if (isNaN(date.getTime())) return 'â€”';
+        const months = ['Ian', 'Feb', 'Mar', 'Apr', 'Mai', 'Iun', 'Iul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        return `${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()}`;
+    },
+
+    // Show calendar options (Google Calendar or .ics download)
+    showCalendarOptions(idx) {
+        const group = this.eventGroups?.[idx];
+        if (!group) return;
+
+        const event = group.event;
+        const tickets = group.tickets;
+
+        // Create a simple dropdown menu
+        const existingMenu = document.getElementById('calendar-dropdown');
+        if (existingMenu) existingMenu.remove();
+
+        const menu = document.createElement('div');
+        menu.id = 'calendar-dropdown';
+        menu.className = 'fixed inset-0 z-50 flex items-center justify-center bg-black/50';
+        menu.onclick = (e) => { if (e.target === menu) menu.remove(); };
+
+        menu.innerHTML = `
+            <div class="bg-white rounded-2xl p-4 w-72 shadow-xl">
+                <h3 class="text-lg font-bold text-secondary mb-4">AdaugÄƒ Ã®n calendar</h3>
+                <div class="space-y-2">
+                    <button onclick="UserTickets.addToGoogleCalendar(${idx}); document.getElementById('calendar-dropdown').remove();" class="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-surface transition-colors">
+                        <svg class="w-6 h-6" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+                        <span class="font-medium text-secondary">Google Calendar</span>
+                    </button>
+                    <button onclick="UserTickets.addToCalendar(${idx}); document.getElementById('calendar-dropdown').remove();" class="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-surface transition-colors">
+                        <svg class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                        <span class="font-medium text-secondary">DescarcÄƒ .ics</span>
+                    </button>
+                </div>
+                <button onclick="document.getElementById('calendar-dropdown').remove();" class="mt-4 w-full py-2 text-sm text-muted hover:text-secondary transition-colors">AnuleazÄƒ</button>
+            </div>
+        `;
+
+        document.body.appendChild(menu);
+    },
+
+    // Add to Google Calendar
+    addToGoogleCalendar(idx) {
+        const group = this.eventGroups?.[idx];
+        if (!group) return;
+
+        const event = group.event;
+        const tickets = group.tickets;
+
+        // Parse date
+        let startDate;
+        if (event.date) {
+            startDate = new Date(event.date);
+            if (event.time && !event.date.includes('T')) {
+                const [hours, minutes] = event.time.split(':');
+                startDate.setHours(parseInt(hours) || 19, parseInt(minutes) || 0);
+            }
+        } else {
+            startDate = new Date();
+        }
+
+        // Calculate end time (use end_time if available, otherwise +3 hours)
+        let endDate;
+        if (event.end_time) {
+            endDate = new Date(startDate);
+            const [hours, minutes] = event.end_time.split(':');
+            endDate.setHours(parseInt(hours), parseInt(minutes) || 0);
+            // If end time is before start time, it's next day
+            if (endDate < startDate) {
+                endDate.setDate(endDate.getDate() + 1);
+            }
+        } else {
+            endDate = new Date(startDate.getTime() + 3 * 60 * 60 * 1000);
+        }
+
+        // Format for Google Calendar
+        const formatGoogleDate = (d) => {
+            return d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+        };
+
+        const googleUrl = new URL('https://calendar.google.com/calendar/render');
+        googleUrl.searchParams.set('action', 'TEMPLATE');
+        googleUrl.searchParams.set('text', event.name || 'Eveniment');
+        googleUrl.searchParams.set('dates', `${formatGoogleDate(startDate)}/${formatGoogleDate(endDate)}`);
+        googleUrl.searchParams.set('details', `${tickets.length}x ${tickets[0]?.type || 'Bilet'}\n\nBilete achizitionate de pe AmBilet.ro`);
+        googleUrl.searchParams.set('location', `${event.venue || ''}${event.city ? ', ' + event.city : ''}`);
+
+        window.open(googleUrl.toString(), '_blank');
+
+        if (typeof BileteOnlineNotifications !== 'undefined') {
+            BileteOnlineNotifications.success('Se deschide Google Calendar...');
+        }
+    },
+
+    addToCalendar(idx) {
+        const group = this.eventGroups?.[idx];
+        if (!group) return;
+
+        const event = group.event;
+        const tickets = group.tickets;
+        const ticketCode = tickets[0]?.code || 'ticket';
+
+        // Parse date - handle ISO format
+        let startDate;
+        if (event.date) {
+            startDate = new Date(event.date);
+            // If time is separate, add it
+            if (event.time && !event.date.includes('T')) {
+                const [hours, minutes] = event.time.split(':');
+                startDate.setHours(parseInt(hours) || 19, parseInt(minutes) || 0);
+            }
+        } else {
+            startDate = new Date();
+        }
+
+        // Calculate end time
+        let endDate;
+        if (event.end_time) {
+            endDate = new Date(startDate);
+            const [hours, minutes] = event.end_time.split(':');
+            endDate.setHours(parseInt(hours), parseInt(minutes) || 0);
+            if (endDate < startDate) {
+                endDate.setDate(endDate.getDate() + 1);
+            }
+        } else {
+            endDate = new Date(startDate.getTime() + 3 * 60 * 60 * 1000);
+        }
+
+        const formatICSDate = (d) => {
+            return d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+        };
+
+        const icsContent = [
+            'BEGIN:VCALENDAR',
+            'VERSION:2.0',
+            'PRODID:-//AmBilet//Event Calendar//RO',
+            'BEGIN:VEVENT',
+            `DTSTART:${formatICSDate(startDate)}`,
+            `DTEND:${formatICSDate(endDate)}`,
+            `SUMMARY:${event.name || 'Eveniment'}`,
+            `DESCRIPTION:${tickets.length}x ${tickets[0]?.type || 'Bilet'}`,
+            `LOCATION:${event.venue || ''}${event.city ? ', ' + event.city : ''}`,
+            'STATUS:CONFIRMED',
+            `UID:${ticketCode}@bilete.online`,
+            'END:VEVENT',
+            'END:VCALENDAR'
+        ].join('\r\n');
+
+        const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `${(event.name || 'event').replace(/[^a-zA-Z0-9]/g, '_')}.ics`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        if (typeof BileteOnlineNotifications !== 'undefined') {
+            BileteOnlineNotifications.success('Eveniment descÄƒrcat! Deschide fiÈ™ierul .ics pentru a-l adÄƒuga Ã®n calendar.');
+        }
+    },
+
+    /**
+     * Print tickets for a specific event group (1 ticket per A4 page)
+     */
+    async printEventTickets(idx) {
+        const group = this.eventGroups?.[idx];
+        if (!group) return;
+
+        const event = group.event || {};
+        const tickets = group.tickets || [];
+        const timeDisplay = this.formatTimeDisplay(event);
+
+        // Generate QR code data URLs for print
+        const qrDataUrls = {};
+        for (const t of tickets) {
+            if (typeof QRCode !== 'undefined' && QRCode.toCanvas) {
+                try {
+                    const canvas = document.createElement('canvas');
+                    await QRCode.toCanvas(canvas, t.code, {
+                        width: 200,
+                        margin: 1,
+                        color: { dark: '#181622', light: '#ffffff' }
+                    });
+                    qrDataUrls[t.code] = canvas.toDataURL('image/png');
+                    continue;
+                } catch (e) {
+                    // Fall through to API fallback
+                }
+            }
+            qrDataUrls[t.code] = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(t.code)}&color=181622&margin=0`;
+        }
+
+        // Build print HTML - 1 ticket per A4 page
+        const printHtml = `<!DOCTYPE html>
+<html><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bilete - ${event.name || 'Eveniment'}</title>
+<style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: #1a1a2e; }
+    @page { size: A4; margin: 10mm; }
+    .ticket-page { page-break-after: always; page-break-inside: avoid; min-height: 0; display: flex; flex-direction: column; justify-content: space-between; padding: 15px 0; }
+    .ticket-page:last-child { page-break-after: avoid; }
+    .ticket-header { text-align: center; border-bottom: 2px solid #e5e7eb; padding-bottom: 15px; }
+    .event-name { font-size: 20px; font-weight: 700; margin-bottom: 6px; word-break: break-word; }
+    .event-details { display: flex; justify-content: center; gap: 16px; flex-wrap: wrap; color: #4b5563; font-size: 13px; margin-top: 8px; }
+    .event-details span { display: flex; align-items: center; gap: 4px; }
+    .ticket-body { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 15px 0; }
+    .qr-section { text-align: center; }
+    .qr-section img { width: 180px; height: 180px; max-width: 50vw; }
+    .ticket-code { font-family: monospace; font-size: 16px; font-weight: 700; margin-top: 6px; letter-spacing: 1px; }
+    .ticket-info { text-align: center; }
+    .ticket-type { font-size: 16px; font-weight: 600; color: #1a1a2e; }
+    .ticket-seat { font-size: 13px; color: #4b5563; margin-top: 4px; }
+    .ticket-attendee { font-size: 13px; color: #6b7280; margin-top: 4px; }
+    .ticket-number { font-size: 11px; color: #9ca3af; }
+    .ticket-footer { text-align: center; border-top: 1px solid #e5e7eb; padding-top: 12px; font-size: 10px; color: #9ca3af; }
+    @media print {
+        .ticket-page { height: auto; min-height: 0; overflow: hidden; break-inside: avoid; }
+        .qr-section img { width: 160px; height: 160px; }
+    }
+</style>
+</head><body>
+${tickets.map((t, i) => {
+    const seatInfo = t.seat ? [t.seat.section_name, t.seat.row_label ? 'RÃ¢nd ' + t.seat.row_label : '', t.seat.seat_number ? 'Loc ' + t.seat.seat_number : ''].filter(Boolean).join(', ') : '';
+    return `
+    <div class="ticket-page">
+        <div class="ticket-header">
+            <div class="event-name">${event.name || 'Eveniment'}</div>
+            <div class="event-details">
+                <span>ðŸ“… ${this.formatDateDisplay(event)}</span>
+                ${timeDisplay ? `<span>ðŸ• ${timeDisplay}</span>` : ''}
+                ${event.venue ? `<span>ðŸ“ ${event.venue}${event.city ? ', ' + event.city : ''}</span>` : ''}
+            </div>
+        </div>
+        <div class="ticket-body">
+            <div class="ticket-number">Bilet ${i + 1} din ${tickets.length}</div>
+            <div class="qr-section">
+                <img src="${qrDataUrls[t.code] || ''}" alt="QR Code">
+                <div class="ticket-code">${t.code}</div>
+                ${t.ticket_series ? `<div style="font-family:monospace;font-size:12px;color:#6b7280;margin-top:2px;">Serie: ${t.ticket_series}</div>` : ''}
+            </div>
+            <div class="ticket-info">
+                <div class="ticket-type">${t.type || 'Bilet Standard'}</div>
+                ${seatInfo ? `<div class="ticket-seat">${seatInfo}</div>` : ''}
+                ${t.attendee_name ? `<div class="ticket-attendee">${t.attendee_name}</div>` : ''}
+            </div>
+        </div>
+        <div class="ticket-footer">
+            PrezintÄƒ acest cod QR la intrare â€¢ ${event.venue ? event.venue : ''}${event.city ? ', ' + event.city : ''}
+        </div>
+    </div>`;
+}).join('')}
+</body></html>`;
+
+        const printWindow = window.open('', '_blank');
+        printWindow.document.write(printHtml);
+        printWindow.document.close();
+        printWindow.onload = function() {
+            printWindow.print();
+        };
+    },
+
+    downloadTicketPDF(ticketId) {
+        if (!ticketId) return;
+        const url = '/api/proxy.php?action=ticket.download-pdf&id=' + encodeURIComponent(ticketId);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'bilet-' + ticketId + '.pdf';
+        link.target = '_blank';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    },
+
+    // ===== Ticket Transfer =====
+    _transferState: null,
+
+    openTransferModal(eventIdx) {
+        const grouped = this.eventGroups || this.groupedEvents || [];
+        const grp = grouped[eventIdx];
+        if (!grp) return;
+        // Only transferable tickets: status=valid, not checked-in, event in
+        // the future. Server re-validates all of these anyway, but filtering
+        // here keeps the UI honest.
+        const eligible = (grp.tickets || []).filter(t => (t.status || '').toLowerCase() === 'valid' && !t.checked_in);
+        if (!eligible.length) {
+            alert('Nu ai bilete eligibile pentru transfer la acest eveniment.');
+            return;
+        }
+        this._transferState = { eventIdx, eligible };
+        this._renderTransferModal(grp, eligible);
+    },
+
+    _renderTransferModal(grp, eligible) {
+        const old = document.getElementById('transfer-modal-backdrop');
+        if (old) old.remove();
+
+        const escAttr = (s) => String(s || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+        const ticketRows = eligible.map((t, i) => {
+            const seat = this.formatSeatInfo(t.seat);
+            const label = [t.type, t.attendee_name, seat, t.code].filter(Boolean).join(' Â· ');
+            return `
+                <label class="flex items-center gap-3 p-3 border border-border rounded-xl cursor-pointer hover:bg-surface">
+                    <input type="checkbox" class="transfer-ticket-check rounded border-border text-primary focus:ring-primary" value="${t.id}" checked>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-medium text-secondary truncate">${escAttr(label)}</p>
+                    </div>
+                </label>
+            `;
+        }).join('');
+
+        const backdrop = document.createElement('div');
+        backdrop.id = 'transfer-modal-backdrop';
+        backdrop.className = 'fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70';
+        backdrop.innerHTML = `
+            <div class="bg-white rounded-2xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto" onclick="event.stopPropagation()">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-bold text-secondary">TransferÄƒ bilete</h3>
+                    <button onclick="UserTickets.closeTransferModal()" class="text-muted hover:text-secondary">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </div>
+                <p class="text-sm text-muted mb-4">Eveniment: <strong class="text-secondary">${escAttr(grp.event && grp.event.name)}</strong></p>
+
+                <div class="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900">
+                    <p class="font-semibold mb-1">âš ï¸ Important</p>
+                    <p>Destinatarul trebuie sÄƒ aibÄƒ deja un cont activ pe aceastÄƒ platformÄƒ. DacÄƒ nu are, primeÈ™ti un link de Ã®nregistrare pe care poÈ›i sÄƒ-l transmiÈ›i pentru a-È™i crea contul.</p>
+                </div>
+
+                <div class="space-y-2 mb-4">
+                    <label class="text-xs font-medium text-secondary">SelecteazÄƒ biletele de transferat</label>
+                    <div class="space-y-2 max-h-60 overflow-y-auto" id="transfer-tickets-list">
+                        ${ticketRows}
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label for="transfer-recipient-email" class="block text-xs font-medium text-secondary mb-1">Email destinatar</label>
+                    <input id="transfer-recipient-email" type="email" required class="w-full px-3 py-2 border border-border rounded-xl text-sm focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none" placeholder="email@exemplu.ro">
+                </div>
+
+                <div id="transfer-error" class="hidden mb-4"></div>
+
+                <div class="flex items-center gap-3 pt-2 border-t border-border">
+                    <button onclick="UserTickets.closeTransferModal()" class="flex-1 px-4 py-2.5 text-sm font-medium text-secondary bg-surface rounded-xl hover:bg-border transition-colors">AnuleazÄƒ</button>
+                    <button id="transfer-submit-btn" onclick="UserTickets.submitTransfer()" class="flex-1 px-4 py-2.5 text-sm font-semibold text-white bg-primary rounded-xl hover:bg-primary/90 transition-colors">TransferÄƒ biletele</button>
+                </div>
+            </div>
+        `;
+        backdrop.onclick = () => this.closeTransferModal();
+        document.body.appendChild(backdrop);
+    },
+
+    closeTransferModal() {
+        const el = document.getElementById('transfer-modal-backdrop');
+        if (el) el.remove();
+        this._transferState = null;
+    },
+
+    async submitTransfer() {
+        const state = this._transferState;
+        if (!state) return;
+        const checks = document.querySelectorAll('.transfer-ticket-check:checked');
+        const ticketIds = Array.from(checks).map(c => parseInt(c.value, 10)).filter(n => n > 0);
+        const recipientEmail = (document.getElementById('transfer-recipient-email').value || '').trim();
+        const errorBox = document.getElementById('transfer-error');
+        errorBox.classList.add('hidden');
+        errorBox.innerHTML = '';
+
+        if (ticketIds.length === 0) {
+            errorBox.classList.remove('hidden');
+            errorBox.innerHTML = '<p class="text-xs text-red-600 p-2 bg-red-50 rounded-lg">SelecteazÄƒ cel puÈ›in un bilet.</p>';
+            return;
+        }
+        if (!recipientEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipientEmail)) {
+            errorBox.classList.remove('hidden');
+            errorBox.innerHTML = '<p class="text-xs text-red-600 p-2 bg-red-50 rounded-lg">Introdu un email valid.</p>';
+            return;
+        }
+
+        const btn = document.getElementById('transfer-submit-btn');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="inline-flex items-center gap-2"><span class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span> Se transferÄƒ...</span>';
+
+        try {
+            const resp = await BileteOnlineAPI.post('/customer/transfers/direct', {
+                ticket_ids: ticketIds,
+                recipient_email: recipientEmail,
+            });
+
+            if (resp && resp.success) {
+                this.closeTransferModal();
+                if (typeof BileteOnlineNotifications !== 'undefined') {
+                    BileteOnlineNotifications.success(resp.message || 'Bilete transferate.');
+                } else {
+                    alert(resp.message || 'Bilete transferate.');
+                }
+                await this.loadTickets();
+                return;
+            }
+
+            // Error path â€” surface signup URL when recipient doesn't exist
+            if (resp && resp.error === 'recipient_not_found') {
+                const url = resp.signup_url || '';
+                errorBox.classList.remove('hidden');
+                errorBox.innerHTML = `
+                    <div class="p-3 bg-amber-50 border border-amber-200 rounded-xl">
+                        <p class="text-xs text-amber-900 font-semibold mb-2">Destinatarul nu are cont Ã®ncÄƒ</p>
+                        <p class="text-xs text-amber-800 mb-3">Trimite-i acest link de Ã®nregistrare. DupÄƒ ce Ã®È™i creeazÄƒ contul, revino aici È™i trimite biletele.</p>
+                        <div class="flex items-center gap-2">
+                            <input type="text" readonly value="${url}" class="flex-1 px-2 py-1.5 text-xs font-mono bg-white border border-amber-300 rounded-lg text-amber-900" onclick="this.select()">
+                            <button type="button" onclick="navigator.clipboard.writeText('${url}'); this.textContent='Copiat âœ“'; setTimeout(()=>this.textContent='CopiazÄƒ',2000)" class="px-3 py-1.5 text-xs font-semibold text-white bg-amber-600 hover:bg-amber-700 rounded-lg">CopiazÄƒ</button>
+                        </div>
+                    </div>
+                `;
+            } else {
+                errorBox.classList.remove('hidden');
+                errorBox.innerHTML = `<p class="text-xs text-red-600 p-2 bg-red-50 rounded-lg">${(resp && resp.message) || 'Transferul a eÈ™uat.'}</p>`;
+            }
+        } catch (e) {
+            errorBox.classList.remove('hidden');
+            errorBox.innerHTML = `<p class="text-xs text-red-600 p-2 bg-red-50 rounded-lg">Eroare de reÈ›ea. ÃŽncearcÄƒ din nou.</p>`;
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = 'TransferÄƒ biletele';
+        }
+    },
+};
+
+// Close QR modal with Escape key
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') UserTickets.hideQRModal();
+});
+
+document.addEventListener('DOMContentLoaded', () => UserTickets.init());

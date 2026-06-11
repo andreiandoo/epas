@@ -1,0 +1,123 @@
+<?php
+return [
+    [
+        'id'        => 48242,
+        'name'      => 'Amersham',
+        'latitude'  => '51.66667000',
+        'longitude' => '-0.61667000',
+    ],
+    [
+        'id'        => 48243,
+        'name'      => 'Amersham on the Hill',
+        'latitude'  => '51.67468000',
+        'longitude' => '-0.60742000',
+    ],
+    [
+        'id'        => 48436,
+        'name'      => 'Beaconsfield',
+        'latitude'  => '51.61219000',
+        'longitude' => '-0.64732000',
+    ],
+    [
+        'id'        => 48624,
+        'name'      => 'Bourne End',
+        'latitude'  => '51.57622000',
+        'longitude' => '-0.71291000',
+    ],
+    [
+        'id'        => 48910,
+        'name'      => 'Chalfont St Giles',
+        'latitude'  => '51.63184000',
+        'longitude' => '-0.57026000',
+    ],
+    [
+        'id'        => 48951,
+        'name'      => 'Chesham',
+        'latitude'  => '51.70000000',
+        'longitude' => '-0.60000000',
+    ],
+    [
+        'id'        => 49073,
+        'name'      => 'Colnbrook',
+        'latitude'  => '51.48384000',
+        'longitude' => '-0.52142000',
+    ],
+    [
+        'id'        => 49244,
+        'name'      => 'Datchet',
+        'latitude'  => '51.48390000',
+        'longitude' => '-0.57893000',
+    ],
+    [
+        'id'        => 49445,
+        'name'      => 'Egham',
+        'latitude'  => '51.43158000',
+        'longitude' => '-0.55239000',
+    ],
+    [
+        'id'        => 49488,
+        'name'      => 'Eton',
+        'latitude'  => '51.48833000',
+        'longitude' => '-0.60905000',
+    ],
+    [
+        'id'        => 49489,
+        'name'      => 'Eton Wick',
+        'latitude'  => '51.49722000',
+        'longitude' => '-0.63437000',
+    ],
+    [
+        'id'        => 49531,
+        'name'      => 'Farnham Royal',
+        'latitude'  => '51.54208000',
+        'longitude' => '-0.61584000',
+    ],
+    [
+        'id'        => 49638,
+        'name'      => 'Gerrards Cross',
+        'latitude'  => '51.58610000',
+        'longitude' => '-0.55543000',
+    ],
+    [
+        'id'        => 49932,
+        'name'      => 'High Wycombe',
+        'latitude'  => '51.62907000',
+        'longitude' => '-0.74934000',
+    ],
+    [
+        'id'        => 50001,
+        'name'      => 'Horton',
+        'latitude'  => '51.47315000',
+        'longitude' => '-0.54245000',
+    ],
+    [
+        'id'        => 50805,
+        'name'      => 'Old Windsor',
+        'latitude'  => '51.45807000',
+        'longitude' => '-0.58674000',
+    ],
+    [
+        'id'        => 51231,
+        'name'      => 'Seer Green',
+        'latitude'  => '51.61796000',
+        'longitude' => '-0.60592000',
+    ],
+    [
+        'id'        => 51332,
+        'name'      => 'Slough',
+        'latitude'  => '51.50949000',
+        'longitude' => '-0.59541000',
+    ],
+    [
+        'id'        => 51466,
+        'name'      => 'Stoke Poges',
+        'latitude'  => '51.54441000',
+        'longitude' => '-0.58880000',
+    ],
+    [
+        'id'        => 51925,
+        'name'      => 'Windsor',
+        'latitude'  => '51.48333000',
+        'longitude' => '-0.60000000',
+    ],
+];

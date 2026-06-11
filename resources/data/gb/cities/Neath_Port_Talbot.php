@@ -1,0 +1,105 @@
+<?php
+return [
+    [
+        'id'        => 48558,
+        'name'      => 'Blaengwynfi',
+        'latitude'  => '51.65623000',
+        'longitude' => '-3.60371000',
+    ],
+    [
+        'id'        => 48705,
+        'name'      => 'Briton Ferry',
+        'latitude'  => '51.63106000',
+        'longitude' => '-3.81898000',
+    ],
+    [
+        'id'        => 48738,
+        'name'      => 'Bryn',
+        'latitude'  => '51.61639000',
+        'longitude' => '-3.71167000',
+    ],
+    [
+        'id'        => 48739,
+        'name'      => 'Brynamman',
+        'latitude'  => '51.80000000',
+        'longitude' => '-3.86667000',
+    ],
+    [
+        'id'        => 49162,
+        'name'      => 'Croeserw',
+        'latitude'  => '51.64472000',
+        'longitude' => '-3.64028000',
+    ],
+    [
+        'id'        => 49192,
+        'name'      => 'Crynant',
+        'latitude'  => '51.72889000',
+        'longitude' => '-3.74806000',
+    ],
+    [
+        'id'        => 49216,
+        'name'      => 'Cwmafan',
+        'latitude'  => '51.61671000',
+        'longitude' => '-3.76205000',
+    ],
+    [
+        'id'        => 49666,
+        'name'      => 'Glyn-neath',
+        'latitude'  => '51.74750000',
+        'longitude' => '-3.61833000',
+    ],
+    [
+        'id'        => 49667,
+        'name'      => 'Glyncorrwg',
+        'latitude'  => '51.67944000',
+        'longitude' => '-3.62806000',
+    ],
+    [
+        'id'        => 50465,
+        'name'      => 'Maesteg',
+        'latitude'  => '51.60926000',
+        'longitude' => '-3.65823000',
+    ],
+    [
+        'id'        => 50667,
+        'name'      => 'Neath',
+        'latitude'  => '51.66317000',
+        'longitude' => '-3.80443000',
+    ],
+    [
+        'id'        => 50668,
+        'name'      => 'Neath Port Talbot',
+        'latitude'  => '51.66667000',
+        'longitude' => '-3.75000000',
+    ],
+    [
+        'id'        => 50955,
+        'name'      => 'Port Talbot',
+        'latitude'  => '51.59241000',
+        'longitude' => '-3.78019000',
+    ],
+    [
+        'id'        => 51064,
+        'name'      => 'Resolven',
+        'latitude'  => '51.71193000',
+        'longitude' => '-3.69745000',
+    ],
+    [
+        'id'        => 51239,
+        'name'      => 'Seven Sisters',
+        'latitude'  => '51.76667000',
+        'longitude' => '-3.71667000',
+    ],
+    [
+        'id'        => 51546,
+        'name'      => 'Taibach',
+        'latitude'  => '51.58333000',
+        'longitude' => '-3.76667000',
+    ],
+    [
+        'id'        => 52027,
+        'name'      => 'Ystalyfera',
+        'latitude'  => '51.76716000',
+        'longitude' => '-3.78082000',
+    ],
+];

@@ -1,0 +1,2285 @@
+/**
+ * Ambilet.ro - API Client
+ * Wrapper for fetch with automatic authentication and error handling
+ */
+
+const AmbiletAPI = {
+    // In-memory cache for GET requests
+    _cache: new Map(),
+    _cacheTTL: {
+        'config': 300000,        // 5 min
+        'events': 30000,         // 30 sec — near-instant visibility of newly published events
+        'events.featured': 60000,
+        'events.past': 300000,   // 5 min
+        'categories': 300000,
+        'event': 30000,          // 30 sec
+        'default': 30000,
+    },
+
+    _getCacheTTL(action) {
+        return this._cacheTTL[action] || this._cacheTTL['default'];
+    },
+
+    clearCache(pattern) {
+        if (!pattern) { this._cache.clear(); return; }
+        for (const key of this._cache.keys()) {
+            if (key.includes(pattern)) this._cache.delete(key);
+        }
+    },
+
+    /**
+     * Get API base URL (uses proxy for security)
+     */
+    getApiUrl() {
+        return window.AMBILET?.apiUrl || '/api/proxy.php';
+    },
+
+    /**
+     * Make an API request via proxy
+     * @param {string} endpoint - API endpoint (without base URL)
+     * @param {Object} options - Fetch options
+     * @returns {Promise<Object>} - API response data
+     */
+    async request(endpoint, options = {}) {
+        // Build proxy URL - the API key is handled server-side
+        const baseUrl = this.getApiUrl();
+
+        // Separate path from query string so routing regexes match correctly
+        const [endpointPath, endpointQuery] = endpoint.split('?');
+        const action = this.getProxyAction(endpointPath);
+        const params = this.getProxyParams(endpointPath);
+
+        // Handle unknown endpoints
+        if (!action) {
+            throw new APIError(`Unknown endpoint: ${endpoint}`, 400);
+        }
+
+        let url = `${baseUrl}?action=${action}`;
+        if (params) {
+            url += '&' + params;
+        }
+        // Forward any extra query params (e.g. preview=true)
+        if (endpointQuery) {
+            url += '&' + endpointQuery;
+        }
+        // Auto-forward preview mode from page URL to bypass all caching
+        if (new URLSearchParams(window.location.search).get('preview') === '1') {
+            url += '&preview=1';
+        }
+
+        const headers = {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            ...options.headers
+        };
+
+        // Add auth token if available
+        const authToken = typeof AmbiletAuth !== 'undefined' ? AmbiletAuth.getToken() : null;
+        if (authToken) {
+            headers['Authorization'] = `Bearer ${authToken}`;
+        }
+
+        // Cache GET requests (skip if preview mode, authenticated, or non-GET)
+        const method = (options.method || 'GET').toUpperCase();
+        const isPreview = new URLSearchParams(window.location.search).get('preview') === '1';
+        const useCache = method === 'GET' && !authToken && !isPreview && !options.noCache;
+        const cacheKey = url;
+
+        if (useCache) {
+            const cached = this._cache.get(cacheKey);
+            if (cached && Date.now() - cached.time < this._getCacheTTL(action)) {
+                return cached.data;
+            }
+        }
+
+        try {
+            const response = await fetch(url, {
+                ...options,
+                headers
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                var apiErr = new APIError(data.message || data.error || 'An error occurred', response.status, data.errors);
+                apiErr.data = data;
+                throw apiErr;
+            }
+
+            // Store in cache for GET requests
+            if (useCache) {
+                this._cache.set(cacheKey, { data, time: Date.now() });
+                // Limit cache size to 50 entries
+                if (this._cache.size > 50) {
+                    const firstKey = this._cache.keys().next().value;
+                    this._cache.delete(firstKey);
+                }
+            }
+
+            return data;
+        } catch (error) {
+            if (error instanceof APIError) {
+                throw error;
+            }
+            throw new APIError('Network error. Please check your connection.', 0);
+        }
+    },
+
+    /**
+     * Convert endpoint to proxy action
+     */
+    getProxyAction(endpoint) {
+        // Customer auth endpoints
+        if (endpoint === '/customer/register') return 'customer.register';
+        if (endpoint === '/customer/login') return 'customer.login';
+        if (endpoint === '/customer/logout') return 'customer.logout';
+        if (endpoint === '/customer/me') return 'customer.me';
+        if (endpoint === '/customer/profile') return 'customer.profile';
+        if (endpoint === '/customer/password') return 'customer.password';
+        if (endpoint === '/customer/account') return 'customer.account';
+        if (endpoint === '/customer/settings') return 'customer.settings';
+        if (endpoint === '/customer/avatar') return 'customer.avatar';
+        if (endpoint === '/customer/profile-data') return 'customer.profile-data';
+        if (endpoint === '/customer/smart-suggestions') return 'customer.smart-suggestions';
+        if (endpoint === '/customer/forgot-password') return 'customer.forgot-password';
+        if (endpoint === '/customer/reset-password') return 'customer.reset-password';
+        if (endpoint === '/customer/verify-email') return 'customer.verify-email';
+        if (endpoint === '/customer/resend-verification') return 'customer.resend-verification';
+
+        // Order confirmation (public, no auth needed — for thank-you page)
+        if (endpoint.match(/\/order-confirmation\/[\w-]+$/)) return 'order-confirmation';
+
+        // Customer orders (order ID can be numeric or alphanumeric like MKT-W08ABJWH)
+        if (endpoint.match(/\/customer\/orders\/[\w-]+$/)) return 'customer.order';
+        if (endpoint === '/customer/orders' || endpoint.includes('/customer/orders?')) return 'customer.orders';
+
+        // Customer ticket transfers
+        if (endpoint === '/customer/transfers/direct') return 'customer.transfers.direct';
+
+        // Customer refunds
+        if (endpoint.includes('/customer/refunds/reasons')) return 'customer.refunds.reasons';
+        if (endpoint.includes('/customer/refunds/check-eligibility')) return 'customer.refunds.check-eligibility';
+        if (endpoint.match(/\/customer\/refunds\/\d+\/cancel$/)) return 'customer.refund.cancel';
+        if (endpoint.match(/\/customer\/refunds\/\d+$/)) return 'customer.refund.show';
+        if (endpoint === '/customer/refunds' || endpoint.includes('/customer/refunds?')) return 'customer.refunds';
+
+        // Customer tickets
+        if (endpoint.includes('/customer/tickets/all')) return 'customer.tickets.all';
+        if (endpoint.match(/\/customer\/tickets\/\d+$/)) return 'customer.ticket';
+        if (endpoint.includes('/customer/tickets')) return 'customer.tickets';
+
+        // Customer stats & dashboard
+        if (endpoint.includes('/customer/stats/upcoming-events')) return 'customer.upcoming-events';
+        if (endpoint.includes('/customer/stats')) return 'customer.stats.dashboard';
+
+        // Customer reviews
+        if (endpoint.includes('/customer/reviews/events-to-review')) return 'customer.reviews.to-write';
+        if (endpoint.match(/\/customer\/reviews\/\d+$/) && endpoint.includes('DELETE')) return 'customer.review.delete';
+        if (endpoint.match(/\/customer\/reviews\/\d+$/)) return 'customer.review.show';
+        if (endpoint === '/customer/reviews' || endpoint.includes('/customer/reviews?')) return 'customer.reviews';
+
+        // Customer watchlist
+        if (endpoint.includes('/customer/watchlist/check')) return 'customer.watchlist.check';
+        if (endpoint.match(/\/customer\/watchlist\/\d+$/)) return 'customer.watchlist.remove';
+        if (endpoint === '/customer/watchlist' || endpoint.includes('/customer/watchlist?')) return 'customer.watchlist';
+
+        // Customer rewards
+        if (endpoint.includes('/customer/rewards/history')) return 'customer.rewards.history';
+        if (endpoint.includes('/customer/rewards/badges')) return 'customer.badges';
+        if (endpoint.includes('/customer/rewards/available')) return 'customer.rewards.available';
+        if (endpoint.includes('/customer/rewards/redeem')) return 'customer.rewards.redeem';
+        if (endpoint.includes('/customer/rewards/redemptions')) return 'customer.rewards.redemptions';
+        if (endpoint === '/customer/rewards' || endpoint.includes('/customer/rewards?')) return 'customer.rewards';
+
+        // Customer notifications
+        if (endpoint.includes('/customer/notifications/unread-count')) return 'customer.notifications.unread-count';
+        if (endpoint.includes('/customer/notifications/mark-read')) return 'customer.notifications.read';
+        if (endpoint.includes('/customer/notifications/settings')) return 'customer.notifications.settings';
+        if (endpoint.match(/\/customer\/notifications\/\d+$/)) return 'customer.notification.delete';
+        if (endpoint === '/customer/notifications' || endpoint.includes('/customer/notifications?')) return 'customer.notifications';
+
+        // Customer referrals
+        if (endpoint.includes('/customer/referrals/regenerate-code')) return 'customer.referrals.regenerate';
+        if (endpoint.includes('/customer/referrals/track-click')) return 'customer.referrals.track-click';
+        if (endpoint.includes('/customer/referrals/leaderboard')) return 'customer.referrals.leaderboard';
+        if (endpoint.includes('/customer/referrals/claim-rewards')) return 'customer.referrals.claim-rewards';
+        if (endpoint.includes('/customer/referrals/validate')) return 'customer.referrals.validate';
+        if (endpoint === '/customer/referrals' || endpoint.includes('/customer/referrals?')) return 'customer.referrals';
+
+        // Organizer event categories, genres, venues, artists (MUST be before public patterns that use .includes())
+        if (endpoint === '/organizer/event-categories') return 'organizer.event-categories';
+        if (endpoint === '/organizer/event-genres' || endpoint.includes('/organizer/event-genres?')) return 'organizer.event-genres';
+        if (endpoint === '/organizer/venues' || endpoint.includes('/organizer/venues?')) return 'organizer.venues';
+        if (endpoint === '/organizer/artists' || endpoint.includes('/organizer/artists?')) return 'organizer.artists';
+
+        // Newsletter
+        if (endpoint === '/newsletter/subscribe') return 'newsletter.subscribe';
+
+        // Public organizer profile
+        if (endpoint.match(/\/marketplace-events\/organizers\/[a-z0-9-]+\/contact$/i)) return 'organizer.contact';
+        if (endpoint.match(/\/marketplace-events\/organizers\/[a-z0-9-]+$/i)) return 'organizer';
+        if (endpoint.includes('/marketplace-events/organizers')) return 'organizers';
+
+        // Public endpoints
+        if (endpoint === '/contact') return 'public.contact';
+        if (endpoint.includes('/search')) return 'search';
+        if (endpoint.includes('/marketplace-events/categories')) return 'categories';
+        if (endpoint.includes('/marketplace-events/cities')) return 'cities';
+        if (endpoint.match(/\/marketplace-events\/[a-z0-9-]+\/date-availability/i)) return 'event.dateAvailability';
+        if (endpoint.match(/\/marketplace-events\/[a-z0-9-]+\/slot-availability/i)) return 'event.slotAvailability';
+        if (endpoint.match(/\/marketplace-events\/[a-z0-9-]+\/resource-availability/i)) return 'event.resourceAvailability';
+        if (endpoint.match(/\/marketplace-events\/[a-z0-9-]+\/verify-password$/i)) return 'event.verify-password';
+        if (endpoint.match(/\/marketplace-events\/[a-z0-9-]+$/i)) return 'event';
+        if (endpoint.includes('/marketplace-events')) return 'events';
+
+        // Customer favorites endpoints (MUST be before venues/artists to avoid false matches)
+        if (endpoint === '/customer/favorites/artists') return 'customer.favorites.artists';
+        if (endpoint === '/customer/favorites/venues') return 'customer.favorites.venues';
+        if (endpoint === '/customer/favorites/summary') return 'customer.favorites.summary';
+
+        // Venue categories
+        if (endpoint.match(/\/venue-categories\/[a-z0-9-]+$/i)) return 'venue-category';
+        if (endpoint.includes('/venue-categories')) return 'venue-categories';
+
+        // Venues endpoints - specific patterns first, then fallback
+        if (endpoint.includes('/venues/featured')) return 'venues.featured';
+        if (endpoint.match(/\/venues\/[a-z0-9-]+\/toggle-favorite$/i)) return 'venue.toggle-favorite';
+        if (endpoint.match(/\/venues\/[a-z0-9-]+\/check-favorite$/i)) return 'venue.check-favorite';
+        if (endpoint.match(/\/venues\/[a-z0-9-]+$/i)) return 'venue';
+        if (endpoint.includes('/venues')) return 'venues';
+
+        // Artists endpoints - specific patterns first, then fallback
+        if (endpoint.includes('/artists/featured')) return 'artists.featured';
+        if (endpoint.includes('/artists/trending')) return 'artists.trending';
+        if (endpoint.includes('/artists/genre-counts')) return 'artists.genre-counts';
+        if (endpoint.includes('/artists/alphabet')) return 'artists.alphabet';
+        if (endpoint.match(/\/artists\/[a-z0-9-]+\/toggle-favorite$/i)) return 'artist.toggle-favorite';
+        if (endpoint.match(/\/artists\/[a-z0-9-]+\/check-favorite$/i)) return 'artist.check-favorite';
+        if (endpoint.match(/\/artists\/[a-z0-9-]+\/events/i)) return 'artist.events';
+        if (endpoint.match(/\/artists\/[a-z0-9-]+$/i)) return 'artist';
+        if (endpoint.includes('/artists')) return 'artists';
+
+        // Locations endpoints
+        if (endpoint.includes('/locations/stats')) return 'locations.stats';
+        if (endpoint.includes('/locations/cities/featured')) return 'locations.cities.featured';
+        if (endpoint.includes('/locations/cities/alphabet')) return 'locations.cities.alphabet';
+        if (endpoint.match(/\/locations\/cities\/[a-z0-9-]+$/i)) return 'locations.city';
+        if (endpoint.includes('/locations/cities')) return 'locations.cities';
+        if (endpoint.match(/\/locations\/regions\/[a-z0-9-]+$/i)) return 'locations.region';
+        if (endpoint.includes('/locations/regions')) return 'locations.regions';
+
+        // Cart sub-routes (specific patterns first, then catch-all)
+        if (endpoint.includes('/cart/items/with-seats')) return 'cart.items.add-with-seats';
+        if (endpoint.includes('/cart/seats')) return 'cart.seats.release';
+        if (endpoint.match(/\/cart\/items\/[^/]+$/)) return 'cart.items.manage';
+        if (endpoint.includes('/cart/items')) return 'cart.items.add';
+        if (endpoint.includes('/cart/promo-code')) return 'cart.promo-code';
+        if (endpoint.includes('/cart')) return 'cart';
+        if (endpoint === '/promo-codes/validate') return 'promo-codes.validate';
+        if (endpoint === '/checkout.features' || endpoint === '/checkout/features') return 'checkout.features';
+        if (endpoint.includes('/checkout')) return 'checkout';
+
+        // Orders endpoints (payment)
+        if (endpoint.match(/\/orders\/\d+\/pay$/)) return 'orders.pay';
+        if (endpoint.match(/\/orders\/\d+\/payment-status$/)) return 'orders.status';
+
+        // Event tracking endpoints (must be before general /events routes)
+        if (endpoint.match(/\/events\/[a-z0-9-]+\/track-view$/i)) return 'event.track-view';
+        if (endpoint.match(/\/events\/[a-z0-9-]+\/toggle-interest$/i)) return 'event.toggle-interest';
+        if (endpoint.match(/\/events\/[a-z0-9-]+\/check-interest$/i)) return 'event.check-interest';
+
+        // Events featured endpoint (must be before general /events)
+        if (endpoint.includes('/events/featured')) return 'events.featured';
+        // Events cities endpoint
+        if (endpoint.includes('/events/cities')) return 'events.cities';
+
+        // Events endpoints (match /events but not /marketplace-events which is handled above)
+        if (endpoint.match(/^\/events\/[a-z0-9-]+$/i)) return 'event';
+        if (endpoint.startsWith('/events')) return 'events';
+
+        // Tour public landing page (single)
+        if (endpoint.match(/^\/tours\/[a-z0-9-]+(?:\?|$)/i)) return 'tour.show';
+
+        // Event types endpoint (global taxonomy)
+        if (endpoint === '/event-types') return 'event-types';
+
+        // Event categories endpoint
+        if (endpoint.includes('event-categories')) return 'event-categories';
+
+        // Event genres endpoint
+        if (endpoint.includes('/event-genres')) return 'event-genres';
+
+        // Subgenres endpoint
+        if (endpoint.startsWith('/subgenres')) return 'subgenres';
+
+        // Cities endpoint
+        if (endpoint.startsWith('/cities')) return 'cities';
+
+        // Organizer auth endpoints
+        if (endpoint === '/organizer/register') return 'organizer.register';
+        if (endpoint === '/organizer/login') return 'organizer.login';
+        if (endpoint === '/organizer/logout') return 'organizer.logout';
+        if (endpoint === '/organizer/me') return 'organizer.me';
+        if (endpoint === '/organizer/widget-settings') return 'organizer.settings';
+        if (endpoint === '/organizer/widget-image') return 'organizer.widget-image';
+        if (endpoint === '/organizer/settings') return 'organizer.me';
+        if (endpoint === '/organizer/settings/profile') return 'organizer.profile';
+        if (endpoint === '/organizer/settings/company') return 'organizer.profile';
+        if (endpoint === '/organizer/settings/password') return 'organizer.password';
+        if (endpoint === '/organizer/settings/verify-cui') return 'organizer.verify-cui';
+        if (endpoint === '/organizer/verify-cui') return 'organizer.verify-cui';
+        if (endpoint === '/organizer/settings/notifications') return 'organizer.notifications';
+        if (endpoint === '/organizer/contract') return 'organizer.contract';
+        if (endpoint === '/organizer/contract/download') return 'organizer.contract.download';
+        if (endpoint === '/organizer/documents/upload') return 'organizer.documents.upload';
+        if (endpoint === '/organizer/profile') return 'organizer.profile';
+        if (endpoint === '/organizer/password') return 'organizer.password';
+        if (endpoint === '/organizer/forgot-password') return 'organizer.forgot-password';
+        if (endpoint === '/organizer/reset-password') return 'organizer.reset-password';
+        if (endpoint === '/organizer/verify-email') return 'organizer.verify-email';
+        if (endpoint === '/organizer/resend-verification') return 'organizer.resend-verification';
+        if (endpoint === '/organizer/payout-details') return 'organizer.payout-details';
+
+        // Artist account auth endpoints (Etapa 3 - artist self-service)
+        if (endpoint === '/artist/register') return 'artist.register';
+        if (endpoint === '/artist/login') return 'artist.login';
+        if (endpoint === '/artist/logout') return 'artist.logout';
+        if (endpoint === '/artist/me') return 'artist.me';
+        if (endpoint === '/artist/forgot-password') return 'artist.forgot-password';
+        if (endpoint === '/artist/reset-password') return 'artist.reset-password';
+        if (endpoint === '/artist/verify-email') return 'artist.verify-email';
+        if (endpoint === '/artist/resend-verification') return 'artist.resend-verification';
+        if (endpoint.match(/^\/artist\/check-claim\/[a-z0-9-]+$/)) return 'artist.check-claim';
+        if (endpoint === '/artist/search' || endpoint.startsWith('/artist/search?')) return 'artist.search';
+        // Artist self-service (Etapa 4) — proxy.php branches GET/PUT/DELETE
+        // on REQUEST_METHOD so a single action string covers all verbs on
+        // the same resource.
+        if (endpoint === '/artist/dashboard') return 'artist.dashboard';
+        // Use a distinct action name to avoid clashing with the pre-existing
+        // public `artist.events` case (slug-required) earlier in proxy.php.
+        if (endpoint === '/artist/events' || endpoint.startsWith('/artist/events?')) return 'artist.account.events';
+        if (endpoint === '/artist/profile') return 'artist.profile';
+        if (endpoint === '/artist/profile/image') return 'artist.profile.image';
+        if (endpoint === '/artist/profile/taxonomies') return 'artist.profile.taxonomies';
+        if (endpoint === '/artist/profile/refresh-social-stats') return 'artist.profile.refresh-social-stats';
+        if (endpoint === '/artist/account') return 'artist.account';
+        if (endpoint === '/artist/account/password') return 'artist.account.password';
+
+        // Organizer bank accounts
+        if (endpoint === '/organizer/bank-accounts') return 'organizer.bank-accounts';
+        if (endpoint.match(/\/organizer\/bank-accounts\/\d+$/)) return 'organizer.bank-account.delete';
+        if (endpoint.match(/\/organizer\/bank-accounts\/\d+\/primary$/)) return 'organizer.bank-account.primary';
+
+        // Organizer notifications
+        if (endpoint.includes('/organizer/notifications/types')) return 'organizer.notifications.types';
+        if (endpoint.includes('/organizer/notifications/unread-count')) return 'organizer.notifications.unread-count';
+        if (endpoint.includes('/organizer/notifications/mark-read')) return 'organizer.notifications.mark-read';
+        if (endpoint.includes('/organizer/notifications/mark-all-read')) return 'organizer.notifications.mark-all-read';
+        if (endpoint.match(/\/organizer\/notifications\/\d+\/read$/)) return 'organizer.notifications.read';
+        if (endpoint === '/organizer/notifications' || endpoint.includes('/organizer/notifications?')) return 'organizer.notifications';
+
+        // Organizer dashboard
+        if (endpoint === '/organizer/dashboard') return 'organizer.dashboard';
+        if (endpoint === '/organizer/dashboard/timeline') return 'organizer.dashboard.timeline';
+        if (endpoint.includes('/organizer/dashboard/sales-timeline')) return 'organizer.dashboard.sales-timeline';
+
+        // Organizer events
+        // Leisure venue endpoints (organizer-side)
+        if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/config$/)) return 'organizer.event.leisure.config';
+        if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/reports\/by-issuer/)) return 'organizer.event.leisure.reports.by-issuer';
+        if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/venue-config$/)) return 'organizer.event.leisure.venue-config';
+        if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/participants/)) return 'organizer.event.leisure.participants';
+        if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/sales-timeline/)) return 'organizer.event.leisure.sales-timeline';
+        if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/dashboard\/live/)) return 'organizer.event.leisure.dashboard.live';
+        if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/raport/)) return 'organizer.event.leisure.raport';
+        if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/pos-sale/)) return 'organizer.event.leisure.pos-sale';
+        if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/shifts\/\d+/)) return 'organizer.event.leisure.shifts.item';
+        if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/shifts/)) return 'organizer.event.leisure.shifts.collection';
+        if (endpoint.match(/\/organizer\/venues\/\d+\/gates\/\d+/)) return 'organizer.venue-gates.item';
+        if (endpoint.match(/\/organizer\/venues\/\d+\/gates/)) return 'organizer.venue-gates.collection';
+        if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/upload-image/)) return 'organizer.event.leisure.upload-image';
+        if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/products\/reorder/)) return 'organizer.event.leisure.products.reorder';
+        if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/products\/\d+/)) return 'organizer.event.leisure.products.item';
+        if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/products/)) return 'organizer.event.leisure.products.collection';
+        if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/boats\/sync/)) return 'organizer.event.leisure.boats.sync';
+        if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/boats/)) return 'organizer.event.leisure.boats';
+        if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/active-rentals/)) return 'organizer.event.leisure.rentals.active';
+        if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/boat-rentals\/start/)) return 'organizer.event.leisure.rentals.start';
+        if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/boat-rentals\/\d+\/end/)) return 'organizer.event.leisure.rentals.end';
+        if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/boat-rentals\/\d+\/finalize/)) return 'organizer.event.leisure.rentals.finalize';
+        if (endpoint === '/organizer/me/active-shift') return 'organizer.me.active-shift';
+
+        if (endpoint.match(/\/organizer\/events\/\d+\/analytics/)) return 'organizer.event.analytics';
+        if (endpoint.match(/\/organizer\/events\/\d+\/staff-report/)) return 'organizer.event.staff-report';
+        if (endpoint.match(/\/organizer\/events\/\d+\/goals\/\d+$/)) return 'organizer.event.goal';
+        if (endpoint.match(/\/organizer\/events\/\d+\/goals$/)) return 'organizer.event.goals';
+        if (endpoint.match(/\/organizer\/events\/\d+\/milestones\/\d+$/)) return 'organizer.event.milestone';
+        if (endpoint.match(/\/organizer\/events\/\d+\/milestones$/)) return 'organizer.event.milestones';
+        if (endpoint.match(/\/organizer\/events\/\d+\/images$/)) return 'organizer.event.images';
+        if (endpoint.match(/\/organizer\/events\/\d+\/participants\/export$/)) return 'organizer.event.participants.export';
+        if (endpoint.match(/\/organizer\/events\/\d+\/participants$/)) return 'organizer.event.participants';
+        if (endpoint.match(/\/organizer\/events\/\d+\/check-in\//)) return 'organizer.event.checkin';
+        if (endpoint.match(/\/organizer\/events\/\d+\/submit$/)) return 'organizer.event.submit';
+        if (endpoint.match(/\/organizer\/events\/\d+\/cancel$/)) return 'organizer.event.cancel';
+        if (endpoint.match(/\/organizer\/events\/\d+\/status$/)) return 'organizer.event.status';
+        if (endpoint.match(/\/organizer\/events\/\d+\/seating-map$/)) return 'organizer.event.seating-map';
+        if (endpoint.match(/\/organizer\/events\/\d+$/)) return 'organizer.event';
+        if (endpoint === '/organizer/events' || endpoint.includes('/organizer/events?')) return 'organizer.events';
+
+        // Organizer orders
+        if (endpoint === '/organizer/orders/export') return 'organizer.orders.export';
+        if (endpoint === '/organizer/orders' || endpoint.includes('/organizer/orders?')) return 'organizer.orders';
+
+        // Organizer finance
+        if (endpoint === '/organizer/balance') return 'organizer.balance';
+        if (endpoint === '/organizer/finance') return 'organizer.finance';
+        if (endpoint === '/organizer/transactions' || endpoint.includes('/organizer/transactions?')) return 'organizer.transactions';
+        if (endpoint.match(/\/organizer\/payouts\/\d+$/)) return 'organizer.payout';
+        if (endpoint === '/organizer/payouts' || endpoint.includes('/organizer/payouts?')) return 'organizer.payouts';
+
+        // Organizer promo codes
+        if (endpoint.match(/\/organizer\/promo-codes\/\d+$/)) return 'organizer.promo-code';
+        if (endpoint === '/organizer/promo-codes' || endpoint.includes('/organizer/promo-codes?')) return 'organizer.promo-codes';
+
+        // Organizer team
+        if (endpoint === '/organizer/team') return 'organizer.team';
+        if (endpoint === '/organizer/team/invite') return 'organizer.team.invite';
+        if (endpoint === '/organizer/team/update') return 'organizer.team.update';
+        if (endpoint === '/organizer/team/remove') return 'organizer.team.remove';
+        if (endpoint === '/organizer/team/resend-invite') return 'organizer.team.resend-invite';
+        if (endpoint === '/organizer/team/resend-all-invites') return 'organizer.team.resend-all-invites';
+
+        // Organizer billing/invoices
+        if (endpoint.match(/\/organizer\/invoices\/\d+\/pdf$/)) return 'organizer.invoice.pdf';
+        if (endpoint.match(/\/organizer\/invoices\/export/)) return 'organizer.invoices.export';
+        if (endpoint.match(/\/organizer\/invoices\/\d+$/)) return 'organizer.invoice';
+        if (endpoint === '/organizer/invoices' || endpoint.includes('/organizer/invoices?')) return 'organizer.invoices';
+        if (endpoint === '/organizer/billing-info') return 'organizer.billing-info';
+        if (endpoint === '/organizer/payment-methods') return 'organizer.payment-methods';
+
+        // Organizer participants (all events)
+        if (endpoint === '/organizer/participants/export') return 'organizer.participants.export';
+        if (endpoint === '/organizer/participants' || endpoint.includes('/organizer/participants?')) return 'organizer.participants';
+        if (endpoint === '/organizer/participants/checkin') return 'organizer.participants.checkin';
+
+        // Organizer share links
+        if (endpoint.match(/\/organizer\/share-links\/[A-Za-z0-9]+$/)) return 'organizer.share-link';
+        if (endpoint === '/organizer/share-links') return 'organizer.share-links';
+
+        // Organizer support tickets
+        if (endpoint === '/organizer/support/departments' || endpoint.startsWith('/organizer/support/departments?')) return 'organizer.support.departments';
+        if (endpoint.match(/\/organizer\/support\/tickets\/\d+\/messages$/)) return 'organizer.support.tickets.reply';
+        if (endpoint.match(/\/organizer\/support\/tickets\/\d+\/close$/)) return 'organizer.support.tickets.close';
+        if (endpoint.match(/\/organizer\/support\/tickets\/\d+\/reopen$/)) return 'organizer.support.tickets.reopen';
+        if (endpoint.match(/\/organizer\/support\/tickets\/\d+$/)) return 'organizer.support.tickets.show';
+        if (endpoint === '/organizer/support/tickets' || endpoint.startsWith('/organizer/support/tickets?')) return 'organizer.support.tickets';
+
+        // Organizer API settings
+        if (endpoint === '/organizer/api-key') return 'organizer.api-key';
+        if (endpoint === '/organizer/api-key/regenerate') return 'organizer.api-key.regenerate';
+        if (endpoint === '/organizer/webhook') return 'organizer.webhook';
+
+        // Organizer documents (Cerere avizare, Declaratie impozite)
+        if (endpoint === '/organizer/documents/events') return 'organizer.documents.events';
+        if (endpoint === '/organizer/documents/generate') return 'organizer.documents.generate';
+        if (endpoint.match(/\/organizer\/documents\/event\/\d+$/)) return 'organizer.documents.for-event';
+        if (endpoint.match(/\/organizer\/documents\/\d+\/download$/)) return 'organizer.documents.download';
+        if (endpoint.match(/\/organizer\/documents\/\d+\/view$/)) return 'organizer.documents.view';
+        if (endpoint === '/organizer/documents' || endpoint.includes('/organizer/documents?')) return 'organizer.documents';
+
+        // Organizer invitations (PDF invite generation)
+        if (endpoint === '/organizer/invitations/csv-template') return 'organizer.invitations.csv-template';
+        if (endpoint === '/organizer/invitations/hold-seats') return 'organizer.invitations.hold-seats';
+        if (endpoint.match(/\/organizer\/invitations\/\d+\/download$/)) return 'organizer.invitations.download';
+        if (endpoint.match(/\/organizer\/invitations\/\d+\/generate$/)) return 'organizer.invitations.generate';
+        if (endpoint.match(/\/organizer\/invitations\/\d+\/invites$/)) return 'organizer.invitations.delete-invites';
+        if (endpoint.match(/\/organizer\/invitations\/\d+$/)) {
+            // Distinguish GET (show) from DELETE via action name — proxy maps both via batch_id
+            return 'organizer.invitations.show';
+        }
+        if (endpoint === '/organizer/invitations' || endpoint.startsWith('/organizer/invitations?')) return 'organizer.invitations';
+
+        // Organizer services (Extra Services / Promovare)
+        if (endpoint === '/organizer/services/pricing') return 'organizer.services.pricing';
+        if (endpoint === '/organizer/services/stats') return 'organizer.services.stats';
+        if (endpoint === '/organizer/services/types') return 'organizer.services.types';
+        if (endpoint === '/organizer/services/email-audiences' || endpoint.includes('/organizer/services/email-audiences?')) return 'organizer.services.email-audiences';
+        if (endpoint.match(/\/organizer\/services\/orders\/[^\/\?]+\/pay$/)) return 'organizer.services.orders.pay';
+        if (endpoint.match(/\/organizer\/services\/orders\/[^\/\?]+\/cancel$/)) return 'organizer.services.orders.cancel';
+        if (endpoint.match(/\/organizer\/services\/orders\/[^\/\?]+$/)) return 'organizer.services.orders.show';
+        if (endpoint === '/organizer/services/orders' || endpoint.includes('/organizer/services/orders?')) return 'organizer.services.orders';
+
+        return null; // unknown endpoint - will cause error
+    },
+
+    /**
+     * Extract params from endpoint for proxy
+     */
+    getProxyParams(endpoint) {
+        // Extract event ID + optional shift ID from leisure shifts CRUD
+        const leisureShiftMatch = endpoint.match(/^\/organizer\/events\/(\d+)\/leisure\/shifts\/(\d+)/);
+        if (leisureShiftMatch) {
+            return `event=${encodeURIComponent(leisureShiftMatch[1])}&shift=${encodeURIComponent(leisureShiftMatch[2])}`;
+        }
+        // Extract event ID + product ID from leisure products CRUD
+        const leisureProductMatch = endpoint.match(/^\/organizer\/events\/(\d+)\/leisure\/products\/(\d+)/);
+        if (leisureProductMatch) {
+            return `event=${encodeURIComponent(leisureProductMatch[1])}&product=${encodeURIComponent(leisureProductMatch[2])}`;
+        }
+        // Extract event ID + rental ID from boat-rentals
+        const rentalMatch = endpoint.match(/^\/organizer\/events\/(\d+)\/leisure\/boat-rentals\/(\d+)/);
+        if (rentalMatch) {
+            return `event=${encodeURIComponent(rentalMatch[1])}&rental=${encodeURIComponent(rentalMatch[2])}`;
+        }
+        // Extract venue+gate IDs
+        const venueGateMatch = endpoint.match(/^\/organizer\/venues\/(\d+)\/gates\/(\d+)/);
+        if (venueGateMatch) {
+            return `venue=${encodeURIComponent(venueGateMatch[1])}&gate=${encodeURIComponent(venueGateMatch[2])}`;
+        }
+        const venueGatesMatch = endpoint.match(/^\/organizer\/venues\/(\d+)\/gates/);
+        if (venueGatesMatch) {
+            return `venue=${encodeURIComponent(venueGatesMatch[1])}`;
+        }
+        // Extract event ID from leisure organizer endpoints
+        const leisureMatch = endpoint.match(/^\/organizer\/events\/(\d+)\/leisure\//);
+        if (leisureMatch) {
+            return `event=${encodeURIComponent(leisureMatch[1])}`;
+        }
+
+        // Extract artist slug from /artist/check-claim/{slug}
+        const artistClaimMatch = endpoint.match(/^\/artist\/check-claim\/([a-z0-9-]+)$/);
+        if (artistClaimMatch) {
+            return `slug=${encodeURIComponent(artistClaimMatch[1])}`;
+        }
+
+        // Extract organizer slug from /marketplace-events/organizers/{slug}/contact
+        const organizerContactMatch = endpoint.match(/\/marketplace-events\/organizers\/([\w-]+)\/contact$/);
+        if (organizerContactMatch) {
+            return `slug=${encodeURIComponent(organizerContactMatch[1])}`;
+        }
+
+        // Extract organizer slug from /marketplace-events/organizers/{slug}
+        const organizerMatch = endpoint.match(/\/marketplace-events\/organizers\/([\w-]+)$/);
+        if (organizerMatch) {
+            return `slug=${encodeURIComponent(organizerMatch[1])}`;
+        }
+
+        // Extract order ID from /order-confirmation/{id} (public thank-you page)
+        const confirmMatch = endpoint.match(/\/order-confirmation\/([\w-]+)$/);
+        if (confirmMatch) {
+            return `id=${encodeURIComponent(confirmMatch[1])}`;
+        }
+
+        // Extract order ID from /customer/orders/{id} (numeric or alphanumeric like MKT-W08ABJWH)
+        const orderMatch = endpoint.match(/\/customer\/orders\/([\w-]+)$/);
+        if (orderMatch) {
+            return `id=${encodeURIComponent(orderMatch[1])}`;
+        }
+
+        // Extract ticket ID from /customer/tickets/{id}
+        const ticketMatch = endpoint.match(/\/customer\/tickets\/(\d+)/);
+        if (ticketMatch) {
+            return `id=${encodeURIComponent(ticketMatch[1])}`;
+        }
+
+        // Extract support ticket id from /organizer/support/tickets/{id}[/messages|close|reopen]
+        const supportTicketMatch = endpoint.match(/\/organizer\/support\/tickets\/(\d+)(\/messages|\/close|\/reopen)?$/);
+        if (supportTicketMatch) {
+            return `id=${encodeURIComponent(supportTicketMatch[1])}`;
+        }
+
+        // Extract refund ID from /customer/refunds/{id}/cancel or /customer/refunds/{id}
+        const refundCancelMatch = endpoint.match(/\/customer\/refunds\/(\d+)\/cancel$/);
+        if (refundCancelMatch) {
+            return `id=${encodeURIComponent(refundCancelMatch[1])}`;
+        }
+        const refundMatch = endpoint.match(/\/customer\/refunds\/(\d+)$/);
+        if (refundMatch) {
+            return `id=${encodeURIComponent(refundMatch[1])}`;
+        }
+
+        // Extract review ID from /customer/reviews/{id}
+        const reviewMatch = endpoint.match(/\/customer\/reviews\/(\d+)/);
+        if (reviewMatch) {
+            return `id=${encodeURIComponent(reviewMatch[1])}`;
+        }
+
+        // Extract watchlist ID from /customer/watchlist/{id}
+        const watchlistMatch = endpoint.match(/\/customer\/watchlist\/(\d+)/);
+        if (watchlistMatch) {
+            return `id=${encodeURIComponent(watchlistMatch[1])}`;
+        }
+
+        // Extract notification ID from /customer/notifications/{id}
+        const notificationMatch = endpoint.match(/\/customer\/notifications\/(\d+)/);
+        if (notificationMatch) {
+            return `id=${encodeURIComponent(notificationMatch[1])}`;
+        }
+
+        // Extract order ID from /orders/{id}/pay or /orders/{id}/payment-status
+        const ordersPayMatch = endpoint.match(/\/orders\/(\d+)\/(pay|payment-status)$/);
+        if (ordersPayMatch) {
+            return `id=${encodeURIComponent(ordersPayMatch[1])}`;
+        }
+
+        // Extract slug from date/slot/resource availability endpoints
+        const availSlugMatch = endpoint.match(/\/marketplace-events\/([a-z0-9-]+)\/(date|slot|resource)-availability/i);
+        if (availSlugMatch) {
+            return `slug=${encodeURIComponent(availSlugMatch[1])}`;
+        }
+
+        // Extract slug from endpoints like /marketplace-events/event-slug or /marketplace-events/event-slug/verify-password
+        const eventVerifyMatch = endpoint.match(/\/marketplace-events\/([a-z0-9-]+)\/verify-password$/i);
+        if (eventVerifyMatch) {
+            return `slug=${encodeURIComponent(eventVerifyMatch[1])}`;
+        }
+        const eventMatch = endpoint.match(/\/marketplace-events\/([a-z0-9-]+)$/i);
+        if (eventMatch) {
+            return `slug=${encodeURIComponent(eventMatch[1])}`;
+        }
+
+        // Extract slug from event tracking endpoints: /events/{slug}/track-view, /events/{slug}/toggle-interest, /events/{slug}/check-interest
+        const eventTrackingMatch = endpoint.match(/\/events\/([a-z0-9-]+)\/(track-view|toggle-interest|check-interest)$/i);
+        if (eventTrackingMatch) {
+            return `slug=${encodeURIComponent(eventTrackingMatch[1])}`;
+        }
+
+        // Tour public landing page: /tours/{slug}
+        const tourMatch = endpoint.match(/^\/tours\/([a-z0-9-]+)/i);
+        if (tourMatch) {
+            return `slug=${encodeURIComponent(tourMatch[1])}`;
+        }
+
+        // Venue category slug extraction
+        const venueCategoryMatch = endpoint.match(/\/venue-categories\/([a-z0-9-]+)$/i);
+        if (venueCategoryMatch) {
+            return `slug=${encodeURIComponent(venueCategoryMatch[1])}`;
+        }
+
+        // Venue favorite endpoints - extract slug before /toggle-favorite or /check-favorite
+        const venueFavoriteMatch = endpoint.match(/\/venues\/([a-z0-9-]+)\/(toggle-favorite|check-favorite)/i);
+        if (venueFavoriteMatch) {
+            return `slug=${encodeURIComponent(venueFavoriteMatch[1])}`;
+        }
+
+        const venueMatch = endpoint.match(/\/venues\/([a-z0-9-]+)$/i);
+        if (venueMatch) {
+            return `slug=${encodeURIComponent(venueMatch[1])}`;
+        }
+
+        // Artist favorite endpoints - extract slug before /toggle-favorite or /check-favorite
+        const artistFavoriteMatch = endpoint.match(/\/artists\/([a-z0-9-]+)\/(toggle-favorite|check-favorite)/i);
+        if (artistFavoriteMatch) {
+            return `slug=${encodeURIComponent(artistFavoriteMatch[1])}`;
+        }
+
+        // Artist events endpoint - extract slug before /events
+        const artistEventsMatch = endpoint.match(/\/artists\/([a-z0-9-]+)\/events/i);
+        if (artistEventsMatch) {
+            const slug = artistEventsMatch[1];
+            const queryStart = endpoint.indexOf('?');
+            if (queryStart !== -1) {
+                return `slug=${encodeURIComponent(slug)}&${endpoint.substring(queryStart + 1)}`;
+            }
+            return `slug=${encodeURIComponent(slug)}`;
+        }
+
+        const artistMatch = endpoint.match(/\/artists\/([a-z0-9-]+)$/i);
+        if (artistMatch) {
+            return `slug=${encodeURIComponent(artistMatch[1])}`;
+        }
+
+        // Location city endpoint - extract slug
+        const cityMatch = endpoint.match(/\/locations\/cities\/([a-z0-9-]+)$/i);
+        if (cityMatch) {
+            return `slug=${encodeURIComponent(cityMatch[1])}`;
+        }
+
+        // Location region endpoint - extract slug
+        const regionMatch = endpoint.match(/\/locations\/regions\/([a-z0-9-]+)$/i);
+        if (regionMatch) {
+            return `slug=${encodeURIComponent(regionMatch[1])}`;
+        }
+
+        // Organizer event analytics - extract event ID and query params
+        const organizerEventAnalyticsMatch = endpoint.match(/\/organizer\/events\/(\d+)\/analytics/);
+        if (organizerEventAnalyticsMatch) {
+            const eventId = organizerEventAnalyticsMatch[1];
+            const queryStart = endpoint.indexOf('?');
+            if (queryStart !== -1) {
+                return `event_id=${encodeURIComponent(eventId)}&${endpoint.substring(queryStart + 1)}`;
+            }
+            return `event_id=${encodeURIComponent(eventId)}`;
+        }
+
+        // Organizer event staff report - extract event ID
+        const organizerEventStaffReportMatch = endpoint.match(/\/organizer\/events\/(\d+)\/staff-report/);
+        if (organizerEventStaffReportMatch) {
+            return `event_id=${encodeURIComponent(organizerEventStaffReportMatch[1])}`;
+        }
+
+        // Organizer event goals - extract event ID and optional goal ID
+        const organizerEventGoalMatch = endpoint.match(/\/organizer\/events\/(\d+)\/goals\/(\d+)$/);
+        if (organizerEventGoalMatch) {
+            return `event_id=${encodeURIComponent(organizerEventGoalMatch[1])}&goal_id=${encodeURIComponent(organizerEventGoalMatch[2])}`;
+        }
+        const organizerEventGoalsMatch = endpoint.match(/\/organizer\/events\/(\d+)\/goals$/);
+        if (organizerEventGoalsMatch) {
+            return `event_id=${encodeURIComponent(organizerEventGoalsMatch[1])}`;
+        }
+
+        // Organizer event milestones - extract event ID and optional milestone ID
+        const organizerEventMilestoneMatch = endpoint.match(/\/organizer\/events\/(\d+)\/milestones\/(\d+)$/);
+        if (organizerEventMilestoneMatch) {
+            return `event_id=${encodeURIComponent(organizerEventMilestoneMatch[1])}&milestone_id=${encodeURIComponent(organizerEventMilestoneMatch[2])}`;
+        }
+        const organizerEventMilestonesMatch = endpoint.match(/\/organizer\/events\/(\d+)\/milestones$/);
+        if (organizerEventMilestonesMatch) {
+            return `event_id=${encodeURIComponent(organizerEventMilestonesMatch[1])}`;
+        }
+
+        // Organizer event endpoints - extract event ID
+        const organizerEventParticipantsMatch = endpoint.match(/\/organizer\/events\/(\d+)\/participants/);
+        if (organizerEventParticipantsMatch) {
+            const eventId = organizerEventParticipantsMatch[1];
+            const queryStart = endpoint.indexOf('?');
+            if (queryStart !== -1) {
+                return `event_id=${encodeURIComponent(eventId)}&${endpoint.substring(queryStart + 1)}`;
+            }
+            return `event_id=${encodeURIComponent(eventId)}`;
+        }
+
+        const organizerEventCheckinMatch = endpoint.match(/\/organizer\/events\/(\d+)\/check-in\/(.+)/);
+        if (organizerEventCheckinMatch) {
+            return `event_id=${encodeURIComponent(organizerEventCheckinMatch[1])}&barcode=${encodeURIComponent(organizerEventCheckinMatch[2])}`;
+        }
+
+        const organizerEventImagesMatch = endpoint.match(/\/organizer\/events\/(\d+)\/images$/);
+        if (organizerEventImagesMatch) {
+            return `event_id=${encodeURIComponent(organizerEventImagesMatch[1])}`;
+        }
+
+        const organizerEventActionMatch = endpoint.match(/\/organizer\/events\/(\d+)\/(submit|cancel|status)$/);
+        if (organizerEventActionMatch) {
+            return `event_id=${encodeURIComponent(organizerEventActionMatch[1])}`;
+        }
+
+        const organizerEventSeatingMapMatch = endpoint.match(/\/organizer\/events\/(\d+)\/seating-map$/);
+        if (organizerEventSeatingMapMatch) {
+            return `event_id=${encodeURIComponent(organizerEventSeatingMapMatch[1])}`;
+        }
+
+        const organizerEventMatch = endpoint.match(/\/organizer\/events\/(\d+)$/);
+        if (organizerEventMatch) {
+            return `event_id=${encodeURIComponent(organizerEventMatch[1])}`;
+        }
+
+        // Organizer payout endpoint - extract payout ID
+        const organizerPayoutMatch = endpoint.match(/\/organizer\/payouts\/(\d+)$/);
+        if (organizerPayoutMatch) {
+            return `payout_id=${encodeURIComponent(organizerPayoutMatch[1])}`;
+        }
+
+        // Organizer bank account endpoint - extract account ID
+        const organizerBankAccountPrimaryMatch = endpoint.match(/\/organizer\/bank-accounts\/(\d+)\/primary$/);
+        if (organizerBankAccountPrimaryMatch) {
+            return `account_id=${encodeURIComponent(organizerBankAccountPrimaryMatch[1])}`;
+        }
+        const organizerBankAccountMatch = endpoint.match(/\/organizer\/bank-accounts\/(\d+)$/);
+        if (organizerBankAccountMatch) {
+            return `account_id=${encodeURIComponent(organizerBankAccountMatch[1])}`;
+        }
+
+        // Organizer promo code endpoint - extract code ID
+        const organizerPromoCodeMatch = endpoint.match(/\/organizer\/promo-codes\/(\d+)$/);
+        if (organizerPromoCodeMatch) {
+            return `code_id=${encodeURIComponent(organizerPromoCodeMatch[1])}`;
+        }
+
+        // Organizer invoice PDF endpoint - extract invoice ID
+        const organizerInvoicePdfMatch = endpoint.match(/\/organizer\/invoices\/(\d+)\/pdf$/);
+        if (organizerInvoicePdfMatch) {
+            return `invoice_id=${encodeURIComponent(organizerInvoicePdfMatch[1])}`;
+        }
+
+        // Organizer invoice endpoint - extract invoice ID
+        const organizerInvoiceMatch = endpoint.match(/\/organizer\/invoices\/(\d+)$/);
+        if (organizerInvoiceMatch) {
+            return `invoice_id=${encodeURIComponent(organizerInvoiceMatch[1])}`;
+        }
+
+        // Organizer notification read - extract notification ID
+        const organizerNotificationReadMatch = endpoint.match(/\/organizer\/notifications\/(\d+)\/read$/);
+        if (organizerNotificationReadMatch) {
+            return `id=${encodeURIComponent(organizerNotificationReadMatch[1])}`;
+        }
+
+        // Organizer share links - extract code parameter
+        const shareLinkMatch = endpoint.match(/\/organizer\/share-links\/([A-Za-z0-9]+)$/);
+        if (shareLinkMatch) {
+            return `code=${encodeURIComponent(shareLinkMatch[1])}`;
+        }
+
+        // Organizer documents endpoint - extract event ID or document ID
+        const organizerDocumentForEventMatch = endpoint.match(/\/organizer\/documents\/event\/(\d+)$/);
+        if (organizerDocumentForEventMatch) {
+            return `event_id=${encodeURIComponent(organizerDocumentForEventMatch[1])}`;
+        }
+        const organizerDocumentDownloadMatch = endpoint.match(/\/organizer\/documents\/(\d+)\/download$/);
+        if (organizerDocumentDownloadMatch) {
+            return `document_id=${encodeURIComponent(organizerDocumentDownloadMatch[1])}`;
+        }
+        const organizerDocumentViewMatch = endpoint.match(/\/organizer\/documents\/(\d+)\/view$/);
+        if (organizerDocumentViewMatch) {
+            return `document_id=${encodeURIComponent(organizerDocumentViewMatch[1])}`;
+        }
+
+        // Organizer invitations - extract batch id (for /{id}, /{id}/generate, /{id}/download, /{id}/invites)
+        const invBatchMatch = endpoint.match(/\/organizer\/invitations\/(\d+)(?:\/(?:generate|download|invites))?$/);
+        if (invBatchMatch) {
+            return `batch_id=${encodeURIComponent(invBatchMatch[1])}`;
+        }
+
+        // Organizer services - extract UUID from /organizer/services/orders/{uuid}[/action]
+        const serviceOrderUuidMatch = endpoint.match(/\/organizer\/services\/orders\/([^\/\?]+)/);
+        if (serviceOrderUuidMatch) {
+            return `uuid=${encodeURIComponent(serviceOrderUuidMatch[1])}`;
+        }
+
+        // Cart item management - extract item key (but NOT /cart/items/with-seats)
+        const cartItemMatch = endpoint.match(/\/cart\/items\/([^/?]+)$/);
+        if (cartItemMatch && cartItemMatch[1] !== 'with-seats') {
+            return `item_key=${encodeURIComponent(cartItemMatch[1])}`;
+        }
+
+        // Pass through query params
+        const queryStart = endpoint.indexOf('?');
+        if (queryStart !== -1) {
+            return endpoint.substring(queryStart + 1);
+        }
+
+        return '';
+    },
+
+    /**
+     * GET request
+     */
+    async get(endpoint, params = {}) {
+        const queryString = new URLSearchParams(params).toString();
+        const url = queryString ? `${endpoint}?${queryString}` : endpoint;
+        return this.request(url, { method: 'GET' });
+    },
+
+    /**
+     * POST request
+     */
+    async post(endpoint, data = {}) {
+        return this.request(endpoint, {
+            method: 'POST',
+            body: JSON.stringify(data)
+        });
+    },
+
+    /**
+     * PUT request
+     */
+    async put(endpoint, data = {}) {
+        return this.request(endpoint, {
+            method: 'PUT',
+            body: JSON.stringify(data)
+        });
+    },
+
+    /**
+     * PATCH request
+     */
+    async patch(endpoint, data = {}) {
+        return this.request(endpoint, {
+            method: 'PATCH',
+            body: JSON.stringify(data)
+        });
+    },
+
+    /**
+     * DELETE request
+     */
+    async delete(endpoint, data = null) {
+        const options = { method: 'DELETE' };
+        if (data) {
+            options.body = JSON.stringify(data);
+        }
+        return this.request(endpoint, options);
+    },
+
+    // ==================== PUBLIC ENDPOINTS ====================
+
+    /**
+     * Get marketplace configuration
+     */
+    async getConfig() {
+        return this.get('/config');
+    },
+
+    /**
+     * Get list of events
+     */
+    async getEvents(params = {}) {
+        return this.get('/marketplace-events', params);
+    },
+
+    /**
+     * Get featured events
+     */
+    async getFeaturedEvents(limit = 6) {
+        return this.get('/marketplace-events/featured', { limit });
+    },
+
+    /**
+     * Get event categories
+     */
+    async getCategories() {
+        return this.get('/marketplace-events/categories');
+    },
+
+    /**
+     * Get all event types (global taxonomy, for profiling)
+     */
+    async getEventTypes() {
+        return this.get('/event-types');
+    },
+
+    /**
+     * Get event genres, optionally filtered by event type IDs
+     */
+    async getEventGenres(eventTypeIds = []) {
+        const params = {};
+        if (eventTypeIds.length > 0) {
+            params.event_type_ids = eventTypeIds.join(',');
+        }
+        return this.get('/event-genres', params);
+    },
+
+    /**
+     * Get event cities
+     */
+    async getCities() {
+        return this.get('/marketplace-events/cities');
+    },
+
+    /**
+     * Get single event details
+     */
+    async getEvent(identifier, params = {}) {
+        return this.get(`/marketplace-events/${identifier}`, params);
+    },
+
+    /**
+     * Get event availability
+     */
+    async getEventAvailability(eventId) {
+        return this.get(`/marketplace-events/${eventId}/availability`);
+    },
+
+    /**
+     * Verify event access password
+     */
+    async verifyEventPassword(identifier, password) {
+        return this.post(`/marketplace-events/${identifier}/verify-password`, { password });
+    },
+
+    /**
+     * Extract UTM and ad click parameters from current URL
+     */
+    getTrackingParams() {
+        const params = new URLSearchParams(window.location.search);
+        const trackingParams = {};
+
+        // UTM parameters
+        const utmFields = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content'];
+        utmFields.forEach(field => {
+            const value = params.get(field);
+            if (value) trackingParams[field] = value;
+        });
+
+        // Ad click IDs
+        const clickIds = ['gclid', 'fbclid', 'ttclid', 'li_fat_id'];
+        clickIds.forEach(field => {
+            const value = params.get(field);
+            if (value) trackingParams[field] = value;
+        });
+
+        // Facebook browser cookies (if available)
+        const fbFields = ['fbc', 'fbp'];
+        fbFields.forEach(field => {
+            const value = params.get(field);
+            if (value) trackingParams[field] = value;
+        });
+
+        // Also try to get fbc/fbp from cookies (Facebook Pixel convention)
+        try {
+            const cookies = document.cookie.split(';').reduce((acc, cookie) => {
+                const [key, value] = cookie.trim().split('=');
+                acc[key] = value;
+                return acc;
+            }, {});
+            if (cookies['_fbc'] && !trackingParams.fbc) trackingParams.fbc = cookies['_fbc'];
+            if (cookies['_fbp'] && !trackingParams.fbp) trackingParams.fbp = cookies['_fbp'];
+        } catch (e) {
+            // Ignore cookie access errors
+        }
+
+        // Document referrer (if not same origin)
+        try {
+            const referrer = document.referrer;
+            if (referrer) {
+                const referrerUrl = new URL(referrer);
+                const currentUrl = new URL(window.location.href);
+                // Only include referrer if it's from a different domain
+                if (referrerUrl.hostname !== currentUrl.hostname) {
+                    trackingParams.referrer = referrer;
+                }
+            }
+        } catch (e) {
+            // Ignore URL parsing errors
+        }
+
+        return trackingParams;
+    },
+
+    /**
+     * Track event page view
+     */
+    async trackEventView(slug) {
+        const trackingParams = this.getTrackingParams();
+        return this.post(`/events/${slug}/track-view`, trackingParams);
+    },
+
+    /**
+     * Toggle interest for an event
+     */
+    async toggleEventInterest(slug) {
+        return this.post(`/events/${slug}/toggle-interest`);
+    },
+
+    /**
+     * Check if user is interested in an event
+     */
+    async checkEventInterest(slug) {
+        return this.get(`/events/${slug}/check-interest`);
+    },
+
+    /**
+     * Toggle favorite for an artist
+     */
+    async toggleArtistFavorite(slug) {
+        return this.post(`/artists/${slug}/toggle-favorite`);
+    },
+
+    /**
+     * Check if user has favorited an artist
+     */
+    async checkArtistFavorite(slug) {
+        return this.get(`/artists/${slug}/check-favorite`);
+    },
+
+    /**
+     * Toggle favorite for a venue
+     */
+    async toggleVenueFavorite(slug) {
+        return this.post(`/venues/${slug}/toggle-favorite`);
+    },
+
+    /**
+     * Check if user has favorited a venue
+     */
+    async checkVenueFavorite(slug) {
+        return this.get(`/venues/${slug}/check-favorite`);
+    },
+
+    /**
+     * Get list of all favorite artists
+     */
+    async getFavoriteArtists() {
+        return this.get('/customer/favorites/artists');
+    },
+
+    /**
+     * Get list of all favorite venues
+     */
+    async getFavoriteVenues() {
+        return this.get('/customer/favorites/venues');
+    },
+
+    /**
+     * Get favorites summary (counts)
+     */
+    async getFavoritesSummary() {
+        return this.get('/customer/favorites/summary');
+    },
+
+    /**
+     * Get single venue details
+     */
+    async getVenue(slug) {
+        return this.get(`/venues/${slug}`);
+    },
+
+    /**
+     * Get list of venues
+     */
+    async getVenues(params = {}) {
+        return this.get('/venues', params);
+    },
+
+    /**
+     * Get venue categories
+     */
+    async getVenueCategories() {
+        return this.get('/venue-categories');
+    },
+
+    /**
+     * Get featured venues
+     */
+    async getFeaturedVenues(limit = 6) {
+        return this.get('/venues/featured', { limit });
+    },
+
+    /**
+     * Validate promo code
+     */
+    async validatePromoCode(code, eventId, cartTotal, ticketCount, customerEmail = null, items = null) {
+        const payload = {
+            code,
+            event_id: eventId,
+            cart_total: cartTotal,
+            ticket_count: ticketCount,
+            customer_email: customerEmail
+        };
+        if (items && items.length > 0) {
+            payload.items = items;
+        }
+        return this.post('/promo-codes/validate', payload);
+    },
+
+    // ==================== CUSTOMER ENDPOINTS ====================
+
+    customer: {
+        /**
+         * Register new customer
+         */
+        async register(data) {
+            return AmbiletAPI.post('/customer/register', data);
+        },
+
+        /**
+         * Login customer
+         */
+        async login(email, password) {
+            return AmbiletAPI.post('/customer/login', { email, password });
+        },
+
+        /**
+         * Logout customer
+         */
+        async logout() {
+            return AmbiletAPI.post('/customer/logout');
+        },
+
+        /**
+         * Get current customer profile
+         */
+        async getProfile() {
+            return AmbiletAPI.get('/customer/me');
+        },
+
+        /**
+         * Get rich profile data (taste profile, top artists, cities, etc.)
+         */
+        async getProfileData() {
+            return AmbiletAPI.get('/customer/profile-data');
+        },
+
+        /**
+         * Get smart suggestions for progressive profiling (cities, venues from history)
+         */
+        async getSmartSuggestions() {
+            return AmbiletAPI.get('/customer/smart-suggestions');
+        },
+
+        /**
+         * Upload avatar image
+         */
+        async uploadAvatar(file) {
+            const formData = new FormData();
+            formData.append('avatar', file);
+
+            const baseUrl = AmbiletAPI.getApiUrl();
+            const url = `${baseUrl}?action=customer.avatar`;
+            const headers = {};
+            const token = typeof AmbiletAuth !== 'undefined' ? AmbiletAuth.getToken() : null;
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+
+            const response = await fetch(url, {
+                method: 'POST',
+                headers,
+                body: formData,
+            });
+
+            const data = await response.json();
+            if (!response.ok) {
+                throw new APIError(data.message || 'Upload failed', response.status, data);
+            }
+            return data;
+        },
+
+        /**
+         * Update customer profile
+         */
+        async updateProfile(data) {
+            return AmbiletAPI.put('/customer/profile', data);
+        },
+
+        /**
+         * Change password
+         */
+        async changePassword(currentPassword, newPassword, confirmPassword) {
+            return AmbiletAPI.put('/customer/password', {
+                current_password: currentPassword,
+                password: newPassword,
+                password_confirmation: confirmPassword
+            });
+        },
+
+        /**
+         * Request password reset
+         */
+        async forgotPassword(email) {
+            return AmbiletAPI.post('/customer/forgot-password', { email });
+        },
+
+        /**
+         * Reset password
+         */
+        async resetPassword(token, email, password, confirmPassword) {
+            return AmbiletAPI.post('/customer/reset-password', {
+                token,
+                email,
+                password,
+                password_confirmation: confirmPassword
+            });
+        },
+
+        /**
+         * Delete account
+         */
+        async deleteAccount(password, reason = null) {
+            return AmbiletAPI.delete('/customer/account', {
+                password,
+                reason
+            });
+        },
+
+        /**
+         * Verify email
+         */
+        async verifyEmail(token, email) {
+            return AmbiletAPI.post('/customer/verify-email', { token, email });
+        },
+
+        /**
+         * Resend verification email
+         */
+        async resendVerification(email) {
+            return AmbiletAPI.post('/customer/resend-verification', { email });
+        },
+
+        /**
+         * Get customer orders
+         */
+        async getOrders(params = {}) {
+            return AmbiletAPI.get('/customer/orders', params);
+        },
+
+        /**
+         * Get single order
+         */
+        async getOrder(orderId) {
+            return AmbiletAPI.get(`/customer/orders/${orderId}`);
+        },
+
+        // ==================== REFUND REQUESTS ====================
+
+        /**
+         * Get refund reasons
+         */
+        async getRefundReasons() {
+            return AmbiletAPI.get('/customer/refunds/reasons');
+        },
+
+        /**
+         * Check refund eligibility for an order
+         */
+        async checkRefundEligibility(orderId) {
+            return AmbiletAPI.post('/customer/refunds/check-eligibility', { order_id: orderId });
+        },
+
+        /**
+         * Submit refund request
+         */
+        async submitRefundRequest(data) {
+            return AmbiletAPI.post('/customer/refunds', data);
+        },
+
+        /**
+         * Get customer's refund requests
+         */
+        async getRefundRequests(params = {}) {
+            return AmbiletAPI.get('/customer/refunds', params);
+        },
+
+        /**
+         * Cancel a pending refund request
+         */
+        async cancelRefundRequest(refundId) {
+            return AmbiletAPI.post(`/customer/refunds/${refundId}/cancel`);
+        },
+
+        /**
+         * Get customer tickets
+         */
+        async getTickets(params = {}) {
+            return AmbiletAPI.get('/customer/tickets', params);
+        },
+
+        /**
+         * Get all tickets with filter (upcoming, past, all)
+         */
+        async getAllTickets(filter = 'all', params = {}) {
+            return AmbiletAPI.get('/customer/tickets/all', { filter, ...params });
+        },
+
+        /**
+         * Get single ticket with QR data
+         */
+        async getTicket(ticketId) {
+            return AmbiletAPI.get(`/customer/tickets/${ticketId}`);
+        },
+
+        // ==================== DASHBOARD & STATS ====================
+
+        /**
+         * Get dashboard stats (orders, tickets, events, rewards)
+         */
+        async getDashboardStats() {
+            return AmbiletAPI.get('/customer/stats');
+        },
+
+        /**
+         * Get upcoming events for dashboard
+         */
+        async getUpcomingEvents(limit = 5) {
+            return AmbiletAPI.get('/customer/stats/upcoming-events', { limit });
+        },
+
+        // ==================== REVIEWS ====================
+
+        /**
+         * Get customer reviews
+         */
+        async getReviews(params = {}) {
+            return AmbiletAPI.get('/customer/reviews', params);
+        },
+
+        /**
+         * Get events available to review
+         */
+        async getEventsToReview(params = {}) {
+            return AmbiletAPI.get('/customer/reviews/events-to-review', params);
+        },
+
+        /**
+         * Submit a review
+         */
+        async submitReview(data) {
+            return AmbiletAPI.post('/customer/reviews', data);
+        },
+
+        /**
+         * Get single review
+         */
+        async getReview(reviewId) {
+            return AmbiletAPI.get(`/customer/reviews/${reviewId}`);
+        },
+
+        /**
+         * Update a review
+         */
+        async updateReview(reviewId, data) {
+            return AmbiletAPI.put(`/customer/reviews/${reviewId}`, data);
+        },
+
+        /**
+         * Delete a review
+         */
+        async deleteReview(reviewId) {
+            return AmbiletAPI.delete(`/customer/reviews/${reviewId}`);
+        },
+
+        // ==================== WATCHLIST ====================
+
+        /**
+         * Get watchlist
+         */
+        async getWatchlist(params = {}) {
+            return AmbiletAPI.get('/customer/watchlist', params);
+        },
+
+        /**
+         * Add event to watchlist
+         */
+        async addToWatchlist(eventId, options = {}) {
+            return AmbiletAPI.post('/customer/watchlist', {
+                event_id: eventId,
+                notify_on_sale: options.notifyOnSale !== false,
+                notify_on_changes: options.notifyOnChanges !== false
+            });
+        },
+
+        /**
+         * Update watchlist item preferences
+         */
+        async updateWatchlistItem(watchlistId, data) {
+            return AmbiletAPI.put(`/customer/watchlist/${watchlistId}`, data);
+        },
+
+        /**
+         * Remove from watchlist/favorites
+         * @param {string} type - 'event', 'artist', or 'venue'
+         * @param {number} id - The item ID
+         */
+        async removeFromWatchlist(type, id) {
+            if (type === 'event') {
+                // Remove event from watchlist
+                return AmbiletAPI.delete(`/customer/watchlist/${id}`);
+            } else if (type === 'artist') {
+                // Toggle artist favorite off
+                return AmbiletAPI.post(`/artists/${id}/toggle-favorite`);
+            } else if (type === 'venue') {
+                // Toggle venue favorite off
+                return AmbiletAPI.post(`/venues/${id}/toggle-favorite`);
+            }
+            return { success: false, message: 'Unknown type' };
+        },
+
+        /**
+         * Check if event is in watchlist
+         */
+        async checkWatchlist(eventId) {
+            return AmbiletAPI.get('/customer/watchlist/check', { event_id: eventId });
+        },
+
+        // ==================== REWARDS & GAMIFICATION ====================
+
+        /**
+         * Get rewards overview (points, XP, badges count)
+         */
+        async getRewardsOverview() {
+            return AmbiletAPI.get('/customer/rewards');
+        },
+
+        /**
+         * Get points history
+         */
+        async getPointsHistory(params = {}) {
+            return AmbiletAPI.get('/customer/rewards/history', params);
+        },
+
+        /**
+         * Get badges (earned and available)
+         */
+        async getBadges() {
+            return AmbiletAPI.get('/customer/rewards/badges');
+        },
+
+        /**
+         * Get available rewards to redeem
+         */
+        async getAvailableRewards(params = {}) {
+            return AmbiletAPI.get('/customer/rewards/available', params);
+        },
+
+        /**
+         * Redeem a reward
+         */
+        async redeemReward(rewardId) {
+            return AmbiletAPI.post('/customer/rewards/redeem', { reward_id: rewardId });
+        },
+
+        /**
+         * Get redemption history
+         */
+        async getRedemptions(params = {}) {
+            return AmbiletAPI.get('/customer/rewards/redemptions', params);
+        },
+
+        /**
+         * Get points summary (alias for getRewardsOverview)
+         */
+        async getPoints() {
+            return AmbiletAPI.get('/customer/rewards');
+        },
+
+        /**
+         * Get XP/Level summary (alias for getRewardsOverview, XP data included)
+         */
+        async getXP() {
+            return AmbiletAPI.get('/customer/rewards');
+        },
+
+        /**
+         * Get available rewards (alias for getAvailableRewards)
+         */
+        async getRewards(params = {}) {
+            return AmbiletAPI.get('/customer/rewards/available', params);
+        },
+
+        // ==================== NOTIFICATIONS ====================
+
+        /**
+         * Get notifications
+         */
+        async getNotifications(params = {}) {
+            return AmbiletAPI.get('/customer/notifications', params);
+        },
+
+        /**
+         * Get unread notifications count
+         */
+        async getUnreadNotificationsCount() {
+            return AmbiletAPI.get('/customer/notifications/unread-count');
+        },
+
+        /**
+         * Mark notifications as read
+         */
+        async markNotificationsRead(notificationIds = null) {
+            return AmbiletAPI.post('/customer/notifications/mark-read', {
+                notification_ids: notificationIds // null = mark all
+            });
+        },
+
+        /**
+         * Delete notification
+         */
+        async deleteNotification(notificationId) {
+            return AmbiletAPI.delete(`/customer/notifications/${notificationId}`);
+        },
+
+        /**
+         * Get notification settings
+         */
+        async getNotificationSettings() {
+            return AmbiletAPI.get('/customer/notifications/settings');
+        },
+
+        /**
+         * Update notification settings
+         */
+        async updateNotificationSettings(settings) {
+            return AmbiletAPI.put('/customer/notifications/settings', settings);
+        },
+
+        // ==================== REFERRALS ====================
+
+        /**
+         * Get referral program info and stats
+         */
+        async getReferrals() {
+            return AmbiletAPI.get('/customer/referrals');
+        },
+
+        /**
+         * Regenerate referral code
+         */
+        async regenerateReferralCode() {
+            return AmbiletAPI.post('/customer/referrals/regenerate-code');
+        },
+
+        /**
+         * Track referral link click
+         */
+        async trackReferralClick(code, source = null) {
+            return AmbiletAPI.post('/customer/referrals/track-click', { code, source });
+        },
+
+        /**
+         * Get referral leaderboard
+         */
+        async getReferralLeaderboard(period = 'month', limit = 10) {
+            return AmbiletAPI.get('/customer/referrals/leaderboard', { period, limit });
+        },
+
+        /**
+         * Claim pending referral rewards
+         */
+        async claimReferralRewards() {
+            return AmbiletAPI.post('/customer/referrals/claim-rewards');
+        },
+
+        /**
+         * Validate a referral code (public, no auth required)
+         */
+        async validateReferralCode(code) {
+            return AmbiletAPI.get('/customer/referrals/validate', { code });
+        },
+
+        /**
+         * Get cart
+         */
+        async getCart() {
+            return AmbiletAPI.get('/customer/cart');
+        },
+
+        /**
+         * Add item to cart
+         */
+        async addToCart(eventId, ticketTypeId, quantity) {
+            return AmbiletAPI.post('/customer/cart/items', {
+                event_id: eventId,
+                ticket_type_id: ticketTypeId,
+                quantity
+            });
+        },
+
+        /**
+         * Update cart item
+         */
+        async updateCartItem(itemKey, quantity) {
+            return AmbiletAPI.put(`/customer/cart/items/${itemKey}`, { quantity });
+        },
+
+        /**
+         * Remove cart item
+         */
+        async removeCartItem(itemKey) {
+            return AmbiletAPI.delete(`/customer/cart/items/${itemKey}`);
+        },
+
+        /**
+         * Clear cart
+         */
+        async clearCart() {
+            return AmbiletAPI.delete('/customer/cart');
+        },
+
+        /**
+         * Apply promo code to cart
+         */
+        async applyPromoCode(code) {
+            return AmbiletAPI.post('/customer/cart/promo-code', { code });
+        },
+
+        /**
+         * Remove promo code from cart
+         */
+        async removePromoCode() {
+            return AmbiletAPI.delete('/customer/cart/promo-code');
+        },
+
+        /**
+         * Get checkout summary
+         */
+        async getCheckoutSummary() {
+            return AmbiletAPI.get('/customer/checkout/summary');
+        },
+
+        /**
+         * Process checkout
+         */
+        async checkout(data) {
+            return AmbiletAPI.post('/customer/checkout', data);
+        }
+    },
+
+    // ==================== ORGANIZER ENDPOINTS ====================
+
+    organizer: {
+        /**
+         * Register new organizer
+         */
+        async register(data) {
+            return AmbiletAPI.post('/organizer/register', data);
+        },
+
+        /**
+         * Login organizer
+         */
+        async login(email, password) {
+            return AmbiletAPI.post('/organizer/login', { email, password });
+        },
+
+        /**
+         * Logout organizer
+         */
+        async logout() {
+            return AmbiletAPI.post('/organizer/logout');
+        },
+
+        /**
+         * Get current organizer profile
+         */
+        async getProfile() {
+            return AmbiletAPI.get('/organizer/me');
+        },
+
+        /**
+         * Update organizer profile
+         */
+        async updateProfile(data) {
+            return AmbiletAPI.put('/organizer/profile', data);
+        },
+
+        /**
+         * Get dashboard data
+         */
+        async getDashboard() {
+            return AmbiletAPI.get('/organizer/dashboard');
+        },
+
+        /**
+         * Get dashboard timeline
+         */
+        async getDashboardTimeline(params = {}) {
+            return AmbiletAPI.get('/organizer/dashboard/timeline', params);
+        },
+
+        /**
+         * Get organizer events
+         */
+        async getEvents(params = {}) {
+            return AmbiletAPI.get('/organizer/events', params);
+        },
+
+        /**
+         * Get single event
+         */
+        async getEvent(eventId) {
+            return AmbiletAPI.get(`/organizer/events/${eventId}`);
+        },
+
+        /**
+         * Create event
+         */
+        async createEvent(data) {
+            return AmbiletAPI.post('/organizer/events', data);
+        },
+
+        /**
+         * Update event
+         */
+        async updateEvent(eventId, data) {
+            return AmbiletAPI.put(`/organizer/events/${eventId}`, data);
+        },
+
+        /**
+         * Upload event images (poster and/or cover)
+         */
+        async uploadEventImages(eventId, posterFile, coverFile) {
+            const formData = new FormData();
+            if (posterFile) formData.append('poster', posterFile);
+            if (coverFile) formData.append('cover_image', coverFile);
+
+            const baseUrl = AmbiletAPI.getApiUrl();
+            const params = AmbiletAPI.getProxyParams(`/organizer/events/${eventId}/images`);
+            const url = `${baseUrl}?action=organizer.event.images&${params}`;
+            const headers = {};
+            const token = typeof AmbiletAuth !== 'undefined' ? AmbiletAuth.getToken() : null;
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+
+            const response = await fetch(url, {
+                method: 'POST',
+                headers,
+                body: formData,
+            });
+
+            const data = await response.json();
+            if (!response.ok) {
+                throw new APIError(data.message || 'Image upload failed', response.status, data);
+            }
+            return data;
+        },
+
+        /**
+         * Submit event for review
+         */
+        async submitEvent(eventId) {
+            return AmbiletAPI.post(`/organizer/events/${eventId}/submit`);
+        },
+
+        /**
+         * Cancel event
+         */
+        async cancelEvent(eventId) {
+            return AmbiletAPI.post(`/organizer/events/${eventId}/cancel`);
+        },
+
+        /**
+         * Get event categories for the marketplace
+         */
+        async getEventCategories() {
+            return AmbiletAPI.get('/organizer/event-categories');
+        },
+
+        /**
+         * Get event genres filtered by event type IDs
+         */
+        async getEventGenres(typeIds = []) {
+            return AmbiletAPI.get('/organizer/event-genres', { type_ids: typeIds });
+        },
+
+        /**
+         * Search venues
+         */
+        async searchVenues(search = '') {
+            return AmbiletAPI.get('/organizer/venues', { search });
+        },
+
+        /**
+         * Search artists
+         */
+        async searchArtists(search = '') {
+            return AmbiletAPI.get('/organizer/artists', { search });
+        },
+
+        /**
+         * Create a new artist
+         */
+        async createArtist(name) {
+            return AmbiletAPI.post('/organizer/artists', { name });
+        },
+
+        /**
+         * Get event participants
+         */
+        async getParticipants(eventId, params = {}) {
+            return AmbiletAPI.get(`/organizer/events/${eventId}/participants`, params);
+        },
+
+        /**
+         * Export participants
+         */
+        async exportParticipants(eventId) {
+            return AmbiletAPI.get(`/organizer/events/${eventId}/participants/export`);
+        },
+
+        /**
+         * Check in ticket
+         */
+        async checkIn(eventId, barcode) {
+            return AmbiletAPI.post(`/organizer/events/${eventId}/check-in/${barcode}`);
+        },
+
+        /**
+         * Undo check in
+         */
+        async undoCheckIn(eventId, barcode) {
+            return AmbiletAPI.delete(`/organizer/events/${eventId}/check-in/${barcode}`);
+        },
+
+        /**
+         * Get organizer orders
+         */
+        async getOrders(params = {}) {
+            return AmbiletAPI.get('/organizer/orders', params);
+        },
+
+        /**
+         * Get balance
+         */
+        async getBalance() {
+            return AmbiletAPI.get('/organizer/balance');
+        },
+
+        /**
+         * Get transactions
+         */
+        async getTransactions(params = {}) {
+            return AmbiletAPI.get('/organizer/transactions', params);
+        },
+
+        /**
+         * Get payouts
+         */
+        async getPayouts(params = {}) {
+            return AmbiletAPI.get('/organizer/payouts', params);
+        },
+
+        /**
+         * Request payout
+         */
+        async requestPayout(data) {
+            return AmbiletAPI.post('/organizer/payouts', data);
+        },
+
+        /**
+         * Cancel payout
+         */
+        async cancelPayout(payoutId) {
+            return AmbiletAPI.delete(`/organizer/payouts/${payoutId}`);
+        },
+
+        /**
+         * Get promo codes
+         */
+        async getPromoCodes(params = {}) {
+            return AmbiletAPI.get('/organizer/promo-codes', params);
+        },
+
+        /**
+         * Create promo code
+         */
+        async createPromoCode(data) {
+            return AmbiletAPI.post('/organizer/promo-codes', data);
+        },
+
+        /**
+         * Update promo code
+         */
+        async updatePromoCode(codeId, data) {
+            return AmbiletAPI.put(`/organizer/promo-codes/${codeId}`, data);
+        },
+
+        /**
+         * Delete promo code
+         */
+        async deletePromoCode(codeId) {
+            return AmbiletAPI.delete(`/organizer/promo-codes/${codeId}`);
+        },
+
+        /**
+         * Update payout details
+         */
+        async updatePayoutDetails(data) {
+            return AmbiletAPI.put('/organizer/payout-details', data);
+        },
+
+        // ==================== SUPPORT TICKETS ====================
+
+        /**
+         * Get support taxonomy (departments + problem types + attachment rules).
+         */
+        async getSupportDepartments(params = {}) {
+            return AmbiletAPI.get('/organizer/support/departments', params);
+        },
+
+        /**
+         * List the organizer's own support tickets.
+         */
+        async getSupportTickets(params = {}) {
+            return AmbiletAPI.get('/organizer/support/tickets', params);
+        },
+
+        /**
+         * Get a single support ticket detail + thread.
+         */
+        async getSupportTicket(id) {
+            return AmbiletAPI.get(`/organizer/support/tickets/${id}`);
+        },
+
+        /**
+         * Create a support ticket. Always sent as multipart so attachments
+         * can ride along; the proxy handler doesn't care if there are no
+         * files in the request.
+         *
+         * @param {Object} data - { support_problem_type_id, subject, description, meta:{...}, context:{...} }
+         * @param {File[]} files - optional list of File objects (jpg/png/pdf, max 3MB each)
+         */
+        async createSupportTicket(data, files = []) {
+            const fd = new FormData();
+            fd.append('support_problem_type_id', String(data.support_problem_type_id));
+            fd.append('subject', data.subject || '');
+            fd.append('description', data.description || '');
+            // Flatten meta + context as bracket notation so Laravel can
+            // re-parse them with request->input('meta.url').
+            for (const [k, v] of Object.entries(data.meta || {})) {
+                if (v !== undefined && v !== null && v !== '') fd.append(`meta[${k}]`, String(v));
+            }
+            for (const [k, v] of Object.entries(data.context || {})) {
+                if (v !== undefined && v !== null && v !== '') fd.append(`context[${k}]`, String(v));
+            }
+            (files || []).forEach((f) => f && fd.append('attachments[]', f));
+
+            return AmbiletAPI._postMultipart('/organizer/support/tickets', fd);
+        },
+
+        /**
+         * Reply on a support ticket (organizer-side).
+         */
+        async replySupportTicket(id, body, files = []) {
+            const fd = new FormData();
+            fd.append('body', body || '');
+            (files || []).forEach((f) => f && fd.append('attachments[]', f));
+            return AmbiletAPI._postMultipart(`/organizer/support/tickets/${id}/messages`, fd);
+        },
+
+        /**
+         * Mark own support ticket resolved.
+         */
+        async closeSupportTicket(id) {
+            return AmbiletAPI.post(`/organizer/support/tickets/${id}/close`);
+        },
+
+        /**
+         * Reopen a previously resolved/closed support ticket.
+         */
+        async reopenSupportTicket(id) {
+            return AmbiletAPI.post(`/organizer/support/tickets/${id}/reopen`);
+        }
+    },
+
+    // ==================== ARTIST ACCOUNT ENDPOINTS ====================
+
+    artist: {
+        /**
+         * Register a new artist account (optionally claiming an existing
+         * /artist/{slug} profile via `artist_slug` in `data`).
+         */
+        async register(data) {
+            return AmbiletAPI.post('/artist/register', data);
+        },
+
+        /**
+         * Login. The Laravel controller returns structured 403 errors
+         * with `data.code` of:
+         *   email_not_verified | pending_approval | rejected | suspended
+         * and `data.reason` for the rejected case. The page-level JS
+         * inspects these to redirect appropriately.
+         */
+        async login(email, password) {
+            return AmbiletAPI.post('/artist/login', { email, password });
+        },
+
+        async logout() {
+            return AmbiletAPI.post('/artist/logout');
+        },
+
+        async getProfile() {
+            return AmbiletAPI.get('/artist/me');
+        },
+
+        async forgotPassword(email) {
+            return AmbiletAPI.post('/artist/forgot-password', { email });
+        },
+
+        async resetPassword(data) {
+            return AmbiletAPI.post('/artist/reset-password', data);
+        },
+
+        async verifyEmail(email, token) {
+            return AmbiletAPI.post('/artist/verify-email', { email, token });
+        },
+
+        async resendVerification(email) {
+            return AmbiletAPI.post('/artist/resend-verification', { email });
+        },
+
+        /**
+         * Public — used by artist-single.php to render the right CTA on
+         * the public profile page (claim vs. verified vs. edit).
+         */
+        async checkClaim(artistSlug) {
+            return AmbiletAPI.get(`/artist/check-claim/${artistSlug}`);
+        },
+
+        /**
+         * Picker search for the register page. Returns up to 20 partner
+         * artists with `is_claimed` flagged so claimed ones can be
+         * disabled in the dropdown.
+         */
+        async searchArtists(q = '') {
+            return AmbiletAPI.get('/artist/search', q ? { q } : {});
+        },
+
+        // -------- Self-service (Etapa 4) — auth required --------
+
+        async getDashboard() {
+            return AmbiletAPI.get('/artist/dashboard');
+        },
+
+        /**
+         * @param {object} params - { filter: 'upcoming'|'past'|'all', per_page, page }
+         */
+        async getEvents(params = {}) {
+            return AmbiletAPI.get('/artist/events', params);
+        },
+
+        async getProfile() {
+            return AmbiletAPI.get('/artist/profile');
+        },
+
+        async updateProfile(data) {
+            return AmbiletAPI.put('/artist/profile', data);
+        },
+
+        /** Cached server-side; returns { artist_types: [...], artist_genres: [...] } */
+        async getTaxonomies() {
+            return AmbiletAPI.get('/artist/profile/taxonomies');
+        },
+
+        /**
+         * Trigger a one-shot refresh of the artist's social stats
+         * (Spotify followers/popularity, YouTube subs, Facebook/Insta/
+         * TikTok followers etc). Server dispatches the FetchArtistSocialStats
+         * job; the response returns BEFORE the upstream APIs are hit, so
+         * the UI should poll /artist/profile or just tell the user to
+         * come back in a few minutes.
+         */
+        async refreshSocialStats() {
+            return AmbiletAPI.post('/artist/profile/refresh-social-stats');
+        },
+
+        /**
+         * Upload an image. `type` is one of: main | logo | portrait | discography.
+         * Uses native FormData so the proxy can forward the multipart body
+         * upstream without re-encoding.
+         */
+        async uploadProfileImage(file, type) {
+            const formData = new FormData();
+            formData.append('image', file);
+            formData.append('type', type);
+
+            const baseUrl = AmbiletAPI.getApiUrl();
+            const url = `${baseUrl}?action=artist.profile.image`;
+            const headers = {};
+            const token = typeof AmbiletAuth !== 'undefined' ? AmbiletAuth.getToken() : null;
+            if (token) headers['Authorization'] = `Bearer ${token}`;
+
+            const response = await fetch(url, { method: 'POST', headers, body: formData });
+            const data = await response.json();
+            if (!response.ok) {
+                const err = new APIError(data.message || 'Upload failed', response.status, data.errors);
+                err.data = data;
+                throw err;
+            }
+            return data;
+        },
+
+        async getAccount() {
+            return AmbiletAPI.get('/artist/account');
+        },
+
+        async updateAccount(data) {
+            return AmbiletAPI.put('/artist/account', data);
+        },
+
+        async updatePassword(data) {
+            return AmbiletAPI.put('/artist/account/password', data);
+        },
+
+        /**
+         * Self-delete the account. Requires `password` confirmation in body.
+         */
+        async deleteAccount(password) {
+            return AmbiletAPI.delete('/artist/account', { password });
+        }
+    }
+};
+
+/**
+ * Internal: POST a FormData body through the proxy with auth.
+ * Mirrors AmbiletAPI.post but doesn't JSON-encode the body so cURL on
+ * the proxy side ships a real multipart/form-data request upstream.
+ */
+/**
+ * Public alias for multipart POST. Mirror la AmbiletAPI.post dar pentru FormData.
+ * Folosit la upload de imagini, atasamente etc.
+ */
+AmbiletAPI.upload = async function(endpointPath, formData) {
+    return AmbiletAPI._postMultipart(endpointPath, formData);
+};
+
+AmbiletAPI._postMultipart = async function(endpointPath, formData) {
+    const action = AmbiletAPI.getProxyAction(endpointPath);
+    const params = AmbiletAPI.getProxyParams(endpointPath);
+    const baseUrl = AmbiletAPI.getApiUrl();
+    if (!action) {
+        throw new APIError(`Unknown endpoint: ${endpointPath}`, 400);
+    }
+    const url = `${baseUrl}?action=${action}${params ? '&' + params : ''}`;
+
+    const headers = {};
+    const token = (typeof AmbiletAuth !== 'undefined' && AmbiletAuth.getToken) ? AmbiletAuth.getToken() : null;
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    // Do NOT set Content-Type — the browser fills it with the boundary.
+
+    const res = await fetch(url, { method: 'POST', headers, body: formData, credentials: 'same-origin' });
+    let data = null;
+    try { data = await res.json(); } catch (_) { /* non-JSON */ }
+    if (!res.ok) {
+        throw new APIError(
+            (data && (data.message || data.error)) || `HTTP ${res.status}`,
+            res.status,
+            data && data.errors ? data.errors : null
+        );
+    }
+    return data;
+};
+
+/**
+ * Custom API Error class
+ */
+class APIError extends Error {
+    constructor(message, status, errors = null) {
+        super(message);
+        this.name = 'APIError';
+        this.status = status;
+        this.errors = errors;
+    }
+
+    /**
+     * Check if error is authentication related
+     */
+    isAuthError() {
+        return this.status === 401 || this.status === 403;
+    }
+
+    /**
+     * Check if error is validation related
+     */
+    isValidationError() {
+        return this.status === 422;
+    }
+
+    /**
+     * Get first error message for a field
+     */
+    getFieldError(field) {
+        if (this.errors && this.errors[field]) {
+            return Array.isArray(this.errors[field])
+                ? this.errors[field][0]
+                : this.errors[field];
+        }
+        return null;
+    }
+
+    /**
+     * Get all field errors
+     */
+    getAllFieldErrors() {
+        const result = {};
+        if (this.errors) {
+            for (const [field, messages] of Object.entries(this.errors)) {
+                result[field] = Array.isArray(messages) ? messages[0] : messages;
+            }
+        }
+        return result;
+    }
+}
+
+// Make APIError available globally
+window.APIError = APIError;

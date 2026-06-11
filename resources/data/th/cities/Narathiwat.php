@@ -1,0 +1,111 @@
+<?php
+return [
+    [
+        'id'        => 105185,
+        'name'      => 'Amphoe Ba Cho',
+        'latitude'  => '6.54591000',
+        'longitude' => '101.64923000',
+    ],
+    [
+        'id'        => 105283,
+        'name'      => 'Amphoe Chanae',
+        'latitude'  => '6.04591000',
+        'longitude' => '101.61765000',
+    ],
+    [
+        'id'        => 105301,
+        'name'      => 'Amphoe Cho-airong',
+        'latitude'  => '6.23011000',
+        'longitude' => '101.84721000',
+    ],
+    [
+        'id'        => 105560,
+        'name'      => 'Amphoe Mueang Narathiwat',
+        'latitude'  => '6.39391000',
+        'longitude' => '101.81316000',
+    ],
+    [
+        'id'        => 105802,
+        'name'      => 'Amphoe Ra-ngae',
+        'latitude'  => '6.25504000',
+        'longitude' => '101.70496000',
+    ],
+    [
+        'id'        => 105815,
+        'name'      => 'Amphoe Rueso',
+        'latitude'  => '6.37450000',
+        'longitude' => '101.51491000',
+    ],
+    [
+        'id'        => 106222,
+        'name'      => 'Amphoe Si Sakhon',
+        'latitude'  => '6.19360000',
+        'longitude' => '101.51257000',
+    ],
+    [
+        'id'        => 106251,
+        'name'      => 'Amphoe Su-ngai Kolok',
+        'latitude'  => '6.07674000',
+        'longitude' => '101.99818000',
+    ],
+    [
+        'id'        => 106252,
+        'name'      => 'Amphoe Su-ngai Padi',
+        'latitude'  => '6.10425000',
+        'longitude' => '101.89333000',
+    ],
+    [
+        'id'        => 106255,
+        'name'      => 'Amphoe Sukhirin',
+        'latitude'  => '5.91513000',
+        'longitude' => '101.73811000',
+    ],
+    [
+        'id'        => 106261,
+        'name'      => 'Amphoe Tak Bai',
+        'latitude'  => '6.23748000',
+        'longitude' => '102.00238000',
+    ],
+    [
+        'id'        => 106330,
+        'name'      => 'Amphoe Waeng',
+        'latitude'  => '5.90042000',
+        'longitude' => '101.86195000',
+    ],
+    [
+        'id'        => 106379,
+        'name'      => 'Amphoe Yi-ngo',
+        'latitude'  => '6.41655000',
+        'longitude' => '101.70035000',
+    ],
+    [
+        'id'        => 106414,
+        'name'      => 'Ban Su-ngai Pa Di',
+        'latitude'  => '6.07239000',
+        'longitude' => '101.87172000',
+    ],
+    [
+        'id'        => 106590,
+        'name'      => 'Narathiwat',
+        'latitude'  => '6.42639000',
+        'longitude' => '101.82308000',
+    ],
+    [
+        'id'        => 106660,
+        'name'      => 'Ra-ngae',
+        'latitude'  => '6.29678000',
+        'longitude' => '101.72844000',
+    ],
+    [
+        'id'        => 106705,
+        'name'      => 'Su-ngai Kolok',
+        'latitude'  => '6.02977000',
+        'longitude' => '101.96586000',
+    ],
+    [
+        'id'        => 106714,
+        'name'      => 'Tak Bai',
+        'latitude'  => '6.25947000',
+        'longitude' => '102.05461000',
+    ],
+];

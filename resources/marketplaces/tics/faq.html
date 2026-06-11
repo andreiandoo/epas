@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Întrebări frecvente — TICS.ro</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>tailwind.config={theme:{extend:{fontFamily:{sans:['Inter','system-ui','sans-serif']}}}}</script>
+    <style>
+        *{-webkit-font-smoothing:antialiased}body{font-family:'Inter',system-ui,sans-serif}
+        @keyframes fadeInUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}.anim{animation:fadeInUp .5s ease forwards;opacity:0}.anim-d1{animation-delay:.08s}.anim-d2{animation-delay:.16s}.anim-d3{animation-delay:.24s}
+        .faq-item{border-radius:1rem;transition:all .25s cubic-bezier(.4,0,.2,1)}.faq-item:hover{background:#f9fafb}
+        .faq-item.open{background:#f9fafb}
+        .faq-answer{display:grid;grid-template-rows:0fr;transition:grid-template-rows .35s cubic-bezier(.4,0,.2,1),opacity .25s ease,padding .3s ease;opacity:0}.faq-answer.open{grid-template-rows:1fr;opacity:1}
+        .faq-answer>div{overflow:hidden}
+        .faq-chevron{transition:transform .3s cubic-bezier(.4,0,.2,1)}.faq-item.open .faq-chevron{transform:rotate(180deg)}
+        .cat-btn{transition:all .2s ease;position:relative}.cat-btn::after{content:'';position:absolute;bottom:-2px;left:50%;width:0;height:2px;background:#111827;transition:all .2s ease;transform:translateX(-50%)}.cat-btn:hover::after,.cat-btn.active::after{width:100%}
+        .cat-btn.active{color:#111827;font-weight:600}
+        .search-glow{box-shadow:0 0 0 0 rgba(99,102,241,0);transition:box-shadow .3s ease}.search-glow:focus-within{box-shadow:0 0 0 4px rgba(99,102,241,.1)}
+        .quick-link{transition:all .2s ease}.quick-link:hover{transform:translateX(4px)}
+        @keyframes pulse-dot{0%,100%{opacity:.4}50%{opacity:1}}.pulse-dot{animation:pulse-dot 2s ease-in-out infinite}
+    </style>
+</head>
+<body class="bg-white">
+    <!-- Header -->
+    <header class="sticky top-0 z-40 bg-white/90 backdrop-blur-xl border-b border-gray-100">
+        <div class="max-w-5xl mx-auto px-4 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <a href="/" class="flex items-center gap-2 group"><div class="w-8 h-8 bg-gray-900 rounded-lg flex items-center justify-center group-hover:scale-105 transition-transform"><span class="text-white font-bold text-sm">T</span></div><span class="font-bold text-lg">TICS</span></a>
+                <div class="flex items-center gap-3">
+                    <a href="/help-center.html" class="text-sm text-gray-500 hover:text-gray-900 transition-colors">Centru de ajutor</a>
+                    <a href="#" class="px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-full hover:bg-gray-800 transition-colors">Contactează-ne</a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero -->
+    <section class="relative overflow-hidden">
+        <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-indigo-50 via-white to-white"></div>
+        <div class="max-w-5xl mx-auto px-4 lg:px-8 py-14 lg:py-20 relative">
+            <div class="text-center max-w-2xl mx-auto">
+                <div class="anim inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-indigo-100 to-violet-100 rounded-2xl mb-6 shadow-sm"><span class="text-3xl">💬</span></div>
+                <h1 class="anim anim-d1 text-3xl lg:text-4xl font-bold text-gray-900 mb-4">Cum te putem ajuta?</h1>
+                <p class="anim anim-d2 text-gray-500 mb-8">Găsește rapid răspunsuri la cele mai frecvente întrebări despre TICS.ro</p>
+                <!-- Search -->
+                <div class="anim anim-d3 search-glow bg-white rounded-2xl border border-gray-200 flex items-center gap-3 px-5 py-4 max-w-lg mx-auto shadow-sm">
+                    <svg class="w-5 h-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                    <input type="text" id="faqSearch" placeholder="Caută o întrebare..." class="flex-1 bg-transparent text-sm outline-none placeholder:text-gray-400" oninput="filterFaq(this.value)">
+                    <kbd class="hidden sm:inline-flex items-center px-2 py-0.5 bg-gray-100 text-gray-400 text-[10px] font-mono rounded">⌘K</kbd>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Quick Stats -->
+    <div class="max-w-5xl mx-auto px-4 lg:px-8 -mt-2 mb-8">
+        <div class="flex items-center justify-center gap-8 text-sm text-gray-400">
+            <span class="flex items-center gap-1.5"><span class="w-1.5 h-1.5 bg-green-500 rounded-full pulse-dot"></span>Echipă online acum</span>
+            <span>Răspuns mediu: &lt; 2h</span>
+            <span>42 articole</span>
+        </div>
+    </div>
+
+    <!-- Categories -->
+    <div class="max-w-5xl mx-auto px-4 lg:px-8 mb-8">
+        <div class="flex items-center justify-center gap-1 flex-wrap" id="catBtns">
+            <button class="cat-btn active px-4 py-2.5 text-sm text-gray-900 rounded-lg" onclick="filterCat('all',this)">Toate</button>
+            <button class="cat-btn px-4 py-2.5 text-sm text-gray-500 rounded-lg" onclick="filterCat('bilete',this)">🎫 Bilete</button>
+            <button class="cat-btn px-4 py-2.5 text-sm text-gray-500 rounded-lg" onclick="filterCat('plati',this)">💳 Plăți</button>
+            <button class="cat-btn px-4 py-2.5 text-sm text-gray-500 rounded-lg" onclick="filterCat('cont',this)">👤 Cont</button>
+            <button class="cat-btn px-4 py-2.5 text-sm text-gray-500 rounded-lg" onclick="filterCat('organizatori',this)">🏢 Organizatori</button>
+            <button class="cat-btn px-4 py-2.5 text-sm text-gray-500 rounded-lg" onclick="filterCat('tehnic',this)">⚙️ Tehnic</button>
+        </div>
+    </div>
+
+    <!-- FAQ Content -->
+    <main class="max-w-3xl mx-auto px-4 lg:px-8 pb-20">
+        <div id="faqList" class="space-y-2">
+
+            <!-- BILETE -->
+            <div class="faq-item border border-gray-100 p-5 cursor-pointer" data-cat="bilete" onclick="toggleFaq(this)">
+                <div class="flex items-center gap-4">
+                    <div class="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center text-lg flex-shrink-0">🎫</div>
+                    <div class="flex-1 min-w-0"><h3 class="font-medium text-gray-900 text-[15px]">Cum primesc biletul după achiziție?</h3><p class="text-xs text-gray-400 mt-0.5">Bilete · Cele mai citite</p></div>
+                    <svg class="faq-chevron w-5 h-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                </div>
+                <div class="faq-answer mt-0"><div><div class="pl-14 pt-4 pb-1 text-sm text-gray-600 leading-relaxed">Imediat după confirmarea plății, biletul este trimis automat pe adresa de email utilizată la achiziție. Biletul conține un cod QR unic care este scanat la intrarea în locație. Poți accesa biletele oricând și din secțiunea <strong>Biletele mele</strong> din contul tău, sau direct din aplicația mobilă TICS. Nu este nevoie să printezi biletul — prezintă doar codul QR de pe telefon.</div></div>
+                </div>
+            </div>
+
+            <div class="faq-item border border-gray-100 p-5 cursor-pointer" data-cat="bilete" onclick="toggleFaq(this)">
+                <div class="flex items-center gap-4">
+                    <div class="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center text-lg flex-shrink-0">🔄</div>
+                    <div class="flex-1 min-w-0"><h3 class="font-medium text-gray-900 text-[15px]">Pot returna sau schimba un bilet?</h3><p class="text-xs text-gray-400 mt-0.5">Bilete</p></div>
+                    <svg class="faq-chevron w-5 h-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                </div>
+                <div class="faq-answer mt-0"><div><div class="pl-14 pt-4 pb-1 text-sm text-gray-600 leading-relaxed">Politica de retur depinde de organizatorul evenimentului. Unele evenimente permit returnarea biletelor cu până la 48 de ore înainte de eveniment, altele nu. Verifică termenii și condițiile din pagina evenimentului. Poți oricând <strong>transfera biletul</strong> altei persoane din secțiunea Biletele mele — gratuit și instant.</div></div>
+                </div>
+            </div>
+
+            <div class="faq-item border border-gray-100 p-5 cursor-pointer" data-cat="bilete" onclick="toggleFaq(this)">
+                <div class="flex items-center gap-4">
+                    <div class="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center text-lg flex-shrink-0">📲</div>
+                    <div class="flex-1 min-w-0"><h3 class="font-medium text-gray-900 text-[15px]">Pot transfera biletul altcuiva?</h3><p class="text-xs text-gray-400 mt-0.5">Bilete</p></div>
+                    <svg class="faq-chevron w-5 h-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                </div>
+                <div class="faq-answer mt-0"><div><div class="pl-14 pt-4 pb-1 text-sm text-gray-600 leading-relaxed">Da! Din secțiunea <strong>Biletele mele</strong>, selectează biletul dorit și apasă „Transferă". Introdu adresa de email a persoanei care va primi biletul. Transferul este instantaneu, gratuit și generează un nou cod QR pe numele noului deținător. Biletul tău original este anulat automat.</div></div>
+                </div>
+            </div>
+
+            <!-- PLATI -->
+            <div class="faq-item border border-gray-100 p-5 cursor-pointer" data-cat="plati" onclick="toggleFaq(this)">
+                <div class="flex items-center gap-4">
+                    <div class="w-10 h-10 bg-green-50 rounded-xl flex items-center justify-center text-lg flex-shrink-0">💳</div>
+                    <div class="flex-1 min-w-0"><h3 class="font-medium text-gray-900 text-[15px]">Ce metode de plată acceptați?</h3><p class="text-xs text-gray-400 mt-0.5">Plăți · Popular</p></div>
+                    <svg class="faq-chevron w-5 h-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                </div>
+                <div class="faq-answer mt-0"><div><div class="pl-14 pt-4 pb-1 text-sm text-gray-600 leading-relaxed">Acceptăm: <strong>Visa, Mastercard</strong> (debit și credit), <strong>Apple Pay, Google Pay</strong>, <strong>transfer bancar instant</strong> (via RoPay), și <strong>carduri de beneficii</strong> — Edenred, Pluxee (fostul Sodexo) și Up Romania. La checkout alegi metoda preferată, iar plata se procesează în câteva secunde.</div></div>
+                </div>
+            </div>
+
+            <div class="faq-item border border-gray-100 p-5 cursor-pointer" data-cat="plati" onclick="toggleFaq(this)">
+                <div class="flex items-center gap-4">
+                    <div class="w-10 h-10 bg-green-50 rounded-xl flex items-center justify-center text-lg flex-shrink-0">🧾</div>
+                    <div class="flex-1 min-w-0"><h3 class="font-medium text-gray-900 text-[15px]">Primesc factură pentru achiziție?</h3><p class="text-xs text-gray-400 mt-0.5">Plăți</p></div>
+                    <svg class="faq-chevron w-5 h-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                </div>
+                <div class="faq-answer mt-0"><div><div class="pl-14 pt-4 pb-1 text-sm text-gray-600 leading-relaxed">Da, factura fiscală este generată automat și trimisă pe email în câteva minute de la confirmarea plății. O poți descărca oricând din contul tău, secțiunea <strong>Istoricul comenzilor</strong>. Dacă ai nevoie de factură pe numele companiei, completează datele de facturare în momentul achiziției.</div></div>
+                </div>
+            </div>
+
+            <div class="faq-item border border-gray-100 p-5 cursor-pointer" data-cat="plati" onclick="toggleFaq(this)">
+                <div class="flex items-center gap-4">
+                    <div class="w-10 h-10 bg-green-50 rounded-xl flex items-center justify-center text-lg flex-shrink-0">⏳</div>
+                    <div class="flex-1 min-w-0"><h3 class="font-medium text-gray-900 text-[15px]">Plata nu a fost procesată. Ce fac?</h3><p class="text-xs text-gray-400 mt-0.5">Plăți</p></div>
+                    <svg class="faq-chevron w-5 h-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                </div>
+                <div class="faq-answer mt-0"><div><div class="pl-14 pt-4 pb-1 text-sm text-gray-600 leading-relaxed">Dacă plata nu a fost procesată, verifică mai întâi că ai suficiente fonduri pe card și că nu ai restricții de la bancă pentru plăți online. Încearcă din nou sau folosește o altă metodă de plată. Dacă suma a fost reținută dar nu ai primit biletul, contactează-ne — banii vor fi returnați automat în 3-5 zile lucrătoare dacă tranzacția nu a fost finalizată.</div></div>
+                </div>
+            </div>
+
+            <!-- CONT -->
+            <div class="faq-item border border-gray-100 p-5 cursor-pointer" data-cat="cont" onclick="toggleFaq(this)">
+                <div class="flex items-center gap-4">
+                    <div class="w-10 h-10 bg-purple-50 rounded-xl flex items-center justify-center text-lg flex-shrink-0">👤</div>
+                    <div class="flex-1 min-w-0"><h3 class="font-medium text-gray-900 text-[15px]">Am nevoie de cont pentru a cumpăra bilete?</h3><p class="text-xs text-gray-400 mt-0.5">Cont</p></div>
+                    <svg class="faq-chevron w-5 h-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                </div>
+                <div class="faq-answer mt-0"><div><div class="pl-14 pt-4 pb-1 text-sm text-gray-600 leading-relaxed">Nu este obligatoriu. Poți cumpăra bilete ca <strong>vizitator</strong> folosind doar adresa de email. Însă, cu un cont TICS beneficiezi de: bilete salvate într-un singur loc, istoric complet de comenzi, transferuri rapide, notificări pentru artiștii favoriți și acces la oferte exclusive.</div></div>
+                </div>
+            </div>
+
+            <div class="faq-item border border-gray-100 p-5 cursor-pointer" data-cat="cont" onclick="toggleFaq(this)">
+                <div class="flex items-center gap-4">
+                    <div class="w-10 h-10 bg-purple-50 rounded-xl flex items-center justify-center text-lg flex-shrink-0">🔐</div>
+                    <div class="flex-1 min-w-0"><h3 class="font-medium text-gray-900 text-[15px]">Mi-am uitat parola. Cum o resetez?</h3><p class="text-xs text-gray-400 mt-0.5">Cont</p></div>
+                    <svg class="faq-chevron w-5 h-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                </div>
+                <div class="faq-answer mt-0"><div><div class="pl-14 pt-4 pb-1 text-sm text-gray-600 leading-relaxed">Accesează pagina de <strong>Autentificare</strong> și apasă pe „Am uitat parola". Introdu adresa de email asociată contului și vei primi un link de resetare în câteva secunde. Link-ul este valabil 1 oră. Dacă nu primești email-ul, verifică și folderul de Spam/Junk.</div></div>
+                </div>
+            </div>
+
+            <!-- ORGANIZATORI -->
+            <div class="faq-item border border-gray-100 p-5 cursor-pointer" data-cat="organizatori" onclick="toggleFaq(this)">
+                <div class="flex items-center gap-4">
+                    <div class="w-10 h-10 bg-orange-50 rounded-xl flex items-center justify-center text-lg flex-shrink-0">🏢</div>
+                    <div class="flex-1 min-w-0"><h3 class="font-medium text-gray-900 text-[15px]">Cum devin organizator pe TICS?</h3><p class="text-xs text-gray-400 mt-0.5">Organizatori</p></div>
+                    <svg class="faq-chevron w-5 h-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                </div>
+                <div class="faq-answer mt-0"><div><div class="pl-14 pt-4 pb-1 text-sm text-gray-600 leading-relaxed">Completează formularul din pagina <strong>Parteneri</strong> sau scrie-ne direct la partners@tics.ro. Echipa noastră te va contacta în maxim 24 de ore. Procesul de onboarding durează de obicei 1-2 zile lucrătoare și include configurarea contului, integrarea cu procesatorul de plăți și accesul la dashboard.</div></div>
+                </div>
+            </div>
+
+            <div class="faq-item border border-gray-100 p-5 cursor-pointer" data-cat="organizatori" onclick="toggleFaq(this)">
+                <div class="flex items-center gap-4">
+                    <div class="w-10 h-10 bg-orange-50 rounded-xl flex items-center justify-center text-lg flex-shrink-0">💰</div>
+                    <div class="flex-1 min-w-0"><h3 class="font-medium text-gray-900 text-[15px]">Când primesc banii din vânzări?</h3><p class="text-xs text-gray-400 mt-0.5">Organizatori · Popular</p></div>
+                    <svg class="faq-chevron w-5 h-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                </div>
+                <div class="faq-answer mt-0"><div><div class="pl-14 pt-4 pb-1 text-sm text-gray-600 leading-relaxed">Spre deosebire de alte platforme unde aștepți 30-60 de zile, pe TICS banii ajung <strong>direct în contul tău</strong>. Plățile sunt procesate prin contul tău de merchant, ceea ce înseamnă acces imediat la fonduri (maxim 24h lucrătoare). Comisionul TICS de 1% este facturat separat.</div></div>
+                </div>
+            </div>
+
+            <!-- TEHNIC -->
+            <div class="faq-item border border-gray-100 p-5 cursor-pointer" data-cat="tehnic" onclick="toggleFaq(this)">
+                <div class="flex items-center gap-4">
+                    <div class="w-10 h-10 bg-sky-50 rounded-xl flex items-center justify-center text-lg flex-shrink-0">📱</div>
+                    <div class="flex-1 min-w-0"><h3 class="font-medium text-gray-900 text-[15px]">Biletul funcționează offline?</h3><p class="text-xs text-gray-400 mt-0.5">Tehnic</p></div>
+                    <svg class="faq-chevron w-5 h-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                </div>
+                <div class="faq-answer mt-0"><div><div class="pl-14 pt-4 pb-1 text-sm text-gray-600 leading-relaxed">Da, biletele din aplicația mobilă TICS sunt salvate local pe dispozitiv. Codul QR funcționează și fără conexiune la internet. Recomandăm totuși să deschizi aplicația înainte de eveniment pentru a sincroniza eventuale actualizări.</div></div>
+                </div>
+            </div>
+
+            <div class="faq-item border border-gray-100 p-5 cursor-pointer" data-cat="tehnic" onclick="toggleFaq(this)">
+                <div class="flex items-center gap-4">
+                    <div class="w-10 h-10 bg-sky-50 rounded-xl flex items-center justify-center text-lg flex-shrink-0">🔗</div>
+                    <div class="flex-1 min-w-0"><h3 class="font-medium text-gray-900 text-[15px]">Aveți API pentru integrări?</h3><p class="text-xs text-gray-400 mt-0.5">Tehnic</p></div>
+                    <svg class="faq-chevron w-5 h-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                </div>
+                <div class="faq-answer mt-0"><div><div class="pl-14 pt-4 pb-1 text-sm text-gray-600 leading-relaxed">Da, TICS oferă un <strong>REST API complet</strong> documentat pentru integrări cu website-uri, aplicații mobile sau sisteme interne. API-ul permite listarea evenimentelor, vânzarea de bilete, verificarea statusului și gestionarea check-in-ului. Documentația este disponibilă la <strong>developers.tics.ro</strong>. Accesul la API este inclus în planurile Pro și Enterprise.</div></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- No results -->
+        <div id="noResults" class="hidden text-center py-12">
+            <div class="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-4">🔍</div>
+            <p class="font-medium text-gray-900 mb-1">Nu am găsit nimic</p>
+            <p class="text-sm text-gray-500">Încearcă alte cuvinte cheie sau <a href="#" class="text-indigo-600 hover:underline">contactează-ne direct</a>.</p>
+        </div>
+
+        <!-- Contact CTA -->
+        <div class="mt-14 bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl p-8 lg:p-10 text-center overflow-hidden relative">
+            <div class="absolute top-0 right-0 w-48 h-48 bg-indigo-500/10 rounded-full blur-3xl"></div>
+            <div class="relative">
+                <h3 class="text-xl font-bold text-white mb-2">Nu ai găsit răspunsul?</h3>
+                <p class="text-gray-400 text-sm mb-6">Scrie-ne și îți răspundem în maxim 2 ore în zilele lucrătoare.</p>
+                <div class="flex items-center justify-center gap-3 flex-wrap">
+                    <a href="#" class="px-6 py-3 bg-white text-gray-900 text-sm font-semibold rounded-full hover:bg-gray-100 transition-colors flex items-center gap-2"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>Trimite email</a>
+                    <a href="#" class="px-6 py-3 border border-white/20 text-white text-sm font-semibold rounded-full hover:bg-white/10 transition-colors flex items-center gap-2"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>Live chat</a>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+    function toggleFaq(el){const wasOpen=el.classList.contains('open');document.querySelectorAll('.faq-item.open').forEach(item=>{item.classList.remove('open');item.querySelector('.faq-answer').classList.remove('open')});if(!wasOpen){el.classList.add('open');el.querySelector('.faq-answer').classList.add('open')}}
+    function filterCat(cat,btn){document.querySelectorAll('.cat-btn').forEach(b=>{b.classList.remove('active');b.classList.add('text-gray-500')});btn.classList.add('active');btn.classList.remove('text-gray-500');const items=document.querySelectorAll('.faq-item');let visible=0;items.forEach(item=>{if(cat==='all'||item.dataset.cat===cat){item.style.display='';visible++}else{item.style.display='none'}});document.getElementById('noResults').classList.toggle('hidden',visible>0)}
+    function filterFaq(q){q=q.toLowerCase().trim();const items=document.querySelectorAll('.faq-item');let visible=0;document.querySelectorAll('.cat-btn').forEach(b=>{b.classList.remove('active');b.classList.add('text-gray-500')});document.querySelector('.cat-btn').classList.add('active');document.querySelector('.cat-btn').classList.remove('text-gray-500');items.forEach(item=>{const text=item.textContent.toLowerCase();if(!q||text.includes(q)){item.style.display='';visible++}else{item.style.display='none'}});document.getElementById('noResults').classList.toggle('hidden',visible>0)}
+    document.addEventListener('keydown',e=>{if((e.metaKey||e.ctrlKey)&&e.key==='k'){e.preventDefault();document.getElementById('faqSearch').focus()}})
+    </script>
+</body>
+</html>

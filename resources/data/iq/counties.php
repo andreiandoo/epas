@@ -1,0 +1,21 @@
+<?php
+return [
+    'Al Anbar',
+    'Al Muthanna',
+    'Al-Qādisiyyah',
+    'Babylon',
+    'Baghdad',
+    'Basra',
+    'Dhi Qar',
+    'Diyala',
+    'Dohuk',
+    'Erbil',
+    'Karbala',
+    'Kirkuk',
+    'Maysan',
+    'Najaf',
+    'Nineveh',
+    'Saladin',
+    'Sulaymaniyah',
+    'Wasit',
+];

@@ -1,0 +1,123 @@
+<?php
+return [
+    [
+        'id'        => 103985,
+        'name'      => 'Älmhult',
+        'latitude'  => '56.55146000',
+        'longitude' => '14.13827000',
+    ],
+    [
+        'id'        => 102995,
+        'name'      => 'Alvesta',
+        'latitude'  => '56.89935000',
+        'longitude' => '14.55559000',
+    ],
+    [
+        'id'        => 104018,
+        'name'      => 'Åseda',
+        'latitude'  => '57.17010000',
+        'longitude' => '15.34430000',
+    ],
+    [
+        'id'        => 103082,
+        'name'      => 'Braås',
+        'latitude'  => '57.06667000',
+        'longitude' => '15.05000000',
+    ],
+    [
+        'id'        => 103205,
+        'name'      => 'Gemla',
+        'latitude'  => '56.86753000',
+        'longitude' => '14.64379000',
+    ],
+    [
+        'id'        => 103301,
+        'name'      => 'Hovmantorp',
+        'latitude'  => '56.78685000',
+        'longitude' => '15.14023000',
+    ],
+    [
+        'id'        => 103346,
+        'name'      => 'Ingelstad',
+        'latitude'  => '56.75000000',
+        'longitude' => '14.91667000',
+    ],
+    [
+        'id'        => 103446,
+        'name'      => 'Lagan',
+        'latitude'  => '56.91667000',
+        'longitude' => '13.98333000',
+    ],
+    [
+        'id'        => 103449,
+        'name'      => 'Lammhult',
+        'latitude'  => '57.16667000',
+        'longitude' => '14.58333000',
+    ],
+    [
+        'id'        => 103458,
+        'name'      => 'Lenhovda',
+        'latitude'  => '57.00000000',
+        'longitude' => '15.28333000',
+    ],
+    [
+        'id'        => 103461,
+        'name'      => 'Lessebo',
+        'latitude'  => '56.75185000',
+        'longitude' => '15.26969000',
+    ],
+    [
+        'id'        => 103478,
+        'name'      => 'Ljungby',
+        'latitude'  => '56.83324000',
+        'longitude' => '13.94082000',
+    ],
+    [
+        'id'        => 103531,
+        'name'      => 'Markaryd',
+        'latitude'  => '56.46135000',
+        'longitude' => '13.59644000',
+    ],
+    [
+        'id'        => 103543,
+        'name'      => 'Moheda',
+        'latitude'  => '57.00000000',
+        'longitude' => '14.56667000',
+    ],
+    [
+        'id'        => 103659,
+        'name'      => 'Rottne',
+        'latitude'  => '57.01667000',
+        'longitude' => '14.90000000',
+    ],
+    [
+        'id'        => 103660,
+        'name'      => 'Ryd',
+        'latitude'  => '56.46667000',
+        'longitude' => '14.68333000',
+    ],
+    [
+        'id'        => 103774,
+        'name'      => 'Strömsnäsbruk',
+        'latitude'  => '56.55000000',
+        'longitude' => '13.71667000',
+    ],
+    [
+        'id'        => 103852,
+        'name'      => 'Tingsryd',
+        'latitude'  => '56.52470000',
+        'longitude' => '14.97902000',
+    ],
+    [
+        'id'        => 103975,
+        'name'      => 'Växjö',
+        'latitude'  => '56.87767000',
+        'longitude' => '14.80906000',
+    ],
+    [
+        'id'        => 103959,
+        'name'      => 'Vislanda',
+        'latitude'  => '56.78333000',
+        'longitude' => '14.45000000',
+    ],
+];

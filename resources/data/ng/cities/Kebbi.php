@@ -1,0 +1,111 @@
+<?php
+return [
+    [
+        'id'        => 76778,
+        'name'      => 'Argungu',
+        'latitude'  => '12.74482000',
+        'longitude' => '4.52514000',
+    ],
+    [
+        'id'        => 76791,
+        'name'      => 'Bagudo',
+        'latitude'  => '11.40351000',
+        'longitude' => '4.22571000',
+    ],
+    [
+        'id'        => 76798,
+        'name'      => 'Bena',
+        'latitude'  => '11.28444000',
+        'longitude' => '5.93472000',
+    ],
+    [
+        'id'        => 76803,
+        'name'      => 'Bin Yauri',
+        'latitude'  => '10.78230000',
+        'longitude' => '4.81135000',
+    ],
+    [
+        'id'        => 76805,
+        'name'      => 'Birnin Kebbi',
+        'latitude'  => '12.45389000',
+        'longitude' => '4.19750000',
+    ],
+    [
+        'id'        => 76822,
+        'name'      => 'Dabai',
+        'latitude'  => '11.47651000',
+        'longitude' => '5.20625000',
+    ],
+    [
+        'id'        => 76824,
+        'name'      => 'Dakingari',
+        'latitude'  => '11.64809000',
+        'longitude' => '4.06177000',
+    ],
+    [
+        'id'        => 76891,
+        'name'      => 'Gulma',
+        'latitude'  => '12.64231000',
+        'longitude' => '4.35545000',
+    ],
+    [
+        'id'        => 76896,
+        'name'      => 'Gwandu',
+        'latitude'  => '12.50204000',
+        'longitude' => '4.64295000',
+    ],
+    [
+        'id'        => 76959,
+        'name'      => 'Jega',
+        'latitude'  => '12.22336000',
+        'longitude' => '4.37971000',
+    ],
+    [
+        'id'        => 76974,
+        'name'      => 'Kamba',
+        'latitude'  => '11.85172000',
+        'longitude' => '3.65478000',
+    ],
+    [
+        'id'        => 76975,
+        'name'      => 'Kangiwa',
+        'latitude'  => '12.55339000',
+        'longitude' => '3.81814000',
+    ],
+    [
+        'id'        => 76983,
+        'name'      => 'Kende',
+        'latitude'  => '11.51966000',
+        'longitude' => '4.26030000',
+    ],
+    [
+        'id'        => 77017,
+        'name'      => 'Mahuta',
+        'latitude'  => '11.55338000',
+        'longitude' => '4.98138000',
+    ],
+    [
+        'id'        => 77019,
+        'name'      => 'Maiyama',
+        'latitude'  => '12.08225000',
+        'longitude' => '4.36907000',
+    ],
+    [
+        'id'        => 77102,
+        'name'      => 'Shanga',
+        'latitude'  => '11.21374000',
+        'longitude' => '4.57941000',
+    ],
+    [
+        'id'        => 77134,
+        'name'      => 'Wasagu',
+        'latitude'  => '11.37640000',
+        'longitude' => '5.79536000',
+    ],
+    [
+        'id'        => 77153,
+        'name'      => 'Zuru',
+        'latitude'  => '11.43522000',
+        'longitude' => '5.23494000',
+    ],
+];

@@ -1,0 +1,105 @@
+<?php
+return [
+    [
+        'id'        => 107419,
+        'name'      => 'Büyükorhan',
+        'latitude'  => '39.78223000',
+        'longitude' => '28.89338000',
+    ],
+    [
+        'id'        => 107660,
+        'name'      => 'Gemlik',
+        'latitude'  => '40.43510000',
+        'longitude' => '29.14943000',
+    ],
+    [
+        'id'        => 107756,
+        'name'      => 'Gürsu',
+        'latitude'  => '40.25498000',
+        'longitude' => '29.21183000',
+    ],
+    [
+        'id'        => 107795,
+        'name'      => 'Harmancık',
+        'latitude'  => '39.67743000',
+        'longitude' => '29.15523000',
+    ],
+    [
+        'id'        => 108901,
+        'name'      => 'İnegöl',
+        'latitude'  => '40.07806000',
+        'longitude' => '29.51333000',
+    ],
+    [
+        'id'        => 108925,
+        'name'      => 'İznik',
+        'latitude'  => '40.42861000',
+        'longitude' => '29.72111000',
+    ],
+    [
+        'id'        => 107890,
+        'name'      => 'Karacabey',
+        'latitude'  => '40.21323000',
+        'longitude' => '28.36120000',
+    ],
+    [
+        'id'        => 107967,
+        'name'      => 'Keles',
+        'latitude'  => '39.91361000',
+        'longitude' => '29.22944000',
+    ],
+    [
+        'id'        => 107987,
+        'name'      => 'Kestel',
+        'latitude'  => '40.19828000',
+        'longitude' => '29.21237000',
+    ],
+    [
+        'id'        => 108217,
+        'name'      => 'Mudanya',
+        'latitude'  => '40.33342000',
+        'longitude' => '28.77218000',
+    ],
+    [
+        'id'        => 108230,
+        'name'      => 'Mustafakemalpaşa',
+        'latitude'  => '40.03815000',
+        'longitude' => '28.40866000',
+    ],
+    [
+        'id'        => 108249,
+        'name'      => 'Nilüfer',
+        'latitude'  => '40.21375000',
+        'longitude' => '28.98464000',
+    ],
+    [
+        'id'        => 108272,
+        'name'      => 'Orhaneli',
+        'latitude'  => '39.90333000',
+        'longitude' => '28.99056000',
+    ],
+    [
+        'id'        => 108274,
+        'name'      => 'Orhangazi',
+        'latitude'  => '40.48917000',
+        'longitude' => '29.30889000',
+    ],
+    [
+        'id'        => 108293,
+        'name'      => 'Osmangazi',
+        'latitude'  => '40.15644000',
+        'longitude' => '29.08753000',
+    ],
+    [
+        'id'        => 108714,
+        'name'      => 'Yenişehir',
+        'latitude'  => '40.26444000',
+        'longitude' => '29.65306000',
+    ],
+    [
+        'id'        => 108746,
+        'name'      => 'Yıldırım',
+        'latitude'  => '40.19567000',
+        'longitude' => '29.03640000',
+    ],
+];

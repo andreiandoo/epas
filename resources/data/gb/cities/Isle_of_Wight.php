@@ -1,0 +1,105 @@
+<?php
+return [
+    [
+        'id'        => 48649,
+        'name'      => 'Brading',
+        'latitude'  => '50.67990000',
+        'longitude' => '-1.14571000',
+    ],
+    [
+        'id'        => 48693,
+        'name'      => 'Brighstone',
+        'latitude'  => '50.64263000',
+        'longitude' => '-1.39479000',
+    ],
+    [
+        'id'        => 49131,
+        'name'      => 'Cowes',
+        'latitude'  => '50.76306000',
+        'longitude' => '-1.29772000',
+    ],
+    [
+        'id'        => 49391,
+        'name'      => 'East Cowes',
+        'latitude'  => '50.75774000',
+        'longitude' => '-1.28815000',
+    ],
+    [
+        'id'        => 49606,
+        'name'      => 'Freshwater',
+        'latitude'  => '50.68365000',
+        'longitude' => '-1.52616000',
+    ],
+    [
+        'id'        => 49672,
+        'name'      => 'Godshill',
+        'latitude'  => '50.63308000',
+        'longitude' => '-1.25476000',
+    ],
+    [
+        'id'        => 50082,
+        'name'      => 'Isle of Wight',
+        'latitude'  => '50.66667000',
+        'longitude' => '-1.33333000',
+    ],
+    [
+        'id'        => 50447,
+        'name'      => 'Lymington',
+        'latitude'  => '50.75767000',
+        'longitude' => '-1.54430000',
+    ],
+    [
+        'id'        => 50583,
+        'name'      => 'Milford on Sea',
+        'latitude'  => '50.72561000',
+        'longitude' => '-1.59004000',
+    ],
+    [
+        'id'        => 50711,
+        'name'      => 'Newchurch',
+        'latitude'  => '50.66744000',
+        'longitude' => '-1.20828000',
+    ],
+    [
+        'id'        => 50721,
+        'name'      => 'Newport',
+        'latitude'  => '50.70146000',
+        'longitude' => '-1.29124000',
+    ],
+    [
+        'id'        => 50744,
+        'name'      => 'Niton',
+        'latitude'  => '50.58702000',
+        'longitude' => '-1.28489000',
+    ],
+    [
+        'id'        => 51194,
+        'name'      => 'Sandown',
+        'latitude'  => '50.65158000',
+        'longitude' => '-1.16103000',
+    ],
+    [
+        'id'        => 51246,
+        'name'      => 'Shalfleet',
+        'latitude'  => '50.70113000',
+        'longitude' => '-1.42007000',
+    ],
+    [
+        'id'        => 51247,
+        'name'      => 'Shanklin',
+        'latitude'  => '50.62613000',
+        'longitude' => '-1.17850000',
+    ],
+    [
+        'id'        => 51715,
+        'name'      => 'Ventnor',
+        'latitude'  => '50.59449000',
+        'longitude' => '-1.20672000',
+    ],
+    [
+        'id'        => 52012,
+        'name'      => 'Yarmouth',
+        'latitude'  => '50.70529000',
+        'longitude' => '-1.49929000',
+    ],
+];

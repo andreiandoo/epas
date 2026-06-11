@@ -1,0 +1,9 @@
+<?php
+return [
+    [
+        'id'        => 15722,
+        'name'      => 'Thimphu',
+        'latitude'  => '27.46609000',
+        'longitude' => '89.64191000',
+    ],
+];

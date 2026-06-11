@@ -1,0 +1,18 @@
+<?php
+return [
+    'Harju',
+    'Hiiu',
+    'Ida-Viru',
+    'Järva',
+    'Jõgeva',
+    'Lääne',
+    'Lääne-Viru',
+    'Pärnu',
+    'Põlva',
+    'Rapla',
+    'Saare',
+    'Tartu',
+    'Valga',
+    'Viljandi',
+    'Võru',
+];

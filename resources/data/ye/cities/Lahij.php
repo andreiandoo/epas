@@ -1,0 +1,105 @@
+<?php
+return [
+    [
+        'id'        => 130754,
+        'name'      => 'Al Ḩabīlayn',
+        'latitude'  => '13.52002000',
+        'longitude' => '44.85076000',
+    ],
+    [
+        'id'        => 130690,
+        'name'      => 'Al Had',
+        'latitude'  => '13.97830000',
+        'longitude' => '45.25530000',
+    ],
+    [
+        'id'        => 130675,
+        'name'      => 'Al Hawtah',
+        'latitude'  => '13.06240000',
+        'longitude' => '44.88160000',
+    ],
+    [
+        'id'        => 130710,
+        'name'      => 'Al Madaribah Wa Al Arah',
+        'latitude'  => '12.85690000',
+        'longitude' => '43.99060000',
+    ],
+    [
+        'id'        => 130711,
+        'name'      => 'Al Maflahy',
+        'latitude'  => '13.77670000',
+        'longitude' => '45.10880000',
+    ],
+    [
+        'id'        => 130721,
+        'name'      => 'Al Maqatirah',
+        'latitude'  => '13.13720000',
+        'longitude' => '44.14040000',
+    ],
+    [
+        'id'        => 130732,
+        'name'      => 'Al Milah',
+        'latitude'  => '13.32020000',
+        'longitude' => '44.92670000',
+    ],
+    [
+        'id'        => 130741,
+        'name'      => 'Al Musaymir',
+        'latitude'  => '13.42910000',
+        'longitude' => '44.59140000',
+    ],
+    [
+        'id'        => 130743,
+        'name'      => 'Al Qabbaytah',
+        'latitude'  => '13.32750000',
+        'longitude' => '44.50250000',
+    ],
+    [
+        'id'        => 130846,
+        'name'      => 'Habil Jabr',
+        'latitude'  => '13.59210000',
+        'longitude' => '45.07370000',
+    ],
+    [
+        'id'        => 130852,
+        'name'      => 'Halimayn',
+        'latitude'  => '13.70880000',
+        'longitude' => '44.94430000',
+    ],
+    [
+        'id'        => 130901,
+        'name'      => 'Laḩij',
+        'latitude'  => '13.05667000',
+        'longitude' => '44.88194000',
+    ],
+    [
+        'id'        => 130945,
+        'name'      => 'Radfan',
+        'latitude'  => '13.46670000',
+        'longitude' => '44.99000000',
+    ],
+    [
+        'id'        => 130991,
+        'name'      => 'Tuban',
+        'latitude'  => '13.09210000',
+        'longitude' => '44.87840000',
+    ],
+    [
+        'id'        => 130992,
+        'name'      => 'Tur Al Bahah',
+        'latitude'  => '13.04269000',
+        'longitude' => '44.41154000',
+    ],
+    [
+        'id'        => 131003,
+        'name'      => 'Yafa\'a',
+        'latitude'  => '13.86200000',
+        'longitude' => '45.20140000',
+    ],
+    [
+        'id'        => 131004,
+        'name'      => 'Yahr',
+        'latitude'  => '13.72270000',
+        'longitude' => '45.13050000',
+    ],
+];

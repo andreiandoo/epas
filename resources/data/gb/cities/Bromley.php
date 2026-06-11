@@ -1,0 +1,111 @@
+<?php
+return [
+    [
+        'id'        => 48500,
+        'name'      => 'Biggin Hill',
+        'latitude'  => '51.31329000',
+        'longitude' => '0.03433000',
+    ],
+    [
+        'id'        => 48598,
+        'name'      => 'Borough Green',
+        'latitude'  => '51.29158000',
+        'longitude' => '0.30478000',
+    ],
+    [
+        'id'        => 48979,
+        'name'      => 'Chislehurst',
+        'latitude'  => '51.41709000',
+        'longitude' => '0.06858000',
+    ],
+    [
+        'id'        => 49309,
+        'name'      => 'Dormansland',
+        'latitude'  => '51.16024000',
+        'longitude' => '0.00618000',
+    ],
+    [
+        'id'        => 49395,
+        'name'      => 'East Grinstead',
+        'latitude'  => '51.12382000',
+        'longitude' => '-0.00610000',
+    ],
+    [
+        'id'        => 49436,
+        'name'      => 'Edenbridge',
+        'latitude'  => '51.19172000',
+        'longitude' => '0.06729000',
+    ],
+    [
+        'id'        => 49776,
+        'name'      => 'Hadlow',
+        'latitude'  => '51.22417000',
+        'longitude' => '0.33914000',
+    ],
+    [
+        'id'        => 50117,
+        'name'      => 'Kemsing',
+        'latitude'  => '51.30604000',
+        'longitude' => '0.22917000',
+    ],
+    [
+        'id'        => 50309,
+        'name'      => 'Lingfield',
+        'latitude'  => '51.17719000',
+        'longitude' => '-0.01558000',
+    ],
+    [
+        'id'        => 50818,
+        'name'      => 'Orpington',
+        'latitude'  => '51.37457000',
+        'longitude' => '0.09785000',
+    ],
+    [
+        'id'        => 50823,
+        'name'      => 'Otford',
+        'latitude'  => '51.31283000',
+        'longitude' => '0.19046000',
+    ],
+    [
+        'id'        => 50842,
+        'name'      => 'Oxted',
+        'latitude'  => '51.25687000',
+        'longitude' => '-0.00601000',
+    ],
+    [
+        'id'        => 51240,
+        'name'      => 'Sevenoaks',
+        'latitude'  => '51.27266000',
+        'longitude' => '0.18883000',
+    ],
+    [
+        'id'        => 51292,
+        'name'      => 'Shortlands',
+        'latitude'  => '51.39914000',
+        'longitude' => '0.00440000',
+    ],
+    [
+        'id'        => 51513,
+        'name'      => 'Sundridge',
+        'latitude'  => '51.27797000',
+        'longitude' => '0.12231000',
+    ],
+    [
+        'id'        => 51640,
+        'name'      => 'Tonbridge',
+        'latitude'  => '51.19532000',
+        'longitude' => '0.27363000',
+    ],
+    [
+        'id'        => 51840,
+        'name'      => 'Westerham',
+        'latitude'  => '51.26632000',
+        'longitude' => '0.06892000',
+    ],
+    [
+        'id'        => 52001,
+        'name'      => 'Wrotham',
+        'latitude'  => '51.30856000',
+        'longitude' => '0.30899000',
+    ],
+];

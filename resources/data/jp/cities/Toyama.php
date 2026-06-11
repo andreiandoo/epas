@@ -1,0 +1,123 @@
+<?php
+return [
+    [
+        'id'        => 63364,
+        'name'      => 'Fukumitsu',
+        'latitude'  => '36.55751000',
+        'longitude' => '136.86945000',
+    ],
+    [
+        'id'        => 63480,
+        'name'      => 'Himi Shi',
+        'latitude'  => '36.87218000',
+        'longitude' => '136.94066000',
+    ],
+    [
+        'id'        => 63481,
+        'name'      => 'Himimachi',
+        'latitude'  => '36.85609000',
+        'longitude' => '136.98850000',
+    ],
+    [
+        'id'        => 63564,
+        'name'      => 'Imizu Shi',
+        'latitude'  => '36.72939000',
+        'longitude' => '137.08784000',
+    ],
+    [
+        'id'        => 63690,
+        'name'      => 'Kamiichi',
+        'latitude'  => '36.70000000',
+        'longitude' => '137.36667000',
+    ],
+    [
+        'id'        => 63874,
+        'name'      => 'Kurobe-shi',
+        'latitude'  => '36.90123000',
+        'longitude' => '137.44955000',
+    ],
+    [
+        'id'        => 64095,
+        'name'      => 'Namerikawa',
+        'latitude'  => '36.75965000',
+        'longitude' => '137.36215000',
+    ],
+    [
+        'id'        => 64096,
+        'name'      => 'Namerikawa-shi',
+        'latitude'  => '36.74934000',
+        'longitude' => '137.38129000',
+    ],
+    [
+        'id'        => 64103,
+        'name'      => 'Nanto Shi',
+        'latitude'  => '36.45260000',
+        'longitude' => '136.91430000',
+    ],
+    [
+        'id'        => 64154,
+        'name'      => 'Nishishinminato',
+        'latitude'  => '36.77957000',
+        'longitude' => '137.07576000',
+    ],
+    [
+        'id'        => 64173,
+        'name'      => 'Nyūzen',
+        'latitude'  => '36.93744000',
+        'longitude' => '137.50059000',
+    ],
+    [
+        'id'        => 64220,
+        'name'      => 'Oyabe',
+        'latitude'  => '36.66667000',
+        'longitude' => '136.85000000',
+    ],
+    [
+        'id'        => 64221,
+        'name'      => 'Oyabe Shi',
+        'latitude'  => '36.66349000',
+        'longitude' => '136.85499000',
+    ],
+    [
+        'id'        => 64431,
+        'name'      => 'Takaoka',
+        'latitude'  => '36.75000000',
+        'longitude' => '137.01667000',
+    ],
+    [
+        'id'        => 64432,
+        'name'      => 'Takaoka Shi',
+        'latitude'  => '36.74257000',
+        'longitude' => '136.96263000',
+    ],
+    [
+        'id'        => 64511,
+        'name'      => 'Tonami Shi',
+        'latitude'  => '36.62395000',
+        'longitude' => '136.98899000',
+    ],
+    [
+        'id'        => 64521,
+        'name'      => 'Toyama Shi',
+        'latitude'  => '36.55146000',
+        'longitude' => '137.29872000',
+    ],
+    [
+        'id'        => 64594,
+        'name'      => 'Uozu',
+        'latitude'  => '36.80000000',
+        'longitude' => '137.40000000',
+    ],
+    [
+        'id'        => 64595,
+        'name'      => 'Uozu Shi',
+        'latitude'  => '36.76234000',
+        'longitude' => '137.48984000',
+    ],
+    [
+        'id'        => 64663,
+        'name'      => 'Yatsuomachi-higashikumisaka',
+        'latitude'  => '36.56667000',
+        'longitude' => '137.13333000',
+    ],
+];

@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TICS Widget Embed</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="m-0 p-0" style="font-family:'Inter',sans-serif">
+    <!-- This is the actual iframe content -->
+    <div class="bg-white rounded-lg overflow-hidden" style="max-width:400px">
+        <div class="h-1 bg-gradient-to-r from-indigo-600 to-purple-600"></div>
+        <div class="p-4">
+            <img src="https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=400&h=180&fit=crop" class="w-full h-36 object-cover rounded-lg mb-3">
+            <h3 class="font-bold text-gray-900 mb-1">Coldplay: Music of the Spheres</h3>
+            <p class="text-sm text-gray-500 mb-3">📅 14 Feb 2026 • 📍 Arena Națională</p>
+            
+            <!-- Ticket Selection -->
+            <div class="space-y-2 mb-4">
+                <label class="flex items-center justify-between p-3 border border-gray-200 rounded-lg cursor-pointer hover:border-indigo-500">
+                    <div class="flex items-center gap-3">
+                        <input type="radio" name="ticket" checked class="text-indigo-600">
+                        <div><p class="text-sm font-medium">General Admission</p><p class="text-xs text-gray-500">Acces zona generală</p></div>
+                    </div>
+                    <span class="font-bold">149 RON</span>
+                </label>
+                <label class="flex items-center justify-between p-3 border border-gray-200 rounded-lg cursor-pointer hover:border-indigo-500">
+                    <div class="flex items-center gap-3">
+                        <input type="radio" name="ticket" class="text-indigo-600">
+                        <div><p class="text-sm font-medium">VIP Experience</p><p class="text-xs text-gray-500">Meet & greet inclus</p></div>
+                    </div>
+                    <span class="font-bold">499 RON</span>
+                </label>
+            </div>
+            
+            <!-- Quantity -->
+            <div class="flex items-center justify-between mb-4">
+                <span class="text-sm text-gray-500">Cantitate:</span>
+                <div class="flex items-center gap-3">
+                    <button class="w-8 h-8 border border-gray-200 rounded-lg hover:bg-gray-50">-</button>
+                    <span class="font-bold">2</span>
+                    <button class="w-8 h-8 border border-gray-200 rounded-lg hover:bg-gray-50">+</button>
+                </div>
+            </div>
+            
+            <!-- Total & Button -->
+            <div class="flex items-center justify-between mb-4">
+                <span class="text-gray-500">Total:</span>
+                <span class="text-xl font-bold text-indigo-600">298 RON</span>
+            </div>
+            <a href="tics-checkout.html" class="block w-full py-3 bg-indigo-600 text-white text-center font-bold rounded-lg hover:bg-indigo-700">
+                Cumpără bilete
+            </a>
+            
+            <!-- Footer -->
+            <div class="flex items-center justify-center gap-2 mt-4 pt-4 border-t border-gray-100">
+                <div class="w-4 h-4 bg-indigo-600 rounded flex items-center justify-center"><span class="text-white text-[8px] font-bold">T</span></div>
+                <span class="text-xs text-gray-400">Securizat de TICS.ro</span>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

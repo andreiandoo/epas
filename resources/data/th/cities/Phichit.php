@@ -1,0 +1,105 @@
+<?php
+return [
+    [
+        'id'        => 105232,
+        'name'      => 'Amphoe Bang Mun Nak',
+        'latitude'  => '16.02656000',
+        'longitude' => '100.43194000',
+    ],
+    [
+        'id'        => 105261,
+        'name'      => 'Amphoe Bueng Na Rang',
+        'latitude'  => '16.18642000',
+        'longitude' => '100.14293000',
+    ],
+    [
+        'id'        => 105336,
+        'name'      => 'Amphoe Dong Charoen',
+        'latitude'  => '15.99848000',
+        'longitude' => '100.59572000',
+    ],
+    [
+        'id'        => 105572,
+        'name'      => 'Amphoe Mueang Phichit',
+        'latitude'  => '16.40986000',
+        'longitude' => '100.34578000',
+    ],
+    [
+        'id'        => 105745,
+        'name'      => 'Amphoe Pho Prathap Chang',
+        'latitude'  => '16.31294000',
+        'longitude' => '100.19897000',
+    ],
+    [
+        'id'        => 105749,
+        'name'      => 'Amphoe Pho Thale',
+        'latitude'  => '16.05885000',
+        'longitude' => '100.24579000',
+    ],
+    [
+        'id'        => 105827,
+        'name'      => 'Amphoe Sak Lek',
+        'latitude'  => '16.50717000',
+        'longitude' => '100.52350000',
+    ],
+    [
+        'id'        => 106269,
+        'name'      => 'Amphoe Taphan Hin',
+        'latitude'  => '16.21103000',
+        'longitude' => '100.41739000',
+    ],
+    [
+        'id'        => 106299,
+        'name'      => 'Amphoe Thap Khlo',
+        'latitude'  => '16.19167000',
+        'longitude' => '100.60082000',
+    ],
+    [
+        'id'        => 106329,
+        'name'      => 'Amphoe Wachira Barami',
+        'latitude'  => '16.51667000',
+        'longitude' => '100.11667000',
+    ],
+    [
+        'id'        => 106344,
+        'name'      => 'Amphoe Wang Sai Phun',
+        'latitude'  => '16.37922000',
+        'longitude' => '100.53668000',
+    ],
+    [
+        'id'        => 106435,
+        'name'      => 'Bang Mun Nak',
+        'latitude'  => '16.02781000',
+        'longitude' => '100.37917000',
+    ],
+    [
+        'id'        => 106457,
+        'name'      => 'Bueng Na Rang',
+        'latitude'  => '16.17120000',
+        'longitude' => '100.12531000',
+    ],
+    [
+        'id'        => 106634,
+        'name'      => 'Phichit',
+        'latitude'  => '16.44184000',
+        'longitude' => '100.34879000',
+    ],
+    [
+        'id'        => 106717,
+        'name'      => 'Taphan Hin',
+        'latitude'  => '16.22095000',
+        'longitude' => '100.41978000',
+    ],
+    [
+        'id'        => 106727,
+        'name'      => 'Thap Khlo',
+        'latitude'  => '16.16003000',
+        'longitude' => '100.59656000',
+    ],
+    [
+        'id'        => 106746,
+        'name'      => 'Wang Sai Phun',
+        'latitude'  => '16.38850000',
+        'longitude' => '100.53801000',
+    ],
+];

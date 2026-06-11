@@ -1,0 +1,105 @@
+<?php
+return [
+    [
+        'id'        => 56372,
+        'name'      => 'Kabupaten Bombana',
+        'latitude'  => '-4.62570000',
+        'longitude' => '121.81641000',
+    ],
+    [
+        'id'        => 56386,
+        'name'      => 'Kabupaten Buton',
+        'latitude'  => '-5.31667000',
+        'longitude' => '122.91667000',
+    ],
+    [
+        'id'        => 56387,
+        'name'      => 'Kabupaten Buton Selatan',
+        'latitude'  => '-5.56667000',
+        'longitude' => '122.70000000',
+    ],
+    [
+        'id'        => 56388,
+        'name'      => 'Kabupaten Buton Tengah',
+        'latitude'  => '-5.31667000',
+        'longitude' => '122.33333000',
+    ],
+    [
+        'id'        => 56389,
+        'name'      => 'Kabupaten Buton Utara',
+        'latitude'  => '-5.01457000',
+        'longitude' => '122.93015000',
+    ],
+    [
+        'id'        => 56461,
+        'name'      => 'Kabupaten Kolaka',
+        'latitude'  => '-4.08333000',
+        'longitude' => '121.66667000',
+    ],
+    [
+        'id'        => 56462,
+        'name'      => 'Kabupaten Kolaka Timur',
+        'latitude'  => '-4.01807000',
+        'longitude' => '121.86172000',
+    ],
+    [
+        'id'        => 56463,
+        'name'      => 'Kabupaten Kolaka Utara',
+        'latitude'  => '-3.10452000',
+        'longitude' => '121.12427000',
+    ],
+    [
+        'id'        => 56464,
+        'name'      => 'Kabupaten Konawe',
+        'latitude'  => '-3.91717000',
+        'longitude' => '122.08823000',
+    ],
+    [
+        'id'        => 56465,
+        'name'      => 'Kabupaten Konawe Kepulauan',
+        'latitude'  => '-4.11656000',
+        'longitude' => '123.10181000',
+    ],
+    [
+        'id'        => 56466,
+        'name'      => 'Kabupaten Konawe Selatan',
+        'latitude'  => '-4.19191000',
+        'longitude' => '122.44854000',
+    ],
+    [
+        'id'        => 56467,
+        'name'      => 'Kabupaten Konawe Utara',
+        'latitude'  => '-3.41552000',
+        'longitude' => '121.99081000',
+    ],
+    [
+        'id'        => 56545,
+        'name'      => 'Kabupaten Muna',
+        'latitude'  => '-4.96667000',
+        'longitude' => '122.66667000',
+    ],
+    [
+        'id'        => 56546,
+        'name'      => 'Kabupaten Muna Barat',
+        'latitude'  => '-4.83333000',
+        'longitude' => '122.48333000',
+    ],
+    [
+        'id'        => 56703,
+        'name'      => 'Katabu',
+        'latitude'  => '-4.93330000',
+        'longitude' => '122.51670000',
+    ],
+    [
+        'id'        => 56712,
+        'name'      => 'Kendari',
+        'latitude'  => '-3.97780000',
+        'longitude' => '122.51507000',
+    ],
+    [
+        'id'        => 57049,
+        'name'      => 'Wakatobi Regency',
+        'latitude'  => '-5.31934000',
+        'longitude' => '123.59480000',
+    ],
+];

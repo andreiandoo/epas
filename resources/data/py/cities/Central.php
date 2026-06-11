@@ -1,0 +1,117 @@
+<?php
+return [
+    [
+        'id'        => 89720,
+        'name'      => 'Areguá',
+        'latitude'  => '-25.31250000',
+        'longitude' => '-57.38472000',
+    ],
+    [
+        'id'        => 89733,
+        'name'      => 'Capiatá',
+        'latitude'  => '-25.35520000',
+        'longitude' => '-57.44545000',
+    ],
+    [
+        'id'        => 89765,
+        'name'      => 'Fernando de la Mora',
+        'latitude'  => '-25.33860000',
+        'longitude' => '-57.52167000',
+    ],
+    [
+        'id'        => 89774,
+        'name'      => 'Guarambaré',
+        'latitude'  => '-25.49096000',
+        'longitude' => '-57.45567000',
+    ],
+    [
+        'id'        => 89786,
+        'name'      => 'Itá',
+        'latitude'  => '-25.50054000',
+        'longitude' => '-57.36717000',
+    ],
+    [
+        'id'        => 89784,
+        'name'      => 'Itauguá',
+        'latitude'  => '-25.39258000',
+        'longitude' => '-57.35421000',
+    ],
+    [
+        'id'        => 157022,
+        'name'      => 'Julián Augusto Saldívar',
+        'latitude'  => '-25.44390000',
+        'longitude' => '-57.44304610',
+    ],
+    [
+        'id'        => 89791,
+        'name'      => 'Lambaré',
+        'latitude'  => '-25.34682000',
+        'longitude' => '-57.60647000',
+    ],
+    [
+        'id'        => 89793,
+        'name'      => 'Limpio',
+        'latitude'  => '-25.16611000',
+        'longitude' => '-57.48562000',
+    ],
+    [
+        'id'        => 157023,
+        'name'      => 'Luque',
+        'latitude'  => '-25.26654170',
+        'longitude' => '-57.49269280',
+    ],
+    [
+        'id'        => 89794,
+        'name'      => 'Mariano Roque Alonso',
+        'latitude'  => '-25.20791000',
+        'longitude' => '-57.53202000',
+    ],
+    [
+        'id'        => 89802,
+        'name'      => 'Nemby',
+        'latitude'  => '-25.39490000',
+        'longitude' => '-57.53574000',
+    ],
+    [
+        'id'        => 89804,
+        'name'      => 'Nueva Italia',
+        'latitude'  => '-25.61080000',
+        'longitude' => '-57.46563000',
+    ],
+    [
+        'id'        => 89819,
+        'name'      => 'San Antonio',
+        'latitude'  => '-25.42126000',
+        'longitude' => '-57.54725000',
+    ],
+    [
+        'id'        => 89828,
+        'name'      => 'San Lorenzo',
+        'latitude'  => '-25.33968000',
+        'longitude' => '-57.50879000',
+    ],
+    [
+        'id'        => 89843,
+        'name'      => 'Villa Elisa',
+        'latitude'  => '-25.36760000',
+        'longitude' => '-57.59274000',
+    ],
+    [
+        'id'        => 157024,
+        'name'      => 'Villeta',
+        'latitude'  => '-25.50451920',
+        'longitude' => '-57.56937890',
+    ],
+    [
+        'id'        => 89854,
+        'name'      => 'Ypacarai',
+        'latitude'  => '-25.40777000',
+        'longitude' => '-57.28889000',
+    ],
+    [
+        'id'        => 157025,
+        'name'      => 'Ypané',
+        'latitude'  => '-25.45735190',
+        'longitude' => '-57.50925750',
+    ],
+];

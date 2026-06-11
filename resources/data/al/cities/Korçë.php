@@ -1,0 +1,111 @@
+<?php
+return [
+    [
+        'id'        => 156,
+        'name'      => 'Bashkia Devoll',
+        'latitude'  => '40.60078000',
+        'longitude' => '20.93814000',
+    ],
+    [
+        'id'        => 166,
+        'name'      => 'Bashkia Kolonjë',
+        'latitude'  => '40.31420000',
+        'longitude' => '20.61482000',
+    ],
+    [
+        'id'        => 173,
+        'name'      => 'Bashkia Maliq',
+        'latitude'  => '40.75508000',
+        'longitude' => '20.60748000',
+    ],
+    [
+        'id'        => 182,
+        'name'      => 'Bashkia Pustec',
+        'latitude'  => '40.83591000',
+        'longitude' => '20.89405000',
+    ],
+    [
+        'id'        => 192,
+        'name'      => 'Bilisht',
+        'latitude'  => '40.62750000',
+        'longitude' => '20.99000000',
+    ],
+    [
+        'id'        => 157050,
+        'name'      => 'Devoll',
+        'latitude'  => '40.58998300',
+        'longitude' => '20.74813130',
+    ],
+    [
+        'id'        => 199,
+        'name'      => 'Ersekë',
+        'latitude'  => '40.33778000',
+        'longitude' => '20.67889000',
+    ],
+    [
+        'id'        => 157054,
+        'name'      => 'Kolonjë',
+        'latitude'  => '40.28305450',
+        'longitude' => '20.45647260',
+    ],
+    [
+        'id'        => 212,
+        'name'      => 'Korçë',
+        'latitude'  => '40.61861000',
+        'longitude' => '20.78083000',
+    ],
+    [
+        'id'        => 223,
+        'name'      => 'Leskovik',
+        'latitude'  => '40.15139000',
+        'longitude' => '20.59722000',
+    ],
+    [
+        'id'        => 226,
+        'name'      => 'Libonik',
+        'latitude'  => '40.70444000',
+        'longitude' => '20.70861000',
+    ],
+    [
+        'id'        => 228,
+        'name'      => 'Maliq',
+        'latitude'  => '40.70583000',
+        'longitude' => '20.69972000',
+    ],
+    [
+        'id'        => 230,
+        'name'      => 'Mborje',
+        'latitude'  => '40.60333000',
+        'longitude' => '20.80306000',
+    ],
+    [
+        'id'        => 237,
+        'name'      => 'Pogradec',
+        'latitude'  => '40.90250000',
+        'longitude' => '20.65250000',
+    ],
+    [
+        'id'        => 245,
+        'name'      => 'Rrethi i Devollit',
+        'latitude'  => '40.58333000',
+        'longitude' => '20.91667000',
+    ],
+    [
+        'id'        => 249,
+        'name'      => 'Rrethi i Kolonjës',
+        'latitude'  => '40.25000000',
+        'longitude' => '20.66667000',
+    ],
+    [
+        'id'        => 275,
+        'name'      => 'Velçan',
+        'latitude'  => '40.95472000',
+        'longitude' => '20.46222000',
+    ],
+    [
+        'id'        => 278,
+        'name'      => 'Voskopojë',
+        'latitude'  => '40.63306000',
+        'longitude' => '20.58889000',
+    ],
+];

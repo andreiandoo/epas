@@ -1,0 +1,123 @@
+<?php
+return [
+    [
+        'id'        => 48305,
+        'name'      => 'Aston Clinton',
+        'latitude'  => '51.80020000',
+        'longitude' => '-0.72540000',
+    ],
+    [
+        'id'        => 48324,
+        'name'      => 'Aylesbury',
+        'latitude'  => '51.81665000',
+        'longitude' => '-0.81458000',
+    ],
+    [
+        'id'        => 48699,
+        'name'      => 'Brill',
+        'latitude'  => '51.81667000',
+        'longitude' => '-1.05000000',
+    ],
+    [
+        'id'        => 48749,
+        'name'      => 'Buckinghamshire',
+        'latitude'  => '51.75000000',
+        'longitude' => '-0.75000000',
+    ],
+    [
+        'id'        => 48912,
+        'name'      => 'Chalgrove',
+        'latitude'  => '51.66476000',
+        'longitude' => '-1.07640000',
+    ],
+    [
+        'id'        => 48970,
+        'name'      => 'Chinnor',
+        'latitude'  => '51.70177000',
+        'longitude' => '-0.91161000',
+    ],
+    [
+        'id'        => 49729,
+        'name'      => 'Great Missenden',
+        'latitude'  => '51.70419000',
+        'longitude' => '-0.70797000',
+    ],
+    [
+        'id'        => 49771,
+        'name'      => 'Haddenham',
+        'latitude'  => '51.77326000',
+        'longitude' => '-0.92628000',
+    ],
+    [
+        'id'        => 50037,
+        'name'      => 'Hyde Heath',
+        'latitude'  => '51.69336000',
+        'longitude' => '-0.65437000',
+    ],
+    [
+        'id'        => 50394,
+        'name'      => 'Long Crendon',
+        'latitude'  => '51.77294000',
+        'longitude' => '-0.99684000',
+    ],
+    [
+        'id'        => 50414,
+        'name'      => 'Longwick',
+        'latitude'  => '51.73607000',
+        'longitude' => '-0.85676000',
+    ],
+    [
+        'id'        => 50992,
+        'name'      => 'Princes Risborough',
+        'latitude'  => '51.72549000',
+        'longitude' => '-0.83144000',
+    ],
+    [
+        'id'        => 51436,
+        'name'      => 'Steeple Claydon',
+        'latitude'  => '51.93643000',
+        'longitude' => '-0.98328000',
+    ],
+    [
+        'id'        => 51470,
+        'name'      => 'Stokenchurch',
+        'latitude'  => '51.65831000',
+        'longitude' => '-0.89740000',
+    ],
+    [
+        'id'        => 51584,
+        'name'      => 'Thame',
+        'latitude'  => '51.74840000',
+        'longitude' => '-0.97624000',
+    ],
+    [
+        'id'        => 51720,
+        'name'      => 'Waddesdon',
+        'latitude'  => '51.84675000',
+        'longitude' => '-0.92105000',
+    ],
+    [
+        'id'        => 51775,
+        'name'      => 'Watlington',
+        'latitude'  => '51.64327000',
+        'longitude' => '-1.00448000',
+    ],
+    [
+        'id'        => 51801,
+        'name'      => 'Wendover',
+        'latitude'  => '51.76194000',
+        'longitude' => '-0.73986000',
+    ],
+    [
+        'id'        => 51846,
+        'name'      => 'Weston Turville',
+        'latitude'  => '51.79168000',
+        'longitude' => '-0.75767000',
+    ],
+    [
+        'id'        => 51932,
+        'name'      => 'Wingrave',
+        'latitude'  => '51.86494000',
+        'longitude' => '-0.74244000',
+    ],
+];

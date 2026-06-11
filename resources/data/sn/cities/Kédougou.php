@@ -1,0 +1,27 @@
+<?php
+return [
+    [
+        'id'        => 104709,
+        'name'      => 'Département de Salémata',
+        'latitude'  => '12.59971000',
+        'longitude' => '-12.77619000',
+    ],
+    [
+        'id'        => 104727,
+        'name'      => 'Kédougou',
+        'latitude'  => '12.55561000',
+        'longitude' => '-12.18076000',
+    ],
+    [
+        'id'        => 104728,
+        'name'      => 'Kédougou Department',
+        'latitude'  => '12.81716000',
+        'longitude' => '-12.17834000',
+    ],
+    [
+        'id'        => 104758,
+        'name'      => 'Saraya',
+        'latitude'  => '13.00150000',
+        'longitude' => '-11.79627000',
+    ],
+];

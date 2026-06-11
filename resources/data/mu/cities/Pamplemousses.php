@@ -1,0 +1,111 @@
+<?php
+return [
+    [
+        'id'        => 67828,
+        'name'      => 'Arsenal',
+        'latitude'  => '-20.10556000',
+        'longitude' => '57.53528000',
+    ],
+    [
+        'id'        => 67838,
+        'name'      => 'Calebasses',
+        'latitude'  => '-20.11167000',
+        'longitude' => '57.55389000',
+    ],
+    [
+        'id'        => 67851,
+        'name'      => 'Congomah',
+        'latitude'  => '-20.14889000',
+        'longitude' => '57.59083000',
+    ],
+    [
+        'id'        => 67853,
+        'name'      => 'Crève Coeur',
+        'latitude'  => '-20.19111000',
+        'longitude' => '57.55722000',
+    ],
+    [
+        'id'        => 153413,
+        'name'      => 'D\'Epinay',
+        'latitude'  => '-20.13021100',
+        'longitude' => '57.59583800',
+    ],
+    [
+        'id'        => 67861,
+        'name'      => 'Fond du Sac',
+        'latitude'  => '-20.04732000',
+        'longitude' => '57.58400000',
+    ],
+    [
+        'id'        => 67872,
+        'name'      => 'Le Hochet',
+        'latitude'  => '-20.13500000',
+        'longitude' => '57.52111000',
+    ],
+    [
+        'id'        => 67873,
+        'name'      => 'Long Mountain',
+        'latitude'  => '-20.14306000',
+        'longitude' => '57.56222000',
+    ],
+    [
+        'id'        => 67880,
+        'name'      => 'Morcellement Saint André',
+        'latitude'  => '-20.07199000',
+        'longitude' => '57.56833000',
+    ],
+    [
+        'id'        => 67882,
+        'name'      => 'Notre Dame',
+        'latitude'  => '-20.14056000',
+        'longitude' => '57.55306000',
+    ],
+    [
+        'id'        => 67886,
+        'name'      => 'Pamplemousses',
+        'latitude'  => '-20.10389000',
+        'longitude' => '57.57028000',
+    ],
+    [
+        'id'        => 67892,
+        'name'      => 'Plaine des Papayes',
+        'latitude'  => '-20.06500000',
+        'longitude' => '57.57250000',
+    ],
+    [
+        'id'        => 67894,
+        'name'      => 'Pointe aux Piments',
+        'latitude'  => '-20.06494000',
+        'longitude' => '57.52347000',
+    ],
+    [
+        'id'        => 67917,
+        'name'      => 'Terre Rouge',
+        'latitude'  => '-20.12611000',
+        'longitude' => '57.52444000',
+    ],
+    [
+        'id'        => 153416,
+        'name'      => 'Tombeau Bay',
+        'latitude'  => '-20.12345100',
+        'longitude' => '57.50218400',
+    ],
+    [
+        'id'        => 67919,
+        'name'      => 'Triolet',
+        'latitude'  => '-20.05760000',
+        'longitude' => '57.55025000',
+    ],
+    [
+        'id'        => 153417,
+        'name'      => 'Trou Aux Biches',
+        'latitude'  => '-20.03123500',
+        'longitude' => '57.55189700',
+    ],
+    [
+        'id'        => 153415,
+        'name'      => 'Ville Bague',
+        'latitude'  => '-20.14604500',
+        'longitude' => '57.62414900',
+    ],
+];

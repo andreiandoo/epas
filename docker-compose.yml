@@ -1,0 +1,66 @@
+#version: "3.8"
+
+services:
+  laravel.test:
+    build:
+      context: ./vendor/laravel/sail/runtimes/8.4
+      dockerfile: Dockerfile
+      args:
+        WWWGROUP: "${WWWGROUP:-1000}"
+        XDEBUG: "false"
+    image: sail-8.4/app
+    ports:
+      - "8081:80"         # API pe 8081
+      - "5173:5173"       # (Vite, dacă vei folosi)
+    environment:
+      LARAVEL_SAIL: 1
+      WWWUSER: "${WWWUSER:-1000}"
+      XDEBUG_MODE: off
+      XDEBUG_CONFIG: client_host=host.docker.internal
+    volumes:
+      - ./:/var/www/html
+    networks:
+      - sail
+    depends_on:
+      - pgsql
+      - redis
+
+  pgsql:
+    image: postgres:16
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: sail
+      POSTGRES_USER: sail
+      POSTGRES_PASSWORD: password
+    volumes:
+      - sail-pgsql:/var/lib/postgresql/data
+    networks:
+      - sail
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - sail-redis:/data
+    networks:
+      - sail
+
+  node:
+    image: node:20.19.0-alpine
+    working_dir: /var/www/html
+    volumes:
+      - ./:/var/www/html:delegated
+    entrypoint: [ "sh", "-lc" ]
+
+
+networks:
+  sail:
+    driver: bridge
+
+volumes:
+  sail-pgsql:
+    driver: local
+  sail-redis:
+    driver: local

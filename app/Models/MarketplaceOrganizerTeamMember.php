@@ -1,0 +1,260 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Support\Str;
+
+class MarketplaceOrganizerTeamMember extends Model
+{
+    protected $fillable = [
+        'marketplace_organizer_id',
+        'name',
+        'email',
+        'password',
+        'role',
+        'leisure_role',
+        'permissions',
+        'gate_id',
+        'status',
+        'invite_token',
+        'invite_expires_at',
+        'invite_sent_at',
+        'accepted_at',
+    ];
+
+    public const LEISURE_ROLES = [
+        'check_in',           // operator check-in (gate scanner)
+        'rental_boats',       // operator inchiriere barci
+        'rental_pontoon',     // operator inchiriere vaporas
+        'validation_pontoon', // operator validare bilete vaporas
+        'rental_sled',        // operator inchiriere sanii
+        'validation_tow',     // operator validare tractari
+        'pos_cashier',        // operator fix casa POS
+        'admin_mobile',       // membru admin — scan + vanzare prin app mobila
+    ];
+
+    public const LEISURE_ROLE_LABELS = [
+        'check_in'           => 'Operator check-in',
+        'rental_boats'       => 'Operator închiriere bărci',
+        'rental_pontoon'     => 'Operator închiriere vaporaș',
+        'validation_pontoon' => 'Operator validare bilete vaporaș',
+        'rental_sled'        => 'Operator închiriere sănii',
+        'validation_tow'     => 'Operator validare tractări',
+        'pos_cashier'        => 'Operator fix casă POS',
+        'admin_mobile'       => 'Membru admin (scan + vânzare mobilă)',
+    ];
+
+    protected $hidden = [
+        'password',
+        'invite_token',
+    ];
+
+    protected $casts = [
+        'permissions' => 'array',
+        'invite_expires_at' => 'datetime',
+        'invite_sent_at' => 'datetime',
+        'accepted_at' => 'datetime',
+    ];
+
+    /**
+     * When password changes on one team member record, propagate the new hash to
+     * all other active team member records with the same email within the same
+     * marketplace. This keeps the "one password across organizers" UX consistent.
+     */
+    protected static function booted(): void
+    {
+        static::updated(function (self $member) {
+            if (!$member->wasChanged('password') || empty($member->password)) {
+                return;
+            }
+
+            $marketplaceClientId = $member->organizer?->marketplace_client_id;
+            if (!$marketplaceClientId) {
+                return;
+            }
+
+            static::query()
+                ->whereHas('organizer', fn ($q) => $q->where('marketplace_client_id', $marketplaceClientId))
+                ->where('email', $member->email)
+                ->where('status', 'active')
+                ->where('id', '!=', $member->id)
+                ->get()
+                ->each(function (self $other) use ($member) {
+                    $other->updateQuietly(['password' => $member->password]);
+                });
+        });
+    }
+
+    // =========================================
+    // Relationships
+    // =========================================
+
+    public function organizer(): BelongsTo
+    {
+        return $this->belongsTo(MarketplaceOrganizer::class, 'marketplace_organizer_id');
+    }
+
+    /**
+     * Per-event whitelist for non-admin members. An empty relation means
+     * "no restriction" — the member sees all events on the organizer.
+     * Admins bypass this entirely at controller layer.
+     */
+    public function events(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            Event::class,
+            'marketplace_organizer_team_member_event',
+            'team_member_id',
+            'event_id'
+        )->withTimestamps();
+    }
+
+    // =========================================
+    // Status Checks
+    // =========================================
+
+    public function isPending(): bool
+    {
+        return $this->status === 'pending';
+    }
+
+    public function isActive(): bool
+    {
+        return $this->status === 'active';
+    }
+
+    public function isInactive(): bool
+    {
+        return $this->status === 'inactive';
+    }
+
+    public function isInviteExpired(): bool
+    {
+        return $this->invite_expires_at && $this->invite_expires_at->isPast();
+    }
+
+    // =========================================
+    // Permissions
+    // =========================================
+
+    public function hasPermission(string $permission): bool
+    {
+        // Admins have all permissions
+        if ($this->role === 'admin') {
+            return true;
+        }
+
+        $permissions = $this->permissions ?? [];
+        return in_array($permission, $permissions);
+    }
+
+    public function getEffectivePermissions(): array
+    {
+        // Admins have all permissions
+        if ($this->role === 'admin') {
+            return ['events', 'orders', 'reports', 'team', 'checkin'];
+        }
+
+        return $this->permissions ?? [];
+    }
+
+    // =========================================
+    // Invite Management
+    // =========================================
+
+    /**
+     * Generate a new invite token
+     */
+    public function generateInviteToken(): string
+    {
+        $token = Str::random(64);
+
+        $this->update([
+            'invite_token' => hash('sha256', $token),
+            'invite_expires_at' => now()->addDays(7),
+            'invite_sent_at' => now(),
+        ]);
+
+        return $token;
+    }
+
+    /**
+     * Verify invite token
+     */
+    public function verifyInviteToken(string $token): bool
+    {
+        if (!$this->invite_token) {
+            return false;
+        }
+
+        if ($this->isInviteExpired()) {
+            return false;
+        }
+
+        return hash_equals($this->invite_token, hash('sha256', $token));
+    }
+
+    /**
+     * Accept invite and activate membership
+     */
+    public function acceptInvite(string $password): void
+    {
+        $this->update([
+            'password' => bcrypt($password),
+            'status' => 'active',
+            'invite_token' => null,
+            'invite_expires_at' => null,
+            'accepted_at' => now(),
+        ]);
+    }
+
+    /**
+     * Check if can resend invite (rate limiting)
+     */
+    public function canResendInvite(): bool
+    {
+        if (!$this->isPending()) {
+            return false;
+        }
+
+        if (!$this->invite_sent_at) {
+            return true;
+        }
+
+        // Allow resend if last invite was sent more than 5 minutes ago
+        return $this->invite_sent_at->diffInMinutes(now()) >= 5;
+    }
+
+    // =========================================
+    // Helpers
+    // =========================================
+
+    /**
+     * Get role label in Romanian
+     */
+    public function getRoleLabelAttribute(): string
+    {
+        return match ($this->role) {
+            'admin' => 'Administrator',
+            'manager' => 'Manager',
+            'staff' => 'Staff',
+            default => ucfirst($this->role),
+        };
+    }
+
+    /**
+     * Get status label in Romanian
+     */
+    public function getStatusLabelAttribute(): string
+    {
+        return match ($this->status) {
+            'pending' => 'Invitație trimisă',
+            'active' => 'Activ',
+            'inactive' => 'Inactiv',
+            default => ucfirst($this->status),
+        };
+    }
+}

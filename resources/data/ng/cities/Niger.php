@@ -1,0 +1,117 @@
+<?php
+return [
+    [
+        'id'        => 76783,
+        'name'      => 'Auna',
+        'latitude'  => '10.18805000',
+        'longitude' => '4.72318000',
+    ],
+    [
+        'id'        => 76787,
+        'name'      => 'Babana',
+        'latitude'  => '10.42949000',
+        'longitude' => '3.81495000',
+    ],
+    [
+        'id'        => 76790,
+        'name'      => 'Badeggi',
+        'latitude'  => '9.05630000',
+        'longitude' => '6.14300000',
+    ],
+    [
+        'id'        => 76795,
+        'name'      => 'Baro',
+        'latitude'  => '8.61565000',
+        'longitude' => '6.41850000',
+    ],
+    [
+        'id'        => 76812,
+        'name'      => 'Bokani',
+        'latitude'  => '9.43333000',
+        'longitude' => '5.20000000',
+    ],
+    [
+        'id'        => 76847,
+        'name'      => 'Duku',
+        'latitude'  => '11.23610000',
+        'longitude' => '4.90727000',
+    ],
+    [
+        'id'        => 76907,
+        'name'      => 'Ibeto',
+        'latitude'  => '10.48536000',
+        'longitude' => '5.14501000',
+    ],
+    [
+        'id'        => 76986,
+        'name'      => 'Konkwesso',
+        'latitude'  => '10.84686000',
+        'longitude' => '4.09835000',
+    ],
+    [
+        'id'        => 76987,
+        'name'      => 'Kontagora',
+        'latitude'  => '10.40319000',
+        'longitude' => '5.47080000',
+    ],
+    [
+        'id'        => 76994,
+        'name'      => 'Kusheriki',
+        'latitude'  => '10.53283000',
+        'longitude' => '6.44222000',
+    ],
+    [
+        'id'        => 76995,
+        'name'      => 'Kuta',
+        'latitude'  => '9.86864000',
+        'longitude' => '6.71042000',
+    ],
+    [
+        'id'        => 77007,
+        'name'      => 'Lapai',
+        'latitude'  => '9.04439000',
+        'longitude' => '6.57089000',
+    ],
+    [
+        'id'        => 77029,
+        'name'      => 'Minna',
+        'latitude'  => '9.61524000',
+        'longitude' => '6.54776000',
+    ],
+    [
+        'id'        => 77039,
+        'name'      => 'New Shagunnu',
+        'latitude'  => '10.33957000',
+        'longitude' => '4.46880000',
+    ],
+    [
+        'id'        => 77108,
+        'name'      => 'Suleja',
+        'latitude'  => '9.18059000',
+        'longitude' => '7.17939000',
+    ],
+    [
+        'id'        => 77112,
+        'name'      => 'Tegina',
+        'latitude'  => '10.07060000',
+        'longitude' => '6.19060000',
+    ],
+    [
+        'id'        => 77124,
+        'name'      => 'Ukata',
+        'latitude'  => '10.83122000',
+        'longitude' => '5.82494000',
+    ],
+    [
+        'id'        => 77135,
+        'name'      => 'Wawa',
+        'latitude'  => '9.90222000',
+        'longitude' => '4.41917000',
+    ],
+    [
+        'id'        => 77152,
+        'name'      => 'Zungeru',
+        'latitude'  => '9.80726000',
+        'longitude' => '6.15238000',
+    ],
+];

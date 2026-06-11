@@ -1,0 +1,643 @@
+
+<body class="min-h-screen bg-surface font-sans"
+      x-data="artistProfile()">
+
+    <!-- Sidebar -->
+    <aside class="fixed left-0 top-0 h-full w-64 bg-secondary text-white z-50 hidden lg:block">
+        <div class="p-6 border-b border-white/10">
+            <a href="/" class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-primary rounded-xl flex items-center justify-center">
+                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/>
+                    </svg>
+                </div>
+                <div>
+                    <span class="text-xl font-extrabold block leading-none">AMBILET</span>
+                    <span class="text-xs text-white/50 mt-1 block">Portal Artist</span>
+                </div>
+            </a>
+        </div>
+
+        <nav class="p-4 space-y-1">
+            <a href="/artist/dashboard.html" class="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:bg-white/10 hover:text-white transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+                Dashboard
+            </a>
+            <a href="/artist/profile.html" class="flex items-center gap-3 px-4 py-3 rounded-xl bg-white/10 text-white font-medium">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/></svg>
+                Detalii Artist
+            </a>
+            <a href="/artist/events.html" class="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:bg-white/10 hover:text-white transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                Evenimente
+            </a>
+            <a href="/artist/settings.html" class="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:bg-white/10 hover:text-white transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                Setări Cont
+            </a>
+            <a href="/artist/help.html" class="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:bg-white/10 hover:text-white transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                Ajutor
+            </a>
+        </nav>
+
+        <div class="absolute bottom-0 left-0 right-0 p-4 border-t border-white/10">
+            <button class="flex items-center gap-3 px-4 py-3 w-full rounded-xl text-white/70 hover:bg-error/20 hover:text-error transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+                Deconectare
+            </button>
+        </div>
+    </aside>
+
+    <!-- Mobile Header -->
+    <header class="lg:hidden fixed top-0 left-0 right-0 bg-white border-b border-border z-40">
+        <div class="flex items-center justify-between px-4 py-3">
+            <button @click="mobileMenu = !mobileMenu" class="p-2 hover:bg-surface rounded-lg">
+                <svg class="w-6 h-6 text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                </svg>
+            </button>
+            <a href="/" class="flex items-center gap-2">
+                <div class="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+                    <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/>
+                    </svg>
+                </div>
+                <span class="font-bold text-secondary">AMBILET</span>
+            </a>
+            <div class="w-10"></div>
+        </div>
+    </header>
+
+    <!-- Mobile Menu -->
+    <div x-show="mobileMenu" x-transition.opacity class="lg:hidden fixed inset-0 bg-black/50 z-50" @click="mobileMenu = false" style="display: none;"></div>
+    <aside x-show="mobileMenu" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="-translate-x-full" x-transition:enter-end="translate-x-0" x-transition:leave="transition ease-in duration-150" x-transition:leave-start="translate-x-0" x-transition:leave-end="-translate-x-full" class="lg:hidden fixed left-0 top-0 h-full w-64 bg-secondary text-white z-50 overflow-y-auto" style="display: none;">
+        <div class="p-6 border-b border-white/10 flex items-center justify-between">
+            <a href="/" class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-primary rounded-xl flex items-center justify-center">
+                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/>
+                    </svg>
+                </div>
+                <span class="text-xl font-extrabold">AMBILET</span>
+            </a>
+            <button @click="mobileMenu = false" class="p-2 text-white/70">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+        </div>
+        <nav class="p-4 space-y-1">
+            <a href="/artist/dashboard.html" class="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:bg-white/10">Dashboard</a>
+            <a href="/artist/profile.html" class="flex items-center gap-3 px-4 py-3 rounded-xl bg-white/10 text-white font-medium">Detalii Artist</a>
+            <a href="/artist/events.html" class="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:bg-white/10">Evenimente</a>
+            <a href="/artist/settings.html" class="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:bg-white/10">Setări Cont</a>
+            <a href="/artist/help.html" class="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:bg-white/10">Ajutor</a>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="lg:ml-64 pt-16 lg:pt-0 min-h-screen">
+        <div class="p-4 lg:p-8">
+            <!-- Page Header -->
+            <div class="mb-8 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                <div>
+                    <h1 class="text-2xl lg:text-3xl font-bold text-secondary">Detalii Artist</h1>
+                    <p class="text-muted mt-1">Profilul tău public, vizibil pe pagina evenimentelor și pe pagina ta dedicată</p>
+                </div>
+                <a href="#" target="_blank" class="btn btn-secondary self-start lg:self-auto">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                    </svg>
+                    Vezi profilul public
+                </a>
+            </div>
+
+            <!-- Tabs Nav -->
+            <div class="flex flex-wrap gap-2 mb-6 border-b border-border pb-4 overflow-x-auto">
+                <template x-for="t in tabs" :key="t.id">
+                    <button @click="tab = t.id"
+                            :class="tab === t.id ? 'bg-primary text-white' : 'text-muted hover:bg-surface'"
+                            class="px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors">
+                        <span x-text="t.label"></span>
+                    </button>
+                </template>
+            </div>
+
+            <!-- ============ TAB: PROFIL PUBLIC ============ -->
+            <div x-show="tab === 'profile'">
+                <!-- Cover & Avatar Card -->
+                <div class="bg-white rounded-2xl border border-border overflow-hidden mb-6">
+                    <div class="relative h-48 lg:h-64 bg-gradient-to-br from-secondary via-primary-dark to-primary group">
+                        <img x-show="data.cover_url" :src="data.cover_url" class="absolute inset-0 w-full h-full object-cover">
+                        <div class="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
+
+                        <button @click="$refs.coverInput.click()"
+                                class="absolute top-4 right-4 px-3 py-2 bg-white/90 backdrop-blur rounded-lg text-sm font-medium text-secondary hover:bg-white transition-colors flex items-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                            Schimbă coperta
+                        </button>
+                        <input type="file" x-ref="coverInput" accept="image/*" class="hidden" @change="previewImage($event, 'cover_url')">
+
+                        <p class="absolute bottom-3 right-4 text-xs text-white/70">Recomandat: 1920×500px</p>
+                    </div>
+
+                    <div class="px-6 pb-6 -mt-16 lg:-mt-20 relative">
+                        <div class="flex flex-col lg:flex-row items-start lg:items-end gap-4 lg:gap-6">
+                            <div class="relative">
+                                <div class="w-32 h-32 lg:w-40 lg:h-40 rounded-2xl border-4 border-white bg-surface overflow-hidden shadow-xl">
+                                    <img x-show="data.avatar_url" :src="data.avatar_url" class="w-full h-full object-cover">
+                                    <div x-show="!data.avatar_url" class="w-full h-full flex items-center justify-center">
+                                        <svg class="w-12 h-12 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                                        </svg>
+                                    </div>
+                                </div>
+                                <button @click="$refs.avatarInput.click()"
+                                        class="absolute bottom-2 right-2 w-9 h-9 bg-primary text-white rounded-full flex items-center justify-center shadow-lg hover:bg-primary-dark transition-colors">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+                                </button>
+                                <input type="file" x-ref="avatarInput" accept="image/*" class="hidden" @change="previewImage($event, 'avatar_url')">
+                            </div>
+
+                            <div class="flex-1 min-w-0 pb-2">
+                                <h2 class="text-2xl lg:text-3xl font-bold text-secondary truncate" x-text="data.stage_name || 'Numele tău de scenă'"></h2>
+                                <p class="text-muted text-sm mt-1" x-show="data.tagline" x-text="data.tagline"></p>
+                                <div class="flex items-center gap-2 mt-2 text-sm text-muted">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+                                    <span class="font-mono text-xs">ambilet.ro/artist/<span x-text="data.slug || 'slug-artist'" class="font-semibold text-secondary"></span></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Form fields -->
+                <form @submit.prevent="saveSection('profil')" class="bg-white rounded-2xl border border-border p-6 mb-6">
+                    <h2 class="text-lg font-bold text-secondary mb-6">Informații generale</h2>
+
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium text-secondary mb-3">Tip artist *</label>
+                        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                            <template x-for="t in artistTypes" :key="t.value">
+                                <button type="button"
+                                        @click="data.type = t.value"
+                                        :class="data.type === t.value ? 'border-primary bg-primary/5 text-primary' : 'border-border hover:border-primary/30 text-secondary'"
+                                        class="p-4 rounded-xl border-2 transition-colors text-left">
+                                    <div class="w-9 h-9 rounded-lg flex items-center justify-center mb-2"
+                                         :class="data.type === t.value ? 'bg-primary text-white' : 'bg-surface text-muted'">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" x-html="t.icon"></svg>
+                                    </div>
+                                    <p class="font-semibold text-sm" x-text="t.label"></p>
+                                </button>
+                            </template>
+                        </div>
+                    </div>
+
+                    <div class="grid lg:grid-cols-2 gap-4 mb-6">
+                        <div>
+                            <label class="block text-sm font-medium text-secondary mb-2">Nume de scenă *</label>
+                            <input type="text" x-model="data.stage_name" required class="form-input" placeholder="Ex: The Rockers">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-secondary mb-2">
+                                URL profil
+                                <span class="text-muted font-normal">(slug)</span>
+                            </label>
+                            <div class="flex">
+                                <span class="inline-flex items-center px-3 rounded-l-xl border border-r-0 border-border bg-surface text-muted text-sm">ambilet.ro/artist/</span>
+                                <input type="text" x-model="data.slug" pattern="[a-z0-9-]+" class="form-input rounded-l-none flex-1 font-mono text-sm" placeholder="the-rockers">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium text-secondary mb-2">Tagline scurt</label>
+                        <input type="text" x-model="data.tagline" maxlength="120" class="form-input" placeholder="Ex: Rock alternativ din București">
+                        <p class="text-xs text-muted mt-1">
+                            <span x-text="(data.tagline || '').length"></span>/120 caractere — apare sub numele tău
+                        </p>
+                    </div>
+
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium text-secondary mb-3">
+                            Genuri
+                            <span class="text-muted font-normal">(maxim 5)</span>
+                        </label>
+                        <div class="flex flex-wrap gap-2">
+                            <template x-for="g in availableGenres" :key="g">
+                                <button type="button"
+                                        @click="toggleGenre(g)"
+                                        :disabled="!data.genres.includes(g) && data.genres.length >= 5"
+                                        :class="data.genres.includes(g) ? 'bg-primary text-white border-primary' : 'bg-white text-muted border-border hover:border-primary/40 disabled:opacity-40 disabled:cursor-not-allowed'"
+                                        class="px-3 py-1.5 rounded-full border text-sm font-medium transition-colors">
+                                    <span x-text="g"></span>
+                                </button>
+                            </template>
+                        </div>
+                    </div>
+
+                    <div class="grid lg:grid-cols-2 gap-4 mb-6">
+                        <div>
+                            <label class="block text-sm font-medium text-secondary mb-2">Activ din anul</label>
+                            <input type="number" x-model="data.year_started" min="1900" :max="new Date().getFullYear()" class="form-input" placeholder="2018">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-secondary mb-2">Oraș de proveniență</label>
+                            <input type="text" x-model="data.origin_city" class="form-input" placeholder="București">
+                        </div>
+                    </div>
+
+                    <div class="pt-6 border-t border-border flex justify-end">
+                        <button type="submit" class="btn btn-primary">Salvează modificările</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- ============ TAB: BIOGRAFIE ============ -->
+            <div x-show="tab === 'bio'">
+                <form @submit.prevent="saveSection('bio')" class="bg-white rounded-2xl border border-border p-6 mb-6">
+                    <h2 class="text-lg font-bold text-secondary mb-2">Biografie</h2>
+                    <p class="text-sm text-muted mb-6">Spune-le organizatorilor și fanilor cine ești și ce te face memorabil pe scenă.</p>
+
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium text-secondary mb-2">Bio scurt *</label>
+                        <textarea x-model="data.bio_short" rows="3" maxlength="280" required class="form-input" placeholder="2-3 propoziții despre artist. Apare în carduri și liste."></textarea>
+                        <p class="text-xs text-muted mt-1">
+                            <span x-text="(data.bio_short || '').length"></span>/280 caractere
+                        </p>
+                    </div>
+
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium text-secondary mb-2">Bio extins</label>
+                        <textarea x-model="data.bio_long" rows="10" class="form-input font-sans" placeholder="Povestea completă: cum ați început, influențe muzicale, realizări, colaborări notabile..."></textarea>
+                        <p class="text-xs text-muted mt-1">Apare pe pagina ta dedicată. Acceptă paragrafe multiple.</p>
+                    </div>
+
+                    <div class="mb-6">
+                        <div class="flex items-center justify-between mb-3">
+                            <label class="block text-sm font-medium text-secondary">Realizări notabile</label>
+                            <button type="button" @click="data.achievements.push({ year: '', text: '' })" class="text-primary text-sm font-medium hover:underline">
+                                + Adaugă realizare
+                            </button>
+                        </div>
+                        <div class="space-y-2">
+                            <template x-for="(a, idx) in data.achievements" :key="idx">
+                                <div class="flex gap-2 items-start">
+                                    <input type="number" x-model="a.year" placeholder="Anul" class="form-input w-24" min="1900" :max="new Date().getFullYear()">
+                                    <input type="text" x-model="a.text" placeholder="Ex: Premiul Muzical al Anului" class="form-input flex-1">
+                                    <button type="button" @click="data.achievements.splice(idx, 1)" class="p-2.5 text-muted hover:text-error rounded-lg hover:bg-error/5">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                    </button>
+                                </div>
+                            </template>
+                            <p x-show="data.achievements.length === 0" class="text-sm text-muted text-center py-4">Niciuna adăugată</p>
+                        </div>
+                    </div>
+
+                    <div class="pt-6 border-t border-border flex justify-end">
+                        <button type="submit" class="btn btn-primary">Salvează modificările</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- ============ TAB: GALERIE & MEDIA ============ -->
+            <div x-show="tab === 'gallery'">
+                <div class="bg-white rounded-2xl border border-border p-6 mb-6">
+                    <div class="flex items-center justify-between mb-6">
+                        <div>
+                            <h2 class="text-lg font-bold text-secondary">Galerie foto</h2>
+                            <p class="text-sm text-muted">Maxim 12 imagini. Recomandat: 1080×1080 sau mai mare.</p>
+                        </div>
+                        <button @click="$refs.galleryInput.click()" class="btn btn-primary" :disabled="data.gallery.length >= 12">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
+                            Adaugă foto
+                        </button>
+                        <input type="file" x-ref="galleryInput" accept="image/*" multiple class="hidden" @change="addGalleryImages($event)">
+                    </div>
+
+                    <div x-show="data.gallery.length === 0" class="text-center py-12 border-2 border-dashed border-border rounded-xl">
+                        <svg class="w-12 h-12 text-muted/40 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                        <p class="text-muted">Nicio imagine încă</p>
+                        <p class="text-sm text-muted mt-1">Adaugă fotografii care arată cine ești pe scenă</p>
+                    </div>
+
+                    <div x-show="data.gallery.length > 0" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                        <template x-for="(img, idx) in data.gallery" :key="idx">
+                            <div class="relative group aspect-square rounded-xl overflow-hidden bg-surface">
+                                <img :src="img.url" class="w-full h-full object-cover">
+                                <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <button @click="data.gallery.splice(idx, 1)" class="absolute top-2 right-2 w-8 h-8 bg-error text-white rounded-lg flex items-center justify-center hover:bg-red-700">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                    </button>
+                                </div>
+                                <span x-show="idx === 0" class="absolute top-2 left-2 px-2 py-0.5 bg-primary text-white text-xs font-semibold rounded-full">Principal</span>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl border border-border p-6 mb-6">
+                    <h2 class="text-lg font-bold text-secondary mb-2">Muzică pe Spotify</h2>
+                    <p class="text-sm text-muted mb-4">Lipește un link Spotify (artist, album sau playlist) pentru a-l afișa pe profil.</p>
+
+                    <div class="flex gap-2">
+                        <div class="flex-1 relative">
+                            <svg class="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-muted" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.42 1.56-.299.421-1.02.599-1.56.3z"/></svg>
+                            <input type="url" x-model="data.spotify_url" class="form-input pl-10" placeholder="https://open.spotify.com/artist/...">
+                        </div>
+                        <button @click="saveSection('media')" class="btn btn-primary">Salvează</button>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl border border-border p-6">
+                    <div class="flex items-center justify-between mb-2">
+                        <h2 class="text-lg font-bold text-secondary">Videoclipuri YouTube</h2>
+                        <button @click="data.youtube_videos.push('')" :disabled="data.youtube_videos.length >= 3" class="text-primary text-sm font-medium hover:underline disabled:opacity-40">
+                            + Adaugă video
+                        </button>
+                    </div>
+                    <p class="text-sm text-muted mb-4">Maxim 3 videoclipuri. Lipește link-ul direct YouTube.</p>
+
+                    <div class="space-y-3">
+                        <template x-for="(v, idx) in data.youtube_videos" :key="idx">
+                            <div class="flex gap-2 items-start">
+                                <div class="flex-1 relative">
+                                    <svg class="w-5 h-5 absolute left-3 top-3.5 text-error" viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+                                    <input type="url" x-model="data.youtube_videos[idx]" class="form-input pl-10" placeholder="https://youtube.com/watch?v=...">
+                                </div>
+                                <button type="button" @click="data.youtube_videos.splice(idx, 1)" class="p-2.5 text-muted hover:text-error rounded-lg hover:bg-error/5">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                </button>
+                            </div>
+                        </template>
+                        <p x-show="data.youtube_videos.length === 0" class="text-sm text-muted text-center py-4">Niciun video adăugat</p>
+                    </div>
+
+                    <div class="pt-6 mt-6 border-t border-border flex justify-end">
+                        <button @click="saveSection('media')" class="btn btn-primary">Salvează modificările</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ============ TAB: SOCIAL MEDIA ============ -->
+            <div x-show="tab === 'social'">
+                <form @submit.prevent="saveSection('social')" class="bg-white rounded-2xl border border-border p-6">
+                    <h2 class="text-lg font-bold text-secondary mb-2">Social Media & Web</h2>
+                    <p class="text-sm text-muted mb-6">Link-urile tale apar ca iconițe pe profilul public.</p>
+
+                    <div class="space-y-4">
+                        <template x-for="s in socialPlatforms" :key="s.key">
+                            <div>
+                                <label class="block text-sm font-medium text-secondary mb-2">
+                                    <span x-text="s.label"></span>
+                                </label>
+                                <div class="relative">
+                                    <input type="url" x-model="data.social[s.key]" :placeholder="s.placeholder" class="form-input">
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+
+                    <div class="pt-6 mt-6 border-t border-border flex justify-end">
+                        <button type="submit" class="btn btn-primary">Salvează modificările</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- ============ TAB: BOOKING ============ -->
+            <div x-show="tab === 'booking'">
+                <form @submit.prevent="saveSection('booking')" class="bg-white rounded-2xl border border-border p-6 mb-6">
+                    <h2 class="text-lg font-bold text-secondary mb-2">Date de booking</h2>
+                    <p class="text-sm text-muted mb-6">Aceste informații sunt vizibile organizatorilor care vor să te contacteze pentru evenimente.</p>
+
+                    <div class="grid lg:grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label class="block text-sm font-medium text-secondary mb-2">Email booking *</label>
+                            <input type="email" x-model="data.booking.email" required class="form-input" placeholder="booking@artist.ro">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-secondary mb-2">Telefon booking</label>
+                            <input type="tel" x-model="data.booking.phone" class="form-input" placeholder="+40 7XX XXX XXX">
+                        </div>
+                    </div>
+
+                    <div class="grid lg:grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label class="block text-sm font-medium text-secondary mb-2">Manager / Agent</label>
+                            <input type="text" x-model="data.booking.manager_name" class="form-input" placeholder="Nume manager">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-secondary mb-2">Email manager</label>
+                            <input type="email" x-model="data.booking.manager_email" class="form-input" placeholder="manager@email.com">
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-secondary mb-2">Onorariu indicativ</label>
+                        <div class="grid grid-cols-2 gap-3">
+                            <select x-model="data.booking.fee_currency" class="form-input">
+                                <option value="RON">RON</option>
+                                <option value="EUR">EUR</option>
+                                <option value="USD">USD</option>
+                            </select>
+                            <input type="text" x-model="data.booking.fee_range" class="form-input" placeholder="Ex: 5.000 - 10.000">
+                        </div>
+                        <p class="text-xs text-muted mt-1">Doar vizibil organizatorilor logați.</p>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-secondary mb-2">Note pentru organizator</label>
+                        <textarea x-model="data.booking.notes" rows="4" class="form-input" placeholder="Disponibilitate, zone preferate, condiții speciale..."></textarea>
+                    </div>
+
+                    <div class="pt-6 border-t border-border flex justify-end">
+                        <button type="submit" class="btn btn-primary">Salvează modificările</button>
+                    </div>
+                </form>
+
+                <div class="bg-white rounded-2xl border border-border p-6">
+                    <h2 class="text-lg font-bold text-secondary mb-2">Press Kit & Rider Tehnic</h2>
+                    <p class="text-sm text-muted mb-6">Documente PDF descărcabile de către organizatori.</p>
+
+                    <div class="space-y-3">
+                        <div class="flex items-center gap-4 p-4 bg-surface rounded-xl">
+                            <div class="w-12 h-12 bg-accent/10 rounded-xl flex items-center justify-center flex-shrink-0">
+                                <svg class="w-6 h-6 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="font-medium text-secondary">Press Kit (EPK)</p>
+                                <p class="text-sm text-muted truncate" x-text="data.press_kit_url ? 'press-kit.pdf' : 'Niciun fișier încărcat'"></p>
+                            </div>
+                            <button class="btn btn-secondary btn-sm">
+                                <span x-text="data.press_kit_url ? 'Înlocuiește' : 'Încarcă'"></span>
+                            </button>
+                        </div>
+
+                        <div class="flex items-center gap-4 p-4 bg-surface rounded-xl">
+                            <div class="w-12 h-12 bg-accent/10 rounded-xl flex items-center justify-center flex-shrink-0">
+                                <svg class="w-6 h-6 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"/></svg>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="font-medium text-secondary">Rider Tehnic</p>
+                                <p class="text-sm text-muted truncate" x-text="data.tech_rider_url ? 'tech-rider.pdf' : 'Niciun fișier încărcat'"></p>
+                            </div>
+                            <button class="btn btn-secondary btn-sm">
+                                <span x-text="data.tech_rider_url ? 'Înlocuiește' : 'Încarcă'"></span>
+                            </button>
+                        </div>
+
+                        <div class="flex items-center gap-4 p-4 bg-surface rounded-xl">
+                            <div class="w-12 h-12 bg-accent/10 rounded-xl flex items-center justify-center flex-shrink-0">
+                                <svg class="w-6 h-6 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"/></svg>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="font-medium text-secondary">Stage Plan</p>
+                                <p class="text-sm text-muted truncate" x-text="data.stage_plan_url ? 'stage-plan.pdf' : 'Niciun fișier încărcat'"></p>
+                            </div>
+                            <button class="btn btn-secondary btn-sm">
+                                <span x-text="data.stage_plan_url ? 'Înlocuiește' : 'Încarcă'"></span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Toast -->
+    <div x-show="toast.show" x-transition
+         class="fixed bottom-6 right-6 bg-secondary text-white px-5 py-3 rounded-xl shadow-lg z-50 flex items-center gap-3"
+         style="display: none;">
+        <svg class="w-5 h-5 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+        </svg>
+        <span x-text="toast.message"></span>
+    </div>
+
+    <script>
+        function artistProfile() {
+            return {
+                mobileMenu: false,
+                tab: 'profile',
+                toast: { show: false, message: '' },
+
+                tabs: [
+                    { id: 'profile', label: 'Profil public' },
+                    { id: 'bio', label: 'Biografie' },
+                    { id: 'gallery', label: 'Galerie & Media' },
+                    { id: 'social', label: 'Social Media' },
+                    { id: 'booking', label: 'Booking' },
+                ],
+
+                artistTypes: [
+                    { value: 'solo', label: 'Artist Solo', icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>' },
+                    { value: 'band', label: 'Trupă', icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>' },
+                    { value: 'standup', label: 'Stand-up', icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/>' },
+                    { value: 'dj', label: 'DJ', icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/>' },
+                ],
+
+                availableGenres: [
+                    'Rock', 'Pop', 'Folk', 'Jazz', 'Blues', 'Electronic', 'House',
+                    'Techno', 'Hip-Hop', 'Rap', 'R&B', 'Reggae', 'Metal', 'Punk',
+                    'Indie', 'Alternative', 'Clasic', 'Manele', 'Tradițional',
+                    'Acoustic', 'Dance', 'Latin', 'Country', 'Comedy'
+                ],
+
+                socialPlatforms: [
+                    { key: 'website', label: 'Website oficial', placeholder: 'https://...' },
+                    { key: 'facebook', label: 'Facebook', placeholder: 'https://facebook.com/...' },
+                    { key: 'instagram', label: 'Instagram', placeholder: 'https://instagram.com/...' },
+                    { key: 'youtube', label: 'YouTube', placeholder: 'https://youtube.com/@...' },
+                    { key: 'tiktok', label: 'TikTok', placeholder: 'https://tiktok.com/@...' },
+                    { key: 'spotify', label: 'Spotify', placeholder: 'https://open.spotify.com/artist/...' },
+                    { key: 'apple_music', label: 'Apple Music', placeholder: 'https://music.apple.com/...' },
+                    { key: 'soundcloud', label: 'SoundCloud', placeholder: 'https://soundcloud.com/...' },
+                ],
+
+                // Mock data — populated so the template shows what a complete profile looks like
+                data: {
+                    type: 'band',
+                    stage_name: 'The Rockers',
+                    slug: 'the-rockers',
+                    tagline: 'Rock alternativ din București',
+                    avatar_url: '',
+                    cover_url: '',
+                    genres: ['Rock', 'Indie', 'Alternative'],
+                    year_started: 2018,
+                    origin_city: 'București',
+                    bio_short: 'Trupă de rock alternativ din București, formată în 2018. Cunoscuți pentru concerte energice și texte în limba română.',
+                    bio_long: '',
+                    achievements: [
+                        { year: 2023, text: 'Premiul Muzical al Anului — Best Rock Act' },
+                        { year: 2022, text: 'Cap de afiș la Festivalul Electric Castle' },
+                    ],
+                    gallery: [],
+                    spotify_url: '',
+                    youtube_videos: [],
+                    social: {
+                        website: '',
+                        facebook: '',
+                        instagram: '',
+                        youtube: '',
+                        tiktok: '',
+                        spotify: '',
+                        apple_music: '',
+                        soundcloud: '',
+                    },
+                    booking: {
+                        email: 'booking@therockers.ro',
+                        phone: '',
+                        manager_name: '',
+                        manager_email: '',
+                        fee_currency: 'RON',
+                        fee_range: '',
+                        notes: '',
+                    },
+                    press_kit_url: '',
+                    tech_rider_url: '',
+                    stage_plan_url: '',
+                },
+
+                toggleGenre(g) {
+                    const idx = this.data.genres.indexOf(g);
+                    if (idx > -1) {
+                        this.data.genres.splice(idx, 1);
+                    } else if (this.data.genres.length < 5) {
+                        this.data.genres.push(g);
+                    }
+                },
+
+                previewImage(event, field) {
+                    const file = event.target.files[0];
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = (e) => { this.data[field] = e.target.result; };
+                    reader.readAsDataURL(file);
+                },
+
+                addGalleryImages(event) {
+                    const files = Array.from(event.target.files || []);
+                    const remaining = 12 - this.data.gallery.length;
+                    files.slice(0, remaining).forEach(file => {
+                        const reader = new FileReader();
+                        reader.onload = (e) => {
+                            this.data.gallery.push({ url: e.target.result });
+                        };
+                        reader.readAsDataURL(file);
+                    });
+                },
+
+                saveSection(section) {
+                    // Placeholder — to be wired to backend
+                    console.log('Save section:', section, this.data);
+                    this.showToast('Modificările au fost salvate');
+                },
+
+                showToast(message) {
+                    this.toast.message = message;
+                    this.toast.show = true;
+                    setTimeout(() => { this.toast.show = false; }, 2500);
+                },
+            }
+        }
+    </script>
+</body>

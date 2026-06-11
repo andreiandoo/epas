@@ -1,0 +1,123 @@
+<?php
+return [
+    [
+        'id'        => 131013,
+        'name'      => '‘Amrān',
+        'latitude'  => '15.65940000',
+        'longitude' => '43.94385000',
+    ],
+    [
+        'id'        => 130679,
+        'name'      => 'Al Ashah',
+        'latitude'  => '16.32400000',
+        'longitude' => '43.78740000',
+    ],
+    [
+        'id'        => 130709,
+        'name'      => 'Al Madan',
+        'latitude'  => '16.23280000',
+        'longitude' => '43.63900000',
+    ],
+    [
+        'id'        => 130745,
+        'name'      => 'Al Qaflah',
+        'latitude'  => '16.33859000',
+        'longitude' => '43.70361000',
+    ],
+    [
+        'id'        => 130779,
+        'name'      => 'As Sawd',
+        'latitude'  => '15.81340000',
+        'longitude' => '43.77700000',
+    ],
+    [
+        'id'        => 130784,
+        'name'      => 'As Sudah',
+        'latitude'  => '15.96640000',
+        'longitude' => '43.77560000',
+    ],
+    [
+        'id'        => 130818,
+        'name'      => 'Bani Suraim',
+        'latitude'  => '16.12530000',
+        'longitude' => '43.96020000',
+    ],
+    [
+        'id'        => 130836,
+        'name'      => 'Dhi Bin',
+        'latitude'  => '16.02760000',
+        'longitude' => '44.15150000',
+    ],
+    [
+        'id'        => 130847,
+        'name'      => 'Habur Zulaymah',
+        'latitude'  => '16.03500000',
+        'longitude' => '43.73380000',
+    ],
+    [
+        'id'        => 130855,
+        'name'      => 'Harf Sufyan',
+        'latitude'  => '16.41389000',
+        'longitude' => '43.98571000',
+    ],
+    [
+        'id'        => 130866,
+        'name'      => 'Hooth',
+        'latitude'  => '16.28397000',
+        'longitude' => '43.97811000',
+    ],
+    [
+        'id'        => 130872,
+        'name'      => 'Iyal Surayh',
+        'latitude'  => '15.71460000',
+        'longitude' => '43.99740000',
+    ],
+    [
+        'id'        => 130875,
+        'name'      => 'Jabal Iyal Yazid',
+        'latitude'  => '15.77170000',
+        'longitude' => '43.90510000',
+    ],
+    [
+        'id'        => 130886,
+        'name'      => 'Khamir',
+        'latitude'  => '15.97653000',
+        'longitude' => '43.93371000',
+    ],
+    [
+        'id'        => 130889,
+        'name'      => 'Kharif',
+        'latitude'  => '15.84700000',
+        'longitude' => '44.08220000',
+    ],
+    [
+        'id'        => 130915,
+        'name'      => 'Maswar',
+        'latitude'  => '15.59860000',
+        'longitude' => '43.69250000',
+    ],
+    [
+        'id'        => 130953,
+        'name'      => 'Raydah',
+        'latitude'  => '15.74056000',
+        'longitude' => '44.05634000',
+    ],
+    [
+        'id'        => 130975,
+        'name'      => 'Shahārah',
+        'latitude'  => '16.18000000',
+        'longitude' => '43.70942000',
+    ],
+    [
+        'id'        => 130983,
+        'name'      => 'Suwayr',
+        'latitude'  => '16.06110000',
+        'longitude' => '43.62120000',
+    ],
+    [
+        'id'        => 130990,
+        'name'      => 'Thula',
+        'latitude'  => '15.60100000',
+        'longitude' => '43.82520000',
+    ],
+];

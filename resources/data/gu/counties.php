@@ -1,0 +1,22 @@
+<?php
+return [
+    'Agana Heights',
+    'Asan-Maina',
+    'Barrigada',
+    'Chalan Pago-Ordot',
+    'Dededo',
+    'Hågat',
+    'Hagåtña',
+    'Inarajan (Inalåhan)',
+    'Mangilao',
+    'Merizo (Malesso)',
+    'Mongmong-Toto-Maite',
+    'Piti',
+    'Santa Rita (Sånta Rita-Sumai)',
+    'Sinajana',
+    'Talofofo (Talo\'fo\'fo)',
+    'Tamuning',
+    'Umatac (Humåtak)',
+    'Yigo',
+    'Yona',
+];

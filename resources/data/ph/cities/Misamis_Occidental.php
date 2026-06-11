@@ -1,0 +1,105 @@
+<?php
+return [
+    [
+        'id'        => 154704,
+        'name'      => 'Aloran',
+        'latitude'  => '8.39998540',
+        'longitude' => '123.66952300',
+    ],
+    [
+        'id'        => 154705,
+        'name'      => 'Baliangao',
+        'latitude'  => '8.61394410',
+        'longitude' => '123.57207190',
+    ],
+    [
+        'id'        => 81791,
+        'name'      => 'Bonifacio',
+        'latitude'  => '8.08888390',
+        'longitude' => '123.56099720',
+    ],
+    [
+        'id'        => 154706,
+        'name'      => 'Calamba',
+        'latitude'  => '8.51787480',
+        'longitude' => '123.59146400',
+    ],
+    [
+        'id'        => 82246,
+        'name'      => 'Clarin',
+        'latitude'  => '8.19847030',
+        'longitude' => '123.60110780',
+    ],
+    [
+        'id'        => 154707,
+        'name'      => 'Concepcion',
+        'latitude'  => '8.41872210',
+        'longitude' => '123.55739490',
+    ],
+    [
+        'id'        => 154708,
+        'name'      => 'Don Victoriano Chiongbian',
+        'latitude'  => '8.26320820',
+        'longitude' => '123.52886940',
+    ],
+    [
+        'id'        => 82807,
+        'name'      => 'Jimenez',
+        'latitude'  => '8.32471840',
+        'longitude' => '123.59737410',
+    ],
+    [
+        'id'        => 83178,
+        'name'      => 'Lopez Jaena',
+        'latitude'  => '8.52845510',
+        'longitude' => '123.63789560',
+    ],
+    [
+        'id'        => 83862,
+        'name'      => 'Oroquieta',
+        'latitude'  => '8.44661360',
+        'longitude' => '123.52158570',
+    ],
+    [
+        'id'        => 83870,
+        'name'      => 'Ozamiz City',
+        'latitude'  => '8.14584380',
+        'longitude' => '123.59332140',
+    ],
+    [
+        'id'        => 154709,
+        'name'      => 'Panaon',
+        'latitude'  => '8.35995340',
+        'longitude' => '123.67287850',
+    ],
+    [
+        'id'        => 84133,
+        'name'      => 'Plaridel',
+        'latitude'  => '8.61147800',
+        'longitude' => '123.62176220',
+    ],
+    [
+        'id'        => 84744,
+        'name'      => 'Sapang Dalaga',
+        'latitude'  => '8.54213010',
+        'longitude' => '123.49799440',
+    ],
+    [
+        'id'        => 84806,
+        'name'      => 'Sinacaban',
+        'latitude'  => '8.29541420',
+        'longitude' => '123.67755220',
+    ],
+    [
+        'id'        => 85038,
+        'name'      => 'Tangub',
+        'latitude'  => '8.10038770',
+        'longitude' => '123.62346010',
+    ],
+    [
+        'id'        => 154710,
+        'name'      => 'Tudela',
+        'latitude'  => '8.24119720',
+        'longitude' => '123.59774690',
+    ],
+];

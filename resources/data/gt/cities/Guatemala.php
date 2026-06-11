@@ -1,0 +1,105 @@
+<?php
+return [
+    [
+        'id'        => 53430,
+        'name'      => 'Amatitlán',
+        'latitude'  => '14.47740000',
+        'longitude' => '-90.63489000',
+    ],
+    [
+        'id'        => 53453,
+        'name'      => 'Chinautla',
+        'latitude'  => '14.70289000',
+        'longitude' => '-90.49983000',
+    ],
+    [
+        'id'        => 53458,
+        'name'      => 'Chuarrancho',
+        'latitude'  => '14.81794000',
+        'longitude' => '-90.51568000',
+    ],
+    [
+        'id'        => 53496,
+        'name'      => 'Fraijanes',
+        'latitude'  => '14.46528000',
+        'longitude' => '-90.44083000',
+    ],
+    [
+        'id'        => 53500,
+        'name'      => 'Guatemala City',
+        'latitude'  => '14.64072000',
+        'longitude' => '-90.51327000',
+    ],
+    [
+        'id'        => 53534,
+        'name'      => 'Mixco',
+        'latitude'  => '14.63077000',
+        'longitude' => '-90.60711000',
+    ],
+    [
+        'id'        => 53616,
+        'name'      => 'Palencia',
+        'latitude'  => '14.66715000',
+        'longitude' => '-90.35721000',
+    ],
+    [
+        'id'        => 53628,
+        'name'      => 'Petapa',
+        'latitude'  => '14.50189000',
+        'longitude' => '-90.56196000',
+    ],
+    [
+        'id'        => 53690,
+        'name'      => 'San José del Golfo',
+        'latitude'  => '14.76414000',
+        'longitude' => '-90.37228000',
+    ],
+    [
+        'id'        => 53688,
+        'name'      => 'San José Pinula',
+        'latitude'  => '14.54600000',
+        'longitude' => '-90.41288000',
+    ],
+    [
+        'id'        => 53698,
+        'name'      => 'San Juan Sacatepéquez',
+        'latitude'  => '14.71889000',
+        'longitude' => '-90.64417000',
+    ],
+    [
+        'id'        => 53724,
+        'name'      => 'San Pedro Ayampuc',
+        'latitude'  => '14.77943000',
+        'longitude' => '-90.45318000',
+    ],
+    [
+        'id'        => 53730,
+        'name'      => 'San Pedro Sacatepéquez',
+        'latitude'  => '14.68612000',
+        'longitude' => '-90.64253000',
+    ],
+    [
+        'id'        => 53736,
+        'name'      => 'San Raimundo',
+        'latitude'  => '14.76462000',
+        'longitude' => '-90.59493000',
+    ],
+    [
+        'id'        => 53752,
+        'name'      => 'Santa Catarina Pinula',
+        'latitude'  => '14.57047000',
+        'longitude' => '-90.49925000',
+    ],
+    [
+        'id'        => 53798,
+        'name'      => 'Villa Canales',
+        'latitude'  => '14.48285000',
+        'longitude' => '-90.53425000',
+    ],
+    [
+        'id'        => 53799,
+        'name'      => 'Villa Nueva',
+        'latitude'  => '14.52512000',
+        'longitude' => '-90.58544000',
+    ],
+];

@@ -1,0 +1,111 @@
+<?php
+return [
+    [
+        'id'        => 105256,
+        'name'      => 'Amphoe Bua Chet',
+        'latitude'  => '14.48406000',
+        'longitude' => '103.97809000',
+    ],
+    [
+        'id'        => 105304,
+        'name'      => 'Amphoe Chom Phra',
+        'latitude'  => '15.14356000',
+        'longitude' => '103.57881000',
+    ],
+    [
+        'id'        => 105313,
+        'name'      => 'Amphoe Chumphon Buri',
+        'latitude'  => '15.37942000',
+        'longitude' => '103.37095000',
+    ],
+    [
+        'id'        => 105375,
+        'name'      => 'Amphoe Kap Choeng',
+        'latitude'  => '14.46795000',
+        'longitude' => '103.58476000',
+    ],
+    [
+        'id'        => 105436,
+        'name'      => 'Amphoe Khwao Sinarin',
+        'latitude'  => '15.00733000',
+        'longitude' => '103.62064000',
+    ],
+    [
+        'id'        => 105479,
+        'name'      => 'Amphoe Lamduan',
+        'latitude'  => '14.71907000',
+        'longitude' => '103.69911000',
+    ],
+    [
+        'id'        => 105596,
+        'name'      => 'Amphoe Mueang Surin',
+        'latitude'  => '14.88359000',
+        'longitude' => '103.51272000',
+    ],
+    [
+        'id'        => 105651,
+        'name'      => 'Amphoe Non Narai',
+        'latitude'  => '15.19111000',
+        'longitude' => '103.92242000',
+    ],
+    [
+        'id'        => 105727,
+        'name'      => 'Amphoe Phanom Dong Rak',
+        'latitude'  => '14.42745000',
+        'longitude' => '103.31007000',
+    ],
+    [
+        'id'        => 105798,
+        'name'      => 'Amphoe Prasat',
+        'latitude'  => '14.62602000',
+        'longitude' => '103.41569000',
+    ],
+    [
+        'id'        => 105808,
+        'name'      => 'Amphoe Rattanaburi',
+        'latitude'  => '15.33780000',
+        'longitude' => '103.90541000',
+    ],
+    [
+        'id'        => 106181,
+        'name'      => 'Amphoe Samrong Thap',
+        'latitude'  => '15.03980000',
+        'longitude' => '103.94089000',
+    ],
+    [
+        'id'        => 106187,
+        'name'      => 'Amphoe Sangkha',
+        'latitude'  => '14.57051000',
+        'longitude' => '103.83911000',
+    ],
+    [
+        'id'        => 106191,
+        'name'      => 'Amphoe Sanom',
+        'latitude'  => '15.17099000',
+        'longitude' => '103.78475000',
+    ],
+    [
+        'id'        => 106213,
+        'name'      => 'Amphoe Si Khoraphum',
+        'latitude'  => '14.94753000',
+        'longitude' => '103.78310000',
+    ],
+    [
+        'id'        => 106218,
+        'name'      => 'Amphoe Si Narong',
+        'latitude'  => '14.78085000',
+        'longitude' => '103.88651000',
+    ],
+    [
+        'id'        => 106288,
+        'name'      => 'Amphoe Tha Tum',
+        'latitude'  => '15.30940000',
+        'longitude' => '103.65111000',
+    ],
+    [
+        'id'        => 106711,
+        'name'      => 'Surin',
+        'latitude'  => '14.88181000',
+        'longitude' => '103.49364000',
+    ],
+];

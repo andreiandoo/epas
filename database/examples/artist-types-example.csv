@@ -1,0 +1,10 @@
+name,slug,description,parent_slug
+Solo Artist,solo-artist,Individual performer,
+Band,band,Musical group,
+DJ,dj,Disc jockey,
+Orchestra,orchestra,Classical orchestra,
+Choir,choir,Vocal ensemble,
+Rock Band,rock-band,Rock music band,band
+Pop Band,pop-band,Pop music band,band
+Jazz Band,jazz-band,Jazz ensemble,band
+Electronic Producer,electronic-producer,Electronic music producer,dj

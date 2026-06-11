@@ -1,0 +1,25 @@
+/* ==================== HORIZONTAL SCROLL ==================== */
+.horizontal-scroll {
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+}
+
+.horizontal-scroll::-webkit-scrollbar {
+    display: none;
+}
+
+.scroll-item {
+    scroll-snap-align: start;
+    flex-shrink: 0;
+}
+
+.scrollbar-hide {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+    display: none;
+}

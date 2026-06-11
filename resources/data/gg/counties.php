@@ -1,0 +1,15 @@
+<?php
+return [
+    'Alderney',
+    'Castel',
+    'Forest',
+    'Sark',
+    'St Andrew',
+    'St Martin',
+    'St Peter Port',
+    'St Pierre du Bois',
+    'St Sampson',
+    'St Saviour',
+    'Torteval',
+    'Vale',
+];

@@ -1,0 +1,161 @@
+<?php
+/**
+ * Organizer Registration Page
+ */
+?>
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inregistrare Organizator — TICS.ro</title>
+    <meta name="description" content="Creeaza cont de organizator TICS">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>tailwind.config={theme:{extend:{fontFamily:{'sans':['Inter','system-ui','sans-serif']}}}}</script>
+    <style>
+        *{-webkit-font-smoothing:antialiased}body{font-family:'Inter',system-ui,sans-serif}
+        @keyframes fadeInUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}.animate-fadeInUp{animation:fadeInUp 0.6s ease forwards}
+        .input-field:focus{border-color:#6366f1;box-shadow:0 0 0 4px rgba(99,102,241,0.1)}
+        .step-item.active .step-circle{background:#6366f1;color:white;border-color:#6366f1}
+        .step-item.completed .step-circle{background:#22c55e;color:white;border-color:#22c55e}
+    </style>
+</head>
+<body class="min-h-screen bg-gray-50">
+    <!-- Header -->
+    <header class="bg-white border-b border-gray-200">
+        <div class="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
+            <a href="/" class="flex items-center gap-2">
+                <div class="w-9 h-9 bg-gray-900 rounded-xl flex items-center justify-center"><span class="text-white font-bold">T</span></div>
+                <span class="font-bold text-xl">TICS</span>
+            </a>
+            <p class="text-sm text-gray-500">Ai deja cont? <a href="/organizator/conectare" class="font-semibold text-indigo-600 hover:text-indigo-500">Autentifica-te</a></p>
+        </div>
+    </header>
+
+    <div class="max-w-4xl mx-auto px-4 py-12">
+        <!-- Progress Steps -->
+        <div class="flex items-center justify-center mb-10">
+            <div class="flex items-center gap-4">
+                <div class="step-item active flex items-center gap-2">
+                    <span class="step-circle w-8 h-8 border-2 border-gray-300 rounded-full flex items-center justify-center text-sm font-bold">1</span>
+                    <span class="text-sm font-medium">Cont</span>
+                </div>
+                <div class="w-12 h-px bg-gray-300"></div>
+                <div class="step-item flex items-center gap-2">
+                    <span class="step-circle w-8 h-8 border-2 border-gray-300 text-gray-400 rounded-full flex items-center justify-center text-sm font-bold">2</span>
+                    <span class="text-sm text-gray-400">Organizatie</span>
+                </div>
+                <div class="w-12 h-px bg-gray-300"></div>
+                <div class="step-item flex items-center gap-2">
+                    <span class="step-circle w-8 h-8 border-2 border-gray-300 text-gray-400 rounded-full flex items-center justify-center text-sm font-bold">3</span>
+                    <span class="text-sm text-gray-400">Verificare</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid lg:grid-cols-3 gap-8">
+            <!-- Form -->
+            <div class="lg:col-span-2">
+                <div class="bg-white rounded-2xl border border-gray-200 p-8 animate-fadeInUp">
+                    <h1 class="text-2xl font-bold text-gray-900 mb-2">Creeaza cont de organizator</h1>
+                    <p class="text-gray-500 mb-8">Incepe sa vinzi bilete in mai putin de 5 minute</p>
+
+                    <form id="registerForm" class="space-y-6">
+                        <div class="grid sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Prenume *</label>
+                                <input type="text" name="first_name" required class="input-field w-full px-4 py-3 border border-gray-200 rounded-xl outline-none transition-all" placeholder="Ion">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Nume *</label>
+                                <input type="text" name="last_name" required class="input-field w-full px-4 py-3 border border-gray-200 rounded-xl outline-none transition-all" placeholder="Popescu">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Email *</label>
+                            <input type="email" name="email" required class="input-field w-full px-4 py-3 border border-gray-200 rounded-xl outline-none transition-all" placeholder="contact@organizatie.ro">
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Telefon *</label>
+                            <input type="tel" name="phone" required class="input-field w-full px-4 py-3 border border-gray-200 rounded-xl outline-none transition-all" placeholder="+40 7XX XXX XXX">
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Parola *</label>
+                            <input type="password" name="password" required class="input-field w-full px-4 py-3 border border-gray-200 rounded-xl outline-none transition-all" placeholder="Minim 8 caractere">
+                            <p class="text-xs text-gray-500 mt-1">Include litere, cifre si caractere speciale</p>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Confirma parola *</label>
+                            <input type="password" name="password_confirmation" required class="input-field w-full px-4 py-3 border border-gray-200 rounded-xl outline-none transition-all" placeholder="Repeta parola">
+                        </div>
+
+                        <div class="space-y-3">
+                            <label class="flex items-start gap-3 cursor-pointer">
+                                <input type="checkbox" name="terms" required class="w-5 h-5 mt-0.5 border-2 border-gray-300 rounded text-indigo-600">
+                                <span class="text-sm text-gray-600">Accept <a href="/termeni" class="text-indigo-600 underline">Termenii si conditiile</a> si <a href="/confidentialitate" class="text-indigo-600 underline">Politica de confidentialitate</a> *</span>
+                            </label>
+                            <label class="flex items-start gap-3 cursor-pointer">
+                                <input type="checkbox" name="newsletter" class="w-5 h-5 mt-0.5 border-2 border-gray-300 rounded text-indigo-600">
+                                <span class="text-sm text-gray-600">Doresc sa primesc noutati si oferte prin email</span>
+                            </label>
+                        </div>
+
+                        <button type="submit" class="w-full py-4 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2">
+                            Continua
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Benefits Sidebar -->
+            <div class="space-y-6 animate-fadeInUp" style="animation-delay:0.2s">
+                <div class="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl p-6 text-white">
+                    <h3 class="font-bold text-lg mb-4">De ce sa alegi TICS?</h3>
+                    <ul class="space-y-3">
+                        <li class="flex items-center gap-3"><svg class="w-5 h-5 text-green-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg><span class="text-sm">Doar 1% comision per bilet</span></li>
+                        <li class="flex items-center gap-3"><svg class="w-5 h-5 text-green-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg><span class="text-sm">Plati in cont in 24h</span></li>
+                        <li class="flex items-center gap-3"><svg class="w-5 h-5 text-green-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg><span class="text-sm">Dashboard analytics complet</span></li>
+                        <li class="flex items-center gap-3"><svg class="w-5 h-5 text-green-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg><span class="text-sm">Scanner gratuit pentru check-in</span></li>
+                        <li class="flex items-center gap-3"><svg class="w-5 h-5 text-green-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg><span class="text-sm">Suport dedicat 24/7</span></li>
+                    </ul>
+                </div>
+
+                <div class="bg-white rounded-2xl border border-gray-200 p-6">
+                    <p class="text-sm text-gray-500 mb-3">Incredere acordata de:</p>
+                    <div class="flex flex-wrap gap-4 opacity-50">
+                        <div class="h-8 w-20 bg-gray-200 rounded"></div>
+                        <div class="h-8 w-16 bg-gray-200 rounded"></div>
+                        <div class="h-8 w-24 bg-gray-200 rounded"></div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl border border-gray-200 p-6">
+                    <div class="flex items-center gap-2 mb-2">
+                        <span class="text-yellow-500">★★★★★</span>
+                        <span class="text-sm font-medium">4.9/5</span>
+                    </div>
+                    <p class="text-sm text-gray-600 italic">"Cel mai simplu sistem de ticketing pe care l-am folosit vreodata."</p>
+                    <p class="text-xs text-gray-400 mt-2">— Alexandru, Festival Dreams</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('registerForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const btn = this.querySelector('button[type="submit"]');
+            btn.innerHTML = '<svg class="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg><span>Se proceseaza...</span>';
+            setTimeout(() => { window.location.href = '/organizator'; }, 1500);
+        });
+    </script>
+</body>
+</html>

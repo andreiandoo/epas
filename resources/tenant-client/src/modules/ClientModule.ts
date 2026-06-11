@@ -1,0 +1,895 @@
+import { ApiClient } from '../core/ApiClient';
+import { EventBus } from '../core/EventBus';
+
+export class ClientModule {
+    name = 'client';
+    private apiClient: ApiClient | null = null;
+    private eventBus: EventBus | null = null;
+    private clientToken: string | null = null;
+
+    async init(apiClient: ApiClient, eventBus: EventBus): Promise<void> {
+        this.apiClient = apiClient;
+        this.eventBus = eventBus;
+        this.clientToken = localStorage.getItem('client_token');
+
+        // Auth routes
+        this.eventBus.on('route:login', () => this.setupLoginForm());
+        this.eventBus.on('route:register', () => this.setupRegisterForm());
+
+        // Cart & Checkout
+        this.eventBus.on('route:cart', () => this.loadCart());
+        this.eventBus.on('route:checkout', () => this.loadCheckout());
+        this.eventBus.on('route:thank-you', (orderNumber: string) => this.loadOrderConfirmation(orderNumber));
+
+        // Client dashboard
+        this.eventBus.on('route:account', () => this.loadAccountDashboard());
+        this.eventBus.on('route:orders', () => this.loadOrders());
+        this.eventBus.on('route:order-detail', (id: string) => this.loadOrderDetail(id));
+        this.eventBus.on('route:tickets', () => this.loadTickets());
+        this.eventBus.on('route:my-events', () => this.loadMyEvents());
+        this.eventBus.on('route:profile', () => this.loadProfile());
+
+        console.log('Client module initialized');
+    }
+
+    private getCartId(): string {
+        let cartId = localStorage.getItem('cart_id');
+        if (!cartId) {
+            cartId = 'cart-' + Math.random().toString(36).substr(2, 9);
+            localStorage.setItem('cart_id', cartId);
+        }
+        return cartId;
+    }
+
+    private isLoggedIn(): boolean {
+        return !!this.clientToken;
+    }
+
+    private setAuthHeaders(): void {
+        if (this.clientToken && this.apiClient) {
+            this.apiClient.setHeader('Authorization', `Bearer ${this.clientToken}`);
+        }
+    }
+
+    setupLoginForm(): void {
+        const form = document.getElementById('login-form');
+        if (!form) return;
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(form as HTMLFormElement);
+            const email = form.querySelector('input[type="email"]') as HTMLInputElement;
+            const password = form.querySelector('input[type="password"]') as HTMLInputElement;
+
+            if (this.apiClient) {
+                try {
+                    const response = await this.apiClient.post('/client/login', {
+                        email: email.value,
+                        password: password.value,
+                    });
+
+                    const { token, client } = response.data.data;
+                    localStorage.setItem('client_token', token);
+                    localStorage.setItem('client_name', client.name);
+                    this.clientToken = token;
+
+                    window.location.hash = '/account';
+                } catch (error: any) {
+                    alert(error.response?.data?.message || 'Login failed');
+                }
+            }
+        });
+    }
+
+    setupRegisterForm(): void {
+        const form = document.getElementById('register-form');
+        if (!form) return;
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const inputs = form.querySelectorAll('input');
+            const name = inputs[0] as HTMLInputElement;
+            const email = inputs[1] as HTMLInputElement;
+            const password = inputs[2] as HTMLInputElement;
+
+            if (this.apiClient) {
+                try {
+                    const response = await this.apiClient.post('/client/register', {
+                        name: name.value,
+                        email: email.value,
+                        password: password.value,
+                        password_confirmation: password.value,
+                    });
+
+                    const { token, client } = response.data.data;
+                    localStorage.setItem('client_token', token);
+                    localStorage.setItem('client_name', client.name);
+                    this.clientToken = token;
+
+                    window.location.hash = '/account';
+                } catch (error: any) {
+                    alert(error.response?.data?.message || 'Registration failed');
+                }
+            }
+        });
+    }
+
+    async loadCart(): Promise<void> {
+        if (!this.apiClient) return;
+
+        const container = document.getElementById('cart-items');
+        if (!container) return;
+
+        try {
+            const cartId = this.getCartId();
+            const response = await this.apiClient.get('/client/cart', {
+                headers: { 'X-Cart-Id': cartId }
+            });
+
+            const { items, subtotal, fees, total, currency } = response.data.data;
+
+            if (items.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 3rem;">
+                        <p style="color: #6b7280; margin-bottom: 1rem;">Your cart is empty</p>
+                        <a href="#/events" class="tixello-btn">Browse Events</a>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = `
+                <div style="display: grid; gap: 1rem; margin-bottom: 1.5rem;">
+                    ${items.map((item: any) => `
+                        <div class="tixello-card" style="display: flex; gap: 1rem; align-items: center;">
+                            ${item.event.image ? `<img src="${item.event.image}" alt="${item.event.name}" style="width: 80px; height: 80px; object-fit: cover; border-radius: 0.375rem;">` : ''}
+                            <div style="flex: 1;">
+                                <h3 style="font-weight: 600;">${item.event.name}</h3>
+                                <p style="font-size: 0.875rem; color: #6b7280;">${item.ticket_type.name}</p>
+                                <p style="font-size: 0.875rem;">${this.formatCurrency(item.price, currency)} × ${item.quantity}</p>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                <button class="quantity-btn" data-id="${item.id}" data-action="decrease">-</button>
+                                <span>${item.quantity}</span>
+                                <button class="quantity-btn" data-id="${item.id}" data-action="increase">+</button>
+                                <button class="remove-btn" data-id="${item.id}" style="color: #ef4444; margin-left: 1rem;">×</button>
+                            </div>
+                            <div style="font-weight: 600; min-width: 80px; text-align: right;">
+                                ${this.formatCurrency(item.total, currency)}
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+
+                <div class="tixello-card" style="max-width: 400px; margin-left: auto;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                        <span>Subtotal</span>
+                        <span>${this.formatCurrency(subtotal, currency)}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; color: #6b7280;">
+                        <span>Service Fee</span>
+                        <span>${this.formatCurrency(fees, currency)}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-weight: 700; font-size: 1.125rem; padding-top: 0.5rem; border-top: 1px solid #e5e7eb;">
+                        <span>Total</span>
+                        <span>${this.formatCurrency(total, currency)}</span>
+                    </div>
+                    <a href="#/checkout" class="tixello-btn" style="display: block; text-align: center; margin-top: 1rem;">Proceed to Checkout</a>
+                </div>
+            `;
+
+            // Bind quantity buttons
+            container.querySelectorAll('.quantity-btn').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    const itemId = (e.target as HTMLElement).getAttribute('data-id');
+                    const action = (e.target as HTMLElement).getAttribute('data-action');
+                    const item = items.find((i: any) => i.id == itemId);
+                    const newQty = action === 'increase' ? item.quantity + 1 : item.quantity - 1;
+
+                    if (this.apiClient) {
+                        await this.apiClient.put(`/client/cart/${itemId}`, {
+                            quantity: newQty,
+                            cart_id: cartId
+                        });
+                        this.loadCart();
+                    }
+                });
+            });
+
+            // Bind remove buttons
+            container.querySelectorAll('.remove-btn').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    const itemId = (e.target as HTMLElement).getAttribute('data-id');
+                    if (this.apiClient) {
+                        await this.apiClient.delete(`/client/cart/${itemId}?cart_id=${cartId}`);
+                        this.loadCart();
+                    }
+                });
+            });
+        } catch (error) {
+            container.innerHTML = '<p class="text-red-500">Failed to load cart.</p>';
+        }
+    }
+
+    async loadCheckout(): Promise<void> {
+        if (!this.apiClient) return;
+
+        const container = document.getElementById('checkout-form');
+        if (!container) return;
+
+        try {
+            const cartId = this.getCartId();
+            const response = await this.apiClient.get('/client/cart', {
+                headers: { 'X-Cart-Id': cartId }
+            });
+
+            const { items, subtotal, fees, total, currency } = response.data.data;
+
+            if (items.length === 0) {
+                window.location.hash = '/cart';
+                return;
+            }
+
+            // Fetch checkout init data (payment methods, WhatsApp availability)
+            let paymentMethods: any[] = [];
+            let hasWhatsApp = false;
+            try {
+                const initResponse = await this.apiClient.get('/client/checkout/init');
+                paymentMethods = initResponse.data.data?.payment_methods || [];
+                hasWhatsApp = initResponse.data.data?.has_whatsapp || false;
+            } catch (e) {
+                // Default to stripe if init fails
+                paymentMethods = [{ id: 'stripe', name: 'Card Payment', icon: 'credit-card' }];
+            }
+
+            container.innerHTML = `
+                <div style="display: grid; grid-template-columns: 1fr 400px; gap: 2rem;">
+                    <div>
+                        <h2 style="font-weight: 600; margin-bottom: 1rem;">Detalii facturare</h2>
+                        <form id="checkout-submit-form">
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                                <div>
+                                    <label style="display: block; font-weight: 500; margin-bottom: 0.5rem;">Prenume</label>
+                                    <input type="text" name="billing_first_name" required
+                                        style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">
+                                </div>
+                                <div>
+                                    <label style="display: block; font-weight: 500; margin-bottom: 0.5rem;">Nume</label>
+                                    <input type="text" name="billing_last_name" required
+                                        style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">
+                                </div>
+                            </div>
+                            <div style="margin-bottom: 1rem;">
+                                <label style="display: block; font-weight: 500; margin-bottom: 0.5rem;">Email</label>
+                                <input type="email" name="billing_email" required
+                                    style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">
+                            </div>
+                            <div style="margin-bottom: 1rem;">
+                                <label style="display: block; font-weight: 500; margin-bottom: 0.5rem;">Telefon</label>
+                                <input type="tel" name="billing_phone"
+                                    style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">
+                            </div>
+
+                            <!-- Payment Method Selection -->
+                            <h2 style="font-weight: 600; margin: 1.5rem 0 1rem;">Metodă de plată</h2>
+                            ${paymentMethods.length > 1 ? `
+                                <div id="payment-methods-container" style="display: grid; gap: 0.5rem; margin-bottom: 1rem;">
+                                    ${paymentMethods.map((method: any, index: number) => `
+                                        <label style="display: flex; align-items: center; padding: 1rem; border: 2px solid ${index === 0 ? '#4f46e5' : '#d1d5db'}; border-radius: 0.5rem; cursor: pointer; transition: border-color 0.2s;" class="payment-method-option">
+                                            <input type="radio" name="payment_method" value="${method.id}" ${index === 0 ? 'checked' : ''} style="margin-right: 0.75rem;">
+                                            <span style="font-weight: 500;">${method.name}</span>
+                                        </label>
+                                    `).join('')}
+                                </div>
+                            ` : `<input type="hidden" name="payment_method" value="${paymentMethods[0]?.id || 'stripe'}">`}
+
+                            <!-- Stripe Payment Element container -->
+                            <div id="stripe-payment-element" style="padding: 1rem; border: 1px solid #d1d5db; border-radius: 0.375rem; min-height: 100px; background: #fafafa;">
+                                <p style="color: #6b7280; text-align: center;">Se încarcă opțiunile de plată...</p>
+                            </div>
+
+                            <!-- Payment error messages -->
+                            <div id="stripe-payment-errors" style="color: #ef4444; font-size: 0.875rem; margin-top: 0.5rem; display: none;"></div>
+
+                            <!-- Notification Preferences -->
+                            <h2 style="font-weight: 600; margin: 1.5rem 0 1rem;">Preferințe notificări</h2>
+                            <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                                <label style="display: flex; align-items: center; cursor: pointer;">
+                                    <input type="checkbox" name="notification_email" checked style="margin-right: 0.75rem; width: 1rem; height: 1rem;">
+                                    <span>Primește notificări prin email</span>
+                                </label>
+                                ${hasWhatsApp ? `
+                                    <label style="display: flex; align-items: center; cursor: pointer;">
+                                        <input type="checkbox" name="notification_whatsapp" style="margin-right: 0.75rem; width: 1rem; height: 1rem;">
+                                        <span>Primește notificări prin WhatsApp</span>
+                                    </label>
+                                ` : ''}
+                            </div>
+
+                            <button type="submit" id="checkout-submit-btn" class="tixello-btn" style="width: 100%; margin-top: 1.5rem;" disabled>
+                                <span id="btn-text">Plătește ${this.formatCurrency(total, currency)}</span>
+                                <span id="btn-spinner" style="display: none;">Procesare...</span>
+                            </button>
+
+                            <p style="font-size: 0.75rem; color: #6b7280; text-align: center; margin-top: 0.75rem;">
+                                🔒 Plata este securizată prin Stripe. Acceptăm card, Apple Pay și Google Pay.
+                            </p>
+                        </form>
+                    </div>
+
+                    <div>
+                        <div class="tixello-card">
+                            <h2 style="font-weight: 600; margin-bottom: 1rem;">Order Summary</h2>
+                            ${items.map((item: any) => `
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.875rem;">
+                                    <span>${item.event.name} × ${item.quantity}</span>
+                                    <span>${this.formatCurrency(item.total, currency)}</span>
+                                </div>
+                            `).join('')}
+                            <div style="border-top: 1px solid #e5e7eb; margin-top: 1rem; padding-top: 1rem;">
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                                    <span>Subtotal</span>
+                                    <span>${this.formatCurrency(subtotal, currency)}</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; color: #6b7280;">
+                                    <span>Service Fee</span>
+                                    <span>${this.formatCurrency(fees, currency)}</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; font-weight: 700; font-size: 1.125rem;">
+                                    <span>Total</span>
+                                    <span>${this.formatCurrency(total, currency)}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Initialize Stripe
+            await this.initStripeCheckout(total, currency);
+
+        } catch (error) {
+            container.innerHTML = '<p class="text-red-500">A apărut o eroare la încărcarea checkout-ului.</p>';
+        }
+    }
+
+    async loadOrderConfirmation(orderNumber: string): Promise<void> {
+        if (!this.apiClient) return;
+
+        const container = document.getElementById(`order-confirmation-${orderNumber}`);
+        if (!container) return;
+
+        try {
+            const response = await this.apiClient.get(`/client/order-confirmation/${orderNumber}`);
+            const order = response.data.data;
+
+            container.innerHTML = `
+                <div class="tixello-card" style="max-width: 500px; margin: 0 auto; text-align: left;">
+                    <div style="margin-bottom: 1rem;">
+                        <strong>Order Number:</strong> ${order.order_number}
+                    </div>
+                    <div style="margin-bottom: 1rem;">
+                        <strong>Total:</strong> ${this.formatCurrency(order.total, order.currency)}
+                    </div>
+                    <div style="margin-bottom: 1rem;">
+                        <strong>Confirmation sent to:</strong> ${order.billing_email}
+                    </div>
+
+                    <h3 style="font-weight: 600; margin: 1.5rem 0 1rem;">Your Tickets</h3>
+                    ${order.tickets.map((ticket: any) => `
+                        <div style="padding: 0.75rem; background: #f9fafb; border-radius: 0.375rem; margin-bottom: 0.5rem;">
+                            <div style="font-weight: 500;">${ticket.event_name}</div>
+                            <div style="font-size: 0.875rem; color: #6b7280;">
+                                ${ticket.ticket_type} • ${ticket.ticket_number}
+                            </div>
+                        </div>
+                    `).join('')}
+
+                    <div style="margin-top: 1.5rem; text-align: center;">
+                        ${this.isLoggedIn() ?
+                            '<a href="#/account/tickets" class="tixello-btn">View My Tickets</a>' :
+                            '<a href="#/events" class="tixello-btn">Browse More Events</a>'
+                        }
+                    </div>
+                </div>
+            `;
+        } catch (error) {
+            container.innerHTML = '<p class="text-red-500">Failed to load order confirmation.</p>';
+        }
+    }
+
+    async loadAccountDashboard(): Promise<void> {
+        if (!this.isLoggedIn()) {
+            window.location.hash = '/login';
+            return;
+        }
+
+        const container = document.querySelector('.tixello-account');
+        if (!container) return;
+
+        const clientName = localStorage.getItem('client_name') || 'User';
+
+        container.innerHTML = `
+            <h1>Welcome, ${clientName}</h1>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-top: 1.5rem;">
+                <a href="#/account/orders" class="tixello-card" style="text-decoration: none; color: inherit;">
+                    <h3 style="font-weight: 600;">My Orders</h3>
+                    <p style="color: #6b7280; font-size: 0.875rem;">View your order history</p>
+                </a>
+                <a href="#/account/tickets" class="tixello-card" style="text-decoration: none; color: inherit;">
+                    <h3 style="font-weight: 600;">My Tickets</h3>
+                    <p style="color: #6b7280; font-size: 0.875rem;">View and download tickets</p>
+                </a>
+                <a href="#/account/events" class="tixello-card" style="text-decoration: none; color: inherit;">
+                    <h3 style="font-weight: 600;">Upcoming Events</h3>
+                    <p style="color: #6b7280; font-size: 0.875rem;">Events you're attending</p>
+                </a>
+                <a href="#/account/profile" class="tixello-card" style="text-decoration: none; color: inherit;">
+                    <h3 style="font-weight: 600;">Profile</h3>
+                    <p style="color: #6b7280; font-size: 0.875rem;">Manage your details</p>
+                </a>
+            </div>
+            <button id="logout-btn" style="margin-top: 2rem; color: #ef4444; background: none; border: none; cursor: pointer;">
+                Logout
+            </button>
+        `;
+
+        document.getElementById('logout-btn')?.addEventListener('click', () => {
+            localStorage.removeItem('client_token');
+            localStorage.removeItem('client_name');
+            this.clientToken = null;
+            window.location.hash = '/login';
+        });
+    }
+
+    async loadOrders(): Promise<void> {
+        if (!this.isLoggedIn()) {
+            window.location.hash = '/login';
+            return;
+        }
+
+        if (!this.apiClient) return;
+
+        const container = document.getElementById('orders-list');
+        if (!container) return;
+
+        try {
+            this.setAuthHeaders();
+            const response = await this.apiClient.get('/client/orders');
+            const { orders } = response.data.data;
+
+            if (orders.length === 0) {
+                container.innerHTML = '<p style="color: #6b7280;">No orders yet.</p>';
+                return;
+            }
+
+            container.innerHTML = `
+                <div style="display: grid; gap: 1rem;">
+                    ${orders.map((order: any) => `
+                        <a href="#/account/orders/${order.id}" class="tixello-card" style="text-decoration: none; color: inherit;">
+                            <div style="display: flex; justify-content: space-between; align-items: start;">
+                                <div>
+                                    <div style="font-weight: 600;">${order.order_number}</div>
+                                    <div style="font-size: 0.875rem; color: #6b7280;">
+                                        ${order.tickets_count} ticket(s) • ${new Date(order.created_at).toLocaleDateString()}
+                                    </div>
+                                    <div style="font-size: 0.875rem; margin-top: 0.25rem;">
+                                        ${order.events.join(', ')}
+                                    </div>
+                                </div>
+                                <div style="text-align: right;">
+                                    <div style="font-weight: 600;">${this.formatCurrency(order.total, order.currency)}</div>
+                                    <span style="font-size: 0.75rem; padding: 0.25rem 0.5rem; border-radius: 0.25rem; background: ${order.status === 'completed' ? '#d1fae5' : '#fef3c7'};">
+                                        ${order.status}
+                                    </span>
+                                </div>
+                            </div>
+                        </a>
+                    `).join('')}
+                </div>
+            `;
+        } catch (error) {
+            container.innerHTML = '<p class="text-red-500">Failed to load orders.</p>';
+        }
+    }
+
+    async loadOrderDetail(orderId: string): Promise<void> {
+        if (!this.isLoggedIn()) {
+            window.location.hash = '/login';
+            return;
+        }
+
+        if (!this.apiClient) return;
+
+        const container = document.getElementById(`order-detail-${orderId}`);
+        if (!container) return;
+
+        try {
+            this.setAuthHeaders();
+            const response = await this.apiClient.get(`/client/orders/${orderId}`);
+            const order = response.data.data;
+
+            container.innerHTML = `
+                <h1 style="margin-bottom: 1rem;">Order ${order.order_number}</h1>
+                <div class="tixello-card" style="margin-bottom: 1.5rem;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                        <div>
+                            <div style="color: #6b7280; font-size: 0.875rem;">Status</div>
+                            <div style="font-weight: 500;">${order.status}</div>
+                        </div>
+                        <div>
+                            <div style="color: #6b7280; font-size: 0.875rem;">Date</div>
+                            <div style="font-weight: 500;">${new Date(order.created_at).toLocaleString()}</div>
+                        </div>
+                        <div>
+                            <div style="color: #6b7280; font-size: 0.875rem;">Payment Method</div>
+                            <div style="font-weight: 500;">${order.payment_method}</div>
+                        </div>
+                        <div>
+                            <div style="color: #6b7280; font-size: 0.875rem;">Total</div>
+                            <div style="font-weight: 600;">${this.formatCurrency(order.total, order.currency)}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <h2 style="font-weight: 600; margin-bottom: 1rem;">Tickets</h2>
+                <div style="display: grid; gap: 1rem;">
+                    ${order.tickets.map((ticket: any) => `
+                        <div class="tixello-card">
+                            <div style="display: flex; justify-content: space-between;">
+                                <div>
+                                    <div style="font-weight: 600;">${ticket.event.name}</div>
+                                    <div style="font-size: 0.875rem; color: #6b7280;">
+                                        ${ticket.ticket_type} • ${ticket.ticket_number}
+                                    </div>
+                                    <div style="font-size: 0.875rem;">
+                                        ${new Date(ticket.event.date).toLocaleDateString()} • ${ticket.event.venue}
+                                    </div>
+                                </div>
+                                <div style="text-align: right;">
+                                    <div>${this.formatCurrency(ticket.price, order.currency)}</div>
+                                    <span style="font-size: 0.75rem; padding: 0.25rem 0.5rem; border-radius: 0.25rem; background: ${ticket.status === 'valid' ? '#d1fae5' : '#fee2e2'};">
+                                        ${ticket.status}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        } catch (error) {
+            container.innerHTML = '<p class="text-red-500">Failed to load order details.</p>';
+        }
+    }
+
+    async loadTickets(): Promise<void> {
+        if (!this.isLoggedIn()) {
+            window.location.hash = '/login';
+            return;
+        }
+
+        if (!this.apiClient) return;
+
+        const container = document.getElementById('tickets-list');
+        if (!container) return;
+
+        try {
+            this.setAuthHeaders();
+            const response = await this.apiClient.get('/client/tickets');
+            const { tickets } = response.data.data;
+
+            if (tickets.length === 0) {
+                container.innerHTML = '<p style="color: #6b7280;">No tickets yet.</p>';
+                return;
+            }
+
+            container.innerHTML = `
+                <div style="display: grid; gap: 1rem;">
+                    ${tickets.map((ticket: any) => `
+                        <div class="tixello-card">
+                            <div style="display: flex; gap: 1rem;">
+                                ${ticket.event.image ? `<img src="${ticket.event.image}" alt="${ticket.event.name}" style="width: 100px; height: 100px; object-fit: cover; border-radius: 0.375rem;">` : ''}
+                                <div style="flex: 1;">
+                                    <div style="font-weight: 600;">${ticket.event.name}</div>
+                                    <div style="font-size: 0.875rem; color: #6b7280;">
+                                        ${new Date(ticket.event.date).toLocaleDateString()} • ${ticket.event.venue}
+                                    </div>
+                                    <div style="font-size: 0.875rem; margin-top: 0.5rem;">
+                                        ${ticket.ticket_type} • ${ticket.ticket_number}
+                                    </div>
+                                </div>
+                                <div style="text-align: right;">
+                                    <span style="font-size: 0.75rem; padding: 0.25rem 0.5rem; border-radius: 0.25rem; background: ${ticket.status === 'valid' ? '#d1fae5' : '#fee2e2'};">
+                                        ${ticket.status}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        } catch (error) {
+            container.innerHTML = '<p class="text-red-500">Failed to load tickets.</p>';
+        }
+    }
+
+    async loadMyEvents(): Promise<void> {
+        if (!this.isLoggedIn()) {
+            window.location.hash = '/login';
+            return;
+        }
+
+        if (!this.apiClient) return;
+
+        const container = document.getElementById('my-events-list');
+        if (!container) return;
+
+        try {
+            this.setAuthHeaders();
+            const response = await this.apiClient.get('/client/upcoming-events');
+            const { events } = response.data.data;
+
+            if (events.length === 0) {
+                container.innerHTML = '<p style="color: #6b7280;">No upcoming events.</p>';
+                return;
+            }
+
+            container.innerHTML = `
+                <div style="display: grid; gap: 1rem;">
+                    ${events.map((event: any) => `
+                        <div class="tixello-card">
+                            <div style="display: flex; gap: 1rem;">
+                                ${event.image ? `<img src="${event.image}" alt="${event.name}" style="width: 120px; height: 120px; object-fit: cover; border-radius: 0.375rem;">` : ''}
+                                <div>
+                                    <div style="font-weight: 600; font-size: 1.125rem;">${event.name}</div>
+                                    <div style="color: #6b7280; margin: 0.5rem 0;">
+                                        ${new Date(event.date).toLocaleDateString()} at ${new Date(event.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                                    </div>
+                                    <div style="font-size: 0.875rem;">${event.venue}</div>
+                                    <div style="font-size: 0.875rem; color: #6b7280;">${event.address}</div>
+                                    <div style="margin-top: 0.5rem; font-size: 0.875rem; color: #3b82f6;">
+                                        ${event.tickets_count} ticket(s)
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        } catch (error) {
+            container.innerHTML = '<p class="text-red-500">Failed to load events.</p>';
+        }
+    }
+
+    async loadProfile(): Promise<void> {
+        if (!this.isLoggedIn()) {
+            window.location.hash = '/login';
+            return;
+        }
+
+        if (!this.apiClient) return;
+
+        const container = document.getElementById('profile-form');
+        if (!container) return;
+
+        try {
+            this.setAuthHeaders();
+            const response = await this.apiClient.get('/client/profile');
+            const profile = response.data.data;
+
+            container.innerHTML = `
+                <form id="profile-update-form" style="max-width: 500px;">
+                    <div style="margin-bottom: 1rem;">
+                        <label style="display: block; font-weight: 500; margin-bottom: 0.5rem;">Name</label>
+                        <input type="text" name="name" value="${profile.name || ''}" required
+                            style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">
+                    </div>
+                    <div style="margin-bottom: 1rem;">
+                        <label style="display: block; font-weight: 500; margin-bottom: 0.5rem;">Email</label>
+                        <input type="email" name="email" value="${profile.email || ''}" required
+                            style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">
+                    </div>
+                    <div style="margin-bottom: 1.5rem;">
+                        <label style="display: block; font-weight: 500; margin-bottom: 0.5rem;">Phone</label>
+                        <input type="tel" name="phone" value="${profile.phone || ''}"
+                            style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">
+                    </div>
+
+                    <h3 style="font-weight: 600; margin-bottom: 1rem;">Change Password</h3>
+                    <div style="margin-bottom: 1rem;">
+                        <label style="display: block; font-weight: 500; margin-bottom: 0.5rem;">Current Password</label>
+                        <input type="password" name="current_password"
+                            style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">
+                    </div>
+                    <div style="margin-bottom: 1rem;">
+                        <label style="display: block; font-weight: 500; margin-bottom: 0.5rem;">New Password</label>
+                        <input type="password" name="new_password"
+                            style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">
+                    </div>
+                    <div style="margin-bottom: 1.5rem;">
+                        <label style="display: block; font-weight: 500; margin-bottom: 0.5rem;">Confirm New Password</label>
+                        <input type="password" name="new_password_confirmation"
+                            style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">
+                    </div>
+
+                    <button type="submit" class="tixello-btn">Update Profile</button>
+                </form>
+            `;
+
+            document.getElementById('profile-update-form')?.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const form = e.target as HTMLFormElement;
+                const formData = new FormData(form);
+
+                if (this.apiClient) {
+                    try {
+                        this.setAuthHeaders();
+                        await this.apiClient.put('/client/profile', {
+                            name: formData.get('name'),
+                            email: formData.get('email'),
+                            phone: formData.get('phone'),
+                            current_password: formData.get('current_password'),
+                            new_password: formData.get('new_password'),
+                            new_password_confirmation: formData.get('new_password_confirmation'),
+                        });
+
+                        localStorage.setItem('client_name', formData.get('name') as string);
+                        alert('Profile updated successfully');
+                    } catch (error: any) {
+                        alert(error.response?.data?.message || 'Failed to update profile');
+                    }
+                }
+            });
+        } catch (error) {
+            container.innerHTML = '<p class="text-red-500">Failed to load profile.</p>';
+        }
+    }
+
+    private formatCurrency(amount: number, currency: string = 'RON'): string {
+        return new Intl.NumberFormat('ro-RO', {
+            style: 'currency',
+            currency: currency
+        }).format(amount);
+    }
+
+    /**
+     * Initialize Stripe checkout with Payment Element
+     */
+    private async initStripeCheckout(total: number, currency: string): Promise<void> {
+        if (!this.apiClient) return;
+
+        const paymentElement = document.getElementById('stripe-payment-element');
+        const errorsElement = document.getElementById('stripe-payment-errors');
+        const submitBtn = document.getElementById('checkout-submit-btn') as HTMLButtonElement;
+        const form = document.getElementById('checkout-submit-form') as HTMLFormElement;
+
+        if (!paymentElement) return;
+
+        try {
+            // Load Stripe.js dynamically
+            if (!(window as any).Stripe) {
+                await this.loadStripeJs();
+            }
+
+            // Get payment config and create payment intent
+            const configResponse = await this.apiClient.get('/client/payment/config');
+            const { publishable_key, configured, processor } = configResponse.data.data;
+
+            if (!configured || processor !== 'stripe') {
+                paymentElement.innerHTML = '<p style="color: #ef4444;">Plățile nu sunt configurate pentru acest organizator.</p>';
+                return;
+            }
+
+            // Create Payment Intent
+            const formData = new FormData(form);
+            const intentResponse = await this.apiClient.post('/client/payment/create-intent', {
+                amount: total,
+                currency: currency.toLowerCase(),
+                customer_email: formData.get('billing_email'),
+                customer_name: `${formData.get('billing_first_name')} ${formData.get('billing_last_name')}`.trim(),
+            });
+
+            const { client_secret } = intentResponse.data.data;
+
+            // Initialize Stripe
+            const stripe = (window as any).Stripe(publishable_key);
+            const elements = stripe.elements({
+                clientSecret: client_secret,
+                appearance: {
+                    theme: 'stripe',
+                    variables: {
+                        colorPrimary: '#4f46e5',
+                        colorBackground: '#ffffff',
+                        colorText: '#1f2937',
+                        fontFamily: 'system-ui, sans-serif',
+                        borderRadius: '0.375rem',
+                    },
+                },
+            });
+
+            // Create Payment Element
+            const paymentElementInstance = elements.create('payment', {
+                layout: 'tabs',
+            });
+            paymentElement.innerHTML = '';
+            paymentElementInstance.mount(paymentElement);
+
+            // Enable submit button when payment element is ready
+            paymentElementInstance.on('ready', () => {
+                submitBtn.disabled = false;
+            });
+
+            // Show errors
+            paymentElementInstance.on('change', (event: any) => {
+                if (event.error && errorsElement) {
+                    errorsElement.textContent = event.error.message;
+                    errorsElement.style.display = 'block';
+                } else if (errorsElement) {
+                    errorsElement.style.display = 'none';
+                }
+            });
+
+            // Handle form submission
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+
+                submitBtn.disabled = true;
+                const btnText = document.getElementById('btn-text');
+                const btnSpinner = document.getElementById('btn-spinner');
+                if (btnText) btnText.style.display = 'none';
+                if (btnSpinner) btnSpinner.style.display = 'inline';
+
+                const formData = new FormData(form);
+                const returnUrl = `${window.location.origin}${window.location.pathname}#/payment-complete`;
+
+                const { error } = await stripe.confirmPayment({
+                    elements,
+                    confirmParams: {
+                        return_url: returnUrl,
+                        receipt_email: formData.get('billing_email') as string,
+                        payment_method_data: {
+                            billing_details: {
+                                name: `${formData.get('billing_first_name')} ${formData.get('billing_last_name')}`.trim(),
+                                email: formData.get('billing_email') as string,
+                                phone: formData.get('billing_phone') as string,
+                            },
+                        },
+                    },
+                });
+
+                if (error) {
+                    if (errorsElement) {
+                        errorsElement.textContent = error.message || 'A apărut o eroare la procesarea plății.';
+                        errorsElement.style.display = 'block';
+                    }
+                    submitBtn.disabled = false;
+                    if (btnText) btnText.style.display = 'inline';
+                    if (btnSpinner) btnSpinner.style.display = 'none';
+                }
+                // If no error, Stripe will redirect to return_url
+            });
+
+        } catch (error: any) {
+            console.error('Stripe init error:', error);
+            paymentElement.innerHTML = `<p style="color: #ef4444;">Eroare la încărcarea plății: ${error.response?.data?.message || error.message || 'Eroare necunoscută'}</p>`;
+        }
+    }
+
+    /**
+     * Load Stripe.js dynamically
+     */
+    private loadStripeJs(): Promise<void> {
+        return new Promise((resolve, reject) => {
+            if ((window as any).Stripe) {
+                resolve();
+                return;
+            }
+
+            const script = document.createElement('script');
+            script.src = 'https://js.stripe.com/v3/';
+            script.onload = () => resolve();
+            script.onerror = () => reject(new Error('Failed to load Stripe.js'));
+            document.head.appendChild(script);
+        });
+    }
+}

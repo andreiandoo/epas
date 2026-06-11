@@ -1,0 +1,9 @@
+<?php
+return [
+    [
+        'id'        => 64876,
+        'name'      => 'Wajir',
+        'latitude'  => '1.74710000',
+        'longitude' => '40.05732000',
+    ],
+];

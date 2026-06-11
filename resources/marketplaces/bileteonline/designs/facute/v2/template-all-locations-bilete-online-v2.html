@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- ===================== SEO CORE ===================== -->
+  <title>Toate locațiile — bilete.online</title>
+  <meta name="description" content="Descoperă locațiile listate pe bilete.online: escape rooms, muzee, parcuri, ateliere, peșteri, rezervații, centre de agrement și spații pentru experiențe în orașele din România." />
+  <meta name="keywords" content="locații activități, locații bilete online, escape rooms, muzee, parcuri de aventură, locații agrement, activități România, bilete online locații" />
+  <meta name="robots" content="index, follow, max-image-preview:large" />
+  <link rel="canonical" href="https://bilete.online/locatii" />
+  <meta name="theme-color" content="#1B1714" />
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="bilete.online" />
+  <meta property="og:title" content="Toate locațiile — bilete.online" />
+  <meta property="og:description" content="Găsește locații de activități: escape rooms, muzee, parcuri, ateliere, natură, experiențe pentru copii, familie și grupuri." />
+  <meta property="og:url" content="https://bilete.online/locatii" />
+  <meta property="og:locale" content="ro_RO" />
+  <meta name="twitter:card" content="summary_large_image" />
+
+  <!-- ===================== STRUCTURED DATA ===================== -->
+  <script type="application/ld+json">
+  {
+    "@context":"https://schema.org",
+    "@type":"CollectionPage",
+    "name":"Toate locațiile",
+    "url":"https://bilete.online/locatii",
+    "description":"Colecție de locații și operatori de activități disponibile pe bilete.online.",
+    "inLanguage":"ro-RO",
+    "isPartOf":{"@type":"WebSite","name":"bilete.online","url":"https://bilete.online/"},
+    "about":[
+      {"@type":"Thing","name":"locații de agrement"},
+      {"@type":"Thing","name":"escape rooms"},
+      {"@type":"Thing","name":"muzee"},
+      {"@type":"Thing","name":"parcuri de aventură"},
+      {"@type":"Thing","name":"activități pentru copii"}
+    ]
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context":"https://schema.org",
+    "@type":"BreadcrumbList",
+    "itemListElement":[
+      {"@type":"ListItem","position":1,"name":"Acasă","item":"https://bilete.online/"},
+      {"@type":"ListItem","position":2,"name":"Locații","item":"https://bilete.online/locatii"}
+    ]
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context":"https://schema.org",
+    "@type":"ItemList",
+    "name":"Locații populare pe bilete.online",
+    "itemListElement":[
+      {"@type":"ListItem","position":1,"name":"Mystery Rooms Brașov","url":"https://bilete.online/locatii/mystery-rooms-brasov"},
+      {"@type":"ListItem","position":2,"name":"Muzeul Interactiv București","url":"https://bilete.online/locatii/muzeul-interactiv-bucuresti"},
+      {"@type":"ListItem","position":3,"name":"Adventure Park Cluj","url":"https://bilete.online/locatii/adventure-park-cluj"},
+      {"@type":"ListItem","position":4,"name":"Atelierul de Ceramică Iași","url":"https://bilete.online/locatii/atelierul-de-ceramica-iasi"}
+    ]
+  }
+  </script>
+
+  <!-- ===================== FONTS ===================== -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;0,9..144,900;1,9..144,500&family=Hanken+Grotesk:wght@400;500;600;700;800&family=Spline+Sans+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+
+  <!-- ===================== TAILWIND ===================== -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: { extend: {
+        colors: {
+          paper:'#F4EFE3','paper-2':'#EBE2CF','paper-3':'#E2D7BF',
+          ink:'#1B1714','ink-2':'#2E2820','ink-soft':'#5A4F41',
+          vermilion:'#E84527','vermilion-d':'#C5371C',
+          forest:'#1E4A3D','forest-l':'#2E6553',
+          ochre:'#DA9A33',sky:'#2C5F8A',mint:'#D7E8D3',rose:'#F2C7B8'
+        },
+        fontFamily: {
+          display:['Fraunces','Georgia','serif'],
+          sans:['"Hanken Grotesk"','system-ui','sans-serif'],
+          mono:['"Spline Sans Mono"','ui-monospace','monospace']
+        },
+        boxShadow:{ ticket:'0 28px 60px -36px rgba(27,23,20,.58)', deep:'0 42px 90px -48px rgba(27,23,20,.75)' }
+      }}
+    }
+  </script>
+
+  <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+  <style>
+    :root { --paper:#F4EFE3; }
+    html { scroll-behavior:smooth; }
+    body { background:#F4EFE3; color:#1B1714; font-feature-settings:"ss01","cv01"; }
+    .font-display { font-optical-sizing:auto; font-variation-settings:"SOFT" 0,"WONK" 1; letter-spacing:-.018em; }
+    .grain::after{ content:""; position:fixed; inset:0; z-index:60; pointer-events:none; opacity:.05; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); mix-blend-mode:multiply; }
+    .ticket{ position:relative; isolation:isolate; }
+    .ticket .perf{ position:absolute; top:0; bottom:0; left:var(--perf,68%); width:0; border-left:2px dashed rgba(27,23,20,.28); }
+    .ticket .notch{ position:absolute; left:var(--perf,68%); width:18px; height:18px; border-radius:9999px; background:var(--punch,#F4EFE3); transform:translateX(-50%); border:2px dashed rgba(27,23,20,.18); }
+    .ticket .notch.top{ top:-9px; } .ticket .notch.bot{ bottom:-9px; }
+    .stamp{ border:2px solid currentColor; border-radius:9999px; }
+    .underline-wobble{ background-image:linear-gradient(currentColor,currentColor); background-size:100% 2px; background-repeat:no-repeat; background-position:0 100%; transition:background-size .3s; }
+    .underline-wobble:hover{ background-size:0% 2px; }
+    .field{ width:100%; border:2px solid rgba(27,23,20,.16); background:rgba(255,255,255,.28); border-radius:1rem; padding:.85rem 1rem; outline:none; transition:border-color .2s, box-shadow .2s, background .2s; }
+    .field:focus{ border-color:#E84527; box-shadow:0 0 0 4px rgba(232,69,39,.12); background:#F4EFE3; }
+    .soft-card{ border:2px solid rgba(27,23,20,.12); background:rgba(235,226,207,.65); border-radius:1.5rem; }
+    @keyframes floaty { 0%,100%{ transform:translateY(0) rotate(-2deg); } 50%{ transform:translateY(-10px) rotate(1deg); } }
+    .floaty{ animation:floaty 7s ease-in-out infinite; }
+    @keyframes pins { 0%,100%{ transform:scale(1); opacity:.85; } 50%{ transform:scale(1.28); opacity:1; } }
+    .pinpulse{ animation:pins 2.8s ease-in-out infinite; }
+    @keyframes marquee{ from{transform:translateX(0)} to{transform:translateX(-50%)} }
+    .marquee{ animation:marquee 40s linear infinite; }
+    .marquee-wrap:hover .marquee{ animation-play-state:paused; }
+    [x-cloak]{ display:none!important; }
+    @media (prefers-reduced-motion: reduce){ html{scroll-behavior:auto;} .floaty,.pinpulse,.marquee{animation:none!important;} *{transition:none!important;} }
+  </style>
+</head>
+
+<body class="grain font-sans antialiased selection:bg-vermilion selection:text-paper" x-data="locationsPage()">
+
+<header x-data="{open:false, scrolled:false}" x-init="window.addEventListener('scroll',()=>scrolled=window.scrollY>20)" class="sticky top-0 z-50">
+  <div class="bg-ink text-paper/80 text-[11px] sm:text-xs font-mono tracking-wider">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 h-8 flex items-center justify-between">
+      <span class="flex items-center gap-2"><span class="inline-block w-1.5 h-1.5 rounded-full bg-vermilion animate-pulse"></span> LOCAȚII · OPERATORI · EXPERIENȚE</span>
+      <span class="hidden sm:flex items-center gap-4"><a href="/pentru-locatii" class="text-ochre underline-wobble">Listează locația ta</a><span class="text-paper/40">operat de <a href="https://tixello.ro" class="text-ochre underline-wobble">Tixello</a></span></span>
+    </div>
+  </div>
+
+  <div :class="scrolled ? 'bg-paper/95 backdrop-blur-md border-b border-ink/10 shadow-[0_10px_30px_-22px_rgba(27,23,20,.6)]' : 'bg-paper/70 backdrop-blur-sm border-b border-ink/5'" class="transition-all duration-300">
+    <nav class="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
+      <a href="/" class="flex items-center gap-2.5 group shrink-0" aria-label="bilete.online">
+        <span class="relative grid place-items-center w-9 h-9 bg-vermilion text-paper rounded-md rotate-[-4deg] group-hover:rotate-[4deg] transition-transform duration-300 shadow-[0_6px_14px_-6px_rgba(232,69,39,.9)]">
+          <svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2 2 2 0 0 0 0 4 2 2 0 0 1-2 2H5a2 2 0 0 1-2-2 2 2 0 0 0 0-4Z"/><path d="M9 7v10" stroke-dasharray="2 2"/></svg>
+        </span>
+        <span class="font-display text-xl font-bold tracking-tight">bilete<span class="text-vermilion">.</span>online</span>
+      </a>
+
+      <div class="hidden lg:flex items-center gap-1 text-[15px] font-medium">
+        <a href="/categorii" class="px-3 py-2 rounded-full hover:bg-ink/5 transition">Categorii</a>
+        <a href="/orase" class="px-3 py-2 rounded-full hover:bg-ink/5 transition">Orașe</a>
+        <a href="/locatii" aria-current="page" class="px-3 py-2 rounded-full bg-ink text-paper transition">Locații</a>
+        <a href="/cum-functioneaza" class="px-3 py-2 rounded-full hover:bg-ink/5 transition">Cum funcționează</a>
+        <a href="/card-cadou" class="px-3 py-2 rounded-full hover:bg-ink/5 transition">Card cadou</a>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <a href="/pentru-locatii" class="hidden sm:inline-flex rounded-full border-2 border-ink px-4 py-2 text-sm font-bold hover:bg-ink hover:text-paper transition">Pentru locații</a>
+        <a href="/cos" class="hidden sm:inline-flex rounded-full bg-vermilion text-paper px-4 py-2 text-sm font-bold hover:bg-vermilion-d transition">Coș</a>
+        <button @click="open=!open" class="lg:hidden grid place-items-center w-10 h-10 rounded-md border border-ink/15" aria-label="Meniu">
+          <svg x-show="!open" viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+          <svg x-show="open" x-cloak viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6 6 18"/></svg>
+        </button>
+      </div>
+    </nav>
+
+    <div x-show="open" x-cloak x-transition.origin.top class="lg:hidden border-t border-ink/10 bg-paper px-5 py-5 text-lg font-medium">
+      <a href="/categorii" class="block py-2">Categorii</a>
+      <a href="/orase" class="block py-2">Orașe</a>
+      <a href="/locatii" class="block py-2 text-vermilion font-bold">Locații</a>
+      <a href="/cum-functioneaza" class="block py-2">Cum funcționează</a>
+      <a href="/card-cadou" class="block py-2">Card cadou</a>
+      <a href="/pentru-locatii" class="block mt-3 px-4 py-3 rounded-full bg-vermilion text-paper text-center font-bold">Listează locația ta</a>
+    </div>
+  </div>
+</header>
+
+<main>
+
+  <!-- HERO -->
+  <section class="relative overflow-hidden border-b-2 border-ink">
+    <div class="absolute inset-0 bg-[radial-gradient(circle_at_82%_14%,rgba(232,69,39,.24),transparent_30%),radial-gradient(circle_at_16%_72%,rgba(30,74,61,.22),transparent_34%),radial-gradient(circle_at_50%_44%,rgba(218,154,51,.18),transparent_30%)]"></div>
+
+    <div class="relative max-w-7xl mx-auto px-4 sm:px-6 pt-14 sm:pt-20 pb-16 sm:pb-24">
+      <nav class="flex items-center gap-2 text-sm text-ink-soft" aria-label="Breadcrumb">
+        <a href="/" class="hover:text-vermilion">Acasă</a><span>/</span><span class="text-ink">Locații</span>
+      </nav>
+
+      <div class="mt-8 grid lg:grid-cols-[1fr_.92fr] gap-12 items-center">
+        <div>
+          <p class="stamp inline-flex px-3 py-1 text-xs font-mono tracking-[.18em] text-vermilion bg-paper/70">LOCAȚII · OPERATORI · ACTIVITĂȚI</p>
+          <h1 class="mt-6 font-display text-6xl sm:text-8xl lg:text-[6.45rem] font-bold leading-[.82]">
+            Locuri unde mergi să faci ceva.
+          </h1>
+          <p class="mt-6 max-w-2xl text-xl sm:text-2xl text-ink-soft leading-relaxed">
+            Descoperă locații și operatori de activități: escape rooms, muzee, parcuri, ateliere, peșteri, rezervații, centre de agrement și spații care vând experiențe online.
+          </p>
+
+          <div class="mt-8 max-w-2xl">
+            <label class="sr-only" for="location-search">Caută locații</label>
+            <div class="relative">
+              <input id="location-search" class="field text-lg pr-14" x-model="search" placeholder="Caută: escape room, muzeu, Brașov, copii..." />
+              <span class="absolute right-4 top-1/2 -translate-y-1/2 text-ink-soft">
+                <svg viewBox="0 0 24 24" class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+              </span>
+            </div>
+          </div>
+
+          <div class="mt-6 flex flex-wrap gap-2">
+            <template x-for="chip in quickChips" :key="chip.label">
+              <button @click="activeType=chip.key" class="rounded-full bg-paper/70 border border-ink/10 px-4 py-2 font-bold hover:bg-ink hover:text-paper transition" x-text="chip.label"></button>
+            </template>
+          </div>
+        </div>
+
+        <div class="relative min-h-[560px]">
+          <div class="absolute inset-x-8 top-10 bottom-8 rounded-[2.4rem] bg-ink rotate-[-2deg] shadow-deep"></div>
+
+          <div class="absolute top-0 left-0 right-0 mx-auto max-w-[540px] ticket bg-paper border-2 border-ink rounded-[2rem] overflow-hidden shadow-deep rotate-[2deg]" style="--perf:100%">
+            <div class="p-6 sm:p-8">
+              <p class="font-mono text-xs tracking-[.18em] text-ink-soft">LOCATION GRAPH</p>
+              <h2 class="mt-3 font-display text-4xl font-bold leading-none">O locație poate avea mai multe activități.</h2>
+              <div class="mt-7 rounded-3xl bg-paper-2 border border-ink/10 p-5">
+                <div class="flex items-center gap-3">
+                  <span class="grid place-items-center w-12 h-12 rounded-2xl bg-vermilion text-paper">📍</span>
+                  <div>
+                    <p class="font-display text-2xl font-bold">Mystery Rooms Brașov</p>
+                    <p class="text-sm text-ink-soft">operator escape room · Brașov</p>
+                  </div>
+                </div>
+                <div class="mt-5 grid gap-3">
+                  <div class="rounded-2xl bg-paper border border-ink/10 p-4 flex justify-between gap-3"><span class="font-bold">Camera 13</span><span class="text-forest font-bold">bilete</span></div>
+                  <div class="rounded-2xl bg-paper border border-ink/10 p-4 flex justify-between gap-3"><span class="font-bold">Laboratorul 7</span><span class="text-forest font-bold">bilete</span></div>
+                  <div class="rounded-2xl bg-paper border border-ink/10 p-4 flex justify-between gap-3"><span class="font-bold">Misiunea Alpha</span><span class="text-ochre font-bold">soon</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="floaty absolute left-0 bottom-20 w-60 rounded-3xl border-2 border-ink bg-paper p-5 shadow-deep rotate-[-5deg]">
+            <p class="font-mono text-[10px] tracking-[.18em] text-ink-soft">URL EXEMPLU</p>
+            <p class="mt-2 font-display text-2xl font-bold">/locatii/mystery-rooms-brasov</p>
+            <p class="mt-2 text-sm text-ink-soft">locație + activități</p>
+          </div>
+
+          <div class="floaty absolute right-0 bottom-0 w-64 rounded-3xl border-2 border-ink bg-ink text-paper p-5 shadow-deep rotate-[5deg]" style="animation-delay:-2.3s">
+            <p class="font-mono text-[10px] tracking-[.18em] text-paper/45">DISCOVERY</p>
+            <p class="mt-2 font-display text-3xl font-bold">locație</p>
+            <p class="mt-1 text-paper/60 text-sm">oraș, categorie, activități, recenzii</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- MARQUEE -->
+  <section class="marquee-wrap overflow-hidden border-b-2 border-ink bg-ink text-paper py-3">
+    <div class="marquee flex w-[200%] gap-8 font-mono text-xs tracking-[.2em] text-paper/70">
+      <div class="flex gap-8 min-w-1/2">
+        <span>ESCAPE ROOMS</span><span>MUZEE</span><span>PARCURI</span><span>ATELIERE</span><span>PEȘTERI</span><span>REZERVAȚII</span><span>TURURI</span><span>CENTRE DE AGREMENT</span>
+      </div>
+      <div class="flex gap-8 min-w-1/2" aria-hidden="true">
+        <span>ESCAPE ROOMS</span><span>MUZEE</span><span>PARCURI</span><span>ATELIERE</span><span>PEȘTERI</span><span>REZERVAȚII</span><span>TURURI</span><span>CENTRE DE AGREMENT</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- LOCATION LIST -->
+  <section class="max-w-7xl mx-auto px-4 sm:px-6 py-12">
+    <div class="grid lg:grid-cols-[300px_1fr] gap-8 items-start">
+      <aside class="lg:sticky lg:top-28">
+        <div class="rounded-[2rem] border-2 border-ink bg-paper p-5 shadow-ticket">
+          <p class="font-mono text-xs tracking-[.18em] text-ink-soft">FILTRARE LOCAȚII</p>
+          <div class="mt-4 space-y-2">
+            <template x-for="filter in typeFilters" :key="filter.key">
+              <button @click="activeType=filter.key"
+                      :class="activeType===filter.key ? 'bg-ink text-paper' : 'bg-paper-2 text-ink hover:bg-ink/5'"
+                      class="w-full rounded-2xl px-4 py-3 text-left font-bold transition flex items-center justify-between gap-3">
+                <span x-text="filter.label"></span>
+                <span class="text-xs opacity-60" x-text="filter.count"></span>
+              </button>
+            </template>
+          </div>
+
+          <label class="block mt-5">
+            <span class="block mb-1.5 text-sm font-bold">Oraș</span>
+            <select class="field" x-model="activeCity">
+              <option value="all">Toate orașele</option>
+              <template x-for="city in cities" :key="city">
+                <option :value="city" x-text="city"></option>
+              </template>
+            </select>
+          </label>
+
+          <div class="mt-5 rounded-2xl bg-mint border border-forest/20 p-4">
+            <p class="font-bold text-forest">Pentru locații</p>
+            <p class="mt-1 text-sm text-ink-soft">Ai o locație cu activități? Poți avea pagină dedicată, activități listate, bilete QR și dashboard.</p>
+            <a href="/pentru-locatii" class="mt-3 inline-flex font-bold text-forest underline-wobble">Vezi detalii</a>
+          </div>
+        </div>
+      </aside>
+
+      <section>
+        <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+          <div>
+            <p class="font-mono text-xs tracking-[.18em] text-ink-soft">LOCAȚII</p>
+            <h2 class="mt-2 font-display text-5xl font-bold leading-none" x-text="currentTypeTitle()"></h2>
+          </div>
+          <p class="text-ink-soft" x-text="filteredLocations().length + ' locații afișate'"></p>
+        </div>
+
+        <div class="mt-6 grid md:grid-cols-2 xl:grid-cols-3 gap-5">
+          <template x-for="location in filteredLocations()" :key="location.slug">
+            <article class="group rounded-[2rem] border-2 border-ink bg-paper overflow-hidden shadow-ticket hover:-translate-y-1 transition">
+              <a :href="'/locatii/' + location.slug" class="block">
+                <div class="relative h-52 overflow-hidden bg-ink">
+                  <img :src="location.image" :alt="'Imagine pentru ' + location.name" class="w-full h-full object-cover opacity-85 group-hover:scale-105 transition duration-500" loading="lazy">
+                  <div class="absolute inset-0 bg-gradient-to-t from-ink/85 via-ink/10 to-transparent"></div>
+                  <span class="absolute left-4 top-4 rounded-full bg-paper text-ink px-3 py-1 text-xs font-bold" x-text="location.typeLabel"></span>
+                  <span class="absolute right-4 top-4 rounded-full bg-mint text-forest px-3 py-1 text-xs font-bold" x-text="location.rating"></span>
+                  <div class="absolute left-4 bottom-4 right-4">
+                    <p class="text-paper/65 font-mono text-[10px] tracking-[.18em]" x-text="location.city"></p>
+                    <h3 class="font-display text-3xl font-bold text-paper leading-none" x-text="location.name"></h3>
+                  </div>
+                </div>
+              </a>
+
+              <div class="p-5">
+                <p class="text-ink-soft leading-relaxed" x-text="location.description"></p>
+                <div class="mt-4 flex flex-wrap gap-2">
+                  <template x-for="tag in location.tags" :key="tag">
+                    <span class="rounded-full bg-paper-2 border border-ink/10 px-3 py-1 text-xs font-bold" x-text="tag"></span>
+                  </template>
+                </div>
+
+                <div class="mt-5 rounded-2xl bg-paper-2 border border-ink/10 p-4">
+                  <div class="flex items-center justify-between gap-3">
+                    <span class="font-bold">Activități disponibile</span>
+                    <span class="text-sm text-ink-soft" x-text="location.activities.length"></span>
+                  </div>
+                  <div class="mt-3 space-y-2">
+                    <template x-for="activity in location.activities.slice(0,2)" :key="activity.name">
+                      <a :href="activity.url" class="flex items-center justify-between gap-3 text-sm hover:text-vermilion">
+                        <span x-text="activity.name"></span>
+                        <span class="font-bold" x-text="activity.price"></span>
+                      </a>
+                    </template>
+                  </div>
+                </div>
+
+                <div class="mt-5 flex items-center justify-between gap-3">
+                  <a :href="'/locatii/' + location.slug" class="font-bold text-vermilion underline-wobble">Vezi locația</a>
+                  <a :href="'/' + location.citySlug" class="text-sm font-bold text-ink-soft hover:text-ink" x-text="location.city"></a>
+                </div>
+              </div>
+            </article>
+          </template>
+        </div>
+      </section>
+    </div>
+  </section>
+
+  <!-- LOCATION PAGE ANATOMY -->
+  <section class="border-y-2 border-ink bg-paper-2/65">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-16 sm:py-20">
+      <div class="grid lg:grid-cols-[.85fr_1.15fr] gap-10 items-start">
+        <div class="lg:sticky lg:top-28">
+          <p class="stamp inline-flex px-3 py-1 text-xs font-mono tracking-[.18em] text-vermilion">PAGINĂ LOCAȚIE</p>
+          <h2 class="mt-5 font-display text-5xl sm:text-6xl font-bold leading-[.9]">O locație bună nu este doar o adresă.</h2>
+          <p class="mt-5 text-lg text-ink-soft leading-relaxed">Pagina unei locații trebuie să explice ce fel de experiențe oferă, ce activități se pot cumpăra, unde este, cum ajungi, ce reguli există și de ce merită vizitată.</p>
+        </div>
+
+        <div class="grid sm:grid-cols-2 gap-4">
+          <article class="soft-card p-6"><p class="font-mono text-xs tracking-[.18em] text-vermilion">01</p><h3 class="mt-2 font-display text-3xl font-bold">Identitate</h3><p class="mt-2 text-ink-soft">Nume, descriere, tip locație, galerie, atmosferă, poziționare.</p></article>
+          <article class="soft-card p-6 bg-mint"><p class="font-mono text-xs tracking-[.18em] text-forest">02</p><h3 class="mt-2 font-display text-3xl font-bold">Activități</h3><p class="mt-2 text-ink-soft">Lista activităților, bilete, prețuri, durată, disponibilitate.</p></article>
+          <article class="soft-card p-6"><p class="font-mono text-xs tracking-[.18em] text-vermilion">03</p><h3 class="mt-2 font-display text-3xl font-bold">Acces</h3><p class="mt-2 text-ink-soft">Adresă, hartă, parcare, transport, program și reguli.</p></article>
+          <article class="soft-card p-6 bg-ink text-paper"><p class="font-mono text-xs tracking-[.18em] text-ochre">04</p><h3 class="mt-2 font-display text-3xl font-bold">Trust</h3><p class="mt-2 text-paper/60">Recenzii, întrebări frecvente, informații pentru familii și grupuri.</p></article>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SEO LOCAL RELATIONS -->
+  <section class="max-w-7xl mx-auto px-4 sm:px-6 py-16 sm:py-20">
+    <div class="grid lg:grid-cols-[1fr_1fr] gap-10 items-center">
+      <div>
+        <p class="stamp inline-flex px-3 py-1 text-xs font-mono tracking-[.18em] text-vermilion">SEO LOCAL</p>
+        <h2 class="mt-5 font-display text-5xl sm:text-6xl font-bold leading-[.9]">Locația leagă orașul, categoria și activitățile.</h2>
+        <p class="mt-5 text-lg text-ink-soft leading-relaxed">O locație poate ranka singură, dar ajută și paginile de oraș și categorie. De exemplu, un operator de escape rooms din Brașov poate apărea în pagina locației, în pagina activității, în /brasov, în /escape-rooms și în /brasov/escape-rooms.</p>
+      </div>
+
+      <div class="ticket bg-ink text-paper rounded-[2rem] overflow-hidden shadow-deep" style="--perf:100%">
+        <div class="p-6 border-b-2 border-dashed border-paper/15">
+          <p class="font-mono text-xs tracking-[.18em] text-paper/45">INTERNAL LINKING</p>
+          <h3 class="mt-2 font-display text-4xl font-bold">Un nod, multe intrări.</h3>
+        </div>
+        <div class="p-6 space-y-3">
+          <a href="/locatii/mystery-rooms-brasov" class="block rounded-2xl bg-paper/10 p-4 hover:bg-paper/15 transition"><strong class="text-ochre">/locatii/mystery-rooms-brasov</strong><br><span class="text-sm text-paper/55">pagina locației</span></a>
+          <a href="/activitati/camera-13" class="block rounded-2xl bg-paper/10 p-4 hover:bg-paper/15 transition"><strong class="text-ochre">/activitati/camera-13</strong><br><span class="text-sm text-paper/55">pagina activității</span></a>
+          <a href="/brasov/escape-rooms" class="block rounded-2xl bg-paper/10 p-4 hover:bg-paper/15 transition"><strong class="text-ochre">/brasov/escape-rooms</strong><br><span class="text-sm text-paper/55">oraș + categorie</span></a>
+          <a href="/brasov/activitati-grupuri" class="block rounded-2xl bg-paper/10 p-4 hover:bg-paper/15 transition"><strong class="text-ochre">/brasov/activitati-grupuri</strong><br><span class="text-sm text-paper/55">oraș + public</span></a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- LOCATION TYPES -->
+  <section class="border-y-2 border-ink bg-ink text-paper">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-16 sm:py-20">
+      <div class="max-w-3xl">
+        <p class="stamp inline-flex px-3 py-1 text-xs font-mono tracking-[.18em] text-ochre">TIPURI DE LOCAȚII</p>
+        <h2 class="mt-5 font-display text-5xl sm:text-6xl font-bold leading-[.9]">Același marketplace, modele diferite de acces.</h2>
+        <p class="mt-5 text-lg text-paper/60 leading-relaxed">Fiecare tip de locație are nevoie de altă structură de informații: sloturi, bilete pe zi, tururi ghidate, pachete sau grupuri.</p>
+      </div>
+
+      <div class="mt-10 grid md:grid-cols-3 gap-5">
+        <article class="rounded-3xl bg-paper/10 border border-paper/10 p-6"><p class="text-3xl">🕵️</p><h3 class="mt-3 font-display text-3xl font-bold">Escape rooms</h3><p class="mt-2 text-paper/60">Sloturi orare, camere, dificultate, număr jucători, check-in.</p></article>
+        <article class="rounded-3xl bg-paper/10 border border-paper/10 p-6"><p class="text-3xl">🖼️</p><h3 class="mt-3 font-display text-3xl font-bold">Muzee</h3><p class="mt-2 text-paper/60">Program, expoziții, tururi, bilete copil/adult, accesibilitate.</p></article>
+        <article class="rounded-3xl bg-paper/10 border border-paper/10 p-6"><p class="text-3xl">🌲</p><h3 class="mt-3 font-display text-3xl font-bold">Natură</h3><p class="mt-2 text-paper/60">Reguli, echipament, tururi, ghid, nivel de dificultate, sezon.</p></article>
+        <article class="rounded-3xl bg-paper/10 border border-paper/10 p-6"><p class="text-3xl">🎡</p><h3 class="mt-3 font-display text-3xl font-bold">Parcuri</h3><p class="mt-2 text-paper/60">Acces pe zi, atracții, pachete, vârste și facilități.</p></article>
+        <article class="rounded-3xl bg-paper/10 border border-paper/10 p-6"><p class="text-3xl">🎨</p><h3 class="mt-3 font-display text-3xl font-bold">Ateliere</h3><p class="mt-2 text-paper/60">Locuri limitate, materiale incluse, vârstă recomandată, durată.</p></article>
+        <article class="rounded-3xl bg-paper/10 border border-paper/10 p-6"><p class="text-3xl">🚶</p><h3 class="mt-3 font-display text-3xl font-bold">Tururi</h3><p class="mt-2 text-paper/60">Punct de întâlnire, limbă, durată, ghid, traseu și grupuri.</p></article>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section class="max-w-5xl mx-auto px-4 sm:px-6 py-16 sm:py-20" x-data="{open:0}">
+    <div class="text-center max-w-3xl mx-auto">
+      <p class="stamp inline-flex px-3 py-1 text-xs font-mono tracking-[.18em] text-vermilion">FAQ</p>
+      <h2 class="mt-5 font-display text-5xl sm:text-6xl font-bold leading-[.9]">Cum aleg o locație?</h2>
+      <p class="mt-5 text-lg text-ink-soft">Întrebări utile pentru utilizatori și pentru indexarea paginii.</p>
+    </div>
+
+    <div class="mt-10 space-y-3">
+      <template x-for="(faq,index) in faqs" :key="faq.q">
+        <article class="rounded-3xl border-2 border-ink bg-paper overflow-hidden">
+          <button @click="open=open===index?null:index" class="w-full text-left p-5 sm:p-6 flex items-center justify-between gap-4">
+            <span class="font-display text-2xl sm:text-3xl font-bold" x-text="faq.q"></span>
+            <span class="text-3xl font-bold" x-text="open===index?'−':'+'"></span>
+          </button>
+          <div x-show="open===index" x-collapse class="px-5 sm:px-6 pb-6 text-ink-soft leading-relaxed" x-text="faq.a"></div>
+        </article>
+      </template>
+    </div>
+  </section>
+
+  <!-- FINAL CTA -->
+  <section class="max-w-7xl mx-auto px-4 sm:px-6 pb-16 sm:pb-20">
+    <div class="relative overflow-hidden rounded-[2rem] border-2 border-ink bg-vermilion text-paper p-8 sm:p-12">
+      <div class="absolute inset-0 opacity-15" style="background-image:radial-gradient(#fff 1px,transparent 1.4px);background-size:15px 15px"></div>
+      <div class="relative grid lg:grid-cols-[1fr_auto] gap-8 items-center">
+        <div>
+          <p class="font-mono text-xs tracking-[.2em] text-paper/60">LOCAȚII</p>
+          <h2 class="mt-3 font-display text-5xl sm:text-6xl font-bold leading-[.9]">Găsește locul. Alege activitatea.</h2>
+          <p class="mt-4 max-w-2xl text-paper/75 text-lg">Explorează locații, vezi ce activități oferă și cumpără bilete online cu acces rapid prin QR.</p>
+        </div>
+        <div class="flex flex-col sm:flex-row lg:flex-col gap-3">
+          <a href="/orase" class="rounded-full bg-paper text-ink px-6 py-4 font-bold text-center hover:bg-ink hover:text-paper transition">Alege orașul</a>
+          <a href="/pentru-locatii" class="rounded-full border-2 border-paper/60 px-6 py-4 font-bold text-center hover:bg-paper hover:text-ink transition">Listează locația</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="border-t-2 border-ink bg-ink text-paper">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 py-12 grid md:grid-cols-4 gap-8">
+    <div class="md:col-span-2">
+      <p class="font-display text-3xl font-bold">bilete<span class="text-vermilion">.</span>online</p>
+      <p class="mt-3 max-w-lg text-paper/65">Bilete pentru activități, experiențe și locuri unde chiar mergi să faci ceva. Rezervi online, primești QR, intri rapid.</p>
+      <div class="mt-5 flex flex-wrap gap-2 text-xs font-mono text-paper/45">
+        <span class="rounded-full border border-paper/15 px-3 py-1">locații</span>
+        <span class="rounded-full border border-paper/15 px-3 py-1">activități</span>
+        <span class="rounded-full border border-paper/15 px-3 py-1">SEO local</span>
+        <span class="rounded-full border border-paper/15 px-3 py-1">bilete QR</span>
+      </div>
+    </div>
+    <nav>
+      <p class="font-mono text-xs tracking-[.2em] text-paper/40 mb-3">LOCAȚII</p>
+      <a class="block py-1.5 text-paper/70 hover:text-ochre" href="/locatii">Toate locațiile</a>
+      <a class="block py-1.5 text-paper/70 hover:text-ochre" href="/pentru-locatii">Pentru locații</a>
+      <a class="block py-1.5 text-paper/70 hover:text-ochre" href="/demo-locatii">Solicită demo</a>
+      <a class="block py-1.5 text-paper/70 hover:text-ochre" href="/pricing-locatii">Pricing</a>
+    </nav>
+    <nav>
+      <p class="font-mono text-xs tracking-[.2em] text-paper/40 mb-3">DESCOPERIRE</p>
+      <a class="block py-1.5 text-paper/70 hover:text-ochre" href="/categorii">Categorii</a>
+      <a class="block py-1.5 text-paper/70 hover:text-ochre" href="/orase">Orașe</a>
+      <a class="block py-1.5 text-paper/70 hover:text-ochre" href="/activitati-azi">Activități azi</a>
+      <a class="block py-1.5 text-paper/70 hover:text-ochre" href="/activitati-weekend">Weekend</a>
+    </nav>
+  </div>
+  <div class="border-t border-paper/10 py-4 text-center text-xs font-mono text-paper/40">© 2026 bilete.online · operat de Tixello</div>
+</footer>
+
+<script>
+function locationsPage(){
+  return {
+    search:'',
+    activeType:'all',
+    activeCity:'all',
+    quickChips:[
+      {label:'Escape rooms',key:'escape'},
+      {label:'Muzee',key:'museum'},
+      {label:'Parcuri',key:'park'},
+      {label:'Ateliere',key:'workshop'},
+      {label:'Natură',key:'nature'}
+    ],
+    typeFilters:[
+      {key:'all',label:'Toate locațiile',count:18},
+      {key:'escape',label:'Escape rooms',count:4},
+      {key:'museum',label:'Muzee & expoziții',count:4},
+      {key:'park',label:'Parcuri & agrement',count:4},
+      {key:'workshop',label:'Ateliere',count:3},
+      {key:'nature',label:'Natură & tururi',count:3}
+    ],
+    cities:['București','Brașov','Cluj-Napoca','Iași','Timișoara','Constanța','Sibiu'],
+    locations:[
+      {
+        name:'Mystery Rooms Brașov',
+        slug:'mystery-rooms-brasov',
+        type:'escape',
+        typeLabel:'Escape room',
+        city:'Brașov',
+        citySlug:'brasov',
+        rating:'4.8 ★',
+        image:'https://images.unsplash.com/photo-1517586979036-b7d1e86b3345?auto=format&fit=crop&w=900&q=80',
+        description:'Operator de escape rooms cu camere tematice, provocări de grup și sloturi orare rezervabile online.',
+        tags:['grupuri','indoor','team building'],
+        activities:[
+          {name:'Camera 13',price:'95 lei',url:'/activitati/camera-13'},
+          {name:'Laboratorul 7',price:'90 lei',url:'/activitati/laboratorul-7'},
+          {name:'Misiunea Alpha',price:'110 lei',url:'/activitati/misiunea-alpha'}
+        ]
+      },
+      {
+        name:'Muzeul Interactiv București',
+        slug:'muzeul-interactiv-bucuresti',
+        type:'museum',
+        typeLabel:'Muzeu',
+        city:'București',
+        citySlug:'bucuresti',
+        rating:'4.7 ★',
+        image:'https://images.unsplash.com/photo-1566127444979-b3d2b654e3d7?auto=format&fit=crop&w=900&q=80',
+        description:'Muzeu interactiv pentru copii, familie și grupuri școlare, cu expoziții temporare și tururi ghidate.',
+        tags:['copii','familie','educativ'],
+        activities:[
+          {name:'Bilet acces general',price:'35 lei',url:'/activitati/muzeu-interactiv-acces'},
+          {name:'Tur ghidat copii',price:'55 lei',url:'/activitati/tur-ghidat-copii'}
+        ]
+      },
+      {
+        name:'Adventure Park Cluj',
+        slug:'adventure-park-cluj',
+        type:'park',
+        typeLabel:'Parc aventură',
+        city:'Cluj-Napoca',
+        citySlug:'cluj-napoca',
+        rating:'4.9 ★',
+        image:'https://images.unsplash.com/photo-1528543606781-2f6e6857f318?auto=format&fit=crop&w=900&q=80',
+        description:'Parc de aventură cu trasee în copaci, tiroliene și pachete pentru copii, adulți și echipe.',
+        tags:['outdoor','aventură','familie'],
+        activities:[
+          {name:'Traseu junior',price:'65 lei',url:'/activitati/traseu-junior'},
+          {name:'Traseu adult',price:'95 lei',url:'/activitati/traseu-adult'}
+        ]
+      },
+      {
+        name:'Atelierul de Ceramică Iași',
+        slug:'atelierul-de-ceramica-iasi',
+        type:'workshop',
+        typeLabel:'Atelier',
+        city:'Iași',
+        citySlug:'iasi',
+        rating:'4.8 ★',
+        image:'https://images.unsplash.com/photo-1513364776144-60967b0f800f?auto=format&fit=crop&w=900&q=80',
+        description:'Ateliere creative pentru copii, adulți și grupuri, cu materiale incluse și locuri limitate.',
+        tags:['creativ','indoor','copii'],
+        activities:[
+          {name:'Atelier ceramică copii',price:'70 lei',url:'/activitati/atelier-ceramica-copii'},
+          {name:'Atelier ceramică adulți',price:'95 lei',url:'/activitati/atelier-ceramica-adulti'}
+        ]
+      },
+      {
+        name:'Peștera Turistică Râșnov',
+        slug:'pestera-turistica-rasnov',
+        type:'nature',
+        typeLabel:'Peșteră',
+        city:'Brașov',
+        citySlug:'brasov',
+        rating:'4.6 ★',
+        image:'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=900&q=80',
+        description:'Tururi ghidate, reguli de acces clare și experiențe potrivite pentru turiști și familie.',
+        tags:['natură','tur ghidat','familie'],
+        activities:[
+          {name:'Tur ghidat peșteră',price:'42 lei',url:'/activitati/tur-ghidat-pestera'},
+          {name:'Pachet familie',price:'120 lei',url:'/activitati/pachet-familie-pestera'}
+        ]
+      },
+      {
+        name:'Aqua & Fun Constanța',
+        slug:'aqua-fun-constanta',
+        type:'park',
+        typeLabel:'Parc distracții',
+        city:'Constanța',
+        citySlug:'constanta',
+        rating:'4.5 ★',
+        image:'https://images.unsplash.com/photo-1513889961551-628c1e5e2ee9?auto=format&fit=crop&w=900&q=80',
+        description:'Parc sezonier pentru familie, copii și turiști, cu bilete de acces și pachete.',
+        tags:['vară','familie','copii'],
+        activities:[
+          {name:'Acces o zi',price:'85 lei',url:'/activitati/aqua-fun-acces'},
+          {name:'Pachet familie',price:'260 lei',url:'/activitati/aqua-fun-familie'}
+        ]
+      },
+      {
+        name:'Galeria Urbană Timișoara',
+        slug:'galeria-urbana-timisoara',
+        type:'museum',
+        typeLabel:'Galerie',
+        city:'Timișoara',
+        citySlug:'timisoara',
+        rating:'4.7 ★',
+        image:'https://images.unsplash.com/photo-1554907984-15263bfd63bd?auto=format&fit=crop&w=900&q=80',
+        description:'Spațiu cultural cu expoziții, tururi, evenimente creative și activități indoor.',
+        tags:['artă','cultură','indoor'],
+        activities:[
+          {name:'Expoziție temporară',price:'30 lei',url:'/activitati/expozitie-temporara'},
+          {name:'Tur curatoriat',price:'50 lei',url:'/activitati/tur-curatoriat'}
+        ]
+      },
+      {
+        name:'Ferma Educațională Sibiu',
+        slug:'ferma-educationala-sibiu',
+        type:'workshop',
+        typeLabel:'Ferma educativă',
+        city:'Sibiu',
+        citySlug:'sibiu',
+        rating:'4.9 ★',
+        image:'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=900&q=80',
+        description:'Activități educative pentru copii, familie și grădinițe, cu experiențe în aer liber.',
+        tags:['educativ','copii','outdoor'],
+        activities:[
+          {name:'Vizită fermă',price:'45 lei',url:'/activitati/vizita-ferma'},
+          {name:'Atelier animale',price:'60 lei',url:'/activitati/atelier-animale'}
+        ]
+      }
+    ],
+    faqs:[
+      {q:'Ce este o pagină de locație?', a:'Pagina de locație prezintă operatorul sau spațiul în care se desfășoară activitățile: descriere, adresă, oraș, galerie, activități disponibile, reguli, program și recenzii.'},
+      {q:'Care este diferența dintre locație și activitate?', a:'Locația este spațiul sau operatorul. Activitatea este produsul cumpărabil: o cameră de escape room, un tur ghidat, o expoziție, un atelier sau un bilet de acces.'},
+      {q:'O locație poate avea mai multe activități?', a:'Da. De exemplu, un operator de escape rooms poate avea mai multe camere, un muzeu poate avea mai multe expoziții, iar un parc poate avea mai multe pachete.'},
+      {q:'Pot căuta locații după oraș?', a:'Da. Locațiile pot fi filtrate după oraș, tip, categorie, public sau activități disponibile.'},
+      {q:'Cum listez locația mea?', a:'Accesează pagina „Pentru locații”, trimite detaliile, iar echipa poate configura pagina locației, activitățile, biletele și fluxul de check-in QR.'}
+    ],
+    currentTypeTitle(){
+      const found = this.typeFilters.find(f => f.key === this.activeType);
+      return found ? found.label : 'Toate locațiile';
+    },
+    filteredLocations(){
+      const q = this.search.toLowerCase().trim();
+      return this.locations.filter(location => {
+        const matchesType = this.activeType === 'all' || location.type === this.activeType;
+        const matchesCity = this.activeCity === 'all' || location.city === this.activeCity;
+        const blob = JSON.stringify(location).toLowerCase();
+        const matchesSearch = !q || blob.includes(q);
+        return matchesType && matchesCity && matchesSearch;
+      });
+    }
+  }
+}
+</script>
+
+</body>
+</html>

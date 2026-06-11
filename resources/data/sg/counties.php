@@ -1,0 +1,8 @@
+<?php
+return [
+    'Central Singapore',
+    'North East',
+    'North West',
+    'South East',
+    'South West',
+];

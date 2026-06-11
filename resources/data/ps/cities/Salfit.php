@@ -1,0 +1,105 @@
+<?php
+return [
+    [
+        'id'        => 154071,
+        'name'      => 'az-Zawiya',
+        'latitude'  => '32.09470520',
+        'longitude' => '35.01867630',
+    ],
+    [
+        'id'        => 154055,
+        'name'      => 'Biddya',
+        'latitude'  => '32.11340020',
+        'longitude' => '35.05686530',
+    ],
+    [
+        'id'        => 154056,
+        'name'      => 'Bruqin',
+        'latitude'  => '32.07264720',
+        'longitude' => '35.07780630',
+    ],
+    [
+        'id'        => 154057,
+        'name'      => 'Deir Ballut',
+        'latitude'  => '32.06506720',
+        'longitude' => '35.00494930',
+    ],
+    [
+        'id'        => 154058,
+        'name'      => 'Deir Istiya',
+        'latitude'  => '32.13079620',
+        'longitude' => '35.11953630',
+    ],
+    [
+        'id'        => 154059,
+        'name'      => 'Farkha',
+        'latitude'  => '32.06877720',
+        'longitude' => '35.13027630',
+    ],
+    [
+        'id'        => 154060,
+        'name'      => 'Haris',
+        'latitude'  => '32.11344920',
+        'longitude' => '35.12311630',
+    ],
+    [
+        'id'        => 154061,
+        'name'      => 'Iskaka',
+        'latitude'  => '32.10295520',
+        'longitude' => '35.20394930',
+    ],
+    [
+        'id'        => 154062,
+        'name'      => 'Kafr ad-Dik',
+        'latitude'  => '32.06863540',
+        'longitude' => '35.06050810',
+    ],
+    [
+        'id'        => 154063,
+        'name'      => 'Kifl Hares',
+        'latitude'  => '32.11692420',
+        'longitude' => '35.13636430',
+    ],
+    [
+        'id'        => 154064,
+        'name'      => 'Marda',
+        'latitude'  => '32.11425120',
+        'longitude' => '35.17525130',
+    ],
+    [
+        'id'        => 154065,
+        'name'      => 'Mas-ha',
+        'latitude'  => '32.10729820',
+        'longitude' => '35.03037430',
+    ],
+    [
+        'id'        => 154066,
+        'name'      => 'Qarawat Bani Hassan',
+        'latitude'  => '32.12853920',
+        'longitude' => '35.07877830',
+    ],
+    [
+        'id'        => 154067,
+        'name'      => 'Qira',
+        'latitude'  => '32.12213420',
+        'longitude' => '35.15063230',
+    ],
+    [
+        'id'        => 154068,
+        'name'      => 'Rafat',
+        'latitude'  => '32.07872020',
+        'longitude' => '35.02468730',
+    ],
+    [
+        'id'        => 154069,
+        'name'      => 'Sarta',
+        'latitude'  => '32.10336920',
+        'longitude' => '35.07123830',
+    ],
+    [
+        'id'        => 154070,
+        'name'      => 'Yasuf',
+        'latitude'  => '32.10940520',
+        'longitude' => '35.21911530',
+    ],
+];

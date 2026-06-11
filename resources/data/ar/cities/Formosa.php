@@ -1,0 +1,123 @@
+<?php
+return [
+    [
+        'id'        => 772,
+        'name'      => 'Clorinda',
+        'latitude'  => '-25.28481000',
+        'longitude' => '-57.71851000',
+    ],
+    [
+        'id'        => 785,
+        'name'      => 'Comandante Fontana',
+        'latitude'  => '-25.33453000',
+        'longitude' => '-59.68212000',
+    ],
+    [
+        'id'        => 958,
+        'name'      => 'Departamento de Pilcomayo',
+        'latitude'  => '-25.50000000',
+        'longitude' => '-58.08333000',
+    ],
+    [
+        'id'        => 1053,
+        'name'      => 'El Colorado',
+        'latitude'  => '-26.30808000',
+        'longitude' => '-59.37291000',
+    ],
+    [
+        'id'        => 1072,
+        'name'      => 'Estanislao del Campo',
+        'latitude'  => '-25.05504000',
+        'longitude' => '-60.09218000',
+    ],
+    [
+        'id'        => 1082,
+        'name'      => 'Formosa',
+        'latitude'  => '-26.18489000',
+        'longitude' => '-58.17313000',
+    ],
+    [
+        'id'        => 1102,
+        'name'      => 'General Enrique Mosconi',
+        'latitude'  => '-23.21667000',
+        'longitude' => '-62.30000000',
+    ],
+    [
+        'id'        => 1138,
+        'name'      => 'Herradura',
+        'latitude'  => '-26.48705000',
+        'longitude' => '-58.31198000',
+    ],
+    [
+        'id'        => 1148,
+        'name'      => 'Ibarreta',
+        'latitude'  => '-25.21438000',
+        'longitude' => '-59.85851000',
+    ],
+    [
+        'id'        => 1151,
+        'name'      => 'Ingeniero Guillermo N. Juárez',
+        'latitude'  => '-23.90000000',
+        'longitude' => '-61.85000000',
+    ],
+    [
+        'id'        => 1209,
+        'name'      => 'Laguna Naick-Neck',
+        'latitude'  => '-25.24769000',
+        'longitude' => '-58.09383000',
+    ],
+    [
+        'id'        => 1211,
+        'name'      => 'Laguna Yema',
+        'latitude'  => '-24.25391000',
+        'longitude' => '-61.24466000',
+    ],
+    [
+        'id'        => 1225,
+        'name'      => 'Las Lomitas',
+        'latitude'  => '-24.70955000',
+        'longitude' => '-60.59303000',
+    ],
+    [
+        'id'        => 1312,
+        'name'      => 'Palo Santo',
+        'latitude'  => '-25.56332000',
+        'longitude' => '-59.33781000',
+    ],
+    [
+        'id'        => 1336,
+        'name'      => 'Pirané',
+        'latitude'  => '-25.73239000',
+        'longitude' => '-59.10879000',
+    ],
+    [
+        'id'        => 1344,
+        'name'      => 'Pozo del Tigre',
+        'latitude'  => '-24.89682000',
+        'longitude' => '-60.32359000',
+    ],
+    [
+        'id'        => 1381,
+        'name'      => 'Riacho Eh-Eh',
+        'latitude'  => '-25.36209000',
+        'longitude' => '-58.27750000',
+    ],
+    [
+        'id'        => 1423,
+        'name'      => 'San Francisco de Laishí',
+        'latitude'  => '-26.24262000',
+        'longitude' => '-58.63039000',
+    ],
+    [
+        'id'        => 1551,
+        'name'      => 'Villa Escolar',
+        'latitude'  => '-26.62209000',
+        'longitude' => '-58.67134000',
+    ],
+    [
+        'id'        => 1553,
+        'name'      => 'Villa General Guemes',
+        'latitude'  => '-24.75530000',
+        'longitude' => '-59.48940000',
+    ],
+];

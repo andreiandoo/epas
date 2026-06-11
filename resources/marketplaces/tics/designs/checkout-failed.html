@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plată nereușită — TICS.ro</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>tailwind.config={theme:{extend:{fontFamily:{sans:['Inter','system-ui','sans-serif']}}}}</script>
+    <style>
+        *{-webkit-font-smoothing:antialiased}body{font-family:'Inter',system-ui,sans-serif}
+        @keyframes fadeInUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}.anim{animation:fadeInUp .5s ease forwards;opacity:0}.ad1{animation-delay:.1s}.ad2{animation-delay:.2s}.ad3{animation-delay:.3s}.ad4{animation-delay:.4s}
+        @keyframes shake{0%,100%{transform:translateX(0)}10%,30%,50%,70%,90%{transform:translateX(-4px)}20%,40%,60%,80%{transform:translateX(4px)}}.shake{animation:shake .6s ease .3s}
+        @keyframes pulseBorder{0%,100%{border-color:#fecaca}50%{border-color:#fca5a5}}.pulse-border{animation:pulseBorder 2s ease infinite}
+        @keyframes fadeInScale{from{opacity:0;transform:scale(.95)}to{opacity:1;transform:scale(1)}}.scale-in{animation:fadeInScale .4s ease forwards}
+        .tip-card{transition:all .2s ease}.tip-card:hover{transform:translateY(-2px);border-color:#c7d2fe}
+        .method-btn{transition:all .2s ease;cursor:pointer}.method-btn:hover{border-color:#a5b4fc;background:#eef2ff}.method-btn.selected{border-color:#6366f1;background:#eef2ff;box-shadow:0 0 0 3px rgba(99,102,241,.1)}
+        .countdown{font-variant-numeric:tabular-nums}
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Header -->
+    <header class="bg-white border-b border-gray-200">
+        <div class="max-w-3xl mx-auto px-4 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <a href="/" class="flex items-center gap-2"><div class="w-8 h-8 bg-gray-900 rounded-lg flex items-center justify-center"><span class="text-white font-bold text-sm">T</span></div><span class="font-bold text-lg">TICS</span></a>
+                <a href="#" class="text-sm text-gray-500 hover:text-gray-900 transition-colors">Ajutor</a>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-3xl mx-auto px-4 lg:px-8 py-10 lg:py-16">
+
+        <!-- Error Icon + Message -->
+        <div class="text-center mb-8">
+            <div class="anim shake inline-flex items-center justify-center w-20 h-20 bg-red-50 rounded-full mb-5 pulse-border border-2 border-red-200">
+                <svg class="w-10 h-10 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </div>
+            <h1 class="anim ad1 text-2xl lg:text-3xl font-bold text-gray-900 mb-2">Plata nu a fost procesată</h1>
+            <p class="anim ad2 text-gray-500 max-w-md mx-auto">Nu îți face griji — nu ai fost debitat. Biletele sunt încă rezervate pentru tine.</p>
+        </div>
+
+        <!-- Reservation Timer -->
+        <div class="anim ad2 bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center gap-4 mb-6 max-w-lg mx-auto">
+            <div class="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center flex-shrink-0"><svg class="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div>
+            <div class="flex-1 min-w-0">
+                <p class="text-sm font-medium text-amber-900">Biletele sunt rezervate încă <span class="countdown font-bold" id="timer">09:47</span></p>
+                <div class="w-full bg-amber-200 rounded-full h-1.5 mt-2"><div class="bg-amber-500 h-1.5 rounded-full transition-all duration-1000" id="timerBar" style="width:65%"></div></div>
+            </div>
+        </div>
+
+        <!-- Order Summary Card -->
+        <div class="anim ad3 bg-white rounded-2xl border border-gray-200 overflow-hidden mb-6">
+            <div class="p-5 border-b border-gray-100">
+                <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Comanda ta</p>
+                <div class="flex items-center gap-4">
+                    <div class="w-16 h-16 bg-gradient-to-br from-indigo-100 to-violet-100 rounded-xl flex items-center justify-center text-2xl flex-shrink-0">🎵</div>
+                    <div class="flex-1 min-w-0">
+                        <h3 class="font-semibold text-gray-900">Carla's Dreams — Live</h3>
+                        <p class="text-sm text-gray-500">Sala Palatului, București · 14 martie 2026</p>
+                        <div class="flex items-center gap-3 mt-1">
+                            <span class="text-xs text-gray-400">2× Categorie A</span>
+                            <span class="text-xs font-semibold text-gray-900">380 RON</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Error Details -->
+            <div class="p-5 bg-red-50/50 border-b border-gray-100">
+                <div class="flex items-start gap-3">
+                    <svg class="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/></svg>
+                    <div>
+                        <p class="text-sm font-medium text-red-800 mb-0.5">Card refuzat de bancă</p>
+                        <p class="text-xs text-red-600">Eroare: Fonduri insuficiente sau limita de tranzacții online depășită. Cod: CARD_DECLINED_INSUFFICIENT</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Retry section -->
+            <div class="p-5">
+                <p class="text-sm font-semibold text-gray-900 mb-3">Încearcă din nou cu:</p>
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-5">
+                    <label class="method-btn selected block border border-gray-200 rounded-xl p-3 text-center">
+                        <input type="radio" name="method" class="sr-only" checked>
+                        <div class="text-2xl mb-1">💳</div>
+                        <p class="text-xs font-medium text-gray-700">Alt card</p>
+                    </label>
+                    <label class="method-btn block border border-gray-200 rounded-xl p-3 text-center">
+                        <input type="radio" name="method" class="sr-only">
+                        <div class="text-2xl mb-1">🏦</div>
+                        <p class="text-xs font-medium text-gray-700">Transfer bancar</p>
+                    </label>
+                    <label class="method-btn block border border-gray-200 rounded-xl p-3 text-center">
+                        <input type="radio" name="method" class="sr-only">
+                        <div class="text-2xl mb-1"></div>
+                        <p class="text-xs font-medium text-gray-700">Apple Pay</p>
+                    </label>
+                    <label class="method-btn block border border-gray-200 rounded-xl p-3 text-center">
+                        <input type="radio" name="method" class="sr-only">
+                        <div class="text-2xl mb-1">🎁</div>
+                        <p class="text-xs font-medium text-gray-700">Gift Card</p>
+                    </label>
+                </div>
+                <button class="w-full py-3.5 bg-gray-900 text-white text-sm font-semibold rounded-xl hover:bg-gray-800 transition-colors flex items-center justify-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                    Reîncearcă plata — 380 RON
+                </button>
+                <p class="text-center text-xs text-gray-400 mt-3">Plata este securizată cu criptare SSL 256-bit</p>
+            </div>
+        </div>
+
+        <!-- Tips -->
+        <div class="anim ad4">
+            <p class="text-sm font-semibold text-gray-900 mb-3">Sfaturi rapide</p>
+            <div class="grid sm:grid-cols-3 gap-3 mb-10">
+                <div class="tip-card bg-white rounded-xl border border-gray-200 p-4">
+                    <div class="w-9 h-9 bg-blue-50 rounded-lg flex items-center justify-center text-lg mb-2">🔒</div>
+                    <p class="text-xs text-gray-600 leading-relaxed"><strong class="text-gray-900">Verifică limita online.</strong> Unele bănci au o limită zilnică pentru tranzacții online. Contactează banca sau mărește limita din aplicația bancară.</p>
+                </div>
+                <div class="tip-card bg-white rounded-xl border border-gray-200 p-4">
+                    <div class="w-9 h-9 bg-green-50 rounded-lg flex items-center justify-center text-lg mb-2">💰</div>
+                    <p class="text-xs text-gray-600 leading-relaxed"><strong class="text-gray-900">Verifică soldul.</strong> Asigură-te că ai suficiente fonduri pe card. Unele bănci blochează temporar suma chiar dacă plata eșuează.</p>
+                </div>
+                <div class="tip-card bg-white rounded-xl border border-gray-200 p-4">
+                    <div class="w-9 h-9 bg-purple-50 rounded-lg flex items-center justify-center text-lg mb-2">🔄</div>
+                    <p class="text-xs text-gray-600 leading-relaxed"><strong class="text-gray-900">Schimbă metoda.</strong> Folosește un alt card, transfer bancar sau Apple Pay / Google Pay ca alternativă.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Support strip -->
+        <div class="bg-white rounded-2xl border border-gray-200 p-5 flex flex-col sm:flex-row items-center gap-4">
+            <div class="flex-1">
+                <p class="text-sm font-medium text-gray-900">Ai nevoie de ajutor cu plata?</p>
+                <p class="text-xs text-gray-500">Echipa noastră de suport e disponibilă. Referință comandă: <code class="bg-gray-100 px-1.5 py-0.5 rounded text-xs font-mono">#ORD-2026-8f3a</code></p>
+            </div>
+            <div class="flex items-center gap-2 flex-shrink-0">
+                <a href="#" class="px-4 py-2.5 border border-gray-200 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors">💬 Live chat</a>
+                <a href="#" class="px-4 py-2.5 border border-gray-200 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors">✉️ Email</a>
+            </div>
+        </div>
+    </main>
+
+    <script>
+    // Countdown timer
+    let total=587;const tick=()=>{if(total<=0)return;total--;const m=Math.floor(total/60);const s=total%60;document.getElementById('timer').textContent=String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');document.getElementById('timerBar').style.width=((total/600)*100)+'%';setTimeout(tick,1000)};tick();
+    // Method select
+    document.querySelectorAll('.method-btn').forEach(b=>{b.addEventListener('click',()=>{document.querySelectorAll('.method-btn').forEach(x=>x.classList.remove('selected'));b.classList.add('selected')})});
+    </script>
+</body>
+</html>

@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Finalizare comandă — TICS.ro</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'sans': ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style>
+        * { -webkit-font-smoothing: antialiased; }
+        body { font-family: 'Inter', system-ui, sans-serif; }
+        
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        
+        .animate-fadeInUp { animation: fadeInUp 0.5s ease forwards; }
+        .animate-pulse { animation: pulse 2s ease-in-out infinite; }
+        .animate-spin { animation: spin 1s linear infinite; }
+        
+        .form-input {
+            transition: all 0.2s ease;
+        }
+        .form-input:focus {
+            border-color: #6366f1;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+        
+        .payment-method {
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+        .payment-method:hover {
+            border-color: #d1d5db;
+            background: #f9fafb;
+        }
+        .payment-method.selected {
+            border-color: #111827;
+            background: #f9fafb;
+            box-shadow: 0 0 0 2px rgba(17, 24, 39, 0.1);
+        }
+        
+        .pay-btn {
+            background: linear-gradient(135deg, #111827 0%, #1f2937 100%);
+            transition: all 0.3s ease;
+        }
+        .pay-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.3);
+        }
+        .pay-btn:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+        
+        .card-input {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%239ca3af'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            background-size: 20px;
+        }
+        
+        .installment-option {
+            transition: all 0.2s ease;
+        }
+        .installment-option:hover {
+            border-color: #6366f1;
+        }
+        .installment-option.selected {
+            border-color: #6366f1;
+            background: #eef2ff;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Header -->
+    <header class="sticky top-0 z-40 bg-white border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <a href="tics-events.html" class="flex items-center gap-2">
+                    <div class="w-8 h-8 bg-gray-900 rounded-lg flex items-center justify-center">
+                        <span class="text-white font-bold text-sm">T</span>
+                    </div>
+                    <span class="font-bold text-lg">TICS</span>
+                </a>
+                
+                <!-- Progress Steps -->
+                <div class="hidden md:flex items-center gap-2">
+                    <div class="flex items-center gap-2">
+                        <div class="w-8 h-8 bg-green-500 text-white rounded-full flex items-center justify-center">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                        </div>
+                        <span class="text-sm text-gray-500">Coș</span>
+                    </div>
+                    <div class="w-12 h-px bg-green-500"></div>
+                    <div class="flex items-center gap-2">
+                        <div class="w-8 h-8 bg-gray-900 text-white rounded-full flex items-center justify-center text-sm font-bold">2</div>
+                        <span class="text-sm font-medium text-gray-900">Plată</span>
+                    </div>
+                    <div class="w-12 h-px bg-gray-300"></div>
+                    <div class="flex items-center gap-2">
+                        <div class="w-8 h-8 bg-gray-200 text-gray-500 rounded-full flex items-center justify-center text-sm font-medium">3</div>
+                        <span class="text-sm text-gray-500">Confirmare</span>
+                    </div>
+                </div>
+                
+                <a href="tics-cart.html" class="text-sm text-gray-500 hover:text-gray-900 transition-colors">← Înapoi la coș</a>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 lg:px-8 py-8">
+        <!-- Timer Warning -->
+        <div class="bg-gradient-to-r from-amber-500 to-orange-500 rounded-xl p-4 mb-8 flex items-center gap-3 text-white animate-fadeInUp">
+            <div class="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center flex-shrink-0">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+            </div>
+            <div class="flex-1">
+                <p class="font-semibold">Finalizează plata în <span id="timer" class="font-bold">09:59</span></p>
+                <p class="text-sm text-white/80">Biletele sunt rezervate pentru tine</p>
+            </div>
+        </div>
+
+        <div class="flex flex-col lg:flex-row gap-8">
+            <!-- Checkout Form -->
+            <div class="flex-1">
+                <form id="checkoutForm" onsubmit="processPayment(event)">
+                    <!-- Contact Info -->
+                    <div class="bg-white rounded-2xl border border-gray-200 p-6 mb-6 animate-fadeInUp">
+                        <h2 class="text-lg font-bold text-gray-900 mb-5 flex items-center gap-2">
+                            <span class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-sm">1</span>
+                            Informații contact
+                        </h2>
+                        
+                        <div class="grid sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Prenume *</label>
+                                <input type="text" required class="form-input w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none" placeholder="Andrei">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Nume *</label>
+                                <input type="text" required class="form-input w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none" placeholder="Popescu">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Email *</label>
+                                <input type="email" required class="form-input w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none" placeholder="andrei@email.com">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Telefon *</label>
+                                <input type="tel" required class="form-input w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none" placeholder="0722 123 456">
+                            </div>
+                        </div>
+                        
+                        <label class="flex items-center gap-3 mt-4 cursor-pointer">
+                            <input type="checkbox" class="w-5 h-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                            <span class="text-sm text-gray-600">Creează cont pentru a-ți salva biletele și a câștiga puncte</span>
+                        </label>
+                    </div>
+
+                    <!-- Payment Method -->
+                    <div class="bg-white rounded-2xl border border-gray-200 p-6 mb-6 animate-fadeInUp" style="animation-delay: 0.1s">
+                        <h2 class="text-lg font-bold text-gray-900 mb-5 flex items-center gap-2">
+                            <span class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-sm">2</span>
+                            Metodă de plată
+                        </h2>
+
+                        <div class="grid sm:grid-cols-2 gap-3 mb-6">
+                            <div class="payment-method selected border-2 rounded-xl p-4" onclick="selectPayment('card', this)">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center">
+                                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
+                                    </div>
+                                    <div>
+                                        <p class="font-medium text-gray-900">Card bancar</p>
+                                        <p class="text-xs text-gray-500">Visa, Mastercard</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="payment-method border-2 border-gray-200 rounded-xl p-4" onclick="selectPayment('apple', this)">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 bg-black rounded-lg flex items-center justify-center">
+                                        <svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+                                    </div>
+                                    <div>
+                                        <p class="font-medium text-gray-900">Apple Pay</p>
+                                        <p class="text-xs text-gray-500">Plată rapidă</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="payment-method border-2 border-gray-200 rounded-xl p-4" onclick="selectPayment('google', this)">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 bg-white border rounded-lg flex items-center justify-center">
+                                        <svg class="w-5 h-5" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+                                    </div>
+                                    <div>
+                                        <p class="font-medium text-gray-900">Google Pay</p>
+                                        <p class="text-xs text-gray-500">Plată rapidă</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="payment-method border-2 border-gray-200 rounded-xl p-4" onclick="selectPayment('installments', this)">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg flex items-center justify-center">
+                                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                    </div>
+                                    <div>
+                                        <p class="font-medium text-gray-900">Rate fără dobândă</p>
+                                        <p class="text-xs text-gray-500">3, 6 sau 12 rate</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Card Details -->
+                        <div id="cardDetails">
+                            <div class="grid sm:grid-cols-2 gap-4">
+                                <div class="sm:col-span-2">
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Număr card *</label>
+                                    <input type="text" required class="form-input card-input w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none" placeholder="4242 4242 4242 4242" maxlength="19" oninput="formatCardNumber(this)">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Data expirare *</label>
+                                    <input type="text" required class="form-input w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none" placeholder="MM/YY" maxlength="5" oninput="formatExpiry(this)">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">CVV *</label>
+                                    <input type="text" required class="form-input w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none" placeholder="123" maxlength="4">
+                                </div>
+                                <div class="sm:col-span-2">
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Nume pe card *</label>
+                                    <input type="text" required class="form-input w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none" placeholder="ANDREI POPESCU">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Installments Options -->
+                        <div id="installmentsDetails" class="hidden">
+                            <p class="text-sm text-gray-600 mb-4">Alege numărul de rate:</p>
+                            <div class="grid grid-cols-3 gap-3">
+                                <div class="installment-option border-2 border-gray-200 rounded-xl p-4 text-center cursor-pointer" onclick="selectInstallment(3, this)">
+                                    <p class="text-2xl font-bold text-gray-900">3</p>
+                                    <p class="text-xs text-gray-500">rate</p>
+                                    <p class="text-sm font-semibold text-indigo-600 mt-1">262 RON/lună</p>
+                                </div>
+                                <div class="installment-option selected border-2 rounded-xl p-4 text-center cursor-pointer" onclick="selectInstallment(6, this)">
+                                    <p class="text-2xl font-bold text-gray-900">6</p>
+                                    <p class="text-xs text-gray-500">rate</p>
+                                    <p class="text-sm font-semibold text-indigo-600 mt-1">131 RON/lună</p>
+                                    <span class="inline-block mt-2 px-2 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded">Popular</span>
+                                </div>
+                                <div class="installment-option border-2 border-gray-200 rounded-xl p-4 text-center cursor-pointer" onclick="selectInstallment(12, this)">
+                                    <p class="text-2xl font-bold text-gray-900">12</p>
+                                    <p class="text-xs text-gray-500">rate</p>
+                                    <p class="text-sm font-semibold text-indigo-600 mt-1">65 RON/lună</p>
+                                </div>
+                            </div>
+                            <p class="text-xs text-gray-400 mt-3">* Rate fără dobândă prin BRD, BCR, Raiffeisen, ING</p>
+                        </div>
+                    </div>
+
+                    <!-- Billing Address -->
+                    <div class="bg-white rounded-2xl border border-gray-200 p-6 mb-6 animate-fadeInUp" style="animation-delay: 0.2s">
+                        <h2 class="text-lg font-bold text-gray-900 mb-5 flex items-center gap-2">
+                            <span class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-sm">3</span>
+                            Adresă facturare
+                            <span class="text-xs text-gray-400 font-normal ml-2">(opțional)</span>
+                        </h2>
+                        
+                        <label class="flex items-center gap-3 mb-4 cursor-pointer">
+                            <input type="checkbox" id="needInvoice" class="w-5 h-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" onchange="toggleInvoice()">
+                            <span class="text-sm text-gray-600">Doresc factură pe firmă</span>
+                        </label>
+                        
+                        <div id="invoiceFields" class="hidden grid sm:grid-cols-2 gap-4">
+                            <div class="sm:col-span-2">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Nume firmă</label>
+                                <input type="text" class="form-input w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none" placeholder="SC Exemplu SRL">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">CUI</label>
+                                <input type="text" class="form-input w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none" placeholder="RO12345678">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Nr. Reg. Com.</label>
+                                <input type="text" class="form-input w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none" placeholder="J40/123/2020">
+                            </div>
+                            <div class="sm:col-span-2">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Adresă</label>
+                                <input type="text" class="form-input w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none" placeholder="Str. Exemplu nr. 1, București">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Terms -->
+                    <div class="bg-white rounded-2xl border border-gray-200 p-6 animate-fadeInUp" style="animation-delay: 0.3s">
+                        <label class="flex items-start gap-3 cursor-pointer">
+                            <input type="checkbox" required class="w-5 h-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 mt-0.5">
+                            <span class="text-sm text-gray-600">
+                                Accept <a href="tics-terms.html" class="text-indigo-600 hover:underline">Termenii și Condițiile</a> 
+                                și <a href="tics-privacy.html" class="text-indigo-600 hover:underline">Politica de Confidențialitate</a>. 
+                                Înțeleg că biletele nu pot fi returnate decât în conformitate cu 
+                                <a href="tics-refund.html" class="text-indigo-600 hover:underline">Politica de Retur</a>.
+                            </span>
+                        </label>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Order Summary -->
+            <div class="lg:w-[380px]">
+                <div class="sticky top-24">
+                    <div class="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-xl animate-fadeInUp" style="animation-delay: 0.15s">
+                        <div class="p-5 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white">
+                            <h2 class="text-lg font-bold text-gray-900">Sumar comandă</h2>
+                        </div>
+
+                        <div class="p-5">
+                            <!-- Items -->
+                            <div class="space-y-4 mb-5">
+                                <div class="flex gap-3">
+                                    <img src="https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=100&h=100&fit=crop" class="w-16 h-16 rounded-lg object-cover">
+                                    <div class="flex-1 min-w-0">
+                                        <h4 class="font-medium text-gray-900 text-sm truncate">Coldplay: Music of the Spheres</h4>
+                                        <p class="text-xs text-gray-500">General Admission × 2</p>
+                                        <p class="text-sm font-semibold text-gray-900 mt-1">698 RON</p>
+                                    </div>
+                                </div>
+                                <div class="flex gap-3">
+                                    <img src="https://images.unsplash.com/photo-1585699324551-f6c309eedeca?w=100&h=100&fit=crop" class="w-16 h-16 rounded-lg object-cover">
+                                    <div class="flex-1 min-w-0">
+                                        <h4 class="font-medium text-gray-900 text-sm truncate">Micutzu - Sold Out Tour</h4>
+                                        <p class="text-xs text-gray-500">Categoria I × 1</p>
+                                        <p class="text-sm font-semibold text-gray-900 mt-1">89 RON</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Totals -->
+                            <div class="border-t border-gray-100 pt-4 space-y-2">
+                                <div class="flex justify-between text-sm">
+                                    <span class="text-gray-500">Subtotal</span>
+                                    <span class="text-gray-900">787 RON</span>
+                                </div>
+                                <div class="flex justify-between text-sm text-green-600">
+                                    <span>Reducere cod TICS10</span>
+                                    <span>-78 RON</span>
+                                </div>
+                                <div class="flex justify-between text-sm">
+                                    <span class="text-gray-500">Taxe și comisioane</span>
+                                    <span class="text-green-600 font-medium">Incluse</span>
+                                </div>
+                                <div class="pt-3 border-t border-gray-200 flex justify-between items-center">
+                                    <span class="font-semibold text-gray-900">Total</span>
+                                    <span class="text-2xl font-bold text-gray-900">709 RON</span>
+                                </div>
+                            </div>
+
+                            <!-- Pay Button -->
+                            <button type="submit" form="checkoutForm" id="payBtn" class="pay-btn w-full mt-5 py-4 text-white font-bold rounded-xl text-lg flex items-center justify-center gap-2">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                                Plătește 709 RON
+                            </button>
+
+                            <!-- Security -->
+                            <div class="mt-4 flex items-center justify-center gap-4 text-gray-400 text-xs">
+                                <span class="flex items-center gap-1">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                                    SSL 256-bit
+                                </span>
+                                <span class="flex items-center gap-1">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                                    3D Secure
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Help -->
+                    <div class="mt-4 bg-white rounded-xl border border-gray-200 p-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center">
+                                <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            </div>
+                            <div>
+                                <p class="font-medium text-gray-900 text-sm">Ai nevoie de ajutor?</p>
+                                <p class="text-xs text-gray-500">Suntem aici pentru tine 24/7</p>
+                            </div>
+                            <a href="#" class="ml-auto text-sm text-indigo-600 font-medium hover:underline">Chat</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Processing Modal -->
+    <div id="processingModal" class="fixed inset-0 bg-black/50 z-50 hidden items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-sm w-full p-8 text-center">
+            <div class="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg class="w-8 h-8 text-indigo-600 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+            </div>
+            <h3 class="text-xl font-bold text-gray-900 mb-2">Se procesează plata...</h3>
+            <p class="text-gray-500">Nu închide această pagină</p>
+        </div>
+    </div>
+
+    <!-- Footer Mini -->
+    <footer class="bg-white border-t border-gray-200 mt-16 py-6">
+        <div class="max-w-7xl mx-auto px-4 lg:px-8">
+            <div class="flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-gray-500">
+                <div class="flex items-center gap-2">
+                    <div class="w-6 h-6 bg-gray-900 rounded flex items-center justify-center">
+                        <span class="text-white font-bold text-xs">T</span>
+                    </div>
+                    <span>© 2026 TICS.ro • Powered by Tixello</span>
+                </div>
+                <div class="flex items-center gap-4">
+                    <a href="tics-terms.html" class="hover:text-gray-900 transition-colors">Termeni</a>
+                    <a href="tics-privacy.html" class="hover:text-gray-900 transition-colors">Confidențialitate</a>
+                    <a href="#" class="hover:text-gray-900 transition-colors">Ajutor</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Timer
+        let timeLeft = 10 * 60;
+        function updateTimer() {
+            const mins = Math.floor(timeLeft / 60);
+            const secs = timeLeft % 60;
+            document.getElementById('timer').textContent = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+            if (timeLeft > 0) {
+                timeLeft--;
+                setTimeout(updateTimer, 1000);
+            }
+        }
+        updateTimer();
+
+        // Payment method selection
+        let currentPayment = 'card';
+        function selectPayment(method, el) {
+            currentPayment = method;
+            document.querySelectorAll('.payment-method').forEach(m => m.classList.remove('selected'));
+            el.classList.add('selected');
+            
+            document.getElementById('cardDetails').classList.toggle('hidden', method !== 'card' && method !== 'installments');
+            document.getElementById('installmentsDetails').classList.toggle('hidden', method !== 'installments');
+        }
+
+        // Installment selection
+        function selectInstallment(months, el) {
+            document.querySelectorAll('.installment-option').forEach(o => o.classList.remove('selected'));
+            el.classList.add('selected');
+        }
+
+        // Format card number
+        function formatCardNumber(input) {
+            let value = input.value.replace(/\s/g, '').replace(/\D/g, '');
+            value = value.replace(/(.{4})/g, '$1 ').trim();
+            input.value = value;
+        }
+
+        // Format expiry
+        function formatExpiry(input) {
+            let value = input.value.replace(/\D/g, '');
+            if (value.length >= 2) {
+                value = value.substring(0, 2) + '/' + value.substring(2);
+            }
+            input.value = value;
+        }
+
+        // Toggle invoice
+        function toggleInvoice() {
+            const checked = document.getElementById('needInvoice').checked;
+            document.getElementById('invoiceFields').classList.toggle('hidden', !checked);
+        }
+
+        // Process payment
+        function processPayment(e) {
+            e.preventDefault();
+            
+            const modal = document.getElementById('processingModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            
+            // Simulate processing
+            setTimeout(() => {
+                window.location.href = 'tics-thank-you.html';
+            }, 2500);
+        }
+    </script>
+</body>
+</html>

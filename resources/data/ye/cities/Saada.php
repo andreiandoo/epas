@@ -1,0 +1,105 @@
+<?php
+return [
+    [
+        'id'        => 130684,
+        'name'      => 'Al Dhaher',
+        'latitude'  => '16.73140000',
+        'longitude' => '43.27530000',
+    ],
+    [
+        'id'        => 130694,
+        'name'      => 'Al Hashwah',
+        'latitude'  => '16.88840000',
+        'longitude' => '44.27380000',
+    ],
+    [
+        'id'        => 130774,
+        'name'      => 'As Safra',
+        'latitude'  => '17.01420000',
+        'longitude' => '43.85660000',
+    ],
+    [
+        'id'        => 130792,
+        'name'      => 'Ash Shawātī',
+        'latitude'  => '16.78314000',
+        'longitude' => '43.81265000',
+    ],
+    [
+        'id'        => 130820,
+        'name'      => 'Baqim',
+        'latitude'  => '17.37810000',
+        'longitude' => '43.46350000',
+    ],
+    [
+        'id'        => 130842,
+        'name'      => 'Ghamr',
+        'latitude'  => '16.98301000',
+        'longitude' => '43.31608000',
+    ],
+    [
+        'id'        => 130860,
+        'name'      => 'Haydan',
+        'latitude'  => '16.72870000',
+        'longitude' => '43.48490000',
+    ],
+    [
+        'id'        => 130894,
+        'name'      => 'Kitaf wa Al Boqe\'e',
+        'latitude'  => '17.08080000',
+        'longitude' => '44.39620000',
+    ],
+    [
+        'id'        => 130906,
+        'name'      => 'Majz',
+        'latitude'  => '17.09230000',
+        'longitude' => '43.51040000',
+    ],
+    [
+        'id'        => 130926,
+        'name'      => 'Monabbih',
+        'latitude'  => '17.16930000',
+        'longitude' => '43.27910000',
+    ],
+    [
+        'id'        => 130942,
+        'name'      => 'Qatabir',
+        'latitude'  => '17.33680000',
+        'longitude' => '43.33110000',
+    ],
+    [
+        'id'        => 130956,
+        'name'      => 'Rāziḩ',
+        'latitude'  => '16.93704000',
+        'longitude' => '43.26080000',
+    ],
+    [
+        'id'        => 130957,
+        'name'      => 'Sa\'dah',
+        'latitude'  => '16.94021000',
+        'longitude' => '43.76393000',
+    ],
+    [
+        'id'        => 131010,
+        'name'      => 'Şa‘dah',
+        'latitude'  => '16.91733000',
+        'longitude' => '43.76000000',
+    ],
+    [
+        'id'        => 130972,
+        'name'      => 'Saḩār',
+        'latitude'  => '16.88522000',
+        'longitude' => '43.68306000',
+    ],
+    [
+        'id'        => 130966,
+        'name'      => 'Saqayn',
+        'latitude'  => '16.86010000',
+        'longitude' => '43.47160000',
+    ],
+    [
+        'id'        => 130973,
+        'name'      => 'Shada\'a',
+        'latitude'  => '16.89130000',
+        'longitude' => '43.18710000',
+    ],
+];

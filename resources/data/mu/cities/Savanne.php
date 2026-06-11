@@ -1,0 +1,105 @@
+<?php
+return [
+    [
+        'id'        => 153402,
+        'name'      => 'Baie Du Cap',
+        'latitude'  => '-20.48664400',
+        'longitude' => '57.37881500',
+    ],
+    [
+        'id'        => 153406,
+        'name'      => 'Bel Ombre',
+        'latitude'  => '-20.50191900',
+        'longitude' => '57.42550700',
+    ],
+    [
+        'id'        => 153407,
+        'name'      => 'Benares',
+        'latitude'  => '-20.48440700',
+        'longitude' => '57.58871700',
+    ],
+    [
+        'id'        => 153403,
+        'name'      => 'Bois Cheri',
+        'latitude'  => '-20.42667100',
+        'longitude' => '57.53425200',
+    ],
+    [
+        'id'        => 153408,
+        'name'      => 'Britannia',
+        'latitude'  => '-20.44865500',
+        'longitude' => '57.56340700',
+    ],
+    [
+        'id'        => 67839,
+        'name'      => 'Camp Diable',
+        'latitude'  => '-20.46278000',
+        'longitude' => '57.57889000',
+    ],
+    [
+        'id'        => 67847,
+        'name'      => 'Chamouny',
+        'latitude'  => '-20.48222000',
+        'longitude' => '57.46611000',
+    ],
+    [
+        'id'        => 67848,
+        'name'      => 'Chemin Grenier',
+        'latitude'  => '-20.48722000',
+        'longitude' => '57.46556000',
+    ],
+    [
+        'id'        => 67864,
+        'name'      => 'Grand Bois',
+        'latitude'  => '-20.41889000',
+        'longitude' => '57.54417000',
+    ],
+    [
+        'id'        => 153409,
+        'name'      => 'L\'Escalier',
+        'latitude'  => '-20.47333500',
+        'longitude' => '57.61867600',
+    ],
+    [
+        'id'        => 153411,
+        'name'      => 'La Flora',
+        'latitude'  => '-20.41000500',
+        'longitude' => '57.56048700',
+    ],
+    [
+        'id'        => 67904,
+        'name'      => 'Rivière des Anguilles',
+        'latitude'  => '-20.48528000',
+        'longitude' => '57.55083000',
+    ],
+    [
+        'id'        => 153405,
+        'name'      => 'Rivière Du Poste',
+        'latitude'  => '-20.42866200',
+        'longitude' => '57.57368100',
+    ],
+    [
+        'id'        => 67909,
+        'name'      => 'Saint Aubin',
+        'latitude'  => '-20.49600000',
+        'longitude' => '57.55000000',
+    ],
+    [
+        'id'        => 67914,
+        'name'      => 'Souillac',
+        'latitude'  => '-20.51667000',
+        'longitude' => '57.51667000',
+    ],
+    [
+        'id'        => 153410,
+        'name'      => 'St Aubin',
+        'latitude'  => '-20.49444600',
+        'longitude' => '57.55033500',
+    ],
+    [
+        'id'        => 67915,
+        'name'      => 'Surinam',
+        'latitude'  => '-20.50972000',
+        'longitude' => '57.50528000',
+    ],
+];

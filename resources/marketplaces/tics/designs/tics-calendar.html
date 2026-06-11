@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calendar Evenimente — TICS.ro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>tailwind.config={theme:{extend:{fontFamily:{'sans':['Inter','system-ui','sans-serif']}}}}</script>
+    <style>*{-webkit-font-smoothing:antialiased}body{font-family:'Inter',system-ui,sans-serif}.day-cell:hover{background:#f3f4f6}.day-cell.has-events{cursor:pointer}.event-dot{width:6px;height:6px;border-radius:50%}</style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <header class="bg-white border-b border-gray-200 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+            <a href="tics-homepage.html" class="flex items-center gap-2"><div class="w-10 h-10 bg-gray-900 rounded-xl flex items-center justify-center"><span class="text-white font-bold text-lg">T</span></div><span class="font-bold text-xl">TICS</span></a>
+            <div class="flex items-center gap-3">
+                <a href="tics-search.html" class="p-2 text-gray-600 hover:bg-gray-100 rounded-xl"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg></a>
+                <a href="tics-login.html" class="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-xl">Intră în cont</a>
+            </div>
+        </div>
+    </header>
+
+    <div class="max-w-7xl mx-auto px-4 py-8">
+        <div class="flex items-center justify-between mb-8">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900">Calendar Evenimente</h1>
+                <p class="text-gray-500 mt-1">Planifică-ți ieșirile din timp</p>
+            </div>
+            <div class="flex items-center gap-3">
+                <select class="border border-gray-200 rounded-xl px-4 py-2 text-sm"><option>Toate categoriile</option><option>Concerte</option><option>Teatru</option><option>Stand-up</option></select>
+                <select class="border border-gray-200 rounded-xl px-4 py-2 text-sm"><option>Toate orașele</option><option>București</option><option>Cluj-Napoca</option></select>
+            </div>
+        </div>
+
+        <div class="grid lg:grid-cols-3 gap-8">
+            <!-- Calendar -->
+            <div class="lg:col-span-2">
+                <div class="bg-white rounded-2xl border border-gray-200 p-6">
+                    <!-- Month Navigation -->
+                    <div class="flex items-center justify-between mb-6">
+                        <button class="p-2 hover:bg-gray-100 rounded-lg"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg></button>
+                        <h2 class="text-xl font-bold text-gray-900">Februarie 2026</h2>
+                        <button class="p-2 hover:bg-gray-100 rounded-lg"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg></button>
+                    </div>
+                    <!-- Days Header -->
+                    <div class="grid grid-cols-7 gap-1 mb-2">
+                        <div class="text-center text-sm font-medium text-gray-500 py-2">Lun</div>
+                        <div class="text-center text-sm font-medium text-gray-500 py-2">Mar</div>
+                        <div class="text-center text-sm font-medium text-gray-500 py-2">Mie</div>
+                        <div class="text-center text-sm font-medium text-gray-500 py-2">Joi</div>
+                        <div class="text-center text-sm font-medium text-gray-500 py-2">Vin</div>
+                        <div class="text-center text-sm font-medium text-gray-500 py-2">Sâm</div>
+                        <div class="text-center text-sm font-medium text-gray-500 py-2">Dum</div>
+                    </div>
+                    <!-- Calendar Grid -->
+                    <div class="grid grid-cols-7 gap-1">
+                        <div class="day-cell p-3 text-center text-gray-300 rounded-lg">26</div>
+                        <div class="day-cell p-3 text-center text-gray-300 rounded-lg">27</div>
+                        <div class="day-cell p-3 text-center text-gray-300 rounded-lg">28</div>
+                        <div class="day-cell p-3 text-center text-gray-300 rounded-lg">29</div>
+                        <div class="day-cell p-3 text-center text-gray-300 rounded-lg">30</div>
+                        <div class="day-cell p-3 text-center text-gray-300 rounded-lg">31</div>
+                        <div class="day-cell p-3 text-center rounded-lg">1</div>
+                        <div class="day-cell p-3 text-center rounded-lg">2</div>
+                        <div class="day-cell p-3 text-center rounded-lg">3</div>
+                        <div class="day-cell p-3 text-center rounded-lg">4</div>
+                        <div class="day-cell p-3 text-center rounded-lg">5</div>
+                        <div class="day-cell p-3 text-center rounded-lg">6</div>
+                        <div class="day-cell has-events p-3 text-center rounded-lg bg-indigo-50"><span class="font-semibold text-indigo-600">7</span><div class="flex justify-center gap-1 mt-1"><span class="event-dot bg-indigo-500"></span></div></div>
+                        <div class="day-cell has-events p-3 text-center rounded-lg bg-purple-50"><span class="font-semibold text-purple-600">8</span><div class="flex justify-center gap-1 mt-1"><span class="event-dot bg-purple-500"></span><span class="event-dot bg-green-500"></span></div></div>
+                        <div class="day-cell p-3 text-center rounded-lg">9</div>
+                        <div class="day-cell p-3 text-center rounded-lg">10</div>
+                        <div class="day-cell p-3 text-center rounded-lg">11</div>
+                        <div class="day-cell p-3 text-center rounded-lg">12</div>
+                        <div class="day-cell p-3 text-center rounded-lg">13</div>
+                        <div class="day-cell has-events p-3 text-center rounded-lg bg-red-50 ring-2 ring-red-500"><span class="font-bold text-red-600">14</span><div class="flex justify-center gap-1 mt-1"><span class="event-dot bg-red-500"></span><span class="event-dot bg-red-500"></span><span class="event-dot bg-red-500"></span></div></div>
+                        <div class="day-cell has-events p-3 text-center rounded-lg bg-indigo-50"><span class="font-semibold text-indigo-600">15</span><div class="flex justify-center gap-1 mt-1"><span class="event-dot bg-indigo-500"></span></div></div>
+                        <div class="day-cell p-3 text-center rounded-lg">16</div>
+                        <div class="day-cell p-3 text-center rounded-lg">17</div>
+                        <div class="day-cell p-3 text-center rounded-lg">18</div>
+                        <div class="day-cell p-3 text-center rounded-lg">19</div>
+                        <div class="day-cell p-3 text-center rounded-lg">20</div>
+                        <div class="day-cell p-3 text-center rounded-lg">21</div>
+                        <div class="day-cell has-events p-3 text-center rounded-lg bg-green-50"><span class="font-semibold text-green-600">22</span><div class="flex justify-center gap-1 mt-1"><span class="event-dot bg-green-500"></span></div></div>
+                        <div class="day-cell p-3 text-center rounded-lg">23</div>
+                        <div class="day-cell p-3 text-center rounded-lg">24</div>
+                        <div class="day-cell p-3 text-center rounded-lg">25</div>
+                        <div class="day-cell p-3 text-center rounded-lg">26</div>
+                        <div class="day-cell p-3 text-center rounded-lg">27</div>
+                        <div class="day-cell has-events p-3 text-center rounded-lg bg-amber-50"><span class="font-semibold text-amber-600">28</span><div class="flex justify-center gap-1 mt-1"><span class="event-dot bg-amber-500"></span><span class="event-dot bg-amber-500"></span></div></div>
+                    </div>
+                    <!-- Legend -->
+                    <div class="flex items-center gap-4 mt-6 pt-4 border-t border-gray-100">
+                        <div class="flex items-center gap-2"><span class="event-dot bg-indigo-500"></span><span class="text-xs text-gray-500">Concert</span></div>
+                        <div class="flex items-center gap-2"><span class="event-dot bg-purple-500"></span><span class="text-xs text-gray-500">Stand-up</span></div>
+                        <div class="flex items-center gap-2"><span class="event-dot bg-green-500"></span><span class="text-xs text-gray-500">Teatru</span></div>
+                        <div class="flex items-center gap-2"><span class="event-dot bg-amber-500"></span><span class="text-xs text-gray-500">Sport</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Upcoming Events -->
+            <div>
+                <div class="bg-white rounded-2xl border border-gray-200 p-6">
+                    <h3 class="font-bold text-gray-900 mb-4">🔥 14 Februarie - Valentine's Day</h3>
+                    <div class="space-y-4">
+                        <a href="tics-event.html" class="block p-3 bg-gray-50 rounded-xl hover:bg-gray-100">
+                            <p class="font-semibold text-gray-900">Coldplay Concert</p>
+                            <p class="text-sm text-gray-500">18:00 • Arena Națională</p>
+                            <p class="text-sm font-medium text-indigo-600 mt-1">de la 149 RON</p>
+                        </a>
+                        <a href="tics-event.html" class="block p-3 bg-gray-50 rounded-xl hover:bg-gray-100">
+                            <p class="font-semibold text-gray-900">Cină romantică & Jazz</p>
+                            <p class="text-sm text-gray-500">20:00 • Hard Rock Cafe</p>
+                            <p class="text-sm font-medium text-indigo-600 mt-1">de la 250 RON</p>
+                        </a>
+                        <a href="tics-event.html" class="block p-3 bg-gray-50 rounded-xl hover:bg-gray-100">
+                            <p class="font-semibold text-gray-900">Stand-up: Love Edition</p>
+                            <p class="text-sm text-gray-500">21:00 • The Fool</p>
+                            <p class="text-sm font-medium text-indigo-600 mt-1">de la 75 RON</p>
+                        </a>
+                    </div>
+                </div>
+
+                <div class="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl p-6 mt-6 text-white">
+                    <h3 class="font-bold mb-2">📧 Nu rata niciun eveniment</h3>
+                    <p class="text-sm text-indigo-100 mb-4">Abonează-te și primești alerte pentru evenimentele preferate.</p>
+                    <input type="email" placeholder="Email-ul tău" class="w-full px-4 py-2 rounded-xl text-gray-900 mb-3">
+                    <button class="w-full py-2 bg-white text-indigo-600 font-medium rounded-xl hover:bg-indigo-50">Abonează-te</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="bg-gray-900 text-white py-8 mt-12"><div class="max-w-7xl mx-auto px-4 text-center"><p class="text-gray-400">© 2026 TICS.ro</p></div></footer>
+</body>
+</html>

@@ -1,0 +1,123 @@
+<?php
+return [
+    [
+        'id'        => 53857,
+        'name'      => 'Arizona',
+        'latitude'  => '15.63333000',
+        'longitude' => '-87.31667000',
+    ],
+    [
+        'id'        => 53860,
+        'name'      => 'Atenas de San Cristóbal',
+        'latitude'  => '15.68333000',
+        'longitude' => '-87.31667000',
+    ],
+    [
+        'id'        => 53921,
+        'name'      => 'Corozal',
+        'latitude'  => '15.80000000',
+        'longitude' => '-86.71667000',
+    ],
+    [
+        'id'        => 53974,
+        'name'      => 'El Pino',
+        'latitude'  => '15.70000000',
+        'longitude' => '-86.93333000',
+    ],
+    [
+        'id'        => 53976,
+        'name'      => 'El Porvenir',
+        'latitude'  => '15.75000000',
+        'longitude' => '-86.93333000',
+    ],
+    [
+        'id'        => 53995,
+        'name'      => 'El Triunfo de la Cruz',
+        'latitude'  => '15.76667000',
+        'longitude' => '-87.43333000',
+    ],
+    [
+        'id'        => 54001,
+        'name'      => 'Esparta',
+        'latitude'  => '15.66291000',
+        'longitude' => '-87.25622000',
+    ],
+    [
+        'id'        => 54041,
+        'name'      => 'Jutiapa',
+        'latitude'  => '15.69586000',
+        'longitude' => '-86.50414000',
+    ],
+    [
+        'id'        => 54048,
+        'name'      => 'La Ceiba',
+        'latitude'  => '15.75971000',
+        'longitude' => '-86.78221000',
+    ],
+    [
+        'id'        => 54071,
+        'name'      => 'La Masica',
+        'latitude'  => '15.59865000',
+        'longitude' => '-87.13500000',
+    ],
+    [
+        'id'        => 54080,
+        'name'      => 'La Unión',
+        'latitude'  => '15.71667000',
+        'longitude' => '-87.00000000',
+    ],
+    [
+        'id'        => 54127,
+        'name'      => 'Mezapa',
+        'latitude'  => '15.58333000',
+        'longitude' => '-87.65000000',
+    ],
+    [
+        'id'        => 54145,
+        'name'      => 'Nueva Armenia',
+        'latitude'  => '15.79556000',
+        'longitude' => '-86.49845000',
+    ],
+    [
+        'id'        => 54208,
+        'name'      => 'Sambo Creek',
+        'latitude'  => '15.81667000',
+        'longitude' => '-86.68333000',
+    ],
+    [
+        'id'        => 54212,
+        'name'      => 'San Antonio',
+        'latitude'  => '15.60000000',
+        'longitude' => '-87.15000000',
+    ],
+    [
+        'id'        => 54226,
+        'name'      => 'San Francisco',
+        'latitude'  => '15.65246000',
+        'longitude' => '-87.01736000',
+    ],
+    [
+        'id'        => 54259,
+        'name'      => 'San Juan Pueblo',
+        'latitude'  => '15.58333000',
+        'longitude' => '-87.23333000',
+    ],
+    [
+        'id'        => 54290,
+        'name'      => 'Santa Ana',
+        'latitude'  => '15.65000000',
+        'longitude' => '-87.06667000',
+    ],
+    [
+        'id'        => 54334,
+        'name'      => 'Tela',
+        'latitude'  => '15.77425000',
+        'longitude' => '-87.46731000',
+    ],
+    [
+        'id'        => 54341,
+        'name'      => 'Tornabé',
+        'latitude'  => '15.75000000',
+        'longitude' => '-87.55000000',
+    ],
+];

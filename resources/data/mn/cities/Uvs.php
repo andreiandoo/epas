@@ -1,0 +1,9 @@
+<?php
+return [
+    [
+        'id'        => 67736,
+        'name'      => 'Ulaangom',
+        'latitude'  => '49.98111000',
+        'longitude' => '92.06667000',
+    ],
+];

@@ -1,0 +1,17 @@
+<?php
+return [
+    'Alofi North',
+    'Alofi South',
+    'Avatele',
+    'Hakupu',
+    'Hikutavake',
+    'Lakepa',
+    'Liku',
+    'Makefu',
+    'Mutalau',
+    'Namukulu',
+    'Tamakautoga',
+    'Toi',
+    'Tuapa',
+    'Vaiea',
+];

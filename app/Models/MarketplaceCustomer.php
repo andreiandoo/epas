@@ -1,0 +1,433 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\Notifiable;
+use Laravel\Sanctum\HasApiTokens;
+
+class MarketplaceCustomer extends Authenticatable
+{
+    use HasApiTokens, HasFactory, Notifiable, SoftDeletes;
+
+    protected $fillable = [
+        'marketplace_client_id',
+        'email',
+        'password',
+        'first_name',
+        'last_name',
+        'avatar',
+        'phone',
+        'birth_date',
+        'gender',
+        'locale',
+        'address',
+        'city',
+        'state',
+        'postal_code',
+        'country',
+        'status',
+        'email_verified_at',
+        'email_verification_token',
+        'email_verification_expires_at',
+        'last_login_at',
+        'accepts_marketing',
+        'marketing_consent_at',
+        'settings',
+        'total_orders',
+        'total_spent',
+        'wp_password_hash',
+        'two_factor_secret',
+        'two_factor_recovery_codes',
+        'two_factor_confirmed_at',
+    ];
+
+    protected $hidden = [
+        'password',
+        'wp_password_hash',
+        'remember_token',
+        'two_factor_secret',
+        'two_factor_recovery_codes',
+    ];
+
+    protected $casts = [
+        'email_verified_at' => 'datetime',
+        'email_verification_expires_at' => 'datetime',
+        'last_login_at' => 'datetime',
+        'marketing_consent_at' => 'datetime',
+        'birth_date' => 'date',
+        'password' => 'hashed',
+        'accepts_marketing' => 'boolean',
+        'settings' => 'array',
+        'total_spent' => 'decimal:2',
+        'two_factor_secret' => 'encrypted',
+        'two_factor_recovery_codes' => 'encrypted:array',
+        'two_factor_confirmed_at' => 'datetime',
+    ];
+
+    // =========================================
+    // Relationships
+    // =========================================
+
+    public function marketplaceClient(): BelongsTo
+    {
+        return $this->belongsTo(MarketplaceClient::class);
+    }
+
+    public function orders(): HasMany
+    {
+        return $this->hasMany(Order::class, 'marketplace_customer_id');
+    }
+
+    public function contactLists(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            MarketplaceContactList::class,
+            'marketplace_contact_list_members',
+            'marketplace_customer_id',
+            'list_id'
+        )->withPivot(['status', 'subscribed_at', 'unsubscribed_at'])
+         ->withTimestamps();
+    }
+
+    public function tags(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            MarketplaceContactTag::class,
+            'marketplace_customer_tags',
+            'marketplace_customer_id',
+            'tag_id'
+        )->withTimestamps();
+    }
+
+    public function refundRequests(): HasMany
+    {
+        return $this->hasMany(MarketplaceRefundRequest::class, 'marketplace_customer_id');
+    }
+
+    public function purchasedGiftCards(): HasMany
+    {
+        return $this->hasMany(MarketplaceGiftCard::class, 'purchaser_id');
+    }
+
+    public function receivedGiftCards(): HasMany
+    {
+        return $this->hasMany(MarketplaceGiftCard::class, 'recipient_customer_id');
+    }
+
+    public function giftCardsByEmail(): HasMany
+    {
+        return $this->hasMany(MarketplaceGiftCard::class, 'recipient_email', 'email');
+    }
+
+    public function paymentMethods(): HasMany
+    {
+        return $this->hasMany(MarketplaceCustomerPaymentMethod::class, 'marketplace_customer_id');
+    }
+
+    public function activePaymentMethods(): HasMany
+    {
+        return $this->paymentMethods()->where('is_active', true);
+    }
+
+    /**
+     * Favorite events via pivot table (legacy - not currently used)
+     */
+    public function favoriteEvents(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            MarketplaceEvent::class,
+            'marketplace_customer_favorites',
+            'marketplace_customer_id',
+            'favoriteable_id'
+        )->wherePivot('favoriteable_type', 'event')
+         ->withTimestamps();
+    }
+
+    /**
+     * Watchlist events (events the customer is interested in)
+     */
+    public function watchlistEvents(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            Event::class,
+            'marketplace_customer_watchlist',
+            'marketplace_customer_id',
+            'event_id'
+        )->withPivot(['notify_on_sale', 'notify_on_price_drop'])
+         ->withTimestamps();
+    }
+
+    /**
+     * Favorite artists via pivot table
+     */
+    public function favoriteArtists(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            Artist::class,
+            'marketplace_customer_favorites',
+            'marketplace_customer_id',
+            'favoriteable_id'
+        )->wherePivot('favoriteable_type', 'artist')
+         ->withTimestamps();
+    }
+
+    /**
+     * Favorite venues via pivot table
+     */
+    public function favoriteVenues(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            Venue::class,
+            'marketplace_customer_favorites',
+            'marketplace_customer_id',
+            'favoriteable_id'
+        )->wherePivot('favoriteable_type', 'venue')
+         ->withTimestamps();
+    }
+
+    /**
+     * Watchlist marketplace events (via marketplace_event_id)
+     */
+    public function watchlistMarketplaceEvents(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            MarketplaceEvent::class,
+            'marketplace_customer_watchlist',
+            'marketplace_customer_id',
+            'marketplace_event_id'
+        )->withPivot(['notify_on_sale', 'notify_on_price_drop'])
+         ->withTimestamps();
+    }
+
+    /**
+     * Get total available gift card balance for this customer
+     */
+    public function getGiftCardBalanceAttribute(): float
+    {
+        return $this->receivedGiftCards()
+            ->where('status', MarketplaceGiftCard::STATUS_ACTIVE)
+            ->where('expires_at', '>', now())
+            ->sum('balance');
+    }
+
+    // =========================================
+    // Status Checks
+    // =========================================
+
+    public function isActive(): bool
+    {
+        return $this->status === 'active';
+    }
+
+    public function isSuspended(): bool
+    {
+        return $this->status === 'suspended';
+    }
+
+    public function isEmailVerified(): bool
+    {
+        return $this->email_verified_at !== null;
+    }
+
+    public function isGuest(): bool
+    {
+        return $this->password === null;
+    }
+
+    /**
+     * Verify a password against a WordPress phpass hash ($P$B...).
+     * If valid, re-hash with bcrypt and clear the WP hash (one-time migration).
+     */
+    public function verifyAndMigrateWpPassword(string $plainPassword): bool
+    {
+        if (empty($this->wp_password_hash)) {
+            return false;
+        }
+
+        $wpHash = $this->wp_password_hash;
+
+        // WordPress phpass portable hash verification
+        if (!str_starts_with($wpHash, '$P$') && !str_starts_with($wpHash, '$H$')) {
+            return false;
+        }
+
+        $itoa64 = './0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+        $countLog2 = strpos($itoa64, $wpHash[3]);
+        $count = 1 << $countLog2;
+        $salt = substr($wpHash, 4, 8);
+
+        $hash = md5($salt . $plainPassword, true);
+        do {
+            $hash = md5($hash . $plainPassword, true);
+        } while (--$count);
+
+        $encoded = '';
+        $i = 0;
+        $hashBytes = $hash;
+        do {
+            $value = ord($hashBytes[$i++]);
+            $encoded .= $itoa64[$value & 0x3f];
+            if ($i < 16) $value |= ord($hashBytes[$i]) << 8;
+            $encoded .= $itoa64[($value >> 6) & 0x3f];
+            if ($i++ >= 16) break;
+            if ($i < 16) $value |= ord($hashBytes[$i]) << 16;
+            $encoded .= $itoa64[($value >> 12) & 0x3f];
+            if ($i++ >= 16) break;
+            $encoded .= $itoa64[($value >> 18) & 0x3f];
+        } while ($i < 16);
+
+        $computed = substr($wpHash, 0, 12) . $encoded;
+
+        if (!hash_equals($wpHash, $computed)) {
+            return false;
+        }
+
+        // Password matches — migrate to bcrypt and clear WP hash
+        $this->forceFill([
+            'password' => \Illuminate\Support\Facades\Hash::make($plainPassword),
+            'wp_password_hash' => null,
+        ])->saveQuietly();
+
+        return true;
+    }
+
+    // =========================================
+    // Stats
+    // =========================================
+
+    /**
+     * Statuses considered as a successful purchase for cached aggregates.
+     * Mirrors OrderObserver's conversion-trigger set (paid/confirmed/completed)
+     * plus partially_refunded (the customer still kept a portion of the order).
+     */
+    public const SUCCESS_ORDER_STATUSES = ['paid', 'confirmed', 'completed', 'partially_refunded'];
+
+    /**
+     * Update cached stats from the customer's actual orders.
+     */
+    public function updateStats(): void
+    {
+        $this->update([
+            'total_orders' => $this->orders()->whereIn('status', self::SUCCESS_ORDER_STATUSES)->count(),
+            'total_spent' => $this->orders()->whereIn('status', self::SUCCESS_ORDER_STATUSES)->sum('total'),
+        ]);
+    }
+
+    /**
+     * Record login
+     */
+    public function recordLogin(): void
+    {
+        $this->update(['last_login_at' => now()]);
+    }
+
+    // =========================================
+    // Helpers
+    // =========================================
+
+    public function getFullNameAttribute(): string
+    {
+        return trim("{$this->first_name} {$this->last_name}");
+    }
+
+    public function getFullAddressAttribute(): ?string
+    {
+        $parts = array_filter([
+            $this->address,
+            $this->city,
+            $this->state,
+            $this->postal_code,
+            $this->country,
+        ]);
+
+        return !empty($parts) ? implode(', ', $parts) : null;
+    }
+
+    /**
+     * Convert guest to registered customer
+     */
+    public function convertFromGuest(string $password): void
+    {
+        $this->update([
+            'password' => bcrypt($password),
+        ]);
+    }
+
+    // =========================================
+    // Email Verification
+    // =========================================
+
+    /**
+     * Generate email verification token
+     */
+    public function generateEmailVerificationToken(): string
+    {
+        $token = \Illuminate\Support\Str::random(64);
+
+        $this->update([
+            'email_verification_token' => hash('sha256', $token),
+            'email_verification_expires_at' => now()->addHours(24),
+        ]);
+
+        return $token;
+    }
+
+    /**
+     * Verify email with token
+     */
+    public function verifyEmailWithToken(string $token): bool
+    {
+        if (!$this->email_verification_token) {
+            return false;
+        }
+
+        if ($this->email_verification_expires_at && $this->email_verification_expires_at->isPast()) {
+            return false;
+        }
+
+        if (!hash_equals($this->email_verification_token, hash('sha256', $token))) {
+            return false;
+        }
+
+        $this->update([
+            'email_verified_at' => now(),
+            'email_verification_token' => null,
+            'email_verification_expires_at' => null,
+        ]);
+
+        return true;
+    }
+
+    /**
+     * Check if verification token is expired
+     */
+    public function isVerificationTokenExpired(): bool
+    {
+        return $this->email_verification_expires_at && $this->email_verification_expires_at->isPast();
+    }
+
+    /**
+     * Check if customer can resend verification email
+     * (rate limiting: at least 1 minute between requests)
+     */
+    public function canResendVerification(): bool
+    {
+        if ($this->isEmailVerified()) {
+            return false;
+        }
+
+        if (!$this->email_verification_expires_at) {
+            return true;
+        }
+
+        // Allow resend if token was created more than 1 minute ago
+        $tokenCreatedAt = $this->email_verification_expires_at->subHours(24);
+        return $tokenCreatedAt->diffInMinutes(now()) >= 1;
+    }
+}

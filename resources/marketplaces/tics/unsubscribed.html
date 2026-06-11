@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dezabonat — TICS.ro</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>tailwind.config={theme:{extend:{fontFamily:{sans:['Inter','system-ui','sans-serif']}}}}</script>
+    <style>
+        *{-webkit-font-smoothing:antialiased}body{font-family:'Inter',system-ui,sans-serif}
+        @keyframes fadeInUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}.anim{animation:fadeInUp .5s ease forwards;opacity:0}.ad1{animation-delay:.1s}.ad2{animation-delay:.2s}.ad3{animation-delay:.3s}
+        @keyframes wave{0%{transform:rotate(0deg)}15%{transform:rotate(14deg)}30%{transform:rotate(-8deg)}40%{transform:rotate(14deg)}50%{transform:rotate(-4deg)}60%{transform:rotate(10deg)}70%{transform:rotate(0deg)}100%{transform:rotate(0deg)}}.wave{animation:wave 2s ease 1;display:inline-block;transform-origin:70% 70%}
+        @keyframes confettiDrop{0%{transform:translateY(-20px) rotate(0deg);opacity:1}100%{transform:translateY(80px) rotate(360deg);opacity:0}}
+        .resubscribe-btn{transition:all .2s ease}.resubscribe-btn:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(17,24,39,.15)}
+        .undo-bar{transition:all .5s cubic-bezier(.4,0,.2,1)}.undo-bar.shrink{width:0%!important}
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen flex flex-col">
+    <!-- Header -->
+    <header class="bg-white border-b border-gray-200 flex-shrink-0">
+        <div class="max-w-lg mx-auto px-4"><div class="flex items-center justify-center h-16"><a href="/" class="flex items-center gap-2"><div class="w-8 h-8 bg-gray-900 rounded-lg flex items-center justify-center"><span class="text-white font-bold text-sm">T</span></div><span class="font-bold text-lg">TICS</span></a></div></div>
+    </header>
+
+    <main class="flex-1 flex items-center justify-center px-4 py-10">
+        <div class="w-full max-w-md text-center">
+
+            <!-- Undo toast -->
+            <div class="anim bg-gray-900 rounded-2xl px-5 py-4 flex items-center gap-3 mb-8 shadow-lg" id="undoToast">
+                <div class="flex-1 text-left">
+                    <p class="text-sm text-white font-medium">Te-ai dezabonat cu succes</p>
+                    <p class="text-xs text-gray-400 mt-0.5">Ai schimbat părerea?</p>
+                </div>
+                <button onclick="resubscribe()" class="px-4 py-2 bg-white text-gray-900 text-sm font-bold rounded-lg hover:bg-gray-100 transition-colors flex-shrink-0">Anulează</button>
+                <div class="absolute bottom-0 left-4 right-4 h-0.5 bg-gray-700 rounded overflow-hidden"><div id="undoBar" class="undo-bar h-full bg-indigo-400 rounded" style="width:100%"></div></div>
+            </div>
+
+            <!-- Main card -->
+            <div class="anim ad1 bg-white rounded-2xl border border-gray-200 shadow-sm p-8 lg:p-10 relative overflow-hidden">
+                <!-- Subtle confetti -->
+                <div class="absolute inset-0 pointer-events-none overflow-hidden" id="confetti"></div>
+
+                <div class="relative">
+                    <div class="text-5xl mb-5"><span class="wave">👋</span></div>
+                    <h1 class="text-2xl font-bold text-gray-900 mb-2">Ne va fi dor de tine!</h1>
+                    <p class="text-sm text-gray-500 mb-2">Adresa <strong class="text-gray-700">andrei@email.com</strong> a fost dezabonată de la newsletterul TICS.</p>
+                    <p class="text-sm text-gray-500 mb-8">Schimbarea va fi activă imediat. Este posibil să mai primești 1-2 emailuri deja programate.</p>
+
+                    <div class="bg-gray-50 rounded-xl p-4 mb-6 border border-gray-100">
+                        <p class="text-xs font-medium text-gray-900 mb-2">Ce nu se schimbă:</p>
+                        <div class="space-y-2 text-xs text-gray-600 text-left">
+                            <div class="flex items-center gap-2"><svg class="w-4 h-4 text-green-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>Confirmări de achiziție și bilete</div>
+                            <div class="flex items-center gap-2"><svg class="w-4 h-4 text-green-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>Facturi și documente fiscale</div>
+                            <div class="flex items-center gap-2"><svg class="w-4 h-4 text-green-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>Alerte de securitate cont</div>
+                            <div class="flex items-center gap-2"><svg class="w-4 h-4 text-green-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>Notificări despre bilete transferate</div>
+                        </div>
+                    </div>
+
+                    <button onclick="resubscribe()" class="resubscribe-btn w-full py-3 bg-gray-900 text-white text-sm font-semibold rounded-xl mb-3 flex items-center justify-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                        Re-abonează-mă
+                    </button>
+                    <a href="/" class="block text-sm text-gray-500 hover:text-gray-900 transition-colors">Înapoi la TICS.ro →</a>
+                </div>
+            </div>
+
+            <p class="anim ad2 text-xs text-gray-400 mt-6">Dacă crezi că primești emailuri nedorite, <a href="/contact.html" class="text-indigo-600 hover:underline">contactează-ne</a>.</p>
+        </div>
+    </main>
+
+    <script>
+    // Undo timer countdown
+    let undoTime=10;const undoBar=document.getElementById('undoBar');const undoToast=document.getElementById('undoToast');
+    const undoInterval=setInterval(()=>{undoTime--;undoBar.style.width=(undoTime/10*100)+'%';if(undoTime<=0){clearInterval(undoInterval);undoToast.style.opacity='0';undoToast.style.transform='translateY(-10px)';setTimeout(()=>undoToast.style.display='none',300)}},1000);
+
+    function resubscribe(){
+        clearInterval(undoInterval);
+        undoToast.innerHTML='<div class="flex items-center gap-2"><svg class="w-5 h-5 text-green-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg><span class="text-sm text-white font-medium">Te-ai re-abonat cu succes! 🎉</span></div>';
+        setTimeout(()=>{undoToast.style.opacity='0';setTimeout(()=>undoToast.style.display='none',300)},3000);
+    }
+    </script>
+</body>
+</html>

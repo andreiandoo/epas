@@ -1,0 +1,111 @@
+<?php
+return [
+    [
+        'id'        => 130048,
+        'name'      => 'Baruta',
+        'latitude'  => '10.43424000',
+        'longitude' => '-66.87558000',
+    ],
+    [
+        'id'        => 130058,
+        'name'      => 'Carrizal',
+        'latitude'  => '10.34985000',
+        'longitude' => '-66.98632000',
+    ],
+    [
+        'id'        => 130061,
+        'name'      => 'Caucaguita',
+        'latitude'  => '10.35782000',
+        'longitude' => '-66.80252000',
+    ],
+    [
+        'id'        => 130062,
+        'name'      => 'Caucagüito',
+        'latitude'  => '10.48666000',
+        'longitude' => '-66.73799000',
+    ],
+    [
+        'id'        => 130063,
+        'name'      => 'Chacao',
+        'latitude'  => '10.49581000',
+        'longitude' => '-66.85367000',
+    ],
+    [
+        'id'        => 130064,
+        'name'      => 'Charallave',
+        'latitude'  => '10.24247000',
+        'longitude' => '-66.85723000',
+    ],
+    [
+        'id'        => 130073,
+        'name'      => 'Cúa',
+        'latitude'  => '10.16245000',
+        'longitude' => '-66.88248000',
+    ],
+    [
+        'id'        => 130075,
+        'name'      => 'El Cafetal',
+        'latitude'  => '10.46541000',
+        'longitude' => '-66.82951000',
+    ],
+    [
+        'id'        => 130076,
+        'name'      => 'El Hatillo',
+        'latitude'  => '10.42411000',
+        'longitude' => '-66.82581000',
+    ],
+    [
+        'id'        => 130083,
+        'name'      => 'Guarenas',
+        'latitude'  => '10.47027000',
+        'longitude' => '-66.61934000',
+    ],
+    [
+        'id'        => 130084,
+        'name'      => 'Guatire',
+        'latitude'  => '10.47400000',
+        'longitude' => '-66.54241000',
+    ],
+    [
+        'id'        => 130089,
+        'name'      => 'La Dolorita',
+        'latitude'  => '10.48830000',
+        'longitude' => '-66.78608000',
+    ],
+    [
+        'id'        => 130097,
+        'name'      => 'Los Dos Caminos',
+        'latitude'  => '10.49389000',
+        'longitude' => '-66.82863000',
+    ],
+    [
+        'id'        => 130100,
+        'name'      => 'Los Teques',
+        'latitude'  => '10.34447000',
+        'longitude' => '-67.04325000',
+    ],
+    [
+        'id'        => 130126,
+        'name'      => 'Ocumare del Tuy',
+        'latitude'  => '10.11820000',
+        'longitude' => '-66.77513000',
+    ],
+    [
+        'id'        => 130129,
+        'name'      => 'Petare',
+        'latitude'  => '10.47679000',
+        'longitude' => '-66.80786000',
+    ],
+    [
+        'id'        => 130139,
+        'name'      => 'San Antonio de Los Altos',
+        'latitude'  => '10.38853000',
+        'longitude' => '-66.95179000',
+    ],
+    [
+        'id'        => 130155,
+        'name'      => 'Santa Teresa del Tuy',
+        'latitude'  => '10.23291000',
+        'longitude' => '-66.66474000',
+    ],
+];

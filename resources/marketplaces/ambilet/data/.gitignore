@@ -1,0 +1,6 @@
+# Runtime data — must NEVER be tracked. The webhook deploy script preserves
+# data/ on the server (see _webhook-deploy.php PRESERVE_FILES), so the
+# server's live share-links.json is authoritative. Tracking it in source
+# would risk overwriting every organizer's links on each deploy.
+share-links.json
+rate-limits/

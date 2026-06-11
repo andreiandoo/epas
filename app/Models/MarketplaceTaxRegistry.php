@@ -1,0 +1,125 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
+class MarketplaceTaxRegistry extends Model
+{
+    protected $table = 'marketplace_tax_registries';
+
+    protected $fillable = [
+        'marketplace_client_id',
+        'country',
+        'county',
+        'city',
+        'commune',
+        'name',
+        'subname',
+        'address',
+        'directions',
+        'phone',
+        'email',
+        'email2',
+        'website_url',
+        'cif',
+        'iban',
+        'siruta_code',
+        'coat_of_arms',
+        'tax_rate',
+        'is_active',
+    ];
+
+    protected $casts = [
+        'is_active' => 'boolean',
+    ];
+
+    // =========================================
+    // Relationships
+    // =========================================
+
+    public function marketplaceClient(): BelongsTo
+    {
+        return $this->belongsTo(MarketplaceClient::class);
+    }
+
+    // =========================================
+    // Scopes
+    // =========================================
+
+    public function scopeActive($query)
+    {
+        return $query->where('is_active', true);
+    }
+
+    public function scopeForMarketplace($query, $marketplaceClientId)
+    {
+        return $query->where('marketplace_client_id', $marketplaceClientId);
+    }
+
+    // =========================================
+    // Helpers
+    // =========================================
+
+    /**
+     * Get display name with subname
+     */
+    public function getFullNameAttribute(): string
+    {
+        if ($this->subname) {
+            return "{$this->name} - {$this->subname}";
+        }
+        return $this->name;
+    }
+
+    /**
+     * Get full location string
+     */
+    public function getLocationAttribute(): string
+    {
+        $parts = array_filter([
+            $this->commune,
+            $this->city,
+            $this->county,
+            $this->country,
+        ]);
+
+        return implode(', ', $parts);
+    }
+
+    /**
+     * Get all fields as array for template variables
+     */
+    public function toTemplateVariables(): array
+    {
+        // Build coat of arms as complete <img> tag with base64 (DomPDF compatible)
+        $coatOfArmsHtml = '';
+        if ($this->coat_of_arms && \Illuminate\Support\Facades\Storage::disk('public')->exists($this->coat_of_arms)) {
+            $content = \Illuminate\Support\Facades\Storage::disk('public')->get($this->coat_of_arms);
+            $mime = \Illuminate\Support\Facades\Storage::disk('public')->mimeType($this->coat_of_arms) ?: 'image/png';
+            $b64 = 'data:' . $mime . ';base64,' . base64_encode($content);
+            $coatOfArmsHtml = '<img src="' . $b64 . '" alt="Stema" style="max-height:80px;max-width:80px;display:block;" />';
+        }
+
+        return [
+            'tax_registry_country' => $this->country ?? '',
+            'tax_registry_county' => $this->county ?? '',
+            'tax_registry_city' => $this->city ?? '',
+            'tax_registry_commune' => $this->commune ?? '',
+            'tax_registry_name' => $this->name ?? '',
+            'tax_registry_subname' => $this->subname ?? '',
+            'tax_registry_address' => $this->address ?? '',
+            'tax_registry_directions' => $this->directions ?? '',
+            'tax_registry_phone' => $this->phone ?? '',
+            'tax_registry_email' => $this->email ?? '',
+            'tax_registry_email2' => $this->email2 ?? '',
+            'tax_registry_website_url' => $this->website_url ?? '',
+            'tax_registry_cif' => $this->cif ?? '',
+            'tax_registry_iban' => $this->iban ?? '',
+            'tax_registry_siruta_code' => $this->siruta_code ?? '',
+            'tax_registry_coat_of_arms' => $coatOfArmsHtml,
+            'tax_registry_tax_rate' => $this->tax_rate !== null ? rtrim(rtrim(number_format((float) $this->tax_rate, 2, '.', ''), '0'), '.') . '%' : '',
+        ];
+    }
+}

@@ -1,0 +1,17 @@
+<?php
+return [
+    'Dakar',
+    'Diourbel Region',
+    'Fatick',
+    'Kaffrine',
+    'Kaolack',
+    'Kédougou',
+    'Kolda',
+    'Louga',
+    'Matam',
+    'Saint-Louis',
+    'Sédhiou',
+    'Tambacounda Region',
+    'Thiès Region',
+    'Ziguinchor',
+];

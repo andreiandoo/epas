@@ -1,0 +1,111 @@
+<?php
+return [
+    [
+        'id'        => 48204,
+        'name'      => 'Albrighton',
+        'latitude'  => '52.63640000',
+        'longitude' => '-2.27966000',
+    ],
+    [
+        'id'        => 48236,
+        'name'      => 'Alveley',
+        'latitude'  => '52.45709000',
+        'longitude' => '-2.35434000',
+    ],
+    [
+        'id'        => 48512,
+        'name'      => 'Bilston',
+        'latitude'  => '52.56568000',
+        'longitude' => '-2.07367000',
+    ],
+    [
+        'id'        => 48678,
+        'name'      => 'Brewood',
+        'latitude'  => '52.67712000',
+        'longitude' => '-2.17414000',
+    ],
+    [
+        'id'        => 48685,
+        'name'      => 'Bridgnorth',
+        'latitude'  => '52.53661000',
+        'longitude' => '-2.42033000',
+    ],
+    [
+        'id'        => 49056,
+        'name'      => 'Codsall',
+        'latitude'  => '52.62989000',
+        'longitude' => '-2.20148000',
+    ],
+    [
+        'id'        => 49126,
+        'name'      => 'Coven',
+        'latitude'  => '52.65587000',
+        'longitude' => '-2.13530000',
+    ],
+    [
+        'id'        => 49487,
+        'name'      => 'Essington',
+        'latitude'  => '52.62910000',
+        'longitude' => '-2.05770000',
+    ],
+    [
+        'id'        => 49537,
+        'name'      => 'Featherstone',
+        'latitude'  => '52.64483000',
+        'longitude' => '-2.09315000',
+    ],
+    [
+        'id'        => 49937,
+        'name'      => 'Highley',
+        'latitude'  => '52.44866000',
+        'longitude' => '-2.38251000',
+    ],
+    [
+        'id'        => 50182,
+        'name'      => 'Kingswinford',
+        'latitude'  => '52.49755000',
+        'longitude' => '-2.16889000',
+    ],
+    [
+        'id'        => 50861,
+        'name'      => 'Pattingham',
+        'latitude'  => '52.58910000',
+        'longitude' => '-2.26538000',
+    ],
+    [
+        'id'        => 51157,
+        'name'      => 'Ryton',
+        'latitude'  => '52.61667000',
+        'longitude' => '-2.35000000',
+    ],
+    [
+        'id'        => 51782,
+        'name'      => 'Wednesfield',
+        'latitude'  => '52.59630000',
+        'longitude' => '-2.08508000',
+    ],
+    [
+        'id'        => 51862,
+        'name'      => 'Wheaton Aston',
+        'latitude'  => '52.71145000',
+        'longitude' => '-2.22064000',
+    ],
+    [
+        'id'        => 51906,
+        'name'      => 'Willenhall',
+        'latitude'  => '52.58514000',
+        'longitude' => '-2.05934000',
+    ],
+    [
+        'id'        => 51964,
+        'name'      => 'Wolverhampton',
+        'latitude'  => '52.58333000',
+        'longitude' => '-2.11667000',
+    ],
+    [
+        'id'        => 51965,
+        'name'      => 'Wombourn',
+        'latitude'  => '52.53333000',
+        'longitude' => '-2.18333000',
+    ],
+];

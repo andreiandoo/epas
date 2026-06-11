@@ -1,0 +1,39 @@
+<?php
+return [
+    [
+        'id'        => 65932,
+        'name'      => 'Baabda',
+        'latitude'  => '33.83389000',
+        'longitude' => '35.54417000',
+    ],
+    [
+        'id'        => 65937,
+        'name'      => 'Bhamdoun',
+        'latitude'  => '33.79500000',
+        'longitude' => '35.65111000',
+    ],
+    [
+        'id'        => 65938,
+        'name'      => 'Bhamdoûn el Mhatta',
+        'latitude'  => '33.80861000',
+        'longitude' => '35.65972000',
+    ],
+    [
+        'id'        => 65940,
+        'name'      => 'Caza de Baabda',
+        'latitude'  => '33.84592000',
+        'longitude' => '35.66791000',
+    ],
+    [
+        'id'        => 65947,
+        'name'      => 'Jbaïl',
+        'latitude'  => '34.12111000',
+        'longitude' => '35.64806000',
+    ],
+    [
+        'id'        => 65948,
+        'name'      => 'Jounieh',
+        'latitude'  => '33.98083000',
+        'longitude' => '35.61778000',
+    ],
+];

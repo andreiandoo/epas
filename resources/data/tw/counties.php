@@ -1,0 +1,23 @@
+<?php
+return [
+    'Changhua',
+    'Chiayi',
+    'Hsinchu',
+    'Hualien',
+    'Kaohsiung',
+    'Keelung',
+    'Kinmen',
+    'Lienchiang',
+    'Miaoli',
+    'Nantou',
+    'New Taipei',
+    'Penghu',
+    'Pingtung',
+    'Taichung',
+    'Tainan',
+    'Taipei',
+    'Taitung',
+    'Taoyuan',
+    'Yilan',
+    'Yunlin',
+];

@@ -1,0 +1,4 @@
+# Ignore all cached files
+*.json
+!.gitkeep
+!.gitignore

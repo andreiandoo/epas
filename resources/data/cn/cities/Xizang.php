@@ -1,0 +1,81 @@
+<?php
+return [
+    [
+        'id'        => 19354,
+        'name'      => 'Burang',
+        'latitude'  => '30.29559000',
+        'longitude' => '81.17511000',
+    ],
+    [
+        'id'        => 19488,
+        'name'      => 'Dêqên',
+        'latitude'  => '29.96178000',
+        'longitude' => '90.71875000',
+    ],
+    [
+        'id'        => 19705,
+        'name'      => 'Jiangzi',
+        'latitude'  => '28.92026000',
+        'longitude' => '89.59956000',
+    ],
+    [
+        'id'        => 19812,
+        'name'      => 'Lhasa',
+        'latitude'  => '29.65000000',
+        'longitude' => '91.10000000',
+    ],
+    [
+        'id'        => 19933,
+        'name'      => 'Nagqu',
+        'latitude'  => '31.47678000',
+        'longitude' => '92.05729000',
+    ],
+    [
+        'id'        => 19934,
+        'name'      => 'Nagqu Diqu',
+        'latitude'  => '32.66357000',
+        'longitude' => '88.93146000',
+    ],
+    [
+        'id'        => 19957,
+        'name'      => 'Ngari Diqu',
+        'latitude'  => '33.21836000',
+        'longitude' => '82.57507000',
+    ],
+    [
+        'id'        => 19966,
+        'name'      => 'Nyingchi Prefecture',
+        'latitude'  => '29.60092000',
+        'longitude' => '94.42406000',
+    ],
+    [
+        'id'        => 20003,
+        'name'      => 'Qamdo',
+        'latitude'  => '31.13040000',
+        'longitude' => '97.17982000',
+    ],
+    [
+        'id'        => 20004,
+        'name'      => 'Qamdo Shi',
+        'latitude'  => '31.58370000',
+        'longitude' => '97.22304000',
+    ],
+    [
+        'id'        => 20041,
+        'name'      => 'Rikaze',
+        'latitude'  => '29.25000000',
+        'longitude' => '88.88333000',
+    ],
+    [
+        'id'        => 20049,
+        'name'      => 'Saga',
+        'latitude'  => '29.32367000',
+        'longitude' => '85.22601000',
+    ],
+    [
+        'id'        => 20074,
+        'name'      => 'Shannan Diqu',
+        'latitude'  => '28.55630000',
+        'longitude' => '92.55684000',
+    ],
+];

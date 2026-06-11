@@ -1,0 +1,19 @@
+<?php
+return [
+    'Brändö',
+    'Eckerö',
+    'Finström',
+    'Föglö',
+    'Geta',
+    'Hammarland',
+    'Jomala',
+    'Kökar',
+    'Kumlinge',
+    'Lemland',
+    'Lumparland',
+    'Mariehamn',
+    'Saltvik',
+    'Sottunga',
+    'Sund',
+    'Vårdö',
+];

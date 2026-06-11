@@ -1,0 +1,111 @@
+<?php
+return [
+    [
+        'id'        => 48402,
+        'name'      => 'Barnsley',
+        'latitude'  => '53.53333000',
+        'longitude' => '-1.50000000',
+    ],
+    [
+        'id'        => 48519,
+        'name'      => 'Birdwell',
+        'latitude'  => '53.51398000',
+        'longitude' => '-1.47929000',
+    ],
+    [
+        'id'        => 48899,
+        'name'      => 'Cawthorne',
+        'latitude'  => '53.56687000',
+        'longitude' => '-1.57259000',
+    ],
+    [
+        'id'        => 49023,
+        'name'      => 'Clayton West',
+        'latitude'  => '53.59501000',
+        'longitude' => '-1.61107000',
+    ],
+    [
+        'id'        => 49195,
+        'name'      => 'Cudworth',
+        'latitude'  => '53.57131000',
+        'longitude' => '-1.41595000',
+    ],
+    [
+        'id'        => 49234,
+        'name'      => 'Darfield',
+        'latitude'  => '53.53390000',
+        'longitude' => '-1.37595000',
+    ],
+    [
+        'id'        => 49241,
+        'name'      => 'Darton',
+        'latitude'  => '53.58705000',
+        'longitude' => '-1.52676000',
+    ],
+    [
+        'id'        => 49299,
+        'name'      => 'Dodworth',
+        'latitude'  => '53.54306000',
+        'longitude' => '-1.52779000',
+    ],
+    [
+        'id'        => 49725,
+        'name'      => 'Great Houghton',
+        'latitude'  => '53.55352000',
+        'longitude' => '-1.34952000',
+    ],
+    [
+        'id'        => 49752,
+        'name'      => 'Grimethorpe',
+        'latitude'  => '53.57650000',
+        'longitude' => '-1.37688000',
+    ],
+    [
+        'id'        => 49899,
+        'name'      => 'Hemsworth',
+        'latitude'  => '53.61267000',
+        'longitude' => '-1.35424000',
+    ],
+    [
+        'id'        => 50016,
+        'name'      => 'Hoyland Nether',
+        'latitude'  => '53.50000000',
+        'longitude' => '-1.45000000',
+    ],
+    [
+        'id'        => 50788,
+        'name'      => 'Notton',
+        'latitude'  => '53.61267000',
+        'longitude' => '-1.47234000',
+    ],
+    [
+        'id'        => 50882,
+        'name'      => 'Penistone',
+        'latitude'  => '53.52572000',
+        'longitude' => '-1.63027000',
+    ],
+    [
+        'id'        => 51305,
+        'name'      => 'Silkstone',
+        'latitude'  => '53.54808000',
+        'longitude' => '-1.56381000',
+    ],
+    [
+        'id'        => 51456,
+        'name'      => 'Stocksbridge',
+        'latitude'  => '53.48249000',
+        'longitude' => '-1.59373000',
+    ],
+    [
+        'id'        => 51966,
+        'name'      => 'Wombwell',
+        'latitude'  => '53.52189000',
+        'longitude' => '-1.39698000',
+    ],
+    [
+        'id'        => 51981,
+        'name'      => 'Woolley',
+        'latitude'  => '53.61339000',
+        'longitude' => '-1.51457000',
+    ],
+];

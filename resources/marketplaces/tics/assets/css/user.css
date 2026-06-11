@@ -1,0 +1,152 @@
+/**
+ * TICS.ro - User Account Styles
+ * Consolidated CSS for all user pages (dashboard, tickets, etc.)
+ */
+
+/* Base typography */
+* { -webkit-font-smoothing: antialiased; }
+body { font-family: 'Inter', system-ui, sans-serif; }
+
+/* Animations */
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes scaleIn {
+    from { transform: scale(0.9); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+
+@keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.animate-fadeInUp { animation: fadeInUp 0.5s ease forwards; }
+.animate-scaleIn { animation: scaleIn 0.3s ease forwards; }
+.animate-float { animation: float 3s ease-in-out infinite; }
+.animate-pulse { animation: pulse 2s ease-in-out infinite; }
+.animate-spin { animation: spin 1s linear infinite; }
+
+/* Stat cards */
+.stat-card { transition: all 0.3s ease; }
+.stat-card:hover { transform: translateY(-4px); box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.1); }
+
+/* Event cards */
+.event-card { transition: all 0.3s ease; }
+.event-card:hover { transform: translateY(-4px); box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.15); }
+
+/* Ticket cards */
+.ticket-card { transition: all 0.3s ease; }
+.ticket-card:hover { transform: translateY(-4px); box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.15); }
+
+/* Quick actions */
+.quick-action { transition: all 0.2s ease; }
+.quick-action:hover { transform: scale(1.05); }
+
+/* Action buttons */
+.action-btn { transition: all 0.2s ease; }
+.action-btn:hover { transform: scale(1.05); }
+
+/* Countdown badges */
+.countdown-badge { background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); }
+.countdown-urgent { background: linear-gradient(135deg, #ef4444 0%, #f97316 100%); }
+
+/* Sidebar */
+.user-sidebar {
+    position: sticky;
+    top: 6rem; /* Account for header height + some spacing */
+    max-height: calc(100vh - 8rem);
+    overflow-y: auto;
+}
+
+.sidebar-link { transition: all 0.2s ease; }
+.sidebar-link:hover { background: #f9fafb; transform: translateX(4px); }
+.sidebar-link.active { background: #f3f4f6; border-left-color: #6366f1; }
+
+/* Tabs */
+.tab-btn { transition: all 0.2s ease; }
+.tab-btn.active { color: #111827; border-color: #111827; }
+
+/* Filters */
+.filter-btn { transition: all 0.2s ease; }
+.filter-btn:hover { background: #f3f4f6; }
+.filter-btn.active { background: #111827; color: white; }
+
+/* QR Code placeholder */
+.qr-code { background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%); }
+
+/* Modals */
+.modal { transition: all 0.3s ease; }
+.modal.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+.modal.show { opacity: 1; visibility: visible; pointer-events: auto; }
+
+/* Input fields */
+.input-field { transition: all 0.2s ease; }
+.input-field:focus { border-color: #6366f1; box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1); }
+
+/* User menu dropdown */
+.user-dropdown {
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(10px);
+    transition: all 0.2s ease;
+}
+.user-dropdown.show {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+/* Checkbox styling */
+.checkbox-btn { transition: all 0.2s ease; }
+.checkbox-btn:hover { background: #f9fafb; }
+.checkbox-btn.selected {
+    background: #eef2ff;
+    border-color: #6366f1;
+}
+
+/* Ticket selection */
+.ticket-select-item {
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+.ticket-select-item:hover { background: #f9fafb; }
+.ticket-select-item.selected {
+    background: #eef2ff;
+    border-color: #6366f1;
+}
+.ticket-select-item input[type="checkbox"] {
+    accent-color: #6366f1;
+}
+
+/* Calendar button */
+.calendar-dropdown {
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(10px);
+    transition: all 0.2s ease;
+}
+.calendar-dropdown.show {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+/* Past tickets styling */
+.ticket-card.past-ticket {
+    opacity: 0.7;
+}
+.ticket-card.past-ticket:hover {
+    opacity: 1;
+}

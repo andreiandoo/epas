@@ -1,0 +1,920 @@
+/**
+ * bilete.online - Authentication Manager
+ * Handles customer and organizer authentication state
+ */
+
+const BileteOnlineAuth = {
+    // Storage keys
+    KEYS: {
+        CUSTOMER_TOKEN: 'bileteonline_customer_token',
+        CUSTOMER_DATA: 'bileteonline_customer_data',
+        ORGANIZER_TOKEN: 'bileteonline_organizer_token',
+        ORGANIZER_DATA: 'bileteonline_organizer_data',
+        ARTIST_TOKEN: 'bileteonline_artist_token',
+        ARTIST_DATA: 'bileteonline_artist_data',
+        USER_TYPE: 'bileteonline_user_type',
+        REDIRECT_AFTER_LOGIN: 'bileteonline_redirect_after_login',
+        REFERRAL_CODE: 'bileteonline_referral_code',
+        REFERRAL_INFO: 'bileteonline_referral_info'
+    },
+
+    /**
+     * Get current auth token (customer, organizer, or artist)
+     */
+    getToken() {
+        const userType = this.getUserType();
+        if (userType === 'organizer') {
+            return localStorage.getItem(this.KEYS.ORGANIZER_TOKEN);
+        }
+        if (userType === 'artist') {
+            return localStorage.getItem(this.KEYS.ARTIST_TOKEN);
+        }
+        return localStorage.getItem(this.KEYS.CUSTOMER_TOKEN);
+    },
+
+    /**
+     * Get current user type
+     */
+    getUserType() {
+        return localStorage.getItem(this.KEYS.USER_TYPE) || null;
+    },
+
+    /**
+     * Check if user is logged in
+     */
+    isLoggedIn() {
+        return !!this.getToken();
+    },
+
+    /**
+     * Check if user is a customer
+     */
+    isCustomer() {
+        return this.getUserType() === 'customer' && this.isLoggedIn();
+    },
+
+    /**
+     * Check if user is an organizer
+     */
+    isOrganizer() {
+        return this.getUserType() === 'organizer' && this.isLoggedIn();
+    },
+
+    /**
+     * Check if user is an artist
+     */
+    isArtist() {
+        return this.getUserType() === 'artist' && this.isLoggedIn();
+    },
+
+    // ==================== CUSTOMER AUTH ====================
+
+    /**
+     * Login customer
+     */
+    async loginCustomer(email, password) {
+        try {
+            const response = await BileteOnlineAPI.customer.login(email, password);
+
+            // 2FA challenge — backend returned a short-lived `challenge` token
+            // instead of a real session token. Caller (login page) must show a
+            // code input and call `finishCustomer2faLogin(challenge, code)`.
+            if (response.success && response.data && response.data.requires_2fa) {
+                return {
+                    success: true,
+                    requires2fa: true,
+                    challenge: response.data.challenge,
+                };
+            }
+
+            if (response.success && response.data.token) {
+                this.setCustomerSession(response.data.token, response.data.customer);
+                return { success: true, customer: response.data.customer };
+            }
+
+            return { success: false, message: response.message || 'Login failed' };
+        } catch (error) {
+            return { success: false, message: error.message, errors: error.errors };
+        }
+    },
+
+    /**
+     * Step 2 of customer login when 2FA is active. Exchanges the challenge +
+     * a TOTP/recovery code for the real Sanctum session token.
+     */
+    async finishCustomer2faLogin(challenge, code) {
+        try {
+            const response = await BileteOnlineAPI.post('/customer/2fa/login', { challenge, code });
+            if (response.success && response.data.token) {
+                this.setCustomerSession(response.data.token, response.data.customer);
+                return { success: true, customer: response.data.customer };
+            }
+            return { success: false, message: response.message || 'Codul nu este valid' };
+        } catch (error) {
+            return { success: false, message: error.message, errors: error.errors };
+        }
+    },
+
+    /**
+     * Register customer
+     */
+    async registerCustomer(data) {
+        try {
+            // Include referral code if present
+            const referralCode = this.getReferralCode();
+            if (referralCode && !data.referral_code) {
+                data.referral_code = referralCode;
+            }
+
+            const response = await BileteOnlineAPI.customer.register(data);
+
+            if (response.success) {
+                // Auto-login if token is returned
+                if (response.data.token) {
+                    this.setCustomerSession(response.data.token, response.data.customer);
+                }
+
+                // Clear stored referral code after successful registration
+                this.clearReferralCode();
+
+                // Show referral message if user was referred
+                if (response.data.referral && response.data.referral.message) {
+                    setTimeout(() => {
+                        if (typeof BileteOnlineNotifications !== 'undefined') {
+                            BileteOnlineNotifications.success(response.data.referral.message, 6000);
+                        }
+                    }, 500);
+                }
+
+                return {
+                    success: true,
+                    customer: response.data.customer,
+                    requiresVerification: !response.data.token,
+                    referral: response.data.referral
+                };
+            }
+
+            return { success: false, message: response.message || 'Registration failed' };
+        } catch (error) {
+            return { success: false, message: error.message, errors: error.errors };
+        }
+    },
+
+    /**
+     * Set customer session
+     */
+    setCustomerSession(token, customerData) {
+        localStorage.setItem(this.KEYS.CUSTOMER_TOKEN, token);
+        localStorage.setItem(this.KEYS.CUSTOMER_DATA, JSON.stringify(customerData));
+        localStorage.setItem(this.KEYS.USER_TYPE, 'customer');
+
+        // Clear organizer session if exists
+        localStorage.removeItem(this.KEYS.ORGANIZER_TOKEN);
+        localStorage.removeItem(this.KEYS.ORGANIZER_DATA);
+
+        // Dispatch event
+        window.dispatchEvent(new CustomEvent('bileteonline:auth:login', {
+            detail: { type: 'customer', user: customerData }
+        }));
+    },
+
+    /**
+     * Get customer data
+     */
+    getCustomerData() {
+        const data = localStorage.getItem(this.KEYS.CUSTOMER_DATA);
+        return data ? JSON.parse(data) : null;
+    },
+
+    /**
+     * Update customer data
+     */
+    updateCustomerData(data) {
+        const current = this.getCustomerData() || {};
+        const updated = { ...current, ...data };
+        localStorage.setItem(this.KEYS.CUSTOMER_DATA, JSON.stringify(updated));
+
+        window.dispatchEvent(new CustomEvent('bileteonline:auth:update', {
+            detail: { type: 'customer', user: updated }
+        }));
+    },
+
+    /**
+     * Logout customer
+     */
+    async logoutCustomer() {
+        try {
+            await BileteOnlineAPI.customer.logout();
+        } catch (e) {
+            // Ignore logout API errors
+        }
+
+        this.clearCustomerSession();
+        window.location.href = '/';
+    },
+
+    /**
+     * Clear customer session
+     */
+    clearCustomerSession() {
+        localStorage.removeItem(this.KEYS.CUSTOMER_TOKEN);
+        localStorage.removeItem(this.KEYS.CUSTOMER_DATA);
+        if (this.getUserType() === 'customer') {
+            localStorage.removeItem(this.KEYS.USER_TYPE);
+        }
+
+        window.dispatchEvent(new CustomEvent('bileteonline:auth:logout', {
+            detail: { type: 'customer' }
+        }));
+    },
+
+    // ==================== ORGANIZER AUTH ====================
+
+    /**
+     * Login organizer
+     */
+    async loginOrganizer(email, password) {
+        try {
+            const response = await BileteOnlineAPI.organizer.login(email, password);
+
+            if (response.success && response.data.token) {
+                this.setOrganizerSession(response.data.token, response.data.organizer);
+                return { success: true, organizer: response.data.organizer };
+            }
+
+            return { success: false, message: response.message || 'Login failed' };
+        } catch (error) {
+            return { success: false, message: error.message, errors: error.errors };
+        }
+    },
+
+    /**
+     * Register organizer
+     */
+    async registerOrganizer(data) {
+        try {
+            const response = await BileteOnlineAPI.organizer.register(data);
+
+            if (response.success) {
+                // Auto-login if token is returned (depends on verification requirements)
+                if (response.data.token) {
+                    this.setOrganizerSession(response.data.token, response.data.organizer);
+                }
+                return { success: true, organizer: response.data.organizer, requiresVerification: !response.data.token };
+            }
+
+            return { success: false, message: response.message || 'Registration failed' };
+        } catch (error) {
+            return { success: false, message: error.message, errors: error.errors };
+        }
+    },
+
+    /**
+     * Set organizer session
+     */
+    setOrganizerSession(token, organizerData) {
+        localStorage.setItem(this.KEYS.ORGANIZER_TOKEN, token);
+        localStorage.setItem(this.KEYS.ORGANIZER_DATA, JSON.stringify(organizerData));
+        localStorage.setItem(this.KEYS.USER_TYPE, 'organizer');
+
+        // Clear customer session if exists
+        localStorage.removeItem(this.KEYS.CUSTOMER_TOKEN);
+        localStorage.removeItem(this.KEYS.CUSTOMER_DATA);
+
+        // Dispatch event
+        window.dispatchEvent(new CustomEvent('bileteonline:auth:login', {
+            detail: { type: 'organizer', user: organizerData }
+        }));
+    },
+
+    /**
+     * Get organizer data
+     */
+    getOrganizerData() {
+        const data = localStorage.getItem(this.KEYS.ORGANIZER_DATA);
+        return data ? JSON.parse(data) : null;
+    },
+
+    /**
+     * Update organizer data
+     */
+    updateOrganizerData(data) {
+        const current = this.getOrganizerData() || {};
+        const updated = { ...current, ...data };
+        localStorage.setItem(this.KEYS.ORGANIZER_DATA, JSON.stringify(updated));
+
+        window.dispatchEvent(new CustomEvent('bileteonline:auth:update', {
+            detail: { type: 'organizer', user: updated }
+        }));
+    },
+
+    /**
+     * Logout organizer
+     */
+    async logoutOrganizer() {
+        try {
+            await BileteOnlineAPI.organizer.logout();
+        } catch (e) {
+            // Ignore logout API errors
+        }
+
+        this.clearOrganizerSession();
+        window.location.href = '/';
+    },
+
+    /**
+     * Clear organizer session
+     */
+    clearOrganizerSession() {
+        localStorage.removeItem(this.KEYS.ORGANIZER_TOKEN);
+        localStorage.removeItem(this.KEYS.ORGANIZER_DATA);
+        if (this.getUserType() === 'organizer') {
+            localStorage.removeItem(this.KEYS.USER_TYPE);
+        }
+
+        window.dispatchEvent(new CustomEvent('bileteonline:auth:logout', {
+            detail: { type: 'organizer' }
+        }));
+    },
+
+    // ==================== ARTIST AUTH ====================
+
+    /**
+     * Login an artist account. The Laravel controller returns structured 403
+     * errors with a `code` field â€” pages call this and handle the codes:
+     *   email_not_verified -> redirect to /artist/verifica-email?email=...
+     *   pending_approval   -> redirect to /artist/in-asteptare
+     *   rejected           -> show inline rejection reason
+     *   suspended          -> show inline suspended notice
+     */
+    async loginArtist(email, password) {
+        try {
+            const response = await BileteOnlineAPI.artist.login(email, password);
+
+            if (response.success && response.data.token) {
+                this.setArtistSession(response.data.token, response.data.account);
+                return { success: true, account: response.data.account };
+            }
+
+            return { success: false, message: response.message || 'Login failed' };
+        } catch (error) {
+            // Surface the structured error code so the page can branch.
+            const code = error.data?.errors?.code || null;
+            const reason = error.data?.errors?.reason || null;
+            return {
+                success: false,
+                message: error.message,
+                errors: error.errors,
+                code,
+                reason
+            };
+        }
+    },
+
+    /**
+     * Register a new artist account. The Laravel controller starts the
+     * account in `pending` status and emails a verification link, so this
+     * does NOT auto-login. Returns `requiresVerification: true` to signal
+     * the page should redirect to the pending screen.
+     */
+    async registerArtist(data) {
+        try {
+            const response = await BileteOnlineAPI.artist.register(data);
+
+            if (response.success) {
+                return {
+                    success: true,
+                    account: response.data.account,
+                    requiresVerification: !!response.data.requires_verification,
+                    requiresApproval: !!response.data.requires_approval
+                };
+            }
+
+            return { success: false, message: response.message || 'Registration failed' };
+        } catch (error) {
+            return { success: false, message: error.message, errors: error.errors };
+        }
+    },
+
+    /**
+     * Persist an artist session. Clears any prior customer/organizer session
+     * so the three account types remain mutually exclusive on this device.
+     */
+    setArtistSession(token, accountData) {
+        localStorage.setItem(this.KEYS.ARTIST_TOKEN, token);
+        localStorage.setItem(this.KEYS.ARTIST_DATA, JSON.stringify(accountData));
+        localStorage.setItem(this.KEYS.USER_TYPE, 'artist');
+
+        localStorage.removeItem(this.KEYS.CUSTOMER_TOKEN);
+        localStorage.removeItem(this.KEYS.CUSTOMER_DATA);
+        localStorage.removeItem(this.KEYS.ORGANIZER_TOKEN);
+        localStorage.removeItem(this.KEYS.ORGANIZER_DATA);
+
+        window.dispatchEvent(new CustomEvent('bileteonline:auth:login', {
+            detail: { type: 'artist', user: accountData }
+        }));
+    },
+
+    getArtistData() {
+        const data = localStorage.getItem(this.KEYS.ARTIST_DATA);
+        return data ? JSON.parse(data) : null;
+    },
+
+    updateArtistData(data) {
+        const current = this.getArtistData() || {};
+        const updated = { ...current, ...data };
+        localStorage.setItem(this.KEYS.ARTIST_DATA, JSON.stringify(updated));
+
+        window.dispatchEvent(new CustomEvent('bileteonline:auth:update', {
+            detail: { type: 'artist', user: updated }
+        }));
+    },
+
+    async logoutArtist() {
+        try {
+            await BileteOnlineAPI.artist.logout();
+        } catch (e) {
+            // Ignore logout API errors â€” local session is cleared either way.
+        }
+
+        this.clearArtistSession();
+        window.location.href = '/';
+    },
+
+    clearArtistSession() {
+        localStorage.removeItem(this.KEYS.ARTIST_TOKEN);
+        localStorage.removeItem(this.KEYS.ARTIST_DATA);
+        if (this.getUserType() === 'artist') {
+            localStorage.removeItem(this.KEYS.USER_TYPE);
+        }
+
+        window.dispatchEvent(new CustomEvent('bileteonline:auth:logout', {
+            detail: { type: 'artist' }
+        }));
+    },
+
+    /**
+     * Require artist authentication. Redirects to /artist/login if the visitor
+     * is not currently logged in as an artist.
+     */
+    requireArtistAuth(redirectUrl = null) {
+        if (!this.isArtist()) {
+            const currentUrl = redirectUrl || window.location.href;
+            this.setRedirectAfterLogin(currentUrl);
+            window.location.href = '/artist/login';
+            return false;
+        }
+        return true;
+    },
+
+    // ==================== COMMON ====================
+
+    /**
+     * Generic login method (defaults to customer)
+     * Alias for loginCustomer for convenience
+     */
+    async login(email, password) {
+        return this.loginCustomer(email, password);
+    },
+
+    /**
+     * Generic register method (defaults to customer)
+     * Alias for registerCustomer for convenience
+     */
+    async register(data) {
+        return this.registerCustomer(data);
+    },
+
+    /**
+     * Check if authenticated (customer or organizer)
+     */
+    isAuthenticated() {
+        return this.isLoggedIn();
+    },
+
+    /**
+     * Get user data (alias for getCurrentUser)
+     */
+    getUser() {
+        return this.getCurrentUser();
+    },
+
+    /**
+     * Get current user data (customer, organizer, or artist)
+     */
+    getCurrentUser() {
+        const userType = this.getUserType();
+        if (userType === 'customer') {
+            return this.getCustomerData();
+        }
+        if (userType === 'organizer') {
+            return this.getOrganizerData();
+        }
+        if (userType === 'artist') {
+            return this.getArtistData();
+        }
+        return null;
+    },
+
+    /**
+     * Full logout (clear all sessions)
+     */
+    logout() {
+        const userType = this.getUserType();
+        if (userType === 'customer') {
+            return this.logoutCustomer();
+        }
+        if (userType === 'organizer') {
+            return this.logoutOrganizer();
+        }
+        if (userType === 'artist') {
+            return this.logoutArtist();
+        }
+
+        // Clear all just in case
+        this.clearCustomerSession();
+        this.clearOrganizerSession();
+        this.clearArtistSession();
+    },
+
+    /**
+     * Set redirect URL after login
+     */
+    setRedirectAfterLogin(url) {
+        sessionStorage.setItem(this.KEYS.REDIRECT_AFTER_LOGIN, url);
+    },
+
+    /**
+     * Get and clear redirect URL after login
+     */
+    getRedirectAfterLogin() {
+        const url = sessionStorage.getItem(this.KEYS.REDIRECT_AFTER_LOGIN);
+        sessionStorage.removeItem(this.KEYS.REDIRECT_AFTER_LOGIN);
+        return url;
+    },
+
+    /**
+     * Require customer authentication
+     * Redirects to login if not authenticated
+     */
+    requireCustomerAuth(redirectUrl = null) {
+        if (!this.isCustomer()) {
+            const currentUrl = redirectUrl || window.location.href;
+            this.setRedirectAfterLogin(currentUrl);
+            window.location.href = '/login';
+            return false;
+        }
+        return true;
+    },
+
+    /**
+     * Require organizer authentication
+     * Redirects to organizer login if not authenticated
+     */
+    requireOrganizerAuth(redirectUrl = null) {
+        // Check for admin impersonation token in URL before auth check
+        this._handleAdminToken();
+
+        if (!this.isOrganizer()) {
+            const currentUrl = redirectUrl || window.location.href;
+            this.setRedirectAfterLogin(currentUrl);
+            window.location.href = '/organizator/login';
+            return false;
+        }
+        return true;
+    },
+
+    /**
+     * Handle admin impersonation token from URL (idempotent)
+     */
+    _handleAdminToken() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const adminToken = urlParams.get('_admin_token');
+        if (!adminToken) return;
+
+        localStorage.setItem(this.KEYS.ORGANIZER_TOKEN, adminToken);
+        localStorage.setItem(this.KEYS.USER_TYPE, 'organizer');
+        localStorage.removeItem(this.KEYS.CUSTOMER_TOKEN);
+        localStorage.removeItem(this.KEYS.CUSTOMER_DATA);
+
+        // Clean token from URL
+        urlParams.delete('_admin_token');
+        const cleanUrl = window.location.pathname + (urlParams.toString() ? '?' + urlParams.toString() : '') + window.location.hash;
+        history.replaceState(null, '', cleanUrl);
+
+        // Fetch organizer data in background (once API is ready)
+        setTimeout(() => {
+            if (typeof BileteOnlineAPI !== 'undefined') {
+                BileteOnlineAPI.get('/organizer/me').then(response => {
+                    if (response.success && response.data) {
+                        const orgData = response.data.organizer || response.data;
+                        localStorage.setItem(this.KEYS.ORGANIZER_DATA, JSON.stringify(orgData));
+                        window.dispatchEvent(new CustomEvent('bileteonline:auth:login', {
+                            detail: { type: 'organizer', user: orgData }
+                        }));
+                    }
+                }).catch(() => {});
+            }
+        }, 100);
+    },
+
+    /**
+     * Refresh user data from server
+     */
+    async refreshCurrentUser() {
+        try {
+            const userType = this.getUserType();
+            if (userType === 'customer') {
+                const response = await BileteOnlineAPI.customer.getProfile();
+                if (response.success) {
+                    this.updateCustomerData(response.data);
+                    return response.data;
+                }
+            } else if (userType === 'organizer') {
+                const response = await BileteOnlineAPI.organizer.getProfile();
+                if (response.success) {
+                    this.updateOrganizerData(response.data);
+                    return response.data;
+                }
+            }
+        } catch (error) {
+            // Token might be expired, clear session
+            if (error.isAuthError && error.isAuthError()) {
+                this.logout();
+            }
+            throw error;
+        }
+        return null;
+    },
+
+    // ==================== REFERRAL HANDLING ====================
+
+    /**
+     * Get stored referral code
+     */
+    getReferralCode() {
+        return localStorage.getItem(this.KEYS.REFERRAL_CODE);
+    },
+
+    /**
+     * Store referral code
+     */
+    setReferralCode(code) {
+        localStorage.setItem(this.KEYS.REFERRAL_CODE, code);
+    },
+
+    /**
+     * Get stored referral info
+     */
+    getReferralInfo() {
+        const info = localStorage.getItem(this.KEYS.REFERRAL_INFO);
+        return info ? JSON.parse(info) : null;
+    },
+
+    /**
+     * Store referral info
+     */
+    setReferralInfo(info) {
+        localStorage.setItem(this.KEYS.REFERRAL_INFO, JSON.stringify(info));
+    },
+
+    /**
+     * Clear referral data
+     */
+    clearReferralCode() {
+        localStorage.removeItem(this.KEYS.REFERRAL_CODE);
+        localStorage.removeItem(this.KEYS.REFERRAL_INFO);
+    },
+
+    /**
+     * Check for referral code in URL and validate it
+     */
+    async checkReferralCode() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const refCode = urlParams.get('ref');
+
+        if (!refCode) return;
+
+        // Don't process if user is already logged in
+        if (this.isLoggedIn()) return;
+
+        // Don't process if we already have this code stored
+        const storedCode = this.getReferralCode();
+        if (storedCode === refCode) {
+            // Show stored notification if available
+            this.showReferralBanner();
+            return;
+        }
+
+        try {
+            const response = await BileteOnlineAPI.customer.validateReferralCode(refCode);
+            if (response.success && response.data.valid) {
+                // Store the code and info
+                this.setReferralCode(refCode);
+                this.setReferralInfo(response.data);
+
+                // Show notification banner
+                this.showReferralBanner(response.data);
+
+                // Clean URL without page reload
+                const url = new URL(window.location);
+                url.searchParams.delete('ref');
+                window.history.replaceState({}, '', url);
+            }
+        } catch (error) {
+            console.error('Error validating referral code:', error);
+        }
+    },
+
+    /**
+     * Show referral notification banner
+     */
+    showReferralBanner(info = null) {
+        const referralInfo = info || this.getReferralInfo();
+        if (!referralInfo) return;
+
+        // Don't show if already logged in
+        if (this.isLoggedIn()) return;
+
+        // Create banner if it doesn't exist
+        let banner = document.getElementById('referral-banner');
+        if (banner) return; // Already showing
+
+        banner = document.createElement('div');
+        banner.id = 'referral-banner';
+        banner.className = 'text-sm py-2.5 transition-all duration-200 ease-in-out text-white bg-gradient-to-r from-purple-600 to-pink-600';
+
+        const isRegisterPage = window.location.pathname.includes('inregistrare') || window.location.pathname.includes('register');
+        const referrerName = referralInfo.referrer_name || 'un prieten';
+        const reward = referralInfo.referred_reward || 50;
+        const bannerText = isRegisterPage
+            ? `Ai fost invitat de ${referrerName}! FinalizeazÄƒ Ã®nregistrarea È™i primeÈ™ti ${reward} puncte bonus.`
+            : (referralInfo.message || `Ai fost invitat de ${referrerName}! PrimeÈ™ti ${reward} puncte bonus la Ã®nregistrare.`);
+        const ctaButton = isRegisterPage ? '' : `
+                <a href="/inregistrare" class="bg-white text-purple-600 px-4 py-1 rounded-full font-semibold hover:bg-gray-100 transition-colors text-sm">
+                    ÃŽnregistreazÄƒ-te acum
+                </a>`;
+
+        banner.innerHTML = `
+            <div class="flex items-center justify-center gap-3 px-4 mx-auto max-w-7xl flex-wrap">
+                <span class="text-lg">ðŸŽ‰</span>
+                <span class="font-medium">${bannerText}</span>
+                ${ctaButton}
+                <button onclick="this.closest('#referral-banner').remove()" aria-label="ÃŽnchide" class="ml-2 text-white/80 hover:text-white">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+        `;
+
+        // Insert inside the header, before the top bar (same position as cart timer)
+        const header = document.getElementById('header');
+        if (header) {
+            header.insertBefore(banner, header.firstChild);
+        } else {
+            document.body.insertBefore(banner, document.body.firstChild);
+        }
+    },
+
+    /**
+     * Initialize auth state (call on page load)
+     */
+    init() {
+        // Handle admin impersonation token (also handled in requireOrganizerAuth and IIFE)
+        this._handleAdminToken();
+
+        // Check if token is still valid on page load
+        if (this.isLoggedIn()) {
+            // Self-heal: if we have a token but no cached profile (e.g. fresh admin
+            // impersonation where head.php already cleaned the URL before this ran),
+            // fetch the profile so the page renders with the real user instead of
+            // demo / stale data.
+            const userType = this.getUserType();
+            if (userType === 'customer' && !this.getCustomerData()) {
+                if (typeof BileteOnlineAPI !== 'undefined' && BileteOnlineAPI.customer && BileteOnlineAPI.customer.getProfile) {
+                    BileteOnlineAPI.customer.getProfile().then(response => {
+                        if (response && response.success && response.data) {
+                            const customerData = response.data.customer || response.data;
+                            this.setCustomerSession(this.getToken(), customerData);
+                            window.dispatchEvent(new CustomEvent('bileteonline:auth:login', {
+                                detail: { type: 'customer', user: customerData }
+                            }));
+                            window.dispatchEvent(new CustomEvent('bileteonline:customer:loaded', { detail: customerData }));
+                        }
+                    }).catch(() => {});
+                }
+            } else if (userType === 'organizer' && !this.getOrganizerData()) {
+                if (typeof BileteOnlineAPI !== 'undefined') {
+                    BileteOnlineAPI.get('/organizer/me').then(response => {
+                        if (response && response.success && response.data) {
+                            const orgData = response.data.organizer || response.data;
+                            localStorage.setItem(this.KEYS.ORGANIZER_DATA, JSON.stringify(orgData));
+                            window.dispatchEvent(new CustomEvent('bileteonline:auth:login', {
+                                detail: { type: 'organizer', user: orgData }
+                            }));
+                        }
+                    }).catch(() => {});
+                }
+            }
+        } else {
+            // Check for referral code in URL
+            this.checkReferralCode();
+
+            // Show existing referral banner if code is stored
+            if (this.getReferralCode()) {
+                this.showReferralBanner();
+            }
+        }
+
+        // Dispatch initial state
+        window.dispatchEvent(new CustomEvent('bileteonline:auth:init', {
+            detail: {
+                isLoggedIn: this.isLoggedIn(),
+                userType: this.getUserType(),
+                user: this.getCurrentUser()
+            }
+        }));
+    }
+};
+
+// Handle admin impersonation token IMMEDIATELY (before DOMContentLoaded)
+// so organizer/customer pages don't redirect to login before the token is stored
+(function () {
+    const urlParams = new URLSearchParams(window.location.search);
+    const adminToken = urlParams.get('_admin_token');
+    const adminCustomerToken = urlParams.get('_admin_customer_token');
+
+    if (adminCustomerToken) {
+        localStorage.setItem('bileteonline_customer_token', adminCustomerToken);
+        localStorage.setItem('bileteonline_user_type', 'customer');
+        localStorage.removeItem('bileteonline_organizer_token');
+        localStorage.removeItem('bileteonline_organizer_data');
+        // Stale customer_data from a previous session would cause the page to render the
+        // OLD customer's profile while the impersonated token loads â€” wipe it so /customer/me
+        // is the only source of truth for the impersonated session.
+        localStorage.removeItem('bileteonline_customer_data');
+
+        urlParams.delete('_admin_customer_token');
+        const cleanUrl = window.location.pathname + (urlParams.toString() ? '?' + urlParams.toString() : '') + window.location.hash;
+        history.replaceState(null, '', cleanUrl);
+
+        // Fetch customer profile so the page can render with real data
+        // (mirrors the organizer impersonation flow above).
+        document.addEventListener('DOMContentLoaded', () => {
+            if (typeof BileteOnlineAPI !== 'undefined') {
+                BileteOnlineAPI.get('/customer/me').then(response => {
+                    if (response && response.success && response.data) {
+                        const customerData = response.data.customer || response.data;
+                        localStorage.setItem('bileteonline_customer_data', JSON.stringify(customerData));
+                        window.dispatchEvent(new CustomEvent('bileteonline:auth:login', {
+                            detail: { type: 'customer', user: customerData }
+                        }));
+                        // Re-render any page that listens for customer data â€” most user pages
+                        // gate their fetch on bileteonline:auth:login or DOMContentLoaded with token.
+                        window.dispatchEvent(new CustomEvent('bileteonline:customer:loaded', { detail: customerData }));
+                    }
+                }).catch(() => {});
+            }
+        });
+        return;
+    }
+
+    if (!adminToken) return;
+
+    localStorage.setItem('bileteonline_organizer_token', adminToken);
+    localStorage.setItem('bileteonline_user_type', 'organizer');
+    localStorage.removeItem('bileteonline_customer_token');
+    localStorage.removeItem('bileteonline_customer_data');
+
+    // Clean token from URL
+    urlParams.delete('_admin_token');
+    const cleanUrl = window.location.pathname + (urlParams.toString() ? '?' + urlParams.toString() : '') + window.location.hash;
+    history.replaceState(null, '', cleanUrl);
+
+    // Fetch organizer data after API is ready
+    document.addEventListener('DOMContentLoaded', () => {
+        if (typeof BileteOnlineAPI !== 'undefined') {
+            BileteOnlineAPI.get('/organizer/me').then(response => {
+                if (response.success && response.data) {
+                    const orgData = response.data.organizer || response.data;
+                    localStorage.setItem('bileteonline_organizer_data', JSON.stringify(orgData));
+                    window.dispatchEvent(new CustomEvent('bileteonline:auth:login', {
+                        detail: { type: 'organizer', user: orgData }
+                    }));
+                }
+            }).catch(() => {});
+        }
+    });
+})();
+
+// Expose globally on window. A top-level `const` is a lexical global, NOT a
+// property of `window`, so any consumer that guards on `window.BileteOnlineAuth`
+// (header, /cont sidebar, login redirect, avatar initials, logout buttons)
+// would otherwise see `undefined` and silently treat the user as logged out.
+window.BileteOnlineAuth = BileteOnlineAuth;
+
+// Initialize on DOM ready
+document.addEventListener('DOMContentLoaded', () => {
+    BileteOnlineAuth.init();
+});

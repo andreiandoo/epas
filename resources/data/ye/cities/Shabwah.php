@@ -1,0 +1,123 @@
+<?php
+return [
+    [
+        'id'        => 130674,
+        'name'      => 'Ain',
+        'latitude'  => '14.95030000',
+        'longitude' => '45.60040000',
+    ],
+    [
+        'id'        => 130760,
+        'name'      => 'Al ‘Āqir',
+        'latitude'  => '14.56816000',
+        'longitude' => '45.91156000',
+    ],
+    [
+        'id'        => 130751,
+        'name'      => 'Al Talh',
+        'latitude'  => '15.08260000',
+        'longitude' => '47.35140000',
+    ],
+    [
+        'id'        => 130663,
+        'name'      => 'AL-khashā upper',
+        'latitude'  => '14.34044000',
+        'longitude' => '46.71365000',
+    ],
+    [
+        'id'        => 130766,
+        'name'      => 'Ar Rawdah',
+        'latitude'  => '14.49560000',
+        'longitude' => '47.27460000',
+    ],
+    [
+        'id'        => 130771,
+        'name'      => 'Arma',
+        'latitude'  => '15.41270000',
+        'longitude' => '47.23450000',
+    ],
+    [
+        'id'        => 130775,
+        'name'      => 'As Said',
+        'latitude'  => '14.27660000',
+        'longitude' => '46.86930000',
+    ],
+    [
+        'id'        => 130800,
+        'name'      => 'Ataq',
+        'latitude'  => '14.53767000',
+        'longitude' => '46.83187000',
+    ],
+    [
+        'id'        => 130822,
+        'name'      => 'Bayhan',
+        'latitude'  => '14.76190000',
+        'longitude' => '45.74820000',
+    ],
+    [
+        'id'        => 130835,
+        'name'      => 'Dhar',
+        'latitude'  => '15.50360000',
+        'longitude' => '47.60580000',
+    ],
+    [
+        'id'        => 130845,
+        'name'      => 'Habban',
+        'latitude'  => '14.28780000',
+        'longitude' => '47.13610000',
+    ],
+    [
+        'id'        => 130858,
+        'name'      => 'Hatib',
+        'latitude'  => '14.18020000',
+        'longitude' => '46.44390000',
+    ],
+    [
+        'id'        => 130879,
+        'name'      => 'Jardan',
+        'latitude'  => '15.19000000',
+        'longitude' => '46.73380000',
+    ],
+    [
+        'id'        => 130891,
+        'name'      => 'Khimār',
+        'latitude'  => '14.31980000',
+        'longitude' => '46.73922000',
+    ],
+    [
+        'id'        => 130918,
+        'name'      => 'Mayfa\'a',
+        'latitude'  => '14.39780000',
+        'longitude' => '47.74040000',
+    ],
+    [
+        'id'        => 130922,
+        'name'      => 'Merkhah Al Ulya',
+        'latitude'  => '14.48470000',
+        'longitude' => '45.92990000',
+    ],
+    [
+        'id'        => 130923,
+        'name'      => 'Merkhah As Sufla',
+        'latitude'  => '14.69990000',
+        'longitude' => '46.15630000',
+    ],
+    [
+        'id'        => 130938,
+        'name'      => 'Nisab',
+        'latitude'  => '14.52570000',
+        'longitude' => '46.44770000',
+    ],
+    [
+        'id'        => 130954,
+        'name'      => 'Rudum',
+        'latitude'  => '14.03759000',
+        'longitude' => '47.83824000',
+    ],
+    [
+        'id'        => 130993,
+        'name'      => 'Usaylan',
+        'latitude'  => '15.17030000',
+        'longitude' => '46.02740000',
+    ],
+];

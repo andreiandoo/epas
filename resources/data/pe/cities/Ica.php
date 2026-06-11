@@ -1,0 +1,117 @@
+<?php
+return [
+    [
+        'id'        => 80616,
+        'name'      => 'Chincha Alta',
+        'latitude'  => '-13.40985000',
+        'longitude' => '-76.13235000',
+    ],
+    [
+        'id'        => 80667,
+        'name'      => 'Ica',
+        'latitude'  => '-14.06777000',
+        'longitude' => '-75.72861000',
+    ],
+    [
+        'id'        => 80706,
+        'name'      => 'Los Aquijes',
+        'latitude'  => '-14.09667000',
+        'longitude' => '-75.69083000',
+    ],
+    [
+        'id'        => 80714,
+        'name'      => 'Minas de Marcona',
+        'latitude'  => '-15.21194000',
+        'longitude' => '-75.11028000',
+    ],
+    [
+        'id'        => 80729,
+        'name'      => 'Nazca',
+        'latitude'  => '-14.83098000',
+        'longitude' => '-74.93895000',
+    ],
+    [
+        'id'        => 80747,
+        'name'      => 'Palpa',
+        'latitude'  => '-14.53361000',
+        'longitude' => '-75.18556000',
+    ],
+    [
+        'id'        => 80752,
+        'name'      => 'Paracas',
+        'latitude'  => '-13.86667000',
+        'longitude' => '-76.26667000',
+    ],
+    [
+        'id'        => 80764,
+        'name'      => 'Pisco',
+        'latitude'  => '-13.71029000',
+        'longitude' => '-76.20538000',
+    ],
+    [
+        'id'        => 80805,
+        'name'      => 'Provincia de Chincha',
+        'latitude'  => '-13.31791000',
+        'longitude' => '-75.93930000',
+    ],
+    [
+        'id'        => 80843,
+        'name'      => 'Provincia de Ica',
+        'latitude'  => '-14.33861000',
+        'longitude' => '-75.64833000',
+    ],
+    [
+        'id'        => 80865,
+        'name'      => 'Provincia de Nazca',
+        'latitude'  => '-15.00000000',
+        'longitude' => '-75.08333000',
+    ],
+    [
+        'id'        => 80872,
+        'name'      => 'Provincia de Palpa',
+        'latitude'  => '-14.41667000',
+        'longitude' => '-75.16667000',
+    ],
+    [
+        'id'        => 80878,
+        'name'      => 'Provincia de Pisco',
+        'latitude'  => '-13.80377000',
+        'longitude' => '-75.94264000',
+    ],
+    [
+        'id'        => 80935,
+        'name'      => 'Río Grande',
+        'latitude'  => '-14.51600000',
+        'longitude' => '-75.19933000',
+    ],
+    [
+        'id'        => 80943,
+        'name'      => 'San Clemente',
+        'latitude'  => '-13.66667000',
+        'longitude' => '-76.15000000',
+    ],
+    [
+        'id'        => 80949,
+        'name'      => 'San Juan Bautista',
+        'latitude'  => '-14.01083000',
+        'longitude' => '-75.73583000',
+    ],
+    [
+        'id'        => 80964,
+        'name'      => 'Santiago',
+        'latitude'  => '-14.18469000',
+        'longitude' => '-75.71124000',
+    ],
+    [
+        'id'        => 80978,
+        'name'      => 'Subtanjalla',
+        'latitude'  => '-14.01889000',
+        'longitude' => '-75.75806000',
+    ],
+    [
+        'id'        => 81009,
+        'name'      => 'Villa Tupac Amaru',
+        'latitude'  => '-13.71135000',
+        'longitude' => '-76.14980000',
+    ],
+];

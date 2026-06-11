@@ -1,0 +1,105 @@
+<?php
+return [
+    [
+        'id'        => 107073,
+        'name'      => 'Ahmetli',
+        'latitude'  => '38.51960000',
+        'longitude' => '27.93865000',
+    ],
+    [
+        'id'        => 107082,
+        'name'      => 'Akhisar',
+        'latitude'  => '38.91852000',
+        'longitude' => '27.84006000',
+    ],
+    [
+        'id'        => 107128,
+        'name'      => 'Alaşehir',
+        'latitude'  => '38.35083000',
+        'longitude' => '28.51718000',
+    ],
+    [
+        'id'        => 107461,
+        'name'      => 'Demirci',
+        'latitude'  => '39.04607000',
+        'longitude' => '28.65889000',
+    ],
+    [
+        'id'        => 107698,
+        'name'      => 'Gölmarmara',
+        'latitude'  => '38.71389000',
+        'longitude' => '27.91417000',
+    ],
+    [
+        'id'        => 107711,
+        'name'      => 'Gördes',
+        'latitude'  => '38.93278000',
+        'longitude' => '28.28942000',
+    ],
+    [
+        'id'        => 108104,
+        'name'      => 'Kırkağaç',
+        'latitude'  => '39.10638000',
+        'longitude' => '27.66925000',
+    ],
+    [
+        'id'        => 108072,
+        'name'      => 'Köprübaşı',
+        'latitude'  => '38.74972000',
+        'longitude' => '28.40472000',
+    ],
+    [
+        'id'        => 108038,
+        'name'      => 'Kula',
+        'latitude'  => '38.56775000',
+        'longitude' => '28.64146000',
+    ],
+    [
+        'id'        => 108376,
+        'name'      => 'Salihli',
+        'latitude'  => '38.49254000',
+        'longitude' => '28.15264000',
+    ],
+    [
+        'id'        => 108399,
+        'name'      => 'Sarıgöl',
+        'latitude'  => '38.23953000',
+        'longitude' => '28.69663000',
+    ],
+    [
+        'id'        => 108397,
+        'name'      => 'Saruhanlı',
+        'latitude'  => '38.76778000',
+        'longitude' => '27.64714000',
+    ],
+    [
+        'id'        => 108947,
+        'name'      => 'Şehzadeler',
+        'latitude'  => '38.61660000',
+        'longitude' => '27.43861000',
+    ],
+    [
+        'id'        => 108428,
+        'name'      => 'Selendi',
+        'latitude'  => '38.74444000',
+        'longitude' => '28.86778000',
+    ],
+    [
+        'id'        => 108485,
+        'name'      => 'Soma',
+        'latitude'  => '39.18554000',
+        'longitude' => '27.60945000',
+    ],
+    [
+        'id'        => 108600,
+        'name'      => 'Turgutlu',
+        'latitude'  => '38.51515000',
+        'longitude' => '27.73515000',
+    ],
+    [
+        'id'        => 108740,
+        'name'      => 'Yunusemre',
+        'latitude'  => '38.62063000',
+        'longitude' => '27.40806000',
+    ],
+];

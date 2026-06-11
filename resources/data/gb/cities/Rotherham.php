@@ -1,0 +1,111 @@
+<?php
+return [
+    [
+        'id'        => 48589,
+        'name'      => 'Bolton upon Dearne',
+        'latitude'  => '53.51667000',
+        'longitude' => '-1.31667000',
+    ],
+    [
+        'id'        => 48889,
+        'name'      => 'Catcliffe',
+        'latitude'  => '53.39316000',
+        'longitude' => '-1.36207000',
+    ],
+    [
+        'id'        => 48918,
+        'name'      => 'Chapeltown',
+        'latitude'  => '53.46506000',
+        'longitude' => '-1.47217000',
+    ],
+    [
+        'id'        => 49287,
+        'name'      => 'Dinnington',
+        'latitude'  => '53.36667000',
+        'longitude' => '-1.20000000',
+    ],
+    [
+        'id'        => 49820,
+        'name'      => 'Harthill',
+        'latitude'  => '53.31667000',
+        'longitude' => '-1.26667000',
+    ],
+    [
+        'id'        => 49889,
+        'name'      => 'Hellaby',
+        'latitude'  => '53.42257000',
+        'longitude' => '-1.24125000',
+    ],
+    [
+        'id'        => 50215,
+        'name'      => 'Kiveton Park',
+        'latitude'  => '53.34120000',
+        'longitude' => '-1.25498000',
+    ],
+    [
+        'id'        => 50478,
+        'name'      => 'Maltby',
+        'latitude'  => '53.41667000',
+        'longitude' => '-1.20000000',
+    ],
+    [
+        'id'        => 50563,
+        'name'      => 'Mexborough',
+        'latitude'  => '53.49389000',
+        'longitude' => '-1.29243000',
+    ],
+    [
+        'id'        => 51041,
+        'name'      => 'Rawmarsh',
+        'latitude'  => '53.46062000',
+        'longitude' => '-1.34437000',
+    ],
+    [
+        'id'        => 51117,
+        'name'      => 'Rotherham',
+        'latitude'  => '53.41667000',
+        'longitude' => '-1.25000000',
+    ],
+    [
+        'id'        => 51637,
+        'name'      => 'Todwick',
+        'latitude'  => '53.35373000',
+        'longitude' => '-1.25673000',
+    ],
+    [
+        'id'        => 51662,
+        'name'      => 'Treeton',
+        'latitude'  => '53.38564000',
+        'longitude' => '-1.35189000',
+    ],
+    [
+        'id'        => 51728,
+        'name'      => 'Wales',
+        'latitude'  => '53.34061000',
+        'longitude' => '-1.28162000',
+    ],
+    [
+        'id'        => 51774,
+        'name'      => 'Wath upon Dearne',
+        'latitude'  => '53.50291000',
+        'longitude' => '-1.34580000',
+    ],
+    [
+        'id'        => 51802,
+        'name'      => 'Wentworth',
+        'latitude'  => '53.47816000',
+        'longitude' => '-1.41500000',
+    ],
+    [
+        'id'        => 51885,
+        'name'      => 'Whitwell',
+        'latitude'  => '53.28333000',
+        'longitude' => '-1.21667000',
+    ],
+    [
+        'id'        => 51976,
+        'name'      => 'Woodsetts',
+        'latitude'  => '53.34804000',
+        'longitude' => '-1.17204000',
+    ],
+];

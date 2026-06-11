@@ -1,0 +1,9 @@
+<?php
+return [
+    [
+        'id'        => 104109,
+        'name'      => 'Gornji Grad',
+        'latitude'  => '46.29528000',
+        'longitude' => '14.80833000',
+    ],
+];

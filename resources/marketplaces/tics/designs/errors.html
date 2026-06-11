@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eroare — TICS.ro</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>tailwind.config={theme:{extend:{fontFamily:{sans:['Inter','system-ui','sans-serif']}}}}</script>
+    <style>
+        *{-webkit-font-smoothing:antialiased}body{font-family:'Inter',system-ui,sans-serif}
+        @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}.animate-float{animation:float 4s ease-in-out infinite}
+        @keyframes pulse-slow{0%,100%{opacity:.15}50%{opacity:.3}}.animate-pulse-slow{animation:pulse-slow 3s ease-in-out infinite}
+        @keyframes shake{0%,100%{transform:translateX(0)}10%,30%,50%,70%,90%{transform:translateX(-4px)}20%,40%,60%,80%{transform:translateX(4px)}}.shake{animation:shake .6s ease}
+        .error-section{display:none}.error-section.active{display:flex}
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Demo switcher (remove in production) -->
+    <div class="fixed top-4 right-4 z-50 bg-white rounded-xl border border-gray-200 shadow-lg p-2 flex gap-1">
+        <button onclick="showError(403)" class="px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-gray-100 transition-colors" id="btn-403">403</button>
+        <button onclick="showError(404)" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-gray-900 text-white" id="btn-404">404</button>
+        <button onclick="showError(500)" class="px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-gray-100 transition-colors" id="btn-500">500</button>
+        <button onclick="showError(503)" class="px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-gray-100 transition-colors" id="btn-503">503</button>
+    </div>
+
+    <!-- ===== 403 FORBIDDEN ===== -->
+    <section id="error-403" class="error-section min-h-screen flex-col items-center justify-center px-4">
+        <div class="absolute inset-0 overflow-hidden pointer-events-none"><div class="absolute top-1/4 left-1/4 w-96 h-96 bg-red-200 rounded-full blur-3xl animate-pulse-slow"></div><div class="absolute bottom-1/4 right-1/4 w-80 h-80 bg-orange-200 rounded-full blur-3xl animate-pulse-slow" style="animation-delay:1.5s"></div></div>
+        <div class="relative text-center max-w-lg">
+            <div class="animate-float mb-6">
+                <div class="w-28 h-28 mx-auto bg-gradient-to-br from-red-100 to-orange-100 rounded-3xl flex items-center justify-center border border-red-200/50 shadow-lg shadow-red-100">
+                    <svg class="w-14 h-14 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
+                </div>
+            </div>
+            <p class="text-sm font-bold text-red-500 tracking-widest uppercase mb-2">Eroare 403</p>
+            <h1 class="text-3xl lg:text-4xl font-bold text-gray-900 mb-3">Acces interzis</h1>
+            <p class="text-gray-600 mb-8 leading-relaxed">Nu ai permisiunea să accesezi această pagină. Dacă crezi că este o eroare, te rugăm să ne contactezi sau să încerci să te autentifici.</p>
+            <div class="flex items-center justify-center gap-3">
+                <a href="/" class="px-6 py-3 bg-gray-900 text-white text-sm font-medium rounded-full hover:bg-gray-800 transition-colors">Pagina principală</a>
+                <a href="#" class="px-6 py-3 border border-gray-200 text-gray-700 text-sm font-medium rounded-full hover:bg-white hover:border-gray-300 transition-colors">Conectare</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== 404 NOT FOUND ===== -->
+    <section id="error-404" class="error-section active min-h-screen flex-col items-center justify-center px-4">
+        <div class="absolute inset-0 overflow-hidden pointer-events-none"><div class="absolute top-1/3 left-1/3 w-96 h-96 bg-indigo-200 rounded-full blur-3xl animate-pulse-slow"></div><div class="absolute bottom-1/3 right-1/3 w-80 h-80 bg-violet-200 rounded-full blur-3xl animate-pulse-slow" style="animation-delay:1.5s"></div></div>
+        <div class="relative text-center max-w-lg">
+            <div class="animate-float mb-6">
+                <div class="w-28 h-28 mx-auto bg-gradient-to-br from-indigo-100 to-violet-100 rounded-3xl flex items-center justify-center border border-indigo-200/50 shadow-lg shadow-indigo-100">
+                    <span class="text-5xl">🎫</span>
+                </div>
+            </div>
+            <p class="text-sm font-bold text-indigo-500 tracking-widest uppercase mb-2">Eroare 404</p>
+            <h1 class="text-3xl lg:text-4xl font-bold text-gray-900 mb-3">Biletul a dispărut</h1>
+            <p class="text-gray-600 mb-8 leading-relaxed">Pagina pe care o cauți nu există sau a fost mutată. Poate evenimentul s-a terminat, sau link-ul este greșit.</p>
+            <div class="flex items-center justify-center gap-3 mb-8">
+                <a href="/" class="px-6 py-3 bg-gray-900 text-white text-sm font-medium rounded-full hover:bg-gray-800 transition-colors">Pagina principală</a>
+                <a href="#" class="px-6 py-3 border border-gray-200 text-gray-700 text-sm font-medium rounded-full hover:bg-white hover:border-gray-300 transition-colors">Caută evenimente</a>
+            </div>
+            <!-- Search inline -->
+            <div class="max-w-sm mx-auto">
+                <div class="flex items-center bg-white rounded-full border border-gray-200 px-4 py-3 focus-within:ring-2 focus-within:ring-gray-900 focus-within:border-transparent transition-all shadow-sm">
+                    <svg class="w-5 h-5 text-gray-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                    <input type="text" placeholder="Caută artiști sau evenimente..." class="flex-1 bg-transparent outline-none text-gray-900 placeholder:text-gray-400 text-sm">
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== 500 SERVER ERROR ===== -->
+    <section id="error-500" class="error-section min-h-screen flex-col items-center justify-center px-4">
+        <div class="absolute inset-0 overflow-hidden pointer-events-none"><div class="absolute top-1/3 left-1/4 w-96 h-96 bg-amber-200 rounded-full blur-3xl animate-pulse-slow"></div><div class="absolute bottom-1/3 right-1/4 w-80 h-80 bg-rose-200 rounded-full blur-3xl animate-pulse-slow" style="animation-delay:1.5s"></div></div>
+        <div class="relative text-center max-w-lg">
+            <div class="animate-float mb-6">
+                <div class="w-28 h-28 mx-auto bg-gradient-to-br from-amber-100 to-rose-100 rounded-3xl flex items-center justify-center border border-amber-200/50 shadow-lg shadow-amber-100">
+                    <svg class="w-14 h-14 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                </div>
+            </div>
+            <p class="text-sm font-bold text-amber-500 tracking-widest uppercase mb-2">Eroare 500</p>
+            <h1 class="text-3xl lg:text-4xl font-bold text-gray-900 mb-3">Oops! Ceva nu a mers</h1>
+            <p class="text-gray-600 mb-8 leading-relaxed">Serverul nostru a întâmpinat o problemă neașteptată. Echipa tehnică a fost notificată automat. Te rugăm să încerci din nou.</p>
+            <div class="flex items-center justify-center gap-3 mb-6">
+                <button onclick="location.reload()" class="px-6 py-3 bg-gray-900 text-white text-sm font-medium rounded-full hover:bg-gray-800 transition-colors flex items-center gap-2"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>Reîncearcă</button>
+                <a href="/" class="px-6 py-3 border border-gray-200 text-gray-700 text-sm font-medium rounded-full hover:bg-white hover:border-gray-300 transition-colors">Pagina principală</a>
+            </div>
+            <div class="bg-white/80 backdrop-blur rounded-xl border border-gray-200 p-4 max-w-xs mx-auto">
+                <p class="text-xs text-gray-500">Ref: <code class="text-gray-700 bg-gray-100 px-1.5 py-0.5 rounded text-xs">ERR-7f3a2b</code></p>
+                <p class="text-xs text-gray-400 mt-1">12 Feb 2026, 14:32 UTC</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== 503 MAINTENANCE ===== -->
+    <section id="error-503" class="error-section min-h-screen flex-col items-center justify-center px-4">
+        <div class="absolute inset-0 overflow-hidden pointer-events-none"><div class="absolute top-1/3 left-1/3 w-96 h-96 bg-sky-200 rounded-full blur-3xl animate-pulse-slow"></div><div class="absolute bottom-1/3 right-1/3 w-80 h-80 bg-teal-200 rounded-full blur-3xl animate-pulse-slow" style="animation-delay:1.5s"></div></div>
+        <div class="relative text-center max-w-lg">
+            <div class="animate-float mb-6">
+                <div class="w-28 h-28 mx-auto bg-gradient-to-br from-sky-100 to-teal-100 rounded-3xl flex items-center justify-center border border-sky-200/50 shadow-lg shadow-sky-100">
+                    <svg class="w-14 h-14 text-sky-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                </div>
+            </div>
+            <p class="text-sm font-bold text-sky-500 tracking-widest uppercase mb-2">Mentenanță</p>
+            <h1 class="text-3xl lg:text-4xl font-bold text-gray-900 mb-3">Revenim imediat!</h1>
+            <p class="text-gray-600 mb-8 leading-relaxed">Platforma este în curs de actualizare pentru a-ți oferi o experiență mai bună. Vom fi înapoi în scurt timp.</p>
+            <!-- Countdown / Progress -->
+            <div class="bg-white/80 backdrop-blur rounded-2xl border border-gray-200 p-6 max-w-sm mx-auto mb-8">
+                <p class="text-xs text-gray-500 uppercase tracking-wider font-medium mb-3">Durată estimată</p>
+                <div class="flex items-center justify-center gap-4">
+                    <div class="text-center"><p class="text-2xl font-bold text-gray-900" id="countdown-h">00</p><p class="text-xs text-gray-400">ore</p></div>
+                    <span class="text-xl text-gray-300 font-light">:</span>
+                    <div class="text-center"><p class="text-2xl font-bold text-gray-900" id="countdown-m">15</p><p class="text-xs text-gray-400">minute</p></div>
+                    <span class="text-xl text-gray-300 font-light">:</span>
+                    <div class="text-center"><p class="text-2xl font-bold text-gray-900" id="countdown-s">00</p><p class="text-xs text-gray-400">secunde</p></div>
+                </div>
+                <div class="mt-4 w-full bg-gray-200 rounded-full h-1.5"><div class="bg-gradient-to-r from-sky-500 to-teal-500 h-1.5 rounded-full" style="width:35%"></div></div>
+            </div>
+            <div class="flex items-center justify-center gap-3">
+                <button onclick="location.reload()" class="px-6 py-3 bg-gray-900 text-white text-sm font-medium rounded-full hover:bg-gray-800 transition-colors flex items-center gap-2"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>Verifică din nou</button>
+                <a href="#" class="px-6 py-3 border border-gray-200 text-gray-700 text-sm font-medium rounded-full hover:bg-white hover:border-gray-300 transition-colors">Status pagină</a>
+            </div>
+            <!-- Notify -->
+            <div class="mt-8 max-w-sm mx-auto">
+                <p class="text-sm text-gray-500 mb-3">Primește notificare când suntem înapoi:</p>
+                <div class="flex gap-2">
+                    <input type="email" placeholder="email@exemplu.ro" class="flex-1 px-4 py-2.5 bg-white border border-gray-200 rounded-full text-sm outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent">
+                    <button class="px-5 py-2.5 bg-gray-900 text-white text-sm font-medium rounded-full hover:bg-gray-800 transition-colors flex-shrink-0">Notifică-mă</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Shared footer link -->
+    <div class="fixed bottom-6 left-0 right-0 text-center">
+        <a href="/" class="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-gray-600 transition-colors">
+            <div class="w-6 h-6 bg-gray-200 rounded-md flex items-center justify-center"><span class="text-gray-500 font-bold text-xs">T</span></div>TICS.ro
+        </a>
+    </div>
+
+    <script>
+    function showError(code){
+        document.querySelectorAll('.error-section').forEach(s=>s.classList.remove('active'));
+        document.getElementById('error-'+code).classList.add('active');
+        document.querySelectorAll('[id^="btn-"]').forEach(b=>{b.classList.remove('bg-gray-900','text-white');b.classList.add('hover:bg-gray-100')});
+        const btn=document.getElementById('btn-'+code);btn.classList.add('bg-gray-900','text-white');btn.classList.remove('hover:bg-gray-100');
+    }
+    // 503 countdown
+    let total=15*60;
+    setInterval(()=>{if(total<=0)return;total--;const h=Math.floor(total/3600),m=Math.floor((total%3600)/60),s=total%60;
+        document.getElementById('countdown-h').textContent=String(h).padStart(2,'0');
+        document.getElementById('countdown-m').textContent=String(m).padStart(2,'0');
+        document.getElementById('countdown-s').textContent=String(s).padStart(2,'0');
+    },1000);
+    </script>
+</body>
+</html>
