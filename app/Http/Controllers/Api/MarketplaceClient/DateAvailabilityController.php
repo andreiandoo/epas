@@ -109,6 +109,9 @@ class DateAvailabilityController extends BaseController
             ->orderBy('sort_order')
             ->get()
             ->filter(function ($tt) {
+                // Daca operatorul a debifat "Activ" in Filament/organizer, status devine 'hidden'.
+                // is_active accessor returneaza (status === 'active'). Filtram produsele ascunse.
+                if (!$tt->is_active) return false;
                 if ($tt->is_entry_ticket) return false;
                 if (!empty($tt->meta['is_invitation'] ?? false)) return false;
                 // Leisure: produsele marcate "POS only" sunt ascunse de pe pagina publica.
@@ -356,6 +359,13 @@ class DateAvailabilityController extends BaseController
                 'package_outputs' => $packageOutputs,
                 'package_components_sum' => round($packageSumComponents, 2),
                 'package_savings' => $packageOutputs ? round($packageSumComponents - $effectivePrice, 2) : 0,
+                // Subset meta expus front-end pentru bilete de grup + step
+                'meta' => [
+                    'is_group_ticket' => (bool) ($tt->meta['is_group_ticket'] ?? false),
+                    'step_qty' => isset($tt->meta['step_qty']) ? (int) $tt->meta['step_qty'] : null,
+                    'group_includes_guide' => (bool) ($tt->meta['group_includes_guide'] ?? false),
+                    'group_guide_label' => $tt->meta['group_guide_label'] ?? null,
+                ],
             ];
 
             if ($hasTourSlots) {

@@ -1188,6 +1188,45 @@ class CheckoutController extends BaseController
 
                     $ticketIndex++;
                 }
+
+                // Leisure group ticket bonus: la fiecare multiplu de min_per_order
+                // cumparat, emite +1 bilet GRATUIT pentru ghid daca operatorul
+                // a bifat group_includes_guide. Bilet emis pe acelasi ticket_type
+                // (pentru raportare/control acces), pret 0, marcat cu
+                // meta.guide_bonus=true + meta.label_override pentru randare PDF.
+                if (
+                    isset($tt) && $tt
+                    && !empty($tt->meta['is_group_ticket'])
+                    && !empty($tt->meta['group_includes_guide'])
+                ) {
+                    $minPerGroup = max(1, (int) ($tt->min_per_order ?? 1));
+                    $bonusCount = intdiv((int) $item['quantity'], $minPerGroup);
+                    $guideLabel = trim((string) ($tt->meta['group_guide_label'] ?? '')) ?: 'Ghid grup';
+                    for ($g = 0; $g < $bonusCount; $g++) {
+                        Ticket::create([
+                            'marketplace_client_id' => $client->id,
+                            'tenant_id' => $event?->tenant_id,
+                            'order_id' => $order->id,
+                            'order_item_id' => $orderItem->id,
+                            'event_id' => $event?->id,
+                            'marketplace_event_id' => $marketplaceEvent?->id,
+                            'ticket_type_id' => $tt->id ?? null,
+                            'marketplace_ticket_type_id' => $mtt->id ?? null,
+                            'performance_id' => $item['performance_id'] ?? null,
+                            'marketplace_customer_id' => $customer->id,
+                            'code' => strtoupper(Str::random(8)),
+                            'barcode' => Str::uuid()->toString(),
+                            'locale' => $checkoutLocale,
+                            'status' => $isAutoConfirmed ? 'valid' : 'pending',
+                            'price' => 0,
+                            'meta' => [
+                                'guide_bonus' => true,
+                                'label_override' => $guideLabel,
+                                'visit_date' => $item['visit_date'] ?? null,
+                            ],
+                        ]);
+                    }
+                }
             }
 
             // Increment promo code usage

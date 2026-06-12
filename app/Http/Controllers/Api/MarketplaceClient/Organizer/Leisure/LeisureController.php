@@ -188,6 +188,8 @@ class LeisureController extends BaseController
                     'id' => $tt->id,
                     'name' => $tt->name,
                     'sku' => $tt->sku,
+                    'status' => $tt->status,
+                    'is_active' => $tt->is_active,
                     'price' => $price,
                     'price_max' => (float) ($tt->price_max ?? 0),
                     'service_category' => $tt->effective_service_category,
@@ -1756,6 +1758,10 @@ class LeisureController extends BaseController
             'pos_only',
             // Multi-locale (B2): traduceri opt-in pe name/description/etc. + pe variants/addons.
             'translations',
+            // Pas incrementare cantitate (min_per_order e coloana SQL top-level) +
+            // bilet de grup (group ticket logic) + bonus ghid
+            'step_qty', 'is_group_ticket',
+            'group_includes_guide', 'group_guide_label',
         ];
         $filtered = array_intersect_key($meta, array_flip($allowed));
 

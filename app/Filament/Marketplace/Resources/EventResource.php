@@ -1797,6 +1797,10 @@ class EventResource extends Resource
                                                     ->label($t('Badge-uri hero', 'Hero badges'))
                                                     ->placeholder($t('Adaugă badge cu Enter', 'Add badge with Enter'))
                                                     ->helperText($t('ex: 🌿 Sit Natura 2000, 🏔️ Altitudine 950m', 'Use emoji + text')),
+                                                Forms\Components\TextInput::make('venue_config.location_label')
+                                                    ->label($t('Etichetă locație (Quick Stats Bar)', 'Location label (Quick Stats Bar)'))
+                                                    ->placeholder($t('ex: Lăzărești (suprascrie orașul venue-ului)', 'e.g. Lăzărești (overrides venue city)'))
+                                                    ->helperText($t('Lasă gol pentru a folosi orașul venue-ului. Util când orașul administrativ diferă de localitatea reală.', 'Empty = uses venue city. Useful when admin city differs from actual locality.')),
 
                                                 // 🌐 Traduceri hero (HU + EN) — stocate in venue_config.translations
                                                 SC\Section::make('🌐 ' . $t('Traduceri Hero (HU + EN)', 'Hero translations (HU + EN)'))
@@ -1812,6 +1816,8 @@ class EventResource extends Resource
                                                             Forms\Components\TextInput::make('venue_config.translations.hero_kicker.en')->label('🇬🇧 Kicker (EN)'),
                                                             Forms\Components\TagsInput::make('venue_config.translations.hero_badges.hu')->label('🇭🇺 ' . $t('Badge-uri hero (HU)', 'Hero badges (HU)'))->placeholder($t('Adaugă badge HU + Enter', 'Add HU badge + Enter')),
                                                             Forms\Components\TagsInput::make('venue_config.translations.hero_badges.en')->label('🇬🇧 Hero badges (EN)')->placeholder($t('Adaugă badge EN + Enter', 'Add EN badge + Enter')),
+                                                            Forms\Components\TextInput::make('venue_config.translations.location_label.hu')->label('🇭🇺 ' . $t('Etichetă locație (HU)', 'Location label (HU)'))->placeholder('ex: Lázárfalva'),
+                                                            Forms\Components\TextInput::make('venue_config.translations.location_label.en')->label('🇬🇧 Location label (EN)')->placeholder('ex: Lăzărești'),
                                                         ]),
                                                     ]),
 

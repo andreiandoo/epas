@@ -138,6 +138,9 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
     let payment = 'cash';
     let posLocale = 'ro'; // default RO; staff il schimba pentru turisti HU/EN
     let commission = { rate: 0, fixed: 0, mode: 'included' };
+    // C2: categoriile custom de afișare definite în /organizator/leisure tab Produse.
+    // Folosite pentru gruparea + ordonarea produselor în panoul POS.
+    let ticketCategories = [];
 
     function cartKey(ttId, variantId) { return variantId ? `${ttId}|${variantId}` : String(ttId); }
 
@@ -153,23 +156,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
     const CAT_LABEL = { 'access': 'Acces', 'parking': 'Parcare', 'rental': 'Închiriere', 'activity': 'Activitate', 'extra': 'Extra', 'package': '🎁 Pachet' };
     const CAT_COLOR = { 'access': 'blue', 'parking': 'violet', 'rental': 'amber', 'activity': 'emerald', 'extra': 'slate', 'package': 'rose' };
 
-    function renderGrid() {
-        $('lv-loading').classList.add('hidden');
-        $('lv-grid').classList.remove('hidden');
-        $('lv-grid').classList.add('grid');
-        // Filtreaza la nivel UI: aratam DOAR produsele bifate "Doar pentru vanzare POS".
-        // Backward compat: produsele cu pos_price setat sunt si ele acceptate (gating implicit).
-        const posTypes = (types || []).filter(t => {
-            const meta = t.meta || {};
-            const isPosOnly = !!meta.pos_only;
-            const hasPosPrice = (t.pos_price !== null && t.pos_price !== undefined && t.pos_price !== '');
-            return isPosOnly || hasPosPrice;
-        });
-        if (!posTypes.length) {
-            $('lv-grid').innerHTML = '<p class="col-span-3 text-center text-muted py-8">Nicio bilet/serviciu marcat pentru POS. Bifează „Doar pentru vânzare POS" pe produsele de la <a href="/organizator/leisure" class="text-primary underline">/organizator/leisure</a>.</p>';
-            return;
-        }
-        $('lv-grid').innerHTML = posTypes.map(t => {
+    function renderProductCard(t) {
             const cat = t.service_category || 'access';
             const color = CAT_COLOR[cat] || 'slate';
             const variants = Array.isArray(t.variants) ? t.variants : [];
@@ -213,7 +200,73 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 <div class="font-bold text-secondary text-sm leading-tight">${t.name || ''}</div>
                 <div class="text-lg font-bold text-${color}-700 mt-2">${fmtMoney(basePrice)} RON</div>
             </button>`;
-        }).join('');
+    }
+
+    function renderGrid() {
+        $('lv-loading').classList.add('hidden');
+        $('lv-grid').classList.remove('hidden');
+        // Filtreaza la nivel UI: aratam DOAR produsele bifate "Doar pentru vanzare POS".
+        // Backward compat: produsele cu pos_price setat sunt si ele acceptate (gating implicit).
+        // Filtru is_active la nivel UI: ascundem produsele dezactivate (status != 'active').
+        const posTypes = (types || []).filter(t => {
+            const meta = t.meta || {};
+            const isPosOnly = !!meta.pos_only;
+            const hasPosPrice = (t.pos_price !== null && t.pos_price !== undefined && t.pos_price !== '');
+            if (!isPosOnly && !hasPosPrice) return false;
+            // Daca backend returneaza status='hidden' (toggle Activ debifat), filtram.
+            // Backward compat: daca status nu e expus, presupunem activ.
+            if (t.status && t.status !== 'active') return false;
+            return true;
+        });
+        if (!posTypes.length) {
+            $('lv-grid').classList.remove('grid');
+            $('lv-grid').innerHTML = '<p class="col-span-3 text-center text-muted py-8">Nicio bilet/serviciu marcat pentru POS. Bifează „Doar pentru vânzare POS" pe produsele de la <a href="/organizator/leisure" class="text-primary underline">/organizator/leisure</a>.</p>';
+            return;
+        }
+
+        // C2: grupare după ticket_categories. Daca nu există categorii configurate
+        // sau niciun produs nu are ticket_group asignat, afișam un singur grup fără
+        // header (backward compat — aceeași grila plata ca înainte).
+        const cats = Array.isArray(ticketCategories) ? ticketCategories : [];
+        const hasAnyGroup = cats.length > 0 && posTypes.some(t => t.ticket_group);
+
+        if (!hasAnyGroup) {
+            // Render plat (înainte) — grid simplu fără headere
+            $('lv-grid').classList.remove('grid');
+            $('lv-grid').classList.add('flex', 'flex-col', 'gap-0');
+            $('lv-grid').innerHTML = `<div class="grid grid-cols-2 md:grid-cols-3 gap-3">${posTypes.map(renderProductCard).join('')}</div>`;
+        } else {
+            // Grupeaza posTypes după ticket_group, păstrând ordinea din `cats`.
+            $('lv-grid').classList.remove('grid');
+            $('lv-grid').classList.add('flex', 'flex-col', 'gap-6');
+            const grouped = {};
+            posTypes.forEach(t => {
+                const gid = t.ticket_group || '__uncategorized__';
+                if (!grouped[gid]) grouped[gid] = [];
+                grouped[gid].push(t);
+            });
+            const sections = [];
+            // 1. Categoriile definite (in ordinea din venue_config)
+            cats.forEach(cat => {
+                const gid = cat.id;
+                if (grouped[gid] && grouped[gid].length) {
+                    sections.push({ name: cat.name || '', items: grouped[gid] });
+                    delete grouped[gid];
+                }
+            });
+            // 2. Produse fără categorie sau cu categorie ștearsă → "Altele"
+            const leftovers = [];
+            Object.keys(grouped).forEach(gid => { leftovers.push(...grouped[gid]); });
+            if (leftovers.length) {
+                sections.push({ name: 'Altele', items: leftovers });
+            }
+            $('lv-grid').innerHTML = sections.map(sec => `
+                <div>
+                    ${sec.name ? `<h3 class="text-sm font-bold text-secondary uppercase tracking-wider mb-3 pb-2 border-b border-border">${sec.name}</h3>` : ''}
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-3">${sec.items.map(renderProductCard).join('')}</div>
+                </div>
+            `).join('');
+        }
 
         $('lv-grid').querySelectorAll('.lv-tt-btn').forEach(btn => {
             btn.addEventListener('click', async () => {
@@ -632,6 +685,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         try {
             const res = await AmbiletAPI.get(`/organizer/events/${currentEventId}/leisure/config`);
             types = res.data?.ticket_types || [];
+            ticketCategories = Array.isArray(res.data?.ticket_categories) ? res.data.ticket_categories : [];
             if (res.data?.commission) commission = res.data.commission;
         } catch (e) {
             $('lv-error').textContent = 'Eroare la încărcarea biletelor: ' + (e?.message || '');

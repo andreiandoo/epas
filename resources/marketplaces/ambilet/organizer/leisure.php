@@ -223,6 +223,37 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     </label>
                     <label class="block">
                         <span class="text-xs font-semibold text-muted uppercase tracking-wider flex items-center gap-1.5">
+                            <span>Cantitate minimă coș</span>
+                            <span title="Câte bucăți minim trebuie să adauge clientul în coș pentru acest produs.&#10;Implicit: 1.&#10;Util pentru bilete de grup (ex: 10 persoane minimum)." class="cursor-help text-primary">ℹ️</span>
+                        </span>
+                        <input id="pr-f-min-qty" type="number" min="1" step="1" class="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg" placeholder="1">
+                    </label>
+                    <label class="block">
+                        <span class="text-xs font-semibold text-muted uppercase tracking-wider flex items-center gap-1.5">
+                            <span>Pas incrementare (+/-)</span>
+                            <span title="Cu cât crește sau scade cantitatea la apăsarea butoanelor + / -.&#10;Implicit: 1.&#10;Folosit pentru bilete grup (de ex pas 5 = adaugi câte 5 deodată)." class="cursor-help text-primary">ℹ️</span>
+                        </span>
+                        <input id="pr-f-step-qty" type="number" min="1" step="1" class="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg" placeholder="1">
+                    </label>
+                    <label class="block md:col-span-2 p-3 border border-amber-300 bg-amber-50 rounded-lg">
+                        <div class="flex items-center gap-2">
+                            <input id="pr-f-is-group" type="checkbox" class="w-4 h-4 accent-amber-600">
+                            <span class="text-xs font-semibold text-amber-900 uppercase tracking-wider">🎟️ Bilet de grup</span>
+                            <span title="Marchează acest produs ca bilet de grup.&#10;Pentru biletele de grup, prețul afișat pe pagina publică devine „de la {cantitate_minima × pret}"." class="cursor-help text-amber-700">ℹ️</span>
+                        </div>
+                        <div id="pr-f-group-extra" class="hidden mt-3 space-y-2 pl-6">
+                            <label class="flex items-center gap-2">
+                                <input id="pr-f-group-includes-guide" type="checkbox" class="w-4 h-4 accent-amber-600">
+                                <span class="text-xs text-amber-900">Emite +1 bilet GRATUIT pentru ghid când se cumpără cantitatea minimă</span>
+                            </label>
+                            <label class="block">
+                                <span class="text-[11px] font-semibold text-amber-800 uppercase">Nume bilet ghid bonus</span>
+                                <input id="pr-f-group-guide-label" type="text" class="mt-1 w-full px-3 py-1.5 text-xs border border-amber-300 rounded bg-white" placeholder="ex: Ghid grup">
+                            </label>
+                        </div>
+                    </label>
+                    <label class="block">
+                        <span class="text-xs font-semibold text-muted uppercase tracking-wider flex items-center gap-1.5">
                             <span>Durată serviciu (min)</span>
                             <span title="Cât durează serviciul, în minute. Folosit pentru închirieri (calupuri de timp) sau activități (slots pe oră).&#10;Ex: barcă 30 min = 30, ghidaj 2h = 120." class="cursor-help text-primary">ℹ️</span>
                         </span>
@@ -516,6 +547,11 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                         <span class="text-xs font-semibold text-muted uppercase tracking-wider">Titlu secțiune "Despre"</span>
                         <input type="text" data-vc="about_title" class="vc-input mt-1 w-full px-3 py-2 border border-border rounded-lg" placeholder="ex: Două cratere, o poveste">
                     </label>
+                    <label class="block">
+                        <span class="text-xs font-semibold text-muted uppercase tracking-wider">Etichetă locație (afișată în Quick Stats Bar)</span>
+                        <input type="text" data-vc="location_label" class="vc-input mt-1 w-full px-3 py-2 border border-border rounded-lg" placeholder="ex: Lăzărești (suprascrie orașul venue-ului)">
+                        <span class="text-[11px] text-muted block mt-1">Lasă gol pentru a folosi orașul venue-ului (din admin). Folosește acest câmp dacă vrei să afișezi numele satului/localității reale (ex: Lăzărești în loc de Bixad).</span>
+                    </label>
 
                     <!-- 🌐 Traduceri Hero (HU + EN) — opt-in -->
                     <details class="border border-amber-200 bg-amber-50 rounded-lg p-3">
@@ -553,6 +589,14 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                             <label class="block md:col-span-2">
                                 <span class="text-[10px] uppercase text-amber-800">🇬🇧 Hero badges (EN, comma-separated)</span>
                                 <input type="text" data-vc-list-nested="translations.hero_badges.en" class="vc-input mt-1 w-full px-2 py-1.5 text-sm border border-amber-300 rounded bg-white" placeholder="🌿 Natura 2000 site, 🏔️ 950m altitude">
+                            </label>
+                            <label class="block">
+                                <span class="text-[10px] uppercase text-amber-800">🇭🇺 Etichetă locație (HU)</span>
+                                <input type="text" data-vc-nested="translations.location_label.hu" class="vc-input mt-1 w-full px-2 py-1.5 text-sm border border-amber-300 rounded bg-white" placeholder="ex: Lázárfalva">
+                            </label>
+                            <label class="block">
+                                <span class="text-[10px] uppercase text-amber-800">🇬🇧 Location label (EN)</span>
+                                <input type="text" data-vc-nested="translations.location_label.en" class="vc-input mt-1 w-full px-2 py-1.5 text-sm border border-amber-300 rounded bg-white" placeholder="ex: Lăzărești">
                             </label>
                         </div>
                     </details>
@@ -1564,6 +1608,14 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         $('pr-f-active').checked = p ? !!p.is_active : true;
         $('pr-f-parking').checked = p ? !!p.is_parking : false;
         $('pr-f-vehicle').checked = p ? !!p.requires_vehicle_info : false;
+        // Cantitati min/step + bilet de grup
+        // min_per_order = coloana SQL; step_qty + grup logic = meta (fără migrare SQL)
+        $('pr-f-min-qty').value = (p?.min_per_order ?? '');
+        $('pr-f-step-qty').value = (p?.meta?.step_qty ?? '');
+        $('pr-f-is-group').checked = !!(p?.meta?.is_group_ticket);
+        $('pr-f-group-includes-guide').checked = !!(p?.meta?.group_includes_guide);
+        $('pr-f-group-guide-label').value = (p?.meta?.group_guide_label || '');
+        $('pr-f-group-extra').classList.toggle('hidden', !$('pr-f-is-group').checked);
         // F6/F8/F9: access_requirement, is_child_ticket, pos_price
         $('pr-f-access-req').value = p?.access_requirement || 'none';
         $('pr-f-child').checked = p ? !!p.is_child_ticket : false;
@@ -1961,6 +2013,8 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             is_parking: $('pr-f-parking').checked,
             requires_vehicle_info: $('pr-f-vehicle').checked,
             requires_access_ticket: ($('pr-f-access-req').value || 'none') !== 'none',
+            // min_per_order = coloana SQL; ramane top-level pentru a fi salvat in DB
+            min_per_order: $('pr-f-min-qty').value !== '' ? Math.max(1, parseInt($('pr-f-min-qty').value, 10)) : null,
             meta: {
                 icon: $('pr-f-icon').value.trim() || null,
                 unit_label: $('pr-f-unit').value.trim() || null,
@@ -1969,6 +2023,13 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 pos_only: $('pr-f-pos-only').checked,
                 is_child_ticket: $('pr-f-child').checked,
                 access_requirement: $('pr-f-access-req').value || 'none',
+                // step_qty + grup ticket (bilet de grup) cu bonus ghid → meta
+                step_qty: $('pr-f-step-qty').value !== '' ? Math.max(1, parseInt($('pr-f-step-qty').value, 10)) : null,
+                is_group_ticket: $('pr-f-is-group').checked,
+                group_includes_guide: $('pr-f-is-group').checked && $('pr-f-group-includes-guide').checked,
+                group_guide_label: ($('pr-f-is-group').checked && $('pr-f-group-includes-guide').checked)
+                    ? ($('pr-f-group-guide-label').value.trim() || 'Ghid grup')
+                    : null,
                 blocked_time_ranges: collectBlockedRanges(),
                 includes,
                 variants,
@@ -2052,6 +2113,11 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         });
         const saveBtn = $('pr-f-save'); if (saveBtn) saveBtn.addEventListener('click', saveProduct);
         const delBtn = $('pr-f-delete'); if (delBtn) delBtn.addEventListener('click', deleteProduct);
+        // Toggle "Bilet de grup" → arata/ascunde optiunile ghid
+        const grpToggle = $('pr-f-is-group');
+        if (grpToggle) grpToggle.addEventListener('change', () => {
+            $('pr-f-group-extra').classList.toggle('hidden', !grpToggle.checked);
+        });
         // C4a: modal-ul se inchide DOAR pe X / Renunta — nu mai inchidem la click outside,
         // ca utilizatorul sa nu piarda datele introduse accidental dand click in afara modalului.
         // Variants: add row + show/hide on category change
