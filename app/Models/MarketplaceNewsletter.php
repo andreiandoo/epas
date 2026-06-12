@@ -265,6 +265,16 @@ class MarketplaceNewsletter extends Model
             $resolved = $baseIds->unique()->intersect($filterIds->unique())->values();
         }
 
+        // Always strip customers who have actively unsubscribed (clicked
+        // the unsubscribe link in a previous campaign), UNLESS the admin
+        // explicitly picked a list whose rules target that very cohort
+        // — in which case the intent is the inverse (re-permission /
+        // exit-survey campaigns) and we keep them in. This is a defense
+        // layer beyond the recipient-side opt-out token: even if a list
+        // membership pivot drifted out of sync, an actively-unsubscribed
+        // customer never gets a fresh email.
+        $resolved = $this->applyActivelyUnsubscribedFilter($resolved, $clientId);
+
         // Apply the optional "skip recipients who already received another
         // newsletter from this marketplace in the last N hours" filter at
         // the very end so it never widens the audience and works the same
@@ -272,6 +282,72 @@ class MarketplaceNewsletter extends Model
         // the read-only count and the send-time build, so the displayed
         // number always matches what'll go out.
         return $this->applyRecentRecipientFilter($resolved, $clientId);
+    }
+
+    /**
+     * Drop customers who have actively unsubscribed (recipient row with
+     * status=unsubscribed for any campaign on this marketplace). Skipped
+     * when the targeting explicitly includes a list whose rules ask for
+     * the actively-unsubscribed cohort — e.g. a re-permission campaign
+     * pointing at "Dezabonați activ" should reach exactly that cohort,
+     * not be silently drained to zero.
+     */
+    protected function applyActivelyUnsubscribedFilter(\Illuminate\Support\Collection $ids, int $clientId): \Illuminate\Support\Collection
+    {
+        if ($ids->isEmpty()) return $ids;
+
+        // Bail when any picked list is built around the
+        // has_actively_unsubscribed rule — the admin's intent IS that
+        // cohort, so suppressing it would zero the audience.
+        $listIds = (array) ($this->target_lists ?? []);
+        if (!empty($listIds)) {
+            $lists = MarketplaceContactList::whereIn('id', $listIds)
+                ->where('marketplace_client_id', $clientId)
+                ->get(['id', 'rules']);
+            foreach ($lists as $list) {
+                foreach ((array) $list->getRules() as $rule) {
+                    if (($rule['type'] ?? null) === 'has_actively_unsubscribed') {
+                        return $ids;
+                    }
+                }
+            }
+        }
+
+        // Match by customer_id (modern path) AND by lowercased email
+        // (legacy / unlinked recipients). Pull both sets, union them,
+        // diff from $ids.
+        $unsubByCustomerId = \Illuminate\Support\Facades\DB::table('marketplace_newsletter_recipients as r')
+            ->join('marketplace_newsletters as n', 'n.id', '=', 'r.newsletter_id')
+            ->where('n.marketplace_client_id', $clientId)
+            ->where('r.status', 'unsubscribed')
+            ->whereNotNull('r.marketplace_customer_id')
+            ->pluck('r.marketplace_customer_id');
+
+        $unsubEmails = \Illuminate\Support\Facades\DB::table('marketplace_newsletter_recipients as r')
+            ->join('marketplace_newsletters as n', 'n.id', '=', 'r.newsletter_id')
+            ->where('n.marketplace_client_id', $clientId)
+            ->where('r.status', 'unsubscribed')
+            ->whereNotNull('r.email')
+            ->pluck('r.email')
+            ->map(fn ($e) => mb_strtolower(trim((string) $e)))
+            ->filter()
+            ->unique();
+
+        $unsubByEmail = collect();
+        if ($unsubEmails->isNotEmpty()) {
+            foreach ($unsubEmails->chunk(10000) as $chunk) {
+                $unsubByEmail = $unsubByEmail->concat(
+                    MarketplaceCustomer::where('marketplace_client_id', $clientId)
+                        ->whereIn(\Illuminate\Support\Facades\DB::raw('LOWER(TRIM(email))'), $chunk->all())
+                        ->pluck('id')
+                );
+            }
+        }
+
+        $toExclude = $unsubByCustomerId->concat($unsubByEmail)->unique()->flip();
+        if ($toExclude->isEmpty()) return $ids;
+
+        return $ids->reject(fn ($id) => isset($toExclude[$id]))->values();
     }
 
     /**
