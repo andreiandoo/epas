@@ -1,0 +1,605 @@
+/* =========================================================================
+   Scan App — mobile-first dark theme
+   --------------------------------------------------------------------------
+   Standalone CSS file for /organizator/scan/*. Intentionally separate from
+   organizer.css so we cannot accidentally affect the main panel. All classes
+   prefixed with `scanapp-` to avoid collisions.
+
+   Color palette mirrors the Android app (purple primary, dark surfaces).
+   ========================================================================= */
+
+:root {
+  --scanapp-bg:           #0A0A0F;
+  --scanapp-surface:      #15151E;
+  --scanapp-surface-2:    #1F1F2B;
+  --scanapp-surface-3:    #2A2A3A;
+  --scanapp-border:       rgba(255, 255, 255, 0.08);
+  --scanapp-border-strong:rgba(255, 255, 255, 0.16);
+  --scanapp-text:         #FFFFFF;
+  --scanapp-text-sec:     rgba(255, 255, 255, 0.7);
+  --scanapp-text-ter:     rgba(255, 255, 255, 0.45);
+  --scanapp-text-quat:    rgba(255, 255, 255, 0.25);
+  --scanapp-primary:      #8B5CF6; /* purple — same as App.js colors.purple */
+  --scanapp-primary-dark: #7C3AED;
+  --scanapp-primary-soft: rgba(139, 92, 246, 0.15);
+  --scanapp-success:      #10B981;
+  --scanapp-warning:      #F59E0B;
+  --scanapp-danger:       #EF4444;
+  --scanapp-info:         #06B6D4;
+
+  --scanapp-header-h:     56px;
+  --scanapp-tabbar-h:     64px;
+  --scanapp-safe-top:     env(safe-area-inset-top, 0px);
+  --scanapp-safe-bottom:  env(safe-area-inset-bottom, 0px);
+  --scanapp-safe-left:    env(safe-area-inset-left, 0px);
+  --scanapp-safe-right:   env(safe-area-inset-right, 0px);
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+html.scanapp-html {
+  background: var(--scanapp-bg);
+  color-scheme: dark;
+  -webkit-text-size-adjust: 100%;
+  height: 100%;
+}
+
+body.scanapp-body {
+  margin: 0;
+  padding: 0;
+  background: var(--scanapp-bg);
+  color: var(--scanapp-text);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.45;
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  padding-left: var(--scanapp-safe-left);
+  padding-right: var(--scanapp-safe-right);
+}
+
+a { color: inherit; text-decoration: none; }
+button { font: inherit; }
+
+/* ── Header ───────────────────────────────────────────────────────────── */
+.scanapp-header {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: calc(var(--scanapp-header-h) + var(--scanapp-safe-top));
+  padding: var(--scanapp-safe-top) 12px 0 12px;
+  background: var(--scanapp-surface);
+  border-bottom: 1px solid var(--scanapp-border);
+  -webkit-backdrop-filter: saturate(180%) blur(10px);
+  backdrop-filter: saturate(180%) blur(10px);
+}
+
+.scanapp-header__menu,
+.scanapp-header__notif {
+  background: transparent;
+  border: 0;
+  color: var(--scanapp-text-sec);
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  cursor: pointer;
+  transition: background-color 120ms, color 120ms;
+}
+
+.scanapp-header__menu:active,
+.scanapp-header__notif:active {
+  background: var(--scanapp-surface-2);
+  color: var(--scanapp-text);
+}
+
+.scanapp-header__title {
+  flex: 1;
+  min-width: 0;
+}
+
+.scanapp-header__event-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--scanapp-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.scanapp-header__event-meta {
+  font-size: 11px;
+  color: var(--scanapp-text-ter);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 1px;
+}
+
+.scanapp-header__badge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: var(--scanapp-danger);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── Main content ─────────────────────────────────────────────────────── */
+.scanapp-main {
+  flex: 1;
+  min-height: calc(100vh - var(--scanapp-header-h) - var(--scanapp-tabbar-h) - var(--scanapp-safe-top) - var(--scanapp-safe-bottom));
+  min-height: calc(100dvh - var(--scanapp-header-h) - var(--scanapp-tabbar-h) - var(--scanapp-safe-top) - var(--scanapp-safe-bottom));
+  padding: 16px 16px calc(var(--scanapp-tabbar-h) + var(--scanapp-safe-bottom) + 16px) 16px;
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+.scanapp-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* ── Cards ────────────────────────────────────────────────────────────── */
+.scanapp-card {
+  background: var(--scanapp-surface);
+  border: 1px solid var(--scanapp-border);
+  border-radius: 16px;
+  padding: 16px;
+}
+
+.scanapp-card--placeholder {
+  border-style: dashed;
+  border-color: var(--scanapp-border-strong);
+}
+
+.scanapp-card__title {
+  margin: 0 0 8px;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.scanapp-card__text {
+  margin: 0;
+  color: var(--scanapp-text-sec);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.scanapp-card__text + .scanapp-card__text { margin-top: 8px; }
+
+.scanapp-card__text--muted {
+  color: var(--scanapp-text-ter);
+  font-size: 12px;
+}
+
+/* ── Banner (Android APK / iOS Add-to-Home tutorial) ──────────────────── */
+.scanapp-banner {
+  display: flex;
+  gap: 14px;
+  padding: 16px;
+  border-radius: 16px;
+  border: 1px solid var(--scanapp-border-strong);
+  background: linear-gradient(135deg, var(--scanapp-surface-2), var(--scanapp-surface));
+}
+
+.scanapp-banner__icon {
+  font-size: 28px;
+  line-height: 1;
+  width: 40px;
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.scanapp-banner__body { flex: 1; min-width: 0; }
+.scanapp-banner__title { font-size: 14px; font-weight: 700; margin: 0 0 4px; }
+.scanapp-banner__text  { font-size: 12.5px; color: var(--scanapp-text-sec); margin: 0; line-height: 1.5; }
+
+.scanapp-banner__cta {
+  display: inline-block;
+  margin-top: 10px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  background: var(--scanapp-primary);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.scanapp-banner__cta:active { background: var(--scanapp-primary-dark); }
+
+/* ── Tab bar (bottom navigation, mobile-first) ────────────────────────── */
+.scanapp-tabbar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 30;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  height: calc(var(--scanapp-tabbar-h) + var(--scanapp-safe-bottom));
+  padding-bottom: var(--scanapp-safe-bottom);
+  background: var(--scanapp-surface);
+  border-top: 1px solid var(--scanapp-border);
+  -webkit-backdrop-filter: saturate(180%) blur(10px);
+  backdrop-filter: saturate(180%) blur(10px);
+}
+
+.scanapp-tabbar__tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  color: var(--scanapp-text-ter);
+  font-size: 10px;
+  font-weight: 600;
+  padding: 6px 4px;
+  transition: color 120ms;
+  text-decoration: none;
+}
+
+.scanapp-tabbar__tab--active {
+  color: var(--scanapp-primary);
+}
+
+.scanapp-tabbar__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── Toasts ───────────────────────────────────────────────────────────── */
+.scanapp-toasts {
+  position: fixed;
+  bottom: calc(var(--scanapp-tabbar-h) + var(--scanapp-safe-bottom) + 12px);
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+  z-index: 40;
+  width: calc(100% - 32px);
+  max-width: 420px;
+}
+
+.scanapp-toast {
+  pointer-events: auto;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: var(--scanapp-surface-3);
+  color: var(--scanapp-text);
+  font-size: 13px;
+  font-weight: 500;
+  border: 1px solid var(--scanapp-border-strong);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+  animation: scanapp-toast-in 200ms ease-out;
+}
+
+.scanapp-toast--success { border-color: rgba(16, 185, 129, 0.35); background: rgba(16, 185, 129, 0.12); }
+.scanapp-toast--warning { border-color: rgba(245, 158, 11, 0.35); background: rgba(245, 158, 11, 0.12); }
+.scanapp-toast--danger  { border-color: rgba(239, 68, 68, 0.35);  background: rgba(239, 68, 68, 0.12); }
+
+@keyframes scanapp-toast-in {
+  from { transform: translateY(20px); opacity: 0; }
+  to   { transform: translateY(0);     opacity: 1; }
+}
+
+/* ── Scanner UI ───────────────────────────────────────────────────────── */
+.scanapp-scanner {
+  position: relative;
+  background: #000;
+  border-radius: 18px;
+  overflow: hidden;
+  aspect-ratio: 3 / 4;
+  max-width: 480px;
+  margin: 0 auto;
+  border: 1px solid var(--scanapp-border-strong);
+}
+
+.scanapp-scanner__video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  background: #000;
+}
+
+.scanapp-scanner__overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.scanapp-scanner__frame {
+  width: 70%;
+  aspect-ratio: 1 / 1;
+  border: 2px solid rgba(255, 255, 255, 0.7);
+  border-radius: 18px;
+  position: relative;
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+}
+
+.scanapp-scanner__line {
+  position: absolute;
+  left: 6%;
+  right: 6%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--scanapp-primary), transparent);
+  box-shadow: 0 0 12px var(--scanapp-primary);
+  animation: scanapp-line 1.6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+@keyframes scanapp-line {
+  0%   { top: 10%;  opacity: 0; }
+  20%  {            opacity: 1; }
+  80%  {            opacity: 1; }
+  100% { top: 90%;  opacity: 0; }
+}
+
+.scanapp-scanner__hint {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  right: 12px;
+  text-align: center;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.85);
+  background: rgba(0, 0, 0, 0.45);
+  padding: 8px 10px;
+  border-radius: 10px;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.scanapp-scanner__placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  text-align: center;
+  background: var(--scanapp-surface);
+  color: var(--scanapp-text-sec);
+}
+
+.scanapp-scanner__placeholder svg { margin-bottom: 12px; opacity: 0.6; }
+
+.scanapp-scanner__placeholder-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--scanapp-text);
+  margin: 0 0 6px;
+}
+
+.scanapp-scanner__placeholder-text {
+  font-size: 13px;
+  margin: 0;
+  max-width: 320px;
+  color: var(--scanapp-text-sec);
+}
+
+/* Scanner controls bar */
+.scanapp-scanner-controls {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.scanapp-scanner-controls__btn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--scanapp-border-strong);
+  background: var(--scanapp-surface);
+  color: var(--scanapp-text);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 120ms, transform 120ms;
+}
+
+.scanapp-scanner-controls__btn:active { transform: scale(0.97); background: var(--scanapp-surface-2); }
+.scanapp-scanner-controls__btn--primary { background: var(--scanapp-primary); border-color: var(--scanapp-primary); color: #fff; }
+.scanapp-scanner-controls__btn--primary:active { background: var(--scanapp-primary-dark); }
+
+/* ── Scan result card ─────────────────────────────────────────────────── */
+.scanapp-result {
+  display: none;
+  margin-top: 14px;
+  padding: 16px;
+  border-radius: 16px;
+  border: 1px solid var(--scanapp-border-strong);
+  background: var(--scanapp-surface);
+}
+
+.scanapp-result--show { display: block; animation: scanapp-result-in 220ms ease-out; }
+
+@keyframes scanapp-result-in {
+  from { transform: translateY(8px); opacity: 0; }
+  to   { transform: translateY(0);   opacity: 1; }
+}
+
+.scanapp-result--success { border-color: rgba(16, 185, 129, 0.4); background: rgba(16, 185, 129, 0.08); }
+.scanapp-result--warning { border-color: rgba(245, 158, 11, 0.4); background: rgba(245, 158, 11, 0.08); }
+.scanapp-result--danger  { border-color: rgba(239, 68, 68, 0.4);  background: rgba(239, 68, 68, 0.08); }
+
+.scanapp-result__header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.scanapp-result__icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.scanapp-result--success .scanapp-result__icon { background: rgba(16, 185, 129, 0.2); color: var(--scanapp-success); }
+.scanapp-result--warning .scanapp-result__icon { background: rgba(245, 158, 11, 0.2); color: var(--scanapp-warning); }
+.scanapp-result--danger  .scanapp-result__icon { background: rgba(239, 68, 68, 0.2);  color: var(--scanapp-danger); }
+
+.scanapp-result__title {
+  font-size: 15px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.scanapp-result__subtitle {
+  font-size: 12px;
+  color: var(--scanapp-text-sec);
+  margin: 2px 0 0;
+}
+
+.scanapp-result__details {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.scanapp-result__detail-row {
+  font-size: 12px;
+}
+
+.scanapp-result__detail-label {
+  color: var(--scanapp-text-ter);
+  text-transform: uppercase;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  margin-bottom: 1px;
+}
+
+.scanapp-result__detail-value {
+  color: var(--scanapp-text);
+  font-weight: 600;
+  word-break: break-word;
+}
+
+.scanapp-result__actions {
+  margin-top: 12px;
+  display: flex;
+  gap: 8px;
+}
+
+/* ── Live stats pills (above scanner) ─────────────────────────────────── */
+.scanapp-stat-pills {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.scanapp-stat-pills::-webkit-scrollbar { display: none; }
+
+.scanapp-stat-pill {
+  flex: 0 0 auto;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: var(--scanapp-surface);
+  border: 1px solid var(--scanapp-border);
+  font-size: 11px;
+  color: var(--scanapp-text-sec);
+  white-space: nowrap;
+}
+
+.scanapp-stat-pill__value {
+  color: var(--scanapp-text);
+  font-weight: 700;
+  margin-right: 4px;
+}
+
+/* ── Manual entry modal ───────────────────────────────────────────────── */
+.scanapp-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: none;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.6);
+  padding: 0;
+}
+
+.scanapp-modal--open { display: flex; }
+
+.scanapp-modal__sheet {
+  width: 100%;
+  max-width: 480px;
+  background: var(--scanapp-surface);
+  border-top-left-radius: 24px;
+  border-top-right-radius: 24px;
+  padding: 20px 20px calc(20px + var(--scanapp-safe-bottom));
+  animation: scanapp-sheet-in 220ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes scanapp-sheet-in {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+
+.scanapp-modal__title { margin: 0 0 4px; font-size: 16px; font-weight: 700; }
+.scanapp-modal__text  { margin: 0 0 16px; font-size: 13px; color: var(--scanapp-text-sec); }
+
+.scanapp-input {
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: var(--scanapp-bg);
+  border: 1px solid var(--scanapp-border-strong);
+  color: var(--scanapp-text);
+  font-size: 15px;
+  font-family: inherit;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.scanapp-input:focus {
+  outline: none;
+  border-color: var(--scanapp-primary);
+  box-shadow: 0 0 0 3px var(--scanapp-primary-soft);
+}
+
+/* ── Responsive tweaks (tablet / desktop preview) ─────────────────────── */
+@media (min-width: 768px) {
+  .scanapp-main { padding-left: 24px; padding-right: 24px; }
+}

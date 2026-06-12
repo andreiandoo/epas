@@ -1,7 +1,8 @@
 <?php
 require_once __DIR__ . '/includes/config.php';
-$pageTitle = 'Checkout';
-$pageDescription = 'Finalizează comanda și plătește biletele';
+require_once __DIR__ . '/includes/cart-locale.php';
+$pageTitle = ct('checkout_h1');
+$pageDescription = ct('checkout_subtitle');
 $cssBundle = 'checkout';
 require_once __DIR__ . '/includes/head.php';
 require_once __DIR__ . '/includes/header.php';
@@ -15,17 +16,17 @@ require_once __DIR__ . '/includes/header.php';
                     <div class="flex items-center justify-center w-8 h-8 text-white bg-green-500 rounded-full">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
                     </div>
-                    <span class="text-sm font-medium text-green-600">Coș</span>
+                    <span class="text-sm font-medium text-green-600"><?= htmlspecialchars(ct('checkout_step_cart')) ?></span>
                 </div>
                 <div class="w-12 h-px bg-green-500"></div>
                 <div class="flex items-center gap-2">
                     <div class="flex items-center justify-center w-8 h-8 text-sm font-bold text-white rounded-full bg-primary">2</div>
-                    <span class="text-sm font-semibold text-primary">Checkout</span>
+                    <span class="text-sm font-semibold text-primary"><?= htmlspecialchars(ct('checkout_step_checkout')) ?></span>
                 </div>
                 <div class="w-12 h-px bg-gray-300"></div>
                 <div class="flex items-center gap-2">
                     <div class="flex items-center justify-center w-8 h-8 text-sm font-bold text-gray-400 bg-gray-100 border border-gray-200 rounded-full">3</div>
-                    <span class="text-sm text-gray-400">Confirmare</span>
+                    <span class="text-sm text-gray-400"><?= htmlspecialchars(ct('checkout_step_confirm')) ?></span>
                 </div>
             </div>
         </div>
@@ -36,9 +37,9 @@ require_once __DIR__ . '/includes/header.php';
         <div class="px-4 py-3 mx-auto max-w-7xl">
             <div class="flex items-center justify-center gap-2 text-sm">
                 <svg class="w-5 h-5 text-warning" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                <span class="text-secondary">Finalizează comanda în</span>
+                <span class="text-secondary"><?= htmlspecialchars(ct('checkout_timer_label')) ?></span>
                 <span id="countdown" class="font-bold countdown text-warning tabular-nums">14:59</span>
-                <span class="text-secondary">minute</span>
+                <span class="text-secondary"><?= htmlspecialchars(ct('timer_minutes')) ?></span>
             </div>
         </div>
     </div>
@@ -48,7 +49,7 @@ require_once __DIR__ . '/includes/header.php';
         <div class="flex flex-col gap-8 lg:flex-row">
             <!-- Left Column - Checkout Form -->
             <div class="lg:w-2/3">
-                <h1 class="mb-6 text-2xl font-bold md:text-3xl text-secondary">Finalizare comandă</h1>
+                <h1 class="mb-6 text-2xl font-bold md:text-3xl text-secondary"><?= htmlspecialchars(ct('checkout_h1')) ?></h1>
 
                 <!-- Loading State -->
                 <div id="checkout-loading" class="space-y-6">
@@ -64,44 +65,44 @@ require_once __DIR__ . '/includes/header.php';
                         <div class="flex items-center justify-between mb-4">
                             <h2 class="flex items-center gap-2 text-lg font-bold text-secondary">
                                 <span class="flex items-center justify-center w-8 h-8 text-sm font-bold rounded-lg bg-primary/10 text-primary">1</span>
-                                Datele tale
+                                <?= htmlspecialchars(ct('buyer_info')) ?>
                             </h2>
                             <!-- Login button for guests -->
-                            <button type="button" id="guest-login-btn" onclick="CheckoutPage.showLoginModal()" class="items-center hidden gap-2 px-4 py-2 text-sm font-medium transition-all border-2 rounded-xl text-primary border-primary hover:bg-primary hover:text-white" aria-label="Autentificare pentru clienți existenți">
+                            <button type="button" id="guest-login-btn" onclick="CheckoutPage.showLoginModal()" class="items-center hidden gap-2 px-4 py-2 text-sm font-medium transition-all border-2 rounded-xl text-primary border-primary hover:bg-primary hover:text-white" aria-label="<?= htmlspecialchars(ct('login_existing_aria')) ?>">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"/></svg>
-                                Intră în cont
+                                <?= htmlspecialchars(ct('login_existing')) ?>
                             </button>
                         </div>
 
                         <div class="grid gap-4 md:grid-cols-2">
                             <div>
-                                <label class="block mb-2 text-sm font-medium text-secondary">Nume *</label>
+                                <label class="block mb-2 text-sm font-medium text-secondary"><?= htmlspecialchars(ct('last_name_required')) ?></label>
                                 <input type="text" id="buyer-last-name" class="w-full px-4 py-3 border-2 input-field border-border rounded-xl focus:outline-none" placeholder="Ex: Popescu" required>
                             </div>
                             <div>
-                                <label class="block mb-2 text-sm font-medium text-secondary">Prenume *</label>
+                                <label class="block mb-2 text-sm font-medium text-secondary"><?= htmlspecialchars(ct('first_name_required')) ?></label>
                                 <input type="text" id="buyer-first-name" class="w-full px-4 py-3 border-2 input-field border-border rounded-xl focus:outline-none" placeholder="Ex: Ion" required>
                             </div>
                             <div>
-                                <label class="block mb-2 text-sm font-medium text-secondary">Email *</label>
+                                <label class="block mb-2 text-sm font-medium text-secondary"><?= htmlspecialchars(ct('email_required')) ?></label>
                                 <input type="email" id="buyer-email" autocomplete="off" class="w-full px-4 py-3 border-2 input-field border-border rounded-xl focus:outline-none" required>
                             </div>
                             <div>
-                                <label class="block mb-2 text-sm font-medium text-secondary">Confirmă email *</label>
+                                <label class="block mb-2 text-sm font-medium text-secondary"><?= htmlspecialchars(ct('email_confirm')) ?></label>
                                 <input type="email" id="buyer-email-confirm" autocomplete="new-password" onpaste="return false;" ondrop="return false;" class="w-full px-4 py-3 border-2 input-field border-border rounded-xl focus:outline-none" required>
-                                <p id="email-mismatch-error" class="hidden mt-1 text-sm text-primary">Adresele de email nu coincid</p>
+                                <p id="email-mismatch-error" class="hidden mt-1 text-sm text-primary"><?= htmlspecialchars(ct('email_mismatch')) ?></p>
                             </div>
                             <div class="md:col-span-2">
-                                <label class="block mb-2 text-sm font-medium text-secondary">Telefon *</label>
+                                <label class="block mb-2 text-sm font-medium text-secondary"><?= htmlspecialchars(ct('phone_required')) ?></label>
                                 <input type="tel" id="buyer-phone" class="w-full px-4 py-3 border-2 input-field border-border rounded-xl focus:outline-none" required>
                             </div>
                             <!-- Auto-create account checkbox (guests only) -->
                             <div id="create-account-row" class="hidden md:col-span-2">
                                 <label class="flex items-center gap-3 cursor-pointer select-none">
                                     <input type="checkbox" id="createAccountCheckbox" class="w-5 h-5 border-2 rounded accent-primary border-border">
-                                    <span class="text-sm text-secondary">Creează un cont automat folosind datele de mai sus</span>
+                                    <span class="text-sm text-secondary"><?= htmlspecialchars(ct('create_account_auto')) ?></span>
                                 </label>
-                                <p class="mt-1 ml-8 text-xs text-muted">Vei primi parola pe email după finalizarea comenzii</p>
+                                <p class="mt-1 ml-8 text-xs text-muted"><?= htmlspecialchars(ct('create_account_hint')) ?></p>
                             </div>
                         </div>
                     </div>
@@ -111,24 +112,24 @@ require_once __DIR__ . '/includes/header.php';
                         <div class="flex items-center justify-between mb-4">
                             <h2 class="flex items-center gap-2 text-lg font-bold text-secondary">
                                 <span class="flex items-center justify-center w-8 h-8 text-sm font-bold rounded-lg bg-primary/10 text-primary">2</span>
-                                Beneficiari bilete
+                                <?= htmlspecialchars(ct('beneficiaries_title')) ?>
                             </h2>
-                            <span id="beneficiaries-count" class="text-sm text-muted">0 bilete</span>
+                            <span id="beneficiaries-count" class="text-sm text-muted">0 <?= htmlspecialchars(ct('cart_items_unit')) ?></span>
                         </div>
 
                         <div class="flex items-center justify-between p-4 mb-4 bg-surface rounded-xl mobile:flex-col mobile:gap-y-2">
-                            
+
                             <div class="flex items-start gap-3" id="allTicketsToEmail">
                                 <svg class="w-5 h-5 text-success flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                                 <div class="text-sm text-muted">
-                                    <p class="font-medium text-secondary">Toate biletele vor fi trimise pe emailul tău</p>
+                                    <p class="font-medium text-secondary"><?= htmlspecialchars(ct('tickets_to_email')) ?></p>
                                 </div>
                             </div>
 
                             <!-- Different beneficiaries toggle -->
                             <label class="flex items-center gap-3 cursor-pointer">
                                 <input type="checkbox" id="differentBeneficiaries" class="checkbox-custom" onchange="CheckoutPage.toggleBeneficiaries()">
-                                <span class="text-sm font-medium text-secondary">Folosește date diferite pentru fiecare bilet</span>
+                                <span class="text-sm font-medium text-secondary"><?= htmlspecialchars(ct('different_beneficiaries')) ?></span>
                             </label>
                         </div>
 
@@ -142,7 +143,7 @@ require_once __DIR__ . '/includes/header.php';
                             <span class="flex items-center justify-center w-8 h-8 rounded-lg bg-success/10">
                                 <svg class="w-5 h-5 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
                             </span>
-                            <span id="insurance-label">Taxa de retur</span>
+                            <span id="insurance-label"><?= htmlspecialchars(ct('insurance_label')) ?></span>
                         </h2>
 
                         <div class="flex items-start gap-4">
@@ -150,12 +151,12 @@ require_once __DIR__ . '/includes/header.php';
                                 <input type="checkbox" id="insuranceCheckbox" class="checkbox-custom mt-0.5">
                                 <div class="flex-1">
                                     <div class="flex items-center justify-between mb-1">
-                                        <span class="font-medium text-secondary" id="insurance-title">Protecție returnare bilete</span>
+                                        <span class="font-medium text-secondary" id="insurance-title"><?= htmlspecialchars(ct('insurance_protection')) ?></span>
                                         <span class="font-bold text-success" id="insurance-price">+5.00 lei</span>
                                     </div>
-                                    <p class="text-sm text-muted" id="insurance-description">Poți solicita returnarea biletelor în cazul în care evenimentul este amânat sau anulat.</p>
+                                    <p class="text-sm text-muted" id="insurance-description"><?= htmlspecialchars(ct('insurance_description')) ?></p>
                                     <p class="hidden mt-2 text-xs font-medium text-amber-600" id="insurance-partial-note"></p>
-                                    <a href="#" id="insurance-terms-link" class="hidden mt-2 text-xs text-primary hover:underline">Vezi termeni și condiții</a>
+                                    <a href="#" id="insurance-terms-link" class="hidden mt-2 text-xs text-primary hover:underline"><?= htmlspecialchars(ct('insurance_terms')) ?></a>
                                 </div>
                             </label>
                         </div>
@@ -166,16 +167,16 @@ require_once __DIR__ . '/includes/header.php';
                         <label class="flex items-start gap-3 cursor-pointer">
                             <input type="checkbox" id="termsCheckbox" class="checkbox-custom mt-0.5" required>
                             <span class="text-sm text-muted">
-                                Am citit și sunt de acord cu <a href="/termeni" class="text-primary">Termenii și condițiile</a>,
-                                <a href="/confidentialitate" class="text-primary">Politica de confidențialitate</a> și
-                                <a href="/retur" class="text-primary">Politica de returnare</a>.
+                                <?= htmlspecialchars(ct('terms_full')) ?> <a href="/termeni" class="text-primary"><?= htmlspecialchars(ct('terms_link_text')) ?></a>,
+                                <a href="/confidentialitate" class="text-primary"><?= htmlspecialchars(ct('privacy_link_text')) ?></a> <?= htmlspecialchars(ct('and')) ?>
+                                <a href="/retur" class="text-primary"><?= htmlspecialchars(ct('return_link_text')) ?></a>.
                             </span>
                         </label>
 
                         <label class="flex items-start gap-3 mt-4 cursor-pointer">
                             <input type="checkbox" id="newsletterCheckbox" class="checkbox-custom mt-0.5">
                             <span class="text-sm text-muted">
-                                Doresc să primesc newsletter-ul <?= SITE_NAME ?> cu noutăți și oferte speciale.
+                                <?= htmlspecialchars(ct('newsletter_full')) ?> <?= SITE_NAME ?> <?= htmlspecialchars(ct('newsletter_full_suffix')) ?>
                             </span>
                         </label>
                     </div>
@@ -184,7 +185,7 @@ require_once __DIR__ . '/includes/header.php';
                     <div class="p-6 bg-white border rounded-2xl border-border">
                         <h2 class="flex items-center gap-2 mb-4 text-lg font-bold text-secondary">
                             <span class="flex items-center justify-center w-8 h-8 text-sm font-bold rounded-lg bg-primary/10 text-primary">3</span>
-                            Metodă de plată
+                            <?= htmlspecialchars(ct('payment_method')) ?>
                         </h2>
 
                         <div class="space-y-3">
@@ -197,8 +198,8 @@ require_once __DIR__ . '/includes/header.php';
                                             <span class="text-white text-[10px] font-bold">NETOPIA</span>
                                         </div>
                                         <div>
-                                            <p class="font-semibold text-secondary">Card bancar</p>
-                                            <p class="text-xs text-muted">Visa, Mastercard, Maestro</p>
+                                            <p class="font-semibold text-secondary"><?= htmlspecialchars(ct('card_bank')) ?></p>
+                                            <p class="text-xs text-muted"><?= htmlspecialchars(ct('card_bank_brands')) ?></p>
                                         </div>
                                     </div>
                                     <div class="flex items-center gap-2 mobile:hidden">
@@ -218,8 +219,8 @@ require_once __DIR__ . '/includes/header.php';
                                             <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
                                         </div>
                                         <div>
-                                            <p class="font-semibold text-secondary">Card Cultural</p>
-                                            <p class="text-xs text-muted">Edenred, Sodexo, Up România</p>
+                                            <p class="font-semibold text-secondary"><?= htmlspecialchars(ct('card_cultural')) ?></p>
+                                            <p class="text-xs text-muted"><?= htmlspecialchars(ct('card_cultural_brands')) ?></p>
                                         </div>
                                     </div>
                                 </div>
@@ -229,7 +230,7 @@ require_once __DIR__ . '/includes/header.php';
 
                         <!-- Accepted wallets info (informational only) -->
                         <div class="flex flex-wrap items-center gap-3 px-1 mt-4">
-                            <span class="text-xs text-muted">Acceptăm și:</span>
+                            <span class="text-xs text-muted"><?= htmlspecialchars(ct('accept_also')) ?></span>
                             <div class="flex items-center gap-1.5 px-2.5 py-1 bg-white border rounded-lg border-border">
                                 <svg class="h-3.5 mobile:h-5" viewBox="0 0 24 24" fill="none">
                                     <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
@@ -249,10 +250,10 @@ require_once __DIR__ . '/includes/header.php';
 
                         <!-- Card Form Info (shown for Card bancar) -->
                         <div id="cardForm" class="p-4 mt-4 bg-surface rounded-xl">
-                            <p class="mb-4 text-sm text-muted">Vei fi redirecționat către procesatorul de plăți pentru a introduce datele cardului în siguranță.</p>
+                            <p class="mb-4 text-sm text-muted"><?= htmlspecialchars(ct('card_form_info')) ?></p>
                             <div class="flex items-center gap-2 text-xs mobile:text-sm text-muted">
                                 <svg class="w-4 h-4 text-success mobile:h-5 mobile:w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
-                                Plățile sunt procesate securizat
+                                <?= htmlspecialchars(ct('secure_processed')) ?>
                             </div>
                         </div>
 
@@ -261,9 +262,9 @@ require_once __DIR__ . '/includes/header.php';
                             <div class="flex items-start gap-3">
                                 <svg class="w-5 h-5 mt-0.5 text-purple-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                                 <div>
-                                    <p class="mb-1 text-sm font-medium text-purple-800">Comision adițional Card Cultural</p>
-                                    <p id="cultural-card-surcharge-text" class="text-sm text-purple-700">Tranzacțiile cu card cultural au un comision de procesare suplimentar de <strong>4%</strong> din valoarea totală, datorat costurilor mai mari de procesare pentru acest tip de card.</p>
-                                    <p class="mt-2 text-xs text-muted">Vei fi redirecționat către procesatorul de plăți pentru a introduce datele cardului cultural în siguranță.</p>
+                                    <p class="mb-1 text-sm font-medium text-purple-800"><?= htmlspecialchars(ct('cultural_card_surcharge')) ?></p>
+                                    <p id="cultural-card-surcharge-text" class="text-sm text-purple-700"><?= ct('cultural_card_surcharge_text') ?></p>
+                                    <p class="mt-2 text-xs text-muted"><?= htmlspecialchars(ct('cultural_card_redirect')) ?></p>
                                 </div>
                             </div>
                         </div>
@@ -275,10 +276,10 @@ require_once __DIR__ . '/includes/header.php';
                     <div class="flex items-center justify-center w-24 h-24 mx-auto mb-6 rounded-full bg-surface">
                         <svg class="w-12 h-12 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/></svg>
                     </div>
-                    <h3 class="mb-2 text-xl font-bold text-secondary">Coșul tău este gol</h3>
-                    <p class="mb-6 text-muted">Adaugă bilete în coș pentru a continua.</p>
-                    <a href="/evenimente" class="inline-flex items-center gap-2 px-6 py-3 font-bold text-white btn-primary bg-primary rounded-xl">
-                        Descoperă evenimente
+                    <h3 class="mb-2 text-xl font-bold text-secondary"><?= htmlspecialchars(ct('empty_cart_title')) ?></h3>
+                    <p class="mb-6 text-muted"><?= htmlspecialchars(ct('empty_cart_short')) ?></p>
+                    <a href="/evenimente<?= $cartLocale !== 'ro' ? '?lang=' . urlencode($cartLocale) : '' ?>" class="inline-flex items-center gap-2 px-6 py-3 font-bold text-white btn-primary bg-primary rounded-xl">
+                        <?= htmlspecialchars(ct('discover_events')) ?>
                     </a>
                 </div>
             </div>
@@ -288,7 +289,7 @@ require_once __DIR__ . '/includes/header.php';
                 <div id="summary-section" class="sticky hidden top-24">
                     <div class="overflow-hidden bg-white border rounded-2xl border-border">
                         <div class="p-6 border-b border-border">
-                            <h2 class="text-xl font-bold text-secondary">Sumar comandă</h2>
+                            <h2 class="text-xl font-bold text-secondary"><?= htmlspecialchars(ct('summary_title')) ?></h2>
                         </div>
 
                         <div class="p-6">
@@ -305,7 +306,7 @@ require_once __DIR__ . '/includes/header.php';
                                 </div>
                                 
                                 <div class="flex justify-between text-sm">
-                                    <span class="text-muted">Subtotal (<span id="summary-items">0</span> bilete)</span>
+                                    <span class="text-muted"><?= htmlspecialchars(ct('subtotal')) ?> (<span id="summary-items">0</span> <?= htmlspecialchars(ct('cart_items_unit')) ?>)</span>
                                     <span id="summary-subtotal" class="font-medium">0.00 lei</span>
                                 </div>
 
@@ -313,7 +314,7 @@ require_once __DIR__ . '/includes/header.php';
                                 <div id="discount-row" class="flex justify-between hidden p-2 -mx-2 text-sm rounded-lg bg-success/5">
                                     <span class="flex items-center gap-1 text-success">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
-                                        <span id="discount-label">Reducere</span>
+                                        <span id="discount-label"><?= htmlspecialchars(ct('discount_short')) ?></span>
                                     </span>
                                     <span id="discount-amount" class="font-medium text-success">-0.00 lei</span>
                                 </div>
@@ -322,7 +323,7 @@ require_once __DIR__ . '/includes/header.php';
                                 <div id="insurance-row" class="flex justify-between hidden p-2 -mx-2 text-sm rounded-lg bg-success/5">
                                     <span class="flex items-center gap-1 text-success">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
-                                        <span id="insurance-row-label">Taxa de retur</span>
+                                        <span id="insurance-row-label"><?= htmlspecialchars(ct('insurance_label')) ?></span>
                                     </span>
                                     <span id="insurance-row-amount" class="font-medium text-success">+0.00 lei</span>
                                 </div>
@@ -331,7 +332,7 @@ require_once __DIR__ . '/includes/header.php';
                                 <div id="cultural-card-row" class="flex justify-between hidden p-2 -mx-2 text-sm rounded-lg bg-purple-50">
                                     <span class="flex items-center gap-1 text-purple-700">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
-                                        <span id="cultural-card-surcharge-label">Comision card cultural (4%)</span>
+                                        <span id="cultural-card-surcharge-label"><?= htmlspecialchars(ct('cultural_surcharge_label')) ?></span>
                                     </span>
                                     <span id="cultural-card-amount" class="font-medium text-purple-700">+0.00 lei</span>
                                 </div>
@@ -339,12 +340,12 @@ require_once __DIR__ . '/includes/header.php';
 
                             <div class="pt-4 mt-4 border-t border-border">
                                 <div class="flex items-center justify-between">
-                                    <span class="text-lg font-bold text-secondary">Total de plată</span>
+                                    <span class="text-lg font-bold text-secondary"><?= htmlspecialchars(ct('total_to_pay')) ?></span>
                                     <span id="summary-total" class="text-2xl font-bold text-primary">0.00 lei</span>
                                 </div>
                                 <p id="savings-text" class="flex items-center justify-end hidden gap-1 mt-1 text-sm text-right text-success">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                                    <span id="savings-amount">Economisești 0 lei!</span>
+                                    <span id="savings-amount"><?= htmlspecialchars(ct('savings_amount_prefix')) ?> 0 lei!</span>
                                 </p>
                             </div>
 
@@ -352,18 +353,18 @@ require_once __DIR__ . '/includes/header.php';
                             <div class="flex items-center justify-between p-3 mt-4 bg-surface rounded-xl">
                                 <div class="flex items-center gap-2">
                                     <span class="text-lg">🎁</span>
-                                    <span class="text-sm font-medium text-secondary">Vei câștiga:</span>
+                                    <span class="text-sm font-medium text-secondary"><?= htmlspecialchars(ct('will_earn_short')) ?></span>
                                 </div>
-                                <span id="points-earned" class="font-bold text-accent">0 puncte</span>
+                                <span id="points-earned" class="font-bold text-accent">0 <?= htmlspecialchars(ct('points_short')) ?></span>
                             </div>
 
-                            <button onclick="CheckoutPage.submit()" id="payBtn" class="flex items-center justify-center w-full gap-2 py-4 mt-6 text-lg font-bold text-white btn-primary rounded-xl bg-primary" disabled aria-label="Finalizează comanda">
+                            <button onclick="CheckoutPage.submit()" id="payBtn" class="flex items-center justify-center w-full gap-2 py-4 mt-6 text-lg font-bold text-white btn-primary rounded-xl bg-primary" disabled aria-label="<?= htmlspecialchars(ct('pay_now')) ?>">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
-                                <span id="pay-btn-text">Plătește 0.00 lei</span>
+                                <span id="pay-btn-text"><?= htmlspecialchars(ct('pay_amount')) ?> 0.00 lei</span>
                             </button>
 
                             <p class="mt-3 text-xs text-center text-muted">
-                                Prin plasarea comenzii, confirmi că ai citit și ești de acord cu termenii și condițiile.
+                                <?= htmlspecialchars(ct('terms_confirm_short')) ?>
                             </p>
                         </div>
                     </div>
@@ -394,31 +395,31 @@ require_once __DIR__ . '/includes/header.php';
     <div id="login-modal" class="fixed inset-0 z-50 items-center justify-center hidden bg-black/50 backdrop-blur-sm">
         <div class="w-full max-w-md p-8 mx-4 bg-white shadow-2xl rounded-2xl">
             <div class="flex items-center justify-between mb-6">
-                <h3 class="text-xl font-bold text-secondary">Conectează-te</h3>
-                <button type="button" onclick="CheckoutPage.hideLoginModal()" class="p-2 transition-colors rounded-lg hover:bg-surface" aria-label="Închide modalul de login">
+                <h3 class="text-xl font-bold text-secondary"><?= htmlspecialchars(ct('login_title')) ?></h3>
+                <button type="button" onclick="CheckoutPage.hideLoginModal()" class="p-2 transition-colors rounded-lg hover:bg-surface" aria-label="<?= htmlspecialchars(ct('login_close_aria')) ?>">
                     <svg class="w-5 h-5 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                 </button>
             </div>
 
-            <p class="mb-6 text-sm text-muted">Conectează-te pentru a-ți precompletă datele și a finaliza comanda mai rapid.</p>
+            <p class="mb-6 text-sm text-muted"><?= htmlspecialchars(ct('login_intro')) ?></p>
 
             <form id="checkout-login-form" onsubmit="return CheckoutPage.handleLogin(event)">
                 <div class="mb-4">
-                    <label class="block mb-2 text-sm font-medium text-secondary">Email</label>
+                    <label class="block mb-2 text-sm font-medium text-secondary"><?= htmlspecialchars(ct('email')) ?></label>
                     <input type="email" id="login-email" class="w-full px-4 py-3 border-2 input-field border-border rounded-xl focus:outline-none" placeholder="email@exemplu.ro" required>
                 </div>
                 <div class="mb-6">
-                    <label class="block mb-2 text-sm font-medium text-secondary">Parola</label>
+                    <label class="block mb-2 text-sm font-medium text-secondary"><?= htmlspecialchars(ct('login_password')) ?></label>
                     <input type="password" id="login-password" class="w-full px-4 py-3 border-2 input-field border-border rounded-xl focus:outline-none" placeholder="••••••••" required>
                 </div>
                 <button type="submit" id="login-submit-btn" class="flex items-center justify-center w-full gap-2 py-3 font-bold text-white btn-primary rounded-xl bg-primary">
-                    <span id="login-btn-text">Conectează-te</span>
+                    <span id="login-btn-text"><?= htmlspecialchars(ct('login_submit')) ?></span>
                 </button>
             </form>
 
             <div class="flex items-center justify-between mt-4 text-sm">
-                <a href="/parola-uitata" target="_blank" class="text-primary hover:underline">Ai uitat parola?</a>
-                <a href="/inregistrare" target="_blank" class="text-primary hover:underline">Creează cont</a>
+                <a href="/parola-uitata" target="_blank" class="text-primary hover:underline"><?= htmlspecialchars(ct('forgot_password')) ?></a>
+                <a href="/inregistrare" target="_blank" class="text-primary hover:underline"><?= htmlspecialchars(ct('create_account_link')) ?></a>
             </div>
         </div>
     </div>

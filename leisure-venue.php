@@ -334,6 +334,9 @@ require_once __DIR__ . '/includes/head.php';
                 // Step 2 services
                 'extra_services' => 'Servicii suplimentare',
                 'from_price' => 'de la ',
+                'price_breakdown' => 'Detalii preț',
+                'price_ticket' => 'Preț bilet',
+                'ticketing_fee' => 'Taxă ticketing',
                 'requires_access_short' => 'Necesită bilet acces',
                 'includes_label' => 'Include',
                 'rental_hour' => 'Ora închiriere',
@@ -417,6 +420,9 @@ require_once __DIR__ . '/includes/head.php';
                 'upsell_subtitle' => 'Válaszd ki, mi tetszik, és spórolj időt a helyszínen.',
                 'extra_services' => 'Kiegészítő szolgáltatások',
                 'from_price' => '-tól ',
+                'price_breakdown' => 'Ár részletei',
+                'price_ticket' => 'Jegy ára',
+                'ticketing_fee' => 'Jegykezelési díj',
                 'requires_access_short' => 'Belépőjegy szükséges',
                 'includes_label' => 'Tartalmaz',
                 'rental_hour' => 'Bérlés időpontja',
@@ -494,6 +500,9 @@ require_once __DIR__ . '/includes/head.php';
                 'upsell_subtitle' => 'Pick what tempts you and save time on-site.',
                 'extra_services' => 'Extra services',
                 'from_price' => 'from ',
+                'price_breakdown' => 'Price breakdown',
+                'price_ticket' => 'Ticket price',
+                'ticketing_fee' => 'Ticketing fee',
                 'requires_access_short' => 'Access ticket required',
                 'includes_label' => 'Includes',
                 'rental_hour' => 'Rental time',
@@ -1439,6 +1448,26 @@ foreach (['slug', '_route', '_path'] as $_drop) {
                         <div class="flex items-center justify-between text-sm gap-2">
                             <span class="text-white/80 flex-1 min-w-0"><span x-text="item.qty"></span>× <span x-text="item.name"></span></span>
                             <div class="flex items-center gap-1 flex-shrink-0">
+                                <!-- Info tooltip: split bilet + taxa ticketing (vizibil doar daca exista comision) -->
+                                <span x-show="hasCommission" class="relative inline-flex items-center" @mouseenter="hoverTooltipKey = item._cartKey" @mouseleave="hoverTooltipKey = null" @click.stop="hoverTooltipKey = (hoverTooltipKey === item._cartKey ? null : item._cartKey)">
+                                    <button type="button" class="text-white/50 hover:text-white p-0.5" :aria-label="t('price_breakdown') || 'Detalii preț'">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                    </button>
+                                    <div x-show="hoverTooltipKey === item._cartKey" x-transition class="absolute right-full mr-2 top-1/2 -translate-y-1/2 bg-white text-forest-900 text-[11px] rounded-lg shadow-xl border border-forest-100 px-3 py-2 w-44 z-50">
+                                        <div class="flex items-center justify-between gap-3 mb-1">
+                                            <span class="text-forest-700/70" data-i18n="price_ticket">Preț bilet</span>
+                                            <span class="font-bold"><span x-text="(item.qty * (item.effective_price - commissionPerTicket(item.effective_price))).toFixed(2)"></span> RON</span>
+                                        </div>
+                                        <div class="flex items-center justify-between gap-3 pb-1 border-b border-forest-100">
+                                            <span class="text-forest-700/70" data-i18n="ticketing_fee">Taxă ticketing</span>
+                                            <span class="font-bold"><span x-text="(item.qty * commissionPerTicket(item.effective_price)).toFixed(2)"></span> RON</span>
+                                        </div>
+                                        <div class="flex items-center justify-between gap-3 pt-1">
+                                            <span class="font-semibold text-forest-900" data-i18n="total">Total</span>
+                                            <span class="font-bold"><span x-text="(item.qty * item.effective_price).toFixed(2)"></span> RON</span>
+                                        </div>
+                                    </div>
+                                </span>
                                 <button @click="removeLineFromCart(item)" type="button" class="text-white/40 hover:text-rose-300 transition-colors p-0.5" title="Elimină din coș">
                                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22"/></svg>
                                 </button>
@@ -1453,10 +1482,6 @@ foreach (['slug', '_route', '_path'] as $_drop) {
                                 <span x-show="addon.line_total === 0" class="text-emerald-300">gratis</span>
                             </div>
                         </template>
-                        <div x-show="hasCommission" class="flex items-center justify-between text-xs text-white/50 mt-0.5 pl-3">
-                            <span data-i18n="commission_plus">+ Comision ticketing</span>
-                            <span>+<span x-text="(item.qty * commissionPerTicket(item.effective_price)).toFixed(2)"></span> RON</span>
-                        </div>
                     </div>
                 </template>
             </div>
@@ -1538,6 +1563,7 @@ function reservationPage() {
         // i18n helper expus pe Alpine scope (utilizat in template prin t('key'))
         t: t,
         cartOpen: false,
+        hoverTooltipKey: null,
         openFaq: 0,
         upsellDismissed: false,
         selectedDate: null,
@@ -2221,7 +2247,9 @@ function reservationPage() {
                 );
             });
 
-            window.location.href = '/cos';
+            // B5: păstram limba selectata pe pagina publica si in cos/checkout
+            const langParam = PUBLIC_LOCALE && PUBLIC_LOCALE !== 'ro' ? ('?lang=' + encodeURIComponent(PUBLIC_LOCALE)) : '';
+            window.location.href = '/cos' + langParam;
         },
 
         // ========== Maps (Leaflet) ==========

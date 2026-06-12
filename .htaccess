@@ -485,6 +485,40 @@ RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^organizator/widget-uri/?$ organizer/widgets.php [L]
 
+# ============================================
+# SCAN APP ROUTES START (added 2026-06-12)
+# Web replica of the Android Tixello Scan app for iOS users.
+# All routes redirect to organizer/scan-app/*.php files.
+# DO NOT remove without checking dependencies in
+# organizer/scan-app/ and assets/js/scan-app/.
+# ============================================
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^organizator/scan/?$ organizer/scan-app/panou.php [L]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^organizator/scan/panou/?$ organizer/scan-app/panou.php [L]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^organizator/scan/scanare/?$ organizer/scan-app/scanare.php [L]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^organizator/scan/vanzare/?$ organizer/scan-app/vanzare.php [L]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^organizator/scan/rapoarte/?$ organizer/scan-app/rapoarte.php [L]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^organizator/scan/setari-scan/?$ organizer/scan-app/setari-scan.php [L]
+# ============================================
+# SCAN APP ROUTES END
+# ============================================
+
 # Payment redirect for whitelabel sites
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
