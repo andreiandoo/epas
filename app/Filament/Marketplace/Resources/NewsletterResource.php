@@ -1067,6 +1067,71 @@ class NewsletterResource extends Resource
                         ->visible(fn (SGet $get) => (bool) $get('exclude_stale_no_clicks'))
                         ->suffix('ore'),
 
+                    Forms\Components\Placeholder::make('throttle_estimate')
+                        ->label('Durată estimată trimitere')
+                        ->content(function (SGet $get) use ($marketplace) {
+                            // Approximate: total ÷ (batch_size / batch_delay).
+                            // Doesn't account for SMTP send time, which adds
+                            // a few seconds per batch on top — keeps the
+                            // estimate honest as a LOWER bound.
+                            $instance = new MarketplaceNewsletter();
+                            $instance->marketplace_client_id = $marketplace?->id;
+                            $instance->target_lists = $get('target_lists') ?? [];
+                            $instance->target_tags = $get('target_tags') ?? [];
+                            $instance->target_event_ids = $get('target_event_ids') ?? [];
+                            $instance->target_organizer_ids = $get('target_organizer_ids') ?? [];
+                            $instance->target_city_ids = $get('target_city_ids') ?? [];
+                            $instance->target_category_ids = $get('target_category_ids') ?? [];
+                            $instance->target_artist_ids = $get('target_artist_ids') ?? [];
+
+                            $hasTargeting = !empty($instance->target_lists)
+                                || !empty($instance->target_tags)
+                                || !empty($instance->target_event_ids)
+                                || !empty($instance->target_organizer_ids)
+                                || !empty($instance->target_city_ids)
+                                || !empty($instance->target_category_ids)
+                                || !empty($instance->target_artist_ids);
+                            if (!$hasTargeting) return '—';
+
+                            try {
+                                $count = $instance->getRecipientCount();
+                            } catch (\Throwable) {
+                                return '—';
+                            }
+                            if ($count <= 0) return '—';
+
+                            $batchSize = (int) ($marketplace?->settings['newsletter_throttle']['batch_size']
+                                ?? config('newsletter.throttle.batch_size', 25));
+                            $batchDelay = (int) ($marketplace?->settings['newsletter_throttle']['batch_delay_seconds']
+                                ?? config('newsletter.throttle.batch_delay_seconds', 8));
+                            $batchSize = max(1, $batchSize);
+                            $batchDelay = max(1, $batchDelay);
+
+                            $batches = (int) ceil($count / $batchSize);
+                            $seconds = $batches * $batchDelay;
+
+                            $h = intdiv($seconds, 3600);
+                            $m = intdiv($seconds % 3600, 60);
+                            $rate = (int) round(60 / $batchDelay * $batchSize);
+                            $duration = $h > 0
+                                ? sprintf('%dh %02dm', $h, $m)
+                                : sprintf('%dm', max(1, $m));
+
+                            return new HtmlString(
+                                '<div class="text-xs text-gray-700 dark:text-gray-300">'
+                                . '<div><strong>~' . $duration . '</strong> pentru ' . number_format($count) . ' destinatari</div>'
+                                . '<div class="text-gray-500 mt-1">Throttle: ' . $batchSize . ' / ' . $batchDelay . 's = ~' . $rate . ' email/min</div>'
+                                . '</div>'
+                            );
+                        })
+                        ->visible(fn (SGet $get) => !empty($get('target_lists'))
+                            || !empty($get('target_event_ids'))
+                            || !empty($get('target_organizer_ids'))
+                            || !empty($get('target_city_ids'))
+                            || !empty($get('target_category_ids'))
+                            || !empty($get('target_artist_ids'))
+                            || !empty($get('target_tags'))),
+
                     Forms\Components\Placeholder::make('targeted_events_summary')
                         ->label('Evenimente țintă')
                         ->content(function (SGet $get) {

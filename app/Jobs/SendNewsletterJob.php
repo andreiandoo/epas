@@ -26,10 +26,30 @@ class SendNewsletterJob implements ShouldQueue
     protected MarketplaceNewsletter $newsletter;
     protected int $batchSize;
 
-    public function __construct(MarketplaceNewsletter $newsletter, int $batchSize = 50)
+    public function __construct(MarketplaceNewsletter $newsletter, ?int $batchSize = null)
     {
         $this->newsletter = $newsletter;
-        $this->batchSize = $batchSize;
+        // Throttle resolution: per-marketplace setting overrides the
+        // global config. Default 25 emails per batch — slow enough that
+        // the queue worker doesn't saturate the DB / PHP-FPM pool that
+        // the public ambilet.ro front-end also depends on (the 3s nav
+        // cache curl was timing out mid-blast).
+        $this->batchSize = $batchSize
+            ?? $this->resolveBatchSize($newsletter);
+    }
+
+    protected function resolveBatchSize(MarketplaceNewsletter $newsletter): int
+    {
+        $perMarketplace = $newsletter->marketplaceClient?->settings['newsletter_throttle']['batch_size'] ?? null;
+        $resolved = $perMarketplace ?? config('newsletter.throttle.batch_size', 25);
+        return max(1, (int) $resolved);
+    }
+
+    protected function resolveBatchDelaySeconds(): int
+    {
+        $perMarketplace = $this->newsletter->marketplaceClient?->settings['newsletter_throttle']['batch_delay_seconds'] ?? null;
+        $resolved = $perMarketplace ?? config('newsletter.throttle.batch_delay_seconds', 8);
+        return max(1, (int) $resolved);
     }
 
     public function handle(): void
@@ -93,8 +113,11 @@ class SendNewsletterJob implements ShouldQueue
             ->count();
 
         if ($remaining > 0) {
-            // Dispatch next batch with a small delay
-            static::dispatch($newsletter, $this->batchSize)->delay(now()->addSeconds(5));
+            // Dispatch next batch with a configurable delay so the
+            // overall throughput stays bounded — protects the DB / PHP-
+            // FPM pool that the public site shares with the queue worker.
+            static::dispatch($newsletter, $this->batchSize)
+                ->delay(now()->addSeconds($this->resolveBatchDelaySeconds()));
         } else {
             $newsletter->markCompleted();
             $this->completeServiceOrder($newsletter);
