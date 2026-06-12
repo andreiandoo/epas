@@ -116,7 +116,11 @@ class SendNewsletterJob implements ShouldQueue
             // Dispatch next batch with a configurable delay so the
             // overall throughput stays bounded — protects the DB / PHP-
             // FPM pool that the public site shares with the queue worker.
-            static::dispatch($newsletter, $this->batchSize)
+            // Don't pass $this->batchSize through: re-reading the throttle
+            // on each iteration lets the admin tighten the knob mid-blast
+            // (e.g. when the site starts struggling) and have the in-
+            // flight chain pick up the change on the next batch.
+            static::dispatch($newsletter)
                 ->delay(now()->addSeconds($this->resolveBatchDelaySeconds()));
         } else {
             $newsletter->markCompleted();
