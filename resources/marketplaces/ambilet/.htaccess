@@ -515,6 +515,14 @@ RewriteRule ^organizator/scan/rapoarte/?$ organizer/scan-app/rapoarte.php [L]
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^organizator/scan/setari-scan/?$ organizer/scan-app/setari-scan.php [L]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^organizator/scan/porti/?$ organizer/scan-app/porti.php [L]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^organizator/scan/asignare-personal/?$ organizer/scan-app/asignare-personal.php [L]
 # ============================================
 # SCAN APP ROUTES END
 # ============================================
