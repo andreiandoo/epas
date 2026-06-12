@@ -287,12 +287,121 @@ class EditNewsletter extends EditRecord
                     Notification::make()->title('Programat')->success()->send();
                 }),
 
+            // Pause: flips status away from 'sending' so the next batch
+            // exits early at the status check in SendNewsletterJob::handle.
+            // Pending recipients stay queued for a later resume. Uses
+            // 'scheduled' as the "paused" state to reuse the existing
+            // resume path. Stops the chain in at most one batch delay
+            // (~10-15s with default throttle).
+            Actions\Action::make('pauseSending')
+                ->label('Pauză')
+                ->icon('heroicon-o-pause')
+                ->color('warning')
+                ->requiresConfirmation()
+                ->modalHeading('Pauză trimitere')
+                ->modalDescription('Trimiterea se va opri în maxim un batch (~10-15 secunde). Destinatarii rămași (pending) așteaptă o eventuală reluare.')
+                ->visible(fn () => $this->record->status === 'sending')
+                ->action(function () {
+                    $this->record->update(['status' => 'scheduled']);
+                    Notification::make()->title('Trimitere pausată')
+                        ->body('Chain-ul se oprește la următorul batch.')
+                        ->success()->send();
+                }),
+
+            // Resume: only meaningful when paused (scheduled with started_at
+            // set) or when an explicit pending count remains. Sets status
+            // back to 'sending' and dispatches a fresh SendNewsletterJob
+            // which picks up the remaining pending recipients with the
+            // CURRENT marketplace throttle.
+            Actions\Action::make('resumeSending')
+                ->label('Reia')
+                ->icon('heroicon-o-play')
+                ->color('success')
+                ->requiresConfirmation()
+                ->modalHeading('Reia trimitere')
+                ->modalDescription(function () {
+                    $pending = \Illuminate\Support\Facades\DB::table('marketplace_newsletter_recipients')
+                        ->where('newsletter_id', $this->record->id)
+                        ->where('status', 'pending')
+                        ->count();
+                    return "Continuă trimiterea pentru {$pending} destinatari rămași, cu throttle-ul curent al marketplace-ului.";
+                })
+                ->visible(function () {
+                    if ($this->record->status !== 'scheduled') return false;
+                    // Only show resume when there's pending work — pure
+                    // future-scheduled drafts get the existing "cancel
+                    // programare" path.
+                    return \Illuminate\Support\Facades\DB::table('marketplace_newsletter_recipients')
+                        ->where('newsletter_id', $this->record->id)
+                        ->where('status', 'pending')
+                        ->exists();
+                })
+                ->action(function () {
+                    $this->record->update(['status' => 'sending']);
+                    \App\Jobs\SendNewsletterJob::dispatch($this->record);
+                    Notification::make()->title('Trimitere reluată')
+                        ->body('Job-ul a fost re-dispatched cu throttle-ul curent.')
+                        ->success()->send();
+                }),
+
+            // Stop: hard-cancel mid-flight or while paused. Marks the
+            // newsletter as cancelled AND flushes remaining pending
+            // recipients so they don't get sent on a stray resume.
+            // Distinct from "Anulează programare" which only applies
+            // to never-started scheduled drafts.
+            Actions\Action::make('stopSending')
+                ->label('Stop definitiv')
+                ->icon('heroicon-o-stop')
+                ->color('danger')
+                ->requiresConfirmation()
+                ->modalHeading('Oprește definitiv trimiterea')
+                ->modalDescription(function () {
+                    $pending = \Illuminate\Support\Facades\DB::table('marketplace_newsletter_recipients')
+                        ->where('newsletter_id', $this->record->id)
+                        ->where('status', 'pending')
+                        ->count();
+                    return "Newsletter-ul va fi marcat ca anulat. {$pending} destinatari rămași nu se mai trimit. Acțiunea NU se poate anula.";
+                })
+                ->modalSubmitActionLabel('Oprește definitiv')
+                ->visible(function () {
+                    if (!in_array($this->record->status, ['sending', 'scheduled'])) return false;
+                    return \Illuminate\Support\Facades\DB::table('marketplace_newsletter_recipients')
+                        ->where('newsletter_id', $this->record->id)
+                        ->where('status', 'pending')
+                        ->exists();
+                })
+                ->action(function () {
+                    $now = now();
+                    // Mark remaining recipients as cancelled (audit trail
+                    // preserved) and the newsletter itself as cancelled.
+                    \Illuminate\Support\Facades\DB::table('marketplace_newsletter_recipients')
+                        ->where('newsletter_id', $this->record->id)
+                        ->where('status', 'pending')
+                        ->update(['status' => 'cancelled', 'updated_at' => $now]);
+                    $this->record->update([
+                        'status' => 'cancelled',
+                        'completed_at' => $now,
+                    ]);
+                    Notification::make()->title('Trimitere oprită definitiv')
+                        ->body('Newsletter marcat ca anulat.')
+                        ->success()->send();
+                }),
+
             Actions\Action::make('cancel')
                 ->label('Anulează programare')
                 ->icon('heroicon-o-x-mark')
                 ->color('danger')
                 ->requiresConfirmation()
-                ->visible(fn () => $this->record->status === 'scheduled')
+                ->visible(function () {
+                    // Only show for pure future-scheduled drafts that
+                    // never started sending — the Stop action above
+                    // handles the case where some have already been sent.
+                    if ($this->record->status !== 'scheduled') return false;
+                    return ! \Illuminate\Support\Facades\DB::table('marketplace_newsletter_recipients')
+                        ->where('newsletter_id', $this->record->id)
+                        ->where('status', 'sent')
+                        ->exists();
+                })
                 ->action(function () {
                     $this->record->cancel();
                     Notification::make()->title('Anulat')->success()->send();
