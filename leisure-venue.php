@@ -333,6 +333,7 @@ require_once __DIR__ . '/includes/head.php';
                 'upsell_subtitle' => 'Alege ce te tentează și economisește timp pe loc.',
                 // Step 2 services
                 'extra_services' => 'Servicii suplimentare',
+                'from_price' => 'de la ',
                 'requires_access_short' => 'Necesită bilet acces',
                 'includes_label' => 'Include',
                 'rental_hour' => 'Ora închiriere',
@@ -415,6 +416,7 @@ require_once __DIR__ . '/includes/head.php';
                 'upsell_title' => 'Tedd látogatásod teljes élménnyé',
                 'upsell_subtitle' => 'Válaszd ki, mi tetszik, és spórolj időt a helyszínen.',
                 'extra_services' => 'Kiegészítő szolgáltatások',
+                'from_price' => '-tól ',
                 'requires_access_short' => 'Belépőjegy szükséges',
                 'includes_label' => 'Tartalmaz',
                 'rental_hour' => 'Bérlés időpontja',
@@ -491,6 +493,7 @@ require_once __DIR__ . '/includes/head.php';
                 'upsell_title' => 'Make your visit a complete experience',
                 'upsell_subtitle' => 'Pick what tempts you and save time on-site.',
                 'extra_services' => 'Extra services',
+                'from_price' => 'from ',
                 'requires_access_short' => 'Access ticket required',
                 'includes_label' => 'Includes',
                 'rental_hour' => 'Rental time',
@@ -645,14 +648,25 @@ foreach (['slug', '_route', '_path'] as $_drop) {
                 </div>
             </a>
             <?php endif; ?>
-            <?php if ($venueCity || $venueAddress): ?>
+            <?php
+            // Locație afișată: prefera venue_config.location_label (custom suprascriere)
+            // → venue.city → venue.address. Permite organizatorului să afișeze
+            // "Lăzărești" în loc de "Bixad" (cazul Sf. Ana).
+            // Suport traducere prin venue_config.translations.location_label[locale].
+            $locationLabel = $venueConfig['location_label'] ?? '';
+            if (!empty($heroTranslations['location_label'][$publicLocale])) {
+                $locationLabel = $heroTranslations['location_label'][$publicLocale];
+            }
+            $locationDisplay = $locationLabel ?: ($venueCity ?: $venueAddress);
+            ?>
+            <?php if ($locationDisplay): ?>
             <div class="py-4 px-4 flex items-center gap-3">
                 <div class="w-9 h-9 bg-sand-100 rounded-xl flex items-center justify-center flex-shrink-0">
                     <svg class="w-5 h-5 text-sand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                 </div>
                 <div class="min-w-0">
                     <p class="text-xs text-forest-700/60 font-medium" data-i18n="label_location">Locație</p>
-                    <p class="text-sm font-bold text-forest-900 truncate"><?= htmlspecialchars($venueCity ?: $venueAddress) ?></p>
+                    <p class="text-sm font-bold text-forest-900 truncate"><?= htmlspecialchars($locationDisplay) ?></p>
                 </div>
             </div>
             <?php endif; ?>
@@ -856,10 +870,15 @@ foreach (['slug', '_route', '_path'] as $_drop) {
                             <div class="flex items-center justify-between pt-2.5 mt-2.5 border-t border-forest-100">
                                 <div>
                                     <p class="font-display text-xl lg:text-2xl font-bold text-ink leading-none">
-                                        <span x-text="displayPriceFor(ticket).toFixed(2)"></span>
+                                        <span x-show="isGroupTicket(ticket)" class="text-xs font-medium text-forest-700/60" data-i18n="from_price">de la </span>
+                                        <span x-text="groupDisplayPrice(ticket).toFixed(2)"></span>
                                         <span class="text-xs font-medium text-forest-700/60" x-text="ticket.currency || 'RON'"></span>
                                     </p>
-                                    <p x-show="ticket.unit_label" class="text-[10px] text-forest-700/60 mt-0.5" x-text="ticket.unit_label"></p>
+                                    <p x-show="isGroupTicket(ticket)" class="text-[10px] text-forest-700/60 mt-0.5">
+                                        <span x-text="ticketMin(ticket)"></span> × <span x-text="displayPriceFor(ticket).toFixed(2)"></span> <span x-text="ticket.currency || 'RON'"></span>
+                                        <span x-show="(ticket.meta && ticket.meta.group_includes_guide)" class="ml-1 text-emerald-700 font-semibold">+ 1 ghid GRATUIT</span>
+                                    </p>
+                                    <p x-show="!isGroupTicket(ticket) && ticket.unit_label" class="text-[10px] text-forest-700/60 mt-0.5" x-text="ticket.unit_label"></p>
                                 </div>
                                 <div class="flex items-center gap-2">
                                     <button @click="decrementTicket(ticket)" :disabled="qtyForTicket(ticket) === 0" class="lv-qty-btn !w-8 !h-8 !text-base">−</button>
@@ -1857,6 +1876,34 @@ function reservationPage() {
             return this.services.filter(s => s.qty === 0).slice(0, 3);
         },
 
+        // Helper: pas + minim pentru un ticket (default 1 / 1).
+        // Pentru "bilet de grup" + pas absent → forțam pasul = min_per_order
+        // (ex: grup de 10 → +10 / -10) ca sa nu poată ajunge la cantitati
+        // invalide între pași.
+        ticketStep(ticket) {
+            const meta = ticket.meta || {};
+            const min = Math.max(1, Number(ticket.min_per_order) || 1);
+            const isGroup = !!meta.is_group_ticket;
+            const step = Number(meta.step_qty);
+            if (step && step > 0) return Math.max(1, step);
+            return isGroup ? min : 1;
+        },
+        ticketMin(ticket) {
+            return Math.max(1, Number(ticket.min_per_order) || 1);
+        },
+        isGroupTicket(ticket) {
+            return !!(ticket && ticket.meta && ticket.meta.is_group_ticket);
+        },
+        // Pretul afișat pentru un bilet "de grup" este min_per_order × unit.
+        // Pentru bilete normale e prețul unitar (același comportament ca înainte).
+        groupDisplayPrice(ticket) {
+            const unit = this.displayPriceFor(ticket);
+            if (this.isGroupTicket(ticket)) {
+                return unit * this.ticketMin(ticket);
+            }
+            return unit;
+        },
+
         incrementTicket(ticket) {
             // F3/F5: blochează adăugare dacă produsul cere slot/oră
             const needsSlot = (ticket.slots_config && ticket.slots_config.enabled) || (ticket.physical_inventory && ticket.physical_inventory.enabled);
@@ -1875,12 +1922,22 @@ function reservationPage() {
             }
             const vid = this.activeVariantId(ticket);
             const key = this.cartKey(ticket.id, vid);
-            this.qtyById[key] = (this.qtyById[key] || 0) + 1;
+            const current = this.qtyById[key] || 0;
+            const min = this.ticketMin(ticket);
+            const step = this.ticketStep(ticket);
+            // Prima adăugare → setam direct la minim (nu la 0 + step, pentru ca
+            // operatorii pot avea min > step si vrem sa respectam minim setat).
+            this.qtyById[key] = current === 0 ? Math.max(min, step) : current + step;
         },
         decrementTicket(ticket) {
             const vid = this.activeVariantId(ticket);
             const key = this.cartKey(ticket.id, vid);
-            this.qtyById[key] = Math.max(0, (this.qtyById[key] || 0) - 1);
+            const current = this.qtyById[key] || 0;
+            const min = this.ticketMin(ticket);
+            const step = this.ticketStep(ticket);
+            const next = current - step;
+            // Sub minim → 0 (resetare completa)
+            this.qtyById[key] = (next < min) ? 0 : next;
         },
         // Elimină complet o linie din coș (pe baza cheii compuse din _cartKey)
         removeLineFromCart(item) {
