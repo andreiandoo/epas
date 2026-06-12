@@ -1052,19 +1052,41 @@ class MarketplaceNewsletter extends Model
     }
 
     /**
-     * Create recipients from list
+     * Create recipients from list.
+     *
+     * Bulk-upsert in chunks instead of one updateOrCreate per customer —
+     * a 22k-recipient send was running ~45k queries (SELECT + INSERT per
+     * row) and holding the Filament action open for ~30s. The unique
+     * index on (newsletter_id, marketplace_customer_id) lets us emit a
+     * single ON CONFLICT DO UPDATE per chunk; 22k → 5 queries,
+     * single-digit seconds.
      */
     public function createRecipients(): int
     {
         $customers = $this->buildRecipientList();
 
-        foreach ($customers as $customer) {
-            $this->recipients()->updateOrCreate(
-                ['marketplace_customer_id' => $customer->id],
-                [
-                    'email' => $customer->email,
-                    'status' => 'pending',
-                ]
+        if ($customers->isEmpty()) {
+            $this->update(['total_recipients' => 0]);
+            return 0;
+        }
+
+        $now = now();
+        $newsletterId = $this->id;
+
+        foreach ($customers->chunk(5000) as $chunk) {
+            $payload = $chunk->map(fn ($c) => [
+                'newsletter_id' => $newsletterId,
+                'marketplace_customer_id' => $c->id,
+                'email' => $c->email,
+                'status' => 'pending',
+                'created_at' => $now,
+                'updated_at' => $now,
+            ])->values()->all();
+
+            \Illuminate\Support\Facades\DB::table('marketplace_newsletter_recipients')->upsert(
+                $payload,
+                ['newsletter_id', 'marketplace_customer_id'],
+                ['email', 'status', 'updated_at']
             );
         }
 
