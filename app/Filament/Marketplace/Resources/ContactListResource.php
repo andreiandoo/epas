@@ -114,7 +114,8 @@ class ContactListResource extends Resource
                                     ->options([
                                         'Newsletter' => [
                                             'newsletter_subscribed' => 'Subscribed to newsletter',
-                                            'newsletter_unsubscribed' => 'Unsubscribed from newsletter',
+                                            'newsletter_unsubscribed' => 'Not subscribed (accepts_marketing=false)',
+                                            'has_actively_unsubscribed' => 'Actively unsubscribed (clicked unsubscribe link)',
                                         ],
                                         'Purchases' => [
                                             'has_purchases' => 'Has made at least one purchase',

@@ -37,7 +37,8 @@ class MarketplaceContactList extends Model
      */
     public const RULE_TYPES = [
         'newsletter_subscribed' => 'Subscribed to newsletter',
-        'newsletter_unsubscribed' => 'Unsubscribed from newsletter',
+        'newsletter_unsubscribed' => 'Unsubscribed from newsletter (accepts_marketing=false)',
+        'has_actively_unsubscribed' => 'Actively unsubscribed (clicked unsubscribe in a campaign)',
         'has_purchases' => 'Has made at least one purchase',
         'has_failed_purchase_attempt' => 'Has tried to buy but never succeeded (cancelled/failed/refunded, remarketing)',
         'has_no_account' => 'Has no registered account (guest only)',
@@ -142,6 +143,34 @@ class MarketplaceContactList extends Model
 
             case 'newsletter_unsubscribed':
                 $query->where('accepts_marketing', false);
+                break;
+
+            case 'has_actively_unsubscribed':
+                // Strong signal: the customer received a campaign and
+                // clicked the unsubscribe link. Sets recipient.status =
+                // 'unsubscribed' via NewsletterTrackingController. Match
+                // on marketplace_customer_id when set, else fall back to
+                // email so unlinked legacy recipients still surface.
+                // accepts_marketing isn't flipped by the handler, so the
+                // existing newsletter_unsubscribed rule misses this cohort.
+                $clientId = $this->marketplace_client_id;
+                $query->where(function ($q) use ($clientId) {
+                    $q->whereExists(function ($sq) use ($clientId) {
+                        $sq->select(DB::raw(1))
+                            ->from('marketplace_newsletter_recipients as r')
+                            ->join('marketplace_newsletters as n', 'n.id', '=', 'r.newsletter_id')
+                            ->where('n.marketplace_client_id', $clientId)
+                            ->where('r.status', 'unsubscribed')
+                            ->whereColumn('r.marketplace_customer_id', 'marketplace_customers.id');
+                    })->orWhereExists(function ($sq) use ($clientId) {
+                        $sq->select(DB::raw(1))
+                            ->from('marketplace_newsletter_recipients as r')
+                            ->join('marketplace_newsletters as n', 'n.id', '=', 'r.newsletter_id')
+                            ->where('n.marketplace_client_id', $clientId)
+                            ->where('r.status', 'unsubscribed')
+                            ->whereRaw('LOWER(TRIM(r.email)) = LOWER(TRIM(marketplace_customers.email))');
+                    });
+                });
                 break;
 
             case 'has_purchases':
