@@ -141,6 +141,19 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
     // C2: categoriile custom de afișare definite în /organizator/leisure tab Produse.
     // Folosite pentru gruparea + ordonarea produselor în panoul POS.
     let ticketCategories = [];
+    // Stare deschis/închis pentru accordions (per categorie id). Default: toate deschise.
+    let categoryAccordionState = {};
+
+    // Helper: extrage numele categoriei in functie de tip (string sau {ro,hu,en}).
+    // POS staff foloseste posLocale ales din UI (default RO).
+    function categoryName(cat) {
+        if (!cat) return '';
+        if (typeof cat.name === 'string') return cat.name;
+        if (cat.name && typeof cat.name === 'object') {
+            return cat.name[posLocale] || cat.name.ro || cat.name.en || cat.name.hu || cat.id || '';
+        }
+        return cat.id || '';
+    }
 
     function cartKey(ttId, variantId) { return variantId ? `${ttId}|${variantId}` : String(ttId); }
 
@@ -250,7 +263,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             cats.forEach(cat => {
                 const gid = cat.id;
                 if (grouped[gid] && grouped[gid].length) {
-                    sections.push({ name: cat.name || '', items: grouped[gid] });
+                    sections.push({ id: gid, name: categoryName(cat), items: grouped[gid] });
                     delete grouped[gid];
                 }
             });
@@ -258,14 +271,44 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             const leftovers = [];
             Object.keys(grouped).forEach(gid => { leftovers.push(...grouped[gid]); });
             if (leftovers.length) {
-                sections.push({ name: 'Altele', items: leftovers });
+                sections.push({ id: '__other__', name: 'Altele', items: leftovers });
             }
-            $('lv-grid').innerHTML = sections.map(sec => `
-                <div>
-                    ${sec.name ? `<h3 class="text-sm font-bold text-secondary uppercase tracking-wider mb-3 pb-2 border-b border-border">${sec.name}</h3>` : ''}
-                    <div class="grid grid-cols-2 md:grid-cols-3 gap-3">${sec.items.map(renderProductCard).join('')}</div>
+            // Accordion render: header click-able toggle. Implicit deschis = true.
+            $('lv-grid').innerHTML = sections.map(sec => {
+                const isOpen = categoryAccordionState[sec.id] !== false; // default true
+                return `
+                <div class="border border-border rounded-xl bg-white overflow-hidden" data-cat-section="${sec.id}">
+                    <button type="button" class="w-full flex items-center justify-between gap-3 px-4 py-3 hover:bg-slate-50 transition-colors" data-cat-toggle="${sec.id}">
+                        <span class="text-sm font-bold text-secondary uppercase tracking-wider flex items-center gap-2">
+                            ${sec.name || ''}
+                            <span class="text-[10px] font-normal text-muted bg-slate-100 px-1.5 py-0.5 rounded">${sec.items.length}</span>
+                        </span>
+                        <svg class="w-4 h-4 text-muted transition-transform ${isOpen ? 'rotate-180' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                    </button>
+                    <div class="px-4 pb-4 ${isOpen ? '' : 'hidden'}" data-cat-body="${sec.id}">
+                        <div class="grid grid-cols-2 md:grid-cols-3 gap-3">${sec.items.map(renderProductCard).join('')}</div>
+                    </div>
                 </div>
-            `).join('');
+            `;}).join('');
+
+            // Toggle handlers pentru accordions
+            $('lv-grid').querySelectorAll('[data-cat-toggle]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const id = btn.dataset.catToggle;
+                    const body = $('lv-grid').querySelector(`[data-cat-body="${id}"]`);
+                    const chevron = btn.querySelector('svg');
+                    const isOpen = !body.classList.contains('hidden');
+                    if (isOpen) {
+                        body.classList.add('hidden');
+                        chevron?.classList.remove('rotate-180');
+                        categoryAccordionState[id] = false;
+                    } else {
+                        body.classList.remove('hidden');
+                        chevron?.classList.add('rotate-180');
+                        categoryAccordionState[id] = true;
+                    }
+                });
+            });
         }
 
         $('lv-grid').querySelectorAll('.lv-tt-btn').forEach(btn => {
