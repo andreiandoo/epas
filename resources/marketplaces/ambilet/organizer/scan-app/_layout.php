@@ -41,7 +41,16 @@ $tabs = [
     <meta name="apple-mobile-web-app-title" content="Aplicație Scan">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="format-detection" content="telephone=no">
-    <!-- PWA manifest + apple-touch-icon added in Etapa 9 -->
+
+    <!-- PWA: manifest + iOS apple-touch-icon + theme. -->
+    <link rel="manifest" href="/organizator/scan/manifest.webmanifest">
+    <link rel="apple-touch-icon" sizes="180x180" href="/organizator/scan/icon.php?size=180">
+    <link rel="apple-touch-icon" sizes="167x167" href="/organizator/scan/icon.php?size=167">
+    <link rel="apple-touch-icon" sizes="152x152" href="/organizator/scan/icon.php?size=152">
+    <link rel="apple-touch-icon" sizes="120x120" href="/organizator/scan/icon.php?size=120">
+    <link rel="icon" type="image/png" sizes="192x192" href="/organizator/scan/icon.php?size=192">
+    <link rel="icon" type="image/png" sizes="32x32"  href="/organizator/scan/icon.php?size=32">
+
     <title><?= htmlspecialchars($scanPageTitle) ?> — Aplicație Scan</title>
 
     <link rel="stylesheet" href="/assets/css/scan-app.css?v=<?= filemtime(dirname(__DIR__, 2) . '/assets/css/scan-app.css') ?>">

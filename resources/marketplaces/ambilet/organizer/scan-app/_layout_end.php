@@ -46,6 +46,16 @@
   <!-- Toast container (used by JS for in-app feedback) -->
   <div class="scanapp-toasts" id="scanapp-toasts" aria-live="polite" aria-atomic="true"></div>
 
+  <!-- Register service worker (scope = /organizator/scan/). -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function () {
+        navigator.serviceWorker.register('/organizator/scan/sw.js', { scope: '/organizator/scan/' })
+          .catch(function (err) { console.warn('[scan-app] SW registration failed:', err); });
+      });
+    }
+  </script>
+
   <!-- Core scan-app JS bundle. Order matters: auth → contexts → app init.
        Page-specific scripts can listen for ScanApp.toast / EventContext.subscribe(). -->
   <script src="/assets/js/scan-app/auth.js?v=<?= filemtime(dirname(__DIR__, 2) . '/assets/js/scan-app/auth.js') ?>" defer></script>

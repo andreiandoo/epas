@@ -523,6 +523,19 @@ RewriteRule ^organizator/scan/porti/?$ organizer/scan-app/porti.php [L]
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^organizator/scan/asignare-personal/?$ organizer/scan-app/asignare-personal.php [L]
+
+# PWA assets — manifest + service worker + icon generator.
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^organizator/scan/manifest\.webmanifest$ organizer/scan-app/manifest.php [L]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^organizator/scan/sw\.js$ organizer/scan-app/sw.php [L]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^organizator/scan/icon\.php$ organizer/scan-app/icon.php [L,QSA]
 # ============================================
 # SCAN APP ROUTES END
 # ============================================
