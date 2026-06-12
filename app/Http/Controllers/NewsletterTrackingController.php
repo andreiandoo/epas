@@ -63,6 +63,17 @@ class NewsletterTrackingController extends Controller
                 ]);
 
                 MarketplaceNewsletter::where('id', $newsletterId)->increment('clicked_count');
+
+                // Mirror onto the recipient row so engagement filters
+                // (is_stale_no_clicks) can read recipient.clicked_at
+                // without joining link_events. Only fires when we have a
+                // recipient_id from the token + no prior click.
+                if ($recipientId) {
+                    \DB::table('marketplace_newsletter_recipients')
+                        ->where('id', $recipientId)
+                        ->whereNull('clicked_at')
+                        ->update(['clicked_at' => now(), 'status' => 'clicked', 'updated_at' => now()]);
+                }
             });
         } catch (\Throwable $e) {
             Log::warning('Newsletter click logging failed', [
@@ -100,6 +111,18 @@ class NewsletterTrackingController extends Controller
                     ]);
 
                     MarketplaceNewsletter::where('id', $newsletterId)->increment('opened_count');
+
+                    // Mirror onto the recipient so is_stale_no_opens can
+                    // read recipient.opened_at directly. Only on first
+                    // open per recipient — subsequent re-renders by the
+                    // mail client's image proxy must not overwrite the
+                    // original open timestamp.
+                    if ($recipientId) {
+                        \DB::table('marketplace_newsletter_recipients')
+                            ->where('id', $recipientId)
+                            ->whereNull('opened_at')
+                            ->update(['opened_at' => now(), 'status' => \DB::raw("CASE WHEN status = 'pending' OR status = 'sent' THEN 'opened' ELSE status END"), 'updated_at' => now()]);
+                    }
                 });
             } catch (\Throwable $e) {
                 Log::warning('Newsletter open logging failed', [

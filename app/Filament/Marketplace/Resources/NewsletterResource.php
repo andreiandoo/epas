@@ -904,6 +904,10 @@ class NewsletterResource extends Resource
                             // updates the moment the admin flips it.
                             $instance->exclude_recent_recipients = (bool) $get('exclude_recent_recipients');
                             $instance->recent_recipient_window_hours = (int) ($get('recent_recipient_window_hours') ?: 48);
+                            $instance->exclude_stale_no_opens = (bool) $get('exclude_stale_no_opens');
+                            $instance->stale_no_opens_window_hours = (int) ($get('stale_no_opens_window_hours') ?: 48);
+                            $instance->exclude_stale_no_clicks = (bool) $get('exclude_stale_no_clicks');
+                            $instance->stale_no_clicks_window_hours = (int) ($get('stale_no_clicks_window_hours') ?: 96);
 
                             $hasTargeting = !empty($instance->target_lists)
                                 || !empty($instance->target_tags)
@@ -1027,6 +1031,40 @@ class NewsletterResource extends Resource
                         ->default(48)
                         ->live()
                         ->visible(fn (SGet $get) => (bool) $get('exclude_recent_recipients'))
+                        ->suffix('ore'),
+
+                    Forms\Components\Toggle::make('exclude_stale_no_opens')
+                        ->label('Exclude destinatari "stale" (nicio deschidere)')
+                        ->helperText('Sare peste cei care au primit cel puțin un newsletter mai vechi decât fereastra de mai jos și nu au deschis niciodată vreun mail trimis prin acest marketplace.')
+                        ->default(false)
+                        ->live(),
+
+                    Forms\Components\TextInput::make('stale_no_opens_window_hours')
+                        ->label('Fereastră stale (ore)')
+                        ->helperText('Cooldown după ultimul newsletter primit. Implicit 48h.')
+                        ->numeric()
+                        ->minValue(24)
+                        ->maxValue(8760)
+                        ->default(48)
+                        ->live()
+                        ->visible(fn (SGet $get) => (bool) $get('exclude_stale_no_opens'))
+                        ->suffix('ore'),
+
+                    Forms\Components\Toggle::make('exclude_stale_no_clicks')
+                        ->label('Exclude destinatari "no-click" (nicio apăsare link)')
+                        ->helperText('Sare peste cei care au primit cel puțin un newsletter mai vechi decât fereastra de mai jos și nu au apăsat niciodată un link trimis prin acest marketplace.')
+                        ->default(false)
+                        ->live(),
+
+                    Forms\Components\TextInput::make('stale_no_clicks_window_hours')
+                        ->label('Fereastră no-click (ore)')
+                        ->helperText('Cooldown după ultimul newsletter primit. Implicit 96h.')
+                        ->numeric()
+                        ->minValue(24)
+                        ->maxValue(8760)
+                        ->default(96)
+                        ->live()
+                        ->visible(fn (SGet $get) => (bool) $get('exclude_stale_no_clicks'))
                         ->suffix('ore'),
 
                     Forms\Components\Placeholder::make('targeted_events_summary')

@@ -1,25 +1,25 @@
 /* =============================================================================
  * Scan App — global init
  * -----------------------------------------------------------------------------
- * Loaded on every /organizator/scan/* page. Etapa 1: just wire up auth check
- * fallback (server-side gate already redirects in _layout.php) and a toast
- * helper used by page-specific scripts later.
+ * Loaded on every /organizator/scan/* page. Wires up:
+ *   - auth guard (server-side gate is the primary; this is a JS-side double-check)
+ *   - header event-name binding via EventContext subscription
+ *   - bootstrap fetchEvents() once auth is OK
+ *   - toast helper used by page-specific scripts
  *
- * EventContext, AppContext, scanner, etc. land in Etapa 2+.
+ * Dependencies (loaded BEFORE this file via _layout_end.php):
+ *   - /assets/js/auth.js       (AmbiletAuth — existing main panel)
+ *   - /assets/js/api.js        (AmbiletAPI — existing main panel)
+ *   - /assets/js/scan-app/auth.js          → ScanAuth
+ *   - /assets/js/scan-app/app-context.js   → AppContext
+ *   - /assets/js/scan-app/event-context.js → EventContext
  * ============================================================================= */
 (function () {
   'use strict';
 
-  // Guard: re-check auth once AmbiletAuth is on window. Server-side _layout.php
-  // already did a synchronous redirect, but on slow networks or if auth.js
-  // hasn't loaded yet, that gate is a no-op — repeat here defensively.
+  // ── Auth guard (defense in depth — server-side _layout.php already redirects) ──
   function authGuard() {
-    if (typeof AmbiletAuth === 'undefined') {
-      // auth.js failed to load — degrade gracefully to login
-      console.error('[scan-app] AmbiletAuth not loaded');
-      return false;
-    }
-    if (!AmbiletAuth.isLoggedIn || !AmbiletAuth.isLoggedIn()) {
+    if (typeof ScanAuth === 'undefined' || !ScanAuth.isLoggedIn()) {
       var rt = encodeURIComponent(location.pathname + location.search);
       location.replace('/organizator/login?redirect=' + rt);
       return false;
@@ -27,6 +27,7 @@
     return true;
   }
 
+  // ── Toast helper ─────────────────────────────────────────────────────────
   function toast(message, kind) {
     var host = document.getElementById('scanapp-toasts');
     if (!host) return;
@@ -42,13 +43,41 @@
     }, 3200);
   }
 
-  // Minimal event-picker stub: opens /organizator/scan/evenimente when ready.
-  // Etapa 7 replaces this with the real picker.
+  // ── Header bindings ──────────────────────────────────────────────────────
+  function formatEventMeta(event) {
+    if (!event) return '—';
+    var label = '';
+    var dt = event.starts_at || event.start_date;
+    if (dt) {
+      try {
+        var d = new Date(dt);
+        if (!isNaN(d.getTime())) {
+          var dd = String(d.getDate()).padStart(2, '0');
+          var mm = String(d.getMonth() + 1).padStart(2, '0');
+          var yy = d.getFullYear();
+          var hh = String(d.getHours()).padStart(2, '0');
+          var mi = String(d.getMinutes()).padStart(2, '0');
+          label = dd + '.' + mm + '.' + yy + ' · ' + hh + ':' + mi;
+        }
+      } catch (e) {}
+    }
+    if (event.venue_name) label += (label ? ' · ' : '') + event.venue_name;
+    return label || '—';
+  }
+
+  function renderHeader(event) {
+    var nameEl = document.getElementById('scanapp-event-name');
+    var metaEl = document.getElementById('scanapp-event-meta');
+    if (nameEl) nameEl.textContent = event ? (event.name || event.title || 'Eveniment') : 'Selectează un eveniment';
+    if (metaEl) metaEl.textContent = formatEventMeta(event);
+  }
+
   function bindHeader() {
     var picker = document.getElementById('scanapp-event-picker');
     if (picker) {
       picker.addEventListener('click', function () {
-        toast('Selectorul de evenimente urmează în Etapa 2+', 'warning');
+        // Etapa 7 replaces this stub with the real picker page (modal or drawer).
+        toast('Selectorul de evenimente urmează în Etapa 7', 'warning');
       });
     }
     var notif = document.getElementById('scanapp-notif');
@@ -59,16 +88,34 @@
     }
   }
 
-  // Expose a small API for page scripts.
+  // ── Bootstrap ────────────────────────────────────────────────────────────
+  function bootstrap() {
+    if (!authGuard()) return;
+    bindHeader();
+
+    if (typeof EventContext === 'undefined') {
+      console.error('[scan-app] EventContext not loaded');
+      return;
+    }
+
+    // Render header on selection change.
+    EventContext.subscribe('event-selected', function (e) {
+      renderHeader(e.detail.event);
+    });
+
+    // Initial events fetch (fills events list + auto-selects first available).
+    EventContext.fetchEvents();
+  }
+
+  // Expose a small public API for page scripts.
   window.ScanApp = window.ScanApp || {};
-  window.ScanApp.toast = toast;
-  window.ScanApp.authGuard = authGuard;
+  window.ScanApp.toast       = toast;
+  window.ScanApp.authGuard   = authGuard;
+  window.ScanApp.renderHeader = renderHeader;
 
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', function () {
-      if (authGuard()) bindHeader();
-    });
+    document.addEventListener('DOMContentLoaded', bootstrap);
   } else {
-    if (authGuard()) bindHeader();
+    bootstrap();
   }
 })();

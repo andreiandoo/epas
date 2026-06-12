@@ -31,6 +31,10 @@ class MarketplaceNewsletter extends Model
         'target_artist_ids',
         'exclude_recent_recipients',
         'recent_recipient_window_hours',
+        'exclude_stale_no_opens',
+        'stale_no_opens_window_hours',
+        'exclude_stale_no_clicks',
+        'stale_no_clicks_window_hours',
         'source_email_template_id',
         'status',
         'scheduled_at',
@@ -58,6 +62,10 @@ class MarketplaceNewsletter extends Model
         'target_artist_ids' => 'array',
         'exclude_recent_recipients' => 'boolean',
         'recent_recipient_window_hours' => 'integer',
+        'exclude_stale_no_opens' => 'boolean',
+        'stale_no_opens_window_hours' => 'integer',
+        'exclude_stale_no_clicks' => 'boolean',
+        'stale_no_clicks_window_hours' => 'integer',
         'scheduled_at' => 'datetime',
         'started_at' => 'datetime',
         'completed_at' => 'datetime',
@@ -275,6 +283,27 @@ class MarketplaceNewsletter extends Model
         // customer never gets a fresh email.
         $resolved = $this->applyActivelyUnsubscribedFilter($resolved, $clientId);
 
+        // Per-campaign opt-in: when the admin toggled "exclude stale"
+        // (no opens for N hours) or "exclude no-click" (no clicks for M
+        // hours), strip those cohorts. Defaults to OFF so existing
+        // campaigns behave unchanged.
+        if ($this->exclude_stale_no_opens) {
+            $resolved = $this->applyEngagementStaleFilter(
+                $resolved,
+                $clientId,
+                'opened_at',
+                (int) ($this->stale_no_opens_window_hours ?: 48)
+            );
+        }
+        if ($this->exclude_stale_no_clicks) {
+            $resolved = $this->applyEngagementStaleFilter(
+                $resolved,
+                $clientId,
+                'clicked_at',
+                (int) ($this->stale_no_clicks_window_hours ?: 96)
+            );
+        }
+
         // Apply the optional "skip recipients who already received another
         // newsletter from this marketplace in the last N hours" filter at
         // the very end so it never widens the audience and works the same
@@ -282,6 +311,62 @@ class MarketplaceNewsletter extends Model
         // the read-only count and the send-time build, so the displayed
         // number always matches what'll go out.
         return $this->applyRecentRecipientFilter($resolved, $clientId);
+    }
+
+    /**
+     * Drop customers whose engagement on this marketplace's newsletter
+     * stream has gone stale — they received at least one campaign sent
+     * more than $windowHours ago AND never opened OR clicked anything
+     * across the marketplace's sends. Reused for both the "no opens"
+     * (48h default) and "no clicks" (96h default) filters by switching
+     * the engagement column.
+     *
+     * Uses the recipient.opened_at / clicked_at columns which the
+     * tracking controllers now mirror from link_events, so the join
+     * stays a single table.
+     */
+    protected function applyEngagementStaleFilter(
+        \Illuminate\Support\Collection $ids,
+        int $clientId,
+        string $engagementColumn,
+        int $windowHours
+    ): \Illuminate\Support\Collection {
+        if ($ids->isEmpty()) return $ids;
+        if (!in_array($engagementColumn, ['opened_at', 'clicked_at'], true)) return $ids;
+        if ($windowHours <= 0) return $ids;
+
+        $cutoff = now()->subHours($windowHours);
+
+        // Customers with at least one stale send (sent_at older than the
+        // cooldown). Pulled separately from the engagement check so we
+        // can apply DISTINCT cheaply.
+        $sentStaleIds = \Illuminate\Support\Facades\DB::table('marketplace_newsletter_recipients as r')
+            ->join('marketplace_newsletters as n', 'n.id', '=', 'r.newsletter_id')
+            ->where('n.marketplace_client_id', $clientId)
+            ->whereNotNull('r.sent_at')
+            ->where('r.sent_at', '<=', $cutoff)
+            ->whereNotNull('r.marketplace_customer_id')
+            ->distinct()
+            ->pluck('r.marketplace_customer_id');
+
+        if ($sentStaleIds->isEmpty()) return $ids;
+
+        // Customers who DID engage (opened or clicked anything in this
+        // marketplace's newsletter stream). Those stay even if some of
+        // their other receipts are stale.
+        $engagedIds = \Illuminate\Support\Facades\DB::table('marketplace_newsletter_recipients as r')
+            ->join('marketplace_newsletters as n', 'n.id', '=', 'r.newsletter_id')
+            ->where('n.marketplace_client_id', $clientId)
+            ->whereNotNull('r.' . $engagementColumn)
+            ->whereNotNull('r.marketplace_customer_id')
+            ->distinct()
+            ->pluck('r.marketplace_customer_id')
+            ->flip();
+
+        $staleSet = $sentStaleIds->reject(fn ($id) => isset($engagedIds[$id]))->flip();
+        if ($staleSet->isEmpty()) return $ids;
+
+        return $ids->reject(fn ($id) => isset($staleSet[$id]))->values();
     }
 
     /**

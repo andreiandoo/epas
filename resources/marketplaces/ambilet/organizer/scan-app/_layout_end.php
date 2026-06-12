@@ -46,7 +46,11 @@
   <!-- Toast container (used by JS for in-app feedback) -->
   <div class="scanapp-toasts" id="scanapp-toasts" aria-live="polite" aria-atomic="true"></div>
 
-  <!-- Core scan-app JS bundle. Page-specific scripts loaded inline below by each page. -->
+  <!-- Core scan-app JS bundle. Order matters: auth → contexts → app init.
+       Page-specific scripts can listen for ScanApp.toast / EventContext.subscribe(). -->
+  <script src="/assets/js/scan-app/auth.js?v=<?= filemtime(dirname(__DIR__, 2) . '/assets/js/scan-app/auth.js') ?>" defer></script>
+  <script src="/assets/js/scan-app/app-context.js?v=<?= filemtime(dirname(__DIR__, 2) . '/assets/js/scan-app/app-context.js') ?>" defer></script>
+  <script src="/assets/js/scan-app/event-context.js?v=<?= filemtime(dirname(__DIR__, 2) . '/assets/js/scan-app/event-context.js') ?>" defer></script>
   <script src="/assets/js/scan-app/app.js?v=<?= filemtime(dirname(__DIR__, 2) . '/assets/js/scan-app/app.js') ?>" defer></script>
 </body>
 </html>

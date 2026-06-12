@@ -39,6 +39,8 @@ class MarketplaceContactList extends Model
         'newsletter_subscribed' => 'Subscribed to newsletter',
         'newsletter_unsubscribed' => 'Unsubscribed from newsletter (accepts_marketing=false)',
         'has_actively_unsubscribed' => 'Actively unsubscribed (clicked unsubscribe in a campaign)',
+        'is_stale_no_opens' => 'Stale: received newsletter but never opened (48h cooldown)',
+        'is_stale_no_clicks' => 'Stale: received newsletter but never clicked (96h cooldown)',
         'has_purchases' => 'Has made at least one purchase',
         'has_failed_purchase_attempt' => 'Has tried to buy but never succeeded (cancelled/failed/refunded, remarketing)',
         'has_no_account' => 'Has no registered account (guest only)',
@@ -143,6 +145,66 @@ class MarketplaceContactList extends Model
 
             case 'newsletter_unsubscribed':
                 $query->where('accepts_marketing', false);
+                break;
+
+            case 'is_stale_no_opens':
+                // Engagement rot signal: received at least one sent
+                // newsletter where sent_at < NOW() - 48h, AND never
+                // opened ANY newsletter. The 48h gate prevents marking
+                // someone stale within the same-day cooldown. The
+                // "never opened any" check looks at
+                // recipient.opened_at (the public tracking controller
+                // mirrors link_event opens onto the recipient row).
+                $clientId = $this->marketplace_client_id;
+                $windowHours = (int) ($rule['value'] ?? 48);
+                if ($windowHours <= 0) $windowHours = 48;
+                $cutoff = now()->subHours($windowHours);
+                $query->where(function ($q) use ($clientId, $cutoff) {
+                    $q->whereExists(function ($sq) use ($clientId, $cutoff) {
+                        $sq->select(DB::raw(1))
+                            ->from('marketplace_newsletter_recipients as r')
+                            ->join('marketplace_newsletters as n', 'n.id', '=', 'r.newsletter_id')
+                            ->where('n.marketplace_client_id', $clientId)
+                            ->whereNotNull('r.sent_at')
+                            ->where('r.sent_at', '<=', $cutoff)
+                            ->whereColumn('r.marketplace_customer_id', 'marketplace_customers.id');
+                    })->whereNotExists(function ($sq) use ($clientId) {
+                        $sq->select(DB::raw(1))
+                            ->from('marketplace_newsletter_recipients as r')
+                            ->join('marketplace_newsletters as n', 'n.id', '=', 'r.newsletter_id')
+                            ->where('n.marketplace_client_id', $clientId)
+                            ->whereNotNull('r.opened_at')
+                            ->whereColumn('r.marketplace_customer_id', 'marketplace_customers.id');
+                    });
+                });
+                break;
+
+            case 'is_stale_no_clicks':
+                // Same shape as is_stale_no_opens but for clicks. 96h
+                // default — clicks are a stronger signal so we wait
+                // longer before declaring engagement dead.
+                $clientId = $this->marketplace_client_id;
+                $windowHours = (int) ($rule['value'] ?? 96);
+                if ($windowHours <= 0) $windowHours = 96;
+                $cutoff = now()->subHours($windowHours);
+                $query->where(function ($q) use ($clientId, $cutoff) {
+                    $q->whereExists(function ($sq) use ($clientId, $cutoff) {
+                        $sq->select(DB::raw(1))
+                            ->from('marketplace_newsletter_recipients as r')
+                            ->join('marketplace_newsletters as n', 'n.id', '=', 'r.newsletter_id')
+                            ->where('n.marketplace_client_id', $clientId)
+                            ->whereNotNull('r.sent_at')
+                            ->where('r.sent_at', '<=', $cutoff)
+                            ->whereColumn('r.marketplace_customer_id', 'marketplace_customers.id');
+                    })->whereNotExists(function ($sq) use ($clientId) {
+                        $sq->select(DB::raw(1))
+                            ->from('marketplace_newsletter_recipients as r')
+                            ->join('marketplace_newsletters as n', 'n.id', '=', 'r.newsletter_id')
+                            ->where('n.marketplace_client_id', $clientId)
+                            ->whereNotNull('r.clicked_at')
+                            ->whereColumn('r.marketplace_customer_id', 'marketplace_customers.id');
+                    });
+                });
                 break;
 
             case 'has_actively_unsubscribed':
