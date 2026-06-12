@@ -821,6 +821,240 @@ button { font: inherit; }
 
 .scanapp-divider { height: 1px; background: var(--scanapp-border); margin: 14px 0; border: 0; }
 
+/* ── Sales (vanzare) ──────────────────────────────────────────────────── */
+.scanapp-ticket-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.scanapp-ticket {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: var(--scanapp-surface);
+  border: 1px solid var(--scanapp-border);
+  border-radius: 14px;
+}
+
+.scanapp-ticket__color {
+  width: 6px;
+  align-self: stretch;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.scanapp-ticket__body { flex: 1; min-width: 0; }
+.scanapp-ticket__name { font-size: 14px; font-weight: 700; }
+.scanapp-ticket__price { font-size: 12px; color: var(--scanapp-text-sec); }
+.scanapp-ticket__hint { font-size: 11px; color: var(--scanapp-text-ter); margin-top: 2px; }
+
+.scanapp-qty {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.scanapp-qty__btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--scanapp-surface-2);
+  color: var(--scanapp-text);
+  border: 1px solid var(--scanapp-border-strong);
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.scanapp-qty__btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.scanapp-qty__btn--add { background: var(--scanapp-primary); border-color: var(--scanapp-primary); color: #fff; }
+.scanapp-qty__value { min-width: 18px; text-align: center; font-weight: 700; }
+
+.scanapp-cart-bar {
+  position: fixed;
+  bottom: calc(var(--scanapp-tabbar-h) + var(--scanapp-safe-bottom));
+  left: 0;
+  right: 0;
+  z-index: 25;
+  background: var(--scanapp-surface);
+  border-top: 1px solid var(--scanapp-border);
+  padding: 12px 16px;
+  display: none;
+  align-items: center;
+  gap: 12px;
+  max-width: 640px;
+  margin: 0 auto;
+}
+.scanapp-cart-bar--open { display: flex; }
+
+.scanapp-cart-bar__summary { flex: 1; min-width: 0; }
+.scanapp-cart-bar__count { font-size: 11px; color: var(--scanapp-text-sec); }
+.scanapp-cart-bar__total { font-size: 16px; font-weight: 800; }
+
+.scanapp-payment-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.scanapp-payment-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 18px 8px;
+  border-radius: 14px;
+  border: 1px solid var(--scanapp-border-strong);
+  background: var(--scanapp-surface-2);
+  color: var(--scanapp-text);
+  font-size: 13px;
+  font-weight: 600;
+  gap: 6px;
+  cursor: pointer;
+}
+.scanapp-payment-btn--primary { background: var(--scanapp-primary); border-color: var(--scanapp-primary); color: #fff; }
+.scanapp-payment-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.scanapp-qr-display {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 18px;
+  background: #fff;
+  border-radius: 14px;
+  margin: 12px 0;
+}
+.scanapp-qr-display canvas { display: block; }
+.scanapp-qr-display__hint {
+  margin-top: 12px;
+  font-size: 12px;
+  color: #111;
+  text-align: center;
+  max-width: 240px;
+  line-height: 1.4;
+}
+
+.scanapp-claim-status {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--scanapp-surface-2);
+  font-size: 12px;
+  color: var(--scanapp-text-sec);
+  text-align: center;
+}
+.scanapp-claim-status--ok { background: rgba(16,185,129,0.15); color: var(--scanapp-success); }
+
+.scanapp-recent-sales {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.scanapp-recent-sale {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--scanapp-surface);
+  border: 1px solid var(--scanapp-border);
+  border-radius: 12px;
+  font-size: 12.5px;
+}
+.scanapp-recent-sale__icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: var(--scanapp-primary-soft);
+  color: var(--scanapp-primary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.scanapp-recent-sale__desc { flex: 1; min-width: 0; }
+.scanapp-recent-sale__amount { font-weight: 700; }
+
+/* ── Reports (rapoarte) ───────────────────────────────────────────────── */
+.scanapp-report-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.scanapp-report-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  background: var(--scanapp-surface);
+  border: 1px solid var(--scanapp-border);
+  border-radius: 12px;
+}
+
+.scanapp-report-bar__head {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12.5px;
+}
+
+.scanapp-report-bar__name { font-weight: 600; }
+.scanapp-report-bar__value { color: var(--scanapp-text-sec); }
+
+.scanapp-report-bar__track {
+  height: 8px;
+  background: var(--scanapp-surface-2);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.scanapp-report-bar__fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 320ms ease;
+}
+
+/* Settings */
+.scanapp-setting-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--scanapp-border);
+}
+.scanapp-setting-row:last-child { border-bottom: 0; }
+.scanapp-setting-row__label { font-size: 14px; font-weight: 600; }
+.scanapp-setting-row__hint  { font-size: 12px; color: var(--scanapp-text-ter); margin-top: 2px; }
+
+/* Toggle switch */
+.scanapp-toggle {
+  position: relative;
+  width: 44px;
+  height: 26px;
+  border-radius: 13px;
+  background: var(--scanapp-surface-2);
+  border: 1px solid var(--scanapp-border-strong);
+  cursor: pointer;
+  transition: background-color 180ms;
+  flex-shrink: 0;
+}
+.scanapp-toggle__knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 180ms;
+}
+.scanapp-toggle[aria-checked="true"] { background: var(--scanapp-primary); border-color: var(--scanapp-primary); }
+.scanapp-toggle[aria-checked="true"] .scanapp-toggle__knob { transform: translateX(18px); }
+
 /* ── Responsive tweaks (tablet / desktop preview) ─────────────────────── */
 @media (min-width: 768px) {
   .scanapp-main { padding-left: 24px; padding-right: 24px; }
