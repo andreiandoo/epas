@@ -79,7 +79,7 @@ require __DIR__ . '/_layout.php';
     <h2 class="scanapp-sheet__title" id="scanapp-success-title">Plată reușită</h2>
     <p class="scanapp-card__text" id="scanapp-success-subtitle">Comandă finalizată.</p>
     <div class="scanapp-qr-display" id="scanapp-qr-display" hidden>
-      <canvas id="scanapp-qr-canvas" width="220" height="220"></canvas>
+      <div id="scanapp-qr-host" style="width: 220px; height: 220px; display: flex; align-items: center; justify-content: center;"></div>
       <p class="scanapp-qr-display__hint">Clientul scanează acest cod cu telefonul pentru a primi biletele pe email.</p>
     </div>
     <div class="scanapp-claim-status" id="scanapp-claim-status" hidden>Aștept claim…</div>
@@ -88,7 +88,6 @@ require __DIR__ . '/_layout.php';
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js" defer></script>
-<script src="/assets/js/scan-app/pages/vanzare.js?v=<?= filemtime(dirname(__DIR__, 2) . '/assets/js/scan-app/pages/vanzare.js') ?>" defer></script>
-
-<?php require __DIR__ . '/_layout_end.php'; ?>
+<!-- QR generator: qrcode-generator (kazuhikoarase) — small, no deps, stable CDN. -->
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js" defer></script>
+<?php $scanPageScript = 'vanzare.js'; require __DIR__ . '/_layout_end.php'; ?>

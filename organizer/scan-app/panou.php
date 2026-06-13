@@ -124,6 +124,4 @@ require __DIR__ . '/_layout.php';
   </div>
 </div>
 
-<script src="/assets/js/scan-app/pages/panou.js?v=<?= filemtime(dirname(__DIR__, 2) . '/assets/js/scan-app/pages/panou.js') ?>" defer></script>
-
-<?php require __DIR__ . '/_layout_end.php'; ?>
+<?php $scanPageScript = 'panou.js'; require __DIR__ . '/_layout_end.php'; ?>
