@@ -82,7 +82,4 @@ require __DIR__ . '/_layout.php';
   </div>
 </div>
 
-<script src="/assets/js/scan-app/scanner.js?v=<?= filemtime(dirname(__DIR__, 2) . '/assets/js/scan-app/scanner.js') ?>" defer></script>
-<script src="/assets/js/scan-app/pages/scanare.js?v=<?= filemtime(dirname(__DIR__, 2) . '/assets/js/scan-app/pages/scanare.js') ?>" defer></script>
-
-<?php require __DIR__ . '/_layout_end.php'; ?>
+<?php $scanPageScript = 'scanare.js'; require __DIR__ . '/_layout_end.php'; ?>

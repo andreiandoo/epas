@@ -57,10 +57,20 @@
   </script>
 
   <!-- Core scan-app JS bundle. Order matters: auth → contexts → app init.
-       Page-specific scripts can listen for ScanApp.toast / EventContext.subscribe(). -->
+       Page-specific scripts can listen for ScanApp.toast / EventContext.subscribe().
+       defer scripts execute in document order, so any page-specific JS MUST be
+       emitted AFTER these via $scanPageScript, otherwise it runs before
+       ScanAuth / AppContext / EventContext are defined. -->
   <script src="/assets/js/scan-app/auth.js?v=<?= filemtime(dirname(__DIR__, 2) . '/assets/js/scan-app/auth.js') ?>" defer></script>
   <script src="/assets/js/scan-app/app-context.js?v=<?= filemtime(dirname(__DIR__, 2) . '/assets/js/scan-app/app-context.js') ?>" defer></script>
   <script src="/assets/js/scan-app/event-context.js?v=<?= filemtime(dirname(__DIR__, 2) . '/assets/js/scan-app/event-context.js') ?>" defer></script>
+  <script src="/assets/js/scan-app/scanner.js?v=<?= filemtime(dirname(__DIR__, 2) . '/assets/js/scan-app/scanner.js') ?>" defer></script>
   <script src="/assets/js/scan-app/app.js?v=<?= filemtime(dirname(__DIR__, 2) . '/assets/js/scan-app/app.js') ?>" defer></script>
+<?php if (!empty($scanPageScript)):
+    $scanPageScriptPath = dirname(__DIR__, 2) . '/assets/js/scan-app/pages/' . basename($scanPageScript);
+    $scanPageScriptVer = is_file($scanPageScriptPath) ? filemtime($scanPageScriptPath) : 1;
+?>
+  <script src="/assets/js/scan-app/pages/<?= htmlspecialchars($scanPageScript) ?>?v=<?= $scanPageScriptVer ?>" defer></script>
+<?php endif; ?>
 </body>
 </html>

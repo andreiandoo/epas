@@ -59,7 +59,7 @@
     dom.successTitle      = $('scanapp-success-title');
     dom.successSubtitle   = $('scanapp-success-subtitle');
     dom.qrDisplay         = $('scanapp-qr-display');
-    dom.qrCanvas          = $('scanapp-qr-canvas');
+    dom.qrHost            = $('scanapp-qr-host');
     dom.claimStatus       = $('scanapp-claim-status');
     dom.successDone       = $('scanapp-success-done');
   }
@@ -318,16 +318,40 @@
   }
 
   function renderQR(text) {
-    if (typeof QRCode === 'undefined') {
-      console.warn('[vanzare] QRCode lib not loaded yet');
+    if (!dom.qrHost) return;
+    if (typeof qrcode !== 'function') {
+      console.warn('[vanzare] qrcode-generator lib not loaded yet — retrying in 300ms');
+      setTimeout(function () { renderQR(text); }, 300);
       return;
     }
     try {
-      QRCode.toCanvas(dom.qrCanvas, text, { width: 220, margin: 1 }, function (err) {
-        if (err) console.error('[vanzare] QR error:', err);
-      });
+      // qrcode-generator API: qrcode(typeNumber, errorCorrectionLevel)
+      // typeNumber=0 means auto-pick smallest fit; 'M' = 15% recovery.
+      var qr = qrcode(0, 'M');
+      qr.addData(text);
+      qr.make();
+      // Render at 5px per cell, 4 cell quiet zone → ~220px for typical URLs.
+      var cell = 5;
+      var margin = 4;
+      var moduleCount = qr.getModuleCount();
+      var size = (moduleCount + margin * 2) * cell;
+      var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + size + '" height="' + size +
+                '" viewBox="0 0 ' + size + ' ' + size + '" shape-rendering="crispEdges">' +
+                '<rect width="100%" height="100%" fill="#fff"/>';
+      for (var r = 0; r < moduleCount; r++) {
+        for (var c = 0; c < moduleCount; c++) {
+          if (qr.isDark(r, c)) {
+            var x = (c + margin) * cell;
+            var y = (r + margin) * cell;
+            svg += '<rect x="' + x + '" y="' + y + '" width="' + cell + '" height="' + cell + '" fill="#000"/>';
+          }
+        }
+      }
+      svg += '</svg>';
+      dom.qrHost.innerHTML = svg;
     } catch (e) {
       console.error('[vanzare] renderQR threw:', e);
+      dom.qrHost.innerHTML = '<p style="color:#111; font-size:11px;">Eroare la generarea QR. Folosește link-ul direct.</p>';
     }
   }
 

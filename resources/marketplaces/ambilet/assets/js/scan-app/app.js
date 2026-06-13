@@ -4,6 +4,7 @@
  * Loaded on every /organizator/scan/* page. Wires up:
  *   - auth guard (server-side gate is the primary; this is a JS-side double-check)
  *   - header event-name binding via EventContext subscription
+ *   - global event-picker sheet (opened by header tap on any page)
  *   - bootstrap fetchEvents() once auth is OK
  *   - toast helper used by page-specific scripts
  *
@@ -43,23 +44,27 @@
     }, 3200);
   }
 
+  // ── Helpers ──────────────────────────────────────────────────────────────
+  function pad(n) { return String(n).padStart(2, '0'); }
+  function formatDateTime(value) {
+    try {
+      var d = new Date(value);
+      if (isNaN(d.getTime())) return '—';
+      return pad(d.getDate()) + '.' + pad(d.getMonth() + 1) + '.' + d.getFullYear() + ' · ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+    } catch (e) { return '—'; }
+  }
+  function escapeHtml(s) {
+    if (s == null) return '';
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+
   // ── Header bindings ──────────────────────────────────────────────────────
   function formatEventMeta(event) {
     if (!event) return '—';
     var label = '';
     var dt = event.starts_at || event.start_date;
     if (dt) {
-      try {
-        var d = new Date(dt);
-        if (!isNaN(d.getTime())) {
-          var dd = String(d.getDate()).padStart(2, '0');
-          var mm = String(d.getMonth() + 1).padStart(2, '0');
-          var yy = d.getFullYear();
-          var hh = String(d.getHours()).padStart(2, '0');
-          var mi = String(d.getMinutes()).padStart(2, '0');
-          label = dd + '.' + mm + '.' + yy + ' · ' + hh + ':' + mi;
-        }
-      } catch (e) {}
+      label = formatDateTime(dt);
     }
     if (event.venue_name) label += (label ? ' · ' : '') + event.venue_name;
     return label || '—';
@@ -72,18 +77,105 @@
     if (metaEl) metaEl.textContent = formatEventMeta(event);
   }
 
+  // ── Global event picker sheet (created on demand, reused on all pages) ──
+  var pickerSheet = null;
+
+  function buildPickerSheet() {
+    if (pickerSheet) return pickerSheet;
+    var el = document.createElement('div');
+    el.className = 'scanapp-sheet-backdrop';
+    el.id = 'scanapp-global-event-sheet';
+    el.setAttribute('role', 'dialog');
+    el.setAttribute('aria-modal', 'true');
+    el.innerHTML =
+      '<div class="scanapp-sheet">' +
+        '<div class="scanapp-sheet__handle"></div>' +
+        '<h2 class="scanapp-sheet__title">Alege un eveniment</h2>' +
+        '<div id="scanapp-global-event-sheet-body"></div>' +
+        '<hr class="scanapp-divider">' +
+        '<button type="button" class="scanapp-btn scanapp-btn--block" id="scanapp-global-event-sheet-close">Închide</button>' +
+      '</div>';
+    document.body.appendChild(el);
+    el.querySelector('#scanapp-global-event-sheet-close').addEventListener('click', closePicker);
+    el.addEventListener('click', function (e) { if (e.target === el) closePicker(); });
+    pickerSheet = el;
+    return el;
+  }
+
+  function renderPickerContents() {
+    if (typeof EventContext === 'undefined') return;
+    var s = EventContext.getState();
+    var groups = s.groupedEvents || { live: [], today: [], future: [], past: [] };
+    var labels = { live: 'Live acum', today: 'Azi', future: 'Viitoare', past: 'Trecute' };
+    var html = '';
+    ['live', 'today', 'future', 'past'].forEach(function (key) {
+      var list = groups[key] || [];
+      if (!list.length) return;
+      html += '<div class="scanapp-section-title" style="margin-top:8px;">' + labels[key] + '</div>';
+      html += list.map(function (e) {
+        var meta = e.starts_at ? formatDateTime(e.starts_at) : '';
+        if (e.venue_name) meta += (meta ? ' · ' : '') + e.venue_name;
+        var isActive = (s.selectedEvent && Number(s.selectedEvent.id) === Number(e.id));
+        return '<div class="scanapp-sheet__row" data-event-id="' + escapeHtml(e.id) + '" style="cursor:pointer;">' +
+                 '<div class="scanapp-sheet__row-body">' +
+                   '<div class="scanapp-sheet__row-name">' + escapeHtml(e.name || e.title || 'Eveniment') + (isActive ? ' ✓' : '') + '</div>' +
+                   '<div class="scanapp-sheet__row-sub">' + escapeHtml(meta || '—') + '</div>' +
+                 '</div>' +
+               '</div>';
+      }).join('');
+    });
+    if (!html) {
+      var state = EventContext.getState();
+      html = state.isLoadingEvents
+        ? '<div class="scanapp-sheet__empty">Se încarcă evenimentele…</div>'
+        : '<div class="scanapp-sheet__empty">Nu există evenimente disponibile.</div>';
+    }
+    var body = document.getElementById('scanapp-global-event-sheet-body');
+    if (body) {
+      body.innerHTML = html;
+      body.querySelectorAll('[data-event-id]').forEach(function (row) {
+        row.addEventListener('click', function () {
+          var id = row.getAttribute('data-event-id');
+          var ev = (EventContext.getState().events || []).find(function (e) { return String(e.id) === String(id); });
+          if (ev) {
+            EventContext.selectEvent(ev);
+            closePicker();
+          }
+        });
+      });
+    }
+  }
+
+  function openPicker() {
+    var el = buildPickerSheet();
+    renderPickerContents();
+    el.classList.add('scanapp-sheet-backdrop--open');
+  }
+  function closePicker() {
+    if (pickerSheet) pickerSheet.classList.remove('scanapp-sheet-backdrop--open');
+  }
+
   function bindHeader() {
     var picker = document.getElementById('scanapp-event-picker');
     if (picker) {
-      picker.addEventListener('click', function () {
-        // Etapa 7 replaces this stub with the real picker page (modal or drawer).
-        toast('Selectorul de evenimente urmează în Etapa 7', 'warning');
+      picker.addEventListener('click', openPicker);
+    }
+    // Make the whole event-name area clickable too (matches mobile app UX where
+    // tapping the top bar opens the event switcher).
+    var title = document.querySelector('.scanapp-header__title');
+    if (title) {
+      title.style.cursor = 'pointer';
+      title.setAttribute('role', 'button');
+      title.setAttribute('tabindex', '0');
+      title.addEventListener('click', openPicker);
+      title.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openPicker(); }
       });
     }
     var notif = document.getElementById('scanapp-notif');
     if (notif) {
       notif.addEventListener('click', function () {
-        toast('Notificările urmează în Etapa 7', 'warning');
+        toast('Notificările urmează în iterația 2.', 'warning');
       });
     }
   }
@@ -101,6 +193,14 @@
     // Render header on selection change.
     EventContext.subscribe('event-selected', function (e) {
       renderHeader(e.detail.event);
+      renderPickerContents();
+    });
+    EventContext.subscribe('events-loaded', function () {
+      renderPickerContents();
+      // If hero/header is currently empty (no selectedEvent yet rendered),
+      // re-pull state and force a header refresh.
+      var s = EventContext.getState();
+      if (s.selectedEvent) renderHeader(s.selectedEvent);
     });
 
     // Initial events fetch (fills events list + auto-selects first available).
@@ -109,9 +209,10 @@
 
   // Expose a small public API for page scripts.
   window.ScanApp = window.ScanApp || {};
-  window.ScanApp.toast       = toast;
-  window.ScanApp.authGuard   = authGuard;
-  window.ScanApp.renderHeader = renderHeader;
+  window.ScanApp.toast          = toast;
+  window.ScanApp.authGuard      = authGuard;
+  window.ScanApp.renderHeader   = renderHeader;
+  window.ScanApp.openEventPicker= openPicker;
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', bootstrap);

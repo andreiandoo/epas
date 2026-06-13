@@ -101,6 +101,4 @@ require __DIR__ . '/_layout.php';
 
 </section>
 
-<script src="/assets/js/scan-app/pages/setari-scan.js?v=<?= filemtime(dirname(__DIR__, 2) . '/assets/js/scan-app/pages/setari-scan.js') ?>" defer></script>
-
-<?php require __DIR__ . '/_layout_end.php'; ?>
+<?php $scanPageScript = 'setari-scan.js'; require __DIR__ . '/_layout_end.php'; ?>
