@@ -62,10 +62,16 @@
     dom.qrHost            = $('scanapp-qr-host');
     dom.claimStatus       = $('scanapp-claim-status');
     dom.successDone       = $('scanapp-success-done');
+    dom.seatModal         = $('scanapp-seating-modal');
+    dom.seatIframe        = $('scanapp-seating-iframe');
+    dom.seatBack          = $('scanapp-seating-back');
+    dom.seatLoading       = $('scanapp-seating-loading');
   }
 
   // ── Cart state ───────────────────────────────────────────────────────────
-  var cart = []; // [{ id, name, price, color, quantity }]
+  var cart = [];                // [{ id, name, price, color, quantity, seatLabel? }]
+  var selectedSeatUids = [];    // accumulates across multi-type seating sessions
+  var selectedSeatDetails = []; // [{ uid, section, row, seat, ticket_type_id }]
 
   function cartCount() { return cart.reduce(function (n, i) { return n + i.quantity; }, 0); }
   function cartSubtotal() { return cart.reduce(function (n, i) { return n + Number(i.price) * i.quantity; }, 0); }
@@ -142,7 +148,7 @@
           var type = types.find(function (t) { return String(t.id) === String(id); });
           if (!type) return;
           if (action === 'seated') {
-            openSeatedInfo(type);
+            openSeating(type);
             return;
           }
           var idx = cart.findIndex(function (i) { return Number(i.id) === Number(id); });
@@ -165,16 +171,93 @@
     });
   }
 
-  function openSeatedInfo(type) {
-    // Reuse the success sheet structure to show an info dialog without adding
-    // a new sheet element to vanzare.php.
-    dom.successTitle.textContent = 'Bilete cu locuri rezervate';
-    dom.successSubtitle.innerHTML = 'Pentru <b>' + escapeHtml(type.name) + '</b> trebuie selectat un loc pe harta sălii. ' +
-      'Această funcție nu este suportată în versiunea web — folosește aplicația Android sau site-ul public pentru vânzare cu loc.';
-    dom.qrDisplay.hidden = true;
-    dom.claimStatus.hidden = true;
-    dom.successDone.textContent = 'Am înțeles';
-    dom.successSheet.classList.add('scanapp-sheet-backdrop--open');
+  // ── Seating widget (iframe over /seating/embed) ──────────────────────────
+  // Mirrors tixello-app/src/screens/SeatingMapScreen.js: same backend endpoint
+  // (/organizer/seating/embed-token), same /seating/embed page, same
+  // postMessage contract. The only difference vs mobile is iframe vs WebView.
+  function openSeating(type) {
+    var ev = EventContext.getState().selectedEvent;
+    if (!ev) { ScanApp.toast('Niciun eveniment selectat.', 'warning'); return; }
+
+    dom.seatIframe.src = 'about:blank';
+    dom.seatLoading.hidden = false;
+    dom.seatModal.classList.add('scanapp-seating-modal--open');
+
+    AmbiletAPI.post('/organizer/seating/embed-token', {
+      event_id:        ev.id,
+      ticket_type_id:  type ? type.id : null
+    }).then(function (resp) {
+      var data = (resp && resp.data) || resp || {};
+      var url = data.url;
+      if (!url) {
+        ScanApp.toast('Token-ul pentru harta locurilor nu a fost emis.', 'danger');
+        closeSeating();
+        return;
+      }
+      dom.seatIframe.src = url;
+      dom.seatLoading.hidden = false;
+      dom.seatIframe.onload = function () { dom.seatLoading.hidden = true; };
+    }).catch(function (err) {
+      console.error('[vanzare] seating embed-token error:', err);
+      ScanApp.toast((err && err.message) || 'Nu am putut deschide harta locurilor.', 'danger');
+      closeSeating();
+    });
+  }
+
+  function closeSeating() {
+    dom.seatModal.classList.remove('scanapp-seating-modal--open');
+    dom.seatIframe.src = 'about:blank';
+  }
+
+  function bindSeatingMessages() {
+    window.addEventListener('message', function (event) {
+      // Only accept messages from the iframe we just opened.
+      if (!dom.seatIframe || event.source !== dom.seatIframe.contentWindow) return;
+      var msg = event.data;
+      if (typeof msg === 'string') {
+        try { msg = JSON.parse(msg); } catch (e) { return; }
+      }
+      if (!msg || typeof msg !== 'object') return;
+
+      switch (msg.type) {
+        case 'ready':
+          dom.seatLoading.hidden = true;
+          break;
+        case 'cancel':
+          closeSeating();
+          break;
+        case 'confirm':
+          handleSeatingConfirm(msg);
+          break;
+        default:
+          // ignore unknown messages
+      }
+    });
+  }
+
+  function handleSeatingConfirm(msg) {
+    // msg: { cartItems: [...], seatUids: [...], selectedSeats: [...] }
+    var incoming = Array.isArray(msg.cartItems) ? msg.cartItems : [];
+    incoming.forEach(function (newItem) {
+      var existing = cart.find(function (i) { return Number(i.id) === Number(newItem.id); });
+      if (existing) {
+        existing.quantity += (newItem.quantity || 1);
+      } else {
+        cart.push({
+          id: newItem.id,
+          name: newItem.name,
+          price: Number(newItem.price || 0),
+          color: newItem.color || '#8B5CF6',
+          quantity: newItem.quantity || 1
+        });
+      }
+    });
+    if (Array.isArray(msg.seatUids))    selectedSeatUids    = selectedSeatUids.concat(msg.seatUids);
+    if (Array.isArray(msg.selectedSeats)) selectedSeatDetails = selectedSeatDetails.concat(msg.selectedSeats);
+
+    closeSeating();
+    renderGrid();
+    renderCart();
   }
 
   function renderCart() {
@@ -292,6 +375,11 @@
         return { ticket_type_id: i.id, quantity: i.quantity };
       })
     };
+    // Include seat UIDs for seated ticket types — mirrors the mobile payload
+    // (tixello-app/src/screens/SalesScreen.js line 576).
+    if (selectedSeatUids.length > 0) {
+      payload.seat_uids = selectedSeatUids.slice();
+    }
 
     closePaymentSheet();
     openSuccessSheet('Se procesează…', 'Așteaptă confirmarea sistemului.');
@@ -348,8 +436,10 @@
       }
     }
 
-    // Clear cart, refresh recent sales
+    // Clear cart + seat selections, refresh recent sales
     cart = [];
+    selectedSeatUids = [];
+    selectedSeatDetails = [];
     renderGrid();
     renderCart();
     renderRecentSales();
@@ -447,9 +537,14 @@
       });
     });
 
+    bindSeatingMessages();
+    if (dom.seatBack) dom.seatBack.addEventListener('click', closeSeating);
+
     if (window.EventContext) {
       EventContext.subscribe('event-selected', function () {
         cart = [];
+        selectedSeatUids = [];
+        selectedSeatDetails = [];
         renderGrid();
         renderCart();
         renderRecentSales();

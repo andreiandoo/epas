@@ -95,13 +95,8 @@ $tabs = [
       <div class="scanapp-header__event-name" id="scanapp-event-name">Selectează un eveniment</div>
       <div class="scanapp-header__event-meta" id="scanapp-event-meta">—</div>
     </div>
-    <button type="button" class="scanapp-header__notif" id="scanapp-notif" aria-label="Notificări">
-      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M18 8a6 6 0 00-12 0c0 7-3 9-3 9h18s-3-2-3-9"></path>
-        <path d="M13.73 21a2 2 0 01-3.46 0"></path>
-      </svg>
-      <span class="scanapp-header__badge" id="scanapp-notif-badge" hidden>0</span>
-    </button>
+    <!-- Notifications bell intentionally hidden until backed by real data. -->
+    <span style="width: 40px;"></span>
   </header>
 
   <main class="scanapp-main">

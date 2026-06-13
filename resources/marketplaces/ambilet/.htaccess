@@ -524,6 +524,10 @@ RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^organizator/scan/asignare-personal/?$ organizer/scan-app/asignare-personal.php [L]
 
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^organizator/scan/guest-list/?$ organizer/scan-app/guest-list.php [L]
+
 # PWA assets — manifest + service worker + icon generator.
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d

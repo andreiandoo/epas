@@ -172,12 +172,6 @@
         if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openPicker(); }
       });
     }
-    var notif = document.getElementById('scanapp-notif');
-    if (notif) {
-      notif.addEventListener('click', function () {
-        toast('Notificările urmează în iterația 2.', 'warning');
-      });
-    }
   }
 
   // ── Bootstrap ────────────────────────────────────────────────────────────

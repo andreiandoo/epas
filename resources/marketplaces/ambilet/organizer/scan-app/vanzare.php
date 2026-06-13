@@ -88,6 +88,25 @@ require __DIR__ . '/_layout.php';
   </div>
 </div>
 
+<!-- Seating widget modal — same /seating/embed page the Android app's
+     WebView loads. We iframe it here and listen for postMessage from the
+     iframe (confirm / cancel / ready) so the behavior is 1:1 with mobile. -->
+<div class="scanapp-seating-modal" id="scanapp-seating-modal" role="dialog" aria-modal="true">
+  <div class="scanapp-seating-modal__inner">
+    <div class="scanapp-seating-modal__header">
+      <button type="button" class="scanapp-seating-modal__back" id="scanapp-seating-back">‹ Înapoi</button>
+      <div class="scanapp-seating-modal__title">Selectează locuri</div>
+      <span style="width: 64px;"></span>
+    </div>
+    <div class="scanapp-seating-modal__body">
+      <div class="scanapp-seating-modal__loading" id="scanapp-seating-loading">
+        <p style="color:#9CA3AF; font-size:13px;">Se pregătește harta…</p>
+      </div>
+      <iframe class="scanapp-seating-modal__iframe" id="scanapp-seating-iframe" allow="autoplay; fullscreen" referrerpolicy="strict-origin-when-cross-origin"></iframe>
+    </div>
+  </div>
+</div>
+
 <!-- QR generator: qrcode-generator (kazuhikoarase) — small, no deps, stable CDN. -->
 <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js" defer></script>
 <?php $scanPageScript = 'vanzare.js'; require __DIR__ . '/_layout_end.php'; ?>

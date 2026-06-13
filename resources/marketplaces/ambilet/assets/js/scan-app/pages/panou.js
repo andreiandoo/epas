@@ -308,16 +308,6 @@
     dom.sheetClose.addEventListener('click', closeSheet);
     dom.sheet.addEventListener('click', function (e) { if (e.target === dom.sheet) closeSheet(); });
 
-    var gl = $('scanapp-action-guest-list');
-    if (gl) gl.addEventListener('click', function () {
-      // Will route to /organizator/scan/guest-list in Etapa 7.
-      ScanApp.toast('Lista de invitați urmează în Etapa 7.', 'warning');
-    });
-    var st = $('scanapp-action-staff');
-    if (st) st.addEventListener('click', function () {
-      ScanApp.toast('Modulul echipă urmează în Etapa 7.', 'warning');
-    });
-
     var closeShiftAdmin = $('scanapp-action-close-shift');
     if (closeShiftAdmin) closeShiftAdmin.addEventListener('click', openShiftSummaryModal);
     var closeShiftScanner = $('scanapp-scanner-close-shift');
