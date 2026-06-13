@@ -46,12 +46,17 @@
   <!-- Toast container (used by JS for in-app feedback) -->
   <div class="scanapp-toasts" id="scanapp-toasts" aria-live="polite" aria-atomic="true"></div>
 
-  <!-- Register service worker (scope = /organizator/scan/). -->
+  <!-- Register service worker (scope = /organizator/scan/).
+       Defer registration by 2s after window.load so it doesn't compete with
+       the initial page render — the SW is a progressive enhancement and
+       its presence on the FIRST visit gives the user no benefit. -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function () {
-        navigator.serviceWorker.register('/organizator/scan/sw.js', { scope: '/organizator/scan/' })
-          .catch(function (err) { console.warn('[scan-app] SW registration failed:', err); });
+        setTimeout(function () {
+          navigator.serviceWorker.register('/organizator/scan/sw.js', { scope: '/organizator/scan/' })
+            .catch(function (err) { console.warn('[scan-app] SW registration failed:', err); });
+        }, 2000);
       });
     }
   </script>
