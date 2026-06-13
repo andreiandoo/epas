@@ -182,16 +182,21 @@
       if (!opts.skipPersist) persistSelectedEventId(event.id);
       emit('event-selected', { event: event });
 
-      // Auto-fetch stats + ticket types
-      return Promise.all([
-        EventContext.refreshStats(),
-        EventContext.refreshTicketTypes()
-      ]).then(function () {
+      // Auto-fetch stats + ticket types in ONE batch (one /events/{id} call
+      // instead of two).
+      return EventContext.refreshAll().then(function () {
         EventContext._startStatsPolling();
       });
     },
 
-    refreshStats: function () {
+    /**
+     * One batched fetch — runs participants + event details in parallel and
+     * dispatches both stats-updated and ticket-types-updated events from a
+     * single network round-trip.
+     *
+     * Older callers (refreshStats / refreshTicketTypes) delegate to this.
+     */
+    refreshAll: function () {
       if (!state.selectedEvent) return Promise.resolve(null);
       var eventId = state.selectedEvent.id;
       state.isLoadingStats = true;
@@ -202,6 +207,8 @@
       ]).then(function (results) {
         var partResp = results[0];
         var eventResp = results[1];
+
+        // Stats
         var rawStats = (partResp && partResp.data && partResp.data.stats)
                     || (partResp && partResp.stats)
                     || (partResp && partResp.meta && partResp.meta.stats)
@@ -216,27 +223,15 @@
           revenue:         eventData.revenue        != null ? eventData.revenue        : (rawStats.revenue || 0),
           capacity:        eventData.capacity       != null ? eventData.capacity       : 0
         };
-        emit('stats-updated', { stats: state.eventStats });
-      }).catch(function (e) {
-        console.error('[EventContext] refreshStats failed:', e);
-      }).finally(function () {
-        state.isLoadingStats = false;
-      });
-    },
 
-    refreshTicketTypes: function () {
-      if (!state.selectedEvent) return Promise.resolve(null);
-      var eventId = state.selectedEvent.id;
-
-      return apiGet('/organizer/events/' + eventId).then(function (resp) {
-        var ev = unwrapEvent(resp) || {};
+        // Ticket types + commission (same event payload — no second fetch)
         state.eventCommission = {
-          rate:     ev.effective_commission_rate || ev.commission_rate || 0,
-          mode:     ev.commission_mode || 'included',
-          useFixed: !!ev.use_fixed_commission
+          rate:     eventData.effective_commission_rate || eventData.commission_rate || 0,
+          mode:     eventData.commission_mode || 'included',
+          useFixed: !!eventData.use_fixed_commission
         };
         var palette = ['#8B5CF6', '#F59E0B', '#10B981', '#06B6D4', '#EF4444', '#EC4899'];
-        var allTypes = ev.ticket_types || [];
+        var allTypes = eventData.ticket_types || [];
         var enrich = function (t, i) {
           var available = (t.available != null)
             ? t.available
@@ -249,15 +244,18 @@
         };
         state.allTicketTypes = allTypes.map(enrich);
         state.ticketTypes    = allTypes.filter(function (t) { return t.is_entry_ticket; }).map(enrich);
-        emit('ticket-types-updated', {
-          ticketTypes:     state.ticketTypes,
-          allTicketTypes:  state.allTicketTypes,
-          commission:      state.eventCommission
-        });
+
+        emit('stats-updated',         { stats: state.eventStats });
+        emit('ticket-types-updated',  { ticketTypes: state.ticketTypes, allTicketTypes: state.allTicketTypes, commission: state.eventCommission });
       }).catch(function (e) {
-        console.error('[EventContext] refreshTicketTypes failed:', e);
+        console.error('[EventContext] refreshAll failed:', e);
+      }).finally(function () {
+        state.isLoadingStats = false;
       });
     },
+
+    refreshStats:       function () { return EventContext.refreshAll(); },
+    refreshTicketTypes: function () { return EventContext.refreshAll(); },
 
     incrementCheckedIn: function () {
       if (!state.eventStats) return;

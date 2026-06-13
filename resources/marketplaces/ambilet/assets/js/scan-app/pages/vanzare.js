@@ -78,6 +78,12 @@
     return s;
   }
 
+  function isSeatedType(t) {
+    var ev = EventContext.getState().selectedEvent;
+    var eventHasSeating = !!(ev && (ev.has_seating === true || ev.seating_layout_id));
+    return eventHasSeating && (t.has_seats === true || t.requires_seat_selection === true);
+  }
+
   // ── Render ticket grid ───────────────────────────────────────────────────
   function renderGrid() {
     var s = EventContext.getState();
@@ -91,22 +97,40 @@
       var sold = avail <= 0;
       var price = Number(t.price || 0);
       var color = t.color || '#8B5CF6';
+      var seated = isSeatedType(t);
       var qtyInCart = (cart.find(function (i) { return Number(i.id) === Number(t.id); }) || { quantity: 0 }).quantity;
-      var minus = qtyInCart > 0 ? '' : 'disabled';
-      var plus  = sold || (avail > 0 && qtyInCart >= avail) ? 'disabled' : '';
+
+      // Seated ticket type: replace the +/- control with a 'Selectează locuri'
+      // button that opens an explanatory sheet (web version cannot drive the
+      // interactive canvas seating widget in this iteration; redirects user
+      // to Android APK for full seated POS flow).
+      var actionBlock;
+      if (seated) {
+        actionBlock = '<button type="button" class="scanapp-btn scanapp-btn--primary" data-action="seated" ' + (sold ? 'disabled' : '') + ' style="font-size:11px; padding: 8px 10px; white-space:nowrap;">Locuri rezervate</button>';
+      } else {
+        var minus = qtyInCart > 0 ? '' : 'disabled';
+        var plus  = sold || (avail > 0 && qtyInCart >= avail) ? 'disabled' : '';
+        actionBlock = '<div class="scanapp-qty">' +
+                        '<button type="button" class="scanapp-qty__btn" data-action="dec" ' + minus + '>−</button>' +
+                        '<span class="scanapp-qty__value">' + qtyInCart + '</span>' +
+                        '<button type="button" class="scanapp-qty__btn scanapp-qty__btn--add" data-action="inc" ' + plus + '>+</button>' +
+                      '</div>';
+      }
+
+      var hint;
+      if (sold) hint = 'Stoc epuizat';
+      else if (seated) hint = avail.toLocaleString('ro-RO') + ' locuri disponibile';
+      else hint = avail.toLocaleString('ro-RO') + ' disponibile';
+
       return '' +
         '<div class="scanapp-ticket" data-id="' + escapeHtml(t.id) + '">' +
           '<div class="scanapp-ticket__color" style="background:' + escapeHtml(color) + ';"></div>' +
           '<div class="scanapp-ticket__body">' +
-            '<div class="scanapp-ticket__name">' + escapeHtml(t.name) + '</div>' +
+            '<div class="scanapp-ticket__name">' + escapeHtml(t.name) + (seated ? ' <span style="font-size:10px; color:var(--scanapp-warning);">📍 cu loc</span>' : '') + '</div>' +
             '<div class="scanapp-ticket__price">' + escapeHtml(formatLei(price)) + '</div>' +
-            '<div class="scanapp-ticket__hint">' + (sold ? 'Stoc epuizat' : (avail.toLocaleString('ro-RO') + ' disponibile')) + '</div>' +
+            '<div class="scanapp-ticket__hint">' + hint + '</div>' +
           '</div>' +
-          '<div class="scanapp-qty">' +
-            '<button type="button" class="scanapp-qty__btn" data-action="dec" ' + minus + '>−</button>' +
-            '<span class="scanapp-qty__value">' + qtyInCart + '</span>' +
-            '<button type="button" class="scanapp-qty__btn scanapp-qty__btn--add" data-action="inc" ' + plus + '>+</button>' +
-          '</div>' +
+          actionBlock +
         '</div>';
     }).join('');
 
@@ -117,6 +141,10 @@
           var action = btn.getAttribute('data-action');
           var type = types.find(function (t) { return String(t.id) === String(id); });
           if (!type) return;
+          if (action === 'seated') {
+            openSeatedInfo(type);
+            return;
+          }
           var idx = cart.findIndex(function (i) { return Number(i.id) === Number(id); });
           if (action === 'inc') {
             if (idx === -1) {
@@ -135,6 +163,18 @@
         });
       });
     });
+  }
+
+  function openSeatedInfo(type) {
+    // Reuse the success sheet structure to show an info dialog without adding
+    // a new sheet element to vanzare.php.
+    dom.successTitle.textContent = 'Bilete cu locuri rezervate';
+    dom.successSubtitle.innerHTML = 'Pentru <b>' + escapeHtml(type.name) + '</b> trebuie selectat un loc pe harta sălii. ' +
+      'Această funcție nu este suportată în versiunea web — folosește aplicația Android sau site-ul public pentru vânzare cu loc.';
+    dom.qrDisplay.hidden = true;
+    dom.claimStatus.hidden = true;
+    dom.successDone.textContent = 'Am înțeles';
+    dom.successSheet.classList.add('scanapp-sheet-backdrop--open');
   }
 
   function renderCart() {
@@ -217,6 +257,7 @@
     dom.successSubtitle.textContent = subtitle || 'Comandă finalizată.';
     dom.qrDisplay.hidden = true;
     dom.claimStatus.hidden = true;
+    dom.successDone.textContent = 'Finalizează';
     dom.successSheet.classList.add('scanapp-sheet-backdrop--open');
   }
   function closeSuccessSheet() {

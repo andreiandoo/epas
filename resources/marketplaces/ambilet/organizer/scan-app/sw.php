@@ -3,16 +3,26 @@
  * Service Worker for Aplicație Scan PWA.
  *
  * Served via /organizator/scan/sw.js so its scope covers all scan-app pages.
- * Strategy:
- *   - shell (HTML pages of scan-app): network-first, cache fallback (so updates
- *     ship immediately but offline keeps working)
- *   - static assets (CSS, JS of scan-app, jsdelivr CDN scripts): stale-while-
- *     revalidate (instant load from cache, refresh in background)
- *   - API calls (/api/marketplace-client/*): network-only (NEVER cache —
- *     stale tickets would be a nightmare)
  *
- * Versioned by the cache name; bumping CACHE_VERSION at the top forces a fresh
- * install + cleanup of older caches.
+ * Strategy (intentionally minimal — NO precache on install):
+ *   - shell (HTML pages of scan-app): network-first, cache fallback (so
+ *     updates ship immediately but offline keeps working). Cached lazily on
+ *     first successful visit.
+ *   - static assets (CSS, JS of scan-app, jsdelivr CDN scripts): stale-while-
+ *     revalidate (instant load from cache after first visit, refresh in
+ *     background).
+ *   - API calls (/api/marketplace-client/*): network-only (NEVER cache —
+ *     stale tickets would be a nightmare).
+ *
+ * Why no precache: aggressive install-time precache fires a flurry of
+ * parallel requests on the first visit which competes for bandwidth with
+ * the actual page the user is trying to load. Lazy caching via the fetch
+ * handler delivers the same offline benefit with no install cost — the
+ * page the user opens first IS the one that gets cached first.
+ *
+ * Versioned by the cache name; bumping CACHE_VERSION (or letting the build
+ * timestamp drift in the header) forces a fresh install + cleanup of older
+ * caches.
  */
 
 header('Content-Type: application/javascript; charset=utf-8');
@@ -22,44 +32,13 @@ header('Cache-Control: max-age=0, no-cache, no-store, must-revalidate');
 header('Service-Worker-Allowed: /organizator/scan/');
 ?>
 /* eslint-disable */
-const CACHE_VERSION = 'scanapp-v1-<?= date('YmdHi') ?>';
+const CACHE_VERSION = 'scanapp-v2-<?= date('YmdHi') ?>';
 const SHELL_CACHE   = CACHE_VERSION + '-shell';
 const ASSETS_CACHE  = CACHE_VERSION + '-assets';
 
-const SHELL_URLS = [
-  '/organizator/scan/panou',
-  '/organizator/scan/scanare',
-  '/organizator/scan/vanzare',
-  '/organizator/scan/rapoarte',
-  '/organizator/scan/setari-scan',
-];
-
-const ASSET_URLS = [
-  '/assets/css/scan-app.css',
-  '/assets/js/scan-app/auth.js',
-  '/assets/js/scan-app/api.js',
-  '/assets/js/scan-app/app-context.js',
-  '/assets/js/scan-app/event-context.js',
-  '/assets/js/scan-app/app.js',
-  '/assets/js/scan-app/scanner.js',
-  '/assets/js/scan-app/pages/panou.js',
-  '/assets/js/scan-app/pages/scanare.js',
-  '/assets/js/scan-app/pages/vanzare.js',
-  '/assets/js/scan-app/pages/rapoarte.js',
-  '/assets/js/scan-app/pages/setari-scan.js',
-  '/assets/js/scan-app/pages/porti.js',
-  '/assets/js/scan-app/pages/asignare-personal.js',
-];
-
 self.addEventListener('install', (event) => {
-  event.waitUntil((async () => {
-    const shell  = await caches.open(SHELL_CACHE);
-    const assets = await caches.open(ASSETS_CACHE);
-    // Best-effort precache — don't fail install if a single URL 404s.
-    await Promise.allSettled(SHELL_URLS.map(u => shell.add(new Request(u, { credentials: 'include' }))));
-    await Promise.allSettled(ASSET_URLS.map(u => assets.add(u)));
-    self.skipWaiting();
-  })());
+  // No precache. Skip waiting so the new SW activates immediately on update.
+  event.waitUntil(self.skipWaiting());
 });
 
 self.addEventListener('activate', (event) => {
@@ -75,7 +54,7 @@ self.addEventListener('activate', (event) => {
 });
 
 function isApiRequest(url) {
-  return /\/api\/marketplace-client\//.test(url);
+  return /\/api\/marketplace-client\//.test(url) || /\/api\/proxy\.php/.test(url);
 }
 function isCdnAsset(url) {
   return /^https:\/\/cdn\.jsdelivr\.net\//.test(url);
@@ -85,6 +64,9 @@ function isScanAssetPath(url) {
 }
 function isScanShellPath(url) {
   return /\/organizator\/scan(\/|$|\?)/.test(url);
+}
+function isIconRequest(url) {
+  return /\/organizator\/scan\/icon\.php/.test(url) || /\/organizator\/scan\/manifest\.webmanifest/.test(url);
 }
 
 self.addEventListener('fetch', (event) => {
@@ -96,13 +78,32 @@ self.addEventListener('fetch', (event) => {
   // stale ticket / event data.
   if (isApiRequest(url)) return;
 
+  // Icons + manifest: cache-first (immutable for a year per their headers).
+  if (isIconRequest(url)) {
+    event.respondWith((async () => {
+      const cache = await caches.open(ASSETS_CACHE);
+      const cached = await cache.match(req);
+      if (cached) return cached;
+      try {
+        const resp = await fetch(req);
+        if (resp && resp.ok) cache.put(req, resp.clone());
+        return resp;
+      } catch (e) {
+        return new Response('', { status: 504 });
+      }
+    })());
+    return;
+  }
+
   // Scan app pages: network-first, fall back to cache.
   if (isScanShellPath(url)) {
     event.respondWith((async () => {
       try {
         const fresh = await fetch(req);
-        const cache = await caches.open(SHELL_CACHE);
-        cache.put(req, fresh.clone());
+        if (fresh && fresh.ok) {
+          const cache = await caches.open(SHELL_CACHE);
+          cache.put(req, fresh.clone());
+        }
         return fresh;
       } catch (e) {
         const cached = await caches.match(req);
