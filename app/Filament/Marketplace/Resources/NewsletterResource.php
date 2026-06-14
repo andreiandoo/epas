@@ -300,6 +300,13 @@ class NewsletterResource extends Resource
                         ->label('Orașe — unde locuiesc clienții (auto-detectat + adresa lor)')
                         ->multiple()
                         ->searchable()
+                        // Trigger the recipient-count placeholder rebuild
+                        // when the admin commits a pick (blur, not keystroke,
+                        // so the dropdown stays open while selecting multiple
+                        // pills). Without this, the new resident-cities filter
+                        // doesn't reflect in Statistici email until another
+                        // live-enabled field changes.
+                        ->live(onBlur: true)
                         ->options(fn () => static::buildCityOptions($marketplace))
                         ->getSearchResultsUsing(function (string $search) use ($marketplace) {
                             $needle = static::normalizeSearch($search);
