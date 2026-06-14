@@ -95,78 +95,117 @@ body.scanapp-body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* ── Header (minimal — mobile has no header bar at all; we keep a thin one
-       just to expose the event-picker + refresh button without a hard tap
-       on the dashboard hero) ──────────────────────────────────────────── */
-.scanapp-header {
+/* ── Top bar — pixel-perfect port of tixello-app/src/components/Header.js.
+       Container: rgba(10,10,15,0.95) bg, border-bottom 1px, paddingTop 48px
+       (status bar safe area). Logo left, status pill + bell right.
+   ─────────────────────────────────────────────────────────────────────── */
+.scanapp-topbar {
   position: sticky;
   top: 0;
-  z-index: 30;
+  z-index: 100; /* mobile Header.js uses zIndex: 100 */
+  background: rgba(10, 10, 15, 0.95);
+  border-bottom: 1px solid var(--scanapp-border);
+  padding-top: max(48px, calc(var(--scanapp-safe-top) + 12px));
+  padding-bottom: 12px;
+  padding-left: 16px;
+  padding-right: 16px;
+  -webkit-backdrop-filter: saturate(180%) blur(10px);
+  backdrop-filter: saturate(180%) blur(10px);
+}
+.scanapp-topbar__inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.scanapp-topbar__left {
   display: flex;
   align-items: center;
   gap: 8px;
-  height: calc(var(--scanapp-header-h) + var(--scanapp-safe-top));
-  padding: var(--scanapp-safe-top) 8px 0 8px;
-  background: var(--scanapp-bg);
-  /* No bottom border — mobile has no header at all; let the content
-     blend in directly without a visual divider. */
+  flex: 1;
+  text-decoration: none;
+}
+.scanapp-topbar__logo {
+  width: 120px;
+  height: 54px;
+  object-fit: contain;
+  display: block;
+}
+.scanapp-topbar__right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
-.scanapp-header__menu,
-.scanapp-header__notif {
-  background: transparent;
-  border: 0;
-  color: var(--scanapp-text-secondary);
+/* Status pill — Live (green) / Offline (red) with pulsing dot */
+.scanapp-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 20px;
+  border: 1px solid transparent;
+}
+.scanapp-status-pill--online {
+  background: var(--scanapp-green-light);
+  border-color: var(--scanapp-green-border);
+}
+.scanapp-status-pill--offline {
+  background: var(--scanapp-red-light);
+  border-color: var(--scanapp-red-border);
+}
+.scanapp-status-pill__text {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+.scanapp-status-pill--online  .scanapp-status-pill__text { color: var(--scanapp-green); }
+.scanapp-status-pill--offline .scanapp-status-pill__text { color: var(--scanapp-red); }
+.scanapp-pulse-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 4px;
+  background: currentColor;
+  animation: scanapp-pulse 2s infinite ease-in-out;
+}
+.scanapp-status-pill--online  .scanapp-pulse-dot { background: var(--scanapp-green); color: var(--scanapp-green); }
+.scanapp-status-pill--offline .scanapp-pulse-dot { background: var(--scanapp-red);   color: var(--scanapp-red); }
+@keyframes scanapp-pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.3; }
+}
+
+/* Bell button (round 40x40 surface, doubles as refresh) */
+.scanapp-bell {
+  position: relative;
   width: 40px;
   height: 40px;
-  border-radius: 10px;
+  border-radius: 20px;
+  background: var(--scanapp-surface);
+  border: 1px solid var(--scanapp-border);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  transition: color 120ms, background-color 120ms;
-}
-.scanapp-header__menu:active,
-.scanapp-header__notif:active {
-  background: var(--scanapp-surface-hover);
-  color: var(--scanapp-text);
-}
-
-.scanapp-header__title {
-  flex: 1;
-  min-width: 0;
-}
-
-.scanapp-header__event-name {
-  font-size: 13px;
-  font-weight: 600;
   color: var(--scanapp-text-secondary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  cursor: pointer;
 }
-
-.scanapp-header__event-meta {
-  /* Hidden in the new minimal header — date+venue live in the dashboard
-     hero only. Kept in DOM so /scanare and /vanzare can show it if they
-     want to in a follow-up tweak. */
-  display: none;
-}
-
-.scanapp-header__badge {
+.scanapp-bell:active { background: var(--scanapp-surface-hover); }
+.scanapp-bell__badge {
   position: absolute;
-  top: 4px;
-  right: 4px;
-  min-width: 16px;
-  height: 16px;
-  padding: 0 4px;
-  border-radius: 8px;
+  top: 2px;
+  right: 2px;
   background: var(--scanapp-red);
+  border-radius: 9px;
+  min-width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  border: 2px solid var(--scanapp-bg);
   color: #fff;
   font-size: 10px;
   font-weight: 700;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+  line-height: 1;
 }
 
 /* ── Main content ─────────────────────────────────────────────────────── */

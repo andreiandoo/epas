@@ -71,10 +71,19 @@
   }
 
   function renderHeader(event) {
-    var nameEl = document.getElementById('scanapp-event-name');
-    var metaEl = document.getElementById('scanapp-event-meta');
-    if (nameEl) nameEl.textContent = event ? (event.name || event.title || 'Eveniment') : 'Selectează un eveniment';
-    if (metaEl) metaEl.textContent = formatEventMeta(event);
+    // The Header.js port doesn't surface the event name in the top bar —
+    // it lives in the dashboard hero now. Kept as a no-op for back-compat
+    // so page scripts that still call ScanApp.renderHeader don't blow up.
+  }
+
+  function renderStatusPill() {
+    var pill = document.getElementById('scanapp-status-pill');
+    var txt  = document.getElementById('scanapp-status-text');
+    if (!pill || !txt) return;
+    var on = (typeof AppContext !== 'undefined' && AppContext.isOnline) ? AppContext.isOnline() : navigator.onLine !== false;
+    pill.classList.toggle('scanapp-status-pill--online',  on);
+    pill.classList.toggle('scanapp-status-pill--offline', !on);
+    txt.textContent = on ? 'Live' : 'Offline';
   }
 
   // ── Global event picker sheet (created on demand, reused on all pages) ──
@@ -156,26 +165,8 @@
   }
 
   function bindHeader() {
-    var picker = document.getElementById('scanapp-event-picker');
-    if (picker) {
-      picker.addEventListener('click', openPicker);
-    }
-    // Make the whole event-name area clickable too (matches mobile app UX where
-    // tapping the top bar opens the event switcher).
-    var title = document.querySelector('.scanapp-header__title');
-    if (title) {
-      title.style.cursor = 'pointer';
-      title.setAttribute('role', 'button');
-      title.setAttribute('tabindex', '0');
-      title.addEventListener('click', openPicker);
-      title.addEventListener('keydown', function (e) {
-        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openPicker(); }
-      });
-    }
-
-    // Manual refresh: re-fetches the current event's stats + ticket types and
-    // briefly spins the icon for visual feedback. The 30s auto-poll keeps
-    // running in the background regardless.
+    // The bell button doubles as a manual refresh trigger (mobile uses
+    // pull-to-refresh which has no clean web equivalent).
     var refresh = document.getElementById('scanapp-refresh');
     if (refresh) {
       refresh.addEventListener('click', function () {
@@ -194,6 +185,14 @@
           });
       });
     }
+
+    // Live status pill updates on online/offline events.
+    renderStatusPill();
+    if (typeof AppContext !== 'undefined' && AppContext.subscribe) {
+      AppContext.subscribe('online-change', renderStatusPill);
+    }
+    window.addEventListener('online',  renderStatusPill);
+    window.addEventListener('offline', renderStatusPill);
   }
 
   // ── Bootstrap ────────────────────────────────────────────────────────────
