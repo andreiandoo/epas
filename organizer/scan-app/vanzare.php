@@ -23,7 +23,10 @@ require __DIR__ . '/_layout.php';
       </div>
     </div>
 
-    <div class="scanapp-section-title" style="margin-top: 16px;">Vânzări recente</div>
+    <div class="scanapp-sales-today-header">
+      <div class="scanapp-section-title">Vânzări Azi</div>
+      <div class="scanapp-sales-total-badge" id="scanapp-sales-total-badge">0 lei</div>
+    </div>
     <div class="scanapp-recent-sales" id="scanapp-recent-sales">
       <div class="scanapp-card scanapp-card--placeholder">
         <p class="scanapp-card__text">Nu există vânzări înregistrate în această tură.</p>

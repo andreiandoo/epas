@@ -95,78 +95,117 @@ body.scanapp-body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* ── Header (minimal — mobile has no header bar at all; we keep a thin one
-       just to expose the event-picker + refresh button without a hard tap
-       on the dashboard hero) ──────────────────────────────────────────── */
-.scanapp-header {
+/* ── Top bar — pixel-perfect port of tixello-app/src/components/Header.js.
+       Container: rgba(10,10,15,0.95) bg, border-bottom 1px, paddingTop 48px
+       (status bar safe area). Logo left, status pill + bell right.
+   ─────────────────────────────────────────────────────────────────────── */
+.scanapp-topbar {
   position: sticky;
   top: 0;
-  z-index: 30;
+  z-index: 100; /* mobile Header.js uses zIndex: 100 */
+  background: rgba(10, 10, 15, 0.95);
+  border-bottom: 1px solid var(--scanapp-border);
+  padding-top: max(48px, calc(var(--scanapp-safe-top) + 12px));
+  padding-bottom: 12px;
+  padding-left: 16px;
+  padding-right: 16px;
+  -webkit-backdrop-filter: saturate(180%) blur(10px);
+  backdrop-filter: saturate(180%) blur(10px);
+}
+.scanapp-topbar__inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.scanapp-topbar__left {
   display: flex;
   align-items: center;
   gap: 8px;
-  height: calc(var(--scanapp-header-h) + var(--scanapp-safe-top));
-  padding: var(--scanapp-safe-top) 8px 0 8px;
-  background: var(--scanapp-bg);
-  /* No bottom border — mobile has no header at all; let the content
-     blend in directly without a visual divider. */
+  flex: 1;
+  text-decoration: none;
+}
+.scanapp-topbar__logo {
+  width: 120px;
+  height: 54px;
+  object-fit: contain;
+  display: block;
+}
+.scanapp-topbar__right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
-.scanapp-header__menu,
-.scanapp-header__notif {
-  background: transparent;
-  border: 0;
-  color: var(--scanapp-text-secondary);
+/* Status pill — Live (green) / Offline (red) with pulsing dot */
+.scanapp-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 20px;
+  border: 1px solid transparent;
+}
+.scanapp-status-pill--online {
+  background: var(--scanapp-green-light);
+  border-color: var(--scanapp-green-border);
+}
+.scanapp-status-pill--offline {
+  background: var(--scanapp-red-light);
+  border-color: var(--scanapp-red-border);
+}
+.scanapp-status-pill__text {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+.scanapp-status-pill--online  .scanapp-status-pill__text { color: var(--scanapp-green); }
+.scanapp-status-pill--offline .scanapp-status-pill__text { color: var(--scanapp-red); }
+.scanapp-pulse-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 4px;
+  background: currentColor;
+  animation: scanapp-pulse 2s infinite ease-in-out;
+}
+.scanapp-status-pill--online  .scanapp-pulse-dot { background: var(--scanapp-green); color: var(--scanapp-green); }
+.scanapp-status-pill--offline .scanapp-pulse-dot { background: var(--scanapp-red);   color: var(--scanapp-red); }
+@keyframes scanapp-pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.3; }
+}
+
+/* Bell button (round 40x40 surface, doubles as refresh) */
+.scanapp-bell {
+  position: relative;
   width: 40px;
   height: 40px;
-  border-radius: 10px;
+  border-radius: 20px;
+  background: var(--scanapp-surface);
+  border: 1px solid var(--scanapp-border);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  transition: color 120ms, background-color 120ms;
-}
-.scanapp-header__menu:active,
-.scanapp-header__notif:active {
-  background: var(--scanapp-surface-hover);
-  color: var(--scanapp-text);
-}
-
-.scanapp-header__title {
-  flex: 1;
-  min-width: 0;
-}
-
-.scanapp-header__event-name {
-  font-size: 13px;
-  font-weight: 600;
   color: var(--scanapp-text-secondary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  cursor: pointer;
 }
-
-.scanapp-header__event-meta {
-  /* Hidden in the new minimal header — date+venue live in the dashboard
-     hero only. Kept in DOM so /scanare and /vanzare can show it if they
-     want to in a follow-up tweak. */
-  display: none;
-}
-
-.scanapp-header__badge {
+.scanapp-bell:active { background: var(--scanapp-surface-hover); }
+.scanapp-bell__badge {
   position: absolute;
-  top: 4px;
-  right: 4px;
-  min-width: 16px;
-  height: 16px;
-  padding: 0 4px;
-  border-radius: 8px;
+  top: 2px;
+  right: 2px;
   background: var(--scanapp-red);
+  border-radius: 9px;
+  min-width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  border: 2px solid var(--scanapp-bg);
   color: #fff;
   font-size: 10px;
   font-weight: 700;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+  line-height: 1;
 }
 
 /* ── Main content ─────────────────────────────────────────────────────── */
@@ -785,77 +824,389 @@ body.scanapp-body {
   to   { transform: translateY(0);     opacity: 1; }
 }
 
-/* ── Scanner UI (preserved from previous iteration for /scanare) ─────── */
-.scanapp-scanner {
-  position: relative;
-  background: #000;
-  border-radius: 18px;
-  overflow: hidden;
-  aspect-ratio: 3 / 4;
-  max-width: 480px;
-  margin: 0 auto;
-  border: 1px solid var(--scanapp-border-medium);
-}
-.scanapp-scanner__video { width: 100%; height: 100%; object-fit: cover; display: block; background: #000; }
-.scanapp-scanner__overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; }
-.scanapp-scanner__frame { width: 70%; aspect-ratio: 1 / 1; border: 2px solid rgba(255,255,255,0.7); border-radius: 18px; position: relative; box-shadow: 0 0 0 9999px rgba(0,0,0,0.35); overflow: hidden; }
-.scanapp-scanner__line { position: absolute; left: 6%; right: 6%; height: 2px; background: linear-gradient(90deg, transparent, var(--scanapp-purple), transparent); box-shadow: 0 0 12px var(--scanapp-purple); animation: scanapp-line 1.6s cubic-bezier(0.4, 0, 0.2, 1) infinite; }
-@keyframes scanapp-line { 0% { top: 10%; opacity: 0; } 20% { opacity: 1; } 80% { opacity: 1; } 100% { top: 90%; opacity: 0; } }
-.scanapp-scanner__hint { position: absolute; bottom: 12px; left: 12px; right: 12px; text-align: center; font-size: 12px; color: rgba(255,255,255,0.85); background: rgba(0,0,0,0.45); padding: 8px 10px; border-radius: 10px; backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
-.scanapp-scanner__placeholder { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; text-align: center; background: var(--scanapp-surface); color: var(--scanapp-text-secondary); }
-.scanapp-scanner__placeholder svg { margin-bottom: 12px; opacity: 0.6; }
-.scanapp-scanner__placeholder-title { font-size: 16px; font-weight: 700; color: var(--scanapp-text); margin: 0 0 6px; }
-.scanapp-scanner__placeholder-text { font-size: 13px; margin: 0; max-width: 320px; color: var(--scanapp-text-secondary); }
-.scanapp-scanner-controls { display: flex; gap: 8px; margin-top: 12px; }
-.scanapp-scanner-controls__btn { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--scanapp-border-light); background: var(--scanapp-surface); color: var(--scanapp-text); font-size: 13px; font-weight: 600; cursor: pointer; }
-.scanapp-scanner-controls__btn:active { background: var(--scanapp-surface-hover); }
-.scanapp-scanner-controls__btn--primary { background: var(--scanapp-purple); border-color: var(--scanapp-purple); color: #fff; }
+/* ── Scanner UI (CheckInScreen.js port) ──────────────────────────────── */
+/* Scanner section: centered, marginBottom 20 */
+.scanapp-scanner-section { display: flex; justify-content: center; margin-bottom: 20px; }
 
-/* Result card */
-.scanapp-result { display: none; margin-top: 14px; padding: 16px; border-radius: 16px; border: 1px solid; background: var(--scanapp-surface); }
+/* Square 280x280 frame with rounded corners + animated scan line + 4 corner brackets */
+.scanapp-scanner-frame {
+  position: relative;
+  width: 280px;
+  max-width: 100%;
+  aspect-ratio: 1 / 1;
+  background: rgba(255, 255, 255, 0.02);
+  border: 2px solid var(--scanapp-purple);
+  border-radius: 24px;
+  overflow: hidden;
+}
+.scanapp-scanner-frame--scanning { border-color: var(--scanapp-purple); box-shadow: 0 0 32px var(--scanapp-purple-glow); }
+.scanapp-scanner-frame--valid    { border-color: var(--scanapp-green);  box-shadow: 0 0 32px rgba(16, 185, 129, 0.5); }
+.scanapp-scanner-frame--invalid  { border-color: var(--scanapp-red);    box-shadow: 0 0 32px rgba(239, 68, 68, 0.5); }
+.scanapp-scanner-frame--duplicate{ border-color: var(--scanapp-amber);  box-shadow: 0 0 32px rgba(245, 158, 11, 0.5); }
+
+.scanapp-scanner-frame__video {
+  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; background: #000;
+}
+.scanapp-scanner-frame__placeholder {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 12px;
+  background: transparent;
+  cursor: pointer;
+}
+.scanapp-scanner-frame__placeholder-text {
+  font-size: 13px;
+  color: var(--scanapp-text-quaternary);
+  letter-spacing: 0.3px;
+}
+
+/* Animated purple scan line — runs only while scanning */
+.scanapp-scanner-frame__line {
+  position: absolute; left: 8px; right: 8px; height: 3px;
+  background: linear-gradient(90deg, transparent, var(--scanapp-purple), var(--scanapp-purple), transparent);
+  border-radius: 1.5px;
+  animation: scanapp-line 1.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  pointer-events: none;
+}
+@keyframes scanapp-line {
+  0%   { top: 8px; opacity: 0; }
+  10%  { opacity: 1; }
+  90%  { opacity: 1; }
+  100% { top: calc(100% - 11px); opacity: 0; }
+}
+
+/* 4 corner brackets — 40x40, 4px thick, purple */
+.scanapp-scanner-corner {
+  position: absolute;
+  width: 40px;
+  height: 40px;
+  border-color: var(--scanapp-purple);
+  pointer-events: none;
+}
+.scanapp-scanner-corner--tl { top: 0;    left: 0;    border-top:    4px solid; border-left:  4px solid; border-top-left-radius: 22px; }
+.scanapp-scanner-corner--tr { top: 0;    right: 0;   border-top:    4px solid; border-right: 4px solid; border-top-right-radius: 22px; }
+.scanapp-scanner-corner--bl { bottom: 0; left: 0;    border-bottom: 4px solid; border-left:  4px solid; border-bottom-left-radius: 22px; }
+.scanapp-scanner-corner--br { bottom: 0; right: 0;   border-bottom: 4px solid; border-right: 4px solid; border-bottom-right-radius: 22px; }
+
+/* ── Result Card — color-coded green/amber/red with 52x52 icon circle ── */
+.scanapp-result {
+  display: none;
+  border-width: 1px;
+  border-style: solid;
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 20px;
+}
 .scanapp-result--show { display: block; animation: scanapp-result-in 220ms ease-out; }
 @keyframes scanapp-result-in { from { transform: translateY(8px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-.scanapp-result--success { border-color: var(--scanapp-green-border); background: var(--scanapp-green-light); }
-.scanapp-result--warning { border-color: var(--scanapp-amber-border); background: var(--scanapp-amber-light); }
-.scanapp-result--danger  { border-color: var(--scanapp-red-border);   background: var(--scanapp-red-light); }
-.scanapp-result__header { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
-.scanapp-result__icon { width: 44px; height: 44px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.scanapp-result--success .scanapp-result__icon { background: var(--scanapp-green-bg); color: var(--scanapp-green); }
-.scanapp-result--warning .scanapp-result__icon { background: var(--scanapp-amber-bg); color: var(--scanapp-amber); }
-.scanapp-result--danger  .scanapp-result__icon { background: var(--scanapp-red-bg);   color: var(--scanapp-red); }
-.scanapp-result__title { font-size: 15px; font-weight: 700; margin: 0; color: var(--scanapp-text); }
-.scanapp-result__subtitle { font-size: 12px; color: var(--scanapp-text-secondary); margin: 2px 0 0; }
-.scanapp-result__details { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
-.scanapp-result__detail-row { font-size: 12px; }
-.scanapp-result__detail-label { color: var(--scanapp-text-tertiary); text-transform: uppercase; font-size: 10px; font-weight: 700; letter-spacing: 0.4px; margin-bottom: 1px; }
-.scanapp-result__detail-value { color: var(--scanapp-text); font-weight: 600; word-break: break-word; }
-.scanapp-result__actions { margin-top: 12px; display: flex; gap: 8px; }
+.scanapp-result--success  { background: var(--scanapp-green-bg);  border-color: var(--scanapp-green-border); }
+.scanapp-result--warning  { background: var(--scanapp-amber-bg);  border-color: var(--scanapp-amber-border); }
+.scanapp-result--danger   { background: var(--scanapp-red-bg);    border-color: var(--scanapp-red-border); }
 
-/* Stat pills (used on /scanare) */
+.scanapp-result__inner { display: flex; align-items: center; gap: 14px; }
+.scanapp-result__icon-circle {
+  width: 52px; height: 52px; border-radius: 26px;
+  display: inline-flex; align-items: center; justify-content: center;
+  color: #fff;
+  flex-shrink: 0;
+}
+.scanapp-result--success  .scanapp-result__icon-circle { background: var(--scanapp-green); }
+.scanapp-result--warning  .scanapp-result__icon-circle { background: var(--scanapp-amber); }
+.scanapp-result--danger   .scanapp-result__icon-circle { background: var(--scanapp-red); }
+
+.scanapp-result__text { flex: 1; min-width: 0; }
+.scanapp-result__title {
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  margin: 0 0 4px;
+  text-transform: uppercase;
+}
+.scanapp-result--success  .scanapp-result__title { color: var(--scanapp-green); }
+.scanapp-result--warning  .scanapp-result__title { color: var(--scanapp-amber); }
+.scanapp-result--danger   .scanapp-result__title { color: var(--scanapp-red); }
+.scanapp-result__name {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--scanapp-text);
+  margin: 0 0 4px;
+}
+.scanapp-result__detail {
+  font-size: 13px;
+  color: var(--scanapp-text-secondary);
+  margin: 0;
+}
+.scanapp-result__next-btn {
+  display: block;
+  width: 100%;
+  margin-top: 14px;
+  padding: 12px;
+  background: var(--scanapp-surface);
+  border: 1px solid var(--scanapp-border);
+  border-radius: 12px;
+  color: var(--scanapp-text);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+/* ── Big scan button + manual entry link ─────────────────────────────── */
+.scanapp-actions-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+.scanapp-scan-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 16px;
+  border-radius: 14px;
+  background: var(--scanapp-purple);
+  color: #fff;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  border: 0;
+  cursor: pointer;
+}
+.scanapp-scan-button:active { filter: brightness(0.92); }
+.scanapp-scan-button--scanning { background: var(--scanapp-purple-secondary); opacity: 0.85; }
+.scanapp-manual-entry-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 20px;
+  background: transparent;
+  border: 0;
+  color: var(--scanapp-text-secondary);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+/* ── Live stats row (3 pills centered) — CheckIn ────────────────────── */
+.scanapp-stats-row {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 28px;
+}
+.scanapp-stats-row .scanapp-stat-pill { padding: 8px 14px; }
+
 .scanapp-stat-pills { display: flex; gap: 8px; margin-bottom: 12px; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
 .scanapp-stat-pills::-webkit-scrollbar { display: none; }
-.scanapp-stat-pill { flex: 0 0 auto; padding: 8px 14px; border-radius: 999px; background: var(--scanapp-surface); border: 1px solid var(--scanapp-border); font-size: 11px; color: var(--scanapp-text-secondary); white-space: nowrap; }
-.scanapp-stat-pill__value { color: var(--scanapp-text); font-weight: 700; margin-right: 4px; }
-button.scanapp-stat-pill { background: var(--scanapp-surface); border: 1px solid var(--scanapp-border); color: var(--scanapp-text-secondary); cursor: pointer; font-family: inherit; }
+.scanapp-stat-pill {
+  flex: 0 0 auto;
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 14px;
+  border-radius: 20px;
+  background: var(--scanapp-surface);
+  border: 1px solid var(--scanapp-border);
+  font-size: 12px;
+  color: var(--scanapp-text-tertiary);
+  white-space: nowrap;
+  letter-spacing: 0.2px;
+}
+.scanapp-stat-pill__value { color: var(--scanapp-text); font-weight: 700; font-size: 14px; margin-right: 2px; }
+button.scanapp-stat-pill { cursor: pointer; font-family: inherit; }
 .scanapp-stat-pill--active { background: var(--scanapp-purple) !important; border-color: var(--scanapp-purple) !important; color: #fff !important; }
 
-/* Manual entry input */
-.scanapp-input { width: 100%; padding: 14px 16px; border-radius: 12px; background: var(--scanapp-bg); border: 1px solid var(--scanapp-border-light); color: var(--scanapp-text); font-size: 15px; font-family: inherit; letter-spacing: 1px; text-transform: uppercase; }
+/* ── Recent scans (CheckIn list) ─────────────────────────────────────── */
+.scanapp-recent-scans-section .scanapp-section-title { margin-bottom: 12px; }
+.scanapp-recent-scan {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--scanapp-surface);
+  border: 1px solid var(--scanapp-border);
+  border-radius: 12px;
+  padding: 12px;
+  margin-bottom: 8px;
+}
+.scanapp-recent-scan__status {
+  width: 32px;
+  height: 32px;
+  border-radius: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.scanapp-recent-scan__status--valid     { background: var(--scanapp-green-bg);  color: var(--scanapp-green); }
+.scanapp-recent-scan__status--duplicate { background: var(--scanapp-amber-bg);  color: var(--scanapp-amber); }
+.scanapp-recent-scan__status--invalid   { background: var(--scanapp-red-bg);    color: var(--scanapp-red); }
+.scanapp-recent-scan__text { flex: 1; min-width: 0; }
+.scanapp-recent-scan__name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--scanapp-text);
+  margin: 0 0 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.scanapp-recent-scan__type {
+  font-size: 12px;
+  color: var(--scanapp-text-tertiary);
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.scanapp-recent-scan__time {
+  font-size: 12px;
+  color: var(--scanapp-text-quaternary);
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+/* ── Manual entry modal (centered card, not bottom sheet) ─────────────── */
+.scanapp-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 65;
+  background: rgba(0, 0, 0, 0.7);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.scanapp-modal-overlay--open { display: flex; }
+.scanapp-modal-card {
+  background: #16161F;
+  border: 1px solid var(--scanapp-border);
+  border-radius: 20px;
+  padding: 28px;
+  width: 100%;
+  max-width: 400px;
+  text-align: center;
+}
+.scanapp-modal-card__title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--scanapp-text);
+  margin: 0 0 8px;
+}
+.scanapp-modal-card__desc {
+  font-size: 14px;
+  color: var(--scanapp-text-secondary);
+  margin: 0 0 20px;
+}
+
+/* Input — manual entry style */
+.scanapp-input {
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: var(--scanapp-bg);
+  border: 1px solid var(--scanapp-border-light);
+  color: var(--scanapp-text);
+  font-size: 15px;
+  font-family: inherit;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
 .scanapp-input:focus { outline: none; border-color: var(--scanapp-purple); box-shadow: 0 0 0 3px var(--scanapp-purple-light); }
 
-/* ── Sales (vanzare) — preserved + restyled ──────────────────────────── */
+/* ── Sales (vanzare) — pixel-perfect port of SalesScreen.js ──────────── */
 .scanapp-ticket-grid { display: flex; flex-direction: column; gap: 10px; }
-.scanapp-ticket { display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: var(--scanapp-surface); border: 1px solid var(--scanapp-border); border-radius: 14px; }
-.scanapp-ticket__color { width: 4px; align-self: stretch; border-radius: 2px; flex-shrink: 0; min-height: 36px; }
-.scanapp-ticket__body { flex: 1; min-width: 0; }
-.scanapp-ticket__name { font-size: 14px; font-weight: 700; color: var(--scanapp-text); }
-.scanapp-ticket__price { font-size: 13px; color: var(--scanapp-text-secondary); margin-top: 2px; }
-.scanapp-ticket__hint { font-size: 11px; color: var(--scanapp-text-tertiary); margin-top: 2px; }
-.scanapp-qty { display: inline-flex; align-items: center; gap: 8px; }
-.scanapp-qty__btn { width: 32px; height: 32px; border-radius: 16px; background: var(--scanapp-surface-hover); color: var(--scanapp-text); border: 1px solid var(--scanapp-border-light); font-size: 16px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
+.scanapp-ticket {
+  display: flex;
+  align-items: center;
+  background: var(--scanapp-surface);
+  border: 1px solid var(--scanapp-border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.scanapp-ticket--sold-out { opacity: 0.5; }
+.scanapp-ticket__color {
+  width: 4px;
+  align-self: stretch;
+  flex-shrink: 0;
+}
+.scanapp-ticket__body {
+  flex: 1;
+  min-width: 0;
+  padding: 14px;
+}
+.scanapp-ticket__name {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--scanapp-text);
+  margin-bottom: 4px;
+}
+.scanapp-ticket--sold-out .scanapp-ticket__name { color: var(--scanapp-text-tertiary); }
+.scanapp-ticket__price {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--scanapp-purple);
+  margin-bottom: 2px;
+}
+.scanapp-ticket__hint {
+  font-size: 12px;
+  color: var(--scanapp-text-tertiary);
+}
+.scanapp-ticket__sold-out {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--scanapp-red);
+}
+.scanapp-qty {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-right: 12px;
+}
+.scanapp-qty__btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  background: var(--scanapp-surface-hover);
+  color: var(--scanapp-text);
+  border: 1px solid var(--scanapp-border-light);
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
 .scanapp-qty__btn:disabled { opacity: 0.4; cursor: not-allowed; }
-.scanapp-qty__btn--add { background: var(--scanapp-purple); border-color: var(--scanapp-purple); color: #fff; }
-.scanapp-qty__value { min-width: 18px; text-align: center; font-weight: 700; }
+.scanapp-qty__btn--add {
+  width: 40px;
+  height: 40px;
+  background: var(--scanapp-purple-light);
+  border-color: transparent;
+  color: var(--scanapp-purple);
+}
+.scanapp-qty__value { min-width: 18px; text-align: center; font-weight: 700; color: var(--scanapp-text); }
+
+/* Sales-today section header with green total badge */
+.scanapp-sales-today-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  margin-top: 24px;
+}
+.scanapp-sales-today-header .scanapp-section-title { margin: 0; }
+.scanapp-sales-total-badge {
+  background: var(--scanapp-green-bg);
+  border: 1px solid var(--scanapp-green-border);
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--scanapp-green);
+}
 
 .scanapp-cart-bar { position: fixed; bottom: calc(var(--scanapp-tabbar-h) + var(--scanapp-safe-bottom) + 8px); left: 0; right: 0; z-index: 25; background: #16161F; border-top: 1px solid var(--scanapp-border-light); padding: 12px 16px; display: none; align-items: center; gap: 12px; max-width: 640px; margin: 0 auto; }
 .scanapp-cart-bar--open { display: flex; }
@@ -873,30 +1224,348 @@ button.scanapp-stat-pill { background: var(--scanapp-surface); border: 1px solid
 .scanapp-claim-status { margin-top: 10px; padding: 10px 12px; border-radius: 10px; background: var(--scanapp-surface-hover); font-size: 12px; color: var(--scanapp-text-secondary); text-align: center; }
 .scanapp-claim-status--ok { background: var(--scanapp-green-light); color: var(--scanapp-green); }
 
-.scanapp-recent-sales { display: flex; flex-direction: column; gap: 8px; }
-.scanapp-recent-sale { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: var(--scanapp-surface); border: 1px solid var(--scanapp-border); border-radius: 12px; font-size: 12.5px; }
-.scanapp-recent-sale__icon { width: 30px; height: 30px; border-radius: 8px; background: var(--scanapp-purple-bg); color: var(--scanapp-purple); display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.scanapp-recent-sale__desc { flex: 1; min-width: 0; }
-.scanapp-recent-sale__amount { font-weight: 700; color: var(--scanapp-text); }
+.scanapp-recent-sales { display: flex; flex-direction: column; gap: 6px; }
+.scanapp-recent-sale {
+  display: flex;
+  align-items: center;
+  background: var(--scanapp-surface);
+  border: 1px solid var(--scanapp-border);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+.scanapp-recent-sale__icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--scanapp-purple-bg);
+  color: var(--scanapp-purple);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-right: 12px;
+}
+.scanapp-recent-sale__icon--cash { background: var(--scanapp-green-bg); color: var(--scanapp-green); }
+.scanapp-recent-sale__icon--card { background: var(--scanapp-purple-bg); color: var(--scanapp-purple); }
+.scanapp-recent-sale__info { flex: 1; min-width: 0; }
+.scanapp-recent-sale__desc {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--scanapp-text);
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.scanapp-recent-sale__time {
+  font-size: 12px;
+  color: var(--scanapp-text-tertiary);
+}
+.scanapp-recent-sale__amount {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--scanapp-text);
+  margin-left: 8px;
+}
 
-/* Reports (rapoarte) bars */
-.scanapp-report-bars { display: flex; flex-direction: column; gap: 8px; }
-.scanapp-report-bar { display: flex; flex-direction: column; gap: 4px; padding: 10px 12px; background: var(--scanapp-surface); border: 1px solid var(--scanapp-border); border-radius: 12px; }
-.scanapp-report-bar__head { display: flex; justify-content: space-between; font-size: 12.5px; }
+/* ── Reports (rapoarte) — port of ReportsScreen.js ──────────────────── */
+.scanapp-reports-page-header {
+  margin-bottom: 16px;
+}
+.scanapp-reports-page-header__title {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--scanapp-text);
+  margin: 0 0 4px;
+}
+.scanapp-reports-page-header__sub {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--scanapp-text-tertiary);
+}
+.scanapp-reports-page-header__sub .scanapp-pulse-dot {
+  width: 6px; height: 6px; border-radius: 3px;
+  background: var(--scanapp-green);
+}
+
+/* Past-event selector row (clickable bar above the report content) */
+.scanapp-past-selector {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--scanapp-surface);
+  border: 1px solid var(--scanapp-border);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-bottom: 20px;
+  gap: 8px;
+  cursor: pointer;
+  color: inherit;
+  text-decoration: none;
+  font-family: inherit;
+  width: 100%;
+}
+.scanapp-past-selector__left { display: inline-flex; align-items: center; gap: 8px; color: var(--scanapp-text-secondary); font-size: 13px; font-weight: 500; }
+.scanapp-past-selector__right { display: inline-flex; align-items: center; gap: 6px; flex: 1; justify-content: flex-end; min-width: 0; }
+.scanapp-past-selector__value {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--scanapp-purple);
+  max-width: 200px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Metric card (rapoarte top cards: Rata Check-in wide + 2-col grid) */
+.scanapp-metrics-grid { display: flex; flex-direction: column; gap: 10px; margin-bottom: 24px; }
+.scanapp-metric-card {
+  background: var(--scanapp-surface);
+  border: 1px solid var(--scanapp-border);
+  border-radius: 14px;
+  padding: 16px;
+}
+.scanapp-metric-card--wide { padding: 18px; }
+.scanapp-metric-card__label {
+  font-size: 12px;
+  color: var(--scanapp-text-tertiary);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-bottom: 6px;
+}
+.scanapp-metric-card__value {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--scanapp-text);
+  line-height: 1.1;
+}
+.scanapp-metric-card__suffix {
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--scanapp-text-tertiary);
+  margin-left: 4px;
+}
+.scanapp-metrics-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+/* Section card (Reports has 'Performanța Porților', 'Detalii Venituri', etc.) */
+.scanapp-section-card {
+  background: var(--scanapp-surface);
+  border: 1px solid var(--scanapp-border);
+  border-radius: 14px;
+  padding: 16px;
+}
+.scanapp-section-card + .scanapp-section-card { margin-top: 8px; }
+
+.scanapp-report-bars { display: flex; flex-direction: column; gap: 14px; }
+.scanapp-report-bar { display: flex; flex-direction: column; gap: 6px; }
+.scanapp-report-bar__head { display: flex; justify-content: space-between; align-items: baseline; font-size: 13px; }
 .scanapp-report-bar__name { font-weight: 600; color: var(--scanapp-text); }
-.scanapp-report-bar__value { color: var(--scanapp-text-secondary); }
-.scanapp-report-bar__track { height: 8px; background: var(--scanapp-surface-hover); border-radius: 4px; overflow: hidden; }
-.scanapp-report-bar__fill { height: 100%; border-radius: 4px; transition: width 320ms ease; }
+.scanapp-report-bar__value { color: var(--scanapp-text-secondary); font-size: 12px; }
+.scanapp-report-bar__track { height: 6px; background: var(--scanapp-surface-hover); border-radius: 3px; overflow: hidden; }
+.scanapp-report-bar__fill { height: 100%; border-radius: 3px; transition: width 320ms ease; }
 
-/* Settings rows */
-.scanapp-setting-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--scanapp-border); }
-.scanapp-setting-row:last-child { border-bottom: 0; }
-.scanapp-setting-row__label { font-size: 14px; font-weight: 600; color: var(--scanapp-text); }
+.scanapp-section-divider {
+  height: 1px;
+  background: var(--scanapp-border);
+  margin: 12px 0;
+}
+
+/* Export button (rapoarte) */
+.scanapp-export-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 14px;
+  border-radius: 12px;
+  background: var(--scanapp-purple-bg);
+  border: 1px solid var(--scanapp-purple-border);
+  color: var(--scanapp-purple);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  margin-top: 16px;
+}
+
+/* ── Settings — port of SettingsScreen.js ────────────────────────────── */
+
+/* Page header — same big title as rapoarte ('Setări', 28px fw700) */
+.scanapp-settings-page-header {
+  margin-bottom: 16px;
+}
+.scanapp-settings-page-header__title {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--scanapp-text);
+  margin: 0;
+}
+
+/* Section header — small uppercase title above each section card */
+.scanapp-settings-section-header {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--scanapp-text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 20px 4px 8px;
+}
+
+/* InfoRow: label + value (no toggle), divider between */
+.scanapp-info-row,
+.scanapp-setting-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 0;
+}
+.scanapp-info-row__label,
+.scanapp-setting-row__label { font-size: 14px; font-weight: 500; color: var(--scanapp-text-secondary); flex: 1; min-width: 0; }
+.scanapp-info-row__value { font-size: 14px; font-weight: 600; color: var(--scanapp-text); text-align: right; }
 .scanapp-setting-row__hint { font-size: 12px; color: var(--scanapp-text-tertiary); margin-top: 2px; }
-.scanapp-toggle { position: relative; width: 44px; height: 26px; border-radius: 13px; background: var(--scanapp-surface-hover); border: 1px solid var(--scanapp-border-light); cursor: pointer; transition: background-color 180ms; flex-shrink: 0; }
-.scanapp-toggle__knob { position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; border-radius: 50%; background: #fff; transition: transform 180ms; }
+
+/* Divider line between rows inside a sectionCard */
+.scanapp-divider-line { height: 1px; background: var(--scanapp-border); }
+
+/* Toggle */
+.scanapp-toggle {
+  position: relative;
+  width: 44px;
+  height: 26px;
+  border-radius: 13px;
+  background: var(--scanapp-surface-hover);
+  border: 1px solid var(--scanapp-border-light);
+  cursor: pointer;
+  transition: background-color 180ms;
+  flex-shrink: 0;
+}
+.scanapp-toggle__knob {
+  position: absolute;
+  top: 2px; left: 2px;
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 180ms;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.3);
+}
 .scanapp-toggle[aria-checked="true"] { background: var(--scanapp-purple); border-color: var(--scanapp-purple); }
 .scanapp-toggle[aria-checked="true"] .scanapp-toggle__knob { transform: translateX(18px); }
+
+/* Status badge (Hardware section: connected/disconnected dot) */
+.scanapp-status-badge-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 0;
+}
+.scanapp-status-badge-row__label { font-size: 14px; font-weight: 500; color: var(--scanapp-text-secondary); }
+.scanapp-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 12px;
+  background: var(--scanapp-red-light);
+  border: 1px solid var(--scanapp-red-border);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--scanapp-red);
+}
+.scanapp-status-badge::before {
+  content: '';
+  display: inline-block;
+  width: 6px; height: 6px;
+  border-radius: 3px;
+  background: var(--scanapp-red);
+}
+.scanapp-status-badge--connected {
+  background: var(--scanapp-green-light);
+  border-color: var(--scanapp-green-border);
+  color: var(--scanapp-green);
+}
+.scanapp-status-badge--connected::before { background: var(--scanapp-green); }
+
+/* Admin badge ('Acces Administrator' pill with shield icon) */
+.scanapp-admin-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--scanapp-purple-bg);
+  border: 1px solid var(--scanapp-purple-border);
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--scanapp-purple);
+}
+
+/* Admin row (link to gate manager / staff assignment) */
+.scanapp-admin-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 0;
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+.scanapp-admin-row__label { font-size: 14px; font-weight: 500; color: var(--scanapp-text); }
+.scanapp-admin-row__right { display: inline-flex; align-items: center; gap: 8px; color: var(--scanapp-text-tertiary); }
+.scanapp-count-badge {
+  background: var(--scanapp-purple-bg);
+  color: var(--scanapp-purple);
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 700;
+  min-width: 18px;
+  text-align: center;
+}
+
+/* Info box (cyan info icon + text) used in offline mode + NFC sections */
+.scanapp-info-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  background: var(--scanapp-cyan-bg);
+  border: 1px solid var(--scanapp-cyan-border);
+  border-radius: 10px;
+  margin-top: 10px;
+}
+.scanapp-info-box svg { flex-shrink: 0; margin-top: 2px; color: var(--scanapp-cyan); }
+.scanapp-info-box__text {
+  flex: 1;
+  font-size: 12px;
+  color: var(--scanapp-text-secondary);
+  line-height: 1.5;
+}
+
+/* Big red logout button at bottom */
+.scanapp-logout-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  margin-top: 24px;
+  padding: 14px;
+  background: var(--scanapp-red-light);
+  border: 1px solid var(--scanapp-red-border);
+  border-radius: 14px;
+  color: var(--scanapp-red);
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+}
 
 /* Card (generic placeholder) */
 .scanapp-card { background: var(--scanapp-surface); border: 1px solid var(--scanapp-border); border-radius: 16px; padding: 16px; }

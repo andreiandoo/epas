@@ -84,25 +84,27 @@ $tabs = [
     })();
   </script>
 
-  <header class="scanapp-header">
-    <button type="button" class="scanapp-header__menu" id="scanapp-event-picker" aria-label="Schimbă eveniment">
-      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
-        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-        <path d="M16 2v4M8 2v4M3 10h18"></path>
-      </svg>
-    </button>
-    <div class="scanapp-header__title">
-      <div class="scanapp-header__event-name" id="scanapp-event-name">Selectează un eveniment</div>
-      <div class="scanapp-header__event-meta" id="scanapp-event-meta">—</div>
+  <!-- Top bar: pixel-perfect port of tixello-app/src/components/Header.js.
+       Logo on left + status pill (Live/Offline) + notification bell on right.
+       Refresh action attached to the bell button so manual refresh stays
+       reachable in one tap (web has no pull-to-refresh equivalent). -->
+  <header class="scanapp-topbar">
+    <div class="scanapp-topbar__inner">
+      <a class="scanapp-topbar__left" href="/organizator/scan/panou" aria-label="Aplicație Scan">
+        <img src="/assets/images/ambilet-logo.webp" alt="" class="scanapp-topbar__logo">
+      </a>
+      <div class="scanapp-topbar__right">
+        <div class="scanapp-status-pill scanapp-status-pill--online" id="scanapp-status-pill" role="status">
+          <span class="scanapp-pulse-dot"></span>
+          <span class="scanapp-status-pill__text" id="scanapp-status-text">Live</span>
+        </div>
+        <button type="button" class="scanapp-bell" id="scanapp-refresh" aria-label="Reîncarcă datele" title="Reîncarcă datele">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 8A6 6 0 1 0 6 8c0 7-3 9-3 9h18s-3-2-3-9zM13.73 21a2 2 0 0 1-3.46 0"/>
+          </svg>
+        </button>
+      </div>
     </div>
-    <!-- Manual refresh button — visually confirms the data is reloaded. -->
-    <button type="button" class="scanapp-header__notif" id="scanapp-refresh" aria-label="Reîncarcă datele" title="Reîncarcă datele">
-      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
-        <polyline points="23 4 23 10 17 10"></polyline>
-        <polyline points="1 20 1 14 7 14"></polyline>
-        <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"></path>
-      </svg>
-    </button>
   </header>
 
   <main class="scanapp-main">
