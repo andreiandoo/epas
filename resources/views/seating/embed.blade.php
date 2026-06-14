@@ -125,20 +125,34 @@ const PRESELECTED_TT = @json($ticketTypeId);
 const REVERB = @json($reverbConfig);
 
 // ────────────────────────────────────────────────────────────────────────
-// Bridge to React Native WebView. window.ReactNativeWebView.postMessage
-// is injected when running inside the mobile WebView. Wrapped to also
-// work in a regular browser for debugging.
+// Bridge to host page.
+//   - React Native WebView: window.ReactNativeWebView.postMessage (mobile app)
+//   - Browser iframe:       window.parent.postMessage (Aplicație Scan web)
+//   - Standalone:           console.log (debugging)
+// All three are tried in order so the same embed page works in every host.
 // ────────────────────────────────────────────────────────────────────────
 const bridge = {
   post(type, data = {}) {
-    const msg = JSON.stringify({ type, ...data });
+    const payload = { type, ...data };
+    const msg = JSON.stringify(payload);
     if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
       window.ReactNativeWebView.postMessage(msg);
-    } else {
-      console.log('[bridge]', msg);
+      return;
     }
+    if (window.parent && window.parent !== window) {
+      // Browser iframe — post to the parent window. We send the object form
+      // (not the JSON string) so the parent listener can read event.data.type
+      // directly without parsing, matching modern postMessage best practice.
+      // Target origin '*' is OK here because the message contains no secrets
+      // and the parent listener filters by event.source === iframe.contentWindow.
+      try { window.parent.postMessage(payload, '*'); return; } catch (e) {}
+    }
+    console.log('[bridge]', msg);
   },
 };
+
+// (The 'ready' post is dispatched at the bottom of this script once
+// fitToContainer() has run — line ~925. Don't double-post it here.)
 
 // ────────────────────────────────────────────────────────────────────────
 // Render state.
@@ -343,25 +357,55 @@ function paint() {
   // guessing. Performance is fine: even 5000 fillText calls per paint
   // are <10ms on modern devices.
   const showSeatNumbers = true;
+  // Two-pass render: draw unselected seats first, then selected ones on top
+  // (so selected halos don't get covered by neighbouring seat fills). Selected
+  // seats are rendered ~25% bigger and with a glow + white outline so the
+  // operator can pick them out at a glance.
+  const selectedEntries = [];
   for (const entry of seatIndex.values()) {
     const { seat, absX, absY, r } = entry;
+    if (selectedSeats.has(seat.seat_uid)) {
+      selectedEntries.push(entry);
+      continue;
+    }
     ctx.beginPath();
     ctx.arc(absX, absY, r, 0, Math.PI * 2);
     ctx.fillStyle = seatColor(seat);
     ctx.fill();
 
-    if (selectedSeats.has(seat.seat_uid)) {
-      ctx.strokeStyle = '#fff';
-      ctx.lineWidth = 2 / view.scale;
-      ctx.stroke();
-    }
-
-    // GeometryStorage emits the seat number as `label` (not seat_number).
-    // Fall back to seat_number / seat_label for any older snapshot.
     const seatNum = seat.label ?? seat.seat_number ?? seat.seat_label;
     if (showSeatNumbers && seatNum != null && seatNum !== '') {
       ctx.fillStyle = '#fff';
       ctx.font = `700 ${Math.max(7, r * 0.95)}px system-ui`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(String(seatNum), absX, absY);
+    }
+  }
+  // Second pass — selected seats, enlarged 25% with glow + outline.
+  for (const entry of selectedEntries) {
+    const { seat, absX, absY, r } = entry;
+    const bigR = r * 1.25;
+    ctx.save();
+    ctx.shadowColor = 'rgba(165, 28, 48, 0.85)';
+    ctx.shadowBlur = Math.max(4, r * 0.8);
+    ctx.beginPath();
+    ctx.arc(absX, absY, bigR, 0, Math.PI * 2);
+    ctx.fillStyle = seatColor(seat);
+    ctx.fill();
+    ctx.restore();
+
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = Math.max(1.2, 2 / view.scale);
+    ctx.beginPath();
+    ctx.arc(absX, absY, bigR, 0, Math.PI * 2);
+    ctx.stroke();
+
+    const seatNum = seat.label ?? seat.seat_number ?? seat.seat_label;
+    if (showSeatNumbers && seatNum != null && seatNum !== '') {
+      ctx.fillStyle = '#fff';
+      // Font scales with the enlarged radius so the number stays readable.
+      ctx.font = `800 ${Math.max(8, bigR * 0.95)}px system-ui`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText(String(seatNum), absX, absY);
