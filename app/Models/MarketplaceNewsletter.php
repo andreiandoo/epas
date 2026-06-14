@@ -27,6 +27,7 @@ class MarketplaceNewsletter extends Model
         'target_event_ids',
         'target_organizer_ids',
         'target_city_ids',
+        'target_resident_cities',
         'target_category_ids',
         'target_artist_ids',
         'exclude_recent_recipients',
@@ -58,6 +59,7 @@ class MarketplaceNewsletter extends Model
         'target_event_ids' => 'array',
         'target_organizer_ids' => 'array',
         'target_city_ids' => 'array',
+        'target_resident_cities' => 'array',
         'target_category_ids' => 'array',
         'target_artist_ids' => 'array',
         'exclude_recent_recipients' => 'boolean',
@@ -227,6 +229,23 @@ class MarketplaceNewsletter extends Model
             }
         }
 
+        // ---- Resident-city base source: customers whose home city
+        // matches either the auto-detected determined_city_id (from
+        // customers:detect-cities) OR the manual address `city` text
+        // field (case + accent insensitive). Distinct from
+        // target_city_ids which targets event-city; this one targets
+        // customer-city.
+        if (!empty($this->target_resident_cities)) {
+            $residentIds = $this->getResidentCustomerIds(
+                $clientId,
+                (array) $this->target_resident_cities
+            );
+            if (!$residentIds->isEmpty()) {
+                $hasBase = true;
+                $baseIds = $baseIds->merge($residentIds);
+            }
+        }
+
         // ---- Narrowing filter: events directly OR derived from
         // city/organizer/category/artist picks. When target_event_ids
         // is non-empty those exact events drive the filter and the
@@ -311,6 +330,62 @@ class MarketplaceNewsletter extends Model
         // the read-only count and the send-time build, so the displayed
         // number always matches what'll go out.
         return $this->applyRecentRecipientFilter($resolved, $clientId);
+    }
+
+    /**
+     * Resolve customers whose home city matches one of $cityIds, using
+     * both the auto-detected determined_city_id (FK, robust) and the
+     * manual address.city text column (case + accent insensitive).
+     * Postgres unaccent extension is assumed available — already used
+     * elsewhere by the event search.
+     *
+     * Returns an unordered Collection of customer ids.
+     *
+     * @param array<int> $cityIds  marketplace_cities ids
+     */
+    public function getResidentCustomerIds(int $clientId, array $cityIds): \Illuminate\Support\Collection
+    {
+        $cityIds = array_values(array_unique(array_filter(array_map('intval', $cityIds))));
+        if (empty($cityIds)) return collect();
+
+        // Localize the picked city names for the text-column match.
+        // Prefer ro (Ambilet primary), fall back to en, then first.
+        $cityNames = MarketplaceCity::query()
+            ->whereIn('id', $cityIds)
+            ->where('marketplace_client_id', $clientId)
+            ->get(['name'])
+            ->map(function ($c) {
+                $name = is_array($c->name)
+                    ? ($c->name['ro'] ?? $c->name['en'] ?? reset($c->name))
+                    : $c->name;
+                return is_string($name) ? trim($name) : null;
+            })
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
+        $cityIdsList = implode(',', $cityIds);
+
+        return MarketplaceCustomer::query()
+            ->where('marketplace_client_id', $clientId)
+            ->where(function ($q) use ($cityIdsList, $cityNames) {
+                // OR-1: auto-detected determined_city_id via JSON path.
+                $q->whereRaw(
+                    "(settings->'detected_location'->>'determined_city_id')::int IN ({$cityIdsList})"
+                );
+                // OR-2: manual address text — unaccent + lowercase both
+                // sides so "Bucuresti" / "BUCUREȘTI" / "București" all
+                // match the canonical city name.
+                if (!empty($cityNames)) {
+                    $placeholders = implode(',', array_fill(0, count($cityNames), '?'));
+                    $q->orWhereRaw(
+                        "LOWER(unaccent(COALESCE(city, ''))) IN (SELECT LOWER(unaccent(x)) FROM unnest(ARRAY[{$placeholders}]::text[]) AS x)",
+                        $cityNames
+                    );
+                }
+            })
+            ->pluck('id');
     }
 
     /**
@@ -920,7 +995,7 @@ class MarketplaceNewsletter extends Model
     {
         $clientId = $this->marketplace_client_id ?? $this->marketplaceClient?->id;
         if (!$clientId) {
-            return ['lists' => 0, 'tags' => 0, 'organizers' => 0, 'events' => 0, 'total' => 0];
+            return ['lists' => 0, 'tags' => 0, 'organizers' => 0, 'events' => 0, 'residents' => 0, 'total' => 0];
         }
 
         [$organizerListIds, $regularListIds] = $this->splitListsByType((array) $this->target_lists);
@@ -976,11 +1051,20 @@ class MarketplaceNewsletter extends Model
             }
         }
 
+        $residentsCount = 0;
+        if (!empty($this->target_resident_cities)) {
+            $residentsCount = $this->getResidentCustomerIds(
+                $clientId,
+                (array) $this->target_resident_cities
+            )->count();
+        }
+
         return [
             'lists' => $listsCount,
             'tags' => $tagsCount,
             'organizers' => $organizersCount,
             'events' => $eventsCount,
+            'residents' => $residentsCount,
             'total' => $this->getRecipientCount(),
         ];
     }

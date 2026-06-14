@@ -290,6 +290,37 @@ class NewsletterResource extends Resource
                         ->helperText('Selectează unul sau mai multe orașe pentru a vedea doar evenimentele/organizatorii de acolo. Caută cu sau fără diacritice. Lasă gol pentru toate.')
                         ->columnSpanFull(),
 
+                    // Resident-city target — distinct from target_city_ids
+                    // above which filters EVENTS by city. This one targets
+                    // CUSTOMERS by where they live, matching against
+                    // settings.detected_location.determined_city_id
+                    // (auto-detected from order history) OR the manual
+                    // address.city text column (case + accent insensitive).
+                    Forms\Components\Select::make('target_resident_cities')
+                        ->label('Orașe — unde locuiesc clienții (auto-detectat + adresa lor)')
+                        ->multiple()
+                        ->searchable()
+                        ->options(fn () => static::buildCityOptions($marketplace))
+                        ->getSearchResultsUsing(function (string $search) use ($marketplace) {
+                            $needle = static::normalizeSearch($search);
+                            return collect(static::buildCityOptions($marketplace))
+                                ->filter(fn ($label) => $needle === '' || str_contains(static::normalizeSearch($label), $needle))
+                                ->toArray();
+                        })
+                        ->getOptionLabelsUsing(function (array $values) {
+                            return MarketplaceCity::whereIn('id', $values)
+                                ->get()
+                                ->mapWithKeys(function ($city) {
+                                    $name = $city->getTranslation('name', 'ro')
+                                        ?? $city->getTranslation('name', 'en')
+                                        ?? '—';
+                                    return [$city->id => $name];
+                                })
+                                ->toArray();
+                        })
+                        ->helperText('Sursa: orașul determinat din comenzi (rulează customers:detect-cities) + câmpul Adresă completat manual de client. Match case + accent insensitive.')
+                        ->columnSpanFull(),
+
                     // Organizer pre-filter. Two purposes:
                     //   1. Narrows the events dropdown below to only
                     //      events owned by these organizers (combined
@@ -898,6 +929,7 @@ class NewsletterResource extends Resource
                             $instance->target_event_ids = $get('target_event_ids') ?? [];
                             $instance->target_organizer_ids = $get('target_organizer_ids') ?? [];
                             $instance->target_city_ids = $get('target_city_ids') ?? [];
+                            $instance->target_resident_cities = $get('target_resident_cities') ?? [];
                             $instance->target_category_ids = $get('target_category_ids') ?? [];
                             $instance->target_artist_ids = $get('target_artist_ids') ?? [];
                             // Honour the dedup toggle live so the total
@@ -914,6 +946,7 @@ class NewsletterResource extends Resource
                                 || !empty($instance->target_event_ids)
                                 || !empty($instance->target_organizer_ids)
                                 || !empty($instance->target_city_ids)
+                                || !empty($instance->target_resident_cities)
                                 || !empty($instance->target_category_ids)
                                 || !empty($instance->target_artist_ids);
                             if (!$hasTargeting) {
@@ -948,6 +981,9 @@ class NewsletterResource extends Resource
                             if (($b['events'] ?? 0) > 0) {
                                 $rows[] = '<div class="flex items-center justify-between"><span class="text-gray-600">Cumpărători evenimente</span><span class="font-semibold">' . number_format($b['events']) . '</span></div>';
                             }
+                            if (($b['residents'] ?? 0) > 0) {
+                                $rows[] = '<div class="flex items-center justify-between"><span class="text-gray-600">Locuiesc în orașe</span><span class="font-semibold">' . number_format($b['residents']) . '</span></div>';
+                            }
                             if (!empty($rows)) {
                                 $html .= '<div class="border-t border-gray-200 dark:border-gray-700 pt-1.5 mt-1.5 space-y-1 text-xs">' . implode('', $rows) . '</div>';
                             }
@@ -971,6 +1007,7 @@ class NewsletterResource extends Resource
                             $instance->target_event_ids = $get('target_event_ids') ?? [];
                             $instance->target_organizer_ids = $get('target_organizer_ids') ?? [];
                             $instance->target_city_ids = $get('target_city_ids') ?? [];
+                            $instance->target_resident_cities = $get('target_resident_cities') ?? [];
                             $instance->target_category_ids = $get('target_category_ids') ?? [];
                             $instance->target_artist_ids = $get('target_artist_ids') ?? [];
                             $instance->recent_recipient_window_hours = (int) ($get('recent_recipient_window_hours') ?: 48);
@@ -985,6 +1022,7 @@ class NewsletterResource extends Resource
                                 || !empty($instance->target_event_ids)
                                 || !empty($instance->target_organizer_ids)
                                 || !empty($instance->target_city_ids)
+                                || !empty($instance->target_resident_cities)
                                 || !empty($instance->target_category_ids)
                                 || !empty($instance->target_artist_ids);
                             if (!$hasTargeting) {
@@ -1081,6 +1119,7 @@ class NewsletterResource extends Resource
                             $instance->target_event_ids = $get('target_event_ids') ?? [];
                             $instance->target_organizer_ids = $get('target_organizer_ids') ?? [];
                             $instance->target_city_ids = $get('target_city_ids') ?? [];
+                            $instance->target_resident_cities = $get('target_resident_cities') ?? [];
                             $instance->target_category_ids = $get('target_category_ids') ?? [];
                             $instance->target_artist_ids = $get('target_artist_ids') ?? [];
 
@@ -1089,6 +1128,7 @@ class NewsletterResource extends Resource
                                 || !empty($instance->target_event_ids)
                                 || !empty($instance->target_organizer_ids)
                                 || !empty($instance->target_city_ids)
+                                || !empty($instance->target_resident_cities)
                                 || !empty($instance->target_category_ids)
                                 || !empty($instance->target_artist_ids);
                             if (!$hasTargeting) return '—';
