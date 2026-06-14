@@ -56,6 +56,7 @@ require __DIR__ . '/_layout.php';
 
     <!-- Live stats: primary card (Intrați) + 2x2 grid -->
     <div id="scanapp-live-stats">
+      <div class="scanapp-stats-section">
       <!-- Primary card -->
       <div class="scanapp-primary-stat">
         <div class="scanapp-primary-stat__header">
@@ -97,8 +98,10 @@ require __DIR__ . '/_layout.php';
           <div class="scanapp-stat-card__label">Capacitate</div>
         </div>
       </div>
+      </div><!-- /.scanapp-stats-section -->
 
       <!-- Quick actions (4 column) -->
+      <div class="scanapp-quick-actions-section">
       <div class="scanapp-section-title">Acțiuni Rapide</div>
       <div class="scanapp-quick-grid">
         <a class="scanapp-quick-action scanapp-quick-action--purple" href="/organizator/scan/scanare">
@@ -118,8 +121,10 @@ require __DIR__ . '/_layout.php';
           Echipă
         </a>
       </div>
+      </div><!-- /.scanapp-quick-actions-section -->
 
       <!-- Recent activity -->
+      <div class="scanapp-recent-section">
       <div class="scanapp-section-title">Activitate Recentă</div>
       <div id="scanapp-recent-activity">
         <div class="scanapp-recent-empty">
@@ -127,6 +132,7 @@ require __DIR__ . '/_layout.php';
           <div class="scanapp-recent-empty__text">Nicio activitate recentă</div>
         </div>
       </div>
+      </div><!-- /.scanapp-recent-section -->
 
       <!-- Close shift (admin) -->
       <button type="button" class="scanapp-close-shift" id="scanapp-action-close-shift">

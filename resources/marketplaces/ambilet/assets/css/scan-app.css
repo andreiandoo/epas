@@ -65,6 +65,14 @@ html, body { margin: 0; padding: 0; }
 button { font: inherit; cursor: pointer; }
 a { color: inherit; text-decoration: none; }
 
+/* CRITICAL: HTML `hidden` attribute is normally `display: none` from the
+   user-agent stylesheet (specificity 0,0,0,1). Author rules with explicit
+   `display: grid|flex|block` win over it, which silently breaks our
+   hidden-by-default elements (live stats vs reports-only grid, scanner vs
+   admin view, etc.). Force [hidden] to actually hide regardless of any
+   later display rule. */
+[hidden] { display: none !important; }
+
 html.scanapp-html {
   background: var(--scanapp-bg);
   color-scheme: dark;
@@ -87,18 +95,21 @@ body.scanapp-body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* ── Header (sticky top, holds event picker + refresh) ──────────────── */
+/* ── Header (minimal — mobile has no header bar at all; we keep a thin one
+       just to expose the event-picker + refresh button without a hard tap
+       on the dashboard hero) ──────────────────────────────────────────── */
 .scanapp-header {
   position: sticky;
   top: 0;
   z-index: 30;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
   height: calc(var(--scanapp-header-h) + var(--scanapp-safe-top));
-  padding: var(--scanapp-safe-top) 12px 0 12px;
+  padding: var(--scanapp-safe-top) 8px 0 8px;
   background: var(--scanapp-bg);
-  border-bottom: 1px solid var(--scanapp-border);
+  /* No bottom border — mobile has no header at all; let the content
+     blend in directly without a visual divider. */
 }
 
 .scanapp-header__menu,
@@ -126,21 +137,19 @@ body.scanapp-body {
 }
 
 .scanapp-header__event-name {
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--scanapp-text);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--scanapp-text-secondary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .scanapp-header__event-meta {
-  font-size: 11px;
-  color: var(--scanapp-text-tertiary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  margin-top: 1px;
+  /* Hidden in the new minimal header — date+venue live in the dashboard
+     hero only. Kept in DOM so /scanare and /vanzare can show it if they
+     want to in a follow-up tweak. */
+  display: none;
 }
 
 .scanapp-header__badge {
@@ -257,14 +266,18 @@ body.scanapp-body {
   margin-top: 4px;
 }
 
-/* ── Section title ───────────────────────────────────────────────────── */
+/* ── Section title — mirrors mobile sectionTitle (no implicit margin-top,
+       its containing section provides spacing via marginTop/marginBottom). */
 .scanapp-section-title {
   font-size: 16px;
   font-weight: 600;
   color: var(--scanapp-text);
-  margin: 24px 0 12px;
+  margin: 0 0 12px;
 }
-.scanapp-section-title:first-child { margin-top: 0; }
+
+/* Generic 'recent activity' section — mirrors mobile recentSection
+   { marginBottom: 8 }. */
+.scanapp-recent-section { margin-bottom: 8px; }
 
 /* ── Reports-only banner ──────────────────────────────────────────────── */
 .scanapp-reports-banner {
@@ -309,6 +322,9 @@ body.scanapp-body {
   font-weight: 500;
   color: var(--scanapp-text-secondary);
 }
+
+/* Container for primary + grid + bar — mirrors mobile statsSection. */
+.scanapp-stats-section { margin-bottom: 20px; }
 
 /* ── Primary stat card (Intrați — full width) ────────────────────────── */
 .scanapp-primary-stat {
@@ -422,6 +438,9 @@ body.scanapp-body {
 .scanapp-c-amber   { color: var(--scanapp-amber); }
 .scanapp-c-purple  { color: var(--scanapp-purple); }
 .scanapp-c-red     { color: var(--scanapp-red); }
+
+/* Mirrors mobile quickActionsSection { marginTop: 24, marginBottom: 20 }. */
+.scanapp-quick-actions-section { margin-top: 24px; margin-bottom: 20px; }
 
 /* ── Quick actions (4 column grid) ───────────────────────────────────── */
 .scanapp-quick-grid {

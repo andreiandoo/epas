@@ -53,7 +53,13 @@
 
   // ── Helpers ──────────────────────────────────────────────────────────────
   /**
-   * Replicates tixello-app/src/utils/eventCategories.js → categorizeEvent().
+   * Replicates tixello-app/src/utils/eventCategories.js → categorizeEvent(),
+   * with one additional check the mobile sister missed: honor `is_past`
+   * from the server (computed off ends_at). Without it, a single-day event
+   * that ended 3h ago is still inside the 12h 'live' window and gets
+   * mislabelled — producing the 'LIVE ACUM' + 'eveniment încheiat'
+   * contradiction the user hit on /scan/panou.
+   *
    * Returns one of: 'live' | 'today' | 'future' | 'past'.
    */
   function categorizeEvent(event) {
@@ -62,6 +68,7 @@
     var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     var eventDay = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate());
 
+    if (event.is_past === true) return 'past';
     if (event.status === 'ended' || event.status === 'cancelled') return 'past';
 
     var diffMs = eventDay.getTime() - today.getTime();

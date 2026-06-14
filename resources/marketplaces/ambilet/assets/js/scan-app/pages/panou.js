@@ -51,24 +51,43 @@
           var dateStr = weekdays[d.getDay()] + ', ' + d.getDate() + ' ' + months[d.getMonth()] + ' ' + d.getFullYear() + ' · ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
           dateEl.textContent = dateStr;
 
-          // Countdown badge
-          var now = new Date();
-          var msDiff = d.getTime() - now.getTime();
-          if (msDiff > 0) {
+          // Countdown badge — synced with the authoritative timeCategory
+          // (which respects is_cancelled / is_postponed / past dates) so we
+          // never end up displaying both 'LIVE ACUM' and the
+          // 'eveniment s-a încheiat' banner on the same page.
+          var cat = event.timeCategory;
+          if (cat === 'past') {
+            countdown.hidden = false;
+            countdownT.textContent = 'ÎNCHEIAT';
+            countdown.style.background = 'var(--scanapp-amber-bg)';
+            countdown.style.borderColor = 'var(--scanapp-amber-border)';
+            countdown.style.color = 'var(--scanapp-amber)';
+          } else if (cat === 'live') {
+            countdown.hidden = false;
+            countdownT.textContent = 'LIVE ACUM';
+            countdown.style.background = 'var(--scanapp-green-bg)';
+            countdown.style.borderColor = 'var(--scanapp-green-border)';
+            countdown.style.color = 'var(--scanapp-green)';
+          } else if (cat === 'today') {
+            countdown.hidden = false;
+            countdownT.textContent = 'AZI';
+            countdown.style.background = 'var(--scanapp-purple-bg)';
+            countdown.style.borderColor = 'var(--scanapp-purple-border)';
+            countdown.style.color = 'var(--scanapp-purple)';
+          } else if (cat === 'future') {
+            var now = new Date();
+            var msDiff = d.getTime() - now.getTime();
             var days = Math.floor(msDiff / 86400000);
             var hours = Math.floor((msDiff % 86400000) / 3600000);
             countdown.hidden = false;
-            if (days >= 1) countdownT.textContent = 'În ' + days + ' ' + (days === 1 ? 'zi' : 'zile');
-            else if (hours >= 1) countdownT.textContent = 'În ' + hours + 'h';
-            else countdownT.textContent = 'Curând';
+            if (days >= 1) countdownT.textContent = 'ÎN ' + days + ' ' + (days === 1 ? 'ZI' : 'ZILE');
+            else if (hours >= 1) countdownT.textContent = 'ÎN ' + hours + 'H';
+            else countdownT.textContent = 'CURÂND';
+            countdown.style.background = 'var(--scanapp-purple-bg)';
+            countdown.style.borderColor = 'var(--scanapp-purple-border)';
+            countdown.style.color = 'var(--scanapp-purple)';
           } else {
-            var hoursPast = Math.floor(-msDiff / 3600000);
-            if (hoursPast < 12) {
-              countdown.hidden = false;
-              countdownT.textContent = 'LIVE ACUM';
-            } else {
-              countdown.hidden = true;
-            }
+            countdown.hidden = true;
           }
         }
       } catch (e) {
