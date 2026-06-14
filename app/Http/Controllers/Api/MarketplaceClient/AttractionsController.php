@@ -70,6 +70,7 @@ class AttractionsController extends BaseController
             ->with([
                 'type:id,slug,name,icon_emoji',
                 'city:id,slug,name',
+                'county:id,name',
                 'activities' => fn ($q) => $q->where('is_published', true)->orderBy('activity_attraction.sort_order'),
                 'activities.city:id,slug,name',
                 'activities.category:id,slug,name,parent_id',
@@ -80,8 +81,35 @@ class AttractionsController extends BaseController
             return response()->json(['success' => false, 'message' => 'Attraction not found'], 404);
         }
 
+        // Sibling attractions for the "explore more" rails — fetched here so the
+        // single /attractions/{slug} call powers the whole page (no extra
+        // round-trips from the frontend, which matters for page speed).
+        $cityId = $attraction->marketplace_city_id;
+        $countyId = $attraction->marketplace_county_id;
+
+        $siblings = fn () => Attraction::query()
+            ->where('marketplace_client_id', $client->id)
+            ->where('is_visible', true)
+            ->where('id', '!=', $attraction->id)
+            ->with(['type:id,slug,name,icon_emoji', 'city:id,slug,name'])
+            ->orderByDesc('is_featured')->orderBy('sort_order')->orderBy('id');
+
+        $cityAttractions = $cityId
+            ? $siblings()->where('marketplace_city_id', $cityId)->limit(6)->get()
+            : collect();
+
+        $countyAttractions = $countyId
+            ? $siblings()
+                ->where('marketplace_county_id', $countyId)
+                ->when($cityId, fn ($q) => $q->where('marketplace_city_id', '!=', $cityId))
+                ->limit(6)->get()
+            : collect();
+
         return $this->success([
             'attraction' => array_merge($this->cardPayload($attraction, $locale), [
+                'county'      => $attraction->county ? $this->translate($attraction->county->name, $locale) : null,
+                'city_attractions'   => $cityAttractions->map(fn ($a) => $this->cardPayload($a, $locale))->values()->all(),
+                'county_attractions' => $countyAttractions->map(fn ($a) => $this->cardPayload($a, $locale))->values()->all(),
                 'subtitle'    => $this->translate($attraction->subtitle, $locale),
                 'description' => $this->translate($attraction->description, $locale),
                 'gallery'     => collect((array) $attraction->gallery)->map(fn ($g) => $this->img($g))->filter()->values()->all(),
