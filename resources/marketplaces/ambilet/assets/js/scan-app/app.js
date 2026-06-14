@@ -71,9 +71,62 @@
   }
 
   function renderHeader(event) {
-    // The Header.js port doesn't surface the event name in the top bar —
-    // it lives in the dashboard hero now. Kept as a no-op for back-compat
-    // so page scripts that still call ScanApp.renderHeader don't blow up.
+    // The Header.js port doesn't surface the event name in the top bar.
+    // The EventSelector strip below the topbar does — render it here.
+    renderEventSelector(event);
+  }
+
+  function renderEventSelector(event) {
+    var nameEl   = document.getElementById('scanapp-es-name');
+    var metaEl   = document.getElementById('scanapp-es-meta');
+    var badge    = document.getElementById('scanapp-es-badge');
+    var badgeTxt = document.getElementById('scanapp-es-badge-text');
+    if (!nameEl) return;
+    if (!event) {
+      nameEl.textContent = 'Niciun eveniment selectat';
+      metaEl.textContent = 'Apasă pentru a alege un eveniment';
+      if (badge) badge.hidden = true;
+      return;
+    }
+
+    // Format short date prefix ("15 IUN") + event name
+    var months = ['Ian','Feb','Mar','Apr','Mai','Iun','Iul','Aug','Sep','Oct','Noi','Dec'];
+    var datePrefix = '';
+    var dateSource = event.start_date || event.event_date || event.starts_at;
+    if (dateSource) {
+      try {
+        var d = new Date(dateSource);
+        if (!isNaN(d.getTime())) datePrefix = d.getDate() + ' ' + months[d.getMonth()];
+      } catch (e) {}
+    }
+    var title = event.name || event.title || 'Eveniment';
+    if (datePrefix) {
+      nameEl.innerHTML = '<span class="scanapp-event-selector__date-prefix">' + escapeHtml(datePrefix) + '</span>' + escapeHtml(title);
+    } else {
+      nameEl.textContent = title;
+    }
+
+    // Venue · city
+    var venue = event.venue_name || (event.venue && event.venue.name) || '';
+    var city  = event.venue_city || (event.venue && event.venue.city) || '';
+    var meta  = '';
+    if (venue) meta = venue;
+    if (city && city !== venue) meta += (meta ? ', ' : '') + city;
+    metaEl.textContent = meta || '—';
+
+    // Status badge
+    if (badge && badgeTxt) {
+      badge.hidden = false;
+      var cat = event.timeCategory || 'future';
+      var labels = { live: 'LIVE', today: 'AZI', future: 'Viitor', past: 'Încheiat' };
+      badgeTxt.textContent = labels[cat] || 'Viitor';
+      badge.className = 'scanapp-event-selector__badge scanapp-event-selector__badge--' + cat;
+    }
+  }
+
+  function escapeHtml(s) {
+    if (s == null) return '';
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
   }
 
   function renderStatusPill() {
@@ -165,8 +218,11 @@
   }
 
   function bindHeader() {
-    // The bell button doubles as a manual refresh trigger (mobile uses
-    // pull-to-refresh which has no clean web equivalent).
+    // EventSelector strip — opens the global picker on tap.
+    var selectorBar = document.getElementById('scanapp-event-selector-bar');
+    if (selectorBar) selectorBar.addEventListener('click', openPicker);
+
+    // Refresh button (uses circular-arrow icon to clearly signal action).
     var refresh = document.getElementById('scanapp-refresh');
     if (refresh) {
       refresh.addEventListener('click', function () {
