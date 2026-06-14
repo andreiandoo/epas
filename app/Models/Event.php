@@ -864,35 +864,61 @@ class Event extends Model
     /**
      * Calculate total revenue for this event.
      *
-     * Aligned 2026-06-14 with the admin panel's "Venituri" number on
-     * /marketplace/events/{id}/edit?tab=vanzari (the canonical source of
-     * truth the marketplace operators verify against). Admin formula:
+     * Re-aligned 2026-06-14 (second pass) with the admin panel's "net
+     * organizator" number on /marketplace/events/{id}/edit?tab=vanzari.
      *
-     *   Order::where('event_id', X)
-     *        ->whereIn('status', ['paid','confirmed','completed'])
-     *        ->sum('total')
+     * Verified for event 4365:
+     *   ticket_face_value = sum(per_type: count(valid|used) × tt.price)
+     *                     = 102×70 + 55×60 + 25×50 + 24×40 + 12×0
+     *                     = 7140 + 3300 + 1250 + 960 + 0
+     *                     = 12650
+     *   discount          = Order.sum(discount_amount) on paid|confirmed|
+     *                       completed orders = 148
+     *   revenue           = 12650 − 148 = 12502   ✓ matches admin exactly
      *
-     * `total` = what the customer paid after discounts and commission are
-     * factored in. Matches `EventStatistics::getTotalRevenue` in the
-     * Filament admin. Mobile + web scan replicas read this attribute so
-     * they now match the admin too.
+     * Invitations contribute their face value (0 lei for Invitatie ticket
+     * type 10775) — so a free invitation correctly adds 0 to revenue but
+     * its count is included in tickets_sold (status valid|used). POS
+     * ticket types with zero sold contribute 0.
+     *
+     * sale_price takes precedence over price when set (mirrors all other
+     * places in the codebase that compute "what the customer would have
+     * been charged").
      */
     public function getTotalRevenueAttribute(): float
     {
-        $total = (float) \App\Models\Order::where('event_id', $this->id)
-            ->whereIn('status', ['paid', 'confirmed', 'completed'])
-            ->sum('total');
+        $tts = $this->relationLoaded('ticketTypes')
+            ? $this->ticketTypes
+            : $this->ticketTypes()->get();
 
-        // Legacy fallback for older orders that stored amounts in
-        // total_cents but never populated `total` (decimal column added later).
-        if ($total == 0.0) {
-            $cents = (int) \App\Models\Order::where('event_id', $this->id)
-                ->whereIn('status', ['paid', 'confirmed', 'completed'])
-                ->sum('total_cents');
-            if ($cents > 0) $total = $cents / 100;
+        if ($tts->isEmpty()) {
+            return 0.0;
         }
 
-        return round($total, 2);
+        $ttIds = $tts->pluck('id')->toArray();
+
+        $countsByType = \App\Models\Ticket::whereIn('ticket_type_id', $ttIds)
+            ->where('event_id', $this->id)
+            ->whereIn('status', ['valid', 'used'])
+            ->groupBy('ticket_type_id')
+            ->selectRaw('ticket_type_id, COUNT(*) as cnt')
+            ->pluck('cnt', 'ticket_type_id');
+
+        $gross = 0.0;
+        foreach ($tts as $tt) {
+            $count = (int) ($countsByType[$tt->id] ?? 0);
+            if ($count === 0) continue;
+            $priceCents = ((int) ($tt->sale_price_cents ?? 0)) > 0
+                ? (int) $tt->sale_price_cents
+                : (int) ($tt->price_cents ?? 0);
+            $gross += $count * ($priceCents / 100);
+        }
+
+        $discount = (float) \App\Models\Order::where('event_id', $this->id)
+            ->whereIn('status', ['paid', 'confirmed', 'completed'])
+            ->sum('discount_amount');
+
+        return round(max(0.0, $gross - $discount), 2);
     }
 
     /**
