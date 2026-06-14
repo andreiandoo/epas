@@ -325,7 +325,7 @@ class NewsletterResource extends Resource
                                 })
                                 ->toArray();
                         })
-                        ->helperText('Sursa: orașul determinat din comenzi (rulează customers:detect-cities) + câmpul Adresă completat manual de client. Match case + accent insensitive.')
+                        ->helperText('Sursa: orașul determinat din comenzi (rulează customers:detect-cities) + câmpul Adresă completat manual de client. Match case + accent insensitive. Combinat cu alte filtre (Contact Lists / Evenimente) → intersecție (doar cei care sunt și în restul filtrelor ȘI locuiesc aici). Singur → toți cei care locuiesc în orașele alese.')
                         ->columnSpanFull(),
 
                     // Organizer pre-filter. Two purposes:

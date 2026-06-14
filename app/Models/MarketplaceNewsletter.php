@@ -229,23 +229,6 @@ class MarketplaceNewsletter extends Model
             }
         }
 
-        // ---- Resident-city base source: customers whose home city
-        // matches either the auto-detected determined_city_id (from
-        // customers:detect-cities) OR the manual address `city` text
-        // field (case + accent insensitive). Distinct from
-        // target_city_ids which targets event-city; this one targets
-        // customer-city.
-        if (!empty($this->target_resident_cities)) {
-            $residentIds = $this->getResidentCustomerIds(
-                $clientId,
-                (array) $this->target_resident_cities
-            );
-            if (!$residentIds->isEmpty()) {
-                $hasBase = true;
-                $baseIds = $baseIds->merge($residentIds);
-            }
-        }
-
         // ---- Narrowing filter: events directly OR derived from
         // city/organizer/category/artist picks. When target_event_ids
         // is non-empty those exact events drive the filter and the
@@ -279,18 +262,38 @@ class MarketplaceNewsletter extends Model
             $filterIds = collect();
         }
 
-        // ---- Combination semantics.
-        if (!$hasBase && $filterIds === null) {
+        // ---- Resident-city narrowing filter. Independent dimension —
+        // applies an intersection on TOP of base/event sets so picking
+        // "Abonați" + "București" returns subscribers who live in
+        // București, not their union. Picked alone it's the only set,
+        // so resolve to "everyone living in București".
+        $residentIds = null;
+        if (!empty($this->target_resident_cities)) {
+            $residentIds = $this->getResidentCustomerIds(
+                $clientId,
+                (array) $this->target_resident_cities
+            );
+        }
+
+        // ---- Combination semantics: intersect every active set. An
+        // "active" set is one the admin explicitly populated; absent
+        // sets don't constrain. Returns empty when nothing was selected
+        // or any active set is empty (an active resolved-to-zero filter
+        // never silently widens back).
+        $activeSets = [];
+        if ($hasBase) $activeSets[] = $baseIds->unique();
+        if ($filterIds !== null) $activeSets[] = $filterIds->unique();
+        if ($residentIds !== null) $activeSets[] = $residentIds->unique();
+
+        if (empty($activeSets)) {
             return collect(); // nothing selected
         }
-        if ($filterIds === null) {
-            $resolved = $baseIds->unique()->values();
-        } elseif (!$hasBase) {
-            $resolved = $filterIds->unique()->values();
-        } else {
-            // Both → intersect.
-            $resolved = $baseIds->unique()->intersect($filterIds->unique())->values();
+
+        $resolved = array_shift($activeSets);
+        foreach ($activeSets as $set) {
+            $resolved = $resolved->intersect($set);
         }
+        $resolved = $resolved->values();
 
         // Always strip customers who have actively unsubscribed (clicked
         // the unsubscribe link in a previous campaign), UNLESS the admin
@@ -1141,15 +1144,36 @@ class MarketplaceNewsletter extends Model
             $filterEmails = collect();
         }
 
-        // ---- Combine using the same semantics as resolveRecipientCustomerIds.
-        if (!$hasBase && $filterEmails === null) return collect();
-        if ($filterEmails === null) {
-            $combined = $baseEmails->values();
-        } elseif (!$hasBase) {
-            $combined = $filterEmails->values();
-        } else {
-            $combined = $baseEmails->intersect($filterEmails)->values();
+        // ---- Resident-city filter emails. Pluck after the id lookup so
+        // the comparison set stays in email-space, same as the others.
+        $residentEmails = null;
+        if (!empty($this->target_resident_cities)) {
+            $residentIds = $this->getResidentCustomerIds(
+                $clientId,
+                (array) $this->target_resident_cities
+            );
+            $residentEmails = MarketplaceCustomer::whereIn('id', $residentIds->all())
+                ->pluck('email')
+                ->map(fn ($e) => strtolower(trim((string) $e)))
+                ->filter(fn ($e) => $e !== '' && filter_var($e, FILTER_VALIDATE_EMAIL))
+                ->unique();
         }
+
+        // ---- Combine using N-way intersection — same semantics as
+        // resolveRecipientCustomerIds. Each set the admin populated is a
+        // narrowing constraint; absent sets don't constrain.
+        $activeSets = [];
+        if ($hasBase) $activeSets[] = $baseEmails;
+        if ($filterEmails !== null) $activeSets[] = $filterEmails;
+        if ($residentEmails !== null) $activeSets[] = $residentEmails;
+
+        if (empty($activeSets)) return collect();
+
+        $combined = array_shift($activeSets);
+        foreach ($activeSets as $set) {
+            $combined = $combined->intersect($set);
+        }
+        $combined = $combined->values();
 
         // Recent-recipient dedup (parity with resolveRecipientCustomerIds)
         // so the surfaced count matches what'll actually be mailed.
