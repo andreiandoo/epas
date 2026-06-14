@@ -4019,20 +4019,19 @@ class EventsController extends BaseController
             'views' => $event->views_count ?? 0,
             'ticket_types' => $event->ticketTypes->map(function ($tt) use ($event) {
                 // Per-type counts aligned 2026-06-14 with the admin panel's
-                // EventStatistics: count non-cancelled tickets, including
-                // invitations (no order). Previously this required a
-                // paid/confirmed/completed order, dropping invitations from
-                // the per-type breakdown so the modal totals (200) didn't
-                // match the headline number (218).
+                // EventStatistics: tickets with status valid|used, including
+                // invitations (no order). is_cancelled boolean is not
+                // reliable on legacy data, so we filter by status directly
+                // (same as Event::getTotalTicketsSoldAttribute).
                 $validTickets = \App\Models\Ticket::where('ticket_type_id', $tt->id)
                     ->where('event_id', $event->id)
-                    ->where('is_cancelled', false)
+                    ->whereIn('status', ['valid', 'used'])
                     ->count();
 
-                // Count checked-in tickets — same non-cancelled scope.
+                // Count checked-in tickets — same valid|used scope.
                 $checkedIn = \App\Models\Ticket::where('ticket_type_id', $tt->id)
                     ->where('event_id', $event->id)
-                    ->where('is_cancelled', false)
+                    ->whereIn('status', ['valid', 'used'])
                     ->whereNotNull('checked_in_at')
                     ->count();
 

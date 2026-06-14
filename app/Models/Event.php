@@ -898,23 +898,26 @@ class Event extends Model
     /**
      * Calculate total tickets sold for this event.
      *
-     * Aligned 2026-06-14 with the admin panel's "Bilete vandute" number on
-     * /marketplace/events/{id}/edit?tab=vanzari. Admin formula:
+     * Aligned 2026-06-14 with the admin panel's "Bilete valide" number on
+     * /marketplace/events/{id}/edit?tab=vanzari. Admin formula
+     * (EventStatistics::getTicketStats line 416):
      *
-     *   Ticket::where('event_id', X)->where('is_cancelled', false)->count()
+     *   $validTickets = $valid + $used;   // status in ('valid', 'used')
      *
-     * Includes invitations (12 for event 4365) on top of paid online sales
-     * (206) for a total of 218 — same number the admin shows. Previously
-     * this accessor used a stricter `whereHas('order' paid)` filter which
-     * silently dropped invitations, producing 206 instead of 218 and
-     * causing daily discrepancies between admin and mobile/web app.
+     * Includes invitations (status='valid') on top of paid online tickets
+     * (also valid/used). For event 4365: 206 paid online + 12 invitations
+     * = 218 — matches admin exactly.
      *
-     * Excludes only `is_cancelled = true` tickets (consistent with admin).
+     * NOTE: we deliberately use `whereIn(status, [valid,used])` instead of
+     * `where(is_cancelled, false)` because the `is_cancelled` boolean is
+     * inconsistently set on legacy cancelled tickets (some carry
+     * status='cancelled' without is_cancelled=true), which produced 248
+     * instead of 218 on the same event.
      */
     public function getTotalTicketsSoldAttribute(): int
     {
         return (int) \App\Models\Ticket::where('event_id', $this->id)
-            ->where('is_cancelled', false)
+            ->whereIn('status', ['valid', 'used'])
             ->count();
     }
 
