@@ -35,15 +35,28 @@
   function loadAll() {
     var venueId = getVenueId();
     dom.list.innerHTML = '<div class="scanapp-card scanapp-card--placeholder"><p class="scanapp-card__text">Se încarcă echipa…</p></div>';
-    var promises = [AmbiletAPI.get('/organizer/team')];
-    if (venueId) promises.push(AmbiletAPI.get('/organizer/venues/' + venueId + '/gates'));
+    var promises = [ScanAPI.get('/organizer/team')];
+    if (venueId) promises.push(ScanAPI.get('/organizer/venues/' + venueId + '/gates'));
     Promise.all(promises).then(function (results) {
       var teamResp = results[0];
       var gatesResp = results[1];
       var teamData = (teamResp && teamResp.data) || teamResp || [];
       members = Array.isArray(teamData) ? teamData : (teamData.team || teamData.members || teamData.items || []);
       var gatesData = (gatesResp && gatesResp.data) || gatesResp || [];
-      gates = Array.isArray(gatesData) ? gatesData : (gatesData.gates || gatesData.items || []);
+      var rawGates = Array.isArray(gatesData) ? gatesData : (gatesData.gates || gatesData.items || []);
+      // Defensive client-side filter: keep only gates tied to the CURRENT event's
+      // venue. The backend endpoint URL already scopes by venueId, but for
+      // some organizers we've seen gates from other venues bleeding in
+      // (cross-venue contamination in legacy data). This guarantees the
+      // operator never sees a gate from a different location.
+      if (venueId) {
+        gates = rawGates.filter(function (g) {
+          var gv = g.venue_id != null ? g.venue_id : (g.venue && g.venue.id);
+          return gv == null || Number(gv) === Number(venueId);
+        });
+      } else {
+        gates = rawGates;
+      }
       renderMembers();
     }).catch(function (err) {
       console.error('[asignare] load failed:', err);
@@ -124,7 +137,7 @@
       assigned_gate: gateId ? Number(gateId) : null,
       gate_id:    gateId ? Number(gateId) : null
     };
-    AmbiletAPI.post('/organizer/team/update', payload).then(function () {
+    ScanAPI.post('/organizer/team/update', payload).then(function () {
       editingMember.assigned_gate = gateId ? Number(gateId) : null;
       editingMember.gate_id = gateId ? Number(gateId) : null;
       closeSheet();

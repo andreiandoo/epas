@@ -47,7 +47,7 @@
     currentVenueId = venueId;
     dom.addBtn.disabled = false;
     dom.list.innerHTML = '<div class="scanapp-card scanapp-card--placeholder"><p class="scanapp-card__text">Se încarcă porțile…</p></div>';
-    AmbiletAPI.get('/organizer/venues/' + venueId + '/gates').then(function (resp) {
+    ScanAPI.get('/organizer/venues/' + venueId + '/gates').then(function (resp) {
       var data = (resp && resp.data) || resp || [];
       gates = Array.isArray(data) ? data : (data.gates || data.items || []);
       renderGates();
@@ -105,9 +105,9 @@
 
     var p;
     if (editingGate) {
-      p = AmbiletAPI.put('/organizer/venues/' + currentVenueId + '/gates/' + editingGate.id, payload);
+      p = ScanAPI.put('/organizer/venues/' + currentVenueId + '/gates/' + editingGate.id, payload);
     } else {
-      p = AmbiletAPI.post('/organizer/venues/' + currentVenueId + '/gates', payload);
+      p = ScanAPI.post('/organizer/venues/' + currentVenueId + '/gates', payload);
     }
     p.then(function () {
       closeSheet();
@@ -122,7 +122,7 @@
   function deleteGate() {
     if (!editingGate || !currentVenueId) return;
     if (!confirm('Ștergi poarta "' + (editingGate.name || '') + '"?')) return;
-    AmbiletAPI.delete('/organizer/venues/' + currentVenueId + '/gates/' + editingGate.id).then(function () {
+    ScanAPI.delete('/organizer/venues/' + currentVenueId + '/gates/' + editingGate.id).then(function () {
       closeSheet();
       loadGates();
       ScanApp.toast('Poarta a fost ștearsă.', 'success');

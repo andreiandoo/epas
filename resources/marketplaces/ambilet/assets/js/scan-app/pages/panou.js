@@ -201,7 +201,7 @@
     var paths = ['/organizer/events/' + ev.id + '/sales-breakdown', '/events/' + ev.id + '/sales-breakdown'];
     function tryNext(i) {
       if (i >= paths.length) return Promise.reject(new Error('No sales-breakdown endpoint responded'));
-      return AmbiletAPI.get(paths[i]).catch(function () { return tryNext(i + 1); });
+      return ScanAPI.get(paths[i]).catch(function () { return tryNext(i + 1); });
     }
     tryNext(0)
       .then(function (resp) {

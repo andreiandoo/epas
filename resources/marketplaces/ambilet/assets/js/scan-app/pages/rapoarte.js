@@ -202,7 +202,7 @@
     var ev = EventContext.getState().selectedEvent;
     if (!ev) { ScanApp.toast('Selectează un eveniment.', 'warning'); return; }
     ScanApp.toast('Pornesc exportul…', 'success');
-    AmbiletAPI.get('/organizer/events/' + ev.id + '/participants/export').then(function (resp) {
+    ScanAPI.get('/organizer/events/' + ev.id + '/participants/export').then(function (resp) {
       var url = (resp && resp.data && (resp.data.url || resp.data.download_url)) || null;
       if (url) {
         window.open(url, '_blank', 'noopener');

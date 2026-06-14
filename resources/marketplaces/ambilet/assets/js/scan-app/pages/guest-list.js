@@ -38,11 +38,15 @@
     }
     loading = true;
     dom.list.innerHTML = '<div class="scanapp-card scanapp-card--placeholder"><p class="scanapp-card__text">Se încarcă lista de invitați…</p></div>';
-    AmbiletAPI.get('/organizer/events/' + ev.id + '/participants', { per_page: 500 })
+    ScanAPI.get('/organizer/events/' + ev.id + '/participants', { per_page: 500 })
       .then(function (resp) {
         var data = (resp && resp.data) || resp || {};
-        participants = data.participants || data.items || data.data || (Array.isArray(data) ? data : []);
-        if (!Array.isArray(participants)) participants = [];
+        var all = data.participants || data.items || data.data || (Array.isArray(data) ? data : []);
+        if (!Array.isArray(all)) all = [];
+        // Filter to invitation tickets ONLY (per spec — this page is the
+        // 'Listă invitați', not the full participants list). An entry counts
+        // as an invitation if any of the common signals is set.
+        participants = all.filter(isInvitation);
         renderStats();
         render();
       })
@@ -63,6 +67,20 @@
 
   function isCheckedIn(p) {
     return !!(p.checked_in_at || p.checked_in || p.status === 'used' || p.ticket_status === 'used');
+  }
+
+  function isInvitation(p) {
+    // Backend may surface invitations under multiple shapes — accept any.
+    if (p.is_invitation === true) return true;
+    if (p.invitation_id != null) return true;
+    if (p.invitation_batch_id != null) return true;
+    if (p.source === 'invitation') return true;
+    if (p.order_source === 'invitation') return true;
+    if (p.type === 'invitation') return true;
+    var t = (p.ticket_type_name || p.ticket_type || '').toString().toLowerCase();
+    if (t === 'invitatie' || t === 'invitație' || t === 'invitation' || t === 'invite') return true;
+    if (t.indexOf('invitati') !== -1 || t.indexOf('invitație') !== -1 || t.indexOf('invitation') !== -1) return true;
+    return false;
   }
 
   function nameOf(p) {
@@ -100,7 +118,10 @@
   function render() {
     var list = applySearch(applyFilter(participants));
     if (!list.length) {
-      dom.list.innerHTML = '<div class="scanapp-card scanapp-card--placeholder"><p class="scanapp-card__text">Nicio potrivire.</p></div>';
+      var empty = participants.length === 0
+        ? 'Nu există invitații pentru acest eveniment.'
+        : 'Nicio invitație nu se potrivește căutării.';
+      dom.list.innerHTML = '<div class="scanapp-card scanapp-card--placeholder"><p class="scanapp-card__text">' + empty + '</p></div>';
       return;
     }
     // Hard cap visible rows for perf (most events have hundreds; rendering

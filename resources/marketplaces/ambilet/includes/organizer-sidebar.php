@@ -119,31 +119,9 @@ $currentPage = $currentPage ?? getCurrentPage();
             </a>
         </div>
 
-        <!-- SCAN APP SIDEBAR SECTION START (added 2026-06-12) — DO NOT remove without checking /organizator/scan/* pages -->
-        <div class="flex flex-col pt-4 mt-4 space-y-1 border-t border-slate-700">
-            <p class="px-4 mb-2 text-xs font-semibold tracking-wider uppercase text-muted">Aplicație Scan (iOS)</p>
-            <a href="/organizator/scan/panou" class="sidebar-link <?= ($currentPage ?? '') === 'scan_panou' ? 'active' : '' ?> flex items-center gap-3 px-4 py-3 m-2 rounded-xl text-sm font-medium group <?= ($currentPage ?? '') !== 'scan_panou' ? 'text-white' : '' ?>">
-                <svg class="<?= ($currentPage ?? '') !== 'scan_panou' ? 'text-muted' : 'text-white' ?> w-5 h-5 group-hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-                Panou scan
-            </a>
-            <a href="/organizator/scan/scanare" class="sidebar-link <?= ($currentPage ?? '') === 'scan_scanare' ? 'active' : '' ?> flex items-center gap-3 px-4 py-3 m-2 rounded-xl text-sm font-medium group <?= ($currentPage ?? '') !== 'scan_scanare' ? 'text-white' : '' ?>">
-                <svg class="<?= ($currentPage ?? '') !== 'scan_scanare' ? 'text-muted' : 'text-white' ?> w-5 h-5 group-hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
-                Scanare bilete
-            </a>
-            <a href="/organizator/scan/vanzare" class="sidebar-link <?= ($currentPage ?? '') === 'scan_vanzare' ? 'active' : '' ?> flex items-center gap-3 px-4 py-3 m-2 rounded-xl text-sm font-medium group <?= ($currentPage ?? '') !== 'scan_vanzare' ? 'text-white' : '' ?>">
-                <svg class="<?= ($currentPage ?? '') !== 'scan_vanzare' ? 'text-muted' : 'text-white' ?> w-5 h-5 group-hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/></svg>
-                Vânzare on-site
-            </a>
-            <a href="/organizator/scan/rapoarte" class="sidebar-link <?= ($currentPage ?? '') === 'scan_rapoarte' ? 'active' : '' ?> flex items-center gap-3 px-4 py-3 m-2 rounded-xl text-sm font-medium group <?= ($currentPage ?? '') !== 'scan_rapoarte' ? 'text-white' : '' ?>">
-                <svg class="<?= ($currentPage ?? '') !== 'scan_rapoarte' ? 'text-muted' : 'text-white' ?> w-5 h-5 group-hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 20V10M12 20V4M6 20v-6"/></svg>
-                Rapoarte live
-            </a>
-            <a href="/organizator/scan/setari-scan" class="sidebar-link <?= ($currentPage ?? '') === 'scan_setari' ? 'active' : '' ?> flex items-center gap-3 px-4 py-3 m-2 rounded-xl text-sm font-medium group <?= ($currentPage ?? '') !== 'scan_setari' ? 'text-white' : '' ?>">
-                <svg class="<?= ($currentPage ?? '') !== 'scan_setari' ? 'text-muted' : 'text-white' ?> w-5 h-5 group-hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
-                Setări scanner
-            </a>
-        </div>
-        <!-- SCAN APP SIDEBAR SECTION END -->
+        <!-- SCAN APP SIDEBAR SECTION (removed 2026-06-14 per request) — entry
+             point is now the 'Aplicație Scan' button in dashboard.php. -->
+
 
         <div class="flex flex-col pt-4 mt-4 space-y-1 border-t border-slate-700">
             <p class="px-4 mb-2 text-xs font-semibold tracking-wider uppercase text-muted">Setari</p>

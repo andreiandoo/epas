@@ -103,10 +103,10 @@
 
   // ── API calls ────────────────────────────────────────────────────────────
   function apiGet(path, params) {
-    if (typeof AmbiletAPI === 'undefined' || !AmbiletAPI.get) {
-      return Promise.reject(new Error('AmbiletAPI not available'));
+    if (typeof ScanAPI === 'undefined' || !ScanAPI.get) {
+      return Promise.reject(new Error('ScanAPI not available'));
     }
-    return AmbiletAPI.get(path, params || {});
+    return ScanAPI.get(path, params || {});
   }
 
   function unwrapList(resp) {

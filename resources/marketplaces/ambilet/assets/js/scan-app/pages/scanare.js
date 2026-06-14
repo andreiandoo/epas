@@ -93,15 +93,15 @@
   // ── Check-in API ─────────────────────────────────────────────────────────
   function performCheckIn(code) {
     if (!code) return Promise.resolve(null);
-    if (typeof AmbiletAPI === 'undefined' || !AmbiletAPI.post) {
-      showResult('danger', 'Eroare conexiune', 'AmbiletAPI nu este disponibilă.');
+    if (typeof ScanAPI === 'undefined' || !ScanAPI.post) {
+      showResult('danger', 'Eroare conexiune', 'API-ul nu este disponibil.');
       return Promise.resolve(null);
     }
 
     var event = (window.EventContext && EventContext.getState().selectedEvent) || null;
     var eventId = event ? event.id : null;
 
-    return AmbiletAPI.post('/organizer/participants/checkin', {
+    return ScanAPI.post('/organizer/participants/checkin', {
       ticket_code: code,
       event_id: eventId
     }).then(function (resp) {

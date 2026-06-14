@@ -183,7 +183,7 @@
     dom.seatLoading.hidden = false;
     dom.seatModal.classList.add('scanapp-seating-modal--open');
 
-    AmbiletAPI.post('/organizer/seating/embed-token', {
+    ScanAPI.post('/organizer/seating/embed-token', {
       event_id:        ev.id,
       ticket_type_id:  type ? type.id : null
     }).then(function (resp) {
@@ -384,7 +384,7 @@
     closePaymentSheet();
     openSuccessSheet('Se procesează…', 'Așteaptă confirmarea sistemului.');
 
-    AmbiletAPI.post('/orders', payload).then(function (resp) {
+    ScanAPI.post('/orders', payload).then(function (resp) {
       if (!resp || resp.success === false) {
         throw new Error((resp && resp.message) || 'Comanda nu a putut fi creată.');
       }
@@ -418,7 +418,7 @@
 
     // Generate claim URL
     if (orderData.id) {
-      AmbiletAPI.post('/orders/' + orderData.id + '/generate-claim-url').then(function (claimResp) {
+      ScanAPI.post('/orders/' + orderData.id + '/generate-claim-url').then(function (claimResp) {
         var d = (claimResp && claimResp.data) || claimResp || {};
         if (d.claim_url) {
           renderQR(d.claim_url);
@@ -432,7 +432,7 @@
       // Auto-check-in (if setting enabled and we're on cash/card)
       var autoConfirm = AppContext.get('autoConfirmValid') === true;
       if (autoConfirm) {
-        AmbiletAPI.post('/orders/' + orderData.id + '/pos-complete', {}).catch(function () {});
+        ScanAPI.post('/orders/' + orderData.id + '/pos-complete', {}).catch(function () {});
       }
     }
 
@@ -499,7 +499,7 @@
         dom.claimStatus.textContent = 'Polling oprit după 60s. Biletele au fost generate, clientul le poate accesa oricând prin QR.';
         return;
       }
-      AmbiletAPI.get('/claim/' + token + '/status').then(function (resp) {
+      ScanAPI.get('/claim/' + token + '/status').then(function (resp) {
         var d = (resp && resp.data) || resp || {};
         if (d.completed || d.claimed || d.status === 'completed') {
           dom.claimStatus.classList.add('scanapp-claim-status--ok');

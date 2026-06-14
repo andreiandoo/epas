@@ -67,6 +67,7 @@
        emitted AFTER these via $scanPageScript, otherwise it runs before
        ScanAuth / AppContext / EventContext are defined. -->
   <script src="/assets/js/scan-app/auth.js?v=<?= filemtime(dirname(__DIR__, 2) . '/assets/js/scan-app/auth.js') ?>" defer></script>
+  <script src="/assets/js/scan-app/api.js?v=<?= filemtime(dirname(__DIR__, 2) . '/assets/js/scan-app/api.js') ?>" defer></script>
   <script src="/assets/js/scan-app/app-context.js?v=<?= filemtime(dirname(__DIR__, 2) . '/assets/js/scan-app/app-context.js') ?>" defer></script>
   <script src="/assets/js/scan-app/event-context.js?v=<?= filemtime(dirname(__DIR__, 2) . '/assets/js/scan-app/event-context.js') ?>" defer></script>
   <script src="/assets/js/scan-app/scanner.js?v=<?= filemtime(dirname(__DIR__, 2) . '/assets/js/scan-app/scanner.js') ?>" defer></script>
