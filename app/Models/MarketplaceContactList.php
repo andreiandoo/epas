@@ -53,7 +53,8 @@ class MarketplaceContactList extends Model
         'is_organizer' => 'Is an event organizer (email matches marketplace_organizers)',
         'is_artist' => 'Is an artist (email matches marketplace_artist_accounts)',
         'is_venue_contact' => 'Is a venue contact (email matches venues.email / email2)',
-        'city' => 'Lives in city',
+        'city' => 'Lives in city (manual address field)',
+        'lives_in_city' => 'Lives in city (auto-detected from orders)',
         'state' => 'Lives in state/region',
         'age_less_than' => 'Age less than',
         'age_equals' => 'Age equals',
@@ -371,6 +372,20 @@ class MarketplaceContactList extends Model
 
             case 'city':
                 $query->where('city', 'like', "%{$value}%");
+                break;
+
+            case 'lives_in_city':
+                // Matches the auto-detected determined_city_id stored by
+                // customers:detect-cities under settings.detected_location.
+                // Uses the FK so a renamed MarketplaceCity row stays
+                // matchable. Postgres-specific JSON path operator —
+                // matches the only DB in production.
+                $cityId = (int) $value;
+                if ($cityId > 0) {
+                    $query->whereRaw("(settings->'detected_location'->>'determined_city_id')::int = ?", [$cityId]);
+                } else {
+                    $query->whereRaw('1 = 0');
+                }
                 break;
 
             case 'state':

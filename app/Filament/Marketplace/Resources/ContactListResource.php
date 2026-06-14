@@ -68,6 +68,23 @@ class ContactListResource extends Resource
             ->pluck('state', 'state')
             ->toArray();
 
+        // Detected-city dropdown source — marketplace_cities by id, with
+        // Translatable name decoded so the operator sees "București" /
+        // "Cluj-Napoca" instead of '{"ro":"...","en":"..."}'. The rule
+        // lives_in_city stores the city_id and matches against
+        // settings.detected_location.determined_city_id on customers.
+        $marketplaceCities = \App\Models\MarketplaceCity::query()
+            ->where('marketplace_client_id', $marketplace?->id)
+            ->get(['id', 'name'])
+            ->mapWithKeys(function ($c) {
+                $name = is_array($c->name)
+                    ? ($c->name['ro'] ?? $c->name['en'] ?? reset($c->name) ?: '?')
+                    : (string) $c->name;
+                return [$c->id => $name];
+            })
+            ->sort()
+            ->toArray();
+
         return $schema
             ->components([
                 SC\Section::make('List Details')
@@ -134,7 +151,8 @@ class ContactListResource extends Resource
                                             'has_refund_request' => 'Has requested refund',
                                         ],
                                         'Location' => [
-                                            'city' => 'Lives in city',
+                                            'city' => 'Lives in city (manual address field)',
+                                            'lives_in_city' => 'Lives in city (auto-detected from orders)',
                                             'state' => 'Lives in state/region',
                                         ],
                                         'Demographics' => [
@@ -188,6 +206,20 @@ class ContactListResource extends Resource
                                     ->options($cities)
                                     ->searchable()
                                     ->visible(fn (SGet $get) => $get('type') === 'city')
+                                    ->columnSpan(2),
+
+                                // Detected-city selector — id => localized
+                                // name pairs from marketplace_cities, so the
+                                // rule stores the stable FK and survives a
+                                // city rename. Distinct from the "city"
+                                // string field above, which targets the
+                                // manual address column.
+                                Forms\Components\Select::make('value')
+                                    ->label('Auto-detected city')
+                                    ->options($marketplaceCities)
+                                    ->searchable()
+                                    ->helperText('Folosește orașul determinat din istoricul de comenzi (rulează customers:detect-cities pe marketplace întâi).')
+                                    ->visible(fn (SGet $get) => $get('type') === 'lives_in_city')
                                     ->columnSpan(2),
 
                                 // State selector

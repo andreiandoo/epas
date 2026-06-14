@@ -148,11 +148,16 @@ class DetectCustomerCitiesCommand extends Command
             $topN = $is100 ? [$top] : array_slice($cities, 0, self::SHOW_TOP_N);
 
             $determinedCity = $top['pct'] >= self::DETERMINED_THRESHOLD_PCT ? $top['city_name'] : null;
+            $determinedCityId = $top['pct'] >= self::DETERMINED_THRESHOLD_PCT ? (int) $top['city_id'] : null;
             if ($determinedCity) $determined++;
             if ($is100) $hundredPct++;
 
             $payloads[$customerId] = [
                 'determined_city' => $determinedCity,
+                // FK to marketplace_cities — robust targeting key for
+                // future newsletter list rules ('lives_in_city'). Name
+                // can drift if the row is renamed; id stays stable.
+                'determined_city_id' => $determinedCityId,
                 'determined_at' => now()->toIso8601String(),
                 'distribution' => $topN,
             ];
