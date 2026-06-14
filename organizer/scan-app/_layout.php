@@ -84,10 +84,11 @@ $tabs = [
     })();
   </script>
 
-  <!-- Top bar: pixel-perfect port of tixello-app/src/components/Header.js.
-       Logo on left + status pill (Live/Offline) + notification bell on right.
-       Refresh action attached to the bell button so manual refresh stays
-       reachable in one tap (web has no pull-to-refresh equivalent). -->
+  <!-- Top bar: ported from tixello-app/src/components/Header.js but trimmed
+       for web (no 48px paddingTop — browser chrome already gives us space).
+       Logo left, status pill + refresh button right. The refresh button
+       used to be a bell icon which confused users (no notifications exist
+       yet), so it's a circular-arrow icon now to clearly signal its action. -->
   <header class="scanapp-topbar">
     <div class="scanapp-topbar__inner">
       <a class="scanapp-topbar__left" href="/organizator/scan/panou" aria-label="Aplicație Scan">
@@ -99,13 +100,31 @@ $tabs = [
           <span class="scanapp-status-pill__text" id="scanapp-status-text">Live</span>
         </div>
         <button type="button" class="scanapp-bell" id="scanapp-refresh" aria-label="Reîncarcă datele" title="Reîncarcă datele">
-          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M18 8A6 6 0 1 0 6 8c0 7-3 9-3 9h18s-3-2-3-9zM13.73 21a2 2 0 0 1-3.46 0"/>
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="23 4 23 10 17 10"/>
+            <polyline points="1 20 1 14 7 14"/>
+            <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
           </svg>
         </button>
       </div>
     </div>
   </header>
+
+  <!-- EventSelector strip (port of tixello-app/src/components/EventSelector.js)
+       — shown below the topbar on every page, opens the event picker on tap. -->
+  <button type="button" class="scanapp-event-selector" id="scanapp-event-selector-bar">
+    <div class="scanapp-event-selector__content">
+      <div class="scanapp-event-selector__title-row">
+        <div class="scanapp-event-selector__name" id="scanapp-es-name">Niciun eveniment selectat</div>
+        <div class="scanapp-event-selector__badge" id="scanapp-es-badge" hidden>
+          <span class="scanapp-pulse-dot scanapp-event-selector__badge-dot" id="scanapp-es-badge-dot"></span>
+          <span id="scanapp-es-badge-text">Viitor</span>
+        </div>
+      </div>
+      <div class="scanapp-event-selector__meta" id="scanapp-es-meta">Apasă pentru a alege un eveniment</div>
+    </div>
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--scanapp-text-tertiary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+  </button>
 
   <main class="scanapp-main">
 <?php

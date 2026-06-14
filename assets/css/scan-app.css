@@ -105,8 +105,11 @@ body.scanapp-body {
   z-index: 100; /* mobile Header.js uses zIndex: 100 */
   background: rgba(10, 10, 15, 0.95);
   border-bottom: 1px solid var(--scanapp-border);
-  padding-top: max(48px, calc(var(--scanapp-safe-top) + 12px));
-  padding-bottom: 12px;
+  /* Web doesn't have a status bar — only pad for safe-area when present
+     (PWA standalone on iOS with notch). Browser chrome takes the role of
+     the 48px padding mobile needs. */
+  padding-top: calc(var(--scanapp-safe-top) + 10px);
+  padding-bottom: 10px;
   padding-left: 16px;
   padding-right: 16px;
   -webkit-backdrop-filter: saturate(180%) blur(10px);
@@ -125,11 +128,85 @@ body.scanapp-body {
   text-decoration: none;
 }
 .scanapp-topbar__logo {
-  width: 120px;
-  height: 54px;
+  width: 100px;
+  height: 40px;
   object-fit: contain;
   display: block;
 }
+
+/* ── EventSelector strip (port of EventSelector.js) ──────────────────── */
+.scanapp-event-selector {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  background: var(--scanapp-purple-bg);
+  border: 0;
+  border-bottom: 1px solid var(--scanapp-border);
+  padding: 12px 16px;
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+  color: inherit;
+  position: sticky;
+  top: calc(var(--scanapp-safe-top) + 60px); /* sit just under the topbar */
+  z-index: 90;
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+.scanapp-event-selector:active { background: rgba(139, 92, 246, 0.12); }
+.scanapp-event-selector__content { flex: 1; min-width: 0; }
+.scanapp-event-selector__title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 3px;
+}
+.scanapp-event-selector__name {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--scanapp-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-shrink: 1;
+}
+.scanapp-event-selector__date-prefix {
+  color: var(--scanapp-purple);
+  font-weight: 700;
+  margin-right: 6px;
+}
+.scanapp-event-selector__meta {
+  font-size: 12px;
+  color: var(--scanapp-text-tertiary);
+  line-height: 16px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.scanapp-event-selector__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: 12px;
+  border: 1px solid;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.scanapp-event-selector__badge--live    { background: var(--scanapp-green-light); border-color: var(--scanapp-green-border); color: var(--scanapp-green); }
+.scanapp-event-selector__badge--today   { background: var(--scanapp-purple-bg);   border-color: var(--scanapp-purple-border); color: var(--scanapp-purple); }
+.scanapp-event-selector__badge--future  { background: var(--scanapp-surface);     border-color: var(--scanapp-border); color: var(--scanapp-text-tertiary); }
+.scanapp-event-selector__badge--past    { background: var(--scanapp-amber-light); border-color: var(--scanapp-amber-border); color: var(--scanapp-amber); }
+.scanapp-event-selector__badge-dot { width: 6px; height: 6px; border-radius: 3px; }
+.scanapp-event-selector__badge--live  .scanapp-event-selector__badge-dot { background: var(--scanapp-green); }
+.scanapp-event-selector__badge--today .scanapp-event-selector__badge-dot { background: var(--scanapp-purple); animation: none; }
+.scanapp-event-selector__badge--future .scanapp-event-selector__badge-dot { background: var(--scanapp-text-tertiary); animation: none; }
+.scanapp-event-selector__badge--past .scanapp-event-selector__badge-dot { background: var(--scanapp-amber); animation: none; }
 .scanapp-topbar__right {
   display: flex;
   align-items: center;
