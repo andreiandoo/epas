@@ -95,8 +95,14 @@ $tabs = [
       <div class="scanapp-header__event-name" id="scanapp-event-name">Selectează un eveniment</div>
       <div class="scanapp-header__event-meta" id="scanapp-event-meta">—</div>
     </div>
-    <!-- Notifications bell intentionally hidden until backed by real data. -->
-    <span style="width: 40px;"></span>
+    <!-- Manual refresh button — visually confirms the data is reloaded. -->
+    <button type="button" class="scanapp-header__notif" id="scanapp-refresh" aria-label="Reîncarcă datele" title="Reîncarcă datele">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="23 4 23 10 17 10"></polyline>
+        <polyline points="1 20 1 14 7 14"></polyline>
+        <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"></path>
+      </svg>
+    </button>
   </header>
 
   <main class="scanapp-main">

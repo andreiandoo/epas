@@ -172,6 +172,28 @@
         if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openPicker(); }
       });
     }
+
+    // Manual refresh: re-fetches the current event's stats + ticket types and
+    // briefly spins the icon for visual feedback. The 30s auto-poll keeps
+    // running in the background regardless.
+    var refresh = document.getElementById('scanapp-refresh');
+    if (refresh) {
+      refresh.addEventListener('click', function () {
+        if (typeof EventContext === 'undefined') return;
+        var svg = refresh.querySelector('svg');
+        if (svg) { svg.style.transition = 'transform 600ms'; svg.style.transform = 'rotate(-360deg)'; }
+        Promise.resolve(EventContext.refreshAll && EventContext.refreshAll())
+          .then(function () {
+            toast('Datele au fost reîncărcate.', 'success');
+          })
+          .catch(function () {
+            toast('Nu am putut reîncărca datele.', 'danger');
+          })
+          .finally(function () {
+            setTimeout(function () { if (svg) svg.style.transform = ''; }, 700);
+          });
+      });
+    }
   }
 
   // ── Bootstrap ────────────────────────────────────────────────────────────

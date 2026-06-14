@@ -100,7 +100,14 @@ class SeatingEmbedController extends Controller
                 'reverbConfig' => $this->reverbClientConfig(),
             ])
             ->header('Cache-Control', 'no-store, no-cache, must-revalidate')
-            ->header('X-Frame-Options', 'SAMEORIGIN');
+            // Allow embedding from marketplace sites (ambilet.ro, bilete.online,
+            // tics.ro, tenant *.tixello.com) so the same canvas widget that the
+            // Android WebView loads can also be iframed by the iOS-friendly web
+            // replica at /organizator/scan/vanzare. Token is HMAC-signed + has
+            // a 30-min TTL so unauthorized embedding cannot do anything useful
+            // without first obtaining a fresh token via /seating/embed-token.
+            ->header('Content-Security-Policy', "frame-ancestors 'self' https://ambilet.ro https://*.ambilet.ro https://bilete.online https://*.bilete.online https://tics.ro https://*.tics.ro https://*.tixello.com")
+            ->withoutHeader('X-Frame-Options');
     }
 
     /**

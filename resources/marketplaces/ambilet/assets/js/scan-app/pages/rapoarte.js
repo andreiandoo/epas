@@ -48,6 +48,9 @@
     dom.eventSheet      = $('scanapp-event-sheet');
     dom.eventSheetBody  = $('scanapp-event-sheet-body');
     dom.eventSheetClose = $('scanapp-event-sheet-close');
+    dom.filterYear      = $('scanapp-event-filter-year');
+    dom.filterMonth     = $('scanapp-event-filter-month');
+    dom.filterSearch    = $('scanapp-event-filter-search');
   }
 
   // ── Render helpers ───────────────────────────────────────────────────────
@@ -152,21 +155,82 @@
     dom.activity.innerHTML = html;
   }
 
-  // ── Event picker ─────────────────────────────────────────────────────────
-  function openPicker() {
+  // ── Event picker with filters ────────────────────────────────────────────
+  var pickerFilters = { year: '', month: '', search: '' };
+
+  function eventDate(e) {
+    var raw = e.starts_at || e.start_date || e.event_date;
+    if (!raw) return null;
+    var d = new Date(raw);
+    return isNaN(d.getTime()) ? null : d;
+  }
+
+  function populateYearFilter(events) {
+    var sel = dom.filterYear;
+    if (!sel) return;
+    var years = {};
+    events.forEach(function (e) {
+      var d = eventDate(e);
+      if (d) years[d.getFullYear()] = true;
+    });
+    var keys = Object.keys(years).map(Number).sort(function (a, b) { return b - a; });
+    var html = '<option value="">Toți anii</option>';
+    keys.forEach(function (y) { html += '<option value="' + y + '">' + y + '</option>'; });
+    sel.innerHTML = html;
+    if (pickerFilters.year && keys.indexOf(Number(pickerFilters.year)) !== -1) {
+      sel.value = pickerFilters.year;
+    }
+  }
+
+  function filteredAndGrouped() {
     var s = EventContext.getState();
-    var groups = s.groupedEvents || { live:[], today:[], future:[], past:[] };
+    var events = (s.events || []).slice();
+
+    if (pickerFilters.year) {
+      events = events.filter(function (e) {
+        var d = eventDate(e);
+        return d && String(d.getFullYear()) === String(pickerFilters.year);
+      });
+    }
+    if (pickerFilters.month) {
+      events = events.filter(function (e) {
+        var d = eventDate(e);
+        return d && String(d.getMonth() + 1) === String(pickerFilters.month);
+      });
+    }
+    if (pickerFilters.search) {
+      var q = pickerFilters.search.toLowerCase();
+      events = events.filter(function (e) {
+        return (e.name || e.title || '').toLowerCase().indexOf(q) !== -1
+            || (e.venue_name || '').toLowerCase().indexOf(q) !== -1;
+      });
+    }
+
+    // Re-bucket by timeCategory (still present on each event from EventContext).
+    var groups = { live: [], today: [], future: [], past: [] };
+    events.forEach(function (e) {
+      var k = e.timeCategory || 'past';
+      if (groups[k]) groups[k].push(e);
+    });
+    // Past sorted desc (newest past first) — already sorted by event_date desc
+    // from the API but re-assert here in case other filters scramble order.
+    groups.past.sort(function (a, b) {
+      var da = eventDate(a) ? eventDate(a).getTime() : 0;
+      var db = eventDate(b) ? eventDate(b).getTime() : 0;
+      return db - da;
+    });
+    return groups;
+  }
+
+  function renderPickerBody() {
+    var s = EventContext.getState();
+    var groups = filteredAndGrouped();
     var html = '';
-    var labels = {
-      live:   'Live acum',
-      today:  'Azi',
-      future: 'Viitoare',
-      past:   'Trecute'
-    };
-    ['live','today','future','past'].forEach(function (key) {
+    var labels = { live: 'Live acum', today: 'Azi', future: 'Viitoare', past: 'Trecute' };
+    ['live', 'today', 'future', 'past'].forEach(function (key) {
       var list = groups[key] || [];
       if (!list.length) return;
-      html += '<div class="scanapp-section-title" style="margin-top:8px;">' + labels[key] + '</div>';
+      html += '<div class="scanapp-section-title" style="margin-top:8px;">' + labels[key] + ' (' + list.length + ')</div>';
       html += list.map(function (e) {
         var meta = e.starts_at ? formatDateTime(e.starts_at) : '';
         if (e.venue_name) meta += (meta ? ' · ' : '') + e.venue_name;
@@ -179,7 +243,7 @@
                '</div>';
       }).join('');
     });
-    if (!html) html = '<div class="scanapp-sheet__empty">Nu există evenimente disponibile.</div>';
+    if (!html) html = '<div class="scanapp-sheet__empty">Niciun eveniment nu se potrivește filtrelor.</div>';
     dom.eventSheetBody.innerHTML = html;
     dom.eventSheetBody.querySelectorAll('[data-event-id]').forEach(function (row) {
       row.addEventListener('click', function () {
@@ -191,6 +255,11 @@
         }
       });
     });
+  }
+
+  function openPicker() {
+    populateYearFilter(EventContext.getState().events || []);
+    renderPickerBody();
     dom.eventSheet.classList.add('scanapp-sheet-backdrop--open');
   }
   function closePicker() {
@@ -238,6 +307,17 @@
     dom.pickerBtn.addEventListener('click', openPicker);
     dom.eventSheetClose.addEventListener('click', closePicker);
     dom.eventSheet.addEventListener('click', function (e) { if (e.target === dom.eventSheet) closePicker(); });
+
+    if (dom.filterYear)  dom.filterYear .addEventListener('change', function () { pickerFilters.year  = dom.filterYear.value;  renderPickerBody(); });
+    if (dom.filterMonth) dom.filterMonth.addEventListener('change', function () { pickerFilters.month = dom.filterMonth.value; renderPickerBody(); });
+    if (dom.filterSearch) {
+      var t = null;
+      dom.filterSearch.addEventListener('input', function () {
+        pickerFilters.search = (dom.filterSearch.value || '').trim();
+        clearTimeout(t);
+        t = setTimeout(renderPickerBody, 120);
+      });
+    }
 
     if (window.EventContext) {
       EventContext.subscribe('event-selected', function (e) {

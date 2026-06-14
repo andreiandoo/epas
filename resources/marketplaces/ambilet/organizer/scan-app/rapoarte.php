@@ -62,12 +62,36 @@ require __DIR__ . '/_layout.php';
 
 </section>
 
-<!-- Event picker sheet -->
+<!-- Event picker sheet with filters (year / month / search) — covers full
+     event history including past events. -->
 <div class="scanapp-sheet-backdrop" id="scanapp-event-sheet" role="dialog" aria-modal="true">
-  <div class="scanapp-sheet">
+  <div class="scanapp-sheet" style="max-height: 92vh;">
     <div class="scanapp-sheet__handle"></div>
     <h2 class="scanapp-sheet__title">Alege un eveniment</h2>
-    <div id="scanapp-event-sheet-body"></div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
+      <select id="scanapp-event-filter-year" class="scanapp-input" style="text-transform: none; letter-spacing: 0; padding: 10px 12px; font-size: 13px;">
+        <option value="">Toți anii</option>
+      </select>
+      <select id="scanapp-event-filter-month" class="scanapp-input" style="text-transform: none; letter-spacing: 0; padding: 10px 12px; font-size: 13px;">
+        <option value="">Toate lunile</option>
+        <option value="1">Ianuarie</option>
+        <option value="2">Februarie</option>
+        <option value="3">Martie</option>
+        <option value="4">Aprilie</option>
+        <option value="5">Mai</option>
+        <option value="6">Iunie</option>
+        <option value="7">Iulie</option>
+        <option value="8">August</option>
+        <option value="9">Septembrie</option>
+        <option value="10">Octombrie</option>
+        <option value="11">Noiembrie</option>
+        <option value="12">Decembrie</option>
+      </select>
+    </div>
+    <input type="search" id="scanapp-event-filter-search" class="scanapp-input" style="text-transform: none; letter-spacing: 0; margin-bottom: 12px;" placeholder="Caută după nume eveniment…">
+
+    <div id="scanapp-event-sheet-body" style="max-height: 50vh; overflow-y: auto;"></div>
     <hr class="scanapp-divider">
     <button type="button" class="scanapp-btn scanapp-btn--block" id="scanapp-event-sheet-close">Închide</button>
   </div>

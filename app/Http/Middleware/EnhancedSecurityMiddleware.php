@@ -215,13 +215,27 @@ class EnhancedSecurityMiddleware
     protected function addSecurityHeaders(Response $response): Response
     {
         $response->headers->set('X-Content-Type-Options', 'nosniff');
-        $response->headers->set('X-Frame-Options', 'SAMEORIGIN');
+
+        // The seating embed page is designed to be iframed by external
+        // marketplace sites (ambilet.ro etc.) and by the Android WebView.
+        // SeatingEmbedController sets its own CSP frame-ancestors with the
+        // exact allowlist — DON'T overwrite X-Frame-Options or CSP here for
+        // that response (the controller's CSP supersedes X-Frame-Options on
+        // modern browsers but only if we don't blanket-set X-Frame-Options
+        // to SAMEORIGIN, since X-Frame-Options always wins when present).
+        $hasFrameCsp = str_contains((string) $response->headers->get('Content-Security-Policy', ''), 'frame-ancestors');
+        if (!$hasFrameCsp) {
+            $response->headers->set('X-Frame-Options', 'SAMEORIGIN');
+        }
+
         $response->headers->set('X-XSS-Protection', '1; mode=block');
         $response->headers->set('Referrer-Policy', 'strict-origin-when-cross-origin');
         $response->headers->set('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
 
-        // Add CSP for HTML responses
-        if (str_contains($response->headers->get('Content-Type', ''), 'text/html')) {
+        // Add default CSP for HTML responses, but skip when the controller
+        // already set a CSP (so we don't clobber the seating embed's policy).
+        if (str_contains($response->headers->get('Content-Type', ''), 'text/html')
+            && !$response->headers->has('Content-Security-Policy')) {
             $response->headers->set(
                 'Content-Security-Policy',
                 "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline';"
