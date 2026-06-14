@@ -1,117 +1,134 @@
 /* =============================================================================
- * Scan App — pages/scanare.js
+ * Scan App — pages/scanare.js (Check-In)
  * -----------------------------------------------------------------------------
- * Controller for /organizator/scan/scanare. Wires the scanner to the check-in
- * API, renders result cards, and bridges manual entry. Mirrors the logic of
- * tixello-app/src/screens/CheckInScreen.js.
+ * Pixel-perfect port of tixello-app/src/screens/CheckInScreen.js layout:
+ *   - 280x280 scanner frame with 4 corner brackets + animated purple scan line
+ *   - Frame border + glow color change on scan result (purple→green/amber/red)
+ *   - Result card: color-coded with 52x52 icon circle, ACCES APROBAT / DEJA
+ *     SCANAT / BILET INVALID titles, name + ticket type details
+ *   - Big purple "Începe Scanarea" button + "Cod Manual" secondary link
+ *   - 3 stat pills: scanări/min · așteptare · intrați
+ *   - Recent scans list with 32x32 status icon
  * ============================================================================= */
 (function () {
   'use strict';
 
-  // ── DOM refs ─────────────────────────────────────────────────────────────
-  var dom = {};
   function $(id) { return document.getElementById(id); }
+  function escapeHtml(s) {
+    if (s == null) return '';
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+  function pad(n) { return String(n).padStart(2, '0'); }
 
+  var dom = {};
   function collectDom() {
-    dom.video           = $('scanapp-video');
-    dom.scannerHost     = $('scanapp-scanner-host');
-    dom.placeholder     = $('scanapp-scanner-placeholder');
-    dom.placeholderText = $('scanapp-scanner-placeholder-text');
-    dom.btnCamera       = $('scanapp-btn-camera');
-    dom.btnManual       = $('scanapp-btn-manual');
-    dom.result          = $('scanapp-result');
-    dom.resultIcon      = $('scanapp-result-icon');
-    dom.resultTitle     = $('scanapp-result-title');
-    dom.resultSubtitle  = $('scanapp-result-subtitle');
-    dom.resultDetails   = $('scanapp-result-details');
-    dom.resultNext      = $('scanapp-result-next');
-    dom.manualModal     = $('scanapp-manual-modal');
-    dom.manualInput     = $('scanapp-manual-input');
-    dom.manualCancel    = $('scanapp-manual-cancel');
-    dom.manualSubmit    = $('scanapp-manual-submit');
-    dom.reportsOnly     = $('scanapp-reports-only');
-    dom.statPills       = $('scanapp-stat-pills');
-    dom.statSpm         = $('scanapp-stat-spm');
-    dom.statCheckedIn   = $('scanapp-stat-checkedin');
-    dom.statRate        = $('scanapp-stat-rate');
+    dom.reportsOnly      = $('scanapp-reports-only');
+    dom.main             = $('scanapp-checkin-main');
+    dom.video            = $('scanapp-video');
+    dom.frame            = $('scanapp-scanner-frame');
+    dom.scanLine         = $('scanapp-scan-line');
+    dom.placeholder      = $('scanapp-scanner-placeholder');
+    dom.placeholderText  = $('scanapp-scanner-placeholder-text');
+    dom.btnCamera        = $('scanapp-btn-camera');
+    dom.btnCameraText    = $('scanapp-btn-camera-text');
+    dom.btnManual        = $('scanapp-btn-manual');
+    dom.result           = $('scanapp-result');
+    dom.manualModal      = $('scanapp-manual-modal');
+    dom.manualInput      = $('scanapp-manual-input');
+    dom.manualCancel     = $('scanapp-manual-cancel');
+    dom.manualSubmit     = $('scanapp-manual-submit');
+    dom.statSpm          = $('scanapp-stat-spm');
+    dom.statWait         = $('scanapp-stat-wait');
+    dom.statCheckedIn    = $('scanapp-stat-checkedin');
+    dom.recentSection    = $('scanapp-recent-scans-section');
+    dom.recentList       = $('scanapp-recent-scans-list');
   }
 
-  // ── Scanner state ────────────────────────────────────────────────────────
   var scanner = null;
   var cameraActive = false;
-  var scanTimestamps = []; // for scans/min rolling window
+  var scanTimestamps = [];
 
-  // ── Result rendering ─────────────────────────────────────────────────────
-  var KIND_TO_CLASS = {
-    success: 'scanapp-result--success',
-    warning: 'scanapp-result--warning',
-    danger:  'scanapp-result--danger'
-  };
+  function setFrameColor(state) {
+    dom.frame.classList.remove(
+      'scanapp-scanner-frame--scanning',
+      'scanapp-scanner-frame--valid',
+      'scanapp-scanner-frame--invalid',
+      'scanapp-scanner-frame--duplicate'
+    );
+    if (state) dom.frame.classList.add('scanapp-scanner-frame--' + state);
+  }
+  function setVideoVisible(on) {
+    if (dom.video) dom.video.style.display = on ? 'block' : 'none';
+    if (dom.placeholder) dom.placeholder.style.display = on ? 'none' : 'flex';
+    if (dom.scanLine) dom.scanLine.hidden = !on;
+  }
 
-  var ICONS = {
-    success: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>',
-    warning: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
-    danger:  '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>'
-  };
+  // ── Result card rendering (mobile CheckInScreen.js renderResultCard) ─────
+  var resultTimer = null;
+  function showResult(type, data) {
+    if (resultTimer) { clearTimeout(resultTimer); resultTimer = null; }
 
-  function showResult(kind, title, subtitle, details) {
-    if (!dom.result) return;
-    dom.result.classList.remove('scanapp-result--success', 'scanapp-result--warning', 'scanapp-result--danger');
-    dom.result.classList.add('scanapp-result--show');
-    if (KIND_TO_CLASS[kind]) dom.result.classList.add(KIND_TO_CLASS[kind]);
-    dom.resultIcon.innerHTML  = ICONS[kind] || '';
-    dom.resultTitle.textContent    = title || '—';
-    dom.resultSubtitle.textContent = subtitle || '';
-    dom.resultDetails.innerHTML = '';
-    (details || []).forEach(function (d) {
-      var row = document.createElement('div');
-      row.className = 'scanapp-result__detail-row';
-      row.innerHTML = '<div class="scanapp-result__detail-label">' + escapeHtml(d.label) + '</div>' +
-                      '<div class="scanapp-result__detail-value">' + escapeHtml(d.value || '—') + '</div>';
-      dom.resultDetails.appendChild(row);
-    });
+    var classes = { valid: 'scanapp-result--success', duplicate: 'scanapp-result--warning', invalid: 'scanapp-result--danger' };
+    var titles  = { valid: 'ACCES APROBAT', duplicate: 'DEJA SCANAT', invalid: 'BILET INVALID' };
+    var icons   = {
+      valid:     '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>',
+      duplicate: '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+      invalid:   '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>'
+    };
 
-    // Auto-advance for success when autoConfirmValid is on.
-    var auto = (window.AppContext && AppContext.get('autoConfirmValid')) === true;
-    if (kind === 'success' && auto) {
-      setTimeout(hideResult, 1500);
+    setFrameColor(type === 'valid' ? 'valid' : type === 'duplicate' ? 'duplicate' : 'invalid');
+
+    var html = '<div class="scanapp-result__inner">' +
+                 '<div class="scanapp-result__icon-circle">' + icons[type] + '</div>' +
+                 '<div class="scanapp-result__text">' +
+                   '<div class="scanapp-result__title">' + titles[type] + '</div>';
+    if (type === 'valid') {
+      html += '<div class="scanapp-result__name">' + escapeHtml(data.name || '—') + '</div>';
+      if (data.ticketType) html += '<div class="scanapp-result__detail">' + escapeHtml(data.ticketType) + '</div>';
+      if (data.seatInfo) html += '<div class="scanapp-result__detail" style="margin-top: 2px;">' + escapeHtml(data.seatInfo) + '</div>';
+    } else if (type === 'duplicate') {
+      if (data.name && data.name !== 'N/A') html += '<div class="scanapp-result__name">' + escapeHtml(data.name) + '</div>';
+      var prev = data.checkedInAt ? 'Scanat: ' + data.checkedInAt : 'Bilet folosit anterior';
+      html += '<div class="scanapp-result__detail" style="color: var(--scanapp-amber);">' + escapeHtml(prev) + '</div>';
+    } else {
+      html += '<div class="scanapp-result__detail" style="color: var(--scanapp-red);">' + escapeHtml(data.message || 'Bilet nerecunoscut') + '</div>';
     }
+    html += '</div></div>';
+
+    var autoConfirm = (window.AppContext && AppContext.get('autoConfirmValid')) === true;
+    if (type === 'valid' && !autoConfirm) {
+      html += '<button type="button" class="scanapp-result__next-btn" id="scanapp-result-next">Scanează Următorul</button>';
+    }
+
+    dom.result.className = 'scanapp-result scanapp-result--show ' + classes[type];
+    dom.result.innerHTML = html;
+    var next = $('scanapp-result-next');
+    if (next) next.addEventListener('click', hideResult);
+    if (type === 'valid' && autoConfirm) resultTimer = setTimeout(hideResult, 1500);
   }
 
   function hideResult() {
-    if (!dom.result) return;
-    dom.result.classList.remove('scanapp-result--show');
-  }
-
-  function escapeHtml(s) {
-    if (s == null) return '';
-    return String(s)
-      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    if (dom.result) {
+      dom.result.classList.remove('scanapp-result--show');
+      dom.result.innerHTML = '';
+    }
+    setFrameColor(cameraActive ? 'scanning' : null);
   }
 
   // ── Check-in API ─────────────────────────────────────────────────────────
   function performCheckIn(code) {
-    if (!code) return Promise.resolve(null);
-    if (typeof ScanAPI === 'undefined' || !ScanAPI.post) {
-      showResult('danger', 'Eroare conexiune', 'API-ul nu este disponibil.');
-      return Promise.resolve(null);
-    }
-
-    var event = (window.EventContext && EventContext.getState().selectedEvent) || null;
-    var eventId = event ? event.id : null;
-
+    if (!code) return;
+    if (typeof ScanAPI === 'undefined') { showResult('invalid', { message: 'API indisponibil' }); return; }
+    var ev = EventContext.getState().selectedEvent;
     return ScanAPI.post('/organizer/participants/checkin', {
       ticket_code: code,
-      event_id: eventId
-    }).then(function (resp) {
-      handleCheckInResponse(resp, code);
-      return resp;
-    }).catch(function (err) {
-      console.error('[scanare] check-in error:', err);
-      handleCheckInError(err, code);
-      throw err;
-    });
+      event_id: ev ? ev.id : null
+    }).then(function (resp) { handleCheckInResponse(resp, code); })
+      .catch(function (err) {
+        showResult('invalid', { message: (err && err.message) || 'Eroare de rețea' });
+        ScanScanner.feedbackError();
+        ScanScanner.vibratePattern([0, 200, 100, 200, 100, 200]);
+      });
   }
 
   function handleCheckInResponse(resp, code) {
@@ -119,82 +136,39 @@
     var participant = data.participant || data.ticket || data;
     var ticketStatus = (participant && (participant.status || participant.ticket_status)) || null;
     var alreadyCheckedIn = !!(data.already_checked_in
-      || ticketStatus === 'used'
-      || ticketStatus === 'checked_in'
-      || data.duplicate);
+      || ticketStatus === 'used' || ticketStatus === 'checked_in' || data.duplicate);
 
-    // Build common detail rows
     var name = participant.customer_name || participant.name || participant.attendee_name
-            || (participant.customer && participant.customer.name) || null;
+      || (participant.customer && participant.customer.name) || null;
     var ticketType = participant.ticket_type_name || participant.ticket_type
-            || (participant.ticket_type && participant.ticket_type.name) || null;
-    var orderNumber = participant.order_number || participant.order_id || null;
-
-    var details = [];
-    if (name)        details.push({ label: 'Nume',        value: name });
-    if (ticketType)  details.push({ label: 'Tip bilet',   value: ticketType });
-    if (orderNumber) details.push({ label: 'Comandă',     value: '#' + orderNumber });
-    details.push({ label: 'Cod', value: code });
+      || (participant.ticket_type && participant.ticket_type.name) || null;
 
     if (resp && resp.success === false && !alreadyCheckedIn) {
-      showResult('danger', 'Bilet invalid', resp.message || 'Codul nu a fost recunoscut.', details);
-      if ((AppContext.get('soundEffects') !== false)) ScanScanner.feedbackError();
-      if ((AppContext.get('vibrationFeedback') !== false)) ScanScanner.vibratePattern([0, 200, 100, 200, 100, 200]);
-      return;
-    }
-
-    if (alreadyCheckedIn) {
-      var prev = participant.checked_in_at || data.checked_in_at;
-      if (prev) details.unshift({ label: 'Scanat anterior', value: formatDateTime(prev) });
-      showResult('warning', 'Deja scanat', resp.message || 'Acest bilet a fost deja folosit.', details);
-      if ((AppContext.get('soundEffects') !== false)) ScanScanner.feedbackWarning();
-      if ((AppContext.get('vibrationFeedback') !== false)) ScanScanner.vibratePattern([0, 100, 100, 100]);
+      showResult('invalid', { message: resp.message || 'Cod necunoscut', code: code });
+      ScanScanner.feedbackError();
+      ScanScanner.vibratePattern([0, 200, 100, 200, 100, 200]);
       if (window.AppContext && EventContext.getState().selectedEvent) {
-        AppContext.addScan(EventContext.getState().selectedEvent.id, {
-          code: code, valid: false, duplicate: true, ticketType: ticketType, customerName: name
-        });
+        AppContext.addScan(EventContext.getState().selectedEvent.id, { code: code, valid: false, ticketType: ticketType, customerName: name });
       }
       return;
     }
-
-    // Success
-    showResult('success', 'Bilet valid', name || 'Check-in reușit', details);
+    if (alreadyCheckedIn) {
+      showResult('duplicate', { name: name, ticketType: ticketType, checkedInAt: participant.checked_in_at || data.checked_in_at || null });
+      ScanScanner.feedbackWarning();
+      ScanScanner.vibratePattern([0, 100, 100, 100]);
+      if (window.AppContext && EventContext.getState().selectedEvent) {
+        AppContext.addScan(EventContext.getState().selectedEvent.id, { code: code, valid: false, duplicate: true, ticketType: ticketType, customerName: name });
+      }
+      return;
+    }
+    showResult('valid', { name: name, ticketType: ticketType });
     pulseScanTimestamp();
     if (window.EventContext) EventContext.incrementCheckedIn();
     if (window.AppContext && EventContext.getState().selectedEvent) {
-      AppContext.addScan(EventContext.getState().selectedEvent.id, {
-        code: code, valid: true, ticketType: ticketType, customerName: name
-      });
+      AppContext.addScan(EventContext.getState().selectedEvent.id, { code: code, valid: true, ticketType: ticketType, customerName: name });
     }
   }
 
-  function handleCheckInError(err, code) {
-    var msg = (err && err.message) || 'Eroare de rețea.';
-    var status = err && err.status;
-    var kind = 'danger';
-    var title = 'Eroare';
-    if (status === 404) { title = 'Bilet inexistent'; msg = 'Codul nu există în sistem.'; }
-    else if (status === 403) { title = 'Acces refuzat'; msg = 'Nu ai permisiunea de check-in pe acest eveniment.'; }
-    else if (!navigator.onLine) { title = 'Fără conexiune'; msg = 'Reconectează-te și reîncearcă.'; kind = 'warning'; }
-    showResult(kind, title, msg, [{ label: 'Cod', value: code }]);
-    if ((AppContext.get('soundEffects') !== false)) ScanScanner.feedbackError();
-    if ((AppContext.get('vibrationFeedback') !== false)) ScanScanner.vibratePattern([0, 200, 100, 200, 100, 200]);
-  }
-
-  function formatDateTime(value) {
-    try {
-      var d = new Date(value);
-      if (isNaN(d.getTime())) return String(value);
-      var dd = String(d.getDate()).padStart(2, '0');
-      var mm = String(d.getMonth() + 1).padStart(2, '0');
-      var yy = d.getFullYear();
-      var hh = String(d.getHours()).padStart(2, '0');
-      var mi = String(d.getMinutes()).padStart(2, '0');
-      return dd + '.' + mm + '.' + yy + ' ' + hh + ':' + mi;
-    } catch (e) { return String(value); }
-  }
-
-  // ── Live stat pills ──────────────────────────────────────────────────────
   function pulseScanTimestamp() {
     var now = Date.now();
     scanTimestamps.push(now);
@@ -202,21 +176,48 @@
     while (scanTimestamps.length && scanTimestamps[0] < cutoff) scanTimestamps.shift();
     dom.statSpm.textContent = String(scanTimestamps.length);
   }
-
-  function renderStatPills(stats) {
+  function renderLiveStats(stats) {
     if (!stats) return;
     dom.statCheckedIn.textContent = String(stats.checked_in || 0);
-    var rate = stats.check_in_rate || 0;
-    dom.statRate.textContent = Math.round(rate) + '%';
+    dom.statWait.textContent = '0s';
   }
 
-  // ── Manual entry sheet ───────────────────────────────────────────────────
+  function renderRecentScans() {
+    var ev = EventContext.getState().selectedEvent;
+    if (!ev || !dom.recentList) return;
+    var list = AppContext.getRecentScans(ev.id).slice(0, 10);
+    if (!list.length) { dom.recentSection.hidden = true; return; }
+    dom.recentSection.hidden = false;
+    dom.recentList.innerHTML = list.map(function (s) {
+      var type = s.valid === true ? 'valid' : (s.duplicate === true ? 'duplicate' : 'invalid');
+      var iconPath = type === 'valid'
+        ? '<path d="M20 6L9 17l-5-5"/>'
+        : type === 'duplicate'
+          ? '<path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>'
+          : '<path d="M18 6L6 18M6 6l12 12"/>';
+      var time = '';
+      try { var d = new Date(s.time); time = pad(d.getHours()) + ':' + pad(d.getMinutes()); } catch (e) {}
+      var name = s.customerName || s.code || 'Cod ' + (s.code || '');
+      var ticketType = s.ticketType || 'Bilet';
+      return '<div class="scanapp-recent-scan">' +
+               '<div class="scanapp-recent-scan__status scanapp-recent-scan__status--' + type + '">' +
+                 '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">' + iconPath + '</svg>' +
+               '</div>' +
+               '<div class="scanapp-recent-scan__text">' +
+                 '<div class="scanapp-recent-scan__name">' + escapeHtml(ticketType) + '</div>' +
+                 '<div class="scanapp-recent-scan__type">' + escapeHtml(name) + ' · ' + escapeHtml(s.code || '') + '</div>' +
+               '</div>' +
+               '<div class="scanapp-recent-scan__time">' + escapeHtml(time) + '</div>' +
+             '</div>';
+    }).join('');
+  }
+
   function openManual() {
     dom.manualInput.value = '';
-    dom.manualModal.classList.add('scanapp-modal--open');
+    dom.manualModal.classList.add('scanapp-modal-overlay--open');
     setTimeout(function () { dom.manualInput.focus(); }, 50);
   }
-  function closeManual() { dom.manualModal.classList.remove('scanapp-modal--open'); }
+  function closeManual() { dom.manualModal.classList.remove('scanapp-modal-overlay--open'); }
   function submitManual() {
     var code = (dom.manualInput.value || '').trim();
     if (!code) return;
@@ -224,91 +225,71 @@
     performCheckIn(code);
   }
 
-  // ── Camera lifecycle ─────────────────────────────────────────────────────
   function startCamera() {
-    if (!window.ScanScanner) {
-      ScanApp.toast('Scanner-ul nu s-a încărcat.', 'danger');
-      return;
-    }
+    if (!window.ScanScanner) { ScanApp.toast('Scanner-ul nu s-a încărcat.', 'danger'); return; }
     if (!scanner) {
       scanner = ScanScanner.create({
         videoEl: dom.video,
         onScan: function (s) { performCheckIn(s.code); },
         onError: function (e) {
-          if (dom.placeholderText) dom.placeholderText.textContent = e.message || 'Eroare cameră.';
-          dom.placeholder.style.display = 'flex';
+          dom.placeholderText.textContent = e.message || 'Eroare cameră.';
+          setVideoVisible(false);
           ScanApp.toast(e.message || 'Eroare cameră.', 'danger');
         },
-        onPermission: function (p) {
-          if (p.granted) dom.placeholder.style.display = 'none';
-        }
+        onPermission: function (p) { if (p.granted) setVideoVisible(true); }
       });
     }
     scanner.start();
     cameraActive = true;
-    dom.btnCamera.textContent = 'Oprește camera';
+    dom.btnCameraText.textContent = 'Oprește Camera';
+    dom.btnCamera.classList.add('scanapp-scan-button--scanning');
+    setFrameColor('scanning');
   }
-
   function stopCamera() {
     if (scanner) scanner.stop();
     cameraActive = false;
-    dom.btnCamera.textContent = 'Pornește camera';
-    dom.placeholder.style.display = 'flex';
+    dom.btnCameraText.textContent = 'Începe Scanarea';
+    dom.btnCamera.classList.remove('scanapp-scan-button--scanning');
+    setVideoVisible(false);
+    setFrameColor(null);
   }
+  function toggleCamera() { cameraActive ? stopCamera() : startCamera(); }
 
-  function toggleCamera() {
-    if (cameraActive) stopCamera();
-    else              startCamera();
-  }
-
-  // ── Reports-only mode + event change ─────────────────────────────────────
-  function reflectReportsOnlyMode() {
+  function reflectReportsOnly() {
     var on = window.EventContext && EventContext.isReportsOnlyMode();
     dom.reportsOnly.hidden = !on;
-    dom.scannerHost.style.display = on ? 'none' : '';
-    document.querySelector('.scanapp-scanner-controls').style.display = on ? 'none' : '';
+    dom.main.hidden = on;
     if (on && cameraActive) stopCamera();
   }
 
-  // ── Wire up ──────────────────────────────────────────────────────────────
   function init() {
     collectDom();
-    if (!dom.video) return;
+    if (!dom.frame) return;
+    setVideoVisible(false);
 
     dom.btnCamera.addEventListener('click', toggleCamera);
     dom.btnManual.addEventListener('click', openManual);
-    dom.resultNext.addEventListener('click', hideResult);
     dom.manualCancel.addEventListener('click', closeManual);
     dom.manualSubmit.addEventListener('click', submitManual);
-    dom.manualInput.addEventListener('keydown', function (e) {
-      if (e.key === 'Enter') submitManual();
-    });
-    dom.manualModal.addEventListener('click', function (e) {
-      if (e.target === dom.manualModal) closeManual();
-    });
+    dom.placeholder.addEventListener('click', toggleCamera);
+    dom.manualInput.addEventListener('keydown', function (e) { if (e.key === 'Enter') submitManual(); });
+    dom.manualModal.addEventListener('click', function (e) { if (e.target === dom.manualModal) closeManual(); });
 
     if (window.EventContext) {
       EventContext.subscribe('event-selected', function () {
-        reflectReportsOnlyMode();
+        reflectReportsOnly();
+        renderRecentScans();
         if (scanner) scanner.clearDedup();
       });
-      EventContext.subscribe('stats-updated', function (e) {
-        renderStatPills(e.detail.stats);
-        dom.statPills.hidden = false;
-      });
-      // Initial check (events may already have been loaded by app.js)
-      reflectReportsOnlyMode();
+      EventContext.subscribe('stats-updated', function (e) { renderLiveStats(e.detail.stats); });
+      reflectReportsOnly();
       var s = EventContext.getState();
-      if (s.eventStats) {
-        renderStatPills(s.eventStats);
-        dom.statPills.hidden = false;
-      }
+      if (s.eventStats) renderLiveStats(s.eventStats);
+      renderRecentScans();
     }
+    if (window.AppContext) AppContext.subscribe('scan-added', renderRecentScans);
   }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
-  } else {
-    init();
-  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
 })();
