@@ -862,82 +862,59 @@ class Event extends Model
     }
 
     /**
-     * Calculate total revenue for this event (paid/confirmed/completed orders)
+     * Calculate total revenue for this event.
+     *
+     * Aligned 2026-06-14 with the admin panel's "Venituri" number on
+     * /marketplace/events/{id}/edit?tab=vanzari (the canonical source of
+     * truth the marketplace operators verify against). Admin formula:
+     *
+     *   Order::where('event_id', X)
+     *        ->whereIn('status', ['paid','confirmed','completed'])
+     *        ->sum('total')
+     *
+     * `total` = what the customer paid after discounts and commission are
+     * factored in. Matches `EventStatistics::getTotalRevenue` in the
+     * Filament admin. Mobile + web scan replicas read this attribute so
+     * they now match the admin too.
      */
     public function getTotalRevenueAttribute(): float
     {
-        // Net revenue = for each ticket_type, valid_count × ticket_type's net price
-        // (configured price, with included-commission subtracted when the
-        // ticket_type is in 'included' mode). Uses configured price rather than
-        // ticket.price to avoid zero-priced invitations / free tickets skewing
-        // the total. Matches /organizator/report/{id}'s "Venituri totale".
-        $tts = $this->relationLoaded('ticketTypes') ? $this->ticketTypes : $this->ticketTypes()->get();
-        if ($tts->isEmpty()) {
-            return 0.0;
+        $total = (float) \App\Models\Order::where('event_id', $this->id)
+            ->whereIn('status', ['paid', 'confirmed', 'completed'])
+            ->sum('total');
+
+        // Legacy fallback for older orders that stored amounts in
+        // total_cents but never populated `total` (decimal column added later).
+        if ($total == 0.0) {
+            $cents = (int) \App\Models\Order::where('event_id', $this->id)
+                ->whereIn('status', ['paid', 'confirmed', 'completed'])
+                ->sum('total_cents');
+            if ($cents > 0) $total = $cents / 100;
         }
 
-        $ttIds = $tts->pluck('id')->toArray();
-
-        // Broad filter: valid tickets linked to this event's ticket types
-        // through non-external orders (or with no order — invitations).
-        $validCountsByType = \App\Models\Ticket::whereIn('ticket_type_id', $ttIds)
-            ->whereIn('status', ['valid', 'used'])
-            ->where(function ($q) {
-                $q->whereDoesntHave('order')
-                  ->orWhereHas('order', fn ($qq) => $qq->where('source', '!=', 'external_import'));
-            })
-            ->selectRaw('ticket_type_id, COUNT(*) as cnt')
-            ->groupBy('ticket_type_id')
-            ->pluck('cnt', 'ticket_type_id');
-
-        // Resolve default commission settings from event → organizer → marketplace
-        $defaultRate = (float) (
-            $this->commission_rate
-            ?? $this->marketplaceOrganizer?->commission_rate
-            ?? $this->marketplaceClient?->commission_rate
-            ?? 5
-        );
-        $defaultMode = $this->commission_mode
-            ?? $this->marketplaceOrganizer?->default_commission_mode
-            ?? $this->marketplaceClient?->commission_mode
-            ?? 'included';
-
-        $net = 0.0;
-        foreach ($tts as $tt) {
-            $validCount = (int) ($validCountsByType[$tt->id] ?? 0);
-            if ($validCount === 0) continue;
-
-            $basePriceCents = ((int) ($tt->sale_price_cents ?? 0)) > 0
-                ? (int) $tt->sale_price_cents
-                : (int) ($tt->price_cents ?? 0);
-            $basePrice = $basePriceCents / 100;
-
-            $effective = $tt->getEffectiveCommission($defaultRate, $defaultMode);
-            $mode = $effective['mode'];
-
-            if (in_array($mode, ['on_top', 'added_on_top'], true)) {
-                $netPerTicket = $basePrice;
-            } else { // included
-                $commPerTicket = (float) $tt->calculateCommission($basePrice, $defaultRate, $defaultMode);
-                $netPerTicket = max(0.0, $basePrice - $commPerTicket);
-            }
-
-            $net += $netPerTicket * $validCount;
-        }
-
-        return round($net, 2);
+        return round($total, 2);
     }
 
     /**
-     * Calculate total tickets sold for this event (only valid/used tickets)
+     * Calculate total tickets sold for this event.
+     *
+     * Aligned 2026-06-14 with the admin panel's "Bilete vandute" number on
+     * /marketplace/events/{id}/edit?tab=vanzari. Admin formula:
+     *
+     *   Ticket::where('event_id', X)->where('is_cancelled', false)->count()
+     *
+     * Includes invitations (12 for event 4365) on top of paid online sales
+     * (206) for a total of 218 — same number the admin shows. Previously
+     * this accessor used a stricter `whereHas('order' paid)` filter which
+     * silently dropped invitations, producing 206 instead of 218 and
+     * causing daily discrepancies between admin and mobile/web app.
+     *
+     * Excludes only `is_cancelled = true` tickets (consistent with admin).
      */
     public function getTotalTicketsSoldAttribute(): int
     {
         return (int) \App\Models\Ticket::where('event_id', $this->id)
-            ->whereIn('status', ['valid', 'used'])
-            ->whereHas('order', function ($q) {
-                $q->whereIn('status', ['paid', 'confirmed', 'completed']);
-            })
+            ->where('is_cancelled', false)
             ->count();
     }
 
