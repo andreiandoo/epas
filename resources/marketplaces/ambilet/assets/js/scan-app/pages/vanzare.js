@@ -307,13 +307,24 @@
       dom.recent.innerHTML = '<div class="scanapp-card scanapp-card--placeholder"><p class="scanapp-card__text">Nu există vânzări înregistrate în această tură.</p></div>';
       return;
     }
+    // Total badge in header (sum of recent sales — what the operator
+    // collected in this shift).
+    var totalCollected = list.reduce(function (n, s) { return n + (Number(s.total) || 0); }, 0);
+    var totalBadge = $('scanapp-sales-total-badge');
+    if (totalBadge) totalBadge.textContent = formatLei(totalCollected);
+
     dom.recent.innerHTML = list.slice(0, 10).map(function (s) {
-      var icon = s.paymentMethod === 'cash' ? '💵' : '💳';
+      var cashIcon = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>';
+      var cardIcon = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>';
+      var iconCls = s.paymentMethod === 'cash' ? 'scanapp-recent-sale__icon--cash' : 'scanapp-recent-sale__icon--card';
+      var icon = s.paymentMethod === 'cash' ? cashIcon : cardIcon;
       var desc = (s.items || []).map(function (i) { return i.quantity + 'x ' + i.name; }).join(', ') || 'Vânzare';
       return '<div class="scanapp-recent-sale">' +
-               '<div class="scanapp-recent-sale__icon">' + icon + '</div>' +
-               '<div class="scanapp-recent-sale__desc"><div>' + escapeHtml(desc) + '</div>' +
-               '<div style="color: var(--scanapp-text-ter); font-size: 11px;">' + nowTimeFromMs(s.time) + '</div></div>' +
+               '<div class="scanapp-recent-sale__icon ' + iconCls + '">' + icon + '</div>' +
+               '<div class="scanapp-recent-sale__info">' +
+                 '<div class="scanapp-recent-sale__desc">' + escapeHtml(desc) + '</div>' +
+                 '<div class="scanapp-recent-sale__time">' + nowTimeFromMs(s.time) + '</div>' +
+               '</div>' +
                '<div class="scanapp-recent-sale__amount">' + escapeHtml(formatLei(s.total)) + '</div>' +
              '</div>';
     }).join('');

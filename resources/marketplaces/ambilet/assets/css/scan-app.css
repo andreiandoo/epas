@@ -1116,19 +1116,97 @@ button.scanapp-stat-pill { cursor: pointer; font-family: inherit; }
 }
 .scanapp-input:focus { outline: none; border-color: var(--scanapp-purple); box-shadow: 0 0 0 3px var(--scanapp-purple-light); }
 
-/* ── Sales (vanzare) — preserved + restyled ──────────────────────────── */
+/* ── Sales (vanzare) — pixel-perfect port of SalesScreen.js ──────────── */
 .scanapp-ticket-grid { display: flex; flex-direction: column; gap: 10px; }
-.scanapp-ticket { display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: var(--scanapp-surface); border: 1px solid var(--scanapp-border); border-radius: 14px; }
-.scanapp-ticket__color { width: 4px; align-self: stretch; border-radius: 2px; flex-shrink: 0; min-height: 36px; }
-.scanapp-ticket__body { flex: 1; min-width: 0; }
-.scanapp-ticket__name { font-size: 14px; font-weight: 700; color: var(--scanapp-text); }
-.scanapp-ticket__price { font-size: 13px; color: var(--scanapp-text-secondary); margin-top: 2px; }
-.scanapp-ticket__hint { font-size: 11px; color: var(--scanapp-text-tertiary); margin-top: 2px; }
-.scanapp-qty { display: inline-flex; align-items: center; gap: 8px; }
-.scanapp-qty__btn { width: 32px; height: 32px; border-radius: 16px; background: var(--scanapp-surface-hover); color: var(--scanapp-text); border: 1px solid var(--scanapp-border-light); font-size: 16px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
+.scanapp-ticket {
+  display: flex;
+  align-items: center;
+  background: var(--scanapp-surface);
+  border: 1px solid var(--scanapp-border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.scanapp-ticket--sold-out { opacity: 0.5; }
+.scanapp-ticket__color {
+  width: 4px;
+  align-self: stretch;
+  flex-shrink: 0;
+}
+.scanapp-ticket__body {
+  flex: 1;
+  min-width: 0;
+  padding: 14px;
+}
+.scanapp-ticket__name {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--scanapp-text);
+  margin-bottom: 4px;
+}
+.scanapp-ticket--sold-out .scanapp-ticket__name { color: var(--scanapp-text-tertiary); }
+.scanapp-ticket__price {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--scanapp-purple);
+  margin-bottom: 2px;
+}
+.scanapp-ticket__hint {
+  font-size: 12px;
+  color: var(--scanapp-text-tertiary);
+}
+.scanapp-ticket__sold-out {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--scanapp-red);
+}
+.scanapp-qty {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-right: 12px;
+}
+.scanapp-qty__btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  background: var(--scanapp-surface-hover);
+  color: var(--scanapp-text);
+  border: 1px solid var(--scanapp-border-light);
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
 .scanapp-qty__btn:disabled { opacity: 0.4; cursor: not-allowed; }
-.scanapp-qty__btn--add { background: var(--scanapp-purple); border-color: var(--scanapp-purple); color: #fff; }
-.scanapp-qty__value { min-width: 18px; text-align: center; font-weight: 700; }
+.scanapp-qty__btn--add {
+  width: 40px;
+  height: 40px;
+  background: var(--scanapp-purple-light);
+  border-color: transparent;
+  color: var(--scanapp-purple);
+}
+.scanapp-qty__value { min-width: 18px; text-align: center; font-weight: 700; color: var(--scanapp-text); }
+
+/* Sales-today section header with green total badge */
+.scanapp-sales-today-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  margin-top: 24px;
+}
+.scanapp-sales-today-header .scanapp-section-title { margin: 0; }
+.scanapp-sales-total-badge {
+  background: var(--scanapp-green-bg);
+  border: 1px solid var(--scanapp-green-border);
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--scanapp-green);
+}
 
 .scanapp-cart-bar { position: fixed; bottom: calc(var(--scanapp-tabbar-h) + var(--scanapp-safe-bottom) + 8px); left: 0; right: 0; z-index: 25; background: #16161F; border-top: 1px solid var(--scanapp-border-light); padding: 12px 16px; display: none; align-items: center; gap: 12px; max-width: 640px; margin: 0 auto; }
 .scanapp-cart-bar--open { display: flex; }
@@ -1146,30 +1224,348 @@ button.scanapp-stat-pill { cursor: pointer; font-family: inherit; }
 .scanapp-claim-status { margin-top: 10px; padding: 10px 12px; border-radius: 10px; background: var(--scanapp-surface-hover); font-size: 12px; color: var(--scanapp-text-secondary); text-align: center; }
 .scanapp-claim-status--ok { background: var(--scanapp-green-light); color: var(--scanapp-green); }
 
-.scanapp-recent-sales { display: flex; flex-direction: column; gap: 8px; }
-.scanapp-recent-sale { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: var(--scanapp-surface); border: 1px solid var(--scanapp-border); border-radius: 12px; font-size: 12.5px; }
-.scanapp-recent-sale__icon { width: 30px; height: 30px; border-radius: 8px; background: var(--scanapp-purple-bg); color: var(--scanapp-purple); display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.scanapp-recent-sale__desc { flex: 1; min-width: 0; }
-.scanapp-recent-sale__amount { font-weight: 700; color: var(--scanapp-text); }
+.scanapp-recent-sales { display: flex; flex-direction: column; gap: 6px; }
+.scanapp-recent-sale {
+  display: flex;
+  align-items: center;
+  background: var(--scanapp-surface);
+  border: 1px solid var(--scanapp-border);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+.scanapp-recent-sale__icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--scanapp-purple-bg);
+  color: var(--scanapp-purple);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-right: 12px;
+}
+.scanapp-recent-sale__icon--cash { background: var(--scanapp-green-bg); color: var(--scanapp-green); }
+.scanapp-recent-sale__icon--card { background: var(--scanapp-purple-bg); color: var(--scanapp-purple); }
+.scanapp-recent-sale__info { flex: 1; min-width: 0; }
+.scanapp-recent-sale__desc {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--scanapp-text);
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.scanapp-recent-sale__time {
+  font-size: 12px;
+  color: var(--scanapp-text-tertiary);
+}
+.scanapp-recent-sale__amount {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--scanapp-text);
+  margin-left: 8px;
+}
 
-/* Reports (rapoarte) bars */
-.scanapp-report-bars { display: flex; flex-direction: column; gap: 8px; }
-.scanapp-report-bar { display: flex; flex-direction: column; gap: 4px; padding: 10px 12px; background: var(--scanapp-surface); border: 1px solid var(--scanapp-border); border-radius: 12px; }
-.scanapp-report-bar__head { display: flex; justify-content: space-between; font-size: 12.5px; }
+/* ── Reports (rapoarte) — port of ReportsScreen.js ──────────────────── */
+.scanapp-reports-page-header {
+  margin-bottom: 16px;
+}
+.scanapp-reports-page-header__title {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--scanapp-text);
+  margin: 0 0 4px;
+}
+.scanapp-reports-page-header__sub {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--scanapp-text-tertiary);
+}
+.scanapp-reports-page-header__sub .scanapp-pulse-dot {
+  width: 6px; height: 6px; border-radius: 3px;
+  background: var(--scanapp-green);
+}
+
+/* Past-event selector row (clickable bar above the report content) */
+.scanapp-past-selector {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--scanapp-surface);
+  border: 1px solid var(--scanapp-border);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-bottom: 20px;
+  gap: 8px;
+  cursor: pointer;
+  color: inherit;
+  text-decoration: none;
+  font-family: inherit;
+  width: 100%;
+}
+.scanapp-past-selector__left { display: inline-flex; align-items: center; gap: 8px; color: var(--scanapp-text-secondary); font-size: 13px; font-weight: 500; }
+.scanapp-past-selector__right { display: inline-flex; align-items: center; gap: 6px; flex: 1; justify-content: flex-end; min-width: 0; }
+.scanapp-past-selector__value {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--scanapp-purple);
+  max-width: 200px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Metric card (rapoarte top cards: Rata Check-in wide + 2-col grid) */
+.scanapp-metrics-grid { display: flex; flex-direction: column; gap: 10px; margin-bottom: 24px; }
+.scanapp-metric-card {
+  background: var(--scanapp-surface);
+  border: 1px solid var(--scanapp-border);
+  border-radius: 14px;
+  padding: 16px;
+}
+.scanapp-metric-card--wide { padding: 18px; }
+.scanapp-metric-card__label {
+  font-size: 12px;
+  color: var(--scanapp-text-tertiary);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-bottom: 6px;
+}
+.scanapp-metric-card__value {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--scanapp-text);
+  line-height: 1.1;
+}
+.scanapp-metric-card__suffix {
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--scanapp-text-tertiary);
+  margin-left: 4px;
+}
+.scanapp-metrics-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+/* Section card (Reports has 'Performanța Porților', 'Detalii Venituri', etc.) */
+.scanapp-section-card {
+  background: var(--scanapp-surface);
+  border: 1px solid var(--scanapp-border);
+  border-radius: 14px;
+  padding: 16px;
+}
+.scanapp-section-card + .scanapp-section-card { margin-top: 8px; }
+
+.scanapp-report-bars { display: flex; flex-direction: column; gap: 14px; }
+.scanapp-report-bar { display: flex; flex-direction: column; gap: 6px; }
+.scanapp-report-bar__head { display: flex; justify-content: space-between; align-items: baseline; font-size: 13px; }
 .scanapp-report-bar__name { font-weight: 600; color: var(--scanapp-text); }
-.scanapp-report-bar__value { color: var(--scanapp-text-secondary); }
-.scanapp-report-bar__track { height: 8px; background: var(--scanapp-surface-hover); border-radius: 4px; overflow: hidden; }
-.scanapp-report-bar__fill { height: 100%; border-radius: 4px; transition: width 320ms ease; }
+.scanapp-report-bar__value { color: var(--scanapp-text-secondary); font-size: 12px; }
+.scanapp-report-bar__track { height: 6px; background: var(--scanapp-surface-hover); border-radius: 3px; overflow: hidden; }
+.scanapp-report-bar__fill { height: 100%; border-radius: 3px; transition: width 320ms ease; }
 
-/* Settings rows */
-.scanapp-setting-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--scanapp-border); }
-.scanapp-setting-row:last-child { border-bottom: 0; }
-.scanapp-setting-row__label { font-size: 14px; font-weight: 600; color: var(--scanapp-text); }
+.scanapp-section-divider {
+  height: 1px;
+  background: var(--scanapp-border);
+  margin: 12px 0;
+}
+
+/* Export button (rapoarte) */
+.scanapp-export-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 14px;
+  border-radius: 12px;
+  background: var(--scanapp-purple-bg);
+  border: 1px solid var(--scanapp-purple-border);
+  color: var(--scanapp-purple);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  margin-top: 16px;
+}
+
+/* ── Settings — port of SettingsScreen.js ────────────────────────────── */
+
+/* Page header — same big title as rapoarte ('Setări', 28px fw700) */
+.scanapp-settings-page-header {
+  margin-bottom: 16px;
+}
+.scanapp-settings-page-header__title {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--scanapp-text);
+  margin: 0;
+}
+
+/* Section header — small uppercase title above each section card */
+.scanapp-settings-section-header {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--scanapp-text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 20px 4px 8px;
+}
+
+/* InfoRow: label + value (no toggle), divider between */
+.scanapp-info-row,
+.scanapp-setting-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 0;
+}
+.scanapp-info-row__label,
+.scanapp-setting-row__label { font-size: 14px; font-weight: 500; color: var(--scanapp-text-secondary); flex: 1; min-width: 0; }
+.scanapp-info-row__value { font-size: 14px; font-weight: 600; color: var(--scanapp-text); text-align: right; }
 .scanapp-setting-row__hint { font-size: 12px; color: var(--scanapp-text-tertiary); margin-top: 2px; }
-.scanapp-toggle { position: relative; width: 44px; height: 26px; border-radius: 13px; background: var(--scanapp-surface-hover); border: 1px solid var(--scanapp-border-light); cursor: pointer; transition: background-color 180ms; flex-shrink: 0; }
-.scanapp-toggle__knob { position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; border-radius: 50%; background: #fff; transition: transform 180ms; }
+
+/* Divider line between rows inside a sectionCard */
+.scanapp-divider-line { height: 1px; background: var(--scanapp-border); }
+
+/* Toggle */
+.scanapp-toggle {
+  position: relative;
+  width: 44px;
+  height: 26px;
+  border-radius: 13px;
+  background: var(--scanapp-surface-hover);
+  border: 1px solid var(--scanapp-border-light);
+  cursor: pointer;
+  transition: background-color 180ms;
+  flex-shrink: 0;
+}
+.scanapp-toggle__knob {
+  position: absolute;
+  top: 2px; left: 2px;
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 180ms;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.3);
+}
 .scanapp-toggle[aria-checked="true"] { background: var(--scanapp-purple); border-color: var(--scanapp-purple); }
 .scanapp-toggle[aria-checked="true"] .scanapp-toggle__knob { transform: translateX(18px); }
+
+/* Status badge (Hardware section: connected/disconnected dot) */
+.scanapp-status-badge-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 0;
+}
+.scanapp-status-badge-row__label { font-size: 14px; font-weight: 500; color: var(--scanapp-text-secondary); }
+.scanapp-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 12px;
+  background: var(--scanapp-red-light);
+  border: 1px solid var(--scanapp-red-border);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--scanapp-red);
+}
+.scanapp-status-badge::before {
+  content: '';
+  display: inline-block;
+  width: 6px; height: 6px;
+  border-radius: 3px;
+  background: var(--scanapp-red);
+}
+.scanapp-status-badge--connected {
+  background: var(--scanapp-green-light);
+  border-color: var(--scanapp-green-border);
+  color: var(--scanapp-green);
+}
+.scanapp-status-badge--connected::before { background: var(--scanapp-green); }
+
+/* Admin badge ('Acces Administrator' pill with shield icon) */
+.scanapp-admin-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--scanapp-purple-bg);
+  border: 1px solid var(--scanapp-purple-border);
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--scanapp-purple);
+}
+
+/* Admin row (link to gate manager / staff assignment) */
+.scanapp-admin-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 0;
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+.scanapp-admin-row__label { font-size: 14px; font-weight: 500; color: var(--scanapp-text); }
+.scanapp-admin-row__right { display: inline-flex; align-items: center; gap: 8px; color: var(--scanapp-text-tertiary); }
+.scanapp-count-badge {
+  background: var(--scanapp-purple-bg);
+  color: var(--scanapp-purple);
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 700;
+  min-width: 18px;
+  text-align: center;
+}
+
+/* Info box (cyan info icon + text) used in offline mode + NFC sections */
+.scanapp-info-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  background: var(--scanapp-cyan-bg);
+  border: 1px solid var(--scanapp-cyan-border);
+  border-radius: 10px;
+  margin-top: 10px;
+}
+.scanapp-info-box svg { flex-shrink: 0; margin-top: 2px; color: var(--scanapp-cyan); }
+.scanapp-info-box__text {
+  flex: 1;
+  font-size: 12px;
+  color: var(--scanapp-text-secondary);
+  line-height: 1.5;
+}
+
+/* Big red logout button at bottom */
+.scanapp-logout-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  margin-top: 24px;
+  padding: 14px;
+  background: var(--scanapp-red-light);
+  border: 1px solid var(--scanapp-red-border);
+  border-radius: 14px;
+  color: var(--scanapp-red);
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+}
 
 /* Card (generic placeholder) */
 .scanapp-card { background: var(--scanapp-surface); border: 1px solid var(--scanapp-border); border-radius: 16px; padding: 16px; }

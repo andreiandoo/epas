@@ -44,18 +44,20 @@
   function renderAccount() {
     var nameEl = $('scanapp-account-name');
     var roleEl = $('scanapp-account-role');
+    var orgEl  = $('scanapp-account-org');
     var tm = ScanAuth.getTeamMember();
     var org = ScanAuth.getOrganizer();
     var displayName, displayRole;
     if (tm) {
       displayName = tm.name || tm.email || 'Membru echipă';
-      displayRole = (tm.role || 'staff') + ' · ' + (org.name || '—');
+      displayRole = (tm.role || 'staff').replace(/^./, function (c) { return c.toUpperCase(); });
     } else {
       displayName = (org && org.public_name) || (org && org.name) || 'Organizator';
-      displayRole = 'Owner · ' + ((org && org.name) || '—');
+      displayRole = 'Owner';
     }
     if (nameEl) nameEl.textContent = displayName;
     if (roleEl) roleEl.textContent = displayRole;
+    if (orgEl)  orgEl.textContent  = (org && (org.public_name || org.name)) || '—';
 
     var admin = $('scanapp-admin-section');
     if (admin) admin.hidden = !ScanAuth.isAdmin();
