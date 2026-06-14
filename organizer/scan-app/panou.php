@@ -53,18 +53,18 @@ require __DIR__ . '/_layout.php';
         </span>
         Vinde
       </a>
-      <button type="button" class="scanapp-quick-action" id="scanapp-action-guest-list">
+      <a class="scanapp-quick-action" href="/organizator/scan/guest-list">
         <span class="scanapp-quick-action__icon">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 20h5v-2a3 3 0 00-5.356-1.857"/><circle cx="9" cy="7" r="4"/><path d="M16 3.13a4 4 0 010 7.75M22 21v-2a4 4 0 00-3-3.87"/></svg>
         </span>
         Listă invitați
-      </button>
-      <button type="button" class="scanapp-quick-action" id="scanapp-action-staff">
+      </a>
+      <a class="scanapp-quick-action" href="/organizator/scan/asignare-personal">
         <span class="scanapp-quick-action__icon">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 20h5v-2a3 3 0 00-5.356-1.857"/><path d="M9 11a4 4 0 100-8 4 4 0 000 8z"/></svg>
         </span>
         Echipă
-      </button>
+      </a>
     </div>
 
     <button type="button" class="scanapp-btn scanapp-btn--danger scanapp-btn--block" id="scanapp-action-close-shift" style="margin-top: 14px;">Închide tura</button>
