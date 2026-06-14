@@ -24,6 +24,28 @@ class EditMarketplaceCustomer extends EditRecord
                 ->icon('heroicon-o-user-circle')
                 ->color('info')
                 ->url(fn () => static::getResource()::getUrl('view', ['record' => $this->record])),
+            Actions\Action::make('detectCity')
+                ->label('Re-detectează oraș')
+                ->icon('heroicon-o-map')
+                ->color('gray')
+                ->requiresConfirmation()
+                ->modalHeading('Re-detectează oraș')
+                ->modalDescription('Recalculează distribuția de orașe pentru acest client din istoricul de comenzi.')
+                ->modalSubmitActionLabel('Recalculează')
+                ->action(function () {
+                    $exitCode = \Illuminate\Support\Facades\Artisan::call('customers:detect-cities', [
+                        '--marketplace' => $this->record->marketplace_client_id,
+                        '--customer' => $this->record->id,
+                    ]);
+                    if ($exitCode !== 0) {
+                        Notification::make()->title('Detectarea a eșuat')->danger()->send();
+                        return;
+                    }
+                    Notification::make()->title('Oraș re-detectat')
+                        ->body('Reîncarcă pagina ca să vezi noua distribuție.')
+                        ->success()->send();
+                    $this->redirect(static::getResource()::getUrl('edit', ['record' => $this->record]));
+                }),
             Actions\DeleteAction::make(),
         ];
     }

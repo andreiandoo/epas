@@ -170,6 +170,62 @@ class MarketplaceCustomerResource extends Resource
                         ])->columns(2)
                         ->collapsed(),
 
+                    // Auto-detected city from order history. Separate from
+                    // the user-editable Address section above — this one is
+                    // read-only and driven by customers:detect-cities.
+                    SC\Section::make('Oraș detectat (din comenzi)')
+                        ->icon('heroicon-o-map')
+                        ->description('Determinat automat din istoricul de comenzi — ce orașe a frecventat pentru evenimente.')
+                        ->collapsible()
+                        ->visibleOn('edit')
+                        ->schema([
+                            Forms\Components\Placeholder::make('detected_city_summary')
+                                ->label('')
+                                ->content(function ($record) {
+                                    $loc = data_get($record?->settings, 'detected_location');
+                                    if (!is_array($loc) || empty($loc['distribution'])) {
+                                        return new \Illuminate\Support\HtmlString(
+                                            '<div class="text-sm text-gray-500 dark:text-gray-400">Niciun oraș detectat încă. Rulează <code class="bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded">php artisan customers:detect-cities --marketplace=' . ($record?->marketplace_client_id ?? '1') . '</code> sau apasă butonul "Re-detectează" de mai jos.</div>'
+                                        );
+                                    }
+
+                                    $determined = $loc['determined_city'] ?? null;
+                                    $determinedAt = $loc['determined_at'] ?? null;
+                                    $distribution = $loc['distribution'];
+
+                                    $header = $determined
+                                        ? '<div class="mb-3"><span class="text-xs uppercase tracking-wide text-gray-500">Oraș determinat</span><div class="text-2xl font-bold text-green-700 dark:text-green-400 mt-0.5">' . e($determined) . '</div></div>'
+                                        : '<div class="mb-3"><span class="text-xs uppercase tracking-wide text-gray-500">Oraș determinat</span><div class="text-sm text-amber-700 dark:text-amber-400 mt-0.5 italic">Niciunul peste pragul de 85% — vezi distribuția.</div></div>';
+
+                                    $rows = '<div class="space-y-2">';
+                                    foreach ($distribution as $entry) {
+                                        $name = $entry['city_name'] ?? '?';
+                                        $orders = (int) ($entry['orders'] ?? 0);
+                                        $pct = (float) ($entry['pct'] ?? 0);
+                                        $barWidth = max(2, min(100, $pct));
+                                        $highlight = ($determined && $name === $determined) ? 'bg-green-50 dark:bg-green-900/20 border-green-300 dark:border-green-700' : 'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700';
+                                        $rows .= '<div class="border rounded-lg p-3 ' . $highlight . '">'
+                                            . '<div class="flex items-center justify-between mb-1.5">'
+                                            . '<span class="font-semibold">' . e($name) . '</span>'
+                                            . '<span class="text-sm tabular-nums"><strong>' . number_format($pct, 1) . '%</strong> <span class="text-gray-500">· ' . $orders . ' comenzi</span></span>'
+                                            . '</div>'
+                                            . '<div class="h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">'
+                                            . '<div class="h-full bg-primary-500" style="width: ' . $barWidth . '%;"></div>'
+                                            . '</div>'
+                                            . '</div>';
+                                    }
+                                    $rows .= '</div>';
+
+                                    $footer = $determinedAt
+                                        ? '<div class="text-xs text-gray-500 mt-3">Ultima detectare: ' . e(\Carbon\Carbon::parse($determinedAt)->format('d.m.Y H:i')) . '</div>'
+                                        : '';
+
+                                    return new \Illuminate\Support\HtmlString($header . $rows . $footer);
+                                })
+                                ->columnSpanFull(),
+                        ])
+                        ->collapsed(false),
+
                     SC\Section::make('Notification Preferences')
                         ->icon('heroicon-o-bell')
                         ->description('User notification settings')
