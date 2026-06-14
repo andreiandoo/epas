@@ -528,6 +528,11 @@ RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^organizator/scan/guest-list/?$ organizer/scan-app/guest-list.php [L]
 
+# Generic scan-app API proxy (avoids the main panel's action-mapping table).
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^api/scan-proxy\.php$ api/scan-proxy.php [L,QSA]
+
 # PWA assets — manifest + service worker + icon generator.
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d

@@ -162,10 +162,22 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                                     <p class="text-sm text-muted">Scanează codul QR sau apasă butonul</p>
                                     <p class="mt-1 text-xs text-muted/70">Versiune curentă: <strong>1.4.5</strong></p>
                                 </div>
-                                <a href="https://ambilet.ro/android" target="_blank" class="flex items-center justify-center w-full gap-2 px-4 py-2.5 text-sm font-medium text-white transition-colors rounded-xl bg-primary hover:bg-primary-dark">
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-                                    Descarcă Aplicatia
-                                </a>
+                                <div class="grid w-full grid-cols-2 gap-2">
+                                    <a href="https://ambilet.ro/android" target="_blank" class="flex items-center justify-center gap-2 px-3 py-2.5 text-sm font-medium text-white transition-colors rounded-xl bg-primary hover:bg-primary-dark">
+                                        <!-- Android robot logo -->
+                                        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                                            <path d="M17.523 15.342c-.515 0-.937-.421-.937-.937s.421-.937.937-.937.937.421.937.937-.421.937-.937.937m-11.046 0c-.515 0-.937-.421-.937-.937s.421-.937.937-.937.937.421.937.937-.421.937-.937.937m11.383-6.235l1.873-3.241a.39.39 0 00-.142-.532.39.39 0 00-.532.142l-1.896 3.286a11.66 11.66 0 00-9.527 0L5.74 5.476a.39.39 0 00-.532-.142.39.39 0 00-.142.532l1.873 3.241C3.751 10.768 1.55 13.876 1.18 17.519H22.82c-.371-3.643-2.572-6.751-5.96-8.412"/>
+                                        </svg>
+                                        Aplicație Android
+                                    </a>
+                                    <a href="/organizator/scan/panou" class="flex items-center justify-center gap-2 px-3 py-2.5 text-sm font-medium text-white transition-colors rounded-xl bg-secondary hover:bg-secondary/90">
+                                        <!-- Apple logo -->
+                                        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                                            <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/>
+                                        </svg>
+                                        Aplicație Scan
+                                    </a>
+                                </div>
                             </div>
                         </div>
 
