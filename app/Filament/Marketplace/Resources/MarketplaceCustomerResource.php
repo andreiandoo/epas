@@ -197,9 +197,24 @@ class MarketplaceCustomerResource extends Resource
                                         ? '<div class="mb-3"><span class="text-xs uppercase tracking-wide text-gray-500">Oraș determinat</span><div class="text-2xl font-bold text-green-700 dark:text-green-400 mt-0.5">' . e($determined) . '</div></div>'
                                         : '<div class="mb-3"><span class="text-xs uppercase tracking-wide text-gray-500">Oraș determinat</span><div class="text-sm text-amber-700 dark:text-amber-400 mt-0.5 italic">Niciunul peste pragul de 85% — vezi distribuția.</div></div>';
 
+                                    // Defensive translate in case an older
+                                    // payload still has the raw Translatable
+                                    // JSON {"ro":"...","en":"..."}.
+                                    $translate = function ($raw): string {
+                                        $raw = (string) $raw;
+                                        if ($raw !== '' && $raw[0] === '{') {
+                                            $d = json_decode($raw, true);
+                                            if (is_array($d) && !empty($d)) {
+                                                return (string) ($d['ro'] ?? $d['en'] ?? reset($d));
+                                            }
+                                        }
+                                        return $raw ?: '?';
+                                    };
+                                    $determined = $determined ? $translate($determined) : null;
+
                                     $rows = '<div class="space-y-2">';
                                     foreach ($distribution as $entry) {
-                                        $name = $entry['city_name'] ?? '?';
+                                        $name = $translate($entry['city_name'] ?? '?');
                                         $orders = (int) ($entry['orders'] ?? 0);
                                         $pct = (float) ($entry['pct'] ?? 0);
                                         $barWidth = max(2, min(100, $pct));

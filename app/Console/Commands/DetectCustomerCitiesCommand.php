@@ -105,11 +105,18 @@ class DetectCustomerCitiesCommand extends Command
         // Group by customer in-memory. The per-customer list is bounded
         // by the number of distinct cities they bought tickets in —
         // realistic max ~50, typical 1-5. Cheap to process.
+        //
+        // marketplace_cities.name is a Translatable JSON column, so the
+        // raw aggregation returns strings like
+        // '{"en":"Bucharest","ro":"București"}'. Decode here so the
+        // stored payload + UI render the localized form. Prefer ro
+        // (primary locale on Ambilet), fall back to en, then to the
+        // first value, then to the raw string.
         $perCustomer = [];
         foreach ($rows as $r) {
             $perCustomer[(int) $r->customer_id][] = [
                 'city_id' => (int) $r->city_id,
-                'city_name' => (string) $r->city_name,
+                'city_name' => $this->translateName((string) $r->city_name),
                 'orders' => (int) $r->order_count,
             ];
         }
@@ -204,5 +211,25 @@ class DetectCustomerCitiesCommand extends Command
         $this->info("Done. Aggregation {$aggSec}s + write {$writeSec}s = total {$totalSec}s");
 
         return self::SUCCESS;
+    }
+
+    /**
+     * Pull a localized city name out of the Translatable JSON column.
+     * Falls through gracefully when the value isn't JSON (older rows
+     * may carry a plain string).
+     */
+    protected function translateName(string $raw): string
+    {
+        $trimmed = trim($raw);
+        if ($trimmed === '') return '?';
+
+        if ($trimmed[0] === '{') {
+            $decoded = json_decode($trimmed, true);
+            if (is_array($decoded) && !empty($decoded)) {
+                return (string) ($decoded['ro'] ?? $decoded['en'] ?? reset($decoded));
+            }
+        }
+
+        return $trimmed;
     }
 }
