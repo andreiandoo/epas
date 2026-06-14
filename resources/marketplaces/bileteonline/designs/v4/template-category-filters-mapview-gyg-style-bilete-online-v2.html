@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>Escape rooms în Brașov — Filtre + Map view | bilete.online</title>
+  <meta name="description" content="Găsește escape rooms în Brașov cu filtre sus, modal complet de filtre și map view cu listă de activități și hartă cu pinpoints." />
+  <meta name="robots" content="index, follow" />
+  <link rel="canonical" href="https://bilete.online/brasov/escape-rooms" />
+  <meta name="theme-color" content="#1B1714" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700;9..144,900&family=Hanken+Grotesk:wght@400;500;600;700;800&family=Spline+Sans+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: { extend: {
+        colors: {
+          paper:'#F4EFE3','paper-2':'#EBE2CF','paper-3':'#E2D7BF',
+          ink:'#1B1714','ink-soft':'#5A4F41',
+          vermilion:'#E84527','vermilion-d':'#C5371C',
+          forest:'#1E4A3D',ochre:'#DA9A33',mint:'#D7E8D3',rose:'#F2C7B8',
+          map:'#D9E5D0'
+        },
+        fontFamily: {
+          display:['Fraunces','Georgia','serif'],
+          sans:['Hanken Grotesk','system-ui','sans-serif'],
+          mono:['Spline Sans Mono','ui-monospace','monospace']
+        },
+        boxShadow:{ soft:'0 18px 45px -30px rgba(27,23,20,.75)', panel:'0 32px 90px -52px rgba(27,23,20,.9)' }
+      }}
+    }
+  </script>
+
+  <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+  <style>
+    html{scroll-behavior:smooth}
+    body{background:#F4EFE3;color:#1B1714;font-family:'Hanken Grotesk',system-ui,sans-serif;font-feature-settings:"ss01","cv01"}
+    .font-display{font-family:Fraunces,Georgia,serif;letter-spacing:-.018em}
+    .field{width:100%;border:2px solid rgba(27,23,20,.14);background:#F4EFE3;border-radius:1rem;padding:.85rem 1rem;outline:none;transition:.2s}
+    .field:focus{border-color:#E84527;box-shadow:0 0 0 4px rgba(232,69,39,.12)}
+    .range-track{accent-color:#E84527}
+    .map-grid{background:
+      linear-gradient(90deg,rgba(27,23,20,.06) 1px,transparent 1px),
+      linear-gradient(rgba(27,23,20,.06) 1px,transparent 1px),
+      radial-gradient(circle at 20% 20%,rgba(232,69,39,.14),transparent 22%),
+      radial-gradient(circle at 80% 70%,rgba(30,74,61,.16),transparent 28%),
+      #D9E5D0;
+      background-size:48px 48px,48px 48px,auto,auto,auto;
+    }
+    [x-cloak]{display:none!important}
+    @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{transition:none!important;animation:none!important}}
+  </style>
+</head>
+
+<body x-data="categoryFiltersGYG()" x-init="init()" class="antialiased selection:bg-vermilion selection:text-paper">
+  <header class="sticky top-0 z-50 border-b border-ink/10 bg-paper/95 backdrop-blur-xl">
+    <nav class="mx-auto flex h-[72px] max-w-[1500px] items-center gap-3 px-4 sm:px-6">
+      <a href="/" class="flex shrink-0 items-center gap-2.5">
+        <span class="grid h-10 w-10 place-items-center rounded-xl bg-vermilion text-paper rotate-[-4deg]">
+          <svg viewBox="0 0 24 24" class="h-5.5 w-5.5" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2 2 2 0 0 0 0 4 2 2 0 0 1-2 2H5a2 2 0 0 1-2-2 2 2 0 0 0 0-4Z"/><path d="M9 7v10" stroke-dasharray="2 2"/></svg>
+        </span>
+        <span class="font-display text-[1.55rem] font-bold tracking-tight">bilete<span class="text-vermilion">.</span>online</span>
+      </a>
+
+      <button @click="openTopFilter('search')" class="mx-auto hidden h-12 w-full max-w-[620px] items-center gap-3 rounded-full border-2 border-ink/15 bg-paper px-4 text-left transition hover:border-ink/35 md:flex">
+        <svg viewBox="0 0 24 24" class="h-5 w-5 shrink-0 text-ink-soft" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <span class="text-sm font-bold text-ink-soft">Caută activități în categoria curentă</span>
+      </button>
+
+      <div class="ml-auto flex items-center gap-2">
+        <a href="/cos" class="rounded-full border-2 border-ink px-4 py-2.5 text-sm font-bold transition hover:bg-ink hover:text-paper">Coș</a>
+        <a href="/login" class="rounded-full bg-ink px-4 py-2.5 text-sm font-bold text-paper transition hover:bg-vermilion">Log in</a>
+      </div>
+    </nav>
+  </header>
+
+  <main>
+    <!-- Category hero -->
+    <section class="border-b border-ink/10 bg-paper">
+      <div class="mx-auto max-w-[1500px] px-4 py-8 sm:px-6 lg:py-12">
+        <nav class="flex flex-wrap items-center gap-2 text-sm font-bold text-ink-soft" aria-label="Breadcrumb">
+          <a href="/" class="hover:text-vermilion">Acasă</a><span>/</span>
+          <a href="/brasov" class="hover:text-vermilion">Brașov</a><span>/</span>
+          <span class="text-ink">Escape rooms</span>
+        </nav>
+
+        <div class="mt-6 grid gap-6 lg:grid-cols-[1fr_360px] lg:items-end">
+          <div>
+            <p class="font-mono text-xs tracking-[.18em] text-vermilion">ACTIVITĂȚI ÎN BRAȘOV</p>
+            <h1 class="mt-3 font-display text-6xl font-bold leading-[.86] sm:text-7xl lg:text-8xl">Escape rooms în Brașov</h1>
+            <p class="mt-5 max-w-3xl text-xl leading-relaxed text-ink-soft">Compară activități după loc, dată, oră, preț, durată, rating, limbă, interese și caracteristici. Poți vedea rezultatele ca listă sau direct pe hartă.</p>
+          </div>
+
+          <div class="rounded-[2rem] border-2 border-ink bg-mint p-5 shadow-soft">
+            <p class="font-mono text-xs tracking-[.18em] text-forest">REZULTATE</p>
+            <p class="mt-2 font-display text-5xl font-bold leading-none"><span x-text="filteredActivities().length"></span> activități</p>
+            <p class="mt-2 text-ink-soft">Disponibilitate, prețuri și puncte bonus actualizate în funcție de filtre.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- GYG-style top filters -->
+    <section class="sticky top-[72px] z-40 border-b border-ink/10 bg-paper/95 backdrop-blur-xl">
+      <div class="mx-auto max-w-[1500px] px-4 py-3 sm:px-6">
+        <div class="flex items-center gap-2 overflow-x-auto pb-1">
+          <!-- Map view before Filters -->
+          <button @click="mapOpen=true" class="shrink-0 rounded-full border-2 border-ink bg-ink px-4 py-2.5 text-sm font-bold text-paper transition hover:bg-vermilion">
+            Map view
+          </button>
+
+          <!-- Main Filters button -->
+          <button @click="filtersModal=true" class="shrink-0 rounded-full border-2 border-ink bg-paper px-4 py-2.5 text-sm font-bold transition hover:bg-ink hover:text-paper">
+            Filters <span x-show="activeFilterCount()" class="ml-1 rounded-full bg-vermilion px-2 py-0.5 text-xs text-paper" x-text="activeFilterCount()"></span>
+          </button>
+
+          <template x-for="filter in topFilterButtons" :key="filter.key">
+            <button @click="openTopFilter(filter.key)" class="shrink-0 rounded-full border-2 border-ink/10 bg-paper-2 px-4 py-2.5 text-sm font-bold transition hover:border-ink">
+              <span x-text="filter.label"></span>
+              <span x-show="topFilterActive(filter.key)" class="ml-1 text-vermilion">•</span>
+            </button>
+          </template>
+
+          <button @click="resetFilters()" x-show="activeFilterCount()" class="shrink-0 rounded-full px-4 py-2.5 text-sm font-bold text-vermilion hover:bg-rose">
+            Clear all
+          </button>
+        </div>
+
+        <!-- Compact top filter popover -->
+        <div x-show="topFilterOpen" x-cloak x-transition @click.outside="topFilterOpen=null" class="absolute left-4 right-4 top-[calc(100%+8px)] mx-auto max-w-[1500px] rounded-[2rem] border border-ink/10 bg-paper p-5 shadow-panel sm:left-6 sm:right-6 lg:w-[720px] lg:mx-0">
+          <div class="flex items-start justify-between gap-4">
+            <div>
+              <p class="font-mono text-xs tracking-[.18em] text-ink-soft" x-text="topFilterMeta().kicker"></p>
+              <h2 class="font-display text-4xl font-bold leading-none" x-text="topFilterMeta().title"></h2>
+            </div>
+            <button @click="topFilterOpen=null" class="grid h-10 w-10 place-items-center rounded-full bg-ink text-xl font-bold text-paper">×</button>
+          </div>
+
+          <div class="mt-5">
+            <template x-if="topFilterOpen==='search'">
+              <div>
+                <input x-ref="searchInput" x-model="filters.search" class="field" placeholder="Caută după nume, locație, temă..." />
+                <div class="mt-3 flex flex-wrap gap-2">
+                  <template x-for="term in ['horror','detective','familie','team building','beginner']" :key="term">
+                    <button @click="filters.search=term" class="rounded-full bg-paper-2 px-4 py-2 text-sm font-bold hover:bg-ink hover:text-paper" x-text="term"></button>
+                  </template>
+                </div>
+              </div>
+            </template>
+
+            <template x-if="topFilterOpen==='dates'">
+              <div class="grid gap-2 sm:grid-cols-4">
+                <template x-for="preset in datePresets" :key="preset.value">
+                  <button @click="filters.datePreset=preset.value" :class="filters.datePreset===preset.value ? 'bg-ink text-paper' : 'bg-paper-2'" class="rounded-2xl px-4 py-3 text-left font-bold hover:bg-ink hover:text-paper">
+                    <span class="block" x-text="preset.label"></span><span class="block text-xs opacity-70" x-text="preset.hint"></span>
+                  </button>
+                </template>
+              </div>
+            </template>
+
+            <template x-if="topFilterOpen==='start'">
+              <checkbox-grid :options="startTimeOptions" model="startTimes"></checkbox-grid>
+            </template>
+
+            <template x-if="topFilterOpen==='duration'">
+              <checkbox-grid :options="durationOptions" model="durations"></checkbox-grid>
+            </template>
+
+            <template x-if="topFilterOpen==='price'">
+              <div>
+                <div class="flex items-center justify-between"><span class="font-bold">Preț maxim</span><strong x-text="formatMoney(filters.maxPrice)"></strong></div>
+                <input type="range" min="50" max="250" step="10" x-model.number="filters.maxPrice" class="range-track mt-4 w-full">
+                <div class="mt-2 flex justify-between text-xs font-bold text-ink-soft"><span>50 lei</span><span>250 lei</span></div>
+              </div>
+            </template>
+
+            <template x-if="topFilterOpen==='features'">
+              <checkbox-grid :options="featureOptions" model="features"></checkbox-grid>
+            </template>
+
+            <template x-if="topFilterOpen==='languages'">
+              <checkbox-grid :options="languageOptions" model="languages"></checkbox-grid>
+            </template>
+          </div>
+
+          <div class="mt-5 flex items-center justify-between gap-3 border-t border-ink/10 pt-4">
+            <button @click="clearTopFilter()" class="rounded-full border-2 border-ink px-5 py-3 font-bold hover:bg-ink hover:text-paper">Curăță</button>
+            <button @click="topFilterOpen=null" class="rounded-full bg-vermilion px-5 py-3 font-bold text-paper hover:bg-vermilion-d">Aplică</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Results area -->
+    <section class="mx-auto max-w-[1500px] px-4 py-8 sm:px-6 lg:py-10">
+      <div class="mb-5 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <p class="font-display text-5xl font-bold leading-none"><span x-text="filteredActivities().length"></span> rezultate</p>
+          <p class="mt-2 text-ink-soft">Activitățile sunt ordonate după relevanță, rating, disponibilitate și performanță.</p>
+        </div>
+        <label class="flex max-w-sm items-center gap-2">
+          <span class="text-sm font-bold text-ink-soft">Sortare</span>
+          <select class="field" x-model="sortBy">
+            <option value="recommended">Recomandate</option>
+            <option value="rating">Rating</option>
+            <option value="priceAsc">Preț crescător</option>
+            <option value="priceDesc">Preț descrescător</option>
+            <option value="duration">Durată scurtă</option>
+          </select>
+        </label>
+      </div>
+
+      <!-- Active chips -->
+      <div class="mb-6 flex flex-wrap gap-2" x-show="activeChips().length">
+        <template x-for="chip in activeChips()" :key="chip.key">
+          <button @click="removeChip(chip)" class="rounded-full bg-ink px-4 py-2 text-sm font-bold text-paper">
+            <span x-text="chip.label"></span> ×
+          </button>
+        </template>
+      </div>
+
+      <div class="space-y-5">
+        <template x-for="activity in sortedActivities()" :key="activity.id">
+          <article class="group overflow-hidden rounded-[2rem] border-2 border-ink bg-paper shadow-soft transition hover:-translate-y-0.5 hover:shadow-panel">
+            <div class="grid md:grid-cols-[290px_1fr]">
+              <a :href="activity.href" class="relative block min-h-[250px] overflow-hidden bg-ink">
+                <img :src="activity.image" :alt="activity.title" class="h-full w-full object-cover transition duration-500 group-hover:scale-105">
+                <div class="absolute left-4 top-4 flex flex-wrap gap-2">
+                  <template x-for="badge in activity.badges" :key="badge">
+                    <span class="rounded-full bg-paper px-3 py-1 text-xs font-bold text-ink" x-text="badge"></span>
+                  </template>
+                </div>
+                <button @click.prevent="activity.favorite=!activity.favorite" class="absolute right-4 top-4 grid h-10 w-10 place-items-center rounded-full bg-paper text-2xl text-ink">
+                  <span x-text="activity.favorite ? '♥' : '♡'"></span>
+                </button>
+              </a>
+
+              <div class="grid gap-4 p-5 lg:grid-cols-[1fr_220px]">
+                <div>
+                  <div class="flex flex-wrap gap-2">
+                    <span class="rounded-full bg-paper-2 px-3 py-1 text-xs font-bold text-ink-soft" x-text="activity.category"></span>
+                    <span class="rounded-full bg-mint px-3 py-1 text-xs font-bold text-forest" x-show="activity.freeCancellation">Anulare gratuită</span>
+                  </div>
+                  <a :href="activity.href" class="mt-3 block"><h2 class="font-display text-4xl font-bold leading-none group-hover:text-vermilion" x-text="activity.title"></h2></a>
+                  <p class="mt-3 text-ink-soft" x-text="activity.description"></p>
+                  <div class="mt-4 flex flex-wrap items-center gap-3 text-sm font-bold">
+                    <span class="text-ochre">★★★★★</span>
+                    <span x-text="activity.rating"></span>
+                    <span class="text-ink-soft" x-text="'(' + activity.reviews.toLocaleString('ro-RO') + ')'"></span>
+                    <span class="text-ink-soft">·</span>
+                    <span x-text="activity.place"></span>
+                    <span class="text-ink-soft">·</span>
+                    <span x-text="activity.durationLabel"></span>
+                  </div>
+                  <div class="mt-4 flex flex-wrap gap-2">
+                    <template x-for="feature in activity.features" :key="feature">
+                      <span class="rounded-full bg-paper-2 px-3 py-1 text-xs font-bold text-ink-soft" x-text="featureLabel(feature)"></span>
+                    </template>
+                  </div>
+                </div>
+
+                <aside class="flex flex-col justify-between rounded-3xl bg-paper-2 p-4">
+                  <div>
+                    <p class="text-sm font-bold text-ink-soft">de la</p>
+                    <p class="font-display text-4xl font-bold leading-none" x-text="formatMoney(activity.price)"></p>
+                    <p class="mt-1 text-xs text-ink-soft">per persoană</p>
+                    <p class="mt-3 rounded-2xl bg-mint px-3 py-2 text-sm font-bold text-forest" x-text="'+' + Math.floor(activity.price/5) + ' puncte bonus'"></p>
+                  </div>
+                  <a :href="activity.href" class="mt-4 rounded-full bg-vermilion px-5 py-3 text-center font-bold text-paper transition hover:bg-vermilion-d">Vezi bilete</a>
+                </aside>
+              </div>
+            </div>
+          </article>
+        </template>
+
+        <div x-show="filteredActivities().length === 0" class="rounded-[2rem] border-2 border-ink bg-paper p-8 text-center">
+          <p class="font-display text-5xl font-bold leading-none">Nu am găsit activități.</p>
+          <p class="mt-3 text-ink-soft">Schimbă filtrele sau resetează căutarea.</p>
+          <button @click="resetFilters()" class="mt-5 rounded-full bg-vermilion px-6 py-4 font-bold text-paper">Resetează filtrele</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Main Filters Modal -->
+  <div x-show="filtersModal" x-cloak class="fixed inset-0 z-[90] bg-ink/70 p-3 backdrop-blur-sm sm:p-5" role="dialog" aria-modal="true" aria-label="Filtre activități">
+    <div @click.outside="filtersModal=false" class="mx-auto flex max-h-[94vh] w-full max-w-5xl flex-col overflow-hidden rounded-[2rem] bg-paper shadow-panel">
+      <div class="flex items-start justify-between gap-4 border-b border-ink/10 p-5 sm:p-6">
+        <div>
+          <p class="font-mono text-xs tracking-[.18em] text-ink-soft">FILTERS</p>
+          <h2 class="font-display text-5xl font-bold leading-none">Filtrează activitățile</h2>
+          <p class="mt-2 text-ink-soft">Start time, Places, Interests, Categories, Price, Languages, Duration, Features și Star rating.</p>
+        </div>
+        <button @click="filtersModal=false" class="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-ink text-2xl font-bold text-paper">×</button>
+      </div>
+
+      <div class="grid min-h-0 flex-1 overflow-auto lg:grid-cols-[280px_1fr]">
+        <aside class="border-b border-ink/10 bg-paper-2 p-4 lg:border-b-0 lg:border-r">
+          <template x-for="tab in modalTabs" :key="tab.key">
+            <button @click="modalTab=tab.key" :class="modalTab===tab.key ? 'bg-ink text-paper' : 'hover:bg-paper'" class="mt-1 flex w-full items-center justify-between rounded-2xl px-4 py-3 text-left font-bold transition">
+              <span x-text="tab.label"></span>
+              <span x-show="modalTabHasValue(tab.key)" class="rounded-full bg-vermilion px-2 py-0.5 text-xs text-paper">•</span>
+            </button>
+          </template>
+        </aside>
+
+        <section class="p-5 sm:p-6">
+          <template x-if="modalTab==='start'">
+            <filter-block title="Start time" description="Alege intervalul orar potrivit."></filter-block>
+          </template>
+
+          <div x-show="modalTab==='start'" class="grid gap-2 sm:grid-cols-3">
+            <template x-for="option in startTimeOptions" :key="option.value">
+              <label class="flex cursor-pointer items-center gap-3 rounded-2xl bg-paper-2 px-4 py-3 font-bold hover:bg-paper-3">
+                <input type="checkbox" :value="option.value" x-model="filters.startTimes" class="h-5 w-5 accent-vermilion"><span x-text="option.label"></span>
+              </label>
+            </template>
+          </div>
+
+          <div x-show="modalTab==='places'">
+            <h3 class="font-display text-5xl font-bold leading-none">Places</h3>
+            <p class="mt-2 text-ink-soft">Filtrează după zona sau locația activității.</p>
+            <div class="mt-5 grid gap-2 sm:grid-cols-2">
+              <template x-for="place in placeOptions" :key="place.value">
+                <label class="flex cursor-pointer items-center gap-3 rounded-2xl bg-paper-2 px-4 py-3 font-bold hover:bg-paper-3">
+                  <input type="checkbox" :value="place.value" x-model="filters.places" class="h-5 w-5 accent-vermilion"><span x-text="place.label"></span>
+                </label>
+              </template>
+            </div>
+          </div>
+
+          <div x-show="modalTab==='interests'">
+            <h3 class="font-display text-5xl font-bold leading-none">Interests</h3>
+            <p class="mt-2 text-ink-soft">Alege atmosfera sau motivul principal al activității.</p>
+            <div class="mt-5 grid gap-2 sm:grid-cols-2">
+              <template x-for="interest in interestOptions" :key="interest.value">
+                <label class="flex cursor-pointer items-center gap-3 rounded-2xl bg-paper-2 px-4 py-3 font-bold hover:bg-paper-3">
+                  <input type="checkbox" :value="interest.value" x-model="filters.interests" class="h-5 w-5 accent-vermilion"><span x-text="interest.label"></span>
+                </label>
+              </template>
+            </div>
+          </div>
+
+          <div x-show="modalTab==='categories'">
+            <h3 class="font-display text-5xl font-bold leading-none">Categories</h3>
+            <p class="mt-2 text-ink-soft">Alege subcategoria de activitate.</p>
+            <div class="mt-5 grid gap-2 sm:grid-cols-2">
+              <template x-for="cat in categoryOptions" :key="cat.value">
+                <label class="flex cursor-pointer items-center gap-3 rounded-2xl bg-paper-2 px-4 py-3 font-bold hover:bg-paper-3">
+                  <input type="checkbox" :value="cat.value" x-model="filters.categories" class="h-5 w-5 accent-vermilion"><span x-text="cat.label"></span>
+                </label>
+              </template>
+            </div>
+          </div>
+
+          <div x-show="modalTab==='price'">
+            <h3 class="font-display text-5xl font-bold leading-none">Price</h3>
+            <p class="mt-2 text-ink-soft">Setează bugetul maxim per persoană.</p>
+            <div class="mt-8 rounded-3xl bg-paper-2 p-5">
+              <div class="flex items-center justify-between"><span class="font-bold">Preț maxim</span><strong x-text="formatMoney(filters.maxPrice)"></strong></div>
+              <input type="range" min="50" max="250" step="10" x-model.number="filters.maxPrice" class="range-track mt-5 w-full">
+              <div class="mt-2 flex justify-between text-xs font-bold text-ink-soft"><span>50 lei</span><span>250 lei</span></div>
+            </div>
+          </div>
+
+          <div x-show="modalTab==='languages'">
+            <h3 class="font-display text-5xl font-bold leading-none">Languages</h3>
+            <p class="mt-2 text-ink-soft">Alege limba în care este disponibilă activitatea.</p>
+            <div class="mt-5 grid gap-2 sm:grid-cols-3">
+              <template x-for="language in languageOptions" :key="language.value">
+                <label class="flex cursor-pointer items-center gap-3 rounded-2xl bg-paper-2 px-4 py-3 font-bold hover:bg-paper-3">
+                  <input type="checkbox" :value="language.value" x-model="filters.languages" class="h-5 w-5 accent-vermilion"><span x-text="language.label"></span>
+                </label>
+              </template>
+            </div>
+          </div>
+
+          <div x-show="modalTab==='duration'">
+            <h3 class="font-display text-5xl font-bold leading-none">Duration</h3>
+            <p class="mt-2 text-ink-soft">Alege cât timp vrei să dureze activitatea.</p>
+            <div class="mt-5 grid gap-2 sm:grid-cols-3">
+              <template x-for="option in durationOptions" :key="option.value">
+                <label class="flex cursor-pointer items-center gap-3 rounded-2xl bg-paper-2 px-4 py-3 font-bold hover:bg-paper-3">
+                  <input type="checkbox" :value="option.value" x-model="filters.durations" class="h-5 w-5 accent-vermilion"><span x-text="option.label"></span>
+                </label>
+              </template>
+            </div>
+          </div>
+
+          <div x-show="modalTab==='features'">
+            <h3 class="font-display text-5xl font-bold leading-none">Features</h3>
+            <p class="mt-2 text-ink-soft">Alege caracteristicile importante pentru tine.</p>
+            <div class="mt-5 grid gap-2 sm:grid-cols-2">
+              <template x-for="feature in featureOptions" :key="feature.value">
+                <label class="flex cursor-pointer items-center gap-3 rounded-2xl bg-paper-2 px-4 py-3 font-bold hover:bg-paper-3">
+                  <input type="checkbox" :value="feature.value" x-model="filters.features" class="h-5 w-5 accent-vermilion"><span x-text="feature.label"></span>
+                </label>
+              </template>
+            </div>
+          </div>
+
+          <div x-show="modalTab==='rating'">
+            <h3 class="font-display text-5xl font-bold leading-none">Star rating</h3>
+            <p class="mt-2 text-ink-soft">Alege ratingul minim.</p>
+            <div class="mt-5 grid gap-2 sm:grid-cols-4">
+              <template x-for="rating in ratingOptions" :key="rating.value">
+                <button @click="filters.minRating=rating.value" :class="filters.minRating===rating.value ? 'bg-ink text-paper' : 'bg-paper-2'" class="rounded-2xl px-4 py-4 text-left font-bold hover:bg-ink hover:text-paper">
+                  <span class="block text-ochre">★★★★★</span>
+                  <span x-text="rating.label"></span>
+                </button>
+              </template>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <div class="flex items-center justify-between gap-3 border-t border-ink/10 p-5 sm:p-6">
+        <button @click="resetFilters()" class="rounded-full border-2 border-ink px-5 py-3 font-bold hover:bg-ink hover:text-paper">Clear all</button>
+        <button @click="filtersModal=false" class="rounded-full bg-vermilion px-6 py-3 font-bold text-paper hover:bg-vermilion-d">
+          Show <span x-text="filteredActivities().length"></span> results
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Map view modal: 1/3 list + 2/3 map -->
+  <div x-show="mapOpen" x-cloak class="fixed inset-0 z-[95] bg-ink/80 p-2 backdrop-blur-sm sm:p-4" role="dialog" aria-modal="true" aria-label="Map view">
+    <div @click.outside="mapOpen=false" class="mx-auto flex h-[96vh] max-w-[1700px] overflow-hidden rounded-[2rem] bg-paper shadow-panel">
+      <!-- 1/3 list -->
+      <aside class="flex w-full flex-col border-r border-ink/10 lg:w-1/3">
+        <div class="border-b border-ink/10 p-4">
+          <div class="flex items-start justify-between gap-4">
+            <div>
+              <p class="font-mono text-xs tracking-[.18em] text-ink-soft">MAP VIEW</p>
+              <h2 class="font-display text-4xl font-bold leading-none">Escape rooms în Brașov</h2>
+              <p class="mt-1 text-sm text-ink-soft"><span x-text="filteredActivities().length"></span> rezultate pe hartă</p>
+            </div>
+            <button @click="mapOpen=false" class="grid h-10 w-10 place-items-center rounded-full bg-ink text-xl font-bold text-paper">×</button>
+          </div>
+
+          <!-- filters above list -->
+          <div class="mt-4 flex gap-2 overflow-x-auto pb-1">
+            <button @click="filtersModal=true" class="shrink-0 rounded-full bg-ink px-4 py-2 text-sm font-bold text-paper">Filters</button>
+            <button @click="openTopFilter('dates')" class="shrink-0 rounded-full bg-paper-2 px-4 py-2 text-sm font-bold">Dates</button>
+            <button @click="openTopFilter('price')" class="shrink-0 rounded-full bg-paper-2 px-4 py-2 text-sm font-bold">Price</button>
+            <button @click="openTopFilter('features')" class="shrink-0 rounded-full bg-paper-2 px-4 py-2 text-sm font-bold">Features</button>
+          </div>
+        </div>
+
+        <div class="flex-1 overflow-auto p-3">
+          <template x-for="activity in sortedActivities()" :key="activity.id">
+            <button @mouseenter="hoveredPin=activity.id" @mouseleave="hoveredPin=null" @click="selectedPin=activity.id" :class="selectedPin===activity.id ? 'border-vermilion bg-rose' : 'border-ink/10 bg-paper'" class="mb-3 w-full rounded-3xl border-2 p-3 text-left transition hover:border-vermilion">
+              <div class="grid grid-cols-[92px_1fr] gap-3">
+                <img :src="activity.image" :alt="activity.title" class="h-24 w-full rounded-2xl object-cover">
+                <div class="min-w-0">
+                  <p class="line-clamp-2 font-display text-2xl font-bold leading-none" x-text="activity.title"></p>
+                  <p class="mt-1 text-xs text-ink-soft" x-text="activity.place + ' · ' + activity.durationLabel"></p>
+                  <p class="mt-2 text-sm font-bold"><span class="text-ochre">★★★★★</span> <span x-text="activity.rating"></span></p>
+                  <p class="mt-1 font-bold" x-text="'de la ' + formatMoney(activity.price)"></p>
+                </div>
+              </div>
+            </button>
+          </template>
+        </div>
+      </aside>
+
+      <!-- 2/3 map -->
+      <section class="relative hidden flex-1 lg:block">
+        <div class="map-grid absolute inset-0"></div>
+
+        <!-- fake map controls -->
+        <div class="absolute left-5 top-5 z-10 rounded-2xl bg-paper p-2 shadow-soft">
+          <button class="grid h-10 w-10 place-items-center rounded-xl font-bold hover:bg-paper-2">+</button>
+          <button class="grid h-10 w-10 place-items-center rounded-xl font-bold hover:bg-paper-2">−</button>
+        </div>
+
+        <div class="absolute right-5 top-5 z-10 rounded-full bg-paper px-4 py-2 text-sm font-bold shadow-soft">
+          Brașov · map preview
+        </div>
+
+        <template x-for="activity in sortedActivities()" :key="'pin-'+activity.id">
+          <button
+            @mouseenter="hoveredPin=activity.id"
+            @mouseleave="hoveredPin=null"
+            @click="selectedPin=activity.id"
+            class="absolute z-20 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-paper px-3 py-2 text-sm font-bold text-paper shadow-panel transition hover:scale-110"
+            :class="selectedPin===activity.id || hoveredPin===activity.id ? 'bg-vermilion' : 'bg-ink'"
+            :style="'left:'+activity.map.x+'%; top:'+activity.map.y+'%;'"
+          >
+            <span x-text="formatMoney(activity.price)"></span>
+          </button>
+        </template>
+
+        <!-- selected map card -->
+        <div x-show="selectedActivity()" x-transition class="absolute bottom-5 left-5 z-30 w-[420px] overflow-hidden rounded-[2rem] bg-paper shadow-panel">
+          <template x-if="selectedActivity()">
+            <div>
+              <img :src="selectedActivity().image" :alt="selectedActivity().title" class="h-48 w-full object-cover">
+              <div class="p-5">
+                <div class="flex items-start justify-between gap-4">
+                  <div>
+                    <p class="font-display text-3xl font-bold leading-none" x-text="selectedActivity().title"></p>
+                    <p class="mt-2 text-sm text-ink-soft" x-text="selectedActivity().place + ' · ' + selectedActivity().durationLabel"></p>
+                  </div>
+                  <button @click="selectedPin=null" class="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-ink text-paper">×</button>
+                </div>
+                <div class="mt-3 flex items-center justify-between">
+                  <p class="font-bold"><span class="text-ochre">★★★★★</span> <span x-text="selectedActivity().rating"></span></p>
+                  <p class="font-display text-3xl font-bold" x-text="formatMoney(selectedActivity().price)"></p>
+                </div>
+                <a :href="selectedActivity().href" class="mt-4 block rounded-full bg-vermilion px-5 py-3 text-center font-bold text-paper">Vezi bilete</a>
+              </div>
+            </div>
+          </template>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('alpine:init', () => {
+      Alpine.data('checkboxGrid', (options, model) => ({}));
+    });
+
+    function categoryFiltersGYG(){
+      return {
+        topFilterOpen:null,
+        filtersModal:false,
+        mapOpen:false,
+        modalTab:'start',
+        sortBy:'recommended',
+        hoveredPin:null,
+        selectedPin:null,
+        filters:{
+          search:'',
+          datePreset:'any',
+          startTimes:[],
+          places:[],
+          interests:[],
+          categories:[],
+          maxPrice:250,
+          languages:[],
+          durations:[],
+          features:[],
+          minRating:0
+        },
+        topFilterButtons:[
+          {key:'search',label:'Search'},
+          {key:'dates',label:'Dates'},
+          {key:'start',label:'Start time'},
+          {key:'duration',label:'Duration'},
+          {key:'price',label:'Price'},
+          {key:'features',label:'Features'},
+          {key:'languages',label:'Languages'}
+        ],
+        modalTabs:[
+          {key:'start',label:'Start time'},
+          {key:'places',label:'Places'},
+          {key:'interests',label:'Interests'},
+          {key:'categories',label:'Categories'},
+          {key:'price',label:'Price'},
+          {key:'languages',label:'Languages'},
+          {key:'duration',label:'Duration'},
+          {key:'features',label:'Features'},
+          {key:'rating',label:'Star rating'}
+        ],
+        datePresets:[
+          {value:'any', label:'Oricând', hint:'toate datele'},
+          {value:'today', label:'Azi', hint:'disponibil acum'},
+          {value:'tomorrow', label:'Mâine', hint:'următoarea zi'},
+          {value:'weekend', label:'Weekend', hint:'sâmbătă / duminică'}
+        ],
+        startTimeOptions:[
+          {value:'morning', label:'Dimineața'},
+          {value:'afternoon', label:'După-amiaza'},
+          {value:'evening', label:'Seara'}
+        ],
+        placeOptions:[
+          {value:'old-town', label:'Centrul Vechi'},
+          {value:'tractorul', label:'Tractorul'},
+          {value:'civic', label:'Centrul Civic'},
+          {value:'near-station', label:'Aproape de gară'},
+          {value:'poiana', label:'Poiana Brașov'},
+          {value:'nearby', label:'Lângă Brașov'}
+        ],
+        interestOptions:[
+          {value:'mystery', label:'Mister'},
+          {value:'horror', label:'Horror'},
+          {value:'family', label:'Familie'},
+          {value:'team', label:'Team building'},
+          {value:'history', label:'Istorie'},
+          {value:'adventure', label:'Aventură'}
+        ],
+        categoryOptions:[
+          {value:'escape-horror', label:'Escape horror'},
+          {value:'escape-detective', label:'Detective'},
+          {value:'escape-fantasy', label:'Fantasy / Sci-fi'},
+          {value:'escape-family', label:'Pentru familie'},
+          {value:'escape-teen', label:'Pentru adolescenți'},
+          {value:'urban-game', label:'Urban game'}
+        ],
+        languageOptions:[
+          {value:'ro', label:'Română'},
+          {value:'en', label:'Engleză'},
+          {value:'de', label:'Germană'}
+        ],
+        durationOptions:[
+          {value:'short', label:'Sub 60 min'},
+          {value:'medium', label:'60–90 min'},
+          {value:'long', label:'90+ min'}
+        ],
+        featureOptions:[
+          {value:'freeCancellation', label:'Anulare gratuită'},
+          {value:'private', label:'Privat / grupul tău'},
+          {value:'family', label:'Potrivit pentru familie'},
+          {value:'teen', label:'Adolescenți'},
+          {value:'beginner', label:'Începători'},
+          {value:'teamBuilding', label:'Team building'},
+          {value:'wheelchair', label:'Accesibil'}
+        ],
+        ratingOptions:[
+          {value:0,label:'Orice rating'},
+          {value:4,label:'4.0+'},
+          {value:4.5,label:'4.5+'},
+          {value:4.8,label:'4.8+'}
+        ],
+        activities:[
+          {id:1,title:'Camera 13: Escape Room Horror în Brașov',href:'/activitati/camera-13-escape-room-brasov',category:'Horror escape room',categories:['escape-horror'],interests:['horror','mystery'],place:'Centrul Vechi',placeValue:'old-town',description:'O experiență intensă, cinematică, pentru grupuri care vor mister, suspans și puzzle-uri cu ritm rapid.',rating:4.8,reviews:1240,duration:'medium',durationLabel:'75 min',price:95,startTime:'evening',dateAvailability:['today','tomorrow','weekend'],languages:['ro','en'],features:['freeCancellation','private','teamBuilding'],badges:['Top rated','Booked today'],image:'https://images.unsplash.com/photo-1517586979036-b7d1e86b3345?auto=format&fit=crop&w=800&q=80',freeCancellation:true,favorite:false,rank:99,map:{x:44,y:48}},
+          {id:2,title:'Detectiv în Centrul Vechi: mister urban',href:'/activitati/detectiv-centrul-vechi-brasov',category:'Detective game',categories:['escape-detective','urban-game'],interests:['mystery','history'],place:'Centrul Vechi',placeValue:'old-town',description:'Joc de investigație cu indicii, hartă și provocări, potrivit pentru prieteni, turiști și familii cu adolescenți.',rating:4.7,reviews:830,duration:'long',durationLabel:'100 min',price:80,startTime:'afternoon',dateAvailability:['tomorrow','weekend'],languages:['ro','en','de'],features:['family','teen','beginner'],badges:['Family friendly'],image:'https://images.unsplash.com/photo-1531058020387-3be344556be6?auto=format&fit=crop&w=800&q=80',freeCancellation:false,favorite:false,rank:92,map:{x:50,y:54}},
+          {id:3,title:'Laboratorul Secret: Escape Room Sci-Fi',href:'/activitati/laboratorul-secret-sci-fi-brasov',category:'Fantasy / Sci-Fi',categories:['escape-fantasy'],interests:['adventure'],place:'Centrul Civic',placeValue:'civic',description:'Decor futurist, puzzle-uri logice și misiune contra timp. Bun pentru grupuri mixte și începători.',rating:4.6,reviews:512,duration:'medium',durationLabel:'60 min',price:70,startTime:'morning',dateAvailability:['today','weekend'],languages:['ro'],features:['freeCancellation','beginner','teen'],badges:['Best value'],image:'https://images.unsplash.com/photo-1518709268805-4e9042af2176?auto=format&fit=crop&w=800&q=80',freeCancellation:true,favorite:false,rank:88,map:{x:56,y:42}},
+          {id:4,title:'Escape Room pentru Team Building',href:'/activitati/escape-room-team-building-brasov',category:'Team building',categories:['escape-detective'],interests:['team'],place:'Tractorul',placeValue:'tractorul',description:'Format pentru companii, cu briefing, joc și mini-debrief despre colaborare, comunicare și strategie.',rating:4.9,reviews:210,duration:'long',durationLabel:'120 min',price:150,startTime:'afternoon',dateAvailability:['weekend'],languages:['ro','en'],features:['private','teamBuilding','freeCancellation'],badges:['Private group'],image:'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=800&q=80',freeCancellation:true,favorite:false,rank:95,map:{x:64,y:36}},
+          {id:5,title:'Camera Piraților: Escape Room pentru Familie',href:'/activitati/camera-piratilor-familie-brasov',category:'Family escape room',categories:['escape-family','escape-teen'],interests:['family','adventure'],place:'Aproape de gară',placeValue:'near-station',description:'Aventură colorată, dificultate moderată și puzzle-uri potrivite pentru copii mai mari și părinți.',rating:4.5,reviews:390,duration:'short',durationLabel:'50 min',price:60,startTime:'morning',dateAvailability:['today','tomorrow','weekend'],languages:['ro'],features:['family','teen','beginner'],badges:['For families'],image:'https://images.unsplash.com/photo-1528543606781-2f6e6857f318?auto=format&fit=crop&w=800&q=80',freeCancellation:false,favorite:false,rank:83,map:{x:38,y:62}},
+          {id:6,title:'Camera Victoriană: Enigmă clasică',href:'/activitati/camera-victoriana-enigma-brasov',category:'Classic escape room',categories:['escape-detective'],interests:['mystery','history'],place:'Poiana Brașov',placeValue:'poiana',description:'Atmosferă elegantă, puzzle-uri old-school și poveste cu detectivi. Potrivită pentru prima experiență.',rating:4.4,reviews:680,duration:'medium',durationLabel:'75 min',price:85,startTime:'evening',dateAvailability:['tomorrow'],languages:['ro','en'],features:['beginner','freeCancellation'],badges:['Classic'],image:'https://images.unsplash.com/photo-1518005020951-eccb494ad742?auto=format&fit=crop&w=800&q=80',freeCancellation:true,favorite:false,rank:80,map:{x:48,y:72}}
+        ],
+        init(){},
+        openTopFilter(key){
+          this.topFilterOpen = this.topFilterOpen === key ? null : key;
+          if(key === 'search') this.$nextTick(()=>this.$refs.searchInput && this.$refs.searchInput.focus());
+        },
+        topFilterMeta(){
+          const map = {
+            search:{kicker:'SEARCH',title:'Caută în categorie'},
+            dates:{kicker:'DATES',title:'Alege perioada'},
+            start:{kicker:'START TIME',title:'Ora de începere'},
+            duration:{kicker:'DURATION',title:'Durata activității'},
+            price:{kicker:'PRICE',title:'Bugetul tău'},
+            features:{kicker:'FEATURES',title:'Caracteristici'},
+            languages:{kicker:'LANGUAGES',title:'Limba activității'}
+          };
+          return map[this.topFilterOpen] || {kicker:'FILTER',title:'Filtru'};
+        },
+        topFilterActive(key){
+          if(key==='search') return !!this.filters.search;
+          if(key==='dates') return this.filters.datePreset !== 'any';
+          if(key==='start') return this.filters.startTimes.length;
+          if(key==='duration') return this.filters.durations.length;
+          if(key==='price') return this.filters.maxPrice < 250;
+          if(key==='features') return this.filters.features.length;
+          if(key==='languages') return this.filters.languages.length;
+          return false;
+        },
+        modalTabHasValue(key){
+          if(key==='start') return this.filters.startTimes.length;
+          if(key==='places') return this.filters.places.length;
+          if(key==='interests') return this.filters.interests.length;
+          if(key==='categories') return this.filters.categories.length;
+          if(key==='price') return this.filters.maxPrice < 250;
+          if(key==='languages') return this.filters.languages.length;
+          if(key==='duration') return this.filters.durations.length;
+          if(key==='features') return this.filters.features.length;
+          if(key==='rating') return this.filters.minRating > 0;
+          return false;
+        },
+        clearTopFilter(){
+          const key = this.topFilterOpen;
+          if(key==='search') this.filters.search='';
+          if(key==='dates') this.filters.datePreset='any';
+          if(key==='start') this.filters.startTimes=[];
+          if(key==='duration') this.filters.durations=[];
+          if(key==='price') this.filters.maxPrice=250;
+          if(key==='features') this.filters.features=[];
+          if(key==='languages') this.filters.languages=[];
+        },
+        resetFilters(){
+          this.filters = {search:'',datePreset:'any',startTimes:[],places:[],interests:[],categories:[],maxPrice:250,languages:[],durations:[],features:[],minRating:0};
+          this.sortBy='recommended';
+        },
+        activeFilterCount(){
+          let c=0;
+          if(this.filters.search) c++;
+          if(this.filters.datePreset !== 'any') c++;
+          c += this.filters.startTimes.length + this.filters.places.length + this.filters.interests.length + this.filters.categories.length + this.filters.languages.length + this.filters.durations.length + this.filters.features.length;
+          if(this.filters.maxPrice < 250) c++;
+          if(this.filters.minRating > 0) c++;
+          return c;
+        },
+        activeChips(){
+          const chips=[];
+          if(this.filters.search) chips.push({key:'search',label:'Search: '+this.filters.search,type:'search'});
+          if(this.filters.datePreset!=='any') chips.push({key:'date',label:this.datePresets.find(p=>p.value===this.filters.datePreset)?.label || 'Dată',type:'date'});
+          this.filters.startTimes.forEach(v=>chips.push({key:'start-'+v,label:this.startTimeOptions.find(o=>o.value===v)?.label,type:'start',value:v}));
+          this.filters.places.forEach(v=>chips.push({key:'place-'+v,label:this.placeOptions.find(o=>o.value===v)?.label,type:'place',value:v}));
+          this.filters.interests.forEach(v=>chips.push({key:'interest-'+v,label:this.interestOptions.find(o=>o.value===v)?.label,type:'interest',value:v}));
+          this.filters.categories.forEach(v=>chips.push({key:'cat-'+v,label:this.categoryOptions.find(o=>o.value===v)?.label,type:'category',value:v}));
+          if(this.filters.maxPrice<250) chips.push({key:'price',label:'Max '+this.formatMoney(this.filters.maxPrice),type:'price'});
+          this.filters.languages.forEach(v=>chips.push({key:'lang-'+v,label:this.languageOptions.find(o=>o.value===v)?.label,type:'language',value:v}));
+          this.filters.durations.forEach(v=>chips.push({key:'duration-'+v,label:this.durationOptions.find(o=>o.value===v)?.label,type:'duration',value:v}));
+          this.filters.features.forEach(v=>chips.push({key:'feature-'+v,label:this.featureLabel(v),type:'feature',value:v}));
+          if(this.filters.minRating>0) chips.push({key:'rating',label:this.filters.minRating+'+ stars',type:'rating'});
+          return chips;
+        },
+        removeChip(chip){
+          if(chip.type==='search') this.filters.search='';
+          if(chip.type==='date') this.filters.datePreset='any';
+          if(chip.type==='start') this.filters.startTimes=this.filters.startTimes.filter(v=>v!==chip.value);
+          if(chip.type==='place') this.filters.places=this.filters.places.filter(v=>v!==chip.value);
+          if(chip.type==='interest') this.filters.interests=this.filters.interests.filter(v=>v!==chip.value);
+          if(chip.type==='category') this.filters.categories=this.filters.categories.filter(v=>v!==chip.value);
+          if(chip.type==='price') this.filters.maxPrice=250;
+          if(chip.type==='language') this.filters.languages=this.filters.languages.filter(v=>v!==chip.value);
+          if(chip.type==='duration') this.filters.durations=this.filters.durations.filter(v=>v!==chip.value);
+          if(chip.type==='feature') this.filters.features=this.filters.features.filter(v=>v!==chip.value);
+          if(chip.type==='rating') this.filters.minRating=0;
+        },
+        filteredActivities(){
+          const q=this.filters.search.toLowerCase().trim();
+          return this.activities.filter(a=>{
+            const blob=JSON.stringify(a).toLowerCase();
+            if(q && !blob.includes(q)) return false;
+            if(this.filters.datePreset!=='any' && !a.dateAvailability.includes(this.filters.datePreset)) return false;
+            if(this.filters.startTimes.length && !this.filters.startTimes.includes(a.startTime)) return false;
+            if(this.filters.places.length && !this.filters.places.includes(a.placeValue)) return false;
+            if(this.filters.interests.length && !this.filters.interests.some(i=>a.interests.includes(i))) return false;
+            if(this.filters.categories.length && !this.filters.categories.some(c=>a.categories.includes(c))) return false;
+            if(a.price > this.filters.maxPrice) return false;
+            if(this.filters.languages.length && !this.filters.languages.some(l=>a.languages.includes(l))) return false;
+            if(this.filters.durations.length && !this.filters.durations.includes(a.duration)) return false;
+            if(this.filters.features.length && !this.filters.features.every(f=>a.features.includes(f))) return false;
+            if(a.rating < this.filters.minRating) return false;
+            return true;
+          });
+        },
+        sortedActivities(){
+          const list=[...this.filteredActivities()];
+          if(this.sortBy==='rating') return list.sort((a,b)=>b.rating-a.rating);
+          if(this.sortBy==='priceAsc') return list.sort((a,b)=>a.price-b.price);
+          if(this.sortBy==='priceDesc') return list.sort((a,b)=>b.price-a.price);
+          if(this.sortBy==='duration') {
+            const order={short:1,medium:2,long:3};
+            return list.sort((a,b)=>order[a.duration]-order[b.duration]);
+          }
+          return list.sort((a,b)=>b.rank-a.rank);
+        },
+        selectedActivity(){
+          return this.activities.find(a=>a.id===this.selectedPin);
+        },
+        featureLabel(value){
+          return this.featureOptions.find(f=>f.value===value)?.label || value;
+        },
+        formatMoney(value){
+          return new Intl.NumberFormat('ro-RO',{style:'currency',currency:'RON',maximumFractionDigits:0}).format(value);
+        }
+      }
+    }
+  </script>
+</body>
+</html>
