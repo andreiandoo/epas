@@ -2240,6 +2240,50 @@ class MarketplaceTaxTemplate extends Model
 
         if (empty($groups)) return '';
 
+        // Pass 4: reconcile the tier label sum with the group amount.
+        // Saved tiers are rounded to integer lei per ticket (e.g. 48 for
+        // a 12-lei-off promo on 60-lei catalog), so the visual sum
+        // "60lei*32+48lei*8" = 2304 can drift above the row's actual net
+        // (2292 for that row on payout 3068) by the rounded-off lei the
+        // tier set discarded. Absorb the difference into the lowest-
+        // price tier so the label sums EXACTLY to the rendered 1a/1c
+        // value — operator caught the 12-lei mismatch on payout 3068.
+        //
+        // Adjustment is bounded: only the lowest tier shifts (visually
+        // rendered last by krsort below), so the dominant catalog prices
+        // stay clean integers. Decimals (e.g. 46.50) only appear when
+        // the data actually requires them.
+        foreach ($groups as $key => &$group) {
+            $tierMap = $group['tierMap'];
+            if (empty($tierMap)) continue;
+
+            $tierSum = 0.0;
+            foreach ($tierMap as $priceKey => $qty) {
+                $tierSum += (float) $priceKey * (int) $qty;
+            }
+            $diff = round((float) $group['amount'] - $tierSum, 2);
+            if (abs($diff) < 0.01) continue;
+
+            // Sort ascending to find the lowest-price tier — the one
+            // that renders last after krsort and absorbs the rounding
+            // loss in the most discounted bracket.
+            $sortedKeys = array_keys($tierMap);
+            usort($sortedKeys, fn ($a, $b) => (float) $a <=> (float) $b);
+            $lowKey = $sortedKeys[0];
+            $lowQty = (int) $tierMap[$lowKey];
+            if ($lowQty <= 0) continue;
+
+            $newPrice = max(0.0, (float) $lowKey + ($diff / $lowQty));
+            unset($tierMap[$lowKey]);
+            $newKey = (string) round($newPrice, 2);
+            // Merge if the adjusted price coincides with an existing
+            // tier (rare, but covers a saved-tier collision case).
+            $tierMap[$newKey] = ($tierMap[$newKey] ?? 0) + $lowQty;
+
+            $group['tierMap'] = $tierMap;
+        }
+        unset($group);
+
         // Build the per-group priceParts label from tierMap. Sorted by
         // price descending so the higher catalog tier leads the list —
         // matches the visual ordering operators expect in the PDF.
