@@ -2854,6 +2854,82 @@ class EventsController extends BaseController
             $totals[$k] = round($totals[$k], 2);
         }
 
+        // Check-in attribution per operator. Most historic scans have
+        // checked_in_at but a NULL checked_in_by because the legacy scan
+        // endpoints didn't capture the operating user. The recent
+        // organizer_app / venue_app paths do — see Ticket::checked_in_by
+        // backfill. Rows with NULL operator collapse into a single
+        // "Operator necunoscut" bucket so the organizer can still see the
+        // total scan count for the event without having it disappear into
+        // an N+1 of anonymous lines.
+        $scannedTickets = \App\Models\Ticket::query()
+            ->where('event_id', $eventId)
+            ->whereNotNull('checked_in_at')
+            ->get(['id', 'ticket_type_id', 'checked_in_at', 'checked_in_by', 'checked_in_via']);
+
+        $scanBuckets = []; // keyed by user_id or '__unknown__'
+        $scanViaTotals = [];
+        $scanTotal = 0;
+        $scanUserIds = $scannedTickets->pluck('checked_in_by')->filter()->unique()->all();
+        $scannerUserById = !empty($scanUserIds)
+            ? \App\Models\User::whereIn('id', $scanUserIds)
+                ->get(['id', 'name', 'email'])
+                ->keyBy('id')
+            : collect();
+
+        foreach ($scannedTickets as $t) {
+            $scanTotal++;
+            $via = $t->checked_in_via ?: 'unknown';
+            $scanViaTotals[$via] = ($scanViaTotals[$via] ?? 0) + 1;
+
+            $userId = $t->checked_in_by ? (int) $t->checked_in_by : null;
+            $key = $userId ? 'u:' . $userId : '__unknown__';
+
+            if (!isset($scanBuckets[$key])) {
+                if ($userId && isset($scannerUserById[$userId])) {
+                    $u = $scannerUserById[$userId];
+                    $name = trim((string) ($u->name ?? '')) ?: ($u->email ?? 'Operator #' . $userId);
+                } elseif ($userId) {
+                    $name = 'Operator #' . $userId;
+                } else {
+                    $name = 'Operator necunoscut';
+                }
+                $scanBuckets[$key] = [
+                    'name' => $name,
+                    'user_id' => $userId,
+                    'is_unknown' => !$userId,
+                    'scans' => 0,
+                    'via' => [],
+                    'first_scan_at' => null,
+                    'last_scan_at' => null,
+                ];
+            }
+            $scanBuckets[$key]['scans']++;
+            if ($via !== 'unknown') {
+                $scanBuckets[$key]['via'][$via] = ($scanBuckets[$key]['via'][$via] ?? 0) + 1;
+            }
+            $tsIso = $t->checked_in_at?->toIso8601String();
+            if ($tsIso) {
+                if (!$scanBuckets[$key]['first_scan_at'] || $tsIso < $scanBuckets[$key]['first_scan_at']) {
+                    $scanBuckets[$key]['first_scan_at'] = $tsIso;
+                }
+                if (!$scanBuckets[$key]['last_scan_at'] || $tsIso > $scanBuckets[$key]['last_scan_at']) {
+                    $scanBuckets[$key]['last_scan_at'] = $tsIso;
+                }
+            }
+        }
+
+        $scanners = array_values($scanBuckets);
+        // Sort: known operators first (DESC by scans), unknown bucket last
+        // so it doesn't dominate the top of the table even when it carries
+        // the bulk of legacy scans.
+        usort($scanners, function ($a, $b) {
+            if ($a['is_unknown'] !== $b['is_unknown']) {
+                return $a['is_unknown'] ? 1 : -1;
+            }
+            return $b['scans'] <=> $a['scans'];
+        });
+
         $title = is_array($event->title)
             ? ($event->title['ro'] ?? $event->title['en'] ?? reset($event->title))
             : $event->title;
@@ -2869,6 +2945,11 @@ class EventsController extends BaseController
             'totals' => $totals,
             'ticket_types_overall' => $ticketTypeTotals,
             'staff' => $staff,
+            'scans' => [
+                'total' => $scanTotal,
+                'by_via' => $scanViaTotals,
+                'operators' => $scanners,
+            ],
         ]);
     }
 

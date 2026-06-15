@@ -133,6 +133,31 @@ $eventId = $_GET['event'] ?? null;
                 </div>
             </div>
 
+            <!-- Scanning Activity Table -->
+            <div id="scan-section" class="hidden bg-white border border-gray-100 shadow-sm rounded-2xl report-section">
+                <div class="flex flex-col gap-2 px-6 py-4 border-b border-gray-100 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                        <h2 class="text-lg font-semibold text-gray-900">Activitate scanare per staff</h2>
+                        <p class="mt-1 text-xs text-gray-500">Cine a scanat și câte bilete, plus aplicația folosită. Scanările istorice fără operator atribuit apar grupate la final.</p>
+                    </div>
+                    <div id="scan-total-pill" class="self-start inline-flex items-center px-3 py-1 text-xs font-semibold rounded-full bg-emerald-50 text-emerald-700"></div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead>
+                            <tr class="text-xs font-medium text-left text-gray-500 uppercase bg-gray-50">
+                                <th class="px-6 py-3">Operator</th>
+                                <th class="px-3 py-3 text-right">Scanări</th>
+                                <th class="px-3 py-3">Sursă</th>
+                                <th class="px-3 py-3">Primul scan</th>
+                                <th class="px-3 py-3">Ultimul scan</th>
+                            </tr>
+                        </thead>
+                        <tbody id="scan-table-body" class="divide-y divide-gray-100"></tbody>
+                    </table>
+                </div>
+            </div>
+
             <!-- Overall ticket types performance -->
             <div class="bg-white border border-gray-100 shadow-sm rounded-2xl report-section">
                 <div class="px-6 py-4 border-b border-gray-100">
@@ -288,6 +313,9 @@ function renderReport(data) {
         `;
     }).join('');
 
+    // Scanning activity table (only render when the event has any scans)
+    renderScanSection(data.scans);
+
     // Overall ticket types table
     const ttBody = document.getElementById('ticket-types-body');
     const ttData = Array.isArray(data.ticket_types_overall) ? data.ticket_types_overall : [];
@@ -312,6 +340,79 @@ function toggleStaffDetails(idx) {
     const row = document.getElementById('staff-details-' + idx);
     if (!row) return;
     row.classList.toggle('hidden');
+}
+
+// Map the per-app `checked_in_via` enum to short, human-friendly badges
+// (color-coded). organizer_app → blue, venue_app → teal, staff_app →
+// indigo, manual → gray. Unknown values pass through as a neutral pill.
+function viaBadge(via, count) {
+    const map = {
+        staff_app:     { label: 'Staff app',     cls: 'bg-indigo-100 text-indigo-700' },
+        venue_app:     { label: 'Venue app',     cls: 'bg-teal-100 text-teal-700' },
+        organizer_app: { label: 'Organizer app', cls: 'bg-blue-100 text-blue-700' },
+        pos_app:       { label: 'POS app',       cls: 'bg-emerald-100 text-emerald-700' },
+        activities_app:{ label: 'Activities',    cls: 'bg-orange-100 text-orange-700' },
+        leisure_app:   { label: 'Leisure',       cls: 'bg-amber-100 text-amber-700' },
+        manual:        { label: 'Manual',        cls: 'bg-gray-100 text-gray-700' },
+    };
+    const cfg = map[via] || { label: via || 'Necunoscut', cls: 'bg-gray-100 text-gray-600' };
+    const countTxt = count != null ? (' · ' + count) : '';
+    return `<span class="inline-flex items-center px-2 py-0.5 text-[11px] font-semibold rounded-full ${cfg.cls}">${escapeHtml(cfg.label)}${countTxt}</span>`;
+}
+
+function renderScanSection(scans) {
+    const section = document.getElementById('scan-section');
+    if (!section) return;
+
+    const total = scans && scans.total ? scans.total : 0;
+    if (!total) {
+        section.classList.add('hidden');
+        return;
+    }
+
+    section.classList.remove('hidden');
+
+    const pill = document.getElementById('scan-total-pill');
+    pill.textContent = total.toLocaleString('ro-RO') + ' bilete scanate în total';
+
+    const tbody = document.getElementById('scan-table-body');
+    const operators = Array.isArray(scans.operators) ? scans.operators : [];
+    if (!operators.length) {
+        tbody.innerHTML = '<tr><td colspan="5" class="px-6 py-6 text-sm text-center text-gray-400">Nicio scanare înregistrată.</td></tr>';
+        return;
+    }
+
+    const fmtTs = (iso) => {
+        if (!iso) return '—';
+        const d = new Date(iso);
+        return isNaN(d.getTime()) ? '—' : d.toLocaleString('ro-RO', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+    };
+
+    tbody.innerHTML = operators.map((op) => {
+        const viaEntries = op.via && typeof op.via === 'object' ? Object.entries(op.via) : [];
+        const viaBadges = viaEntries.length
+            ? viaEntries.map(([via, count]) => viaBadge(via, count)).join(' ')
+            : '<span class="text-xs text-gray-400">—</span>';
+
+        const rowCls = op.is_unknown ? 'bg-gray-50/40 text-gray-600' : 'hover:bg-gray-50/50';
+        const nameHtml = op.is_unknown
+            ? `<div class="italic font-medium text-gray-500">${escapeHtml(op.name)}</div>
+               <div class="mt-0.5 text-[11px] text-gray-400">Scanări vechi, fără operator atribuit (legacy).</div>`
+            : `<div class="font-semibold text-secondary">${escapeHtml(op.name)}</div>
+               <div class="text-xs text-gray-500">User #${op.user_id}</div>`;
+
+        return `
+            <tr class="text-sm ${rowCls}">
+                <td class="px-6 py-4">${nameHtml}</td>
+                <td class="px-3 py-4 text-right font-bold text-secondary">${(op.scans || 0).toLocaleString('ro-RO')}</td>
+                <td class="px-3 py-4">
+                    <div class="flex flex-wrap gap-1">${viaBadges}</div>
+                </td>
+                <td class="px-3 py-4 text-xs text-gray-600">${fmtTs(op.first_scan_at)}</td>
+                <td class="px-3 py-4 text-xs text-gray-600">${fmtTs(op.last_scan_at)}</td>
+            </tr>
+        `;
+    }).join('');
 }
 </script>
 
