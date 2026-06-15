@@ -30,6 +30,8 @@
   'use strict';
 
   var SELECTED_EVENT_KEY = 'scanapp_selected_event_id_v1';
+  var SWR_CACHE_KEY      = 'scanapp_eventctx_swr_v1';
+  var SWR_MAX_AGE_MS     = 24 * 60 * 60 * 1000; // 24h — beyond this drop the cache as too stale to trust
 
   var emitter = new EventTarget();
   function emit(type, detail) {
@@ -47,6 +49,68 @@
     isLoadingEvents:  false,
     isLoadingStats:   false
   };
+
+  // ── Stale-While-Revalidate cache ─────────────────────────────────────────
+  // On every successful fetch we persist the full state snapshot into
+  // localStorage. On the next page load we hydrate state SYNCHRONOUSLY
+  // from that snapshot, so page scripts that call EventContext.getState()
+  // during their init() see the previous-visit data immediately and
+  // render the UI on the first paint. App.js bootstrap then fires a
+  // background revalidate (fetchEvents + refreshAll in parallel) which
+  // updates the UI once the network resolves.
+  //
+  // Trade-off: the user may briefly see stats from the last visit (could
+  // be seconds to hours old). The background revalidate corrects within
+  // ~1-2s on a normal connection. The 30s polling kicks in after that.
+  function loadSwrCache() {
+    try {
+      var raw = localStorage.getItem(SWR_CACHE_KEY);
+      if (!raw) return null;
+      var c = JSON.parse(raw);
+      if (!c || typeof c !== 'object') return null;
+      if (Date.now() - (c.savedAt || 0) > SWR_MAX_AGE_MS) return null;
+      return c;
+    } catch (e) { return null; }
+  }
+
+  function saveSwrCache() {
+    try {
+      var snapshot = {
+        savedAt:           Date.now(),
+        events:            state.events,
+        groupedEvents:     state.groupedEvents,
+        selectedEventId:   state.selectedEvent ? state.selectedEvent.id : null,
+        eventStats:        state.eventStats,
+        ticketTypes:       state.ticketTypes,
+        allTicketTypes:    state.allTicketTypes,
+        eventCommission:   state.eventCommission
+      };
+      localStorage.setItem(SWR_CACHE_KEY, JSON.stringify(snapshot));
+    } catch (e) {
+      // quota exceeded / safari private mode — silently skip; revalidation
+      // will repopulate state from the network anyway.
+    }
+  }
+
+  function hydrateFromSwrCache() {
+    var c = loadSwrCache();
+    if (!c) return false;
+    if (Array.isArray(c.events))           state.events           = c.events;
+    if (c.groupedEvents)                   state.groupedEvents    = c.groupedEvents;
+    if (Array.isArray(c.ticketTypes))      state.ticketTypes      = c.ticketTypes;
+    if (Array.isArray(c.allTicketTypes))   state.allTicketTypes   = c.allTicketTypes;
+    if (c.eventCommission)                 state.eventCommission  = c.eventCommission;
+    if (c.eventStats)                      state.eventStats       = c.eventStats;
+    if (c.selectedEventId && state.events.length) {
+      state.selectedEvent = state.events.find(function (e) { return Number(e.id) === Number(c.selectedEventId); }) || null;
+    }
+    return !!state.selectedEvent;
+  }
+
+  // Hydrate synchronously during the IIFE so page scripts can read state
+  // immediately on their init(). Note: subscribers can't be notified here
+  // (none are registered yet) — they read via getState() instead.
+  hydrateFromSwrCache();
 
   var statsPollTimer = null;
   var STATS_POLL_INTERVAL_MS = 30000;
@@ -171,6 +235,7 @@
           }
 
           emit('events-loaded', { events: enriched, grouped: state.groupedEvents });
+          saveSwrCache();
         })
         .catch(function (e) {
           console.error('[EventContext] fetchEvents failed:', e);
@@ -254,6 +319,7 @@
 
         emit('stats-updated',         { stats: state.eventStats });
         emit('ticket-types-updated',  { ticketTypes: state.ticketTypes, allTicketTypes: state.allTicketTypes, commission: state.eventCommission });
+        saveSwrCache();
       }).catch(function (e) {
         console.error('[EventContext] refreshAll failed:', e);
       }).finally(function () {

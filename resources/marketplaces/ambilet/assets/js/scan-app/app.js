@@ -274,8 +274,31 @@
       if (s.selectedEvent) renderHeader(s.selectedEvent);
     });
 
-    // Initial events fetch (fills events list + auto-selects first available).
-    EventContext.fetchEvents();
+    // SWR-aware bootstrap. event-context.js hydrated `state` synchronously
+    // from localStorage during its IIFE, so page scripts already see last-
+    // visit data. We now fire BOTH endpoints in parallel to revalidate:
+    //   - fetchEvents() refreshes the events list
+    //   - refreshAll() refreshes the selected event's stats + ticket types
+    // Cold visits (no cache) skip the refreshAll() shortcut because
+    // selectedEvent isn't set yet — fetchEvents() will pick the initial
+    // event and chain into refreshAll() itself.
+    var hadCache = !!EventContext.getState().selectedEvent;
+
+    // Render the cached state immediately so the UI doesn't flash empty
+    // while the revalidate is in flight.
+    if (hadCache) {
+      var snap = EventContext.getState();
+      renderHeader(snap.selectedEvent);
+      renderPickerContents();
+    }
+
+    if (hadCache && typeof EventContext.refreshAll === 'function') {
+      // Parallel revalidate: events list + stats fire at the same time.
+      Promise.all([EventContext.fetchEvents(), EventContext.refreshAll()])
+        .catch(function () { /* errors already logged inside */ });
+    } else {
+      EventContext.fetchEvents();
+    }
   }
 
   // Expose a small public API for page scripts.
