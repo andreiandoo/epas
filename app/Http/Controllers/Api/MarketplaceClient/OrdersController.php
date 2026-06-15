@@ -469,6 +469,18 @@ class OrdersController extends BaseController
             // Reload order to get updated status
             $order->refresh();
 
+            // PERF P2/8 — POS cash/card/invitation paths above use raw
+            // DB::table()->update() to dodge OrderObserver (PostgreSQL UUID
+            // cascade issue). That ALSO skips the EventStatsCache invalidation
+            // wired into OrderObserver + TicketObserver. Invalidate manually
+            // so the dashboard sees the new sale on the very next request
+            // instead of waiting up to 60s for the TTL.
+            try {
+                \App\Services\EventStatsCache::forget((int) $event->id);
+            } catch (\Throwable $e) {
+                // Cache failures must never affect the order flow.
+            }
+
             // Real-time: notify all mobile dashboards subscribed to
             // event.{id}.sales so their POS-vs-online counters refresh
             // without waiting for the 30 s poll. Only fires when the

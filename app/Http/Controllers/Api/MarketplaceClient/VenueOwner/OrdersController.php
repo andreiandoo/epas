@@ -268,6 +268,16 @@ class OrdersController extends BaseController
         // response.data.order.id / .payment_url / etc. uniformly.
         $order = $order->fresh();
 
+        // PERF P2/8 — venue-owner POS path uses raw DB::table()->update()
+        // (mirrors organizer POS path) and skips OrderObserver +
+        // TicketObserver. Invalidate the EventStatsCache manually so the
+        // dashboard sees this sale on the next request.
+        try {
+            \App\Services\EventStatsCache::forget((int) $event->id);
+        } catch (\Throwable $e) {
+            // Cache failures must never affect the order flow.
+        }
+
         // Real-time push so any other mobile / web dashboard watching
         // this event refreshes its sales counter instantly.
         if (in_array($order->status, ['confirmed', 'paid', 'completed'], true)) {
