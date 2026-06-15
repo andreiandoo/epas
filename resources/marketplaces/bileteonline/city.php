@@ -433,86 +433,13 @@ document.addEventListener('alpine:init', () => {
 <section class="sticky top-[72px] z-40 border-y border-ink/10 bg-paper/95 backdrop-blur-xl">
     <div class="mx-auto flex max-w-[1500px] gap-2 overflow-x-auto px-4 py-3 text-sm font-bold sm:px-6">
         <a href="#activitati" class="shrink-0 rounded-full bg-ink px-4 py-2.5 text-paper">Top activități</a>
+        <a href="#interese" class="shrink-0 rounded-full bg-paper-2 px-4 py-2.5 hover:bg-ink hover:text-paper">Explorează după interes</a>
         <?php if (!empty($cityAttractions)): ?><a href="#attractions" class="shrink-0 rounded-full bg-paper-2 px-4 py-2.5 hover:bg-ink hover:text-paper">Atracții</a><?php endif; ?>
-        <a href="#categorii" class="shrink-0 rounded-full bg-paper-2 px-4 py-2.5 hover:bg-ink hover:text-paper">Categorii</a>
-        <a href="#by-traveler" class="shrink-0 rounded-full bg-paper-2 px-4 py-2.5 hover:bg-ink hover:text-paper">Pentru cine</a>
-        <?php if (!empty($nearbyCities)): ?><a href="#nearby" class="shrink-0 rounded-full bg-paper-2 px-4 py-2.5 hover:bg-ink hover:text-paper">Aproape de <?= htmlspecialchars($cityName) ?></a><?php endif; ?>
         <?php if (!empty($cityGuides)): ?><a href="#guides" class="shrink-0 rounded-full bg-paper-2 px-4 py-2.5 hover:bg-ink hover:text-paper">Ghiduri</a><?php endif; ?>
+        <?php if (!empty($nearbyCities)): ?><a href="#nearby" class="shrink-0 rounded-full bg-paper-2 px-4 py-2.5 hover:bg-ink hover:text-paper">Aproape de <?= htmlspecialchars($cityName) ?></a><?php endif; ?>
         <a href="#ghid-local" class="shrink-0 rounded-full bg-paper-2 px-4 py-2.5 hover:bg-ink hover:text-paper">FAQ</a>
     </div>
 </section>
-
-<!-- ============================== ATRACTII (F4) ============================== -->
-<?php if (!empty($cityAttractions)): ?>
-<section id="attractions" class="bg-white">
-    <div class="mx-auto max-w-[1500px] px-4 py-12 sm:px-6 lg:py-16">
-        <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-            <div>
-                <p class="font-mono text-xs tracking-[.18em] text-vermilion">ATRACȚII DE NERATAT</p>
-                <h2 class="mt-2 text-6xl font-bold leading-none font-display">Atracții pe care merită să le pui pe listă</h2>
-            </div>
-        </div>
-        <div class="grid gap-5 mt-8 md:grid-cols-2 xl:grid-cols-4">
-            <?php $atBg = ['from-vermilion to-vermilion-d','from-forest to-ink','from-sky to-ink','from-ochre to-vermilion-d']; foreach ($cityAttractions as $ai => $at): ?>
-                <a href="/atractie/<?= htmlspecialchars($at['slug'], ENT_QUOTES) ?>" class="group overflow-hidden rounded-[2rem] border-2 border-ink bg-paper shadow-deep transition hover:-translate-y-0.5">
-                    <div class="relative h-56 overflow-hidden">
-                        <?php if (!empty($at['image'])): ?>
-                            <img src="<?= htmlspecialchars($at['image'], ENT_QUOTES) ?>" alt="<?= htmlspecialchars($at['name'], ENT_QUOTES) ?>" class="object-cover w-full h-full transition duration-500 group-hover:scale-105" loading="lazy">
-                        <?php else: ?>
-                            <div class="grid h-full place-items-center bg-gradient-to-br <?= $atBg[$ai % count($atBg)] ?> text-paper"><span class="px-4 text-2xl font-bold text-center font-display"><?= htmlspecialchars($at['name']) ?></span></div>
-                        <?php endif; ?>
-                        <?php if (!empty($at['type'])): ?><span class="absolute px-3 py-1 text-xs font-bold rounded-full left-4 top-4 bg-paper text-ink"><?= htmlspecialchars($at['type']) ?></span><?php endif; ?>
-                        <?php if (!empty($at['count'])): ?><span class="absolute px-3 py-1 text-xs font-bold rounded-full right-4 top-4 bg-ink/90 text-paper"><?= (int) $at['count'] ?> activități</span><?php endif; ?>
-                    </div>
-                    <div class="p-5">
-                        <p class="text-3xl font-bold leading-none font-display group-hover:text-vermilion"><?= htmlspecialchars($at['name']) ?></p>
-                    </div>
-                </a>
-            <?php endforeach; ?>
-        </div>
-    </div>
-</section>
-<?php endif; ?>
-
-<!-- ============================== CATEGORY QUICK LINKS ============================== -->
-<?php if (!empty($topCategories)): ?>
-<section id="categorii" class="px-4 py-12 mx-auto max-w-7xl sm:px-6 lg:py-16">
-    <div class="flex items-end justify-between gap-6 mb-8">
-        <div>
-            <p class="font-mono text-xs tracking-[.2em] text-vermilion mb-2">CATEGORII LOCALE</p>
-            <h2 class="font-display text-[clamp(2rem,4vw,3.8rem)] font-700 leading-[0.95]">Alege ce fel de zi vrei în <?= htmlspecialchars($cityName) ?></h2>
-        </div>
-        <a href="#activitati" class="items-center hidden gap-2 sm:inline-flex font-700 text-vermilion underline-wobble">
-            Vezi toate activitățile
-            <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.3" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>
-        </a>
-    </div>
-
-    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <?php
-        $catAccentBg = [
-            'vermilion' => 'bg-gradient-to-br from-vermilion to-vermilion-d text-vermilion',
-            'forest'    => 'bg-gradient-to-br from-forest-l to-forest text-forest',
-            'sky'       => 'bg-gradient-to-br from-sky to-ink text-sky',
-            'ochre'     => 'bg-gradient-to-br from-ochre to-vermilion-d text-ochre',
-        ];
-        foreach ($topCategories as $cat):
-            $bgClass = $catAccentBg[$cat['accent']] ?? $catAccentBg['vermilion'];
-        ?>
-            <a href="/<?= htmlspecialchars($slug, ENT_QUOTES) ?>?category=<?= htmlspecialchars($cat['slug'], ENT_QUOTES) ?>" class="overflow-hidden border-2 ticket ticket-lift group border-ink rounded-2xl bg-paper" style="--perf:100%">
-                <div class="duotone h-32 p-5 flex items-end <?= $bgClass ?>">
-                    <div class="grid-tex"></div>
-                    <span class="relative text-paper/90 font-mono text-[10px] tracking-wider"><?= htmlspecialchars($cat['count']) ?></span>
-                    <span class="absolute text-3xl transition-transform top-5 right-5 text-paper/40 group-hover:scale-110" aria-hidden="true"><?= htmlspecialchars($cat['icon_emoji'] ?? '🎫') ?></span>
-                </div>
-                <div class="p-5">
-                    <h3 class="text-2xl leading-none font-display font-700"><?= htmlspecialchars($cat['label']) ?></h3>
-                </div>
-            </a>
-        <?php endforeach; ?>
-    </div>
-</section>
-<?php endif; ?>
 
 <!-- ============================== EVENTS LISTING ============================== -->
 <section id="activitati" x-data="cityFilters()" class="bg-white border-y border-ink/10">
@@ -522,12 +449,13 @@ document.addEventListener('alpine:init', () => {
             <div>
                 <p class="font-mono text-xs tracking-[.2em] text-vermilion mb-2">LISTĂ LOCALĂ</p>
                 <h2 class="font-display text-[clamp(2rem,4vw,3.5rem)] font-700 leading-[0.95]">
-                    Cele mai bune lucruri de făcut în <?= htmlspecialchars($cityName) ?>
+                    Activități populare în <?= htmlspecialchars($cityName) ?>
                 </h2>
-                <p class="max-w-2xl mt-3 text-ink-soft">
-                    <?= (int) ($pagination['total'] ?? 0) ?> <?= ($pagination['total'] ?? 0) === 1 ? 'activitate disponibilă' : 'activități disponibile' ?>
-                </p>
+                <p class="max-w-2xl mt-3 text-ink-soft">Rezervă bilete și experiențe disponibile în oraș și în zona apropiată.</p>
             </div>
+            <p class="shrink-0 text-sm font-bold text-ink-soft">
+                <?= (int) ($pagination['total'] ?? 0) ?> <?= ($pagination['total'] ?? 0) === 1 ? 'rezultat' : 'rezultate' ?>
+            </p>
         </div>
 
         <!-- FILTER TOOLBAR -->
@@ -772,39 +700,81 @@ document.addEventListener('alpine:init', () => {
 });
 </script>
 
-<!-- ============================== BY TRAVELER ============================== -->
-<section id="by-traveler" class="bg-ink text-paper">
+<!-- ============================== EXPLOREAZĂ DUPĂ INTERES (categorii + traveler) ============================== -->
+<section id="interese" class="bg-paper">
     <div class="mx-auto max-w-[1500px] px-4 py-12 sm:px-6 lg:py-16">
-        <p class="font-mono text-xs tracking-[.18em] text-ochre">PENTRU CINE</p>
-        <h2 class="mt-2 text-6xl font-bold leading-none font-display">Alege după stilul tău de ieșire în <?= htmlspecialchars($cityName) ?></h2>
-        <div class="grid gap-5 mt-8 md:grid-cols-2 xl:grid-cols-4">
-            <?php foreach ($travelerTypes as $tt): ?>
-                <a href="<?= htmlspecialchars($tt['href'], ENT_QUOTES) ?>" class="group rounded-[2rem] border border-paper/10 bg-paper/10 p-6 transition hover:-translate-y-0.5 hover:bg-paper hover:text-ink">
-                    <p class="text-4xl"><?= $tt['icon'] ?></p>
-                    <p class="mt-5 text-4xl font-bold leading-none font-display group-hover:text-vermilion"><?= htmlspecialchars($tt['title']) ?></p>
-                    <p class="mt-3 text-paper/60 group-hover:text-ink-soft"><?= htmlspecialchars($tt['desc']) ?></p>
-                </a>
-            <?php endforeach; ?>
+        <div class="grid gap-10 lg:grid-cols-[1fr_360px]">
+            <!-- Left: categorii locale -->
+            <div>
+                <div class="flex items-end justify-between gap-4">
+                    <div>
+                        <p class="font-mono text-xs tracking-[.18em] text-vermilion">CATEGORII LOCALE</p>
+                        <h2 class="mt-2 font-display text-5xl font-bold leading-none">Explorează după interes</h2>
+                        <p class="mt-2 text-ink-soft">Categorii utile ca să găsești mai repede ce cauți în <?= htmlspecialchars($cityName) ?>.</p>
+                    </div>
+                    <a href="#activitati" class="shrink-0 text-sm font-bold text-vermilion underline-wobble">Toate →</a>
+                </div>
+                <?php if (!empty($topCategories)): ?>
+                <div class="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    <?php foreach ($topCategories as $cat): ?>
+                        <a href="/<?= htmlspecialchars($slug, ENT_QUOTES) ?>?category=<?= htmlspecialchars($cat['slug'], ENT_QUOTES) ?>" class="group flex items-center gap-4 rounded-2xl border-2 border-ink bg-paper p-4 shadow-ticket transition hover:-translate-y-0.5">
+                            <span class="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-paper-2 text-2xl"><?= htmlspecialchars($cat['icon_emoji'] ?? '🎫') ?></span>
+                            <span class="min-w-0">
+                                <span class="block truncate font-bold leading-none group-hover:text-vermilion"><?= htmlspecialchars($cat['label']) ?></span>
+                                <span class="mt-1 block text-sm text-ink-soft"><?= htmlspecialchars($cat['count']) ?></span>
+                            </span>
+                        </a>
+                    <?php endforeach; ?>
+                </div>
+                <?php endif; ?>
+            </div>
+
+            <!-- Right: pentru cine (traveler types) -->
+            <aside class="rounded-[2rem] bg-ink p-6 text-paper">
+                <p class="font-mono text-xs tracking-[.18em] text-ochre">PENTRU CINE</p>
+                <h3 class="mt-2 font-display text-3xl font-bold leading-none">Alege după stilul tău</h3>
+                <div class="mt-5 space-y-3">
+                    <?php foreach ($travelerTypes as $tt): ?>
+                        <a href="<?= htmlspecialchars($tt['href'], ENT_QUOTES) ?>" class="group flex items-center gap-3 rounded-xl bg-paper/10 p-3 transition hover:bg-paper hover:text-ink">
+                            <span class="text-2xl"><?= $tt['icon'] ?></span>
+                            <span>
+                                <span class="block font-bold"><?= htmlspecialchars($tt['title']) ?></span>
+                                <span class="mt-1 block text-xs text-paper/60 group-hover:text-ink-soft"><?= htmlspecialchars($tt['desc']) ?></span>
+                            </span>
+                        </a>
+                    <?php endforeach; ?>
+                </div>
+            </aside>
         </div>
     </div>
 </section>
 
-<?php if (!empty($nearbyCities)): ?>
-<!-- ============================== NEARBY ============================== -->
-<section id="nearby" class="bg-white">
+<!-- ============================== ATRACTII (F4) ============================== -->
+<?php if (!empty($cityAttractions)): ?>
+<section id="attractions" class="bg-white">
     <div class="mx-auto max-w-[1500px] px-4 py-12 sm:px-6 lg:py-16">
-        <p class="font-mono text-xs tracking-[.18em] text-vermilion">ÎN APROPIERE</p>
-        <h2 class="mt-2 text-6xl font-bold leading-none font-display">Alte orașe de explorat lângă <?= htmlspecialchars($cityName) ?></h2>
-        <p class="max-w-3xl mt-3 text-ink-soft">Pentru excursii de o zi, experiențe de weekend sau activități care merg bine împreună cu o vizită în <?= htmlspecialchars($cityName) ?>.</p>
-        <div class="grid gap-4 mt-8 md:grid-cols-2 xl:grid-cols-5">
-            <?php $nbBg = ['from-vermilion to-vermilion-d','from-forest to-ink','from-sky to-ink','from-ochre to-vermilion-d','from-ink to-forest']; foreach ($nearbyCities as $ni => $nc): ?>
-                <a href="<?= htmlspecialchars($nc['href'], ENT_QUOTES) ?>" class="group overflow-hidden rounded-[2rem] border-2 border-ink bg-paper shadow-deep transition hover:-translate-y-0.5">
-                    <div class="grid h-40 place-items-end bg-gradient-to-br <?= $nbBg[$ni % count($nbBg)] ?> p-4">
-                        <span class="font-mono text-[10px] tracking-wider text-paper/80">ORAȘ</span>
+        <div class="flex items-end justify-between gap-4">
+            <div>
+                <p class="font-mono text-xs tracking-[.18em] text-vermilion">ATRACȚII DE NERATAT</p>
+                <h2 class="mt-2 font-display text-5xl font-bold leading-none sm:text-6xl">Atracții de neratat în <?= htmlspecialchars($cityName) ?></h2>
+                <p class="mt-2 max-w-2xl text-ink-soft">Descoperă locurile care definesc orașul și vezi activitățile disponibile în jurul lor.</p>
+            </div>
+            <a href="/<?= htmlspecialchars($slug, ENT_QUOTES) ?>/atractii" class="shrink-0 text-sm font-bold text-vermilion underline-wobble">Toate atracțiile →</a>
+        </div>
+        <div class="grid gap-4 mt-8 sm:grid-cols-2 lg:grid-cols-4">
+            <?php $atBg = ['from-vermilion to-vermilion-d','from-forest to-ink','from-sky to-ink','from-ochre to-vermilion-d']; foreach ($cityAttractions as $ai => $at): ?>
+                <a href="/atractie/<?= htmlspecialchars($at['slug'], ENT_QUOTES) ?>" class="group overflow-hidden rounded-2xl border-2 border-ink bg-paper shadow-ticket transition hover:-translate-y-1">
+                    <div class="relative h-44 overflow-hidden">
+                        <?php if (!empty($at['image'])): ?>
+                            <img src="<?= htmlspecialchars($at['image'], ENT_QUOTES) ?>" alt="<?= htmlspecialchars($at['name'], ENT_QUOTES) ?>" class="object-cover w-full h-full transition duration-500 group-hover:scale-105" loading="lazy">
+                        <?php else: ?>
+                            <div class="grid h-full place-items-center bg-gradient-to-br <?= $atBg[$ai % count($atBg)] ?> text-paper"><span class="px-4 text-xl font-bold text-center font-display"><?= htmlspecialchars($at['name']) ?></span></div>
+                        <?php endif; ?>
+                        <?php if (!empty($at['count'])): ?><span class="absolute px-3 py-1 text-xs font-bold rounded-full left-3 top-3 bg-paper text-ink shadow-ticket"><?= (int) $at['count'] ?> activități</span><?php endif; ?>
                     </div>
                     <div class="p-4">
-                        <p class="text-3xl font-bold leading-none font-display group-hover:text-vermilion"><?= htmlspecialchars($nc['label']) ?></p>
-                        <p class="mt-1 text-sm text-ink-soft">Activități și experiențe locale</p>
+                        <h3 class="font-display text-2xl font-bold leading-tight group-hover:text-vermilion"><?= htmlspecialchars($at['name']) ?></h3>
+                        <?php if (!empty($at['type'])): ?><p class="mt-2 line-clamp-2 text-sm text-ink-soft"><?= htmlspecialchars($at['type']) ?></p><?php endif; ?>
                     </div>
                 </a>
             <?php endforeach; ?>
@@ -878,6 +848,30 @@ document.addEventListener('alpine:init', () => {
     ></div>
 </section>
 <script async defer src="https://widget.getyourguide.com/dist/pa.umd.production.min.js"></script>
+<?php endif; ?>
+
+<?php if (!empty($nearbyCities)): ?>
+<!-- ============================== NEARBY ============================== -->
+<section id="nearby" class="bg-white">
+    <div class="mx-auto max-w-[1500px] px-4 py-12 sm:px-6 lg:py-16">
+        <p class="font-mono text-xs tracking-[.18em] text-vermilion">ÎN APROPIERE</p>
+        <h2 class="mt-2 text-6xl font-bold leading-none font-display">Alte orașe de explorat lângă <?= htmlspecialchars($cityName) ?></h2>
+        <p class="max-w-3xl mt-3 text-ink-soft">Pentru excursii de o zi, experiențe de weekend sau activități care merg bine împreună cu o vizită în <?= htmlspecialchars($cityName) ?>.</p>
+        <div class="grid gap-4 mt-8 md:grid-cols-2 xl:grid-cols-5">
+            <?php $nbBg = ['from-vermilion to-vermilion-d','from-forest to-ink','from-sky to-ink','from-ochre to-vermilion-d','from-ink to-forest']; foreach ($nearbyCities as $ni => $nc): ?>
+                <a href="<?= htmlspecialchars($nc['href'], ENT_QUOTES) ?>" class="group overflow-hidden rounded-[2rem] border-2 border-ink bg-paper shadow-deep transition hover:-translate-y-0.5">
+                    <div class="grid h-40 place-items-end bg-gradient-to-br <?= $nbBg[$ni % count($nbBg)] ?> p-4">
+                        <span class="font-mono text-[10px] tracking-wider text-paper/80">ORAȘ</span>
+                    </div>
+                    <div class="p-4">
+                        <p class="text-3xl font-bold leading-none font-display group-hover:text-vermilion"><?= htmlspecialchars($nc['label']) ?></p>
+                        <p class="mt-1 text-sm text-ink-soft">Activități și experiențe locale</p>
+                    </div>
+                </a>
+            <?php endforeach; ?>
+        </div>
+    </div>
+</section>
 <?php endif; ?>
 
 <!-- ============================== EDITORIAL + CROSS-LINKS ============================== -->
@@ -1019,6 +1013,37 @@ document.addEventListener('alpine:init', () => {
                 <a href="/pentru-locatii" class="inline-flex px-5 py-3 mt-5 transition rounded-full bg-paper text-ink font-700 hover:bg-ink hover:text-paper">Listează activitatea</a>
             </div>
         </aside>
+    </div>
+</section>
+
+<!-- ============================== NEWSLETTER ============================== -->
+<section class="bg-vermilion text-paper" x-data="{ email:'', sent:false, loading:false, error:'', async submit(){ if(this.loading||this.sent) return; this.loading=true; this.error=''; try{ const r = await fetch('/api/proxy.php?action=newsletter.subscribe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:this.email, source:'city-<?= htmlspecialchars($slug, ENT_QUOTES) ?>'})}); if(r.ok){ this.sent=true; } else { this.error='A apărut o eroare. Încearcă din nou.'; } }catch(e){ this.error='A apărut o eroare. Încearcă din nou.'; } this.loading=false; } }">
+    <div class="mx-auto grid max-w-[1500px] lg:grid-cols-2">
+        <div class="flex items-center px-4 py-12 sm:px-6 lg:px-12 lg:py-16">
+            <div>
+                <p class="font-mono text-xs tracking-[.18em] text-paper/60">NEWSLETTER BILETE.ONLINE</p>
+                <h2 class="mt-2 font-display text-5xl font-bold leading-none">Primește idei de activități în <?= htmlspecialchars($cityName) ?></h2>
+                <p class="mt-3 max-w-xl text-paper/75">Activități noi, ghiduri locale și idei de weekend, direct pe email.</p>
+                <form @submit.prevent="submit()" class="mt-6 flex max-w-xl gap-2 rounded-full bg-paper p-2 text-ink">
+                    <input type="email" required x-model="email" :disabled="sent" class="min-w-0 flex-1 bg-transparent px-4 py-2.5 font-bold outline-none placeholder:text-ink-soft/70" placeholder="emailul tău">
+                    <button type="submit" :disabled="loading || sent" class="shrink-0 rounded-full bg-ink px-6 py-2.5 font-bold text-paper transition hover:bg-vermilion-d disabled:opacity-60">
+                        <span x-show="!loading && !sent">Abonează-mă</span>
+                        <span x-show="loading" x-cloak>…</span>
+                        <span x-show="sent" x-cloak>✓ Gata</span>
+                    </button>
+                </form>
+                <p x-show="sent" x-cloak class="mt-3 font-bold">Te-ai abonat cu succes. Mulțumim!</p>
+                <p x-show="error" x-cloak class="mt-3 font-bold" x-text="error"></p>
+            </div>
+        </div>
+        <div class="min-h-[240px] lg:min-h-[300px]">
+            <?php $nlImg = $coverResolved ?: ($gallery[1]['src'] ?? ''); ?>
+            <?php if ($nlImg): ?>
+                <img src="<?= htmlspecialchars($nlImg, ENT_QUOTES) ?>" alt="<?= htmlspecialchars($cityName, ENT_QUOTES) ?>" class="object-cover w-full h-full" loading="lazy">
+            <?php else: ?>
+                <div class="grid h-full min-h-[240px] place-items-center bg-vermilion-d"><span class="font-display text-5xl font-bold opacity-40"><?= htmlspecialchars($cityName) ?></span></div>
+            <?php endif; ?>
+        </div>
     </div>
 </section>
 
