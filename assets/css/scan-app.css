@@ -146,7 +146,6 @@ body.scanapp-body {
   border-bottom: 1px solid var(--scanapp-border);
   padding: 12px 16px;
   text-align: left;
-  cursor: pointer;
   font-family: inherit;
   color: inherit;
   position: sticky;
@@ -155,7 +154,15 @@ body.scanapp-body {
   -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
 }
-.scanapp-event-selector:active { background: rgba(139, 92, 246, 0.12); }
+.scanapp-event-selector--interactive { cursor: pointer; }
+.scanapp-event-selector--interactive:active { background: rgba(139, 92, 246, 0.12); }
+/* Read-only variant on /scanare and /vanzare: shows the event name + badge
+   but no chevron, no click. Visually slightly dimmer + tighter padding. */
+.scanapp-event-selector--readonly {
+  cursor: default;
+  padding: 10px 16px;
+  background: var(--scanapp-surface);
+}
 .scanapp-event-selector__content { flex: 1; min-width: 0; }
 .scanapp-event-selector__title-row {
   display: flex;
@@ -527,11 +534,18 @@ body.scanapp-body {
   color: inherit;
   transition: background-color 120ms;
 }
-.scanapp-stat-card:active { background: var(--scanapp-surface-hover); }
-.scanapp-stat-card--green   { border-color: var(--scanapp-green-border); }
-.scanapp-stat-card--cyan    { border-color: var(--scanapp-cyan-border); }
-.scanapp-stat-card--amber   { border-color: var(--scanapp-amber-border); }
-.scanapp-stat-card--purple  { border-color: var(--scanapp-purple-border); }
+.scanapp-stat-card:active { filter: brightness(1.1); }
+/* Live-stats cards use the same colored-background look as the past-event
+   reports grid (user found the past variant 'arata mai bine'). */
+.scanapp-stat-card--green   { background: var(--scanapp-green-bg);  border-color: var(--scanapp-green-border); }
+.scanapp-stat-card--cyan    { background: var(--scanapp-cyan-bg);   border-color: var(--scanapp-cyan-border); }
+.scanapp-stat-card--amber   { background: var(--scanapp-amber-bg);  border-color: var(--scanapp-amber-border); }
+.scanapp-stat-card--purple  { background: var(--scanapp-purple-bg); border-color: var(--scanapp-purple-border); }
+/* Colored value text matches the card accent for stronger visual presence. */
+.scanapp-stat-card--green  .scanapp-stat-card__value { color: var(--scanapp-green); }
+.scanapp-stat-card--cyan   .scanapp-stat-card__value { color: var(--scanapp-cyan); }
+.scanapp-stat-card--amber  .scanapp-stat-card__value { color: var(--scanapp-amber); }
+.scanapp-stat-card--purple .scanapp-stat-card__value { color: var(--scanapp-purple); }
 .scanapp-stat-card__icon-row {
   display: inline-flex;
   align-items: center;
@@ -1658,8 +1672,11 @@ button.scanapp-stat-pill { cursor: pointer; font-family: inherit; }
 .scanapp-banner__text { font-size: 12.5px; color: var(--scanapp-text-secondary); margin: 0; line-height: 1.5; }
 .scanapp-banner__cta { display: inline-block; margin-top: 10px; padding: 8px 14px; border-radius: 10px; background: var(--scanapp-purple); color: #fff; font-size: 13px; font-weight: 700; text-decoration: none; }
 
-/* Seating modal (full-screen iframe) */
-.scanapp-seating-modal { position: fixed; inset: 0; z-index: 70; background: var(--scanapp-bg); display: none; flex-direction: column; }
+/* Seating modal (full-screen iframe) — z-index 200 so it sits above the
+   sticky topbar (z-100) and EventSelector strip (z-90); user reported
+   that the strip overlapped the canvas and ate the Anulează / seat-tap
+   events. */
+.scanapp-seating-modal { position: fixed; inset: 0; z-index: 200; background: var(--scanapp-bg); display: none; flex-direction: column; }
 .scanapp-seating-modal--open { display: flex; }
 .scanapp-seating-modal__inner { display: flex; flex-direction: column; width: 100%; height: 100%; padding-top: var(--scanapp-safe-top); padding-bottom: var(--scanapp-safe-bottom); }
 .scanapp-seating-modal__header { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; background: #0f0f1f; border-bottom: 1px solid var(--scanapp-border-light); }
