@@ -398,8 +398,7 @@ function renderScanSection(scans) {
         const nameHtml = op.is_unknown
             ? `<div class="italic font-medium text-gray-500">${escapeHtml(op.name)}</div>
                <div class="mt-0.5 text-[11px] text-gray-400">Scanări vechi, fără operator atribuit (legacy).</div>`
-            : `<div class="font-semibold text-secondary">${escapeHtml(op.name)}</div>
-               <div class="text-xs text-gray-500">User #${op.user_id}</div>`;
+            : `<div class="font-semibold text-secondary">${escapeHtml(op.name)}</div>`;
 
         return `
             <tr class="text-sm ${rowCls}">

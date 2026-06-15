@@ -2854,50 +2854,39 @@ class EventsController extends BaseController
             $totals[$k] = round($totals[$k], 2);
         }
 
-        // Check-in attribution per operator. Most historic scans have
-        // checked_in_at but a NULL checked_in_by because the legacy scan
-        // endpoints didn't capture the operating user. The recent
-        // organizer_app / venue_app paths do — see Ticket::checked_in_by
-        // backfill. Rows with NULL operator collapse into a single
-        // "Operator necunoscut" bucket so the organizer can still see the
-        // total scan count for the event without having it disappear into
+        // Check-in attribution per operator. tickets.checked_in_by stores
+        // the operator's NAME as free text (e.g. "Ionescu-Posea Doina"),
+        // not a User FK — legacy scan endpoints write the scanner's display
+        // name directly. Old historic scans have checked_in_at populated
+        // but checked_in_by NULL (legacy code paths that never captured
+        // the operator); those collapse into a single "Operator necunoscut"
+        // bucket so the organizer still sees the total scan count without
         // an N+1 of anonymous lines.
         $scannedTickets = \App\Models\Ticket::query()
             ->where('event_id', $eventId)
             ->whereNotNull('checked_in_at')
             ->get(['id', 'ticket_type_id', 'checked_in_at', 'checked_in_by', 'checked_in_via']);
 
-        $scanBuckets = []; // keyed by user_id or '__unknown__'
+        $scanBuckets = []; // keyed by lowercased name or '__unknown__'
         $scanViaTotals = [];
         $scanTotal = 0;
-        $scanUserIds = $scannedTickets->pluck('checked_in_by')->filter()->unique()->all();
-        $scannerUserById = !empty($scanUserIds)
-            ? \App\Models\User::whereIn('id', $scanUserIds)
-                ->get(['id', 'name', 'email'])
-                ->keyBy('id')
-            : collect();
 
         foreach ($scannedTickets as $t) {
             $scanTotal++;
             $via = $t->checked_in_via ?: 'unknown';
             $scanViaTotals[$via] = ($scanViaTotals[$via] ?? 0) + 1;
 
-            $userId = $t->checked_in_by ? (int) $t->checked_in_by : null;
-            $key = $userId ? 'u:' . $userId : '__unknown__';
+            $rawName = trim((string) ($t->checked_in_by ?? ''));
+            // Defensive: if a future migration ever swaps the column to an
+            // FK, a numeric string here would still produce a stable
+            // grouping key. We never try to resolve it against users —
+            // historically the value IS the display name.
+            $key = $rawName !== '' ? 'n:' . mb_strtolower($rawName) : '__unknown__';
 
             if (!isset($scanBuckets[$key])) {
-                if ($userId && isset($scannerUserById[$userId])) {
-                    $u = $scannerUserById[$userId];
-                    $name = trim((string) ($u->name ?? '')) ?: ($u->email ?? 'Operator #' . $userId);
-                } elseif ($userId) {
-                    $name = 'Operator #' . $userId;
-                } else {
-                    $name = 'Operator necunoscut';
-                }
                 $scanBuckets[$key] = [
-                    'name' => $name,
-                    'user_id' => $userId,
-                    'is_unknown' => !$userId,
+                    'name' => $rawName !== '' ? $rawName : 'Operator necunoscut',
+                    'is_unknown' => $rawName === '',
                     'scans' => 0,
                     'via' => [],
                     'first_scan_at' => null,
