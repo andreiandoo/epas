@@ -60,7 +60,11 @@ function isCdnAsset(url) {
   return /^https:\/\/cdn\.jsdelivr\.net\//.test(url);
 }
 function isScanAssetPath(url) {
-  return /\/assets\/(css\/scan-app\.css|js\/scan-app\/)/.test(url);
+  // Includes the concatenated JS bundle (P1/3) so SWR caches it like any
+  // other static asset. The ?v=<mtime> query string changes whenever a source
+  // file changes, which busts the SWR cache on the next request.
+  return /\/assets\/(css\/scan-app\.css|js\/scan-app\/)/.test(url)
+      || /\/api\/scan-bundle\.php/.test(url);
 }
 function isScanShellPath(url) {
   return /\/organizator\/scan(\/|$|\?)/.test(url);
