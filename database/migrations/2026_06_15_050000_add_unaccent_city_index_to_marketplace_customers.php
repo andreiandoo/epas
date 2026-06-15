@@ -27,6 +27,20 @@ return new class extends Migration {
             return;
         }
 
+        // unaccent() ships as STABLE because it reads from the unaccent
+        // dictionary at runtime; Postgres refuses STABLE/VOLATILE
+        // functions in expression indexes (the planner can't trust the
+        // output is reproducible). The standard fix is a thin SQL
+        // wrapper that re-declares IMMUTABLE — safe in practice because
+        // the dictionary doesn't change at runtime in our deployment.
+        // Same trick used by the events search elsewhere if needed.
+        DB::statement(<<<'SQL'
+            CREATE OR REPLACE FUNCTION immutable_unaccent(text)
+            RETURNS text AS $$
+                SELECT public.unaccent($1)
+            $$ LANGUAGE SQL IMMUTABLE PARALLEL SAFE STRICT
+        SQL);
+
         $existing = DB::selectOne(
             "SELECT 1 FROM pg_indexes WHERE indexname = 'mkt_cust_lower_unaccent_city_idx'"
         );
@@ -36,7 +50,7 @@ return new class extends Migration {
 
         DB::statement(<<<'SQL'
             CREATE INDEX CONCURRENTLY mkt_cust_lower_unaccent_city_idx
-            ON marketplace_customers (LOWER(unaccent(COALESCE(city, ''))))
+            ON marketplace_customers (LOWER(immutable_unaccent(COALESCE(city, ''))))
             WHERE city IS NOT NULL AND city <> ''
         SQL);
     }
@@ -44,5 +58,6 @@ return new class extends Migration {
     public function down(): void
     {
         DB::statement('DROP INDEX CONCURRENTLY IF EXISTS mkt_cust_lower_unaccent_city_idx');
+        DB::statement('DROP FUNCTION IF EXISTS immutable_unaccent(text)');
     }
 };

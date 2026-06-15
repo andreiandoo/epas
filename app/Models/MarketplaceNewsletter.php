@@ -379,11 +379,14 @@ class MarketplaceNewsletter extends Model
                 );
                 // OR-2: manual address text — unaccent + lowercase both
                 // sides so "Bucuresti" / "BUCUREȘTI" / "București" all
-                // match the canonical city name.
+                // match the canonical city name. Uses immutable_unaccent
+                // (deployed by the 2026_06_15_050000 migration) so the
+                // planner can hit the partial expression index
+                // mkt_cust_lower_unaccent_city_idx instead of seq scan.
                 if (!empty($cityNames)) {
                     $placeholders = implode(',', array_fill(0, count($cityNames), '?'));
                     $q->orWhereRaw(
-                        "LOWER(unaccent(COALESCE(city, ''))) IN (SELECT LOWER(unaccent(x)) FROM unnest(ARRAY[{$placeholders}]::text[]) AS x)",
+                        "LOWER(immutable_unaccent(COALESCE(city, ''))) IN (SELECT LOWER(immutable_unaccent(x)) FROM unnest(ARRAY[{$placeholders}]::text[]) AS x)",
                         $cityNames
                     );
                 }
