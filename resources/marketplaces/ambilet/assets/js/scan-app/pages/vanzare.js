@@ -218,6 +218,17 @@
 
     // Fast path: we already prefetched the iframe for this event.
     if (seatingPrefetch.url && seatingPrefetch.eventId === ev.id) {
+      // Defensive: if anything else (legacy code, browser quirk) blanked the
+      // iframe between prefetch and now, force-reload the prefetched URL.
+      var currentSrc = dom.seatIframe.getAttribute('src') || '';
+      if (!currentSrc || currentSrc === 'about:blank' || currentSrc.indexOf(seatingPrefetch.url) === -1) {
+        seatingPrefetch.loaded = false;
+        dom.seatIframe.src = seatingPrefetch.url;
+        dom.seatIframe.addEventListener('load', function () {
+          seatingPrefetch.loaded = true;
+          dom.seatLoading.hidden = true;
+        }, { once: true });
+      }
       dom.seatLoading.hidden = seatingPrefetch.loaded;
       dom.seatModal.classList.add('scanapp-seating-modal--open');
       if (!seatingPrefetch.loaded) {
@@ -259,7 +270,13 @@
 
   function closeSeating() {
     dom.seatModal.classList.remove('scanapp-seating-modal--open');
-    dom.seatIframe.src = 'about:blank';
+    // IMPORTANT: do NOT clear iframe.src on close. The prefetched embed page
+    // stays alive in the background so the next 'Locuri rezervate' tap is
+    // instant. Reloading the src here would defeat the whole P0/3 prefetch
+    // optimisation AND leave the modal blank on second open (user-reported
+    // bug). Iframe src is only reset when:
+    //   - the event changes (event-selected handler invalidates seatingPrefetch)
+    //   - the page navigates away (browser cleans up automatically)
   }
 
   function bindSeatingMessages() {
