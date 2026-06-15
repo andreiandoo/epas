@@ -110,9 +110,18 @@ $tabs = [
     </div>
   </header>
 
-  <!-- EventSelector strip (port of tixello-app/src/components/EventSelector.js)
-       — shown below the topbar on every page, opens the event picker on tap. -->
-  <button type="button" class="scanapp-event-selector" id="scanapp-event-selector-bar">
+  <?php
+    // EventSelector visibility rules (after user feedback):
+    //   panou           → full interactive selector (open picker on tap)
+    //   scanare/vanzare → read-only event name strip (no chevron, no click)
+    //   rapoarte        → nothing (page has its own past-event selector)
+    //   setari-scan     → nothing (no event context)
+    $selectorMode = 'hidden';
+    if ($scanPage === 'panou')        $selectorMode = 'interactive';
+    elseif (in_array($scanPage, ['scanare', 'vanzare'], true)) $selectorMode = 'readonly';
+  ?>
+  <?php if ($selectorMode === 'interactive'): ?>
+  <button type="button" class="scanapp-event-selector scanapp-event-selector--interactive" id="scanapp-event-selector-bar">
     <div class="scanapp-event-selector__content">
       <div class="scanapp-event-selector__title-row">
         <div class="scanapp-event-selector__name" id="scanapp-es-name">Niciun eveniment selectat</div>
@@ -125,6 +134,20 @@ $tabs = [
     </div>
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--scanapp-text-tertiary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
   </button>
+  <?php elseif ($selectorMode === 'readonly'): ?>
+  <div class="scanapp-event-selector scanapp-event-selector--readonly">
+    <div class="scanapp-event-selector__content">
+      <div class="scanapp-event-selector__title-row">
+        <div class="scanapp-event-selector__name" id="scanapp-es-name">—</div>
+        <div class="scanapp-event-selector__badge" id="scanapp-es-badge" hidden>
+          <span class="scanapp-pulse-dot scanapp-event-selector__badge-dot" id="scanapp-es-badge-dot"></span>
+          <span id="scanapp-es-badge-text">Viitor</span>
+        </div>
+      </div>
+      <div class="scanapp-event-selector__meta" id="scanapp-es-meta">—</div>
+    </div>
+  </div>
+  <?php endif; ?>
 
   <main class="scanapp-main">
 <?php
