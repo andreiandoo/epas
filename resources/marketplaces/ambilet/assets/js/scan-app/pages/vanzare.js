@@ -175,10 +175,61 @@
   // Mirrors tixello-app/src/screens/SeatingMapScreen.js: same backend endpoint
   // (/organizer/seating/embed-token), same /seating/embed page, same
   // postMessage contract. The only difference vs mobile is iframe vs WebView.
+  //
+  // PERF P0/3: prefetch + warm-up the iframe in the background. When the page
+  // loads and the selected event has seating, we fire the embed-token request
+  // immediately and set iframe.src to the returned URL with display:none. The
+  // canvas page + geometry JSON + Reverb handshake all happen while the user
+  // is scrolling the ticket grid. When they finally tap 'Locuri rezervate',
+  // we just reveal the (already-rendered) modal — instant.
+  var seatingPrefetch = { url: null, eventId: null, loaded: false };
+
+  function prefetchSeating() {
+    if (!dom.seatIframe) return;
+    var ev = EventContext.getState().selectedEvent;
+    if (!ev) return;
+    var hasSeating = !!(ev.has_seating === true || ev.seating_layout_id);
+    if (!hasSeating) return;
+    if (seatingPrefetch.eventId === ev.id && seatingPrefetch.url) return; // already prefetched
+
+    // Token request is cheap (single signed-URL response, ~100 bytes); the
+    // expensive part is the iframe loading the embed HTML + geometry.
+    ScanAPI.post('/organizer/seating/embed-token', { event_id: ev.id })
+      .then(function (resp) {
+        var url = (resp && resp.data && resp.data.url) || (resp && resp.url) || null;
+        if (!url) return;
+        seatingPrefetch = { url: url, eventId: ev.id, loaded: false };
+        // Eager-load — modal stays display:none but the iframe still
+        // downloads + executes the embed page. By the time the operator
+        // taps a seated ticket, the canvas is interactive.
+        dom.seatIframe.src = url;
+        var onLoad = function () { seatingPrefetch.loaded = true; };
+        dom.seatIframe.addEventListener('load', onLoad, { once: true });
+      })
+      .catch(function () {
+        // Silent failure — openSeating() falls back to the on-demand
+        // request path, so the worst case is no-prefetch behavior.
+      });
+  }
+
   function openSeating(type) {
     var ev = EventContext.getState().selectedEvent;
     if (!ev) { ScanApp.toast('Niciun eveniment selectat.', 'warning'); return; }
 
+    // Fast path: we already prefetched the iframe for this event.
+    if (seatingPrefetch.url && seatingPrefetch.eventId === ev.id) {
+      dom.seatLoading.hidden = seatingPrefetch.loaded;
+      dom.seatModal.classList.add('scanapp-seating-modal--open');
+      if (!seatingPrefetch.loaded) {
+        // Still loading in background — hide spinner once it's done.
+        dom.seatIframe.addEventListener('load', function () {
+          dom.seatLoading.hidden = true;
+        }, { once: true });
+      }
+      return;
+    }
+
+    // Slow path: prefetch wasn't done (no seating? cold visit? cache miss?).
     dom.seatIframe.src = 'about:blank';
     dom.seatLoading.hidden = false;
     dom.seatModal.classList.add('scanapp-seating-modal--open');
@@ -197,6 +248,8 @@
       dom.seatIframe.src = url;
       dom.seatLoading.hidden = false;
       dom.seatIframe.onload = function () { dom.seatLoading.hidden = true; };
+      // Cache for any subsequent open in this session.
+      seatingPrefetch = { url: url, eventId: ev.id, loaded: false };
     }).catch(function (err) {
       console.error('[vanzare] seating embed-token error:', err);
       ScanApp.toast((err && err.message) || 'Nu am putut deschide harta locurilor.', 'danger');
@@ -556,10 +609,14 @@
         cart = [];
         selectedSeatUids = [];
         selectedSeatDetails = [];
+        // Invalidate the warm iframe — it was scoped to the previous event.
+        seatingPrefetch = { url: null, eventId: null, loaded: false };
+        if (dom.seatIframe) dom.seatIframe.src = 'about:blank';
         renderGrid();
         renderCart();
         renderRecentSales();
         reflectReportsOnly();
+        prefetchSeating(); // re-warm for the new event
       });
       EventContext.subscribe('ticket-types-updated', function () {
         renderGrid();
@@ -567,6 +624,9 @@
       reflectReportsOnly();
       renderGrid();
       renderRecentSales();
+      // Initial warm-up for the current event (covers SWR-hydrated state where
+      // event-selected may have fired before this subscription was attached).
+      prefetchSeating();
     }
 
     if (window.AppContext) {
