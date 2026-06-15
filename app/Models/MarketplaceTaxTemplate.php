@@ -1933,6 +1933,17 @@ class MarketplaceTaxTemplate extends Model
             // alongside their respective values.
             // getVariablesForContext() is static — helpers must be called
             // via self:: too. The earlier $this-> calls blew up at 1909.
+            //
+            // Enrich the saved breakdown with per-row discount before render.
+            // GenerateAutoDeconts + a couple of legacy save paths save the
+            // breakdown without the discount/net columns that
+            // buildBreakdownFromSelection populates, so 1a/1c rendered as
+            // gross (catalog × qty) and drifted from the payout's actual
+            // collected net by exactly the discount sum. Idempotent: when
+            // discount is already present (modern saves), the helper exits
+            // early so existing PDFs stay bit-identical.
+            $ticketBreakdown = self::enrichBreakdownWithLiveDiscount($payout, $ticketBreakdown);
+
             $variables['sales_breakdown_rows'] = self::buildPayoutSalesBreakdownRows($payout, $ticketBreakdown, $posTypeIdsSet, $vatAmount, $formatPrice);
             $variables['refund_breakdown_rows'] = self::buildPayoutRefundBreakdownRows($payout, $formatPrice);
 
@@ -2018,6 +2029,78 @@ class MarketplaceTaxTemplate extends Model
      * @param array<int, array<string, mixed>> $ticketBreakdown
      * @param array<int, mixed> $posTypeIdsSet
      */
+    /**
+     * Populate the `discount` column on each breakdown row using the live
+     * SalesBreakdownService output, indexed by ticket_type_id. Only fires
+     * when the saved breakdown is missing the field — when a save path
+     * already populated discount/net (the modern buildBreakdownFromSelection
+     * shape), the breakdown is returned untouched so existing payouts'
+     * PDFs render exactly as before.
+     *
+     * Safe failure mode: if the Service throws (event deleted, period
+     * malformed, etc.), return the breakdown unchanged. The PDF then
+     * shows the same row amounts it would have without this enrichment.
+     */
+    private static function enrichBreakdownWithLiveDiscount(MarketplacePayout $payout, array $breakdown): array
+    {
+        if (empty($breakdown)) {
+            return $breakdown;
+        }
+
+        // Modern breakdowns already carry per-row discount — bail.
+        $firstRow = $breakdown[0] ?? [];
+        if (array_key_exists('discount', $firstRow)) {
+            return $breakdown;
+        }
+
+        // No event resolvable → nothing to look up against.
+        $event = $payout->event;
+        if (!$event) {
+            return $breakdown;
+        }
+
+        try {
+            $svc = app(\App\Services\Marketplace\SalesBreakdownService::class);
+            $res = $svc->build(
+                $event,
+                $payout->period_start,
+                $payout->period_end,
+                excludePos: true,
+            );
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning(
+                'MarketplaceTaxTemplate: discount enrichment failed; rendering breakdown without it',
+                [
+                    'payout_id' => $payout->id,
+                    'error' => $e->getMessage(),
+                ]
+            );
+            return $breakdown;
+        }
+
+        $discountByType = [];
+        foreach (($res['per_type'] ?? []) as $row) {
+            $ttId = $row['ticket_type_id'] ?? null;
+            if ($ttId !== null) {
+                $discountByType[(int) $ttId] = (float) ($row['discount'] ?? 0);
+            }
+        }
+
+        if (empty($discountByType)) {
+            return $breakdown;
+        }
+
+        foreach ($breakdown as &$row) {
+            $ttId = $row['ticket_type_id'] ?? null;
+            if ($ttId !== null && isset($discountByType[(int) $ttId])) {
+                $row['discount'] = $discountByType[(int) $ttId];
+            }
+        }
+        unset($row);
+
+        return $breakdown;
+    }
+
     private static function buildPayoutSalesBreakdownRows(MarketplacePayout $payout, array $ticketBreakdown, array $posTypeIdsSet, float $vatAmount, callable $formatPrice): string
     {
         // Expand each saved breakdown row by its `tiers` field when present.
