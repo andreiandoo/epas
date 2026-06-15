@@ -32,6 +32,78 @@ header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
 
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 
+// ============================================================================
+// PERF P1/4 — short-TTL response cache for read-only endpoints
+// ----------------------------------------------------------------------------
+// Same-event reads from many operators (and from the same operator hopping
+// between /panou ↔ /scanare ↔ /vanzare) used to round-trip to core.tixello.com
+// every time. The data only changes when a check-in happens or a ticket is
+// sold, which Reverb already broadcasts, so we can safely serve a stale
+// snapshot for a few seconds without missing meaningful state.
+//
+// Cache key includes a hash of the bearer token so different organizers /
+// team members never see each other's data. TTLs are intentionally short —
+// long enough to absorb burst traffic from page navigation, short enough
+// that the 30s EventContext poll always sees fresh data.
+// ============================================================================
+
+/**
+ * Returns the TTL in seconds for a given (method, path) tuple, or false to
+ * indicate the response must not be cached. Conservative — only true GETs
+ * with deterministic responses are listed here.
+ */
+function _scanProxyCacheTtl(string $method, string $cleanPath): int|false {
+    if ($method !== 'GET') return false;
+    static $rules = [
+        '#^/organizer/events$#'                              => 15, // events list
+        '#^/organizer/events/\d+$#'                          => 5,  // event detail (ticket_types + stats)
+        '#^/organizer/events/\d+/participants$#'             => 5,  // headline stats
+        '#^/organizer/events/\d+/sales-breakdown$#'          => 5,  // dashboard revenue modal
+        '#^/organizer/team$#'                                => 30,
+        '#^/organizer/venues/\d+/gates$#'                    => 60,
+        '#^/venue-owner/events$#'                            => 15,
+        '#^/venue-owner/events/\d+$#'                        => 5,
+    ];
+    foreach ($rules as $regex => $ttl) {
+        if (preg_match($regex, $cleanPath)) return $ttl;
+    }
+    return false;
+}
+
+function _scanProxyCacheKey(string $path, ?string $auth): string {
+    // Include a short token fingerprint so per-organizer responses don't leak
+    // between organizers sharing the same cache directory.
+    $authHash = $auth ? substr(hash('sha256', $auth), 0, 16) : 'anon';
+    return 'scanproxy_' . hash('sha256', $authHash . '|' . $path) . '.cache';
+}
+
+function _scanProxyCacheDir(): string {
+    return sys_get_temp_dir();
+}
+
+function _scanProxyCacheGet(string $key, int $ttl): ?string {
+    $file = _scanProxyCacheDir() . DIRECTORY_SEPARATOR . $key;
+    if (!is_file($file)) return null;
+    $mtime = @filemtime($file);
+    if ($mtime === false) return null;
+    if ((time() - $mtime) > $ttl) {
+        @unlink($file);
+        return null;
+    }
+    $contents = @file_get_contents($file);
+    return $contents !== false ? $contents : null;
+}
+
+function _scanProxyCacheSet(string $key, string $body): void {
+    $file = _scanProxyCacheDir() . DIRECTORY_SEPARATOR . $key;
+    // Atomic write: write to tmp, rename. Otherwise a concurrent reader could
+    // see a truncated file mid-write.
+    $tmp = $file . '.tmp.' . bin2hex(random_bytes(4));
+    if (@file_put_contents($tmp, $body) !== false) {
+        @rename($tmp, $file);
+    }
+}
+
 // CORS preflight (same-origin in production, but allow OPTIONS for safety).
 if ($method === 'OPTIONS') {
     header('Access-Control-Allow-Methods: GET, POST, PUT, PATCH, DELETE, OPTIONS');
@@ -111,6 +183,26 @@ if ($incomingAuth) {
     $headers[] = 'Authorization: ' . $incomingAuth;
 }
 
+// ── Cache lookup BEFORE the upstream request ─────────────────────────────
+// Cache key uses cleanPath + query so different filters (per_page, sort)
+// don't share the same cache slot. Auth fingerprint scopes per organizer.
+$cacheTtl = _scanProxyCacheTtl($method, $cleanPath);
+$cacheKey = null;
+if ($cacheTtl !== false) {
+    $cachePathForKey = $cleanPath . ($queryFromPath !== null && $queryFromPath !== '' ? '?' . $queryFromPath : '');
+    $cacheKey = _scanProxyCacheKey($cachePathForKey, $incomingAuth);
+    $cached = _scanProxyCacheGet($cacheKey, $cacheTtl);
+    if ($cached !== null) {
+        // HIT — short-circuit before we even open a curl handle.
+        header('X-Scan-Proxy-Cache: HIT');
+        header('X-Scan-Proxy-Cache-Ttl: ' . $cacheTtl);
+        http_response_code(200);
+        echo $cached;
+        exit;
+    }
+    header('X-Scan-Proxy-Cache: MISS');
+}
+
 // Body for write methods.
 $body = null;
 if (in_array($method, ['POST', 'PUT', 'PATCH', 'DELETE'], true)) {
@@ -136,6 +228,12 @@ if ($response === false) {
     http_response_code(502);
     echo json_encode(['success' => false, 'message' => 'Upstream error', 'error' => $err]);
     exit;
+}
+
+// Store in cache only on 2xx responses — error bodies (401, 500, etc.) must
+// not be served from cache, the client should always hit upstream to retry.
+if ($cacheKey !== null && $status >= 200 && $status < 300 && $response !== '') {
+    _scanProxyCacheSet($cacheKey, $response);
 }
 
 http_response_code((int) $status);
