@@ -199,6 +199,130 @@ function api_cached(string $key, callable $callback, int $ttl = 300)
 }
 
 /**
+ * Parallel variant of api_cached() — runs several independent GET requests
+ * CONCURRENTLY via curl_multi instead of one-after-another. Cache semantics are
+ * identical to api_cached() (fresh / stale-while-revalidate / skip-failed), but
+ * only the cache MISSES are fetched, and those misses share a single wall-clock
+ * round-trip instead of summing. Used by the city page, which needs both
+ * /events and /activities (two independent upstream calls) on the same render.
+ *
+ * @param array $jobs  Map of resultKey => [
+ *                        'key'      => string  (cache key),
+ *                        'endpoint' => string  (e.g. '/events'),
+ *                        'params'   => array   (query params),
+ *                        'ttl'      => int      (seconds, default 300),
+ *                      ]
+ * @return array Map of resultKey => api_get-shaped result (['success','data',('meta')]).
+ */
+function api_cached_many(array $jobs): array
+{
+    $cacheDir = sys_get_temp_dir() . '/bileteonline_cache';
+    if (!is_dir($cacheDir)) {
+        @mkdir($cacheDir, 0755, true);
+    }
+    $bypassCache = !empty($_GET['preview']) || !empty($_GET['nocache']);
+
+    $results = [];
+    $misses  = []; // resultKey => job
+
+    // 1) Serve everything we can from disk (fresh or stale-within-limit).
+    foreach ($jobs as $rk => $job) {
+        $ttl       = (int) ($job['ttl'] ?? 300);
+        $cacheFile = $cacheDir . '/' . md5($job['key']) . '.json';
+        if (!$bypassCache && file_exists($cacheFile)) {
+            $cached = json_decode(file_get_contents($cacheFile), true);
+            if ($cached && isset($cached['expires'], $cached['data'])) {
+                $staleLimit = $cached['expires'] + ($ttl * 4);
+                if ($cached['expires'] > time() || time() < $staleLimit) {
+                    $results[$rk] = $cached['data'];
+                    continue;
+                }
+            }
+        }
+        $misses[$rk] = $job;
+    }
+
+    if (empty($misses)) {
+        return $results;
+    }
+
+    // 2) Fetch all misses concurrently.
+    $headers = [
+        'Accept: application/json',
+        'Content-Type: application/json',
+        'X-API-Key: ' . API_KEY,
+    ];
+    $mh = curl_multi_init();
+    $handles = [];
+    foreach ($misses as $rk => $job) {
+        $url = API_BASE_URL . $job['endpoint'];
+        if (!empty($job['params'])) {
+            $url .= '?' . http_build_query($job['params']);
+        }
+        $ch = curl_init();
+        curl_setopt_array($ch, [
+            CURLOPT_URL => $url,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_CONNECTTIMEOUT => 3,
+            CURLOPT_TIMEOUT => 10,
+            CURLOPT_HTTPHEADER => $headers,
+            CURLOPT_SSL_VERIFYPEER => true,
+            CURLOPT_FOLLOWLOCATION => true,
+        ]);
+        $handles[$rk] = $ch;
+        curl_multi_add_handle($mh, $ch);
+    }
+
+    // Drive the multi handle to completion.
+    do {
+        $status = curl_multi_exec($mh, $running);
+        if ($running) {
+            curl_multi_select($mh, 1.0);
+        }
+    } while ($running && $status === CURLM_OK);
+
+    // 3) Parse + cache each response (mirrors api_request()/api_cached()).
+    foreach ($handles as $rk => $ch) {
+        $job      = $misses[$rk];
+        $ttl      = (int) ($job['ttl'] ?? 300);
+        $response = curl_multi_getcontent($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $error    = curl_error($ch);
+        curl_multi_remove_handle($mh, $ch);
+        curl_close($ch);
+
+        if ($error) {
+            error_log("API Multi Error: {$error} for {$job['endpoint']}");
+            $results[$rk] = ['success' => false, 'error' => 'Connection error', 'data' => []];
+            continue;
+        }
+        $decoded = json_decode((string) $response, true);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            $results[$rk] = ['success' => false, 'error' => 'Invalid response', 'data' => []];
+            continue;
+        }
+        if ($httpCode >= 400) {
+            $results[$rk] = ['success' => false, 'error' => $decoded['message'] ?? 'API error', 'data' => []];
+            continue;
+        }
+
+        $result = ['success' => true, 'data' => $decoded['data'] ?? $decoded];
+        if (isset($decoded['meta'])) {
+            $result['meta'] = $decoded['meta'];
+        }
+        $results[$rk] = $result;
+
+        // Cache only successful payloads (same rule as api_cached()).
+        $cacheFile = $cacheDir . '/' . md5($job['key']) . '.json';
+        @file_put_contents($cacheFile, json_encode(['expires' => time() + $ttl, 'data' => $result]));
+    }
+
+    curl_multi_close($mh);
+
+    return $results;
+}
+
+/**
  * Get KB categories with caching
  *
  * @return array Categories array
