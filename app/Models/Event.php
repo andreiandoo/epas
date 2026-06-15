@@ -887,38 +887,11 @@ class Event extends Model
      */
     public function getTotalRevenueAttribute(): float
     {
-        $tts = $this->relationLoaded('ticketTypes')
-            ? $this->ticketTypes
-            : $this->ticketTypes()->get();
-
-        if ($tts->isEmpty()) {
-            return 0.0;
-        }
-
-        $ttIds = $tts->pluck('id')->toArray();
-
-        $countsByType = \App\Models\Ticket::whereIn('ticket_type_id', $ttIds)
-            ->where('event_id', $this->id)
-            ->whereIn('status', ['valid', 'used'])
-            ->groupBy('ticket_type_id')
-            ->selectRaw('ticket_type_id, COUNT(*) as cnt')
-            ->pluck('cnt', 'ticket_type_id');
-
-        $gross = 0.0;
-        foreach ($tts as $tt) {
-            $count = (int) ($countsByType[$tt->id] ?? 0);
-            if ($count === 0) continue;
-            $priceCents = ((int) ($tt->sale_price_cents ?? 0)) > 0
-                ? (int) $tt->sale_price_cents
-                : (int) ($tt->price_cents ?? 0);
-            $gross += $count * ($priceCents / 100);
-        }
-
-        $discount = (float) \App\Models\Order::where('event_id', $this->id)
-            ->whereIn('status', ['paid', 'confirmed', 'completed'])
-            ->sum('discount_amount');
-
-        return round(max(0.0, $gross - $discount), 2);
+        // PERF P2/8 — routes through EventStatsCache so 100 dashboard hits
+        // on the same event in 60s share one computation. The service
+        // wraps the identical query logic and falls back to a live
+        // compute on any cache error (Redis down, exception, etc).
+        return (float) (\App\Services\EventStatsCache::get($this->id)['total_revenue'] ?? 0.0);
     }
 
     /**
@@ -942,9 +915,11 @@ class Event extends Model
      */
     public function getTotalTicketsSoldAttribute(): int
     {
-        return (int) \App\Models\Ticket::where('event_id', $this->id)
-            ->whereIn('status', ['valid', 'used'])
-            ->count();
+        // PERF P2/8 — see comment on getTotalRevenueAttribute. Same
+        // service, same key — the two attributes share one cache read
+        // when called together (Laravel attribute accessor cache makes
+        // this even cheaper within a single request).
+        return (int) (\App\Services\EventStatsCache::get($this->id)['total_tickets_sold'] ?? 0);
     }
 
     /**

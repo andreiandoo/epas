@@ -4017,23 +4017,17 @@ class EventsController extends BaseController
             'tickets_sold' => $event->total_tickets_sold,
             'revenue' => (float) $event->total_revenue,
             'views' => $event->views_count ?? 0,
-            'ticket_types' => $event->ticketTypes->map(function ($tt) use ($event) {
-                // Per-type counts aligned 2026-06-14 with the admin panel's
-                // EventStatistics: tickets with status valid|used, including
-                // invitations (no order). is_cancelled boolean is not
-                // reliable on legacy data, so we filter by status directly
-                // (same as Event::getTotalTicketsSoldAttribute).
-                $validTickets = \App\Models\Ticket::where('ticket_type_id', $tt->id)
-                    ->where('event_id', $event->id)
-                    ->whereIn('status', ['valid', 'used'])
-                    ->count();
-
-                // Count checked-in tickets — same valid|used scope.
-                $checkedIn = \App\Models\Ticket::where('ticket_type_id', $tt->id)
-                    ->where('event_id', $event->id)
-                    ->whereIn('status', ['valid', 'used'])
-                    ->whereNotNull('checked_in_at')
-                    ->count();
+            // PERF P2/8 — fetch the per-ticket-type stats hash ONCE outside
+            // the loop instead of running 2 COUNTs per ticket type per
+            // render. For a 5-type event this collapses 10 queries to 0
+            // (cache hit) or 2 (cache miss — GROUP BY queries inside the
+            // service compute step). See EventStatsCache::compute().
+            'ticket_types' => (function () use ($event) {
+                $stats = \App\Services\EventStatsCache::get($event->id);
+                $perType = $stats['per_ticket_type'] ?? [];
+                return $event->ticketTypes->map(function ($tt) use ($event, $perType) {
+                $validTickets = (int) ($perType[$tt->id]['sold'] ?? 0);
+                $checkedIn = (int) ($perType[$tt->id]['checked_in'] ?? 0);
 
                 // Available count — for seated events, try to count real
                 // event_seats with status='available' that map to this
@@ -4074,7 +4068,8 @@ class EventsController extends BaseController
                     'color' => $tt->color ?? null,
                     'checked_in' => $checkedIn,
                 ];
-            }),
+                });
+            })(),
             'has_seating' => (bool) $event->seating_layout_id,
             'created_at' => $event->created_at?->toIso8601String(),
         ];

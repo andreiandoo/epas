@@ -68,6 +68,15 @@ class OrderObserver
         // Invalidate organizer-level breakdown cache on every new order so
         // the stats tab picks the row up at next render.
         DB::afterCommit(fn () => $this->bustOrganizerBreakdownCache($order));
+
+        // PERF P2/8 — bust the per-event aggregate stats cache so the
+        // organizer scan-app dashboard and the mobile app see the new
+        // sale on next refresh (otherwise stale up to 60s). Tickets
+        // attached to this order will also fire TicketObserver::created,
+        // but we forget proactively here in case ticket creation lags.
+        if ($order->event_id) {
+            DB::afterCommit(fn () => \App\Services\EventStatsCache::forget($order->event_id));
+        }
     }
 
     /**
@@ -125,6 +134,14 @@ class OrderObserver
             // by status IN paid/confirmed/completed). 5-min TTL covers other
             // edge cases on its own.
             DB::afterCommit(fn () => $this->bustOrganizerBreakdownCache($order));
+
+            // PERF P2/8 — bust the per-event aggregate stats cache too.
+            // Revenue depends on Order::sum(discount_amount) which is
+            // status-filtered, so a status transition (refund, void) can
+            // change the cached revenue figure.
+            if ($order->event_id) {
+                DB::afterCommit(fn () => \App\Services\EventStatsCache::forget($order->event_id));
+            }
         }
 
         // Order moved between customers (rare — usually via OrderTransferService,

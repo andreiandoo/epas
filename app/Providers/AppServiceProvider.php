@@ -102,6 +102,10 @@ class AppServiceProvider extends ServiceProvider
         \App\Models\Order::observe(\App\Observers\OrderObserver::class);
         \App\Models\Order::observe(\App\Observers\FacebookCapiOrderObserver::class);
         \App\Models\Order::observe(\App\Observers\ActivityBookingOrderObserver::class);
+        // PERF P2/8 — invalidate event_stats:v1:{event_id} cache on ticket
+        // status / check-in changes so dashboards see fresh numbers within
+        // 60s window (without waiting for the TTL to expire on its own).
+        \App\Models\Ticket::observe(\App\Observers\TicketObserver::class);
         \App\Models\Event::observe(\App\Observers\EventObserver::class);
         \App\Models\Event::observe(\App\Observers\MarketplaceEventObserver::class);
         \App\Models\MarketplaceCustomer::observe(\App\Observers\MarketplaceCustomerObserver::class);
