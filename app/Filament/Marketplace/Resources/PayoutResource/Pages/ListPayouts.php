@@ -1232,49 +1232,31 @@ class ListPayouts extends ListRecords
             return;
         }
 
-        $ttMap = $event->ticketTypes->keyBy('id');
-        $ticketBreakdown = collect($items)->map(function ($t) use ($ttMap) {
-            $tt = $ttMap->get($t['ticket_type_id'] ?? null);
-            return [
-                'ticket_type_id' => $t['ticket_type_id'] ?? null,
-                'ticket_type_name' => $t['ticket_type_name'] ?? '',
-                'qty' => (int) ($t['qty'] ?? 0),
-                'unit_price' => (float) ($t['unit_price'] ?? 0),
-                'commission_per_ticket' => (float) ($t['commission_per_ticket'] ?? 0),
-                'commission_type' => $tt?->commission_type ?? null,
-                'commission_rate' => $tt?->commission_rate !== null ? (float) $tt->commission_rate : null,
-                'commission_fixed' => $tt?->commission_fixed !== null ? (float) $tt->commission_fixed : null,
-                'commission_mode' => $tt?->commission_mode ?? null,
-            ];
-        })->values()->toArray();
-
-        // Resolve commission_mode from ticket types first (same as manual flow)
-        $modesFromTickets = collect($ticketBreakdown)->pluck('commission_mode')->filter()->unique()->values();
-        if ($modesFromTickets->count() === 1) {
-            $commissionMode = $modesFromTickets->first();
-        } elseif ($modesFromTickets->contains('added_on_top')) {
-            $commissionMode = 'added_on_top';
+        // Delegate to the same canonical pipeline the manual create modal
+        // uses (PayoutResource\Pages\ListPayouts second action ~line 824).
+        // buildBreakdownFromSelection enriches each row with discount /
+        // net / tiers and threads totals through every pass — without this
+        // delegation, payouts created via the "Evenimente încheiate" modal
+        // saved a minimal breakdown (qty + unit_price + commission only),
+        // and the PDF renderer fell back to gross × qty for 1a/1c.
+        // Payout 3069 was the surfaced case.
+        if (!empty($items)) {
+            $built = MarketplacePayout::buildBreakdownFromSelection($items, $event, null);
+            $ticketBreakdown = $built['rows'];
+            $grossAmount = $built['totals']['gross'];
+            $commissionAmount = $built['totals']['commission'];
+            $discountAmount = (float) ($built['totals']['discount'] ?? 0);
+            $netAmount = $built['totals']['net']; // already nets gross − commission − discount
+            $commissionMode = $built['commission_mode'];
         } else {
+            // Refund-only flow — no tickets in this slice, just a 0-net
+            // record so the refund history has somewhere to land.
+            $ticketBreakdown = [];
+            $grossAmount = 0;
+            $commissionAmount = 0;
+            $discountAmount = 0;
+            $netAmount = 0;
             $commissionMode = $event->getEffectiveCommissionMode() ?? 'included';
-        }
-
-        // Compute gross / commission / net from the breakdown
-        $grossAmount = 0;
-        $commissionAmount = 0;
-        foreach ($ticketBreakdown as $tb) {
-            $qty = (int) $tb['qty'];
-            $unit = (float) $tb['unit_price'];
-            $commPer = (float) $tb['commission_per_ticket'];
-            $grossAmount += $qty * $unit;
-            $commissionAmount += $qty * $commPer;
-        }
-
-        if ($commissionMode === 'added_on_top') {
-            // Customer paid commission separately; organizer receives full gross
-            $netAmount = $grossAmount;
-        } else {
-            // Commission is deducted from gross
-            $netAmount = $grossAmount - $commissionAmount;
         }
 
         if ($netAmount <= 0 && $refundCount === 0) {
@@ -1319,6 +1301,7 @@ class ListPayouts extends ListRecords
             'period_end' => now()->toDateString(),
             'gross_amount' => round($grossAmount, 2),
             'commission_amount' => round($commissionAmount, 2),
+            'discount_amount' => round($discountAmount, 2),
             'fees_amount' => 0,
             'adjustments_amount' => 0,
             // Triggered by an admin clicking "Generează decont" in the
