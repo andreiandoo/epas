@@ -42,6 +42,19 @@ $tabs = [
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="format-detection" content="telephone=no">
 
+    <!-- PERF: preconnect to the API origin so the DNS lookup + TCP + TLS
+         handshake happens IN PARALLEL with HTML parsing. By the time JS
+         fires the first /api/scan-proxy → core.tixello.com request, the
+         connection is already warm. Saves ~100-300ms on cold visits
+         (mobile data, first session). dns-prefetch is a cheaper fallback
+         that older browsers honor.
+
+         Scope: only the scan-app layout. Other marketplace pages remain
+         untouched. -->
+    <link rel="preconnect" href="https://core.tixello.com" crossorigin>
+    <link rel="dns-prefetch" href="https://core.tixello.com">
+    <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
+
     <!-- PWA: manifest + iOS apple-touch-icon + theme. We declare a single
          apple-touch-icon at 180x180 (iOS picks the closest match and resizes;
          no point making 4 GD calls on first load). The manifest itself
