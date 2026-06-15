@@ -65,13 +65,37 @@
        Page-specific scripts can listen for ScanApp.toast / EventContext.subscribe().
        defer scripts execute in document order, so any page-specific JS MUST be
        emitted AFTER these via $scanPageScript, otherwise it runs before
-       ScanAuth / AppContext / EventContext are defined. -->
+       ScanAuth / AppContext / EventContext are defined.
+
+       PERF P1/3 — All 6 core files (auth, api, app-context, event-context,
+       scanner, app) are concatenated server-side by /api/scan-bundle.php and
+       delivered as one HTTP request. Saves 5 round-trips per page load.
+       Bundle URL is invalidated automatically by max(mtime) → ?v= so source
+       edits are picked up on next request.
+
+       Emergency rollback: add ?bundle=0 to the URL to fall back to individual
+       script tags (useful if the bundle ever serves something stale). -->
+<?php
+    $coreDir = dirname(__DIR__, 2) . '/assets/js/scan-app/';
+    $coreFiles = ['auth.js', 'api.js', 'app-context.js', 'event-context.js', 'scanner.js', 'app.js'];
+    $coreMaxMtime = 0;
+    foreach ($coreFiles as $f) {
+        if (is_file($coreDir . $f)) {
+            $coreMaxMtime = max($coreMaxMtime, filemtime($coreDir . $f));
+        }
+    }
+    $useBundle = !isset($_GET['bundle']) || $_GET['bundle'] !== '0';
+?>
+<?php if ($useBundle): ?>
+  <script src="/api/scan-bundle.php?v=<?= $coreMaxMtime ?>" defer></script>
+<?php else: ?>
   <script src="/assets/js/scan-app/auth.js?v=<?= filemtime(dirname(__DIR__, 2) . '/assets/js/scan-app/auth.js') ?>" defer></script>
   <script src="/assets/js/scan-app/api.js?v=<?= filemtime(dirname(__DIR__, 2) . '/assets/js/scan-app/api.js') ?>" defer></script>
   <script src="/assets/js/scan-app/app-context.js?v=<?= filemtime(dirname(__DIR__, 2) . '/assets/js/scan-app/app-context.js') ?>" defer></script>
   <script src="/assets/js/scan-app/event-context.js?v=<?= filemtime(dirname(__DIR__, 2) . '/assets/js/scan-app/event-context.js') ?>" defer></script>
   <script src="/assets/js/scan-app/scanner.js?v=<?= filemtime(dirname(__DIR__, 2) . '/assets/js/scan-app/scanner.js') ?>" defer></script>
   <script src="/assets/js/scan-app/app.js?v=<?= filemtime(dirname(__DIR__, 2) . '/assets/js/scan-app/app.js') ?>" defer></script>
+<?php endif; ?>
 <?php if (!empty($scanPageScript)):
     $scanPageScriptPath = dirname(__DIR__, 2) . '/assets/js/scan-app/pages/' . basename($scanPageScript);
     $scanPageScriptVer = is_file($scanPageScriptPath) ? filemtime($scanPageScriptPath) : 1;
