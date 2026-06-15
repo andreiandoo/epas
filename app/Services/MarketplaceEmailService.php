@@ -44,8 +44,16 @@ class MarketplaceEmailService
             return false;
         }
 
-        if (!$this->marketplace->hasMailConfigured()) {
-            Log::warning('Admin notification skipped — SMTP not configured', [
+        // Admin notifications are transactional content (order receipts,
+        // refund alerts, stock warnings) — route them through the
+        // platform-owned transactional provider (ambilet.ro server) so
+        // they don't ride on the bulk newsletter Brevo account. Either
+        // transport being configured is enough; sendTransactionalEmail
+        // transparently falls back primary→transactional or vice versa.
+        $hasTransactional = $this->marketplace->hasTransactionalMailConfigured();
+        $hasPrimary = $this->marketplace->hasMailConfigured();
+        if (!$hasTransactional && !$hasPrimary) {
+            Log::warning('Admin notification skipped — neither transactional nor primary SMTP configured', [
                 'slug' => $slug,
                 'marketplace_id' => $this->marketplace->id,
             ]);
@@ -66,20 +74,69 @@ class MarketplaceEmailService
             $html = $this->renderFallback($fallbackHtml, $variables);
         }
 
+        // Route through transactional when configured (ambilet.ro). Prior
+        // version used primary getMailTransport() directly which on
+        // Ambilet pointed at the Brevo bulk account — every admin
+        // notification silently failed once the Brevo cred required
+        // reactivation. Same call shape sendTemplatedEmail uses.
+        $useTransactional = $hasTransactional;
+        $fromAddress = $useTransactional
+            ? $this->marketplace->getTransactionalEmailFromAddress()
+            : $this->marketplace->getEmailFromAddress();
+        $fromName = $useTransactional
+            ? $this->marketplace->getTransactionalEmailFromName()
+            : $this->marketplace->getEmailFromName();
+
+        // Always create a MarketplaceEmailLog row so the admin can see
+        // attempts + failures in the EmailLogs UI. Previously this code
+        // path bypassed logging entirely — the operator only learned of
+        // delivery failures by noticing missing emails in their inbox.
+        $log = MarketplaceEmailLog::create([
+            'marketplace_client_id' => $this->marketplace->id,
+            'marketplace_customer_id' => null,
+            'template_slug' => $slug,
+            'to_email' => $recipient,
+            'to_name' => null,
+            'from_email' => $fromAddress,
+            'from_name' => $fromName,
+            'subject' => $subject,
+            'body_html' => $html,
+            'status' => 'pending',
+        ]);
+
         try {
-            $transport = $this->marketplace->getMailTransport();
             $email = (new Email())
-                ->from(new Address(
-                    $this->marketplace->getEmailFromAddress(),
-                    $this->marketplace->getEmailFromName()
-                ))
+                ->from(new Address($fromAddress, $fromName))
                 ->to(new Address($recipient))
                 ->subject($subject)
                 ->html($html);
 
-            $transport->send($email);
+            if ($useTransactional) {
+                $result = $this->marketplace->sendTransactionalEmail($email);
+                if ($result['success']) {
+                    $log->markSent($result['message_id'] ?? null);
+                    return true;
+                }
+                $log->markFailed($result['error'] ?? 'Transactional send failed');
+                Log::error('Admin notification send failed (transactional)', [
+                    'slug' => $slug,
+                    'recipient' => $recipient,
+                    'error' => $result['error'] ?? 'unknown',
+                ]);
+                return false;
+            }
+
+            // No transactional configured — primary is the only option.
+            $transport = $this->marketplace->getMailTransport();
+            if (!$transport) {
+                $log->markFailed('Could not create primary SMTP transport');
+                return false;
+            }
+            $sent = $transport->send($email);
+            $log->markSent($sent?->getMessageId());
             return true;
         } catch (\Throwable $e) {
+            $log->markFailed($e->getMessage());
             Log::error('Admin notification send failed', [
                 'slug' => $slug,
                 'recipient' => $recipient,
