@@ -1651,6 +1651,7 @@ class EventResource extends Resource
                                     ->key('venue-config')
                                     ->icon('heroicon-o-building-office')
                                     ->visible(fn (SGet $get) => ($get('display_template') ?? 'standard') === 'leisure_venue')
+                                    ->lazy()
                                     ->schema([
                                         SC\Section::make($t('Sezoane', 'Seasons'))
                                             ->description($t('Definește sezoanele cu program și oră ultimă intrare. Exemplu: Vară (01 apr - 31 oct) și Iarnă (01 nov - 31 mar).', 'Define seasons with schedule and last entry time.'))
@@ -1776,6 +1777,19 @@ class EventResource extends Resource
                                                     ->toolbarButtons(['bold', 'italic', 'bulletList', 'orderedList', 'link']),
                                             ]),
 
+                                        // Gating editor continut pagina publica — randarea simultana a Repeater-urilor
+                                        // profund nested (Hero, Atractii, Trasee, Flora, Galerie, FAQ, etc.) cu date
+                                        // reale (Lacul Sf. Ana = zeci de items pe fiecare repeater) consuma peste 512MB
+                                        // la compilarea Blade. Toggle-ul ascunde bloc-ul pana cand e bifat explicit;
+                                        // editarea recomandata e prin /organizator/leisure tab Setari.
+                                        Forms\Components\Toggle::make('_show_venue_advanced')
+                                            ->label($t('Afișează editor conținut pagină publică (Hero, Atracții, Trasee, Galerie, FAQ…)', 'Show public-page content editor (Hero, Attractions, Trails, Gallery, FAQ…)'))
+                                            ->helperText($t('Recomandat: editează prin /organizator/leisure tab Setări. Bifează aici doar dacă ai nevoie să intervii ca admin (consumă mai multă memorie la încărcare).', 'Recommended: edit via /organizator/leisure tab Setari. Toggle here only if you need to intervene as admin (heavier load).'))
+                                            ->live()
+                                            ->dehydrated(false)
+                                            ->default(false),
+
+                                        SC\Group::make([
                                         // ===== HERO & IDENTITATE =====
                                         SC\Section::make($t('Hero & Identitate', 'Hero & Identity'))
                                             ->description($t('Titlul, subtitlul italic, kicker și badge-urile afișate pe hero-ul paginii publice.', 'Title, italic subtitle, kicker and hero badges.'))
@@ -2280,6 +2294,7 @@ class EventResource extends Resource
                                                     ->collapsible()
                                                     ->collapsed(),
                                             ]),
+                                        ])->visible(fn (SGet $get) => (bool) $get('_show_venue_advanced')),
                                     ]),
 
                                 // ========== TAB 4: BILETE ==========
