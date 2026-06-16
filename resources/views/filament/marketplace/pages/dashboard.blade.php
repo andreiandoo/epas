@@ -405,8 +405,10 @@
                     <div class="flex items-center gap-3 text-xs text-gray-500">
                         <span class="flex items-center gap-1"><span class="w-3 h-0.5 bg-indigo-500 rounded"></span> Vânzări (RON)</span>
                         <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-sm bg-purple-500/70"></span> Bilete</span>
+                        <span class="flex items-center gap-1"><span class="w-3 h-0.5 rounded" style="border-top: 1.5px dashed rgba(99,102,241,0.6);"></span> Medie</span>
                         @if($chartPeriod === 'month')
                         <span class="flex items-center gap-1"><span class="w-3 h-0.5 bg-yellow-500/50 rounded" style="border-top: 1.5px dashed rgba(202,138,4,0.5);"></span> Anul trecut</span>
+                        <span class="flex items-center gap-1"><span class="w-3 h-0.5 rounded" style="border-top: 1.5px dashed rgba(234,179,8,0.5);"></span> Medie an trecut</span>
                         <span class="flex items-center gap-1"><span class="w-3 h-0.5 rounded" style="border-top: 1.5px dashed rgba(16,185,129,0.7);"></span> Predicție</span>
                         @endif
                     </div>
@@ -426,6 +428,58 @@
             <div class="h-64">
                 <canvas id="combinedChart" data-sales='@json($chartData)' data-tickets='@json($ticketChartData)' data-prev-sales='@json($prevYearChartData ?? null)' data-prev-tickets='@json($prevYearTicketChartData ?? null)' data-currency="RON"></canvas>
             </div>
+
+            @if($chartPeriod === 'month' && isset($chartSummary))
+                @php
+                    $monthLabel = \Carbon\Carbon::now('Europe/Bucharest')->locale('ro')->translatedFormat('F Y');
+                    $prevLabel = \Carbon\Carbon::now('Europe/Bucharest')->subYear()->locale('ro')->translatedFormat('F Y');
+                @endphp
+                <div class="pt-4 mt-4 border-t border-gray-200 dark:border-gray-700">
+                    <div class="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
+                        {{-- Vânzări până acum --}}
+                        <div class="p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg border border-indigo-100 dark:border-indigo-800/40">
+                            <p class="text-[10px] uppercase tracking-wide text-indigo-700 dark:text-indigo-300 font-semibold">Vânzări până acum</p>
+                            <p class="mt-1 text-lg font-bold text-indigo-900 dark:text-indigo-100 tabular-nums">{{ number_format($chartSummary['sales_so_far'], 0, ',', '.') }}<span class="text-xs font-medium text-indigo-600 dark:text-indigo-300 ml-1">RON</span></p>
+                            <p class="text-[10px] text-indigo-600/70 dark:text-indigo-300/70 mt-0.5">{{ $monthLabel }}</p>
+                        </div>
+
+                        {{-- Bilete până acum --}}
+                        <div class="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-100 dark:border-purple-800/40">
+                            <p class="text-[10px] uppercase tracking-wide text-purple-700 dark:text-purple-300 font-semibold">Bilete până acum</p>
+                            <p class="mt-1 text-lg font-bold text-purple-900 dark:text-purple-100 tabular-nums">{{ number_format($chartSummary['tickets_so_far'], 0, ',', '.') }}</p>
+                            <p class="text-[10px] text-purple-600/70 dark:text-purple-300/70 mt-0.5">{{ $monthLabel }}</p>
+                        </div>
+
+                        {{-- Anul trecut — vânzări --}}
+                        <div class="p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-100 dark:border-yellow-800/40">
+                            <p class="text-[10px] uppercase tracking-wide text-yellow-800 dark:text-yellow-300 font-semibold">Anul trecut · vânzări</p>
+                            <p class="mt-1 text-lg font-bold text-yellow-900 dark:text-yellow-100 tabular-nums">{{ number_format($chartSummary['prev_year_sales'], 0, ',', '.') }}<span class="text-xs font-medium text-yellow-700 dark:text-yellow-300 ml-1">RON</span></p>
+                            <p class="text-[10px] text-yellow-700/70 dark:text-yellow-300/70 mt-0.5">{{ $prevLabel }}</p>
+                        </div>
+
+                        {{-- Anul trecut — bilete --}}
+                        <div class="p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-100 dark:border-amber-800/40">
+                            <p class="text-[10px] uppercase tracking-wide text-amber-800 dark:text-amber-300 font-semibold">Anul trecut · bilete</p>
+                            <p class="mt-1 text-lg font-bold text-amber-900 dark:text-amber-100 tabular-nums">{{ number_format($chartSummary['prev_year_tickets'], 0, ',', '.') }}</p>
+                            <p class="text-[10px] text-amber-700/70 dark:text-amber-300/70 mt-0.5">{{ $prevLabel }}</p>
+                        </div>
+
+                        {{-- Predicție vânzări --}}
+                        <div class="p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg border border-emerald-100 dark:border-emerald-800/40">
+                            <p class="text-[10px] uppercase tracking-wide text-emerald-800 dark:text-emerald-300 font-semibold">Predicție · vânzări</p>
+                            <p class="mt-1 text-lg font-bold text-emerald-900 dark:text-emerald-100 tabular-nums">{{ number_format($chartSummary['predicted_sales'], 0, ',', '.') }}<span class="text-xs font-medium text-emerald-700 dark:text-emerald-300 ml-1">RON</span></p>
+                            <p class="text-[10px] text-emerald-700/70 dark:text-emerald-300/70 mt-0.5">total {{ $monthLabel }}</p>
+                        </div>
+
+                        {{-- Predicție bilete --}}
+                        <div class="p-3 bg-teal-50 dark:bg-teal-900/20 rounded-lg border border-teal-100 dark:border-teal-800/40">
+                            <p class="text-[10px] uppercase tracking-wide text-teal-800 dark:text-teal-300 font-semibold">Predicție · bilete</p>
+                            <p class="mt-1 text-lg font-bold text-teal-900 dark:text-teal-100 tabular-nums">{{ number_format($chartSummary['predicted_tickets'], 0, ',', '.') }}</p>
+                            <p class="text-[10px] text-teal-700/70 dark:text-teal-300/70 mt-0.5">total {{ $monthLabel }}</p>
+                        </div>
+                    </div>
+                </div>
+            @endif
         </div>
 
         <!-- Monthly Stats -->
@@ -819,6 +873,13 @@
             const prevTicketsData = prevTicketsStr && prevTicketsStr !== 'null' ? JSON.parse(prevTicketsStr) : null;
             const currency = ctx.getAttribute('data-currency') || 'RON';
 
+            // Average of sales / tickets over the rendered period — drawn as a
+            // flat dashed line so operators can spot above/below-average days
+            // at a glance.
+            const avg = (arr) => arr.length > 0 ? arr.reduce((a, b) => a + (Number(b) || 0), 0) / arr.length : 0;
+            const salesAvg = avg(salesData.data);
+            const ticketAvg = avg(ticketData.data);
+
             const datasets = [
                 {
                     type: 'line',
@@ -839,6 +900,26 @@
                     borderWidth: 1, borderRadius: 3,
                     yAxisID: 'y1',
                     order: 2,
+                },
+                {
+                    type: 'line',
+                    label: 'Medie vânzări (RON)',
+                    data: salesData.labels.map(() => salesAvg),
+                    borderColor: isDark ? 'rgba(129, 140, 248, 0.65)' : 'rgba(99, 102, 241, 0.6)',
+                    backgroundColor: 'transparent',
+                    borderWidth: 1.25, borderDash: [4, 4], fill: false, pointRadius: 0, pointHoverRadius: 0,
+                    yAxisID: 'y',
+                    order: 4,
+                },
+                {
+                    type: 'line',
+                    label: 'Medie bilete',
+                    data: ticketData.labels.map(() => ticketAvg),
+                    borderColor: isDark ? 'rgba(168, 85, 247, 0.55)' : 'rgba(147, 51, 234, 0.5)',
+                    backgroundColor: 'transparent',
+                    borderWidth: 1.25, borderDash: [4, 4], fill: false, pointRadius: 0, pointHoverRadius: 0,
+                    yAxisID: 'y1',
+                    order: 4,
                 }
             ];
 
@@ -851,6 +932,19 @@
                     borderColor: isDark ? 'rgba(234, 179, 8, 0.5)' : 'rgba(202, 138, 4, 0.5)',
                     backgroundColor: 'transparent',
                     borderWidth: 1.5, borderDash: [4, 4], fill: false, tension: 0.3, pointRadius: 0, pointHoverRadius: 3,
+                    yAxisID: 'y',
+                    order: 0,
+                });
+                // Flat avg line for last year — comparable to the current
+                // year's avg line so the operator sees year-over-year shift.
+                const prevSalesAvg = avg(prevSalesData.data);
+                datasets.push({
+                    type: 'line',
+                    label: 'Medie anul trecut (RON)',
+                    data: prevSalesData.labels.map(() => prevSalesAvg),
+                    borderColor: isDark ? 'rgba(234, 179, 8, 0.55)' : 'rgba(202, 138, 4, 0.5)',
+                    backgroundColor: 'transparent',
+                    borderWidth: 1.25, borderDash: [2, 4], fill: false, pointRadius: 0, pointHoverRadius: 0,
                     yAxisID: 'y',
                     order: 0,
                 });
@@ -990,9 +1084,14 @@
                             borderWidth: 1, padding: 12, displayColors: true,
                             usePointStyle: false,
                             filter: function(tooltipItem) {
-                                // Hide prev year + prediction from main labels — shown in afterBody
+                                // Hide prev year + prediction from main labels — shown in afterBody.
+                                // Also hide "Medie *" flat-average lines; they're constant
+                                // across the period and add no per-day signal.
                                 const label = tooltipItem.dataset.label || '';
-                                return !label.includes('trecut') && !label.includes('Predic') && !label.includes('verificare');
+                                return !label.includes('trecut')
+                                    && !label.includes('Predic')
+                                    && !label.includes('verificare')
+                                    && !label.startsWith('Medie');
                             },
                             callbacks: {
                                 label: function(context) {

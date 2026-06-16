@@ -137,6 +137,20 @@ class Dashboard extends Page
             $prevYearTicketChartData = Cache::remember("mp_dash_tchart_{$marketplaceId}_prevyear_{$nowRo->copy()->subYear()->format('Y-m')}", 3600, function () use ($marketplaceId, $prevStart, $prevEnd, $prevDays) {
                 return $this->getTicketChartData($marketplaceId, $prevStart, $prevEnd, $prevDays, true);
             });
+
+            // Cards under chart — sales/tickets so far + last year + prediction.
+            // 5-min cache: today's value drifts as orders come in, but the
+            // expensive parts (last year aggregates) are stable.
+            $chartSummary = Cache::remember(
+                "mp_dash_chart_summary_{$marketplaceId}_{$nowRo->format('Y-m-d-H')}",
+                300,
+                fn () => $this->computeMonthChartSummary(
+                    $chartData,
+                    $ticketChartData,
+                    $prevYearChartData,
+                    $prevYearTicketChartData,
+                )
+            );
         } else {
             $startDate = Carbon::now($tz)->subDays($days)->startOfDay()->utc();
             $endDate = Carbon::now($tz)->endOfDay()->utc();
@@ -147,6 +161,7 @@ class Dashboard extends Page
             $ticketChartData = Cache::remember("mp_dash_tchart_{$marketplaceId}_{$days}", 600, function () use ($marketplaceId, $startDate, $endDate, $days) {
                 return $this->getTicketChartData($marketplaceId, $startDate, $endDate, $days);
             });
+            $chartSummary = null;
         }
 
         // Pending review events (cached 2 min — lightweight query)
@@ -291,6 +306,7 @@ class Dashboard extends Page
             'todayStats' => $todayStats,
             'prevYearChartData' => $prevYearChartData,
             'prevYearTicketChartData' => $prevYearTicketChartData,
+            'chartSummary' => $chartSummary,
             'selectedMonth' => $month,
             'dailyEventReport' => $dailyEventReport,
             'dailyReportDate' => $dailyReportDate,
@@ -539,6 +555,117 @@ class Dashboard extends Page
         }
 
         return ['labels' => $labels, 'data' => $data];
+    }
+
+    /**
+     * Aggregate "current month chart" series + last year + prediction into a
+     * single summary used by the stats grid below the chart. Prediction logic
+     * mirrors the JS in dashboard.blade.php so the rendered total matches the
+     * dashed prediction line: past days use actuals, today is extrapolated by
+     * hours-elapsed, future days use a day-of-week growth ratio against last
+     * year (falling back to overall ratio, then to overall daily average).
+     *
+     * @return array{
+     *   sales_so_far: float,
+     *   tickets_so_far: int,
+     *   prev_year_sales: float,
+     *   prev_year_tickets: int,
+     *   predicted_sales: float,
+     *   predicted_tickets: int,
+     * }
+     */
+    private function computeMonthChartSummary(array $chartData, array $ticketChartData, ?array $prevSales, ?array $prevTickets): array
+    {
+        $tz = 'Europe/Bucharest';
+        $now = Carbon::now($tz);
+        $daysInMonth = (int) $now->daysInMonth;
+        $currentDay = (int) $now->day; // 1-based
+
+        $salesArr = array_map('floatval', $chartData['data'] ?? []);
+        $ticketsArr = array_map('intval', $ticketChartData['data'] ?? []);
+        $prevSalesArr = array_map('floatval', $prevSales['data'] ?? []);
+        $prevTicketsArr = array_map('intval', $prevTickets['data'] ?? []);
+
+        $salesSoFar = array_sum($salesArr);
+        $ticketsSoFar = array_sum($ticketsArr);
+
+        // Predict daily series using the same logic the chart JS uses.
+        $predicted = $this->predictMonthlySeries($salesArr, $prevSalesArr, $currentDay, $daysInMonth, $tz);
+        $predictedTickets = $this->predictMonthlySeries($ticketsArr, $prevTicketsArr, $currentDay, $daysInMonth, $tz);
+
+        return [
+            'sales_so_far' => $salesSoFar,
+            'tickets_so_far' => $ticketsSoFar,
+            'prev_year_sales' => array_sum($prevSalesArr),
+            'prev_year_tickets' => array_sum($prevTicketsArr),
+            'predicted_sales' => (float) array_sum($predicted),
+            'predicted_tickets' => (int) round(array_sum($predictedTickets)),
+        ];
+    }
+
+    /**
+     * Day-by-day prediction matching the chart JS in dashboard.blade.php.
+     * Returns the full-month series (past actuals + today extrapolation +
+     * future predicted). Sum it for the predicted monthly total.
+     *
+     * @param array<int, float|int> $current Daily actuals for the month so far
+     *                                       (length = days in current month)
+     * @param array<int, float|int> $prev    Daily actuals for the same month
+     *                                       last year (length = days in that month)
+     */
+    private function predictMonthlySeries(array $current, array $prev, int $currentDay, int $daysInMonth, string $tz): array
+    {
+        $now = Carbon::now($tz);
+        $monthStart = $now->copy()->startOfMonth();
+
+        // Day-of-week growth ratios from completed days (i < currentDay - 1)
+        $dowRatios = []; // 0..6 → list of curr/prev ratios
+        $allRatios = [];
+        $completedTotal = 0.0;
+        $completedDays = 0;
+        for ($i = 0; $i < $currentDay - 1 && $i < count($current); $i++) {
+            $dow = $monthStart->copy()->addDays($i)->dayOfWeek;
+            $curr = (float) ($current[$i] ?? 0);
+            $prv = (float) ($prev[$i] ?? 0);
+            if ($prv > 0 && $curr > 0) {
+                $dowRatios[$dow][] = $curr / $prv;
+                $allRatios[] = $curr / $prv;
+            }
+            $completedTotal += $curr;
+            if ($curr > 0) $completedDays++;
+        }
+        $dowGrowth = [];
+        for ($dow = 0; $dow < 7; $dow++) {
+            $r = $dowRatios[$dow] ?? [];
+            $dowGrowth[$dow] = !empty($r) ? array_sum($r) / count($r) : null;
+        }
+        $overallGrowth = !empty($allRatios) ? array_sum($allRatios) / count($allRatios) : null;
+        $overallAvg = $completedDays > 0 ? $completedTotal / $completedDays : 0.0;
+
+        // Today: extrapolate by hours-elapsed (matches JS hoursElapsed > 1 path)
+        $hoursElapsed = $now->hour + $now->minute / 60;
+        $todayActual = (float) ($current[$currentDay - 1] ?? 0);
+        $todayEstimated = $hoursElapsed > 1 ? round($todayActual * (24 / $hoursElapsed)) : $todayActual;
+
+        // Build prediction for all days
+        $out = [];
+        for ($i = 0; $i < $daysInMonth; $i++) {
+            if ($i < $currentDay - 1) {
+                $out[] = (float) ($current[$i] ?? 0);
+            } elseif ($i === $currentDay - 1) {
+                $out[] = (float) $todayEstimated;
+            } else {
+                $dow = $monthStart->copy()->addDays($i)->dayOfWeek;
+                $growth = $dowGrowth[$dow] ?? $overallGrowth ?? 1.0;
+                $prv = (float) ($prev[$i] ?? 0);
+                if ($prv > 0 && ($dowGrowth[$dow] !== null || $overallGrowth !== null)) {
+                    $out[] = round($prv * $growth);
+                } else {
+                    $out[] = round($overallAvg);
+                }
+            }
+        }
+        return $out;
     }
 
     private function getTicketChartData(int $marketplaceId, Carbon $startDate, Carbon $endDate, int $days, bool $fullMonth = false): array
