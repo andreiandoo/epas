@@ -61,6 +61,8 @@ class MarketplaceClient extends Model
         'signature_image',
         // Payment processing fees config (NULL = feature disabled for this marketplace)
         'payment_fees',
+        // Marketplace admin id to which all NEW TODOs are auto-routed.
+        'default_todo_admin_id',
     ];
 
     protected $casts = [

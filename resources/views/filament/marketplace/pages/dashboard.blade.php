@@ -69,6 +69,81 @@
         </div>
         @endif
 
+        <!-- Active TODOs (marketplace-internal task list) — visible to all admins -->
+        @if(isset($pendingTodos) && $pendingTodos->count() > 0)
+        <div class="mb-5 overflow-hidden bg-white border shadow-sm dark:bg-gray-800 rounded-xl border-sky-300 dark:border-sky-700">
+            <div class="flex items-center justify-between px-4 py-3 border-b bg-sky-50 dark:bg-sky-900/30 border-sky-200 dark:border-sky-800">
+                <div class="flex items-center gap-2">
+                    <x-heroicon-o-clipboard-document-check class="w-5 h-5 text-sky-500" />
+                    <h3 class="font-semibold text-sky-800 dark:text-sky-200">TODOs active</h3>
+                    <span class="inline-flex items-center justify-center px-2 py-0.5 text-xs font-bold text-white bg-sky-500 rounded-full">{{ $pendingTodosCount }}</span>
+                </div>
+                <a href="{{ route('filament.marketplace.resources.marketplace-todos.index') }}" class="text-xs text-sky-600 dark:text-sky-400 hover:underline">
+                    Vezi toate
+                </a>
+            </div>
+            <div class="divide-y divide-gray-100 dark:divide-gray-700">
+                @foreach($pendingTodos as $todo)
+                @php
+                    $statusLabel = match ($todo->status) {
+                        'open' => 'Deschis',
+                        'in_progress' => 'În lucru',
+                        'awaiting_response' => 'Așteaptă răspuns',
+                        default => $todo->status,
+                    };
+                    $statusClass = match ($todo->status) {
+                        'open' => 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
+                        'in_progress' => 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
+                        'awaiting_response' => 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300',
+                        default => 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
+                    };
+                    $priorityClass = match ($todo->priority) {
+                        'urgent' => 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300',
+                        'high' => 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
+                        'low' => 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
+                        default => 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
+                    };
+                    $priorityLabel = match ($todo->priority) {
+                        'urgent' => 'Urgentă',
+                        'high' => 'Ridicată',
+                        'normal' => 'Normală',
+                        'low' => 'Scăzută',
+                        default => $todo->priority,
+                    };
+                @endphp
+                <div class="flex items-center justify-between gap-4 px-4 py-3 transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                    <div class="flex-1 min-w-0">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <a href="{{ route('filament.marketplace.resources.marketplace-todos.view', $todo->id) }}" class="text-sm font-medium text-gray-900 truncate dark:text-white hover:text-sky-600 dark:hover:text-sky-400">
+                                {{ $todo->title }}
+                            </a>
+                            <span class="inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium rounded {{ $statusClass }}">{{ $statusLabel }}</span>
+                            <span class="inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium rounded {{ $priorityClass }}">{{ $priorityLabel }}</span>
+                            <span class="font-mono text-[10px] text-gray-500">{{ $todo->todo_number }}</span>
+                        </div>
+                        <div class="flex items-center gap-3 mt-1 text-xs text-gray-500 dark:text-gray-400">
+                            <span>{{ $todo->creator?->name ?? '—' }}</span>
+                            @if ($todo->category)
+                                <span>·</span>
+                                <span>{{ $todo->category->name }}</span>
+                            @endif
+                            @if ($todo->assignee)
+                                <span>·</span>
+                                <span>Asignat: {{ $todo->assignee->name }}</span>
+                            @endif
+                            <span class="text-gray-400">{{ $todo->last_activity_at?->diffForHumans() }}</span>
+                        </div>
+                    </div>
+                    <a href="{{ route('filament.marketplace.resources.marketplace-todos.view', $todo->id) }}" class="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-sky-700 bg-sky-100 hover:bg-sky-200 dark:text-sky-300 dark:bg-sky-900/40 dark:hover:bg-sky-900/60 rounded-lg transition-colors">
+                        <x-heroicon-o-eye class="w-3.5 h-3.5" />
+                        Deschide
+                    </a>
+                </div>
+                @endforeach
+            </div>
+        </div>
+        @endif
+
         <!-- Pending Artist Accounts (status=pending → "În review") — visible to all admins -->
         @if(isset($pendingArtistAccounts) && $pendingArtistAccounts->count() > 0)
         <div class="mb-5 overflow-hidden bg-white border shadow-sm dark:bg-gray-800 rounded-xl border-violet-300 dark:border-violet-700">

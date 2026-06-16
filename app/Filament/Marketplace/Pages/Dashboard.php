@@ -8,6 +8,7 @@ use App\Models\MarketplaceClient;
 use App\Models\MarketplaceCustomer;
 use App\Models\MarketplaceOrganizer;
 use App\Models\MarketplacePayout;
+use App\Models\MarketplaceTodo;
 use App\Models\Order;
 use App\Models\ServiceOrder;
 use App\Models\SupportTicket;
@@ -218,6 +219,29 @@ class Dashboard extends Page
                 ->count()
         );
 
+        // Active TODOs — visible to ALL marketplace admins. Cache for 60s
+        // so opening the dashboard stays snappy. Mirrors the support
+        // tickets section's behaviour, scoped to this marketplace.
+        $pendingTodos = Cache::remember(
+            "mp_dash_todos_pending_{$marketplaceId}",
+            60,
+            fn () => MarketplaceTodo::query()
+                ->where('marketplace_client_id', $marketplaceId)
+                ->whereNotIn('status', [MarketplaceTodo::STATUS_RESOLVED, MarketplaceTodo::STATUS_CLOSED])
+                ->with(['creator', 'assignee', 'category'])
+                ->orderByDesc('last_activity_at')
+                ->limit(10)
+                ->get()
+        );
+        $pendingTodosCount = Cache::remember(
+            "mp_dash_todos_pending_count_{$marketplaceId}",
+            60,
+            fn () => MarketplaceTodo::query()
+                ->where('marketplace_client_id', $marketplaceId)
+                ->whereNotIn('status', [MarketplaceTodo::STATUS_RESOLVED, MarketplaceTodo::STATUS_CLOSED])
+                ->count()
+        );
+
         $isSuperAdmin = Auth::guard('marketplace_admin')->user()?->isSuperAdmin() ?? false;
 
         // Daily event sales report (super-admin only) — events that had
@@ -261,6 +285,8 @@ class Dashboard extends Page
             'pendingSupportTicketsCount' => $pendingSupportTicketsCount,
             'pendingArtistAccounts' => $pendingArtistAccounts,
             'pendingArtistAccountsCount' => $pendingArtistAccountsCount,
+            'pendingTodos' => $pendingTodos,
+            'pendingTodosCount' => $pendingTodosCount,
             'billing' => $billingData,
             'todayStats' => $todayStats,
             'prevYearChartData' => $prevYearChartData,
