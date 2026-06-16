@@ -333,6 +333,7 @@ require_once __DIR__ . '/includes/head.php';
                 'upsell_subtitle' => 'Alege ce te tentează și economisește timp pe loc.',
                 // Step 2 services
                 'extra_services' => 'Servicii suplimentare',
+                'packages_promo_title' => 'Pachete promoționale',
                 'from_price' => 'de la ',
                 'price_breakdown' => 'Detalii preț',
                 'price_ticket' => 'Preț bilet',
@@ -419,6 +420,7 @@ require_once __DIR__ . '/includes/head.php';
                 'upsell_title' => 'Tedd látogatásod teljes élménnyé',
                 'upsell_subtitle' => 'Válaszd ki, mi tetszik, és spórolj időt a helyszínen.',
                 'extra_services' => 'Kiegészítő szolgáltatások',
+                'packages_promo_title' => 'Promóciós csomagok',
                 'from_price' => '-tól ',
                 'price_breakdown' => 'Ár részletei',
                 'price_ticket' => 'Jegy ára',
@@ -499,6 +501,7 @@ require_once __DIR__ . '/includes/head.php';
                 'upsell_title' => 'Make your visit a complete experience',
                 'upsell_subtitle' => 'Pick what tempts you and save time on-site.',
                 'extra_services' => 'Extra services',
+                'packages_promo_title' => 'Promo packages',
                 'from_price' => 'from ',
                 'price_breakdown' => 'Price breakdown',
                 'price_ticket' => 'Ticket price',
@@ -1727,37 +1730,68 @@ function reservationPage() {
         get _ticketsWithQty() {
             return this.ticketsRaw.map(t => ({ ...t, qty: this.totalQtyForTicket(t) }));
         },
+        // accessTickets = bilete de acces PLUS pachete promotionale (pachetele
+        // sunt afișate în secțiunea principală de bilete, NU în Servicii suplimentare).
         get accessTickets() {
-            return this._ticketsWithQty.filter(t => (t.service_category || 'access') === 'access');
+            return this._ticketsWithQty.filter(t => {
+                const cat = t.service_category || 'access';
+                return cat === 'access' || cat === 'package';
+            });
         },
+        // services = TOATE produsele care nu sunt bilete acces și nu sunt pachete.
         get services() {
-            return this._ticketsWithQty.filter(t => (t.service_category || 'access') !== 'access');
+            return this._ticketsWithQty.filter(t => {
+                const cat = t.service_category || 'access';
+                return cat !== 'access' && cat !== 'package';
+            });
+        },
+        // Pachetele promoționale ca grup virtual de afișare (apar mereu la finalul
+        // listei de bilete, sub un header dedicat "Pachete promoționale").
+        get packageTickets() {
+            return this._ticketsWithQty.filter(t => (t.service_category || '') === 'package');
+        },
+        // Eticheta grupului de pachete in functie de locale curent.
+        get packageGroupLabel() {
+            return t('packages_promo_title') || 'Pachete promoționale';
         },
         // C2 — Grupare bilete acces pe ticket_categories (definite de organizator
         // in /organizator/leisure tab Produse → Categorii afișare). Daca nu sunt
         // categorii configurate sau niciun bilet nu are ticket_group asignat,
         // returnam un singur grup fara header (backward compat).
+        // Pachetele sunt mereu un grup separat afișat ÎN FINAL.
         get accessTicketsGrouped() {
             const cats = Array.isArray(this.ticketCategoriesRaw) ? this.ticketCategoriesRaw : [];
-            const all = this.accessTickets;
-            if (!cats.length) {
-                return [{ id: '__all__', name: '', items: all }];
-            }
-            const byId = {};
-            const ungrouped = [];
-            for (const t of all) {
-                const gid = t.ticket_group;
-                const cat = gid ? cats.find(c => c.id === gid) : null;
-                if (cat) { (byId[cat.id] ||= []).push(t); }
-                else { ungrouped.push(t); }
-            }
-            const groups = [];
-            for (const c of cats) {
-                const items = byId[c.id] || [];
-                if (items.length) groups.push({ id: c.id, name: c.name, items });
-            }
-            if (ungrouped.length) {
-                groups.push({ id: '__none__', name: '', items: ungrouped });
+            // Separam pachetele de restul biletelor de acces — pachetele primesc
+            // mereu propriul header dedicat.
+            const all = this._ticketsWithQty.filter(t => (t.service_category || 'access') === 'access');
+            const packages = this.packageTickets;
+
+            const buildGroups = () => {
+                if (!cats.length) {
+                    return all.length ? [{ id: '__all__', name: '', items: all }] : [];
+                }
+                const byId = {};
+                const ungrouped = [];
+                for (const t of all) {
+                    const gid = t.ticket_group;
+                    const cat = gid ? cats.find(c => c.id === gid) : null;
+                    if (cat) { (byId[cat.id] ||= []).push(t); }
+                    else { ungrouped.push(t); }
+                }
+                const groups = [];
+                for (const c of cats) {
+                    const items = byId[c.id] || [];
+                    if (items.length) groups.push({ id: c.id, name: c.name, items });
+                }
+                if (ungrouped.length) {
+                    groups.push({ id: '__none__', name: '', items: ungrouped });
+                }
+                return groups;
+            };
+
+            const groups = buildGroups();
+            if (packages.length) {
+                groups.push({ id: '__packages__', name: this.packageGroupLabel, items: packages });
             }
             return groups;
         },
