@@ -2201,11 +2201,23 @@ class MarketplaceTaxTemplate extends Model
             $groups[$key]['amount'] += max(0.0, $catalogPrice * $qty - $discount);
         }
 
-        // Pass 2: tierMap from the expanded tier rows for the 1b label
-        // ("70lei*24+56lei*4+..."). The label is informational about
-        // the per-ticket prices actually paid; the 1a value comes from
-        // pass 1.
-        foreach ($tierRows as $item) {
+        // Pass 2: tierMap for the 1b/1d label ("60lei*87+48lei*11+...").
+        // Iterates PARENT $ticketBreakdown rows (one per ticket type), NOT
+        // the expanded $tierRows. Reason: when saved tiers are wrong (e.g.
+        // payout 3067 Cat III had [40×5, 32×2] when correct was [40×4,
+        // 32×3] — scaleTiers's proportional rounding when the operator
+        // reduced qty from 10 → 7 dropped 1 discounted ticket), the old
+        // tier-row loop never compared against the row's true qty, so it
+        // accepted the wrong saved split as-is.
+        //
+        // The new loop checks derive at PARENT qty: for Cat III qty=7,
+        // deriveEffectiveTiersFromTickets returns the latest 7 tickets
+        // grouped by effective price → [40×4, 32×3] = 256 (matches net).
+        // When derive's total equals the row qty, it wins — the saved
+        // tiers (whatever they are) get overridden. When derive doesn't
+        // match qty (refunded tickets, period bound edge cases), fall
+        // back to the saved tiers as before.
+        foreach ($ticketBreakdown as $item) {
             $ttId = $item['ticket_type_id'] ?? null;
             if ($ttId && isset($posTypeIdsSet[$ttId])) continue;
             $catalogPrice = (float) ($item['price'] ?? $item['unit_price'] ?? 0);
@@ -2215,15 +2227,38 @@ class MarketplaceTaxTemplate extends Model
             if (!isset($groups[$key])) continue;
 
             $rowTierMap = null;
+
+            // 1. Prefer live derivation when its total exactly matches
+            //    the row's qty — most accurate, uses real ticket effective
+            //    prices for the latest N tickets in this payout's slice.
             if ($ttId !== null && isset($effectiveTiersByTtId[$ttId])) {
                 $derivedTotal = array_sum($effectiveTiersByTtId[$ttId]);
                 if ($derivedTotal === $qty) {
                     $rowTierMap = $effectiveTiersByTtId[$ttId];
                 }
             }
+
+            // 2. Fall back to the saved tiers (the breakdown row's own
+            //    tiers field, scaled by Pass 1's invariant enforcement).
+            //    Used when derive can't reconstruct the slice — e.g. a
+            //    ticket was refunded after save, so the latest N tickets
+            //    no longer match the saved qty.
+            if ($rowTierMap === null) {
+                $tiers = $item['tiers'] ?? null;
+                if (is_array($tiers) && !empty($tiers)) {
+                    $rowTierMap = [];
+                    foreach ($tiers as $tier) {
+                        $priceKey = (string) round((float) ($tier['price'] ?? 0), 2);
+                        $rowTierMap[$priceKey] = ($rowTierMap[$priceKey] ?? 0) + (int) ($tier['qty'] ?? 0);
+                    }
+                }
+            }
+
+            // 3. Last fallback: single catalog tier.
             if ($rowTierMap === null) {
                 $rowTierMap = [(string) round($catalogPrice, 2) => $qty];
             }
+
             foreach ($rowTierMap as $priceKey => $tierQty) {
                 $groups[$key]['tierMap'][$priceKey] = ($groups[$key]['tierMap'][$priceKey] ?? 0) + $tierQty;
             }
