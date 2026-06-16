@@ -114,7 +114,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     <p class="text-xs uppercase tracking-wider text-muted font-semibold">Metodă plată</p>
                     <div class="grid grid-cols-3 gap-2">
                         <button data-pay="cash" class="lv-pay-btn px-3 py-2 text-sm font-medium border border-border rounded-lg hover:bg-slate-50">💵 Cash</button>
-                        <button data-pay="card" disabled title="Necesită integrare terminal POS — în pregătire" class="lv-pay-btn px-3 py-2 text-sm font-medium border border-border rounded-lg opacity-50 cursor-not-allowed">💳 Card<span class="ml-1 text-[10px] font-bold text-amber-600">(soon)</span></button>
+                        <button data-pay="card" title="Înregistrează plata cu cardul (procesată la POS-ul bancar fizic) — fără integrare automată cu terminalul" class="lv-pay-btn px-3 py-2 text-sm font-medium border border-border rounded-lg hover:bg-slate-50">💳 Card</button>
                         <button data-pay="invoice" class="lv-pay-btn px-3 py-2 text-sm font-medium border border-border rounded-lg hover:bg-slate-50">📧 Link plată pe email</button>
                     </div>
                     <p class="text-[10px] text-muted leading-snug mt-1">
