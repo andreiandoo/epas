@@ -560,11 +560,19 @@ class AccountController extends BaseController
     {
         $customer = $this->requireCustomer($request);
 
-        // Scope by tickets.current_owner_customer_id so transferred-in
-        // tickets show up in the new owner's account and transferred-away
-        // tickets disappear from the original buyer's. See migration
-        // 2026_05_14_110000 for the rationale.
-        $orders = Order::whereHas('tickets', fn ($q) => $q->where('current_owner_customer_id', $customer->id))
+        // Scope by current owner (for transfers) OR original purchaser
+        // when the owner column was never set. Same fallback as allTickets
+        // — without the NULL branch, untransferred normal purchases (the
+        // vast majority of /cont/bilete content) vanish for the buyer.
+        $ownershipScope = function ($q) use ($customer) {
+            $q->where('current_owner_customer_id', $customer->id)
+              ->orWhere(function ($qq) use ($customer) {
+                  $qq->whereNull('current_owner_customer_id')
+                     ->where('marketplace_customer_id', $customer->id);
+              });
+        };
+
+        $orders = Order::whereHas('tickets', $ownershipScope)
             ->whereIn('status', ['completed', 'paid', 'confirmed'])
             ->whereHas('marketplaceEvent', function ($q) {
                 $q->where('starts_at', '>=', now());
@@ -577,8 +585,12 @@ class AccountController extends BaseController
             ->get();
 
         $tickets = $orders->flatMap(function ($order) use ($customer) {
+            $currentCustomerId = $customer->id;
             return $order->tickets
-                ->where('current_owner_customer_id', $customer->id)
+                ->filter(fn ($t) =>
+                    (int) $t->current_owner_customer_id === $currentCustomerId
+                    || ($t->current_owner_customer_id === null
+                        && (int) $t->marketplace_customer_id === $currentCustomerId))
                 ->map(function ($ticket) use ($order) {
                 return [
                     'id' => $ticket->id,
@@ -614,10 +626,19 @@ class AccountController extends BaseController
     {
         $customer = $this->requireCustomer($request);
 
-        // Scope by current_owner_customer_id so transferred tickets are
-        // accessible to the new owner (and not the old one).
+        // Scope by current owner (transferred-in) OR original purchaser
+        // when the owner column was never written. Same fallback as
+        // allTickets / upcomingTickets — without the NULL branch, the
+        // detail page 404s for normal untransferred purchases even though
+        // the customer sees the ticket in their list.
         $ticket = \App\Models\Ticket::where('id', $ticketId)
-            ->where('current_owner_customer_id', $customer->id)
+            ->where(function ($q) use ($customer) {
+                $q->where('current_owner_customer_id', $customer->id)
+                  ->orWhere(function ($qq) use ($customer) {
+                      $qq->whereNull('current_owner_customer_id')
+                         ->where('marketplace_customer_id', $customer->id);
+                  });
+            })
             ->whereHas('order', fn ($q) => $q->whereIn('status', ['completed', 'paid', 'confirmed']))
             ->with(['order.marketplaceEvent', 'marketplaceTicketType'])
             ->first();
@@ -686,13 +707,35 @@ class AccountController extends BaseController
 
         $filter = $request->input('filter', 'upcoming'); // upcoming, past, all
 
+        // Ownership scope helper:
+        //   current_owner_customer_id = $customer->id            (transferred-in)
+        //   OR (current_owner_customer_id IS NULL                 (never transferred)
+        //       AND marketplace_customer_id = $customer->id)
+        //
+        // The historic code only matched on current_owner_customer_id. That
+        // column is populated only when a transfer happens — a normal
+        // purchase leaves it NULL and the ticket lives only on
+        // marketplace_customer_id. /cont/comenzi was reading orders via
+        // marketplace_customer_id and showing them, but /cont/bilete used
+        // the owner column, so the customer saw their orders without
+        // their tickets (incident 96085 = luminita.iancu54@gmail.com).
+        // Tickets transferred AWAY have current_owner != $customer, so
+        // they correctly fail both branches.
+        $ownershipScope = function ($q) use ($customer) {
+            $q->where('current_owner_customer_id', $customer->id)
+              ->orWhere(function ($qq) use ($customer) {
+                  $qq->whereNull('current_owner_customer_id')
+                     ->where('marketplace_customer_id', $customer->id);
+              });
+        };
+
         // NOTE: We deliberately don't filter by date in SQL anymore because the
         // event "Încheiat" status is derived from Event::isPast() which is
         // range-aware (festivals have event_date=NULL but range_start_date /
         // range_end_date set, and a SQL `event_date < now` would push them into
         // "past" with a 1970-01-01 date). We fetch all the customer's orders
         // (always a small set) and split by isPast() in PHP below.
-        $orders = Order::whereHas('tickets', fn ($q) => $q->where('current_owner_customer_id', $customer->id))
+        $orders = Order::whereHas('tickets', $ownershipScope)
             ->whereIn('status', ['completed', 'paid', 'confirmed'])
             ->with([
                 'marketplaceEvent:id,name,slug,starts_at,ends_at,doors_open_at,venue_name,venue_city,image',
@@ -711,8 +754,14 @@ class AccountController extends BaseController
         $currentCustomerId = $customer->id;
         $tickets = $orders->flatMap(function ($order) use ($currentCustomerId) {
             $customer = $order->marketplaceCustomer;
+            // Mirror the SQL ownership scope above so eager-loaded ticket
+            // collections only surface what this customer actually owns
+            // (transferred-in OR untransferred original purchase).
             return $order->tickets
-                ->where('current_owner_customer_id', $currentCustomerId)
+                ->filter(fn ($t) =>
+                    (int) $t->current_owner_customer_id === $currentCustomerId
+                    || ($t->current_owner_customer_id === null
+                        && (int) $t->marketplace_customer_id === $currentCustomerId))
                 ->map(function ($ticket) use ($order, $customer) {
                 // Handle both marketplace events and tenant events
                 if ($order->marketplaceEvent) {

@@ -357,10 +357,23 @@ class TicketTransferController extends BaseController
             ], 404);
         }
 
-        // Load tickets — must be owned by the caller (current_owner_customer_id
-        // gate, not order.marketplace_customer_id), valid, in this marketplace.
+        // Load tickets — must be owned by the caller. Ownership is either:
+        //   current_owner_customer_id = caller        (transferred-in)
+        //   OR (current_owner_customer_id IS NULL     (never transferred)
+        //       AND marketplace_customer_id = caller)
+        // The NULL branch is essential: normal purchases leave the owner
+        // column unset (only the original-buyer fk is written), and
+        // without this fallback the buyer couldn't transfer their own
+        // tickets. Tickets transferred AWAY have a non-NULL owner that
+        // doesn't match the caller, so they correctly fail both branches.
         $tickets = Ticket::whereIn('id', $validated['ticket_ids'])
-            ->where('current_owner_customer_id', $customer->id)
+            ->where(function ($q) use ($customer) {
+                $q->where('current_owner_customer_id', $customer->id)
+                  ->orWhere(function ($qq) use ($customer) {
+                      $qq->whereNull('current_owner_customer_id')
+                         ->where('marketplace_customer_id', $customer->id);
+                  });
+            })
             ->where('marketplace_client_id', $client->id)
             ->with(['order', 'ticketType'])
             ->get();
