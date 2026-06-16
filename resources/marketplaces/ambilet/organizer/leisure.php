@@ -2652,17 +2652,20 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         payload.getting_there = collectRepeater('getting-list');
         payload.seasons = collectSeasons();
 
-        // Cast numeric fields in trails/hotels/POIs (Postgres expects numbers)
-        payload.trails.forEach(t => {
+        // Cast numeric fields in trails/hotels/POIs (Postgres expects numbers).
+        // Defensiv: || [] in caz ca un collectRepeater intoarce undefined cumva.
+        (payload.trails || []).forEach(t => {
             if (t.distance_km) t.distance_km = parseFloat(t.distance_km);
             if (t.duration_min) t.duration_min = parseInt(t.duration_min, 10);
             if (t.elevation_m) t.elevation_m = parseInt(t.elevation_m, 10);
         });
-        payload.nearby_hotels.forEach(h => {
+        (payload.nearby_hotels || []).forEach(h => {
             if (h.distance_km) h.distance_km = parseFloat(h.distance_km);
             if (h.stars) h.stars = parseInt(h.stars, 10);
         });
-        payload.map_pois.forEach(p => {
+        // POIs sunt salvati nested sub map_config.pois (vezi linia ~2648); cale veche
+        // `payload.map_pois` nu mai exista, ar fi aruncat TypeError la forEach.
+        (payload.map_config?.pois || []).forEach(p => {
             if (p.lat) p.lat = parseFloat(p.lat);
             if (p.lng) p.lng = parseFloat(p.lng);
         });
