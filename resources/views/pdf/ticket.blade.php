@@ -229,5 +229,13 @@
             @endif
         </div>
     </div>
+
+    {{-- Seating map second page. Triple-gated (config flag + event allowlist
+         + ticket.seat_uid). Default off — emits nothing on live until the
+         test event id is in SEATING_PDF_TEST_EVENT_IDS and SEATING_PDF_ENABLED
+         is true. See app/Support/SeatingPdfGate.php. --}}
+    @if(\App\Support\SeatingPdfGate::shouldRenderFor($ticket ?? null))
+        @include('pdf.ticket-seating-page', ['ticket' => $ticket, 'event' => $event])
+    @endif
 </body>
 </html>
