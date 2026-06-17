@@ -207,7 +207,18 @@ class SendNewsletterJob implements ShouldQueue
     protected function replaceVariables(string $content, array $variables): string
     {
         foreach ($variables as $key => $value) {
-            $content = str_replace("{{" . $key . "}}", $value ?? '', $content);
+            $val = $value ?? '';
+            // Plain placeholder — body text / non-href contexts.
+            $content = str_replace('{{' . $key . '}}', $val, $content);
+            // WYSIWYG editors (Filament's RichEditor in particular)
+            // URL-encode characters inside href attributes when saving,
+            // so `<a href="{{unsubscribe_url}}">` becomes
+            // `<a href="%7B%7Bunsubscribe_url%7D%7D">` in the stored
+            // HTML. Without this second pass the encoded form survives
+            // through to the rendered email and the recipient clicks a
+            // dead link.
+            $content = str_replace('%7B%7B' . $key . '%7D%7D', $val, $content);
+            $content = str_replace('%7b%7b' . $key . '%7d%7d', $val, $content);
         }
         return $content;
     }
