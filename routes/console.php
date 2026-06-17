@@ -281,6 +281,19 @@ Schedule::command('services:check-status')
         \Log::error('Failed to check services status');
     });
 
+// Services Status: Prune logs older than 90 days, nightly at 03:30
+// Without pruning, services:check-status (every 5min × ~13 services)
+// adds ~10k rows/day, bloating service_status_logs to 1M+ rows in 90
+// days. App code only reads the last 30 days via scopeLast30Days, so
+// 90 days is generous audit buffer. Batched DELETE keeps WAL pressure
+// low and avoids blocking the table.
+Schedule::command('services:prune-status-logs --days=90')
+    ->dailyAt('03:30')
+    ->onOneServer()
+    ->onFailure(function () {
+        \Log::error('Failed to prune service status logs');
+    });
+
 // Cache: Warm up global caches (every hour)
 Schedule::call(function () {
     if (config('microservices.cache.enabled', true)) {
