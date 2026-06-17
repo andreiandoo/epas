@@ -190,16 +190,19 @@ class CleanupExpiredOrders extends Command
                         ->where('status', 'pending')
                         ->update(['status' => 'cancelled']);
 
-                    // 3. Restore quota_sold for ticket types
-                    foreach ($order->items as $orderItem) {
-                        if ($orderItem->ticket_type_id && $orderItem->quantity > 0) {
-                            TicketType::where('id', $orderItem->ticket_type_id)
-                                ->where('quota_sold', '>=', $orderItem->quantity)
-                                ->decrement('quota_sold', $orderItem->quantity);
-                        }
-                    }
-
-                    // 4. Mark order as expired
+                    // 3. Mark order as expired
+                    //
+                    // We INTENTIONALLY do NOT call decrement('quota_sold')
+                    // here. The Order::saved observer fires on the status
+                    // transition and runs releaseSeatsAndRestoreStock(),
+                    // which decrements quota_sold itself. Doing both meant
+                    // every expired order subtracted quota_sold twice —
+                    // freeing fictitious capacity, letting checkout
+                    // over-sell tickets after the cap was hit. Event 4563
+                    // ended with 123 valid tickets against a 110 cap and
+                    // 13 over-sale orders (incident 2026-06-16). See
+                    // Order::releaseSeatsAndRestoreStock() and
+                    // Order::saved observer at the 'expired' branch.
                     $order->update([
                         'status' => 'expired',
                         'payment_status' => 'expired',

@@ -791,13 +791,11 @@ class OrdersController extends BaseController
         try {
             DB::beginTransaction();
 
-            // Restore ticket availability (decrement quota_sold; available_quantity is computed)
-            foreach ($order->items as $item) {
-                TicketType::where('id', $item->ticket_type_id)
-                    ->decrement('quota_sold', $item->quantity);
-            }
-
-            // Update order status
+            // Update order status. The Order::saved observer fires on the
+            // 'cancelled' transition and calls releaseSeatsAndRestoreStock(),
+            // which decrements quota_sold itself — we INTENTIONALLY do NOT
+            // decrement here. Doing both was halving cap headroom on every
+            // cancel (over-sale incident on event 4563, 2026-06-16).
             $order->update([
                 'status' => 'cancelled',
                 'cancelled_at' => now(),
@@ -885,15 +883,15 @@ class OrdersController extends BaseController
                 'refund_reason' => $request->reason,
             ]);
 
-            // Invalidate tickets if full refund
+            // Invalidate tickets if full refund. NOTE: the explicit
+            // quota_sold decrement that lived here was removed — the
+            // status='refunded' update above already triggers
+            // Order::saved → releaseSeatsAndRestoreStock() which restores
+            // stock once. Decrementing here too was halving cap headroom
+            // on every refund (over-sale incident on event 4563,
+            // 2026-06-16).
             if ($refundType === 'full') {
                 $order->tickets()->update(['status' => 'refunded']);
-
-                // Restore ticket availability (decrement quota_sold; available_quantity is computed)
-                foreach ($order->items as $item) {
-                    TicketType::where('id', $item->ticket_type_id)
-                        ->decrement('quota_sold', $item->quantity);
-                }
             }
 
             // Record transaction to deduct from organizer balance

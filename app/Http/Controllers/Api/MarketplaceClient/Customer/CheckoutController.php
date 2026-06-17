@@ -355,31 +355,57 @@ class CheckoutController extends BaseController
                             $mktTicketType->update(['status' => 'sold_out']);
                         }
                     } elseif ($ticketType) {
-                        // Own stock availability
-                        $ownAvailable = ($ticketType->quota_total === null || $ticketType->quota_total < 0)
-                            ? PHP_INT_MAX
-                            : max(0, $ticketType->quota_total - ($ticketType->quota_sold ?? 0));
-
-                        // Shared pool check
-                        $available = $ownAvailable;
+                        // Shared pool pre-check. We still do a read-then-check
+                        // here because the pool is computed from a SUM across
+                        // sibling ticket types; pushing it into the conditional
+                        // UPDATE below requires a correlated subquery that
+                        // doesn't compose well in Eloquent. The pool is a
+                        // best-effort guard — the authoritative per-ticket-type
+                        // cap is enforced atomically just below.
                         $event = $ticketType->event;
                         if ($event && $event->general_quota !== null && !$ticketType->is_independent_stock) {
                             $soldNonIndep = $event->ticketTypes()
                                 ->where('is_independent_stock', false)
                                 ->sum('quota_sold');
                             $poolRemaining = max(0, $event->general_quota - (int) $soldNonIndep);
-                            $available = min($ownAvailable, $poolRemaining);
-                        }
-
-                        if ($available < $quantity) {
-                            throw new \Exception("Not enough tickets for {$ticketType->name}");
+                            if ($poolRemaining < $quantity) {
+                                throw new \Exception("Not enough tickets for {$ticketType->name}");
+                            }
                         }
 
                         if ($ticketType->quota_total !== null && $ticketType->quota_total >= 0) {
-                            $ticketType->increment('quota_sold', $quantity);
+                            // Atomic check + increment. The conditional WHERE
+                            // is what protects against TOCTOU: read + compare +
+                            // increment in a single SQL UPDATE that Postgres
+                            // serializes across concurrent transactions. If
+                            // another checkout has already filled the cap,
+                            // affected = 0 and we throw — no over-sale.
+                            //
+                            // Previous code path was: SELECT availability →
+                            // PHP check → separate UPDATE quota_sold. With
+                            // double-decrement bug fixed, races would still
+                            // creep through on a hot cap; this closes the
+                            // window for good. Incident: event 4563, 110-cap
+                            // exceeded by 13 (2026-06-16).
+                            $affected = TicketType::where('id', $ticketType->id)
+                                ->whereRaw('(COALESCE(quota_sold, 0) + ?) <= quota_total', [$quantity])
+                                ->update([
+                                    'quota_sold' => DB::raw('COALESCE(quota_sold, 0) + ' . (int) $quantity),
+                                ]);
+                            if ($affected === 0) {
+                                throw new \Exception("Not enough tickets for {$ticketType->name}");
+                            }
+
+                            // Refresh the in-memory model so the low-stock
+                            // alert below reads the post-increment value
+                            // (the atomic UPDATE bypassed Eloquent's casts).
+                            $ticketType->refresh();
 
                             // Check low stock alert
                             $this->checkLowStockAlert($ticketType);
+                        } else {
+                            // quota_total NULL / negative = unlimited. No
+                            // counter to increment — just let it through.
                         }
                     }
 
