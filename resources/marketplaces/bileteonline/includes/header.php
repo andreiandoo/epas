@@ -462,12 +462,12 @@ $tabPlacesLabel = ($ctxType === 'city' || $ctxType === 'activity')
                 </button>
 
                 <div class="grid gap-3">
-                    <a href="<?= htmlspecialchars($ctxHero['href'], ENT_QUOTES) ?>" class="px-4 py-4 text-3xl font-bold rounded-2xl bg-ink font-display text-paper" x-text="primaryExploreLabel()"><?= htmlspecialchars($ctxExploreLabel) ?></a>
-                    <a href="/categorii" class="px-4 py-4 text-3xl font-bold rounded-2xl bg-paper-2 font-display">Activități</a>
-                    <a href="/orase" class="px-4 py-4 text-3xl font-bold rounded-2xl bg-paper-2 font-display">Orașe</a>
-                    <a href="/operatori" class="px-4 py-4 text-3xl font-bold rounded-2xl bg-paper-2 font-display">Operatori</a>
-                    <a href="/ghiduri" class="px-4 py-4 text-3xl font-bold rounded-2xl bg-paper-2 font-display">Inspirație</a>
-                    <a href="/card-cadou" class="px-4 py-4 text-3xl font-bold rounded-2xl bg-mint font-display text-forest">Card cadou</a>
+                    <a href="<?= htmlspecialchars($ctxHero['href'], ENT_QUOTES) ?>" class="px-4 py-4 text-2xl font-bold rounded-2xl bg-ink font-display text-paper" x-text="primaryExploreLabel()"><?= htmlspecialchars($ctxExploreLabel) ?></a>
+                    <a href="/categorii" class="px-4 py-4 text-2xl font-bold rounded-2xl bg-paper-2 font-display">Activități</a>
+                    <a href="/orase" class="px-4 py-4 text-2xl font-bold rounded-2xl bg-paper-2 font-display">Orașe</a>
+                    <a href="/operatori" class="px-4 py-4 text-2xl font-bold rounded-2xl bg-paper-2 font-display">Operatori</a>
+                    <a href="/ghiduri" class="px-4 py-4 text-2xl font-bold rounded-2xl bg-paper-2 font-display">Inspirație</a>
+                    <a href="/card-cadou" class="px-4 py-4 text-2xl font-bold rounded-2xl bg-mint font-display text-forest">Card cadou</a>
                 </div>
 
                 <div class="mt-5">
