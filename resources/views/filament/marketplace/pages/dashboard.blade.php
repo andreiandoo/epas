@@ -987,8 +987,25 @@
                     return prevSalesData.data[idx] || 0;
                 };
 
-                // Calculate growth ratio per day-of-week (current month vs same month last year)
-                const dowRatios = {}; // 0=Sun..6=Sat -> array of ratios
+                // Smoothing helpers — see PHP predictMonthlySeries comments
+                // for the backtest rationale. Caps prevent a single big
+                // launch-day spike from sending growth ratios to 4× or
+                // 0.2×; geometric mean dampens outliers far more than
+                // arithmetic.
+                const clamp = (x) => Math.max(0.3, Math.min(3.5, x));
+                const geomean = (vals) => {
+                    const filtered = vals.filter(v => v > 0);
+                    if (filtered.length === 0) return null;
+                    if (filtered.length === 1) return filtered[0];
+                    let sumLog = 0;
+                    for (const v of filtered) sumLog += Math.log(v);
+                    return Math.exp(sumLog / filtered.length);
+                };
+
+                // Collect ratios from completed days
+                const dowRatios = {};
+                const allRatios = [];
+                let completedTotal = 0, completedDays = 0;
                 for (let i = 0; i < currentDay - 1 && i < salesData.data.length; i++) {
                     const d = new Date(monthStart);
                     d.setDate(i + 1);
@@ -996,29 +1013,21 @@
                     const curr = salesData.data[i];
                     const prev = prevAt(i);
                     if (!dowRatios[dow]) dowRatios[dow] = [];
-                    if (prev > 0 && curr > 0) dowRatios[dow].push(curr / prev);
+                    if (prev > 0 && curr > 0) {
+                        dowRatios[dow].push(curr / prev);
+                        allRatios.push(curr / prev);
+                    }
+                    completedTotal += curr;
+                    if (curr > 0) completedDays++;
                 }
+
                 const dowGrowth = {};
                 for (let dow = 0; dow < 7; dow++) {
-                    const r = dowRatios[dow] || [];
-                    dowGrowth[dow] = r.length > 0 ? r.reduce((a, b) => a + b, 0) / r.length : null;
+                    const g = geomean(dowRatios[dow] || []);
+                    dowGrowth[dow] = g !== null ? clamp(g) : null;
                 }
-
-                // Overall growth ratio as fallback
-                let allRatios = [];
-                for (let i = 0; i < currentDay - 1 && i < salesData.data.length; i++) {
-                    const curr = salesData.data[i];
-                    const prev = prevAt(i);
-                    if (prev > 0 && curr > 0) allRatios.push(curr / prev);
-                }
-                const overallGrowth = allRatios.length > 0 ? allRatios.reduce((a, b) => a + b, 0) / allRatios.length : 1;
-
-                // Overall avg daily for fallback when prev year has no data
-                let completedTotal = 0, completedDays = 0;
-                for (let i = 0; i < currentDay - 1 && i < salesData.data.length; i++) {
-                    completedTotal += salesData.data[i];
-                    if (salesData.data[i] > 0) completedDays++;
-                }
+                const overallGeoGrowth = geomean(allRatios);
+                const overallGrowth = overallGeoGrowth !== null ? clamp(overallGeoGrowth) : null;
                 const overallAvg = completedDays > 0 ? completedTotal / completedDays : 0;
 
                 // Estimate today's full-day total based on hours elapsed
@@ -1026,31 +1035,57 @@
                 const todayActual = salesData.data[currentDay - 1] || 0;
                 const todayEstimated = hoursElapsed > 1 ? Math.round(todayActual * (24 / hoursElapsed)) : todayActual;
 
-                // Build prediction for ALL days (past + today + future)
-                // Past days: shows what the model would have predicted (for validation)
-                // Today: extrapolated from hours elapsed
-                // Future: blended prediction
+                // MTD pacing fallback for early-month (< 7 completed days).
+                // Per-DOW ratios with 1 sample/day are pure noise; project
+                // month total from MTD vs same-pace point in prev year and
+                // distribute remaining proportionally to prev days.
+                const useMtdPacing = (currentDay - 1) < 7;
+                let mtdRemaining = null;
+                if (useMtdPacing) {
+                    const currMtd = completedTotal + todayEstimated;
+                    let prevMtdAligned = 0;
+                    for (let j = 0; j < currentDay; j++) prevMtdAligned += prevAt(j);
+                    let prevTotalAligned = 0;
+                    for (let j = 0; j < totalDays; j++) prevTotalAligned += prevAt(j);
+                    if (prevMtdAligned > 0 && prevTotalAligned > 0) {
+                        const pacePct = prevMtdAligned / prevTotalAligned;
+                        const projectedTotal = currMtd / pacePct;
+                        mtdRemaining = Math.max(0, projectedTotal - currMtd);
+                    }
+                }
+
+                // Pre-compute prev remaining sum for proportional distribution
+                let prevRemainingSum = 0;
+                for (let j = currentDay; j < totalDays; j++) prevRemainingSum += prevAt(j);
+
+                // Build prediction for ALL days (past + today + future).
+                // Past days use per-day capped/geomean ratios so the chart
+                // shows a "model verification" line over actual past sales.
+                // Future days use MTD pacing when in early-month mode.
                 const predictionData = [];
                 for (let i = 0; i < totalDays; i++) {
+                    if (i === currentDay - 1) {
+                        predictionData.push(todayEstimated);
+                        continue;
+                    }
+                    const isFuture = i >= currentDay;
+                    if (isFuture && useMtdPacing && mtdRemaining !== null && prevRemainingSum > 0) {
+                        const weight = prevAt(i) / prevRemainingSum;
+                        predictionData.push(Math.round(mtdRemaining * weight));
+                        continue;
+                    }
                     const dayDate = new Date(monthStart);
                     dayDate.setDate(i + 1);
                     const dow = dayDate.getDay();
-
-                    if (i === currentDay - 1) {
-                        predictionData.push(todayEstimated);
+                    const prevVal = prevAt(i);
+                    const ratio = dowGrowth[dow] !== null ? dowGrowth[dow] : (overallGrowth !== null ? overallGrowth : 1);
+                    let predicted;
+                    if (prevVal > 0 && (dowGrowth[dow] !== null || overallGrowth !== null)) {
+                        predicted = prevVal * ratio;
                     } else {
-                        const prevVal = prevAt(i);
-                        // Use DOW-specific growth ratio, fallback to overall
-                        const ratio = dowGrowth[dow] !== null ? dowGrowth[dow] : overallGrowth;
-
-                        let predicted;
-                        if (prevVal > 0) {
-                            predicted = prevVal * ratio;
-                        } else {
-                            predicted = overallAvg;
-                        }
-                        predictionData.push(Math.round(predicted));
+                        predicted = overallAvg;
                     }
+                    predictionData.push(Math.round(predicted));
                 }
 
                 // Split prediction into past (solid) and future (dashed) segments

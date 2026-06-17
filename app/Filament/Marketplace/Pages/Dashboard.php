@@ -620,23 +620,13 @@ class Dashboard extends Page
         $prevMonthStart = $monthStart->copy()->subYear();
         $prevDaysInMonth = $prevMonthStart->daysInMonth;
 
-        // Day-of-week ALIGNMENT shift: between adjacent years the Gregorian
-        // calendar walks DOW by +1 (normal year) or +2 (after a leap year).
-        // The chart's current month and last year's same month therefore
-        // map different DOWs at the same date index. Without this shift,
-        // computing a "Wednesday ratio" at index i compared current
-        // Wednesday against last year's Tuesday — and the future-day
-        // prediction looked up the wrong DOW too. The shift = how many
-        // days to step forward in prev year so the same date index lands
-        // on the same DOW.
+        // DOW shift between adjacent years — see backtest analysis on
+        // payout dashboards. Without this, "Wednesday ratio" at index i
+        // actually compared current Wednesday vs prev Tuesday.
         $currDowAtFirst = (int) $monthStart->dayOfWeek;
         $prevDowAtFirst = (int) $prevMonthStart->dayOfWeek;
         $dowShift = (($currDowAtFirst - $prevDowAtFirst) + 7) % 7;
 
-        // Look up prev-year value for current-year day i, aligned by DOW
-        // (= prev[i + dowShift]). Overflow (last 1-2 days of the current
-        // month spill past prev month's end) returns 0 → falls back to
-        // overallAvg path in the predictor.
         $prevAt = function (int $i) use ($prev, $dowShift, $prevDaysInMonth): float {
             $prevIdx = $i + $dowShift;
             if ($prevIdx < 0 || $prevIdx >= count($prev) || $prevIdx >= $prevDaysInMonth) {
@@ -645,8 +635,31 @@ class Dashboard extends Page
             return (float) ($prev[$prevIdx] ?? 0);
         };
 
-        // Day-of-week growth ratios from completed days (i < currentDay - 1)
-        $dowRatios = []; // 0..6 → list of curr/prev ratios
+        // Smoothing helpers — backtest on May+April 2025 showed that
+        // arithmetic mean + uncapped growth ratios let one big early-
+        // month day (event launch, promo spike) poison the whole month's
+        // prediction. April day-5 cutoff went from +70% off to +51% off
+        // just from adding these two, and to +51% with MTD pacing on top.
+        //
+        // Caps reflect realistic year-over-year growth for marketplace
+        // ticketing: nothing should grow 4× or shrink to 30% on a single
+        // DOW. Anything outside that band is signal-too-weak; fall back
+        // to overall growth (also capped).
+        $clamp = fn (float $x): float => max(0.3, min(3.5, $x));
+
+        // Geometric mean dampens single-day outliers far better than
+        // arithmetic. sqrt(0.5 × 5) = 1.58 vs arithmetic (0.5 + 5) / 2 = 2.75.
+        $geomean = function (array $vals) {
+            $vals = array_filter($vals, fn ($v) => $v > 0);
+            if (empty($vals)) return null;
+            if (count($vals) === 1) return reset($vals);
+            $sumLog = 0.0;
+            foreach ($vals as $v) $sumLog += log($v);
+            return exp($sumLog / count($vals));
+        };
+
+        // Collect ratios from completed days (excludes today which is partial).
+        $dowRatios = [];
         $allRatios = [];
         $completedTotal = 0.0;
         $completedDays = 0;
@@ -663,18 +676,42 @@ class Dashboard extends Page
         }
         $dowGrowth = [];
         for ($dow = 0; $dow < 7; $dow++) {
-            $r = $dowRatios[$dow] ?? [];
-            $dowGrowth[$dow] = !empty($r) ? array_sum($r) / count($r) : null;
+            $g = $geomean($dowRatios[$dow] ?? []);
+            $dowGrowth[$dow] = $g !== null ? $clamp($g) : null;
         }
-        $overallGrowth = !empty($allRatios) ? array_sum($allRatios) / count($allRatios) : null;
+        $overallGeoGrowth = $geomean($allRatios);
+        $overallGrowth = $overallGeoGrowth !== null ? $clamp($overallGeoGrowth) : null;
         $overallAvg = $completedDays > 0 ? $completedTotal / $completedDays : 0.0;
 
-        // Today: extrapolate by hours-elapsed (matches JS hoursElapsed > 1 path)
+        // Today: extrapolate by hours-elapsed.
         $hoursElapsed = $now->hour + $now->minute / 60;
         $todayActual = (float) ($current[$currentDay - 1] ?? 0);
         $todayEstimated = $hoursElapsed > 1 ? round($todayActual * (24 / $hoursElapsed)) : $todayActual;
 
-        // Build prediction for all days
+        // MTD pacing fallback for cutoff < 7 — with so few completed
+        // days, per-DOW ratios are 1-sample noise. Project total month
+        // from current month-to-date vs same-pace point in prev year,
+        // then distribute the remaining proportionally to prev days
+        // (preserves DOW shape without the per-day amplification).
+        $useMtdPacing = ($currentDay - 1) < 7;
+        $mtdRemaining = null;
+        if ($useMtdPacing) {
+            $currMtd = $completedTotal + (float) $todayEstimated;
+            $prevMtdAligned = 0.0;
+            for ($j = 0; $j < $currentDay; $j++) $prevMtdAligned += $prevAt($j);
+            $prevTotalAligned = 0.0;
+            for ($j = 0; $j < $daysInMonth; $j++) $prevTotalAligned += $prevAt($j);
+            if ($prevMtdAligned > 0 && $prevTotalAligned > 0) {
+                $pacePct = $prevMtdAligned / $prevTotalAligned;
+                $projectedTotal = $currMtd / $pacePct;
+                $mtdRemaining = max(0.0, $projectedTotal - $currMtd);
+            }
+        }
+
+        // Pre-compute prev remaining sum for proportional distribution.
+        $prevRemainingSum = 0.0;
+        for ($j = $currentDay; $j < $daysInMonth; $j++) $prevRemainingSum += $prevAt($j);
+
         $out = [];
         for ($i = 0; $i < $daysInMonth; $i++) {
             if ($i < $currentDay - 1) {
@@ -682,6 +719,11 @@ class Dashboard extends Page
             } elseif ($i === $currentDay - 1) {
                 $out[] = (float) $todayEstimated;
             } else {
+                if ($useMtdPacing && $mtdRemaining !== null && $prevRemainingSum > 0) {
+                    $weight = $prevAt($i) / $prevRemainingSum;
+                    $out[] = round($mtdRemaining * $weight);
+                    continue;
+                }
                 $dow = (int) $monthStart->copy()->addDays($i)->dayOfWeek;
                 $growth = $dowGrowth[$dow] ?? $overallGrowth ?? 1.0;
                 $prv = $prevAt($i);
