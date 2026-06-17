@@ -479,7 +479,7 @@ include __DIR__ . '/includes/header.php';
         <div class="absolute z-0 -top-24 -right-28 w-[420px] h-[420px] rounded-full <?= $ac['bg'] ?>/10 blur-3xl" aria-hidden="true"></div>
     <?php endif; ?>
 
-    <div class="relative z-10 px-4 py-8 mx-auto max-w-7xl sm:px-6 lg:py-12">
+    <div class="relative z-10 px-4 py-8 mx-auto max-w-[1500px] sm:px-6 lg:py-12">
         <div class="inline-flex items-center gap-2 mb-4 px-3 py-1 rounded-full text-xs font-mono tracking-wider <?= $catImageUrl ? 'bg-paper/15 text-paper' : $ac['bg-light'] . ' ' . $ac['text'] ?>">
             <span class="w-1.5 h-1.5 rounded-full <?= $catImageUrl ? 'bg-paper' : $ac['bg'] ?>"></span> CATEGORIE · DISPONIBILE TOT ANUL
         </div>
@@ -508,12 +508,17 @@ include __DIR__ . '/includes/header.php';
 </section>
 
 <!-- ============================== GYG FILTERS + MAP VIEW ============================== -->
+<style>
+/* Horizontal scroll on the filter bar without a visible scrollbar. */
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+</style>
 <section x-data="categoryGyg(<?= htmlspecialchars($gygSeed, ENT_QUOTES) ?>)" x-init="init()" class="border-t border-ink/10">
 
     <!-- Sticky top filter bar -->
     <div class="sticky top-[72px] z-40 border-b border-ink/10 bg-paper/95 backdrop-blur-xl">
-        <div class="px-4 py-3 mx-auto max-w-7xl sm:px-6">
-            <div class="flex items-center gap-2 pb-1 overflow-x-auto">
+        <div class="px-4 py-3 mx-auto max-w-[1500px] sm:px-6">
+            <div class="flex items-center gap-2 pb-1 overflow-x-auto no-scrollbar">
                 <button @click="openMap()" class="shrink-0 rounded-full border-2 border-ink bg-ink px-4 py-2.5 text-sm font-bold text-paper transition hover:bg-vermilion">Map view</button>
                 <button @click="filtersModal=true" class="shrink-0 rounded-full border-2 border-ink bg-paper px-4 py-2.5 text-sm font-bold transition hover:bg-ink hover:text-paper">Filtre <span x-show="activeFilterCount()" class="ml-1 rounded-full bg-vermilion px-2 py-0.5 text-xs text-paper" x-text="activeFilterCount()"></span></button>
                 <?php if (!empty($children)): ?>
@@ -529,7 +534,7 @@ include __DIR__ . '/includes/header.php';
             </div>
 
             <!-- Compact top filter popover -->
-            <div x-show="topFilterOpen" x-cloak x-transition @click.outside="topFilterOpen=null" class="absolute left-4 right-4 top-[calc(100%+8px)] z-50 mx-auto max-w-7xl rounded-[2rem] border-2 border-ink bg-paper p-5 shadow-deep sm:left-6 sm:right-6 lg:w-[720px]">
+            <div x-show="topFilterOpen" x-cloak x-transition @click.outside="topFilterOpen=null" class="absolute left-4 right-4 top-[calc(100%+8px)] z-50 mx-auto max-w-[1500px] rounded-[2rem] border-2 border-ink bg-paper p-5 shadow-deep sm:left-6 sm:right-6 lg:w-[720px]">
                 <div class="flex items-start justify-between gap-4">
                     <div>
                         <p class="font-mono text-xs tracking-[.18em] text-ink-soft" x-text="topFilterMeta().kicker"></p>
@@ -595,7 +600,7 @@ include __DIR__ . '/includes/header.php';
     <!-- Subcategorii (togglate din bara de filtre) -->
     <?php if (!empty($children)): ?>
     <div x-show="subcatOpen" x-collapse x-cloak class="border-b border-ink/10 bg-paper-2">
-        <div class="px-4 py-6 mx-auto max-w-7xl sm:px-6">
+        <div class="px-4 py-6 mx-auto max-w-[1500px] sm:px-6">
             <div class="flex items-end justify-between gap-4 mb-4">
                 <h2 class="text-2xl leading-tight font-display sm:text-3xl font-700">Alege tipul de <?= htmlspecialchars(mb_strtolower($catName)) ?></h2>
                 <button @click="subcatOpen=false" class="hidden text-sm font-bold sm:inline text-ink-soft hover:text-vermilion"><?= count($children) ?> opțiuni · închide</button>
@@ -630,7 +635,7 @@ include __DIR__ . '/includes/header.php';
     <?php endif; ?>
 
     <!-- Results -->
-    <div class="px-4 py-8 mx-auto max-w-7xl sm:px-6 lg:py-10">
+    <div class="px-4 py-8 mx-auto max-w-[1500px] sm:px-6 lg:py-10">
         <div class="flex flex-col gap-4 mb-5 lg:flex-row lg:items-end lg:justify-between">
             <div>
                 <p class="text-5xl font-bold leading-none font-display"><span x-text="filteredActivities().length"></span> rezultate</p>
@@ -1022,7 +1027,7 @@ function categoryGyg(seed) {
 
 <!-- ============================== FILTRE + REZULTATE (legacy server-side — disabled, kept for rollback) ============================== -->
 <?php if (false): ?>
-<section x-data="categoryFilters()" class="px-4 pt-10 mx-auto max-w-7xl sm:px-6">
+<section x-data="categoryFilters()" class="px-4 pt-10 mx-auto max-w-[1500px] sm:px-6">
 
     <!-- sticky filter toolbar -->
     <div class="sticky z-40 px-4 py-4 -mx-4 border-b top-24 sm:-mx-6 sm:px-6 bg-paper backdrop-blur-md border-ink/10">
@@ -1292,7 +1297,7 @@ function categoryGyg(seed) {
 
 <!-- ============================== EDITORIAL + FAQ ============================== -->
 <section class="bg-paper-2 border-y border-ink/10">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-16 lg:py-20 grid lg:grid-cols-[1fr_.8fr] gap-14">
+    <div class="max-w-[1500px] mx-auto px-4 sm:px-6 py-16 lg:py-20 grid lg:grid-cols-[1fr_.8fr] gap-14">
 
         <div>
             <h2 class="font-display text-[clamp(1.8rem,4vw,2.8rem)] font-700 leading-[1] mb-6">
