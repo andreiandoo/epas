@@ -238,7 +238,7 @@ if (! empty($faqs)) {
 // still ends with a few bookable activities so a guide always converts.
 $activities = [];
 try {
-    $railResp = api_cached('guide_rail_' . $slug, fn () => api_get('/activities', ['per_page' => 12, 'sort' => 'recent']), 300);
+    $railResp = api_cached('guide_rail_' . $slug, fn () => api_get('/activities', ['per_page' => 16, 'sort' => 'recent']), 300);
     $railRaw = $railResp['data']['items'] ?? [];
     foreach ((is_array($railRaw) ? $railRaw : []) as $a) {
         $t = is_array($a['title'] ?? null) ? ($a['title']['ro'] ?? reset($a['title'])) : ($a['title'] ?? '');
@@ -255,7 +255,7 @@ try {
             'category' => $a['category']['name'] ?? '',
             'price'    => ! empty($a['cheapest_price_cents']) ? ('de la ' . number_format($a['cheapest_price_cents'] / 100, 0, ',', '.') . ' lei') : '',
         ];
-        if (count($activities) >= 6) break;
+        if (count($activities) >= 10) break;
     }
 } catch (\Throwable $e) {
     $activities = [];
@@ -340,32 +340,6 @@ include __DIR__ . '/includes/header.php';
                 <p class="text-ink-soft text-lg">Conținutul acestui ghid va fi disponibil în curând.</p>
             <?php endif; ?>
 
-            <!-- Linked activities -->
-            <template x-if="activities.length > 0">
-                <div class="not-prose my-10">
-                    <h2 class="font-display text-4xl font-bold leading-none">Activități recomandate</h2>
-                    <div class="mt-6 grid md:grid-cols-2 gap-5">
-                        <template x-for="activity in activities" :key="activity.slug">
-                            <article class="rounded-[2rem] border-2 border-ink bg-paper overflow-hidden shadow-ticket hover:-translate-y-1 transition">
-                                <a :href="activity.url" class="block">
-                                    <div class="relative h-52 bg-ink overflow-hidden">
-                                        <img x-show="activity.image" :src="activity.image" :alt="activity.title" class="w-full h-full object-cover opacity-85" loading="lazy" onerror="this.style.display='none'">
-                                        <div class="absolute inset-0 grid place-items-center" x-show="!activity.image"><span class="text-6xl opacity-30">🎫</span></div>
-                                        <div class="absolute inset-0 bg-gradient-to-t from-ink/85 via-transparent to-transparent"></div>
-                                        <span x-show="activity.category" class="absolute left-4 top-4 rounded-full bg-paper text-ink px-3 py-1 text-xs font-bold" x-text="activity.category"></span>
-                                        <h3 class="absolute left-4 bottom-4 right-4 font-display text-3xl font-bold text-paper leading-none" x-text="activity.title"></h3>
-                                    </div>
-                                </a>
-                                <div class="p-5 flex items-center justify-between gap-3">
-                                    <span class="font-display text-2xl font-bold" x-text="activity.price || ''"></span>
-                                    <a :href="activity.url" class="rounded-full bg-vermilion text-paper px-4 py-2 font-bold hover:bg-vermilion-d transition">Vezi bilete</a>
-                                </div>
-                            </article>
-                        </template>
-                    </div>
-                </div>
-            </template>
-
             <!-- FAQ -->
             <h2 id="faq" class="!mt-12">Întrebări frecvente</h2>
             <div class="not-prose mt-6 space-y-3" x-data="{open:0}">
@@ -411,6 +385,50 @@ include __DIR__ . '/includes/header.php';
         </aside>
     </div>
 </section>
+
+<!-- ACTIVITĂȚI RECOMANDATE (carousel continuu) -->
+<style>
+.ghid-marquee-track{display:flex;gap:1.25rem;width:max-content;animation:ghid-marquee 60s linear infinite}
+.ghid-marquee:hover .ghid-marquee-track{animation-play-state:paused}
+@keyframes ghid-marquee{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+@media (prefers-reduced-motion: reduce){.ghid-marquee-track{animation:none}.ghid-marquee{overflow-x:auto}}
+</style>
+<template x-if="activities.length > 0">
+    <section class="border-t-2 border-ink bg-paper">
+        <div class="max-w-[1500px] mx-auto px-4 sm:px-6 pt-14 sm:pt-16">
+            <div class="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+                <div>
+                    <p class="stamp inline-flex px-3 py-1 text-xs font-mono tracking-[.18em] text-vermilion">REZERVĂ ACUM</p>
+                    <h2 class="mt-5 font-display text-5xl sm:text-6xl font-bold leading-[.9]">Activități recomandate</h2>
+                </div>
+                <a href="/activitati" class="rounded-full bg-ink text-paper px-6 py-4 font-bold hover:bg-vermilion transition shrink-0">Vezi toate activitățile</a>
+            </div>
+        </div>
+
+        <div class="ghid-marquee group relative overflow-hidden py-12">
+            <div class="ghid-marquee-track">
+                <?php for ($dup = 0; $dup < 2; $dup++): ?>
+                <template x-for="activity in activities" :key="'<?= $dup ?>-'+activity.slug">
+                    <article class="w-80 shrink-0 flex flex-col overflow-hidden rounded-2xl border-2 border-ink bg-paper shadow-ticket"<?= $dup ? ' aria-hidden="true"' : '' ?>>
+                        <a :href="activity.url" class="relative block h-44 overflow-hidden bg-ink">
+                            <img x-show="activity.image" :src="activity.image" :alt="activity.title" class="object-cover w-full h-full" loading="lazy" onerror="this.style.display='none'">
+                            <div x-show="!activity.image" class="grid h-full place-items-center"><span class="text-4xl opacity-30">🎫</span></div>
+                            <span x-show="activity.category" class="absolute left-3 top-3 rounded-full bg-paper text-ink px-3 py-1 text-xs font-bold shadow-ticket" x-text="activity.category"></span>
+                        </a>
+                        <div class="flex flex-col flex-1 p-4">
+                            <a :href="activity.url"><h3 class="text-2xl font-bold leading-tight font-display line-clamp-2 hover:text-vermilion" x-text="activity.title"></h3></a>
+                            <div class="flex items-end justify-between gap-3 pt-4 mt-auto">
+                                <span class="text-lg font-bold font-display" x-text="activity.price || ''"></span>
+                                <a :href="activity.url" class="rounded-full bg-ink text-paper px-4 py-2 text-sm font-bold transition hover:bg-vermilion">Vezi</a>
+                            </div>
+                        </div>
+                    </article>
+                </template>
+                <?php endfor; ?>
+            </div>
+        </div>
+    </section>
+</template>
 
 <!-- RELATED GUIDES -->
 <template x-if="related.length > 0">
