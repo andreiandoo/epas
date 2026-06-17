@@ -462,16 +462,24 @@ include __DIR__ . '/includes/header.php';
 
 <!-- ============================== HERO (compact, imagine ca background) ============================== -->
 <?php $catImageUrl = $catImage ? $bo_img($catImage) : ''; ?>
-<section class="relative overflow-hidden border-b-2 border-ink <?= $catImageUrl ? 'text-paper' : '' ?>">
+<section class="relative overflow-hidden border-b-2 border-ink <?= $catImageUrl ? 'bg-ink text-paper' : '' ?>">
     <?php if ($catImageUrl): ?>
-        <img src="<?= htmlspecialchars($catImageUrl, ENT_QUOTES) ?>" alt="<?= htmlspecialchars($catName, ENT_QUOTES) ?>" class="absolute inset-0 object-cover w-full h-full -z-10" loading="eager">
-        <div class="absolute inset-0 -z-10 bg-gradient-to-r from-ink/90 via-ink/70 to-ink/40"></div>
+        <!-- Imaginea ocupă jumătatea dreaptă; fundalul ink o înconjoară pe stânga și pe dreapta -->
+        <div class="absolute inset-y-0 right-0 z-0 w-full lg:w-1/2" aria-hidden="true">
+            <img src="<?= htmlspecialchars($catImageUrl, ENT_QUOTES) ?>" alt="<?= htmlspecialchars($catName, ENT_QUOTES) ?>" class="object-cover w-full h-full" loading="eager">
+            <!-- ink dinspre stânga peste imagine — face textul lizibil -->
+            <div class="absolute inset-0 bg-gradient-to-r from-ink via-ink/55 to-transparent"></div>
+            <!-- ink dinspre dreapta — „înconjoară" imaginea -->
+            <div class="absolute inset-0 bg-gradient-to-l from-ink/85 via-transparent to-transparent"></div>
+            <!-- ink dinspre jos — lizibilitate pe mobil, unde imaginea e pe toată lățimea -->
+            <div class="absolute inset-0 lg:hidden bg-gradient-to-t from-ink/75 via-ink/20 to-transparent"></div>
+        </div>
     <?php else: ?>
-        <div class="absolute inset-0 -z-10 bg-gradient-to-b from-paper via-paper to-paper-2"></div>
-        <div class="absolute -z-10 -top-24 -right-28 w-[420px] h-[420px] rounded-full <?= $ac['bg'] ?>/10 blur-3xl" aria-hidden="true"></div>
+        <div class="absolute inset-0 z-0 bg-gradient-to-b from-paper via-paper to-paper-2"></div>
+        <div class="absolute z-0 -top-24 -right-28 w-[420px] h-[420px] rounded-full <?= $ac['bg'] ?>/10 blur-3xl" aria-hidden="true"></div>
     <?php endif; ?>
 
-    <div class="px-4 py-8 mx-auto max-w-7xl sm:px-6 lg:py-10">
+    <div class="relative z-10 px-4 py-8 mx-auto max-w-7xl sm:px-6 lg:py-12">
         <div class="inline-flex items-center gap-2 mb-4 px-3 py-1 rounded-full text-xs font-mono tracking-wider <?= $catImageUrl ? 'bg-paper/15 text-paper' : $ac['bg-light'] . ' ' . $ac['text'] ?>">
             <span class="w-1.5 h-1.5 rounded-full <?= $catImageUrl ? 'bg-paper' : $ac['bg'] ?>"></span> CATEGORIE · DISPONIBILE TOT ANUL
         </div>
