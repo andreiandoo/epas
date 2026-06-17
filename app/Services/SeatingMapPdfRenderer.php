@@ -105,7 +105,7 @@ class SeatingMapPdfRenderer
     protected function loadLayoutGeometry(int $layoutId): ?array
     {
         return Cache::remember(
-            "seating_pdf_geometry_{$layoutId}",
+            "seating_pdf_geometry_{$layoutId}_v2",
             600,
             function () use ($layoutId) {
                 $layout = SeatingLayout::find($layoutId);
@@ -140,11 +140,17 @@ class SeatingMapPdfRenderer
                     $sectionsArr[] = [
                         'id' => $section->id,
                         'name' => $section->name,
+                        'section_type' => $section->section_type ?: 'standard',
                         'section_code' => $section->section_code,
                         'x_position' => (int) $section->x_position,
                         'y_position' => (int) $section->y_position,
+                        'width' => (int) ($section->width ?? 0),
+                        'height' => (int) ($section->height ?? 0),
                         'rotation' => (int) ($section->rotation ?? 0),
                         'color_hex' => $section->color_hex,
+                        'background_color' => $section->background_color,
+                        'corner_radius' => (int) ($section->corner_radius ?? 0),
+                        'meta' => is_array($section->meta) ? $section->meta : [],
                         'rows' => $rowsArr,
                     ];
                 }
@@ -203,8 +209,26 @@ class SeatingMapPdfRenderer
         // Light canvas background so seat circles read clearly on the page.
         $svg .= '<rect width="' . $canvasW . '" height="' . $canvasH . '" fill="#fafafa"/>';
 
-        // First pass — section labels (drawn behind seats).
+        // First pass — decorative zones (stage, dance floor, etc) drawn
+        // BEHIND seats so anything overlapping reads correctly. These have
+        // no seats; we treat them as colored rectangles with the section
+        // name centered inside.
         foreach ($sections as $section) {
+            $type = $section['section_type'] ?? 'standard';
+            if (in_array($type, ['decorative', 'stage', 'dance_floor'], true)) {
+                $this->appendDecorativeZone($svg, $section);
+            } elseif ($type === 'polygon') {
+                $this->appendPolygon($svg, $section);
+            }
+        }
+
+        // Second pass — section name labels for standard sections (above
+        // the topmost seat).
+        foreach ($sections as $section) {
+            $type = $section['section_type'] ?? 'standard';
+            if ($type !== 'standard') {
+                continue;
+            }
             $bbox = $this->sectionBbox($section);
             if (!$bbox) {
                 continue;
@@ -218,12 +242,49 @@ class SeatingMapPdfRenderer
             if ($name !== '') {
                 $svg .= '<text x="' . $cx . '" y="' . $labelY . '" '
                     . 'text-anchor="middle" font-family="Helvetica, Arial, sans-serif" '
-                    . 'font-size="18" fill="#6b7280" font-weight="bold">'
+                    . 'font-size="22" fill="#374151" font-weight="bold">'
                     . $name . '</text>';
             }
         }
 
-        // Second pass — all seats as small grey circles.
+        // Third pass — row labels at the LEFT side of each row, just outside
+        // the first seat. Helps a buyer count rows from the aisle.
+        foreach ($sections as $section) {
+            $sx = $section['x_position'];
+            $sy = $section['y_position'];
+            foreach ($section['rows'] as $row) {
+                if (empty($row['seats']) || empty($row['label'])) {
+                    continue;
+                }
+                $leftSeat = null;
+                $rightSeat = null;
+                foreach ($row['seats'] as $seat) {
+                    if ($leftSeat === null || $seat['x'] < $leftSeat['x']) {
+                        $leftSeat = $seat;
+                    }
+                    if ($rightSeat === null || $seat['x'] > $rightSeat['x']) {
+                        $rightSeat = $seat;
+                    }
+                }
+                $rowLabel = htmlspecialchars((string) $row['label'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+                // Left side
+                $lx = $sx + $leftSeat['x'] - 18;
+                $ly = $sy + $leftSeat['y'] + 5;
+                $svg .= '<text x="' . $lx . '" y="' . $ly . '" '
+                    . 'text-anchor="end" font-family="Helvetica, Arial, sans-serif" '
+                    . 'font-size="11" fill="#6b7280" font-weight="bold">'
+                    . $rowLabel . '</text>';
+                // Right side (helps when the user is approaching from the other aisle)
+                $rx = $sx + $rightSeat['x'] + 18;
+                $ry = $sy + $rightSeat['y'] + 5;
+                $svg .= '<text x="' . $rx . '" y="' . $ry . '" '
+                    . 'text-anchor="start" font-family="Helvetica, Arial, sans-serif" '
+                    . 'font-size="11" fill="#6b7280" font-weight="bold">'
+                    . $rowLabel . '</text>';
+            }
+        }
+
+        // Fourth pass — all seats as small grey circles.
         $targetSeatUid = $target['seat']['seat_uid'] ?? null;
         foreach ($sections as $section) {
             $sx = $section['x_position'];
@@ -240,25 +301,103 @@ class SeatingMapPdfRenderer
             }
         }
 
-        // Third pass — target seat (big red, bold outline, label inside).
+        // Fifth pass — target seat (big red, bold outline, label inside).
         if ($target) {
             $cx = $target['abs_x'];
             $cy = $target['abs_y'];
             // Halo so the target reads at any zoom level.
-            $svg .= '<circle cx="' . $cx . '" cy="' . $cy . '" r="32" fill="#fee2e2" stroke="#dc2626" stroke-width="2" opacity="0.7"/>';
-            $svg .= '<circle cx="' . $cx . '" cy="' . $cy . '" r="18" fill="#dc2626" stroke="#111827" stroke-width="3"/>';
+            $svg .= '<circle cx="' . $cx . '" cy="' . $cy . '" r="36" fill="#fee2e2" stroke="#dc2626" stroke-width="2" opacity="0.6"/>';
+            $svg .= '<circle cx="' . $cx . '" cy="' . $cy . '" r="20" fill="#dc2626" stroke="#111827" stroke-width="3"/>';
 
             $label = htmlspecialchars((string) ($target['seat']['label'] ?? ''), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
             if ($label !== '') {
-                $svg .= '<text x="' . $cx . '" y="' . ($cy + 5) . '" '
+                $svg .= '<text x="' . $cx . '" y="' . ($cy + 6) . '" '
                     . 'text-anchor="middle" font-family="Helvetica, Arial, sans-serif" '
-                    . 'font-size="13" fill="#ffffff" font-weight="bold">'
+                    . 'font-size="14" fill="#ffffff" font-weight="bold">'
                     . $label . '</text>';
             }
         }
 
         $svg .= '</svg>';
         return $svg;
+    }
+
+    /**
+     * Append a decorative zone (stage, dance floor, decorative) as a
+     * coloured rectangle with the section name centered inside.
+     */
+    protected function appendDecorativeZone(string &$svg, array $section): void
+    {
+        $x = $section['x_position'];
+        $y = $section['y_position'];
+        $w = $section['width'] ?: 200;
+        $h = $section['height'] ?: 60;
+        $bg = $section['background_color'] ?: ($section['color_hex'] ?: '#9333ea');
+        $rx = max(0, min(40, $section['corner_radius'] ?? 0));
+
+        $svg .= '<rect x="' . $x . '" y="' . $y . '" '
+            . 'width="' . $w . '" height="' . $h . '" '
+            . 'rx="' . $rx . '" ry="' . $rx . '" '
+            . 'fill="' . htmlspecialchars($bg, ENT_QUOTES | ENT_SUBSTITUTE) . '" '
+            . 'fill-opacity="0.85" stroke="#1f2937" stroke-width="1"/>';
+
+        $name = htmlspecialchars((string) ($section['name'] ?? ''), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        if ($name !== '') {
+            // Pick contrasting text color (cheap heuristic on lightness of bg).
+            $textColor = $this->contrastTextColor($bg);
+            $cx = $x + $w / 2;
+            $cy = $y + $h / 2 + 7;
+            $fontSize = max(12, min(28, (int) ($h * 0.35)));
+            $svg .= '<text x="' . $cx . '" y="' . $cy . '" '
+                . 'text-anchor="middle" font-family="Helvetica, Arial, sans-serif" '
+                . 'font-size="' . $fontSize . '" fill="' . $textColor . '" '
+                . 'font-weight="bold" letter-spacing="2">'
+                . strtoupper($name) . '</text>';
+        }
+    }
+
+    /**
+     * Append a polygon-shaped section. Points stored in section.meta.polygon_points
+     * as a list of {x, y} coordinates relative to the section origin.
+     */
+    protected function appendPolygon(string &$svg, array $section): void
+    {
+        $points = $section['meta']['polygon_points'] ?? null;
+        if (!is_array($points) || empty($points)) {
+            return;
+        }
+        $sx = $section['x_position'];
+        $sy = $section['y_position'];
+        $coords = [];
+        foreach ($points as $p) {
+            $px = $sx + (float) ($p['x'] ?? 0);
+            $py = $sy + (float) ($p['y'] ?? 0);
+            $coords[] = $px . ',' . $py;
+        }
+        $bg = $section['background_color'] ?: ($section['color_hex'] ?: '#9333ea');
+        $svg .= '<polygon points="' . implode(' ', $coords) . '" '
+            . 'fill="' . htmlspecialchars($bg, ENT_QUOTES | ENT_SUBSTITUTE) . '" '
+            . 'fill-opacity="0.7" stroke="#1f2937" stroke-width="1"/>';
+    }
+
+    /**
+     * Return a foreground colour that contrasts with the given hex bg.
+     * Quick & dirty — sufficient for stage/zone labels.
+     */
+    protected function contrastTextColor(string $hex): string
+    {
+        $hex = ltrim($hex, '#');
+        if (strlen($hex) === 3) {
+            $hex = $hex[0] . $hex[0] . $hex[1] . $hex[1] . $hex[2] . $hex[2];
+        }
+        if (strlen($hex) !== 6) {
+            return '#ffffff';
+        }
+        $r = hexdec(substr($hex, 0, 2));
+        $g = hexdec(substr($hex, 2, 2));
+        $b = hexdec(substr($hex, 4, 2));
+        $luma = ($r * 0.299 + $g * 0.587 + $b * 0.114) / 255;
+        return $luma > 0.62 ? '#111827' : '#ffffff';
     }
 
     /**
