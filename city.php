@@ -621,7 +621,7 @@ document.addEventListener('alpine:init', () => {
                 <a href="/categorii" class="inline-block px-5 py-3 mt-5 transition rounded-full bg-ink text-paper font-700 hover:bg-vermilion">Vezi alte categorii</a>
             </div>
         <?php else: ?>
-            <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 <?php foreach ($cards as $ev):
                     $evTitle = $ev['title'];
                     $evCat = $ev['cat'];
@@ -721,7 +721,9 @@ document.addEventListener('alpine:init', () => {
                             <span class="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-paper-2 text-2xl"><?= htmlspecialchars($cat['icon_emoji'] ?? '🎫') ?></span>
                             <span class="min-w-0">
                                 <span class="block truncate font-bold leading-none group-hover:text-vermilion"><?= htmlspecialchars($cat['label']) ?></span>
-                                <span class="mt-1 block text-sm text-ink-soft"><?= htmlspecialchars($cat['count']) ?></span>
+                                <?php if (!empty($cat['count_n'])): ?>
+                                    <span class="mt-1 block text-sm text-ink-soft"><?= (int) $cat['count_n'] ?> <?= ((int) $cat['count_n']) === 1 ? 'activitate' : 'activități' ?></span>
+                                <?php endif; ?>
                             </span>
                         </a>
                     <?php endforeach; ?>
