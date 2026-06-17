@@ -518,7 +518,8 @@ include __DIR__ . '/includes/header.php';
     <!-- Sticky top filter bar -->
     <div class="sticky top-[72px] z-40 border-b border-ink/10 bg-paper/95 backdrop-blur-xl">
         <div class="px-4 py-3 mx-auto max-w-[1500px] sm:px-6">
-            <div class="flex items-center gap-2 pb-1 overflow-x-auto no-scrollbar">
+            <div class="flex items-center gap-3">
+            <div class="flex items-center flex-1 min-w-0 gap-2 pb-1 overflow-x-auto no-scrollbar">
                 <button @click="openMap()" class="shrink-0 rounded-full border-2 border-ink bg-ink px-4 py-2.5 text-sm font-bold text-paper transition hover:bg-vermilion">Map view</button>
                 <button @click="filtersModal=true" class="shrink-0 rounded-full border-2 border-ink bg-paper px-4 py-2.5 text-sm font-bold transition hover:bg-ink hover:text-paper">Filtre <span x-show="activeFilterCount()" class="ml-1 rounded-full bg-vermilion px-2 py-0.5 text-xs text-paper" x-text="activeFilterCount()"></span></button>
                 <?php if (!empty($children)): ?>
@@ -531,6 +532,17 @@ include __DIR__ . '/includes/header.php';
                     <button @click="openTopFilter(b.key)" class="shrink-0 rounded-full border-2 border-ink/10 bg-paper-2 px-4 py-2.5 text-sm font-bold transition hover:border-ink"><span x-text="b.label"></span><span x-show="topFilterActive(b.key)" class="ml-1 text-vermilion">•</span></button>
                 </template>
                 <button @click="resetFilters()" x-show="activeFilterCount()" x-cloak class="shrink-0 rounded-full px-4 py-2.5 text-sm font-bold text-vermilion hover:bg-rose">Șterge tot</button>
+                </div>
+                <label class="flex items-center gap-2 shrink-0">
+                    <span class="hidden text-sm font-bold sm:inline text-ink-soft">Sortare</span>
+                    <select class="px-3 py-2 text-sm font-bold border-2 outline-none rounded-full border-ink/15 bg-paper focus:border-vermilion" x-model="sortBy">
+                        <option value="recommended">Recomandate</option>
+                        <option value="rating" x-show="hasRatings">Rating</option>
+                        <option value="priceAsc">Preț crescător</option>
+                        <option value="priceDesc">Preț descrescător</option>
+                        <option value="duration">Durată scurtă</option>
+                    </select>
+                </label>
             </div>
 
             <!-- Compact top filter popover -->
@@ -636,21 +648,9 @@ include __DIR__ . '/includes/header.php';
 
     <!-- Results -->
     <div class="px-4 py-8 mx-auto max-w-[1500px] sm:px-6 lg:py-10">
-        <div class="flex flex-col gap-4 mb-5 lg:flex-row lg:items-end lg:justify-between">
-            <div>
-                <p class="text-5xl font-bold leading-none font-display"><span x-text="filteredActivities().length"></span> rezultate</p>
-                <p class="mt-2 text-ink-soft">Activitățile sunt ordonate după relevanță, rating și disponibilitate.</p>
-            </div>
-            <label class="flex items-center max-w-sm gap-2">
-                <span class="text-sm font-bold text-ink-soft">Sortare</span>
-                <select class="px-4 py-3 font-bold border-2 outline-none rounded-2xl border-ink/15 bg-paper focus:border-vermilion" x-model="sortBy">
-                    <option value="recommended">Recomandate</option>
-                    <option value="rating" x-show="hasRatings">Rating</option>
-                    <option value="priceAsc">Preț crescător</option>
-                    <option value="priceDesc">Preț descrescător</option>
-                    <option value="duration">Durată scurtă</option>
-                </select>
-            </label>
+        <div class="mb-5">
+            <p class="text-5xl font-bold leading-none font-display"><span x-text="filteredActivities().length"></span> rezultate</p>
+            <p class="mt-2 text-ink-soft">Activitățile sunt ordonate după relevanță, rating și disponibilitate.</p>
         </div>
 
         <div class="flex flex-wrap gap-2 mb-6" x-show="activeChips().length" x-cloak>
@@ -659,52 +659,39 @@ include __DIR__ . '/includes/header.php';
             </template>
         </div>
 
-        <div class="space-y-5">
+        <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             <template x-for="activity in sortedActivities()" :key="activity.id">
-                <article class="group overflow-hidden rounded-[2rem] border-2 border-ink bg-paper shadow-deep transition hover:-translate-y-0.5">
-                    <div class="grid md:grid-cols-[290px_1fr]">
-                        <a :href="activity.href" class="relative block min-h-[230px] overflow-hidden bg-ink">
-                            <img x-show="activity.image" :src="activity.image" :alt="activity.title" class="object-cover w-full h-full transition duration-500 group-hover:scale-105" loading="lazy">
-                            <div x-show="!activity.image" class="grid h-full place-items-center bg-gradient-to-br from-vermilion to-vermilion-d"><span class="text-5xl opacity-40">🎫</span></div>
-                            <div class="absolute flex flex-wrap gap-2 left-4 top-4">
-                                <template x-for="badge in activity.badges" :key="badge"><span class="px-3 py-1 text-xs font-bold rounded-full bg-paper text-ink" x-text="badge"></span></template>
-                            </div>
-                            <button @click.prevent="activity.favorite=!activity.favorite" class="absolute grid w-10 h-10 text-2xl rounded-full right-4 top-4 place-items-center bg-paper text-ink"><span x-text="activity.favorite ? '♥' : '♡'"></span></button>
-                        </a>
-                        <div class="grid gap-4 p-5 lg:grid-cols-[1fr_220px]">
+                <article class="flex flex-col overflow-hidden transition border-2 group rounded-2xl border-ink bg-paper shadow-ticket hover:-translate-y-1">
+                    <a :href="activity.href" class="relative block h-44 overflow-hidden bg-ink">
+                        <img x-show="activity.image" :src="activity.image" :alt="activity.title" class="object-cover w-full h-full transition duration-500 group-hover:scale-105" loading="lazy">
+                        <div x-show="!activity.image" class="grid h-full place-items-center bg-gradient-to-br from-vermilion to-vermilion-d"><span class="text-4xl opacity-40">🎫</span></div>
+                        <div class="absolute flex flex-wrap gap-2 left-3 top-3">
+                            <template x-for="badge in activity.badges" :key="badge"><span class="px-3 py-1 text-xs font-bold rounded-full bg-paper text-ink shadow-ticket" x-text="badge"></span></template>
+                        </div>
+                        <button @click.prevent="activity.favorite=!activity.favorite" class="absolute grid text-xl rounded-full h-9 w-9 right-3 top-3 place-items-center bg-paper text-ink" aria-label="Salvează"><span x-text="activity.favorite ? '♥' : '♡'"></span></button>
+                    </a>
+                    <div class="flex flex-col flex-1 p-4">
+                        <p x-show="activity.category" class="font-mono text-[10px] uppercase tracking-wider text-ink-soft" x-text="activity.category"></p>
+                        <a :href="activity.href" class="mt-1.5"><h3 class="text-2xl font-bold leading-tight font-display line-clamp-2 group-hover:text-vermilion" x-text="activity.title"></h3></a>
+                        <div class="flex flex-wrap items-center gap-2 mt-2 text-sm font-bold">
+                            <template x-if="activity.rating > 0"><span class="text-ochre">★</span></template>
+                            <span x-show="activity.rating > 0" x-text="activity.rating"></span>
+                            <span x-show="activity.reviews > 0" class="text-ink-soft" x-text="'(' + activity.reviews.toLocaleString('ro-RO') + ')'"></span>
+                            <template x-if="activity.durationLabel"><span class="text-ink-soft">·</span></template>
+                            <span x-show="activity.durationLabel" x-text="activity.durationLabel"></span>
+                        </div>
+                        <div class="flex items-end justify-between gap-3 pt-4 mt-auto">
                             <div>
-                                <div class="flex flex-wrap gap-2">
-                                    <span x-show="activity.category" class="px-3 py-1 text-xs font-bold rounded-full bg-paper-2 text-ink-soft" x-text="activity.category"></span>
-                                </div>
-                                <a :href="activity.href" class="block mt-3"><h3 class="text-4xl font-bold leading-none font-display group-hover:text-vermilion" x-text="activity.title"></h3></a>
-                                <p x-show="activity.description" class="mt-3 text-ink-soft" x-text="activity.description"></p>
-                                <div class="flex flex-wrap items-center gap-3 mt-4 text-sm font-bold">
-                                    <template x-if="activity.rating > 0"><span class="text-ochre">★★★★★</span></template>
-                                    <span x-show="activity.rating > 0" x-text="activity.rating"></span>
-                                    <span x-show="activity.reviews > 0" class="text-ink-soft" x-text="'(' + activity.reviews.toLocaleString('ro-RO') + ')'"></span>
-                                    <span x-show="activity.place" class="text-ink-soft">·</span>
-                                    <span x-show="activity.place" x-text="activity.place"></span>
-                                    <span x-show="activity.durationLabel" class="text-ink-soft">·</span>
-                                    <span x-show="activity.durationLabel" x-text="activity.durationLabel"></span>
-                                </div>
-                                <div class="flex flex-wrap gap-2 mt-4">
-                                    <template x-for="feature in activity.features" :key="feature"><span class="px-3 py-1 text-xs font-bold rounded-full bg-paper-2 text-ink-soft" x-text="featureLabel(feature)"></span></template>
-                                </div>
+                                <p x-show="activity.price" class="text-xs text-ink-soft">de la</p>
+                                <p class="text-2xl font-bold leading-none font-display" x-text="activity.price ? formatMoney(activity.price) : 'Vezi preț'"></p>
                             </div>
-                            <aside class="flex flex-col justify-between p-4 rounded-3xl bg-paper-2">
-                                <div>
-                                    <p class="text-sm font-bold text-ink-soft" x-show="activity.price">de la</p>
-                                    <p class="text-4xl font-bold leading-none font-display" x-text="activity.price ? formatMoney(activity.price) : 'Vezi preț'"></p>
-                                    <p x-show="activity.price" class="px-3 py-2 mt-3 text-sm font-bold rounded-2xl bg-mint text-forest" x-text="'+' + Math.floor(activity.price/5) + ' puncte bonus'"></p>
-                                </div>
-                                <a :href="activity.href" class="px-5 py-3 mt-4 font-bold text-center transition rounded-full bg-vermilion text-paper hover:bg-vermilion-d">Vezi bilete</a>
-                            </aside>
+                            <a :href="activity.href" class="px-4 py-2.5 rounded-full bg-ink text-paper text-sm font-bold transition-colors hover:bg-vermilion">Vezi</a>
                         </div>
                     </div>
                 </article>
             </template>
 
-            <div x-show="filteredActivities().length === 0" x-cloak class="rounded-[2rem] border-2 border-ink bg-paper p-8 text-center">
+            <div x-show="filteredActivities().length === 0" x-cloak class="rounded-[2rem] border-2 border-ink bg-paper p-8 text-center sm:col-span-2 lg:col-span-3 xl:col-span-4">
                 <p class="text-5xl font-bold leading-none font-display">Nu am găsit activități.</p>
                 <p class="mt-3 text-ink-soft">Schimbă filtrele sau resetează căutarea.</p>
                 <button @click="resetFilters()" class="px-6 py-4 mt-5 font-bold rounded-full bg-vermilion text-paper">Resetează filtrele</button>
