@@ -189,10 +189,16 @@ class SeatingMapPdfRenderer
      */
     protected function buildSvg(array $sections, int $canvasW, int $canvasH, ?array $target): string
     {
-        $svg = '<svg xmlns="http://www.w3.org/2000/svg" '
+        // XML declaration + explicit width/height (in user units = px) on the
+        // <svg> root. DomPDF's data: image renderer requires both — it ignores
+        // %-based widths inside an <img> data URL and otherwise renders nothing.
+        // The viewBox keeps everything scaling correctly when the consuming
+        // <img> CSS sets a different display size.
+        $svg = '<?xml version="1.0" encoding="UTF-8"?>'
+            . '<svg xmlns="http://www.w3.org/2000/svg" '
             . 'viewBox="0 0 ' . $canvasW . ' ' . $canvasH . '" '
-            . 'preserveAspectRatio="xMidYMid meet" '
-            . 'width="100%" height="100%">';
+            . 'width="' . $canvasW . '" height="' . $canvasH . '" '
+            . 'preserveAspectRatio="xMidYMid meet">';
 
         // Light canvas background so seat circles read clearly on the page.
         $svg .= '<rect width="' . $canvasW . '" height="' . $canvasH . '" fill="#fafafa"/>';

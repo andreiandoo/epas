@@ -35,8 +35,21 @@
         </div>
     </div>
 
-    <div style="width: 100%; height: {{ $svgBoxHeight }}pt; border: 1pt solid #e5e7eb; padding: 4pt; background: #ffffff;">
-        {!! $seatingPdfPayload['svg'] !!}
+    {{-- DomPDF 3 renders inline SVG as raw text. Encoded as a data URI on
+         an <img>, the SVG renderer kicks in and the shapes draw properly.
+         We give the img an explicit width in pt — percentage widths inside
+         a constrained-width div confuse DomPDF too. --}}
+    @php
+        $svgImgWidth = $pageW - 2 * $padding - 8;
+        $aspect = ($seatingPdfPayload['canvas_h'] ?? 1) / max(1, ($seatingPdfPayload['canvas_w'] ?? 1));
+        $svgImgHeight = min($svgBoxHeight, (int) round($svgImgWidth * $aspect));
+    @endphp
+    <div style="width: 100%; border: 1pt solid #e5e7eb; padding: 4pt; background: #ffffff; text-align: center;">
+        <img src="data:image/svg+xml;base64,{{ base64_encode($seatingPdfPayload['svg']) }}"
+             style="width: {{ $svgImgWidth }}pt; height: {{ $svgImgHeight }}pt; display: block; margin: 0 auto;"
+             width="{{ $svgImgWidth }}"
+             height="{{ $svgImgHeight }}"
+             alt="" />
     </div>
 
     <div style="margin-top: {{ $isCompact ? 8 : 14 }}pt; padding: {{ $isCompact ? 8 : 12 }}pt; background: #fef2f2; border: 1pt solid #fecaca;">
