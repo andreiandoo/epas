@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Niciun rezultat găsit | bilete.online</title>
+  <meta name="description" content="Nu am găsit rezultate pentru căutarea sau filtrele selectate. Descoperă alternative, activități similare și destinații populare pe bilete.online.">
+  <meta name="robots" content="noindex, follow">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Hanken+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: { extend: {
+        colors: {
+          paper:'#F7F4EC',
+          paper2:'#EEE8DB',
+          ink:'#171512',
+          muted:'#625B50',
+          red:'#E84527',
+          red2:'#C5371C',
+          green:'#183E34',
+          green2:'#DCE9DF',
+          gold:'#D99A2B',
+          blue:'#244A66'
+        },
+        fontFamily: {
+          display:['Fraunces','Georgia','serif'],
+          sans:['Hanken Grotesk','system-ui','sans-serif']
+        },
+        boxShadow: {
+          soft:'0 18px 50px -34px rgba(23,21,18,.65)',
+          panel:'0 36px 90px -52px rgba(23,21,18,.82)'
+        }
+      }}
+    }
+  </script>
+
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+  <style>
+    body{background:#F7F4EC;color:#171512;font-family:'Hanken Grotesk',system-ui,sans-serif}
+    .font-display{font-family:Fraunces,Georgia,serif;letter-spacing:-.018em}
+    .line-clamp-2{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+    [x-cloak]{display:none!important}
+  </style>
+</head>
+
+<body x-data="emptyResultsPage()" class="antialiased">
+  <header class="sticky top-0 z-50 border-b border-ink/10 bg-paper/95 backdrop-blur-xl">
+    <nav class="mx-auto flex h-[68px] max-w-[1440px] items-center gap-4 px-4 sm:px-6">
+      <a href="/" class="flex shrink-0 items-center gap-2.5">
+        <span class="grid h-9 w-9 place-items-center rounded-xl bg-red text-white rotate-[-4deg]">🎟</span>
+        <span class="font-display text-xl font-bold">bilete<span class="text-red">.</span>online</span>
+      </a>
+
+      <div class="mx-auto hidden w-full max-w-[620px] md:block">
+        <form @submit.prevent="search()" class="flex h-11 items-center gap-2 rounded-full border border-ink/15 bg-white px-4">
+          <span class="text-muted">⌕</span>
+          <input x-model="query" class="min-w-0 flex-1 bg-transparent text-sm font-semibold outline-none" placeholder="Caută activități, atracții, orașe sau ghiduri">
+          <button class="text-sm font-bold text-red">Caută</button>
+        </form>
+      </div>
+
+      <div class="ml-auto flex items-center gap-2">
+        <a href="/cos" class="rounded-full px-4 py-2 text-sm font-bold hover:bg-paper2">Coș</a>
+        <a href="/login" class="rounded-full bg-ink px-4 py-2 text-sm font-bold text-white">Log in</a>
+      </div>
+    </nav>
+  </header>
+
+  <main>
+    <!-- Empty state -->
+    <section class="bg-paper">
+      <div class="mx-auto max-w-[1180px] px-4 py-12 sm:px-6 lg:py-16">
+        <div class="grid gap-10 lg:grid-cols-[minmax(0,1fr)_420px] lg:items-center">
+          <div>
+            <div class="inline-flex items-center gap-2 rounded-full bg-paper2 px-4 py-2 text-sm font-bold">
+              <span class="grid h-6 w-6 place-items-center rounded-full bg-ink text-xs text-white">0</span>
+              Niciun rezultat
+            </div>
+
+            <h1 class="mt-5 max-w-3xl font-display text-5xl font-bold leading-[.95] sm:text-6xl">
+              Nu am găsit exact ce căutai.
+            </h1>
+
+            <p class="mt-5 max-w-2xl text-lg leading-relaxed text-muted">
+              Nu există rezultate pentru
+              <strong class="text-ink">„<span x-text="query"></span>”</strong>
+              în combinație cu filtrele selectate.
+            </p>
+
+            <div class="mt-7 max-w-3xl rounded-2xl border border-ink/10 bg-white p-5 shadow-soft">
+              <form @submit.prevent="search()" class="flex flex-col gap-3 sm:flex-row">
+                <div class="flex min-w-0 flex-1 items-center gap-2 rounded-full border border-ink/15 bg-paper px-4">
+                  <span class="text-muted">⌕</span>
+                  <input x-model="query" class="min-w-0 flex-1 bg-transparent py-3 font-semibold outline-none" placeholder="Încearcă o căutare mai generală">
+                </div>
+                <button class="rounded-full bg-red px-6 py-3 font-bold text-white hover:bg-red2">
+                  Caută din nou
+                </button>
+              </form>
+
+              <div class="mt-4 flex flex-wrap gap-2">
+                <template x-for="term in suggestedTerms" :key="term">
+                  <button @click="query=term" class="rounded-full bg-paper2 px-4 py-2 text-sm font-bold hover:bg-ink hover:text-white" x-text="term"></button>
+                </template>
+              </div>
+            </div>
+
+            <div class="mt-6 flex flex-wrap gap-3">
+              <button @click="clearFilters()" class="rounded-full border border-ink/20 bg-white px-6 py-3 font-bold hover:border-ink">
+                Elimină toate filtrele
+              </button>
+              <a href="/activitati" class="rounded-full bg-ink px-6 py-3 font-bold text-white">
+                Vezi toate activitățile
+              </a>
+            </div>
+          </div>
+
+          <aside class="relative overflow-hidden rounded-[1.75rem] bg-ink p-7 text-white shadow-panel">
+            <div class="absolute -right-14 -top-14 h-44 w-44 rounded-full bg-red/30"></div>
+            <div class="absolute -bottom-16 -left-12 h-44 w-44 rounded-full bg-gold/20"></div>
+
+            <div class="relative">
+              <p class="text-xs font-bold uppercase tracking-[.16em] text-gold">CE POȚI ÎNCERCA</p>
+              <h2 class="mt-3 font-display text-3xl font-bold leading-tight">
+                Uneori rezultatul potrivit este la un filtru distanță.
+              </h2>
+
+              <div class="mt-6 space-y-3">
+                <div class="rounded-xl bg-white/8 p-4">
+                  <p class="font-bold">Lărgește zona</p>
+                  <p class="mt-1 text-sm text-white/60">Caută în întreg județul sau în orașe apropiate.</p>
+                </div>
+                <div class="rounded-xl bg-white/8 p-4">
+                  <p class="font-bold">Elimină data sau ora</p>
+                  <p class="mt-1 text-sm text-white/60">Unele activități nu au disponibilitate în perioada selectată.</p>
+                </div>
+                <div class="rounded-xl bg-white/8 p-4">
+                  <p class="font-bold">Alege o categorie apropiată</p>
+                  <p class="mt-1 text-sm text-white/60">Încearcă indoor, familie, cultură sau outdoor.</p>
+                </div>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </section>
+
+    <!-- Alternative activities -->
+    <section class="bg-white">
+      <div class="mx-auto max-w-[1440px] px-4 py-12 sm:px-6 lg:py-14">
+        <div class="flex items-end justify-between gap-4">
+          <div>
+            <h2 class="font-display text-4xl font-bold leading-none">Activități pe care le-ai putea încerca</h2>
+            <p class="mt-2 text-muted">Alternative populare, disponibile în orașe și categorii apropiate.</p>
+          </div>
+          <a href="/activitati" class="shrink-0 text-sm font-bold text-red">Vezi toate →</a>
+        </div>
+
+        <div class="mt-6 grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
+          <template x-for="activity in alternatives" :key="activity.id">
+            <article class="group overflow-hidden rounded-2xl border border-ink/10 bg-paper shadow-soft">
+              <a :href="activity.href" class="relative block h-48 overflow-hidden">
+                <img :src="activity.image" :alt="activity.title" class="h-full w-full object-cover transition duration-500 group-hover:scale-105">
+                <span class="absolute left-3 top-3 rounded-full bg-white px-3 py-1 text-xs font-bold" x-text="activity.badge"></span>
+              </a>
+
+              <div class="flex min-h-[240px] flex-col p-4">
+                <p class="text-xs font-bold uppercase tracking-wider text-muted" x-text="activity.meta"></p>
+                <a :href="activity.href">
+                  <h3 class="mt-2 font-display text-2xl font-bold leading-tight group-hover:text-red" x-text="activity.title"></h3>
+                </a>
+                <p class="mt-3 line-clamp-2 text-sm leading-relaxed text-muted" x-text="activity.description"></p>
+
+                <div class="mt-4 text-sm font-bold">
+                  <span class="text-gold">★★★★★</span>
+                  <span x-text="activity.rating"></span>
+                  <span class="text-muted" x-text="'(' + activity.reviews + ')'"></span>
+                </div>
+
+                <div class="mt-auto flex items-end justify-between gap-3 pt-4">
+                  <div>
+                    <p class="text-xs font-bold text-muted">de la</p>
+                    <p class="font-display text-3xl font-bold" x-text="formatMoney(activity.price)"></p>
+                  </div>
+                  <a :href="activity.href" class="rounded-full bg-red px-4 py-2.5 text-sm font-bold text-white">Vezi bilete</a>
+                </div>
+              </div>
+            </article>
+          </template>
+        </div>
+      </div>
+    </section>
+
+    <!-- Browse alternatives -->
+    <section class="bg-paper">
+      <div class="mx-auto grid max-w-[1440px] gap-8 px-4 py-12 sm:px-6 lg:grid-cols-2 lg:py-14">
+        <div>
+          <h2 class="font-display text-4xl font-bold leading-none">Explorează după categorie</h2>
+          <div class="mt-6 grid gap-3 sm:grid-cols-2">
+            <template x-for="category in categories" :key="category.href">
+              <a :href="category.href" class="flex items-center gap-4 rounded-2xl bg-white p-4 shadow-soft">
+                <span class="grid h-11 w-11 place-items-center rounded-xl text-xl text-white" :style="'background:'+category.color" x-text="category.icon"></span>
+                <div>
+                  <p class="font-bold" x-text="category.title"></p>
+                  <p class="mt-1 text-sm text-muted" x-text="category.subtitle"></p>
+                </div>
+              </a>
+            </template>
+          </div>
+        </div>
+
+        <div>
+          <h2 class="font-display text-4xl font-bold leading-none">Orașe populare</h2>
+          <div class="mt-6 grid gap-3 sm:grid-cols-2">
+            <template x-for="city in cities" :key="city.href">
+              <a :href="city.href" class="group overflow-hidden rounded-2xl bg-white shadow-soft">
+                <div class="grid grid-cols-[110px_1fr]">
+                  <img :src="city.image" :alt="city.title" class="h-full min-h-[110px] w-full object-cover">
+                  <div class="p-4">
+                    <p class="font-display text-2xl font-bold group-hover:text-red" x-text="city.title"></p>
+                    <p class="mt-1 text-sm text-muted" x-text="city.meta"></p>
+                  </div>
+                </div>
+              </a>
+            </template>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Help -->
+    <section class="bg-ink text-white">
+      <div class="mx-auto flex max-w-[1440px] flex-col gap-5 px-4 py-10 sm:px-6 md:flex-row md:items-center md:justify-between">
+        <div>
+          <h2 class="font-display text-3xl font-bold">Nu găsești activitatea dorită?</h2>
+          <p class="mt-2 text-white/60">Trimite-ne un mesaj și spune-ne ce ai căutat.</p>
+        </div>
+        <a href="/contact" class="rounded-full bg-white px-6 py-3 font-bold text-ink">Contactează-ne</a>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    function emptyResultsPage(){
+      return {
+        query:'parc de distracții în Sinaia',
+
+        suggestedTerms:[
+          'activități pentru copii',
+          'parcuri de aventură',
+          'activități outdoor',
+          'Sinaia',
+          'Brașov'
+        ],
+
+        alternatives:[
+          {
+            id:1,
+            title:'Parc de aventură pentru familie în Brașov',
+            description:'Trasee și activități outdoor pentru copii, adolescenți și adulți.',
+            meta:'Brașov · Outdoor',
+            badge:'Aproape de Sinaia',
+            price:75,
+            rating:4.8,
+            reviews:426,
+            href:'/activitati/parc-aventura-brasov',
+            image:'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=800&q=85'
+          },
+          {
+            id:2,
+            title:'Tur de familie în Sinaia',
+            description:'Tur relaxat care combină principalele atracții istorice ale orașului.',
+            meta:'Sinaia · Tur',
+            badge:'În Sinaia',
+            price:90,
+            rating:4.7,
+            reviews:185,
+            href:'/activitati/tur-familie-sinaia',
+            image:'https://images.unsplash.com/photo-1518005020951-eccb494ad742?auto=format&fit=crop&w=800&q=85'
+          },
+          {
+            id:3,
+            title:'Escape room pentru familie în Brașov',
+            description:'Puzzle-uri și aventură indoor pentru grupuri și familii.',
+            meta:'Brașov · Escape room',
+            badge:'Indoor',
+            price:85,
+            rating:4.9,
+            reviews:318,
+            href:'/activitati/escape-room-familie-brasov',
+            image:'https://images.unsplash.com/photo-1517586979036-b7d1e86b3345?auto=format&fit=crop&w=800&q=85'
+          },
+          {
+            id:4,
+            title:'Experiență interactivă pentru copii',
+            description:'Activitate educativă și distractivă pentru copii și părinți.',
+            meta:'București · Familie',
+            badge:'Popular',
+            price:60,
+            rating:4.8,
+            reviews:267,
+            href:'/activitati/experienta-interactiva-copii',
+            image:'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=800&q=85'
+          }
+        ],
+
+        categories:[
+          {title:'Activități pentru copii',subtitle:'Familie și educație',href:'/categorii/activitati-copii',icon:'👨‍👩‍👧',color:'#183E34'},
+          {title:'Parcuri de aventură',subtitle:'Outdoor și adrenalină',href:'/categorii/parcuri-aventura',icon:'🌲',color:'#D99A2B'},
+          {title:'Escape rooms',subtitle:'Puzzle-uri și mister',href:'/categorii/escape-rooms',icon:'🗝️',color:'#E84527'},
+          {title:'Muzee interactive',subtitle:'Cultură și descoperire',href:'/categorii/muzee-interactive',icon:'🏛️',color:'#244A66'}
+        ],
+
+        cities:[
+          {title:'Sinaia',meta:'Atracții, tururi și activități de familie',href:'/sinaia',image:'https://images.unsplash.com/photo-1518005020951-eccb494ad742?auto=format&fit=crop&w=500&q=85'},
+          {title:'Brașov',meta:'Outdoor, escape rooms și experiențe urbane',href:'/brasov',image:'https://images.unsplash.com/photo-1531058020387-3be344556be6?auto=format&fit=crop&w=500&q=85'},
+          {title:'București',meta:'Muzee, familie și experiențe indoor',href:'/bucuresti',image:'https://images.unsplash.com/photo-1533929736458-ca588d08c8be?auto=format&fit=crop&w=500&q=85'},
+          {title:'Constanța',meta:'Litoral, muzee și activități pentru copii',href:'/constanta',image:'https://images.unsplash.com/photo-1566438480900-0609be27a4be?auto=format&fit=crop&w=500&q=85'}
+        ],
+
+        search(){
+          window.location.href='/cautare?q='+encodeURIComponent(this.query);
+        },
+
+        clearFilters(){
+          this.query='activități';
+        },
+
+        formatMoney(value){
+          return new Intl.NumberFormat('ro-RO',{
+            style:'currency',
+            currency:'RON',
+            maximumFractionDigits:0
+          }).format(value);
+        }
+      }
+    }
+  </script>
+</body>
+</html>

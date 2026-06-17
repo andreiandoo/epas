@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Notificările mele | bilete.online</title>
+  <meta name="description" content="Vezi notificările despre bilete, comenzi, puncte, suport și activități recomandate în contul bilete.online.">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#171512">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Hanken+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: { extend: {
+        colors: {
+          paper:'#F7F4EC',
+          paper2:'#EEE8DB',
+          ink:'#171512',
+          muted:'#625B50',
+          red:'#E84527',
+          red2:'#C5371C',
+          green:'#183E34',
+          green2:'#DCE9DF',
+          gold:'#D99A2B',
+          blue:'#244A66',
+          rose:'#F4D9D1'
+        },
+        fontFamily: {
+          display:['Fraunces','Georgia','serif'],
+          sans:['Hanken Grotesk','system-ui','sans-serif']
+        },
+        boxShadow: {
+          soft:'0 18px 50px -34px rgba(23,21,18,.65)',
+          panel:'0 36px 90px -52px rgba(23,21,18,.82)'
+        }
+      }}
+    }
+  </script>
+
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+  <style>
+    body{background:#F7F4EC;color:#171512;font-family:'Hanken Grotesk',system-ui,sans-serif}
+    .font-display{font-family:Fraunces,Georgia,serif;letter-spacing:-.018em}
+    [x-cloak]{display:none!important}
+  </style>
+</head>
+
+<body x-data="notificationsPage()" class="antialiased">
+  <header class="border-b border-ink/10 bg-paper">
+    <nav class="mx-auto flex h-[68px] max-w-[1280px] items-center justify-between px-4 sm:px-6">
+      <a href="/" class="flex items-center gap-2.5">
+        <span class="grid h-9 w-9 place-items-center rounded-xl bg-red text-white rotate-[-4deg]">🎟</span>
+        <span class="font-display text-xl font-bold">bilete<span class="text-red">.</span>online</span>
+      </a>
+
+      <div class="flex items-center gap-2">
+        <a href="/cont" class="rounded-full px-4 py-2 text-sm font-bold hover:bg-paper2">Dashboard</a>
+        <a href="/cont/setari" class="rounded-full bg-ink px-4 py-2 text-sm font-bold text-white">Setări</a>
+      </div>
+    </nav>
+  </header>
+
+  <main class="min-h-[calc(100vh-137px)]">
+    <section class="mx-auto max-w-[1280px] px-4 py-8 sm:px-6 lg:py-12">
+      <nav class="flex flex-wrap gap-2 text-sm font-semibold text-muted">
+        <a href="/cont">Contul meu</a><span>/</span>
+        <span class="text-ink">Notificări</span>
+      </nav>
+
+      <div class="mt-6 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <div class="flex items-center gap-3">
+            <h1 class="font-display text-5xl font-bold leading-none">Notificări</h1>
+            <span class="rounded-full bg-red px-3 py-1 text-sm font-bold text-white" x-text="unreadCount"></span>
+          </div>
+          <p class="mt-3 text-muted">Actualizări despre bilete, comenzi, puncte, suport și activități recomandate.</p>
+        </div>
+
+        <div class="flex flex-wrap gap-3">
+          <button @click="markAllRead()" class="rounded-full border border-ink/20 bg-white px-5 py-3 text-sm font-bold">Marchează tot ca citit</button>
+          <a href="/cont/setari/notificari" class="rounded-full bg-ink px-5 py-3 text-sm font-bold text-white">Preferințe notificări</a>
+        </div>
+      </div>
+
+      <div class="mt-8 grid gap-8 lg:grid-cols-[240px_minmax(0,1fr)]">
+        <!-- Sidebar filters -->
+        <aside>
+          <div class="sticky top-6 rounded-2xl border border-ink/10 bg-white p-4 shadow-soft">
+            <p class="px-2 text-xs font-bold uppercase tracking-wider text-muted">Filtre</p>
+
+            <div class="mt-3 space-y-1">
+              <template x-for="filter in filters" :key="filter.value">
+                <button
+                  @click="activeFilter=filter.value"
+                  :class="activeFilter===filter.value ? 'bg-ink text-white' : 'hover:bg-paper'"
+                  class="flex w-full items-center justify-between rounded-xl px-3 py-3 text-left text-sm font-bold transition"
+                >
+                  <span class="flex items-center gap-3">
+                    <span x-text="filter.icon"></span>
+                    <span x-text="filter.label"></span>
+                  </span>
+                  <span class="rounded-full px-2 py-0.5 text-xs" :class="activeFilter===filter.value ? 'bg-white/15' : 'bg-paper2'" x-text="countByType(filter.value)"></span>
+                </button>
+              </template>
+            </div>
+
+            <div class="mt-4 border-t border-ink/10 pt-4">
+              <label class="flex items-center gap-3 px-2 text-sm font-bold">
+                <input type="checkbox" x-model="showUnreadOnly" class="h-5 w-5 accent-red">
+                Doar necitite
+              </label>
+            </div>
+          </div>
+        </aside>
+
+        <!-- Notifications list -->
+        <div>
+          <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <p class="text-sm font-bold text-muted">
+              <span x-text="filteredNotifications().length"></span> notificări
+            </p>
+
+            <select x-model="sortBy" class="rounded-full border border-ink/15 bg-white px-4 py-2.5 text-sm font-bold outline-none">
+              <option value="newest">Cele mai noi</option>
+              <option value="oldest">Cele mai vechi</option>
+              <option value="unread">Necitite primele</option>
+            </select>
+          </div>
+
+          <div class="mt-5 space-y-3">
+            <template x-for="notification in sortedNotifications()" :key="notification.id">
+              <article
+                class="group rounded-2xl border p-4 transition sm:p-5"
+                :class="notification.read ? 'border-ink/10 bg-white' : 'border-red/20 bg-rose/40'"
+              >
+                <div class="flex gap-4">
+                  <div
+                    class="grid h-11 w-11 shrink-0 place-items-center rounded-xl text-lg"
+                    :class="iconClass(notification.type)"
+                    x-text="notification.icon"
+                  ></div>
+
+                  <div class="min-w-0 flex-1">
+                    <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                      <div>
+                        <div class="flex flex-wrap items-center gap-2">
+                          <h2 class="font-display text-2xl font-bold leading-tight" x-text="notification.title"></h2>
+                          <span x-show="!notification.read" class="h-2.5 w-2.5 rounded-full bg-red"></span>
+                        </div>
+
+                        <p class="mt-2 leading-relaxed text-muted" x-text="notification.message"></p>
+                      </div>
+
+                      <p class="shrink-0 text-xs font-bold text-muted" x-text="notification.timeLabel"></p>
+                    </div>
+
+                    <div x-show="notification.meta" class="mt-4 rounded-xl bg-paper p-3 text-sm">
+                      <p class="font-bold" x-text="notification.meta"></p>
+                    </div>
+
+                    <div class="mt-4 flex flex-wrap items-center gap-2">
+                      <a
+                        x-show="notification.actionUrl"
+                        :href="notification.actionUrl"
+                        class="rounded-full bg-ink px-4 py-2 text-xs font-bold text-white"
+                        x-text="notification.actionLabel"
+                      ></a>
+
+                      <button
+                        @click="toggleRead(notification)"
+                        class="rounded-full border border-ink/15 px-4 py-2 text-xs font-bold"
+                        x-text="notification.read ? 'Marchează necitită' : 'Marchează citită'"
+                      ></button>
+
+                      <button
+                        @click="deleteNotification(notification.id)"
+                        class="rounded-full px-4 py-2 text-xs font-bold text-red"
+                      >
+                        Șterge
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </article>
+            </template>
+          </div>
+
+          <div x-show="filteredNotifications().length===0" class="mt-6 rounded-2xl border border-dashed border-ink/20 bg-white p-8 text-center">
+            <div class="mx-auto grid h-14 w-14 place-items-center rounded-full bg-paper2 text-2xl">✓</div>
+            <h2 class="mt-4 font-display text-3xl font-bold">Nu ai notificări în această categorie.</h2>
+            <p class="mt-2 text-muted">Când apare ceva nou, îl vei vedea aici.</p>
+          </div>
+
+          <button
+            x-show="filteredNotifications().length>0"
+            @click="loadMore()"
+            class="mx-auto mt-6 block rounded-full border border-ink/20 bg-white px-6 py-3 text-sm font-bold"
+          >
+            Încarcă mai multe
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Quick summary -->
+    <section class="bg-ink text-white">
+      <div class="mx-auto grid max-w-[1280px] gap-4 px-4 py-8 sm:grid-cols-2 sm:px-6 lg:grid-cols-4">
+        <template x-for="stat in summaryStats" :key="stat.label">
+          <article class="rounded-2xl bg-white/8 p-4">
+            <p class="text-sm text-white/60" x-text="stat.label"></p>
+            <p class="mt-1 font-display text-3xl font-bold" x-text="stat.value"></p>
+            <p class="mt-1 text-xs text-white/50" x-text="stat.meta"></p>
+          </article>
+        </template>
+      </div>
+    </section>
+  </main>
+
+  <footer class="border-t border-ink/10 bg-paper">
+    <div class="mx-auto flex max-w-[1240px] flex-col gap-3 px-4 py-6 text-sm text-muted sm:flex-row sm:items-center sm:justify-between sm:px-6">
+      <p>© 2026 bilete.online</p>
+
+      <div class="flex flex-wrap gap-4">
+        <a href="/privacy" class="hover:text-ink">Confidențialitate</a>
+        <a href="/termeni-si-conditii" class="hover:text-ink">Termeni și condiții</a>
+        <a href="/contact" class="hover:text-ink">Contact</a>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    function notificationsPage(){
+      return {
+        activeFilter:'all',
+        showUnreadOnly:false,
+        sortBy:'newest',
+
+        filters:[
+          {label:'Toate',value:'all',icon:'●'},
+          {label:'Bilete',value:'ticket',icon:'🎟️'},
+          {label:'Comenzi',value:'order',icon:'🛒'},
+          {label:'Puncte',value:'points',icon:'★'},
+          {label:'Suport',value:'support',icon:'💬'},
+          {label:'Recomandări',value:'recommendation',icon:'💡'},
+          {label:'Sistem',value:'system',icon:'⚙️'}
+        ],
+
+        notifications:[
+          {
+            id:1,
+            type:'ticket',
+            icon:'🎟️',
+            title:'Biletele pentru comanda #BO-10482 sunt disponibile',
+            message:'Biletele au fost emise și pot fi descărcate din cont.',
+            meta:'3 bilete · Constanța · 14–15 iunie 2026',
+            time:202606171430,
+            timeLabel:'acum 12 minute',
+            read:false,
+            actionLabel:'Vezi biletele',
+            actionUrl:'/cont/comenzi/BO-10482'
+          },
+          {
+            id:2,
+            type:'order',
+            icon:'🛒',
+            title:'Plata comenzii #BO-10482 a fost confirmată',
+            message:'Plata a fost procesată cu succes. Factura și confirmarea sunt disponibile.',
+            meta:'Total plătit: 258,66 lei',
+            time:202606171418,
+            timeLabel:'acum 24 minute',
+            read:false,
+            actionLabel:'Detalii comandă',
+            actionUrl:'/cont/comenzi/BO-10482'
+          },
+          {
+            id:3,
+            type:'points',
+            icon:'★',
+            title:'Ai primit 49 de puncte bonus',
+            message:'Punctele au fost adăugate în cont și pot fi folosite la o comandă viitoare.',
+            meta:'Sold curent: 684 puncte',
+            time:202606171415,
+            timeLabel:'acum 27 minute',
+            read:false,
+            actionLabel:'Vezi punctele',
+            actionUrl:'/cont/puncte'
+          },
+          {
+            id:4,
+            type:'ticket',
+            icon:'🕒',
+            title:'Activitatea începe mâine la ora 18:00',
+            message:'Îți recomandăm să ajungi cu 15 minute înainte și să ai biletul pregătit.',
+            meta:'Escape room în centrul Constanței',
+            time:202606161800,
+            timeLabel:'ieri',
+            read:true,
+            actionLabel:'Deschide biletul',
+            actionUrl:'/cont/bilete/BO-10482-001'
+          },
+          {
+            id:5,
+            type:'support',
+            icon:'💬',
+            title:'Ai primit un răspuns la tichetul #SUP-1821',
+            message:'Echipa de suport a răspuns întrebării tale despre transferul biletului.',
+            meta:'Status tichet: În așteptarea răspunsului tău',
+            time:202606161240,
+            timeLabel:'ieri',
+            read:true,
+            actionLabel:'Vezi conversația',
+            actionUrl:'/cont/suport/SUP-1821'
+          },
+          {
+            id:6,
+            type:'recommendation',
+            icon:'💡',
+            title:'4 activități noi potrivite pentru familia ta',
+            message:'Am găsit experiențe similare cu activitățile salvate și cumpărate anterior.',
+            meta:'București · Constanța · Brașov',
+            time:202606151130,
+            timeLabel:'acum 2 zile',
+            read:true,
+            actionLabel:'Vezi recomandările',
+            actionUrl:'/cont/recomandari'
+          },
+          {
+            id:7,
+            type:'system',
+            icon:'⚙️',
+            title:'Am actualizat politica de confidențialitate',
+            message:'Modificările explică mai clar modul în care gestionăm preferințele și comunicările.',
+            meta:'',
+            time:202606131000,
+            timeLabel:'13 iunie',
+            read:true,
+            actionLabel:'Citește politica',
+            actionUrl:'/privacy'
+          },
+          {
+            id:8,
+            type:'points',
+            icon:'⏳',
+            title:'120 de puncte expiră în 30 de zile',
+            message:'Folosește punctele la o comandă eligibilă înainte de data expirării.',
+            meta:'Data expirării: 17 iulie 2026',
+            time:202606121020,
+            timeLabel:'12 iunie',
+            read:false,
+            actionLabel:'Folosește punctele',
+            actionUrl:'/activitati'
+          }
+        ],
+
+        summaryStats:[
+          {label:'Necitite',value:'4',meta:'necesită atenția ta'},
+          {label:'Bilete active',value:'3',meta:'în următoarele 30 zile'},
+          {label:'Puncte disponibile',value:'684',meta:'120 expiră curând'},
+          {label:'Tichete deschise',value:'1',meta:'răspuns nou primit'}
+        ],
+
+        get unreadCount(){
+          return this.notifications.filter(item=>!item.read).length;
+        },
+
+        countByType(type){
+          if(type==='all') return this.notifications.length;
+          return this.notifications.filter(item=>item.type===type).length;
+        },
+
+        filteredNotifications(){
+          return this.notifications.filter(item=>{
+            if(this.activeFilter!=='all' && item.type!==this.activeFilter) return false;
+            if(this.showUnreadOnly && item.read) return false;
+            return true;
+          });
+        },
+
+        sortedNotifications(){
+          const items=[...this.filteredNotifications()];
+
+          if(this.sortBy==='oldest'){
+            return items.sort((a,b)=>a.time-b.time);
+          }
+
+          if(this.sortBy==='unread'){
+            return items.sort((a,b)=>{
+              if(a.read===b.read) return b.time-a.time;
+              return a.read ? 1 : -1;
+            });
+          }
+
+          return items.sort((a,b)=>b.time-a.time);
+        },
+
+        iconClass(type){
+          const classes={
+            ticket:'bg-green2 text-green',
+            order:'bg-blue/10 text-blue',
+            points:'bg-gold/15 text-gold',
+            support:'bg-paper2 text-ink',
+            recommendation:'bg-rose text-red',
+            system:'bg-paper2 text-muted'
+          };
+
+          return classes[type] || 'bg-paper2 text-ink';
+        },
+
+        toggleRead(notification){
+          notification.read=!notification.read;
+        },
+
+        markAllRead(){
+          this.notifications.forEach(item=>item.read=true);
+        },
+
+        deleteNotification(id){
+          this.notifications=this.notifications.filter(item=>item.id!==id);
+        },
+
+        loadMore(){
+          alert('Demo: se încarcă următoarea pagină de notificări.');
+        }
+      }
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dezabonare newsletter | bilete.online</title>
+  <meta name="description" content="Gestionează abonarea la newsletter-ul bilete.online.">
+  <meta name="robots" content="noindex, follow">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Hanken+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config={theme:{extend:{colors:{paper:'#F7F4EC',paper2:'#EEE8DB',ink:'#171512',muted:'#625B50',red:'#E84527',red2:'#C5371C',green:'#183E34',green2:'#DCE9DF',gold:'#D99A2B'},fontFamily:{display:['Fraunces','Georgia','serif'],sans:['Hanken Grotesk','system-ui','sans-serif']},boxShadow:{panel:'0 36px 90px -52px rgba(23,21,18,.82)'}}}}
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <style>
+    body{background:#F7F4EC;color:#171512;font-family:'Hanken Grotesk',system-ui,sans-serif}
+    .font-display{font-family:Fraunces,Georgia,serif;letter-spacing:-.018em}
+    [x-cloak]{display:none!important}
+  </style>
+</head>
+<body x-data="unsubscribePage()" class="antialiased">
+<header class="border-b border-ink/10 bg-paper">
+  <nav class="mx-auto flex h-[68px] max-w-[1240px] items-center justify-between px-4 sm:px-6">
+    <a href="/" class="flex items-center gap-2.5">
+      <span class="grid h-9 w-9 place-items-center rounded-xl bg-red text-white rotate-[-4deg]">🎟</span>
+      <span class="font-display text-xl font-bold">bilete<span class="text-red">.</span>online</span>
+    </a>
+    <a href="/" class="rounded-full px-4 py-2 text-sm font-bold hover:bg-paper2">Înapoi la activități</a>
+  </nav>
+</header>
+
+<main class="min-h-[calc(100vh-137px)]">
+  <section class="mx-auto max-w-[900px] px-4 py-10 sm:px-6 lg:py-16">
+    <div class="rounded-[1.75rem] border border-ink/10 bg-white p-6 shadow-panel sm:p-8 lg:p-10">
+      <div x-show="state === 'initial'">
+        <div class="grid h-14 w-14 place-items-center rounded-2xl bg-paper2 text-2xl">✉️</div>
+        <h1 class="mt-5 font-display text-4xl font-bold leading-tight sm:text-5xl">Vrei să te dezabonezi?</h1>
+        <p class="mt-4 max-w-2xl text-lg leading-relaxed text-muted">
+          Nu vei mai primi newslettere cu activități, ghiduri și idei de weekend la adresa
+          <strong class="text-ink" x-text="email"></strong>.
+        </p>
+
+        <div class="mt-7 rounded-2xl bg-paper p-5">
+          <p class="font-bold">Poți primi mai puține mesaje</p>
+          <p class="mt-2 text-sm leading-relaxed text-muted">Alege o frecvență mai redusă, în loc să te dezabonezi complet.</p>
+          <div class="mt-4 grid gap-3 sm:grid-cols-2">
+            <label class="cursor-pointer rounded-xl border-2 p-4" :class="frequency === 'weekly' ? 'border-red bg-white' : 'border-transparent bg-paper2'">
+              <input type="radio" value="weekly" x-model="frequency" class="sr-only">
+              <span class="font-bold">O dată pe săptămână</span>
+              <span class="mt-1 block text-sm text-muted">Selecția principală de activități și ghiduri.</span>
+            </label>
+            <label class="cursor-pointer rounded-xl border-2 p-4" :class="frequency === 'monthly' ? 'border-red bg-white' : 'border-transparent bg-paper2'">
+              <input type="radio" value="monthly" x-model="frequency" class="sr-only">
+              <span class="font-bold">O dată pe lună</span>
+              <span class="mt-1 block text-sm text-muted">Doar cele mai importante recomandări.</span>
+            </label>
+          </div>
+          <button @click="saveFrequency()" class="mt-4 rounded-full bg-green px-5 py-3 text-sm font-bold text-white">Salvează frecvența</button>
+        </div>
+
+        <div class="mt-7 border-t border-ink/10 pt-7">
+          <p class="font-bold">Motivul dezabonării <span class="font-normal text-muted">(opțional)</span></p>
+          <div class="mt-4 grid gap-2 sm:grid-cols-2">
+            <template x-for="reason in reasons" :key="reason.value">
+              <label class="cursor-pointer rounded-xl border p-4" :class="selectedReason === reason.value ? 'border-ink bg-paper' : 'border-ink/10 hover:border-ink/30'">
+                <input type="radio" :value="reason.value" x-model="selectedReason" class="sr-only">
+                <span class="font-bold" x-text="reason.label"></span>
+              </label>
+            </template>
+          </div>
+          <textarea x-show="selectedReason === 'other'" x-model="otherReason" rows="3" class="mt-3 w-full rounded-xl border border-ink/15 bg-paper px-4 py-3 outline-none focus:border-red" placeholder="Spune-ne ce am putea îmbunătăți"></textarea>
+        </div>
+
+        <div class="mt-7 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <a href="/" class="rounded-full border border-ink/20 px-6 py-3 text-center font-bold hover:border-ink">Renunță și rămâi abonat</a>
+          <button @click="unsubscribe()" class="rounded-full bg-red px-6 py-3 font-bold text-white hover:bg-red2">Confirmă dezabonarea</button>
+        </div>
+      </div>
+
+      <div x-show="state === 'unsubscribed'" x-cloak class="text-center">
+        <div class="mx-auto grid h-16 w-16 place-items-center rounded-full bg-paper2 text-2xl">✓</div>
+        <h1 class="mt-5 font-display text-4xl font-bold sm:text-5xl">Ai fost dezabonat.</h1>
+        <p class="mx-auto mt-4 max-w-xl text-lg leading-relaxed text-muted">
+          Nu vei mai primi newslettere la adresa <strong class="text-ink" x-text="email"></strong>.
+        </p>
+        <div class="mt-7 flex flex-wrap justify-center gap-3">
+          <button @click="resubscribe()" class="rounded-full bg-green px-6 py-3 font-bold text-white">Reabonează-mă</button>
+          <a href="/" class="rounded-full border border-ink/20 px-6 py-3 font-bold hover:border-ink">Înapoi la bilete.online</a>
+        </div>
+      </div>
+
+      <div x-show="state === 'preferences-saved'" x-cloak class="text-center">
+        <div class="mx-auto grid h-16 w-16 place-items-center rounded-full bg-green2 text-2xl text-green">✓</div>
+        <h1 class="mt-5 font-display text-4xl font-bold sm:text-5xl">Preferințele au fost salvate.</h1>
+        <p class="mx-auto mt-4 max-w-xl text-lg leading-relaxed text-muted">
+          Vei primi newsletter-ul <strong class="text-ink" x-text="frequency === 'weekly' ? 'o dată pe săptămână' : 'o dată pe lună'"></strong>.
+        </p>
+        <a href="/" class="mt-7 inline-flex rounded-full bg-ink px-6 py-3 font-bold text-white">Explorează bilete.online</a>
+      </div>
+
+      <div x-show="state === 'resubscribed'" x-cloak class="text-center">
+        <div class="mx-auto grid h-16 w-16 place-items-center rounded-full bg-green2 text-2xl text-green">✓</div>
+        <h1 class="mt-5 font-display text-4xl font-bold sm:text-5xl">Te-ai reabonat.</h1>
+        <p class="mx-auto mt-4 max-w-xl text-lg leading-relaxed text-muted">Vei primi din nou recomandări și noutăți bilete.online.</p>
+        <a href="/" class="mt-7 inline-flex rounded-full bg-red px-6 py-3 font-bold text-white">Descoperă activități</a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="border-t border-ink/10 bg-paper">
+  <div class="mx-auto flex max-w-[1240px] flex-col gap-3 px-4 py-6 text-sm text-muted sm:flex-row sm:items-center sm:justify-between sm:px-6">
+    <p>© 2026 bilete.online</p>
+    <div class="flex flex-wrap gap-4">
+      <a href="/privacy" class="hover:text-ink">Confidențialitate</a>
+      <a href="/termeni-si-conditii" class="hover:text-ink">Termeni și condiții</a>
+      <a href="/contact" class="hover:text-ink">Contact</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+function unsubscribePage(){
+  return {
+    state:'initial',
+    email:'andrei@email.ro',
+    frequency:'monthly',
+    selectedReason:'',
+    otherReason:'',
+    reasons:[
+      {value:'too-many',label:'Primesc prea multe emailuri'},
+      {value:'not-relevant',label:'Conținutul nu este relevant'},
+      {value:'not-interested',label:'Nu mai sunt interesat'},
+      {value:'did-not-subscribe',label:'Nu îmi amintesc să mă fi abonat'},
+      {value:'other',label:'Alt motiv'}
+    ],
+    unsubscribe(){this.state='unsubscribed';window.scrollTo({top:0,behavior:'smooth'})},
+    saveFrequency(){this.state='preferences-saved';window.scrollTo({top:0,behavior:'smooth'})},
+    resubscribe(){this.state='resubscribed';window.scrollTo({top:0,behavior:'smooth'})}
+  }
+}
+</script>
+</body>
+</html>

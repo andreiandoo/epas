@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Comanda a fost anulată | bilete.online</title>
+  <meta name="description" content="Comanda a fost anulată înainte de finalizarea plății. Poți reveni la checkout, restaura coșul sau descoperi activități similare.">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#171512">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Hanken+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: { extend: {
+        colors: {
+          paper:'#F7F4EC',
+          paper2:'#EEE8DB',
+          ink:'#171512',
+          muted:'#625B50',
+          red:'#E84527',
+          red2:'#C5371C',
+          green:'#183E34',
+          green2:'#DCE9DF',
+          gold:'#D99A2B',
+          blue:'#244A66',
+          rose:'#F4D9D1'
+        },
+        fontFamily: {
+          display:['Fraunces','Georgia','serif'],
+          sans:['Hanken Grotesk','system-ui','sans-serif']
+        },
+        boxShadow: {
+          soft:'0 18px 50px -34px rgba(23,21,18,.65)',
+          panel:'0 36px 90px -52px rgba(23,21,18,.82)'
+        }
+      }}
+    }
+  </script>
+
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+  <style>
+    body{background:#F7F4EC;color:#171512;font-family:'Hanken Grotesk',system-ui,sans-serif}
+    .font-display{font-family:Fraunces,Georgia,serif;letter-spacing:-.018em}
+    .line-clamp-2{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  </style>
+</head>
+
+<body x-data="cancelledOrderPage()" class="antialiased">
+  <header class="border-b border-ink/10 bg-paper">
+    <nav class="mx-auto flex h-[68px] max-w-[1240px] items-center justify-between px-4 sm:px-6">
+      <a href="/" class="flex items-center gap-2.5">
+        <span class="grid h-9 w-9 place-items-center rounded-xl bg-red text-white rotate-[-4deg]">🎟</span>
+        <span class="font-display text-xl font-bold">bilete<span class="text-red">.</span>online</span>
+      </a>
+
+      <a href="/suport" class="rounded-full px-4 py-2 text-sm font-bold hover:bg-paper2">
+        Ai nevoie de ajutor?
+      </a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="bg-paper">
+      <div class="mx-auto grid max-w-[1240px] gap-8 px-4 py-10 sm:px-6 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start lg:py-14">
+        <div>
+          <div class="inline-flex items-center gap-2 rounded-full bg-paper2 px-4 py-2 text-sm font-bold">
+            <span class="grid h-6 w-6 place-items-center rounded-full bg-ink text-xs text-white">×</span>
+            Comandă anulată
+          </div>
+
+          <h1 class="mt-5 max-w-3xl font-display text-5xl font-bold leading-[.95] sm:text-6xl">
+            Plata a fost întreruptă înainte de finalizare.
+          </h1>
+
+          <p class="mt-5 max-w-2xl text-lg leading-relaxed text-muted">
+            Comanda <strong class="text-ink" x-text="orderNumber"></strong> nu a fost plătită, iar biletele nu au fost emise.
+            Produsele pot fi restaurate în coș, în limita disponibilității.
+          </p>
+
+          <div class="mt-7 rounded-2xl border border-ink/10 bg-white p-5 shadow-soft">
+            <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p class="text-sm font-bold text-muted">Status</p>
+                <p class="mt-1 font-display text-3xl font-bold">Comandă anulată</p>
+              </div>
+
+              <span class="rounded-full bg-rose px-4 py-2 text-sm font-bold text-red">
+                Nicio plată confirmată
+              </span>
+            </div>
+
+            <p class="mt-4 text-sm leading-relaxed text-muted">
+              Dacă banca afișează temporar o sumă blocată, aceasta poate reprezenta doar o autorizare și va fi eliberată conform termenelor băncii.
+            </p>
+          </div>
+
+          <div class="mt-7 grid gap-3 sm:grid-cols-3">
+            <button @click="restoreCart()" class="rounded-2xl bg-red p-5 text-left text-white hover:bg-red2">
+              <p class="text-2xl">↻</p>
+              <p class="mt-3 font-bold">Restaurează coșul</p>
+              <p class="mt-1 text-sm text-white/70">Adaugă din nou biletele disponibile.</p>
+            </button>
+
+            <button @click="continueCheckout()" class="rounded-2xl bg-ink p-5 text-left text-white">
+              <p class="text-2xl">💳</p>
+              <p class="mt-3 font-bold">Reia checkout-ul</p>
+              <p class="mt-1 text-sm text-white/60">Continuă cu datele existente.</p>
+            </button>
+
+            <a href="/activitati" class="rounded-2xl bg-white p-5 text-left shadow-soft">
+              <p class="text-2xl">⌕</p>
+              <p class="mt-3 font-bold">Alege altceva</p>
+              <p class="mt-1 text-sm text-muted">Explorează alte activități disponibile.</p>
+            </a>
+          </div>
+
+          <div x-show="cartRestored" x-cloak class="mt-6 rounded-2xl bg-green2 p-5 text-green">
+            <p class="font-bold">Coșul a fost restaurat.</p>
+            <p class="mt-2 text-sm">Produsele disponibile au fost readăugate. Poți continua către checkout.</p>
+            <a href="/cos" class="mt-4 inline-flex rounded-full bg-green px-5 py-3 text-sm font-bold text-white">Deschide coșul</a>
+          </div>
+
+          <div class="mt-7 grid gap-4 md:grid-cols-2">
+            <article class="rounded-2xl border border-ink/10 bg-white p-5">
+              <p class="font-bold">De ce poate fi anulată o comandă?</p>
+              <p class="mt-2 text-sm leading-relaxed text-muted">
+                Închiderea ferestrei de plată, revenirea din aplicația bancară sau anularea manuală pot opri fluxul înainte de confirmare.
+              </p>
+            </article>
+
+            <article class="rounded-2xl border border-ink/10 bg-white p-5">
+              <p class="font-bold">Se păstrează rezervarea?</p>
+              <p class="mt-2 text-sm leading-relaxed text-muted">
+                Nu permanent. Locurile și prețurile vor fi reverificate când produsele sunt restaurate în coș.
+              </p>
+            </article>
+          </div>
+        </div>
+
+        <aside>
+          <div class="sticky top-6 rounded-[1.5rem] border border-ink/10 bg-white p-5 shadow-panel">
+            <div class="flex items-center justify-between gap-3">
+              <h2 class="font-display text-3xl font-bold">Comanda anulată</h2>
+              <span class="text-sm font-bold text-muted" x-text="orderNumber"></span>
+            </div>
+
+            <div class="mt-5 space-y-4">
+              <template x-for="item in orderItems" :key="item.id">
+                <article class="grid grid-cols-[76px_1fr] gap-3">
+                  <img :src="item.image" :alt="item.title" class="h-20 w-full rounded-xl object-cover opacity-80">
+
+                  <div>
+                    <p class="font-bold leading-tight" x-text="item.title"></p>
+                    <p class="mt-1 text-sm text-muted" x-text="item.meta"></p>
+                    <p class="mt-1 text-sm font-bold" x-text="item.quantity + ' × ' + formatMoney(item.unitPrice)"></p>
+                  </div>
+                </article>
+              </template>
+            </div>
+
+            <div class="mt-5 divide-y divide-ink/10 border-t border-ink/10 text-sm">
+              <div class="flex justify-between py-3"><span class="text-muted">Subtotal</span><strong x-text="formatMoney(subtotal)"></strong></div>
+              <div class="flex justify-between py-3"><span class="text-muted">Comision platformă</span><strong x-text="formatMoney(platformFee)"></strong></div>
+              <div class="flex justify-between py-3"><span class="text-muted">Procesare</span><strong x-text="formatMoney(processingFee)"></strong></div>
+            </div>
+
+            <div class="mt-4 flex items-end justify-between">
+              <div>
+                <p class="text-sm font-bold text-muted">Total neplătit</p>
+                <p class="font-display text-4xl font-bold" x-text="formatMoney(total)"></p>
+              </div>
+
+              <span class="rounded-full bg-paper2 px-3 py-2 text-xs font-bold text-muted">
+                Bilete neemise
+              </span>
+            </div>
+
+            <button @click="restoreCart()" class="mt-5 w-full rounded-full bg-red px-6 py-3 font-bold text-white hover:bg-red2">
+              Restaurează coșul
+            </button>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <section class="bg-white">
+      <div class="mx-auto max-w-[1360px] px-4 py-12 sm:px-6 lg:py-14">
+        <div class="flex items-end justify-between gap-4">
+          <div>
+            <h2 class="font-display text-4xl font-bold leading-none">Alternative similare</h2>
+            <p class="mt-2 text-muted">Alte experiențe pe care le poți rezerva acum.</p>
+          </div>
+          <a href="/activitati" class="shrink-0 text-sm font-bold text-red">Vezi toate →</a>
+        </div>
+
+        <div class="mt-6 grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
+          <template x-for="activity in alternatives" :key="activity.id">
+            <article class="group overflow-hidden rounded-2xl border border-ink/10 bg-paper shadow-soft">
+              <a :href="activity.href" class="relative block h-48 overflow-hidden">
+                <img :src="activity.image" :alt="activity.title" class="h-full w-full object-cover transition duration-500 group-hover:scale-105">
+                <span class="absolute left-3 top-3 rounded-full bg-white px-3 py-1 text-xs font-bold" x-text="activity.badge"></span>
+              </a>
+
+              <div class="flex min-h-[235px] flex-col p-4">
+                <p class="text-xs font-bold uppercase tracking-wider text-muted" x-text="activity.meta"></p>
+                <a :href="activity.href">
+                  <h3 class="mt-2 font-display text-2xl font-bold leading-tight group-hover:text-red" x-text="activity.title"></h3>
+                </a>
+                <p class="mt-3 line-clamp-2 text-sm leading-relaxed text-muted" x-text="activity.description"></p>
+
+                <div class="mt-auto flex items-end justify-between gap-3 pt-4">
+                  <div>
+                    <p class="text-xs font-bold text-muted">de la</p>
+                    <p class="font-display text-3xl font-bold" x-text="formatMoney(activity.price)"></p>
+                  </div>
+                  <a :href="activity.href" class="rounded-full bg-red px-4 py-2.5 text-sm font-bold text-white">Vezi bilete</a>
+                </div>
+              </div>
+            </article>
+          </template>
+        </div>
+      </div>
+    </section>
+
+    <section class="bg-ink text-white">
+      <div class="mx-auto flex max-w-[1360px] flex-col gap-5 px-4 py-10 sm:px-6 md:flex-row md:items-center md:justify-between">
+        <div>
+          <h2 class="font-display text-3xl font-bold">Ai o problemă cu plata?</h2>
+          <p class="mt-2 text-white/60">Trimite-ne numărul comenzii și verificăm situația.</p>
+        </div>
+
+        <a href="/suport" class="rounded-full bg-white px-6 py-3 font-bold text-ink">
+          Contactează suportul
+        </a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="border-t border-ink/10 bg-paper">
+    <div class="mx-auto flex max-w-[1240px] flex-col gap-3 px-4 py-6 text-sm text-muted sm:flex-row sm:items-center sm:justify-between sm:px-6">
+      <p>© 2026 bilete.online</p>
+
+      <div class="flex flex-wrap gap-4">
+        <a href="/privacy" class="hover:text-ink">Confidențialitate</a>
+        <a href="/termeni-si-conditii" class="hover:text-ink">Termeni și condiții</a>
+        <a href="/contact" class="hover:text-ink">Contact</a>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    function cancelledOrderPage(){
+      return {
+        orderNumber:'#BO-10511',
+        cartRestored:false,
+
+        orderItems:[
+          {
+            id:1,
+            title:'Escape room în centrul Constanței',
+            meta:'14 iunie 2026 · 18:00',
+            quantity:2,
+            unitPrice:90,
+            image:'https://images.unsplash.com/photo-1517586979036-b7d1e86b3345?auto=format&fit=crop&w=400&q=85'
+          },
+          {
+            id:2,
+            title:'Experiență interactivă pentru familie',
+            meta:'15 iunie 2026 · 11:30',
+            quantity:1,
+            unitPrice:65,
+            image:'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=400&q=85'
+          }
+        ],
+
+        subtotal:245,
+        platformFee:4.90,
+        processingFee:4.06,
+
+        alternatives:[
+          {
+            id:11,
+            title:'Escape room tematic pentru grupuri',
+            description:'O experiență indoor cu puzzle-uri și provocări pentru prieteni.',
+            meta:'Constanța · Escape room',
+            badge:'Similar',
+            price:85,
+            href:'/activitati/escape-room-tematic-constanta',
+            image:'https://images.unsplash.com/photo-1517586979036-b7d1e86b3345?auto=format&fit=crop&w=800&q=85'
+          },
+          {
+            id:12,
+            title:'Muzeu interactiv pentru copii',
+            description:'Activitate educativă și distractivă pentru familie.',
+            meta:'Constanța · Familie',
+            badge:'Pentru copii',
+            price:45,
+            href:'/activitati/muzeu-interactiv-constanta',
+            image:'https://images.unsplash.com/photo-1564399579883-451a5d44ec08?auto=format&fit=crop&w=800&q=85'
+          },
+          {
+            id:13,
+            title:'Tur urban și plimbare pe faleză',
+            description:'Descoperă centrul vechi și principalele repere ale orașului.',
+            meta:'Constanța · Tur',
+            badge:'Popular',
+            price:70,
+            href:'/activitati/tur-urban-constanta',
+            image:'https://images.unsplash.com/photo-1566438480900-0609be27a4be?auto=format&fit=crop&w=800&q=85'
+          },
+          {
+            id:14,
+            title:'Atelier creativ pentru familie',
+            description:'Activitate practică potrivită pentru copii și părinți.',
+            meta:'Constanța · Atelier',
+            badge:'Weekend',
+            price:60,
+            href:'/activitati/atelier-familie-constanta',
+            image:'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=800&q=85'
+          }
+        ],
+
+        get total(){
+          return this.subtotal + this.platformFee + this.processingFee;
+        },
+
+        restoreCart(){
+          this.cartRestored=true;
+          window.scrollTo({top:0,behavior:'smooth'});
+        },
+
+        continueCheckout(){
+          window.location.href='/checkout?restore_order='+encodeURIComponent(this.orderNumber);
+        },
+
+        formatMoney(value){
+          return new Intl.NumberFormat('ro-RO',{
+            style:'currency',
+            currency:'RON',
+            minimumFractionDigits:2,
+            maximumFractionDigits:2
+          }).format(value);
+        }
+      }
+    }
+  </script>
+</body>
+</html>

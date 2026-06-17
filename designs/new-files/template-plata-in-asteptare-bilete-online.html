@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Plata este în curs de confirmare | bilete.online</title>
+  <meta name="description" content="Plata comenzii este în curs de confirmare. Verifică statusul comenzii și află când vor fi emise biletele.">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#171512">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Hanken+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: { extend: {
+        colors: {
+          paper:'#F7F4EC',
+          paper2:'#EEE8DB',
+          ink:'#171512',
+          muted:'#625B50',
+          red:'#E84527',
+          red2:'#C5371C',
+          green:'#183E34',
+          green2:'#DCE9DF',
+          gold:'#D99A2B',
+          blue:'#244A66'
+        },
+        fontFamily: {
+          display:['Fraunces','Georgia','serif'],
+          sans:['Hanken Grotesk','system-ui','sans-serif']
+        },
+        boxShadow: {
+          soft:'0 18px 50px -34px rgba(23,21,18,.65)',
+          panel:'0 36px 90px -52px rgba(23,21,18,.82)'
+        }
+      }}
+    }
+  </script>
+
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+  <style>
+    body{background:#F7F4EC;color:#171512;font-family:'Hanken Grotesk',system-ui,sans-serif}
+    .font-display{font-family:Fraunces,Georgia,serif;letter-spacing:-.018em}
+    [x-cloak]{display:none!important}
+  </style>
+</head>
+
+<body x-data="pendingPaymentPage()" class="antialiased">
+  <header class="border-b border-ink/10 bg-paper">
+    <nav class="mx-auto flex h-[68px] max-w-[1240px] items-center justify-between px-4 sm:px-6">
+      <a href="/" class="flex items-center gap-2.5">
+        <span class="grid h-9 w-9 place-items-center rounded-xl bg-red text-white rotate-[-4deg]">🎟</span>
+        <span class="font-display text-xl font-bold">bilete<span class="text-red">.</span>online</span>
+      </a>
+
+      <a href="/suport" class="rounded-full px-4 py-2 text-sm font-bold hover:bg-paper2">
+        Ai nevoie de ajutor?
+      </a>
+    </nav>
+  </header>
+
+  <main class="min-h-[calc(100vh-137px)]">
+    <section class="mx-auto max-w-[1180px] px-4 py-10 sm:px-6 lg:py-14">
+      <div class="grid gap-8 lg:grid-cols-[minmax(0,1fr)_380px]">
+        <div>
+          <div class="inline-flex items-center gap-2 rounded-full bg-paper2 px-4 py-2 text-sm font-bold">
+            <span class="relative flex h-2.5 w-2.5">
+              <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-gold opacity-75"></span>
+              <span class="relative inline-flex h-2.5 w-2.5 rounded-full bg-gold"></span>
+            </span>
+            Plata este în curs de confirmare
+          </div>
+
+          <h1 class="mt-5 max-w-3xl font-display text-5xl font-bold leading-[.95] sm:text-6xl">
+            Comanda este înregistrată. Așteptăm confirmarea plății.
+          </h1>
+
+          <p class="mt-5 max-w-2xl text-lg leading-relaxed text-muted">
+            Comanda <strong class="text-ink" x-text="orderNumber"></strong> a fost creată, dar plata nu a fost încă confirmată de procesator.
+            Biletele vor fi emise automat imediat ce primim confirmarea.
+          </p>
+
+          <div class="mt-7 rounded-2xl border border-ink/10 bg-white p-5 shadow-soft">
+            <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p class="text-sm font-bold text-muted">Status actual</p>
+                <p class="mt-1 font-display text-3xl font-bold" x-text="statusLabel"></p>
+              </div>
+
+              <button @click="checkStatus()" class="rounded-full bg-ink px-5 py-3 text-sm font-bold text-white">
+                Verifică statusul
+              </button>
+            </div>
+
+            <div class="mt-5 h-2 overflow-hidden rounded-full bg-paper2">
+              <div class="h-full rounded-full bg-gold transition-all duration-500" :style="'width:'+progress+'%'"></div>
+            </div>
+
+            <p class="mt-3 text-sm text-muted" x-text="statusMessage"></p>
+          </div>
+
+          <div class="mt-7 grid gap-4 sm:grid-cols-3">
+            <article class="rounded-2xl bg-paper2 p-5">
+              <p class="text-2xl">1</p>
+              <p class="mt-3 font-bold">Plata este verificată</p>
+              <p class="mt-2 text-sm leading-relaxed text-muted">Procesatorul sau banca transmite confirmarea.</p>
+            </article>
+
+            <article class="rounded-2xl bg-paper2 p-5">
+              <p class="text-2xl">2</p>
+              <p class="mt-3 font-bold">Biletele sunt emise</p>
+              <p class="mt-2 text-sm leading-relaxed text-muted">Le primești automat pe email și în cont.</p>
+            </article>
+
+            <article class="rounded-2xl bg-paper2 p-5">
+              <p class="text-2xl">3</p>
+              <p class="mt-3 font-bold">Primești confirmarea</p>
+              <p class="mt-2 text-sm leading-relaxed text-muted">Comanda devine activă și biletele pot fi descărcate.</p>
+            </article>
+          </div>
+
+          <div class="mt-7 rounded-2xl border border-gold/20 bg-white p-5">
+            <p class="font-bold">Nu repeta plata încă</p>
+            <p class="mt-2 leading-relaxed text-muted">
+              O nouă încercare poate crea o a doua autorizare. Așteaptă confirmarea sau verifică statusul comenzii înainte de a plăti din nou.
+            </p>
+          </div>
+
+          <div class="mt-7 grid gap-4 md:grid-cols-2">
+            <div class="rounded-2xl border border-ink/10 bg-white p-5">
+              <p class="font-bold">Cât durează?</p>
+              <p class="mt-2 text-sm leading-relaxed text-muted">
+                În mod normal, confirmarea apare în câteva minute. Pentru unele metode de plată poate dura mai mult.
+              </p>
+            </div>
+
+            <div class="rounded-2xl border border-ink/10 bg-white p-5">
+              <p class="font-bold">Ai închis aplicația bancară?</p>
+              <p class="mt-2 text-sm leading-relaxed text-muted">
+                Revino în aplicație și verifică dacă plata necesită încă o autorizare sau confirmare.
+              </p>
+            </div>
+          </div>
+
+          <div class="mt-7 flex flex-wrap gap-3">
+            <a href="/cont/comenzi" class="rounded-full bg-red px-6 py-3 font-bold text-white hover:bg-red2">
+              Vezi comenzile mele
+            </a>
+            <a href="/suport" class="rounded-full border border-ink/20 bg-white px-6 py-3 font-bold hover:border-ink">
+              Contactează suportul
+            </a>
+          </div>
+        </div>
+
+        <!-- Order summary -->
+        <aside>
+          <div class="sticky top-6 rounded-[1.5rem] border border-ink/10 bg-white p-5 shadow-panel">
+            <div class="flex items-center justify-between gap-3">
+              <h2 class="font-display text-3xl font-bold">Rezumat comandă</h2>
+              <span class="rounded-full bg-paper2 px-3 py-1 text-xs font-bold" x-text="orderNumber"></span>
+            </div>
+
+            <div class="mt-5 space-y-4">
+              <template x-for="item in orderItems" :key="item.id">
+                <article class="grid grid-cols-[78px_1fr] gap-3">
+                  <img :src="item.image" :alt="item.title" class="h-20 w-full rounded-xl object-cover">
+
+                  <div>
+                    <p class="font-bold leading-tight" x-text="item.title"></p>
+                    <p class="mt-1 text-sm text-muted" x-text="item.meta"></p>
+                    <p class="mt-1 text-sm font-bold" x-text="item.quantity + ' × ' + formatMoney(item.unitPrice)"></p>
+                  </div>
+                </article>
+              </template>
+            </div>
+
+            <div class="mt-5 divide-y divide-ink/10 border-t border-ink/10 text-sm">
+              <div class="flex justify-between py-3"><span class="text-muted">Subtotal</span><strong x-text="formatMoney(subtotal)"></strong></div>
+              <div class="flex justify-between py-3"><span class="text-muted">Comision platformă</span><strong x-text="formatMoney(platformFee)"></strong></div>
+              <div class="flex justify-between py-3"><span class="text-muted">Procesare plată</span><strong x-text="formatMoney(processingFee)"></strong></div>
+              <div class="flex justify-between py-3"><span class="text-muted">Protecție bilet</span><strong x-text="formatMoney(protectionFee)"></strong></div>
+            </div>
+
+            <div class="mt-4 flex items-end justify-between">
+              <div>
+                <p class="text-sm font-bold text-muted">Total</p>
+                <p class="font-display text-4xl font-bold" x-text="formatMoney(total)"></p>
+              </div>
+
+              <span class="rounded-full bg-green2 px-3 py-2 text-xs font-bold text-green" x-text="'+' + bonusPoints + ' puncte'"></span>
+            </div>
+
+            <div class="mt-5 rounded-xl bg-paper p-4">
+              <p class="text-sm font-bold text-muted">Metodă de plată</p>
+              <p class="mt-1 font-bold" x-text="paymentMethod"></p>
+            </div>
+
+            <div class="mt-3 rounded-xl bg-paper p-4">
+              <p class="text-sm font-bold text-muted">Email confirmare</p>
+              <p class="mt-1 font-bold break-all" x-text="customerEmail"></p>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </section>
+  </main>
+
+  <footer class="border-t border-ink/10 bg-paper">
+    <div class="mx-auto flex max-w-[1240px] flex-col gap-3 px-4 py-6 text-sm text-muted sm:flex-row sm:items-center sm:justify-between sm:px-6">
+      <p>© 2026 bilete.online</p>
+
+      <div class="flex flex-wrap gap-4">
+        <a href="/privacy" class="hover:text-ink">Confidențialitate</a>
+        <a href="/termeni-si-conditii" class="hover:text-ink">Termeni și condiții</a>
+        <a href="/contact" class="hover:text-ink">Contact</a>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    function pendingPaymentPage(){
+      return {
+        orderNumber:'#BO-10503',
+        status:'pending',
+        checks:0,
+
+        paymentMethod:'RoPay',
+        customerEmail:'andrei@email.ro',
+
+        orderItems:[
+          {
+            id:1,
+            title:'Escape room în centrul Constanței',
+            meta:'14 iunie 2026 · 18:00',
+            quantity:2,
+            unitPrice:90,
+            image:'https://images.unsplash.com/photo-1517586979036-b7d1e86b3345?auto=format&fit=crop&w=400&q=85'
+          },
+          {
+            id:2,
+            title:'Experiență interactivă pentru familie',
+            meta:'15 iunie 2026 · 11:30',
+            quantity:1,
+            unitPrice:65,
+            image:'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=400&q=85'
+          }
+        ],
+
+        subtotal:245,
+        platformFee:4.90,
+        processingFee:4.06,
+        protectionFee:14.70,
+        bonusPoints:49,
+
+        get total(){
+          return this.subtotal + this.platformFee + this.processingFee + this.protectionFee;
+        },
+
+        get statusLabel(){
+          if(this.status==='confirmed') return 'Plată confirmată';
+          if(this.status==='failed') return 'Plată nereușită';
+          return 'În curs de confirmare';
+        },
+
+        get statusMessage(){
+          if(this.status==='confirmed') return 'Plata a fost confirmată. Biletele sunt în curs de emitere.';
+          if(this.status==='failed') return 'Plata nu a putut fi confirmată. Poți relua plata din pagina comenzii.';
+          return 'Verificăm automat statusul plății. Nu este nevoie să reîncarci pagina.';
+        },
+
+        get progress(){
+          if(this.status==='confirmed') return 100;
+          if(this.status==='failed') return 100;
+          return 58 + Math.min(this.checks * 8, 32);
+        },
+
+        checkStatus(){
+          this.checks++;
+
+          if(this.checks >= 3){
+            this.status='confirmed';
+          }
+        },
+
+        formatMoney(value){
+          return new Intl.NumberFormat('ro-RO',{
+            style:'currency',
+            currency:'RON',
+            minimumFractionDigits:2,
+            maximumFractionDigits:2
+          }).format(value);
+        }
+      }
+    }
+  </script>
+</body>
+</html>
