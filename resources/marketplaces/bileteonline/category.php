@@ -650,7 +650,6 @@ include __DIR__ . '/includes/header.php';
     <div class="px-4 py-8 mx-auto max-w-[1500px] sm:px-6 lg:py-10">
         <div class="mb-5">
             <p class="text-5xl font-bold leading-none font-display"><span x-text="filteredActivities().length"></span> rezultate</p>
-            <p class="mt-2 text-ink-soft">Activitățile sunt ordonate după relevanță, rating și disponibilitate.</p>
         </div>
 
         <div class="flex flex-wrap gap-2 mb-6" x-show="activeChips().length" x-cloak>
@@ -1080,7 +1079,7 @@ function categoryGyg(seed) {
                     </span>
                     <svg :class="open==='sort' && 'rotate-180'" class="w-3.5 h-3.5 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
                 </button>
-                <div x-show="open==='sort'" x-cloak x-transition class="absolute right-0 top-[calc(100%+10px)] z-50 w-52 bg-paper border-2 border-ink rounded-2xl shadow-2xl p-2">
+                <div x-show="open==='sort'" x-cloak x-transition class="absolute right-0 top-[calc(100%+10px)] z-50 w-52 bg-white border-2 border-ink rounded-2xl shadow-2xl p-2">
                     <?php foreach ($sortLabels as $value => $label): ?>
                         <a href="<?= htmlspecialchars(navBuildUrl($slug, $_GET, $value === 'recommended' ? [] : ['sort' => $value], $value === 'recommended' ? ['sort'] : []), ENT_QUOTES) ?>" class="block w-full text-left px-3 py-2 rounded-lg text-[15px] hover:bg-paper-2 transition <?= $sort === $value ? 'bg-ink text-paper' : '' ?>">
                             <?= htmlspecialchars($label) ?>

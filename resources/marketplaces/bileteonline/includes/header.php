@@ -333,8 +333,7 @@ $tabPlacesLabel = ($ctxType === 'city' || $ctxType === 'activity')
                         <div x-show="megaTab==='places'">
                             <div class="flex items-end justify-between gap-6">
                                 <div>
-                                    <p class="font-mono text-xs tracking-[.18em] text-ink-soft">ORAȘE</p>
-                                    <h2 class="mt-2 text-5xl font-bold leading-none font-display"><?= htmlspecialchars($tabPlacesLabel) ?></h2>
+                                    <h2 class="mt-2 text-3xl font-bold leading-none font-display"><?= htmlspecialchars($tabPlacesLabel) ?></h2>
                                     <p class="max-w-3xl mt-3 text-ink-soft">Alege un oraș și descoperă activități, ghiduri și locații locale.</p>
                                 </div>
                                 <a href="/orase" @click="mega=null" class="px-5 py-3 font-bold transition rounded-full shrink-0 bg-ink text-paper hover:bg-vermilion">Toate orașele</a>
@@ -358,8 +357,7 @@ $tabPlacesLabel = ($ctxType === 'city' || $ctxType === 'activity')
                         <div x-show="megaTab==='things'" x-cloak>
                             <div class="flex items-end justify-between gap-6">
                                 <div>
-                                    <p class="font-mono text-xs tracking-[.18em] text-ink-soft">ACTIVITĂȚI</p>
-                                    <h2 class="mt-2 text-5xl font-bold leading-none font-display">Alege după ce vrei să faci</h2>
+                                    <h2 class="mt-2 text-3xl font-bold leading-none font-display">Alege după ce vrei să faci</h2>
                                     <p class="max-w-3xl mt-3 text-ink-soft">Categorii clare pentru ieșiri, weekenduri, copii, cadouri și experiențe locale.</p>
                                 </div>
                                 <a href="/categorii" @click="mega=null" class="px-5 py-3 font-bold transition rounded-full shrink-0 bg-ink text-paper hover:bg-vermilion">Toate categoriile</a>
@@ -370,7 +368,7 @@ $tabPlacesLabel = ($ctxType === 'city' || $ctxType === 'activity')
                                         <div class="flex items-center justify-between gap-4">
                                             <div class="flex items-center min-w-0 gap-3">
                                                 <?php if (!empty($cat['icon_emoji'])): ?><span class="text-2xl shrink-0" aria-hidden="true"><?= htmlspecialchars($cat['icon_emoji']) ?></span><?php endif; ?>
-                                                <p class="text-2xl font-bold leading-none truncate font-display group-hover:text-vermilion"><?= htmlspecialchars($cat['label']) ?></p>
+                                                <p class="text-xl font-bold leading-none truncate font-display group-hover:text-vermilion"><?= htmlspecialchars($cat['label']) ?></p>
                                             </div>
                                             <span class="text-2xl transition group-hover:translate-x-1">→</span>
                                         </div>
@@ -383,8 +381,7 @@ $tabPlacesLabel = ($ctxType === 'city' || $ctxType === 'activity')
                         <div x-show="megaTab==='nearby'" x-cloak>
                             <div class="flex items-end justify-between gap-6">
                                 <div>
-                                    <p class="font-mono text-xs tracking-[.18em] text-ink-soft">IDEI RAPIDE</p>
-                                    <h2 class="mt-2 text-5xl font-bold leading-none font-display">Scurtături utile</h2>
+                                    <h2 class="mt-2 text-3xl font-bold leading-none font-display">Scurtături utile</h2>
                                     <p class="max-w-3xl mt-3 text-ink-soft">Pagini care se potrivesc sezonului și intereselor frecvente.</p>
                                 </div>
                                 <a href="/ghiduri" @click="mega=null" class="px-5 py-3 font-bold transition rounded-full shrink-0 bg-ink text-paper hover:bg-vermilion">Vezi ghidurile</a>
@@ -393,7 +390,7 @@ $tabPlacesLabel = ($ctxType === 'city' || $ctxType === 'activity')
                                 <?php foreach ($navQuickSearches as $tag): ?>
                                     <a href="<?= htmlspecialchars($tag['href'], ENT_QUOTES) ?>" @click="mega=null" class="group rounded-[1.5rem] border border-ink/10 bg-paper-2 p-5 transition hover:-translate-y-0.5 hover:bg-paper hover:shadow-deep">
                                         <div class="flex items-center justify-between gap-4">
-                                            <p class="text-3xl font-bold leading-none font-display group-hover:text-vermilion"><?= htmlspecialchars($tag['label']) ?></p>
+                                            <p class="text-xl font-bold leading-none font-display group-hover:text-vermilion"><?= htmlspecialchars($tag['label']) ?></p>
                                             <span class="text-2xl transition group-hover:translate-x-1">→</span>
                                         </div>
                                     </a>
@@ -424,8 +421,7 @@ $tabPlacesLabel = ($ctxType === 'city' || $ctxType === 'activity')
                         <div x-show="inspTab==='guides'">
                             <div class="flex items-end justify-between gap-6">
                                 <div>
-                                    <p class="font-mono text-xs tracking-[.18em] text-ink-soft">GHIDURI</p>
-                                    <h2 class="mt-2 text-5xl font-bold leading-none font-display">Idei și recomandări editoriale</h2>
+                                    <h2 class="mt-2 text-3xl font-bold leading-none font-display">Idei și recomandări editoriale</h2>
                                     <p class="max-w-3xl mt-3 text-ink-soft">Ghiduri pentru orașe, weekenduri, atracții și activități de pus pe listă.</p>
                                 </div>
                                 <a href="/ghiduri" @click="mega=null" class="px-5 py-3 font-bold transition rounded-full shrink-0 bg-ink text-paper hover:bg-vermilion">Toate ghidurile</a>
@@ -447,8 +443,7 @@ $tabPlacesLabel = ($ctxType === 'city' || $ctxType === 'activity')
                             ?>
                             <div class="flex items-end justify-between gap-6">
                                 <div>
-                                    <p class="font-mono text-xs tracking-[.18em] text-ink-soft"><?= htmlspecialchars($kicker) ?></p>
-                                    <h2 class="mt-2 text-5xl font-bold leading-none font-display"><?= htmlspecialchars($title) ?></h2>
+                                    <h2 class="mt-2 text-3xl font-bold leading-none font-display"><?= htmlspecialchars($title) ?></h2>
                                     <p class="max-w-3xl mt-3 text-ink-soft"><?= htmlspecialchars($desc) ?></p>
                                 </div>
                                 <a href="<?= htmlspecialchars($allHref, ENT_QUOTES) ?>" @click="mega=null" class="px-5 py-3 font-bold transition rounded-full shrink-0 bg-ink text-paper hover:bg-vermilion"><?= htmlspecialchars($allLabel) ?></a>
@@ -457,7 +452,7 @@ $tabPlacesLabel = ($ctxType === 'city' || $ctxType === 'activity')
                                 <?php foreach (array_slice($navCities, 0, 6) as $city): ?>
                                     <a href="/<?= htmlspecialchars($city['slug'], ENT_QUOTES) ?>/<?= htmlspecialchars($intentSlug, ENT_QUOTES) ?>" @click="mega=null" class="group rounded-[1.5rem] border border-ink/10 bg-paper-2 p-5 transition hover:-translate-y-0.5 hover:bg-paper hover:shadow-deep">
                                         <div class="flex items-center justify-between gap-4">
-                                            <p class="text-2xl font-bold leading-none truncate font-display group-hover:text-vermilion"><?= htmlspecialchars($cityPrefix) ?> <?= htmlspecialchars($city['label']) ?></p>
+                                            <p class="text-xl font-bold leading-none truncate font-display group-hover:text-vermilion"><?= htmlspecialchars($cityPrefix) ?> <?= htmlspecialchars($city['label']) ?></p>
                                             <span class="text-2xl transition group-hover:translate-x-1">→</span>
                                         </div>
                                     </a>
@@ -481,8 +476,7 @@ $tabPlacesLabel = ($ctxType === 'city' || $ctxType === 'activity')
                         <div x-show="inspTab==='gift'" x-cloak>
                             <div class="flex items-end justify-between gap-6">
                                 <div>
-                                    <p class="font-mono text-xs tracking-[.18em] text-ink-soft">CADOU</p>
-                                    <h2 class="mt-2 text-5xl font-bold leading-none font-display">Experiențe cadou</h2>
+                                    <h2 class="mt-2 text-3xl font-bold leading-none font-display">Experiențe cadou</h2>
                                     <p class="max-w-3xl mt-3 text-ink-soft">Oferă un card cadou bilete.online — valabil la orice activitate de pe platformă.</p>
                                 </div>
                                 <a href="/card-cadou" @click="mega=null" class="px-5 py-3 font-bold transition rounded-full shrink-0 bg-ink text-paper hover:bg-vermilion">Vezi cardul cadou</a>
