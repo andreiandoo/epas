@@ -398,7 +398,13 @@ class MarketplaceEventsController extends BaseController
                 break;
             case 'newest':
             case 'latest':
-                // Sort by creation date (newest first)
+            case 'latest_stratified':
+                // Sort by creation date (newest first). For the stratified
+                // variant the post-processing block below picks N events per
+                // category from this DESC order, then shuffles — keeps the
+                // homepage "ultimele evenimente adăugate" grid from being
+                // dominated by a single category when an organizer imports
+                // 10-15 plays in one batch (incident 2026-06-16).
                 $query->orderBy('created_at', 'desc');
                 break;
             case 'date_asc':
@@ -424,7 +430,30 @@ class MarketplaceEventsController extends BaseController
         $optOut = $request->input('paging') === 'flat' || $request->boolean('flat_paging');
         $smartPaging = !$optOut && in_array($sort, $smartPagingSorts, true);
 
-        if ($smartPaging) {
+        if ($sort === 'latest_stratified') {
+            // Category-balanced "latest" feed for the homepage. We pull a
+            // 5× over-sample of the freshest events, take up to 4 per
+            // category (PARTITION BY category, take head N), then shuffle
+            // — so a batch of 15 plays imported at once can't dominate the
+            // visible grid. Caller still receives a paginator shape so
+            // ->paginated() formatting stays uniform with the other sorts.
+            $perPage = min((int) $request->input('per_page', 20), 100);
+            $maxPerCategory = (int) $request->input('max_per_category', 4);
+            $oversample = $query->limit($perPage * 5)->get();
+            $stratified = $oversample
+                ->groupBy(fn ($e) => $e->marketplace_event_category_id ?? '__uncat__')
+                ->flatMap(fn ($events) => $events->take($maxPerCategory))
+                ->shuffle()
+                ->take($perPage)
+                ->values();
+            $events = new \Illuminate\Pagination\LengthAwarePaginator(
+                $stratified,
+                $stratified->count(),
+                $perPage,
+                1,
+                ['path' => $request->url(), 'query' => $request->query()]
+            );
+        } elseif ($smartPaging) {
             $events = $this->paginateByMonth(
                 $query,
                 $effectiveDateExpr,

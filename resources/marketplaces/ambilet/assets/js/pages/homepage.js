@@ -219,7 +219,12 @@ const CityEventsFilter = {
 
     async loadEvents() {
         try {
-            const response = await AmbiletAPI.get('/marketplace-events?sort=latest&per_page=45');
+            // latest_stratified = take latest N per category, shuffle the
+            // result. Stops the "ultimele evenimente adăugate" grid from
+            // collapsing into a single category when an organizer imports
+            // 10-15 plays in one batch (theatre, etc.). Categories stay
+            // hidden on the card — see hideCategory below.
+            const response = await AmbiletAPI.get('/marketplace-events?sort=latest_stratified&per_page=45&max_per_category=4');
             if (response.data) {
                 this.allEvents = Array.isArray(response.data) ? response.data : (response.data.events || response.data.data || []);
             }
@@ -327,7 +332,11 @@ const CityEventsFilter = {
         if (typeof AmbiletEventCard !== 'undefined') {
             container.innerHTML = AmbiletEventCard.renderMany(events.slice(0, 45), {
                 urlPrefix: '/bilete/',
-                showCategory: true,
+                // Category badge hidden — backend already stratifies the
+                // feed across categories (sort=latest_stratified) so the
+                // grid showcases variety; surfacing the label dilutes the
+                // poster art and reinforces a single category visually.
+                showCategory: false,
                 showPrice: true,
                 showVenue: true,
                 // The "ultimele evenimente adăugate" grid intentionally hides
