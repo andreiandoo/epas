@@ -1700,20 +1700,19 @@ class MarketplaceTaxTemplate extends Model
             $formatPrice = fn (float $p): string => fmod($p, 1.0) === 0.0
                 ? number_format($p, 0, '.', '')
                 : number_format($p, 2, '.', '');
+            $breakdownParts = [];
             $ticketBreakdown = $payout->ticket_breakdown ?? [];
             $totalTicketsSold = 0;
             $totalTicketsRefunded = 0;
 
-            // Sold-by-price aggregation. Section 1b shows the qty BREAKDOWN
-            // of every ticket the operator issued in this decont — both the
-            // ones still active AND the ones later refunded. The snapshot
-            // (ticket_breakdown JSON) only carries status=valid/used rows
-            // because SalesBreakdownService filters them out. We pre-bucket
-            // by price here so the refunded rows below can merge into the
-            // same buckets — otherwise the label would split into a "20lei*8
-            // + 20lei*2" pair instead of one "20lei*10" entry and the line
-            // 1a total wouldn't reconcile against the line 1b sum.
-            $soldByPrice = []; // key: formatted price string, value: ['price'=>float, 'qty'=>int]
+            // Source: ticket_breakdown JSON (the operator's actual selection
+            // after the edit-tickets action). Previously this used
+            // SalesBreakdownService::buildPayoutSplitTable with period
+            // bounds, which re-queried the DB and returned every ticket sold
+            // in that window — including the rows the operator removed when
+            // they shrank a decont to a subset. The label and totals are
+            // now in lock-step with the per-payout snapshot used everywhere
+            // else.
             foreach ($ticketBreakdown as $item) {
                 $ttId = $item['ticket_type_id'] ?? null;
                 if ($ttId && isset($posTypeIdsSet[$ttId])) {
@@ -1723,13 +1722,32 @@ class MarketplaceTaxTemplate extends Model
                 $qty = (int) ($item['quantity'] ?? $item['tickets'] ?? $item['qty'] ?? 0);
                 if ($qty <= 0) continue;
                 $totalTicketsSold += $qty;
-                $key = $formatPrice($price);
-                if (!isset($soldByPrice[$key])) {
-                    $soldByPrice[$key] = ['price' => $price, 'qty' => 0];
-                }
                 // Zero-priced rows (invitations) still emit as "0lei*N" so
                 // 1b's qty total matches the qty in the label.
-                $soldByPrice[$key]['qty'] += $qty;
+                $breakdownParts[] = $formatPrice($price) . 'lei*' . $qty;
+            }
+
+            // Wrap every 5 parts with <br> so multi-type deconts don't blow
+            // the PDF page width. processTemplate substitutes the value as
+            // raw HTML (preg_replace, no escaping), so <br> renders as a
+            // real line break in DomPDF.
+            if (empty($breakdownParts)) {
+                $variables['tickets_breakdown_label'] = '';
+            } else {
+                $chunks = array_chunk($breakdownParts, 5);
+                $joined = implode('<br>+ ', array_map(fn ($chunk) => implode('+', $chunk), $chunks));
+                $variables['tickets_breakdown_label'] = ' (' . $joined . ')';
+            }
+            // Use breakdown qty (from this decont) over total event sold
+            if ($totalTicketsSold > 0) {
+                $variables['total_tickets_sold'] = $totalTicketsSold;
+            } elseif ($payout->gross_amount > 0 && !empty($events)) {
+                // Fallback: estimate from gross amount and average ticket price
+                $event = $events->first();
+                $avgPrice = $event?->ticketTypes->avg(fn ($tt) => $tt->price_cents > 0 ? $tt->price_cents / 100 : 0);
+                if ($avgPrice > 0) {
+                    $variables['total_tickets_sold'] = (int) round($payout->gross_amount / $avgPrice);
+                }
             }
             // Refunded tickets aggregate for the decont template (filling
             // section 2 — "Taxe pentru bilete returnate"). Sourced from
@@ -1762,24 +1780,10 @@ class MarketplaceTaxTemplate extends Model
                 // Group by exact face_value (rounded to cents) so 59.50 stays
                 // visible — the rounding-to-int in the previous cut conflated
                 // distinct prices and lost decimals in the label.
-                //
-                // Also fold the same per-price counts into $soldByPrice so
-                // section 1b shows the COMPLETE picture (issued = active +
-                // refunded). Section 2b keeps its own dedicated breakdown
-                // below and is unaffected — operators still see refunds as
-                // a distinct line, just no longer missing from section 1.
                 $byPrice = $refundItems->groupBy(fn ($it) => number_format((float) $it->face_value, 2, '.', ''));
                 foreach ($byPrice as $price => $set) {
                     $priceFloat = (float) $price;
-                    $count = $set->count();
-                    $refundedBreakdownParts[] = $formatPrice($priceFloat) . 'lei*' . $count;
-
-                    $key = $formatPrice($priceFloat);
-                    if (!isset($soldByPrice[$key])) {
-                        $soldByPrice[$key] = ['price' => $priceFloat, 'qty' => 0];
-                    }
-                    $soldByPrice[$key]['qty'] += $count;
-                    $totalTicketsSold += $count;
+                    $refundedBreakdownParts[] = $formatPrice($priceFloat) . 'lei*' . $set->count();
                 }
             }
             $variables['total_tickets_refunded'] = $refundCount;
@@ -1788,41 +1792,6 @@ class MarketplaceTaxTemplate extends Model
             $variables['refunded_tickets_breakdown_label'] = !empty($refundedBreakdownParts)
                 ? ' (' . implode('+', $refundedBreakdownParts) . ')'
                 : '';
-
-            // Build the section 1b label NOW (after refunds merged in).
-            // Earlier code emitted the label straight from the ticket_breakdown
-            // loop — refunded rows would not appear there because the JSON
-            // snapshot only carries status=valid/used. Doing it after the
-            // refund merge guarantees the line 1b sum reconciles to the
-            // line 1a total. Sort by descending qty so the dominant ticket
-            // type leads — easier to eyeball.
-            uasort($soldByPrice, fn ($a, $b) => $b['qty'] <=> $a['qty']);
-            $breakdownParts = array_values(array_map(
-                fn ($entry) => $formatPrice($entry['price']) . 'lei*' . $entry['qty'],
-                $soldByPrice
-            ));
-            // Wrap every 5 parts with <br> so multi-type deconts don't blow
-            // the PDF page width. processTemplate substitutes the value as
-            // raw HTML (preg_replace, no escaping), so <br> renders as a
-            // real line break in DomPDF.
-            if (empty($breakdownParts)) {
-                $variables['tickets_breakdown_label'] = '';
-            } else {
-                $chunks = array_chunk($breakdownParts, 5);
-                $joined = implode('<br>+ ', array_map(fn ($chunk) => implode('+', $chunk), $chunks));
-                $variables['tickets_breakdown_label'] = ' (' . $joined . ')';
-            }
-            // Use breakdown qty (from this decont) over total event sold
-            if ($totalTicketsSold > 0) {
-                $variables['total_tickets_sold'] = $totalTicketsSold;
-            } elseif ($payout->gross_amount > 0 && !empty($events)) {
-                // Fallback: estimate from gross amount and average ticket price
-                $event = $events->first();
-                $avgPrice = $event?->ticketTypes->avg(fn ($tt) => $tt->price_cents > 0 ? $tt->price_cents / 100 : 0);
-                if ($avgPrice > 0) {
-                    $variables['total_tickets_sold'] = (int) round($payout->gross_amount / $avgPrice);
-                }
-            }
 
             // Discount aggregate for the decont template (section 1c).
             // Try the snapshot first (new SalesBreakdownService stores
