@@ -67,7 +67,9 @@ function navGetCategories(?int $limit = 6): array
         $slug = $cat['slug'] ?? '';
         if (!$slug || !$name) continue;
 
-        $count = (int) ($cat['count'] ?? $cat['event_count'] ?? 0);
+        // Prefer the real activities count (bilete.online is activity-centric);
+        // fall back to event_count for event-only marketplaces.
+        $count = (int) ($cat['activities_count'] ?? 0) ?: (int) ($cat['count'] ?? $cat['event_count'] ?? 0);
         $items[] = [
             'label' => $name,
             'href' => '/' . ltrim($slug, '/'),
@@ -106,7 +108,7 @@ function navGetCities(?int $limit = 8): array
             'label' => $name,
             'href' => '/' . ltrim($slug, '/'),
             'slug' => $slug,
-            'count' => (int) ($c['count'] ?? $c['events_count'] ?? 0),
+            'count' => (int) ($c['activities_count'] ?? 0) ?: (int) ($c['count'] ?? $c['events_count'] ?? 0),
         ];
 
         if ($limit !== null && count($items) >= $limit) break;

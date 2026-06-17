@@ -45,6 +45,7 @@ class CategoriesController extends BaseController
                 'image' => $category->image_full_url,
                 'color' => $category->color,
                 'event_count' => $eventCount,
+                'activities_count' => $this->countActivitiesForCategory($category, $client->id),
                 'is_featured' => $category->is_featured,
                 'sort_order' => $category->sort_order ?? 0,
                 'children' => $category->children()
@@ -167,5 +168,28 @@ class CategoriesController extends BaseController
             ->count();
 
         return $count;
+    }
+
+    /**
+     * Count published activities in a category (including its child categories),
+     * matching the /activities listing filter (category OR subcategory slug).
+     * bilete.online is activity-centric, so this is the count surfaced as
+     * `activities_count` for category counters on the marketplace front-end.
+     */
+    protected function countActivitiesForCategory(MarketplaceEventCategory $category, int $clientId): int
+    {
+        $categoryIds = collect([$category->id])
+            ->merge($category->children()->pluck('id'))
+            ->unique()
+            ->all();
+
+        return \App\Models\Activity::query()
+            ->where('marketplace_client_id', $clientId)
+            ->where('is_published', true)
+            ->where(function ($q) use ($categoryIds) {
+                $q->whereIn('marketplace_category_id', $categoryIds)
+                    ->orWhereIn('marketplace_subcategory_id', $categoryIds);
+            })
+            ->count();
     }
 }

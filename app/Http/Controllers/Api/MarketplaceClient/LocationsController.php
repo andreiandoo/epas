@@ -88,9 +88,10 @@ class LocationsController extends BaseController
 
         // Get event counts with diacritics-aware matching
         $eventCounts = $this->getCityEventCounts($client->id, $cities);
+        $activityCounts = $this->getCityActivityCounts($client->id, $cities);
 
         // Transform cities for response
-        $result = $cities->map(function ($city) use ($eventCounts, $lang) {
+        $result = $cities->map(function ($city) use ($eventCounts, $activityCounts, $lang) {
             return [
                 'id' => $city->id,
                 'name' => $city->name[$lang] ?? $city->name['ro'] ?? array_values((array)$city->name)[0] ?? '',
@@ -102,6 +103,7 @@ class LocationsController extends BaseController
                     'code' => $city->county->code,
                 ] : null,
                 'events_count' => $eventCounts[$city->id] ?? 0,
+                'activities_count' => $activityCounts[$city->id] ?? 0,
                 'is_capital' => $city->slug === 'bucuresti',
             ];
         });
@@ -209,6 +211,31 @@ class LocationsController extends BaseController
     /**
      * Get event counts for cities with diacritics-aware matching
      */
+    /**
+     * Count published activities per city in one grouped query.
+     * Activities link to a city directly via marketplace_city_id, so this is an
+     * exact count (no diacritics matching needed, unlike events).
+     *
+     * @return array<int,int> map of city id => activities count
+     */
+    private function getCityActivityCounts(int $clientId, $cities): array
+    {
+        $ids = collect($cities)->pluck('id')->all();
+        if (empty($ids)) {
+            return [];
+        }
+
+        return \App\Models\Activity::query()
+            ->where('marketplace_client_id', $clientId)
+            ->where('is_published', true)
+            ->whereIn('marketplace_city_id', $ids)
+            ->selectRaw('marketplace_city_id, COUNT(*) as c')
+            ->groupBy('marketplace_city_id')
+            ->pluck('c', 'marketplace_city_id')
+            ->map(fn ($v) => (int) $v)
+            ->all();
+    }
+
     private function getCityEventCounts(int $clientId, $cities): array
     {
         // Build city name variants for matching (handles diacritics)
