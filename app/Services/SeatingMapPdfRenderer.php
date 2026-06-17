@@ -282,7 +282,9 @@ class SeatingMapPdfRenderer
             }
         }
 
-        // Fourth pass — all seats as small grey circles.
+        // Fourth pass — all seats as small grey circles WITH the seat
+        // label inside. Helps the buyer count seats on a row even when
+        // their own seat is far from the aisle.
         $targetSeatUid = $target['seat']['seat_uid'] ?? null;
         foreach ($sections as $section) {
             $sx = $section['x_position'];
@@ -294,7 +296,19 @@ class SeatingMapPdfRenderer
                     }
                     $cx = $sx + $seat['x'];
                     $cy = $sy + $seat['y'];
-                    $svg .= '<circle cx="' . $cx . '" cy="' . $cy . '" r="6" fill="#d1d5db"/>';
+                    // Larger circle so the number fits without crowding
+                    // neighbouring seats. r=10 in canvas units; the SVG
+                    // viewBox scales to whatever pt size the PDF page
+                    // gives us.
+                    $svg .= '<circle cx="' . $cx . '" cy="' . $cy . '" r="10" fill="#e5e7eb" stroke="#9ca3af" stroke-width="0.6"/>';
+
+                    $label = htmlspecialchars((string) ($seat['label'] ?? ''), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+                    if ($label !== '') {
+                        $svg .= '<text x="' . $cx . '" y="' . ($cy + 3.5) . '" '
+                            . 'text-anchor="middle" font-family="DejaVu Sans, Helvetica, Arial, sans-serif" '
+                            . 'font-size="9" font-weight="900" fill="#1f2937">'
+                            . $label . '</text>';
+                    }
                 }
             }
         }
