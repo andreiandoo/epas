@@ -969,6 +969,24 @@
                 const totalDays = salesData.labels.length;
                 const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
 
+                // DOW-alignment shift between current and prev year for this
+                // month. Gregorian calendar walks DOW by +1 between normal
+                // years and +2 after a leap year, so the SAME date index
+                // lands on a DIFFERENT day of week. Without this shift, the
+                // "Wednesday ratio" at index i actually compared current
+                // Wednesday against last year's Tuesday — and the future
+                // prediction looked up the wrong DOW from prev data too.
+                // shift = how many days to step forward in prev so the same
+                // index lands on the same DOW.
+                const prevMonthStart = new Date(today.getFullYear() - 1, today.getMonth(), 1);
+                const prevDaysInMonth = new Date(today.getFullYear() - 1, today.getMonth() + 1, 0).getDate();
+                const dowShift = ((monthStart.getDay() - prevMonthStart.getDay()) + 7) % 7;
+                const prevAt = (i) => {
+                    const idx = i + dowShift;
+                    if (idx < 0 || idx >= prevSalesData.data.length || idx >= prevDaysInMonth) return 0;
+                    return prevSalesData.data[idx] || 0;
+                };
+
                 // Calculate growth ratio per day-of-week (current month vs same month last year)
                 const dowRatios = {}; // 0=Sun..6=Sat -> array of ratios
                 for (let i = 0; i < currentDay - 1 && i < salesData.data.length; i++) {
@@ -976,7 +994,7 @@
                     d.setDate(i + 1);
                     const dow = d.getDay();
                     const curr = salesData.data[i];
-                    const prev = prevSalesData.data[i] || 0;
+                    const prev = prevAt(i);
                     if (!dowRatios[dow]) dowRatios[dow] = [];
                     if (prev > 0 && curr > 0) dowRatios[dow].push(curr / prev);
                 }
@@ -990,7 +1008,7 @@
                 let allRatios = [];
                 for (let i = 0; i < currentDay - 1 && i < salesData.data.length; i++) {
                     const curr = salesData.data[i];
-                    const prev = prevSalesData.data[i] || 0;
+                    const prev = prevAt(i);
                     if (prev > 0 && curr > 0) allRatios.push(curr / prev);
                 }
                 const overallGrowth = allRatios.length > 0 ? allRatios.reduce((a, b) => a + b, 0) / allRatios.length : 1;
@@ -1021,7 +1039,7 @@
                     if (i === currentDay - 1) {
                         predictionData.push(todayEstimated);
                     } else {
-                        const prevVal = prevSalesData.data[i] || 0;
+                        const prevVal = prevAt(i);
                         // Use DOW-specific growth ratio, fallback to overall
                         const ratio = dowGrowth[dow] !== null ? dowGrowth[dow] : overallGrowth;
 

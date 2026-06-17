@@ -617,6 +617,33 @@ class Dashboard extends Page
     {
         $now = Carbon::now($tz);
         $monthStart = $now->copy()->startOfMonth();
+        $prevMonthStart = $monthStart->copy()->subYear();
+        $prevDaysInMonth = $prevMonthStart->daysInMonth;
+
+        // Day-of-week ALIGNMENT shift: between adjacent years the Gregorian
+        // calendar walks DOW by +1 (normal year) or +2 (after a leap year).
+        // The chart's current month and last year's same month therefore
+        // map different DOWs at the same date index. Without this shift,
+        // computing a "Wednesday ratio" at index i compared current
+        // Wednesday against last year's Tuesday — and the future-day
+        // prediction looked up the wrong DOW too. The shift = how many
+        // days to step forward in prev year so the same date index lands
+        // on the same DOW.
+        $currDowAtFirst = (int) $monthStart->dayOfWeek;
+        $prevDowAtFirst = (int) $prevMonthStart->dayOfWeek;
+        $dowShift = (($currDowAtFirst - $prevDowAtFirst) + 7) % 7;
+
+        // Look up prev-year value for current-year day i, aligned by DOW
+        // (= prev[i + dowShift]). Overflow (last 1-2 days of the current
+        // month spill past prev month's end) returns 0 → falls back to
+        // overallAvg path in the predictor.
+        $prevAt = function (int $i) use ($prev, $dowShift, $prevDaysInMonth): float {
+            $prevIdx = $i + $dowShift;
+            if ($prevIdx < 0 || $prevIdx >= count($prev) || $prevIdx >= $prevDaysInMonth) {
+                return 0.0;
+            }
+            return (float) ($prev[$prevIdx] ?? 0);
+        };
 
         // Day-of-week growth ratios from completed days (i < currentDay - 1)
         $dowRatios = []; // 0..6 → list of curr/prev ratios
@@ -624,9 +651,9 @@ class Dashboard extends Page
         $completedTotal = 0.0;
         $completedDays = 0;
         for ($i = 0; $i < $currentDay - 1 && $i < count($current); $i++) {
-            $dow = $monthStart->copy()->addDays($i)->dayOfWeek;
+            $dow = (int) $monthStart->copy()->addDays($i)->dayOfWeek;
             $curr = (float) ($current[$i] ?? 0);
-            $prv = (float) ($prev[$i] ?? 0);
+            $prv = $prevAt($i);
             if ($prv > 0 && $curr > 0) {
                 $dowRatios[$dow][] = $curr / $prv;
                 $allRatios[] = $curr / $prv;
@@ -655,9 +682,9 @@ class Dashboard extends Page
             } elseif ($i === $currentDay - 1) {
                 $out[] = (float) $todayEstimated;
             } else {
-                $dow = $monthStart->copy()->addDays($i)->dayOfWeek;
+                $dow = (int) $monthStart->copy()->addDays($i)->dayOfWeek;
                 $growth = $dowGrowth[$dow] ?? $overallGrowth ?? 1.0;
-                $prv = (float) ($prev[$i] ?? 0);
+                $prv = $prevAt($i);
                 if ($prv > 0 && ($dowGrowth[$dow] !== null || $overallGrowth !== null)) {
                     $out[] = round($prv * $growth);
                 } else {
