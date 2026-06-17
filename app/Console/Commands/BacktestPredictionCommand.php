@@ -26,7 +26,8 @@ class BacktestPredictionCommand extends Command
     protected $signature = 'dashboard:backtest-prediction
                             {--marketplace= : marketplace_client_id (required)}
                             {--month= : YYYY-MM to backtest (default last calendar month)}
-                            {--cutoffs=5,10,15,20,25 : days to freeze knowledge at}';
+                            {--cutoffs=5,10,15,20,25 : days to freeze knowledge at}
+                            {--exclude-legacy : exclude legacy_import orders (default keeps them; pre-2026 Ambilet data is ~all legacy_import and would zero out)}';
 
     protected $description = 'Replay the dashboard sales prediction against a historical month and report errors';
 
@@ -64,10 +65,17 @@ class BacktestPredictionCommand extends Command
         $this->line("  cutoffs: " . implode(',', $cutoffs));
         $this->line('');
 
-        // Pull daily sales for both months. Exclude legacy_import +
-        // test_order + external_import — same filter the dashboard uses.
-        $current = $this->fetchDailySales($marketplaceId, $monthStart, $monthEnd, $tz);
-        $prev    = $this->fetchDailySales($marketplaceId, $prevMonthStart, $prevMonthEnd, $tz);
+        // Pull daily sales for both months. Default keeps legacy_import
+        // because pre-2026 Ambilet is migrated data — excluding zeros
+        // out the entire backtest. The live dashboard already mixes both
+        // (current excludes legacy, prev includes it) — for backtest we
+        // hold the filter constant across both years so the comparison
+        // is apples-to-apples.
+        $excludeLegacy = (bool) $this->option('exclude-legacy');
+        $current = $this->fetchDailySales($marketplaceId, $monthStart, $monthEnd, $tz, $excludeLegacy);
+        $prev    = $this->fetchDailySales($marketplaceId, $prevMonthStart, $prevMonthEnd, $tz, $excludeLegacy);
+
+        $this->line(sprintf('  legacy_import filter: %s', $excludeLegacy ? 'EXCLUDED' : 'INCLUDED'));
 
         // Pad to month length
         $current = array_pad($current, $daysInMonth, 0.0);
@@ -152,11 +160,14 @@ class BacktestPredictionCommand extends Command
         return self::SUCCESS;
     }
 
-    private function fetchDailySales(int $marketplaceId, Carbon $start, Carbon $end, string $tz): array
+    private function fetchDailySales(int $marketplaceId, Carbon $start, Carbon $end, string $tz, bool $excludeLegacy = false): array
     {
+        $excluded = $excludeLegacy
+            ? ['test_order', 'external_import', 'legacy_import']
+            : ['test_order', 'external_import'];
         $rows = Order::where('marketplace_client_id', $marketplaceId)
             ->whereIn('status', ['paid', 'confirmed', 'completed'])
-            ->whereNotIn('source', ['test_order', 'external_import', 'legacy_import'])
+            ->whereNotIn('source', $excluded)
             ->whereBetween('created_at', [$start->copy()->utc(), $end->copy()->utc()])
             ->selectRaw("DATE(created_at AT TIME ZONE 'UTC' AT TIME ZONE '{$tz}') as date, SUM(total) as total")
             ->groupBy('date')
