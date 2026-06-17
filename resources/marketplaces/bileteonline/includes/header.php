@@ -184,9 +184,9 @@ $tabPlacesLabel = ($ctxType === 'city' || $ctxType === 'activity')
                         <path d="M9 7v10" stroke-dasharray="2 2"/>
                     </svg>
                 </span>
-                <span>
-                    <span class="block text-2xl font-bold leading-none font-display">bilete<span class="text-vermilion">.</span>online</span>
-                    <span class="hidden text-xs font-bold text-ink-soft sm:block">activități, experiențe, locuri de descoperit</span>
+                <span class="hidden min-w-0 sm:block">
+                    <span class="block font-bold leading-none font-display text-lg lg:text-xl xl:text-2xl">bilete<span class="text-vermilion">.</span>online</span>
+                    <span class="hidden text-xs font-bold text-ink-soft 2xl:block">activități, experiențe, locuri de descoperit</span>
                 </span>
             </a>
 
@@ -222,14 +222,26 @@ $tabPlacesLabel = ($ctxType === 'city' || $ctxType === 'activity')
                     <span x-show="cartCount() > 0" x-cloak class="absolute right-0 top-0 grid h-5 min-w-5 place-items-center rounded-full bg-vermilion px-1 text-[11px] font-bold text-paper" x-text="cartCount()"></span>
                 </button>
 
-                <!-- Language / currency -->
-                <button @click="languageOpen=!languageOpen; accountOpen=false; mega=null" class="rounded-full px-3 py-2.5 text-sm font-bold transition hover:bg-paper-2">RO/RON</button>
+                <!-- Language / currency (compact: glob + RO) -->
+                <button @click="languageOpen=!languageOpen; accountOpen=false; mega=null" class="inline-flex items-center gap-1.5 rounded-full px-3 h-11 text-sm font-bold transition hover:bg-paper-2" aria-label="Limbă și monedă (RO / RON)">
+                    <svg viewBox="0 0 24 24" class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>
+                    <span class="hidden xl:inline">RO</span>
+                </button>
 
-                <!-- Logged OUT: login + register -->
+                <!-- Logged OUT: compact account icon → dropdown (login + register) -->
                 <template x-if="!loggedIn">
-                    <div class="flex items-center gap-2" x-cloak>
-                        <a href="/login" class="rounded-full px-4 py-2.5 text-sm font-bold transition hover:bg-paper-2">Intră în cont</a>
-                        <a href="/register" class="rounded-full bg-ink px-4 py-2.5 text-sm font-bold text-paper transition hover:bg-vermilion">Creează cont</a>
+                    <div class="relative" x-cloak>
+                        <button @click="accountOpen=!accountOpen; languageOpen=false; mega=null" class="grid transition rounded-full h-11 w-11 place-items-center bg-ink text-paper hover:bg-vermilion" aria-haspopup="menu" :aria-expanded="accountOpen.toString()" aria-label="Cont">
+                            <svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>
+                        </button>
+                        <div x-show="accountOpen" x-cloak x-transition.origin.top.right @click.outside="accountOpen=false" class="absolute right-0 top-[calc(100%+12px)] w-[280px] overflow-hidden rounded-[2rem] border-2 border-ink bg-paper text-ink shadow-deep" role="menu">
+                            <div class="p-5">
+                                <p class="text-3xl font-bold leading-none font-display">Contul tău</p>
+                                <p class="mt-2 text-sm text-ink-soft">Bilete QR, puncte bonus și recomandări personalizate.</p>
+                                <a href="/login" class="flex items-center justify-center w-full px-4 py-3 mt-4 text-sm font-bold transition border-2 rounded-full border-ink hover:bg-ink hover:text-paper" role="menuitem">Intră în cont</a>
+                                <a href="/register" class="flex items-center justify-center w-full px-4 py-3 mt-2 text-sm font-bold transition rounded-full bg-ink text-paper hover:bg-vermilion" role="menuitem">Creează cont</a>
+                            </div>
+                        </div>
                     </div>
                 </template>
 
