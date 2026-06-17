@@ -237,30 +237,11 @@ class SeatingMapPdfRenderer
             // 'line' — skipped; rare and tricky in static SVG.
         }
 
-        // Second pass — section name labels for standard sections (above
-        // the topmost seat).
-        foreach ($sections as $section) {
-            $type = $section['section_type'] ?? 'standard';
-            if ($type !== 'standard') {
-                continue;
-            }
-            $bbox = $this->sectionBbox($section);
-            if (!$bbox) {
-                continue;
-            }
-            $cx = ($bbox['minX'] + $bbox['maxX']) / 2;
-            $labelY = $bbox['minY'] - 22;
-            if ($labelY < 16) {
-                $labelY = $bbox['minY'] + 16;
-            }
-            $name = htmlspecialchars((string) ($section['name'] ?? ''), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-            if ($name !== '') {
-                $svg .= '<text x="' . $cx . '" y="' . $labelY . '" '
-                    . 'text-anchor="middle" font-family="Helvetica, Arial, sans-serif" '
-                    . 'font-size="22" fill="#374151" font-weight="bold">'
-                    . $name . '</text>';
-            }
-        }
+        // Note: section name labels for STANDARD (seated) sections are
+        // intentionally omitted — the seat itself + row label are enough
+        // context, and the section banners just added clutter. Decorative
+        // / stage / dance_floor sections still carry their own labels
+        // from appendDecorativeRect/Polygon/Text above.
 
         // Third pass — row labels at the LEFT side of each row, just outside
         // the first seat. Helps a buyer count rows from the aisle.
@@ -282,19 +263,21 @@ class SeatingMapPdfRenderer
                     }
                 }
                 $rowLabel = htmlspecialchars((string) $row['label'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-                // Left side
-                $lx = $sx + $leftSeat['x'] - 18;
-                $ly = $sy + $leftSeat['y'] + 5;
-                $svg .= '<text x="' . $lx . '" y="' . $ly . '" '
-                    . 'text-anchor="end" font-family="Helvetica, Arial, sans-serif" '
-                    . 'font-size="11" fill="#6b7280" font-weight="bold">'
+                // DejaVu Sans is DomPDF's only reliably-bundled font with
+                // a real bold variant — Helvetica falls back to a faux-bold
+                // that DomPDF doesn't actually render. font-weight="900"
+                // pushes DomPDF to pick the heaviest available glyph set.
+                $leftX = $sx + $leftSeat['x'] - 18;
+                $leftY = $sy + $leftSeat['y'] + 5;
+                $svg .= '<text x="' . $leftX . '" y="' . $leftY . '" '
+                    . 'text-anchor="end" font-family="DejaVu Sans, Helvetica, Arial, sans-serif" '
+                    . 'font-size="13" fill="#111827" font-weight="900">'
                     . $rowLabel . '</text>';
-                // Right side (helps when the user is approaching from the other aisle)
-                $rx = $sx + $rightSeat['x'] + 18;
-                $ry = $sy + $rightSeat['y'] + 5;
-                $svg .= '<text x="' . $rx . '" y="' . $ry . '" '
-                    . 'text-anchor="start" font-family="Helvetica, Arial, sans-serif" '
-                    . 'font-size="11" fill="#6b7280" font-weight="bold">'
+                $rightXPos = $sx + $rightSeat['x'] + 18;
+                $rightYPos = $sy + $rightSeat['y'] + 5;
+                $svg .= '<text x="' . $rightXPos . '" y="' . $rightYPos . '" '
+                    . 'text-anchor="start" font-family="DejaVu Sans, Helvetica, Arial, sans-serif" '
+                    . 'font-size="13" fill="#111827" font-weight="900">'
                     . $rowLabel . '</text>';
             }
         }
