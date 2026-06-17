@@ -1700,19 +1700,19 @@ class MarketplaceTaxTemplate extends Model
             $formatPrice = fn (float $p): string => fmod($p, 1.0) === 0.0
                 ? number_format($p, 0, '.', '')
                 : number_format($p, 2, '.', '');
-            $breakdownParts = [];
             $ticketBreakdown = $payout->ticket_breakdown ?? [];
             $totalTicketsSold = 0;
             $totalTicketsRefunded = 0;
 
-            // Source: ticket_breakdown JSON (the operator's actual selection
-            // after the edit-tickets action). Previously this used
-            // SalesBreakdownService::buildPayoutSplitTable with period
-            // bounds, which re-queried the DB and returned every ticket sold
-            // in that window — including the rows the operator removed when
-            // they shrank a decont to a subset. The label and totals are
-            // now in lock-step with the per-payout snapshot used everywhere
-            // else.
+            // Pre-bucket by collected price so section 1b can merge the
+            // refunded rows into the matching price bucket (so a 70-lei
+            // ticket sold at 56 after discount and later refunded surfaces
+            // in the 56-bucket, not a separate one). Keys map to position
+            // in $breakdownOrder so we preserve the snapshot's row order
+            // — sorting by qty produced the wrong-looking output when the
+            // breakdown was regenerated.
+            $soldByPrice = []; // key => ['price'=>float, 'qty'=>int]
+            $breakdownOrder = []; // ordered list of keys as encountered
             foreach ($ticketBreakdown as $item) {
                 $ttId = $item['ticket_type_id'] ?? null;
                 if ($ttId && isset($posTypeIdsSet[$ttId])) {
@@ -1722,32 +1722,14 @@ class MarketplaceTaxTemplate extends Model
                 $qty = (int) ($item['quantity'] ?? $item['tickets'] ?? $item['qty'] ?? 0);
                 if ($qty <= 0) continue;
                 $totalTicketsSold += $qty;
+                $key = $formatPrice($price);
+                if (!isset($soldByPrice[$key])) {
+                    $soldByPrice[$key] = ['price' => $price, 'qty' => 0];
+                    $breakdownOrder[] = $key;
+                }
                 // Zero-priced rows (invitations) still emit as "0lei*N" so
                 // 1b's qty total matches the qty in the label.
-                $breakdownParts[] = $formatPrice($price) . 'lei*' . $qty;
-            }
-
-            // Wrap every 5 parts with <br> so multi-type deconts don't blow
-            // the PDF page width. processTemplate substitutes the value as
-            // raw HTML (preg_replace, no escaping), so <br> renders as a
-            // real line break in DomPDF.
-            if (empty($breakdownParts)) {
-                $variables['tickets_breakdown_label'] = '';
-            } else {
-                $chunks = array_chunk($breakdownParts, 5);
-                $joined = implode('<br>+ ', array_map(fn ($chunk) => implode('+', $chunk), $chunks));
-                $variables['tickets_breakdown_label'] = ' (' . $joined . ')';
-            }
-            // Use breakdown qty (from this decont) over total event sold
-            if ($totalTicketsSold > 0) {
-                $variables['total_tickets_sold'] = $totalTicketsSold;
-            } elseif ($payout->gross_amount > 0 && !empty($events)) {
-                // Fallback: estimate from gross amount and average ticket price
-                $event = $events->first();
-                $avgPrice = $event?->ticketTypes->avg(fn ($tt) => $tt->price_cents > 0 ? $tt->price_cents / 100 : 0);
-                if ($avgPrice > 0) {
-                    $variables['total_tickets_sold'] = (int) round($payout->gross_amount / $avgPrice);
-                }
+                $soldByPrice[$key]['qty'] += $qty;
             }
             // Refunded tickets aggregate for the decont template (filling
             // section 2 — "Taxe pentru bilete returnate"). Sourced from
@@ -1780,10 +1762,66 @@ class MarketplaceTaxTemplate extends Model
                 // Group by exact face_value (rounded to cents) so 59.50 stays
                 // visible — the rounding-to-int in the previous cut conflated
                 // distinct prices and lost decimals in the label.
+                //
+                // Also fold the same per-price counts into $soldByPrice so
+                // section 1b shows the COMPLETE picture (issued = active +
+                // refunded). Section 2b keeps its own dedicated breakdown
+                // below and is unaffected — operators still see refunds as
+                // a distinct line, just no longer missing from section 1.
                 $byPrice = $refundItems->groupBy(fn ($it) => number_format((float) $it->face_value, 2, '.', ''));
                 foreach ($byPrice as $price => $set) {
                     $priceFloat = (float) $price;
-                    $refundedBreakdownParts[] = $formatPrice($priceFloat) . 'lei*' . $set->count();
+                    $count = $set->count();
+                    $refundedBreakdownParts[] = $formatPrice($priceFloat) . 'lei*' . $count;
+
+                    $key = $formatPrice($priceFloat);
+                    if (!isset($soldByPrice[$key])) {
+                        $soldByPrice[$key] = ['price' => $priceFloat, 'qty' => 0];
+                        $breakdownOrder[] = $key;
+                    }
+                    $soldByPrice[$key]['qty'] += $count;
+                    $totalTicketsSold += $count;
+                }
+            }
+            $variables['total_tickets_refunded'] = $refundCount;
+            $variables['total_refunded_amount'] = number_format($refundFaceTotal, 2);
+            $variables['total_refunded_commission'] = number_format($refundCommissionReturned, 2);
+            $variables['refunded_tickets_breakdown_label'] = !empty($refundedBreakdownParts)
+                ? ' (' . implode('+', $refundedBreakdownParts) . ')'
+                : '';
+
+            // Build section 1b label from the merged map, in snapshot order
+            // (or refund-appended at the end if the refunded price wasn't
+            // already in the snapshot). Sort attempts that re-ordered by
+            // qty caused weird-looking output on regenerated snapshots; the
+            // snapshot's own row order is the most natural pick.
+            $breakdownParts = [];
+            foreach ($breakdownOrder as $key) {
+                $entry = $soldByPrice[$key];
+                $breakdownParts[] = $formatPrice($entry['price']) . 'lei*' . $entry['qty'];
+            }
+            // Wrap every 5 parts with <br> so multi-type deconts don't blow
+            // the PDF page width. processTemplate substitutes the value as
+            // raw HTML (preg_replace, no escaping), so <br> renders as a
+            // real line break in DomPDF.
+            if (empty($breakdownParts)) {
+                $variables['tickets_breakdown_label'] = '';
+            } else {
+                $chunks = array_chunk($breakdownParts, 5);
+                $joined = implode('<br>+ ', array_map(fn ($chunk) => implode('+', $chunk), $chunks));
+                $variables['tickets_breakdown_label'] = ' (' . $joined . ')';
+            }
+            // Use breakdown qty (from this decont) over total event sold.
+            // Now includes refunded tickets that were merged above so the
+            // headline "buc N" matches the qty sum in the label.
+            if ($totalTicketsSold > 0) {
+                $variables['total_tickets_sold'] = $totalTicketsSold;
+            } elseif ($payout->gross_amount > 0 && !empty($events)) {
+                // Fallback: estimate from gross amount and average ticket price
+                $event = $events->first();
+                $avgPrice = $event?->ticketTypes->avg(fn ($tt) => $tt->price_cents > 0 ? $tt->price_cents / 100 : 0);
+                if ($avgPrice > 0) {
+                    $variables['total_tickets_sold'] = (int) round($payout->gross_amount / $avgPrice);
                 }
             }
             $variables['total_tickets_refunded'] = $refundCount;
