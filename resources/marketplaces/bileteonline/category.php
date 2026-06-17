@@ -460,131 +460,44 @@ include __DIR__ . '/includes/head.php';
 include __DIR__ . '/includes/header.php';
 ?>
 
-<!-- ============================== HERO ============================== -->
-<section class="relative overflow-hidden border-b border-ink/10">
-    <div class="absolute inset-0 -z-10 bg-gradient-to-b from-paper via-paper to-paper-2"></div>
-    <div class="absolute -z-10 -top-28 -right-32 w-[520px] h-[520px] rounded-full <?= $ac['bg'] ?>/10 blur-3xl" aria-hidden="true"></div>
-    <div class="absolute inset-0 -z-10 opacity-[.3] bg-ruled-vertical" aria-hidden="true"></div>
+<!-- ============================== HERO (compact, imagine ca background) ============================== -->
+<?php $catImageUrl = $catImage ? $bo_img($catImage) : ''; ?>
+<section class="relative overflow-hidden border-b-2 border-ink <?= $catImageUrl ? 'text-paper' : '' ?>">
+    <?php if ($catImageUrl): ?>
+        <img src="<?= htmlspecialchars($catImageUrl, ENT_QUOTES) ?>" alt="<?= htmlspecialchars($catName, ENT_QUOTES) ?>" class="absolute inset-0 object-cover w-full h-full -z-10" loading="eager">
+        <div class="absolute inset-0 -z-10 bg-gradient-to-r from-ink/90 via-ink/70 to-ink/40"></div>
+    <?php else: ?>
+        <div class="absolute inset-0 -z-10 bg-gradient-to-b from-paper via-paper to-paper-2"></div>
+        <div class="absolute -z-10 -top-24 -right-28 w-[420px] h-[420px] rounded-full <?= $ac['bg'] ?>/10 blur-3xl" aria-hidden="true"></div>
+    <?php endif; ?>
 
-    <div class="px-4 pb-12 mx-auto max-w-7xl sm:px-6 pt-7 lg:pb-16">
-        <!-- breadcrumb -->
-        <nav aria-label="breadcrumb" class="flex flex-wrap items-center gap-2 mb-8 font-mono text-sm text-ink-soft">
-            <?php foreach ($breadcrumbs as $i => $bc): ?>
-                <?php if ($i > 0): ?><span class="opacity-40">/</span><?php endif; ?>
-                <?php if ($i < count($breadcrumbs) - 1): ?>
-                    <a href="<?= htmlspecialchars($bc['url'], ENT_QUOTES) ?>" class="transition hover:text-vermilion"><?= htmlspecialchars($bc['name']) ?></a>
-                <?php else: ?>
-                    <span class="text-ink font-600"><?= htmlspecialchars($bc['name']) ?></span>
-                <?php endif; ?>
-            <?php endforeach; ?>
-        </nav>
+    <div class="px-4 py-8 mx-auto max-w-7xl sm:px-6 lg:py-10">
+        <div class="inline-flex items-center gap-2 mb-4 px-3 py-1 rounded-full text-xs font-mono tracking-wider <?= $catImageUrl ? 'bg-paper/15 text-paper' : $ac['bg-light'] . ' ' . $ac['text'] ?>">
+            <span class="w-1.5 h-1.5 rounded-full <?= $catImageUrl ? 'bg-paper' : $ac['bg'] ?>"></span> CATEGORIE · DISPONIBILE TOT ANUL
+        </div>
 
-        <div class="grid lg:grid-cols-[1.35fr_.65fr] gap-10 items-center">
-            <div>
-                <div class="inline-flex items-center gap-2 mb-5 px-3 py-1 rounded-full <?= $ac['bg-light'] ?> <?= $ac['text'] ?> text-xs font-mono tracking-wider">
-                    <span class="w-1.5 h-1.5 rounded-full <?= $ac['bg'] ?>"></span> CATEGORIE · DISPONIBILE TOT ANUL
-                </div>
+        <h1 class="flex flex-wrap items-center gap-3 font-display text-[clamp(1.9rem,4vw,3.2rem)] font-700 leading-[0.95]">
+            <?php if ($catIcon): ?>
+                <span class="grid w-12 h-12 text-2xl shrink-0 place-items-center rounded-xl <?= $catImageUrl ? 'bg-paper/15' : $ac['bg-light'] ?>"><?= htmlspecialchars($catIcon) ?></span>
+            <?php endif; ?>
+            <span><?= htmlspecialchars($catName) ?> <span class="ital <?= $catImageUrl ? 'text-paper/85' : $ac['text'] ?>">în <?= htmlspecialchars($heroLocation) ?></span></span>
+        </h1>
 
-                <h1 class="font-display text-[clamp(2.6rem,6vw,4.6rem)] font-700 leading-[0.92]">
-                    <?php if ($catIcon): ?><span class="inline-block mr-2 align-middle"><?= htmlspecialchars($catIcon) ?></span><?php endif; ?>
-                    <?= htmlspecialchars($catName) ?><br>
-                    <span class="ital <?= $ac['text'] ?>">în <?= htmlspecialchars($heroLocation) ?></span>
-                </h1>
+        <?php if ($catDescription): ?>
+            <p class="max-w-2xl mt-4 leading-relaxed line-clamp-2 <?= $catImageUrl ? 'text-paper/85' : 'text-ink-soft' ?>"><?= htmlspecialchars($catDescription) ?></p>
+        <?php endif; ?>
 
-                <p class="max-w-2xl mt-6 text-lg leading-relaxed text-ink-soft">
-                    <?php if ($catDescription): ?>
-                        <?= htmlspecialchars($catDescription) ?>
-                    <?php else: ?>
-                        Alege orașul și activitatea — rezervi online și intri cu QR.
-                    <?php endif; ?>
-                </p>
-
-                <!-- mini stats -->
-                <div class="flex flex-wrap gap-3 mt-8">
-                    <div class="ticket bg-paper border-2 border-ink rounded-xl px-4 py-2.5" style="--perf:100%">
-                        <p class="text-2xl leading-none font-display font-700"><?= (int) ($pagination['total'] ?? $eventCount) ?></p>
-                        <p class="font-mono text-[10px] text-ink-soft mt-1">ACTIVITĂȚI</p>
-                    </div>
-                    <?php if (!empty($children)): ?>
-                    <div class="ticket bg-paper border-2 border-ink rounded-xl px-4 py-2.5" style="--perf:100%">
-                        <p class="text-2xl leading-none font-display font-700"><?= count($children) ?></p>
-                        <p class="font-mono text-[10px] text-ink-soft mt-1">SUBCATEGORII</p>
-                    </div>
-                    <?php endif; ?>
-                    <?php if (!empty($featuredCities)): ?>
-                    <div class="ticket bg-paper border-2 border-ink rounded-xl px-4 py-2.5" style="--perf:100%">
-                        <p class="text-2xl leading-none font-display font-700"><?= count($featuredCities) ?>+</p>
-                        <p class="font-mono text-[10px] text-ink-soft mt-1">ORAȘE</p>
-                    </div>
-                    <?php endif; ?>
-                </div>
-            </div>
-
-            <!-- decorative ticket (uses admin color + emoji) -->
-            <div class="relative hidden lg:block h-72" aria-hidden="true">
-                <div class="ticket ticket-lift absolute right-4 top-2 w-[80%] rotate-6 bg-ink text-paper rounded-2xl overflow-hidden border-2 border-ink shadow-2xl" style="--perf:72%; --punch:#1B1714">
-                    <div class="duotone h-32 relative overflow-hidden bg-gradient-to-br <?= $ac['gradient'] ?> <?= $ac['text'] ?>">
-                        <?php if (!empty($catImage)): ?>
-                            <img src="<?= htmlspecialchars(str_starts_with($catImage, 'http') ? $catImage : STORAGE_URL . '/' . ltrim($catImage, '/'), ENT_QUOTES) ?>" alt="<?= htmlspecialchars($catName, ENT_QUOTES) ?>" loading="lazy" class="absolute inset-0 object-cover w-full h-full" />
-                        <?php endif; ?>
-                        <div class="grid-tex"></div>
-                        <span class="stamp absolute top-4 left-4 text-paper/80 px-3 py-1 text-[10px] font-mono -rotate-6"><?= htmlspecialchars(strtoupper($catName)) ?></span>
-                        <?php if (empty($catImage)): ?><span class="absolute text-5xl right-5 bottom-2 opacity-30"><?= htmlspecialchars($catIcon) ?></span><?php endif; ?>
-                    </div>
-                    <div class="p-5">
-                        <p class="font-mono text-[10px] text-paper/50">ADMIT ONE · QR</p>
-                        <h3 class="mt-1 text-xl font-display font-700">bilete.online</h3>
-                        <div class="flex items-center justify-between mt-3">
-                            <span class="font-mono text-xs text-paper/60">VALABIL TOT ANUL</span>
-                            <span class="px-3 py-1.5 rounded-full <?= $ac['bg'] ?> text-paper text-xs font-600">Rezervă</span>
-                        </div>
-                    </div>
-                    <div class="notch top"></div><div class="notch bot"></div><div class="perf"></div>
-                </div>
-            </div>
+        <div class="flex flex-wrap gap-2 mt-5 text-sm font-bold">
+            <span class="rounded-full px-3.5 py-1.5 <?= $catImageUrl ? 'bg-paper/15 text-paper' : 'bg-paper-2 border border-ink/10' ?>"><?= (int) ($pagination['total'] ?? $eventCount) ?> activități</span>
+            <?php if (!empty($children)): ?>
+                <span class="rounded-full px-3.5 py-1.5 <?= $catImageUrl ? 'bg-paper/15 text-paper' : 'bg-paper-2 border border-ink/10' ?>"><?= count($children) ?> tipuri</span>
+            <?php endif; ?>
+            <?php if (!empty($featuredCities)): ?>
+                <span class="rounded-full px-3.5 py-1.5 <?= $catImageUrl ? 'bg-paper/15 text-paper' : 'bg-paper-2 border border-ink/10' ?>"><?= count($featuredCities) ?>+ orașe</span>
+            <?php endif; ?>
         </div>
     </div>
 </section>
-
-<!-- ============================== SUBCATEGORII (prominent grid) ============================== -->
-<?php if (!empty($children)): ?>
-<section class="px-4 pt-10 pb-2 mx-auto max-w-7xl sm:px-6">
-    <div class="flex items-end justify-between gap-6 mb-6">
-        <div>
-            <p class="font-mono text-xs tracking-[.2em] <?= $ac['text'] ?> mb-2">SUBCATEGORII</p>
-            <h2 class="text-2xl leading-tight font-display sm:text-3xl font-700">Alege tipul de <?= htmlspecialchars(mb_strtolower($catName)) ?></h2>
-        </div>
-        <p class="hidden font-mono text-xs sm:block text-ink-soft"><?= count($children) ?> opțiuni</p>
-    </div>
-    <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-        <?php foreach ($children as $child):
-            $childName = navFlatName($child['name'] ?? '');
-            $childSlug = $child['slug'] ?? '';
-            if (!$childName || !$childSlug) continue;
-            $childEmoji = $child['icon_emoji'] ?? '';
-            $childCount = (int) ($child['event_count'] ?? 0);
-        ?>
-            <a href="/<?= htmlspecialchars(bo_short_category_slug($child), ENT_QUOTES) ?>" class="group flex items-center gap-3 p-4 rounded-2xl border-2 border-ink/10 bg-paper hover:border-ink hover:<?= $ac['bg-light'] ?> transition-colors">
-                <?php if ($childEmoji): ?>
-                    <span class="grid place-items-center w-10 h-10 rounded-lg <?= $ac['bg-light'] ?> <?= $ac['text'] ?> shrink-0 group-hover:<?= $ac['bg'] ?> group-hover:text-paper transition-colors text-xl leading-none" aria-hidden="true"><?= htmlspecialchars($childEmoji) ?></span>
-                <?php else: ?>
-                    <span class="grid place-items-center w-10 h-10 rounded-lg <?= $ac['bg-light'] ?> <?= $ac['text'] ?> shrink-0 font-display text-lg font-700">
-                        <?= htmlspecialchars(mb_substr($childName, 0, 1)) ?>
-                    </span>
-                <?php endif; ?>
-                <div class="flex-1 min-w-0">
-                    <p class="text-sm leading-tight truncate font-600"><?= htmlspecialchars($childName) ?></p>
-                    <?php if ($childCount > 0): ?>
-                        <p class="text-xs text-ink-soft mt-0.5"><?= $childCount ?> <?= $childCount === 1 ? 'activitate' : 'activități' ?></p>
-                    <?php else: ?>
-                        <p class="text-xs text-ink-soft/60 mt-0.5">în curând</p>
-                    <?php endif; ?>
-                </div>
-            </a>
-        <?php endforeach; ?>
-    </div>
-</section>
-<?php endif; ?>
 
 <!-- ============================== GYG FILTERS + MAP VIEW ============================== -->
 <section x-data="categoryGyg(<?= htmlspecialchars($gygSeed, ENT_QUOTES) ?>)" x-init="init()" class="border-t border-ink/10">
@@ -595,6 +508,12 @@ include __DIR__ . '/includes/header.php';
             <div class="flex items-center gap-2 pb-1 overflow-x-auto">
                 <button @click="openMap()" class="shrink-0 rounded-full border-2 border-ink bg-ink px-4 py-2.5 text-sm font-bold text-paper transition hover:bg-vermilion">Map view</button>
                 <button @click="filtersModal=true" class="shrink-0 rounded-full border-2 border-ink bg-paper px-4 py-2.5 text-sm font-bold transition hover:bg-ink hover:text-paper">Filtre <span x-show="activeFilterCount()" class="ml-1 rounded-full bg-vermilion px-2 py-0.5 text-xs text-paper" x-text="activeFilterCount()"></span></button>
+                <?php if (!empty($children)): ?>
+                <button @click="subcatOpen = !subcatOpen" :class="subcatOpen ? 'bg-ink text-paper' : 'bg-paper'" class="shrink-0 inline-flex items-center gap-1.5 rounded-full border-2 border-ink px-4 py-2.5 text-sm font-bold transition hover:bg-ink hover:text-paper">
+                    Alege tipul de <?= htmlspecialchars(mb_strtolower($catName)) ?>
+                    <svg :class="subcatOpen && 'rotate-180'" class="w-3.5 h-3.5 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+                </button>
+                <?php endif; ?>
                 <template x-for="b in topButtons()" :key="b.key">
                     <button @click="openTopFilter(b.key)" class="shrink-0 rounded-full border-2 border-ink/10 bg-paper-2 px-4 py-2.5 text-sm font-bold transition hover:border-ink"><span x-text="b.label"></span><span x-show="topFilterActive(b.key)" class="ml-1 text-vermilion">•</span></button>
                 </template>
@@ -664,6 +583,43 @@ include __DIR__ . '/includes/header.php';
             </div>
         </div>
     </div>
+
+    <!-- Subcategorii (togglate din bara de filtre) -->
+    <?php if (!empty($children)): ?>
+    <div x-show="subcatOpen" x-collapse x-cloak class="border-b border-ink/10 bg-paper-2">
+        <div class="px-4 py-6 mx-auto max-w-7xl sm:px-6">
+            <div class="flex items-end justify-between gap-4 mb-4">
+                <h2 class="text-2xl leading-tight font-display sm:text-3xl font-700">Alege tipul de <?= htmlspecialchars(mb_strtolower($catName)) ?></h2>
+                <button @click="subcatOpen=false" class="hidden text-sm font-bold sm:inline text-ink-soft hover:text-vermilion"><?= count($children) ?> opțiuni · închide</button>
+            </div>
+            <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+                <?php foreach ($children as $child):
+                    $childName = navFlatName($child['name'] ?? '');
+                    $childSlug = $child['slug'] ?? '';
+                    if (!$childName || !$childSlug) continue;
+                    $childEmoji = $child['icon_emoji'] ?? '';
+                    $childCount = (int) ($child['event_count'] ?? 0);
+                ?>
+                    <a href="/<?= htmlspecialchars(bo_short_category_slug($child), ENT_QUOTES) ?>" class="group flex items-center gap-3 p-4 rounded-2xl border-2 border-ink/10 bg-paper hover:border-ink transition-colors">
+                        <?php if ($childEmoji): ?>
+                            <span class="grid place-items-center w-10 h-10 rounded-lg <?= $ac['bg-light'] ?> <?= $ac['text'] ?> shrink-0 group-hover:<?= $ac['bg'] ?> group-hover:text-paper transition-colors text-xl leading-none" aria-hidden="true"><?= htmlspecialchars($childEmoji) ?></span>
+                        <?php else: ?>
+                            <span class="grid place-items-center w-10 h-10 rounded-lg <?= $ac['bg-light'] ?> <?= $ac['text'] ?> shrink-0 font-display text-lg font-700"><?= htmlspecialchars(mb_substr($childName, 0, 1)) ?></span>
+                        <?php endif; ?>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm leading-tight truncate font-600"><?= htmlspecialchars($childName) ?></p>
+                            <?php if ($childCount > 0): ?>
+                                <p class="text-xs text-ink-soft mt-0.5"><?= $childCount ?> <?= $childCount === 1 ? 'activitate' : 'activități' ?></p>
+                            <?php else: ?>
+                                <p class="text-xs text-ink-soft/60 mt-0.5">în curând</p>
+                            <?php endif; ?>
+                        </div>
+                    </a>
+                <?php endforeach; ?>
+            </div>
+        </div>
+    </div>
+    <?php endif; ?>
 
     <!-- Results -->
     <div class="px-4 py-8 mx-auto max-w-7xl sm:px-6 lg:py-10">
@@ -920,7 +876,7 @@ function categoryGyg(seed) {
         ratingOptions: (seed && seed.ratingOptions) || [],
         priceCap: (seed && seed.priceMax) || 250,
         hasRatings: !!(seed && seed.hasRatings),
-        topFilterOpen: null, filtersModal: false, mapOpen: false,
+        topFilterOpen: null, filtersModal: false, mapOpen: false, subcatOpen: false,
         modalTab: 'price', sortBy: 'recommended',
         hoveredPin: null, selectedPin: null,
         filters: { search: '', categories: [], interests: [], travelerTypes: [], maxPrice: (seed && seed.priceMax) || 250, languages: [], durations: [], features: [], minRating: 0 },
