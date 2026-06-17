@@ -447,6 +447,7 @@ function fetchFeaturedCitiesFromAPI(): array|false {
             'slug' => $city['slug'],
             'image' => $city['image'] ?? '/assets/images/default-city.png',
             'count' => $city['events_count'] ?? 0,
+            'activities_count' => $city['activities_count'] ?? 0,
             'featured' => $index === 0 // First city is featured (larger card)
         ];
     }
@@ -629,6 +630,7 @@ function fetchEventCategoriesFromAPI(): array|false {
             'image' => $category['image'] ?? '',
             'color' => $category['color'] ?? '#A51C30',
             'count' => $category['event_count'] ?? 0,
+            'activities_count' => $category['activities_count'] ?? 0,
             'sort_order' => $category['sort_order'] ?? 0,
         ];
     }
