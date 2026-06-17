@@ -198,16 +198,46 @@ class EditNewsletter extends EditRecord
                     try {
                         $renderer = new NewsletterRenderer();
                         $html = $renderer->renderPreview($this->record);
+
+                        // Substitute the same placeholder set the real send
+                        // path resolves (SendNewsletterJob::replaceVariables).
+                        // Without this the test email arrives with a literal
+                        // {{unsubscribe_url}} in the default footer; the
+                        // recipient clicks and gets a broken relative URL.
+                        // Test sends don't have a real
+                        // MarketplaceNewsletterRecipient, so we generate a
+                        // preview-only unsubscribe URL — same shape as the
+                        // production one, but with id=0 so the endpoint
+                        // displays "link expired / invalid" rather than
+                        // actually unsubscribing anyone.
+                        $marketplace = static::getMarketplaceClient();
+                        $testEmail = $data['test_email'];
+                        $previewToken = hash('sha256', '0' . $testEmail . config('app.key'));
+                        $previewUnsubscribe = url("/api/marketplace-client/newsletter/unsubscribe?id=0&token={$previewToken}&preview=1");
+
+                        $variables = [
+                            'customer_name' => 'Test',
+                            'customer_email' => $testEmail,
+                            'marketplace_name' => $marketplace?->name ?? '',
+                            'unsubscribe_url' => $previewUnsubscribe,
+                        ];
+                        foreach ($variables as $key => $value) {
+                            $val = $value ?? '';
+                            $html = str_replace('{{' . $key . '}}', $val, $html);
+                            $html = str_replace('%7B%7B' . $key . '%7D%7D', $val, $html);
+                            $html = str_replace('%7b%7b' . $key . '%7d%7d', $val, $html);
+                        }
+
                         $subject = '[TEST] ' . ($this->record->subject ?: 'Newsletter');
                         \App\Http\Controllers\Api\MarketplaceClient\BaseController::sendViaMarketplace(
-                            static::getMarketplaceClient(),
-                            $data['test_email'],
+                            $marketplace,
+                            $testEmail,
                             'Test',
                             $subject,
                             $html,
                             ['template_slug' => 'newsletter_test']
                         );
-                        Notification::make()->title('Test trimis către ' . $data['test_email'])->success()->send();
+                        Notification::make()->title('Test trimis către ' . $testEmail)->success()->send();
                     } catch (\Throwable $e) {
                         Notification::make()->title('Trimiterea a eșuat')->body($e->getMessage())->danger()->send();
                     }
