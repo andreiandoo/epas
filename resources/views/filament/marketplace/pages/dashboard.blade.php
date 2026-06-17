@@ -900,18 +900,44 @@
     @push('scripts')
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
+        // jsdelivr fallback — observed transient ERR_SSL_PROTOCOL_ERROR on
+        // some networks. cdnjs serves a pinned UMD build of the same major
+        // version, so Chart.js APIs stay compatible.
+        if (typeof Chart === 'undefined') {
+            const fb = document.createElement('script');
+            fb.src = 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js';
+            fb.onload = function() {
+                if (typeof initCombinedChart === 'function') initCombinedChart();
+            };
+            document.head.appendChild(fb);
+        }
         document.addEventListener('DOMContentLoaded', function() { initCombinedChart(); });
         document.addEventListener('livewire:navigated', function() { initCombinedChart(); });
         document.addEventListener('charts-updated', function() { setTimeout(() => initCombinedChart(), 100); });
-        Livewire.hook('morph.updated', ({ el }) => {
-            if (el.querySelector && el.querySelector('#combinedChart')) {
-                setTimeout(() => initCombinedChart(), 100);
-            }
-        });
+        // Guard Livewire.hook — Filament occasionally surfaces a version
+        // mismatch between published assets and the installed Livewire
+        // package ("published Livewire assets are out of date" warning).
+        // When that happens the Livewire global is missing at parse time
+        // and an unguarded .hook() call throws ReferenceError, taking
+        // down every other initializer in this block.
+        if (typeof Livewire !== 'undefined' && Livewire?.hook) {
+            Livewire.hook('morph.updated', ({ el }) => {
+                if (el.querySelector && el.querySelector('#combinedChart')) {
+                    setTimeout(() => initCombinedChart(), 100);
+                }
+            });
+        }
 
         function initCombinedChart() {
             const ctx = document.getElementById('combinedChart');
             if (!ctx) return;
+            // Chart.js is loaded via jsdelivr CDN — if the CDN is unreachable
+            // (intermittent SSL_PROTOCOL_ERROR observed on some networks),
+            // bail out quietly instead of throwing a cascade of errors.
+            if (typeof Chart === 'undefined') {
+                console.warn('Chart.js failed to load — skipping chart render.');
+                return;
+            }
             const existing = Chart.getChart(ctx);
             if (existing) existing.destroy();
             const isDark = document.documentElement.classList.contains('dark');
