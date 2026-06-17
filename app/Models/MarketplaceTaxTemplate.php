@@ -2264,12 +2264,19 @@ class MarketplaceTaxTemplate extends Model
             }
         }
 
-        // Pass 3: add refund nominal per group → 1a = gross sold incl.
-        // refunded. Template's E = A − B brings it back down to active
-        // post-discount net.
-        foreach ($refundAllocByGroup as $key => $refundAmt) {
-            if (isset($groups[$key])) {
-                $groups[$key]['amount'] += $refundAmt;
+        // Pass 3: add refund per group → 1a = gross sold incl. refunded.
+        // Template's E = A − B brings it back down to active post-discount
+        // net. We also fold the refund's PER-PRICE breakdown into the
+        // group's tierMap so a 5 × 56 refund shows up as +5 in the 56-tier
+        // bucket (not as a value diff that reconciliation later smears
+        // into the lowest-price tier — that's how payout 3055 ended up
+        // with "133.33lei*3" on Cat III, which never had any refunds).
+        foreach ($refundAllocByGroup as $key => $refundData) {
+            if (!isset($groups[$key])) continue;
+            $groups[$key]['amount'] += (float) ($refundData['amount'] ?? 0);
+            $groups[$key]['qty'] += (int) ($refundData['qty'] ?? 0);
+            foreach (($refundData['tiers'] ?? []) as $priceKey => $tierQty) {
+                $groups[$key]['tierMap'][$priceKey] = ($groups[$key]['tierMap'][$priceKey] ?? 0) + $tierQty;
             }
         }
 
@@ -2399,10 +2406,20 @@ class MarketplaceTaxTemplate extends Model
         $refundTotal = (float) ($payout->refund_amount ?? 0);
         if ($refundTotal <= 0) return [];
 
+        // Pull `face_value` alongside `ticket_id` so the per-tier rebuild
+        // below uses each refund item's REAL collected price (e.g. 56 for
+        // a 70-catalog Cat I ticket sold with 20% promo), not an average.
+        // Without this, the tier label was synthetic — the bucket landed
+        // in whichever group key matched the parent row but with no real
+        // price attached, so the reconciliation pass smeared the refund
+        // value into the lowest-priced tier and produced absurd entries
+        // like "133.33lei*3" (payout 3055 incident, 2026-06-17).
         $refundItems = \App\Models\MarketplaceRefundItem::whereHas(
             'refundRequest',
             fn ($q) => $q->where('marketplace_payout_id', $payout->id)
-        )->get(['id', 'ticket_id']);
+        )
+            ->where('status', 'refunded')
+            ->get(['id', 'ticket_id', 'face_value']);
         $itemCount = $refundItems->count();
         if ($itemCount === 0) return [];
 
@@ -2418,7 +2435,10 @@ class MarketplaceTaxTemplate extends Model
             $rowByTicketType[$ttId] = $row;
         }
 
-        $perItem = $refundTotal / $itemCount;
+        // Returns a per-group descriptor instead of a plain amount so the
+        // caller can fold each refunded ticket back into the right tier
+        // bucket. Shape: ['amount' => float, 'qty' => int, 'tiers' =>
+        // [priceKey => qty]].
         $allocByGroup = [];
         foreach ($refundItems as $ri) {
             $ttId = (int) ($ticketTypeByTicket[$ri->ticket_id] ?? 0);
@@ -2426,7 +2446,14 @@ class MarketplaceTaxTemplate extends Model
             $row = $rowByTicketType[$ttId] ?? null;
             if (!$row) continue;
             $key = self::commissionGroupKey($row);
-            $allocByGroup[$key] = ($allocByGroup[$key] ?? 0) + $perItem;
+            if (!isset($allocByGroup[$key])) {
+                $allocByGroup[$key] = ['amount' => 0.0, 'qty' => 0, 'tiers' => []];
+            }
+            $face = (float) ($ri->face_value ?? 0);
+            $allocByGroup[$key]['amount'] += $face;
+            $allocByGroup[$key]['qty'] += 1;
+            $priceKey = (string) round($face, 2);
+            $allocByGroup[$key]['tiers'][$priceKey] = ($allocByGroup[$key]['tiers'][$priceKey] ?? 0) + 1;
         }
 
         return $allocByGroup;
