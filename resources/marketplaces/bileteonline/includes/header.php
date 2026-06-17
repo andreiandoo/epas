@@ -196,7 +196,6 @@ $tabPlacesLabel = ($ctxType === 'city' || $ctxType === 'activity')
                         class="mx-auto flex h-12 w-full max-w-[620px] items-center gap-3 rounded-full border-2 border-ink/15 bg-white px-4 text-left transition hover:border-ink/40 hover:bg-paper-2">
                     <svg viewBox="0 0 24 24" class="w-5 h-5 shrink-0 text-ink-soft" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
                     <span class="flex-1 min-w-0 text-sm font-bold truncate text-ink-soft" x-text="searchPlaceholder()"></span>
-                    <span class="hidden rounded-full bg-paper-2 px-2.5 py-1 text-[11px] font-bold text-ink-soft lg:inline">Ctrl K</span>
                 </button>
             </div>
 
@@ -343,11 +342,10 @@ $tabPlacesLabel = ($ctxType === 'city' || $ctxType === 'activity')
                             <div class="grid gap-4 mt-7 md:grid-cols-2 xl:grid-cols-3">
                                 <?php foreach ($navCities as $city): ?>
                                     <a href="<?= htmlspecialchars($city['href'], ENT_QUOTES) ?>" @click="mega=null" class="group rounded-[1.5rem] border border-ink/10 bg-paper-2 p-5 transition hover:-translate-y-0.5 hover:bg-paper hover:shadow-deep">
-                                        <div class="flex items-start justify-between gap-4">
-                                            <div>
-                                                <span class="px-3 py-1 text-xs font-bold rounded-full bg-paper text-ink-soft">Oraș</span>
-                                                <p class="mt-4 text-3xl font-bold leading-none font-display group-hover:text-vermilion"><?= htmlspecialchars($city['label']) ?></p>
-                                                <p class="mt-2 text-sm text-ink-soft">Activități și experiențe locale</p>
+                                        <div class="flex items-center justify-between gap-4">
+                                            <div class="min-w-0">
+                                                <p class="text-2xl font-bold leading-none truncate font-display group-hover:text-vermilion"><?= htmlspecialchars($city['label']) ?></p>
+                                                <p class="mt-2 text-sm text-ink-soft"><?php if (!empty($city['count'])): ?><?= (int) $city['count'] ?> activități și experiențe locale<?php else: ?>Activități și experiențe locale<?php endif; ?></p>
                                             </div>
                                             <span class="text-2xl transition group-hover:translate-x-1">→</span>
                                         </div>
@@ -369,11 +367,10 @@ $tabPlacesLabel = ($ctxType === 'city' || $ctxType === 'activity')
                             <div class="grid gap-4 mt-7 md:grid-cols-2 xl:grid-cols-3">
                                 <?php foreach ($navCategories as $cat): ?>
                                     <a href="<?= htmlspecialchars($cat['href'], ENT_QUOTES) ?>" @click="mega=null" class="group rounded-[1.5rem] border border-ink/10 bg-paper-2 p-5 transition hover:-translate-y-0.5 hover:bg-paper hover:shadow-deep">
-                                        <div class="flex items-start justify-between gap-4">
-                                            <div>
-                                                <span class="px-3 py-1 text-xs font-bold rounded-full bg-paper text-ink-soft"><?= !empty($cat['icon_emoji']) ? htmlspecialchars($cat['icon_emoji']) . ' ' : '' ?><?= htmlspecialchars($cat['count'] ?? '') ?></span>
-                                                <p class="mt-4 text-3xl font-bold leading-none font-display group-hover:text-vermilion"><?= htmlspecialchars($cat['label']) ?></p>
-                                                <p class="mt-2 text-sm text-ink-soft">Vezi activitățile din categorie</p>
+                                        <div class="flex items-center justify-between gap-4">
+                                            <div class="flex items-center min-w-0 gap-3">
+                                                <?php if (!empty($cat['icon_emoji'])): ?><span class="text-2xl shrink-0" aria-hidden="true"><?= htmlspecialchars($cat['icon_emoji']) ?></span><?php endif; ?>
+                                                <p class="text-2xl font-bold leading-none truncate font-display group-hover:text-vermilion"><?= htmlspecialchars($cat['label']) ?></p>
                                             </div>
                                             <span class="text-2xl transition group-hover:translate-x-1">→</span>
                                         </div>
@@ -410,10 +407,10 @@ $tabPlacesLabel = ($ctxType === 'city' || $ctxType === 'activity')
                 <div x-show="mega==='inspiration'" x-cloak class="relative mx-auto grid max-w-[1500px] grid-cols-[300px_1fr] gap-0 px-6 py-6">
                     <aside class="pr-5 border-r border-ink/10">
                         <p class="mb-3 px-4 font-mono text-xs tracking-[.18em] text-ink-soft">INSPIRAȚIE</p>
-                        <a href="/ghiduri" @click="mega=null" class="flex items-center justify-between w-full px-4 py-3 font-bold text-left transition rounded-2xl bg-ink text-paper hover:bg-vermilion"><span>Toate ghidurile</span><span>→</span></a>
-                        <a href="/activitati-weekend" @click="mega=null" class="flex items-center justify-between w-full px-4 py-3 mt-1 font-bold text-left transition rounded-2xl hover:bg-paper-2"><span>Idei de weekend</span><span>→</span></a>
-                        <a href="/activitati-copii" @click="mega=null" class="flex items-center justify-between w-full px-4 py-3 mt-1 font-bold text-left transition rounded-2xl hover:bg-paper-2"><span>Cu copiii</span><span>→</span></a>
-                        <a href="/card-cadou" @click="mega=null" class="flex items-center justify-between w-full px-4 py-3 mt-1 font-bold text-left transition rounded-2xl hover:bg-paper-2"><span>Experiențe cadou</span><span>→</span></a>
+                        <a href="/ghiduri" @mouseenter="inspTab='guides'" @focus="inspTab='guides'" @click="mega=null" :class="inspTab==='guides' ? 'bg-ink text-paper' : 'hover:bg-paper-2'" class="flex items-center justify-between w-full px-4 py-3 font-bold text-left transition rounded-2xl"><span>Toate ghidurile</span><span>→</span></a>
+                        <a href="/activitati-weekend" @mouseenter="inspTab='weekend'" @focus="inspTab='weekend'" @click="mega=null" :class="inspTab==='weekend' ? 'bg-ink text-paper' : 'hover:bg-paper-2'" class="flex items-center justify-between w-full px-4 py-3 mt-1 font-bold text-left transition rounded-2xl"><span>Idei de weekend</span><span>→</span></a>
+                        <a href="/activitati-copii" @mouseenter="inspTab='kids'" @focus="inspTab='kids'" @click="mega=null" :class="inspTab==='kids' ? 'bg-ink text-paper' : 'hover:bg-paper-2'" class="flex items-center justify-between w-full px-4 py-3 mt-1 font-bold text-left transition rounded-2xl"><span>Cu copiii</span><span>→</span></a>
+                        <a href="/card-cadou" @mouseenter="inspTab='gift'" @focus="inspTab='gift'" @click="mega=null" :class="inspTab==='gift' ? 'bg-ink text-paper' : 'hover:bg-paper-2'" class="flex items-center justify-between w-full px-4 py-3 mt-1 font-bold text-left transition rounded-2xl"><span>Experiențe cadou</span><span>→</span></a>
 
                         <div class="mt-5 rounded-[1.5rem] border border-forest/20 bg-mint p-5">
                             <p class="font-bold text-forest">Ai puncte bonus?</p>
@@ -423,22 +420,85 @@ $tabPlacesLabel = ($ctxType === 'city' || $ctxType === 'activity')
                     </aside>
 
                     <section class="pl-6">
-                        <div class="flex items-end justify-between gap-6">
-                            <div>
-                                <p class="font-mono text-xs tracking-[.18em] text-ink-soft">GHIDURI</p>
-                                <h2 class="mt-2 text-5xl font-bold leading-none font-display">Idei și recomandări editoriale</h2>
-                                <p class="max-w-3xl mt-3 text-ink-soft">Ghiduri pentru orașe, weekenduri, atracții și activități de pus pe listă.</p>
+                        <!-- TAB: Toate ghidurile -->
+                        <div x-show="inspTab==='guides'">
+                            <div class="flex items-end justify-between gap-6">
+                                <div>
+                                    <p class="font-mono text-xs tracking-[.18em] text-ink-soft">GHIDURI</p>
+                                    <h2 class="mt-2 text-5xl font-bold leading-none font-display">Idei și recomandări editoriale</h2>
+                                    <p class="max-w-3xl mt-3 text-ink-soft">Ghiduri pentru orașe, weekenduri, atracții și activități de pus pe listă.</p>
+                                </div>
+                                <a href="/ghiduri" @click="mega=null" class="px-5 py-3 font-bold transition rounded-full shrink-0 bg-ink text-paper hover:bg-vermilion">Toate ghidurile</a>
                             </div>
-                            <a href="/ghiduri" @click="mega=null" class="px-5 py-3 font-bold transition rounded-full shrink-0 bg-ink text-paper hover:bg-vermilion">Toate ghidurile</a>
+                            <div class="grid gap-4 mt-7 md:grid-cols-2 xl:grid-cols-3">
+                                <?php foreach ($navGuides as $guide): ?>
+                                    <a href="<?= htmlspecialchars($guide['href'], ENT_QUOTES) ?>" @click="mega=null" class="group rounded-[1.5rem] border border-ink/10 bg-paper-2 p-5 transition hover:-translate-y-0.5 hover:bg-paper hover:shadow-deep">
+                                        <span class="px-3 py-1 text-xs font-bold rounded-full bg-paper text-ink-soft"><?= htmlspecialchars($guide['meta']) ?></span>
+                                        <p class="mt-4 text-3xl font-bold leading-none font-display group-hover:text-vermilion"><?= htmlspecialchars($guide['title']) ?></p>
+                                        <p class="mt-2 text-sm text-ink-soft">Citește ghidul →</p>
+                                    </a>
+                                <?php endforeach; ?>
+                            </div>
                         </div>
-                        <div class="grid gap-4 mt-7 md:grid-cols-2 xl:grid-cols-3">
-                            <?php foreach ($navGuides as $guide): ?>
-                                <a href="<?= htmlspecialchars($guide['href'], ENT_QUOTES) ?>" @click="mega=null" class="group rounded-[1.5rem] border border-ink/10 bg-paper-2 p-5 transition hover:-translate-y-0.5 hover:bg-paper hover:shadow-deep">
-                                    <span class="px-3 py-1 text-xs font-bold rounded-full bg-paper text-ink-soft"><?= htmlspecialchars($guide['meta']) ?></span>
-                                    <p class="mt-4 text-3xl font-bold leading-none font-display group-hover:text-vermilion"><?= htmlspecialchars($guide['title']) ?></p>
-                                    <p class="mt-2 text-sm text-ink-soft">Citește ghidul →</p>
+
+                        <?php
+                        // Reusable intent panel for weekend / kids tabs — real city-scoped links.
+                        $inspIntentPanel = function (string $kicker, string $title, string $desc, string $allHref, string $allLabel, string $intentSlug, string $cityPrefix) use ($navCities) {
+                            ?>
+                            <div class="flex items-end justify-between gap-6">
+                                <div>
+                                    <p class="font-mono text-xs tracking-[.18em] text-ink-soft"><?= htmlspecialchars($kicker) ?></p>
+                                    <h2 class="mt-2 text-5xl font-bold leading-none font-display"><?= htmlspecialchars($title) ?></h2>
+                                    <p class="max-w-3xl mt-3 text-ink-soft"><?= htmlspecialchars($desc) ?></p>
+                                </div>
+                                <a href="<?= htmlspecialchars($allHref, ENT_QUOTES) ?>" @click="mega=null" class="px-5 py-3 font-bold transition rounded-full shrink-0 bg-ink text-paper hover:bg-vermilion"><?= htmlspecialchars($allLabel) ?></a>
+                            </div>
+                            <div class="grid gap-4 mt-7 md:grid-cols-2 xl:grid-cols-3">
+                                <?php foreach (array_slice($navCities, 0, 6) as $city): ?>
+                                    <a href="/<?= htmlspecialchars($city['slug'], ENT_QUOTES) ?>/<?= htmlspecialchars($intentSlug, ENT_QUOTES) ?>" @click="mega=null" class="group rounded-[1.5rem] border border-ink/10 bg-paper-2 p-5 transition hover:-translate-y-0.5 hover:bg-paper hover:shadow-deep">
+                                        <div class="flex items-center justify-between gap-4">
+                                            <p class="text-2xl font-bold leading-none truncate font-display group-hover:text-vermilion"><?= htmlspecialchars($cityPrefix) ?> <?= htmlspecialchars($city['label']) ?></p>
+                                            <span class="text-2xl transition group-hover:translate-x-1">→</span>
+                                        </div>
+                                    </a>
+                                <?php endforeach; ?>
+                            </div>
+                            <?php
+                        };
+                        ?>
+
+                        <!-- TAB: Idei de weekend -->
+                        <div x-show="inspTab==='weekend'" x-cloak>
+                            <?php $inspIntentPanel('WEEKEND', 'Idei de weekend', 'Activități numai bune pentru sâmbătă și duminică, în orașele tale preferate.', '/activitati-weekend', 'Toate ideile', 'activitati-weekend', 'Weekend în'); ?>
+                        </div>
+
+                        <!-- TAB: Cu copiii -->
+                        <div x-show="inspTab==='kids'" x-cloak>
+                            <?php $inspIntentPanel('CU COPIII', 'Activități cu copiii', 'Experiențe sigure, interactive și educative, potrivite pentru cei mici.', '/activitati-copii', 'Toate ideile', 'activitati-copii', 'Cu copiii în'); ?>
+                        </div>
+
+                        <!-- TAB: Experiențe cadou -->
+                        <div x-show="inspTab==='gift'" x-cloak>
+                            <div class="flex items-end justify-between gap-6">
+                                <div>
+                                    <p class="font-mono text-xs tracking-[.18em] text-ink-soft">CADOU</p>
+                                    <h2 class="mt-2 text-5xl font-bold leading-none font-display">Experiențe cadou</h2>
+                                    <p class="max-w-3xl mt-3 text-ink-soft">Oferă un card cadou bilete.online — valabil la orice activitate de pe platformă.</p>
+                                </div>
+                                <a href="/card-cadou" @click="mega=null" class="px-5 py-3 font-bold transition rounded-full shrink-0 bg-ink text-paper hover:bg-vermilion">Vezi cardul cadou</a>
+                            </div>
+                            <div class="grid gap-4 mt-7 md:grid-cols-2">
+                                <a href="/card-cadou" @click="mega=null" class="rounded-[1.5rem] bg-mint p-6 transition hover:-translate-y-0.5 hover:shadow-deep">
+                                    <p class="font-mono text-xs tracking-[.16em] text-forest">CARD CADOU</p>
+                                    <p class="mt-2 text-4xl font-bold leading-none font-display">Orice sumă, orice activitate</p>
+                                    <p class="mt-3 text-sm text-ink-soft">Se folosește la escape rooms, muzee, tururi, experiențe pentru copii și multe altele.</p>
                                 </a>
-                            <?php endforeach; ?>
+                                <a href="/card-cadou" @click="mega=null" class="group rounded-[1.5rem] border border-ink/10 bg-paper-2 p-6 transition hover:-translate-y-0.5 hover:bg-paper hover:shadow-deep">
+                                    <p class="text-3xl font-bold leading-none font-display group-hover:text-vermilion">Cumpără un card cadou</p>
+                                    <p class="mt-2 text-sm text-ink-soft">Livrare instant pe email, cu cod unic. Îl alegi în câteva secunde.</p>
+                                    <p class="mt-4 text-sm font-bold text-vermilion">Spre card cadou →</p>
+                                </a>
+                            </div>
                         </div>
                     </section>
                 </div>
@@ -649,6 +709,7 @@ function bileteOnlineHeader(seed) {
         languageOpen: false,
         mega: null,
         megaTab: 'places',
+        inspTab: 'guides',
         megaCloseTimer: null,
         searchQuery: '',
         loggedIn: false,

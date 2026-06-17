@@ -75,6 +75,7 @@ function navGetCategories(?int $limit = 6): array
             'count' => $count > 0
                 ? ($count . ' ' . ($count === 1 ? 'activitate' : 'activități'))
                 : 'în curând',
+            'count_n' => $count,
             'accent' => navAccentFromHex($cat['color'] ?? null),
             'icon_emoji' => $cat['icon_emoji'] ?? '🎫',
         ];
@@ -105,6 +106,7 @@ function navGetCities(?int $limit = 8): array
             'label' => $name,
             'href' => '/' . ltrim($slug, '/'),
             'slug' => $slug,
+            'count' => (int) ($c['count'] ?? $c['events_count'] ?? 0),
         ];
 
         if ($limit !== null && count($items) >= $limit) break;
