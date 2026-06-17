@@ -353,7 +353,15 @@ class ViewTicket extends ViewRecord
             $heightPt = round($size['height'] * 2.8346, 2);
             $bgColor = $template->template_data['meta']['background']['color'] ?? '#ffffff';
 
-            $html = <<<HTML
+            // Seating-map second page — fully gated. When the gate fails
+            // (default everywhere) $seatingPageHtml stays empty and the
+            // HTML below is byte-identical to the original ticket PDF.
+            $seatingPageHtml = \App\Support\SeatingPdfInjector::renderPageFor($ticket, $widthPt, $heightPt);
+
+            if ($seatingPageHtml === '') {
+                // Original single-page HTML — preserved byte-for-byte so
+                // every live ticket renders identically.
+                $html = <<<HTML
 <!DOCTYPE html>
 <html>
 <head>
@@ -369,6 +377,31 @@ class ViewTicket extends ViewRecord
 </body>
 </html>
 HTML;
+            } else {
+                // Multi-page variant: ticket content lives inside a fixed-
+                // size div (preserving its in-template positioning) so the
+                // body can flow to a second page. body's fixed height +
+                // overflow:hidden would suppress page-break-before, so they
+                // move onto .ep-ticket-page instead.
+                $html = <<<HTML
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        @page { margin: 0; size: {$widthPt}pt {$heightPt}pt; }
+        * { margin: 0; padding: 0; }
+        body { margin: 0; padding: 0; background-color: {$bgColor}; font-family: 'DejaVu Sans', sans-serif; }
+        .ep-ticket-page { width: {$widthPt}pt; height: {$heightPt}pt; overflow: hidden; position: relative; }
+    </style>
+</head>
+<body>
+<div class="ep-ticket-page">{$content}</div>
+{$seatingPageHtml}
+</body>
+</html>
+HTML;
+            }
 
             Log::channel('marketplace')->info('Ticket PDF HTML generated', [
                 'ticket_id' => $ticket->id,

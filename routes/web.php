@@ -490,7 +490,15 @@ Route::middleware(['web', 'auth:marketplace_admin'])->prefix('marketplace')->gro
                 $heightPt = round($size['height'] * 2.8346, 2);
                 $bgColor = $template->template_data['meta']['background']['color'] ?? '#ffffff';
 
-                $html = "<!DOCTYPE html><html><head><meta charset='UTF-8'><style>@page{margin:0;size:{$widthPt}pt {$heightPt}pt;}*{margin:0;padding:0;}body{margin:0;padding:0;width:{$widthPt}pt;height:{$heightPt}pt;background-color:{$bgColor};font-family:'DejaVu Sans',sans-serif;overflow:hidden;}</style></head><body>{$content}</body></html>";
+                // Seating-map second page — gated, falls back to empty string
+                // when off. Same wrapper switch as ViewTicket downloadCustomTemplate.
+                $seatingPageHtml = \App\Support\SeatingPdfInjector::renderPageFor($ticket, $widthPt, $heightPt);
+
+                if ($seatingPageHtml === '') {
+                    $html = "<!DOCTYPE html><html><head><meta charset='UTF-8'><style>@page{margin:0;size:{$widthPt}pt {$heightPt}pt;}*{margin:0;padding:0;}body{margin:0;padding:0;width:{$widthPt}pt;height:{$heightPt}pt;background-color:{$bgColor};font-family:'DejaVu Sans',sans-serif;overflow:hidden;}</style></head><body>{$content}</body></html>";
+                } else {
+                    $html = "<!DOCTYPE html><html><head><meta charset='UTF-8'><style>@page{margin:0;size:{$widthPt}pt {$heightPt}pt;}*{margin:0;padding:0;}body{margin:0;padding:0;background-color:{$bgColor};font-family:'DejaVu Sans',sans-serif;}.ep-ticket-page{width:{$widthPt}pt;height:{$heightPt}pt;overflow:hidden;position:relative;}</style></head><body><div class=\"ep-ticket-page\">{$content}</div>{$seatingPageHtml}</body></html>";
+                }
 
                 $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadHTML($html)
                     ->setPaper([0, 0, $widthPt, $heightPt])

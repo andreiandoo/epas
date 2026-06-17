@@ -123,20 +123,25 @@ class TicketsController extends BaseController
                     $data = $variableService->resolveTicketData($ticket, $locale);
                     $content = $generator->renderToHtml($template->template_data, $data, $locale);
                     if (!empty(trim($content))) {
-                        $pages[] = $content;
+                        // Wrap each ticket in a relative container so position:fixed
+                        // elements are scoped to their page, not the whole document.
+                        $wrapped = "<div style=\"position: relative; width: {$widthPt}pt; height: {$heightPt}pt; overflow: hidden; background-color: {$bgColor};\">" .
+                            str_replace('position: fixed;', 'position: absolute;', $content) .
+                            "</div>";
+                        $pages[] = $wrapped;
+
+                        // Inject the seating-map page right after the ticket (per-ticket)
+                        // so a multi-ticket order produces ticket → map → ticket → map
+                        // when the feature is on. Gate returns '' when off → no-op.
+                        $seatingPageHtml = \App\Support\SeatingPdfInjector::renderPageFor($ticket, $widthPt, $heightPt);
+                        if ($seatingPageHtml !== '') {
+                            $pages[] = $seatingPageHtml;
+                        }
                     }
                 }
 
                 if (!empty($pages)) {
-                    // Wrap each page in a relative container so position:fixed
-                    // elements are scoped to their page, not the whole document
-                    $wrappedPages = array_map(fn ($content) =>
-                        "<div style=\"position: relative; width: {$widthPt}pt; height: {$heightPt}pt; overflow: hidden; background-color: {$bgColor};\">" .
-                        str_replace('position: fixed;', 'position: absolute;', $content) .
-                        "</div>",
-                        $pages
-                    );
-                    $pagesHtml = implode('<div style="page-break-after: always;"></div>', $wrappedPages);
+                    $pagesHtml = implode('<div style="page-break-after: always;"></div>', $pages);
                     $html = "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><style>@page { margin: 0; size: {$widthPt}pt {$heightPt}pt; } * { margin: 0; padding: 0; } body { margin: 0; padding: 0; font-family: 'DejaVu Sans', sans-serif; }</style></head><body>{$pagesHtml}</body></html>";
 
                     $pdf = Pdf::loadHTML($html)
@@ -218,7 +223,14 @@ class TicketsController extends BaseController
                     $heightPt = round($size['height'] * 2.8346, 2);
                     $bgColor = $template->template_data['meta']['background']['color'] ?? '#ffffff';
 
-                    $html = "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><style>@page { margin: 0; size: {$widthPt}pt {$heightPt}pt; } * { margin: 0; padding: 0; } body { margin: 0; padding: 0; width: {$widthPt}pt; height: {$heightPt}pt; background-color: {$bgColor}; font-family: 'DejaVu Sans', sans-serif; overflow: hidden; }</style></head><body>{$content}</body></html>";
+                    // Seating-map second page — gated, empty string when off.
+                    $seatingPageHtml = \App\Support\SeatingPdfInjector::renderPageFor($ticket, $widthPt, $heightPt);
+
+                    if ($seatingPageHtml === '') {
+                        $html = "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><style>@page { margin: 0; size: {$widthPt}pt {$heightPt}pt; } * { margin: 0; padding: 0; } body { margin: 0; padding: 0; width: {$widthPt}pt; height: {$heightPt}pt; background-color: {$bgColor}; font-family: 'DejaVu Sans', sans-serif; overflow: hidden; }</style></head><body>{$content}</body></html>";
+                    } else {
+                        $html = "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><style>@page { margin: 0; size: {$widthPt}pt {$heightPt}pt; } * { margin: 0; padding: 0; } body { margin: 0; padding: 0; background-color: {$bgColor}; font-family: 'DejaVu Sans', sans-serif; } .ep-ticket-page { width: {$widthPt}pt; height: {$heightPt}pt; overflow: hidden; position: relative; }</style></head><body><div class=\"ep-ticket-page\">{$content}</div>{$seatingPageHtml}</body></html>";
+                    }
 
                     $pdf = Pdf::loadHTML($html)
                         ->setPaper([0, 0, $widthPt, $heightPt])

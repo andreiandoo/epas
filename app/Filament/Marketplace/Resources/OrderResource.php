@@ -2489,18 +2489,21 @@ class OrderResource extends Resource
                 $data = $variableService->resolveTicketData($ticket, $locale);
                 $content = $generator->renderToHtml($template->template_data, $data, $locale);
                 if (!empty(trim($content))) {
-                    $pages[] = $content;
+                    $wrapped = "<div style=\"position: relative; width: {$widthPt}pt; height: {$heightPt}pt; overflow: hidden; background-color: {$bgColor};\">" .
+                        str_replace('position: fixed;', 'position: absolute;', $content) .
+                        "</div>";
+                    $pages[] = $wrapped;
+
+                    // Seating-map page per ticket — gated, no-op when off.
+                    $seatingPageHtml = \App\Support\SeatingPdfInjector::renderPageFor($ticket, $widthPt, $heightPt);
+                    if ($seatingPageHtml !== '') {
+                        $pages[] = $seatingPageHtml;
+                    }
                 }
             }
 
             if (!empty($pages)) {
-                $wrappedPages = array_map(fn ($content) =>
-                    "<div style=\"position: relative; width: {$widthPt}pt; height: {$heightPt}pt; overflow: hidden; background-color: {$bgColor};\">" .
-                    str_replace('position: fixed;', 'position: absolute;', $content) .
-                    "</div>",
-                    $pages
-                );
-                $pagesHtml = implode('<div style="page-break-after: always;"></div>', $wrappedPages);
+                $pagesHtml = implode('<div style="page-break-after: always;"></div>', $pages);
                 $html = "<!DOCTYPE html><html><head><meta charset='UTF-8'><style>@page{margin:0;size:{$widthPt}pt {$heightPt}pt;}*{margin:0;padding:0;}body{margin:0;padding:0;font-family:'DejaVu Sans',sans-serif;}</style></head><body>{$pagesHtml}</body></html>";
 
                 $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadHTML($html)
