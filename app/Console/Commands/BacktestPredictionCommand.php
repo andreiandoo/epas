@@ -110,35 +110,37 @@ class BacktestPredictionCommand extends Command
         }
         $this->line('');
 
-        // Backtest each cutoff with both alignment modes
+        // Backtest each cutoff with three alignment / smoothing modes
         $this->line('Backtest per cutoff (predicted full-month vs actual):');
-        $header = sprintf('  %-8s | %-22s | %-22s | %s',
-            'cutoff', 'OLD (date-aligned)', 'NEW (dow-aligned +' . $dowShift . ')', 'actual');
+        $header = sprintf('  %-8s | %-22s | %-22s | %-22s | %s',
+            'cutoff', 'OLD (date-aligned)', 'NEW (dow-aligned +' . $dowShift . ')',
+            'PROPOSED (caps+geomean+MTD)', 'actual');
         $this->line($header);
         $this->line('  ' . str_repeat('-', strlen($header) - 2));
         foreach ($cutoffs as $cutoff) {
             $predOld = $this->predict($current, $prev, $cutoff, $daysInMonth, $prevDaysInMonth, $monthStart, $tz, /*shift*/ 0);
             $predNew = $this->predict($current, $prev, $cutoff, $daysInMonth, $prevDaysInMonth, $monthStart, $tz, /*shift*/ $dowShift);
+            $predPro = $this->predictProposed($current, $prev, $cutoff, $daysInMonth, $prevDaysInMonth, $monthStart, $tz, $dowShift);
             $oldSum = array_sum($predOld);
             $newSum = array_sum($predNew);
+            $proSum = array_sum($predPro);
             $oldErr = (($oldSum - $actualTotal) / max($actualTotal, 1)) * 100;
             $newErr = (($newSum - $actualTotal) / max($actualTotal, 1)) * 100;
-            $this->line(sprintf('  day %-4d | %12s (%+.1f%%) | %12s (%+.1f%%) | %s',
+            $proErr = (($proSum - $actualTotal) / max($actualTotal, 1)) * 100;
+            $this->line(sprintf('  day %-4d | %12s (%+.1f%%) | %12s (%+.1f%%) | %12s (%+.1f%%) | %s',
                 $cutoff,
-                number_format($oldSum, 0),
-                $oldErr,
-                number_format($newSum, 0),
-                $newErr,
+                number_format($oldSum, 0), $oldErr,
+                number_format($newSum, 0), $newErr,
+                number_format($proSum, 0), $proErr,
                 number_format($actualTotal, 0)
             ));
         }
         $this->line('');
 
-        // Per-day breakdown at the LATEST cutoff — shows where the model
-        // misses badly day-by-day.
+        // Per-day breakdown at the LATEST cutoff for the PROPOSED model
         $lastCutoff = end($cutoffs) ?: max(5, intdiv($daysInMonth, 2));
-        $predLast = $this->predict($current, $prev, $lastCutoff, $daysInMonth, $prevDaysInMonth, $monthStart, $tz, $dowShift);
-        $this->line("Per-day errors at cutoff day {$lastCutoff} (new DOW-aligned):");
+        $predLast = $this->predictProposed($current, $prev, $lastCutoff, $daysInMonth, $prevDaysInMonth, $monthStart, $tz, $dowShift);
+        $this->line("Per-day errors at cutoff day {$lastCutoff} (PROPOSED model):");
         $this->line('  day | DOW | predicted | actual    | error    | error%');
         $this->line('  ' . str_repeat('-', 60));
         for ($i = $lastCutoff; $i < $daysInMonth; $i++) {
@@ -242,6 +244,124 @@ class BacktestPredictionCommand extends Command
                 } else {
                     $out[] = round($overallAvg);
                 }
+            }
+        }
+        return $out;
+    }
+
+    /**
+     * Proposed predictor — A+B+C combined:
+     *
+     *   A. Cap on every growth ratio at [0.3, 3.5] — anything outside is
+     *      a likely outlier (event-driven spike, rare promo, data error)
+     *      and bleeding it forward poisons every future day.
+     *
+     *   B. Geometric mean (not arithmetic) when 2+ samples available —
+     *      sqrt(0.5 × 5) = 1.58 vs arithmetic 2.75. Far more robust to
+     *      single big-day spikes that dominate early-month ratios.
+     *
+     *   C. Month-to-date pacing for cutoff < 7 — when we don't have
+     *      enough completed days for the per-DOW model to be statistically
+     *      meaningful (max ~1 sample per DOW after 5 days), fall back to
+     *      "we're at X% of last year's same-cutoff pace, project pro-rata".
+     *      Smoother extrapolation that ignores DOW-level noise until
+     *      enough data accumulates.
+     */
+    private function predictProposed(
+        array $current,
+        array $prev,
+        int $cutoffDay,
+        int $daysInMonth,
+        int $prevDaysInMonth,
+        Carbon $monthStart,
+        string $tz,
+        int $shift
+    ): array {
+        $prevAt = function (int $i) use ($prev, $shift, $prevDaysInMonth): float {
+            $idx = $i + $shift;
+            if ($idx < 0 || $idx >= count($prev) || $idx >= $prevDaysInMonth) return 0.0;
+            return (float) ($prev[$idx] ?? 0);
+        };
+
+        $clamp = fn (float $x): float => max(0.3, min(3.5, $x));
+        $geomean = function (array $vals) {
+            $vals = array_filter($vals, fn ($v) => $v > 0);
+            if (empty($vals)) return null;
+            if (count($vals) === 1) return reset($vals);
+            $sumLog = 0.0;
+            foreach ($vals as $v) $sumLog += log($v);
+            return exp($sumLog / count($vals));
+        };
+
+        // Collect per-DOW ratios + overall MTD bookkeeping
+        $dowRatios = [];
+        $allRatios = [];
+        $completedTotal = 0.0;
+        $completedDays = 0;
+        for ($i = 0; $i < $cutoffDay; $i++) {
+            $dow = (int) $monthStart->copy()->addDays($i)->dayOfWeek;
+            $curr = (float) ($current[$i] ?? 0);
+            $prv  = $prevAt($i);
+            if ($prv > 0 && $curr > 0) {
+                $dowRatios[$dow][] = $curr / $prv;
+                $allRatios[] = $curr / $prv;
+            }
+            $completedTotal += $curr;
+            if ($curr > 0) $completedDays++;
+        }
+        $dowGrowth = [];
+        for ($dow = 0; $dow < 7; $dow++) {
+            $g = $geomean($dowRatios[$dow] ?? []);
+            $dowGrowth[$dow] = $g !== null ? $clamp($g) : null;
+        }
+        $overallGeoGrowth = $geomean($allRatios);
+        $overallGrowth = $overallGeoGrowth !== null ? $clamp($overallGeoGrowth) : null;
+        $overallAvg = $completedDays > 0 ? $completedTotal / $completedDays : 0.0;
+
+        // Early cutoff — use MTD pacing instead of per-day extrapolation.
+        // Prev MTD aligned by shift so the pace ratio uses same-DOW days.
+        $useMtdPacing = $cutoffDay < 7;
+        $mtdRemaining = null;
+        if ($useMtdPacing) {
+            $currMtd = $completedTotal;
+            $prevMtdAligned = 0.0;
+            for ($j = 0; $j < $cutoffDay; $j++) $prevMtdAligned += $prevAt($j);
+            $prevTotalAligned = 0.0;
+            for ($j = 0; $j < $daysInMonth; $j++) $prevTotalAligned += $prevAt($j);
+            if ($prevMtdAligned > 0 && $prevTotalAligned > 0) {
+                $pacePct = $prevMtdAligned / $prevTotalAligned;
+                $projectedTotal = $currMtd / $pacePct;
+                $mtdRemaining = max(0.0, $projectedTotal - $currMtd);
+            }
+        }
+
+        $out = [];
+        // Pre-compute prev remaining sum (used for proportional pacing distribution)
+        $prevRemainingSum = 0.0;
+        for ($j = $cutoffDay; $j < $daysInMonth; $j++) $prevRemainingSum += $prevAt($j);
+
+        for ($i = 0; $i < $daysInMonth; $i++) {
+            if ($i < $cutoffDay) {
+                $out[] = (float) ($current[$i] ?? 0);
+                continue;
+            }
+
+            // Pacing path — distribute MTD-projected remaining proportionally
+            // to prev's day weights so DOW patterns still show through.
+            if ($useMtdPacing && $mtdRemaining !== null && $prevRemainingSum > 0) {
+                $weight = $prevAt($i) / $prevRemainingSum;
+                $out[] = round($mtdRemaining * $weight);
+                continue;
+            }
+
+            // Per-day path with capped + geomean growth.
+            $dow = (int) $monthStart->copy()->addDays($i)->dayOfWeek;
+            $growth = $dowGrowth[$dow] ?? $overallGrowth ?? 1.0;
+            $prv = $prevAt($i);
+            if ($prv > 0 && ($dowGrowth[$dow] !== null || $overallGrowth !== null)) {
+                $out[] = round($prv * $growth);
+            } else {
+                $out[] = round($overallAvg);
             }
         }
         return $out;
