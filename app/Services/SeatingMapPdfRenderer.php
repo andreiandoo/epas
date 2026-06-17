@@ -105,7 +105,7 @@ class SeatingMapPdfRenderer
     protected function loadLayoutGeometry(int $layoutId): ?array
     {
         return Cache::remember(
-            "seating_pdf_geometry_{$layoutId}_v2",
+            "seating_pdf_geometry_{$layoutId}_v3",
             600,
             function () use ($layoutId) {
                 $layout = SeatingLayout::find($layoutId);
@@ -146,11 +146,18 @@ class SeatingMapPdfRenderer
                         'y_position' => (int) $section->y_position,
                         'width' => (int) ($section->width ?? 0),
                         'height' => (int) ($section->height ?? 0),
-                        'rotation' => (int) ($section->rotation ?? 0),
+                        'rotation' => (float) ($section->rotation ?? 0),
                         'color_hex' => $section->color_hex,
                         'background_color' => $section->background_color,
                         'corner_radius' => (int) ($section->corner_radius ?? 0),
-                        'meta' => is_array($section->meta) ? $section->meta : [],
+                        // The Konva designer stores extra props (shape,
+                        // opacity, points, font*, etc.) under `metadata`.
+                        // Legacy data sometimes uses `meta`. Merge both
+                        // so older layouts keep rendering.
+                        'metadata' => array_merge(
+                            is_array($section->meta) ? $section->meta : [],
+                            is_array($section->metadata) ? $section->metadata : [],
+                        ),
                         'rows' => $rowsArr,
                     ];
                 }
@@ -209,17 +216,25 @@ class SeatingMapPdfRenderer
         // Light canvas background so seat circles read clearly on the page.
         $svg .= '<rect width="' . $canvasW . '" height="' . $canvasH . '" fill="#fafafa"/>';
 
-        // First pass — decorative zones (stage, dance floor, etc) drawn
-        // BEHIND seats so anything overlapping reads correctly. These have
-        // no seats; we treat them as colored rectangles with the section
-        // name centered inside.
+        // First pass — decorative / stage / dance_floor / polygon zones,
+        // drawn BEHIND seats so anything overlapping reads correctly.
+        // Style mirrors the Konva designer (designer-konva.blade.php):
+        // metadata.shape selects rect / polygon / text / line; defaults
+        // to 'rect' for stage and dance_floor types.
         foreach ($sections as $section) {
             $type = $section['section_type'] ?? 'standard';
-            if (in_array($type, ['decorative', 'stage', 'dance_floor'], true)) {
-                $this->appendDecorativeZone($svg, $section);
-            } elseif ($type === 'polygon') {
-                $this->appendPolygon($svg, $section);
+            if (!in_array($type, ['decorative', 'stage', 'dance_floor'], true)) {
+                continue;
             }
+            $shape = $section['metadata']['shape'] ?? (in_array($type, ['stage', 'dance_floor'], true) ? 'rect' : 'rect');
+            if ($shape === 'rect') {
+                $this->appendDecorativeRect($svg, $section);
+            } elseif ($shape === 'polygon') {
+                $this->appendDecorativePolygon($svg, $section);
+            } elseif ($shape === 'text') {
+                $this->appendDecorativeText($svg, $section);
+            }
+            // 'line' — skipped; rare and tricky in static SVG.
         }
 
         // Second pass — section name labels for standard sections (above
@@ -323,81 +338,126 @@ class SeatingMapPdfRenderer
     }
 
     /**
-     * Append a decorative zone (stage, dance floor, decorative) as a
-     * coloured rectangle with the section name centered inside.
+     * Decorative rectangle (stage, dance floor, VIP lounge). Mirrors the
+     * Konva designer: opacity from metadata.opacity (default 0.3 — NOT
+     * the 0.85 we had before, which made every stage look like a solid
+     * black block), stroke matches the fill colour rather than a hard
+     * black border, label is dark grey at 0.85 opacity (no uppercase,
+     * no letter-spacing — the designer keeps it plain).
      */
-    protected function appendDecorativeZone(string &$svg, array $section): void
+    protected function appendDecorativeRect(string &$svg, array $section): void
     {
         $x = $section['x_position'];
         $y = $section['y_position'];
         $w = $section['width'] ?: 200;
         $h = $section['height'] ?: 60;
-        $bg = $section['background_color'] ?: ($section['color_hex'] ?: '#9333ea');
-        $rx = max(0, min(40, $section['corner_radius'] ?? 0));
+        $color = $section['background_color'] ?: ($section['color_hex'] ?: '#10B981');
+        $opacity = isset($section['metadata']['opacity']) ? (float) $section['metadata']['opacity'] : 0.3;
+        $cornerR = (int) ($section['corner_radius'] ?: ($section['metadata']['corner_radius'] ?? 0));
+        $rotation = (float) ($section['rotation'] ?? 0);
 
+        // Per the designer, rotation pivots around the section's CENTRE.
+        $cx = $x + $w / 2;
+        $cy = $y + $h / 2;
+        $rotAttr = $rotation != 0.0
+            ? ' transform="rotate(' . $rotation . ' ' . $cx . ' ' . $cy . ')"'
+            : '';
+
+        $fillEsc = htmlspecialchars($color, ENT_QUOTES | ENT_SUBSTITUTE);
+
+        $svg .= '<g' . $rotAttr . '>';
         $svg .= '<rect x="' . $x . '" y="' . $y . '" '
             . 'width="' . $w . '" height="' . $h . '" '
-            . 'rx="' . $rx . '" ry="' . $rx . '" '
-            . 'fill="' . htmlspecialchars($bg, ENT_QUOTES | ENT_SUBSTITUTE) . '" '
-            . 'fill-opacity="0.85" stroke="#1f2937" stroke-width="1"/>';
+            . 'rx="' . $cornerR . '" ry="' . $cornerR . '" '
+            . 'fill="' . $fillEsc . '" fill-opacity="' . $opacity . '" '
+            . 'stroke="' . $fillEsc . '" stroke-width="1.5"/>';
 
-        $name = htmlspecialchars((string) ($section['name'] ?? ''), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-        if ($name !== '') {
-            // Pick contrasting text color (cheap heuristic on lightness of bg).
-            $textColor = $this->contrastTextColor($bg);
-            $cx = $x + $w / 2;
-            $cy = $y + $h / 2 + 7;
-            $fontSize = max(12, min(28, (int) ($h * 0.35)));
-            $svg .= '<text x="' . $cx . '" y="' . $cy . '" '
-                . 'text-anchor="middle" font-family="Helvetica, Arial, sans-serif" '
-                . 'font-size="' . $fontSize . '" fill="' . $textColor . '" '
-                . 'font-weight="bold" letter-spacing="2">'
-                . strtoupper($name) . '</text>';
+        $labelText = $section['metadata']['label'] ?? $section['name'] ?? '';
+        if ($labelText !== '') {
+            $labelEsc = htmlspecialchars((string) $labelText, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+            $fontSize = max(11, min(18, (int) round(min($w, $h) * 0.18)));
+            // Vertically centred — SVG baseline + small ascent fudge.
+            $textY = $y + $h / 2 + $fontSize * 0.35;
+            $svg .= '<text x="' . $cx . '" y="' . $textY . '" '
+                . 'text-anchor="middle" font-family="Arial, Helvetica, sans-serif" '
+                . 'font-size="' . $fontSize . '" font-weight="bold" '
+                . 'fill="#1f2937" fill-opacity="0.85">'
+                . $labelEsc . '</text>';
         }
+        $svg .= '</g>';
     }
 
     /**
-     * Append a polygon-shaped section. Points stored in section.meta.polygon_points
-     * as a list of {x, y} coordinates relative to the section origin.
+     * Polygon-shaped decorative section. Designer stores points in
+     * metadata.points as a FLAT array of absolute coordinates
+     * [x1, y1, x2, y2, ...] — same convention used by Konva.Line.
      */
-    protected function appendPolygon(string &$svg, array $section): void
+    protected function appendDecorativePolygon(string &$svg, array $section): void
     {
-        $points = $section['meta']['polygon_points'] ?? null;
-        if (!is_array($points) || empty($points)) {
+        $points = $section['metadata']['points'] ?? null;
+        if (!is_array($points) || count($points) < 4) {
             return;
         }
-        $sx = $section['x_position'];
-        $sy = $section['y_position'];
         $coords = [];
-        foreach ($points as $p) {
-            $px = $sx + (float) ($p['x'] ?? 0);
-            $py = $sy + (float) ($p['y'] ?? 0);
-            $coords[] = $px . ',' . $py;
+        for ($i = 0; $i + 1 < count($points); $i += 2) {
+            $coords[] = ((float) $points[$i]) . ',' . ((float) $points[$i + 1]);
         }
-        $bg = $section['background_color'] ?: ($section['color_hex'] ?: '#9333ea');
+        $color = $section['background_color'] ?: ($section['color_hex'] ?: '#10B981');
+        $opacity = isset($section['metadata']['opacity']) ? (float) $section['metadata']['opacity'] : 0.3;
+        $fillEsc = htmlspecialchars($color, ENT_QUOTES | ENT_SUBSTITUTE);
+
         $svg .= '<polygon points="' . implode(' ', $coords) . '" '
-            . 'fill="' . htmlspecialchars($bg, ENT_QUOTES | ENT_SUBSTITUTE) . '" '
-            . 'fill-opacity="0.7" stroke="#1f2937" stroke-width="1"/>';
+            . 'fill="' . $fillEsc . '" fill-opacity="' . $opacity . '" '
+            . 'stroke="' . $fillEsc . '" stroke-width="2"/>';
+
+        $labelText = $section['metadata']['label'] ?? $section['name'] ?? '';
+        if ($labelText !== '') {
+            // Place label at the centroid of the polygon.
+            $xs = [];
+            $ys = [];
+            for ($i = 0; $i + 1 < count($points); $i += 2) {
+                $xs[] = (float) $points[$i];
+                $ys[] = (float) $points[$i + 1];
+            }
+            $cx = (min($xs) + max($xs)) / 2;
+            $cy = (min($ys) + max($ys)) / 2 + 5;
+            $svg .= '<text x="' . $cx . '" y="' . $cy . '" '
+                . 'text-anchor="middle" font-family="Arial, Helvetica, sans-serif" '
+                . 'font-size="12" fill="#1f2937" fill-opacity="0.85">'
+                . htmlspecialchars((string) $labelText, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')
+                . '</text>';
+        }
     }
 
     /**
-     * Return a foreground colour that contrasts with the given hex bg.
-     * Quick & dirty — sufficient for stage/zone labels.
+     * Plain-text decorative element (no rectangle background). Properties
+     * come from metadata (text/fontSize/fontFamily/fontWeight); colour is
+     * the section's background_color (same as the Konva designer).
      */
-    protected function contrastTextColor(string $hex): string
+    protected function appendDecorativeText(string &$svg, array $section): void
     {
-        $hex = ltrim($hex, '#');
-        if (strlen($hex) === 3) {
-            $hex = $hex[0] . $hex[0] . $hex[1] . $hex[1] . $hex[2] . $hex[2];
+        $text = (string) ($section['metadata']['text'] ?? $section['name'] ?? '');
+        if ($text === '') {
+            return;
         }
-        if (strlen($hex) !== 6) {
-            return '#ffffff';
-        }
-        $r = hexdec(substr($hex, 0, 2));
-        $g = hexdec(substr($hex, 2, 2));
-        $b = hexdec(substr($hex, 4, 2));
-        $luma = ($r * 0.299 + $g * 0.587 + $b * 0.114) / 255;
-        return $luma > 0.62 ? '#111827' : '#ffffff';
+        $x = $section['x_position'];
+        $y = $section['y_position'];
+        $fontSize = (int) ($section['metadata']['fontSize'] ?? 16);
+        $fontFamily = htmlspecialchars((string) ($section['metadata']['fontFamily'] ?? 'Arial'), ENT_QUOTES | ENT_SUBSTITUTE);
+        $fontWeight = (string) ($section['metadata']['fontWeight'] ?? 'normal');
+        $weight = $fontWeight === 'bold' ? 'bold' : 'normal';
+        $color = $section['background_color'] ?: ($section['color_hex'] ?: '#1f2937');
+        $rotation = (float) ($section['rotation'] ?? 0);
+        $rotAttr = $rotation != 0.0
+            ? ' transform="rotate(' . $rotation . ' ' . $x . ' ' . $y . ')"'
+            : '';
+
+        $svg .= '<text x="' . $x . '" y="' . ($y + $fontSize) . '"' . $rotAttr . ' '
+            . 'font-family="' . $fontFamily . '" font-size="' . $fontSize . '" '
+            . 'font-weight="' . $weight . '" '
+            . 'fill="' . htmlspecialchars($color, ENT_QUOTES | ENT_SUBSTITUTE) . '">'
+            . htmlspecialchars($text, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')
+            . '</text>';
     }
 
     /**
