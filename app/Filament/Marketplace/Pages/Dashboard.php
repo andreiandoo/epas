@@ -34,6 +34,9 @@ class Dashboard extends Page
     public string $chartPeriod = '30';
 
     #[Url]
+    public string $chartMonth = '';
+
+    #[Url]
     public string $selectedMonth = '';
 
     #[Url]
@@ -43,12 +46,40 @@ class Dashboard extends Page
     {
         $admin = Auth::guard('marketplace_admin')->user();
         $this->marketplace = $admin?->marketplaceClient;
+        $nowRo = Carbon::now('Europe/Bucharest');
         if (!$this->selectedMonth) {
-            $this->selectedMonth = Carbon::now('Europe/Bucharest')->format('Y-m');
+            $this->selectedMonth = $nowRo->format('Y-m');
         }
         if (!$this->selectedDailyReportDate) {
-            $this->selectedDailyReportDate = Carbon::now('Europe/Bucharest')->format('Y-m-d');
+            $this->selectedDailyReportDate = $nowRo->format('Y-m-d');
         }
+        if (!$this->chartMonth) {
+            $this->chartMonth = $nowRo->format('Y-m');
+        }
+    }
+
+    public function updatedChartMonth(): void
+    {
+        $this->dispatch('charts-updated');
+    }
+
+    public function shiftChartMonth(int $delta): void
+    {
+        $tz = 'Europe/Bucharest';
+        try {
+            $current = Carbon::createFromFormat('Y-m', $this->chartMonth, $tz)->startOfMonth();
+        } catch (\Throwable $e) {
+            $current = Carbon::now($tz)->startOfMonth();
+        }
+        $current->addMonths($delta);
+        // Clamp: don't go before 2024-01 (data didn't exist) or beyond +12 months
+        // ahead of now (predictions get too speculative further out).
+        $minMonth = Carbon::create(2024, 1, 1, 0, 0, 0, $tz);
+        $maxMonth = Carbon::now($tz)->addMonths(12)->startOfMonth();
+        if ($current->lt($minMonth)) $current = $minMonth;
+        if ($current->gt($maxMonth)) $current = $maxMonth;
+        $this->chartMonth = $current->format('Y-m');
+        $this->dispatch('charts-updated');
     }
 
     public function updatedSelectedMonth(): void
@@ -110,47 +141,104 @@ class Dashboard extends Page
         $isMonthView = $this->chartPeriod === 'month';
         $prevYearChartData = null;
         $prevYearTicketChartData = null;
+        $chartMonthMeta = null;
 
         if ($isMonthView) {
             $nowRo = Carbon::now($tz);
-            $startDate = $nowRo->copy()->startOfMonth()->utc();
-            $endDate = $nowRo->copy()->endOfMonth()->endOfDay()->utc();
-            $chartDays = $nowRo->daysInMonth;
+            $monthRef = $this->chartMonth ?: $nowRo->format('Y-m');
+            try {
+                $chartMonthDate = Carbon::createFromFormat('Y-m', $monthRef, $tz)->startOfMonth();
+            } catch (\Throwable $e) {
+                $chartMonthDate = $nowRo->copy()->startOfMonth();
+                $monthRef = $chartMonthDate->format('Y-m');
+            }
 
-            $chartData = Cache::remember("mp_dash_chart_{$marketplaceId}_month_{$nowRo->format('Y-m')}", 600, function () use ($marketplaceId, $startDate, $endDate, $chartDays) {
+            $nowMonthStart = $nowRo->copy()->startOfMonth();
+            if ($chartMonthDate->lt($nowMonthStart)) {
+                $chartMonthMode = 'past';
+                $currentDayInView = $chartMonthDate->daysInMonth + 1; // entire month completed
+            } elseif ($chartMonthDate->gt($nowMonthStart)) {
+                $chartMonthMode = 'future';
+                $currentDayInView = 0;
+            } else {
+                $chartMonthMode = 'current';
+                $currentDayInView = (int) $nowRo->day;
+            }
+
+            $startDate = $chartMonthDate->copy()->utc();
+            $endDate = $chartMonthDate->copy()->endOfMonth()->endOfDay()->utc();
+            $chartDays = $chartMonthDate->daysInMonth;
+
+            // Past months are immutable → cache 24h. Current/future change as
+            // sales come in → keep the existing 10-min TTL.
+            $chartCacheTtl = $chartMonthMode === 'past' ? 86400 : 600;
+
+            $chartData = Cache::remember("mp_dash_chart_{$marketplaceId}_month_{$monthRef}", $chartCacheTtl, function () use ($marketplaceId, $startDate, $endDate, $chartDays) {
                 return $this->getChartData($marketplaceId, $startDate, $endDate, $chartDays, true);
             });
-            $ticketChartData = Cache::remember("mp_dash_tchart_{$marketplaceId}_month_{$nowRo->format('Y-m')}", 600, function () use ($marketplaceId, $startDate, $endDate, $chartDays) {
+            $ticketChartData = Cache::remember("mp_dash_tchart_{$marketplaceId}_month_{$monthRef}", $chartCacheTtl, function () use ($marketplaceId, $startDate, $endDate, $chartDays) {
                 return $this->getTicketChartData($marketplaceId, $startDate, $endDate, $chartDays, true);
             });
 
-            // Previous year same month
-            $prevStart = $nowRo->copy()->subYear()->startOfMonth()->utc();
-            $prevEnd = $nowRo->copy()->subYear()->endOfMonth()->endOfDay()->utc();
-            $prevDays = $nowRo->copy()->subYear()->daysInMonth;
-            $prevYearChartData = Cache::remember("mp_dash_chart_{$marketplaceId}_prevyear_{$nowRo->copy()->subYear()->format('Y-m')}", 3600, function () use ($marketplaceId, $prevStart, $prevEnd, $prevDays) {
+            // Previous year same month — always immutable, cache 24h.
+            $prevYearMonthDate = $chartMonthDate->copy()->subYear();
+            $prevStart = $prevYearMonthDate->copy()->utc();
+            $prevEnd = $prevYearMonthDate->copy()->endOfMonth()->endOfDay()->utc();
+            $prevDays = $prevYearMonthDate->daysInMonth;
+            $prevYearChartData = Cache::remember("mp_dash_chart_{$marketplaceId}_prevyear_{$prevYearMonthDate->format('Y-m')}", 86400, function () use ($marketplaceId, $prevStart, $prevEnd, $prevDays) {
                 // Include legacy_import for the comparison line — last year's
                 // sales are mostly migrated orders; excluding them would leave
                 // the prev-year series empty and nothing to compare against.
                 return $this->getChartData($marketplaceId, $prevStart, $prevEnd, $prevDays, true, excludeLegacy: false);
             });
-            $prevYearTicketChartData = Cache::remember("mp_dash_tchart_{$marketplaceId}_prevyear_{$nowRo->copy()->subYear()->format('Y-m')}", 3600, function () use ($marketplaceId, $prevStart, $prevEnd, $prevDays) {
+            $prevYearTicketChartData = Cache::remember("mp_dash_tchart_{$marketplaceId}_prevyear_{$prevYearMonthDate->format('Y-m')}", 86400, function () use ($marketplaceId, $prevStart, $prevEnd, $prevDays) {
                 return $this->getTicketChartData($marketplaceId, $prevStart, $prevEnd, $prevDays, true);
             });
 
-            // Cards under chart — sales/tickets so far + last year + prediction.
-            // 5-min cache: today's value drifts as orders come in, but the
-            // expensive parts (last year aggregates) are stable.
+            // Future-month prediction needs a YoY growth basis. We don't have
+            // any same-month observations yet, so derive it from the current
+            // month MTD vs same DOW-aligned days last year (overall ratio,
+            // capped). Used by both sales and tickets card.
+            $futureGrowthRatio = null;
+            if ($chartMonthMode === 'future') {
+                $futureGrowthRatio = $this->deriveCurrentMonthGrowthRatio($marketplaceId, $nowRo);
+            }
+
+            // Cards under chart — uses cache window that varies per mode.
+            $summaryKey = "mp_dash_chart_summary_{$marketplaceId}_{$monthRef}_" . ($chartMonthMode === 'current' ? $nowRo->format('Y-m-d-H') : 'static');
+            $summaryTtl = $chartMonthMode === 'current' ? 300 : 86400;
             $chartSummary = Cache::remember(
-                "mp_dash_chart_summary_{$marketplaceId}_{$nowRo->format('Y-m-d-H')}",
-                300,
+                $summaryKey,
+                $summaryTtl,
                 fn () => $this->computeMonthChartSummary(
                     $chartData,
                     $ticketChartData,
                     $prevYearChartData,
                     $prevYearTicketChartData,
+                    $chartMonthMode,
+                    $currentDayInView,
+                    $chartDays,
+                    $chartMonthDate,
+                    $futureGrowthRatio,
                 )
             );
+
+            // Navigation bounds — keep clamp consistent with shiftChartMonth().
+            $minMonth = Carbon::create(2024, 1, 1, 0, 0, 0, $tz);
+            $maxMonth = $nowRo->copy()->addMonths(12)->startOfMonth();
+
+            $chartMonthMeta = [
+                'mode' => $chartMonthMode,
+                'monthRef' => $monthRef,
+                'monthStart' => $chartMonthDate->format('Y-m-d'),
+                'monthLabel' => $chartMonthDate->locale('ro')->translatedFormat('F Y'),
+                'prevMonthLabel' => $prevYearMonthDate->locale('ro')->translatedFormat('F Y'),
+                'daysInMonth' => $chartDays,
+                'currentDay' => $currentDayInView,
+                'futureGrowth' => $futureGrowthRatio,
+                'canGoPrev' => $chartMonthDate->copy()->subMonth()->gte($minMonth),
+                'canGoNext' => $chartMonthDate->copy()->addMonth()->lte($maxMonth),
+            ];
         } else {
             $startDate = Carbon::now($tz)->subDays($days)->startOfDay()->utc();
             $endDate = Carbon::now($tz)->endOfDay()->utc();
@@ -307,6 +395,7 @@ class Dashboard extends Page
             'prevYearChartData' => $prevYearChartData,
             'prevYearTicketChartData' => $prevYearTicketChartData,
             'chartSummary' => $chartSummary,
+            'chartMonthMeta' => $chartMonthMeta,
             'selectedMonth' => $month,
             'dailyEventReport' => $dailyEventReport,
             'dailyReportDate' => $dailyReportDate,
@@ -574,12 +663,21 @@ class Dashboard extends Page
      *   predicted_tickets: int,
      * }
      */
-    private function computeMonthChartSummary(array $chartData, array $ticketChartData, ?array $prevSales, ?array $prevTickets): array
-    {
+    private function computeMonthChartSummary(
+        array $chartData,
+        array $ticketChartData,
+        ?array $prevSales,
+        ?array $prevTickets,
+        string $mode = 'current',
+        ?int $currentDay = null,
+        ?int $daysInMonth = null,
+        ?Carbon $monthDate = null,
+        ?float $futureGrowth = null,
+    ): array {
         $tz = 'Europe/Bucharest';
-        $now = Carbon::now($tz);
-        $daysInMonth = (int) $now->daysInMonth;
-        $currentDay = (int) $now->day; // 1-based
+        $monthDate = $monthDate ?? Carbon::now($tz)->startOfMonth();
+        $daysInMonth = $daysInMonth ?? (int) $monthDate->daysInMonth;
+        $currentDay = $currentDay ?? (int) Carbon::now($tz)->day;
 
         $salesArr = array_map('floatval', $chartData['data'] ?? []);
         $ticketsArr = array_map('intval', $ticketChartData['data'] ?? []);
@@ -589,11 +687,11 @@ class Dashboard extends Page
         $salesSoFar = array_sum($salesArr);
         $ticketsSoFar = array_sum($ticketsArr);
 
-        // Predict daily series using the same logic the chart JS uses.
-        $predicted = $this->predictMonthlySeries($salesArr, $prevSalesArr, $currentDay, $daysInMonth, $tz);
-        $predictedTickets = $this->predictMonthlySeries($ticketsArr, $prevTicketsArr, $currentDay, $daysInMonth, $tz);
+        $predicted = $this->predictMonthlySeries($salesArr, $prevSalesArr, $currentDay, $daysInMonth, $tz, $monthDate, $mode, $futureGrowth);
+        $predictedTickets = $this->predictMonthlySeries($ticketsArr, $prevTicketsArr, $currentDay, $daysInMonth, $tz, $monthDate, $mode, $futureGrowth);
 
         return [
+            'mode' => $mode,
             'sales_so_far' => $salesSoFar,
             'tickets_so_far' => $ticketsSoFar,
             'prev_year_sales' => array_sum($prevSalesArr),
@@ -601,6 +699,64 @@ class Dashboard extends Page
             'predicted_sales' => (float) array_sum($predicted),
             'predicted_tickets' => (int) round(array_sum($predictedTickets)),
         ];
+    }
+
+    /**
+     * Overall YoY growth ratio for the CURRENT month so far, used as the
+     * growth basis when the chart is showing a FUTURE month (we have no
+     * observations there yet, so we borrow the current month's pace).
+     * Returns null if either side has no data — caller falls back to 1.0.
+     */
+    private function deriveCurrentMonthGrowthRatio(int $marketplaceId, Carbon $now): ?float
+    {
+        $tz = 'Europe/Bucharest';
+        $currMonth = $now->format('Y-m');
+        $prevYearMonth = $now->copy()->subYear()->format('Y-m');
+
+        // Reuse the same cache keys populated by the main month flow when
+        // viewing the current month — saves a query in the common case.
+        $currKey = "mp_dash_chart_{$marketplaceId}_month_{$currMonth}";
+        $prevKey = "mp_dash_chart_{$marketplaceId}_prevyear_{$prevYearMonth}";
+
+        $currData = Cache::get($currKey);
+        $prevData = Cache::get($prevKey);
+
+        if (!$currData) {
+            $currStart = $now->copy()->startOfMonth()->utc();
+            $currEnd = $now->copy()->endOfDay()->utc();
+            $currDays = $now->daysInMonth;
+            $currData = Cache::remember($currKey, 600, fn () => $this->getChartData($marketplaceId, $currStart, $currEnd, $currDays, true));
+        }
+        if (!$prevData) {
+            $prevStart = $now->copy()->subYear()->startOfMonth()->utc();
+            $prevEnd = $now->copy()->subYear()->endOfMonth()->endOfDay()->utc();
+            $prevDays = $now->copy()->subYear()->daysInMonth;
+            $prevData = Cache::remember($prevKey, 86400, fn () => $this->getChartData($marketplaceId, $prevStart, $prevEnd, $prevDays, true, excludeLegacy: false));
+        }
+
+        $currDay = (int) $now->day;
+        $currSum = 0.0;
+        for ($i = 0; $i < $currDay; $i++) {
+            $currSum += (float) ($currData['data'][$i] ?? 0);
+        }
+
+        // DOW-align prev year (same shift logic as predictMonthlySeries).
+        $currMonthStart = $now->copy()->startOfMonth();
+        $prevMonthStart = $currMonthStart->copy()->subYear();
+        $dowShift = (((int) $currMonthStart->dayOfWeek - (int) $prevMonthStart->dayOfWeek) + 7) % 7;
+        $prevSum = 0.0;
+        $prevDataArr = $prevData['data'] ?? [];
+        for ($i = 0; $i < $currDay; $i++) {
+            $idx = $i + $dowShift;
+            if ($idx >= 0 && $idx < count($prevDataArr)) {
+                $prevSum += (float) ($prevDataArr[$idx] ?? 0);
+            }
+        }
+
+        if ($currSum <= 0 || $prevSum <= 0) {
+            return null;
+        }
+        return $currSum / $prevSum;
     }
 
     /**
@@ -613,10 +769,18 @@ class Dashboard extends Page
      * @param array<int, float|int> $prev    Daily actuals for the same month
      *                                       last year (length = days in that month)
      */
-    private function predictMonthlySeries(array $current, array $prev, int $currentDay, int $daysInMonth, string $tz): array
-    {
+    private function predictMonthlySeries(
+        array $current,
+        array $prev,
+        int $currentDay,
+        int $daysInMonth,
+        string $tz,
+        ?Carbon $monthDate = null,
+        string $mode = 'current',
+        ?float $futureGrowth = null,
+    ): array {
         $now = Carbon::now($tz);
-        $monthStart = $now->copy()->startOfMonth();
+        $monthStart = ($monthDate ?? $now)->copy()->startOfMonth();
         $prevMonthStart = $monthStart->copy()->subYear();
         $prevDaysInMonth = $prevMonthStart->daysInMonth;
 
@@ -634,6 +798,29 @@ class Dashboard extends Page
             }
             return (float) ($prev[$prevIdx] ?? 0);
         };
+
+        $clampGlobal = fn (float $x): float => max(0.3, min(3.5, $x));
+
+        // PAST month: month is done, no prediction — return actuals.
+        if ($mode === 'past') {
+            $out = [];
+            for ($i = 0; $i < $daysInMonth; $i++) {
+                $out[] = (float) ($current[$i] ?? 0);
+            }
+            return $out;
+        }
+
+        // FUTURE month: no current observations exist. Predict every day
+        // as prev[i+shift] × (growth from current month MTD vs prev year
+        // MTD). If no growth basis available, assume parity.
+        if ($mode === 'future') {
+            $growth = $futureGrowth !== null ? $clampGlobal($futureGrowth) : 1.0;
+            $out = [];
+            for ($i = 0; $i < $daysInMonth; $i++) {
+                $out[] = round($prevAt($i) * $growth);
+            }
+            return $out;
+        }
 
         // Smoothing helpers — backtest on May+April 2025 showed that
         // arithmetic mean + uncapped growth ratios let one big early-

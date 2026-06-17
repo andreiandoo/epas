@@ -398,18 +398,59 @@
         @endif
 
         <!-- Combined Chart: Sales + Tickets -->
-        <div class="p-4 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700" wire:key="charts-{{ $chartPeriod }}">
+        <div class="p-4 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700" wire:key="charts-{{ $chartPeriod }}-{{ $chartMonth }}">
             <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
                 <div class="flex items-center gap-4">
                     <h3 class="text-sm font-semibold tracking-wide text-gray-900 uppercase dark:text-white">Vânzări & Bilete</h3>
+                    @if($chartPeriod === 'month' && $chartMonthMeta)
+                        <div class="flex items-center gap-1">
+                            <button type="button"
+                                    wire:click="shiftChartMonth(-1)"
+                                    @disabled(!($chartMonthMeta['canGoPrev'] ?? false))
+                                    class="inline-flex items-center justify-center w-7 h-7 text-gray-500 transition-colors rounded-md hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-200 disabled:opacity-30 disabled:cursor-not-allowed"
+                                    title="Luna anterioară">
+                                <x-heroicon-o-chevron-left class="w-4 h-4" />
+                            </button>
+                            <span class="px-1 text-xs font-semibold text-gray-700 dark:text-gray-200 tabular-nums whitespace-nowrap">
+                                {{ ucfirst($chartMonthMeta['monthLabel']) }}
+                                @if($chartMonthMeta['mode'] === 'past')
+                                    <span class="ml-1 inline-flex items-center px-1.5 py-0.5 text-[9px] uppercase tracking-wide font-medium text-gray-500 bg-gray-100 dark:text-gray-400 dark:bg-gray-700 rounded">Trecut</span>
+                                @elseif($chartMonthMeta['mode'] === 'future')
+                                    <span class="ml-1 inline-flex items-center px-1.5 py-0.5 text-[9px] uppercase tracking-wide font-medium text-emerald-700 bg-emerald-100 dark:text-emerald-300 dark:bg-emerald-900/40 rounded">Predicție</span>
+                                @endif
+                            </span>
+                            <button type="button"
+                                    wire:click="shiftChartMonth(1)"
+                                    @disabled(!($chartMonthMeta['canGoNext'] ?? false))
+                                    class="inline-flex items-center justify-center w-7 h-7 text-gray-500 transition-colors rounded-md hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-200 disabled:opacity-30 disabled:cursor-not-allowed"
+                                    title="Luna următoare">
+                                <x-heroicon-o-chevron-right class="w-4 h-4" />
+                            </button>
+                            @if($chartMonthMeta['mode'] !== 'current')
+                                <button type="button"
+                                        wire:click="$set('chartMonth', '{{ \Carbon\Carbon::now('Europe/Bucharest')->format('Y-m') }}')"
+                                        class="ml-1 px-2 py-1 text-[10px] font-medium uppercase tracking-wide text-indigo-700 hover:text-indigo-900 hover:bg-indigo-50 dark:text-indigo-300 dark:hover:bg-indigo-900/30 rounded transition-colors"
+                                        title="Revino la luna în curs">
+                                    Azi
+                                </button>
+                            @endif
+                        </div>
+                    @endif
                     <div class="flex items-center gap-3 text-xs text-gray-500">
-                        <span class="flex items-center gap-1"><span class="w-3 h-0.5 bg-indigo-500 rounded"></span> Vânzări (RON)</span>
-                        <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-sm bg-purple-500/70"></span> Bilete</span>
+                        @if($chartPeriod === 'month' && $chartMonthMeta && $chartMonthMeta['mode'] !== 'future')
+                            <span class="flex items-center gap-1"><span class="w-3 h-0.5 bg-indigo-500 rounded"></span> Vânzări (RON)</span>
+                            <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-sm bg-purple-500/70"></span> Bilete</span>
+                        @elseif($chartPeriod !== 'month')
+                            <span class="flex items-center gap-1"><span class="w-3 h-0.5 bg-indigo-500 rounded"></span> Vânzări (RON)</span>
+                            <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-sm bg-purple-500/70"></span> Bilete</span>
+                        @endif
                         <span class="flex items-center gap-1"><span class="w-3 h-0.5 rounded" style="border-top: 1.5px dashed rgba(99,102,241,0.6);"></span> Medie</span>
                         @if($chartPeriod === 'month')
-                        <span class="flex items-center gap-1"><span class="w-3 h-0.5 bg-yellow-500/50 rounded" style="border-top: 1.5px dashed rgba(202,138,4,0.5);"></span> Anul trecut</span>
-                        <span class="flex items-center gap-1"><span class="w-3 h-0.5 rounded" style="border-top: 1.5px dashed rgba(234,179,8,0.5);"></span> Medie an trecut</span>
-                        <span class="flex items-center gap-1"><span class="w-3 h-0.5 rounded" style="border-top: 1.5px dashed rgba(16,185,129,0.7);"></span> Predicție</span>
+                            <span class="flex items-center gap-1"><span class="w-3 h-0.5 bg-yellow-500/50 rounded" style="border-top: 1.5px dashed rgba(202,138,4,0.5);"></span> Anul trecut</span>
+                            <span class="flex items-center gap-1"><span class="w-3 h-0.5 rounded" style="border-top: 1.5px dashed rgba(234,179,8,0.5);"></span> Medie an trecut</span>
+                            @if($chartMonthMeta && $chartMonthMeta['mode'] !== 'past')
+                                <span class="flex items-center gap-1"><span class="w-3 h-0.5 rounded" style="border-top: 1.5px dashed rgba(16,185,129,0.7);"></span> Predicție</span>
+                            @endif
                         @endif
                     </div>
                 </div>
@@ -417,7 +458,7 @@
                     wire:model.live="chartPeriod"
                     class="py-1 text-xs border-gray-300 rounded-lg dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:ring-primary-500 focus:border-primary-500"
                 >
-                    <option value="month">Luna în curs</option>
+                    <option value="month">Luna selectată</option>
                     <option value="7">7 zile</option>
                     <option value="15">15 zile</option>
                     <option value="30">30 zile</option>
@@ -426,29 +467,43 @@
                 </select>
             </div>
             <div class="h-64">
-                <canvas id="combinedChart" data-sales='@json($chartData)' data-tickets='@json($ticketChartData)' data-prev-sales='@json($prevYearChartData ?? null)' data-prev-tickets='@json($prevYearTicketChartData ?? null)' data-currency="RON"></canvas>
+                <canvas id="combinedChart"
+                        data-sales='@json($chartData)'
+                        data-tickets='@json($ticketChartData)'
+                        data-prev-sales='@json($prevYearChartData ?? null)'
+                        data-prev-tickets='@json($prevYearTicketChartData ?? null)'
+                        data-chart-meta='@json($chartMonthMeta ?? null)'
+                        data-currency="RON"></canvas>
             </div>
 
-            @if($chartPeriod === 'month' && isset($chartSummary))
+            @if($chartPeriod === 'month' && isset($chartSummary) && $chartMonthMeta)
                 @php
-                    $monthLabel = \Carbon\Carbon::now('Europe/Bucharest')->locale('ro')->translatedFormat('F Y');
-                    $prevLabel = \Carbon\Carbon::now('Europe/Bucharest')->subYear()->locale('ro')->translatedFormat('F Y');
+                    $monthLabel = ucfirst($chartMonthMeta['monthLabel']);
+                    $prevLabel = ucfirst($chartMonthMeta['prevMonthLabel']);
+                    $mode = $chartMonthMeta['mode'];
+                    $isCurrent = $mode === 'current';
+                    $isPast = $mode === 'past';
+                    $isFuture = $mode === 'future';
+                    // Labels adapt to mode: past = totals, current = so-far, future = no actuals yet
+                    $salesLabel = $isCurrent ? 'Vânzări până acum' : ($isPast ? 'Vânzări totale' : 'Vânzări reale');
+                    $ticketsLabel = $isCurrent ? 'Bilete până acum' : ($isPast ? 'Bilete totale' : 'Bilete reale');
                 @endphp
                 <div class="pt-4 mt-4 border-t border-gray-200 dark:border-gray-700">
                     <div class="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
-                        {{-- Vânzări până acum --}}
+                        {{-- Vânzări reale (hide for future: no actuals exist) --}}
+                        @if(!$isFuture)
                         <div class="p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg border border-indigo-100 dark:border-indigo-800/40">
-                            <p class="text-[10px] uppercase tracking-wide text-indigo-700 dark:text-indigo-300 font-semibold">Vânzări până acum</p>
+                            <p class="text-[10px] uppercase tracking-wide text-indigo-700 dark:text-indigo-300 font-semibold">{{ $salesLabel }}</p>
                             <p class="mt-1 text-lg font-bold text-indigo-900 dark:text-indigo-100 tabular-nums">{{ number_format($chartSummary['sales_so_far'], 0, ',', '.') }}<span class="text-xs font-medium text-indigo-600 dark:text-indigo-300 ml-1">RON</span></p>
                             <p class="text-[10px] text-indigo-600/70 dark:text-indigo-300/70 mt-0.5">{{ $monthLabel }}</p>
                         </div>
 
-                        {{-- Bilete până acum --}}
                         <div class="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-100 dark:border-purple-800/40">
-                            <p class="text-[10px] uppercase tracking-wide text-purple-700 dark:text-purple-300 font-semibold">Bilete până acum</p>
+                            <p class="text-[10px] uppercase tracking-wide text-purple-700 dark:text-purple-300 font-semibold">{{ $ticketsLabel }}</p>
                             <p class="mt-1 text-lg font-bold text-purple-900 dark:text-purple-100 tabular-nums">{{ number_format($chartSummary['tickets_so_far'], 0, ',', '.') }}</p>
                             <p class="text-[10px] text-purple-600/70 dark:text-purple-300/70 mt-0.5">{{ $monthLabel }}</p>
                         </div>
+                        @endif
 
                         {{-- Anul trecut — vânzări --}}
                         <div class="p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-100 dark:border-yellow-800/40">
@@ -457,26 +512,26 @@
                             <p class="text-[10px] text-yellow-700/70 dark:text-yellow-300/70 mt-0.5">{{ $prevLabel }}</p>
                         </div>
 
-                        {{-- Anul trecut — bilete --}}
                         <div class="p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-100 dark:border-amber-800/40">
                             <p class="text-[10px] uppercase tracking-wide text-amber-800 dark:text-amber-300 font-semibold">Anul trecut · bilete</p>
                             <p class="mt-1 text-lg font-bold text-amber-900 dark:text-amber-100 tabular-nums">{{ number_format($chartSummary['prev_year_tickets'], 0, ',', '.') }}</p>
                             <p class="text-[10px] text-amber-700/70 dark:text-amber-300/70 mt-0.5">{{ $prevLabel }}</p>
                         </div>
 
-                        {{-- Predicție vânzări --}}
+                        {{-- Predicție (hide for past — actuals already known) --}}
+                        @if(!$isPast)
                         <div class="p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg border border-emerald-100 dark:border-emerald-800/40">
                             <p class="text-[10px] uppercase tracking-wide text-emerald-800 dark:text-emerald-300 font-semibold">Predicție · vânzări</p>
                             <p class="mt-1 text-lg font-bold text-emerald-900 dark:text-emerald-100 tabular-nums">{{ number_format($chartSummary['predicted_sales'], 0, ',', '.') }}<span class="text-xs font-medium text-emerald-700 dark:text-emerald-300 ml-1">RON</span></p>
                             <p class="text-[10px] text-emerald-700/70 dark:text-emerald-300/70 mt-0.5">total {{ $monthLabel }}</p>
                         </div>
 
-                        {{-- Predicție bilete --}}
                         <div class="p-3 bg-teal-50 dark:bg-teal-900/20 rounded-lg border border-teal-100 dark:border-teal-800/40">
                             <p class="text-[10px] uppercase tracking-wide text-teal-800 dark:text-teal-300 font-semibold">Predicție · bilete</p>
                             <p class="mt-1 text-lg font-bold text-teal-900 dark:text-teal-100 tabular-nums">{{ number_format($chartSummary['predicted_tickets'], 0, ',', '.') }}</p>
                             <p class="text-[10px] text-teal-700/70 dark:text-teal-300/70 mt-0.5">total {{ $monthLabel }}</p>
                         </div>
+                        @endif
                     </div>
                 </div>
             @endif
@@ -865,18 +920,34 @@
             const ticketsStr = ctx.getAttribute('data-tickets');
             const prevSalesStr = ctx.getAttribute('data-prev-sales');
             const prevTicketsStr = ctx.getAttribute('data-prev-tickets');
+            const chartMetaStr = ctx.getAttribute('data-chart-meta');
             if (!salesStr || !ticketsStr) return;
 
             const salesData = JSON.parse(salesStr);
             const ticketData = JSON.parse(ticketsStr);
             const prevSalesData = prevSalesStr && prevSalesStr !== 'null' ? JSON.parse(prevSalesStr) : null;
             const prevTicketsData = prevTicketsStr && prevTicketsStr !== 'null' ? JSON.parse(prevTicketsStr) : null;
+            const chartMeta = chartMetaStr && chartMetaStr !== 'null' ? JSON.parse(chartMetaStr) : null;
             const currency = ctx.getAttribute('data-currency') || 'RON';
+
+            // Chart-meta mode: null = non-month view; 'past'/'current'/'future'
+            // = month view variants. For future months the actuals line is
+            // all zeros — blank it out so the chart isn't dragged to a flat
+            // bottom and only the prediction + prev-year lines are visible.
+            const chartMode = chartMeta ? chartMeta.mode : null;
+            if (chartMode === 'future') {
+                salesData.data = salesData.labels.map(() => null);
+                ticketData.data = ticketData.labels.map(() => null);
+            }
 
             // Average of sales / tickets over the rendered period — drawn as a
             // flat dashed line so operators can spot above/below-average days
-            // at a glance.
-            const avg = (arr) => arr.length > 0 ? arr.reduce((a, b) => a + (Number(b) || 0), 0) / arr.length : 0;
+            // at a glance. Filters nulls (future-month case where actuals don't
+            // exist yet) so the avg isn't dragged to 0.
+            const avg = (arr) => {
+                const valid = arr.filter(v => v !== null && v !== undefined);
+                return valid.length > 0 ? valid.reduce((a, b) => a + (Number(b) || 0), 0) / valid.length : 0;
+            };
             const salesAvg = avg(salesData.data);
             const ticketAvg = avg(ticketData.data);
 
@@ -901,7 +972,12 @@
                     yAxisID: 'y1',
                     order: 2,
                 },
-                {
+            ];
+
+            // Current-year avg lines — skip on future month (no observations,
+            // would just draw a flat line at zero).
+            if (chartMode !== 'future') {
+                datasets.push({
                     type: 'line',
                     label: 'Medie vânzări (RON)',
                     data: salesData.labels.map(() => salesAvg),
@@ -910,8 +986,8 @@
                     borderWidth: 1.25, borderDash: [4, 4], fill: false, pointRadius: 0, pointHoverRadius: 0,
                     yAxisID: 'y',
                     order: 4,
-                },
-                {
+                });
+                datasets.push({
                     type: 'line',
                     label: 'Medie bilete',
                     data: ticketData.labels.map(() => ticketAvg),
@@ -920,8 +996,8 @@
                     borderWidth: 1.25, borderDash: [4, 4], fill: false, pointRadius: 0, pointHoverRadius: 0,
                     yAxisID: 'y1',
                     order: 4,
-                }
-            ];
+                });
+            }
 
             // Previous year comparison (only for month view)
             if (prevSalesData) {
@@ -962,30 +1038,52 @@
                 });
             }
 
-            // Prediction line (only for month view)
-            if (prevSalesData && salesData.data.length > 0) {
-                const today = new Date();
-                const currentDay = today.getDate(); // 1-based day of month
+            // Prediction line (only for month view).
+            // PAST month: skip entirely — actuals are known, nothing to predict.
+            // CURRENT month: per-DOW capped/geomean with MTD pacing fallback
+            //   for early-month (matches PHP predictMonthlySeries).
+            // FUTURE month: prev[i + dowShift] × (capped overall growth from
+            //   current month MTD, passed via chartMeta.futureGrowth).
+            if (prevSalesData && chartMode !== 'past' && chartMeta) {
                 const totalDays = salesData.labels.length;
-                const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+                // monthStart driven by chartMeta — NOT new Date() — so that
+                // navigating to a different month sees the right reference.
+                const monthStart = new Date(chartMeta.monthStart + 'T00:00:00');
+                const today = new Date();
+                const currentDay = chartMeta.currentDay; // 1-based; meaningful only for 'current' mode
 
-                // DOW-alignment shift between current and prev year for this
-                // month. Gregorian calendar walks DOW by +1 between normal
-                // years and +2 after a leap year, so the SAME date index
-                // lands on a DIFFERENT day of week. Without this shift, the
-                // "Wednesday ratio" at index i actually compared current
-                // Wednesday against last year's Tuesday — and the future
-                // prediction looked up the wrong DOW from prev data too.
-                // shift = how many days to step forward in prev so the same
-                // index lands on the same DOW.
-                const prevMonthStart = new Date(today.getFullYear() - 1, today.getMonth(), 1);
-                const prevDaysInMonth = new Date(today.getFullYear() - 1, today.getMonth() + 1, 0).getDate();
+                const prevMonthStart = new Date(monthStart.getFullYear() - 1, monthStart.getMonth(), 1);
+                const prevDaysInMonth = new Date(monthStart.getFullYear() - 1, monthStart.getMonth() + 1, 0).getDate();
                 const dowShift = ((monthStart.getDay() - prevMonthStart.getDay()) + 7) % 7;
                 const prevAt = (i) => {
                     const idx = i + dowShift;
                     if (idx < 0 || idx >= prevSalesData.data.length || idx >= prevDaysInMonth) return 0;
                     return prevSalesData.data[idx] || 0;
                 };
+
+                // FUTURE month — single uniform growth applied to prev year.
+                if (chartMode === 'future') {
+                    const clampFuture = (x) => Math.max(0.3, Math.min(3.5, x));
+                    const growth = chartMeta.futureGrowth !== null && chartMeta.futureGrowth !== undefined
+                        ? clampFuture(chartMeta.futureGrowth)
+                        : 1;
+                    const predictionData = [];
+                    for (let i = 0; i < totalDays; i++) {
+                        predictionData.push(Math.round(prevAt(i) * growth));
+                    }
+                    datasets.push({
+                        type: 'line',
+                        label: 'Predicție (RON)',
+                        data: predictionData,
+                        borderColor: isDark ? 'rgba(16, 185, 129, 0.7)' : 'rgba(5, 150, 105, 0.7)',
+                        backgroundColor: isDark ? 'rgba(16, 185, 129, 0.05)' : 'rgba(5, 150, 105, 0.05)',
+                        borderWidth: 2, borderDash: [6, 3], fill: true, tension: 0.3,
+                        pointRadius: 0, pointHoverRadius: 4,
+                        yAxisID: 'y',
+                        order: 0,
+                    });
+                } else if (salesData.data.length > 0) {
+                    // CURRENT month — per-DOW capped/geomean + MTD pacing fallback.
 
                 // Smoothing helpers — see PHP predictMonthlySeries comments
                 // for the backtest rationale. Caps prevent a single big
@@ -1116,7 +1214,8 @@
                     yAxisID: 'y',
                     order: 0,
                 });
-            }
+                } // end CURRENT-month branch
+            } // end prediction block (chartMode !== 'past')
 
             new Chart(ctx, {
                 type: 'bar',
