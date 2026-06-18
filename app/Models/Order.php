@@ -50,6 +50,7 @@ class Order extends Model
         'currency',
         'locale',
         'source',
+        'channel',
         'customer_name',
         'customer_phone',
         'payment_status',

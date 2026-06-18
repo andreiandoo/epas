@@ -2017,10 +2017,14 @@ class EventsController extends BaseController
         $endDate = $request->input('end_date');
 
         // Channel filter: null = all channels (default), or marketplace|whitelabel|embed_widget.
-        // When set, page-view-derived metrics + traffic-sources are computed from
-        // core_customer_events scoped to that channel. Order/ticket counters (which
-        // come from orders/tickets tables) stay channel-blind since revenue is the
-        // same regardless of where the visitor arrived from.
+        // When set, every metric is filtered by channel:
+        //  - page_views / unique_visitors / traffic_sources / top_locations come
+        //    from core_customer_events.channel
+        //  - tickets_sold / chart_tickets / chart_revenue / recent_sales come
+        //    from orders.channel (stamped by MarketplaceTrackingController on
+        //    Purchase events) cascaded down to tickets via whereHas('order')
+        // Tickets without an order (POS sales, invitations) are excluded when
+        // the channel filter is active — they belong to no front-end at all.
         $channel = $request->input('channel');
         if ($channel && !in_array($channel, ['marketplace', 'whitelabel', 'embed_widget'], true)) {
             $channel = null;
@@ -2052,10 +2056,13 @@ class EventsController extends BaseController
         // Valid order statuses for analytics (only truly paid/completed)
         $validStatuses = ['paid', 'completed'];
 
-        // Scoped orders query: only this organizer's marketplace orders
+        // Scoped orders query: only this organizer's marketplace orders.
+        // When a channel filter is active, scope by orders.channel too — Purchase
+        // events stamp the column when they fire (see MarketplaceTrackingController).
         $scopedOrders = fn () => $event->orders()
             ->where('marketplace_organizer_id', $organizer->id)
-            ->whereIn('status', $validStatuses);
+            ->whereIn('status', $validStatuses)
+            ->when($channel, fn ($q) => $q->where('channel', $channel));
 
         // Base query for orders in the range (used for chart data & period comparisons)
         $ordersQuery = $scopedOrders()->whereBetween('created_at', [$rangeStart, $rangeEnd]);
@@ -2113,7 +2120,10 @@ class EventsController extends BaseController
             ->where(function ($q) {
                 $q->whereDoesntHave('order')
                   ->orWhereHas('order', fn ($qq) => $qq->where('source', '!=', 'external_import'));
-            });
+            })
+            // Channel scope: tickets inherit their order's channel. POS / invitation
+            // tickets without orders are kept ONLY when no channel filter is active.
+            ->when($channel, fn ($q) => $q->whereHas('order', fn ($qq) => $qq->where('channel', $channel)));
 
         // Valid tickets grouped by ticket_type — used for net revenue and per-type counts
         $validCountsByType = (clone $validEventTicketsQuery())
@@ -2399,9 +2409,32 @@ class EventsController extends BaseController
             ];
         });
 
-        // Top locations - empty until real location tracking is implemented
-        // Real data would come from a visitor_logs or analytics table with geolocation
-        $topLocations = [];
+        // Top locations — aggregate distinct visitors per country/city from the
+        // tracking table. Honors the same channel filter as the rest of the
+        // dashboard, so "Whitelabel" only counts visitors that landed on a
+        // whitelabel-packaged site. Returns up to 10 buckets ordered by visitors.
+        try {
+            $topLocations = (clone $trackingQuery)
+                ->whereNotNull('country_code')
+                ->selectRaw('country_code, city, COUNT(DISTINCT visitor_id) as visitors')
+                ->groupBy('country_code', 'city')
+                ->orderByDesc('visitors')
+                ->limit(10)
+                ->get()
+                ->map(fn ($row) => [
+                    // Aliased to `country` (ISO-2) so the existing
+                    // renderGlobeData()/getFlag() in analytics.php picks
+                    // it up without a frontend change.
+                    'country' => $row->country_code,
+                    'country_code' => $row->country_code,
+                    'city' => $row->city ?: 'Unknown',
+                    'visitors' => (int) $row->visitors,
+                ])
+                ->toArray();
+        } catch (\Throwable $e) {
+            \Log::warning('top_locations query failed', ['error' => $e->getMessage()]);
+            $topLocations = [];
+        }
 
         // Recent sales
         $recentSales = $scopedOrders()

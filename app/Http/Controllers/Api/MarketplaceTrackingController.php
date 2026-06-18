@@ -153,6 +153,30 @@ class MarketplaceTrackingController extends Controller
         // Update or create session
         $this->updateSession($sessionId, $visitorId, $request, $event);
 
+        // Stamp the order with its channel so the analytics dashboard can scope
+        // revenue + tickets per traffic source. Only Purchase events with a
+        // resolved order_id propagate — and only when the request explicitly
+        // says channel='whitelabel' (or any non-default), so a future
+        // marketplace re-tracking won't clobber an existing whitelabel stamp.
+        if ($event->event_type === 'purchase'
+            && $resolvedOrderId
+            && $request->input('channel')
+            && $request->input('channel') !== 'marketplace'
+        ) {
+            try {
+                \DB::table('orders')->where('id', $resolvedOrderId)->update([
+                    'channel' => $request->input('channel'),
+                    'updated_at' => now(),
+                ]);
+            } catch (\Throwable $e) {
+                \Log::warning('Failed to stamp order.channel from tracking event', [
+                    'order_id' => $resolvedOrderId,
+                    'channel' => $request->input('channel'),
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
         // Update CoreCustomer metrics (link visitor to customer if email known)
         $this->updateCoreCustomer($visitorId, $request, $event);
 
