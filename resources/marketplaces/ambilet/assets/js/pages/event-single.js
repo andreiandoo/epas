@@ -1331,6 +1331,35 @@ const EventPage = {
         if (Array.isArray(fomo.toast_messages) && fomo.toast_messages.length) {
             this.startFomoToasts(fomo.toast_messages);
         }
+
+        // ── Viewers drift ──────────────────────────────────────────────
+        // The server gives us a deterministic-per-minute value; on the
+        // client we want the visible number to twitch so it doesn't read
+        // as a static fake. Random walk every ~8s, ±1 each step, clamped
+        // to the same [4..20] band the server enforces. Slight bias
+        // towards the original value so we hover around the realistic
+        // mark instead of drifting to the edge.
+        this.startFomoViewersDrift(fomo.viewers_now);
+    },
+
+    startFomoViewersDrift(initial) {
+        if (this._fomoViewersInterval) clearInterval(this._fomoViewersInterval);
+        var el = document.getElementById('fomo-viewers');
+        if (!el) return;
+        var current = Math.max(4, Math.min(20, parseInt(initial, 10) || 9));
+        var origin = current;
+        this._fomoViewersInterval = setInterval(function () {
+            // Bias: when current drifts away from origin, nudge back.
+            var delta;
+            var diff = current - origin;
+            if (diff >= 3) delta = -1;
+            else if (diff <= -3) delta = 1;
+            else delta = Math.random() > 0.5 ? 1 : -1;
+            // ~30% chance to stay flat so the number doesn't change every tick
+            if (Math.random() < 0.3) delta = 0;
+            current = Math.max(4, Math.min(20, current + delta));
+            el.textContent = current + ' persoane se uită acum';
+        }, 8000);
     },
 
     /**
