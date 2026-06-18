@@ -68,6 +68,7 @@ class Event extends Model
         'is_postponed', 'postponed_date', 'postponed_start_time', 'postponed_door_time', 'postponed_end_time', 'postponed_reason',
         'door_sales_only', 'is_promoted', 'promoted_until', 'is_featured',
         'is_homepage_featured', 'is_general_featured', 'is_category_featured', 'is_city_featured', 'is_published', 'submitted_at', 'rejected_at', 'rejection_reason', 'access_password', 'redirect_url',
+        'generate_fomo', 'fomo_displayed_remaining', 'fomo_displayed_remaining_updated_at',
         'has_custom_related', 'custom_related_event_ids',
         'homepage_featured_image', 'featured_image',
 
@@ -164,6 +165,9 @@ class Event extends Model
         'is_homepage_featured'  => 'bool',
         'is_general_featured'   => 'bool',
         'is_category_featured'  => 'bool',
+        'generate_fomo'         => 'bool',
+        'fomo_displayed_remaining' => 'int',
+        'fomo_displayed_remaining_updated_at' => 'datetime',
         'is_city_featured'      => 'bool',
         'is_published'          => 'bool',
         'submitted_at'          => 'datetime',

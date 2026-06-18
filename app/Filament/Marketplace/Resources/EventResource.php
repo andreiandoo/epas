@@ -316,6 +316,19 @@ class EventResource extends Resource
                                         ->partiallyRenderAfterStateUpdated(),
                                 ]),
 
+                                // FOMO toggle — gated per event. When off,
+                                // the public marketplace page is unchanged.
+                                // When on, pills/scarcity bar/toast appear.
+                                Forms\Components\Toggle::make('generate_fomo')
+                                    ->label($t('Generate FOMO', 'Generate FOMO'))
+                                    ->helperText($t(
+                                        'Activează micro-elemente de social proof (pills cu vânzări 24h și viewers, „Cerere ridicată" cu locuri rămase, mesaje toast) pe pagina publică. Cifrele afișate sunt parțial bazate pe stocul real, parțial generate pentru atmosferă.',
+                                        'Enables social-proof micro-elements (24h sold + viewers pills, "high demand" scarcity bar, toast messages) on the public page. Numbers are partly derived from real stock, partly generated for vibe.'
+                                    ))
+                                    ->onIcon('heroicon-m-fire')
+                                    ->offIcon('heroicon-m-fire')
+                                    ->columnSpanFull(),
+
                                 // Homepage Featured Image - only shown when Homepage Featured is enabled
                                 Forms\Components\FileUpload::make('homepage_featured_image')
                                     ->label($t('Imagine Featured Homepage', 'Homepage Featured Image'))
