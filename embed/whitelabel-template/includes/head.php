@@ -24,15 +24,31 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 <?php endif; ?>
 
 <?php if (defined('TRACKING_GA_ID') && TRACKING_GA_ID): ?>
-<!-- Google Analytics (gtag) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=<?= htmlspecialchars(TRACKING_GA_ID) ?>"></script>
+<?php
+// Accept comma- or space-separated list of gtag-compatible IDs:
+//   G-XXX   → GA4 (Analytics 4)
+//   UA-XXX  → Universal Analytics (legacy)
+//   GT-XXX  → Google Tag (wrapper)
+//   AW-XXX  → Google Ads Conversion
+// All four load through the same gtag.js library; first id is used as the
+// loader URL param, every id becomes a separate gtag('config') call so
+// conversions / measurement land in the right Google property.
+$gaIdList = array_values(array_filter(array_map('trim', preg_split('/[\s,]+/', TRACKING_GA_ID))));
+$gaLoaderId = $gaIdList[0] ?? '';
+?>
+<?php if (!empty($gaLoaderId)): ?>
+<!-- Google gtag.js (GA / GT / AW / UA) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=<?= htmlspecialchars($gaLoaderId) ?>"></script>
 <script>
 window.dataLayer = window.dataLayer || [];
 function gtag(){dataLayer.push(arguments);}
 gtag('js', new Date());
-gtag('config', '<?= htmlspecialchars(TRACKING_GA_ID) ?>');
+<?php foreach ($gaIdList as $_gid): ?>
+gtag('config', '<?= htmlspecialchars($_gid) ?>');
+<?php endforeach; ?>
 </script>
-<!-- End Google Analytics -->
+<!-- End Google gtag.js -->
+<?php endif; ?>
 <?php endif; ?>
 
 <?php if (defined('TRACKING_FB_PIXEL_ID') && TRACKING_FB_PIXEL_ID): ?>

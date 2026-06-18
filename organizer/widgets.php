@@ -179,10 +179,10 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                                 <label class="flex items-center gap-3 cursor-pointer mb-3">
                                     <input type="checkbox" id="tracking-ga-enabled" class="w-4 h-4 rounded border-gray-300 text-primary focus:ring-2 focus:ring-primary/20" onchange="WidgetsPage.toggleTracker('ga')">
                                     <svg class="w-5 h-5" viewBox="0 0 24 24" fill="#F9AB00"><path d="M22.84 2.998v17.999a2.983 2.983 0 0 1-2.967 2.998 2.98 2.98 0 0 1-2.85-2.12 2.998 2.998 0 0 1-.117-.927V3.12C16.906 1.49 18.245.14 19.873.002a2.97 2.97 0 0 1 2.967 2.996zM4.133 18.055a2.973 2.973 0 1 1 0 5.945 2.973 2.973 0 0 1 0-5.945zm7.872-9.01a2.973 2.973 0 1 0-2.973 2.973 2.973 2.973 0 0 0 2.973-2.973z"/></svg>
-                                    <span class="text-sm font-semibold text-secondary">Google Analytics</span>
+                                    <span class="text-sm font-semibold text-secondary">Google Analytics / Tag / Ads</span>
                                 </label>
-                                <input type="text" id="full-tracking-ga" class="w-full input font-mono disabled:opacity-50 disabled:bg-slate-100" placeholder="G-XXXXXXXXXX" autocomplete="off" disabled>
-                                <p class="mt-1 text-xs text-muted">Începe cu <code>G-</code> (GA4) sau <code>UA-</code> (vechi). Găsești în Google Analytics → Admin → Data Streams.</p>
+                                <input type="text" id="full-tracking-ga" class="w-full input font-mono disabled:opacity-50 disabled:bg-slate-100" placeholder="G-XXXXXXXXXX, AW-1234567890, GT-XXXXXXXXXX" autocomplete="off" disabled>
+                                <p class="mt-1 text-xs text-muted">Acceptă unul sau mai multe ID-uri Google separate prin virgulă: <code>G-</code> (GA4), <code>UA-</code> (vechi), <code>GT-</code> (Google Tag), <code>AW-</code> (Google Ads). Toate sunt încărcate prin același gtag.js și primesc un <code>gtag('config')</code> separat.</p>
                             </div>
 
                             <div class="p-4 border rounded-xl border-border bg-slate-50/50">

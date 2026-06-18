@@ -3130,6 +3130,7 @@ switch ($action) {
         if (isset($_GET['period'])) $params['period'] = $_GET['period'];
         if (isset($_GET['start_date'])) $params['start_date'] = $_GET['start_date'];
         if (isset($_GET['end_date'])) $params['end_date'] = $_GET['end_date'];
+        if (isset($_GET['channel'])) $params['channel'] = $_GET['channel'];
         $endpoint = '/organizer/events/' . urlencode($eventId) . '/analytics' . ($params ? '?' . http_build_query($params) : '');
         $requiresAuth = true;
         break;
