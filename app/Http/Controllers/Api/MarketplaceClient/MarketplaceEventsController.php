@@ -2641,6 +2641,13 @@ class MarketplaceEventsController extends BaseController
             'widget_config' => $organizer->settings['widget_config'] ?? [],
             'widget_terms' => $organizer->settings['widget_terms'] ?? '',
             'widget_privacy' => $organizer->settings['widget_privacy'] ?? '',
+            // Tracking IDs are exposed as plaintext so the whitelabel ZIP
+            // generator can bake them into config.php (head.php emits the
+            // gtag.js / GTM / Meta Pixel snippets conditionally). These are
+            // public-facing IDs anyway — they get printed on every page.
+            'widget_tracking_ga_id' => $organizer->settings['widget_tracking_ga_id'] ?? '',
+            'widget_tracking_gtm_id' => $organizer->settings['widget_tracking_gtm_id'] ?? '',
+            'widget_tracking_fb_pixel_id' => $organizer->settings['widget_tracking_fb_pixel_id'] ?? '',
         ]);
     }
 
