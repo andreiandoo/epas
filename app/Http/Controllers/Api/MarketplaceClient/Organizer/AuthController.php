@@ -1275,6 +1275,9 @@ class AuthController extends BaseController
                 'widget_config' => $organizer->settings['widget_config'] ?? [],
                 'widget_terms' => $organizer->settings['widget_terms'] ?? '',
                 'widget_privacy' => $organizer->settings['widget_privacy'] ?? '',
+                'widget_tracking_ga_id' => $organizer->settings['widget_tracking_ga_id'] ?? '',
+                'widget_tracking_gtm_id' => $organizer->settings['widget_tracking_gtm_id'] ?? '',
+                'widget_tracking_fb_pixel_id' => $organizer->settings['widget_tracking_fb_pixel_id'] ?? '',
             ],
 
             // Mobile POS feature flags — surfaced to the app so it can

@@ -49,11 +49,12 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                         </div>
                     </div>
 
-                    <!-- Inner tabs: Branding | Termeni | Confidențialitate -->
+                    <!-- Inner tabs: Branding | Termeni | Confidențialitate | Tracking -->
                     <div class="flex gap-1 p-1 mb-6 rounded-lg bg-slate-100">
                         <button onclick="WidgetsPage.showInnerTab('branding')" class="flex-1 px-3 py-2 text-sm font-medium rounded-md wl-inner-tab active bg-white text-secondary shadow-sm" data-itab="branding">Branding & Configurare</button>
                         <button onclick="WidgetsPage.showInnerTab('terms')" class="flex-1 px-3 py-2 text-sm font-medium rounded-md wl-inner-tab text-muted" data-itab="terms">Termeni și Condiții</button>
                         <button onclick="WidgetsPage.showInnerTab('privacy')" class="flex-1 px-3 py-2 text-sm font-medium rounded-md wl-inner-tab text-muted" data-itab="privacy">Politica Confidențialitate</button>
+                        <button onclick="WidgetsPage.showInnerTab('tracking')" class="flex-1 px-3 py-2 text-sm font-medium rounded-md wl-inner-tab text-muted" data-itab="tracking">Tracking</button>
                     </div>
 
                     <!-- Inner tab: Branding -->
@@ -167,6 +168,47 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     <div id="itab-privacy" class="wl-inner-content" style="display:none;">
                         <p class="mb-3 text-sm text-muted">Conținutul paginii „Politica de Confidențialitate" de pe site-ul whitelabel. Acceptă HTML.</p>
                         <textarea id="wl-privacy-editor" class="w-full input" rows="14" style="font-family:monospace;font-size:13px;line-height:1.6;" placeholder="Introdu politica de confidențialitate aici..."></textarea>
+                    </div>
+
+                    <!-- Inner tab: Tracking -->
+                    <div id="itab-tracking" class="wl-inner-content" style="display:none;">
+                        <p class="mb-4 text-sm text-muted">Adaugă ID-urile platformelor de tracking. Lasă gol pentru a dezactiva o platformă. Scripturile se injectează automat în &lt;head&gt; pe toate paginile site-ului whitelabel când regenerezi pachetul ZIP.</p>
+
+                        <div class="space-y-5">
+                            <div>
+                                <label class="label flex items-center gap-2">
+                                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="#F9AB00"><path d="M22.84 2.998v17.999a2.983 2.983 0 0 1-2.967 2.998 2.98 2.98 0 0 1-2.85-2.12 2.998 2.998 0 0 1-.117-.927V3.12C16.906 1.49 18.245.14 19.873.002a2.97 2.97 0 0 1 2.967 2.996zM4.133 18.055a2.973 2.973 0 1 1 0 5.945 2.973 2.973 0 0 1 0-5.945zm7.872-9.01a2.973 2.973 0 1 0-2.973 2.973 2.973 2.973 0 0 0 2.973-2.973z"/></svg>
+                                    Google Analytics — Measurement ID
+                                </label>
+                                <input type="text" id="full-tracking-ga" class="w-full input font-mono" placeholder="G-XXXXXXXXXX" autocomplete="off">
+                                <p class="mt-1 text-xs text-muted">Începe cu <code>G-</code> (GA4) sau <code>UA-</code> (vechi). Găsești în Google Analytics → Admin → Data Streams.</p>
+                            </div>
+
+                            <div>
+                                <label class="label flex items-center gap-2">
+                                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="#4285F4"><path d="M19.327 5.683 13.41 11.6l5.917 5.917a4.018 4.018 0 0 1-5.683 5.683l-5.917-5.917L1.81 11.6a4.018 4.018 0 0 1 5.683-5.683l5.917 5.917 5.917-5.917a4.018 4.018 0 1 1 5.683 5.683l-5.683-5.917z"/></svg>
+                                    Google Tag Manager — Container ID
+                                </label>
+                                <input type="text" id="full-tracking-gtm" class="w-full input font-mono" placeholder="GTM-XXXXXXX" autocomplete="off">
+                                <p class="mt-1 text-xs text-muted">Începe cu <code>GTM-</code>. Găsești în Google Tag Manager → Workspace overview.</p>
+                            </div>
+
+                            <div>
+                                <label class="label flex items-center gap-2">
+                                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="#1877F2"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+                                    Meta (Facebook) Pixel — Pixel ID
+                                </label>
+                                <input type="text" id="full-tracking-fb" class="w-full input font-mono" placeholder="1234567890123456" autocomplete="off">
+                                <p class="mt-1 text-xs text-muted">Numeric, 15-16 cifre. Găsești în Meta Business Suite → Events Manager → Data Sources.</p>
+                            </div>
+                        </div>
+
+                        <div class="mt-6 p-4 rounded-xl bg-blue-50 border border-blue-200">
+                            <p class="text-xs text-blue-900 flex items-start gap-2">
+                                <svg class="w-4 h-4 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                <span><strong>Important:</strong> După ce salvezi modificările, descarcă din nou pachetul ZIP și înlocuiește fișierele pe serverul tău. Scripturile se generează la momentul descărcării — modificările NU se aplică pe site-uri deja deployed până nu regenerezi pachetul.</span>
+                            </p>
+                        </div>
                     </div>
 
                     <!-- Actions -->
@@ -403,6 +445,11 @@ const WidgetsPage = {
         _s('wl-terms-editor', terms);
         _s('wl-privacy-editor', privacy);
 
+        // Pre-fill tracking IDs
+        _s('full-tracking-ga', this.organizer.settings?.widget_tracking_ga_id || '');
+        _s('full-tracking-gtm', this.organizer.settings?.widget_tracking_gtm_id || '');
+        _s('full-tracking-fb', this.organizer.settings?.widget_tracking_fb_pixel_id || '');
+
         await this.loadEvents();
 
         this.updateCode('single');
@@ -628,10 +675,21 @@ const WidgetsPage = {
         // Also save terms and privacy content
         const terms = this._v('wl-terms-editor');
         const privacy = this._v('wl-privacy-editor');
+        // Tracking IDs — saved as top-level settings keys (parallel to widget_terms / widget_privacy)
+        const trackingGaId = (this._v('full-tracking-ga') || '').trim();
+        const trackingGtmId = (this._v('full-tracking-gtm') || '').trim();
+        const trackingFbPixelId = (this._v('full-tracking-fb') || '').trim();
 
         try {
             await AmbiletAPI.put('/organizer/widget-settings', {
-                settings: { widget_config: config, widget_terms: terms, widget_privacy: privacy }
+                settings: {
+                    widget_config: config,
+                    widget_terms: terms,
+                    widget_privacy: privacy,
+                    widget_tracking_ga_id: trackingGaId,
+                    widget_tracking_gtm_id: trackingGtmId,
+                    widget_tracking_fb_pixel_id: trackingFbPixelId,
+                }
             });
             const hint = document.getElementById('widget-config-save-hint');
             hint.classList.remove('hidden');

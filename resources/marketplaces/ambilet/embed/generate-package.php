@@ -41,6 +41,11 @@ $widgetTerms = $org['widget_terms'] ?? $org['settings']['widget_terms'] ?? '';
 $widgetPrivacy = $org['widget_privacy'] ?? $org['settings']['widget_privacy'] ?? '';
 $theme = $widgetConfig['theme'] ?? 'dark';
 
+// Tracking IDs (top-level keys in settings, parallel to widget_terms / widget_privacy)
+$trackingGaId = $org['settings']['widget_tracking_ga_id'] ?? '';
+$trackingGtmId = $org['settings']['widget_tracking_gtm_id'] ?? '';
+$trackingFbPixelId = $org['settings']['widget_tracking_fb_pixel_id'] ?? '';
+
 // Replacement map for template placeholders
 $replacements = [
     '{{API_BASE_URL}}' => API_BASE_URL,
@@ -62,6 +67,9 @@ $replacements = [
     '{{WIDGET_TERMS}}' => $widgetTerms,
     '{{WIDGET_PRIVACY}}' => $widgetPrivacy,
     '{{THEME}}' => $theme,
+    '{{TRACKING_GA_ID}}' => $trackingGaId,
+    '{{TRACKING_GTM_ID}}' => $trackingGtmId,
+    '{{TRACKING_FB_PIXEL_ID}}' => $trackingFbPixelId,
 ];
 
 // Template directory
