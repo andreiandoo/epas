@@ -280,6 +280,11 @@ function renderPromoCodes() {
         const usageLimit = c.usage_limit || 0;
         const usagePercent = usageLimit > 0 ? Math.min((usageCount / usageLimit) * 100, 100) : 0;
 
+        // Discount display
+        const discountDisplay = discountType === 'percentage'
+            ? discountValue + '% reducere'
+            : AmbiletUtils.formatCurrency(discountValue) + ' reducere';
+
         // Effective status — DB `status` is not auto-rolled when a code's
         // expires_at passes (no cron updates it), so a row stuck at
         // status='active' can in fact be expired / not-yet-started / exhausted.
