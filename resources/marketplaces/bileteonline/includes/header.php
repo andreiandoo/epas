@@ -135,13 +135,15 @@ if (empty($navGuides)) {
 // Search overlay suggestions (client-filtered), built from live data.
 $searchItems = [];
 foreach ($navCategories as $c) {
-    $searchItems[] = ['title' => $c['label'], 'type' => 'Categorie', 'meta' => ($c['count'] ?? ''), 'href' => $c['href']];
+    $catN = (int) ($c['count_n'] ?? 0);
+    $searchItems[] = ['kind' => 'category', 'title' => $c['label'], 'type' => 'Categorie', 'icon' => $c['icon_emoji'] ?? '', 'meta' => $catN > 0 ? ($catN . ' activități') : '', 'href' => $c['href']];
 }
 foreach ($navCities as $c) {
-    $searchItems[] = ['title' => $c['label'], 'type' => 'Oraș', 'meta' => 'Activități locale', 'href' => $c['href']];
+    $cityN = (int) ($c['count'] ?? 0);
+    $searchItems[] = ['kind' => 'city', 'title' => $c['label'], 'type' => 'Oraș', 'meta' => $cityN > 0 ? ($cityN . ' activități') : 'Activități locale', 'href' => $c['href']];
 }
-$searchItems[] = ['title' => 'Card cadou pentru experiențe', 'type' => 'Cadou', 'meta' => 'Alegi suma, destinatarul alege activitatea', 'href' => '/card-cadou'];
-$searchItems[] = ['title' => 'Recuperează comanda', 'type' => 'Ajutor', 'meta' => 'Găsește biletele după email și comandă', 'href' => '/recuperare-comanda'];
+$searchItems[] = ['kind' => 'page', 'title' => 'Card cadou pentru experiențe', 'type' => 'Cadou', 'meta' => 'Alegi suma, destinatarul alege activitatea', 'href' => '/card-cadou'];
+$searchItems[] = ['kind' => 'page', 'title' => 'Recuperează comanda', 'type' => 'Ajutor', 'meta' => 'Găsește biletele după email și comandă', 'href' => '/recuperare-comanda'];
 
 // json_encode (UTF-8 kept) + htmlspecialchars(ENT_QUOTES) is the correct escaping
 // for an HTML attribute Alpine parses. Do NOT add JSON_HEX_* here.
@@ -638,28 +640,80 @@ $tabPlacesLabel = ($ctxType === 'city' || $ctxType === 'activity')
                 </form>
 
                 <div class="relative grid max-h-[70vh] overflow-auto lg:grid-cols-[1fr_320px]">
-                    <section class="p-5 sm:p-6">
-                        <p class="font-mono text-xs tracking-[.18em] text-ink-soft">SUGESTII</p>
-                        <div class="grid gap-3 mt-4">
-                            <template x-for="item in filteredSearch()" :key="item.href">
-                                <a :href="item.href" class="p-4 transition border group rounded-3xl border-ink/10 bg-paper-2 hover:border-ink hover:bg-paper">
-                                    <div class="flex items-start justify-between gap-4">
-                                        <div>
-                                            <span class="px-3 py-1 text-xs font-bold rounded-full bg-paper text-ink-soft" x-text="item.type"></span>
-                                            <h3 class="mt-3 text-3xl font-bold leading-none font-display group-hover:text-vermilion" x-text="item.title"></h3>
-                                            <p class="mt-1 text-ink-soft" x-text="item.meta"></p>
-                                        </div>
-                                        <span class="text-2xl transition group-hover:translate-x-1" aria-hidden="true">→</span>
-                                    </div>
-                                </a>
-                            </template>
-                            <template x-if="filteredSearch().length === 0">
-                                <button type="button" @click="doSearch()" class="p-5 text-left border-2 border-dashed rounded-3xl border-ink/20">
-                                    <span class="font-bold">Caută „<span x-text="searchQuery"></span>” pe tot site-ul</span>
-                                    <span class="block mt-1 text-sm text-ink-soft">Apasă Enter pentru rezultate complete.</span>
-                                </button>
-                            </template>
+                    <section class="p-5 space-y-6 sm:p-6">
+                        <!-- ACTIVITĂȚI — card cu imagine + preț -->
+                        <div x-show="resultActivities().length" x-cloak>
+                            <p class="font-mono text-xs tracking-[.18em] text-vermilion">ACTIVITĂȚI</p>
+                            <div class="grid gap-3 mt-3 sm:grid-cols-2">
+                                <template x-for="item in resultActivities()" :key="'a-'+item.href">
+                                    <a :href="item.href" class="flex gap-3 p-2.5 transition border group rounded-2xl border-ink/10 bg-paper-2 hover:border-ink hover:bg-paper">
+                                        <span class="grid w-16 h-16 overflow-hidden shrink-0 rounded-xl bg-ink place-items-center">
+                                            <img x-show="item.image" :src="item.image" :alt="item.title" class="object-cover w-full h-full" loading="lazy">
+                                            <span x-show="!item.image" class="text-2xl opacity-40">🎫</span>
+                                        </span>
+                                        <span class="flex-1 min-w-0">
+                                            <span class="block text-lg font-bold leading-tight font-display line-clamp-2 group-hover:text-vermilion" x-text="item.title"></span>
+                                            <span class="mt-0.5 block truncate text-xs text-ink-soft" x-text="item.meta"></span>
+                                            <span x-show="item.price" class="mt-0.5 block text-sm font-bold" x-text="item.price"></span>
+                                        </span>
+                                    </a>
+                                </template>
+                            </div>
                         </div>
+
+                        <!-- CATEGORII — pastile cu iconiță -->
+                        <div x-show="resultCategories().length" x-cloak>
+                            <p class="font-mono text-xs tracking-[.18em] text-vermilion">CATEGORII</p>
+                            <div class="flex flex-wrap gap-2 mt-3">
+                                <template x-for="item in resultCategories()" :key="'c-'+item.href">
+                                    <a :href="item.href" class="inline-flex items-center gap-2 px-3 py-2 text-sm font-bold transition border rounded-full border-ink/10 bg-paper-2 hover:bg-ink hover:text-paper">
+                                        <span x-show="item.icon" x-text="item.icon"></span>
+                                        <span x-text="item.title"></span>
+                                        <span x-show="item.meta" class="font-normal text-ink-soft" x-text="'· ' + item.meta"></span>
+                                    </a>
+                                </template>
+                            </div>
+                        </div>
+
+                        <!-- ORAȘE — rând cu counter -->
+                        <div x-show="resultCities().length" x-cloak>
+                            <p class="font-mono text-xs tracking-[.18em] text-vermilion">ORAȘE</p>
+                            <div class="grid gap-2 mt-3 sm:grid-cols-2">
+                                <template x-for="item in resultCities()" :key="'o-'+item.href">
+                                    <a :href="item.href" class="flex items-center justify-between gap-3 px-4 py-3 transition border group rounded-2xl border-ink/10 bg-paper-2 hover:border-ink hover:bg-paper">
+                                        <span class="min-w-0">
+                                            <span class="block text-xl font-bold leading-none truncate font-display group-hover:text-vermilion" x-text="item.title"></span>
+                                            <span x-show="item.meta" class="mt-1 block text-xs text-ink-soft" x-text="item.meta"></span>
+                                        </span>
+                                        <span class="transition group-hover:translate-x-1" aria-hidden="true">→</span>
+                                    </a>
+                                </template>
+                            </div>
+                        </div>
+
+                        <!-- PAGINI -->
+                        <div x-show="resultPages().length" x-cloak>
+                            <p class="font-mono text-xs tracking-[.18em] text-ink-soft">PAGINI</p>
+                            <div class="grid gap-2 mt-3">
+                                <template x-for="item in resultPages()" :key="'p-'+item.href">
+                                    <a :href="item.href" class="flex items-center justify-between gap-3 px-4 py-3 transition border group rounded-2xl border-ink/10 bg-paper-2 hover:border-ink hover:bg-paper">
+                                        <span class="min-w-0">
+                                            <span class="block font-bold" x-text="item.title"></span>
+                                            <span x-show="item.meta" class="block text-xs text-ink-soft" x-text="item.meta"></span>
+                                        </span>
+                                        <span class="transition group-hover:translate-x-1" aria-hidden="true">→</span>
+                                    </a>
+                                </template>
+                            </div>
+                        </div>
+
+                        <!-- Empty state -->
+                        <template x-if="totalResults() === 0">
+                            <button type="button" @click="doSearch()" class="w-full p-5 text-left border-2 border-dashed rounded-3xl border-ink/20">
+                                <span class="font-bold">Caută „<span x-text="searchQuery"></span>” pe tot site-ul</span>
+                                <span class="block mt-1 text-sm text-ink-soft">Apasă Enter pentru rezultate complete.</span>
+                            </button>
+                        </template>
                     </section>
 
                     <aside class="p-5 border-t-2 border-dashed border-ink/15 bg-paper-2/60 sm:p-6 lg:border-l-2 lg:border-t-0">
@@ -876,20 +930,34 @@ function bileteOnlineHeader(seed) {
                 .then(r => r.json())
                 .then(d => {
                     const items = (d && d.data && (d.data.items || d.data)) || [];
-                    this.activityResults = (Array.isArray(items) ? items : []).map(a => ({
-                        title: (a.title && typeof a.title === 'object') ? (a.title.ro || a.title.en || Object.values(a.title)[0] || '') : (a.title || ''),
-                        type: 'Activitate',
-                        meta: (a.city && a.city.name) || (a.category && a.category.name) || '',
-                        href: '/activitate/' + (a.slug || ''),
-                    })).filter(x => x.title && x.href !== '/activitate/');
+                    this.activityResults = (Array.isArray(items) ? items : []).map(a => {
+                        const slug = a.slug || '';
+                        const citySlug = (a.city && a.city.slug) || '';
+                        const cents = a.cheapest_price_cents || 0;
+                        return {
+                            kind: 'activity',
+                            title: (a.title && typeof a.title === 'object') ? (a.title.ro || a.title.en || Object.values(a.title)[0] || '') : (a.title || ''),
+                            image: a.cover_image_url || '',
+                            meta: [(a.city && a.city.name) || '', (a.category && a.category.name) || ''].filter(Boolean).join(' · '),
+                            price: cents > 0 ? ('de la ' + new Intl.NumberFormat('ro-RO').format(Math.round(cents / 100)) + ' lei') : '',
+                            href: slug ? (citySlug ? ('/' + citySlug + '/' + slug) : ('/activitate/' + slug)) : '',
+                        };
+                    }).filter(x => x.title && x.href);
                 })
                 .catch(() => { this.activityResults = []; });
         },
-        filteredSearch() {
+        matchStatic(kind, limit) {
             const q = (this.searchQuery || '').toLowerCase().trim();
-            if (! q) return this.searchItems.slice(0, 6);
-            const staticMatches = this.searchItems.filter(i => JSON.stringify(i).toLowerCase().includes(q));
-            return [...this.activityResults, ...staticMatches].slice(0, 10);
+            let items = this.searchItems.filter(i => i.kind === kind);
+            if (q) items = items.filter(i => ((i.title || '') + ' ' + (i.meta || '')).toLowerCase().includes(q));
+            return items.slice(0, limit);
+        },
+        resultActivities() { return this.activityResults.slice(0, 6); },
+        resultCategories() { return this.matchStatic('category', 8); },
+        resultCities() { return this.matchStatic('city', 6); },
+        resultPages() { return this.matchStatic('page', 4); },
+        totalResults() {
+            return this.resultActivities().length + this.resultCategories().length + this.resultCities().length + this.resultPages().length;
         },
 
         // ---- misc ----
