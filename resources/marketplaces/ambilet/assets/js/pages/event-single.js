@@ -1295,25 +1295,37 @@ const EventPage = {
         }
 
         // ── Scarcity bar above ticket types ────────────────────────────
-        if (!document.getElementById('fomo-scarcity')) {
-            var scarcity = document.createElement('div');
-            scarcity.id = 'fomo-scarcity';
-            scarcity.className = 'p-4 mb-4 border rounded-2xl border-amber-200 bg-amber-50';
-            scarcity.innerHTML =
-                '<div class="flex items-center justify-between gap-3">' +
-                    '<div class="flex items-center gap-2 text-sm font-bold text-amber-900">' +
-                        '<span>🔥</span><span>Cerere ridicată</span>' +
-                    '</div>' +
-                    '<span class="text-xs font-semibold text-amber-700">' +
-                        this.escapeHtml(fomo.remaining_displayed) + ' locuri rămase' +
-                    '</span>' +
+        // Built as a string, injected as a SIBLING before each ticket-list
+        // container so the bar survives whenever the ticket list re-renders.
+        // We need TWO copies: one before #ticket-types (desktop sidebar)
+        // and one before #drawerTicketTypes (mobile drawer). Both are
+        // present on the same page; CSS hides whichever isn't active.
+        var scarcityHtml =
+            '<div class="flex items-center justify-between gap-3">' +
+                '<div class="flex items-center gap-2 text-sm font-bold text-amber-900">' +
+                    '<span>🔥</span><span>Cerere ridicată</span>' +
                 '</div>' +
-                '<div class="h-2 mt-3 overflow-hidden rounded-full bg-amber-100">' +
-                    '<div class="h-full rounded-full bg-amber-500 transition-all duration-700" style="width:' +
-                        Math.max(8, Math.min(96, fomo.inventory_percent)) + '%;"></div>' +
-                '</div>';
-            ticketsEl.parentNode.insertBefore(scarcity, ticketsEl);
-        }
+                '<span class="text-xs font-semibold text-amber-700">' +
+                    this.escapeHtml(fomo.remaining_displayed) + ' locuri rămase' +
+                '</span>' +
+            '</div>' +
+            '<div class="h-2 mt-3 overflow-hidden rounded-full bg-amber-100">' +
+                '<div class="h-full rounded-full bg-amber-500 transition-all duration-700" style="width:' +
+                    Math.max(8, Math.min(96, fomo.inventory_percent)) + '%;"></div>' +
+            '</div>';
+
+        var injectScarcity = function (siblingId, copyId) {
+            if (document.getElementById(copyId)) return;
+            var sibling = document.getElementById(siblingId);
+            if (!sibling || !sibling.parentNode) return;
+            var box = document.createElement('div');
+            box.id = copyId;
+            box.className = 'p-4 mb-4 border rounded-2xl border-amber-200 bg-amber-50';
+            box.innerHTML = scarcityHtml;
+            sibling.parentNode.insertBefore(box, sibling);
+        };
+        injectScarcity('ticket-types', 'fomo-scarcity');
+        injectScarcity('drawerTicketTypes', 'fomo-scarcity-drawer');
 
         // ── Floating toast cycle ───────────────────────────────────────
         if (Array.isArray(fomo.toast_messages) && fomo.toast_messages.length) {
@@ -1328,11 +1340,25 @@ const EventPage = {
      * the existing container is reused.
      */
     startFomoToasts(messages) {
+        // Inject the stylesheet once so positioning rules can be media-
+        // query driven. On mobile the page has a 92px sticky "Cumpără
+        // bilete" button at the bottom; the toast needs to clear it AND
+        // be horizontally centered. Desktop keeps the bottom-left corner
+        // placement from the mockup.
+        if (!document.getElementById('fomo-toast-style')) {
+            var style = document.createElement('style');
+            style.id = 'fomo-toast-style';
+            style.textContent =
+                '#fomo-toast{position:fixed;left:1rem;bottom:1.5rem;z-index:50;max-width:22rem;display:none;}' +
+                '@media (max-width:1023px){' +
+                    '#fomo-toast{left:1rem;right:1rem;bottom:calc(108px + env(safe-area-inset-bottom,0px));max-width:none;}' +
+                '}';
+            document.head.appendChild(style);
+        }
         var holder = document.getElementById('fomo-toast');
         if (!holder) {
             holder = document.createElement('div');
             holder.id = 'fomo-toast';
-            holder.style.cssText = 'position:fixed;left:1rem;bottom:1.5rem;z-index:50;max-width:22rem;display:none;';
             holder.innerHTML =
                 '<div class="p-4 bg-white border border-slate-200 rounded-2xl shadow-2xl">' +
                     '<div class="flex items-start gap-3">' +
