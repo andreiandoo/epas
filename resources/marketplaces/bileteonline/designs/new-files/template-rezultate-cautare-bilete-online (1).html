@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Rezultate căutare pentru „copii” | bilete.online</title>
+  <meta name="description" content="Rezultate de căutare bilete.online pentru activități, atracții, locații, orașe și ghiduri.">
+  <meta name="robots" content="noindex, follow">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Hanken+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: { extend: {
+        colors: {
+          paper:'#F7F4EC',
+          paper2:'#EEE8DB',
+          ink:'#171512',
+          muted:'#625B50',
+          red:'#E84527',
+          red2:'#C5371C',
+          green:'#183E34',
+          green2:'#DCE9DF',
+          gold:'#D99A2B',
+          blue:'#244A66'
+        },
+        fontFamily: {
+          display:['Fraunces','Georgia','serif'],
+          sans:['Hanken Grotesk','system-ui','sans-serif']
+        },
+        boxShadow: {
+          soft:'0 18px 50px -34px rgba(23,21,18,.65)',
+          panel:'0 36px 90px -52px rgba(23,21,18,.82)'
+        }
+      }}
+    }
+  </script>
+
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+  <style>
+    body{background:#F7F4EC;color:#171512;font-family:'Hanken Grotesk',system-ui,sans-serif}
+    .font-display{font-family:Fraunces,Georgia,serif;letter-spacing:-.018em}
+    .line-clamp-2{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+    .line-clamp-3{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+    [x-cloak]{display:none!important}
+  </style>
+</head>
+
+<body x-data="searchResultsPage()" class="antialiased">
+  <header class="sticky top-0 z-50 border-b border-ink/10 bg-paper/95 backdrop-blur-xl">
+    <nav class="mx-auto flex h-[68px] max-w-[1440px] items-center gap-4 px-4 sm:px-6">
+      <a href="/" class="flex shrink-0 items-center gap-2.5">
+        <span class="grid h-9 w-9 place-items-center rounded-xl bg-red text-white rotate-[-4deg]">🎟</span>
+        <span class="font-display text-xl font-bold">bilete<span class="text-red">.</span>online</span>
+      </a>
+
+      <div class="mx-auto hidden w-full max-w-[620px] md:block">
+        <form @submit.prevent="performSearch()" class="flex h-11 items-center gap-2 rounded-full border border-ink/15 bg-white px-4">
+          <span class="text-muted">⌕</span>
+          <input x-model="query" class="min-w-0 flex-1 bg-transparent text-sm font-semibold outline-none" placeholder="Caută activități, atracții, locații sau ghiduri">
+          <button class="text-sm font-bold text-red">Caută</button>
+        </form>
+      </div>
+
+      <div class="ml-auto flex items-center gap-2">
+        <a href="/cos" class="rounded-full px-4 py-2 text-sm font-bold hover:bg-paper2">Coș</a>
+        <a href="/login" class="rounded-full bg-ink px-4 py-2 text-sm font-bold text-white">Log in</a>
+      </div>
+    </nav>
+  </header>
+
+  <main>
+    <section class="border-b border-ink/10 bg-paper">
+      <div class="mx-auto max-w-[1440px] px-4 py-8 sm:px-6 lg:py-10">
+        <nav class="flex flex-wrap gap-2 text-sm font-semibold text-muted">
+          <a href="/">Acasă</a><span>/</span><span class="text-ink">Rezultate căutare</span>
+        </nav>
+
+        <div class="mt-5 max-w-4xl">
+          <h1 class="font-display text-4xl font-bold leading-tight sm:text-5xl">
+            Rezultate pentru „<span x-text="query"></span>”
+          </h1>
+          <p class="mt-3 text-lg text-muted">
+            Am găsit <strong class="text-ink" x-text="filteredResults().length"></strong> rezultate în activități, atracții, locații, orașe și ghiduri.
+          </p>
+        </div>
+
+        <form @submit.prevent="performSearch()" class="mt-6 flex max-w-3xl items-center gap-2 rounded-full border border-ink/15 bg-white p-2 shadow-soft md:hidden">
+          <span class="ml-3 text-muted">⌕</span>
+          <input x-model="query" class="min-w-0 flex-1 bg-transparent px-2 py-2 font-semibold outline-none" placeholder="Caută pe bilete.online">
+          <button class="rounded-full bg-red px-5 py-2.5 text-sm font-bold text-white">Caută</button>
+        </form>
+      </div>
+    </section>
+
+    <section class="bg-white">
+      <div class="mx-auto max-w-[1440px] px-4 py-8 sm:px-6 lg:py-10">
+        <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div class="flex gap-2 overflow-x-auto pb-1">
+            <template x-for="tab in tabs" :key="tab.value">
+              <button
+                @click="activeType=tab.value"
+                :class="activeType===tab.value ? 'bg-ink text-white' : 'bg-paper2 text-ink'"
+                class="shrink-0 rounded-full px-5 py-2.5 text-sm font-bold"
+              >
+                <span x-text="tab.label"></span>
+                <span class="ml-1 opacity-70" x-text="'(' + countByType(tab.value) + ')'"></span>
+              </button>
+            </template>
+          </div>
+
+          <div class="flex items-center gap-3">
+            <button @click="filtersOpen=true" class="rounded-full border border-ink/15 bg-white px-5 py-2.5 text-sm font-bold">Filtre</button>
+            <select x-model="sortBy" class="rounded-full border border-ink/15 bg-white px-4 py-2.5 text-sm font-bold outline-none">
+              <option value="relevance">Relevanță</option>
+              <option value="rating">Rating</option>
+              <option value="priceAsc">Preț crescător</option>
+              <option value="priceDesc">Preț descrescător</option>
+              <option value="newest">Cele mai noi</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="mt-5 flex flex-wrap gap-2" x-show="activeChips().length">
+          <template x-for="chip in activeChips()" :key="chip.key">
+            <button @click="removeChip(chip)" class="rounded-full bg-paper2 px-4 py-2 text-sm font-bold">
+              <span x-text="chip.label"></span> ×
+            </button>
+          </template>
+          <button @click="resetFilters()" class="rounded-full px-4 py-2 text-sm font-bold text-red">Clear all</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="bg-paper">
+      <div class="mx-auto max-w-[1440px] px-4 py-10 sm:px-6 lg:py-14">
+        <template x-if="sortedResults().length">
+          <div class="space-y-10">
+            <template x-for="group in groupedResults()" :key="group.type">
+              <section x-show="group.items.length">
+                <div class="flex items-end justify-between gap-4">
+                  <div>
+                    <h2 class="font-display text-3xl font-bold leading-none" x-text="group.title"></h2>
+                    <p class="mt-2 text-sm text-muted" x-text="group.subtitle"></p>
+                  </div>
+                  <button x-show="activeType==='all'" @click="activeType=group.type" class="text-sm font-bold text-red">
+                    Vezi toate →
+                  </button>
+                </div>
+
+                <div
+                  class="mt-5 grid gap-5"
+                  :class="group.type==='activity' ? 'sm:grid-cols-2 xl:grid-cols-4' : 'sm:grid-cols-2 lg:grid-cols-3'"
+                >
+                  <template x-for="item in group.items.slice(0, activeType==='all' ? (group.type==='activity' ? 4 : 3) : 12)" :key="item.id">
+                    <article class="group overflow-hidden rounded-2xl border border-ink/10 bg-white shadow-soft">
+                      <a :href="item.href" class="relative block h-48 overflow-hidden bg-ink">
+                        <img :src="item.image" :alt="item.title" class="h-full w-full object-cover transition duration-500 group-hover:scale-105">
+                        <span class="absolute left-3 top-3 rounded-full bg-white px-3 py-1 text-xs font-bold" x-text="typeLabel(item.type)"></span>
+                      </a>
+
+                      <div class="flex min-h-[220px] flex-col p-4">
+                        <p class="text-xs font-bold uppercase tracking-wider text-muted" x-text="item.meta"></p>
+                        <a :href="item.href">
+                          <h3 class="mt-2 font-display text-2xl font-bold leading-tight group-hover:text-red" x-text="item.title"></h3>
+                        </a>
+                        <p class="mt-3 line-clamp-2 text-sm leading-relaxed text-muted" x-text="item.description"></p>
+
+                        <div x-show="item.type==='activity'" class="mt-4 text-sm font-bold">
+                          <span class="text-gold">★★★★★</span>
+                          <span x-text="item.rating"></span>
+                          <span class="text-muted" x-text="'(' + item.reviews + ')'"></span>
+                        </div>
+
+                        <div class="mt-auto pt-4">
+                          <template x-if="item.type==='activity'">
+                            <div class="flex items-end justify-between gap-3">
+                              <div>
+                                <p class="text-xs font-bold text-muted">de la</p>
+                                <p class="font-display text-3xl font-bold" x-text="formatMoney(item.price)"></p>
+                              </div>
+                              <a :href="item.href" class="rounded-full bg-red px-4 py-2.5 text-sm font-bold text-white">Vezi bilete</a>
+                            </div>
+                          </template>
+
+                          <template x-if="item.type!=='activity'">
+                            <a :href="item.href" class="text-sm font-bold text-red">Vezi pagina →</a>
+                          </template>
+                        </div>
+                      </div>
+                    </article>
+                  </template>
+                </div>
+              </section>
+            </template>
+          </div>
+        </template>
+
+        <template x-if="!sortedResults().length">
+          <div class="rounded-2xl border border-dashed border-ink/25 bg-white p-8 text-center">
+            <h2 class="font-display text-3xl font-bold">Nu am găsit rezultate pentru filtrele selectate.</h2>
+            <p class="mt-3 text-muted">Încearcă o căutare mai generală sau resetează filtrele.</p>
+            <button @click="resetFilters()" class="mt-5 rounded-full bg-ink px-5 py-3 text-sm font-bold text-white">Resetează filtrele</button>
+          </div>
+        </template>
+      </div>
+    </section>
+
+    <section class="bg-white">
+      <div class="mx-auto max-w-[1440px] px-4 py-10 sm:px-6 lg:py-12">
+        <h2 class="font-display text-3xl font-bold">Căutări populare</h2>
+        <div class="mt-5 flex flex-wrap gap-2">
+          <template x-for="term in popularSearches" :key="term">
+            <button @click="query=term; activeType='all'; resetFilters(false)" class="rounded-full bg-paper2 px-4 py-2.5 text-sm font-bold hover:bg-ink hover:text-white" x-text="term"></button>
+          </template>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div x-show="filtersOpen" x-cloak class="fixed inset-0 z-[90] bg-ink/70 p-4 backdrop-blur-sm">
+    <div @click.outside="filtersOpen=false" class="mx-auto mt-8 max-w-4xl rounded-2xl bg-paper p-6 shadow-panel">
+      <div class="flex items-start justify-between gap-4">
+        <div>
+          <h2 class="font-display text-4xl font-bold">Filtrează rezultatele</h2>
+          <p class="mt-2 text-muted">Restrânge rezultatele după tip, oraș, categorie, preț sau rating.</p>
+        </div>
+        <button @click="filtersOpen=false" class="grid h-10 w-10 place-items-center rounded-full bg-ink text-xl text-white">×</button>
+      </div>
+
+      <div class="mt-6 grid gap-6 md:grid-cols-3">
+        <div>
+          <p class="font-bold">Oraș</p>
+          <select x-model="filters.city" class="mt-3 w-full rounded-xl border border-ink/15 bg-white px-4 py-3 font-bold">
+            <option value="all">Toate orașele</option>
+            <option value="bucuresti">București</option>
+            <option value="constanta">Constanța</option>
+            <option value="brasov">Brașov</option>
+            <option value="sinaia">Sinaia</option>
+          </select>
+        </div>
+
+        <div>
+          <p class="font-bold">Categorie</p>
+          <select x-model="filters.category" class="mt-3 w-full rounded-xl border border-ink/15 bg-white px-4 py-3 font-bold">
+            <option value="all">Toate categoriile</option>
+            <option value="family">Activități pentru copii</option>
+            <option value="museum">Muzee</option>
+            <option value="escape">Escape rooms</option>
+            <option value="outdoor">Outdoor</option>
+            <option value="tour">Tururi</option>
+          </select>
+        </div>
+
+        <div>
+          <p class="font-bold">Preț maxim</p>
+          <input type="range" min="0" max="500" step="10" x-model.number="filters.maxPrice" class="mt-4 w-full accent-red">
+          <p class="mt-2 font-bold" x-text="formatMoney(filters.maxPrice)"></p>
+        </div>
+
+        <div>
+          <p class="font-bold">Rating minim</p>
+          <select x-model.number="filters.minRating" class="mt-3 w-full rounded-xl border border-ink/15 bg-white px-4 py-3 font-bold">
+            <option :value="0">Orice rating</option>
+            <option :value="4">4.0+</option>
+            <option :value="4.5">4.5+</option>
+            <option :value="4.8">4.8+</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="mt-6 flex justify-between border-t border-ink/10 pt-5">
+        <button @click="resetFilters()" class="rounded-full border border-ink/20 px-5 py-3 text-sm font-bold">Reset</button>
+        <button @click="filtersOpen=false" class="rounded-full bg-red px-6 py-3 text-sm font-bold text-white">
+          Arată <span x-text="filteredResults().length"></span> rezultate
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function searchResultsPage(){
+      return {
+        query:'copii',
+        activeType:'all',
+        sortBy:'relevance',
+        filtersOpen:false,
+        filters:{city:'all',category:'all',maxPrice:500,minRating:0},
+
+        tabs:[
+          {label:'Toate',value:'all'},
+          {label:'Activități',value:'activity'},
+          {label:'Atracții',value:'attraction'},
+          {label:'Locații',value:'venue'},
+          {label:'Orașe',value:'city'},
+          {label:'Ghiduri',value:'guide'}
+        ],
+
+        results:[
+          {id:1,type:'activity',title:'Experiență interactivă pentru familie în Constanța',description:'Activitate indoor pentru copii și părinți, cu jocuri și elemente educative.',meta:'Constanța · Familie',city:'constanta',category:'family',price:65,rating:4.7,reviews:214,relevance:99,created:6,href:'/activitati/familie-constanta',image:'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=800&q=85'},
+          {id:2,type:'activity',title:'Muzeu interactiv pentru copii în București',description:'Experiență educativă cu instalații și activități practice.',meta:'București · Muzeu',city:'bucuresti',category:'museum',price:45,rating:4.8,reviews:326,relevance:97,created:5,href:'/activitati/muzeu-interactiv-copii-bucuresti',image:'https://images.unsplash.com/photo-1564399579883-451a5d44ec08?auto=format&fit=crop&w=800&q=85'},
+          {id:3,type:'activity',title:'Escape room pentru adolescenți în Brașov',description:'Mister și puzzle-uri adaptate pentru grupuri tinere și familii.',meta:'Brașov · Escape room',city:'brasov',category:'escape',price:90,rating:4.9,reviews:441,relevance:94,created:4,href:'/activitati/escape-room-adolescenti-brasov',image:'https://images.unsplash.com/photo-1517586979036-b7d1e86b3345?auto=format&fit=crop&w=800&q=85'},
+          {id:4,type:'activity',title:'Tur de familie în Sinaia',description:'Tur relaxat care combină atracții istorice și opriri potrivite pentru copii.',meta:'Sinaia · Tur',city:'sinaia',category:'tour',price:120,rating:4.6,reviews:189,relevance:90,created:3,href:'/activitati/tur-familie-sinaia',image:'https://images.unsplash.com/photo-1518005020951-eccb494ad742?auto=format&fit=crop&w=800&q=85'},
+          {id:5,type:'attraction',title:'Acvariul Constanța',description:'Atracție pentru familie și copii, aproape de faleză.',meta:'Constanța · Atracție',city:'constanta',category:'family',price:0,rating:4.5,reviews:862,relevance:88,created:2,href:'/atractie/acvariul-constanta',image:'https://images.unsplash.com/photo-1546026423-cc4642628d2b?auto=format&fit=crop&w=800&q=85'},
+          {id:6,type:'attraction',title:'Muzeul Satului București',description:'Patrimoniu, arhitectură tradițională și activități pentru familie.',meta:'București · Atracție',city:'bucuresti',category:'museum',price:0,rating:4.7,reviews:1400,relevance:85,created:2,href:'/atractie/muzeul-satului-bucuresti',image:'https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?auto=format&fit=crop&w=800&q=85'},
+          {id:7,type:'venue',title:'Centrul de activități Junior Fun',description:'Locație cu ateliere și activități pentru copii.',meta:'București · Locație',city:'bucuresti',category:'family',price:0,rating:4.6,reviews:122,relevance:82,created:4,href:'/locatie/junior-fun-bucuresti',image:'https://images.unsplash.com/photo-1526634332515-d56c5fd16991?auto=format&fit=crop&w=800&q=85'},
+          {id:8,type:'venue',title:'Muzeul Copiilor',description:'Spațiu educativ și interactiv pentru familii.',meta:'București · Locație',city:'bucuresti',category:'museum',price:0,rating:4.8,reviews:518,relevance:80,created:3,href:'/locatie/muzeul-copiilor',image:'https://images.unsplash.com/photo-1564399579883-451a5d44ec08?auto=format&fit=crop&w=800&q=85'},
+          {id:9,type:'city',title:'București cu copiii',description:'Activități pentru familie, muzee interactive și experiențe indoor.',meta:'Oraș',city:'bucuresti',category:'family',price:0,rating:0,reviews:0,relevance:86,created:2,href:'/bucuresti/activitati-copii',image:'https://images.unsplash.com/photo-1533929736458-ca588d08c8be?auto=format&fit=crop&w=800&q=85'},
+          {id:10,type:'city',title:'Constanța cu copiii',description:'Atracții, muzee și activități de familie la litoral.',meta:'Oraș',city:'constanta',category:'family',price:0,rating:0,reviews:0,relevance:84,created:2,href:'/constanta/activitati-copii',image:'https://images.unsplash.com/photo-1566438480900-0609be27a4be?auto=format&fit=crop&w=800&q=85'},
+          {id:11,type:'guide',title:'București cu copiii: activități pentru fiecare vârstă',description:'Muzee interactive, ateliere și experiențe potrivite pentru familie.',meta:'Ghid · București',city:'bucuresti',category:'family',price:0,rating:0,reviews:0,relevance:92,created:6,href:'/ghiduri/bucuresti-cu-copiii',image:'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=800&q=85'},
+          {id:12,type:'guide',title:'Constanța cu copiii: idei pentru o zi completă',description:'Activități indoor și outdoor, muzee și locuri potrivite pentru familie.',meta:'Ghid · Constanța',city:'constanta',category:'family',price:0,rating:0,reviews:0,relevance:89,created:5,href:'/ghiduri/constanta-cu-copiii',image:'https://images.unsplash.com/photo-1566438480900-0609be27a4be?auto=format&fit=crop&w=800&q=85'}
+        ],
+
+        popularSearches:[
+          'activități copii București',
+          'escape rooms',
+          'muzee interactive',
+          'activități indoor',
+          'Sinaia cu copiii',
+          'activități weekend'
+        ],
+
+        performSearch(){
+          this.activeType='all';
+        },
+
+        typeLabel(type){
+          const labels={activity:'Activitate',attraction:'Atracție',venue:'Locație',city:'Oraș',guide:'Ghid'};
+          return labels[type] || type;
+        },
+
+        countByType(type){
+          if(type==='all') return this.filteredResults().length;
+          return this.filteredResults().filter(item=>item.type===type).length;
+        },
+
+        filteredResults(){
+          const q=this.query.toLowerCase().trim();
+
+          return this.results.filter(item=>{
+            if(this.activeType!=='all' && item.type!==this.activeType) return false;
+            if(this.filters.city!=='all' && item.city!==this.filters.city) return false;
+            if(this.filters.category!=='all' && item.category!==this.filters.category) return false;
+            if(item.type==='activity' && item.price>this.filters.maxPrice) return false;
+            if(item.type==='activity' && item.rating<this.filters.minRating) return false;
+
+            if(q){
+              const terms=q.split(/\s+/).filter(Boolean);
+              const haystack=(item.title+' '+item.description+' '+item.meta+' '+item.city+' '+item.category).toLowerCase();
+              const match=terms.some(term=>haystack.includes(term));
+              if(!match && !haystack.includes(q)) return false;
+            }
+
+            return true;
+          });
+        },
+
+        sortedResults(){
+          const items=[...this.filteredResults()];
+
+          if(this.sortBy==='rating') return items.sort((a,b)=>b.rating-a.rating);
+          if(this.sortBy==='priceAsc') return items.sort((a,b)=>(a.price||999999)-(b.price||999999));
+          if(this.sortBy==='priceDesc') return items.sort((a,b)=>(b.price||0)-(a.price||0));
+          if(this.sortBy==='newest') return items.sort((a,b)=>b.created-a.created);
+
+          return items.sort((a,b)=>b.relevance-a.relevance);
+        },
+
+        groupedResults(){
+          const items=this.sortedResults();
+
+          if(this.activeType!=='all'){
+            return [{
+              type:this.activeType,
+              title:{
+                activity:'Activități',
+                attraction:'Atracții',
+                venue:'Locații',
+                city:'Orașe',
+                guide:'Ghiduri'
+              }[this.activeType],
+              subtitle:'Rezultate relevante pentru căutarea ta.',
+              items
+            }];
+          }
+
+          const groups=[
+            {type:'activity',title:'Activități',subtitle:'Experiențe și bilete pe care le poți rezerva.'},
+            {type:'attraction',title:'Atracții',subtitle:'Locuri de vizitat și puncte de interes.'},
+            {type:'venue',title:'Locații',subtitle:'Operatori și locuri care găzduiesc activități.'},
+            {type:'city',title:'Orașe',subtitle:'Pagini locale cu activități și atracții.'},
+            {type:'guide',title:'Ghiduri',subtitle:'Articole și recomandări editoriale.'}
+          ];
+
+          return groups.map(group=>({
+            ...group,
+            items:items.filter(item=>item.type===group.type)
+          }));
+        },
+
+        activeChips(){
+          const chips=[];
+
+          if(this.filters.city!=='all'){
+            const label={bucuresti:'București',constanta:'Constanța',brasov:'Brașov',sinaia:'Sinaia'}[this.filters.city];
+            chips.push({key:'city',label,type:'city'});
+          }
+
+          if(this.filters.category!=='all'){
+            const label={family:'Activități pentru copii',museum:'Muzee',escape:'Escape rooms',outdoor:'Outdoor',tour:'Tururi'}[this.filters.category];
+            chips.push({key:'category',label,type:'category'});
+          }
+
+          if(this.filters.maxPrice<500) chips.push({key:'price',label:'Max '+this.formatMoney(this.filters.maxPrice),type:'price'});
+          if(this.filters.minRating>0) chips.push({key:'rating',label:this.filters.minRating+'+ rating',type:'rating'});
+
+          return chips;
+        },
+
+        removeChip(chip){
+          if(chip.type==='city') this.filters.city='all';
+          if(chip.type==='category') this.filters.category='all';
+          if(chip.type==='price') this.filters.maxPrice=500;
+          if(chip.type==='rating') this.filters.minRating=0;
+        },
+
+        resetFilters(resetQuery=true){
+          this.filters={city:'all',category:'all',maxPrice:500,minRating:0};
+          this.activeType='all';
+          this.sortBy='relevance';
+          if(resetQuery) this.query='copii';
+        },
+
+        formatMoney(value){
+          return new Intl.NumberFormat('ro-RO',{
+            style:'currency',
+            currency:'RON',
+            maximumFractionDigits:0
+          }).format(value);
+        }
+      }
+    }
+  </script>
+</body>
+</html>

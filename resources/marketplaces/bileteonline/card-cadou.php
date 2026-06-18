@@ -50,11 +50,6 @@ include __DIR__ . '/includes/header.php';
 <section class="relative overflow-hidden border-b-2 border-ink">
     <div class="absolute inset-0 bg-[radial-gradient(circle_at_80%_16%,rgba(232,69,39,.28),transparent_30%),radial-gradient(circle_at_15%_75%,rgba(218,154,51,.26),transparent_30%),radial-gradient(circle_at_48%_44%,rgba(30,74,61,.16),transparent_34%)]" aria-hidden="true"></div>
     <div class="relative max-w-7xl mx-auto px-4 sm:px-6 pt-14 sm:pt-20 pb-16 sm:pb-24">
-        <nav class="flex items-center gap-2 text-sm text-ink-soft" aria-label="Breadcrumb">
-            <a href="/" class="hover:text-vermilion">Acasă</a><span aria-hidden="true">/</span>
-            <span class="text-ink">Card cadou</span>
-        </nav>
-
         <div class="mt-8 grid lg:grid-cols-[1fr_.92fr] gap-12 items-center">
             <div>
                 <p class="stamp inline-flex px-3 py-1 text-xs font-mono tracking-[.18em] text-vermilion bg-paper/70">CARD CADOU DIGITAL · EXPERIENȚE · BILETE QR</p>
@@ -65,11 +60,6 @@ include __DIR__ . '/includes/header.php';
                 <div class="mt-8 flex flex-wrap gap-3">
                     <a href="#cumpara" class="rounded-full bg-vermilion text-paper px-6 py-4 font-700 text-lg hover:bg-vermilion-d transition">Cumpără card cadou</a>
                     <a href="#cum-functioneaza" class="rounded-full border-2 border-ink px-6 py-4 font-700 text-lg hover:bg-ink hover:text-paper transition">Cum funcționează</a>
-                </div>
-                <div class="mt-10 grid grid-cols-3 gap-3 max-w-2xl">
-                    <div class="rounded-2xl bg-paper/75 border border-ink/10 p-4"><p class="font-mono text-[10px] tracking-[.18em] text-ink-soft">LIVRARE</p><p class="font-display text-3xl font-700">email</p></div>
-                    <div class="rounded-2xl bg-paper/75 border border-ink/10 p-4"><p class="font-mono text-[10px] tracking-[.18em] text-ink-soft">VALORI</p><p class="font-display text-3xl font-700">flex</p></div>
-                    <div class="rounded-2xl bg-paper/75 border border-ink/10 p-4"><p class="font-mono text-[10px] tracking-[.18em] text-ink-soft">FOLOSIRE</p><p class="font-display text-3xl font-700">online</p></div>
                 </div>
             </div>
 

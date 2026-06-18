@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Abonare confirmată | bilete.online</title>
+  <meta name="description" content="Confirmarea abonării la newsletter-ul bilete.online.">
+  <meta name="robots" content="noindex, follow">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Hanken+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config={theme:{extend:{colors:{paper:'#F7F4EC',paper2:'#EEE8DB',ink:'#171512',muted:'#625B50',red:'#E84527',red2:'#C5371C',green:'#183E34',green2:'#DCE9DF',gold:'#D99A2B'},fontFamily:{display:['Fraunces','Georgia','serif'],sans:['Hanken Grotesk','system-ui','sans-serif']},boxShadow:{soft:'0 18px 50px -34px rgba(23,21,18,.65)',panel:'0 36px 90px -52px rgba(23,21,18,.82)'}}}}
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <style>
+    body{background:#F7F4EC;color:#171512;font-family:'Hanken Grotesk',system-ui,sans-serif}
+    .font-display{font-family:Fraunces,Georgia,serif;letter-spacing:-.018em}
+  </style>
+</head>
+<body x-data="{ email: 'andrei@email.ro' }" class="antialiased">
+<header class="border-b border-ink/10 bg-paper">
+  <nav class="mx-auto flex h-[68px] max-w-[1240px] items-center justify-between px-4 sm:px-6">
+    <a href="/" class="flex items-center gap-2.5">
+      <span class="grid h-9 w-9 place-items-center rounded-xl bg-red text-white rotate-[-4deg]">🎟</span>
+      <span class="font-display text-xl font-bold">bilete<span class="text-red">.</span>online</span>
+    </a>
+    <a href="/" class="rounded-full px-4 py-2 text-sm font-bold hover:bg-paper2">Înapoi la activități</a>
+  </nav>
+</header>
+
+<main class="min-h-[calc(100vh-137px)]">
+  <section class="mx-auto grid max-w-[1240px] gap-8 px-4 py-10 sm:px-6 lg:grid-cols-[1fr_460px] lg:items-center lg:py-16">
+    <div>
+      <div class="inline-flex items-center gap-2 rounded-full bg-green2 px-4 py-2 text-sm font-bold text-green">
+        <span class="grid h-6 w-6 place-items-center rounded-full bg-green text-white">✓</span>
+        Abonare confirmată
+      </div>
+      <h1 class="mt-5 max-w-3xl font-display text-5xl font-bold leading-[.95] sm:text-6xl">Ești pe listă.</h1>
+      <p class="mt-5 max-w-2xl text-lg leading-relaxed text-muted">
+        Abonarea la newsletter-ul bilete.online a fost confirmată pentru
+        <strong class="text-ink" x-text="email"></strong>.
+      </p>
+      <p class="mt-3 max-w-2xl leading-relaxed text-muted">
+        Vei primi idei de activități, ghiduri locale, experiențe pentru familie, recomandări de weekend și noutăți relevante din platformă.
+      </p>
+
+      <div class="mt-7 flex flex-wrap gap-3">
+        <a href="/activitati" class="rounded-full bg-red px-6 py-3 font-bold text-white hover:bg-red2">Explorează activitățile</a>
+        <a href="/ghiduri" class="rounded-full border border-ink/20 bg-white px-6 py-3 font-bold hover:border-ink">Citește ghidurile</a>
+      </div>
+
+      <div class="mt-8 max-w-2xl rounded-2xl border border-ink/10 bg-white p-5">
+        <p class="font-bold">Ce urmează?</p>
+        <div class="mt-4 grid gap-3 sm:grid-cols-3">
+          <div class="rounded-xl bg-paper p-4"><p class="text-2xl">📍</p><p class="mt-2 text-sm font-bold">Idei locale</p></div>
+          <div class="rounded-xl bg-paper p-4"><p class="text-2xl">🎟️</p><p class="mt-2 text-sm font-bold">Activități noi</p></div>
+          <div class="rounded-xl bg-paper p-4"><p class="text-2xl">💡</p><p class="mt-2 text-sm font-bold">Ghiduri utile</p></div>
+        </div>
+      </div>
+    </div>
+
+    <aside class="overflow-hidden rounded-[1.75rem] bg-ink shadow-panel">
+      <img src="https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=1000&q=85" alt="Experiențe și activități bilete.online" class="h-72 w-full object-cover opacity-80">
+      <div class="p-6 text-white">
+        <p class="text-xs font-bold uppercase tracking-[.16em] text-gold">BINE AI VENIT</p>
+        <h2 class="mt-2 font-display text-3xl font-bold leading-tight">Mai multe idei. Mai puțin timp pierdut căutând.</h2>
+        <p class="mt-3 text-sm leading-relaxed text-white/65">Selectăm recomandări relevante, fără să îți aglomerăm inboxul.</p>
+      </div>
+    </aside>
+  </section>
+</main>
+
+<footer class="border-t border-ink/10 bg-paper">
+  <div class="mx-auto flex max-w-[1240px] flex-col gap-3 px-4 py-6 text-sm text-muted sm:flex-row sm:items-center sm:justify-between sm:px-6">
+    <p>© 2026 bilete.online</p>
+    <div class="flex flex-wrap gap-4">
+      <a href="/privacy" class="hover:text-ink">Confidențialitate</a>
+      <a href="/termeni-si-conditii" class="hover:text-ink">Termeni și condiții</a>
+      <a href="/contact" class="hover:text-ink">Contact</a>
+    </div>
+  </div>
+</footer>
+</body>
+</html>

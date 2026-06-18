@@ -648,9 +648,6 @@ include __DIR__ . '/includes/header.php';
 
     <!-- Results -->
     <div class="px-4 py-8 mx-auto max-w-[1500px] sm:px-6 lg:py-10">
-        <div class="mb-5">
-            <p class="text-5xl font-bold leading-none font-display"><span x-text="filteredActivities().length"></span> rezultate</p>
-        </div>
 
         <div class="flex flex-wrap gap-2 mb-6" x-show="activeChips().length" x-cloak>
             <template x-for="chip in activeChips()" :key="chip.key">

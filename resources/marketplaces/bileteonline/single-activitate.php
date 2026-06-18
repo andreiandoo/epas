@@ -484,7 +484,6 @@ include __DIR__ . '/includes/header.php';
       <div class="space-y-8">
         <!-- Description -->
         <section id="descriere" class="rounded-[2rem] border-2 border-ink bg-paper p-6 shadow-ticket sm:p-8">
-          <p class="font-mono text-xs tracking-[.18em] text-ink-soft">DESPRE ACTIVITATE</p>
           <h2 class="mt-2 font-display text-4xl font-bold leading-none sm:text-5xl"><?= htmlspecialchars($activity['seo']['body_title'] ?? ('Despre ' . $activity['title'])) ?></h2>
           <div class="mt-6 grid gap-6 lg:grid-cols-[1fr_280px]">
             <div class="prose-bo space-y-4 text-lg leading-relaxed text-ink-soft"><?= $activity['description'] ?? '' ?></div>
@@ -505,18 +504,6 @@ include __DIR__ . '/includes/header.php';
                   <?php foreach ($activity['requirements'] as $r): ?><li class="flex gap-2"><span class="text-vermilion">•</span><span><?= htmlspecialchars($r) ?></span></li><?php endforeach; ?>
                 </ul>
               <?php endif; ?>
-
-              <!-- Trust badges (F5) -->
-              <div class="mt-5 border-t-2 border-dashed border-ink/15 pt-4">
-                <p class="font-bold">De ce bilete.online</p>
-                <ul class="mt-3 space-y-2.5 text-sm font-bold">
-                  <li class="flex items-center gap-2.5"><span class="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-mint text-forest">✓</span>Confirmare instant</li>
-                  <li class="flex items-center gap-2.5"><span class="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-mint text-forest">⌗</span>Bilet digital cu cod QR</li>
-                  <?php if (! empty($activity['cancellation_policy'])): ?><li class="flex items-center gap-2.5"><span class="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-mint text-forest">↺</span>Anulare conform politicii afișate</li><?php endif; ?>
-                  <li class="flex items-center gap-2.5"><span class="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-mint text-forest">🔒</span>Plată securizată</li>
-                  <li class="flex items-center gap-2.5"><span class="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-mint text-forest">★</span>Puncte bonus la fiecare comandă</li>
-                </ul>
-              </div>
             </aside>
           </div>
         </section>
@@ -627,12 +614,13 @@ include __DIR__ . '/includes/header.php';
     <div class="mx-auto max-w-[1500px] px-4 py-14 sm:px-6 lg:py-20">
       <div class="grid gap-8 lg:grid-cols-[360px_1fr]">
         <aside class="lg:sticky lg:top-28 lg:self-start">
-          <p class="font-mono text-xs tracking-[.18em] text-ink-soft">CUSTOMER REVIEWS</p>
           <h2 class="mt-2 font-display text-5xl font-bold leading-none sm:text-6xl">Ce spun clienții</h2>
           <?php if (($reviews['count'] ?? 0) > 0): ?>
             <div class="mt-6 rounded-[2rem] border-2 border-ink bg-ink p-6 text-paper shadow-deep">
-              <p class="font-display text-7xl font-bold leading-none sm:text-8xl"><?= htmlspecialchars(number_format((float) $reviews['average'], 1)) ?></p>
-              <p class="mt-2 text-2xl text-ochre">★</p>
+              <div class="relative inline-block">
+                <p class="pl-4 font-display text-7xl font-bold leading-none sm:text-8xl"><?= htmlspecialchars(number_format((float) $reviews['average'], 1)) ?></p>
+                <p class="text-2xl text-ochre absolute left-0 top-0">★</p>
+              </div>
               <p class="mt-2 text-paper/60"><?= (int) $reviews['count'] ?> review-uri verificate</p>
               <?php if (! empty($reviews['detailed_averages'])): ?>
                 <div class="mt-6 space-y-3">
@@ -717,7 +705,6 @@ include __DIR__ . '/includes/header.php';
     <div class="mx-auto max-w-[1500px] px-4 py-12 sm:px-6 lg:py-16">
       <div class="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p class="font-mono text-xs tracking-[.18em] <?= $dark ? 'text-ochre' : 'text-vermilion' ?>"><?= htmlspecialchars($rail['kicker']) ?></p>
           <h2 class="mt-2 font-display text-4xl font-bold leading-none sm:text-5xl"><?= htmlspecialchars($rail['title']) ?></h2>
         </div>
         <?php if ($citySlug): ?><a href="/<?= htmlspecialchars($citySlug) ?>" class="rounded-full <?= $dark ? 'bg-paper text-ink hover:bg-vermilion hover:text-paper' : 'border-2 border-ink hover:bg-ink hover:text-paper' ?> px-5 py-2.5 text-sm font-bold transition">Vezi tot</a><?php endif; ?>

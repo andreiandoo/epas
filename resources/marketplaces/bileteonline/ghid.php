@@ -275,7 +275,7 @@ include __DIR__ . '/includes/header.php';
 <!-- HERO -->
 <section class="relative overflow-hidden border-b border-ink/10">
     <div class="absolute inset-0 bg-[radial-gradient(circle_at_84%_14%,rgba(232,69,39,.18),transparent_32%),radial-gradient(circle_at_14%_76%,rgba(30,74,61,.16),transparent_34%)]"></div>
-    <div class="relative max-w-7xl mx-auto px-4 sm:px-6 pt-10 lg:pt-14 pb-10">
+    <div class="relative max-w-[1500px] mx-auto px-4 sm:px-6 pt-10 lg:pt-14 pb-10">
         <nav aria-label="Breadcrumb" class="text-sm text-ink-soft">
             <ol class="flex flex-wrap items-center gap-2">
                 <?php foreach ($breadcrumbs as $i => $b): ?>
@@ -316,7 +316,7 @@ include __DIR__ . '/includes/header.php';
 <?php if ($catSlug): ?>
 <!-- QUICK CTA STRIP -->
 <section class="border-b-2 border-ink bg-ink text-paper">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-5 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+    <div class="max-w-[1500px] mx-auto px-4 sm:px-6 py-5 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
             <p class="font-mono text-xs tracking-[.18em] text-paper/45">VREI DIRECT ACTIVITĂȚI?</p>
             <p class="font-display text-2xl font-bold">Vezi activități legate de acest ghid.</p>
@@ -398,10 +398,8 @@ include __DIR__ . '/includes/header.php';
         <div class="max-w-[1500px] mx-auto px-4 sm:px-6 pt-14 sm:pt-16">
             <div class="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
                 <div>
-                    <p class="stamp inline-flex px-3 py-1 text-xs font-mono tracking-[.18em] text-vermilion">REZERVĂ ACUM</p>
                     <h2 class="mt-5 font-display text-5xl sm:text-6xl font-bold leading-[.9]">Activități recomandate</h2>
                 </div>
-                <a href="/activitati" class="rounded-full bg-ink text-paper px-6 py-4 font-bold hover:bg-vermilion transition shrink-0">Vezi toate activitățile</a>
             </div>
         </div>
 
@@ -433,13 +431,11 @@ include __DIR__ . '/includes/header.php';
 <!-- RELATED GUIDES -->
 <template x-if="related.length > 0">
     <section class="border-y-2 border-ink bg-paper-2/65">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 py-16 sm:py-20">
+        <div class="max-w-[1500px] mx-auto px-4 sm:px-6 py-16 sm:py-20">
             <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-5">
                 <div>
-                    <p class="stamp inline-flex px-3 py-1 text-xs font-mono tracking-[.18em] text-vermilion">CITEȘTE ȘI</p>
                     <h2 class="mt-5 font-display text-5xl sm:text-6xl font-bold leading-[.9]">Ghiduri similare</h2>
                 </div>
-                <a href="/ghiduri" class="rounded-full bg-ink text-paper px-6 py-4 font-bold hover:bg-vermilion transition">Toate ghidurile</a>
             </div>
             <div class="mt-10 grid md:grid-cols-3 gap-5">
                 <template x-for="guide in related" :key="guide.slug">

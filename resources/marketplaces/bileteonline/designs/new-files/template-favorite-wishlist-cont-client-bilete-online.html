@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Favoritele mele | bilete.online</title>
+  <meta name="description" content="Vezi activitățile și atracțiile salvate în contul tău bilete.online.">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#171512">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Hanken+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: { extend: {
+        colors: {
+          paper:'#F7F4EC',
+          paper2:'#EEE8DB',
+          ink:'#171512',
+          muted:'#625B50',
+          red:'#E84527',
+          red2:'#C5371C',
+          green:'#183E34',
+          green2:'#DCE9DF',
+          gold:'#D99A2B',
+          blue:'#244A66',
+          rose:'#F4D9D1'
+        },
+        fontFamily: {
+          display:['Fraunces','Georgia','serif'],
+          sans:['Hanken Grotesk','system-ui','sans-serif']
+        },
+        boxShadow: {
+          soft:'0 18px 50px -34px rgba(23,21,18,.65)',
+          panel:'0 36px 90px -52px rgba(23,21,18,.82)'
+        }
+      }}
+    }
+  </script>
+
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+  <style>
+    body{background:#F7F4EC;color:#171512;font-family:'Hanken Grotesk',system-ui,sans-serif}
+    .font-display{font-family:Fraunces,Georgia,serif;letter-spacing:-.018em}
+    .line-clamp-2{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+    [x-cloak]{display:none!important}
+  </style>
+</head>
+
+<body x-data="favoritesPage()" class="antialiased">
+  <header class="border-b border-ink/10 bg-paper">
+    <nav class="mx-auto flex h-[68px] max-w-[1280px] items-center justify-between px-4 sm:px-6">
+      <a href="/" class="flex items-center gap-2.5">
+        <span class="grid h-9 w-9 place-items-center rounded-xl bg-red text-white rotate-[-4deg]">🎟</span>
+        <span class="font-display text-xl font-bold">bilete<span class="text-red">.</span>online</span>
+      </a>
+
+      <div class="flex items-center gap-2">
+        <a href="/cont" class="rounded-full px-4 py-2 text-sm font-bold hover:bg-paper2">Dashboard</a>
+        <a href="/cont/setari" class="rounded-full bg-ink px-4 py-2 text-sm font-bold text-white">Setări</a>
+      </div>
+    </nav>
+  </header>
+
+  <main class="min-h-[calc(100vh-137px)]">
+    <section class="mx-auto max-w-[1280px] px-4 py-8 sm:px-6 lg:py-12">
+      <nav class="flex flex-wrap gap-2 text-sm font-semibold text-muted">
+        <a href="/cont">Contul meu</a><span>/</span>
+        <span class="text-ink">Favorite</span>
+      </nav>
+
+      <div class="mt-6 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <div class="flex flex-wrap items-center gap-3">
+            <h1 class="font-display text-5xl font-bold leading-none">Favoritele mele</h1>
+            <span class="rounded-full bg-red px-3 py-1 text-sm font-bold text-white" x-text="favorites.length"></span>
+          </div>
+
+          <p class="mt-3 max-w-3xl text-muted">
+            Activități și atracții salvate pentru mai târziu. Verifică disponibilitatea, prețurile și alertele active.
+          </p>
+        </div>
+
+        <div class="flex flex-wrap gap-3">
+          <button @click="shareList()" class="rounded-full border border-ink/20 bg-white px-5 py-3 text-sm font-bold">
+            Distribuie lista
+          </button>
+          <a href="/activitati" class="rounded-full bg-ink px-5 py-3 text-sm font-bold text-white">
+            Descoperă activități
+          </a>
+        </div>
+      </div>
+
+      <!-- Overview -->
+      <div class="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <article class="rounded-2xl bg-white p-5 shadow-soft">
+          <p class="text-sm font-bold text-muted">Salvate</p>
+          <p class="mt-1 font-display text-4xl font-bold" x-text="favorites.length"></p>
+          <p class="mt-1 text-xs text-muted">activități și atracții</p>
+        </article>
+
+        <article class="rounded-2xl bg-white p-5 shadow-soft">
+          <p class="text-sm font-bold text-muted">Disponibile acum</p>
+          <p class="mt-1 font-display text-4xl font-bold text-green" x-text="availableCount"></p>
+          <p class="mt-1 text-xs text-muted">pot fi rezervate</p>
+        </article>
+
+        <article class="rounded-2xl bg-white p-5 shadow-soft">
+          <p class="text-sm font-bold text-muted">Alerte active</p>
+          <p class="mt-1 font-display text-4xl font-bold text-gold" x-text="alertCount"></p>
+          <p class="mt-1 text-xs text-muted">preț sau disponibilitate</p>
+        </article>
+
+        <article class="rounded-2xl bg-white p-5 shadow-soft">
+          <p class="text-sm font-bold text-muted">Orașe</p>
+          <p class="mt-1 font-display text-4xl font-bold" x-text="cityCount"></p>
+          <p class="mt-1 text-xs text-muted">destinații salvate</p>
+        </article>
+      </div>
+
+      <!-- Controls -->
+      <div class="mt-8 rounded-2xl border border-ink/10 bg-white p-4 shadow-soft">
+        <div class="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+          <div class="flex gap-2 overflow-x-auto pb-1">
+            <template x-for="tab in tabs" :key="tab.value">
+              <button
+                @click="activeType=tab.value"
+                :class="activeType===tab.value ? 'bg-ink text-white' : 'bg-paper2 text-ink'"
+                class="shrink-0 rounded-full px-5 py-2.5 text-sm font-bold"
+              >
+                <span x-text="tab.label"></span>
+                <span class="ml-1 opacity-65" x-text="'(' + countByType(tab.value) + ')'"></span>
+              </button>
+            </template>
+          </div>
+
+          <div class="flex flex-col gap-3 sm:flex-row">
+            <div class="flex items-center gap-2 rounded-full border border-ink/15 bg-paper px-4">
+              <span class="text-muted">⌕</span>
+              <input
+                x-model="search"
+                class="min-w-0 bg-transparent py-2.5 text-sm font-semibold outline-none"
+                placeholder="Caută în favorite"
+              >
+            </div>
+
+            <select x-model="cityFilter" class="rounded-full border border-ink/15 bg-white px-4 py-2.5 text-sm font-bold outline-none">
+              <option value="all">Toate orașele</option>
+              <option value="bucuresti">București</option>
+              <option value="constanta">Constanța</option>
+              <option value="brasov">Brașov</option>
+              <option value="sinaia">Sinaia</option>
+            </select>
+
+            <select x-model="sortBy" class="rounded-full border border-ink/15 bg-white px-4 py-2.5 text-sm font-bold outline-none">
+              <option value="saved">Salvate recent</option>
+              <option value="priceAsc">Preț crescător</option>
+              <option value="rating">Rating</option>
+              <option value="availability">Disponibilitate</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Content -->
+      <div class="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <div>
+          <div class="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+            <template x-for="item in sortedFavorites()" :key="item.id">
+              <article class="group overflow-hidden rounded-2xl border border-ink/10 bg-white shadow-soft">
+                <div class="relative">
+                  <a :href="item.href" class="block h-48 overflow-hidden">
+                    <img :src="item.image" :alt="item.title" class="h-full w-full object-cover transition duration-500 group-hover:scale-105">
+                  </a>
+
+                  <button
+                    @click="removeFavorite(item.id)"
+                    class="absolute right-3 top-3 grid h-10 w-10 place-items-center rounded-full bg-white text-xl text-red shadow-soft"
+                    aria-label="Elimină din favorite"
+                  >
+                    ♥
+                  </button>
+
+                  <span
+                    class="absolute left-3 top-3 rounded-full px-3 py-1 text-xs font-bold"
+                    :class="availabilityClass(item.status)"
+                    x-text="availabilityLabel(item.status)"
+                  ></span>
+                </div>
+
+                <div class="flex min-h-[320px] flex-col p-4">
+                  <p class="text-xs font-bold uppercase tracking-wider text-muted" x-text="item.meta"></p>
+
+                  <a :href="item.href">
+                    <h2 class="mt-2 font-display text-2xl font-bold leading-tight group-hover:text-red" x-text="item.title"></h2>
+                  </a>
+
+                  <p class="mt-3 line-clamp-2 text-sm leading-relaxed text-muted" x-text="item.description"></p>
+
+                  <div x-show="item.type==='activity'" class="mt-4 text-sm font-bold">
+                    <span class="text-gold">★★★★★</span>
+                    <span x-text="item.rating"></span>
+                    <span class="text-muted" x-text="'(' + item.reviews + ')'"></span>
+                  </div>
+
+                  <div class="mt-4 rounded-xl bg-paper p-3">
+                    <div class="flex items-center justify-between gap-3">
+                      <div>
+                        <p class="text-xs font-bold text-muted" x-text="item.alertType ? 'Alertă activă' : 'Fără alertă'"></p>
+                        <p class="mt-1 text-sm font-bold" x-text="alertLabel(item)"></p>
+                      </div>
+
+                      <button
+                        @click="toggleAlert(item)"
+                        class="rounded-full px-3 py-2 text-xs font-bold"
+                        :class="item.alertType ? 'bg-gold text-white' : 'bg-white text-ink'"
+                      >
+                        <span x-text="item.alertType ? 'Gestionează' : 'Activează'"></span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div class="mt-auto pt-4">
+                    <template x-if="item.type==='activity'">
+                      <div>
+                        <div class="flex items-end justify-between gap-3">
+                          <div>
+                            <p class="text-xs font-bold text-muted">de la</p>
+                            <p class="font-display text-3xl font-bold" x-text="formatMoney(item.price)"></p>
+                          </div>
+
+                          <span x-show="item.oldPrice" class="text-sm font-bold text-muted line-through" x-text="formatMoney(item.oldPrice)"></span>
+                        </div>
+
+                        <a
+                          :href="item.href"
+                          :class="item.status==='available' ? 'bg-red text-white' : 'bg-paper2 text-muted pointer-events-none'"
+                          class="mt-4 block rounded-full px-5 py-3 text-center text-sm font-bold"
+                          x-text="item.status==='available' ? 'Vezi bilete' : 'Momentan indisponibil'"
+                        ></a>
+                      </div>
+                    </template>
+
+                    <template x-if="item.type==='attraction'">
+                      <a :href="item.href" class="block rounded-full bg-ink px-5 py-3 text-center text-sm font-bold text-white">
+                        Explorează atracția
+                      </a>
+                    </template>
+                  </div>
+                </div>
+              </article>
+            </template>
+          </div>
+
+          <div x-show="filteredFavorites().length===0" class="rounded-2xl border border-dashed border-ink/20 bg-white p-8 text-center">
+            <div class="mx-auto grid h-14 w-14 place-items-center rounded-full bg-paper2 text-2xl">♡</div>
+            <h2 class="mt-4 font-display text-3xl font-bold">Nu ai favorite pentru filtrele selectate.</h2>
+            <p class="mt-2 text-muted">Schimbă filtrele sau descoperă activități noi.</p>
+            <button @click="resetFilters()" class="mt-5 rounded-full bg-ink px-5 py-3 text-sm font-bold text-white">Resetează filtrele</button>
+          </div>
+        </div>
+
+        <!-- Sidebar -->
+        <aside class="space-y-5">
+          <div class="rounded-2xl bg-ink p-5 text-white shadow-panel">
+            <p class="text-xs font-bold uppercase tracking-[.16em] text-gold">LISTA TA</p>
+            <h2 class="mt-2 font-display text-3xl font-bold">Planifică mai ușor.</h2>
+            <p class="mt-3 text-sm leading-relaxed text-white/60">
+              Activează alerte și primești notificări când apar locuri, date noi sau reduceri.
+            </p>
+
+            <div class="mt-5 space-y-3">
+              <div class="rounded-xl bg-white/8 p-4">
+                <p class="font-bold">Alerte de preț</p>
+                <p class="mt-1 text-sm text-white/60">Primești notificare când prețul scade.</p>
+              </div>
+
+              <div class="rounded-xl bg-white/8 p-4">
+                <p class="font-bold">Alerte de disponibilitate</p>
+                <p class="mt-1 text-sm text-white/60">Află când apar date sau locuri noi.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="rounded-2xl border border-ink/10 bg-white p-5 shadow-soft">
+            <h2 class="font-display text-3xl font-bold">Colecții sugerate</h2>
+
+            <div class="mt-4 space-y-3">
+              <template x-for="collection in collections" :key="collection.href">
+                <a :href="collection.href" class="group flex items-center gap-3 rounded-xl bg-paper p-3">
+                  <span class="grid h-10 w-10 place-items-center rounded-xl text-lg text-white" :style="'background:'+collection.color" x-text="collection.icon"></span>
+                  <div>
+                    <p class="font-bold group-hover:text-red" x-text="collection.title"></p>
+                    <p class="mt-1 text-xs text-muted" x-text="collection.meta"></p>
+                  </div>
+                </a>
+              </template>
+            </div>
+          </div>
+
+          <div class="rounded-2xl border border-ink/10 bg-white p-5">
+            <p class="font-bold">Lista nu este rezervare</p>
+            <p class="mt-2 text-sm leading-relaxed text-muted">
+              Salvarea unei activități nu blochează locuri și nu garantează prețul sau disponibilitatea.
+            </p>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- Alert modal -->
+    <div x-show="alertModalOpen" x-cloak class="fixed inset-0 z-[90] grid place-items-center bg-ink/70 p-4 backdrop-blur-sm">
+      <div @click.outside="alertModalOpen=false" class="w-full max-w-lg rounded-[1.5rem] bg-white p-6 shadow-panel">
+        <div class="flex items-start justify-between gap-4">
+          <div>
+            <h2 class="font-display text-4xl font-bold">Setează alerta</h2>
+            <p class="mt-2 text-muted" x-text="selectedItem?.title"></p>
+          </div>
+
+          <button @click="alertModalOpen=false" class="grid h-10 w-10 place-items-center rounded-full bg-paper2 font-bold">×</button>
+        </div>
+
+        <div class="mt-6 space-y-3">
+          <label
+            class="block cursor-pointer rounded-xl border-2 p-4"
+            :class="alertForm.type==='price' ? 'border-red bg-paper' : 'border-ink/10'"
+          >
+            <input type="radio" value="price" x-model="alertForm.type" class="sr-only">
+            <p class="font-bold">Scădere de preț</p>
+            <p class="mt-1 text-sm text-muted">Primești o notificare când prețul este redus.</p>
+          </label>
+
+          <label
+            class="block cursor-pointer rounded-xl border-2 p-4"
+            :class="alertForm.type==='availability' ? 'border-red bg-paper' : 'border-ink/10'"
+          >
+            <input type="radio" value="availability" x-model="alertForm.type" class="sr-only">
+            <p class="font-bold">Disponibilitate nouă</p>
+            <p class="mt-1 text-sm text-muted">Primești o notificare când apar date sau locuri.</p>
+          </label>
+
+          <label
+            class="block cursor-pointer rounded-xl border-2 p-4"
+            :class="alertForm.type==='both' ? 'border-red bg-paper' : 'border-ink/10'"
+          >
+            <input type="radio" value="both" x-model="alertForm.type" class="sr-only">
+            <p class="font-bold">Ambele</p>
+            <p class="mt-1 text-sm text-muted">Primești alerte pentru preț și disponibilitate.</p>
+          </label>
+        </div>
+
+        <label class="mt-5 flex items-start gap-3">
+          <input type="checkbox" x-model="alertForm.email" class="mt-1 h-5 w-5 accent-red">
+          <span class="text-sm text-muted">Trimite alerta și pe email.</span>
+        </label>
+
+        <div class="mt-6 flex gap-3">
+          <button
+            x-show="selectedItem?.alertType"
+            @click="removeAlert()"
+            class="rounded-full border border-red/30 px-5 py-3 text-sm font-bold text-red"
+          >
+            Dezactivează
+          </button>
+
+          <button @click="saveAlert()" class="ml-auto rounded-full bg-red px-6 py-3 font-bold text-white">
+            Salvează alerta
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <footer class="mt-4 border-t border-ink/10 bg-paper">
+      <div class="mx-auto flex max-w-[1240px] flex-col gap-3 px-4 py-6 text-sm text-muted sm:flex-row sm:items-center sm:justify-between sm:px-6">
+        <p>© 2026 bilete.online</p>
+
+        <div class="flex flex-wrap gap-4">
+          <a href="/privacy" class="hover:text-ink">Confidențialitate</a>
+          <a href="/termeni-si-conditii" class="hover:text-ink">Termeni și condiții</a>
+          <a href="/contact" class="hover:text-ink">Contact</a>
+        </div>
+      </div>
+    </footer>
+  </main>
+
+  <script>
+    function favoritesPage(){
+      return {
+        activeType:'all',
+        cityFilter:'all',
+        sortBy:'saved',
+        search:'',
+        alertModalOpen:false,
+        selectedItem:null,
+        alertForm:{type:'price',email:true},
+
+        tabs:[
+          {label:'Toate',value:'all'},
+          {label:'Activități',value:'activity'},
+          {label:'Atracții',value:'attraction'}
+        ],
+
+        favorites:[
+          {
+            id:1,
+            type:'activity',
+            title:'Escape room în centrul Constanței',
+            description:'Mister, puzzle-uri și provocări pentru grupuri de prieteni.',
+            meta:'Constanța · Escape room',
+            city:'constanta',
+            price:90,
+            oldPrice:110,
+            rating:4.9,
+            reviews:441,
+            status:'available',
+            alertType:'price',
+            savedAt:8,
+            href:'/activitati/escape-room-constanta',
+            image:'https://images.unsplash.com/photo-1517586979036-b7d1e86b3345?auto=format&fit=crop&w=800&q=85'
+          },
+          {
+            id:2,
+            type:'activity',
+            title:'Muzeu interactiv pentru copii',
+            description:'Experiență educativă și distractivă pentru familie.',
+            meta:'București · Familie',
+            city:'bucuresti',
+            price:45,
+            oldPrice:null,
+            rating:4.8,
+            reviews:326,
+            status:'available',
+            alertType:null,
+            savedAt:7,
+            href:'/activitati/muzeu-interactiv-copii',
+            image:'https://images.unsplash.com/photo-1564399579883-451a5d44ec08?auto=format&fit=crop&w=800&q=85'
+          },
+          {
+            id:3,
+            type:'activity',
+            title:'Tur cultural în Sinaia',
+            description:'Descoperă atracțiile și poveștile orașului într-un tur ghidat.',
+            meta:'Sinaia · Tur',
+            city:'sinaia',
+            price:75,
+            oldPrice:null,
+            rating:4.8,
+            reviews:214,
+            status:'soldout',
+            alertType:'availability',
+            savedAt:6,
+            href:'/activitati/tur-cultural-sinaia',
+            image:'https://images.unsplash.com/photo-1518005020951-eccb494ad742?auto=format&fit=crop&w=800&q=85'
+          },
+          {
+            id:4,
+            type:'attraction',
+            title:'Cazinoul din Constanța',
+            description:'Unul dintre cele mai cunoscute simboluri ale litoralului românesc.',
+            meta:'Constanța · Atracție',
+            city:'constanta',
+            price:0,
+            oldPrice:null,
+            rating:0,
+            reviews:0,
+            status:'available',
+            alertType:null,
+            savedAt:5,
+            href:'/atractie/cazinoul-din-constanta',
+            image:'https://images.unsplash.com/photo-1566438480900-0609be27a4be?auto=format&fit=crop&w=800&q=85'
+          },
+          {
+            id:5,
+            type:'activity',
+            title:'Parc de aventură pentru familie',
+            description:'Trasee outdoor și activități pentru copii și adulți.',
+            meta:'Brașov · Outdoor',
+            city:'brasov',
+            price:70,
+            oldPrice:85,
+            rating:4.7,
+            reviews:187,
+            status:'available',
+            alertType:'both',
+            savedAt:4,
+            href:'/activitati/parc-aventura-brasov',
+            image:'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=800&q=85'
+          },
+          {
+            id:6,
+            type:'attraction',
+            title:'Castelul Peleș',
+            description:'Reper istoric și arhitectural important din Sinaia.',
+            meta:'Sinaia · Atracție',
+            city:'sinaia',
+            price:0,
+            oldPrice:null,
+            rating:0,
+            reviews:0,
+            status:'available',
+            alertType:null,
+            savedAt:3,
+            href:'/atractie/castelul-peles',
+            image:'https://images.unsplash.com/photo-1518005020951-eccb494ad742?auto=format&fit=crop&w=800&q=85'
+          }
+        ],
+
+        collections:[
+          {title:'Pentru familie',meta:'Activități potrivite cu copiii',href:'/colectii/pentru-familie',icon:'👨‍👩‍👧',color:'#183E34'},
+          {title:'Sub 100 lei',meta:'Experiențe accesibile',href:'/colectii/sub-100-lei',icon:'₿',color:'#E84527'},
+          {title:'Weekend în oraș',meta:'Idei pentru 1–2 zile',href:'/colectii/weekend',icon:'🧭',color:'#244A66'}
+        ],
+
+        get availableCount(){
+          return this.favorites.filter(item=>item.status==='available').length;
+        },
+
+        get alertCount(){
+          return this.favorites.filter(item=>item.alertType).length;
+        },
+
+        get cityCount(){
+          return new Set(this.favorites.map(item=>item.city)).size;
+        },
+
+        countByType(type){
+          if(type==='all') return this.favorites.length;
+          return this.favorites.filter(item=>item.type===type).length;
+        },
+
+        filteredFavorites(){
+          const q=this.search.trim().toLowerCase();
+
+          return this.favorites.filter(item=>{
+            if(this.activeType!=='all' && item.type!==this.activeType) return false;
+            if(this.cityFilter!=='all' && item.city!==this.cityFilter) return false;
+
+            if(q){
+              const haystack=(item.title+' '+item.description+' '+item.meta).toLowerCase();
+              if(!haystack.includes(q)) return false;
+            }
+
+            return true;
+          });
+        },
+
+        sortedFavorites(){
+          const items=[...this.filteredFavorites()];
+
+          if(this.sortBy==='priceAsc'){
+            return items.sort((a,b)=>(a.price || 999999)-(b.price || 999999));
+          }
+
+          if(this.sortBy==='rating'){
+            return items.sort((a,b)=>b.rating-a.rating);
+          }
+
+          if(this.sortBy==='availability'){
+            return items.sort((a,b)=>{
+              if(a.status===b.status) return b.savedAt-a.savedAt;
+              return a.status==='available' ? -1 : 1;
+            });
+          }
+
+          return items.sort((a,b)=>b.savedAt-a.savedAt);
+        },
+
+        removeFavorite(id){
+          this.favorites=this.favorites.filter(item=>item.id!==id);
+        },
+
+        toggleAlert(item){
+          this.selectedItem=item;
+          this.alertForm={
+            type:item.alertType || 'price',
+            email:true
+          };
+          this.alertModalOpen=true;
+        },
+
+        saveAlert(){
+          if(!this.selectedItem) return;
+          this.selectedItem.alertType=this.alertForm.type;
+          this.alertModalOpen=false;
+        },
+
+        removeAlert(){
+          if(!this.selectedItem) return;
+          this.selectedItem.alertType=null;
+          this.alertModalOpen=false;
+        },
+
+        alertLabel(item){
+          const labels={
+            price:'Scădere de preț',
+            availability:'Disponibilitate nouă',
+            both:'Preț + disponibilitate'
+          };
+
+          return item.alertType ? labels[item.alertType] : 'Poți activa o alertă';
+        },
+
+        availabilityLabel(status){
+          return {
+            available:'Disponibil',
+            soldout:'Fără locuri',
+            unavailable:'Indisponibil'
+          }[status] || status;
+        },
+
+        availabilityClass(status){
+          return {
+            available:'bg-green2 text-green',
+            soldout:'bg-gold text-white',
+            unavailable:'bg-paper2 text-muted'
+          }[status] || 'bg-paper2 text-ink';
+        },
+
+        resetFilters(){
+          this.activeType='all';
+          this.cityFilter='all';
+          this.search='';
+          this.sortBy='saved';
+        },
+
+        shareList(){
+          alert('Demo: linkul listei de favorite a fost copiat.');
+        },
+
+        formatMoney(value){
+          return new Intl.NumberFormat('ro-RO',{
+            style:'currency',
+            currency:'RON',
+            maximumFractionDigits:0
+          }).format(value);
+        }
+      }
+    }
+  </script>
+</body>
+</html>

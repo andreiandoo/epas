@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Detalii bilet BO-10482-001 | bilete.online</title>
+  <meta name="description" content="Vezi detaliile biletului, codul QR, beneficiarul, activitatea, locația și acțiunile disponibile.">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#171512">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Hanken+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: { extend: {
+        colors: {
+          paper:'#F7F4EC',
+          paper2:'#EEE8DB',
+          ink:'#171512',
+          muted:'#625B50',
+          red:'#E84527',
+          red2:'#C5371C',
+          green:'#183E34',
+          green2:'#DCE9DF',
+          gold:'#D99A2B',
+          blue:'#244A66',
+          rose:'#F4D9D1'
+        },
+        fontFamily: {
+          display:['Fraunces','Georgia','serif'],
+          sans:['Hanken Grotesk','system-ui','sans-serif']
+        },
+        boxShadow: {
+          soft:'0 18px 50px -34px rgba(23,21,18,.65)',
+          panel:'0 36px 90px -52px rgba(23,21,18,.82)'
+        }
+      }}
+    }
+  </script>
+
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+  <style>
+    body{background:#F7F4EC;color:#171512;font-family:'Hanken Grotesk',system-ui,sans-serif}
+    .font-display{font-family:Fraunces,Georgia,serif;letter-spacing:-.018em}
+    [x-cloak]{display:none!important}
+  </style>
+</head>
+
+<body x-data="ticketDetailPage()" class="antialiased">
+  <header class="border-b border-ink/10 bg-paper">
+    <nav class="mx-auto flex h-[68px] max-w-[1240px] items-center justify-between px-4 sm:px-6">
+      <a href="/" class="flex items-center gap-2.5">
+        <span class="grid h-9 w-9 place-items-center rounded-xl bg-red text-white rotate-[-4deg]">🎟</span>
+        <span class="font-display text-xl font-bold">bilete<span class="text-red">.</span>online</span>
+      </a>
+
+      <div class="flex items-center gap-2">
+        <a href="/cont/bilete" class="rounded-full px-4 py-2 text-sm font-bold hover:bg-paper2">Biletele mele</a>
+        <a href="/cont" class="rounded-full bg-ink px-4 py-2 text-sm font-bold text-white">Contul meu</a>
+      </div>
+    </nav>
+  </header>
+
+  <main class="min-h-[calc(100vh-137px)]">
+    <section class="mx-auto max-w-[1180px] px-4 py-8 sm:px-6 lg:py-12">
+      <nav class="flex flex-wrap gap-2 text-sm font-semibold text-muted">
+        <a href="/cont">Contul meu</a><span>/</span>
+        <a href="/cont/bilete">Biletele mele</a><span>/</span>
+        <span class="text-ink" x-text="ticket.code"></span>
+      </nav>
+
+      <div class="mt-6 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <div class="flex flex-wrap items-center gap-3">
+            <h1 class="font-display text-5xl font-bold leading-none">Biletul tău</h1>
+            <span class="rounded-full px-4 py-2 text-sm font-bold" :class="ticketStatusClass(ticket.status)" x-text="ticketStatusLabel(ticket.status)"></span>
+          </div>
+          <p class="mt-3 text-muted">Cod bilet: <strong class="text-ink" x-text="ticket.code"></strong></p>
+        </div>
+
+        <div class="flex flex-wrap gap-3">
+          <button @click="downloadTicket()" class="rounded-full bg-red px-5 py-3 text-sm font-bold text-white">Descarcă PDF</button>
+          <button @click="addToCalendar()" class="rounded-full border border-ink/20 bg-white px-5 py-3 text-sm font-bold">Adaugă în calendar</button>
+        </div>
+      </div>
+
+      <div class="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_380px]">
+        <div class="space-y-6">
+          <!-- Activity -->
+          <section class="overflow-hidden rounded-[1.5rem] border border-ink/10 bg-white shadow-soft">
+            <div class="grid md:grid-cols-[260px_1fr]">
+              <img :src="ticket.activity.image" :alt="ticket.activity.title" class="h-full min-h-[280px] w-full object-cover">
+
+              <div class="p-6">
+                <p class="text-xs font-bold uppercase tracking-wider text-muted" x-text="ticket.activity.category"></p>
+                <h2 class="mt-2 font-display text-4xl font-bold leading-tight" x-text="ticket.activity.title"></h2>
+
+                <div class="mt-5 grid gap-4 sm:grid-cols-2">
+                  <div class="rounded-xl bg-paper p-4">
+                    <p class="text-sm font-bold text-muted">Data și ora</p>
+                    <p class="mt-1 font-bold" x-text="ticket.activity.date"></p>
+                  </div>
+
+                  <div class="rounded-xl bg-paper p-4">
+                    <p class="text-sm font-bold text-muted">Locație</p>
+                    <p class="mt-1 font-bold" x-text="ticket.activity.location"></p>
+                  </div>
+
+                  <div class="rounded-xl bg-paper p-4">
+                    <p class="text-sm font-bold text-muted">Beneficiar</p>
+                    <p class="mt-1 font-bold" x-text="ticket.beneficiary"></p>
+                  </div>
+
+                  <div class="rounded-xl bg-paper p-4">
+                    <p class="text-sm font-bold text-muted">Tip bilet</p>
+                    <p class="mt-1 font-bold" x-text="ticket.type"></p>
+                  </div>
+                </div>
+
+                <div class="mt-5 flex flex-wrap gap-3">
+                  <a :href="ticket.activity.href" class="rounded-full bg-ink px-5 py-3 text-sm font-bold text-white">Vezi activitatea</a>
+                  <a :href="ticket.activity.mapsUrl" class="rounded-full border border-ink/15 px-5 py-3 text-sm font-bold">Deschide în Maps</a>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Access rules -->
+          <section class="rounded-2xl border border-ink/10 bg-white p-5 shadow-soft">
+            <h2 class="font-display text-3xl font-bold">Instrucțiuni de acces</h2>
+
+            <div class="mt-5 grid gap-3 sm:grid-cols-2">
+              <template x-for="rule in accessRules" :key="rule.title">
+                <article class="rounded-xl bg-paper p-4">
+                  <p class="font-bold" x-text="rule.title"></p>
+                  <p class="mt-2 text-sm leading-relaxed text-muted" x-text="rule.text"></p>
+                </article>
+              </template>
+            </div>
+          </section>
+
+          <!-- Actions -->
+          <section class="rounded-2xl border border-ink/10 bg-white p-5 shadow-soft">
+            <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 class="font-display text-3xl font-bold">Acțiuni disponibile</h2>
+                <p class="mt-1 text-sm text-muted">Gestionează biletul înainte de activitate.</p>
+              </div>
+            </div>
+
+            <div class="mt-5 grid gap-3 sm:grid-cols-3">
+              <button @click="openTransfer()" :disabled="ticket.status!=='valid'" class="rounded-2xl bg-paper p-4 text-left disabled:cursor-not-allowed disabled:opacity-50">
+                <p class="text-2xl">↗</p>
+                <p class="mt-3 font-bold">Transferă biletul</p>
+                <p class="mt-1 text-sm text-muted">Schimbă beneficiarul și trimite biletul.</p>
+              </button>
+
+              <button @click="downloadTicket()" class="rounded-2xl bg-paper p-4 text-left">
+                <p class="text-2xl">↓</p>
+                <p class="mt-3 font-bold">Descarcă PDF</p>
+                <p class="mt-1 text-sm text-muted">Salvează biletul pentru acces offline.</p>
+              </button>
+
+              <button @click="addToCalendar()" class="rounded-2xl bg-paper p-4 text-left">
+                <p class="text-2xl">＋</p>
+                <p class="mt-3 font-bold">Adaugă în calendar</p>
+                <p class="mt-1 text-sm text-muted">Salvează data, ora și locația.</p>
+              </button>
+            </div>
+          </section>
+
+          <!-- Protection -->
+          <section class="rounded-2xl bg-green2 p-5">
+            <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p class="text-sm font-bold text-green">Protecție Bilet</p>
+                <h2 class="mt-1 font-display text-3xl font-bold text-green">Activă pentru acest bilet</h2>
+                <p class="mt-2 text-sm text-green/75">Poți verifica eligibilitatea pentru retur înainte de termenul-limită.</p>
+              </div>
+
+              <a href="/retur-bilet" class="rounded-full bg-green px-5 py-3 text-sm font-bold text-white">Solicită retur</a>
+            </div>
+          </section>
+        </div>
+
+        <!-- QR sidebar -->
+        <aside>
+          <div class="sticky top-6 rounded-[1.75rem] bg-ink p-6 text-white shadow-panel">
+            <div class="flex items-center justify-between gap-3">
+              <div>
+                <p class="text-xs font-bold uppercase tracking-[.16em] text-gold">BILET DIGITAL</p>
+                <h2 class="mt-1 font-display text-3xl font-bold">Prezintă la acces</h2>
+              </div>
+
+              <span class="rounded-full px-3 py-1 text-xs font-bold" :class="ticketStatusClass(ticket.status)" x-text="ticketStatusLabel(ticket.status)"></span>
+            </div>
+
+            <div class="mt-6 rounded-2xl bg-white p-5">
+              <div class="mx-auto grid aspect-square max-w-[250px] place-items-center border-8 border-ink bg-white">
+                <div class="grid h-[82%] w-[82%] grid-cols-7 gap-1">
+                  <template x-for="cell in qrCells" :key="cell.id">
+                    <span :class="cell.on ? 'bg-ink' : 'bg-white'"></span>
+                  </template>
+                </div>
+              </div>
+
+              <p class="mt-4 text-center font-mono text-sm font-bold tracking-[.18em] text-ink" x-text="ticket.code"></p>
+            </div>
+
+            <div class="mt-5 rounded-xl bg-white/8 p-4">
+              <p class="font-bold">Luminozitate recomandată</p>
+              <p class="mt-1 text-sm text-white/60">Mărește luminozitatea ecranului înainte de scanare.</p>
+            </div>
+
+            <div class="mt-3 rounded-xl bg-white/8 p-4">
+              <p class="font-bold">Acces unic</p>
+              <p class="mt-1 text-sm text-white/60">Codul QR devine invalid după scanare.</p>
+            </div>
+
+            <div class="mt-5 grid gap-2">
+              <button @click="downloadTicket()" class="rounded-full bg-red px-5 py-3 font-bold text-white">Descarcă biletul</button>
+              <button @click="showFullScreen=true" class="rounded-full bg-white px-5 py-3 font-bold text-ink">Afișează QR fullscreen</button>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </section>
+  </main>
+
+  <!-- Transfer modal -->
+  <div x-show="transferOpen" x-cloak class="fixed inset-0 z-[90] grid place-items-center bg-ink/70 p-4 backdrop-blur-sm">
+    <div @click.outside="transferOpen=false" class="w-full max-w-lg rounded-[1.5rem] bg-white p-6 shadow-panel">
+      <div class="flex items-start justify-between gap-4">
+        <div>
+          <h2 class="font-display text-4xl font-bold">Transferă biletul</h2>
+          <p class="mt-2 text-muted">Noul beneficiar va primi biletul pe email.</p>
+        </div>
+        <button @click="transferOpen=false" class="grid h-10 w-10 place-items-center rounded-full bg-paper2 font-bold">×</button>
+      </div>
+
+      <div class="mt-6 space-y-4">
+        <label class="block">
+          <span class="font-bold">Nume beneficiar</span>
+          <input x-model="transfer.name" class="mt-2 w-full rounded-xl border border-ink/15 px-4 py-3 outline-none focus:border-red" placeholder="Nume complet">
+        </label>
+
+        <label class="block">
+          <span class="font-bold">Email beneficiar</span>
+          <input x-model="transfer.email" type="email" class="mt-2 w-full rounded-xl border border-ink/15 px-4 py-3 outline-none focus:border-red" placeholder="email@exemplu.ro">
+        </label>
+
+        <label class="flex items-start gap-3">
+          <input type="checkbox" x-model="transfer.confirmed" class="mt-1 h-5 w-5 accent-red">
+          <span class="text-sm text-muted">Confirm că transferul schimbă beneficiarul acestui bilet.</span>
+        </label>
+
+        <button @click="confirmTransfer()" :disabled="!canTransfer" :class="canTransfer ? 'bg-red' : 'cursor-not-allowed bg-ink/20'" class="w-full rounded-full px-5 py-3 font-bold text-white">
+          Confirmă transferul
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Fullscreen QR -->
+  <div x-show="showFullScreen" x-cloak class="fixed inset-0 z-[95] grid place-items-center bg-white p-6">
+    <button @click="showFullScreen=false" class="absolute right-5 top-5 grid h-12 w-12 place-items-center rounded-full bg-ink text-2xl text-white">×</button>
+
+    <div class="w-full max-w-md text-center">
+      <p class="font-display text-4xl font-bold" x-text="ticket.activity.title"></p>
+      <p class="mt-2 text-muted" x-text="ticket.beneficiary"></p>
+
+      <div class="mx-auto mt-8 grid aspect-square w-full max-w-[360px] place-items-center border-[12px] border-ink bg-white">
+        <div class="grid h-[82%] w-[82%] grid-cols-7 gap-1.5">
+          <template x-for="cell in qrCells" :key="'full-'+cell.id">
+            <span :class="cell.on ? 'bg-ink' : 'bg-white'"></span>
+          </template>
+        </div>
+      </div>
+
+      <p class="mt-6 font-mono text-lg font-bold tracking-[.18em]" x-text="ticket.code"></p>
+    </div>
+  </div>
+
+  <footer class="border-t border-ink/10 bg-paper">
+    <div class="mx-auto flex max-w-[1240px] flex-col gap-3 px-4 py-6 text-sm text-muted sm:flex-row sm:items-center sm:justify-between sm:px-6">
+      <p>© 2026 bilete.online</p>
+
+      <div class="flex flex-wrap gap-4">
+        <a href="/privacy" class="hover:text-ink">Confidențialitate</a>
+        <a href="/termeni-si-conditii" class="hover:text-ink">Termeni și condiții</a>
+        <a href="/contact" class="hover:text-ink">Contact</a>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    function ticketDetailPage(){
+      const pattern=[
+        1,1,1,0,1,0,1,
+        1,0,1,1,0,1,0,
+        1,1,0,1,1,0,1,
+        0,1,1,0,1,1,0,
+        1,0,1,1,0,1,1,
+        0,1,0,1,1,0,1,
+        1,1,1,0,1,1,1
+      ];
+
+      return {
+        transferOpen:false,
+        showFullScreen:false,
+        transfer:{name:'',email:'',confirmed:false},
+
+        ticket:{
+          code:'BO-10482-001',
+          status:'valid',
+          beneficiary:'Andrei Nastase',
+          type:'Bilet adult',
+          activity:{
+            title:'Escape room în centrul Constanței',
+            category:'Escape room',
+            date:'14 iunie 2026 · 18:00',
+            location:'Mystery Rooms, Constanța',
+            href:'/activitati/escape-room-constanta',
+            mapsUrl:'https://maps.google.com',
+            image:'https://images.unsplash.com/photo-1517586979036-b7d1e86b3345?auto=format&fit=crop&w=900&q=85'
+          }
+        },
+
+        accessRules:[
+          {
+            title:'Ajungi cu 15 minute înainte',
+            text:'Operatorul poate refuza accesul dacă întârzierea afectează intervalul rezervat.'
+          },
+          {
+            title:'Prezintă codul QR',
+            text:'Poți folosi biletul direct de pe telefon sau în format PDF.'
+          },
+          {
+            title:'Act de identitate',
+            text:'Poate fi solicitat pentru verificarea beneficiarului sau a unei categorii de preț.'
+          },
+          {
+            title:'Acces unic',
+            text:'După scanare, biletul este marcat ca utilizat și nu mai poate fi transferat.'
+          }
+        ],
+
+        qrCells:pattern.map((on,index)=>({id:index,on:Boolean(on)})),
+
+        get canTransfer(){
+          return this.transfer.name && this.transfer.email && this.transfer.confirmed;
+        },
+
+        ticketStatusLabel(status){
+          const labels={valid:'Valid',used:'Utilizat',cancelled:'Anulat',refunded:'Rambursat'};
+          return labels[status] || status;
+        },
+
+        ticketStatusClass(status){
+          const classes={
+            valid:'bg-green2 text-green',
+            used:'bg-paper2 text-muted',
+            cancelled:'bg-rose text-red',
+            refunded:'bg-blue/10 text-blue'
+          };
+          return classes[status] || 'bg-paper2 text-ink';
+        },
+
+        openTransfer(){
+          if(this.ticket.status!=='valid') return;
+          this.transfer={name:'',email:'',confirmed:false};
+          this.transferOpen=true;
+        },
+
+        confirmTransfer(){
+          if(!this.canTransfer) return;
+          this.ticket.beneficiary=this.transfer.name;
+          this.transferOpen=false;
+          alert('Demo: biletul a fost transferat către '+this.transfer.email);
+        },
+
+        downloadTicket(){
+          alert('Demo: descărcare PDF pentru '+this.ticket.code);
+        },
+
+        addToCalendar(){
+          alert('Demo: activitatea a fost adăugată în calendar.');
+        }
+      }
+    }
+  </script>
+</body>
+</html>
