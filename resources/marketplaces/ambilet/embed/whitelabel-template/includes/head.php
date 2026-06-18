@@ -136,3 +136,17 @@ fbq('track', 'PageView');
   </div>
 </div>
 <script>if(!document.cookie.includes('wl_ck='))document.getElementById('wl-cookie').style.display='block';</script>
+
+<!-- Whitelabel analytics tracking — sends events to Tixello with channel='whitelabel' -->
+<script src="<?= $bp ?>/assets/js/tracking.js" defer></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    if (typeof WLTracking === 'undefined') return;
+    WLTracking.init({
+        marketplaceClientId: <?= defined('MARKETPLACE_CLIENT_ID') ? (int) MARKETPLACE_CLIENT_ID : 1 ?>,
+        marketplaceOrganizerId: <?= defined('ORG_ID') ? (int) ORG_ID : 0 ?>,
+        marketplaceEventId: typeof window.__wlEventId !== 'undefined' ? window.__wlEventId : null,
+        debug: false
+    });
+});
+</script>

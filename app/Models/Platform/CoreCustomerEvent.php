@@ -13,6 +13,7 @@ class CoreCustomerEvent extends Model
         'customer_id',
         'tenant_id',
         'marketplace_client_id',
+        'channel',
         'session_id',
         'visitor_id',
         'event_type',

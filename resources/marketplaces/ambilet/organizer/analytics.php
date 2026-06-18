@@ -71,13 +71,20 @@ $eventId = $_GET['event'] ?? null;
                     </div>
                 </div>
 
-                <div class="flex items-center gap-3">
+                <div class="flex items-center gap-3 flex-wrap">
                     <!-- Period Selector -->
                     <div class="flex items-center p-1 bg-gray-100 rounded-xl">
                         <button class="px-3 py-1.5 text-xs font-medium rounded-lg transition-all period-btn text-gray-500" data-period="7d">7D</button>
                         <button class="px-3 py-1.5 text-xs font-medium rounded-lg transition-all period-btn text-gray-500" data-period="30d">30D</button>
                         <button class="px-3 py-1.5 text-xs font-medium rounded-lg transition-all period-btn text-gray-500" data-period="90d">90D</button>
                         <button class="px-3 py-1.5 text-xs font-medium rounded-lg transition-all period-btn bg-white shadow-sm text-gray-900" data-period="all">Tot</button>
+                    </div>
+
+                    <!-- Channel Selector -->
+                    <div class="flex items-center p-1 bg-gray-100 rounded-xl" title="Sursa traficului">
+                        <button class="px-3 py-1.5 text-xs font-medium rounded-lg transition-all channel-btn bg-white shadow-sm text-gray-900" data-channel="all">Toate</button>
+                        <button class="px-3 py-1.5 text-xs font-medium rounded-lg transition-all channel-btn text-gray-500" data-channel="marketplace">Marketplace</button>
+                        <button class="px-3 py-1.5 text-xs font-medium rounded-lg transition-all channel-btn text-gray-500" data-channel="whitelabel">Whitelabel</button>
                     </div>
 
                     <!-- Live Indicator -->
@@ -586,6 +593,7 @@ $eventId = $_GET['event'] ?? null;
 <script>
 const eventId = <?= json_encode($eventId) ?>;
 let currentPeriod = 'all';
+let currentChannel = 'all'; // all | marketplace | whitelabel | embed_widget
 let mainChart = null;
 let chartMetrics = { revenue: true, tickets: true, views: true };
 let eventData = null;
@@ -615,6 +623,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     loadAnalytics();
     setupPeriodButtons();
+    setupChannelButtons();
 });
 
 function setupPeriodButtons() {
@@ -632,9 +641,25 @@ function setupPeriodButtons() {
     });
 }
 
+function setupChannelButtons() {
+    document.querySelectorAll('.channel-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('.channel-btn').forEach(b => {
+                b.classList.remove('bg-white', 'shadow-sm', 'text-gray-900');
+                b.classList.add('text-gray-500');
+            });
+            this.classList.remove('text-gray-500');
+            this.classList.add('bg-white', 'shadow-sm', 'text-gray-900');
+            currentChannel = this.dataset.channel;
+            loadAnalytics();
+        });
+    });
+}
+
 async function loadAnalytics() {
     try {
-        const response = await AmbiletAPI.get(`/organizer/events/${eventId}/analytics?period=${currentPeriod}`);
+        const channelParam = currentChannel && currentChannel !== 'all' ? `&channel=${encodeURIComponent(currentChannel)}` : '';
+        const response = await AmbiletAPI.get(`/organizer/events/${eventId}/analytics?period=${currentPeriod}${channelParam}`);
         if (response.success) {
             eventData = response.data;
             updateDashboard(response.data);

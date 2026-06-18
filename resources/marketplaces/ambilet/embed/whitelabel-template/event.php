@@ -53,6 +53,13 @@ require_once __DIR__ . '/includes/head.php';
         'commission_mode' => $commMode,
         'commission_rate' => $commRate,
     ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
+    // Expose event id for WLTracking init (read at DOMContentLoaded in head.php)
+    window.__wlEventId = <?= json_encode((int) ($ev['id'] ?? 0)) ?>;
+    // Fire ViewItem after tracking initialises
+    document.addEventListener('DOMContentLoaded', function () {
+        if (typeof WLTracking === 'undefined') return;
+        WLTracking.trackViewItem(window.__wlEventId, <?= json_encode($ev['name'] ?? '') ?>);
+    });
 </script>
 
 <!-- EVENT HERO -->

@@ -54,25 +54,34 @@ class EventAnalyticsService
      * (Old tracking data was saved to event_id, new data uses marketplace_event_id)
      * This handles the case where Marketplace EventResource uses Event model instead of MarketplaceEvent
      */
-    protected function getTrackingQuery(Event|MarketplaceEvent $event)
+    protected function getTrackingQuery(Event|MarketplaceEvent $event, ?string $channel = null)
     {
         // Always check both columns - the Marketplace panel uses Event model, not MarketplaceEvent
         // So we can't rely on instanceof check to determine if we should check both columns
-        return CoreCustomerEvent::where(function ($q) use ($event) {
-            $q->where('event_id', $event->id)
+        $q = CoreCustomerEvent::where(function ($qq) use ($event) {
+            $qq->where('event_id', $event->id)
               ->orWhere('marketplace_event_id', $event->id);
         });
+        // Optional channel scope (marketplace | whitelabel | embed_widget).
+        // Null = no filter — counts events from every channel.
+        if ($channel !== null && $channel !== '' && $channel !== 'all') {
+            $q->where('channel', $channel);
+        }
+        return $q;
     }
 
     /**
      * Get complete dashboard data for an event
      */
-    public function getDashboardData(Event|MarketplaceEvent $event, string $period = '30d'): array
+    public function getDashboardData(Event|MarketplaceEvent $event, string $period = '30d', ?string $channel = null): array
     {
         $prefix = $this->isMarketplaceEvent($event) ? 'mp_' : '';
-        $cacheKey = "{$prefix}event_analytics_{$event->id}_{$period}";
+        // Channel becomes part of the cache key so toggling the filter in the
+        // UI doesn't return a stale all-channel cached payload.
+        $channelKey = $channel ?: 'all';
+        $cacheKey = "{$prefix}event_analytics_{$event->id}_{$period}_{$channelKey}";
 
-        return Cache::remember($cacheKey, $this->cacheTtl, function () use ($event, $period) {
+        return Cache::remember($cacheKey, $this->cacheTtl, function () use ($event, $period, $channel) {
             $isMarketplace = $this->isMarketplaceEvent($event);
             $dateRange = $this->getDateRange(
                 $period,
@@ -81,13 +90,14 @@ class EventAnalyticsService
             );
 
             return [
-                'overview' => $this->getOverviewStats($event, $dateRange),
-                'chart_data' => $this->getChartData($event, $dateRange),
-                'ticket_performance' => $this->getTicketPerformance($event, $dateRange),
-                'traffic_sources' => $this->getTrafficSources($event, $dateRange),
-                'top_locations' => $this->getTopLocations($event, $dateRange),
+                'overview' => $this->getOverviewStats($event, $dateRange, $channel),
+                'chart_data' => $this->getChartData($event, $dateRange, $channel),
+                'ticket_performance' => $this->getTicketPerformance($event, $dateRange, $channel),
+                'traffic_sources' => $this->getTrafficSources($event, $dateRange, $channel),
+                'top_locations' => $this->getTopLocations($event, $dateRange, 10, $channel),
                 'milestones' => $this->getMilestonesWithMetrics($event),
-                'funnel' => $this->getFunnelMetrics($event, $dateRange),
+                'funnel' => $this->getFunnelMetrics($event, $dateRange, $channel),
+                'channel' => $channel ?: 'all',
             ];
         });
     }
@@ -95,7 +105,7 @@ class EventAnalyticsService
     /**
      * Get overview stats for the stat cards
      */
-    public function getOverviewStats(Event|MarketplaceEvent $event, array $dateRange): array
+    public function getOverviewStats(Event|MarketplaceEvent $event, array $dateRange, ?string $channel = null): array
     {
         $isMarketplace = $this->isMarketplaceEvent($event);
         $orderColumn = $this->getOrderColumn($event);
@@ -129,7 +139,7 @@ class EventAnalyticsService
 
         // Get visits from tracking - use helper for backwards compatibility
         // Include page_view events OR any records without event_type (for legacy data)
-        $visits = (clone $this->getTrackingQuery($event))
+        $visits = (clone $this->getTrackingQuery($event, $channel ?? null))
             ->where(function ($q) {
                 $q->where('event_type', CoreCustomerEvent::TYPE_PAGE_VIEW)
                   ->orWhereNull('event_type')
@@ -141,7 +151,7 @@ class EventAnalyticsService
             })
             ->count();
 
-        $uniqueVisitors = (clone $this->getTrackingQuery($event))
+        $uniqueVisitors = (clone $this->getTrackingQuery($event, $channel ?? null))
             ->where(function ($q) {
                 $q->where('event_type', CoreCustomerEvent::TYPE_PAGE_VIEW)
                   ->orWhereNull('event_type')
@@ -155,7 +165,7 @@ class EventAnalyticsService
             ->count('visitor_id');
 
         // Conversion rate
-        $purchases = (clone $this->getTrackingQuery($event))
+        $purchases = (clone $this->getTrackingQuery($event, $channel ?? null))
             ->where('event_type', CoreCustomerEvent::TYPE_PURCHASE)
             ->where(function ($q) use ($dateRange) {
                 $q->whereBetween('created_at', [$dateRange['start'], $dateRange['end']])
@@ -220,7 +230,7 @@ class EventAnalyticsService
     /**
      * Get chart data for performance overview
      */
-    public function getChartData(Event|MarketplaceEvent $event, array $dateRange): array
+    public function getChartData(Event|MarketplaceEvent $event, array $dateRange, ?string $channel = null): array
     {
         $isMarketplace = $this->isMarketplaceEvent($event);
 
@@ -271,7 +281,7 @@ class EventAnalyticsService
 
         // Use helper for backwards compatibility with tracking data
         // Include page_view events OR any records without event_type (for legacy data)
-        $visitsByDay = (clone $this->getTrackingQuery($event))
+        $visitsByDay = (clone $this->getTrackingQuery($event, $channel ?? null))
             ->where(function ($q) {
                 $q->where('event_type', CoreCustomerEvent::TYPE_PAGE_VIEW)
                   ->orWhereNull('event_type')
@@ -304,7 +314,7 @@ class EventAnalyticsService
     /**
      * Get ticket performance breakdown
      */
-    public function getTicketPerformance(Event|MarketplaceEvent $event, array $dateRange): array
+    public function getTicketPerformance(Event|MarketplaceEvent $event, array $dateRange, ?string $channel = null): array
     {
         $isMarketplace = $this->isMarketplaceEvent($event);
 
@@ -375,7 +385,7 @@ class EventAnalyticsService
             $price = $ticketType->price ?? ($sold > 0 ? round($revenue / $sold, 2) : 0);
 
             // Calculate conversion rate for this ticket type - use helper for backwards compatibility
-            $addToCartCount = (clone $this->getTrackingQuery($event))
+            $addToCartCount = (clone $this->getTrackingQuery($event, $channel ?? null))
                 ->where('event_type', CoreCustomerEvent::TYPE_ADD_TO_CART)
                 ->where('content_id', $ticketType->id)
                 ->where(function ($q) use ($dateRange) {
@@ -384,7 +394,7 @@ class EventAnalyticsService
                 })
                 ->count();
 
-            $purchaseCount = (clone $this->getTrackingQuery($event))
+            $purchaseCount = (clone $this->getTrackingQuery($event, $channel ?? null))
                 ->where('event_type', CoreCustomerEvent::TYPE_PURCHASE)
                 ->where('content_id', $ticketType->id)
                 ->where(function ($q) use ($dateRange) {
@@ -428,7 +438,7 @@ class EventAnalyticsService
     /**
      * Get traffic sources breakdown
      */
-    public function getTrafficSources(Event|MarketplaceEvent $event, array $dateRange): array
+    public function getTrafficSources(Event|MarketplaceEvent $event, array $dateRange, ?string $channel = null): array
     {
         $isMarketplace = $this->isMarketplaceEvent($event);
 
@@ -445,7 +455,7 @@ class EventAnalyticsService
         ";
 
         // Use helper for backwards compatibility
-        $sources = (clone $this->getTrackingQuery($event))
+        $sources = (clone $this->getTrackingQuery($event, $channel ?? null))
             ->where(function ($q) use ($dateRange) {
                 $q->whereBetween('created_at', [$dateRange['start'], $dateRange['end']])
                   ->orWhereNull('created_at');
@@ -490,7 +500,7 @@ class EventAnalyticsService
     /**
      * Get top locations
      */
-    public function getTopLocations(Event|MarketplaceEvent $event, array $dateRange, int $limit = 10): array
+    public function getTopLocations(Event|MarketplaceEvent $event, array $dateRange, int $limit = 10, ?string $channel = null): array
     {
         $isMarketplace = $this->isMarketplaceEvent($event);
 
@@ -516,7 +526,7 @@ class EventAnalyticsService
         ];
 
         // Use helper for backwards compatibility
-        $locations = (clone $this->getTrackingQuery($event))
+        $locations = (clone $this->getTrackingQuery($event, $channel ?? null))
             ->where('event_type', CoreCustomerEvent::TYPE_PURCHASE)
             ->where(function ($q) use ($dateRange) {
                 $q->whereBetween('created_at', [$dateRange['start'], $dateRange['end']])
@@ -598,13 +608,13 @@ class EventAnalyticsService
     /**
      * Get funnel metrics
      */
-    public function getFunnelMetrics(Event|MarketplaceEvent $event, array $dateRange): array
+    public function getFunnelMetrics(Event|MarketplaceEvent $event, array $dateRange, ?string $channel = null): array
     {
         $isMarketplace = $this->isMarketplaceEvent($event);
 
         // Use helper for backwards compatibility
         // Include page_view events OR any records without event_type (for legacy data)
-        $pageViews = (clone $this->getTrackingQuery($event))
+        $pageViews = (clone $this->getTrackingQuery($event, $channel ?? null))
             ->where(function ($q) {
                 $q->where('event_type', CoreCustomerEvent::TYPE_PAGE_VIEW)
                   ->orWhereNull('event_type')
@@ -616,7 +626,7 @@ class EventAnalyticsService
             })
             ->count();
 
-        $uniqueVisitors = (clone $this->getTrackingQuery($event))
+        $uniqueVisitors = (clone $this->getTrackingQuery($event, $channel ?? null))
             ->where(function ($q) {
                 $q->where('event_type', CoreCustomerEvent::TYPE_PAGE_VIEW)
                   ->orWhereNull('event_type')
@@ -629,7 +639,7 @@ class EventAnalyticsService
             ->distinct('visitor_id')
             ->count('visitor_id');
 
-        $addToCart = (clone $this->getTrackingQuery($event))
+        $addToCart = (clone $this->getTrackingQuery($event, $channel ?? null))
             ->where('event_type', CoreCustomerEvent::TYPE_ADD_TO_CART)
             ->where(function ($q) use ($dateRange) {
                 $q->whereBetween('created_at', [$dateRange['start'], $dateRange['end']])
@@ -638,7 +648,7 @@ class EventAnalyticsService
             ->distinct('session_id')
             ->count('session_id');
 
-        $checkoutStarted = (clone $this->getTrackingQuery($event))
+        $checkoutStarted = (clone $this->getTrackingQuery($event, $channel ?? null))
             ->where('event_type', CoreCustomerEvent::TYPE_BEGIN_CHECKOUT)
             ->where(function ($q) use ($dateRange) {
                 $q->whereBetween('created_at', [$dateRange['start'], $dateRange['end']])
@@ -647,7 +657,7 @@ class EventAnalyticsService
             ->distinct('session_id')
             ->count('session_id');
 
-        $purchases = (clone $this->getTrackingQuery($event))
+        $purchases = (clone $this->getTrackingQuery($event, $channel ?? null))
             ->where('event_type', CoreCustomerEvent::TYPE_PURCHASE)
             ->where(function ($q) use ($dateRange) {
                 $q->whereBetween('created_at', [$dateRange['start'], $dateRange['end']])
@@ -751,7 +761,7 @@ class EventAnalyticsService
 
         // Use helper for backwards compatibility
         // Include page_view events OR any records without event_type (for legacy data)
-        $visitors = (clone $this->getTrackingQuery($event))
+        $visitors = (clone $this->getTrackingQuery($event, $channel ?? null))
             ->where(function ($q) {
                 $q->where('event_type', CoreCustomerEvent::TYPE_PAGE_VIEW)
                   ->orWhereNull('event_type')
@@ -766,7 +776,7 @@ class EventAnalyticsService
 
         // Get visitor locations
         // Include page_view events OR any records without event_type (for legacy data)
-        $locations = (clone $this->getTrackingQuery($event))
+        $locations = (clone $this->getTrackingQuery($event, $channel ?? null))
             ->where(function ($q) {
                 $q->where('event_type', CoreCustomerEvent::TYPE_PAGE_VIEW)
                   ->orWhereNull('event_type')
@@ -784,7 +794,7 @@ class EventAnalyticsService
             ->get();
 
         // Get recent activity
-        $recentActivity = (clone $this->getTrackingQuery($event))
+        $recentActivity = (clone $this->getTrackingQuery($event, $channel ?? null))
             ->where(function ($q) use ($fiveMinutesAgo) {
                 $q->where('created_at', '>=', $fiveMinutesAgo)
                   ->orWhereNull('created_at');
@@ -822,7 +832,7 @@ class EventAnalyticsService
 
         // Get recent sessions with location data - use helper for backwards compatibility
         // Include page_view events OR any records without event_type (for legacy data)
-        $visitors = (clone $this->getTrackingQuery($event))
+        $visitors = (clone $this->getTrackingQuery($event, $channel ?? null))
             ->where(function ($q) {
                 $q->where('event_type', CoreCustomerEvent::TYPE_PAGE_VIEW)
                   ->orWhereNull('event_type')
@@ -1075,7 +1085,7 @@ class EventAnalyticsService
 
             // Use helper for backwards compatibility
             // Include page_view events OR any records without event_type (for legacy data)
-            $pageViews = (clone $this->getTrackingQuery($event))
+            $pageViews = (clone $this->getTrackingQuery($event, $channel ?? null))
                 ->where(function ($q) {
                     $q->where('event_type', CoreCustomerEvent::TYPE_PAGE_VIEW)
                       ->orWhereNull('event_type')
@@ -1084,7 +1094,7 @@ class EventAnalyticsService
                 ->whereBetween('created_at', [$hourStart, $hourEnd])
                 ->count();
 
-            $uniqueVisitors = (clone $this->getTrackingQuery($event))
+            $uniqueVisitors = (clone $this->getTrackingQuery($event, $channel ?? null))
                 ->where(function ($q) {
                     $q->where('event_type', CoreCustomerEvent::TYPE_PAGE_VIEW)
                       ->orWhereNull('event_type')
@@ -1094,7 +1104,7 @@ class EventAnalyticsService
                 ->distinct('visitor_id')
                 ->count('visitor_id');
 
-            $purchases = (clone $this->getTrackingQuery($event))
+            $purchases = (clone $this->getTrackingQuery($event, $channel ?? null))
                 ->where('event_type', CoreCustomerEvent::TYPE_PURCHASE)
                 ->whereBetween('created_at', [$hourStart, $hourEnd])
                 ->count();
@@ -1373,7 +1383,7 @@ class EventAnalyticsService
 
         // Use helper for backwards compatibility
         // Include page_view events OR any records without event_type (for legacy data)
-        $currentVisitors = (clone $this->getTrackingQuery($event))
+        $currentVisitors = (clone $this->getTrackingQuery($event, $channel ?? null))
             ->where(function ($q) {
                 $q->where('event_type', CoreCustomerEvent::TYPE_PAGE_VIEW)
                   ->orWhereNull('event_type')
@@ -1386,7 +1396,7 @@ class EventAnalyticsService
             ->distinct('visitor_id')
             ->count('visitor_id');
 
-        $currentPurchases = (clone $this->getTrackingQuery($event))
+        $currentPurchases = (clone $this->getTrackingQuery($event, $channel ?? null))
             ->where('event_type', CoreCustomerEvent::TYPE_PURCHASE)
             ->where(function ($q) use ($currentRange) {
                 $q->whereBetween('created_at', [$currentRange['start'], $currentRange['end']])
@@ -1401,7 +1411,7 @@ class EventAnalyticsService
             ->sum('total');
 
         // Include page_view events OR any records without event_type (for legacy data)
-        $previousVisitors = (clone $this->getTrackingQuery($event))
+        $previousVisitors = (clone $this->getTrackingQuery($event, $channel ?? null))
             ->where(function ($q) {
                 $q->where('event_type', CoreCustomerEvent::TYPE_PAGE_VIEW)
                   ->orWhereNull('event_type')
@@ -1411,7 +1421,7 @@ class EventAnalyticsService
             ->distinct('visitor_id')
             ->count('visitor_id');
 
-        $previousPurchases = (clone $this->getTrackingQuery($event))
+        $previousPurchases = (clone $this->getTrackingQuery($event, $channel ?? null))
             ->where('event_type', CoreCustomerEvent::TYPE_PURCHASE)
             ->whereBetween('created_at', [$previousRange['start'], $previousRange['end']])
             ->count();

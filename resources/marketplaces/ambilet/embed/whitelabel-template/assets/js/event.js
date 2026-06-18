@@ -222,7 +222,7 @@
         });
         keysToRemove.forEach(function(key) { WLCart.removeItem(key); });
 
-        // Add selected ticket types
+        // Add selected ticket types + fire analytics add_to_cart per type
         ticketTypes.forEach(function(tt) {
             var q = quantities[tt.id] || 0;
             if (q <= 0) return;
@@ -233,6 +233,9 @@
                 { id: tt.id, name: tt.name, price: p.display, base_price: parseFloat(tt.price || 0), commission_amount: c.amount, commission_mode: c.mode, commission: tt.commission, min_per_order: tt.min_per_order, max_per_order: tt.max_per_order },
                 q, null
             );
+            if (typeof WLTracking !== 'undefined') {
+                WLTracking.trackAddToCart(event.id, tt.id, q, p.display, 'RON');
+            }
         });
         window.location.href = (typeof WL_BASE !== 'undefined' ? WL_BASE : '') + '/checkout';
     });

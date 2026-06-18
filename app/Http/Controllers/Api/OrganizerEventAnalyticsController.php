@@ -36,7 +36,16 @@ class OrganizerEventAnalyticsController extends Controller
         $this->authorizeEvent($event);
 
         $period = $request->input('period', '30d');
-        $data = $this->analyticsService->getDashboardData($event, $period);
+        // Channel filter: 'all' (default) shows every funnel event; specific
+        // values restrict tracking queries to that channel (marketplace,
+        // whitelabel, embed_widget). Orders/tickets totals are NOT channel-
+        // filtered — revenue is the same regardless of where the visitor
+        // landed before checkout.
+        $channel = $request->input('channel');
+        if ($channel && !in_array($channel, ['marketplace', 'whitelabel', 'embed_widget'], true)) {
+            $channel = null;
+        }
+        $data = $this->analyticsService->getDashboardData($event, $period, $channel);
 
         return response()->json([
             'success' => true,

@@ -12,8 +12,10 @@ define('STORAGE_URL', '{{STORAGE_URL}}');
 define('API_KEY', '{{API_KEY}}');
 
 // Organizer
+define('ORG_ID', (int) '{{ORG_ID}}');
 define('ORG_SLUG', '{{ORG_SLUG}}');
 define('ORG_NAME', '{{ORG_NAME}}');
+define('MARKETPLACE_CLIENT_ID', (int) '{{MARKETPLACE_CLIENT_ID}}');
 
 // Site Configuration
 define('SITE_NAME', '{{SITE_NAME}}');

@@ -33,6 +33,10 @@ class MarketplaceTrackingController extends Controller
             'event_type' => 'required|string|max:50',
             'marketplace_event_id' => 'nullable|integer',
             'marketplace_client_id' => 'nullable|integer',
+            // Channel identifies the traffic source funnel: marketplace (ambilet/bilete.online),
+            // whitelabel (organizer's ZIP-packaged site), or embed_widget (third-party iframe).
+            // Defaults to 'marketplace' below so legacy callers don't need to change.
+            'channel' => 'nullable|string|in:marketplace,whitelabel,embed_widget',
             'visitor_id' => 'nullable|string|max:64',
             'session_id' => 'nullable|string|max:64',
             'page_url' => 'nullable|string|max:2000',
@@ -103,6 +107,7 @@ class MarketplaceTrackingController extends Controller
         $event = CoreCustomerEvent::create([
             'marketplace_event_id' => $request->input('marketplace_event_id'),
             'marketplace_client_id' => $clientId,
+            'channel' => $request->input('channel', 'marketplace'),
             'visitor_id' => $visitorId,
             'session_id' => $sessionId,
             'event_type' => $t($request->input('event_type')),
