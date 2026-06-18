@@ -12,8 +12,10 @@ define('STORAGE_URL', '{{STORAGE_URL}}');
 define('API_KEY', '{{API_KEY}}');
 
 // Organizer
+define('ORG_ID', (int) '{{ORG_ID}}');
 define('ORG_SLUG', '{{ORG_SLUG}}');
 define('ORG_NAME', '{{ORG_NAME}}');
+define('MARKETPLACE_CLIENT_ID', (int) '{{MARKETPLACE_CLIENT_ID}}');
 
 // Site Configuration
 define('SITE_NAME', '{{SITE_NAME}}');
@@ -32,6 +34,11 @@ define('ORG_PHONE', '{{ORG_PHONE}}');
 define('WIDGET_TERMS', '{{WIDGET_TERMS}}');
 define('WIDGET_PRIVACY', '{{WIDGET_PRIVACY}}');
 define('THEME', '{{THEME}}');
+
+// Tracking IDs — empty string disables that tracker
+define('TRACKING_GA_ID', '{{TRACKING_GA_ID}}');
+define('TRACKING_GTM_ID', '{{TRACKING_GTM_ID}}');
+define('TRACKING_FB_PIXEL_ID', '{{TRACKING_FB_PIXEL_ID}}');
 
 // Base path — set this to the subfolder where the site is installed.
 // Examples: '' for root, '/tickets' for a subfolder.

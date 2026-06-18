@@ -24,7 +24,16 @@ if (in_array($method, ['POST', 'PUT', 'PATCH'])) {
 // Build URL — pass query params (except 'endpoint')
 $params = $_GET;
 unset($params['endpoint']);
-$url = API_BASE_URL . $endpoint;
+
+// Marketplace-tracking endpoints live at /api/marketplace-tracking/* (NOT under
+// the marketplace-client prefix), so strip the /marketplace-client suffix from
+// API_BASE_URL when forwarding to them. Same X-API-Key auth applies to both.
+if (preg_match('#^/marketplace-tracking/(track|batch|pixel)$#', $endpoint)) {
+    $apiRoot = preg_replace('#/marketplace-client/?$#', '', API_BASE_URL);
+    $url = $apiRoot . $endpoint;
+} else {
+    $url = API_BASE_URL . $endpoint;
+}
 if (!empty($params)) $url .= '?' . http_build_query($params);
 
 // Make request

@@ -33,4 +33,35 @@ require_once __DIR__ . '/includes/head.php';
   </div>
 </div>
 
+
+<?php if ($orderNumber): ?>
+<script>
+// Fetch order details to fire WLTracking.trackPurchase with the real order id + total.
+// Sends channel='whitelabel' via the tracking lib so this conversion shows in the
+// whitelabel slice of the analytics funnel.
+(function () {
+    var orderRef = <?= json_encode($orderNumber) ?>;
+    if (!orderRef) return;
+    document.addEventListener('DOMContentLoaded', function () {
+        if (typeof WLTracking === 'undefined') return;
+        fetch('<?= $bp ?>/api/proxy.php?endpoint=/orders/' + encodeURIComponent(orderRef), {
+            headers: { 'Accept': 'application/json' }
+        })
+            .then(function (r) { return r.json(); })
+            .then(function (resp) {
+                var order = (resp && resp.data && resp.data.order) || (resp && resp.order);
+                if (!order || !order.id) return;
+                WLTracking.trackPurchase(
+                    (order.event && order.event.id) || null,
+                    order.id,
+                    parseFloat(order.total) || 0,
+                    order.currency || 'RON'
+                );
+            })
+            .catch(function () { /* silent fail — analytics, not user-facing */ });
+    });
+})();
+</script>
+<?php endif; ?>
+
 <?php require_once __DIR__ . '/includes/footer.php'; ?>

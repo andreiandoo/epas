@@ -18,6 +18,21 @@ require_once __DIR__ . '/includes/head.php';
 ?>
 <script>
 window.__WL_COMMISSION__ = <?= json_encode(['mode' => $commMode, 'rate' => $commRate]) ?>;
+// Fire begin_checkout once page is ready. Reads cart from localStorage so we
+// have the correct total + event id even when checkout.js builds the summary
+// asynchronously. Cleared on purchase by checkout.js → no double-fire risk.
+document.addEventListener('DOMContentLoaded', function () {
+    if (typeof WLTracking === 'undefined') return;
+    try {
+        var cart = JSON.parse(localStorage.getItem('wl_cart') || 'null');
+        if (!cart || !cart.items || !cart.items.length) return;
+        var eventId = cart.event_id || (cart.items[0] && cart.items[0].event_id) || null;
+        var total = (cart.items || []).reduce(function (s, it) {
+            return s + (parseFloat(it.price || 0) * parseInt(it.quantity || 0, 10));
+        }, 0);
+        WLTracking.trackBeginCheckout(eventId, Math.round(total * 100) / 100, 'RON');
+    } catch (e) { /* silent — analytics fallback */ }
+});
 </script>
 
 <!-- Steps bar -->
