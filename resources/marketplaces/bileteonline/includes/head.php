@@ -195,6 +195,41 @@ $alpineCollapseUrl = file_exists($alpineLocalCollapse)
      `border-ink/10`, `/15` opacity variants are separate classes and stay). -->
 <style>.border-ink{border-color:#D8CDBA}</style>
 
+<!-- Modern, auto-hiding scrollbar (desktop only). The page scrollbar thumb is
+     transparent when idle and fades in while scrolling (JS toggles
+     html.is-scrolling, cleared ~1s after the last scroll). Inner scroll areas
+     keep a subtle thin thumb. Touch devices already overlay/auto-hide natively. -->
+<style>
+@media (pointer: fine) {
+    html { scrollbar-width: thin; scrollbar-color: transparent transparent; }
+    html.is-scrolling { scrollbar-color: rgba(90, 79, 70, .5) transparent; }
+    ::-webkit-scrollbar { width: 10px; height: 10px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb {
+        background-color: rgba(90, 79, 70, .28);
+        border: 3px solid transparent;
+        background-clip: content-box;
+        border-radius: 9999px;
+        transition: background-color .35s ease;
+    }
+    ::-webkit-scrollbar-thumb:hover { background-color: rgba(90, 79, 70, .6); }
+    /* Page (root) scrollbar fully hides when idle, reveals while scrolling. */
+    html::-webkit-scrollbar-thumb { background-color: transparent; }
+    html.is-scrolling::-webkit-scrollbar-thumb { background-color: rgba(90, 79, 70, .5); }
+}
+</style>
+<script>
+(function () {
+    var h = document.documentElement, t;
+    function ping() {
+        h.classList.add('is-scrolling');
+        clearTimeout(t);
+        t = setTimeout(function () { h.classList.remove('is-scrolling'); }, 1000);
+    }
+    window.addEventListener('scroll', ping, { passive: true });
+})();
+</script>
+
 <!-- ===================== GOOGLE CONSENT MODE v2 — MUST be before tracking ===================== -->
 <script>
 window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}
