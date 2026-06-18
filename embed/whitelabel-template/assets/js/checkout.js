@@ -7,8 +7,10 @@ function fmtP(n) { return n % 1 !== 0 ? n.toFixed(2) : n.toFixed(0); }
 var WLCheckout = {
     promoCode: null,
     promoDiscount: 0,
+    promoData: null,
     // Organizer-level commission defaults (injected from checkout.php)
     orgCommRate: (window.__WL_COMMISSION__ && window.__WL_COMMISSION__.rate) || 5,
+    orgCommMode: (window.__WL_COMMISSION__ && window.__WL_COMMISSION__.mode) || 'included',
 
     init: function() {
         var cart = WLCart.getCart();
@@ -81,26 +83,38 @@ var WLCheckout = {
         var $btn = document.getElementById('wl-pay-btn');
         var subtotalBase = 0;
         var totalComm = 0;
+        // Whether AT LEAST ONE item has mode='added_on_top'. Drives whether the
+        // commission line shows "+X lei" (added on top) or "incl. X lei" (in
+        // price). Real-world organizers don't mix modes per cart, so taking the
+        // last item's mode as canonical is fine for display purposes.
+        var anyOnTop = false;
         var html = '';
         var self = this;
-        var rate = self.orgCommRate;
 
-        // Always compute commission for every item, regardless of mode
         cart.items.forEach(function(item) {
             var tt = item.ticketType;
+            // tt.price from /marketplace-events/{slug} is the BASE price (raw
+            // sale_price_cents / 100). Commission is reported separately via
+            // tt.commission = { type, rate, fixed, mode }. event.js stores
+            // pre-computed base_price + commission_amount + commission_mode
+            // when adding to cart — fall back to defaults if cart is stale.
             var displayPrice = parseFloat(tt.price || 0);
-            var basePrice, commAmt;
+            var basePrice, commAmt, mode;
 
             if (tt.base_price !== undefined && tt.base_price !== null) {
-                // New cart format — pre-computed
                 basePrice = parseFloat(tt.base_price);
                 commAmt = parseFloat(tt.commission_amount || 0);
+                mode = tt.commission_mode || self.orgCommMode;
             } else {
-                // Compute from org defaults: base = display / (1 + rate/100)
-                // This works for both modes: on_top (display includes comm) and included (display IS the price, comm is inside)
-                basePrice = Math.round(displayPrice / (1 + rate / 100) * 100) / 100;
-                commAmt = Math.round((displayPrice - basePrice) * 100) / 100;
+                // Cart predates the per-item commission snapshot. Recompute
+                // from org defaults using the canonical org mode — tt.price is
+                // always the base, never the commission-inflated display price.
+                basePrice = displayPrice;
+                commAmt = Math.round(displayPrice * self.orgCommRate) / 100;
+                mode = self.orgCommMode;
             }
+
+            if (mode === 'added_on_top') anyOnTop = true;
 
             var lineBase = Math.round(basePrice * item.quantity * 100) / 100;
             var lineComm = Math.round(commAmt * item.quantity * 100) / 100;
@@ -110,16 +124,24 @@ var WLCheckout = {
             html += '<div class="order-line"><div class="order-line-label"><span class="order-line-qty">' + item.quantity + ' × </span>' + esc(tt.name) + '</div><div class="order-line-amount">' + fmtP(lineBase) + ' lei</div></div>';
         });
 
-        // Always show commission line
+        // Commission line: amount shown either way (transparency), but the
+        // label clarifies whether it's added or included so the grand-total
+        // delta makes sense to the buyer.
         if (totalComm > 0) {
-            html += '<div class="order-line"><div class="order-line-label" style="color:var(--text-muted);font-size:12px;">Comisioane</div><div class="order-line-amount" style="color:var(--text-muted);font-size:12px;">' + fmtP(totalComm) + ' lei</div></div>';
+            var commLabel = anyOnTop
+                ? 'Comision Ticketing'
+                : 'Comision Ticketing (inclus)';
+            html += '<div class="order-line"><div class="order-line-label" style="color:var(--text-muted);font-size:12px;">' + commLabel + '</div><div class="order-line-amount" style="color:var(--text-muted);font-size:12px;">' + (anyOnTop ? '+' : '') + fmtP(totalComm) + ' lei</div></div>';
         }
 
-        var grandTotal = subtotalBase + totalComm;
+        // added_on_top: total = base + commission. included: total = base
+        // (commission is already inside the displayed price, line above is
+        // informational only).
+        var grandTotal = anyOnTop ? subtotalBase + totalComm : subtotalBase;
 
         if (this.promoDiscount > 0) {
             grandTotal = Math.max(0, grandTotal - this.promoDiscount);
-            html += '<div class="order-line"><div class="order-line-label" style="color:#5cc87a;">Reducere (' + esc(this.promoCode) + ')</div><div class="order-line-amount" style="color:#5cc87a;">-' + this.promoDiscount.toFixed(0) + ' lei</div></div>';
+            html += '<div class="order-line"><div class="order-line-label" style="color:#5cc87a;">Reducere (' + esc(this.promoCode) + ')</div><div class="order-line-amount" style="color:#5cc87a;">-' + fmtP(this.promoDiscount) + ' lei</div></div>';
         }
 
         $lines.innerHTML = html;
@@ -143,15 +165,75 @@ var WLCheckout = {
         var code = document.getElementById('wl-promo').value.trim();
         var $msg = document.getElementById('wl-promo-msg');
         if (!code) return;
+
+        var cart = WLCart.getCart();
+        if (!cart.items.length) {
+            $msg.style.display = 'block';
+            $msg.style.color = '#e05c44';
+            $msg.textContent = 'Coșul este gol.';
+            return;
+        }
+
+        // /promo-codes/validate requires cart_total (base prices, NOT
+        // base+commission — server reapplies commission) and items[] for
+        // ticket-type targeting + min_purchase_amount. Match event.js logic.
+        var items = [];
+        var cartTotal = 0;
+        var ticketCount = 0;
+        var eventId = null;
+        cart.items.forEach(function (item) {
+            var tt = item.ticketType;
+            var base = (tt.base_price !== undefined && tt.base_price !== null)
+                ? parseFloat(tt.base_price)
+                : parseFloat(tt.price || 0);
+            var line = base * item.quantity;
+            cartTotal += line;
+            ticketCount += item.quantity;
+            eventId = eventId || item.event.id;
+            items.push({
+                event_id: item.event.id,
+                ticket_type_id: tt.id,
+                quantity: item.quantity,
+                price: base,
+                total: line,
+            });
+        });
+
         $msg.style.display = 'block';
         $msg.style.color = 'var(--text-muted)';
         $msg.textContent = 'Se verifică...';
-        // TODO: API promo validation
+
         var self = this;
-        setTimeout(function() {
-            $msg.style.color = 'var(--text-dim)';
-            $msg.textContent = 'Funcționalitate în curs de implementare.';
-        }, 500);
+        WLApi.post('/promo-codes/validate', {
+            code: code,
+            event_id: eventId,
+            cart_total: Math.round(cartTotal * 100) / 100,
+            ticket_count: ticketCount,
+            items: items,
+        }).then(function (resp) {
+            if (resp.success && resp.data && resp.data.valid) {
+                self.promoCode = (resp.data.promo_code && resp.data.promo_code.code) || code;
+                self.promoData = resp.data.promo_code || null;
+                self.promoDiscount = parseFloat((resp.data.discount && resp.data.discount.amount) || 0);
+                $msg.style.color = '#5cc87a';
+                $msg.textContent = 'Cod valid! Reducere ' + fmtP(self.promoDiscount) + ' lei aplicată.';
+                self.renderOrderLines();
+            } else {
+                self.promoCode = null;
+                self.promoData = null;
+                self.promoDiscount = 0;
+                $msg.style.color = '#e05c44';
+                $msg.textContent = (resp.data && resp.data.message) || resp.message || 'Cod invalid sau expirat.';
+                self.renderOrderLines();
+            }
+        }).catch(function () {
+            self.promoCode = null;
+            self.promoData = null;
+            self.promoDiscount = 0;
+            $msg.style.color = '#e05c44';
+            $msg.textContent = 'Eroare la verificare. Încearcă din nou.';
+            self.renderOrderLines();
+        });
     },
 
     submit: function() {
