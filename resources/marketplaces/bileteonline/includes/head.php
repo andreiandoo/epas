@@ -203,8 +203,10 @@ $alpineCollapseUrl = file_exists($alpineLocalCollapse)
 @media (pointer: fine) {
     html { scrollbar-width: thin; scrollbar-color: transparent transparent; }
     html.is-scrolling { scrollbar-color: rgba(90, 79, 70, .5) transparent; }
-    ::-webkit-scrollbar { width: 10px; height: 10px; }
-    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar { width: 10px; height: 10px; background: transparent; }
+    ::-webkit-scrollbar-track,
+    ::-webkit-scrollbar-track-piece,
+    ::-webkit-scrollbar-corner { background: transparent; }
     ::-webkit-scrollbar-thumb {
         background-color: rgba(90, 79, 70, .28);
         border: 3px solid transparent;
