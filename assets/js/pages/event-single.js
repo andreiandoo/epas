@@ -763,7 +763,11 @@ const EventPage = {
             ticket_terms: (apiData.event && apiData.event.ticket_terms) ? apiData.event.ticket_terms : null,
             // Ticket display options
             enable_ticket_groups: apiData.enable_ticket_groups || false,
-            enable_ticket_perks: apiData.enable_ticket_perks || false
+            enable_ticket_perks: apiData.enable_ticket_perks || false,
+            // FOMO payload — null on events where the admin toggle is off.
+            // Server-side service returns null + the PHP stripper drops the
+            // key, so `apiData.fomo` is undefined for any non-opted-in event.
+            fomo: apiData.fomo || null
         };
     },
 
@@ -1243,6 +1247,141 @@ const EventPage = {
         if (!this.eventEnded) {
             this.setupLazyRelatedEvents();
         }
+
+        // FOMO social-proof UI — gated server-side, only activates when
+        // the per-event flag is on AND the FomoStatsService returned data.
+        // For any other event, this is a no-op (this.event.fomo is null).
+        if (this.event.fomo && !this.eventEnded) {
+            try {
+                this.renderFomo(this.event.fomo);
+            } catch (e) {
+                console.warn('[EventPage] FOMO render failed:', e);
+            }
+        }
+    },
+
+    /**
+     * Inject the FOMO social-proof block:
+     *   - 2 pills above the event title (sold-24h + viewers)
+     *   - scarcity bar above the ticket types list
+     *   - floating toast container with rotating messages
+     *
+     * Called from render() only when this.event.fomo is non-null. The
+     * server is the single source of truth for the numbers — we never
+     * recompute on the client.
+     */
+    renderFomo(fomo) {
+        if (!fomo || !fomo.enabled) return;
+
+        var titleEl = document.getElementById('event-title');
+        var ticketsEl = document.getElementById('ticket-types');
+        if (!titleEl || !ticketsEl) return;
+
+        // ── Pills above the title ──────────────────────────────────────
+        if (!document.getElementById('fomo-pills')) {
+            var pills = document.createElement('div');
+            pills.id = 'fomo-pills';
+            pills.className = 'flex flex-wrap items-center gap-2 px-6 mb-3 mobile:px-4';
+            pills.innerHTML =
+                '<span class="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-bold rounded-full bg-amber-50 text-amber-700">' +
+                    '<span class="w-2 h-2 rounded-full bg-amber-500" style="animation: pulse 2s cubic-bezier(0.4,0,0.6,1) infinite;"></span>' +
+                    '<span>' + this.escapeHtml(fomo.sold_last_24h) + ' bilete vândute în ultimele 24h</span>' +
+                '</span>' +
+                '<span class="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-bold rounded-full bg-sky-50 text-sky-700">' +
+                    '<span>👁</span>' +
+                    '<span id="fomo-viewers">' + this.escapeHtml(fomo.viewers_now) + ' persoane se uită acum</span>' +
+                '</span>';
+            titleEl.parentNode.insertBefore(pills, titleEl);
+        }
+
+        // ── Scarcity bar above ticket types ────────────────────────────
+        if (!document.getElementById('fomo-scarcity')) {
+            var scarcity = document.createElement('div');
+            scarcity.id = 'fomo-scarcity';
+            scarcity.className = 'p-4 mb-4 border rounded-2xl border-amber-200 bg-amber-50';
+            scarcity.innerHTML =
+                '<div class="flex items-center justify-between gap-3">' +
+                    '<div class="flex items-center gap-2 text-sm font-bold text-amber-900">' +
+                        '<span>🔥</span><span>Cerere ridicată</span>' +
+                    '</div>' +
+                    '<span class="text-xs font-semibold text-amber-700">' +
+                        this.escapeHtml(fomo.remaining_displayed) + ' locuri rămase' +
+                    '</span>' +
+                '</div>' +
+                '<div class="h-2 mt-3 overflow-hidden rounded-full bg-amber-100">' +
+                    '<div class="h-full rounded-full bg-amber-500 transition-all duration-700" style="width:' +
+                        Math.max(8, Math.min(96, fomo.inventory_percent)) + '%;"></div>' +
+                '</div>';
+            ticketsEl.parentNode.insertBefore(scarcity, ticketsEl);
+        }
+
+        // ── Floating toast cycle ───────────────────────────────────────
+        if (Array.isArray(fomo.toast_messages) && fomo.toast_messages.length) {
+            this.startFomoToasts(fomo.toast_messages);
+        }
+    },
+
+    /**
+     * Lightweight toast cycler. One toast at a time, cycles every ~16s,
+     * dismissable. Uses a single container appended to <body>; if the
+     * user navigates away (we never go full SPA, but bfcache exists)
+     * the existing container is reused.
+     */
+    startFomoToasts(messages) {
+        var holder = document.getElementById('fomo-toast');
+        if (!holder) {
+            holder = document.createElement('div');
+            holder.id = 'fomo-toast';
+            holder.style.cssText = 'position:fixed;left:1rem;bottom:1.5rem;z-index:50;max-width:22rem;display:none;';
+            holder.innerHTML =
+                '<div class="p-4 bg-white border border-slate-200 rounded-2xl shadow-2xl">' +
+                    '<div class="flex items-start gap-3">' +
+                        '<div class="grid w-10 h-10 text-emerald-700 bg-emerald-50 rounded-full place-items-center shrink-0">✓</div>' +
+                        '<div class="flex-1">' +
+                            '<div id="fomo-toast-title" class="text-sm font-bold text-secondary"></div>' +
+                            '<div id="fomo-toast-text" class="mt-1 text-xs leading-5 text-muted"></div>' +
+                        '</div>' +
+                        '<button type="button" onclick="document.getElementById(\'fomo-toast\').style.display=\'none\';" class="ml-2 text-slate-400" aria-label="Închide notificarea">×</button>' +
+                    '</div>' +
+                '</div>';
+            document.body.appendChild(holder);
+        }
+        var titleEl = document.getElementById('fomo-toast-title');
+        var textEl = document.getElementById('fomo-toast-text');
+        var i = 0;
+        var show = function () {
+            var m = messages[i % messages.length];
+            i++;
+            if (!m || !titleEl || !textEl) return;
+            titleEl.textContent = m.title || '';
+            textEl.textContent = m.text || '';
+            holder.style.display = 'block';
+            holder.style.opacity = '0';
+            holder.style.transition = 'opacity 300ms ease-out';
+            requestAnimationFrame(function () { holder.style.opacity = '1'; });
+            setTimeout(function () {
+                holder.style.opacity = '0';
+                setTimeout(function () { holder.style.display = 'none'; }, 350);
+            }, 7500);
+        };
+        // First toast a bit after page load so it doesn't fight the
+        // initial render; then cycle every 16s.
+        setTimeout(show, 2800);
+        if (this._fomoToastInterval) clearInterval(this._fomoToastInterval);
+        this._fomoToastInterval = setInterval(show, 16000);
+    },
+
+    /**
+     * Tiny HTML escape — values come from the server but we still want
+     * to be defensive (e.g. a city name with an ampersand).
+     */
+    escapeHtml(v) {
+        return String(v == null ? '' : v)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
     },
 
     /**

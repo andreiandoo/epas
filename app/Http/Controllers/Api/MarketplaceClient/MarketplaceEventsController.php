@@ -1121,6 +1121,11 @@ class MarketplaceEventsController extends BaseController
                         ];
                     })
                 : [],
+            // FOMO social-proof payload. Returns null when the per-event
+            // toggle is off — keeps the response shape identical for
+            // events that haven't opted in. Service has its own
+            // try/catch so a failure here never breaks the event load.
+            'fomo' => app(\App\Services\FomoStatsService::class)->getStatsForEvent($event->id),
         ]);
     }
 
