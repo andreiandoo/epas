@@ -235,7 +235,7 @@ $tabPlacesLabel = ($ctxType === 'city' || $ctxType === 'activity')
                         <button @click="accountOpen=!accountOpen; languageOpen=false; mega=null" class="grid transition rounded-full h-11 w-11 place-items-center bg-ink text-paper hover:bg-vermilion" aria-haspopup="menu" :aria-expanded="accountOpen.toString()" aria-label="Cont">
                             <svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>
                         </button>
-                        <div x-show="accountOpen" x-cloak x-transition.origin.top.right @click.outside="accountOpen=false" class="absolute right-0 top-[calc(100%+12px)] w-[280px] overflow-hidden rounded-[2rem] border-2 border-ink bg-paper text-ink shadow-deep" role="menu">
+                        <div x-show="accountOpen" x-cloak x-transition.origin.top.right @click.outside="accountOpen=false" class="absolute right-0 top-[calc(100%+14px)] w-[280px] overflow-hidden rounded-[2rem] rounded-t-none border border-ink/10 bg-paper text-ink shadow-deep" role="menu">
                             <div class="p-5">
                                 <p class="text-3xl font-bold leading-none font-display">Contul tău</p>
                                 <p class="mt-2 text-sm text-ink-soft">Bilete QR, puncte bonus și recomandări personalizate.</p>
@@ -301,8 +301,7 @@ $tabPlacesLabel = ($ctxType === 'city' || $ctxType === 'activity')
         </nav>
 
         <!-- Language / currency popover -->
-        <div x-show="languageOpen" x-cloak x-transition.origin.top.right @click.outside="languageOpen=false" class="absolute right-[88px] top-[calc(100%+10px)] z-[51] hidden w-[320px] rounded-[1.6rem] border-2 border-ink bg-paper p-4 shadow-deep lg:block">
-            <p class="text-3xl font-bold leading-none font-display">Limbă și monedă</p>
+        <div x-show="languageOpen" x-cloak x-transition.origin.top.right @click.outside="languageOpen=false" class="absolute right-[78px] top-[calc(100%+0px)] z-[51] hidden w-[320px] rounded-[2rem] border rounded-t-none border-ink/10 bg-paper p-4 shadow-deep lg:block">
             <div class="grid gap-3 mt-4">
                 <label><span class="block mb-1 text-sm font-bold text-ink-soft">Limbă</span><select class="w-full px-4 py-3 font-bold border-2 outline-none rounded-2xl border-ink/10 bg-paper-2"><option>Română</option><option disabled>English (în curând)</option></select></label>
                 <label><span class="block mb-1 text-sm font-bold text-ink-soft">Monedă</span><select class="w-full px-4 py-3 font-bold border-2 outline-none rounded-2xl border-ink/10 bg-paper-2"><option>RON</option><option disabled>EUR (în curând)</option></select></label>
