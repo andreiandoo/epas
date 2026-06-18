@@ -172,33 +172,36 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 
                     <!-- Inner tab: Tracking -->
                     <div id="itab-tracking" class="wl-inner-content" style="display:none;">
-                        <p class="mb-4 text-sm text-muted">Adaugă ID-urile platformelor de tracking. Lasă gol pentru a dezactiva o platformă. Scripturile se injectează automat în &lt;head&gt; pe toate paginile site-ului whitelabel când regenerezi pachetul ZIP.</p>
+                        <p class="mb-4 text-sm text-muted">Activează doar platformele pe care le folosești. Scripturile se injectează automat în &lt;head&gt; pe paginile whitelabel când regenerezi pachetul ZIP — tracker-ele dezactivate sunt sărite.</p>
 
                         <div class="space-y-5">
-                            <div>
-                                <label class="label flex items-center gap-2">
-                                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="#F9AB00"><path d="M22.84 2.998v17.999a2.983 2.983 0 0 1-2.967 2.998 2.98 2.98 0 0 1-2.85-2.12 2.998 2.998 0 0 1-.117-.927V3.12C16.906 1.49 18.245.14 19.873.002a2.97 2.97 0 0 1 2.967 2.996zM4.133 18.055a2.973 2.973 0 1 1 0 5.945 2.973 2.973 0 0 1 0-5.945zm7.872-9.01a2.973 2.973 0 1 0-2.973 2.973 2.973 2.973 0 0 0 2.973-2.973z"/></svg>
-                                    Google Analytics — Measurement ID
+                            <div class="p-4 border rounded-xl border-border bg-slate-50/50">
+                                <label class="flex items-center gap-3 cursor-pointer mb-3">
+                                    <input type="checkbox" id="tracking-ga-enabled" class="w-4 h-4 rounded border-gray-300 text-primary focus:ring-2 focus:ring-primary/20" onchange="WidgetsPage.toggleTracker('ga')">
+                                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="#F9AB00"><path d="M22.84 2.998v17.999a2.983 2.983 0 0 1-2.967 2.998 2.98 2.98 0 0 1-2.85-2.12 2.998 2.998 0 0 1-.117-.927V3.12C16.906 1.49 18.245.14 19.873.002a2.97 2.97 0 0 1 2.967 2.996zM4.133 18.055a2.973 2.973 0 1 1 0 5.945 2.973 2.973 0 0 1 0-5.945zm7.872-9.01a2.973 2.973 0 1 0-2.973 2.973 2.973 2.973 0 0 0 2.973-2.973z"/></svg>
+                                    <span class="text-sm font-semibold text-secondary">Google Analytics</span>
                                 </label>
-                                <input type="text" id="full-tracking-ga" class="w-full input font-mono" placeholder="G-XXXXXXXXXX" autocomplete="off">
+                                <input type="text" id="full-tracking-ga" class="w-full input font-mono disabled:opacity-50 disabled:bg-slate-100" placeholder="G-XXXXXXXXXX" autocomplete="off" disabled>
                                 <p class="mt-1 text-xs text-muted">Începe cu <code>G-</code> (GA4) sau <code>UA-</code> (vechi). Găsești în Google Analytics → Admin → Data Streams.</p>
                             </div>
 
-                            <div>
-                                <label class="label flex items-center gap-2">
-                                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="#4285F4"><path d="M19.327 5.683 13.41 11.6l5.917 5.917a4.018 4.018 0 0 1-5.683 5.683l-5.917-5.917L1.81 11.6a4.018 4.018 0 0 1 5.683-5.683l5.917 5.917 5.917-5.917a4.018 4.018 0 1 1 5.683 5.683l-5.683-5.917z"/></svg>
-                                    Google Tag Manager — Container ID
+                            <div class="p-4 border rounded-xl border-border bg-slate-50/50">
+                                <label class="flex items-center gap-3 cursor-pointer mb-3">
+                                    <input type="checkbox" id="tracking-gtm-enabled" class="w-4 h-4 rounded border-gray-300 text-primary focus:ring-2 focus:ring-primary/20" onchange="WidgetsPage.toggleTracker('gtm')">
+                                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="#4285F4"><path d="M19.327 5.683 13.41 11.6l5.917 5.917a4.018 4.018 0 0 1-5.683 5.683l-5.917-5.917L1.81 11.6a4.018 4.018 0 0 1 5.683-5.683l5.917 5.917 5.917-5.917a4.018 4.018 0 1 1 5.683 5.683l-5.683-5.917z"/></svg>
+                                    <span class="text-sm font-semibold text-secondary">Google Tag Manager</span>
                                 </label>
-                                <input type="text" id="full-tracking-gtm" class="w-full input font-mono" placeholder="GTM-XXXXXXX" autocomplete="off">
+                                <input type="text" id="full-tracking-gtm" class="w-full input font-mono disabled:opacity-50 disabled:bg-slate-100" placeholder="GTM-XXXXXXX" autocomplete="off" disabled>
                                 <p class="mt-1 text-xs text-muted">Începe cu <code>GTM-</code>. Găsești în Google Tag Manager → Workspace overview.</p>
                             </div>
 
-                            <div>
-                                <label class="label flex items-center gap-2">
-                                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="#1877F2"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
-                                    Meta (Facebook) Pixel — Pixel ID
+                            <div class="p-4 border rounded-xl border-border bg-slate-50/50">
+                                <label class="flex items-center gap-3 cursor-pointer mb-3">
+                                    <input type="checkbox" id="tracking-fb-enabled" class="w-4 h-4 rounded border-gray-300 text-primary focus:ring-2 focus:ring-primary/20" onchange="WidgetsPage.toggleTracker('fb')">
+                                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="#1877F2"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+                                    <span class="text-sm font-semibold text-secondary">Meta (Facebook) Pixel</span>
                                 </label>
-                                <input type="text" id="full-tracking-fb" class="w-full input font-mono" placeholder="1234567890123456" autocomplete="off">
+                                <input type="text" id="full-tracking-fb" class="w-full input font-mono disabled:opacity-50 disabled:bg-slate-100" placeholder="1234567890123456" autocomplete="off" disabled>
                                 <p class="mt-1 text-xs text-muted">Numeric, 15-16 cifre. Găsești în Meta Business Suite → Events Manager → Data Sources.</p>
                             </div>
                         </div>
@@ -445,10 +448,22 @@ const WidgetsPage = {
         _s('wl-terms-editor', terms);
         _s('wl-privacy-editor', privacy);
 
-        // Pre-fill tracking IDs
-        _s('full-tracking-ga', this.organizer.settings?.widget_tracking_ga_id || '');
-        _s('full-tracking-gtm', this.organizer.settings?.widget_tracking_gtm_id || '');
-        _s('full-tracking-fb', this.organizer.settings?.widget_tracking_fb_pixel_id || '');
+        // Pre-fill tracking IDs + toggle checkbox state based on whether value exists.
+        // Non-empty stored value → checkbox checked + input enabled (carry the saved id forward).
+        // Empty stored value → checkbox unchecked + input disabled (preserves "no tracker" state).
+        const trackerSetup = (key, inputId, checkboxId) => {
+            const val = this.organizer.settings?.[key] || '';
+            const $input = document.getElementById(inputId);
+            const $cb = document.getElementById(checkboxId);
+            if ($input) $input.value = val;
+            if ($cb) {
+                $cb.checked = !!val;
+                if ($input) $input.disabled = !$cb.checked;
+            }
+        };
+        trackerSetup('widget_tracking_ga_id', 'full-tracking-ga', 'tracking-ga-enabled');
+        trackerSetup('widget_tracking_gtm_id', 'full-tracking-gtm', 'tracking-gtm-enabled');
+        trackerSetup('widget_tracking_fb_pixel_id', 'full-tracking-fb', 'tracking-fb-enabled');
 
         await this.loadEvents();
 
@@ -659,6 +674,26 @@ const WidgetsPage = {
         // sweep. The persisted widget_config field becomes empty on Save.
     },
 
+    toggleTracker(key) {
+        // Enables/disables the matching tracker input based on its checkbox.
+        // When the user unchecks, we leave the input value alone so they can
+        // re-enable without re-typing — but the save handler skips the value
+        // for unchecked trackers (see trackerVal in saveWidgetConfig).
+        const map = {
+            ga: { input: 'full-tracking-ga', checkbox: 'tracking-ga-enabled' },
+            gtm: { input: 'full-tracking-gtm', checkbox: 'tracking-gtm-enabled' },
+            fb: { input: 'full-tracking-fb', checkbox: 'tracking-fb-enabled' },
+        };
+        const cfg = map[key];
+        if (!cfg) return;
+        const $cb = document.getElementById(cfg.checkbox);
+        const $input = document.getElementById(cfg.input);
+        if ($input && $cb) {
+            $input.disabled = !$cb.checked;
+            if ($cb.checked) $input.focus();
+        }
+    },
+
     async saveWidgetConfig() {
         const config = {
             logo: this._v('full-logo'),
@@ -675,10 +710,17 @@ const WidgetsPage = {
         // Also save terms and privacy content
         const terms = this._v('wl-terms-editor');
         const privacy = this._v('wl-privacy-editor');
-        // Tracking IDs — saved as top-level settings keys (parallel to widget_terms / widget_privacy)
-        const trackingGaId = (this._v('full-tracking-ga') || '').trim();
-        const trackingGtmId = (this._v('full-tracking-gtm') || '').trim();
-        const trackingFbPixelId = (this._v('full-tracking-fb') || '').trim();
+        // Tracking IDs — saved as top-level settings keys. Empty when the per-tracker
+        // checkbox is unchecked, regardless of any leftover input value, so disabling
+        // a tracker in the UI immediately stops injecting its script on the next ZIP.
+        const trackerVal = (inputId, checkboxId) => {
+            const $cb = document.getElementById(checkboxId);
+            if ($cb && !$cb.checked) return '';
+            return (this._v(inputId) || '').trim();
+        };
+        const trackingGaId = trackerVal('full-tracking-ga', 'tracking-ga-enabled');
+        const trackingGtmId = trackerVal('full-tracking-gtm', 'tracking-gtm-enabled');
+        const trackingFbPixelId = trackerVal('full-tracking-fb', 'tracking-fb-enabled');
 
         try {
             await AmbiletAPI.put('/organizer/widget-settings', {

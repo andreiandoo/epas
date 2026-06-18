@@ -2016,6 +2016,16 @@ class EventsController extends BaseController
         $startDate = $request->input('start_date');
         $endDate = $request->input('end_date');
 
+        // Channel filter: null = all channels (default), or marketplace|whitelabel|embed_widget.
+        // When set, page-view-derived metrics + traffic-sources are computed from
+        // core_customer_events scoped to that channel. Order/ticket counters (which
+        // come from orders/tickets tables) stay channel-blind since revenue is the
+        // same regardless of where the visitor arrived from.
+        $channel = $request->input('channel');
+        if ($channel && !in_array($channel, ['marketplace', 'whitelabel', 'embed_widget'], true)) {
+            $channel = null;
+        }
+
         // Determine date range
         $now = now();
         $eventCreatedAt = $event->created_at->startOfDay();
@@ -2171,7 +2181,20 @@ class EventsController extends BaseController
         $totalRevenue = $grossRevenue; // Keep for backwards compat (chart/comparison)
         // Bilete vândute = all valid tickets (online + POS + invitations)
         $ticketsSold = (int) (clone $validEventTicketsQuery())->count();
-        $pageViews = $event->views_count ?? 0;
+
+        // Page views: denormalized counter is fast but channel-blind. When a channel
+        // filter is active, recompute from core_customer_events scoped to that channel.
+        if ($channel) {
+            $pageViews = (int) \App\Models\Platform\CoreCustomerEvent::where(function ($q) use ($event) {
+                $q->where('event_id', $event->id)
+                  ->orWhere('marketplace_event_id', $event->id);
+            })
+                ->where('channel', $channel)
+                ->where('event_type', 'page_view')
+                ->count();
+        } else {
+            $pageViews = $event->views_count ?? 0;
+        }
         $conversionRate = $pageViews > 0 ? round(($ticketsSold / $pageViews) * 100, 2) : 0;
 
         // Tickets sold today (uses same broad filter as total count)
@@ -2295,6 +2318,9 @@ class EventsController extends BaseController
             $q->where('event_id', $event->id)
               ->orWhere('marketplace_event_id', $event->id);
         })->whereBetween('created_at', [$rangeStart, $rangeEnd]);
+        if ($channel) {
+            $trackingQuery->where('channel', $channel);
+        }
 
         if ($trackingQuery->exists()) {
             $sourceCase = "CASE
