@@ -176,9 +176,26 @@ class MarketplaceOrganizerPromoCode extends Model
      */
     public function validateForCart(array $cart, ?string $customerEmail = null, ?int $customerId = null): array
     {
-        // Check basic validity
-        if (!$this->isValid()) {
-            return ['valid' => false, 'reason' => 'Codul promoțional nu este activ'];
+        // Surface the specific reason instead of the generic "nu este activ".
+        // Order matches isValid()'s short-circuit order so the message reflects
+        // the first failing check (active → started → not expired → not exhausted).
+        if (!$this->isActive()) {
+            return ['valid' => false, 'reason' => 'Codul promoțional este dezactivat'];
+        }
+        if (!$this->hasStarted()) {
+            $when = $this->starts_at?->format('d.m.Y');
+            return ['valid' => false, 'reason' => $when
+                ? "Codul promoțional este valabil începând cu {$when}"
+                : 'Codul promoțional nu este încă valid'];
+        }
+        if ($this->isExpired()) {
+            $when = $this->expires_at?->format('d.m.Y');
+            return ['valid' => false, 'reason' => $when
+                ? "Codul promoțional a expirat pe {$when}"
+                : 'Codul promoțional a expirat'];
+        }
+        if ($this->isExhausted()) {
+            return ['valid' => false, 'reason' => 'Codul promoțional a atins limita de utilizări'];
         }
 
         // Check minimum purchase amount
