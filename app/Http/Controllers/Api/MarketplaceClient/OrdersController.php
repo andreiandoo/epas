@@ -648,11 +648,38 @@ class OrdersController extends BaseController
             $eventTitle = is_array($order->event->title)
                 ? ($order->event->title['ro'] ?? $order->event->title['en'] ?? reset($order->event->title))
                 : $order->event->title;
+
+            // Combine event_date + start_time into proper ISO datetime so JS
+            // `new Date(event.date).toLocaleTimeString()` returns the real start
+            // time instead of midnight UTC → 03:00 Bucharest (the bug that made
+            // thank-you / ticket cards show "03:00" on every event). Date+time
+            // are entered in the marketplace's local TZ — parse with that TZ so
+            // the absolute UTC instant in the output is correct.
+            $tz = \App\Support\MarketplaceTz::tz($order->event->marketplaceClient);
+            $startDate = $order->event->start_date;
+            $startTime = match ($order->event->duration_mode) {
+                'range' => $order->event->range_start_time,
+                'multi_day' => !empty($order->event->multi_slots) ? ($order->event->multi_slots[0]['start_time'] ?? null) : null,
+                'recurring' => $order->event->recurring_start_time,
+                default => $order->event->start_time,
+            };
+            $eventDateIso = null;
+            $eventTimeStr = null;
+            if ($startDate) {
+                if ($startTime) {
+                    $eventDateIso = \Carbon\Carbon::parse($startDate->format('Y-m-d') . ' ' . $startTime, $tz)->toIso8601String();
+                    $eventTimeStr = substr($startTime, 0, 5);
+                } else {
+                    $eventDateIso = $startDate->toIso8601String();
+                }
+            }
+
             $eventData = [
                 'id' => $order->event->id,
                 'name' => $eventTitle,
                 'slug' => $order->event->slug,
-                'date' => $order->event->event_date?->toIso8601String(),
+                'date' => $eventDateIso,
+                'time' => $eventTimeStr,
                 'doors_open' => $order->event->door_time,
                 'venue' => $order->event->venue?->name,
                 'city' => $order->event->venue?->city,

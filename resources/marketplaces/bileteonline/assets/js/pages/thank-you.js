@@ -336,7 +336,7 @@ const ThankYouPage = {
         if (event && eventInfo) {
             const eventTitle = event.name || event.title || 'Eveniment';
             const eventDate = event.date ? BileteOnlineUtils.formatDate(event.date) : '';
-            const eventTime = event.doors_open || (event.date ? new Date(event.date).toLocaleTimeString('ro-RO', {hour: '2-digit', minute: '2-digit'}) : '');
+            const eventTime = event.time || event.doors_open || (event.date ? new Date(event.date).toLocaleTimeString('ro-RO', {hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Bucharest'}) : '');
             const venue = (typeof event.venue === 'object' && event.venue !== null) ? (event.venue.ro || event.venue.en || Object.values(event.venue)[0] || '') : (event.venue || '');
             eventInfo.innerHTML = `
                 <img src="${getStorageUrl(event.image)}" alt="${eventTitle}" class="object-cover w-20 h-20 rounded-xl" loading="lazy" onerror="this.style.display='none'">
@@ -475,7 +475,7 @@ const ThankYouPage = {
         if (event) {
             const eventTitle = event.name || event.title || 'Eveniment';
             const eventDate = event.date ? BileteOnlineUtils.formatDate(event.date) : '';
-            const eventTime = event.doors_open || (event.date ? new Date(event.date).toLocaleTimeString('ro-RO', {hour: '2-digit', minute: '2-digit'}) : '');
+            const eventTime = event.time || event.doors_open || (event.date ? new Date(event.date).toLocaleTimeString('ro-RO', {hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Bucharest'}) : '');
             // Venue may be string or translatable object {en: "...", ro: "..."}
             const venue = (typeof event.venue === 'object' && event.venue !== null) ? (event.venue.ro || event.venue.en || Object.values(event.venue)[0] || '') : (event.venue || '');
             eventInfo.innerHTML = `
@@ -812,7 +812,7 @@ const ThankYouPage = {
         const event = this.order?.event;
         const eventTitle = event?.name || event?.title || 'Eveniment';
         const eventDate = event?.date ? BileteOnlineUtils.formatDate(event.date, 'medium') : '';
-        const eventTime = event?.doors_open || (event?.date ? new Date(event.date).toLocaleTimeString('ro-RO', {hour: '2-digit', minute: '2-digit'}) : '');
+        const eventTime = event?.time || event?.doors_open || (event?.date ? new Date(event.date).toLocaleTimeString('ro-RO', {hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Bucharest'}) : '');
         const eventVenue = event?.venue ? (typeof event.venue === 'object' ? (event.venue.ro || event.venue.en || Object.values(event.venue)[0] || '') : event.venue) : '';
         const siteName = window.BILETEONLINE?.siteName || 'bilete.online';
 
