@@ -216,7 +216,9 @@ async function loadPromoCodes() {
             allPromoCodes = Array.isArray(response.data) ? response.data : (response.data.data || response.data.promo_codes || []);
             promoCodes = [...allPromoCodes];
             renderPromoCodes();
-            document.getElementById('active-codes').textContent = allPromoCodes.filter(c => c.status === 'active').length;
+            // "Active" tile counts codes that are TRULY usable right now, not just
+            // status='active' (which lies for expired / exhausted / pending codes).
+            document.getElementById('active-codes').textContent = allPromoCodes.filter(isCodeEffectivelyActive).length;
             document.getElementById('total-uses').textContent = allPromoCodes.reduce((s, c) => s + (c.usage_count || 0), 0);
             // Calculate total discounts from usage
             const totalDiscounts = allPromoCodes.reduce((sum, c) => sum + ((c.usage_count || 0) * (c.value || 0)), 0);
@@ -226,9 +228,24 @@ async function loadPromoCodes() {
     } catch (error) { console.error('Failed to load promo codes:', error); allPromoCodes = []; promoCodes = []; renderPromoCodes(); }
 }
 
+// Mirror of the server-side isValid() in MarketplaceOrganizerPromoCode:
+// status='active' is necessary but not sufficient — also need to be inside
+// the start/end window and under usage_limit.
+function isCodeEffectivelyActive(c) {
+    if (c.status !== 'active') return false;
+    const now = Date.now();
+    const startMs = (c.starts_at || c.start_date) ? new Date(c.starts_at || c.start_date).getTime() : null;
+    const endMs = (c.expires_at || c.end_date) ? new Date(c.expires_at || c.end_date).getTime() : null;
+    if (startMs && startMs > now) return false;
+    if (endMs && endMs < now) return false;
+    const limit = c.usage_limit || 0;
+    if (limit > 0 && (c.usage_count || 0) >= limit) return false;
+    return true;
+}
+
 function getCardColor(code) {
     // Return different colors based on status and discount type
-    if (code.status !== 'active') return 'muted';
+    if (!isCodeEffectivelyActive(code)) return 'muted';
     const type = code.type || code.discount_type;
     const value = code.value || code.discount_value || 0;
     if (type === 'percentage' && value >= 20) return 'accent';
@@ -244,7 +261,6 @@ function renderPromoCodes() {
         const discountType = c.type || c.discount_type;
         const discountValue = c.value || c.discount_value || 0;
         const color = getCardColor(c);
-        const isExpired = c.status === 'expired' || c.status === 'disabled';
 
         // Handle event name
         let eventName = 'Toate evenimentele';
@@ -259,21 +275,39 @@ function renderPromoCodes() {
         }
 
         const endDate = c.expires_at || c.end_date;
+        const startDate = c.starts_at || c.start_date;
         const usageCount = c.usage_count || 0;
         const usageLimit = c.usage_limit || 0;
         const usagePercent = usageLimit > 0 ? Math.min((usageCount / usageLimit) * 100, 100) : 0;
 
-        // Discount display
-        const discountDisplay = discountType === 'percentage'
-            ? discountValue + '% reducere'
-            : AmbiletUtils.formatCurrency(discountValue) + ' reducere';
+        // Effective status — DB `status` is not auto-rolled when a code's
+        // expires_at passes (no cron updates it), so a row stuck at
+        // status='active' can in fact be expired / not-yet-started / exhausted.
+        // The /promo-codes/validate endpoint enforces these checks server-side,
+        // which is how an "Activ" badge in the list pairs with a
+        // "Codul promoțional nu este activ" error on checkout. We recompute
+        // the effective status client-side so the badge matches reality.
+        const nowMs = Date.now();
+        const startMs = startDate ? new Date(startDate).getTime() : null;
+        const endMs = endDate ? new Date(endDate).getTime() : null;
+        let effectiveStatus = c.status;
+        if (c.status === 'active') {
+            if (endMs && endMs < nowMs) effectiveStatus = 'expired';
+            else if (startMs && startMs > nowMs) effectiveStatus = 'pending';
+            else if (usageLimit > 0 && usageCount >= usageLimit) effectiveStatus = 'exhausted';
+        }
+        const isExpired = effectiveStatus === 'expired' || effectiveStatus === 'disabled' || effectiveStatus === 'exhausted';
 
         // Status badge
         let statusBadge = '';
-        if (c.status === 'active') {
+        if (effectiveStatus === 'active') {
             statusBadge = '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-success/10 text-success">Activ</span>';
-        } else if (c.status === 'expired') {
+        } else if (effectiveStatus === 'expired') {
             statusBadge = '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-muted/10 text-muted">Expirat</span>';
+        } else if (effectiveStatus === 'pending') {
+            statusBadge = '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-700">Programat</span>';
+        } else if (effectiveStatus === 'exhausted') {
+            statusBadge = '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-warning/10 text-warning">Epuizat</span>';
         } else {
             statusBadge = '<span class="px-2 py-1 text-xs font-semibold rounded-full bg-error/10 text-error">Dezactivat</span>';
         }
@@ -363,7 +397,19 @@ function filterPromoCodes() {
 
     promoCodes = allPromoCodes.filter(c => {
         const matchesSearch = !searchQuery || c.code.toLowerCase().includes(searchQuery);
-        const matchesStatus = !statusFilter || c.status === statusFilter;
+        // Match against the EFFECTIVE status so picking "Activ" hides expired codes
+        // that are still status='active' in DB, and picking "Expirat" surfaces them.
+        const now = Date.now();
+        const startMs = (c.starts_at || c.start_date) ? new Date(c.starts_at || c.start_date).getTime() : null;
+        const endMs = (c.expires_at || c.end_date) ? new Date(c.expires_at || c.end_date).getTime() : null;
+        const limit = c.usage_limit || 0;
+        let effective = c.status;
+        if (c.status === 'active') {
+            if (endMs && endMs < now) effective = 'expired';
+            else if (startMs && startMs > now) effective = 'pending';
+            else if (limit > 0 && (c.usage_count || 0) >= limit) effective = 'exhausted';
+        }
+        const matchesStatus = !statusFilter || effective === statusFilter;
         return matchesSearch && matchesStatus;
     });
 

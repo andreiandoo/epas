@@ -41,10 +41,13 @@ $widgetTerms = $org['widget_terms'] ?? $org['settings']['widget_terms'] ?? '';
 $widgetPrivacy = $org['widget_privacy'] ?? $org['settings']['widget_privacy'] ?? '';
 $theme = $widgetConfig['theme'] ?? 'dark';
 
-// Tracking IDs (top-level keys in settings, parallel to widget_terms / widget_privacy)
-$trackingGaId = $org['settings']['widget_tracking_ga_id'] ?? '';
-$trackingGtmId = $org['settings']['widget_tracking_gtm_id'] ?? '';
-$trackingFbPixelId = $org['settings']['widget_tracking_fb_pixel_id'] ?? '';
+// Tracking IDs — exposed at top-level by the organizer() endpoint (parallel
+// to widget_terms / widget_privacy). The $org['settings'] fallback is dead
+// code, kept only so a future API tweak that nests them won't silently break
+// the generator: at least one of the two paths will resolve.
+$trackingGaId = $org['widget_tracking_ga_id'] ?? $org['settings']['widget_tracking_ga_id'] ?? '';
+$trackingGtmId = $org['widget_tracking_gtm_id'] ?? $org['settings']['widget_tracking_gtm_id'] ?? '';
+$trackingFbPixelId = $org['widget_tracking_fb_pixel_id'] ?? $org['settings']['widget_tracking_fb_pixel_id'] ?? '';
 
 // Replacement map for template placeholders
 $replacements = [
