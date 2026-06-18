@@ -2,36 +2,56 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Add `channel` to orders so the analytics dashboard can scope revenue /
- * tickets / chart data by the front-end that produced the purchase, not just
- * the page-view funnel.
+ * Analytics index for orders.channel.
  *
- * Default 'marketplace' classifies every legacy order correctly: until
- * whitelabel tracking went live in 2026-06-18, every customer-facing path
- * was the main site (ambilet.ro / bilete.online / tics.ro). New orders
- * placed on a whitelabel ZIP-packaged site get `channel='whitelabel'`
- * written by MarketplaceTrackingController when the Purchase event fires
- * with an order_id payload.
+ * The `channel` column itself was already introduced by the E6 migration
+ * (2026_05_22_160000_add_channel_to_orders_and_pricing_to_ticket_types)
+ * with the values: 'online' (default), 'pos_fixed', 'pos_mobile', 'embed',
+ * 'partner_app'. From 2026-06-18, the whitelabel front-end appends a new
+ * value 'whitelabel' (stamped by MarketplaceTrackingController when a
+ * Purchase event arrives with channel='whitelabel'). This migration only
+ * adds the composite (channel, created_at) index needed by the per-channel
+ * analytics dashboard — no schema change, no data backfill.
  */
 return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('orders', function (Blueprint $table) {
-            $table->string('channel', 50)->default('marketplace')->after('source')
-                ->comment('Order channel: marketplace | whitelabel | embed_widget');
-            $table->index(['channel', 'created_at'], 'idx_orders_channel_created');
-        });
+        if (! Schema::hasColumn('orders', 'channel')) {
+            // Defensive — should never run (E6 already added it on existing
+            // environments), but covers a fresh DB built without E6.
+            Schema::table('orders', function (Blueprint $table) {
+                $table->string('channel')->default('online');
+            });
+        }
+
+        $indexExists = collect(DB::select(<<<'SQL'
+            SELECT indexname FROM pg_indexes
+            WHERE tablename = 'orders' AND indexname = 'idx_orders_channel_created'
+        SQL))->isNotEmpty();
+
+        if (! $indexExists) {
+            Schema::table('orders', function (Blueprint $table) {
+                $table->index(['channel', 'created_at'], 'idx_orders_channel_created');
+            });
+        }
     }
 
     public function down(): void
     {
-        Schema::table('orders', function (Blueprint $table) {
-            $table->dropIndex('idx_orders_channel_created');
-            $table->dropColumn('channel');
-        });
+        $indexExists = collect(DB::select(<<<'SQL'
+            SELECT indexname FROM pg_indexes
+            WHERE tablename = 'orders' AND indexname = 'idx_orders_channel_created'
+        SQL))->isNotEmpty();
+
+        if ($indexExists) {
+            Schema::table('orders', function (Blueprint $table) {
+                $table->dropIndex('idx_orders_channel_created');
+            });
+        }
     }
 };

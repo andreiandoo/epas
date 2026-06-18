@@ -2019,16 +2019,36 @@ class EventsController extends BaseController
         // Channel filter: null = all channels (default), or marketplace|whitelabel|embed_widget.
         // When set, every metric is filtered by channel:
         //  - page_views / unique_visitors / traffic_sources / top_locations come
-        //    from core_customer_events.channel
+        //    from core_customer_events.channel (string column we added 2026-06-18)
         //  - tickets_sold / chart_tickets / chart_revenue / recent_sales come
-        //    from orders.channel (stamped by MarketplaceTrackingController on
-        //    Purchase events) cascaded down to tickets via whereHas('order')
-        // Tickets without an order (POS sales, invitations) are excluded when
-        // the channel filter is active — they belong to no front-end at all.
+        //    from orders.channel (introduced by E6 with values
+        //    online/pos_fixed/pos_mobile/embed/partner_app; whitelabel was
+        //    appended 2026-06-18 by MarketplaceTrackingController).
+        //
+        // UI semantics:
+        //  - 'marketplace' (default selection) = every channel EXCEPT 'whitelabel'
+        //    (POS sales count as marketplace activity for the organizer)
+        //  - 'whitelabel'  = only orders.channel = 'whitelabel'
+        // The orderChannelClause / trackingChannelClause closures below
+        // centralize that translation so every query stays consistent.
         $channel = $request->input('channel');
-        if ($channel && !in_array($channel, ['marketplace', 'whitelabel', 'embed_widget'], true)) {
+        if ($channel && !in_array($channel, ['marketplace', 'whitelabel'], true)) {
             $channel = null;
         }
+        $orderChannelClause = function ($q) use ($channel) {
+            if ($channel === 'whitelabel') {
+                $q->where('channel', 'whitelabel');
+            } elseif ($channel === 'marketplace') {
+                $q->where(fn ($qq) => $qq->where('channel', '!=', 'whitelabel')->orWhereNull('channel'));
+            }
+        };
+        $trackingChannelClause = function ($q) use ($channel) {
+            if ($channel === 'whitelabel') {
+                $q->where('channel', 'whitelabel');
+            } elseif ($channel === 'marketplace') {
+                $q->where(fn ($qq) => $qq->where('channel', '!=', 'whitelabel')->orWhereNull('channel'));
+            }
+        };
 
         // Determine date range
         $now = now();
@@ -2062,7 +2082,7 @@ class EventsController extends BaseController
         $scopedOrders = fn () => $event->orders()
             ->where('marketplace_organizer_id', $organizer->id)
             ->whereIn('status', $validStatuses)
-            ->when($channel, fn ($q) => $q->where('channel', $channel));
+            ->when($channel, fn ($q) => $orderChannelClause($q));
 
         // Base query for orders in the range (used for chart data & period comparisons)
         $ordersQuery = $scopedOrders()->whereBetween('created_at', [$rangeStart, $rangeEnd]);
@@ -2123,7 +2143,7 @@ class EventsController extends BaseController
             })
             // Channel scope: tickets inherit their order's channel. POS / invitation
             // tickets without orders are kept ONLY when no channel filter is active.
-            ->when($channel, fn ($q) => $q->whereHas('order', fn ($qq) => $qq->where('channel', $channel)));
+            ->when($channel, fn ($q) => $q->whereHas('order', fn ($qq) => $orderChannelClause($qq)));
 
         // Valid tickets grouped by ticket_type — used for net revenue and per-type counts
         $validCountsByType = (clone $validEventTicketsQuery())
@@ -2195,13 +2215,12 @@ class EventsController extends BaseController
         // Page views: denormalized counter is fast but channel-blind. When a channel
         // filter is active, recompute from core_customer_events scoped to that channel.
         if ($channel) {
-            $pageViews = (int) \App\Models\Platform\CoreCustomerEvent::where(function ($q) use ($event) {
+            $pageViewQuery = \App\Models\Platform\CoreCustomerEvent::where(function ($q) use ($event) {
                 $q->where('event_id', $event->id)
                   ->orWhere('marketplace_event_id', $event->id);
-            })
-                ->where('channel', $channel)
-                ->where('event_type', 'page_view')
-                ->count();
+            })->where('event_type', 'page_view');
+            $trackingChannelClause($pageViewQuery);
+            $pageViews = (int) $pageViewQuery->count();
         } else {
             $pageViews = $event->views_count ?? 0;
         }
@@ -2329,7 +2348,7 @@ class EventsController extends BaseController
               ->orWhere('marketplace_event_id', $event->id);
         })->whereBetween('created_at', [$rangeStart, $rangeEnd]);
         if ($channel) {
-            $trackingQuery->where('channel', $channel);
+            $trackingChannelClause($trackingQuery);
         }
 
         if ($trackingQuery->exists()) {
