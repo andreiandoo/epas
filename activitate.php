@@ -381,7 +381,6 @@ include __DIR__ . '/includes/header.php';
             <section id="despre" class="scroll-mt-40">
                 <div class="flex items-end justify-between gap-4 mb-6">
                     <div>
-                        <p class="font-mono text-[11px] tracking-[.22em] text-vermilion">DESPRE ACTIVITATE</p>
                         <h2 class="font-display text-4xl sm:text-5xl font-700 leading-none mt-2">Ce te așteaptă</h2>
                     </div>
                 </div>

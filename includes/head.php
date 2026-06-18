@@ -189,6 +189,12 @@ $alpineCollapseUrl = file_exists($alpineLocalCollapse)
 <link rel="stylesheet" href="<?= asset('assets/css/tailwind.min.css') ?>">
 <?php endif; ?>
 
+<!-- Softer borders: replace the harsh near-black `border-ink` (#1B1714) with a
+     warm taupe globally. Loaded AFTER the main bundle so it wins without
+     !important; only full-opacity `.border-ink` is affected (the already-soft
+     `border-ink/10`, `/15` opacity variants are separate classes and stay). -->
+<style>.border-ink{border-color:#D8CDBA}</style>
+
 <!-- ===================== GOOGLE CONSENT MODE v2 — MUST be before tracking ===================== -->
 <script>
 window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}

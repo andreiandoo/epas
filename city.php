@@ -336,8 +336,7 @@ include __DIR__ . '/includes/header.php';
 
         <div class="mt-7 grid gap-8 lg:grid-cols-[minmax(0,1fr)_560px] lg:items-end">
             <div>
-                <p class="font-mono text-xs tracking-[.18em] text-vermilion"><?= htmlspecialchars(strtoupper($cityName)) ?> · LUCRURI DE FĂCUT</p>
-                <h1 class="mt-3 font-display text-6xl font-bold leading-[.84] sm:text-7xl lg:text-8xl">Lucruri de făcut în <?= htmlspecialchars($cityName) ?></h1>
+                <h1 class="mt-3 font-display text-3xl font-bold leading-[.84]">Lucruri de făcut în <span class="text-5xl"><?= htmlspecialchars($cityName) ?></span></h1>
                 <p class="max-w-4xl mt-6 text-xl leading-relaxed text-ink-soft">
                     <?php if ($cityDescription): ?>
                         <?= htmlspecialchars($cityDescription) ?>
@@ -442,24 +441,11 @@ document.addEventListener('alpine:init', () => {
 </section>
 
 <!-- ============================== EVENTS LISTING ============================== -->
-<section id="activitati" x-data="cityFilters()" class="bg-white border-y border-ink/10">
-    <div class="px-4 py-16 mx-auto max-w-7xl sm:px-6 lg:py-20">
-
-        <div class="flex flex-col justify-between gap-4 mb-8 sm:flex-row sm:items-end">
-            <div>
-                <p class="font-mono text-xs tracking-[.2em] text-vermilion mb-2">LISTĂ LOCALĂ</p>
-                <h2 class="font-display text-[clamp(2rem,4vw,3.5rem)] font-700 leading-[0.95]">
-                    Activități populare în <?= htmlspecialchars($cityName) ?>
-                </h2>
-                <p class="max-w-2xl mt-3 text-ink-soft">Rezervă bilete și experiențe disponibile în oraș și în zona apropiată.</p>
-            </div>
-            <p class="shrink-0 text-sm font-bold text-ink-soft">
-                <?= (int) ($pagination['total'] ?? 0) ?> <?= ($pagination['total'] ?? 0) === 1 ? 'rezultat' : 'rezultate' ?>
-            </p>
-        </div>
+<section id="activitati" x-data="cityFilters()" class="bg-white">
+    <div class="px-4 pb-16 mx-auto max-w-[1500px] sm:px-6">
 
         <!-- FILTER TOOLBAR -->
-        <div class="sticky z-40 px-4 py-4 mb-6 -mx-4 top-24 sm:-mx-6 sm:px-6 bg-paper/95 backdrop-blur-md border-y border-ink/10">
+        <div class="sticky z-30 px-4 py-2 mb-6 -mx-4 top-34 sm:-mx-6 sm:px-6 bg-paper/95 backdrop-blur-md border-y border-ink/10">
             <!-- DESKTOP -->
             <form method="get" action="/<?= htmlspecialchars($slug, ENT_QUOTES) ?>" class="items-center hidden gap-3 lg:flex" @click.outside="open=null">
                 <?php if ($categoryFilter): ?><input type="hidden" name="category" value="<?= htmlspecialchars($categoryFilter, ENT_QUOTES) ?>"><?php endif; ?>
@@ -708,11 +694,9 @@ document.addEventListener('alpine:init', () => {
             <div>
                 <div class="flex items-end justify-between gap-4">
                     <div>
-                        <p class="font-mono text-xs tracking-[.18em] text-vermilion">CATEGORII LOCALE</p>
                         <h2 class="mt-2 font-display text-5xl font-bold leading-none">Explorează după interes</h2>
                         <p class="mt-2 text-ink-soft">Categorii utile ca să găsești mai repede ce cauți în <?= htmlspecialchars($cityName) ?>.</p>
                     </div>
-                    <a href="#activitati" class="shrink-0 text-sm font-bold text-vermilion underline-wobble">Toate →</a>
                 </div>
                 <?php if (!empty($topCategories)): ?>
                 <div class="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -733,7 +717,6 @@ document.addEventListener('alpine:init', () => {
 
             <!-- Right: pentru cine (traveler types) -->
             <aside class="rounded-[2rem] bg-ink p-6 text-paper">
-                <p class="font-mono text-xs tracking-[.18em] text-ochre">PENTRU CINE</p>
                 <h3 class="mt-2 font-display text-3xl font-bold leading-none">Alege după stilul tău</h3>
                 <div class="mt-5 space-y-3">
                     <?php foreach ($travelerTypes as $tt): ?>
@@ -791,7 +774,6 @@ document.addEventListener('alpine:init', () => {
     <div class="mx-auto max-w-[1500px] px-4 py-12 sm:px-6 lg:py-16">
         <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
             <div>
-                <p class="font-mono text-xs tracking-[.18em] text-ink-soft">ARTICOLE</p>
                 <h2 class="mt-2 text-6xl font-bold leading-none font-display">Ghiduri și idei pentru <?= htmlspecialchars($cityName) ?></h2>
             </div>
             <a href="/ghiduri" class="px-5 py-3 font-bold transition rounded-full bg-ink text-paper hover:bg-vermilion">Toate ghidurile</a>
@@ -855,10 +837,9 @@ document.addEventListener('alpine:init', () => {
 <?php if (!empty($nearbyCities)): ?>
 <!-- ============================== NEARBY ============================== -->
 <section id="nearby" class="bg-white">
-    <div class="mx-auto max-w-[1500px] px-4 py-12 sm:px-6 lg:py-16">
-        <p class="font-mono text-xs tracking-[.18em] text-vermilion">ÎN APROPIERE</p>
-        <h2 class="mt-2 text-6xl font-bold leading-none font-display">Alte orașe de explorat lângă <?= htmlspecialchars($cityName) ?></h2>
-        <p class="max-w-3xl mt-3 text-ink-soft">Pentru excursii de o zi, experiențe de weekend sau activități care merg bine împreună cu o vizită în <?= htmlspecialchars($cityName) ?>.</p>
+    <div class="mx-auto text-center max-w-[1500px] px-4 py-12 sm:px-6 lg:py-16">
+        <h2 class="mt-2 text-5xl font-bold leading-none font-display">Alte orașe de explorat lângă <?= htmlspecialchars($cityName) ?></h2>
+        <p class="max-w-3xl mx-auto mt-3 text-ink-soft">Pentru excursii de o zi, experiențe de weekend sau activități care merg bine împreună cu o vizită în <?= htmlspecialchars($cityName) ?>.</p>
         <div class="grid gap-4 mt-8 md:grid-cols-2 xl:grid-cols-5">
             <?php $nbBg = ['from-vermilion to-vermilion-d','from-forest to-ink','from-sky to-ink','from-ochre to-vermilion-d','from-ink to-forest']; foreach ($nearbyCities as $ni => $nc): ?>
                 <a href="<?= htmlspecialchars($nc['href'], ENT_QUOTES) ?>" class="group overflow-hidden rounded-[2rem] border-2 border-ink bg-paper shadow-deep transition hover:-translate-y-0.5">
