@@ -500,7 +500,8 @@ document.addEventListener('alpine:init', () => {
     <div class="px-4 pb-16 mx-auto w-full sm:px-6">
 
         <!-- FILTER TOOLBAR -->
-        <div class="sticky z-30 px-4 py-2 mb-6 -mx-4 top-34 sm:-mx-6 sm:px-6 bg-paper/95 backdrop-blur-md max-w-[1500px] border-y border-ink/10">
+        <div class="sticky z-30 px-4 py-2 mb-6 -mx-4 top-34 sm:-mx-6 sm:px-6 bg-paper/95 backdrop-blur-md border-y border-ink/10 w-full">
+            <div class="max-w-[1500px] mx-auto">
             <!-- DESKTOP -->
             <form method="get" action="/<?= htmlspecialchars($slug, ENT_QUOTES) ?>" class="items-center hidden gap-3 lg:flex" @click.outside="open=null">
                 <?php if ($categoryFilter): ?><input type="hidden" name="category" value="<?= htmlspecialchars($categoryFilter, ENT_QUOTES) ?>"><?php endif; ?>
@@ -650,7 +651,7 @@ document.addEventListener('alpine:init', () => {
         </div>
 
         <?php if (empty($cards)): ?>
-            <div class="p-10 text-center border-2 ticket bg-paper border-ink rounded-3xl sm:p-16 max-w-[1500px]" style="--perf:100%">
+            <div class="p-10 text-center border-2 ticket bg-paper border-ink rounded-3xl sm:p-16 max-w-[1500px] mx-auto" style="--perf:100%">
                 <p class="text-3xl font-display font-700">
                     <?php if ($categoryFilter): ?>
                         Nicio activitate din această categorie în <?= htmlspecialchars($cityName) ?>.
@@ -662,7 +663,7 @@ document.addEventListener('alpine:init', () => {
                 <a href="/categorii" class="inline-block px-5 py-3 mt-5 transition rounded-full bg-ink text-paper font-700 hover:bg-vermilion">Vezi alte categorii</a>
             </div>
         <?php else: ?>
-            <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 max-w-[1500px]">
+            <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 max-w-[1500px] mx-auto">
                 <?php foreach ($cards as $ev):
                     $evTitle = $ev['title'];
                     $evCat = $ev['cat'];
