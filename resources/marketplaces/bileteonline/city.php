@@ -386,7 +386,7 @@ include __DIR__ . '/includes/header.php';
             <?php endforeach; ?>
         </nav>
 
-        <div class="mt-7 grid gap-8 lg:grid-cols-[minmax(0,1fr)_560px] lg:items-end">
+        <div class="grid gap-8 lg:grid-cols-[minmax(0,1fr)_560px]">
             <div>
                 <h1 class="mt-3 font-display text-3xl font-bold leading-[.84]">Lucruri de făcut în <span class="text-5xl"><?= htmlspecialchars($cityName) ?></span></h1>
                 <p class="max-w-4xl mt-6 text-xl leading-relaxed text-ink-soft">
@@ -396,7 +396,7 @@ include __DIR__ . '/includes/header.php';
                         <?= htmlspecialchars($cityName) ?> combină atracții, muzee, tururi, experiențe de familie, escape rooms și activități outdoor. Alege activități pentru weekend, bilete pentru atracții, tururi culturale sau experiențe cadou — rezervi online cu bilet QR.
                     <?php endif; ?>
                 </p>
-                <form action="/<?= htmlspecialchars($slug, ENT_QUOTES) ?>" method="get" class="max-w-3xl p-2 border-2 rounded-full mt-7 border-ink bg-paper shadow-deep" role="search" aria-label="Caută activități în <?= htmlspecialchars($cityName) ?>">
+                <form action="/<?= htmlspecialchars($slug, ENT_QUOTES) ?>" method="get" class="max-w-3xl p-2 border-2 rounded-full mt-7 border-ink bg-paper shadow-deep hidden" role="search" aria-label="Caută activități în <?= htmlspecialchars($cityName) ?>">
                     <div class="flex items-center gap-2">
                         <svg viewBox="0 0 24 24" class="w-5 h-5 ml-3 shrink-0 text-ink-soft" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
                         <label class="sr-only" for="city-search">Caută activități în <?= htmlspecialchars($cityName) ?></label>
@@ -500,107 +500,108 @@ document.addEventListener('alpine:init', () => {
 
 <!-- ============================== EVENTS LISTING ============================== -->
 <section id="activitati" x-data="cityFilters()" class="bg-white">
-    <div class="px-4 pb-16 mx-auto w-full sm:px-6">
+    <div class="px-4 pb-16 mx-auto w-full sm:px-6 bg-white">
 
         <!-- FILTER TOOLBAR -->
-        <div class="sticky z-30 px-4 py-2 mb-6 -mx-4 top-34 sm:-mx-6 sm:px-6 bg-paper/95 backdrop-blur-md border-y border-ink/10 w-full">
-            <div class="max-w-[1500px] mx-auto">
-            <!-- DESKTOP -->
-            <form method="get" action="/<?= htmlspecialchars($slug, ENT_QUOTES) ?>" class="items-center hidden gap-3 lg:flex" @click.outside="open=null">
-                <?php if ($categoryFilter): ?><input type="hidden" name="category" value="<?= htmlspecialchars($categoryFilter, ENT_QUOTES) ?>"><?php endif; ?>
-                <?php if ($maxPrice !== null): ?><input type="hidden" name="max_price" value="<?= $maxPrice ?>"><?php endif; ?>
-                <?php if ($sort !== 'recommended'): ?><input type="hidden" name="sort" value="<?= htmlspecialchars($sort, ENT_QUOTES) ?>"><?php endif; ?>
+        <div class="sticky z-30 top-34 bg-paper/95 backdrop-blur-md border-y border-ink/10 w-full mb-6">
+            <div class="max-w-[1500px] mx-auto px-4 py-2 sm:px-6">
+                <!-- DESKTOP -->
+                <form method="get" action="/<?= htmlspecialchars($slug, ENT_QUOTES) ?>" class="items-center hidden gap-3 lg:flex" @click.outside="open=null">
+                    <?php if ($categoryFilter): ?><input type="hidden" name="category" value="<?= htmlspecialchars($categoryFilter, ENT_QUOTES) ?>"><?php endif; ?>
+                    <?php if ($maxPrice !== null): ?><input type="hidden" name="max_price" value="<?= $maxPrice ?>"><?php endif; ?>
+                    <?php if ($sort !== 'recommended'): ?><input type="hidden" name="sort" value="<?= htmlspecialchars($sort, ENT_QUOTES) ?>"><?php endif; ?>
 
-                <div class="relative flex-1 max-w-xs">
-                    <svg viewBox="0 0 24 24" class="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-soft" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-                    <input name="q" type="search" value="<?= htmlspecialchars($searchQuery, ENT_QUOTES) ?>" placeholder="Caută în <?= htmlspecialchars($cityName, ENT_QUOTES) ?>…" class="w-full bg-paper border-2 border-ink/15 focus:border-ink rounded-full pl-10 pr-4 py-2.5 text-[15px] focus:outline-none transition-colors" />
-                </div>
+                    <div class="relative flex-1 max-w-xs">
+                        <svg viewBox="0 0 24 24" class="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-soft" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+                        <input name="q" type="search" value="<?= htmlspecialchars($searchQuery, ENT_QUOTES) ?>" placeholder="Caută în <?= htmlspecialchars($cityName, ENT_QUOTES) ?>…" class="w-full bg-paper border-2 border-ink/15 focus:border-ink rounded-full pl-10 pr-4 py-2.5 text-[15px] focus:outline-none transition-colors" />
+                    </div>
 
-                <!-- Categorie -->
-                <?php
-                $catFilterLabel = 'Categorie';
-                if ($categoryFilter) {
-                    foreach ($topCategories as $c) { if ($c['slug'] === $categoryFilter) { $catFilterLabel = $c['label']; break; } }
-                    if ($catFilterLabel === 'Categorie') $catFilterLabel = ucwords(str_replace('-', ' ', $categoryFilter));
-                }
-                ?>
-                <div class="relative">
-                    <button type="button" @click="open = open==='cat' ? null : 'cat'" class="<?= $categoryFilter ? 'border-ink bg-ink text-paper' : 'border-ink/15 bg-paper hover:border-ink' ?> flex items-center gap-2 px-4 py-2.5 rounded-full border-2 text-[15px] font-500 transition">
-                        <span><?= htmlspecialchars($catFilterLabel) ?></span>
-                        <svg :class="open==='cat' && 'rotate-180'" class="w-3.5 h-3.5 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+                    <!-- Categorie -->
+                    <?php
+                    $catFilterLabel = 'Categorie';
+                    if ($categoryFilter) {
+                        foreach ($topCategories as $c) { if ($c['slug'] === $categoryFilter) { $catFilterLabel = $c['label']; break; } }
+                        if ($catFilterLabel === 'Categorie') $catFilterLabel = ucwords(str_replace('-', ' ', $categoryFilter));
+                    }
+                    ?>
+                    <div class="relative">
+                        <button type="button" @click="open = open==='cat' ? null : 'cat'" class="<?= $categoryFilter ? 'border-ink bg-ink text-paper' : 'border-ink/15 bg-paper hover:border-ink' ?> flex items-center gap-2 px-4 py-2.5 rounded-full border-2 text-[15px] font-500 transition">
+                            <span><?= htmlspecialchars($catFilterLabel) ?></span>
+                            <svg :class="open==='cat' && 'rotate-180'" class="w-3.5 h-3.5 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+                        </button>
+                        <div x-show="open==='cat'" x-cloak x-transition class="absolute left-0 top-[calc(100%+10px)] z-50 w-64 bg-paper border-2 border-ink rounded-2xl shadow-2xl p-2 max-h-80 overflow-y-auto">
+                            <a href="<?= htmlspecialchars(navBuildUrl($slug, $_GET, [], ['category']), ENT_QUOTES) ?>" class="block w-full text-left px-3 py-2 rounded-lg text-[15px] hover:bg-paper-2 transition <?= !$categoryFilter ? 'bg-ink text-paper' : '' ?>">Toate categoriile</a>
+                            <?php foreach ($topCategories as $c): ?>
+                                <a href="<?= htmlspecialchars(navBuildUrl($slug, $_GET, ['category' => $c['slug']]), ENT_QUOTES) ?>" class="block w-full text-left px-3 py-2 rounded-lg text-[15px] hover:bg-paper-2 transition <?= $categoryFilter === $c['slug'] ? 'bg-ink text-paper' : '' ?>">
+                                    <?php if (!empty($c['icon_emoji'])): ?><span class="mr-1"><?= htmlspecialchars($c['icon_emoji']) ?></span><?php endif; ?>
+                                    <?= htmlspecialchars($c['label']) ?>
+                                </a>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+
+                    <!-- Preț -->
+                    <div class="relative">
+                        <button type="button" @click="open = open==='price' ? null : 'price'" class="<?= $maxPrice !== null ? 'border-ink bg-ink text-paper' : 'border-ink/15 bg-paper hover:border-ink' ?> flex items-center gap-2 px-4 py-2.5 rounded-full border-2 text-[15px] font-500 transition">
+                            <span><?= $maxPrice !== null ? 'Sub ' . $maxPrice . ' lei' : 'Preț' ?></span>
+                            <svg :class="open==='price' && 'rotate-180'" class="w-3.5 h-3.5 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+                        </button>
+                        <div x-show="open==='price'" x-cloak x-transition class="absolute left-0 top-[calc(100%+10px)] z-50 w-56 bg-paper border-2 border-ink rounded-2xl shadow-2xl p-2">
+                            <a href="<?= htmlspecialchars(navBuildUrl($slug, $_GET, [], ['max_price']), ENT_QUOTES) ?>" class="block w-full text-left px-3 py-2 rounded-lg text-[15px] hover:bg-paper-2 transition <?= $maxPrice === null ? 'bg-ink text-paper' : '' ?>">Orice preț</a>
+                            <?php foreach ($priceMaxAllowed as $cap): ?>
+                                <a href="<?= htmlspecialchars(navBuildUrl($slug, $_GET, ['max_price' => $cap]), ENT_QUOTES) ?>" class="block w-full text-left px-3 py-2 rounded-lg text-[15px] hover:bg-paper-2 transition <?= $maxPrice === $cap ? 'bg-ink text-paper' : '' ?>">Sub <?= $cap ?> lei</a>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+
+                    <!-- Sortare -->
+                    <div class="relative">
+                        <?php $sortLabels = ['recommended' => 'Recomandate', 'price_asc' => 'Preț ↑', 'price_desc' => 'Preț ↓', 'name_asc' => 'Alfabetic', 'date_asc' => 'Dată']; ?>
+                        <button type="button" @click="open = open==='sort' ? null : 'sort'" class="<?= $sort !== 'recommended' ? 'border-ink bg-ink text-paper' : 'border-ink/15 bg-paper hover:border-ink' ?> flex items-center gap-2 px-4 py-2.5 rounded-full border-2 text-[15px] font-500 transition">
+                            <span><?= htmlspecialchars($sortLabels[$sort] ?? 'Sortare') ?></span>
+                            <svg :class="open==='sort' && 'rotate-180'" class="w-3.5 h-3.5 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+                        </button>
+                        <div x-show="open==='sort'" x-cloak x-transition class="absolute right-0 top-[calc(100%+10px)] z-50 w-52 bg-paper border-2 border-ink rounded-2xl shadow-2xl p-2">
+                            <?php foreach ($sortLabels as $value => $label): ?>
+                                <a href="<?= htmlspecialchars($value === 'recommended' ? navBuildUrl($slug, $_GET, [], ['sort']) : navBuildUrl($slug, $_GET, ['sort' => $value]), ENT_QUOTES) ?>" class="block w-full text-left px-3 py-2 rounded-lg text-[15px] hover:bg-paper-2 transition <?= $sort === $value ? 'bg-ink text-paper' : '' ?>">
+                                    <?= htmlspecialchars($label) ?>
+                                </a>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="px-5 py-2.5 rounded-full bg-vermilion text-paper font-600 hover:bg-vermilion-d transition-colors">Caută</button>
+                </form>
+
+                <!-- MOBILE -->
+                <form method="get" action="/<?= htmlspecialchars($slug, ENT_QUOTES) ?>" class="flex items-center gap-2 lg:hidden">
+                    <?php if ($categoryFilter): ?><input type="hidden" name="category" value="<?= htmlspecialchars($categoryFilter, ENT_QUOTES) ?>"><?php endif; ?>
+                    <?php if ($maxPrice !== null): ?><input type="hidden" name="max_price" value="<?= $maxPrice ?>"><?php endif; ?>
+                    <?php if ($sort !== 'recommended'): ?><input type="hidden" name="sort" value="<?= htmlspecialchars($sort, ENT_QUOTES) ?>"><?php endif; ?>
+                    <div class="relative flex-1">
+                        <svg viewBox="0 0 24 24" class="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-soft" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+                        <input name="q" type="search" value="<?= htmlspecialchars($searchQuery, ENT_QUOTES) ?>" placeholder="Caută…" class="w-full bg-paper border-2 border-ink/15 focus:border-ink rounded-full pl-10 pr-4 py-2.5 text-[15px] focus:outline-none" />
+                    </div>
+                    <button type="button" @click="sheet=true" class="relative shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-full border-2 border-ink font-600 text-sm">
+                        <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 5h18M6 12h12M10 19h4"/></svg>
+                        Filtre
+                        <?php if (!empty($activeChips)): ?><span class="grid place-items-center w-5 h-5 rounded-full bg-vermilion text-paper text-[11px] font-700"><?= count($activeChips) ?></span><?php endif; ?>
                     </button>
-                    <div x-show="open==='cat'" x-cloak x-transition class="absolute left-0 top-[calc(100%+10px)] z-50 w-64 bg-paper border-2 border-ink rounded-2xl shadow-2xl p-2 max-h-80 overflow-y-auto">
-                        <a href="<?= htmlspecialchars(navBuildUrl($slug, $_GET, [], ['category']), ENT_QUOTES) ?>" class="block w-full text-left px-3 py-2 rounded-lg text-[15px] hover:bg-paper-2 transition <?= !$categoryFilter ? 'bg-ink text-paper' : '' ?>">Toate categoriile</a>
-                        <?php foreach ($topCategories as $c): ?>
-                            <a href="<?= htmlspecialchars(navBuildUrl($slug, $_GET, ['category' => $c['slug']]), ENT_QUOTES) ?>" class="block w-full text-left px-3 py-2 rounded-lg text-[15px] hover:bg-paper-2 transition <?= $categoryFilter === $c['slug'] ? 'bg-ink text-paper' : '' ?>">
-                                <?php if (!empty($c['icon_emoji'])): ?><span class="mr-1"><?= htmlspecialchars($c['icon_emoji']) ?></span><?php endif; ?>
-                                <?= htmlspecialchars($c['label']) ?>
+                </form>
+
+                <!-- active chips -->
+                <?php if (!empty($activeChips)): ?>
+                    <div class="flex flex-wrap items-center gap-2 mt-3">
+                        <?php foreach ($activeChips as $ch): ?>
+                            <a href="/<?= htmlspecialchars($slug, ENT_QUOTES) ?><?= htmlspecialchars($ch['remove_qs'], ENT_QUOTES) ?>" class="group flex items-center gap-1.5 pl-3 pr-2 py-1 rounded-full bg-paper-2 border border-ink/15 text-sm hover:border-ink transition">
+                                <span><?= htmlspecialchars($ch['label']) ?></span>
+                                <svg class="w-3.5 h-3.5 text-ink-soft group-hover:text-vermilion" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
                             </a>
                         <?php endforeach; ?>
+                        <a href="/<?= htmlspecialchars($slug, ENT_QUOTES) ?>" class="ml-1 text-sm font-600 text-vermilion underline-wobble">Șterge tot</a>
                     </div>
-                </div>
-
-                <!-- Preț -->
-                <div class="relative">
-                    <button type="button" @click="open = open==='price' ? null : 'price'" class="<?= $maxPrice !== null ? 'border-ink bg-ink text-paper' : 'border-ink/15 bg-paper hover:border-ink' ?> flex items-center gap-2 px-4 py-2.5 rounded-full border-2 text-[15px] font-500 transition">
-                        <span><?= $maxPrice !== null ? 'Sub ' . $maxPrice . ' lei' : 'Preț' ?></span>
-                        <svg :class="open==='price' && 'rotate-180'" class="w-3.5 h-3.5 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
-                    </button>
-                    <div x-show="open==='price'" x-cloak x-transition class="absolute left-0 top-[calc(100%+10px)] z-50 w-56 bg-paper border-2 border-ink rounded-2xl shadow-2xl p-2">
-                        <a href="<?= htmlspecialchars(navBuildUrl($slug, $_GET, [], ['max_price']), ENT_QUOTES) ?>" class="block w-full text-left px-3 py-2 rounded-lg text-[15px] hover:bg-paper-2 transition <?= $maxPrice === null ? 'bg-ink text-paper' : '' ?>">Orice preț</a>
-                        <?php foreach ($priceMaxAllowed as $cap): ?>
-                            <a href="<?= htmlspecialchars(navBuildUrl($slug, $_GET, ['max_price' => $cap]), ENT_QUOTES) ?>" class="block w-full text-left px-3 py-2 rounded-lg text-[15px] hover:bg-paper-2 transition <?= $maxPrice === $cap ? 'bg-ink text-paper' : '' ?>">Sub <?= $cap ?> lei</a>
-                        <?php endforeach; ?>
-                    </div>
-                </div>
-
-                <!-- Sortare -->
-                <div class="relative">
-                    <?php $sortLabels = ['recommended' => 'Recomandate', 'price_asc' => 'Preț ↑', 'price_desc' => 'Preț ↓', 'name_asc' => 'Alfabetic', 'date_asc' => 'Dată']; ?>
-                    <button type="button" @click="open = open==='sort' ? null : 'sort'" class="<?= $sort !== 'recommended' ? 'border-ink bg-ink text-paper' : 'border-ink/15 bg-paper hover:border-ink' ?> flex items-center gap-2 px-4 py-2.5 rounded-full border-2 text-[15px] font-500 transition">
-                        <span><?= htmlspecialchars($sortLabels[$sort] ?? 'Sortare') ?></span>
-                        <svg :class="open==='sort' && 'rotate-180'" class="w-3.5 h-3.5 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
-                    </button>
-                    <div x-show="open==='sort'" x-cloak x-transition class="absolute right-0 top-[calc(100%+10px)] z-50 w-52 bg-paper border-2 border-ink rounded-2xl shadow-2xl p-2">
-                        <?php foreach ($sortLabels as $value => $label): ?>
-                            <a href="<?= htmlspecialchars($value === 'recommended' ? navBuildUrl($slug, $_GET, [], ['sort']) : navBuildUrl($slug, $_GET, ['sort' => $value]), ENT_QUOTES) ?>" class="block w-full text-left px-3 py-2 rounded-lg text-[15px] hover:bg-paper-2 transition <?= $sort === $value ? 'bg-ink text-paper' : '' ?>">
-                                <?= htmlspecialchars($label) ?>
-                            </a>
-                        <?php endforeach; ?>
-                    </div>
-                </div>
-
-                <button type="submit" class="px-5 py-2.5 rounded-full bg-vermilion text-paper font-600 hover:bg-vermilion-d transition-colors">Caută</button>
-            </form>
-
-            <!-- MOBILE -->
-            <form method="get" action="/<?= htmlspecialchars($slug, ENT_QUOTES) ?>" class="flex items-center gap-2 lg:hidden">
-                <?php if ($categoryFilter): ?><input type="hidden" name="category" value="<?= htmlspecialchars($categoryFilter, ENT_QUOTES) ?>"><?php endif; ?>
-                <?php if ($maxPrice !== null): ?><input type="hidden" name="max_price" value="<?= $maxPrice ?>"><?php endif; ?>
-                <?php if ($sort !== 'recommended'): ?><input type="hidden" name="sort" value="<?= htmlspecialchars($sort, ENT_QUOTES) ?>"><?php endif; ?>
-                <div class="relative flex-1">
-                    <svg viewBox="0 0 24 24" class="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-soft" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-                    <input name="q" type="search" value="<?= htmlspecialchars($searchQuery, ENT_QUOTES) ?>" placeholder="Caută…" class="w-full bg-paper border-2 border-ink/15 focus:border-ink rounded-full pl-10 pr-4 py-2.5 text-[15px] focus:outline-none" />
-                </div>
-                <button type="button" @click="sheet=true" class="relative shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-full border-2 border-ink font-600 text-sm">
-                    <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 5h18M6 12h12M10 19h4"/></svg>
-                    Filtre
-                    <?php if (!empty($activeChips)): ?><span class="grid place-items-center w-5 h-5 rounded-full bg-vermilion text-paper text-[11px] font-700"><?= count($activeChips) ?></span><?php endif; ?>
-                </button>
-            </form>
-
-            <!-- active chips -->
-            <?php if (!empty($activeChips)): ?>
-                <div class="flex flex-wrap items-center gap-2 mt-3">
-                    <?php foreach ($activeChips as $ch): ?>
-                        <a href="/<?= htmlspecialchars($slug, ENT_QUOTES) ?><?= htmlspecialchars($ch['remove_qs'], ENT_QUOTES) ?>" class="group flex items-center gap-1.5 pl-3 pr-2 py-1 rounded-full bg-paper-2 border border-ink/15 text-sm hover:border-ink transition">
-                            <span><?= htmlspecialchars($ch['label']) ?></span>
-                            <svg class="w-3.5 h-3.5 text-ink-soft group-hover:text-vermilion" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
-                        </a>
-                    <?php endforeach; ?>
-                    <a href="/<?= htmlspecialchars($slug, ENT_QUOTES) ?>" class="ml-1 text-sm font-600 text-vermilion underline-wobble">Șterge tot</a>
-                </div>
-            <?php endif; ?>
+                <?php endif; ?>
+            </div>
         </div>
 
         <!-- MOBILE FILTER SHEET -->
@@ -654,7 +655,7 @@ document.addEventListener('alpine:init', () => {
         </div>
 
         <?php if (empty($cards)): ?>
-            <div class="p-10 text-center border-2 ticket bg-paper border-ink rounded-3xl sm:p-16 max-w-[1500px] mx-auto" style="--perf:100%">
+            <div class="p-10 text-center border-2 ticket bg-white border-ink rounded-3xl sm:p-16 max-w-[1500px] mx-auto" style="--perf:100%">
                 <p class="text-3xl font-display font-700">
                     <?php if ($categoryFilter): ?>
                         Nicio activitate din această categorie în <?= htmlspecialchars($cityName) ?>.
