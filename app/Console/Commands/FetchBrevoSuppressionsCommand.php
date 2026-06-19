@@ -76,6 +76,19 @@ class FetchBrevoSuppressionsCommand extends Command
         $dryRun = (bool) $this->option('dry-run');
         $report = $this->option('report');
 
+        // Validate the key up-front so we fail with a single 401 instead of
+        // hammering Brevo with 60+ doomed requests across both phases.
+        $probe = Http::withHeaders(['api-key' => $this->apiKey, 'Accept' => 'application/json'])
+            ->timeout(15)
+            ->get('https://api.brevo.com/v3/account');
+        if (!$probe->successful()) {
+            $this->error('Brevo API key check failed (' . $probe->status() . '): ' . $probe->body());
+            $this->warn('Tip: pass the full key — `xkeysib-...` is a placeholder, not a real value.');
+            return self::FAILURE;
+        }
+        $acct = $probe->json();
+        $this->info('Authenticated as: ' . ($acct['email'] ?? 'unknown') . ' (' . ($acct['companyName'] ?? '') . ')');
+
         $emailToReason = [];
         $rowsForReport = [];
 
