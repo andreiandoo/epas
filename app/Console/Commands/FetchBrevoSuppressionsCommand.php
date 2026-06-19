@@ -216,8 +216,9 @@ class FetchBrevoSuppressionsCommand extends Command
 
     /**
      * Paginate through /v3/smtp/statistics/events?event=X for a single
-     * event type (unsubscribed, blocked, error). Brevo caps page size at
-     * 100 and total range at 30 days unless you pass startDate/endDate.
+     * event type. Brevo's events endpoint enforces a max 90-day window per
+     * request, so we sweep history in 90-day buckets walking backward from
+     * --until (default today) to --since (default 5 years ago).
      */
     protected function fetchEvents(string $eventType, ?string $since, ?string $until, int $limit, array &$emailToReason, array &$rowsForReport): void
     {
@@ -230,22 +231,50 @@ class FetchBrevoSuppressionsCommand extends Command
         ];
         $internal = $eventReasonMap[$eventType] ?? 'brevo_blocked';
 
+        $rangeEnd = $until ? \Carbon\Carbon::parse($until) : now();
+        $rangeStart = $since ? \Carbon\Carbon::parse($since) : now()->subYears(5);
+
+        // Walk backward in 90-day windows so we always stay inside Brevo's
+        // limit. Last window may be shorter than 90 days.
+        $cursorEnd = $rangeEnd->copy();
+        while ($cursorEnd->greaterThanOrEqualTo($rangeStart)) {
+            $cursorStart = $cursorEnd->copy()->subDays(89);
+            if ($cursorStart->lessThan($rangeStart)) {
+                $cursorStart = $rangeStart->copy();
+            }
+
+            $this->fetchEventsWindow(
+                $eventType,
+                $cursorStart->format('Y-m-d'),
+                $cursorEnd->format('Y-m-d'),
+                $limit,
+                $internal,
+                $emailToReason,
+                $rowsForReport
+            );
+
+            if ($cursorStart->equalTo($rangeStart)) break;
+            $cursorEnd = $cursorStart->copy()->subDay();
+        }
+    }
+
+    /**
+     * Single Brevo window query, paginated by offset. Brevo caps offset at
+     * 5000 per range, so for huge accounts the 90-day window keeps us under
+     * that ceiling in practice.
+     */
+    protected function fetchEventsWindow(string $eventType, string $start, string $end, int $limit, string $internal, array &$emailToReason, array &$rowsForReport): void
+    {
         $offset = 0;
         while (true) {
-            $params = ['limit' => $limit, 'offset' => $offset, 'event' => $eventType, 'sort' => 'desc'];
-            // Brevo's events endpoint requires a date range when sweeping the
-            // full history; default to a wide window (5 years) so we don't
-            // miss historic unsubscribes.
-            if ($since) {
-                $params['startDate'] = $since;
-            } else {
-                $params['startDate'] = now()->subYears(5)->format('Y-m-d');
-            }
-            if ($until) {
-                $params['endDate'] = $until;
-            } else {
-                $params['endDate'] = now()->format('Y-m-d');
-            }
+            $params = [
+                'limit' => $limit,
+                'offset' => $offset,
+                'event' => $eventType,
+                'startDate' => $start,
+                'endDate' => $end,
+                'sort' => 'desc',
+            ];
 
             $resp = Http::withHeaders(['api-key' => $this->apiKey, 'Accept' => 'application/json'])
                 ->timeout(30)
@@ -253,11 +282,16 @@ class FetchBrevoSuppressionsCommand extends Command
 
             if (!$resp->successful()) {
                 $this->error('  Brevo events API error ' . $resp->status() . ': ' . $resp->body());
-                break;
+                return;
             }
 
             $events = $resp->json()['events'] ?? [];
-            if (empty($events)) break;
+            if (empty($events)) {
+                if ($offset === 0) {
+                    $this->line("    {$start}…{$end} → 0");
+                }
+                return;
+            }
 
             foreach ($events as $e) {
                 $email = strtolower(trim((string) ($e['email'] ?? '')));
@@ -270,14 +304,12 @@ class FetchBrevoSuppressionsCommand extends Command
                 $rowsForReport[] = [$email, "events/{$eventType}", $e['event'] ?? $eventType, $internal, $e['date'] ?? ''];
             }
 
-            $this->line("    event={$eventType} offset={$offset} → +" . count($events));
-            if (count($events) < $limit) break;
+            $this->line("    {$start}…{$end} offset={$offset} → +" . count($events));
+            if (count($events) < $limit) return;
             $offset += $limit;
-            // Brevo events caps offset at 5000 per range — break early so we
-            // don't hammer the API for nothing.
             if ($offset >= 5000) {
-                $this->warn("    event={$eventType} hit offset cap at 5000; narrow --since/--until if you need older rows");
-                break;
+                $this->warn("    {$start}…{$end} hit offset cap at 5000 — narrow the window if you need older rows");
+                return;
             }
         }
     }
