@@ -416,35 +416,38 @@ include __DIR__ . '/includes/header.php';
                 <?php endif; ?>
             </div>
 
-            <!-- Gallery (real images) -->
-            <?php if (count($gallery) >= 1): ?>
-                <div class="grid h-[460px] grid-cols-5 grid-rows-4 gap-3">
-                    <button type="button" @click="openG(0)" class="group relative col-span-3 row-span-4 overflow-hidden rounded-[2rem] border-2 border-ink bg-ink">
-                        <img src="<?= htmlspecialchars($gallery[0]['src'], ENT_QUOTES) ?>" alt="<?= htmlspecialchars($gallery[0]['alt'], ENT_QUOTES) ?>" class="object-cover w-full h-full transition duration-500 group-hover:scale-105" loading="lazy">
-                        <div class="absolute inset-0 bg-gradient-to-t from-ink/70 via-transparent to-transparent"></div>
-                        <span class="absolute px-4 py-2 text-sm font-bold rounded-full bottom-4 left-4 bg-paper text-ink">Vezi imagini</span>
-                    </button>
-                    <?php for ($gi = 1; $gi <= 4; $gi++): $g = $gallery[$gi] ?? null; ?>
-                        <?php if ($g): ?>
-                            <button type="button" @click="openG(<?= $gi ?>)" class="group relative col-span-2 row-span-1 overflow-hidden rounded-[1.5rem] border-2 border-ink bg-ink">
-                                <img src="<?= htmlspecialchars($g['src'], ENT_QUOTES) ?>" alt="<?= htmlspecialchars($g['alt'], ENT_QUOTES) ?>" class="object-cover w-full h-full transition duration-500 group-hover:scale-105" loading="lazy">
-                            </button>
-                        <?php else: ?>
-                            <div class="col-span-2 row-span-1 grid place-items-center rounded-[1.5rem] border-2 border-ink bg-gradient-to-br <?= ['from-vermilion to-vermilion-d','from-forest to-ink','from-sky to-ink','from-ochre to-vermilion-d'][$gi - 1] ?? 'from-vermilion to-vermilion-d' ?> text-paper">
-                                <span class="text-xl font-bold font-display opacity-80"><?= htmlspecialchars($cityName) ?></span>
-                            </div>
-                        <?php endif; ?>
-                    <?php endfor; ?>
+            <!-- Gallery as a continuously rotating half-wheel — only the top arc
+                 shows in the hero (the hub sits on the bottom edge). The 4 squares
+                 are spaced evenly (every 90°) and ride the rim perpendicular to the
+                 radius, so they rotate as the wheel turns. -->
+            <style>
+            @keyframes cityWheelSpin { to { transform: rotate(360deg); } }
+            .city-hero-wheel .wheel-rot { animation: cityWheelSpin 48s linear infinite; will-change: transform; }
+            .city-hero-wheel:hover .wheel-rot { animation-play-state: paused; }
+            @media (prefers-reduced-motion: reduce) { .city-hero-wheel .wheel-rot { animation: none; } }
+            </style>
+            <div class="relative h-[400px] overflow-hidden city-hero-wheel" aria-hidden="true">
+                <div class="absolute left-1/2 top-full h-[720px] w-[720px] -translate-x-1/2 -translate-y-1/2">
+                    <div class="absolute inset-0 wheel-rot">
+                        <?php
+                        $wheelGrad = ['from-vermilion to-vermilion-d', 'from-forest to-ink', 'from-sky to-ink', 'from-ochre to-vermilion-d'];
+                        for ($i = 0; $i < 4; $i++):
+                            $g = $gallery[$i] ?? null;
+                            $tf = 'transform: translate(-50%, -50%) rotate(' . ($i * 90) . 'deg) translateY(-280px);';
+                        ?>
+                            <?php if ($g): ?>
+                                <button type="button" @click="openG(<?= $i ?>)" class="group absolute left-1/2 top-1/2 h-[150px] w-[150px] overflow-hidden rounded-[1.5rem] border-2 border-ink bg-ink shadow-deep" style="<?= $tf ?>">
+                                    <img src="<?= htmlspecialchars($g['src'], ENT_QUOTES) ?>" alt="<?= htmlspecialchars($g['alt'], ENT_QUOTES) ?>" class="object-cover w-full h-full transition duration-500 group-hover:scale-110" loading="lazy">
+                                </button>
+                            <?php else: ?>
+                                <div class="absolute left-1/2 top-1/2 grid h-[150px] w-[150px] place-items-center rounded-[1.5rem] border-2 border-ink bg-gradient-to-br <?= $wheelGrad[$i] ?> text-paper" style="<?= $tf ?>">
+                                    <span class="px-2 text-center text-lg font-bold font-display opacity-80"><?= htmlspecialchars($cityName) ?></span>
+                                </div>
+                            <?php endif; ?>
+                        <?php endfor; ?>
+                    </div>
                 </div>
-            <?php else: ?>
-                <div class="grid h-[460px] grid-cols-2 grid-rows-2 gap-3">
-                    <?php foreach ([['from-forest to-ink','CITY','Ghid'],['from-vermilion to-vermilion-d','INDOOR','Escape'],['from-sky to-ink','CULTURĂ','Muzee'],['from-ochre to-vermilion-d','OUTDOOR','Aventură']] as $tile): ?>
-                        <div class="flex items-end rounded-[1.5rem] border-2 border-ink bg-gradient-to-br <?= $tile[0] ?> p-5 text-paper">
-                            <div><p class="font-mono text-[10px] tracking-wider opacity-80"><?= $tile[1] ?></p><p class="text-3xl font-bold leading-none font-display"><?= $tile[2] ?></p></div>
-                        </div>
-                    <?php endforeach; ?>
-                </div>
-            <?php endif; ?>
+            </div>
         </div>
     </div>
 
@@ -500,7 +503,8 @@ document.addEventListener('alpine:init', () => {
     <div class="px-4 pb-16 mx-auto w-full sm:px-6">
 
         <!-- FILTER TOOLBAR -->
-        <div class="sticky z-30 px-4 py-2 mb-6 -mx-4 top-34 sm:-mx-6 sm:px-6 bg-paper/95 backdrop-blur-md max-w-[1500px] border-y border-ink/10">
+        <div class="sticky z-30 px-4 py-2 mb-6 -mx-4 top-34 sm:-mx-6 sm:px-6 bg-paper/95 backdrop-blur-md border-y border-ink/10 w-full">
+            <div class="max-w-[1500px] mx-auto">
             <!-- DESKTOP -->
             <form method="get" action="/<?= htmlspecialchars($slug, ENT_QUOTES) ?>" class="items-center hidden gap-3 lg:flex" @click.outside="open=null">
                 <?php if ($categoryFilter): ?><input type="hidden" name="category" value="<?= htmlspecialchars($categoryFilter, ENT_QUOTES) ?>"><?php endif; ?>
@@ -650,7 +654,7 @@ document.addEventListener('alpine:init', () => {
         </div>
 
         <?php if (empty($cards)): ?>
-            <div class="p-10 text-center border-2 ticket bg-paper border-ink rounded-3xl sm:p-16 max-w-[1500px]" style="--perf:100%">
+            <div class="p-10 text-center border-2 ticket bg-paper border-ink rounded-3xl sm:p-16 max-w-[1500px] mx-auto" style="--perf:100%">
                 <p class="text-3xl font-display font-700">
                     <?php if ($categoryFilter): ?>
                         Nicio activitate din această categorie în <?= htmlspecialchars($cityName) ?>.
@@ -662,7 +666,7 @@ document.addEventListener('alpine:init', () => {
                 <a href="/categorii" class="inline-block px-5 py-3 mt-5 transition rounded-full bg-ink text-paper font-700 hover:bg-vermilion">Vezi alte categorii</a>
             </div>
         <?php else: ?>
-            <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 max-w-[1500px]">
+            <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 max-w-[1500px] mx-auto">
                 <?php foreach ($cards as $ev):
                     $evTitle = $ev['title'];
                     $evCat = $ev['cat'];
