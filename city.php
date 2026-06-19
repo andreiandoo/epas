@@ -148,6 +148,48 @@ $pagination = [
     'total'        => (int) ($evPagination['total'] ?? count($events)) + (int) ($actPagination['total'] ?? count($activities)),
 ];
 
+// GetYourGuide affiliate widget (activities grid). Rendered ONCE — either high
+// up the page when this city has no own activities/events (so GYG fills the
+// page) or as the lower "extra" section when we do have our own content. The
+// SDK is lazy-loaded only when the widget nears the viewport.
+$gygPromote = $gygWidgetEnabled && empty($cards);
+$renderGygSection = function () use ($cityName, $slug, $gygCityId, $gygPartnerId, $gygPromote) {
+    $gygUrl = 'https://www.getyourguide.com/' . rawurlencode($slug) . '-l' . rawurlencode($gygCityId) . '/';
+    ?>
+    <section id="getyourguide" class="<?= $gygPromote ? 'bg-white' : 'border-t border-ink/10 bg-paper' ?>">
+        <div class="px-4 py-14 mx-auto max-w-[1500px] sm:px-6 lg:py-16">
+            <div class="max-w-3xl mb-8">
+                <p class="font-mono text-xs tracking-[.2em] text-vermilion mb-3"><?= $gygPromote ? 'ACTIVITĂȚI ȘI TURURI' : 'EXTRA · PRIN PARTENERII NOȘTRI' ?></p>
+                <h2 class="font-display text-[clamp(1.8rem,3vw,2.8rem)] font-700 leading-[1.05] mb-3"><?= $gygPromote ? 'Activități și tururi în ' : 'Mai multe activități și tururi în ' ?><?= htmlspecialchars($cityName) ?></h2>
+                <p class="leading-relaxed text-ink-soft">Selecție de tururi ghidate, experiențe și activități disponibile prin GetYourGuide.</p>
+            </div>
+            <div id="gyg-mount"
+                data-gyg-href="https://widget.getyourguide.com/default/activities.frame"
+                data-gyg-location-id="<?= htmlspecialchars($gygCityId, ENT_QUOTES) ?>"
+                data-gyg-locale-code="ro-RO"
+                data-gyg-widget="activities"
+                data-gyg-number-of-items="24"
+                data-gyg-partner-id="<?= htmlspecialchars($gygPartnerId, ENT_QUOTES) ?>"
+                aria-label="Activități GetYourGuide pentru <?= htmlspecialchars($cityName, ENT_QUOTES) ?>">
+                <span class="text-xs text-ink-soft">Powered by <a target="_blank" rel="sponsored noopener" href="<?= htmlspecialchars($gygUrl, ENT_QUOTES) ?>" class="underline">GetYourGuide</a></span>
+            </div>
+        </div>
+    </section>
+    <script>
+    (function () {
+        var el = document.getElementById('gyg-mount');
+        if (!el) return;
+        var done = false;
+        function load() { if (done) return; done = true; var s = document.createElement('script'); s.async = true; s.defer = true; s.src = 'https://widget.getyourguide.com/dist/pa.umd.production.min.js'; document.body.appendChild(s); }
+        if ('IntersectionObserver' in window) {
+            var io = new IntersectionObserver(function (es) { es.forEach(function (e) { if (e.isIntersecting) { load(); io.disconnect(); } }); }, { rootMargin: '600px' });
+            io.observe(el);
+        } else { load(); }
+    })();
+    </script>
+    <?php
+};
+
 // Active filter chips
 $activeChips = [];
 if ($searchQuery !== '') {
@@ -439,6 +481,9 @@ document.addEventListener('alpine:init', () => {
         <a href="#ghid-local" class="shrink-0 rounded-full bg-paper-2 px-4 py-2.5 hover:bg-ink hover:text-paper">FAQ</a>
     </div>
 </section>
+
+<!-- ============================== GETYOURGUIDE WIDGET (slot promovat — orașe fără activități proprii) ============================== -->
+<?php if ($gygPromote) { $renderGygSection(); } ?>
 
 <!-- ============================== EVENTS LISTING ============================== -->
 <section id="activitati" x-data="cityFilters()" class="bg-white">
@@ -799,40 +844,8 @@ document.addEventListener('alpine:init', () => {
 </section>
 <?php endif; ?>
 
-<?php if ($gygWidgetEnabled): ?>
-<!-- ============================== GETYOURGUIDE WIDGET ============================== -->
-<!--
-     Affiliate widget — surfaces tours + activities for this city from
-     GetYourGuide. Only renders when BOTH the per-city GYG location id
-     (marketplace_cities.getyourguide_city_id) AND the per-marketplace
-     partner id (marketplace_clients.settings.affiliate.getyourguide_partner_id)
-     are configured. Without both, the section is skipped entirely so
-     unconfigured cities don't show an empty box.
-
-     The GYG SDK script is loaded with async+defer so it never blocks
-     the LCP — the widget hydrates after the page is interactive.
--->
-<section id="getyourguide" class="px-4 py-16 mx-auto border-t max-w-7xl sm:px-6 lg:py-20 border-ink/10">
-    <div class="max-w-3xl mb-8">
-        <p class="font-mono text-xs tracking-[.2em] text-vermilion mb-3">EXTRA · PRIN PARTENERII NOȘTRI</p>
-        <h2 class="font-display text-[clamp(1.8rem,3vw,2.6rem)] font-700 leading-[1.05] mb-3">
-            Mai multe activități și tururi în <?= htmlspecialchars($cityName) ?>
-        </h2>
-        <p class="leading-relaxed text-ink-soft">
-            Selecție de tururi ghidate, experiențe și activități internaționale, disponibile prin GetYourGuide.
-        </p>
-    </div>
-    <div
-        data-gyg-href="https://widget.getyourguide.com/default/city.frame"
-        data-gyg-location-id="<?= htmlspecialchars($gygCityId, ENT_QUOTES) ?>"
-        data-gyg-locale-code="ro-RO"
-        data-gyg-widget="city"
-        data-gyg-partner-id="<?= htmlspecialchars($gygPartnerId, ENT_QUOTES) ?>"
-        aria-label="Activități GetYourGuide pentru <?= htmlspecialchars($cityName, ENT_QUOTES) ?>"
-    ></div>
-</section>
-<script async defer src="https://widget.getyourguide.com/dist/pa.umd.production.min.js"></script>
-<?php endif; ?>
+<!-- ============================== GETYOURGUIDE WIDGET (slot „extra", jos) ============================== -->
+<?php if ($gygWidgetEnabled && ! $gygPromote) { $renderGygSection(); } ?>
 
 <?php if (!empty($nearbyCities)): ?>
 <!-- ============================== NEARBY ============================== -->
