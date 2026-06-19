@@ -685,6 +685,13 @@ switch ($action) {
         if (isset($_GET['genre'])) $params['genre'] = $_GET['genre'];
         if (isset($_GET['artist'])) $params['artist'] = $_GET['artist'];
         if (isset($_GET['venue'])) $params['venue'] = $_GET['venue'];
+        // Organizer filter — used by the ended-event banner to prioritise
+        // upcoming events from the SAME organizer. Without this on the
+        // proxy whitelist the filter was silently stripped and we got an
+        // unfiltered list (~50 events) where only 1 happened to belong
+        // to the organizer.
+        if (isset($_GET['organizer_id'])) $params['organizer_id'] = (int)$_GET['organizer_id'];
+        if (isset($_GET['organizer_slug'])) $params['organizer_slug'] = $_GET['organizer_slug'];
         if (isset($_GET['search'])) $params['search'] = $_GET['search'];
         if (isset($_GET['date'])) $params['date_filter'] = $_GET['date'];
         if (isset($_GET['date_filter'])) $params['date_filter'] = $_GET['date_filter'];
