@@ -1003,46 +1003,101 @@ const EventPage = {
     },
 
     /**
-     * Load related events to show in the ended banner
+     * Load related events to show in the ended banner.
+     *
+     * Strategy (per user request):
+     *   1. Prefer upcoming events from the SAME organizer — keeps a fan
+     *      who showed up for the ended event in that organizer's funnel.
+     *   2. If the organizer doesn't have 4 upcoming, fill up to 4 with
+     *      events from the same category, then with any upcoming event.
+     *   3. Always dedupe (skip current event + skip ids already shown)
+     *      and skip cancelled rows. Renders a fallback message when the
+     *      combined pool still yields nothing.
      */
     async loadEndedRelatedEvents() {
+        const container = document.getElementById('ended-related-events');
+        const loading = document.getElementById('ended-related-loading');
+        if (loading) loading.style.display = 'none';
+        if (!container) return;
+
+        const currentId = this.event.id;
+        const currentSlug = this.event.slug;
+        const TARGET = 4;
+        const collected = [];
+        const seenIds = new Set([currentId]);
+        const seenSlugs = new Set([currentSlug]);
+
+        const isUsable = function (e) {
+            if (!e) return false;
+            if (e.is_cancelled) return false;
+            if (seenIds.has(e.id) || seenSlugs.has(e.slug)) return false;
+            return true;
+        };
+        const ingest = function (rows) {
+            if (!Array.isArray(rows)) return;
+            for (var i = 0; i < rows.length && collected.length < TARGET; i++) {
+                var e = rows[i];
+                if (!isUsable(e)) continue;
+                collected.push(e);
+                seenIds.add(e.id);
+                seenSlugs.add(e.slug);
+            }
+        };
+
         try {
-            const params = new URLSearchParams({ limit: 8 });
-            if (this.event.category_slug) {
-                params.append('category', this.event.category_slug);
+            // 1. Same organizer.
+            var organizerId = this.event.organizer && this.event.organizer.id;
+            if (organizerId) {
+                try {
+                    var orgRes = await AmbiletAPI.get('/events?' + new URLSearchParams({
+                        organizer_id: organizerId,
+                        limit: 8
+                    }).toString());
+                    if (orgRes.success) ingest(orgRes.data || []);
+                } catch (e) {
+                    console.warn('[EventPage] Ended banner: organizer fetch failed', e);
+                }
             }
 
-            const response = await AmbiletAPI.get('/events?' + params.toString());
-            const container = document.getElementById('ended-related-events');
-            const loading = document.getElementById('ended-related-loading');
-
-            if (loading) loading.style.display = 'none';
-
-            if (response.success && response.data?.length) {
-                const currentId = this.event.id;
-                const currentSlug = this.event.slug;
-                const filtered = response.data.filter(function(e) {
-                    if (e.is_cancelled) return false;
-                    return e.id !== currentId && e.slug !== currentSlug;
-                }).slice(0, 4);
-
-                if (filtered.length > 0 && container) {
-                    container.innerHTML = AmbiletEventCard.renderMany(filtered, {
-                        showCategory: true,
-                        showPrice: true,
-                        showVenue: true,
-                        urlPrefix: '/bilete/'
-                    });
-                } else if (container) {
-                    container.innerHTML = '<p class="col-span-full text-white text-sm text-center">Nu sunt alte evenimente disponibile momentan.</p>';
+            // 2. Same category fill — keeps tonal relevance even when the
+            // organizer is small.
+            if (collected.length < TARGET && this.event.category_slug) {
+                try {
+                    var catRes = await AmbiletAPI.get('/events?' + new URLSearchParams({
+                        category: this.event.category_slug,
+                        limit: 8
+                    }).toString());
+                    if (catRes.success) ingest(catRes.data || []);
+                } catch (e) {
+                    console.warn('[EventPage] Ended banner: category fetch failed', e);
                 }
-            } else if (container) {
+            }
+
+            // 3. Generic fallback fill — any upcoming event.
+            if (collected.length < TARGET) {
+                try {
+                    var anyRes = await AmbiletAPI.get('/events?' + new URLSearchParams({
+                        limit: 8
+                    }).toString());
+                    if (anyRes.success) ingest(anyRes.data || []);
+                } catch (e) {
+                    console.warn('[EventPage] Ended banner: generic fetch failed', e);
+                }
+            }
+
+            if (collected.length > 0) {
+                container.innerHTML = AmbiletEventCard.renderMany(collected, {
+                    showCategory: true,
+                    showPrice: true,
+                    showVenue: true,
+                    urlPrefix: '/bilete/'
+                });
+            } else {
                 container.innerHTML = '<p class="col-span-full text-white text-sm text-center">Nu sunt alte evenimente disponibile momentan.</p>';
             }
         } catch (e) {
             console.error('Failed to load ended related events:', e);
-            const loading = document.getElementById('ended-related-loading');
-            if (loading) loading.textContent = 'Nu sunt alte evenimente disponibile momentan.';
+            container.innerHTML = '<p class="col-span-full text-white text-sm text-center">Nu sunt alte evenimente disponibile momentan.</p>';
         }
     },
 
