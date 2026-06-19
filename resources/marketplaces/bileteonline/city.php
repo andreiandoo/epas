@@ -157,15 +157,18 @@ $renderGygSection = function () use ($cityName, $slug, $gygCityId, $gygPartnerId
     $gygUrl = 'https://www.getyourguide.com/' . rawurlencode($slug) . '-l' . rawurlencode($gygCityId) . '/';
     ?>
     <style>
-    /* Blend the GetYourGuide widget into the bilete.online look. Target the
-       stable Vue classes (the [data-v-*] hash changes per GYG build); !important
-       beats their non-important scoped rules despite the lower specificity. */
     #getyourguide .activities__card__content__title { min-height: 0 !important; color: #1B1714 !important; }
     #getyourguide .activities__card .smartcrop { border-radius: 8px 8px 0 0 !important; }
+    #getyourguide img.smartcrop__image {transition: 300ms all ease-in-out!important}
+    #getyourguide .activities__card[data-v-7fb4e755] { border: 1px solid #e3e3e3 !important; }
+    #getyourguide .activities__card:hover img.smartcrop__image {
+        transform: scale(1.1)!important;
+        transition: 300ms all ease-in-out!important;
+    }
     </style>
     <section id="getyourguide" class="<?= $gygPromote ? 'bg-white' : 'border-t border-ink/10 bg-white' ?>">
         <div class="px-4 py-14 mx-auto max-w-[1500px] sm:px-6 lg:py-16">
-            <div class="max-w-3xl mb-8">
+            <div class="text-center mb-8">
                 <p class="font-mono text-xs tracking-[.2em] text-vermilion mb-3"><?= $gygPromote ? 'ACTIVITĂȚI ȘI TURURI' : 'EXTRA · PRIN PARTENERII NOȘTRI' ?></p>
                 <h2 class="font-display text-[clamp(1.8rem,3vw,2.8rem)] font-700 leading-[1.05] mb-3"><?= $gygPromote ? 'Activități și tururi în ' : 'Mai multe activități și tururi în ' ?><?= htmlspecialchars($cityName) ?></h2>
                 <p class="leading-relaxed text-ink-soft">Selecție de tururi ghidate, experiențe și activități disponibile prin GetYourGuide.</p>
@@ -175,7 +178,7 @@ $renderGygSection = function () use ($cityName, $slug, $gygCityId, $gygPartnerId
                 data-gyg-location-id="<?= htmlspecialchars($gygCityId, ENT_QUOTES) ?>"
                 data-gyg-locale-code="ro-RO"
                 data-gyg-widget="activities"
-                data-gyg-number-of-items="24"
+                data-gyg-number-of-items="40"
                 data-gyg-partner-id="<?= htmlspecialchars($gygPartnerId, ENT_QUOTES) ?>"
                 aria-label="Activități GetYourGuide pentru <?= htmlspecialchars($cityName, ENT_QUOTES) ?>">
                 <span class="text-xs text-ink-soft">Powered by <a target="_blank" rel="sponsored noopener" href="<?= htmlspecialchars($gygUrl, ENT_QUOTES) ?>" class="underline">GetYourGuide</a></span>
@@ -494,10 +497,10 @@ document.addEventListener('alpine:init', () => {
 
 <!-- ============================== EVENTS LISTING ============================== -->
 <section id="activitati" x-data="cityFilters()" class="bg-white">
-    <div class="px-4 pb-16 mx-auto max-w-[1500px] sm:px-6">
+    <div class="px-4 pb-16 mx-auto w-full sm:px-6">
 
         <!-- FILTER TOOLBAR -->
-        <div class="sticky z-30 px-4 py-2 mb-6 -mx-4 top-34 sm:-mx-6 sm:px-6 bg-paper/95 backdrop-blur-md border-y border-ink/10">
+        <div class="sticky z-30 px-4 py-2 mb-6 -mx-4 top-34 sm:-mx-6 sm:px-6 bg-paper/95 backdrop-blur-md max-w-[1500px] border-y border-ink/10">
             <!-- DESKTOP -->
             <form method="get" action="/<?= htmlspecialchars($slug, ENT_QUOTES) ?>" class="items-center hidden gap-3 lg:flex" @click.outside="open=null">
                 <?php if ($categoryFilter): ?><input type="hidden" name="category" value="<?= htmlspecialchars($categoryFilter, ENT_QUOTES) ?>"><?php endif; ?>
@@ -647,7 +650,7 @@ document.addEventListener('alpine:init', () => {
         </div>
 
         <?php if (empty($cards)): ?>
-            <div class="p-10 text-center border-2 ticket bg-paper border-ink rounded-3xl sm:p-16" style="--perf:100%">
+            <div class="p-10 text-center border-2 ticket bg-paper border-ink rounded-3xl sm:p-16 max-w-[1500px]" style="--perf:100%">
                 <p class="text-3xl font-display font-700">
                     <?php if ($categoryFilter): ?>
                         Nicio activitate din această categorie în <?= htmlspecialchars($cityName) ?>.
@@ -659,7 +662,7 @@ document.addEventListener('alpine:init', () => {
                 <a href="/categorii" class="inline-block px-5 py-3 mt-5 transition rounded-full bg-ink text-paper font-700 hover:bg-vermilion">Vezi alte categorii</a>
             </div>
         <?php else: ?>
-            <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 max-w-[1500px]">
                 <?php foreach ($cards as $ev):
                     $evTitle = $ev['title'];
                     $evCat = $ev['cat'];
@@ -737,6 +740,9 @@ document.addEventListener('alpine:init', () => {
     Alpine.data('cityFilters', () => ({ open: null, sheet: false }));
 });
 </script>
+
+<!-- ============================== GETYOURGUIDE WIDGET (slot „extra", jos) ============================== -->
+<?php if ($gygWidgetEnabled && ! $gygPromote) { $renderGygSection(); } ?>
 
 <!-- ============================== EXPLOREAZĂ DUPĂ INTERES (categorii + traveler) ============================== -->
 <section id="interese" class="bg-paper">
@@ -850,9 +856,6 @@ document.addEventListener('alpine:init', () => {
     </div>
 </section>
 <?php endif; ?>
-
-<!-- ============================== GETYOURGUIDE WIDGET (slot „extra", jos) ============================== -->
-<?php if ($gygWidgetEnabled && ! $gygPromote) { $renderGygSection(); } ?>
 
 <?php if (!empty($nearbyCities)): ?>
 <!-- ============================== NEARBY ============================== -->
