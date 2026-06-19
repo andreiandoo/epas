@@ -156,7 +156,14 @@ $gygPromote = $gygWidgetEnabled && empty($cards);
 $renderGygSection = function () use ($cityName, $slug, $gygCityId, $gygPartnerId, $gygPromote) {
     $gygUrl = 'https://www.getyourguide.com/' . rawurlencode($slug) . '-l' . rawurlencode($gygCityId) . '/';
     ?>
-    <section id="getyourguide" class="<?= $gygPromote ? 'bg-white' : 'border-t border-ink/10 bg-paper' ?>">
+    <style>
+    /* Blend the GetYourGuide widget into the bilete.online look. Target the
+       stable Vue classes (the [data-v-*] hash changes per GYG build); !important
+       beats their non-important scoped rules despite the lower specificity. */
+    #getyourguide .activities__card__content__title { min-height: 0 !important; color: #1B1714 !important; }
+    #getyourguide .activities__card .smartcrop { border-radius: 8px 8px 0 0 !important; }
+    </style>
+    <section id="getyourguide" class="<?= $gygPromote ? 'bg-white' : 'border-t border-ink/10 bg-white' ?>">
         <div class="px-4 py-14 mx-auto max-w-[1500px] sm:px-6 lg:py-16">
             <div class="max-w-3xl mb-8">
                 <p class="font-mono text-xs tracking-[.2em] text-vermilion mb-3"><?= $gygPromote ? 'ACTIVITĂȚI ȘI TURURI' : 'EXTRA · PRIN PARTENERII NOȘTRI' ?></p>
