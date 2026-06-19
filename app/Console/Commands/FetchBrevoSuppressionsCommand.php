@@ -7,54 +7,62 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 
 /**
- * Pull the blocked/bounced/spam/unsubscribed list directly from Brevo's API
+ * Pull the full Brevo suppression set (blocked + bounced + spam + unsubscribed)
  * and flag matching marketplace_customers as email_suppressed.
  *
- * Brevo deprecated the "Email Reporting" export UI; the only stable path is
- * GET /v3/smtp/blockedContacts, which returns a unified feed of every
- * address that SMTP rejected — with a reason.code we map to our internal
- * suppression reasons:
+ * Brevo splits suppression data across two endpoints:
+ *   GET /v3/smtp/blockedContacts        — hard bounces, complaints, admin blocks
+ *   GET /v3/smtp/statistics/events      — paginated event feed; we pull
+ *                                          event=unsubscribed (the blocked
+ *                                          feed never includes unsubscribes)
+ *                                          and optionally event=spam/error
+ *                                          for belt-and-braces coverage.
  *
- *   hardBounce            → brevo_hard_bounce
- *   bounce / softBounce   → brevo_hard_bounce  (Brevo treats persistent softs as hards eventually)
- *   spam / complaint      → brevo_complaint
- *   blockedByUser /
- *   adminBlocked /
- *   unsubscribedViaApi /
- *   unsubscribedViaMA     → brevo_unsubscribed
- *   blockedByOurself /
- *   contactBlockedByAdmin / *   → brevo_blocked  (default catch-all)
+ * Mapping (Brevo code/event → internal suppression reason):
+ *   hardBounce / bounce / softBounce  → brevo_hard_bounce
+ *   spam / complaint                  → brevo_complaint
+ *   unsubscribedViaApi/MA, blockedByUser, event=unsubscribed → brevo_unsubscribed
+ *   adminBlocked / blockedByOurself / contactBlockedByAdmin / event=blocked → brevo_blocked
+ *   event=error                       → brevo_blocked (delivery error, can't deliver)
  *
- * Spam-trap hits don't show as their own reason in this endpoint — Brevo
- * reports them as either complaints (spam) or hardBounces depending on the
- * trap operator. The brevo_spam_trap reason is reserved for direct trap
- * lists if/when Brevo exposes them.
+ * When the same email appears across feeds, the higher-severity reason wins
+ * (hard_bounce > complaint > blocked > unsubscribed).
  *
  *   php artisan customers:fetch-brevo-suppressions --marketplace=1 --dry-run
- *   php artisan customers:fetch-brevo-suppressions --marketplace=1
- *   # restrict to a window (Brevo paginates; defaults to a full sweep)
- *   php artisan customers:fetch-brevo-suppressions --marketplace=1 --since=2026-01-01
- *   # use a one-off key if .env doesn't have BREVO_API_KEY:
- *   php artisan customers:fetch-brevo-suppressions --api-key=xkeysib-...
+ *   php artisan customers:fetch-brevo-suppressions --marketplace=1 --no-overwrite
+ *   php artisan customers:fetch-brevo-suppressions --marketplace=1 --skip-events
  */
 class FetchBrevoSuppressionsCommand extends Command
 {
     protected $signature = 'customers:fetch-brevo-suppressions
                             {--marketplace= : restrict matching to this marketplace_client_id (recommended)}
                             {--api-key= : Brevo v3 API key (defaults to env BREVO_API_KEY)}
-                            {--since= : Only fetch contacts blocked on/after this date (YYYY-MM-DD)}
-                            {--until= : Only fetch contacts blocked on/before this date (YYYY-MM-DD)}
+                            {--since= : Only fetch records on/after this date (YYYY-MM-DD); events endpoint requires it for ranges > 30 days}
+                            {--until= : Only fetch records on/before this date (YYYY-MM-DD)}
                             {--limit=100 : page size (Brevo max 100)}
+                            {--skip-events : do not query statistics/events (skips unsubscribers)}
                             {--no-overwrite : keep an earlier suppression reason if it differs}
                             {--dry-run : count matches but do not write to DB}
                             {--report= : optional CSV path to dump the fetched list}';
 
-    protected $description = 'Pull blocked/bounced contacts from Brevo and flag them as email_suppressed';
+    protected $description = 'Pull blocked/bounced/spam/unsubscribed contacts from Brevo and flag them as email_suppressed';
+
+    /** @var string */
+    protected $apiKey;
+
+    /** @var array<string,string> internal severity ordering for merging duplicates */
+    protected array $priority = [
+        'brevo_hard_bounce' => 4,
+        'brevo_spam_trap'   => 4,
+        'brevo_complaint'   => 3,
+        'brevo_blocked'     => 2,
+        'brevo_unsubscribed'=> 1,
+    ];
 
     public function handle(): int
     {
-        $apiKey = $this->option('api-key') ?: env('BREVO_API_KEY');
-        if (!$apiKey) {
+        $this->apiKey = (string) ($this->option('api-key') ?: env('BREVO_API_KEY'));
+        if (!$this->apiKey) {
             $this->error('No API key — pass --api-key=xkeysib-... or set BREVO_API_KEY in .env');
             return self::FAILURE;
         }
@@ -63,78 +71,33 @@ class FetchBrevoSuppressionsCommand extends Command
         $since = $this->option('since');
         $until = $this->option('until');
         $limit = (int) $this->option('limit') ?: 100;
+        $skipEvents = (bool) $this->option('skip-events');
         $noOverwrite = (bool) $this->option('no-overwrite');
         $dryRun = (bool) $this->option('dry-run');
         $report = $this->option('report');
 
-        $reasonMap = [
-            'hardBounce' => 'brevo_hard_bounce',
-            'bounce' => 'brevo_hard_bounce',
-            'softBounce' => 'brevo_hard_bounce',
-            'spam' => 'brevo_complaint',
-            'complaint' => 'brevo_complaint',
-            'unsubscribedViaApi' => 'brevo_unsubscribed',
-            'unsubscribedViaMA' => 'brevo_unsubscribed',
-            'blockedByUser' => 'brevo_unsubscribed',
-            'adminBlocked' => 'brevo_blocked',
-            'contactBlockedByAdmin' => 'brevo_blocked',
-            'blockedByOurself' => 'brevo_blocked',
-        ];
-
-        $offset = 0;
-        $fetched = 0;
-        $rowsForReport = [];
         $emailToReason = [];
+        $rowsForReport = [];
 
-        $this->info('Fetching from Brevo API…');
+        // ─── Phase 1 — blocked contacts (hard bounces, complaints, admin blocks) ──
+        $this->info('Phase 1/2 — /v3/smtp/blockedContacts');
+        $count = $this->fetchBlockedContacts($since, $until, $limit, $emailToReason, $rowsForReport);
+        $this->info("  blocked-contacts emails accumulated: {$count}");
 
-        while (true) {
-            $params = ['limit' => $limit, 'offset' => $offset];
-            if ($since) $params['startDate'] = $since;
-            if ($until) $params['endDate'] = $until;
-
-            $resp = Http::withHeaders([
-                'api-key' => $apiKey,
-                'Accept' => 'application/json',
-            ])->timeout(30)->get('https://api.brevo.com/v3/smtp/blockedContacts', $params);
-
-            if (!$resp->successful()) {
-                $this->error('Brevo API error ' . $resp->status() . ': ' . $resp->body());
-                return self::FAILURE;
+        // ─── Phase 2 — event feed (unsubscribed + supplementary blocked/error) ──
+        if (!$skipEvents) {
+            foreach (['unsubscribed', 'blocked', 'error'] as $eventType) {
+                $this->info("Phase 2/2 — /v3/smtp/statistics/events event={$eventType}");
+                $before = count($emailToReason);
+                $this->fetchEvents($eventType, $since, $until, $limit, $emailToReason, $rowsForReport);
+                $added = count($emailToReason) - $before;
+                $this->info("  event={$eventType} added {$added} new emails (total distinct: " . count($emailToReason) . ')');
             }
-
-            $data = $resp->json();
-            $contacts = $data['contacts'] ?? [];
-            $totalCount = $data['count'] ?? null;
-
-            if (empty($contacts)) break;
-
-            foreach ($contacts as $c) {
-                $email = strtolower(trim((string) ($c['email'] ?? '')));
-                $code = $c['reason']['code'] ?? 'unknown';
-                if ($email === '') continue;
-
-                $internal = $reasonMap[$code] ?? 'brevo_blocked';
-                // Stronger reasons (hard_bounce, complaint, spam_trap) beat
-                // softer (unsubscribed, blocked) when the same email shows up
-                // multiple times in the feed across reasons.
-                $priority = ['brevo_hard_bounce' => 4, 'brevo_spam_trap' => 4, 'brevo_complaint' => 3, 'brevo_blocked' => 2, 'brevo_unsubscribed' => 1];
-                if (!isset($emailToReason[$email]) ||
-                    ($priority[$internal] ?? 0) > ($priority[$emailToReason[$email]] ?? 0)) {
-                    $emailToReason[$email] = $internal;
-                }
-
-                $rowsForReport[] = [$email, $code, $internal, $c['blockedAt'] ?? ''];
-            }
-
-            $fetched += count($contacts);
-            $this->line("  page offset={$offset} → +" . count($contacts) . " (total fetched: {$fetched}" . ($totalCount ? " / {$totalCount}" : '') . ')');
-
-            if (count($contacts) < $limit) break;
-            $offset += $limit;
+        } else {
+            $this->warn('Phase 2 skipped (--skip-events). Unsubscribers will NOT be flagged.');
         }
 
-        $this->info('Distinct emails: ' . count($emailToReason));
+        $this->info('Distinct emails across all feeds: ' . count($emailToReason));
         if (empty($emailToReason)) {
             $this->warn('Nothing to import.');
             return self::SUCCESS;
@@ -142,7 +105,7 @@ class FetchBrevoSuppressionsCommand extends Command
 
         if ($report) {
             $fh = fopen($report, 'w');
-            fputcsv($fh, ['email', 'brevo_code', 'internal_reason', 'blocked_at']);
+            fputcsv($fh, ['email', 'source', 'brevo_code_or_event', 'internal_reason', 'when']);
             foreach ($rowsForReport as $row) fputcsv($fh, $row);
             fclose($fh);
             $this->info("Report written to {$report}");
@@ -178,7 +141,7 @@ class FetchBrevoSuppressionsCommand extends Command
             }
         }
 
-        $this->info('Match summary by reason:');
+        $this->info('Match summary by reason (DB-matched only):');
         foreach ($matchedByReason as $reason => $cnt) {
             $this->line("  {$reason}: {$cnt}");
         }
@@ -189,5 +152,133 @@ class FetchBrevoSuppressionsCommand extends Command
             $this->warn('Dry run — nothing written.');
         }
         return self::SUCCESS;
+    }
+
+    /**
+     * Paginate through /v3/smtp/blockedContacts and merge into the email map.
+     * Returns the running map size after this phase (NOT the row count).
+     */
+    protected function fetchBlockedContacts(?string $since, ?string $until, int $limit, array &$emailToReason, array &$rowsForReport): int
+    {
+        $reasonMap = [
+            'hardBounce' => 'brevo_hard_bounce',
+            'bounce' => 'brevo_hard_bounce',
+            'softBounce' => 'brevo_hard_bounce',
+            'spam' => 'brevo_complaint',
+            'complaint' => 'brevo_complaint',
+            'unsubscribedViaApi' => 'brevo_unsubscribed',
+            'unsubscribedViaMA' => 'brevo_unsubscribed',
+            'blockedByUser' => 'brevo_unsubscribed',
+            'adminBlocked' => 'brevo_blocked',
+            'contactBlockedByAdmin' => 'brevo_blocked',
+            'blockedByOurself' => 'brevo_blocked',
+        ];
+
+        $offset = 0;
+        while (true) {
+            $params = ['limit' => $limit, 'offset' => $offset];
+            if ($since) $params['startDate'] = $since;
+            if ($until) $params['endDate'] = $until;
+
+            $resp = Http::withHeaders(['api-key' => $this->apiKey, 'Accept' => 'application/json'])
+                ->timeout(30)
+                ->get('https://api.brevo.com/v3/smtp/blockedContacts', $params);
+
+            if (!$resp->successful()) {
+                $this->error('  Brevo API error ' . $resp->status() . ': ' . $resp->body());
+                break;
+            }
+
+            $contacts = $resp->json()['contacts'] ?? [];
+            $totalCount = $resp->json()['count'] ?? null;
+            if (empty($contacts)) break;
+
+            foreach ($contacts as $c) {
+                $email = strtolower(trim((string) ($c['email'] ?? '')));
+                if ($email === '') continue;
+                $code = $c['reason']['code'] ?? 'unknown';
+                $internal = $reasonMap[$code] ?? 'brevo_blocked';
+
+                if (!isset($emailToReason[$email]) ||
+                    ($this->priority[$internal] ?? 0) > ($this->priority[$emailToReason[$email]] ?? 0)) {
+                    $emailToReason[$email] = $internal;
+                }
+                $rowsForReport[] = [$email, 'blockedContacts', $code, $internal, $c['blockedAt'] ?? ''];
+            }
+
+            $this->line("    offset={$offset} → +" . count($contacts) . ($totalCount ? " (/ {$totalCount})" : ''));
+            if (count($contacts) < $limit) break;
+            $offset += $limit;
+        }
+
+        return count($emailToReason);
+    }
+
+    /**
+     * Paginate through /v3/smtp/statistics/events?event=X for a single
+     * event type (unsubscribed, blocked, error). Brevo caps page size at
+     * 100 and total range at 30 days unless you pass startDate/endDate.
+     */
+    protected function fetchEvents(string $eventType, ?string $since, ?string $until, int $limit, array &$emailToReason, array &$rowsForReport): void
+    {
+        $eventReasonMap = [
+            'unsubscribed' => 'brevo_unsubscribed',
+            'blocked'      => 'brevo_blocked',
+            'error'        => 'brevo_blocked',
+            'spam'         => 'brevo_complaint',
+            'hardBounces'  => 'brevo_hard_bounce',
+        ];
+        $internal = $eventReasonMap[$eventType] ?? 'brevo_blocked';
+
+        $offset = 0;
+        while (true) {
+            $params = ['limit' => $limit, 'offset' => $offset, 'event' => $eventType, 'sort' => 'desc'];
+            // Brevo's events endpoint requires a date range when sweeping the
+            // full history; default to a wide window (5 years) so we don't
+            // miss historic unsubscribes.
+            if ($since) {
+                $params['startDate'] = $since;
+            } else {
+                $params['startDate'] = now()->subYears(5)->format('Y-m-d');
+            }
+            if ($until) {
+                $params['endDate'] = $until;
+            } else {
+                $params['endDate'] = now()->format('Y-m-d');
+            }
+
+            $resp = Http::withHeaders(['api-key' => $this->apiKey, 'Accept' => 'application/json'])
+                ->timeout(30)
+                ->get('https://api.brevo.com/v3/smtp/statistics/events', $params);
+
+            if (!$resp->successful()) {
+                $this->error('  Brevo events API error ' . $resp->status() . ': ' . $resp->body());
+                break;
+            }
+
+            $events = $resp->json()['events'] ?? [];
+            if (empty($events)) break;
+
+            foreach ($events as $e) {
+                $email = strtolower(trim((string) ($e['email'] ?? '')));
+                if ($email === '') continue;
+
+                if (!isset($emailToReason[$email]) ||
+                    ($this->priority[$internal] ?? 0) > ($this->priority[$emailToReason[$email]] ?? 0)) {
+                    $emailToReason[$email] = $internal;
+                }
+                $rowsForReport[] = [$email, "events/{$eventType}", $e['event'] ?? $eventType, $internal, $e['date'] ?? ''];
+            }
+
+            $this->line("    event={$eventType} offset={$offset} → +" . count($events));
+            if (count($events) < $limit) break;
+            $offset += $limit;
+            // Brevo events caps offset at 5000 per range — break early so we
+            // don't hammer the API for nothing.
+            if ($offset >= 5000) {
+                $this->warn("    event={$eventType} hit offset cap at 5000; narrow --since/--until if you need older rows");
+                break;
+            }
+        }
     }
 }
