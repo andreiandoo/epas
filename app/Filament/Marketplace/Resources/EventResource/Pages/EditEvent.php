@@ -194,6 +194,14 @@ class EditEvent extends EditRecord
                     'status', 'is_public', 'submitted_at', 'approved_at', 'approved_by',
                     'venue_name', 'city', 'starts_at', 'ends_at',
                     'seo_title', 'seo_description', 'revenue_target', 'capacity', 'event_type',
+                    // Seating mapping: do NOT inherit from the source event. The
+                    // organizer often duplicates to move an event to a different
+                    // venue, and inheriting seating_layout_id leaves the new event
+                    // pointing at the source venue's layout — the "Harta Locuri"
+                    // tab stays visible and renders the wrong map even after the
+                    // venue is switched. Force a clean start; admin re-picks if
+                    // needed.
+                    'seating_layout_id', 'seating_performance_id',
                 ]);
 
                 $titleArray = $record->title ?? [];

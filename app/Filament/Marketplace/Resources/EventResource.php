@@ -994,6 +994,18 @@ class EventResource extends Resource
                                             . ($venue->city ? ' (' . $venue->city . ')' : '');
                                     })
                                     ->afterStateUpdated(function ($state, SSet $set) use ($marketplace, $marketplaceLanguage) {
+                                        // Changing the venue invalidates any seating
+                                        // layout previously chosen (layouts are
+                                        // venue-scoped). Without this reset the
+                                        // form keeps the old seating_layout_id in
+                                        // state — the "Harta Locuri" tab visibility
+                                        // is gated on that field, so it stays
+                                        // visible and still renders the stale
+                                        // layout. Clearing the performance id too
+                                        // because it's tied to a specific layout.
+                                        $set('seating_layout_id', null);
+                                        $set('seating_performance_id', null);
+
                                         if ($state) {
                                             $venue = Venue::find($state);
                                             if ($venue) {
