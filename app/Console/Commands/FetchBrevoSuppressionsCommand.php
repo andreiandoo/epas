@@ -192,8 +192,13 @@ class FetchBrevoSuppressionsCommand extends Command
         $offset = 0;
         while (true) {
             $params = ['limit' => $limit, 'offset' => $offset];
-            if ($since) $params['startDate'] = $since;
-            if ($until) $params['endDate'] = $until;
+            // Brevo rejects --startDate alone with 400 missing_parameter; the
+            // two date params are coupled. Auto-fill the missing side so the
+            // daily cron (--since only) and ad-hoc runs both succeed.
+            if ($since || $until) {
+                $params['startDate'] = $since ?: now()->subYears(5)->format('Y-m-d');
+                $params['endDate'] = $until ?: now()->format('Y-m-d');
+            }
 
             $resp = Http::withHeaders(['api-key' => $this->apiKey, 'Accept' => 'application/json'])
                 ->timeout(30)
