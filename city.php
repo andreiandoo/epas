@@ -416,50 +416,64 @@ include __DIR__ . '/includes/header.php';
                 <?php endif; ?>
             </div>
 
-            <!-- Categorii populare ca roată continuă. Butucul e împins sub
-                 fereastră, așa că vezi doar cardurile cum trec peste partea de sus
-                 (fără tăietură urâtă la orizont). 4 carduri egal distribuite (90°),
-                 perpendiculare pe rază, fiecare cu altă culoare. -->
+            <!-- Categorii populare — un card pe rând, care intră pe arcul cercului
+                 (swing pe rază) cu fade 0→100%, apoi iese tot pe arc; ciclează
+                 continuu prin categorii. Cardul stă drept (text lizibil), doar
+                 poziția lui descrie arcul. -->
             <style>
-            @keyframes cityWheelSpin { to { transform: rotate(360deg); } }
-            .city-hero-wheel .wheel-rot { animation: cityWheelSpin 60s linear infinite; will-change: transform; }
-            .city-hero-wheel:hover .wheel-rot { animation-play-state: paused; }
-            @media (prefers-reduced-motion: reduce) { .city-hero-wheel .wheel-rot { animation: none; } }
+            .cw-card { transition: opacity .85s ease, transform .85s cubic-bezier(.18,.7,.2,1); will-change: transform, opacity; }
+            .cw-rest      { opacity: 1; transform: translate(-50%, 50%) translateY(-230px); }
+            .cw-start-in  { opacity: 0; transform: translate(-50%, 50%) rotate(-130deg) translateY(-230px) rotate(130deg); }
+            .cw-start-out { opacity: 0; transform: translate(-50%, 50%) rotate(130deg) translateY(-230px) rotate(-130deg); }
+            @media (prefers-reduced-motion: reduce) { .cw-card { transition: opacity .4s ease; } .cw-start-in, .cw-start-out { transform: translate(-50%, 50%) translateY(-230px); } }
             </style>
             <?php
             $wheelGrad = ['from-vermilion to-vermilion-d', 'from-forest to-ink', 'from-sky to-ink', 'from-ochre to-vermilion-d'];
+            $bo_cat_img = function ($u) {
+                $u = (string) $u;
+                if ($u === '') return '';
+                return str_starts_with($u, 'http') ? $u : rtrim(STORAGE_URL, '/') . '/' . ltrim($u, '/');
+            };
             $wheelItems = [];
-            foreach (array_slice($topCategories, 0, 4) as $cat) {
+            foreach (array_slice($topCategories, 0, 6) as $cat) {
                 $wheelItems[] = [
                     'icon'  => $cat['icon_emoji'] ?? '🎫',
                     'label' => $cat['label'],
+                    'image' => $bo_cat_img($cat['image'] ?? ''),
                     'href'  => '/' . $slug . '?category=' . rawurlencode($cat['slug']),
                 ];
             }
             if (empty($wheelItems)) {
                 $wheelItems = [
-                    ['icon' => '🔐', 'label' => 'Escape rooms', 'href' => '/' . $slug],
-                    ['icon' => '🏛️', 'label' => 'Muzee & expoziții', 'href' => '/' . $slug],
-                    ['icon' => '🎡', 'label' => 'Parcuri de distracții', 'href' => '/' . $slug],
-                    ['icon' => '🧗', 'label' => 'Parcuri de aventură', 'href' => '/' . $slug],
+                    ['icon' => '🔐', 'label' => 'Escape rooms', 'image' => '', 'href' => '/' . $slug],
+                    ['icon' => '🏛️', 'label' => 'Muzee & expoziții', 'image' => '', 'href' => '/' . $slug],
+                    ['icon' => '🎡', 'label' => 'Parcuri de distracții', 'image' => '', 'href' => '/' . $slug],
+                    ['icon' => '🧗', 'label' => 'Parcuri de aventură', 'image' => '', 'href' => '/' . $slug],
                 ];
             }
             ?>
-            <div class="relative h-[360px] overflow-hidden city-hero-wheel">
-                <div class="absolute h-[760px] w-[760px] left-1/2 -translate-x-1/2 -translate-y-1/2" style="top: calc(100% + 60px);">
-                    <div class="absolute inset-0 wheel-rot">
-                        <?php foreach ($wheelItems as $i => $w):
-                            $tf = 'transform: translate(-50%, -50%) rotate(' . ($i * 90) . 'deg) translateY(-230px);';
-                        ?>
-                            <a href="<?= htmlspecialchars($w['href'], ENT_QUOTES) ?>"
-                               class="group absolute left-1/2 top-1/2 flex h-[200px] w-[200px] flex-col justify-end rounded-[1.75rem] border-2 border-ink bg-gradient-to-br <?= $wheelGrad[$i % 4] ?> p-5 text-paper shadow-deep transition hover:brightness-110"
-                               style="<?= $tf ?>">
-                                <span class="text-4xl leading-none"><?= htmlspecialchars($w['icon']) ?></span>
-                                <span class="mt-3 text-2xl font-bold leading-none font-display"><?= htmlspecialchars($w['label']) ?></span>
-                            </a>
-                        <?php endforeach; ?>
-                    </div>
-                </div>
+            <div class="relative h-[360px] overflow-hidden"
+                 x-data="{ i: 0, n: <?= count($wheelItems) ?>, paused: false }"
+                 x-init="setInterval(() => { if (!paused && n > 1) i = (i + 1) % n }, 3000)"
+                 @mouseenter="paused = true" @mouseleave="paused = false">
+                <?php foreach ($wheelItems as $i => $w): ?>
+                    <a href="<?= htmlspecialchars($w['href'], ENT_QUOTES) ?>"
+                       x-show="i === <?= $i ?>" x-cloak
+                       x-transition:enter="cw-card" x-transition:enter-start="cw-start-in" x-transition:enter-end="cw-rest"
+                       x-transition:leave="cw-card" x-transition:leave-start="cw-rest" x-transition:leave-end="cw-start-out"
+                       class="cw-card absolute bottom-0 left-1/2 h-[210px] w-[210px] overflow-hidden rounded-[1.75rem] border-2 border-ink bg-ink text-paper shadow-deep">
+                        <?php if (!empty($w['image'])): ?>
+                            <img src="<?= htmlspecialchars($w['image'], ENT_QUOTES) ?>" alt="<?= htmlspecialchars($w['label'], ENT_QUOTES) ?>" class="absolute inset-0 object-cover w-full h-full" loading="lazy">
+                            <div class="absolute inset-0 bg-gradient-to-t from-ink/90 via-ink/35 to-transparent"></div>
+                        <?php else: ?>
+                            <div class="absolute inset-0 bg-gradient-to-br <?= $wheelGrad[$i % 4] ?>"></div>
+                        <?php endif; ?>
+                        <div class="absolute inset-x-0 bottom-0 p-5">
+                            <span class="block text-4xl leading-none"><?= htmlspecialchars($w['icon']) ?></span>
+                            <span class="block mt-2 text-2xl font-bold leading-none font-display"><?= htmlspecialchars($w['label']) ?></span>
+                        </div>
+                    </a>
+                <?php endforeach; ?>
             </div>
         </div>
     </div>
@@ -513,7 +527,7 @@ document.addEventListener('alpine:init', () => {
 
 <!-- ============================== EVENTS LISTING ============================== -->
 <section id="activitati" x-data="cityFilters()" class="bg-white">
-    <div class="px-4 pb-16 mx-auto w-full sm:px-6 bg-white">
+    <div class="pb-16 mx-auto w-full bg-white">
 
         <!-- FILTER TOOLBAR -->
         <div class="sticky z-30 top-34 bg-paper/95 backdrop-blur-md border-y border-ink/10 w-full mb-6">

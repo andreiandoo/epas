@@ -80,6 +80,7 @@ function navGetCategories(?int $limit = 6): array
             'count_n' => $count,
             'accent' => navAccentFromHex($cat['color'] ?? null),
             'icon_emoji' => $cat['icon_emoji'] ?? '🎫',
+            'image' => $cat['image'] ?? '',
         ];
 
         if ($limit !== null && count($items) >= $limit) break;
