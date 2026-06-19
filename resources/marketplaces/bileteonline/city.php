@@ -416,35 +416,48 @@ include __DIR__ . '/includes/header.php';
                 <?php endif; ?>
             </div>
 
-            <!-- Gallery as a continuously rotating half-wheel — only the top arc
-                 shows in the hero (the hub sits on the bottom edge). The 4 squares
-                 are spaced evenly (every 90°) and ride the rim perpendicular to the
-                 radius, so they rotate as the wheel turns. -->
+            <!-- Categorii populare ca roată continuă. Butucul e împins sub
+                 fereastră, așa că vezi doar cardurile cum trec peste partea de sus
+                 (fără tăietură urâtă la orizont). 4 carduri egal distribuite (90°),
+                 perpendiculare pe rază, fiecare cu altă culoare. -->
             <style>
             @keyframes cityWheelSpin { to { transform: rotate(360deg); } }
-            .city-hero-wheel .wheel-rot { animation: cityWheelSpin 48s linear infinite; will-change: transform; }
+            .city-hero-wheel .wheel-rot { animation: cityWheelSpin 60s linear infinite; will-change: transform; }
             .city-hero-wheel:hover .wheel-rot { animation-play-state: paused; }
             @media (prefers-reduced-motion: reduce) { .city-hero-wheel .wheel-rot { animation: none; } }
             </style>
-            <div class="relative h-[400px] overflow-hidden city-hero-wheel" aria-hidden="true">
-                <div class="absolute left-1/2 top-full h-[720px] w-[720px] -translate-x-1/2 -translate-y-1/2">
+            <?php
+            $wheelGrad = ['from-vermilion to-vermilion-d', 'from-forest to-ink', 'from-sky to-ink', 'from-ochre to-vermilion-d'];
+            $wheelItems = [];
+            foreach (array_slice($topCategories, 0, 4) as $cat) {
+                $wheelItems[] = [
+                    'icon'  => $cat['icon_emoji'] ?? '🎫',
+                    'label' => $cat['label'],
+                    'href'  => '/' . $slug . '?category=' . rawurlencode($cat['slug']),
+                ];
+            }
+            if (empty($wheelItems)) {
+                $wheelItems = [
+                    ['icon' => '🔐', 'label' => 'Escape rooms', 'href' => '/' . $slug],
+                    ['icon' => '🏛️', 'label' => 'Muzee & expoziții', 'href' => '/' . $slug],
+                    ['icon' => '🎡', 'label' => 'Parcuri de distracții', 'href' => '/' . $slug],
+                    ['icon' => '🧗', 'label' => 'Parcuri de aventură', 'href' => '/' . $slug],
+                ];
+            }
+            ?>
+            <div class="relative h-[360px] overflow-hidden city-hero-wheel">
+                <div class="absolute h-[760px] w-[760px] left-1/2 -translate-x-1/2 -translate-y-1/2" style="top: calc(100% + 60px);">
                     <div class="absolute inset-0 wheel-rot">
-                        <?php
-                        $wheelGrad = ['from-vermilion to-vermilion-d', 'from-forest to-ink', 'from-sky to-ink', 'from-ochre to-vermilion-d'];
-                        for ($i = 0; $i < 4; $i++):
-                            $g = $gallery[$i] ?? null;
-                            $tf = 'transform: translate(-50%, -50%) rotate(' . ($i * 90) . 'deg) translateY(-280px);';
+                        <?php foreach ($wheelItems as $i => $w):
+                            $tf = 'transform: translate(-50%, -50%) rotate(' . ($i * 90) . 'deg) translateY(-230px);';
                         ?>
-                            <?php if ($g): ?>
-                                <button type="button" @click="openG(<?= $i ?>)" class="group absolute left-1/2 top-1/2 h-[150px] w-[150px] overflow-hidden rounded-[1.5rem] border-2 border-ink bg-ink shadow-deep" style="<?= $tf ?>">
-                                    <img src="<?= htmlspecialchars($g['src'], ENT_QUOTES) ?>" alt="<?= htmlspecialchars($g['alt'], ENT_QUOTES) ?>" class="object-cover w-full h-full transition duration-500 group-hover:scale-110" loading="lazy">
-                                </button>
-                            <?php else: ?>
-                                <div class="absolute left-1/2 top-1/2 grid h-[150px] w-[150px] place-items-center rounded-[1.5rem] border-2 border-ink bg-gradient-to-br <?= $wheelGrad[$i] ?> text-paper" style="<?= $tf ?>">
-                                    <span class="px-2 text-center text-lg font-bold font-display opacity-80"><?= htmlspecialchars($cityName) ?></span>
-                                </div>
-                            <?php endif; ?>
-                        <?php endfor; ?>
+                            <a href="<?= htmlspecialchars($w['href'], ENT_QUOTES) ?>"
+                               class="group absolute left-1/2 top-1/2 flex h-[200px] w-[200px] flex-col justify-end rounded-[1.75rem] border-2 border-ink bg-gradient-to-br <?= $wheelGrad[$i % 4] ?> p-5 text-paper shadow-deep transition hover:brightness-110"
+                               style="<?= $tf ?>">
+                                <span class="text-4xl leading-none"><?= htmlspecialchars($w['icon']) ?></span>
+                                <span class="mt-3 text-2xl font-bold leading-none font-display"><?= htmlspecialchars($w['label']) ?></span>
+                            </a>
+                        <?php endforeach; ?>
                     </div>
                 </div>
             </div>
