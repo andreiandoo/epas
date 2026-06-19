@@ -986,3 +986,44 @@ Schedule::command('ads:sync-meta-insights --days=7')
     ->timezone('Europe/Bucharest')
     ->withoutOverlapping();
 
+/*
+|--------------------------------------------------------------------------
+| Email deliverability — keep email_suppressed in sync with Brevo + DNS
+|--------------------------------------------------------------------------
+| Added 2026-06-19 after Brevo blocked the marketplace sending account
+| over an accumulated list of 79 spam-trap hits / 74 invalid-MX addresses.
+| The initial backfill flagged ~1371 customers; these jobs keep that
+| flag fresh so we never accumulate a sending-reputation hole again.
+*/
+
+// Pull Brevo's blocked/bounced/spam/unsubscribed feed every morning and
+// flag the matching marketplace_customers. --no-overwrite preserves a
+// stronger reason set by an earlier sweep (hard_bounce > complaint >
+// blocked > unsubscribed). --since reaches 4 days back so we cover the
+// previous day with safety margin in case a run is skipped. Reads
+// BREVO_API_KEY from .env — make sure the key has SMTP + Statistics
+// read permission.
+Schedule::command('customers:fetch-brevo-suppressions', [
+        '--marketplace=1',
+        '--no-overwrite',
+        '--since=' . now()->subDays(4)->format('Y-m-d'),
+    ])
+    ->dailyAt('05:30')
+    ->timezone('Europe/Bucharest')
+    ->withoutOverlapping()
+    ->runInBackground();
+
+// MX audit — DNS-checks every customer email domain and flags rows
+// whose domain has no MX record. Offline (no API quota), runs weekly
+// so signups with typo'd domains (gmail.con etc.) get caught within
+// 7 days. --apply auto-flags; weekly cadence is plenty given DNS-MX
+// records on the long tail of weird domains rarely change.
+Schedule::command('customers:audit-email-mx', [
+        '--marketplace=1',
+        '--apply',
+    ])
+    ->weeklyOn(1, '04:30') // Monday 04:30
+    ->timezone('Europe/Bucharest')
+    ->withoutOverlapping()
+    ->runInBackground();
+
