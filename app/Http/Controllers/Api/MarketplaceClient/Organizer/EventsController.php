@@ -2141,9 +2141,19 @@ class EventsController extends BaseController
                 $q->whereDoesntHave('order')
                   ->orWhereHas('order', fn ($qq) => $qq->where('source', '!=', 'external_import'));
             })
-            // Channel scope: tickets inherit their order's channel. POS / invitation
-            // tickets without orders are kept ONLY when no channel filter is active.
-            ->when($channel, fn ($q) => $q->whereHas('order', fn ($qq) => $orderChannelClause($qq)));
+            // Channel scope: tickets inherit their order's channel.
+            //   - null channel: no extra filter (keeps POS / invitations).
+            //   - 'marketplace': UI semantics say "POS sales count as marketplace
+            //     activity". So we keep tickets WITHOUT an order (POS,
+            //     invitations) AND tickets whose order matches the marketplace
+            //     channel clause. Previously this branch required an order via
+            //     whereHas, silently dropping 3 of 28 tickets for the user.
+            //   - 'whitelabel': strict — order must exist with channel='whitelabel'.
+            ->when($channel === 'marketplace', fn ($q) => $q->where(function ($q2) use ($orderChannelClause) {
+                $q2->whereDoesntHave('order')
+                   ->orWhereHas('order', fn ($qq) => $orderChannelClause($qq));
+            }))
+            ->when($channel === 'whitelabel', fn ($q) => $q->whereHas('order', fn ($qq) => $orderChannelClause($qq)));
 
         // Valid tickets grouped by ticket_type — used for net revenue and per-type counts
         $validCountsByType = (clone $validEventTicketsQuery())
@@ -2212,18 +2222,23 @@ class EventsController extends BaseController
         // Bilete vândute = all valid tickets (online + POS + invitations)
         $ticketsSold = (int) (clone $validEventTicketsQuery())->count();
 
-        // Page views: denormalized counter is fast but channel-blind. When a channel
-        // filter is active, recompute from core_customer_events scoped to that channel.
+        // Page views — always read from the canonical core_customer_events
+        // table. We used to take a fast path through the denormalized
+        // $event->views_count counter when no channel filter was set, but
+        // that counter lags behind the real table for some events, which
+        // produced the bizarre symptom the user reported: switching the
+        // dropdown from "Toate" to "Marketplace" made the views go UP
+        // (507 → 1310) — impossible since marketplace ⊆ all. Reading the
+        // same source for both branches keeps the count monotonically
+        // non-increasing across channel narrowing.
+        $pageViewQuery = \App\Models\Platform\CoreCustomerEvent::where(function ($q) use ($event) {
+            $q->where('event_id', $event->id)
+              ->orWhere('marketplace_event_id', $event->id);
+        })->where('event_type', 'page_view');
         if ($channel) {
-            $pageViewQuery = \App\Models\Platform\CoreCustomerEvent::where(function ($q) use ($event) {
-                $q->where('event_id', $event->id)
-                  ->orWhere('marketplace_event_id', $event->id);
-            })->where('event_type', 'page_view');
             $trackingChannelClause($pageViewQuery);
-            $pageViews = (int) $pageViewQuery->count();
-        } else {
-            $pageViews = $event->views_count ?? 0;
         }
+        $pageViews = (int) $pageViewQuery->count();
         $conversionRate = $pageViews > 0 ? round(($ticketsSold / $pageViews) * 100, 2) : 0;
 
         // Tickets sold today (uses same broad filter as total count)
