@@ -620,9 +620,19 @@ class ServiceOrderController extends BaseController
      */
     public function buildAudienceBaseQuery(MarketplaceOrganizer $organizer, string $audienceType)
     {
+        // Exclude rows flagged email_suppressed=true so newsletter audiences
+        // never include known-bad addresses (invalid MX, Brevo hard bounces,
+        // spam-trap hits, complaints, etc.). Allows NULL too — the column
+        // defaults to false on new rows, but legacy rows from before the
+        // 2026-06-18 migration may carry NULL on some DBs.
+        $excludeSuppressed = fn ($q) => $q->where(function ($qq) {
+            $qq->where('email_suppressed', false)->orWhereNull('email_suppressed');
+        });
+
         if ($audienceType === 'own') {
             return MarketplaceCustomer::query()
                 ->where('marketplace_client_id', $organizer->marketplace_client_id)
+                ->tap($excludeSuppressed)
                 ->whereHas('orders', function ($q) use ($organizer) {
                     $q->where('marketplace_organizer_id', $organizer->id)
                       ->where('status', 'completed');
@@ -632,7 +642,8 @@ class ServiceOrderController extends BaseController
         // Marketplace audience: ALL active customers in the marketplace
         return MarketplaceCustomer::query()
             ->where('marketplace_client_id', $organizer->marketplace_client_id)
-            ->where('status', 'active');
+            ->where('status', 'active')
+            ->tap($excludeSuppressed);
     }
 
     /**

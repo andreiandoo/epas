@@ -99,6 +99,17 @@ class SendNewsletterJob implements ShouldQueue
         }
 
         foreach ($recipients as $recipient) {
+            // Last-line defense: skip recipients whose customer is now flagged
+            // as email_suppressed. Audience filters at newsletter creation time
+            // (ServiceOrderController::buildAudienceBaseQuery) already strip
+            // these out, but a newsletter scheduled BEFORE the customer was
+            // flagged would still carry them in the recipients table. Mark
+            // them as skipped (not 'sent') so the sent-count stays honest.
+            $customer = $recipient->customer;
+            if ($customer && !empty($customer->email_suppressed)) {
+                $recipient->markFailed('skipped:email_suppressed:' . ($customer->email_suppression_reason ?? 'unknown'));
+                continue;
+            }
             try {
                 $this->sendToRecipient($newsletter, $recipient, $transport, $marketplace);
             } catch (\Exception $e) {

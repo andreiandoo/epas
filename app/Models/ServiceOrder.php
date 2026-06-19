@@ -699,6 +699,9 @@ class ServiceOrder extends Model
 
         foreach ($customers as $customer) {
             if (empty($customer->email)) continue;
+            // Defensive — buildAudienceBaseQuery already filters this out, but
+            // belt-and-braces in case some caller bypasses the controller helper.
+            if (!empty($customer->email_suppressed)) continue;
 
             MarketplaceNewsletterRecipient::create([
                 'newsletter_id' => $newsletter->id,
