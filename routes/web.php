@@ -96,6 +96,15 @@ Route::middleware(['web', 'auth:marketplace_admin'])->group(function () {
         }
         return app(\App\Http\Controllers\Admin\OrderDisputeEvidenceController::class)->download($order);
     })->name('marketplace.orders.dispute-evidence');
+
+    // Login-as-organizer: generates a 30-min Sanctum token + redirects to the
+    // marketplace's organizer panel with ?_admin_token=… (auth.js picks it
+    // up). Used by EventResource venue-config redirect placeholder + the
+    // OrganizerResource "Login as Organizer" header action.
+    Route::get('/marketplace/organizers/{organizerId}/login-as', [
+        \App\Http\Controllers\Marketplace\OrganizerImpersonationController::class,
+        'loginAs',
+    ])->name('marketplace.organizers.login-as');
 });
 
 // Marketplace Client Switcher (for super-admins).

@@ -1686,20 +1686,30 @@ class EventResource extends Resource
                                         // overhead-ul de Schema PHP).
                                         Forms\Components\Placeholder::make('venue_config_redirect')
                                             ->label('')
-                                            ->content(new \Illuminate\Support\HtmlString(
-                                                '<div class="p-6 rounded-lg border border-amber-300 bg-amber-50 space-y-3">'
-                                                . '<p class="text-base font-semibold text-amber-900">' . $t('Configurare conținut locație', 'Venue content configuration') . '</p>'
-                                                . '<p class="text-sm text-amber-900">' . $t(
-                                                    'Conținutul paginii publice (Hero, Atracții, Trasee, Floră, Galerie, FAQ, Sezoane, Reguli preț etc.) se editează din panoul de organizator al evenimentului.',
-                                                    'The public-page content (Hero, Attractions, Trails, Flora, Gallery, FAQ, Seasons, Pricing rules, etc.) is edited from the event organizer panel.'
-                                                ) . '</p>'
-                                                . '<p class="text-xs text-amber-700">' . $t(
-                                                    'Editorul admin a fost dezactivat după ce construirea concomitentă a celor ~20 Repeater-uri profund nested cu datele reale ale Lacul Sf. Ana depășea memory_limit-ul PHP de 512MB.',
-                                                    'The admin editor was disabled after concurrent build of ~20 deeply-nested Repeaters with the real Lacul Sf. Ana dataset overflowed the 512MB PHP memory_limit.'
-                                                ) . '</p>'
-                                                . '<p><a href="https://ambilet.ro/organizator/leisure" target="_blank" class="inline-flex items-center gap-2 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-sm font-semibold rounded-lg transition-colors">' . $t('Deschide panoul de organizator', 'Open organizer panel') . '</a></p>'
-                                                . '</div>'
-                                            )),
+                                            ->content(function (?Event $record) use ($t) {
+                                                // URL-ul de impersonation foloseste ruta marketplace.organizers.login-as
+                                                // care emite token Sanctum + redirecteaza la /organizator/leisure pe
+                                                // domeniul marketplace-ului. Lipsa organizer_id pe event → link gri.
+                                                $orgId = $record?->marketplace_organizer_id;
+                                                $btn = $orgId
+                                                    ? '<a href="' . url('/marketplace/organizers/' . $orgId . '/login-as') . '" target="_blank" class="inline-flex items-center gap-2 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-sm font-semibold rounded-lg transition-colors">' . $t('Login ca organizator → deschide panou', 'Login as organizer → open panel') . '</a>'
+                                                    : '<span class="inline-flex items-center gap-2 px-4 py-2 bg-gray-300 text-gray-600 text-sm font-semibold rounded-lg cursor-not-allowed">' . $t('Evenimentul nu are organizator asignat', 'Event has no organizer assigned') . '</span>';
+
+                                                return new \Illuminate\Support\HtmlString(
+                                                    '<div class="p-6 rounded-lg border border-amber-300 bg-amber-50 space-y-3">'
+                                                    . '<p class="text-base font-semibold text-amber-900">' . $t('Configurare conținut locație', 'Venue content configuration') . '</p>'
+                                                    . '<p class="text-sm text-amber-900">' . $t(
+                                                        'Conținutul paginii publice (Hero, Atracții, Trasee, Floră, Galerie, FAQ, Sezoane, Reguli preț etc.) se editează din panoul de organizator al evenimentului.',
+                                                        'The public-page content (Hero, Attractions, Trails, Flora, Gallery, FAQ, Seasons, Pricing rules, etc.) is edited from the event organizer panel.'
+                                                    ) . '</p>'
+                                                    . '<p class="text-xs text-amber-700">' . $t(
+                                                        'Click pe butonul de mai jos te loghează automat ca organizatorul evenimentului (token cu expirare 30 minute) și te trimite pe panoul de leisure de pe marketplace.',
+                                                        'The button below logs you in as the event organizer (30-minute token) and sends you to the marketplace leisure panel.'
+                                                    ) . '</p>'
+                                                    . '<p>' . $btn . '</p>'
+                                                    . '</div>'
+                                                );
+                                            }),
                                     ]),
 
                                 // ========== TAB 4: BILETE ==========
