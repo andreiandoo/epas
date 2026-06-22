@@ -750,6 +750,9 @@ class LeisureController extends BaseController
             'customer.email' => 'nullable|email|max:120',
             'customer.phone' => 'nullable|string|max:30',
             'customer.vehicle_plate' => 'nullable|string|max:20',
+            // Informatii suplimentare opt-in introduse de operator la POS — salvat
+            // in Order.meta.notes pentru audit / retete speciale / observatii grup.
+            'customer.notes' => 'nullable|string|max:1000',
             // Date firma (opțional) — pentru emitere factură pe persoană juridică
             'company.name' => 'nullable|string|max:200',
             'company.cui' => 'nullable|string|max:30',
@@ -1018,6 +1021,7 @@ class LeisureController extends BaseController
                     'payment_method' => $paymentMethod,
                     'visit_date' => $visitDate,
                     'vehicle_plate' => $validated['customer']['vehicle_plate'] ?? null,
+                    'notes' => $validated['customer']['notes'] ?? null,
                     'cashier_organizer_id' => $organizer->id,
                     'commission_total' => $commissionTotal,
                     'commission_rate' => $commissionRate,

@@ -43,8 +43,11 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 
             <!-- Sumar coș -->
             <div class="bg-white border rounded-2xl border-border flex flex-col">
-                <div class="px-5 py-4 border-b border-border">
+                <div class="px-5 py-4 border-b border-border flex items-center justify-between gap-2">
                     <h2 class="font-bold text-secondary">Coș</h2>
+                    <button id="lv-cart-clear" type="button" hidden class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-rose-700 hover:text-white hover:bg-rose-600 border border-rose-300 hover:border-rose-600 rounded-lg transition-colors" title="Șterge toate produsele din coș">
+                        🗑️ Golește coș
+                    </button>
                 </div>
                 <div id="lv-cart" class="flex-1 p-4 space-y-2 max-h-[400px] overflow-y-auto">
                     <p class="text-sm text-muted text-center py-6">Coș gol. Apasă pe un bilet ca să-l adaugi.</p>
@@ -68,6 +71,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                         <input id="lv-cemail" type="email" placeholder="Email (pentru bilete pe mail)" class="w-full px-2 py-1.5 text-sm border border-border rounded">
                         <input id="lv-cphone" type="text" placeholder="Telefon" class="w-full px-2 py-1.5 text-sm border border-border rounded">
                         <input id="lv-cplate" type="text" placeholder="Nr. înmatriculare (pentru parcare)" class="w-full px-2 py-1.5 text-sm border border-border rounded">
+                        <textarea id="lv-cnotes" rows="2" placeholder="Informații suplimentare (opțional) — ex: solicitări speciale, grup, observații" class="w-full px-2 py-1.5 text-sm border border-border rounded resize-y"></textarea>
                     </div>
                 </details>
 
@@ -362,6 +366,9 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
     function renderCart() {
         const entries = Object.entries(cart);
         const wrap = $('lv-cart');
+        // Buton "Golește coș" — vizibil doar cand sunt produse in cos
+        const clearBtn = $('lv-cart-clear');
+        if (clearBtn) clearBtn.hidden = entries.length === 0;
         if (!entries.length) {
             wrap.innerHTML = '<p class="text-sm text-muted text-center py-6">Coș gol. Apasă pe un bilet ca să-l adaugi.</p>';
             $('lv-subtotal').textContent = '0.00 RON';
@@ -604,6 +611,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 email: $('lv-cemail').value || null,
                 phone: $('lv-cphone').value || null,
                 vehicle_plate: $('lv-cplate').value || null,
+                notes: $('lv-cnotes').value || null,
             },
             ...(companyData ? { company: companyData } : {}),
             generate_invoice: $('lv-co-invoice').checked,
@@ -634,6 +642,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             $('lv-cemail').value = '';
             $('lv-cphone').value = '';
             $('lv-cplate').value = '';
+            $('lv-cnotes').value = '';
             $('lv-co-name').value = '';
             $('lv-co-cui').value = '';
             $('lv-co-reg').value = '';
@@ -744,6 +753,15 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         document.querySelectorAll('.lv-pay-btn').forEach(b => b.addEventListener('click', () => selectPayment(b.dataset.pay)));
         document.querySelectorAll('.lv-lang-btn').forEach(b => b.addEventListener('click', () => selectLocale(b.dataset.lang)));
         $('lv-checkout').addEventListener('click', checkout);
+
+        // Golire cos (cu confirmare): sterge toate produsele + addon-urile.
+        // Date client/firma/payment raman setate (operatorul poate reincerca).
+        $('lv-cart-clear')?.addEventListener('click', () => {
+            if (!Object.keys(cart).length) return;
+            if (!confirm('Ești sigur că vrei să golești coșul? Toate produsele adăugate vor fi șterse.')) return;
+            cart = {};
+            renderCart();
+        });
 
         // ANAF lookup: completeaza automat denumire/sediu/reg.com/oras pe baza CUI.
         // Endpoint reutilizat: POST /organizer/verify-cui (folosit deja la onboarding).

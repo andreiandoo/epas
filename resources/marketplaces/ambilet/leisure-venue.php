@@ -381,8 +381,8 @@ require_once __DIR__ . '/includes/head.php';
                 'trail_starts_from' => 'Pornește din:',
                 'closed_today' => 'Închis astăzi',
                 'check_schedule' => 'Verificați programul',
-                'book_access' => 'Rezervă accesul →',
-                'book_access_short' => 'Rezervă acces →',
+                'book_access' => 'Cumpără bilete →',
+                'book_access_short' => 'Cumpără bilete →',
                 'open_in_maps' => 'Deschide în Google Maps',
                 'send_whatsapp' => 'Trimite pe WhatsApp',
             ],
@@ -462,8 +462,8 @@ require_once __DIR__ . '/includes/head.php';
                 'trail_starts_from' => 'Indul innen:',
                 'closed_today' => 'Ma zárva',
                 'check_schedule' => 'Ellenőrizze a nyitvatartást',
-                'book_access' => 'Foglalj belépőt →',
-                'book_access_short' => 'Foglalás →',
+                'book_access' => 'Jegyvásárlás →',
+                'book_access_short' => 'Jegyvásárlás →',
                 'open_in_maps' => 'Megnyitás Google Térképen',
                 'send_whatsapp' => 'Üzenet WhatsAppon',
             ],
@@ -543,8 +543,8 @@ require_once __DIR__ . '/includes/head.php';
                 'trail_starts_from' => 'Starts from:',
                 'closed_today' => 'Closed today',
                 'check_schedule' => 'Check schedule',
-                'book_access' => 'Book access →',
-                'book_access_short' => 'Book →',
+                'book_access' => 'Buy tickets →',
+                'book_access_short' => 'Buy tickets →',
                 'open_in_maps' => 'Open in Google Maps',
                 'send_whatsapp' => 'Send via WhatsApp',
             ],
@@ -569,7 +569,7 @@ require_once __DIR__ . '/includes/head.php';
             <a href="#despre" class="px-4 py-1.5 text-white/80 hover:text-white text-sm font-medium transition-colors rounded-full hover:bg-white/10" data-i18n="nav_about">Despre</a>
             <a href="#cum-ajungi" class="px-4 py-1.5 text-white/80 hover:text-white text-sm font-medium transition-colors rounded-full hover:bg-white/10" data-i18n="nav_directions">Cum ajungi</a>
         </div>
-        <a href="#bilete" class="bg-white/15 backdrop-blur text-white px-4 py-2 rounded-full text-sm font-semibold hover:bg-white/25 transition-colors" data-i18n="book_access_short">Rezervă acces →</a>
+        <a href="#bilete" class="bg-white/15 backdrop-blur text-white px-4 py-2 rounded-full text-sm font-semibold hover:bg-white/25 transition-colors" data-i18n="book_access_short">Cumpără bilete →</a>
     </div>
 </nav>
 
@@ -627,7 +627,7 @@ foreach (['slug', '_route', '_path'] as $_drop) {
             <?php endif; ?>
 
             <div class="flex flex-wrap items-center gap-4 mt-8">
-                <a href="#bilete" class="lv-btn bg-white text-forest-800 hover:bg-lake-50" data-i18n="book_access">Rezervă accesul →</a>
+                <a href="#bilete" class="lv-btn bg-white text-forest-800 hover:bg-lake-50" data-i18n="book_access">Cumpără bilete →</a>
                 <?php if (!empty($trails)): ?>
                 <a href="#trasee" class="lv-btn bg-transparent text-white border border-white/30 hover:bg-white/10" data-i18n="see_trails">Vezi traseele turistice</a>
                 <?php endif; ?>
@@ -1595,6 +1595,43 @@ function reservationPage() {
                 this.renderTrailMap();
                 this.renderLocationMap();
             });
+            // Restaurare cos: daca clientul a navigat la /cos si a venit inapoi,
+            // AmbiletCart are itemi pentru EVENT.id — re-selectam data lor +
+            // hidratam qtyById dupa ce ticketsRaw e incarcat. Astfel cosul
+            // float ramane plin, nu se reseteaza la 0.
+            this.restoreCartState();
+        },
+
+        // Re-hidrare a starii coşului din AmbiletCart (localStorage) după ce
+        // utilizatorul navighează înapoi din /cos. Apelată o singură dată la init.
+        async restoreCartState() {
+            if (typeof AmbiletCart === 'undefined' || !EVENT.id) return;
+            const items = (AmbiletCart.getItems() || []).filter(i => i && Number(i.eventId) === Number(EVENT.id));
+            if (!items.length) return;
+
+            // Toate item-urile aceluiași eveniment au aceeasi visit_date in mod
+            // normal. Folosim primul ca sursa pentru selectedDate; daca lipseste,
+            // skip restore (clientul va alege data manual).
+            const restoreDate = items[0]?.meta?.visit_date || '';
+            if (!restoreDate) return;
+
+            await this.selectDate(restoreDate);
+
+            // selectDate a populat ticketsRaw + a setat qtyById la 0 pentru
+            // fiecare ticket type. Acum suprascriem cu cantitatile reale din cart.
+            items.forEach(it => {
+                const ttId = Number(it.ticketTypeId);
+                if (!ttId) return;
+                const vid = it.meta?.variant_id || null;
+                const slot = it.meta?.slot_time || it.meta?.start_time || null;
+                const key = this.cartKey(ttId, vid);
+                this.qtyById[key] = Number(it.quantity) || 0;
+                if (vid) this.variantSelectedByTicket[ttId] = vid;
+                if (slot) this.slotSelectedByTicket[ttId] = slot;
+            });
+
+            // Deschide cart-ul float automat ca utilizatorul sa vada produsele restaurate
+            this.cartOpen = true;
         },
 
         // ========== Calendar ==========
