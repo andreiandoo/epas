@@ -1154,6 +1154,7 @@ class LeisureController extends BaseController
                             'code' => $pkgTicket->code,
                             'ticket_type' => $displayName . ' (pachet)',
                             'service_category' => 'package',
+                            'issuing_company' => $tt->issuing_company ?? 'primary',
                             'price' => $it['unit_price'],
                             'variant' => null,
                         ];
@@ -1213,6 +1214,7 @@ class LeisureController extends BaseController
                                     'code' => $compTicket->code,
                                     'ticket_type' => $compDisplay,
                                     'service_category' => $compTt->service_category ?? 'access',
+                                    'issuing_company' => $compTt->issuing_company ?? 'primary',
                                     'price' => 0,
                                     'variant' => $compVariant,
                                     'from_package' => true,
@@ -1251,6 +1253,7 @@ class LeisureController extends BaseController
                             'code' => $ticket->code,
                             'ticket_type' => $displayName,
                             'service_category' => $tt->service_category ?? 'access',
+                            'issuing_company' => $tt->issuing_company ?? 'primary',
                             'price' => $it['unit_price'],
                             'variant' => $variantMeta,
                         ];
@@ -1264,8 +1267,12 @@ class LeisureController extends BaseController
             return $this->error('Eroare la procesarea vânzării: ' . $e->getMessage(), 500);
         }
 
-        // Datele pentru chitanță 80mm
+        // Datele pentru chitanță 80mm + print termic POS.
+        // Returnam AMBII emitenti — frontend-ul de print alege per bilet pe baza
+        // ticket.issuing_company (primary/secondary). Pentru organizatorii fara
+        // secondary issuer, getIssuerData('secondary') intoarce primary (fallback).
         $issuer = $organizer->getIssuerData('primary');
+        $issuerSecondary = $organizer->has_secondary_issuer ? $organizer->getIssuerData('secondary') : null;
 
         return $this->success([
             'order' => [
@@ -1288,6 +1295,11 @@ class LeisureController extends BaseController
             'company_billing' => is_array($order->meta['company_billing'] ?? null) ? $order->meta['company_billing'] : null,
             'invoice_requested' => (bool) ($order->meta['invoice_requested'] ?? false),
             'issuer' => $issuer,
+            'issuer_secondary' => $issuerSecondary,
+            'event' => [
+                'id' => $eventModel->id,
+                'name' => is_array($eventModel->name) ? ($eventModel->name['ro'] ?? reset($eventModel->name)) : $eventModel->name,
+            ],
             'items' => array_map(function ($it) {
                 $baseName = is_array($it['ticket_type']->name) ? ($it['ticket_type']->name['ro'] ?? reset($it['ticket_type']->name)) : $it['ticket_type']->name;
                 $name = $it['variant'] ? ($baseName . ' — ' . $it['variant']['label']) : $baseName;

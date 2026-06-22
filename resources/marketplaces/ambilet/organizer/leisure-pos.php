@@ -954,31 +954,41 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         if (!(await PosPrinter.isReady())) return;
 
         const order = saleResponse?.order || {};
-        // Backend response: { order, customer, company_billing, issuer, items, tickets }
-        const issuer = saleResponse?.issuer || saleResponse?.issuer_data || {};
+        // Backend response: { order, customer, company_billing, issuer, issuer_secondary, event, items, tickets }
+        const issuerPrimary = saleResponse?.issuer || {};
+        const issuerSecondary = saleResponse?.issuer_secondary || null;
         const tickets = Array.isArray(saleResponse?.tickets) ? saleResponse.tickets : [];
         if (!tickets.length) return;
 
         const now = new Date();
         const pad = n => String(n).padStart(2, '0');
         const soldAt = pad(now.getDate()) + '.' + pad(now.getMonth()+1) + '.' + now.getFullYear() + ' ' + pad(now.getHours()) + ':' + pad(now.getMinutes());
-        const orgName = (issuer?.name || issuer?.company_name || 'AMBILET.RO').toUpperCase();
-        // Numele evenimentului: nu vine direct in raspuns, dar avem currentEventId
-        // → folosim numele din lista de evenimente incarcata initial.
-        const ev = (typeof leisureEvents !== 'undefined' && Array.isArray(leisureEvents))
-            ? leisureEvents.find(e => e.id === currentEventId) : null;
-        const eventName = (ev && (ev.title || ev.name)) || '';
+
+        // Numele evenimentului: backend trimite acum saleResponse.event.name; fallback la
+        // lista de evenimente incarcata initial daca lipseste.
+        let eventName = saleResponse?.event?.name || '';
+        if (!eventName) {
+            const ev = (typeof leisureEvents !== 'undefined' && Array.isArray(leisureEvents))
+                ? leisureEvents.find(e => e.id === currentEventId) : null;
+            eventName = (ev && (ev.title || ev.name)) || '';
+        }
         const visitDate = order?.visit_date || '';
 
         for (const t of tickets) {
             try {
-                // Backend issued[] shape: { id, code, ticket_type, service_category, price, variant }
+                // Backend issued[] shape: { id, code, ticket_type, service_category,
+                // issuing_company, price, variant }
                 const ticketName = t.ticket_type || t.ticket_type_name || 'Bilet';
                 const variantLabel = (t.variant && (t.variant.label || t.variant.name)) || '';
-                // QR contine codul scurt — scanner-ul ambilet il citeste direct.
                 const qrData = t.code || '';
+                // Alegerea emitentului: ticket-ul are issuing_company=primary|secondary.
+                // Daca organizatorul nu are has_secondary_issuer setat, backend-ul
+                // returneaza issuer_secondary=null si folosim primary ca fallback.
+                const issuerForTicket = (t.issuing_company === 'secondary' && issuerSecondary)
+                    ? issuerSecondary
+                    : issuerPrimary;
                 await PosPrinter.printTicket({
-                    issuer_name: orgName,
+                    issuer: issuerForTicket,
                     event_name: eventName,
                     ticket_type_name: ticketName,
                     variant_label: variantLabel,
@@ -988,7 +998,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     sold_at: soldAt,
                     pos_name: 'POS ' + (order?.cashier_name || 'on-site'),
                 });
-                // Mica pauza intre bilete ca buffer-ul imprimantei sa nu se infunde
                 await new Promise(r => setTimeout(r, 150));
             } catch (e) {
                 console.warn('[auto-print] ticket failed:', t.code, e);

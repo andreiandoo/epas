@@ -95,9 +95,16 @@
     const SIZE_NORMAL   = bytes(GS, 0x21, 0x00);
     const SIZE_2X2      = bytes(GS, 0x21, 0x11);               // 2× width + 2× height
     const SIZE_2H       = bytes(GS, 0x21, 0x01);               // 1× width + 2× height
+    const SIZE_SMALL    = bytes(ESC, 0x21, 0x01);              // Font B (mic, 9×17 dots)
+    // Cut with feed: GS V 66 n — avanseaza n dots si face partial cut.
+    // Bixolon SRP-350plusIII are gap-ul intre printhead si lama de tăiere ≈ 18mm.
+    // 18mm × 8 dots/mm = 144 dots. Folosim 150 ca buffer minim de siguranta;
+    // valoarea reala depinde de mecanism. Daca tot taie text, măreşte n.
+    const CUT_PARTIAL_FEED = (n) => bytes(GS, 0x56, 66, n & 0xff);
     const CUT_PARTIAL   = bytes(GS, 0x56, 0x01);
     const CUT_FULL      = bytes(GS, 0x56, 0x00);
-    const FEED_N        = (n) => bytes(ESC, 0x64, n & 0xff);    // ESC d n
+    const FEED_N        = (n) => bytes(ESC, 0x64, n & 0xff);    // ESC d n (n line feeds)
+    const FEED_DOTS     = (n) => bytes(ESC, 0x4A, n & 0xff);    // ESC J n (n dots ≈ n/8 mm)
     const LINE          = bytes(LF);
 
     function text(s)  { return bytes(ascii(s)); }
@@ -132,35 +139,68 @@
 
     /**
      * Construieste buffer-ul ESC/POS pentru un bilet.
-     * Layout fix 80mm (576 dots) × ~55mm (~440 dots) — incape:
-     *   [HEADER firmă]                              — normal, bold
-     *   [Eveniment]                                  — normal
-     *   ────────────────────────────                  — separator
-     *   [TIP BILET]                                  — 2× size, bold
-     *   [Cantitate / Variantă]                       — normal
-     *   [QR CODE ~24mm]
-     *   [Cod text]                                   — normal, bold
-     *   [Data vizita · vândut la]                    — small, normal
-     *   [POS · operator]                             — small, normal
-     *   [feed + cut]
      *
-     * ticket: { issuer_name, event_name, ticket_type_name, variant_label,
-     *           code, qr_data, visit_date, sold_at, pos_name }
+     * Layout 80mm (576 dots width) cu sectiuni:
+     *   [Numele firmei emitente]                     — bold
+     *   [CUI + Reg. Com.]                            — small, optional
+     *   [Adresa]                                     — small, optional
+     *   [Eveniment]                                  — normal
+     *   ──────────────────
+     *   [TIP BILET]                                  — 2× width+height, bold
+     *   [Variantă]                                   — normal
+     *   [QR CODE ~38mm]                              — size 10
+     *   [Cod text]                                   — bold
+     *   [Vizita · Vandut la]                         — normal
+     *   [@ POS / cashier]                            — normal
+     *   ──────────────────
+     *   [Ticketing prin ambilet.ro]                  — small
+     *   [feed 150 dots + partial cut]
+     *
+     * ticket: { issuer (object cu name/cui/reg_com/address), event_name,
+     *           ticket_type_name, variant_label, code, qr_data,
+     *           visit_date, sold_at, pos_name }
      */
     function buildTicketCommands(ticket) {
         const t = ticket || {};
         const parts = [INIT, ALIGN_CENTER];
 
-        // Header firma + eveniment
-        if (t.issuer_name) {
-            parts.push(BOLD_ON, lineOf(t.issuer_name.toUpperCase()), BOLD_OFF);
+        // ===== HEADER: societatea emitentă =====
+        // `issuer` poate fi obiect intors de getIssuerData() (name/tax_id/registration/
+        // address/city/county) sau forma simpla custom (name/cui/reg_com/address).
+        // Backward compat: t.issuer_name string ca fallback final.
+        const issuer = t.issuer || {};
+        const issuerName = (issuer.name || issuer.company_name || t.issuer_name || '').toString().trim();
+        if (issuerName) {
+            parts.push(BOLD_ON, lineOf(issuerName.toUpperCase()), BOLD_OFF);
         }
+        // CUI + Reg. Com. pe acelasi rand, font mic
+        const issuerCui = issuer.tax_id || issuer.cui || '';
+        const issuerReg = issuer.registration || issuer.reg_com || '';
+        const idLine = [];
+        if (issuerCui) idLine.push('CUI: ' + issuerCui);
+        if (issuerReg) idLine.push('Reg: ' + issuerReg);
+        if (idLine.length) {
+            parts.push(SIZE_SMALL, lineOf(idLine.join('  ')), SIZE_NORMAL);
+        }
+        // Adresa: dacă există city/county le concatenam la address
+        const addrParts = [];
+        if (issuer.address) addrParts.push(issuer.address);
+        if (issuer.city && !String(issuer.address || '').toLowerCase().includes(String(issuer.city).toLowerCase())) {
+            addrParts.push(issuer.city);
+        }
+        if (issuer.county) addrParts.push(issuer.county);
+        if (addrParts.length) {
+            const fullAddr = addrParts.join(', ').replace(/\s+/g, ' ').trim();
+            const shortAddr = fullAddr.length > 42 ? fullAddr.substring(0, 39) + '...' : fullAddr;
+            parts.push(SIZE_SMALL, lineOf(shortAddr), SIZE_NORMAL);
+        }
+
         if (t.event_name) {
             parts.push(lineOf(t.event_name));
         }
         parts.push(lineOf('--------------------------------'));
 
-        // Tip bilet (font dublu, bold)
+        // ===== TIP BILET =====
         if (t.ticket_type_name) {
             parts.push(SIZE_2X2, BOLD_ON, lineOf(t.ticket_type_name.toUpperCase()), BOLD_OFF, SIZE_NORMAL);
         }
@@ -168,19 +208,19 @@
             parts.push(lineOf(t.variant_label));
         }
 
-        // QR code
+        // ===== QR CODE (size 10 ≈ 38mm pentru un payload tipic) =====
         if (t.qr_data) {
             parts.push(FEED_N(1));
-            parts.push(qrCode(t.qr_data, { size: 6, ec: 49 }));
+            parts.push(qrCode(t.qr_data, { size: 10, ec: 49 }));
             parts.push(LINE);
         }
 
-        // Cod text (bold)
+        // Cod text (bold, sub QR)
         if (t.code) {
             parts.push(BOLD_ON, lineOf(t.code), BOLD_OFF);
         }
 
-        // Footer: data + sold_at + POS (compact, multi-line dacă nu încape)
+        // ===== FOOTER VANZARE =====
         const visitLine = [];
         if (t.visit_date) visitLine.push('Vizita: ' + t.visit_date);
         if (t.sold_at) visitLine.push('Vandut: ' + t.sold_at);
@@ -190,8 +230,15 @@
             parts.push(lineOf('@ ' + t.pos_name));
         }
 
-        // Feed + cut partial (lasa o punte mică pentru a tăia manual dacă e cazul)
-        parts.push(FEED_N(3), CUT_PARTIAL);
+        // ===== FOOTER GLOBAL ambilet.ro =====
+        parts.push(lineOf('--------------------------------'));
+        parts.push(SIZE_SMALL, lineOf('Ticketing prin ambilet.ro'), SIZE_NORMAL);
+
+        // ===== FEED + CUT =====
+        // Bixolon SRP-350plusIII are ~18mm offset intre printhead si lama de
+        // taiere. Avansam 150 dots (~19mm) ca textul de footer sa fie complet
+        // imprimat inainte de a tăia. Daca tot taie text, mareste valoarea.
+        parts.push(CUT_PARTIAL_FEED(150));
 
         return concat(parts);
     }
@@ -330,11 +377,16 @@
             const dateStr = pad(now.getDate()) + '.' + pad(now.getMonth() + 1) + '.' + now.getFullYear();
             const timeStr = pad(now.getHours()) + ':' + pad(now.getMinutes());
             const sample = Object.assign({
-                issuer_name: 'AMBILET.RO',
+                issuer: {
+                    name: 'AMBILET TICKETING SRL',
+                    cui: 'RO12345678',
+                    reg_com: 'J40/1234/2025',
+                    address: 'Str. Test Nr. 1, Bucuresti',
+                },
                 event_name: 'Test Bilet - Sf. Ana',
                 ticket_type_name: 'Bilet Adult',
                 code: 'AMB-TEST-X9K3PQ',
-                qr_data: 'https://ambilet.ro/v/AMB-TEST-X9K3PQ',
+                qr_data: 'AMB-TEST-X9K3PQ',
                 visit_date: dateStr,
                 sold_at: dateStr + ' ' + timeStr,
                 pos_name: 'POS Sf. Ana',
