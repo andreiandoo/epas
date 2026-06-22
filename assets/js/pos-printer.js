@@ -239,9 +239,11 @@
             parts.push(SIZE_NORMAL);
         }
 
-        if (t.event_name) {
-            parts.push(lineOf(t.event_name));
-        }
+        // Linie informativă fixă — branding ticketing platform.
+        // Anterior afișam event_name aici; eliminat la cererea utilizatorului
+        // (numele evenimentului apărea ca "Test Eveniment" la print test și
+        // duplicate cu titlul biletului). Înlocuit cu un identifier constant.
+        parts.push(SIZE_SMALL, lineOf('Ticketing prin AmBilet.ro'), SIZE_NORMAL);
         parts.push(lineOf('--------------------------------'));
 
         // ===== TIP BILET =====
@@ -289,13 +291,12 @@
         if (visitLine.length) {
             parts.push(SIZE_SMALL, lineOf(visitLine.join('  ')), SIZE_NORMAL);
         }
-        // POS + ambilet.ro pe ACELAȘI rând final pentru a economisi spațiu.
-        // Bixolon are 18mm gap fizic printhead→lamă; tot ce e după ultimul text
-        // devine spațiu gol obligatoriu. Compactăm cât putem.
-        const finalLine = [];
-        if (t.pos_name) finalLine.push('@ ' + t.pos_name);
-        finalLine.push('ambilet.ro');
-        parts.push(SIZE_SMALL, lineOf(finalLine.join(' · ')), SIZE_NORMAL);
+        // POS / cashier pe ultima linie (ambilet.ro e deja în header). Bixolon are
+        // ~18mm gap fizic printhead→lamă; tot ce e după ultima linie devine
+        // spațiu gol obligatoriu. Compactăm cât putem.
+        if (t.pos_name) {
+            parts.push(SIZE_SMALL, lineOf('@ ' + t.pos_name), SIZE_NORMAL);
+        }
 
         // ===== CUT =====
         // n=0 → cut imediat la cutting position. Gap-ul fizic ~18mm dintre
