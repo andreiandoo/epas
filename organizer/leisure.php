@@ -1288,6 +1288,8 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 // name poate fi string sau {ro,hu,en} — pastram structura completa
                 name: c.name || '',
                 sort_order: parseInt(c.sort_order ?? 0, 10),
+                image: c.image || null,
+                image_url: c.image_url || null,
             })).filter(c => {
                 const n = typeof c.name === 'string' ? c.name : (c.name?.ro || c.name?.en || '');
                 return c.id && n;
@@ -1317,10 +1319,21 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         const nameHu = (c) => typeof c.name === 'object' ? (c.name?.hu || '') : (c.translations?.hu || '');
         const nameEn = (c) => typeof c.name === 'object' ? (c.name?.en || '') : (c.translations?.en || '');
 
-        list.innerHTML = categoriesCache.map((c, i) => `
+        list.innerHTML = categoriesCache.map((c, i) => {
+            const imgUrl = c.image_url || (c.image ? c.image : '');
+            const hasImg = !!imgUrl;
+            return `
             <div class="cat-row p-2 bg-slate-50 rounded-lg" data-cat-idx="${i}">
                 <div class="flex items-center gap-2" draggable="true" data-cat-drag>
                     <span class="text-muted text-lg select-none cursor-move" title="Trage pentru a reordona">⋮⋮</span>
+                    <!-- Imagine reprezentativa per categorie (afisata pe pagina publica la pasul de alegere categorie) -->
+                    <label class="relative w-14 h-14 flex-shrink-0 border-2 border-dashed border-border rounded-lg flex items-center justify-center cursor-pointer hover:border-primary hover:bg-primary/5 transition-colors overflow-hidden" title="${hasImg ? 'Schimbă imaginea' : 'Adaugă imagine reprezentativă (recomandat 400×400px)'}" data-cat-img-zone>
+                        <input type="file" accept="image/jpeg,image/png,image/webp" class="absolute inset-0 opacity-0 cursor-pointer" data-cat-img-file>
+                        ${hasImg
+                            ? `<img src="${escapeHtml(imgUrl)}" class="w-full h-full object-cover" data-cat-img-thumb>`
+                            : `<span class="text-xl text-muted" data-cat-img-placeholder>🖼️</span>`}
+                        <span class="hidden absolute inset-0 bg-black/50 text-white text-[10px] flex items-center justify-center" data-cat-img-loading>...</span>
+                    </label>
                     <input type="text" data-cat-name data-tr-locale="ro" class="flex-1 px-2 py-1 text-sm border border-border rounded bg-white" placeholder="🇷🇴 ex: Bilete individuale" value="${escapeHtml(nameRo(c))}">
                     <code class="text-[10px] text-muted bg-white border border-border rounded px-1.5 py-1" title="ID intern, folosit la asocierea biletelor. Nu se schimbă după creare.">${escapeHtml(c.id)}</code>
                     <button type="button" data-cat-rm class="text-rose-600 hover:bg-rose-100 px-2 py-1 rounded text-sm" title="Șterge categoria (biletele rămân ne-asignate)">🗑</button>
@@ -1333,7 +1346,43 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     </div>
                 </details>
             </div>
-        `).join('');
+            `;
+        }).join('');
+
+        // Handler upload imagine per categorie. Reutilizeaza endpoint-ul
+        // /leisure/upload-image cu type=categories (separa storage dir).
+        // Salveaza in categoriesCache[i].image (path) + .image_url (URL public)
+        // ca renderCategoryList sa o afiseze imediat. Save persistent la
+        // saveCategoriesList (deja existent).
+        list.querySelectorAll('[data-cat-img-file]').forEach((input) => {
+            input.addEventListener('change', async (e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                const row = input.closest('.cat-row');
+                const i = parseInt(row.dataset.catIdx, 10);
+                if (isNaN(i)) return;
+                const loading = row.querySelector('[data-cat-img-loading]');
+                if (loading) loading.classList.remove('hidden');
+                try {
+                    const fd = new FormData();
+                    fd.append('image', file);
+                    fd.append('type', 'categories');
+                    const res = await AmbiletAPI.upload(`/organizer/events/${currentEventId}/leisure/upload-image`, fd);
+                    if (res?.success && res.data) {
+                        categoriesCache[i].image = res.data.path || null;
+                        categoriesCache[i].image_url = res.data.url || null;
+                        renderCategoryList();
+                    } else {
+                        alert('Eroare upload imagine categorie: ' + (res?.message || 'necunoscut'));
+                    }
+                } catch (err) {
+                    console.error('[cat-img-upload]', err);
+                    alert('Eroare upload imagine categorie: ' + (err?.message || 'necunoscut'));
+                } finally {
+                    if (loading) loading.classList.add('hidden');
+                }
+            });
+        });
 
         // Bind input updates — sincronizam name = {ro,hu,en} ca obiect daca avem traduceri.
         list.querySelectorAll('[data-cat-name]').forEach((inp) => {
@@ -1433,6 +1482,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     id: c.id,
                     name: cleanName,
                     sort_order: (i + 1) * 10,
+                    image: c.image || null,
                 };
             })
             .filter(c => {

@@ -20,9 +20,40 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 <div class="flex flex-col flex-1 min-h-screen lg:ml-0">
     <?php require_once dirname(__DIR__) . '/includes/organizer-topbar.php'; ?>
     <main class="flex-1 p-4 lg:p-8 print:p-0">
-        <div class="mb-6 print:hidden">
-            <h1 class="text-2xl font-bold text-secondary lg:text-3xl">🎫 POS — Emite bilete</h1>
-            <p class="mt-1 text-sm text-muted">Vânzare on-site rapidă cu chitanță 80mm.</p>
+        <div class="mb-6 print:hidden flex flex-wrap items-start justify-between gap-4">
+            <div>
+                <h1 class="text-2xl font-bold text-secondary lg:text-3xl">🎫 POS — Emite bilete</h1>
+                <p class="mt-1 text-sm text-muted">Vânzare on-site rapidă cu chitanță 80mm.</p>
+            </div>
+            <!-- Panou imprimantă termică (WebUSB) — collapsible -->
+            <details id="lv-printer-panel" class="bg-white border border-border rounded-xl text-sm min-w-[320px]">
+                <summary class="px-4 py-2.5 cursor-pointer font-semibold text-secondary flex items-center gap-2">
+                    <span>🖨️ Imprimantă termică</span>
+                    <span id="lv-printer-status" class="ml-auto inline-flex items-center gap-1.5 text-xs">
+                        <span id="lv-printer-status-dot" class="w-2 h-2 rounded-full bg-slate-300"></span>
+                        <span id="lv-printer-status-text" class="text-muted">Verificare...</span>
+                    </span>
+                </summary>
+                <div class="px-4 py-3 border-t border-border space-y-3">
+                    <p id="lv-printer-info" class="text-xs text-muted leading-snug"></p>
+                    <p id="lv-printer-error" class="hidden text-xs text-rose-700 leading-snug bg-rose-50 border border-rose-200 rounded p-2"></p>
+                    <div class="flex flex-wrap gap-2">
+                        <button id="lv-printer-connect" type="button" class="flex-1 px-3 py-2 text-xs font-semibold bg-primary text-white rounded hover:bg-primary-dark disabled:opacity-50">
+                            🔌 Conectează
+                        </button>
+                        <button id="lv-printer-test" type="button" disabled class="flex-1 px-3 py-2 text-xs font-semibold border border-border rounded hover:bg-slate-50 disabled:opacity-50">
+                            🧪 Print test
+                        </button>
+                    </div>
+                    <label class="flex items-center gap-2 text-xs">
+                        <input id="lv-printer-auto" type="checkbox" class="w-4 h-4 accent-primary">
+                        <span class="text-secondary">Print automat după fiecare comandă</span>
+                    </label>
+                    <p class="text-[10px] text-muted leading-snug">
+                        Cere Chrome / Edge. Pe Windows, dacă imprimanta nu apare în lista, schimbă driver-ul ei cu <strong>WinUSB</strong> folosind <a href="https://zadig.akeo.ie/" target="_blank" rel="noopener" class="text-primary underline">Zadig</a> (1× per stație).
+                    </p>
+                </div>
+            </details>
         </div>
 
         <div id="lv-error" class="hidden mb-4 p-4 bg-rose-50 border border-rose-200 rounded-xl text-sm text-rose-900 print:hidden"></div>
@@ -133,6 +164,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         <div id="lv-receipt" class="hidden"></div>
     </main>
 </div>
+<script src="<?= asset('assets/js/pos-printer.js') ?>"></script>
 <script>
 (function(){
     const $ = (id) => document.getElementById(id);
@@ -622,13 +654,20 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         try {
             const res = await AmbiletAPI.post(`/organizer/events/${currentEventId}/leisure/pos-sale`, body);
             const data = res.data || {};
-            // Render chitanță și auto-print
+            // Render chitanță și auto-print (browser dialog pentru chitanță hartie A4/POS print)
             $('lv-receipt').innerHTML = buildReceiptHtml(data);
             $('lv-receipt').classList.remove('hidden');
             setTimeout(() => {
                 window.print();
                 $('lv-receipt').classList.add('hidden');
             }, 200);
+
+            // Print termic bilete (WebUSB ESC/POS) — non-blocking, eseuc != esec vanzare.
+            // Toggle-ul "Print automat dupa fiecare comanda" e in panou imprimanta termica.
+            if (typeof window.posAutoPrintTickets === 'function') {
+                try { await window.posAutoPrintTickets(data); }
+                catch (e) { console.warn('[checkout] auto-print failed:', e); }
+            }
             // Daca operatorul a cerut factura si exista date firma → ofera-i butonul de generare
             const orderId = data?.order?.id;
             const wantsInvoice = !!(data?.invoice_requested && data?.company_billing && orderId);
@@ -763,6 +802,9 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             renderCart();
         });
 
+        // ============ Panou imprimantă termică (WebUSB) ============
+        initPrinterPanel();
+
         // ANAF lookup: completeaza automat denumire/sediu/reg.com/oras pe baza CUI.
         // Endpoint reutilizat: POST /organizer/verify-cui (folosit deja la onboarding).
         $('lv-co-anaf-btn')?.addEventListener('click', async () => {
@@ -797,6 +839,163 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             }
         });
     });
+
+    // ============ Panou imprimanta termica WebUSB ============
+    function refreshPrinterUi() {
+        const dot = $('lv-printer-status-dot');
+        const txt = $('lv-printer-status-text');
+        const info = $('lv-printer-info');
+        const testBtn = $('lv-printer-test');
+        const connectBtn = $('lv-printer-connect');
+        const autoCheck = $('lv-printer-auto');
+        const err = $('lv-printer-error');
+        if (!dot || !txt) return;
+
+        if (typeof PosPrinter === 'undefined' || !PosPrinter.isSupported()) {
+            dot.className = 'w-2 h-2 rounded-full bg-rose-500';
+            txt.textContent = 'Browser neacceptat';
+            txt.className = 'text-rose-700';
+            if (info) info.textContent = 'WebUSB nu e suportat aici. Foloseşte Chrome sau Edge.';
+            if (connectBtn) connectBtn.disabled = true;
+            if (testBtn) testBtn.disabled = true;
+            if (autoCheck) { autoCheck.disabled = true; autoCheck.checked = false; }
+            return;
+        }
+
+        PosPrinter.isReady().then(ready => {
+            if (ready) {
+                dot.className = 'w-2 h-2 rounded-full bg-emerald-500';
+                txt.textContent = 'Conectată';
+                txt.className = 'text-emerald-700';
+                PosPrinter.deviceInfo().then(d => {
+                    if (info && d) info.textContent = (d.manufacturerName || 'ESC/POS') + ' ' + (d.productName || '') + ' · VID 0x' + d.vendorId.toString(16).padStart(4, '0');
+                });
+                if (testBtn) testBtn.disabled = false;
+                if (connectBtn) connectBtn.textContent = '🔁 Schimbă imprimanta';
+            } else {
+                dot.className = 'w-2 h-2 rounded-full bg-amber-500';
+                txt.textContent = 'Neconectată';
+                txt.className = 'text-amber-700';
+                if (info) info.textContent = 'Apasă „Conectează" şi alege imprimanta din popup-ul browser-ului.';
+                if (testBtn) testBtn.disabled = true;
+                if (connectBtn) connectBtn.textContent = '🔌 Conectează';
+            }
+            if (autoCheck) {
+                autoCheck.checked = PosPrinter.getAutoPrintEnabled();
+                autoCheck.disabled = false;
+            }
+        });
+        if (err) err.classList.add('hidden');
+    }
+
+    function initPrinterPanel() {
+        refreshPrinterUi();
+
+        const connectBtn = $('lv-printer-connect');
+        if (connectBtn) connectBtn.addEventListener('click', async () => {
+            const err = $('lv-printer-error');
+            connectBtn.disabled = true;
+            try {
+                await PosPrinter.connect();
+                refreshPrinterUi();
+            } catch (e) {
+                console.warn('[printer] connect failed:', e);
+                if (err) {
+                    err.textContent = e?.message || 'Conectare eşuată';
+                    err.classList.remove('hidden');
+                }
+            } finally {
+                connectBtn.disabled = false;
+            }
+        });
+
+        const testBtn = $('lv-printer-test');
+        if (testBtn) testBtn.addEventListener('click', async () => {
+            const err = $('lv-printer-error');
+            testBtn.disabled = true;
+            testBtn.textContent = '⏳ Trimit...';
+            try {
+                await PosPrinter.printTestTicket({
+                    issuer_name: 'AMBILET.RO',
+                    event_name: 'Lacul Sfanta Ana',
+                    pos_name: 'POS Sf. Ana',
+                });
+                testBtn.textContent = '✓ Trimis!';
+                setTimeout(() => { testBtn.textContent = '🧪 Print test'; testBtn.disabled = false; }, 1500);
+            } catch (e) {
+                console.warn('[printer] test print failed:', e);
+                testBtn.textContent = '🧪 Print test';
+                testBtn.disabled = false;
+                if (err) {
+                    err.textContent = 'Print test eşuat: ' + (e?.message || 'necunoscut');
+                    err.classList.remove('hidden');
+                }
+            }
+        });
+
+        const autoCheck = $('lv-printer-auto');
+        if (autoCheck) autoCheck.addEventListener('change', () => {
+            PosPrinter.setAutoPrintEnabled(autoCheck.checked);
+        });
+
+        // Hot-plug: actualizam UI-ul cand utilizatorul deconecteaza/reconecteaza USB
+        window.addEventListener('posprinter:disconnected', refreshPrinterUi);
+        window.addEventListener('posprinter:connected', refreshPrinterUi);
+    }
+
+    // ============ Auto-print dupa checkout reusit ============
+    // Apelat din checkout() dupa raspunsul pos-sale. Daca toggle-ul e activ
+    // si avem imprimanta conectata, trimite cate un bilet ESC/POS per ticket.
+    // Esecul de print NU blocheaza vanzarea — biletele sunt deja emise in DB,
+    // operatorul vede butonul de Re-print pe ultima comanda.
+    window.posAutoPrintTickets = async function (saleResponse) {
+        if (typeof PosPrinter === 'undefined' || !PosPrinter.isSupported()) return;
+        if (!PosPrinter.getAutoPrintEnabled()) return;
+        if (!(await PosPrinter.isReady())) return;
+
+        const order = saleResponse?.order || {};
+        // Backend response: { order, customer, company_billing, issuer, items, tickets }
+        const issuer = saleResponse?.issuer || saleResponse?.issuer_data || {};
+        const tickets = Array.isArray(saleResponse?.tickets) ? saleResponse.tickets : [];
+        if (!tickets.length) return;
+
+        const now = new Date();
+        const pad = n => String(n).padStart(2, '0');
+        const soldAt = pad(now.getDate()) + '.' + pad(now.getMonth()+1) + '.' + now.getFullYear() + ' ' + pad(now.getHours()) + ':' + pad(now.getMinutes());
+        const orgName = (issuer?.name || issuer?.company_name || 'AMBILET.RO').toUpperCase();
+        // Numele evenimentului: nu vine direct in raspuns, dar avem currentEventId
+        // → folosim numele din lista de evenimente incarcata initial.
+        const ev = (typeof leisureEvents !== 'undefined' && Array.isArray(leisureEvents))
+            ? leisureEvents.find(e => e.id === currentEventId) : null;
+        const eventName = (ev && (ev.title || ev.name)) || '';
+        const visitDate = order?.visit_date || '';
+
+        for (const t of tickets) {
+            try {
+                // Backend issued[] shape: { id, code, ticket_type, service_category, price, variant }
+                const ticketName = t.ticket_type || t.ticket_type_name || 'Bilet';
+                const variantLabel = (t.variant && (t.variant.label || t.variant.name)) || '';
+                // QR contine codul scurt — scanner-ul ambilet il citeste direct.
+                const qrData = t.code || '';
+                await PosPrinter.printTicket({
+                    issuer_name: orgName,
+                    event_name: eventName,
+                    ticket_type_name: ticketName,
+                    variant_label: variantLabel,
+                    code: t.code || '',
+                    qr_data: qrData,
+                    visit_date: visitDate,
+                    sold_at: soldAt,
+                    pos_name: 'POS ' + (order?.cashier_name || 'on-site'),
+                });
+                // Mica pauza intre bilete ca buffer-ul imprimantei sa nu se infunde
+                await new Promise(r => setTimeout(r, 150));
+            } catch (e) {
+                console.warn('[auto-print] ticket failed:', t.code, e);
+                // continuam cu urmatorul
+            }
+        }
+    };
 })();
 </script>
 <?php
