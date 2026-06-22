@@ -908,6 +908,7 @@ class LeisureController extends BaseController
                     'slot_time' => $slotTime,
                     'duration_minutes' => (int) ($slotsConfig['duration_minutes'] ?? 30),
                     'unit_pricing' => $slotsConfig['unit_pricing'] ?? 'per_person',
+                    'capacity' => $capacity, // pentru SlotBookingService::reserve in tranzactie
                 ];
             }
 
@@ -1076,6 +1077,36 @@ class LeisureController extends BaseController
                 $packageOutputs = is_array($tt->meta['package_outputs'] ?? null)
                     ? $tt->meta['package_outputs']
                     : [];
+
+                // B — Reservation atomică în leisure_slot_bookings pentru produsele
+                // cu sloturi orare (Ghidaj, Vaporașe, etc.). Verificarea anterioară
+                // bazată pe COUNT(*) pe OrderItem (linii ~898) era informativă —
+                // această reserve() lockează rândul + decide final dacă mai sunt
+                // locuri. Eseuc → SlotSoldOutException → outer tranzacție rollback
+                // → întoarcem 422 user-facing.
+                if (!empty($it['slot']) && is_array($it['slot'])) {
+                    $slotConsume = ($it['slot']['unit_pricing'] ?? 'per_person') === 'per_slot'
+                        ? (int) ($it['slot']['capacity'] ?? 1)
+                        : (int) $it['qty'];
+                    try {
+                        app(\App\Services\Leisure\SlotBookingService::class)->reserve(
+                            $eventModel->id,
+                            $tt->id,
+                            $visitDate,
+                            (string) $it['slot']['slot_time'],
+                            (int) ($it['slot']['capacity'] ?? 1),
+                            $slotConsume,
+                        );
+                    } catch (\App\Services\Leisure\SlotSoldOutException $e) {
+                        // Rollback automat la final-of-foreach când outer catch
+                        // intercepteaza. Re-throw cu context user-facing.
+                        throw new \RuntimeException(
+                            'Cursa de la ' . $it['slot']['slot_time'] . ' s-a umplut între timp. Reîncearcă cu altă oră.',
+                            422,
+                            $e
+                        );
+                    }
+                }
 
                 $orderItem = OrderItem::create([
                     'order_id' => $order->id,
@@ -1264,6 +1295,12 @@ class LeisureController extends BaseController
             DB::commit();
         } catch (\Throwable $e) {
             DB::rollBack();
+            // Excepții cu code 422 (slot sold out etc.) → user-facing 422 cu mesajul lor.
+            // Restul → 500 generic ca până acum.
+            $code = $e->getCode();
+            if (is_int($code) && $code >= 400 && $code < 500) {
+                return $this->error($e->getMessage(), $code);
+            }
             return $this->error('Eroare la procesarea vânzării: ' . $e->getMessage(), 500);
         }
 

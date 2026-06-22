@@ -162,12 +162,23 @@ class DateAvailabilityController extends BaseController
                     }
                 }
 
-                // Build slot availability (could track per-slot sales via date_capacities notes or meta)
-                $tourSlots = array_map(fn ($time) => [
-                    'time' => $time,
-                    'available' => true, // TODO: track per-slot capacity when needed
-                    'max' => $maxPerSlot,
-                ], $slotTimes);
+                // B — Slot capacity tracking real (leisure_slot_bookings).
+                // Pentru fiecare slot din slot_times, calculam remaining =
+                // capacity - bookings_count. Slot fără rând în DB = full
+                // capacity disponibilă.
+                $bookingsMap = app(\App\Services\Leisure\SlotBookingService::class)
+                    ->getBookingsMap($event->id, $tt->id, $dateStr);
+                $tourSlots = array_map(function ($time) use ($maxPerSlot, $bookingsMap) {
+                    $count = (int) ($bookingsMap[$time] ?? 0);
+                    $remaining = max(0, $maxPerSlot - $count);
+                    return [
+                        'time' => $time,
+                        'available' => $remaining > 0,
+                        'max' => $maxPerSlot,
+                        'remaining' => $remaining,
+                        'sold_out' => $remaining === 0,
+                    ];
+                }, $slotTimes);
             }
 
             // Image din meta (setat prin FileUpload pe meta.image in Filament).
@@ -204,20 +215,54 @@ class DateAvailabilityController extends BaseController
                 }
             }
 
-            // Slot-uri pe oră (F3 — Vaporașe etc.)
+            // Slot-uri pe oră (F3 — Vaporașe / Ghidaj etc.)
             $slotsConfig = null;
             $rawSlotsConfig = $tt->meta['slots_config'] ?? null;
             if (is_array($rawSlotsConfig) && !empty($rawSlotsConfig['enabled'])) {
+                $firstSlot = (string) ($rawSlotsConfig['first_slot'] ?? '09:00');
+                $lastSlot  = (string) ($rawSlotsConfig['last_slot'] ?? '18:00');
+                $intervalMin = max(5, (int) ($rawSlotsConfig['interval_minutes'] ?? 30));
+                $capacityPer = max(1, (int) ($rawSlotsConfig['capacity_per_slot'] ?? 1));
+
+                // Generam lista de slot-uri pentru ziua selectata + atasam
+                // remaining real din leisure_slot_bookings.
+                $slotsList = [];
+                try {
+                    $bookingsMap = app(\App\Services\Leisure\SlotBookingService::class)
+                        ->getBookingsMap($event->id, $tt->id, $dateStr);
+                    [$fh, $fm] = array_map('intval', explode(':', $firstSlot . ':0'));
+                    [$lh, $lm] = array_map('intval', explode(':', $lastSlot . ':0'));
+                    $minutes = $fh * 60 + $fm;
+                    $endMinutes = $lh * 60 + $lm;
+                    while ($minutes <= $endMinutes) {
+                        $time = sprintf('%02d:%02d', intdiv($minutes, 60), $minutes % 60);
+                        $count = (int) ($bookingsMap[$time] ?? 0);
+                        $remaining = max(0, $capacityPer - $count);
+                        $slotsList[] = [
+                            'time' => $time,
+                            'remaining' => $remaining,
+                            'sold_out' => $remaining === 0,
+                            'capacity' => $capacityPer,
+                        ];
+                        $minutes += $intervalMin;
+                    }
+                } catch (\Throwable $e) {
+                    // Eseuc tabelul lipseste pe staging vechi → returnam lista
+                    // fara remaining (slot disponibil oricum, comportament vechi).
+                    \Log::warning('[slots_config] getBookingsMap failed: ' . $e->getMessage());
+                }
+
                 $slotsConfig = [
                     'enabled' => true,
-                    'first_slot' => (string) ($rawSlotsConfig['first_slot'] ?? '09:00'),
-                    'last_slot' => (string) ($rawSlotsConfig['last_slot'] ?? '18:00'),
-                    'interval_minutes' => max(5, (int) ($rawSlotsConfig['interval_minutes'] ?? 30)),
+                    'first_slot' => $firstSlot,
+                    'last_slot' => $lastSlot,
+                    'interval_minutes' => $intervalMin,
                     'duration_minutes' => max(5, (int) ($rawSlotsConfig['duration_minutes'] ?? 30)),
-                    'capacity_per_slot' => max(1, (int) ($rawSlotsConfig['capacity_per_slot'] ?? 1)),
+                    'capacity_per_slot' => $capacityPer,
                     'unit_pricing' => in_array(($rawSlotsConfig['unit_pricing'] ?? 'per_person'), ['per_person', 'per_slot'], true)
                         ? $rawSlotsConfig['unit_pricing']
                         : 'per_person',
+                    'slots' => $slotsList,
                 ];
             }
 

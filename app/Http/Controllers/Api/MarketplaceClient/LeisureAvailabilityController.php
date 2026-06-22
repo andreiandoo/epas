@@ -56,26 +56,17 @@ class LeisureAvailabilityController extends BaseController
         $capacity = max(1, (int) ($config['capacity_per_slot'] ?? 1));
         $isPerSlot = ($config['unit_pricing'] ?? 'per_person') === 'per_slot';
 
-        // Aggregate sales per slot — OrderItem.meta->>'slot_time' = '09:00' și meta->>'visit_date' = data
+        // B — Citire din leisure_slot_bookings (rapid, indexat). Vechiul query
+        // pe OrderItem.meta era O(N) pe toate vânzările zilei × JSON path lookup,
+        // si nu reflectă instant POS-sales până la commit (race). Tabelul nou e
+        // actualizat atomic în tranzacție prin SlotBookingService::reserve().
         $dateStr = $date->toDateString();
-        $bookings = OrderItem::query()
-            ->where('ticket_type_id', $tt->id)
-            ->whereHas('order', fn ($q) => $q->whereIn('status', ['paid', 'completed', 'pending']))
-            ->where(function ($q) use ($dateStr) {
-                $q->whereRaw("meta->>'visit_date' = ?", [$dateStr]);
-            })
-            ->get(['id', 'quantity', 'meta']);
-
-        $soldPerSlot = [];
-        foreach ($bookings as $b) {
-            $st = $b->meta['slot_time'] ?? null;
-            if (!$st) continue;
-            $soldPerSlot[$st] = ($soldPerSlot[$st] ?? 0) + ($isPerSlot ? $capacity : (int) $b->quantity);
-        }
+        $soldPerSlot = app(\App\Services\Leisure\SlotBookingService::class)
+            ->getBookingsMap($event->id, $tt->id, $dateStr);
 
         $result = [];
         foreach ($slots as $slot) {
-            $sold = $soldPerSlot[$slot] ?? 0;
+            $sold = (int) ($soldPerSlot[$slot] ?? 0);
             $remaining = max(0, $capacity - $sold);
             $result[] = [
                 'time' => $slot,
