@@ -96,10 +96,11 @@
     const SIZE_2X2      = bytes(GS, 0x21, 0x11);               // 2× width + 2× height
     const SIZE_2H       = bytes(GS, 0x21, 0x01);               // 1× width + 2× height
     const SIZE_SMALL    = bytes(ESC, 0x21, 0x01);              // Font B (mic, 9×17 dots)
-    // Cut with feed: GS V 66 n — avanseaza n dots si face partial cut.
-    // Bixolon SRP-350plusIII are gap-ul intre printhead si lama de tăiere ≈ 18mm.
-    // 18mm × 8 dots/mm = 144 dots. Folosim 150 ca buffer minim de siguranta;
-    // valoarea reala depinde de mecanism. Daca tot taie text, măreşte n.
+    // Cut with feed: GS V 66 n — avanseaza n dots PESTE cutting position (gap-ul
+    // printhead→lama, ~18mm fizic pe Bixolon). n=0 înseamnă cut imediat la
+    // cutting position — gap-ul fizic de 18mm dintre ultima linie text și
+    // marginea biletului rămâne ca un padding INEVITABIL dat de mecanism.
+    // Valori n > 0 ADAUGĂ spațiu gol peste cei 18mm fizici.
     const CUT_PARTIAL_FEED = (n) => bytes(GS, 0x56, 66, n & 0xff);
     const CUT_PARTIAL   = bytes(GS, 0x56, 0x01);
     const CUT_FULL      = bytes(GS, 0x56, 0x00);
@@ -208,10 +209,17 @@
             parts.push(lineOf(t.variant_label));
         }
 
-        // ===== QR CODE (size 10 ≈ 38mm pentru un payload tipic) =====
+        // ===== QR CODE =====
+        // Forțăm payload-ul ca URL (ambilet.ro/v/{code}) — un payload mai lung
+        // determină automat QR-ul să crească la o versiune cu mai multe module
+        // (21×21 → 25×25 → 29×29), deci fizic mai mare la aceeași module size.
+        // Combinat cu size=12 dă ~30-36mm pe Bixolon SRP-350plusIII.
         if (t.qr_data) {
+            const qrPayload = (t.qr_data.startsWith('http') || t.qr_data.length > 20)
+                ? t.qr_data
+                : ('https://ambilet.ro/v/' + t.qr_data);
             parts.push(FEED_N(1));
-            parts.push(qrCode(t.qr_data, { size: 10, ec: 49 }));
+            parts.push(qrCode(qrPayload, { size: 12, ec: 49 }));
             parts.push(LINE);
         }
 
@@ -220,25 +228,27 @@
             parts.push(BOLD_ON, lineOf(t.code), BOLD_OFF);
         }
 
-        // ===== FOOTER VANZARE =====
+        // ===== FOOTER VANZARE (compact) =====
         const visitLine = [];
         if (t.visit_date) visitLine.push('Vizita: ' + t.visit_date);
         if (t.sold_at) visitLine.push('Vandut: ' + t.sold_at);
-        if (visitLine.length) parts.push(lineOf(visitLine.join('  ')));
-
-        if (t.pos_name) {
-            parts.push(lineOf('@ ' + t.pos_name));
+        if (visitLine.length) {
+            parts.push(SIZE_SMALL, lineOf(visitLine.join('  ')), SIZE_NORMAL);
         }
+        // POS + ambilet.ro pe ACELAȘI rând final pentru a economisi spațiu.
+        // Bixolon are 18mm gap fizic printhead→lamă; tot ce e după ultimul text
+        // devine spațiu gol obligatoriu. Compactăm cât putem.
+        const finalLine = [];
+        if (t.pos_name) finalLine.push('@ ' + t.pos_name);
+        finalLine.push('ambilet.ro');
+        parts.push(SIZE_SMALL, lineOf(finalLine.join(' · ')), SIZE_NORMAL);
 
-        // ===== FOOTER GLOBAL ambilet.ro =====
-        parts.push(lineOf('--------------------------------'));
-        parts.push(SIZE_SMALL, lineOf('Ticketing prin ambilet.ro'), SIZE_NORMAL);
-
-        // ===== FEED + CUT =====
-        // Bixolon SRP-350plusIII are ~18mm offset intre printhead si lama de
-        // taiere. Avansam 150 dots (~19mm) ca textul de footer sa fie complet
-        // imprimat inainte de a tăia. Daca tot taie text, mareste valoarea.
-        parts.push(CUT_PARTIAL_FEED(150));
+        // ===== CUT =====
+        // n=0 → cut imediat la cutting position. Gap-ul fizic ~18mm dintre
+        // ultima linie printată și marginea biletului rămâne (mecanism Bixolon).
+        // Dacă vrei și mai puțin spațiu gol, vezi varianta GS V 1 (legacy
+        // partial cut) — unele firmware-uri Bixolon avansează doar 12mm.
+        parts.push(CUT_PARTIAL_FEED(0));
 
         return concat(parts);
     }
@@ -376,20 +386,18 @@
             const pad = (n) => String(n).padStart(2, '0');
             const dateStr = pad(now.getDate()) + '.' + pad(now.getMonth() + 1) + '.' + now.getFullYear();
             const timeStr = pad(now.getHours()) + ':' + pad(now.getMinutes());
+            // NOTĂ: issuer e LĂSAT GOL în default — UI-ul (leisure-pos) îl
+            // injectează prin overrides cu datele reale ale organizatorului
+            // încărcate din /leisure/config. Dacă apelezi fără overrides,
+            // header-ul firmă va lipsi (acceptabil pentru un smoke test).
             const sample = Object.assign({
-                issuer: {
-                    name: 'AMBILET TICKETING SRL',
-                    cui: 'RO12345678',
-                    reg_com: 'J40/1234/2025',
-                    address: 'Str. Test Nr. 1, Bucuresti',
-                },
-                event_name: 'Test Bilet - Sf. Ana',
+                event_name: 'Test bilet',
                 ticket_type_name: 'Bilet Adult',
-                code: 'AMB-TEST-X9K3PQ',
-                qr_data: 'AMB-TEST-X9K3PQ',
+                code: 'TEST-X9K3PQ',
+                qr_data: 'TEST-X9K3PQ',
                 visit_date: dateStr,
                 sold_at: dateStr + ' ' + timeStr,
-                pos_name: 'POS Sf. Ana',
+                pos_name: 'POS Test',
             }, overrides || {});
             return await this.printTicket(sample);
         },

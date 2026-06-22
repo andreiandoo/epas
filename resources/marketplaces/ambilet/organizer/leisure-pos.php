@@ -177,6 +177,10 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
     // C2: categoriile custom de afișare definite în /organizator/leisure tab Produse.
     // Folosite pentru gruparea + ordonarea produselor în panoul POS.
     let ticketCategories = [];
+    // Issuers organizator (primary + secondary daca exista) — incarcati din /leisure/config.
+    // Folositi de PosPrinter ca header pe biletele termice.
+    let posIssuerPrimary = null;
+    let posIssuerSecondary = null;
     // Stare deschis/închis pentru accordions (per categorie id). Default: toate deschise.
     let categoryAccordionState = {};
 
@@ -778,6 +782,12 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             types = res.data?.ticket_types || [];
             ticketCategories = Array.isArray(res.data?.ticket_categories) ? res.data.ticket_categories : [];
             if (res.data?.commission) commission = res.data.commission;
+            // Issuers: backend returneaza issuers.primary (mereu) si issuers.secondary
+            // (doar daca organizatorul are has_secondary_issuer). Salvam ambii ca
+            // sa fie disponibili pentru print termic (per bilet, dupa issuing_company).
+            const issuers = res.data?.issuers || {};
+            posIssuerPrimary = issuers.primary || null;
+            posIssuerSecondary = issuers.secondary || null;
         } catch (e) {
             $('lv-error').textContent = 'Eroare la încărcarea biletelor: ' + (e?.message || '');
             $('lv-error').classList.remove('hidden');
@@ -915,10 +925,16 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             testBtn.disabled = true;
             testBtn.textContent = '⏳ Trimit...';
             try {
+                // Issuer-ul real al organizatorului (incarcat din /leisure/config la initLoad).
+                // Daca config-ul n-a apucat sa se incarce, lasam undefined → printTestTicket
+                // afiseaza fara header firma (smoke test minimal).
+                const ev = (typeof leisureEvents !== 'undefined' && Array.isArray(leisureEvents))
+                    ? leisureEvents.find(e => e.id === currentEventId) : null;
+                const evName = (ev && (ev.title || ev.name)) || 'Test eveniment';
                 await PosPrinter.printTestTicket({
-                    issuer_name: 'AMBILET.RO',
-                    event_name: 'Lacul Sfanta Ana',
-                    pos_name: 'POS Sf. Ana',
+                    issuer: posIssuerPrimary || undefined,
+                    event_name: evName,
+                    pos_name: 'POS test',
                 });
                 testBtn.textContent = '✓ Trimis!';
                 setTimeout(() => { testBtn.textContent = '🧪 Print test'; testBtn.disabled = false; }, 1500);
