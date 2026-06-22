@@ -72,17 +72,37 @@
     // care să acopere ăâîșțĂÂÎȘȚ + maghiar (őűÖÜ). Decât să configurăm codepage
     // diferit per imprimantă (fragil), facem ASCII-fold — operatorul vede textul
     // citibil indiferent de hardware. RO/HU/EN sunt toate acoperite.
+    //
+    // ATENȚIE: în Romanian modern se folosește comma-below pentru ș (U+0219) și
+    // ț (U+021B), care sunt în Latin Extended-B (U+0180-U+024F). Versiunile
+    // cedilla `ş` (U+015F) și `ţ` (U+0163) sunt în Latin Extended-A. Ambele
+    // forme sunt acoperite explicit.
     const DIACRITIC_MAP = {
-        'ă': 'a', 'â': 'a', 'î': 'i', 'ș': 's', 'ş': 's', 'ț': 't', 'ţ': 't',
-        'Ă': 'A', 'Â': 'A', 'Î': 'I', 'Ș': 'S', 'Ş': 'S', 'Ț': 'T', 'Ţ': 'T',
-        'á': 'a', 'é': 'e', 'í': 'i', 'ó': 'o', 'ú': 'u', 'ñ': 'n',
-        'Á': 'A', 'É': 'E', 'Í': 'I', 'Ó': 'O', 'Ú': 'U', 'Ñ': 'N',
+        // Comma-below (Romanian modern, U+0218..U+021B)
+        'Ș': 'S', 'ș': 's', 'Ț': 'T', 'ț': 't',
+        // Cedilla forms (Romanian legacy)
+        'ş': 's', 'ţ': 't', 'Ş': 'S', 'Ţ': 'T',
+        // Romanian breve & circumflex
+        'ă': 'a', 'â': 'a', 'î': 'i', 'Ă': 'A', 'Â': 'A', 'Î': 'I',
+        // Hungarian
         'ö': 'o', 'ü': 'u', 'Ö': 'O', 'Ü': 'U',
         'ő': 'o', 'ű': 'u', 'Ő': 'O', 'Ű': 'U',
+        'á': 'a', 'é': 'e', 'í': 'i', 'ó': 'o', 'ú': 'u',
+        'Á': 'A', 'É': 'E', 'Í': 'I', 'Ó': 'O', 'Ú': 'U',
+        // Spanish / generic
+        'ñ': 'n', 'Ñ': 'N',
     };
     function ascii(s) {
         if (s == null) return '';
-        return String(s).replace(/[À-ſ]/g, (c) => DIACRITIC_MAP[c] || c);
+        // Pas 1: NFD normalize — separă base char + combining marks (acoperă
+        // și caracterele introduse prin tastatură ca base+combining, nu ca
+        // precomposed). Apoi elimină marks-urile.
+        let out = String(s).normalize('NFD').replace(/[̀-ͯ]/g, '');
+        // Pas 2: înlocuiește caracterele precomposed care au scăpat de NFD
+        // (ex: ș la unele encoding-uri rămâne ca atare). Range-ul acoperă
+        // Latin-1 Supplement + Latin Extended-A + Latin Extended-B.
+        out = out.replace(/[À-ɏ]/g, (c) => DIACRITIC_MAP[c] || '?');
+        return out;
     }
 
     // Comenzi atomice ESC/POS
@@ -110,6 +130,25 @@
 
     function text(s)  { return bytes(ascii(s)); }
     function lineOf(s){ return bytes(ascii(s), LF); }
+
+    // Word-wrap simplu pe lățime fixă (caractere/linie). Folosit pentru adresa
+    // emitentului care poate fi lungă (Str. … Nr. … Bloc … Sc. … Oraș, Județ).
+    function wrapText(input, maxChars) {
+        const words = String(input || '').split(/\s+/).filter(Boolean);
+        const lines = [];
+        let current = '';
+        for (const w of words) {
+            if (!current) { current = w; continue; }
+            if ((current.length + 1 + w.length) <= maxChars) {
+                current += ' ' + w;
+            } else {
+                lines.push(current);
+                current = w;
+            }
+        }
+        if (current) lines.push(current);
+        return lines;
+    }
 
     // QR Code prin comenzi standard ESC/POS 2D barcode (GS ( k).
     // Documentat în Epson ESC/POS spec, suportat de Bixolon SRP-350plusIII +
@@ -183,7 +222,9 @@
         if (idLine.length) {
             parts.push(SIZE_SMALL, lineOf(idLine.join('  ')), SIZE_NORMAL);
         }
-        // Adresa: dacă există city/county le concatenam la address
+        // Adresa: dacă există city/county le concatenam la address.
+        // Wrap pe MAX 2 linii cu Font B (cca 56 chars/linie pe 80mm) ca să nu pierdem
+        // județul când adresa e lungă. ascii() rulează după wrap pentru consistență.
         const addrParts = [];
         if (issuer.address) addrParts.push(issuer.address);
         if (issuer.city && !String(issuer.address || '').toLowerCase().includes(String(issuer.city).toLowerCase())) {
@@ -192,8 +233,10 @@
         if (issuer.county) addrParts.push(issuer.county);
         if (addrParts.length) {
             const fullAddr = addrParts.join(', ').replace(/\s+/g, ' ').trim();
-            const shortAddr = fullAddr.length > 42 ? fullAddr.substring(0, 39) + '...' : fullAddr;
-            parts.push(SIZE_SMALL, lineOf(shortAddr), SIZE_NORMAL);
+            const lines = wrapText(fullAddr, 56).slice(0, 2);
+            parts.push(SIZE_SMALL);
+            for (const ln of lines) parts.push(lineOf(ln));
+            parts.push(SIZE_NORMAL);
         }
 
         if (t.event_name) {
@@ -210,16 +253,27 @@
         }
 
         // ===== QR CODE =====
-        // Forțăm payload-ul ca URL (ambilet.ro/v/{code}) — un payload mai lung
-        // determină automat QR-ul să crească la o versiune cu mai multe module
-        // (21×21 → 25×25 → 29×29), deci fizic mai mare la aceeași module size.
-        // Combinat cu size=12 dă ~30-36mm pe Bixolon SRP-350plusIII.
+        // Bixolon SRP-350plusIII firmware acceptă module size 2-8 (NU 1-16 cum
+        // zice ESC/POS spec generic). Valorile > 8 se rezolvă la default 3 →
+        // QR mult mai mic decât așteptat. Folosim size 8 (max safe Bixolon) +
+        // EC Q (error correction ~25%) — Q forțează QR-ul la o versiune cu mai
+        // multe module pentru același payload, deci fizic mai mare.
+        //
+        // Pentru un payload tipic "https://ambilet.ro/v/CODE" (~32 chars):
+        //   EC M, size 8 → versiune 2 (25×25) → 200 dots = 25mm
+        //   EC Q, size 8 → versiune 3-4 (29-33×29-33) → 232-264 dots = 29-33mm
+        //
+        // Adăugăm și un suffix UTM la payload ca să forțăm versiunea spre 4+
+        // (chars suplimentare → versiune mai mare → fizic mai mare).
         if (t.qr_data) {
-            const qrPayload = (t.qr_data.startsWith('http') || t.qr_data.length > 20)
+            let qrPayload = t.qr_data.startsWith('http')
                 ? t.qr_data
                 : ('https://ambilet.ro/v/' + t.qr_data);
+            // Suffix neutru care nu schimba destinatia (ambilet.ro/v handler il ignora)
+            // dar mareste payload-ul cu ~10 chars → versiune QR mai mare → fizic mai mare.
+            if (!qrPayload.includes('?')) qrPayload += '?p=pos';
             parts.push(FEED_N(1));
-            parts.push(qrCode(qrPayload, { size: 12, ec: 49 }));
+            parts.push(qrCode(qrPayload, { size: 8, ec: 50 })); // size 8 = max Bixolon; ec 50 = Q
             parts.push(LINE);
         }
 
