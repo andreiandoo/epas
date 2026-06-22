@@ -402,10 +402,19 @@ class DateAvailabilityController extends BaseController
             if (is_array($name)) {
                 $name = $name[$publicLocale] ?? $name['ro'] ?? $name['en'] ?? (reset($name) ?: '');
             }
+            // Imagine: path storage relativa SAU URL absolut. Convertim in URL public.
+            $imgRaw = $c['image'] ?? null;
+            $imgUrl = null;
+            if (!empty($imgRaw)) {
+                $imgUrl = (str_starts_with($imgRaw, 'http://') || str_starts_with($imgRaw, 'https://'))
+                    ? $imgRaw
+                    : \Illuminate\Support\Facades\Storage::disk('public')->url(ltrim($imgRaw, '/'));
+            }
             return [
                 'id' => (string) ($c['id'] ?? ''),
                 'name' => (string) $name,
                 'sort_order' => (int) ($c['sort_order'] ?? 0),
+                'image_url' => $imgUrl,
             ];
         }, $rawCategories);
 

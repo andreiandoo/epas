@@ -334,6 +334,10 @@ require_once __DIR__ . '/includes/head.php';
                 // Step 2 services
                 'extra_services' => 'Servicii suplimentare',
                 'packages_promo_title' => 'Pachete promoționale',
+                'back_to_categories' => '← Înapoi la categorii',
+                'other_categories' => 'Alte categorii de bilete',
+                'ticket_singular' => 'opțiune',
+                'ticket_plural' => 'opțiuni',
                 'from_price' => 'de la ',
                 'price_breakdown' => 'Detalii preț',
                 'price_ticket' => 'Preț bilet',
@@ -421,6 +425,10 @@ require_once __DIR__ . '/includes/head.php';
                 'upsell_subtitle' => 'Válaszd ki, mi tetszik, és spórolj időt a helyszínen.',
                 'extra_services' => 'Kiegészítő szolgáltatások',
                 'packages_promo_title' => 'Promóciós csomagok',
+                'back_to_categories' => '← Vissza a kategóriákhoz',
+                'other_categories' => 'Más jegykategóriák',
+                'ticket_singular' => 'opció',
+                'ticket_plural' => 'opció',
                 'from_price' => '-tól ',
                 'price_breakdown' => 'Ár részletei',
                 'price_ticket' => 'Jegy ára',
@@ -502,6 +510,10 @@ require_once __DIR__ . '/includes/head.php';
                 'upsell_subtitle' => 'Pick what tempts you and save time on-site.',
                 'extra_services' => 'Extra services',
                 'packages_promo_title' => 'Promo packages',
+                'back_to_categories' => '← Back to categories',
+                'other_categories' => 'Other ticket categories',
+                'ticket_singular' => 'option',
+                'ticket_plural' => 'options',
                 'from_price' => 'from ',
                 'price_breakdown' => 'Price breakdown',
                 'price_ticket' => 'Ticket price',
@@ -790,8 +802,47 @@ foreach (['slug', '_route', '_path'] as $_drop) {
                     <p class="text-forest-700/70">Nu sunt bilete disponibile pentru această dată.</p>
                 </div>
 
-                <div x-show="selectedDate && !loadingTickets && accessTickets.length > 0" class="space-y-4">
-                    <template x-for="(grp, gi) in accessTicketsGrouped" :key="grp.id">
+                <!-- ===== MODE A: Picker categorii (carduri mari cu imagine) ===== -->
+                <!-- Se afiseaza cand:
+                     - exista categorii configurate de organizator (>=2 sau pachete + categorii)
+                     - utilizatorul nu a ales inca o categorie -->
+                <div x-show="selectedDate && !loadingTickets && accessTickets.length > 0 && showCategoryPicker"
+                     class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <template x-for="cat in publicCategoryGroups" :key="cat.id">
+                        <button type="button" @click="selectedCategoryId = cat.id; $nextTick(() => { document.getElementById('bilete')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); })"
+                                class="group relative bg-white rounded-2xl overflow-hidden border-2 border-transparent hover:border-forest-500 hover:shadow-lg transition-all text-left">
+                            <div class="aspect-[4/3] relative overflow-hidden flex items-center justify-center bg-fog"
+                                 :style="!cat.image_url ? `background: linear-gradient(135deg, #DCF2E3 0%, #BFE5CD 100%)` : ''">
+                                <img x-show="cat.image_url" :src="cat.image_url" :alt="cat.name" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
+                                <span x-show="!cat.image_url" class="text-6xl opacity-70">🎟️</span>
+                                <div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent p-4">
+                                    <p class="text-white text-xs font-medium opacity-90" x-text="cat.items.length + ' ' + (cat.items.length === 1 ? (t('ticket_singular') || 'opțiune') : (t('ticket_plural') || 'opțiuni'))"></p>
+                                </div>
+                            </div>
+                            <div class="p-4 flex items-center justify-between">
+                                <h3 class="font-display text-lg font-bold text-ink leading-tight" x-text="cat.name"></h3>
+                                <svg class="w-5 h-5 text-forest-500 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                            </div>
+                        </button>
+                    </template>
+                </div>
+
+                <!-- ===== MODE B: Bilete din categoria selectata ===== -->
+                <!-- Se afiseaza in 2 cazuri:
+                     - utilizatorul a selectat o categorie (selectedCategoryId)
+                     - nu sunt categorii definite → fallback la lista flat (showCategoryPicker = false) -->
+                <div x-show="selectedDate && !loadingTickets && accessTickets.length > 0 && !showCategoryPicker" class="space-y-4">
+                    <!-- Breadcrumb back (vizibil doar cand exista picker, adica avem mai multe categorii) -->
+                    <div x-show="hasMultipleCategories" class="flex items-center justify-between gap-3 mb-2">
+                        <button type="button" @click="selectedCategoryId = null"
+                                class="inline-flex items-center gap-2 text-sm font-semibold text-forest-700 hover:text-forest-900 transition-colors">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+                            <span data-i18n="back_to_categories" x-text="t('back_to_categories') || '← Înapoi la categorii'"></span>
+                        </button>
+                        <span x-show="selectedCategoryName" class="text-xs text-forest-700/60" x-text="selectedCategoryName"></span>
+                    </div>
+
+                    <template x-for="(grp, gi) in displayedTicketGroups" :key="grp.id">
                         <div class="space-y-2">
                             <!-- Header categorie (ascuns daca name e gol → backward compat fara categorii) -->
                             <h3 x-show="grp.name" class="font-display text-lg lg:text-xl font-bold text-ink mt-2 flex items-center gap-2">
@@ -921,6 +972,29 @@ foreach (['slug', '_route', '_path'] as $_drop) {
                             </template>
                         </div>
                     </template>
+
+                    <!-- Chip-uri mici cu celelalte categorii — afisate sub lista
+                         de bilete cand utilizatorul e intr-o categorie selectata.
+                         Permit navigarea rapida la alta categorie fara back-button. -->
+                    <div x-show="hasMultipleCategories && otherCategoryChips.length > 0" class="pt-6 mt-6 border-t border-forest-100">
+                        <p class="text-xs uppercase tracking-wider text-forest-700/60 font-bold mb-3" data-i18n="other_categories" x-text="t('other_categories') || 'Alte categorii de bilete'"></p>
+                        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                            <template x-for="cat in otherCategoryChips" :key="cat.id">
+                                <button type="button" @click="selectedCategoryId = cat.id; $nextTick(() => { document.getElementById('bilete')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); })"
+                                        class="group bg-white border-2 border-forest-100 hover:border-forest-500 rounded-xl p-2 flex items-center gap-2.5 transition-all text-left">
+                                    <div class="w-10 h-10 rounded-lg overflow-hidden flex-shrink-0 bg-fog flex items-center justify-center">
+                                        <img x-show="cat.image_url" :src="cat.image_url" :alt="cat.name" class="w-full h-full object-cover">
+                                        <span x-show="!cat.image_url" class="text-xl">🎟️</span>
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <p class="text-sm font-semibold text-ink truncate" x-text="cat.name"></p>
+                                        <p class="text-[10px] text-forest-700/60" x-text="cat.items.length + ' ' + (cat.items.length === 1 ? (t('ticket_singular') || 'opțiune') : (t('ticket_plural') || 'opțiuni'))"></p>
+                                    </div>
+                                    <svg class="w-3.5 h-3.5 text-forest-500 group-hover:translate-x-0.5 transition-transform flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                                </button>
+                            </template>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Upsell CTA (apare după ce e cel puțin un bilet în coș + există servicii disponibile) -->
@@ -1567,6 +1641,8 @@ function reservationPage() {
         t: t,
         cartOpen: false,
         hoverTooltipKey: null,
+        // Categorie selectata in flow-ul nou (null = arata picker categorii)
+        selectedCategoryId: null,
         openFaq: 0,
         upsellDismissed: false,
         selectedDate: null,
@@ -1629,6 +1705,17 @@ function reservationPage() {
                 if (vid) this.variantSelectedByTicket[ttId] = vid;
                 if (slot) this.slotSelectedByTicket[ttId] = slot;
             });
+
+            // Daca toate biletele restaurate sunt dintr-o singura categorie, auto-selectam acea
+            // categorie ca utilizatorul sa o vada deschisa imediat. Daca sunt mixte, lasam
+            // picker-ul activ.
+            const groupIds = new Set(items.map(it => {
+                const tt = this.ticketsRaw.find(t => Number(t.id) === Number(it.ticketTypeId));
+                return tt?.ticket_group || null;
+            }).filter(Boolean));
+            if (groupIds.size === 1) {
+                this.selectedCategoryId = [...groupIds][0];
+            }
 
             // Deschide cart-ul float automat ca utilizatorul sa vada produsele restaurate
             this.cartOpen = true;
@@ -1700,6 +1787,10 @@ function reservationPage() {
             this.loadingTickets = true;
             this.ticketsRaw = [];
             this.qtyById = {};
+            // Reset categoria selectata daca schimbam data — categoriile pot diferi
+            // intre date (ex: anumite tipuri de bilete nu sunt disponibile in
+            // sezonul ales). Picker-ul se reafiseaza, utilizatorul alege din nou.
+            this.selectedCategoryId = null;
             try {
                 const params = { date: key, lang: PUBLIC_LOCALE };
                 if (IS_PREVIEW) params.preview = 1;
@@ -1831,6 +1922,51 @@ function reservationPage() {
                 groups.push({ id: '__packages__', name: this.packageGroupLabel, items: packages });
             }
             return groups;
+        },
+        // ===== FLOW CATEGORII v2: picker + selected category navigation =====
+        // Toate grupurile populate (folosit ca lista pentru picker + navigare).
+        // Reuses accessTicketsGrouped + injecteaza image_url din ticketCategoriesRaw.
+        get publicCategoryGroups() {
+            const cats = Array.isArray(this.ticketCategoriesRaw) ? this.ticketCategoriesRaw : [];
+            return this.accessTicketsGrouped.map(g => {
+                const cat = cats.find(c => c.id === g.id);
+                return {
+                    ...g,
+                    image_url: cat?.image_url || null,
+                    // Pachetele primesc un placeholder vizual (nu au image_url propriu)
+                    is_packages: g.id === '__packages__',
+                };
+            }).filter(g => g.items && g.items.length > 0);
+        },
+        // True daca avem >=2 grupuri afisabile → flow picker activ.
+        get hasMultipleCategories() {
+            return this.publicCategoryGroups.length >= 2;
+        },
+        // True cand picker-ul de categorii e activ (utilizatorul nu a ales nimic INCA).
+        get showCategoryPicker() {
+            if (!this.hasMultipleCategories) return false;     // 0 sau 1 grup → fallback flat
+            if (!this.selectedCategoryId) return true;          // niciun grup ales → picker
+            // Verifica grupul ales sa existe (caz: se schimba data si grupul vechi nu mai are bilete)
+            return !this.publicCategoryGroups.find(g => g.id === this.selectedCategoryId);
+        },
+        // Grupurile de afisat in lista de bilete: doar cel ales daca avem picker; toate altfel.
+        get displayedTicketGroups() {
+            if (!this.hasMultipleCategories) {
+                // Fallback flat — afisam toate grupurile (ca inainte)
+                return this.accessTicketsGrouped;
+            }
+            const sel = this.publicCategoryGroups.find(g => g.id === this.selectedCategoryId);
+            return sel ? [sel] : [];
+        },
+        // Numele categoriei selectate (pentru breadcrumb back).
+        get selectedCategoryName() {
+            const sel = this.publicCategoryGroups.find(g => g.id === this.selectedCategoryId);
+            return sel?.name || '';
+        },
+        // Chip-uri navigare jos: toate celelalte categorii (nu cea curenta).
+        get otherCategoryChips() {
+            if (!this.selectedCategoryId) return [];
+            return this.publicCategoryGroups.filter(g => g.id !== this.selectedCategoryId);
         },
         get anyRequiresAccess() {
             return this.services.some(s => !!s.requires_access_ticket);

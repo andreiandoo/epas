@@ -33,6 +33,20 @@ use Illuminate\Support\Str;
 class LeisureController extends BaseController
 {
     /**
+     * Converteste o cale storage relativa (ex: "events/4234/categories/abc.png")
+     * sau un URL absolut (ex: "https://...") într-un URL accesibil din browser.
+     * Returneaza null pentru valori goale.
+     */
+    protected function resolveImageUrl(?string $value): ?string
+    {
+        if (empty($value)) return null;
+        if (str_starts_with($value, 'http://') || str_starts_with($value, 'https://')) {
+            return $value;
+        }
+        return \Illuminate\Support\Facades\Storage::disk('public')->url(ltrim($value, '/'));
+    }
+
+    /**
      * GET /marketplace-client/organizer/events/{event}/leisure/config
      *
      * Returneaza configurarea leisure: ticket types cu societatea emitenta efectiva
@@ -89,9 +103,18 @@ class LeisureController extends BaseController
 
         // C2: categorii custom pentru gruparea tipurilor de bilete (afișare pe
         // pagina publica + organizator panel). Stocate in venue_config.ticket_categories
-        // ca [{id, name, sort_order}]. Sortate after sort_order asc, name asc.
+        // ca [{id, name, sort_order, image}]. Sortate dupa sort_order asc, name asc.
+        // `image` e cale storage relativa (uploaded prin endpoint-ul upload-image)
+        // sau URL absolut (fallback). Pagina publica converteste in storage URL.
         $venueConfig = is_array($eventModel->venue_config ?? null) ? $eventModel->venue_config : [];
         $ticketCategories = is_array($venueConfig['ticket_categories'] ?? null) ? $venueConfig['ticket_categories'] : [];
+        $ticketCategories = array_map(function ($c) {
+            $img = $c['image'] ?? null;
+            return array_merge($c, [
+                'image' => $img,
+                'image_url' => $this->resolveImageUrl($img),
+            ]);
+        }, $ticketCategories);
         usort($ticketCategories, function ($a, $b) {
             $sa = (int) ($a['sort_order'] ?? 0);
             $sb = (int) ($b['sort_order'] ?? 0);
@@ -1317,9 +1340,13 @@ class LeisureController extends BaseController
 
         $request->validate([
             'image' => 'required|image|mimes:jpeg,png,webp|max:10240',
+            // 'type' separa storage-ul intre imagini de produs si de categorie
+            // doar pentru a mentine fisierele mai ordonate; nu afecteaza logica.
+            'type' => 'nullable|in:products,categories',
         ]);
 
-        $path = $request->file('image')->store('events/' . $eventModel->id . '/products', 'public');
+        $subdir = $request->input('type') === 'categories' ? 'categories' : 'products';
+        $path = $request->file('image')->store('events/' . $eventModel->id . '/' . $subdir, 'public');
         $url = \Illuminate\Support\Facades\Storage::disk('public')->url($path);
 
         return $this->success([
