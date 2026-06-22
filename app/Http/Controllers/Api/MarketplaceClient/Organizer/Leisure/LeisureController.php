@@ -1311,6 +1311,25 @@ class LeisureController extends BaseController
         $issuer = $organizer->getIssuerData('primary');
         $issuerSecondary = $organizer->has_secondary_issuer ? $organizer->getIssuerData('secondary') : null;
 
+        // C — Email tranzacțional cu biletele (RO/HU/EN). Dispatcham doar daca
+        // exista un email real (nu pos@ambilet.ro default pentru cash sale).
+        // Job-ul genereaza QR inline + trimite via Mail facade — retry 3x.
+        $customerEmail = $validated['customer']['email'] ?? null;
+        if ($customerEmail && !str_contains($customerEmail, 'pos@')) {
+            $eventNameForMail = is_array($eventModel->name)
+                ? ($eventModel->name['ro'] ?? reset($eventModel->name))
+                : $eventModel->name;
+            \App\Jobs\SendLeisureTicketsEmailJob::dispatch(
+                orderId: $order->id,
+                eventName: (string) $eventNameForMail,
+                issuer: $issuer,
+                issuerSecondary: $issuerSecondary,
+                ticketsData: $issued,
+                visitDate: $visitDate,
+                locale: $posLocale ?? 'ro',
+            );
+        }
+
         return $this->success([
             'order' => [
                 'id' => $order->id,
