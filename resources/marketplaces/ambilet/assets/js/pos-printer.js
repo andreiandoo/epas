@@ -312,6 +312,7 @@
 
     let _device = null;
     let _endpoint = null;
+    let _inEndpoint = null;   // bulk IN endpoint pentru citire status (DLE EOT etc.)
 
     async function getAuthorizedDevice() {
         if (!navigator.usb) return null;
@@ -331,22 +332,23 @@
         if (device.configuration === null) {
             await device.selectConfiguration(1);
         }
-        // Caută interfaţa cu un endpoint OUT bulk
+        // Caută interfaţa cu un endpoint OUT bulk (+ IN dacă există pentru status)
         const cfg = device.configuration;
         for (const iface of cfg.interfaces) {
             for (const alt of iface.alternates) {
-                const ep = alt.endpoints.find(e => e.direction === 'out' && e.type === 'bulk');
-                if (ep) {
+                const outEp = alt.endpoints.find(e => e.direction === 'out' && e.type === 'bulk');
+                if (outEp) {
                     try {
                         if (!iface.claimed) await device.claimInterface(iface.interfaceNumber);
                     } catch (e) {
-                        // E posibil ca un alt driver să fi luat deja interface-ul.
-                        // Pe Windows asta înseamnă că driver-ul stock nu a fost
-                        // înlocuit cu WinUSB (vezi setup Zadig).
                         console.warn('[pos-printer] claimInterface failed:', e.message);
                     }
                     _device = device;
-                    _endpoint = ep.endpointNumber;
+                    _endpoint = outEp.endpointNumber;
+                    // IN endpoint e opțional — folosit doar pentru status query (paper-out etc.).
+                    // Multe imprimante POS nu expun unul (mai ales generice Chinese).
+                    const inEp = alt.endpoints.find(e => e.direction === 'in' && e.type === 'bulk');
+                    _inEndpoint = inEp ? inEp.endpointNumber : null;
                     return device;
                 }
             }
@@ -409,6 +411,7 @@
             }
             _device = null;
             _endpoint = null;
+            _inEndpoint = null;
         },
 
         /** Returnează metadata imprimantei conectate. */
@@ -428,6 +431,67 @@
             const d = await ensureConnected();
             if (!d || !_endpoint) throw new Error('Imprimantă neconectată');
             return await d.transferOut(_endpoint, buffer);
+        },
+
+        /**
+         * Citeşte status-ul imprimantei prin comanda ESC/POS realtime
+         * DLE EOT n (0x10 0x04 n):
+         *   n=1 → status general (cover open, drawer)
+         *   n=2 → off-line status
+         *   n=3 → error status (cutter, mechanical)
+         *   n=4 → paper sensor status (paper out / near-end)
+         *
+         * Returnează: { paper: 'ok' | 'near_end' | 'out' | 'unknown',
+         *                cover_open: bool, error: bool, online: bool }
+         *
+         * Necesită un endpoint IN. Multe imprimante POS nu îl expun (în special
+         * generice Chinese) — în acel caz întoarcem { paper: 'unknown' }
+         * fără să blocăm UI-ul. Timeout 800ms ca să nu blocheze auto-print
+         * dacă imprimanta nu răspunde imediat.
+         */
+        async getStatus() {
+            const d = await ensureConnected();
+            if (!d || !_endpoint) return { paper: 'unknown', online: false, error: false, cover_open: false };
+            if (!_inEndpoint) return { paper: 'unknown', online: true, error: false, cover_open: false };
+
+            const query = async (n) => {
+                try {
+                    await d.transferOut(_endpoint, bytes(0x10, 0x04, n));
+                    const racePromise = Promise.race([
+                        d.transferIn(_inEndpoint, 64),
+                        new Promise((_, reject) => setTimeout(() => reject(new Error('status_timeout')), 800)),
+                    ]);
+                    const result = await racePromise;
+                    if (result && result.data && result.data.byteLength > 0) {
+                        return new Uint8Array(result.data.buffer)[0];
+                    }
+                } catch (_) { /* timeout sau imprimanta nu raspunde */ }
+                return null;
+            };
+
+            // Status paper sensor (DLE EOT 4): bits 5-6 = paper out, bits 2-3 = near-end
+            const paperByte = await query(4);
+            let paper = 'unknown';
+            if (paperByte !== null) {
+                const paperOut = (paperByte & 0x60) === 0x60;
+                const nearEnd = (paperByte & 0x0C) === 0x0C;
+                paper = paperOut ? 'out' : (nearEnd ? 'near_end' : 'ok');
+            }
+
+            // Status general (DLE EOT 1): bit 2 = drawer kick-out, bit 3 = offline,
+            // bit 5 = cover open, bit 6 = paper feed by switch
+            const generalByte = await query(1);
+            let cover_open = false, online = true;
+            if (generalByte !== null) {
+                cover_open = (generalByte & 0x20) !== 0;
+                online = (generalByte & 0x08) === 0;
+            }
+
+            // Status erori (DLE EOT 3): bit 5 = autocutter error, bit 6 = unrecoverable
+            const errorByte = await query(3);
+            const error = (errorByte !== null) ? ((errorByte & 0x60) !== 0) : false;
+
+            return { paper, cover_open, online, error };
         },
 
         /** Printează un bilet din datele structurate. */
@@ -477,6 +541,7 @@
                 if (_device && e.device === _device) {
                     _device = null;
                     _endpoint = null;
+                    _inEndpoint = null;
                     window.dispatchEvent(new CustomEvent('posprinter:disconnected', { detail: e.device }));
                 }
             });

@@ -36,6 +36,8 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 </summary>
                 <div class="px-4 py-3 border-t border-border space-y-3">
                     <p id="lv-printer-info" class="text-xs text-muted leading-snug"></p>
+                    <!-- Paper / status indicator (DLE EOT) -->
+                    <p id="lv-printer-paper" class="hidden text-xs leading-snug rounded p-2"></p>
                     <p id="lv-printer-error" class="hidden text-xs text-rose-700 leading-snug bg-rose-50 border border-rose-200 rounded p-2"></p>
                     <div class="flex flex-wrap gap-2">
                         <button id="lv-printer-connect" type="button" class="flex-1 px-3 py-2 text-xs font-semibold bg-primary text-white rounded hover:bg-primary-dark disabled:opacity-50">
@@ -48,6 +50,11 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                             🧪 3 bilete
                         </button>
                     </div>
+                    <!-- Re-print ultima comandă (vizibil doar dacă există state) -->
+                    <button id="lv-printer-reprint" type="button" hidden class="w-full px-3 py-2 text-xs font-semibold bg-amber-100 border border-amber-300 text-amber-900 rounded hover:bg-amber-200 disabled:opacity-50">
+                        🖨️ Reprintează ultima comandă
+                        <span id="lv-printer-reprint-meta" class="text-[10px] font-normal text-amber-700 ml-1"></span>
+                    </button>
                     <label class="flex items-center gap-2 text-xs">
                         <input id="lv-printer-auto" type="checkbox" class="w-4 h-4 accent-primary">
                         <span class="text-secondary">Print automat după fiecare comandă</span>
@@ -184,6 +191,12 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
     // Folositi de PosPrinter ca header pe biletele termice.
     let posIssuerPrimary = null;
     let posIssuerSecondary = null;
+    // State A1: ultima comanda finalizata cu succes (pentru reprint din panou).
+    // Stocata in memorie (volatile la refresh). Pastram doar campurile necesare
+    // print-ului — fara date sensibile customer/billing.
+    let lastSaleSnapshot = null;
+    // Interval polling status imprimanta (paper-out)
+    let printerStatusTimer = null;
     // Stare deschis/închis pentru accordions (per categorie id). Default: toate deschise.
     let categoryAccordionState = {};
 
@@ -1020,9 +1033,128 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             PosPrinter.setAutoPrintEnabled(autoCheck.checked);
         });
 
+        // Buton reprint ultima comanda — apeleaza acelasi pipeline ca auto-print
+        // dar bypaseaza toggle-ul "auto-print enabled" (chiar daca e off, reprint
+        // manual se executa la cerere). Foloseste snapshot-ul capturat la sale.
+        const reprintBtn = $('lv-printer-reprint');
+        if (reprintBtn) reprintBtn.addEventListener('click', async () => {
+            if (!lastSaleSnapshot) return;
+            if (typeof PosPrinter === 'undefined' || !(await PosPrinter.isReady())) {
+                const err = $('lv-printer-error');
+                if (err) {
+                    err.textContent = 'Imprimanta nu e conectată — reconectează și încearcă din nou.';
+                    err.classList.remove('hidden');
+                }
+                return;
+            }
+            reprintBtn.disabled = true;
+            const origText = reprintBtn.innerHTML;
+            reprintBtn.textContent = '⏳ Reprintez...';
+            try {
+                // Reutilizam pipeline-ul auto-print, dar trecem prin un wrapper
+                // care nu salveaza un snapshot nou (evita coruperea lastSaleSnapshot).
+                const fakeResp = lastSaleSnapshot;
+                // Construim manual print loop (similar cu posAutoPrintTickets dar fara captureLastSaleSnapshot)
+                const issuerPrimary = fakeResp.issuer || {};
+                const issuerSecondary = fakeResp.issuer_secondary || null;
+                const tickets = fakeResp.tickets || [];
+                const eventName = fakeResp.event?.name || '';
+                const visitDate = fakeResp.order?.visit_date || '';
+                const now = new Date();
+                const pad = n => String(n).padStart(2, '0');
+                const reprintedAt = pad(now.getDate()) + '.' + pad(now.getMonth()+1) + '.' + now.getFullYear() + ' ' + pad(now.getHours()) + ':' + pad(now.getMinutes());
+                let ok = 0;
+                for (const t of tickets) {
+                    try {
+                        const issuerForTicket = (t.issuing_company === 'secondary' && issuerSecondary)
+                            ? issuerSecondary : issuerPrimary;
+                        await PosPrinter.printTicket({
+                            issuer: issuerForTicket,
+                            event_name: eventName,
+                            ticket_type_name: t.ticket_type || 'Bilet',
+                            variant_label: (t.variant && (t.variant.label || t.variant.name)) || '',
+                            code: t.code || '',
+                            qr_data: t.code || '',
+                            visit_date: visitDate,
+                            sold_at: reprintedAt + ' (REPRINT)',
+                            pos_name: 'POS reprint',
+                        });
+                        ok++;
+                        await new Promise(r => setTimeout(r, 150));
+                    } catch (e) {
+                        console.warn('[reprint] failed:', t.code, e);
+                    }
+                }
+                reprintBtn.innerHTML = `✓ ${ok}/${tickets.length} reprintate`;
+                setTimeout(() => { reprintBtn.innerHTML = origText; reprintBtn.disabled = false; updateReprintButton(); }, 2000);
+            } catch (e) {
+                reprintBtn.innerHTML = origText;
+                reprintBtn.disabled = false;
+                console.warn('[reprint] error:', e);
+            }
+        });
+        updateReprintButton();
+
+        // Poll status imprimanta la 30s (paper-out / cover open detection).
+        // Doar daca imprimanta e ready. Clear interval la disconnect.
+        function startStatusPolling() {
+            if (printerStatusTimer) clearInterval(printerStatusTimer);
+            checkPrinterStatus(); // immediate check
+            printerStatusTimer = setInterval(checkPrinterStatus, 30000);
+        }
+        function stopStatusPolling() {
+            if (printerStatusTimer) { clearInterval(printerStatusTimer); printerStatusTimer = null; }
+        }
+        async function checkPrinterStatus() {
+            const box = $('lv-printer-paper');
+            if (!box) return;
+            if (!(await PosPrinter.isReady())) { box.classList.add('hidden'); return; }
+            try {
+                const s = await PosPrinter.getStatus();
+                if (!s || s.paper === 'unknown') {
+                    box.classList.add('hidden');
+                    return;
+                }
+                if (s.paper === 'out') {
+                    box.textContent = '🛑 Hârtia s-a terminat — schimb-o înainte de a vinde.';
+                    box.className = 'text-xs leading-snug rounded p-2 bg-rose-50 border border-rose-300 text-rose-900';
+                    box.classList.remove('hidden');
+                } else if (s.paper === 'near_end') {
+                    box.textContent = '⚠️ Rola e aproape goală — pregătește o rolă nouă.';
+                    box.className = 'text-xs leading-snug rounded p-2 bg-amber-50 border border-amber-300 text-amber-900';
+                    box.classList.remove('hidden');
+                } else if (s.cover_open) {
+                    box.textContent = '🛑 Capacul imprimantei e deschis.';
+                    box.className = 'text-xs leading-snug rounded p-2 bg-rose-50 border border-rose-300 text-rose-900';
+                    box.classList.remove('hidden');
+                } else if (s.error) {
+                    box.textContent = '⚠️ Imprimantă în eroare (verifică cutter / mecanism).';
+                    box.className = 'text-xs leading-snug rounded p-2 bg-amber-50 border border-amber-300 text-amber-900';
+                    box.classList.remove('hidden');
+                } else {
+                    box.textContent = '🟢 Hârtie OK';
+                    box.className = 'text-xs leading-snug rounded p-2 bg-emerald-50 border border-emerald-200 text-emerald-800';
+                    box.classList.remove('hidden');
+                    // Discret: dispare după 3s ca să nu ocupe spațiu permanent
+                    setTimeout(() => { if (box.classList.contains('hidden') === false && box.textContent.includes('OK')) box.classList.add('hidden'); }, 3000);
+                }
+            } catch (e) {
+                console.debug('[printer-status] poll failed:', e?.message || e);
+                box.classList.add('hidden');
+            }
+        }
+
         // Hot-plug: actualizam UI-ul cand utilizatorul deconecteaza/reconecteaza USB
-        window.addEventListener('posprinter:disconnected', refreshPrinterUi);
-        window.addEventListener('posprinter:connected', refreshPrinterUi);
+        window.addEventListener('posprinter:disconnected', () => {
+            stopStatusPolling();
+            refreshPrinterUi();
+        });
+        window.addEventListener('posprinter:connected', () => {
+            refreshPrinterUi();
+            startStatusPolling();
+        });
+        // Pornim polling-ul daca avem deja imprimanta ready la initLoad
+        PosPrinter.isReady().then(ready => { if (ready) startStatusPolling(); });
     }
 
     // ============ Auto-print dupa checkout reusit ============
@@ -1030,7 +1162,49 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
     // si avem imprimanta conectata, trimite cate un bilet ESC/POS per ticket.
     // Esecul de print NU blocheaza vanzarea — biletele sunt deja emise in DB,
     // operatorul vede butonul de Re-print pe ultima comanda.
+    /**
+     * Stocheaza un snapshot minim din raspunsul pos-sale pentru reprint manual.
+     * Nu include customer/billing/totals — doar ce e relevant la print termic.
+     */
+    function captureLastSaleSnapshot(saleResponse) {
+        if (!saleResponse) return;
+        const order = saleResponse.order || {};
+        lastSaleSnapshot = {
+            order: { id: order.id, order_number: order.order_number, visit_date: order.visit_date, paid_at: order.paid_at },
+            event: saleResponse.event || null,
+            issuer: saleResponse.issuer || null,
+            issuer_secondary: saleResponse.issuer_secondary || null,
+            tickets: (Array.isArray(saleResponse.tickets) ? saleResponse.tickets : []).map(t => ({
+                id: t.id, code: t.code, ticket_type: t.ticket_type,
+                service_category: t.service_category,
+                issuing_company: t.issuing_company,
+                variant: t.variant,
+            })),
+            captured_at: new Date().toISOString(),
+        };
+        updateReprintButton();
+    }
+
+    function updateReprintButton() {
+        const btn = $('lv-printer-reprint');
+        const meta = $('lv-printer-reprint-meta');
+        if (!btn) return;
+        if (!lastSaleSnapshot || !lastSaleSnapshot.tickets || !lastSaleSnapshot.tickets.length) {
+            btn.hidden = true;
+            return;
+        }
+        btn.hidden = false;
+        const n = lastSaleSnapshot.tickets.length;
+        const ord = lastSaleSnapshot.order?.order_number || ('#' + (lastSaleSnapshot.order?.id || ''));
+        if (meta) meta.textContent = `· ${ord} · ${n} ${n === 1 ? 'bilet' : 'bilete'}`;
+    }
+
     window.posAutoPrintTickets = async function (saleResponse) {
+        // Salveaza snapshot CHIAR DACA auto-print e dezactivat sau imprimanta
+        // nu e conectata — operatorul poate vrea sa reprintaze ulterior dupa
+        // ce o conecteaza / pune hartie noua.
+        captureLastSaleSnapshot(saleResponse);
+
         if (typeof PosPrinter === 'undefined' || !PosPrinter.isSupported()) return;
         if (!PosPrinter.getAutoPrintEnabled()) return;
         if (!(await PosPrinter.isReady())) return;
