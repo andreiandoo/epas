@@ -42,7 +42,10 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                             🔌 Conectează
                         </button>
                         <button id="lv-printer-test" type="button" disabled class="flex-1 px-3 py-2 text-xs font-semibold border border-border rounded hover:bg-slate-50 disabled:opacity-50">
-                            🧪 Print test
+                            🧪 1 bilet
+                        </button>
+                        <button id="lv-printer-test3" type="button" disabled class="flex-1 px-3 py-2 text-xs font-semibold border border-border rounded hover:bg-slate-50 disabled:opacity-50">
+                            🧪 3 bilete
                         </button>
                     </div>
                     <label class="flex items-center gap-2 text-xs">
@@ -872,6 +875,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             return;
         }
 
+        const test3Btn = $('lv-printer-test3');
         PosPrinter.isReady().then(ready => {
             if (ready) {
                 dot.className = 'w-2 h-2 rounded-full bg-emerald-500';
@@ -881,6 +885,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     if (info && d) info.textContent = (d.manufacturerName || 'ESC/POS') + ' ' + (d.productName || '') + ' · VID 0x' + d.vendorId.toString(16).padStart(4, '0');
                 });
                 if (testBtn) testBtn.disabled = false;
+                if (test3Btn) test3Btn.disabled = false;
                 if (connectBtn) connectBtn.textContent = '🔁 Schimbă imprimanta';
             } else {
                 dot.className = 'w-2 h-2 rounded-full bg-amber-500';
@@ -888,6 +893,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 txt.className = 'text-amber-700';
                 if (info) info.textContent = 'Apasă „Conectează" şi alege imprimanta din popup-ul browser-ului.';
                 if (testBtn) testBtn.disabled = true;
+                if (test3Btn) test3Btn.disabled = true;
                 if (connectBtn) connectBtn.textContent = '🔌 Conectează';
             }
             if (autoCheck) {
@@ -946,6 +952,66 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     err.textContent = 'Print test eşuat: ' + (e?.message || 'necunoscut');
                     err.classList.remove('hidden');
                 }
+            }
+        });
+
+        // Test multi-bilete: simuleaza o comanda reala cu 3 bilete diferite
+        // (varianta tipica de iesire: 1 adult + 1 copil + 1 parcare). Fiecare
+        // bilet are cod propriu generat random ca QR-urile sa fie distincte.
+        // Reflecta exact flow-ul auto-print din checkout() — acelasi PosPrinter
+        // .printTicket() per bilet, aceeasi pauza 150ms, eseuc per-bilet
+        // izolat (continue cu urmatorul daca unul esueaza).
+        const test3Btn2 = $('lv-printer-test3');
+        if (test3Btn2) test3Btn2.addEventListener('click', async () => {
+            const err = $('lv-printer-error');
+            test3Btn2.disabled = true;
+            const origLabel = test3Btn2.textContent;
+            const ev = (typeof leisureEvents !== 'undefined' && Array.isArray(leisureEvents))
+                ? leisureEvents.find(e => e.id === currentEventId) : null;
+            const evName = (ev && (ev.title || ev.name)) || 'Test eveniment';
+
+            const now = new Date();
+            const pad = n => String(n).padStart(2, '0');
+            const dateStr = pad(now.getDate()) + '.' + pad(now.getMonth()+1) + '.' + now.getFullYear();
+            const soldAt = dateStr + ' ' + pad(now.getHours()) + ':' + pad(now.getMinutes());
+            // Cod random ca QR-urile sa fie distincte
+            const randCode = () => 'TEST-' + Math.random().toString(36).substring(2, 8).toUpperCase();
+
+            const samples = [
+                { ticket_type_name: 'Bilet Adult',     code: randCode() },
+                { ticket_type_name: 'Bilet Copil',     code: randCode() },
+                { ticket_type_name: 'Bilet Pensionar', code: randCode() },
+            ];
+
+            let okCount = 0, failCount = 0;
+            for (let i = 0; i < samples.length; i++) {
+                const s = samples[i];
+                test3Btn2.textContent = `⏳ ${i + 1}/${samples.length}...`;
+                try {
+                    await PosPrinter.printTicket({
+                        issuer: posIssuerPrimary || undefined,
+                        event_name: evName,
+                        ticket_type_name: s.ticket_type_name,
+                        code: s.code,
+                        qr_data: s.code,
+                        visit_date: dateStr,
+                        sold_at: soldAt,
+                        pos_name: 'POS test',
+                    });
+                    okCount++;
+                } catch (e) {
+                    failCount++;
+                    console.warn('[printer] test 3-tickets failed at', i + 1, e);
+                }
+                // Pauza ca buffer-ul imprimantei sa nu se infunde — la fel ca in checkout.
+                await new Promise(r => setTimeout(r, 150));
+            }
+
+            test3Btn2.textContent = failCount ? `⚠ ${okCount}/${samples.length}` : `✓ ${okCount} trimise`;
+            setTimeout(() => { test3Btn2.textContent = origLabel; test3Btn2.disabled = false; }, 2000);
+            if (failCount && err) {
+                err.textContent = `${failCount} bilete au eșuat la print — verifică log-ul consolei.`;
+                err.classList.remove('hidden');
             }
         });
 
