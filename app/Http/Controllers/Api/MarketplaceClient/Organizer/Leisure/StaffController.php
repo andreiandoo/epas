@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\MarketplaceClient\Organizer\Leisure;
 use App\Http\Controllers\Api\MarketplaceClient\BaseController;
 use App\Models\LeisureStaffCheckin;
 use App\Models\LeisureStaffMember;
+use App\Models\MarketplaceOrganizer;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -252,5 +253,19 @@ class StaffController extends BaseController
         }
 
         return $query;
+    }
+
+    /**
+     * Helper local (duplicat din pattern-ul existent in alte controllere
+     * organizer — vezi BillingController::365, LeisureController::2639).
+     * Verifica ca request-ul vine de la un organizator autentificat prin Sanctum.
+     */
+    protected function requireOrganizer(Request $request): MarketplaceOrganizer
+    {
+        $organizer = $request->user();
+        if (!$organizer instanceof MarketplaceOrganizer) {
+            abort(401, 'Unauthorized');
+        }
+        return $organizer;
     }
 }

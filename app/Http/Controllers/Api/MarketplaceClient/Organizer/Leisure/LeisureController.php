@@ -220,6 +220,10 @@ class LeisureController extends BaseController
                     'requires_vehicle_info' => (bool) $tt->requires_vehicle_info,
                     'daily_capacity' => $tt->daily_capacity,
                     'ticket_group' => $tt->ticket_group,
+                    // Cantitatile min/max per comanda — folosite in leisure-pos pentru
+                    // a respecta bilete de grup (ex: min=8 → add adauga direct 8, nu 1).
+                    'min_per_order' => $tt->min_per_order,
+                    'max_per_order' => $tt->max_per_order,
                     'issuing_company' => $tt->effective_issuing_company,
                     'issuing_explicit' => (bool) $tt->issuing_company,
                     'meta' => $metaArr ?: (object) [],
