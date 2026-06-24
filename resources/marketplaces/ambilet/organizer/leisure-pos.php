@@ -49,6 +49,9 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                         <button id="lv-printer-test3" type="button" disabled class="flex-1 px-3 py-2 text-xs font-semibold border border-border rounded hover:bg-slate-50 disabled:opacity-50">
                             🧪 3 bilete
                         </button>
+                        <button id="lv-printer-test-invoice" type="button" disabled class="w-full px-3 py-2 text-xs font-semibold border border-border rounded hover:bg-slate-50 disabled:opacity-50">
+                            🧾 Factură fiscală (test)
+                        </button>
                     </div>
                     <!-- Re-print ultima comandă (vizibil doar dacă există state) -->
                     <button id="lv-printer-reprint" type="button" hidden class="w-full px-3 py-2 text-xs font-semibold bg-amber-100 border border-amber-300 text-amber-900 rounded hover:bg-amber-200 disabled:opacity-50">
@@ -166,6 +169,9 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                         💡 <strong>Cash</strong>: marchezi încasarea fizică acum, biletele sunt emise valid. <strong>Link plată pe email</strong>: clientul primește un link pentru plată online — biletele rămân în „așteptare" până la confirmare.
                     </p>
                     <button id="lv-checkout" disabled class="w-full mt-2 px-4 py-3 bg-primary text-white font-bold rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-primary-dark transition-colors">Finalizează</button>
+                    <button id="lv-checkout-test" type="button" class="w-full mt-2 px-4 py-2 bg-white border-2 border-dashed border-amber-400 text-amber-800 font-semibold rounded-lg hover:bg-amber-50 text-sm" title="Simulează vânzare: printează biletele (+ factura dacă e bifată) FĂRĂ să trimită în baza de date.">
+                        🧪 Finalizare TEST (fără DB)
+                    </button>
                 </div>
             </div>
         </div>
@@ -713,6 +719,12 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 try { await window.posAutoPrintTickets(data); }
                 catch (e) { console.warn('[checkout] auto-print failed:', e); }
             }
+            // Print factura fiscala pe imprimanta termica daca operatorul a bifat
+            // "Genereaza factura fiscala" + avem date firma cumparator.
+            if (typeof window.posPrintInvoiceFromSale === 'function' && $('lv-co-invoice').checked) {
+                try { await window.posPrintInvoiceFromSale(data); }
+                catch (e) { console.warn('[checkout] invoice print failed:', e); }
+            }
             // Daca operatorul a cerut factura si exista date firma → ofera-i butonul de generare
             const orderId = data?.order?.id;
             const wantsInvoice = !!(data?.invoice_requested && data?.company_billing && orderId);
@@ -743,6 +755,103 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         } finally {
             $('lv-checkout').textContent = 'Finalizează';
             $('lv-checkout').disabled = Object.keys(cart).length === 0;
+        }
+    }
+
+    // Construieste un fake sale-response din starea curenta UI a POS-ului
+    // (cart + customer fields + date firma). NU trimite nimic la backend.
+    function buildFakeSaleResponse() {
+        const visitDate = $('lv-visit-date').value || new Date().toISOString().slice(0,10);
+        const cartEntries = Object.entries(cart);
+        const tickets = [];
+        const items = [];
+        let subtotal = 0;
+        cartEntries.forEach(([key, it]) => {
+            const tt = types.find(x => x.id === it.ticket_type_id);
+            const issuingCompany = tt?.issuing_company || 'primary';
+            const lineTotal = it.qty * it.price;
+            subtotal += lineTotal;
+            items.push({ name: it.name, qty: it.qty, unit_price: it.price, line_total: lineTotal, service_category: it.category });
+            for (let i = 0; i < it.qty; i++) {
+                tickets.push({
+                    id: 'TEST-' + Math.random().toString(36).substring(2, 8),
+                    code: 'TEST-' + Math.random().toString(36).substring(2, 10).toUpperCase(),
+                    ticket_type: it.name,
+                    service_category: it.category,
+                    issuing_company: issuingCompany,
+                    price: it.price,
+                    variant: it.variant || null,
+                });
+            }
+        });
+        const hasCompany = !!($('lv-co-cui').value.trim() || $('lv-co-name').value.trim());
+        return {
+            order: {
+                id: null,
+                order_number: 'TEST-' + new Date().getTime().toString().slice(-8),
+                visit_date: visitDate,
+                subtotal: subtotal,
+                total: subtotal,
+                currency: 'RON',
+                paid_at: new Date().toISOString(),
+            },
+            customer: {
+                name: $('lv-cname').value || null,
+                email: $('lv-cemail').value || null,
+                phone: $('lv-cphone').value || null,
+            },
+            company_billing: hasCompany ? {
+                name: $('lv-co-name').value.trim() || null,
+                cui: $('lv-co-cui').value.trim() || null,
+                reg_no: $('lv-co-reg').value.trim() || null,
+                address: $('lv-co-address').value.trim() || null,
+            } : null,
+            issuer: posIssuerPrimary || {},
+            issuer_secondary: posIssuerSecondary || null,
+            event: { name: (typeof leisureEvents !== 'undefined' && Array.isArray(leisureEvents))
+                ? (leisureEvents.find(e => e.id === currentEventId)?.title || '') : '' },
+            items: items,
+            tickets: tickets,
+        };
+    }
+
+    // Finalizare TEST: printeaza bilete + (opțional) factura pe imprimanta termica
+    // folosind datele din cosul curent. NU trimite nimic in DB. Cosul ramane intact.
+    async function checkoutTest() {
+        if (!Object.keys(cart).length) {
+            alert('Cosul e gol — adauga produse inainte de testul de print.');
+            return;
+        }
+        if (typeof PosPrinter === 'undefined' || !PosPrinter.isSupported()) {
+            alert('WebUSB nu e disponibil in browser. Foloseste Chrome.');
+            return;
+        }
+        if (!(await PosPrinter.isReady())) {
+            alert('Conecteaza imprimanta termica inainte de testul de print.');
+            return;
+        }
+        const btn = $('lv-checkout-test');
+        btn.disabled = true;
+        const orig = btn.textContent;
+        btn.textContent = '⏳ Test: printez bilete...';
+        const fakeData = buildFakeSaleResponse();
+        const prevAuto = PosPrinter.getAutoPrintEnabled();
+        PosPrinter.setAutoPrintEnabled(true);
+        try {
+            await window.posAutoPrintTickets(fakeData);
+            if ($('lv-co-invoice').checked) {
+                btn.textContent = '⏳ Test: printez factura...';
+                await window.posPrintInvoiceFromSale(fakeData);
+            }
+            btn.textContent = '✓ Test trimis';
+            setTimeout(() => { btn.textContent = orig; btn.disabled = false; }, 2000);
+        } catch (e) {
+            console.warn('[checkout-test] failed:', e);
+            btn.textContent = orig;
+            btn.disabled = false;
+            alert('Eroare la test print: ' + (e?.message || ''));
+        } finally {
+            PosPrinter.setAutoPrintEnabled(prevAuto);
         }
     }
 
@@ -843,6 +952,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         document.querySelectorAll('.lv-pay-btn').forEach(b => b.addEventListener('click', () => selectPayment(b.dataset.pay)));
         document.querySelectorAll('.lv-lang-btn').forEach(b => b.addEventListener('click', () => selectLocale(b.dataset.lang)));
         $('lv-checkout').addEventListener('click', checkout);
+        $('lv-checkout-test')?.addEventListener('click', checkoutTest);
 
         // Golire cos (cu confirmare): sterge toate produsele + addon-urile.
         // Date client/firma/payment raman setate (operatorul poate reincerca).
@@ -917,6 +1027,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         }
 
         const test3Btn = $('lv-printer-test3');
+        const testInvoiceBtn = $('lv-printer-test-invoice');
         PosPrinter.isReady().then(ready => {
             if (ready) {
                 dot.className = 'w-2 h-2 rounded-full bg-emerald-500';
@@ -927,6 +1038,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 });
                 if (testBtn) testBtn.disabled = false;
                 if (test3Btn) test3Btn.disabled = false;
+                if (testInvoiceBtn) testInvoiceBtn.disabled = false;
                 if (connectBtn) connectBtn.textContent = '🔁 Schimbă imprimanta';
             } else {
                 dot.className = 'w-2 h-2 rounded-full bg-amber-500';
@@ -935,6 +1047,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 if (info) info.textContent = 'Apasă „Conectează" şi alege imprimanta din popup-ul browser-ului.';
                 if (testBtn) testBtn.disabled = true;
                 if (test3Btn) test3Btn.disabled = true;
+                if (testInvoiceBtn) testInvoiceBtn.disabled = true;
                 if (connectBtn) connectBtn.textContent = '🔌 Conectează';
             }
             if (autoCheck) {
@@ -1059,6 +1172,28 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         const autoCheck = $('lv-printer-auto');
         if (autoCheck) autoCheck.addEventListener('change', () => {
             PosPrinter.setAutoPrintEnabled(autoCheck.checked);
+        });
+
+        // Buton test factura fiscala — print cu date dummy reprezentative pt
+        // calibrarea layout-ului pe imprimanta Bixolon.
+        const testInvBtn = $('lv-printer-test-invoice');
+        if (testInvBtn) testInvBtn.addEventListener('click', async () => {
+            const err = $('lv-printer-error');
+            testInvBtn.disabled = true;
+            const orig = testInvBtn.textContent;
+            testInvBtn.textContent = '⏳ Trimit...';
+            try {
+                // Folosesc issuer real al organizatorului daca e incarcat,
+                // altfel cade pe dummy din PosPrinter.printTestInvoice.
+                const overrides = posIssuerPrimary ? { issuer: posIssuerPrimary } : {};
+                await PosPrinter.printTestInvoice(overrides);
+                testInvBtn.textContent = '✓ Trimisă!';
+                setTimeout(() => { testInvBtn.textContent = orig; testInvBtn.disabled = false; }, 1500);
+            } catch (e) {
+                testInvBtn.textContent = orig;
+                testInvBtn.disabled = false;
+                if (err) { err.textContent = 'Factură test eșuată: ' + (e?.message || 'necunoscut'); err.classList.remove('hidden'); }
+            }
         });
 
         // Buton reprint ultima comanda — apeleaza acelasi pipeline ca auto-print
@@ -1287,6 +1422,51 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 console.warn('[auto-print] ticket failed:', t.code, e);
                 // continuam cu urmatorul
             }
+        }
+    };
+
+    /**
+     * Printeaza factura fiscala pe imprimanta termica folosind datele dintr-un
+     * sale-response (real sau fake). Construieste structura PosPrinter.printInvoice
+     * cu issuer + customer + company billing + items + series. Apelata din:
+     *   - checkout() real, dupa biletele printate, daca lv-co-invoice e bifat
+     *   - checkoutTest() (test fara DB)
+     */
+    window.posPrintInvoiceFromSale = async function (saleResponse) {
+        if (typeof PosPrinter === 'undefined' || !PosPrinter.isSupported()) return;
+        if (!(await PosPrinter.isReady())) return;
+
+        const order = saleResponse?.order || {};
+        const customer = saleResponse?.customer || {};
+        const buyerCompany = saleResponse?.company_billing || null;
+        const issuer = saleResponse?.issuer || posIssuerPrimary || {};
+        const items = Array.isArray(saleResponse?.items) ? saleResponse.items : [];
+        const total = parseFloat(order.total ?? items.reduce((s, i) => s + parseFloat(i.line_total || 0), 0));
+
+        // Seria facturii — daca backend trimite invoice_number, foloseste-l;
+        // altfel construieste o serie din order_number sau timestamp.
+        const series = saleResponse?.invoice_number
+            || (order.order_number ? 'P1-' + new Date().getFullYear() + '/' + String(order.order_number).replace(/[^0-9]/g, '').padStart(8, '0').slice(-8) : null)
+            || ('P1-' + new Date().getFullYear() + '/' + String(new Date().getTime()).slice(-8));
+
+        try {
+            await PosPrinter.printInvoice({
+                issuer: issuer,
+                series: series,
+                customer: customer,
+                buyer_company: buyerCompany,
+                issued_at: order.paid_at || new Date(),
+                items: items.map(it => ({
+                    name: it.name,
+                    qty: it.qty,
+                    unit_price: it.unit_price,
+                    total: it.line_total,
+                })),
+                total: total,
+                currency: order.currency || 'RON',
+            });
+        } catch (e) {
+            console.warn('[invoice-print] failed:', e);
         }
     };
 })();

@@ -308,6 +308,169 @@
         return concat(parts);
     }
 
+    // ========================= FACTURA FISCALA =========================
+
+    /**
+     * Construieste buffer-ul ESC/POS pentru o factura fiscala 80mm.
+     *
+     * Layout (conform cerinta client Sf. Ana):
+     *   FACTURA FISCALA                  (mare, bold)
+     *   ──────────────────────
+     *   [Numele firmei emitente]         (bold)
+     *   CUI: ...  Reg: ...               (small)
+     *   Adresa, Oras, Judet              (small, wrap 2 linii)
+     *
+     *   Factura tiparita in doua exemplare   (small italic-like)
+     *   Copia
+     *
+     *   Seria: P1-2026/00000080          (FOARTE MARE, bold)
+     *
+     *   CUMPARATOR                       (small uppercase bold)
+     *   [Nume client]
+     *   [Email · Telefon]
+     *   [Firma cumparator (daca exista):
+     *    Denumire | CUI | Reg | Adresa]
+     *
+     *   Data emiterii: DD.MM.YYYY HH:MM
+     *
+     *   PRODUSE                          (small uppercase bold)
+     *   [Nume produs 1]
+     *      qty x pret           total RON
+     *   [Nume produs 2]
+     *      ...
+     *   ──────────────────────
+     *   TOTAL:                  XX.XX RON   (bold)
+     *
+     *   Achitat cu bon fiscal            (centered)
+     *   [cut]
+     *
+     * invoice: {
+     *   issuer (object cu name/tax_id/registration/address/city/county),
+     *   series, customer (nume/email/phone), buyer_company (nume/cui/reg/adresa),
+     *   issued_at (Date or ISO string), items ([{ name, qty, unit_price, total }]),
+     *   total, currency
+     * }
+     */
+    function buildInvoiceCommands(invoice) {
+        const inv = invoice || {};
+        const parts = [INIT, ALIGN_CENTER];
+
+        // ===== TITLU =====
+        parts.push(SIZE_2X2, BOLD_ON, lineOf('FACTURA FISCALA'), BOLD_OFF, SIZE_NORMAL);
+        parts.push(lineOf('--------------------------------'));
+
+        // ===== EMITENT =====
+        const issuer = inv.issuer || {};
+        const issuerName = (issuer.name || issuer.company_name || 'AMBILET.RO').toString().trim();
+        parts.push(BOLD_ON, lineOf(issuerName.toUpperCase()), BOLD_OFF);
+        const issuerCui = issuer.tax_id || issuer.cui || '';
+        const issuerReg = issuer.registration || issuer.reg_com || '';
+        const idLine = [];
+        if (issuerCui) idLine.push('CUI: ' + issuerCui);
+        if (issuerReg) idLine.push('Reg: ' + issuerReg);
+        if (idLine.length) parts.push(SIZE_SMALL, lineOf(idLine.join('  ')), SIZE_NORMAL);
+        const addrParts = [];
+        if (issuer.address) addrParts.push(issuer.address);
+        if (issuer.city && !String(issuer.address || '').toLowerCase().includes(String(issuer.city).toLowerCase())) addrParts.push(issuer.city);
+        if (issuer.county) addrParts.push(issuer.county);
+        if (addrParts.length) {
+            const fullAddr = addrParts.join(', ').replace(/\s+/g, ' ').trim();
+            const lines = wrapText(fullAddr, 56).slice(0, 2);
+            parts.push(SIZE_SMALL);
+            for (const ln of lines) parts.push(lineOf(ln));
+            parts.push(SIZE_NORMAL);
+        }
+
+        // ===== EXEMPLAR + COPIE =====
+        parts.push(FEED_N(1));
+        parts.push(SIZE_SMALL, lineOf('Factura tiparita in doua exemplare'), SIZE_NORMAL);
+        parts.push(SIZE_SMALL, lineOf('Copia'), SIZE_NORMAL);
+
+        // ===== SERIA (MARE) =====
+        parts.push(FEED_N(1));
+        const series = inv.series || 'P1-' + new Date().getFullYear() + '/00000000';
+        parts.push(SIZE_2X2, BOLD_ON, lineOf('Seria:'), lineOf(series), BOLD_OFF, SIZE_NORMAL);
+        parts.push(FEED_N(1));
+
+        // ===== CUMPARATOR =====
+        parts.push(ALIGN_LEFT);
+        parts.push(BOLD_ON, SIZE_SMALL, lineOf('CUMPARATOR'), SIZE_NORMAL, BOLD_OFF);
+        parts.push(lineOf('--------------------------------'));
+        const customer = inv.customer || {};
+        if (customer.name) parts.push(lineOf(customer.name));
+        const contactLine = [];
+        if (customer.email) contactLine.push(customer.email);
+        if (customer.phone) contactLine.push(customer.phone);
+        if (contactLine.length) parts.push(SIZE_SMALL, lineOf(contactLine.join(' · ')), SIZE_NORMAL);
+
+        // Firma cumparator (daca exista)
+        const buyer = inv.buyer_company || null;
+        if (buyer && (buyer.name || buyer.cui)) {
+            parts.push(FEED_N(1));
+            parts.push(BOLD_ON, SIZE_SMALL, lineOf('Firma:'), SIZE_NORMAL, BOLD_OFF);
+            if (buyer.name) parts.push(lineOf(buyer.name));
+            const buyerIds = [];
+            if (buyer.cui || buyer.tax_id) buyerIds.push('CUI: ' + (buyer.cui || buyer.tax_id));
+            if (buyer.reg_no || buyer.registration) buyerIds.push('Reg: ' + (buyer.reg_no || buyer.registration));
+            if (buyerIds.length) parts.push(SIZE_SMALL, lineOf(buyerIds.join('  ')), SIZE_NORMAL);
+            if (buyer.address) {
+                const ba = wrapText(String(buyer.address), 56).slice(0, 2);
+                parts.push(SIZE_SMALL);
+                for (const l of ba) parts.push(lineOf(l));
+                parts.push(SIZE_NORMAL);
+            }
+        }
+
+        // ===== DATA EMITERII =====
+        parts.push(FEED_N(1));
+        const issuedDate = (() => {
+            const d = inv.issued_at instanceof Date ? inv.issued_at : (inv.issued_at ? new Date(inv.issued_at) : new Date());
+            const pad = n => String(n).padStart(2, '0');
+            return pad(d.getDate()) + '.' + pad(d.getMonth()+1) + '.' + d.getFullYear() + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+        })();
+        parts.push(lineOf('Data emiterii: ' + issuedDate));
+
+        // ===== PRODUSE =====
+        parts.push(FEED_N(1));
+        parts.push(BOLD_ON, SIZE_SMALL, lineOf('PRODUSE'), SIZE_NORMAL, BOLD_OFF);
+        parts.push(lineOf('--------------------------------'));
+        const items = Array.isArray(inv.items) ? inv.items : [];
+        const currency = inv.currency || 'RON';
+        for (const it of items) {
+            const name = String(it.name || 'Produs').trim();
+            const qty = parseFloat(it.qty || 1);
+            const unitPrice = parseFloat(it.unit_price || 0);
+            const total = parseFloat(it.total ?? (qty * unitPrice));
+            // Numele pe primul rand (wrap daca prea lung)
+            const nameLines = wrapText(name, 48);
+            for (const nl of nameLines) parts.push(lineOf(nl));
+            // Detail line: qty x pret = total (aligned)
+            const detail = '  ' + qty + ' x ' + unitPrice.toFixed(2);
+            const totalStr = total.toFixed(2) + ' ' + currency;
+            // Pad to align right (~48 chars width Font A)
+            const pad = Math.max(1, 48 - detail.length - totalStr.length);
+            parts.push(SIZE_SMALL, lineOf(detail + ' '.repeat(pad) + totalStr), SIZE_NORMAL);
+        }
+
+        // ===== TOTAL =====
+        parts.push(lineOf('--------------------------------'));
+        const totalAmount = parseFloat(inv.total ?? items.reduce((s, i) => s + parseFloat(i.total ?? ((i.qty||1) * (i.unit_price||0))), 0));
+        const totalLine = 'TOTAL:';
+        const totalRight = totalAmount.toFixed(2) + ' ' + currency;
+        const totalPad = Math.max(1, 32 - totalLine.length - totalRight.length);
+        parts.push(BOLD_ON, lineOf(totalLine + ' '.repeat(totalPad) + totalRight), BOLD_OFF);
+
+        // ===== FOOTER =====
+        parts.push(FEED_N(2));
+        parts.push(ALIGN_CENTER);
+        parts.push(lineOf('Achitat cu bon fiscal'));
+
+        // Cut
+        parts.push(CUT_PARTIAL_FEED(0));
+
+        return concat(parts);
+    }
+
     // ========================= WebUSB connection management =========================
 
     let _device = null;
@@ -497,6 +660,47 @@
         /** Printează un bilet din datele structurate. */
         async printTicket(ticket) {
             return await this.printRaw(buildTicketCommands(ticket));
+        },
+
+        /** Printează o factură fiscală formată conform specificaţiei Sf. Ana. */
+        async printInvoice(invoice) {
+            return await this.printRaw(buildInvoiceCommands(invoice));
+        },
+
+        /** Test factură — date dummy reprezentative pentru calibrarea layout-ului. */
+        async printTestInvoice(overrides) {
+            const now = new Date();
+            const sample = Object.assign({
+                issuer: {
+                    name: 'AMBILET TICKETING SRL',
+                    tax_id: 'RO12345678',
+                    registration: 'J40/1234/2025',
+                    address: 'Str. Test Nr. 1',
+                    city: 'Bucuresti',
+                    county: 'Bucuresti',
+                },
+                series: 'P1-' + now.getFullYear() + '/00000080',
+                customer: {
+                    name: 'Ion Popescu',
+                    email: 'ion.popescu@example.ro',
+                    phone: '0712345678',
+                },
+                buyer_company: {
+                    name: 'CSOMADCOM SRL',
+                    cui: 'RO28151402',
+                    reg_no: 'J14/123/2011',
+                    address: 'Str. Centrală Nr. 12, Lăzărești, Harghita',
+                },
+                issued_at: now,
+                items: [
+                    { name: 'Bilet Adult', qty: 2, unit_price: 25.00, total: 50.00 },
+                    { name: 'Bilet Copil', qty: 1, unit_price: 15.00, total: 15.00 },
+                    { name: 'Ghidaj 09:00-11:00', qty: 1, unit_price: 80.00, total: 80.00 },
+                ],
+                total: 145.00,
+                currency: 'RON',
+            }, overrides || {});
+            return await this.printInvoice(sample);
         },
 
         /** Printează un bilet de test cu date dummy — pentru calibrare hardware. */
