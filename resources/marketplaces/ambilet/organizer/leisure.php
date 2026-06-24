@@ -27,6 +27,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 <button type="button" id="tab-btn-products" class="px-3 py-2 text-sm font-medium rounded-lg transition-colors text-muted hover:bg-slate-50">🎫 Produse</button>
                 <button type="button" id="tab-btn-gates" class="px-3 py-2 text-sm font-medium rounded-lg transition-colors text-muted hover:bg-slate-50">🚪 Porți acces</button>
                 <a href="/organizator/echipa" class="px-3 py-2 text-sm font-medium rounded-lg transition-colors text-muted hover:bg-slate-50">👥 Angajați →</a>
+                <button type="button" id="tab-btn-issuers" class="px-3 py-2 text-sm font-medium rounded-lg transition-colors text-muted hover:bg-slate-50">🏢 Societăți</button>
                 <button type="button" id="tab-btn-content" class="px-3 py-2 text-sm font-medium rounded-lg transition-colors text-muted hover:bg-slate-50">⚙️ Setări</button>
             </div>
         </div>
@@ -506,6 +507,109 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 
         <!-- Tab: Angajați (initial hidden) -->
         <!-- Tab Angajati mutat in /organizator/echipa (team.php). -->
+
+        <!-- Tab: Societăți emitente (initial hidden) -->
+        <div id="tab-issuers" class="hidden space-y-6">
+            <div class="p-5 bg-white border rounded-2xl border-border">
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 bg-primary/10 text-primary rounded-xl flex items-center justify-center">🏢</div>
+                    <div>
+                        <h2 class="text-lg font-bold text-secondary">Societăți emitente</h2>
+                        <p class="text-xs text-muted">Editezi datele fiscale ale celor 2 societăți care pot emite facturi/bonuri pentru acest organizator. Setezi seria, numărul de pornire și flag-ul TVA pentru fiecare în parte.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="iss-loading" class="p-8 text-center"><div class="inline-block w-6 h-6 border-2 rounded-full border-primary border-t-transparent animate-spin"></div></div>
+
+            <!-- Societatea principala -->
+            <div id="iss-primary-card" class="hidden bg-white border rounded-2xl border-border p-5 space-y-4">
+                <div class="flex items-center justify-between flex-wrap gap-3">
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs font-bold uppercase tracking-wider bg-primary text-white px-2 py-1 rounded">SC1</span>
+                        <h3 class="text-base font-bold text-secondary">Societatea principală</h3>
+                    </div>
+                    <button type="button" data-iss-save="primary" class="px-4 py-2 bg-primary text-white text-sm font-semibold rounded-lg hover:bg-primary-dark disabled:opacity-50">Salvează</button>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3" data-iss-form="primary">
+                    <label class="block md:col-span-2"><span class="text-xs font-semibold text-muted uppercase tracking-wider">Denumire societate *</span><input data-f="name" type="text" class="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg" placeholder="ex: ASOCIATIA TUSNAD..."></label>
+                    <label class="block"><span class="text-xs font-semibold text-muted uppercase tracking-wider">CUI / CIF *</span><input data-f="tax_id" type="text" class="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg" placeholder="RO12345678"></label>
+                    <label class="block"><span class="text-xs font-semibold text-muted uppercase tracking-wider">Nr. Reg. Comerțului</span><input data-f="registration" type="text" class="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg" placeholder="J19/123/2020"></label>
+                    <label class="block md:col-span-2"><span class="text-xs font-semibold text-muted uppercase tracking-wider">Adresă</span><input data-f="address" type="text" class="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg" placeholder="Str. Centrală nr. 1"></label>
+                    <label class="block"><span class="text-xs font-semibold text-muted uppercase tracking-wider">Localitate</span><input data-f="city" type="text" class="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg"></label>
+                    <label class="block"><span class="text-xs font-semibold text-muted uppercase tracking-wider">Județ</span><input data-f="county" type="text" class="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg"></label>
+                    <label class="block"><span class="text-xs font-semibold text-muted uppercase tracking-wider">Cod poștal</span><input data-f="zip" type="text" class="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg"></label>
+                    <div class="md:col-span-2 mt-2 pt-3 border-t border-border">
+                        <p class="text-xs font-bold uppercase tracking-wider text-muted mb-2">Cont bancar</p>
+                    </div>
+                    <label class="block"><span class="text-xs font-semibold text-muted uppercase tracking-wider">Banca</span><input data-f="bank_name" type="text" class="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg"></label>
+                    <label class="block"><span class="text-xs font-semibold text-muted uppercase tracking-wider">IBAN</span><input data-f="iban" type="text" class="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg font-mono uppercase" placeholder="RO__________"></label>
+
+                    <div class="md:col-span-2 mt-2 pt-3 border-t border-border">
+                        <p class="text-xs font-bold uppercase tracking-wider text-muted mb-2">Numerotare facturi</p>
+                    </div>
+                    <label class="block"><span class="text-xs font-semibold text-muted uppercase tracking-wider">Serie factură</span><input data-f="invoice_series" type="text" maxlength="16" class="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg uppercase font-mono" placeholder="ex: P1-2026"></label>
+                    <label class="block"><span class="text-xs font-semibold text-muted uppercase tracking-wider">Următorul nr. factură <span class="text-primary font-bold" data-info="next-hint"></span></span><input data-f="next_invoice_number" type="number" min="1" max="9999999" class="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg font-mono"><span class="text-[11px] text-muted mt-1 block">Următoarea factură va începe de la acest număr. Implicit: <span data-info="next-default" class="font-mono">1</span></span></label>
+
+                    <div class="md:col-span-2 mt-2 pt-3 border-t border-border">
+                        <p class="text-xs font-bold uppercase tracking-wider text-muted mb-2">Regim TVA</p>
+                    </div>
+                    <label class="flex items-center gap-2 mt-1 select-none cursor-pointer md:col-span-2">
+                        <input data-f="vat_payer" type="checkbox" class="w-4 h-4">
+                        <span class="text-sm">Societatea este plătitoare de TVA</span>
+                    </label>
+                    <label class="block" data-show-if="vat_payer"><span class="text-xs font-semibold text-muted uppercase tracking-wider">Cotă TVA (%)</span><input data-f="vat_rate" type="number" step="0.01" min="0" max="100" class="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg font-mono" placeholder="19"></label>
+                </div>
+                <p data-iss-status="primary" class="hidden text-xs text-emerald-700"></p>
+            </div>
+
+            <!-- Societatea secundara -->
+            <div id="iss-secondary-card" class="hidden bg-white border rounded-2xl border-border p-5 space-y-4">
+                <div class="flex items-center justify-between flex-wrap gap-3">
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs font-bold uppercase tracking-wider bg-accent text-white px-2 py-1 rounded">SC2</span>
+                        <h3 class="text-base font-bold text-secondary">Societatea secundară</h3>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <label class="flex items-center gap-2 text-sm select-none cursor-pointer">
+                            <input id="iss-sec-enabled" type="checkbox" class="w-4 h-4">
+                            <span>Activează a doua societate</span>
+                        </label>
+                        <button type="button" data-iss-save="secondary" class="px-4 py-2 bg-primary text-white text-sm font-semibold rounded-lg hover:bg-primary-dark disabled:opacity-50">Salvează</button>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3" data-iss-form="secondary">
+                    <label class="block md:col-span-2"><span class="text-xs font-semibold text-muted uppercase tracking-wider">Denumire societate</span><input data-f="name" type="text" class="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg" placeholder="ex: ICEPOS GIN SRL"></label>
+                    <label class="block"><span class="text-xs font-semibold text-muted uppercase tracking-wider">CUI / CIF</span><input data-f="tax_id" type="text" class="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg" placeholder="RO12345678"></label>
+                    <label class="block"><span class="text-xs font-semibold text-muted uppercase tracking-wider">Nr. Reg. Comerțului</span><input data-f="registration" type="text" class="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg" placeholder="J19/123/2020"></label>
+                    <label class="block md:col-span-2"><span class="text-xs font-semibold text-muted uppercase tracking-wider">Adresă</span><input data-f="address" type="text" class="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg"></label>
+                    <label class="block"><span class="text-xs font-semibold text-muted uppercase tracking-wider">Localitate</span><input data-f="city" type="text" class="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg"></label>
+                    <label class="block"><span class="text-xs font-semibold text-muted uppercase tracking-wider">Județ</span><input data-f="county" type="text" class="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg"></label>
+                    <label class="block"><span class="text-xs font-semibold text-muted uppercase tracking-wider">Cod poștal</span><input data-f="zip" type="text" class="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg"></label>
+                    <div class="md:col-span-2 mt-2 pt-3 border-t border-border">
+                        <p class="text-xs font-bold uppercase tracking-wider text-muted mb-2">Cont bancar</p>
+                    </div>
+                    <label class="block"><span class="text-xs font-semibold text-muted uppercase tracking-wider">Banca</span><input data-f="bank_name" type="text" class="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg"></label>
+                    <label class="block"><span class="text-xs font-semibold text-muted uppercase tracking-wider">IBAN</span><input data-f="iban" type="text" class="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg font-mono uppercase" placeholder="RO__________"></label>
+
+                    <div class="md:col-span-2 mt-2 pt-3 border-t border-border">
+                        <p class="text-xs font-bold uppercase tracking-wider text-muted mb-2">Numerotare facturi</p>
+                    </div>
+                    <label class="block"><span class="text-xs font-semibold text-muted uppercase tracking-wider">Serie factură</span><input data-f="invoice_series" type="text" maxlength="16" class="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg uppercase font-mono" placeholder="ex: P2-2026"></label>
+                    <label class="block"><span class="text-xs font-semibold text-muted uppercase tracking-wider">Următorul nr. factură <span class="text-primary font-bold" data-info="next-hint"></span></span><input data-f="next_invoice_number" type="number" min="1" max="9999999" class="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg font-mono"><span class="text-[11px] text-muted mt-1 block">Implicit: <span data-info="next-default" class="font-mono">1</span></span></label>
+
+                    <div class="md:col-span-2 mt-2 pt-3 border-t border-border">
+                        <p class="text-xs font-bold uppercase tracking-wider text-muted mb-2">Regim TVA</p>
+                    </div>
+                    <label class="flex items-center gap-2 mt-1 select-none cursor-pointer md:col-span-2">
+                        <input data-f="vat_payer" type="checkbox" class="w-4 h-4">
+                        <span class="text-sm">Societatea este plătitoare de TVA</span>
+                    </label>
+                    <label class="block" data-show-if="vat_payer"><span class="text-xs font-semibold text-muted uppercase tracking-wider">Cotă TVA (%)</span><input data-f="vat_rate" type="number" step="0.01" min="0" max="100" class="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg font-mono" placeholder="19"></label>
+                </div>
+                <p data-iss-status="secondary" class="hidden text-xs text-emerald-700"></p>
+            </div>
+        </div>
 
         <!-- Tab: Conținut pagină (initial hidden) -->
         <div id="tab-content" class="hidden space-y-6">
@@ -1123,6 +1227,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             { btn: $('tab-btn-overview'), panel: $('leisure-content'), key: 'overview' },
             { btn: $('tab-btn-products'), panel: $('tab-products'), key: 'products' },
             { btn: $('tab-btn-gates'), panel: $('tab-gates'), key: 'gates' },
+            { btn: $('tab-btn-issuers'), panel: $('tab-issuers'), key: 'issuers' },
             { btn: $('tab-btn-content'), panel: $('tab-content'), key: 'content' },
         ];
         const empty = $('leisure-empty');
@@ -1146,6 +1251,8 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 loadProducts();
             } else if (which === 'gates') {
                 loadGates();
+            } else if (which === 'issuers') {
+                loadIssuers();
             } else if (which === 'content') {
                 hydrateContentForm();
             }
@@ -1155,6 +1262,141 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
     }
 
     // Staff management mutat in /organizator/echipa (team.php).
+
+    // ========== ISSUERS (Societati) ==========
+    let issuersLoaded = false;
+    async function loadIssuers() {
+        if (!currentEventId) return;
+        $('iss-loading').classList.remove('hidden');
+        $('iss-primary-card').classList.add('hidden');
+        $('iss-secondary-card').classList.add('hidden');
+        try {
+            const res = await AmbiletAPI.get(`/organizer/events/${currentEventId}/leisure/issuers`);
+            const data = res?.data || res;
+            fillIssuerForm('primary', data.primary || {});
+            fillIssuerForm('secondary', data.secondary || {});
+            $('iss-sec-enabled').checked = !!data.has_secondary_issuer;
+            applySecondaryEnabledState();
+            $('iss-primary-card').classList.remove('hidden');
+            $('iss-secondary-card').classList.remove('hidden');
+            issuersLoaded = true;
+        } catch (e) {
+            console.error('[issuers] load', e);
+            alert('Eroare la încărcarea societăților: ' + (e?.message || e));
+        } finally {
+            $('iss-loading').classList.add('hidden');
+        }
+    }
+
+    function fillIssuerForm(company, data) {
+        const form = document.querySelector(`[data-iss-form="${company}"]`);
+        if (!form) return;
+        form.querySelectorAll('[data-f]').forEach(input => {
+            const field = input.getAttribute('data-f');
+            const val = data[field];
+            if (input.type === 'checkbox') {
+                input.checked = !!val;
+            } else if (field === 'next_invoice_number') {
+                // Lasam empty -> placeholder = next_invoice_number sugerat
+                input.value = '';
+                input.placeholder = (data.next_invoice_number || 1).toString();
+            } else {
+                input.value = (val ?? '').toString();
+            }
+        });
+        const hint = form.querySelector('[data-info="next-default"]');
+        if (hint) hint.textContent = (data.next_invoice_number || 1).toString();
+        const nextHint = form.querySelector('[data-info="next-hint"]');
+        if (nextHint) {
+            const lastN = parseInt(data.last_invoice_number || 0, 10);
+            nextHint.textContent = lastN > 0 ? `(ultima emisă: #${lastN})` : '';
+        }
+        applyVatRateVisibility(company);
+        // Re-bind listener pentru toggle TVA -> show/hide vat_rate
+        const vatChk = form.querySelector('[data-f="vat_payer"]');
+        if (vatChk && !vatChk._issuerBound) {
+            vatChk.addEventListener('change', () => applyVatRateVisibility(company));
+            vatChk._issuerBound = true;
+        }
+    }
+
+    function applyVatRateVisibility(company) {
+        const form = document.querySelector(`[data-iss-form="${company}"]`);
+        if (!form) return;
+        const vatChk = form.querySelector('[data-f="vat_payer"]');
+        const rateWrap = form.querySelector('[data-show-if="vat_payer"]');
+        if (!rateWrap) return;
+        rateWrap.style.display = vatChk?.checked ? '' : 'none';
+    }
+
+    function applySecondaryEnabledState() {
+        const enabled = $('iss-sec-enabled').checked;
+        const form = document.querySelector('[data-iss-form="secondary"]');
+        if (!form) return;
+        form.querySelectorAll('input').forEach(i => {
+            i.disabled = !enabled;
+            i.classList.toggle('opacity-50', !enabled);
+        });
+    }
+
+    function collectIssuerForm(company) {
+        const form = document.querySelector(`[data-iss-form="${company}"]`);
+        if (!form) return {};
+        const out = {};
+        form.querySelectorAll('[data-f]').forEach(input => {
+            const field = input.getAttribute('data-f');
+            if (input.type === 'checkbox') {
+                out[field] = !!input.checked;
+            } else if (field === 'next_invoice_number') {
+                const v = (input.value || '').trim();
+                if (v !== '') out[field] = parseInt(v, 10);
+            } else if (field === 'vat_rate') {
+                const v = (input.value || '').trim();
+                out[field] = v === '' ? null : parseFloat(v);
+            } else {
+                const v = (input.value || '').trim();
+                out[field] = v === '' ? null : v;
+            }
+        });
+        return out;
+    }
+
+    async function saveIssuer(company) {
+        if (!currentEventId) return;
+        const fields = collectIssuerForm(company);
+        if (company === 'secondary') {
+            fields.has_secondary_issuer = !!$('iss-sec-enabled').checked;
+        }
+        const btn = document.querySelector(`[data-iss-save="${company}"]`);
+        const status = document.querySelector(`[data-iss-status="${company}"]`);
+        if (btn) { btn.disabled = true; btn.textContent = 'Se salvează...'; }
+        try {
+            await AmbiletAPI.put(`/organizer/events/${currentEventId}/leisure/issuers`, {
+                company,
+                fields,
+            });
+            if (status) {
+                status.textContent = '✓ Salvat ' + new Date().toLocaleTimeString('ro-RO');
+                status.classList.remove('hidden');
+                setTimeout(() => status.classList.add('hidden'), 4000);
+            }
+            // Reload to refresh next_invoice_number hint after series change
+            await loadIssuers();
+        } catch (e) {
+            console.error('[issuers] save', e);
+            alert('Eroare la salvare: ' + (e?.message || e));
+        } finally {
+            if (btn) { btn.disabled = false; btn.textContent = 'Salvează'; }
+        }
+    }
+
+    function setupIssuerHandlers() {
+        document.querySelectorAll('[data-iss-save]').forEach(b => {
+            b.addEventListener('click', () => saveIssuer(b.getAttribute('data-iss-save')));
+        });
+        const sec = $('iss-sec-enabled');
+        if (sec) sec.addEventListener('change', applySecondaryEnabledState);
+    }
 
 
     // ========== GATES CRUD ==========
@@ -2784,6 +3026,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         setupTabs();
         setupProductsHandlers();
         setupGatesHandlers();
+        setupIssuerHandlers();
 
         // B3 — Toggle accordion + tabs limbi pentru sectiunea traduceri
         const trToggle = $('pr-f-tr-toggle');

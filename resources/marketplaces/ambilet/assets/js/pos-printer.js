@@ -465,6 +465,15 @@
         parts.push(ALIGN_CENTER);
         parts.push(lineOf('Achitat cu bon fiscal'));
 
+        // Footer note opțional (ex: avertisment cand exista produse SC2 nefacturate)
+        if (inv.footer_note) {
+            parts.push(FEED_N(1));
+            parts.push(SIZE_SMALL);
+            const noteLines = wrapText(ascii(inv.footer_note), 56);
+            for (const nl of noteLines) parts.push(lineOf(nl));
+            parts.push(SIZE_NORMAL);
+        }
+
         // Cut
         parts.push(CUT_PARTIAL_FEED(0));
 

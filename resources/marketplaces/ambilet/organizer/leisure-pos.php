@@ -771,7 +771,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             const issuingCompany = tt?.issuing_company || 'primary';
             const lineTotal = it.qty * it.price;
             subtotal += lineTotal;
-            items.push({ name: it.name, qty: it.qty, unit_price: it.price, line_total: lineTotal, service_category: it.category });
+            items.push({ name: it.name, qty: it.qty, unit_price: it.price, line_total: lineTotal, service_category: it.category, issuing_company: issuingCompany });
             for (let i = 0; i < it.qty; i++) {
                 tickets.push({
                     id: 'TEST-' + Math.random().toString(36).substring(2, 8),
@@ -1439,15 +1439,30 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         const order = saleResponse?.order || {};
         const customer = saleResponse?.customer || {};
         const buyerCompany = saleResponse?.company_billing || null;
-        const issuer = saleResponse?.issuer || posIssuerPrimary || {};
-        const items = Array.isArray(saleResponse?.items) ? saleResponse.items : [];
-        const total = parseFloat(order.total ?? items.reduce((s, i) => s + parseFloat(i.line_total || 0), 0));
+        // Factura fiscala se emite DOAR pe societatea PRINCIPALA. Filtram items
+        // catre cele cu issuing_company='primary' (sau lipsa = default primary).
+        // Produsele de pe societatea secundara nu apar pe factura — ele se vand
+        // separat (bilete imprimate pe alta societate, fara factura aici).
+        const issuer = posIssuerPrimary || saleResponse?.issuer || {};
+        const allItems = Array.isArray(saleResponse?.items) ? saleResponse.items : [];
+        const primaryItems = allItems.filter(it => (it.issuing_company || 'primary') === 'primary');
+        if (!primaryItems.length) {
+            console.warn('[invoice-print] niciun produs pe societatea principala — nu se emite factura');
+            return;
+        }
+        const total = primaryItems.reduce((s, i) => s + parseFloat(i.line_total || 0), 0);
+        const skipped = allItems.length - primaryItems.length;
 
-        // Seria facturii — daca backend trimite invoice_number, foloseste-l;
-        // altfel construieste o serie din order_number sau timestamp.
+        // Seria facturii: priority (1) invoice_number din backend (cand exista),
+        // (2) serie din primary_invoice_series + order_number cand exista,
+        // (3) fallback construit din serie primary + timestamp.
+        const seriesPrefix = issuer?.invoice_series
+            || (saleResponse?.invoice_number ? null : 'P1-' + new Date().getFullYear());
+        const orderNumPart = order.order_number
+            ? String(order.order_number).replace(/[^0-9]/g, '').padStart(8, '0').slice(-8)
+            : String(new Date().getTime()).slice(-8);
         const series = saleResponse?.invoice_number
-            || (order.order_number ? 'P1-' + new Date().getFullYear() + '/' + String(order.order_number).replace(/[^0-9]/g, '').padStart(8, '0').slice(-8) : null)
-            || ('P1-' + new Date().getFullYear() + '/' + String(new Date().getTime()).slice(-8));
+            || (seriesPrefix ? seriesPrefix + '/' + orderNumPart : ('P1-' + new Date().getFullYear() + '/' + orderNumPart));
 
         try {
             await PosPrinter.printInvoice({
@@ -1456,7 +1471,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 customer: customer,
                 buyer_company: buyerCompany,
                 issued_at: order.paid_at || new Date(),
-                items: items.map(it => ({
+                items: primaryItems.map(it => ({
                     name: it.name,
                     qty: it.qty,
                     unit_price: it.unit_price,
@@ -1464,6 +1479,11 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 })),
                 total: total,
                 currency: order.currency || 'RON',
+                // Bottom note cand am sarit produse SC2 (ca operatorul sa stie ca
+                // exista bilete printate care nu apar pe factura)
+                footer_note: skipped > 0
+                    ? 'Produsele de pe societatea secundara nu sunt facturate aici (' + skipped + ' produse separate)'
+                    : null,
             });
         } catch (e) {
             console.warn('[invoice-print] failed:', e);

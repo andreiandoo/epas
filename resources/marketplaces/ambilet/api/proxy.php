@@ -1829,6 +1829,22 @@ switch ($action) {
         $requiresAuth = true;
         break;
 
+    case 'organizer.event.leisure.issuers':
+        // GET → show, PUT → update partial pentru o societate (primary|secondary)
+        $eventId = (int) ($_GET['event'] ?? 0);
+        if (!$eventId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing event id']);
+            exit;
+        }
+        $method = ($_SERVER['REQUEST_METHOD'] === 'PUT') ? 'PUT' : 'GET';
+        if ($method === 'PUT') {
+            $body = file_get_contents('php://input');
+        }
+        $endpoint = '/organizer/events/' . $eventId . '/leisure/issuers';
+        $requiresAuth = true;
+        break;
+
     case 'organizer.event.leisure.participants':
         $eventId = (int) ($_GET['event'] ?? 0);
         if (!$eventId) {

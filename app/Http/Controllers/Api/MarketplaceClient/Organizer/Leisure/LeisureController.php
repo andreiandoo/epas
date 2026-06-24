@@ -33,20 +33,6 @@ use Illuminate\Support\Str;
 class LeisureController extends BaseController
 {
     /**
-     * Converteste o cale storage relativa (ex: "events/4234/categories/abc.png")
-     * sau un URL absolut (ex: "https://...") într-un URL accesibil din browser.
-     * Returneaza null pentru valori goale.
-     */
-    protected function resolveImageUrl(?string $value): ?string
-    {
-        if (empty($value)) return null;
-        if (str_starts_with($value, 'http://') || str_starts_with($value, 'https://')) {
-            return $value;
-        }
-        return \Illuminate\Support\Facades\Storage::disk('public')->url(ltrim($value, '/'));
-    }
-
-    /**
      * GET /marketplace-client/organizer/events/{event}/leisure/config
      *
      * Returneaza configurarea leisure: ticket types cu societatea emitenta efectiva
@@ -103,18 +89,9 @@ class LeisureController extends BaseController
 
         // C2: categorii custom pentru gruparea tipurilor de bilete (afișare pe
         // pagina publica + organizator panel). Stocate in venue_config.ticket_categories
-        // ca [{id, name, sort_order, image}]. Sortate dupa sort_order asc, name asc.
-        // `image` e cale storage relativa (uploaded prin endpoint-ul upload-image)
-        // sau URL absolut (fallback). Pagina publica converteste in storage URL.
+        // ca [{id, name, sort_order}]. Sortate after sort_order asc, name asc.
         $venueConfig = is_array($eventModel->venue_config ?? null) ? $eventModel->venue_config : [];
         $ticketCategories = is_array($venueConfig['ticket_categories'] ?? null) ? $venueConfig['ticket_categories'] : [];
-        $ticketCategories = array_map(function ($c) {
-            $img = $c['image'] ?? null;
-            return array_merge($c, [
-                'image' => $img,
-                'image_url' => $this->resolveImageUrl($img),
-            ]);
-        }, $ticketCategories);
         usort($ticketCategories, function ($a, $b) {
             $sa = (int) ($a['sort_order'] ?? 0);
             $sb = (int) ($b['sort_order'] ?? 0);
@@ -211,8 +188,6 @@ class LeisureController extends BaseController
                     'id' => $tt->id,
                     'name' => $tt->name,
                     'sku' => $tt->sku,
-                    'status' => $tt->status,
-                    'is_active' => $tt->is_active,
                     'price' => $price,
                     'price_max' => (float) ($tt->price_max ?? 0),
                     'service_category' => $tt->effective_service_category,
@@ -220,10 +195,6 @@ class LeisureController extends BaseController
                     'requires_vehicle_info' => (bool) $tt->requires_vehicle_info,
                     'daily_capacity' => $tt->daily_capacity,
                     'ticket_group' => $tt->ticket_group,
-                    // Cantitatile min/max per comanda — folosite in leisure-pos pentru
-                    // a respecta bilete de grup (ex: min=8 → add adauga direct 8, nu 1).
-                    'min_per_order' => $tt->min_per_order,
-                    'max_per_order' => $tt->max_per_order,
                     'issuing_company' => $tt->effective_issuing_company,
                     'issuing_explicit' => (bool) $tt->issuing_company,
                     'meta' => $metaArr ?: (object) [],
@@ -777,9 +748,6 @@ class LeisureController extends BaseController
             'customer.email' => 'nullable|email|max:120',
             'customer.phone' => 'nullable|string|max:30',
             'customer.vehicle_plate' => 'nullable|string|max:20',
-            // Informatii suplimentare opt-in introduse de operator la POS — salvat
-            // in Order.meta.notes pentru audit / retete speciale / observatii grup.
-            'customer.notes' => 'nullable|string|max:1000',
             // Date firma (opțional) — pentru emitere factură pe persoană juridică
             'company.name' => 'nullable|string|max:200',
             'company.cui' => 'nullable|string|max:30',
@@ -912,7 +880,6 @@ class LeisureController extends BaseController
                     'slot_time' => $slotTime,
                     'duration_minutes' => (int) ($slotsConfig['duration_minutes'] ?? 30),
                     'unit_pricing' => $slotsConfig['unit_pricing'] ?? 'per_person',
-                    'capacity' => $capacity, // pentru SlotBookingService::reserve in tranzactie
                 ];
             }
 
@@ -1049,7 +1016,6 @@ class LeisureController extends BaseController
                     'payment_method' => $paymentMethod,
                     'visit_date' => $visitDate,
                     'vehicle_plate' => $validated['customer']['vehicle_plate'] ?? null,
-                    'notes' => $validated['customer']['notes'] ?? null,
                     'cashier_organizer_id' => $organizer->id,
                     'commission_total' => $commissionTotal,
                     'commission_rate' => $commissionRate,
@@ -1081,36 +1047,6 @@ class LeisureController extends BaseController
                 $packageOutputs = is_array($tt->meta['package_outputs'] ?? null)
                     ? $tt->meta['package_outputs']
                     : [];
-
-                // B — Reservation atomică în leisure_slot_bookings pentru produsele
-                // cu sloturi orare (Ghidaj, Vaporașe, etc.). Verificarea anterioară
-                // bazată pe COUNT(*) pe OrderItem (linii ~898) era informativă —
-                // această reserve() lockează rândul + decide final dacă mai sunt
-                // locuri. Eseuc → SlotSoldOutException → outer tranzacție rollback
-                // → întoarcem 422 user-facing.
-                if (!empty($it['slot']) && is_array($it['slot'])) {
-                    $slotConsume = ($it['slot']['unit_pricing'] ?? 'per_person') === 'per_slot'
-                        ? (int) ($it['slot']['capacity'] ?? 1)
-                        : (int) $it['qty'];
-                    try {
-                        app(\App\Services\Leisure\SlotBookingService::class)->reserve(
-                            $eventModel->id,
-                            $tt->id,
-                            $visitDate,
-                            (string) $it['slot']['slot_time'],
-                            (int) ($it['slot']['capacity'] ?? 1),
-                            $slotConsume,
-                        );
-                    } catch (\App\Services\Leisure\SlotSoldOutException $e) {
-                        // Rollback automat la final-of-foreach când outer catch
-                        // intercepteaza. Re-throw cu context user-facing.
-                        throw new \RuntimeException(
-                            'Cursa de la ' . $it['slot']['slot_time'] . ' s-a umplut între timp. Reîncearcă cu altă oră.',
-                            422,
-                            $e
-                        );
-                    }
-                }
 
                 $orderItem = OrderItem::create([
                     'order_id' => $order->id,
@@ -1189,7 +1125,6 @@ class LeisureController extends BaseController
                             'code' => $pkgTicket->code,
                             'ticket_type' => $displayName . ' (pachet)',
                             'service_category' => 'package',
-                            'issuing_company' => $tt->issuing_company ?? 'primary',
                             'price' => $it['unit_price'],
                             'variant' => null,
                         ];
@@ -1249,7 +1184,6 @@ class LeisureController extends BaseController
                                     'code' => $compTicket->code,
                                     'ticket_type' => $compDisplay,
                                     'service_category' => $compTt->service_category ?? 'access',
-                                    'issuing_company' => $compTt->issuing_company ?? 'primary',
                                     'price' => 0,
                                     'variant' => $compVariant,
                                     'from_package' => true,
@@ -1288,7 +1222,6 @@ class LeisureController extends BaseController
                             'code' => $ticket->code,
                             'ticket_type' => $displayName,
                             'service_category' => $tt->service_category ?? 'access',
-                            'issuing_company' => $tt->issuing_company ?? 'primary',
                             'price' => $it['unit_price'],
                             'variant' => $variantMeta,
                         ];
@@ -1299,40 +1232,11 @@ class LeisureController extends BaseController
             DB::commit();
         } catch (\Throwable $e) {
             DB::rollBack();
-            // Excepții cu code 422 (slot sold out etc.) → user-facing 422 cu mesajul lor.
-            // Restul → 500 generic ca până acum.
-            $code = $e->getCode();
-            if (is_int($code) && $code >= 400 && $code < 500) {
-                return $this->error($e->getMessage(), $code);
-            }
             return $this->error('Eroare la procesarea vânzării: ' . $e->getMessage(), 500);
         }
 
-        // Datele pentru chitanță 80mm + print termic POS.
-        // Returnam AMBII emitenti — frontend-ul de print alege per bilet pe baza
-        // ticket.issuing_company (primary/secondary). Pentru organizatorii fara
-        // secondary issuer, getIssuerData('secondary') intoarce primary (fallback).
+        // Datele pentru chitanță 80mm
         $issuer = $organizer->getIssuerData('primary');
-        $issuerSecondary = $organizer->has_secondary_issuer ? $organizer->getIssuerData('secondary') : null;
-
-        // C — Email tranzacțional cu biletele (RO/HU/EN). Dispatcham doar daca
-        // exista un email real (nu pos@ambilet.ro default pentru cash sale).
-        // Job-ul genereaza QR inline + trimite via Mail facade — retry 3x.
-        $customerEmail = $validated['customer']['email'] ?? null;
-        if ($customerEmail && !str_contains($customerEmail, 'pos@')) {
-            $eventNameForMail = is_array($eventModel->name)
-                ? ($eventModel->name['ro'] ?? reset($eventModel->name))
-                : $eventModel->name;
-            \App\Jobs\SendLeisureTicketsEmailJob::dispatch(
-                orderId: $order->id,
-                eventName: (string) $eventNameForMail,
-                issuer: $issuer,
-                issuerSecondary: $issuerSecondary,
-                ticketsData: $issued,
-                visitDate: $visitDate,
-                locale: $posLocale ?? 'ro',
-            );
-        }
 
         return $this->success([
             'order' => [
@@ -1355,11 +1259,6 @@ class LeisureController extends BaseController
             'company_billing' => is_array($order->meta['company_billing'] ?? null) ? $order->meta['company_billing'] : null,
             'invoice_requested' => (bool) ($order->meta['invoice_requested'] ?? false),
             'issuer' => $issuer,
-            'issuer_secondary' => $issuerSecondary,
-            'event' => [
-                'id' => $eventModel->id,
-                'name' => is_array($eventModel->name) ? ($eventModel->name['ro'] ?? reset($eventModel->name)) : $eventModel->name,
-            ],
             'items' => array_map(function ($it) {
                 $baseName = is_array($it['ticket_type']->name) ? ($it['ticket_type']->name['ro'] ?? reset($it['ticket_type']->name)) : $it['ticket_type']->name;
                 $name = $it['variant'] ? ($baseName . ' — ' . $it['variant']['label']) : $baseName;
@@ -1370,6 +1269,7 @@ class LeisureController extends BaseController
                     'line_total' => $it['line_total'],
                     'commission_per_ticket' => $it['commission_per_ticket'] ?? 0,
                     'service_category' => $it['ticket_type']->service_category ?? 'access',
+                    'issuing_company' => $it['ticket_type']->effective_issuing_company ?? 'primary',
                     'variant' => $it['variant'],
                     'addons' => $it['addons'] ?? [],
                     'addons_total' => $it['addons_total'] ?? 0,
@@ -1412,13 +1312,9 @@ class LeisureController extends BaseController
 
         $request->validate([
             'image' => 'required|image|mimes:jpeg,png,webp|max:10240',
-            // 'type' separa storage-ul intre imagini de produs si de categorie
-            // doar pentru a mentine fisierele mai ordonate; nu afecteaza logica.
-            'type' => 'nullable|in:products,categories',
         ]);
 
-        $subdir = $request->input('type') === 'categories' ? 'categories' : 'products';
-        $path = $request->file('image')->store('events/' . $eventModel->id . '/' . $subdir, 'public');
+        $path = $request->file('image')->store('events/' . $eventModel->id . '/products', 'public');
         $url = \Illuminate\Support\Facades\Storage::disk('public')->url($path);
 
         return $this->success([
@@ -1861,10 +1757,6 @@ class LeisureController extends BaseController
             'pos_only',
             // Multi-locale (B2): traduceri opt-in pe name/description/etc. + pe variants/addons.
             'translations',
-            // Pas incrementare cantitate (min_per_order e coloana SQL top-level) +
-            // bilet de grup (group ticket logic) + bonus ghid
-            'step_qty', 'is_group_ticket',
-            'group_includes_guide', 'group_guide_label',
         ];
         $filtered = array_intersect_key($meta, array_flip($allowed));
 
@@ -2654,5 +2546,183 @@ class LeisureController extends BaseController
             return $title['ro'] ?? $title['en'] ?? (reset($title) ?: '');
         }
         return (string) ($title ?? '');
+    }
+
+    // ========================================================================
+    // SOCIETATI — GET/PUT pentru editarea celor 2 societati emitente
+    // ========================================================================
+
+    /**
+     * GET /marketplace-client/organizer/events/{event}/leisure/issuers
+     * Returneaza datele complete editabile ale celor 2 societati (primary +
+     * secondary, daca activata) ale organizatorului evenimentului.
+     */
+    public function issuersShow(Request $request, int $event): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+        $marketplace = $organizer->marketplaceClient;
+
+        $eventModel = Event::query()
+            ->where('id', $event)
+            ->where('marketplace_client_id', $marketplace->id)
+            ->first();
+        if (!$eventModel) return $this->error('Event not found', 404);
+
+        $eventOrganizer = $eventModel->marketplace_organizer_id
+            ? MarketplaceOrganizer::find($eventModel->marketplace_organizer_id)
+            : $organizer;
+        if (!$eventOrganizer) return $this->error('Organizer not found', 404);
+
+        return $this->success([
+            'organizer_id' => $eventOrganizer->id,
+            'has_secondary_issuer' => (bool) $eventOrganizer->has_secondary_issuer,
+            'primary' => [
+                'name' => $eventOrganizer->company_name,
+                'tax_id' => $eventOrganizer->company_tax_id,
+                'registration' => $eventOrganizer->company_registration,
+                'address' => $eventOrganizer->company_address,
+                'city' => $eventOrganizer->company_city,
+                'county' => $eventOrganizer->company_county,
+                'zip' => $eventOrganizer->company_zip,
+                'bank_name' => $eventOrganizer->bank_name,
+                'iban' => $eventOrganizer->iban,
+                'invoice_series' => $eventOrganizer->primary_invoice_series,
+                'last_invoice_number' => (int) ($eventOrganizer->primary_last_invoice_number ?? 0),
+                'next_invoice_number' => (int) ($eventOrganizer->primary_last_invoice_number ?? 0) + 1,
+                'vat_payer' => $eventOrganizer->primary_vat_payer !== null
+                    ? (bool) $eventOrganizer->primary_vat_payer
+                    : (bool) ($eventOrganizer->vat_payer ?? false),
+                'vat_rate' => $eventOrganizer->primary_vat_rate !== null
+                    ? (float) $eventOrganizer->primary_vat_rate
+                    : (isset($eventOrganizer->tax_settings['vat_rate']) ? (float) $eventOrganizer->tax_settings['vat_rate'] : null),
+            ],
+            'secondary' => [
+                'name' => $eventOrganizer->secondary_company_name,
+                'tax_id' => $eventOrganizer->secondary_company_tax_id,
+                'registration' => $eventOrganizer->secondary_company_registration,
+                'address' => $eventOrganizer->secondary_company_address,
+                'city' => $eventOrganizer->secondary_company_city,
+                'county' => $eventOrganizer->secondary_company_county,
+                'zip' => $eventOrganizer->secondary_company_zip,
+                'bank_name' => $eventOrganizer->secondary_bank_name,
+                'iban' => $eventOrganizer->secondary_iban,
+                'invoice_series' => $eventOrganizer->secondary_invoice_series,
+                'last_invoice_number' => (int) ($eventOrganizer->secondary_last_invoice_number ?? 0),
+                'next_invoice_number' => (int) ($eventOrganizer->secondary_last_invoice_number ?? 0) + 1,
+                'vat_payer' => (bool) ($eventOrganizer->secondary_vat_payer ?? false),
+                'vat_rate' => $eventOrganizer->secondary_vat_rate !== null ? (float) $eventOrganizer->secondary_vat_rate : null,
+            ],
+        ]);
+    }
+
+    /**
+     * PUT /marketplace-client/organizer/events/{event}/leisure/issuers
+     *
+     * Update partial pentru societatea ceruta. Body: { company: 'primary'|'secondary', fields: {...} }
+     * Fields acceptate (toate optionale, doar cele trimise se actualizeaza):
+     *  name, tax_id, registration, address, city, county, zip, bank_name, iban,
+     *  invoice_series, next_invoice_number, vat_payer, vat_rate,
+     *  has_secondary_issuer (DOAR cand company=secondary)
+     *
+     * next_invoice_number: cand e setat, scrie last_invoice_number = next - 1 ca sa pornim
+     * urmatoarea factura emisa de la `next` (atomic reservation in reserveNextInvoiceNumber).
+     */
+    public function issuersUpdate(Request $request, int $event): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+        $marketplace = $organizer->marketplaceClient;
+
+        $eventModel = Event::query()
+            ->where('id', $event)
+            ->where('marketplace_client_id', $marketplace->id)
+            ->first();
+        if (!$eventModel) return $this->error('Event not found', 404);
+
+        $eventOrganizer = $eventModel->marketplace_organizer_id
+            ? MarketplaceOrganizer::find($eventModel->marketplace_organizer_id)
+            : $organizer;
+        if (!$eventOrganizer) return $this->error('Organizer not found', 404);
+
+        $validated = $request->validate([
+            'company' => 'required|in:primary,secondary',
+            'fields' => 'required|array',
+            'fields.name' => 'nullable|string|max:255',
+            'fields.tax_id' => 'nullable|string|max:32',
+            'fields.registration' => 'nullable|string|max:32',
+            'fields.address' => 'nullable|string|max:1024',
+            'fields.city' => 'nullable|string|max:100',
+            'fields.county' => 'nullable|string|max:100',
+            'fields.zip' => 'nullable|string|max:20',
+            'fields.bank_name' => 'nullable|string|max:255',
+            'fields.iban' => 'nullable|string|max:34',
+            'fields.invoice_series' => 'nullable|string|max:16',
+            'fields.next_invoice_number' => 'nullable|integer|min:1|max:9999999',
+            'fields.vat_payer' => 'nullable|boolean',
+            'fields.vat_rate' => 'nullable|numeric|min:0|max:100',
+            'fields.has_secondary_issuer' => 'nullable|boolean',
+        ]);
+
+        $company = $validated['company'];
+        $fields = $validated['fields'] ?? [];
+        $prefix = $company === 'secondary' ? 'secondary_' : '';
+
+        // Mapare camp UI -> coloana DB (per societate)
+        $colMap = $company === 'secondary' ? [
+            'name' => 'secondary_company_name',
+            'tax_id' => 'secondary_company_tax_id',
+            'registration' => 'secondary_company_registration',
+            'address' => 'secondary_company_address',
+            'city' => 'secondary_company_city',
+            'county' => 'secondary_company_county',
+            'zip' => 'secondary_company_zip',
+            'bank_name' => 'secondary_bank_name',
+            'iban' => 'secondary_iban',
+            'invoice_series' => 'secondary_invoice_series',
+            'vat_payer' => 'secondary_vat_payer',
+            'vat_rate' => 'secondary_vat_rate',
+        ] : [
+            'name' => 'company_name',
+            'tax_id' => 'company_tax_id',
+            'registration' => 'company_registration',
+            'address' => 'company_address',
+            'city' => 'company_city',
+            'county' => 'company_county',
+            'zip' => 'company_zip',
+            'bank_name' => 'bank_name',
+            'iban' => 'iban',
+            'invoice_series' => 'primary_invoice_series',
+            'vat_payer' => 'primary_vat_payer',
+            'vat_rate' => 'primary_vat_rate',
+        ];
+
+        foreach ($colMap as $uiField => $dbCol) {
+            if (array_key_exists($uiField, $fields)) {
+                $eventOrganizer->{$dbCol} = $fields[$uiField];
+            }
+        }
+
+        // next_invoice_number -> last_invoice_number = next - 1 (atomic transaction)
+        if (array_key_exists('next_invoice_number', $fields) && $fields['next_invoice_number'] !== null) {
+            $next = (int) $fields['next_invoice_number'];
+            $lastCol = $company === 'secondary' ? 'secondary_last_invoice_number' : 'primary_last_invoice_number';
+            $eventOrganizer->{$lastCol} = max(0, $next - 1);
+        }
+
+        // Mirror primary_vat_payer -> legacy vat_payer ca sa nu rupem TaxReportController / BillingController
+        if ($company === 'primary' && array_key_exists('vat_payer', $fields)) {
+            $eventOrganizer->vat_payer = (bool) $fields['vat_payer'];
+        }
+
+        // Toggle has_secondary_issuer DOAR cand vine din societatea secundara
+        if ($company === 'secondary' && array_key_exists('has_secondary_issuer', $fields)) {
+            $eventOrganizer->has_secondary_issuer = (bool) $fields['has_secondary_issuer'];
+        }
+
+        $eventOrganizer->save();
+
+        return $this->success([
+            'saved' => true,
+            'company' => $company,
+        ]);
     }
 }
