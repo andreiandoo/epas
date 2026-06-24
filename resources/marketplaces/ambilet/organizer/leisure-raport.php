@@ -15,7 +15,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 <h1 class="text-2xl font-bold text-secondary lg:text-3xl">📑 Raport</h1>
                 <p class="mt-1 text-sm text-muted">Vânzări, bilete și venit per perioadă, tip bilet, operator POS și sursă (fizic vs online).</p>
             </div>
-            <a href="/organizator/echipa#raport-personal" class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold border border-secondary text-secondary rounded-lg hover:bg-secondary hover:text-white transition-colors">
+            <a href="/organizator/staff-raport" class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold border border-secondary text-secondary rounded-lg hover:bg-secondary hover:text-white transition-colors">
                 👥 Raport activitate angajați →
             </a>
         </div>

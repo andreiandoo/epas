@@ -177,9 +177,14 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                         fiecare intrare. Accesările sunt înregistrate separat de biletele clienților.
                     </p>
                 </div>
-                <button id="staff-add-btn" type="button" class="flex-shrink-0 inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white rounded-lg bg-secondary hover:bg-secondary/90">
-                    + Adaugă angajat
-                </button>
+                <div class="flex flex-wrap gap-2 flex-shrink-0">
+                    <a href="/organizator/staff-raport" class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold border border-secondary text-secondary rounded-lg hover:bg-secondary hover:text-white transition-colors">
+                        📊 Raport activitate
+                    </a>
+                    <button id="staff-add-btn" type="button" class="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white rounded-lg bg-secondary hover:bg-secondary/90">
+                        + Adaugă angajat
+                    </button>
+                </div>
             </div>
             <div class="p-5 bg-white border rounded-xl border-border">
                 <div id="staff-loading" class="p-6 text-center text-muted text-sm">Se încarcă...</div>
@@ -187,28 +192,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     Niciun angajat înregistrat. Apasă „+ Adaugă angajat" pentru a începe.
                 </div>
                 <div id="staff-list" class="hidden overflow-x-auto"></div>
-            </div>
-
-            <!-- Raport activitate -->
-            <div id="raport-personal" class="p-5 mt-4 bg-white border rounded-xl border-border">
-                <div class="flex flex-wrap items-end justify-between gap-3 mb-4">
-                    <div>
-                        <h3 class="font-bold text-secondary">📊 Raport activitate</h3>
-                        <p class="text-xs text-muted mt-1">Toate scanările QR ale angajaților în perioada selectată.</p>
-                    </div>
-                    <div class="flex flex-wrap items-center gap-2">
-                        <label class="text-xs text-muted">De la:
-                            <input id="staff-rep-from" type="date" class="ml-1 px-2 py-1 text-sm border border-border rounded">
-                        </label>
-                        <label class="text-xs text-muted">La:
-                            <input id="staff-rep-to" type="date" class="ml-1 px-2 py-1 text-sm border border-border rounded">
-                        </label>
-                        <button id="staff-rep-refresh" type="button" class="px-3 py-1.5 text-xs font-semibold bg-secondary text-white rounded hover:bg-secondary/90">Actualizează</button>
-                        <button id="staff-rep-export" type="button" class="px-3 py-1.5 text-xs font-semibold border border-border rounded hover:bg-slate-50">⬇️ Export CSV</button>
-                    </div>
-                </div>
-                <div id="staff-rep-summary" class="hidden mb-4 grid grid-cols-1 sm:grid-cols-3 gap-3"></div>
-                <div id="staff-rep-list" class="overflow-x-auto"></div>
             </div>
         </div>
 
@@ -1162,59 +1145,8 @@ document.addEventListener('DOMContentLoaded', () => TeamManager.init());
         w.document.close();
     }
 
-    async function loadStaffCheckins() {
-        const params = {};
-        if ($('staff-rep-from').value) params.from = $('staff-rep-from').value;
-        if ($('staff-rep-to').value) params.to = $('staff-rep-to').value;
-        const list = $('staff-rep-list');
-        list.innerHTML = '<p class="p-4 text-center text-muted text-sm">Se încarcă...</p>';
-        try {
-            const res = await AmbiletAPI.get('/organizer/leisure/staff-checkins', params);
-            const data = res.data || {};
-            renderStaffSummary(data.per_staff || []);
-            renderStaffCheckinsList(data.checkins || []);
-        } catch (e) {
-            list.innerHTML = '<p class="p-4 text-center text-rose-600 text-sm">Eroare: ' + (e?.message || '') + '</p>';
-        }
-    }
-    function renderStaffSummary(perStaff) {
-        const box = $('staff-rep-summary');
-        if (!perStaff.length) { box.classList.add('hidden'); return; }
-        const total = perStaff.reduce((s, r) => s + r.total, 0);
-        const top = [...perStaff].sort((a, b) => b.total - a.total)[0];
-        box.classList.remove('hidden');
-        box.innerHTML = ''
-            + '<div class="p-3 bg-slate-50 rounded-lg"><p class="text-xs text-muted uppercase">Total check-in-uri</p><p class="text-2xl font-bold text-secondary">' + total + '</p></div>'
-            + '<div class="p-3 bg-slate-50 rounded-lg"><p class="text-xs text-muted uppercase">Angajați activi</p><p class="text-2xl font-bold text-secondary">' + perStaff.length + '</p></div>'
-            + '<div class="p-3 bg-slate-50 rounded-lg"><p class="text-xs text-muted uppercase">Cele mai multe</p><p class="text-sm font-bold text-secondary truncate">' + escHtml(top?.staff_name || '—') + '</p><p class="text-xs text-muted">' + (top?.total || 0) + ' scanări</p></div>';
-    }
-    function renderStaffCheckinsList(checkins) {
-        const list = $('staff-rep-list');
-        if (!checkins.length) { list.innerHTML = '<p class="p-6 text-center text-muted text-sm bg-slate-50 rounded-xl">Niciun check-in în perioada selectată.</p>'; return; }
-        list.innerHTML = '<table class="w-full text-sm"><thead class="bg-slate-50 border-b border-border"><tr class="text-left text-xs text-muted uppercase">'
-            + '<th class="px-3 py-2">Data și ora</th><th class="px-3 py-2">Angajat</th><th class="px-3 py-2">Poziție</th><th class="px-3 py-2">Punct check-in</th></tr></thead><tbody>'
-            + checkins.map(c => '<tr class="border-b border-border">'
-                + '<td class="px-3 py-2 font-mono text-xs text-secondary">' + fmtDateTime(c.checked_in_at) + '</td>'
-                + '<td class="px-3 py-2 font-semibold">' + escHtml(c.staff_name) + '</td>'
-                + '<td class="px-3 py-2 text-muted">' + escHtml(c.position || '—') + '</td>'
-                + '<td class="px-3 py-2 text-muted">' + escHtml(c.location || '—') + '</td></tr>').join('')
-            + '</tbody></table>';
-    }
-    function exportStaffCheckins() {
-        const params = new URLSearchParams();
-        if ($('staff-rep-from').value) params.set('from', $('staff-rep-from').value);
-        if ($('staff-rep-to').value) params.set('to', $('staff-rep-to').value);
-        const url = '/api/proxy.php?action=organizer.leisure.staff.export' + (params.toString() ? '&' + params.toString() : '');
-        fetch(url, { headers: { 'Authorization': 'Bearer ' + AmbiletAuth.getToken() } })
-            .then(r => r.blob())
-            .then(blob => {
-                const a = document.createElement('a');
-                a.href = URL.createObjectURL(blob);
-                a.download = 'staff-checkins-' + new Date().toISOString().slice(0,10) + '.csv';
-                document.body.appendChild(a); a.click(); a.remove();
-            })
-            .catch(e => alert('Export eșuat: ' + e.message));
-    }
+    // Raportul check-in a fost mutat in pagina dedicata /organizator/staff-raport.
+    // Pe team.php pastram doar CRUD + QR.
 
     // Init
     document.addEventListener('DOMContentLoaded', () => {
@@ -1225,7 +1157,6 @@ document.addEventListener('DOMContentLoaded', () => TeamManager.init());
             if (typeof AmbiletAPI !== 'undefined' && typeof AmbiletAuth !== 'undefined' && AmbiletAuth.isOrganizer && AmbiletAuth.isOrganizer()) {
                 clearInterval(waitForApi);
                 loadStaff();
-                loadStaffCheckins();
             }
             if (retries > 20) clearInterval(waitForApi);
         }, 200);
@@ -1238,8 +1169,6 @@ document.addEventListener('DOMContentLoaded', () => TeamManager.init());
         $('staff-f-delete')?.addEventListener('click', deleteStaff);
         $('staff-qr-close')?.addEventListener('click', closeStaffQr);
         $('staff-qr-print')?.addEventListener('click', printStaffQr);
-        $('staff-rep-refresh')?.addEventListener('click', loadStaffCheckins);
-        $('staff-rep-export')?.addEventListener('click', exportStaffCheckins);
     });
 })();
 </script>

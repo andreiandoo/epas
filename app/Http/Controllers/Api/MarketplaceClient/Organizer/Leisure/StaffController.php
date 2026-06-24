@@ -140,10 +140,14 @@ class StaffController extends BaseController
             'limit'     => 'nullable|integer|min:1|max:1000',
         ]);
 
-        $query = $this->buildCheckinsQuery($organizer->id, $validated);
         $limit = $validated['limit'] ?? 200;
 
-        $items = $query->orderByDesc('checked_in_at')->limit($limit)->get()
+        // Lista detaliata — query separat cu eager load pentru staffMember + event.
+        $items = $this->buildCheckinsQuery($organizer->id, $validated)
+            ->with(['staffMember' => fn ($q) => $q->withTrashed(), 'event'])
+            ->orderByDesc('checked_in_at')
+            ->limit($limit)
+            ->get()
             ->map(function (LeisureStaffCheckin $c) {
                 return [
                     'id'              => $c->id,
@@ -157,27 +161,36 @@ class StaffController extends BaseController
                 ];
             });
 
-        // Agregate pentru sumar UI (per staff)
-        $perStaff = (clone $query)
+        // Agregate pentru sumar UI — query SEPARAT, fara eager-load (cu eager-load
+        // pe SELECT cu COUNT+GROUP BY Postgres ridica eroare: relatia incearca sa
+        // selecteze coloana primary key care nu e in GROUP BY).
+        $perStaffRaw = $this->buildCheckinsQuery($organizer->id, $validated)
             ->selectRaw('staff_member_id, COUNT(*) as total, MIN(checked_in_at) as first_at, MAX(checked_in_at) as last_at')
             ->groupBy('staff_member_id')
-            ->get()
-            ->map(function ($row) {
-                $staff = LeisureStaffMember::withTrashed()->find($row->staff_member_id);
-                return [
-                    'staff_member_id' => $row->staff_member_id,
-                    'staff_name'      => $staff?->full_name ?? '(șters)',
-                    'position'        => $staff?->position,
-                    'total'           => (int) $row->total,
-                    'first_at'        => $row->first_at,
-                    'last_at'         => $row->last_at,
-                ];
-            });
+            ->get();
+
+        $staffIds = $perStaffRaw->pluck('staff_member_id')->all();
+        $staffMap = LeisureStaffMember::withTrashed()->whereIn('id', $staffIds)->get()->keyBy('id');
+
+        $perStaff = $perStaffRaw->map(function ($row) use ($staffMap) {
+            $staff = $staffMap->get($row->staff_member_id);
+            return [
+                'staff_member_id' => $row->staff_member_id,
+                'staff_name'      => $staff?->full_name ?? '(șters)',
+                'position'        => $staff?->position,
+                'total'           => (int) $row->total,
+                'first_at'        => $row->first_at,
+                'last_at'         => $row->last_at,
+            ];
+        });
+
+        // Total count tot prin query separat (fara with() ca sa fie rapid)
+        $totalCount = $this->buildCheckinsQuery($organizer->id, $validated)->count();
 
         return $this->success([
             'checkins'   => $items,
             'per_staff'  => $perStaff,
-            'total_count' => (clone $query)->count(),
+            'total_count' => $totalCount,
         ]);
     }
 
@@ -197,6 +210,7 @@ class StaffController extends BaseController
         ]);
 
         $query = $this->buildCheckinsQuery($organizer->id, $validated)
+            ->with(['staffMember' => fn ($q) => $q->withTrashed(), 'event'])
             ->orderByDesc('checked_in_at');
 
         $filename = 'staff-checkins-' . now()->format('Ymd-His') . '.csv';
@@ -235,8 +249,10 @@ class StaffController extends BaseController
      */
     protected function buildCheckinsQuery(int $organizerId, array $filters)
     {
+        // Fara eager-load aici — caller-ul (checkins / export) adauga with() pe
+        // queries individuale; agregatele (selectRaw + GROUP BY) nu pot avea
+        // eager-load fara conflict de coloane.
         $query = LeisureStaffCheckin::query()
-            ->with(['staffMember', 'event'])
             ->whereHas('staffMember', fn ($q) => $q->where('marketplace_organizer_id', $organizerId)->withTrashed());
 
         if (!empty($filters['from'])) {
