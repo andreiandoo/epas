@@ -10,9 +10,14 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 <div class="flex flex-col flex-1 min-h-screen lg:ml-0">
     <?php require_once dirname(__DIR__) . '/includes/organizer-topbar.php'; ?>
     <main class="flex-1 p-4 lg:p-8">
-        <div class="mb-6">
-            <h1 class="text-2xl font-bold text-secondary lg:text-3xl">📑 Raport</h1>
-            <p class="mt-1 text-sm text-muted">Vânzări, bilete și venit per perioadă, tip bilet, operator POS și sursă (fizic vs online).</p>
+        <div class="mb-6 flex flex-wrap items-start justify-between gap-3">
+            <div>
+                <h1 class="text-2xl font-bold text-secondary lg:text-3xl">📑 Raport</h1>
+                <p class="mt-1 text-sm text-muted">Vânzări, bilete și venit per perioadă, tip bilet, operator POS și sursă (fizic vs online).</p>
+            </div>
+            <a href="/organizator/echipa#raport-personal" class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold border border-secondary text-secondary rounded-lg hover:bg-secondary hover:text-white transition-colors">
+                👥 Raport activitate angajați →
+            </a>
         </div>
 
         <!-- Filtre perioadă -->
