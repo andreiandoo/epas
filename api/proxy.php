@@ -1910,6 +1910,45 @@ switch ($action) {
         $requiresAuth = true;
         break;
 
+    // ============ LEISURE STAFF (angajati permanent) ============
+    case 'organizer.leisure.staff.collection':
+        $method = $_SERVER['REQUEST_METHOD']; // GET sau POST
+        $body = in_array($method, ['POST', 'PUT']) ? file_get_contents('php://input') : null;
+        $endpoint = '/organizer/leisure/staff';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.leisure.staff.item':
+        $staffId = (int) ($_GET['id'] ?? 0);
+        if (!$staffId) { http_response_code(400); echo json_encode(['error' => 'Missing staff id']); exit; }
+        $method = $_SERVER['REQUEST_METHOD']; // PUT sau DELETE
+        $body = in_array($method, ['POST', 'PUT']) ? file_get_contents('php://input') : null;
+        $endpoint = '/organizer/leisure/staff/' . $staffId;
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.leisure.staff.checkins':
+        $method = 'GET';
+        $params = [];
+        foreach (['from', 'to', 'staff_id', 'event_id', 'limit'] as $k) {
+            if (isset($_GET[$k]) && $_GET[$k] !== '') $params[$k] = $_GET[$k];
+        }
+        $endpoint = '/organizer/leisure/staff-checkins' . ($params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.leisure.staff.export':
+        $method = 'GET';
+        $params = [];
+        foreach (['from', 'to', 'staff_id', 'event_id'] as $k) {
+            if (isset($_GET[$k]) && $_GET[$k] !== '') $params[$k] = $_GET[$k];
+        }
+        $endpoint = '/organizer/leisure/staff-export' . ($params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        // CSV-ul are BOM la inceput (\xEF\xBB\xBF) → proxy.php detecteaza automat
+        // si streameaza ca text/csv cu Content-Disposition attachment (vezi linia ~4587).
+        break;
+
     case 'organizer.event.leisure.shifts.item':
         $eventId = (int) ($_GET['event'] ?? 0);
         $shiftId = (int) ($_GET['shift'] ?? 0);

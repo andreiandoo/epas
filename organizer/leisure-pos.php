@@ -408,7 +408,15 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                         slot_time: slotTime,
                     };
                 }
-                cart[key].qty++;
+                // Respectam min_per_order + meta.step_qty configurat de operator
+                // pe TicketType (bilete de grup au min=8/10 + step=1; bilete
+                // simple au min=1 + step=1 — comportament default ca inainte).
+                const minQty = Math.max(1, parseInt(tt && tt.min_per_order, 10) || 1);
+                const metaStep = tt && tt.meta && tt.meta.step_qty;
+                const isGroup = !!(tt && tt.meta && tt.meta.is_group_ticket);
+                const step = Math.max(1, parseInt(metaStep, 10) || (isGroup ? minQty : 1));
+                const current = cart[key].qty || 0;
+                cart[key].qty = current === 0 ? Math.max(minQty, step) : current + step;
                 renderCart();
                 renderGrid();
             });
@@ -538,9 +546,26 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 const id = btn.dataset.id;
                 const act = btn.dataset.act;
                 if (!cart[id]) return;
-                if (act === 'inc') cart[id].qty++;
-                else if (act === 'dec') { cart[id].qty--; if (cart[id].qty <= 0) delete cart[id]; }
-                else if (act === 'del') delete cart[id];
+                // Respectam min_per_order + meta.step_qty al ticket type-ului
+                const tt = types.find(x => x.id === cart[id].ticket_type_id);
+                const minQty = Math.max(1, parseInt(tt && tt.min_per_order, 10) || 1);
+                const metaStep = tt && tt.meta && tt.meta.step_qty;
+                const isGroup = !!(tt && tt.meta && tt.meta.is_group_ticket);
+                const step = Math.max(1, parseInt(metaStep, 10) || (isGroup ? minQty : 1));
+                if (act === 'inc') {
+                    cart[id].qty += step;
+                } else if (act === 'dec') {
+                    const next = cart[id].qty - step;
+                    if (next < minQty) {
+                        // Sub minim → delete line (operatorul nu poate vinde mai
+                        // putin decat minim, deci scoatem complet din cos).
+                        delete cart[id];
+                    } else {
+                        cart[id].qty = next;
+                    }
+                } else if (act === 'del') {
+                    delete cart[id];
+                }
                 renderCart();
                 renderGrid();
             });
@@ -826,6 +851,9 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             if (!confirm('Ești sigur că vrei să golești coșul? Toate produsele adăugate vor fi șterse.')) return;
             cart = {};
             renderCart();
+            // Re-randam grid-ul ca sa dispara badge-urile cu count de pe carduri
+            // (altfel ramane "2" lipit pe cardul de unde s-au adaugat ultimele).
+            renderGrid();
         });
 
         // ============ Panou imprimantă termică (WebUSB) ============

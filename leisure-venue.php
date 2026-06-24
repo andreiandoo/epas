@@ -581,22 +581,36 @@ require_once __DIR__ . '/includes/head.php';
             <a href="#despre" class="px-4 py-1.5 text-white/80 hover:text-white text-sm font-medium transition-colors rounded-full hover:bg-white/10" data-i18n="nav_about">Despre</a>
             <a href="#cum-ajungi" class="px-4 py-1.5 text-white/80 hover:text-white text-sm font-medium transition-colors rounded-full hover:bg-white/10" data-i18n="nav_directions">Cum ajungi</a>
         </div>
-        <a href="#bilete" class="bg-white/15 backdrop-blur text-white px-4 py-2 rounded-full text-sm font-semibold hover:bg-white/25 transition-colors" data-i18n="book_access_short">Cumpără bilete →</a>
+        <div class="flex items-center gap-2">
+            <!-- Selector limbă MOBILE (dropdown) — lângă butonul "Cumpără bilete". -->
+            <?php
+            $_lvSelectorQuery = $_GET;
+            foreach (['slug', '_route', '_path'] as $_drop) { unset($_lvSelectorQuery[$_drop]); }
+            $_langLabels = ['ro' => 'RO', 'hu' => 'HU', 'en' => 'EN'];
+            $_currentLabel = $_langLabels[$publicLocale] ?? 'RO';
+            ?>
+            <div class="lg:hidden relative" x-data="{ open: false }" @click.outside="open = false">
+                <button type="button" @click="open = !open"
+                        class="inline-flex items-center gap-1 bg-white/15 backdrop-blur text-white px-3 py-2 rounded-full text-xs font-bold hover:bg-white/25 transition-colors">
+                    🌐 <span><?= $_currentLabel ?></span>
+                    <svg class="w-3 h-3 transition-transform" :class="open ? 'rotate-180' : ''" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+                </button>
+                <div x-show="open" x-transition class="absolute top-full right-0 mt-1 bg-white rounded-lg shadow-xl border border-forest-100 py-1 min-w-[80px] z-50">
+                    <?php foreach ($_langLabels as $code => $label): ?>
+                        <a href="?<?= http_build_query(array_merge($_lvSelectorQuery, ['lang' => $code])) ?>"
+                           class="block px-3 py-1.5 text-xs font-bold text-forest-900 hover:bg-forest-50 <?= $publicLocale === $code ? 'bg-forest-700 text-white hover:bg-forest-700' : '' ?>"><?= $label ?></a>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+            <a href="#bilete" class="bg-white/15 backdrop-blur text-white px-4 py-2 rounded-full text-sm font-semibold hover:bg-white/25 transition-colors" data-i18n="book_access_short">Cumpără bilete →</a>
+        </div>
     </div>
 </nav>
 
-<!-- ============ B4: SELECTOR LIMBĂ (fixed top-right) ============ -->
-<?php
-// Curat $_GET pentru build query: scot `slug` (vine din rewrite .htaccess
-// pentru /bilete/{slug}) si chei interne care nu trebuie pastrate in URL.
-$_lvSelectorQuery = $_GET;
-foreach (['slug', '_route', '_path'] as $_drop) {
-    unset($_lvSelectorQuery[$_drop]);
-}
-?>
-<div class="fixed top-4 right-4 z-50 flex items-center gap-1 bg-white/95 backdrop-blur rounded-full px-2 py-1 shadow-lg border border-forest-200" style="font-size:11px;">
+<!-- ============ B4: SELECTOR LIMBĂ DESKTOP (fixed top-right, hidden mobile) ============ -->
+<div class="hidden lg:flex fixed top-4 right-4 z-50 items-center gap-1 bg-white/95 backdrop-blur rounded-full px-2 py-1 shadow-lg border border-forest-200" style="font-size:11px;">
     <span class="text-forest-600 text-[10px] uppercase tracking-wider font-bold px-1.5" data-i18n="lang_label">Limbă</span>
-    <?php foreach (['ro' => 'RO', 'hu' => 'HU', 'en' => 'EN'] as $code => $label): ?>
+    <?php foreach ($_langLabels as $code => $label): ?>
         <a href="?<?= http_build_query(array_merge($_lvSelectorQuery, ['lang' => $code])) ?>"
            class="px-2.5 py-1 rounded-full text-[11px] font-bold tracking-wider transition-colors <?= $publicLocale === $code ? 'bg-forest-700 text-white' : 'text-forest-700 hover:bg-forest-100' ?>"><?= $label ?></a>
     <?php endforeach; ?>
@@ -648,8 +662,8 @@ foreach (['slug', '_route', '_path'] as $_drop) {
     </div>
 </section>
 
-<!-- ============ QUICK STATS BAR (sticky) ============ -->
-<section class="bg-white border-y border-forest-100 sticky top-0 z-20 backdrop-blur">
+<!-- ============ QUICK STATS BAR (sticky doar pe desktop) ============ -->
+<section class="bg-white border-y border-forest-100 lg:sticky lg:top-0 lg:z-20 backdrop-blur">
     <div class="max-w-7xl mx-auto px-6 lg:px-12">
         <div class="grid grid-cols-2 lg:grid-cols-4 divide-x divide-forest-100">
             <div class="py-4 px-4 flex items-center gap-3">
@@ -853,7 +867,8 @@ foreach (['slug', '_route', '_path'] as $_drop) {
                         <div class="bg-white rounded-xl p-3 lg:p-4 border-2 transition-all"
                              :class="ticket.qty > 0 ? 'border-forest-500 shadow-md' : 'border-transparent hover:border-forest-200'">
                             <div class="flex items-start gap-3">
-                                <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors"
+                                <!-- Iconita tip bilet ascunsa pe mobile (eliberare spatiu) -->
+                                <div class="hidden lg:flex w-10 h-10 rounded-xl items-center justify-center flex-shrink-0 transition-colors"
                                      :class="ticket.qty > 0 ? 'bg-forest-600 text-white' : 'bg-forest-50 text-forest-700'">
                                     <span class="text-xl" x-text="ticket.icon || '🎟️'"></span>
                                 </div>
@@ -978,7 +993,8 @@ foreach (['slug', '_route', '_path'] as $_drop) {
                          Permit navigarea rapida la alta categorie fara back-button. -->
                     <div x-show="hasMultipleCategories && otherCategoryChips.length > 0" class="pt-6 mt-6 border-t border-forest-100">
                         <p class="text-xs uppercase tracking-wider text-forest-700/60 font-bold mb-3" data-i18n="other_categories" x-text="t('other_categories') || 'Alte categorii de bilete'"></p>
-                        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                        <!-- Pe mobile: 1 chip per rand (texte lungi de categorie nu se mai taie). -->
+                        <div class="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                             <template x-for="cat in otherCategoryChips" :key="cat.id">
                                 <button type="button" @click="selectedCategoryId = cat.id; $nextTick(() => { document.getElementById('bilete')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); })"
                                         class="group bg-white border-2 border-forest-100 hover:border-forest-500 rounded-xl p-2 flex items-center gap-2.5 transition-all text-left">
@@ -1210,11 +1226,8 @@ foreach (['slug', '_route', '_path'] as $_drop) {
             <?php endforeach; ?>
         </div>
         <?php endif; ?>
-        <?php if (!empty($mapPois)): ?>
-        <div class="bg-white/5 backdrop-blur rounded-2xl border border-white/10 p-2">
-            <div id="trailMap" class="rounded-xl overflow-hidden" style="height: 400px;"></div>
-        </div>
-        <?php endif; ?>
+        <?php /* #trailMap eliminat la cerere — afișa overlap cu locationMap si
+                 nu aducea valoare suplimentară (POI-urile sunt deja in #locationMap). */ ?>
         <?php if ($safetyWarning): ?>
         <div class="mt-8 bg-amber-500/10 border border-amber-500/30 rounded-2xl p-5 flex items-start gap-3 max-w-3xl mx-auto">
             <span class="text-2xl flex-shrink-0"><?= htmlspecialchars($safetyWarning['icon'] ?? '⚠️') ?></span>
@@ -1502,7 +1515,7 @@ foreach (['slug', '_route', '_path'] as $_drop) {
 <?php endif; ?>
 
 <!-- ============ STICKY CART ============ -->
-<div x-show="cartCount > 0" x-transition class="fixed bottom-0 left-0 right-0 z-40 lg:bottom-6 lg:right-6 lg:left-auto lg:max-w-sm">
+<div x-show="cartCount > 0" x-transition class="fixed bottom-0 left-0 right-0 z-[110] lg:bottom-24 lg:right-6 lg:left-auto lg:max-w-sm">
     <div class="bg-forest-900 text-white shadow-2xl lg:rounded-2xl overflow-hidden">
         <button @click="cartOpen = !cartOpen" class="w-full p-4 flex items-center justify-between gap-4 hover:bg-forest-800 transition-colors">
             <div class="flex items-center gap-3 min-w-0">
@@ -2461,6 +2474,9 @@ function reservationPage() {
 
         // ========== Maps (Leaflet) ==========
         renderTrailMap() {
+            // #trailMap a fost eliminat din HTML — early return; functia ramane
+            // ca stub pentru backward compat (init() o apeleaza).
+            return;
             if (typeof L === 'undefined') return;
             const cfg = DATA.map_config || {};
             const center = cfg.center;
