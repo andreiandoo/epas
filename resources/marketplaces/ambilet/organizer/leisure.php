@@ -26,6 +26,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 <button type="button" id="tab-btn-overview" class="px-3 py-2 text-sm font-medium rounded-lg transition-colors bg-primary text-white">Sumar & raport</button>
                 <button type="button" id="tab-btn-products" class="px-3 py-2 text-sm font-medium rounded-lg transition-colors text-muted hover:bg-slate-50">🎫 Produse</button>
                 <button type="button" id="tab-btn-gates" class="px-3 py-2 text-sm font-medium rounded-lg transition-colors text-muted hover:bg-slate-50">🚪 Porți acces</button>
+                <button type="button" id="tab-btn-staff" class="px-3 py-2 text-sm font-medium rounded-lg transition-colors text-muted hover:bg-slate-50">👥 Angajați</button>
                 <button type="button" id="tab-btn-content" class="px-3 py-2 text-sm font-medium rounded-lg transition-colors text-muted hover:bg-slate-50">⚙️ Setări</button>
             </div>
         </div>
@@ -499,6 +500,112 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                         <button id="pr-f-cancel" type="button" class="px-3 py-2 text-sm border border-border rounded-lg hover:bg-slate-50">Renunță</button>
                         <button id="pr-f-save" type="button" class="px-5 py-2 text-sm bg-primary text-white font-semibold rounded-lg hover:bg-primary-dark">Salvează</button>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: Angajați (initial hidden) -->
+        <div id="tab-staff" class="hidden space-y-6">
+            <div class="p-5 bg-white border rounded-2xl border-border">
+                <div class="flex items-start justify-between gap-4 mb-4">
+                    <div>
+                        <h2 class="font-bold text-secondary text-lg">👥 Angajați permanenți</h2>
+                        <p class="text-sm text-muted mt-1">
+                            Coduri QR fixe pentru personalul care vine pe ture. Fiecare angajat primește un cod individual care nu expiră — îl folosește la fiecare intrare prin punctul de check-in. Accesările sunt înregistrate separat de biletele clienților.
+                        </p>
+                    </div>
+                    <button id="staff-add-btn" type="button" class="flex-shrink-0 px-4 py-2 bg-primary text-white font-semibold rounded-lg hover:bg-primary-dark text-sm">
+                        + Adaugă angajat
+                    </button>
+                </div>
+                <div id="staff-loading" class="p-6 text-center text-muted">Se încarcă...</div>
+                <div id="staff-empty" class="hidden p-8 text-center text-muted bg-slate-50 rounded-xl">
+                    Niciun angajat înregistrat. Apasă „+ Adaugă angajat" pentru a începe.
+                </div>
+                <div id="staff-list" class="hidden overflow-x-auto"></div>
+            </div>
+
+            <!-- Sub-panou raport check-in -->
+            <div class="p-5 bg-white border rounded-2xl border-border">
+                <div class="flex flex-wrap items-end justify-between gap-3 mb-4">
+                    <div>
+                        <h2 class="font-bold text-secondary text-lg">📊 Raport activitate</h2>
+                        <p class="text-xs text-muted mt-1">Toate scanările QR ale angajaților în perioada selectată.</p>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <label class="text-xs text-muted">De la:
+                            <input id="staff-rep-from" type="date" class="ml-1 px-2 py-1 text-sm border border-border rounded">
+                        </label>
+                        <label class="text-xs text-muted">La:
+                            <input id="staff-rep-to" type="date" class="ml-1 px-2 py-1 text-sm border border-border rounded">
+                        </label>
+                        <button id="staff-rep-refresh" type="button" class="px-3 py-1.5 text-xs font-semibold bg-secondary text-white rounded hover:bg-secondary/90">Actualizează</button>
+                        <button id="staff-rep-export" type="button" class="px-3 py-1.5 text-xs font-semibold border border-border rounded hover:bg-slate-50">⬇️ Export CSV</button>
+                    </div>
+                </div>
+                <div id="staff-rep-summary" class="hidden mb-4 grid grid-cols-1 sm:grid-cols-3 gap-3"></div>
+                <div id="staff-rep-list" class="overflow-x-auto"></div>
+            </div>
+        </div>
+
+        <!-- Modal: Adaugă / Editează angajat -->
+        <div id="staff-modal" class="hidden fixed inset-0 bg-black/50 z-50 items-center justify-center p-6 overflow-y-auto">
+            <div class="bg-white rounded-2xl max-w-md w-full p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 id="staff-modal-title" class="font-bold text-lg text-secondary">Adaugă angajat</h3>
+                    <button id="staff-modal-close" type="button" class="text-muted hover:text-secondary text-xl">✕</button>
+                </div>
+                <div class="space-y-3">
+                    <label class="block">
+                        <span class="text-xs font-semibold text-muted uppercase">Prenume *</span>
+                        <input id="staff-f-first" type="text" class="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg" placeholder="ex: Ion">
+                    </label>
+                    <label class="block">
+                        <span class="text-xs font-semibold text-muted uppercase">Nume *</span>
+                        <input id="staff-f-last" type="text" class="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg" placeholder="ex: Popescu">
+                    </label>
+                    <label class="block">
+                        <span class="text-xs font-semibold text-muted uppercase">Telefon</span>
+                        <input id="staff-f-phone" type="tel" class="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg" placeholder="ex: 07XX XXX XXX">
+                    </label>
+                    <label class="block">
+                        <span class="text-xs font-semibold text-muted uppercase">Poziție în firmă</span>
+                        <input id="staff-f-position" type="text" class="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg" placeholder="ex: Casier, Salvamar, Manager">
+                    </label>
+                    <label class="block">
+                        <span class="text-xs font-semibold text-muted uppercase">Note (opțional)</span>
+                        <textarea id="staff-f-notes" rows="2" class="mt-1 w-full px-3 py-2 text-sm border border-border rounded-lg" placeholder="Observații interne"></textarea>
+                    </label>
+                    <label id="staff-f-active-wrap" class="hidden items-center gap-2 text-sm">
+                        <input id="staff-f-active" type="checkbox" class="w-4 h-4 accent-primary">
+                        <span class="text-secondary">Activ (poate trece check-in)</span>
+                    </label>
+                </div>
+                <div class="flex items-center justify-between mt-5 pt-3 border-t border-border">
+                    <button id="staff-f-delete" type="button" class="hidden px-3 py-2 text-xs font-semibold text-rose-700 border border-rose-200 rounded hover:bg-rose-50">Șterge angajat</button>
+                    <div class="flex items-center gap-2 ml-auto">
+                        <button id="staff-f-cancel" type="button" class="px-4 py-2 text-sm border border-border rounded hover:bg-slate-50">Anulează</button>
+                        <button id="staff-f-save" type="button" class="px-5 py-2 text-sm bg-primary text-white font-semibold rounded-lg hover:bg-primary-dark">Salvează</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal: Cod QR angajat -->
+        <div id="staff-qr-modal" class="hidden fixed inset-0 bg-black/50 z-50 items-center justify-center p-6">
+            <div class="bg-white rounded-2xl max-w-sm w-full p-6 text-center">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="font-bold text-secondary">Cod QR personal</h3>
+                    <button id="staff-qr-close" type="button" class="text-muted hover:text-secondary text-xl">✕</button>
+                </div>
+                <p id="staff-qr-name" class="text-lg font-bold text-secondary mb-1"></p>
+                <p id="staff-qr-position" class="text-xs text-muted mb-4"></p>
+                <img id="staff-qr-img" src="" alt="" class="mx-auto rounded border border-border" style="width:240px;height:240px;">
+                <p id="staff-qr-code" class="mt-3 font-mono text-sm text-secondary tracking-wider"></p>
+                <p class="mt-2 text-[10px] text-muted">Acest cod e fix pentru acest angajat. Tipărește-l și înmânează-l personalului. Scanare prin app-ul ScanIn de la fiecare poartă.</p>
+                <div class="mt-4 flex items-center justify-center gap-2">
+                    <button id="staff-qr-print" type="button" class="px-3 py-2 text-xs font-semibold bg-secondary text-white rounded hover:bg-secondary/90">🖨️ Tipărește</button>
+                    <a id="staff-qr-download" download="" class="px-3 py-2 text-xs font-semibold border border-border rounded hover:bg-slate-50">⬇️ Descarcă PNG</a>
                 </div>
             </div>
         </div>
@@ -1119,6 +1226,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             { btn: $('tab-btn-overview'), panel: $('leisure-content'), key: 'overview' },
             { btn: $('tab-btn-products'), panel: $('tab-products'), key: 'products' },
             { btn: $('tab-btn-gates'), panel: $('tab-gates'), key: 'gates' },
+            { btn: $('tab-btn-staff'), panel: $('tab-staff'), key: 'staff' },
             { btn: $('tab-btn-content'), panel: $('tab-content'), key: 'content' },
         ];
         const empty = $('leisure-empty');
@@ -1142,12 +1250,275 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 loadProducts();
             } else if (which === 'gates') {
                 loadGates();
+            } else if (which === 'staff') {
+                loadStaff();
+                loadStaffCheckins();
             } else if (which === 'content') {
                 hydrateContentForm();
             }
         }
         window.__leisureActivateTab = activate;
         tabsMap.forEach(t => t.btn && t.btn.addEventListener('click', () => activate(t.key)));
+    }
+
+    // ========== STAFF CRUD ==========
+    let staffCache = [];
+    let editingStaffId = null;
+
+    function escAttr(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+    function escHtml(s) { return escAttr(s); }
+    function staffQrUrl(code) {
+        // QR PNG generat via API extern (acelasi pattern ca Invitations.php).
+        // Fallback inline daca utilizatorul vrea Print: data URI.
+        return 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&format=png&margin=2&data=' + encodeURIComponent(code);
+    }
+    function fmtDateTime(iso) {
+        if (!iso) return '—';
+        const d = new Date(iso);
+        if (isNaN(d.getTime())) return iso;
+        const pad = n => String(n).padStart(2, '0');
+        return pad(d.getDate()) + '.' + pad(d.getMonth()+1) + '.' + d.getFullYear() + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+    }
+
+    async function loadStaff() {
+        $('staff-loading').classList.remove('hidden');
+        $('staff-list').classList.add('hidden');
+        $('staff-empty').classList.add('hidden');
+        try {
+            const res = await AmbiletAPI.get('/organizer/leisure/staff');
+            staffCache = res.data?.staff || [];
+        } catch (e) {
+            console.error('[staff] load failed', e);
+            staffCache = [];
+        }
+        $('staff-loading').classList.add('hidden');
+        renderStaffList();
+    }
+
+    function renderStaffList() {
+        const list = $('staff-list');
+        if (!staffCache.length) { $('staff-empty').classList.remove('hidden'); list.classList.add('hidden'); return; }
+        $('staff-empty').classList.add('hidden');
+        list.classList.remove('hidden');
+        list.innerHTML = `
+            <table class="w-full text-sm">
+                <thead class="bg-slate-50 border-b border-border">
+                    <tr class="text-left text-xs text-muted uppercase">
+                        <th class="px-3 py-2">Angajat</th>
+                        <th class="px-3 py-2">Poziție</th>
+                        <th class="px-3 py-2">Telefon</th>
+                        <th class="px-3 py-2">Cod QR</th>
+                        <th class="px-3 py-2">Check-in-uri</th>
+                        <th class="px-3 py-2">Ultimul</th>
+                        <th class="px-3 py-2 text-right">Acțiuni</th>
+                    </tr>
+                </thead>
+                <tbody>${staffCache.map(s => `
+                    <tr class="border-b border-border hover:bg-slate-50">
+                        <td class="px-3 py-2">
+                            <div class="font-semibold text-secondary">${escHtml(s.full_name)}</div>
+                            ${!s.active ? '<span class="text-[10px] text-rose-600 font-semibold">DEZACTIVAT</span>' : ''}
+                        </td>
+                        <td class="px-3 py-2 text-muted">${escHtml(s.position || '—')}</td>
+                        <td class="px-3 py-2 text-muted">${escHtml(s.phone || '—')}</td>
+                        <td class="px-3 py-2 font-mono text-xs text-secondary">${escHtml(s.qr_code)}</td>
+                        <td class="px-3 py-2 text-center font-semibold">${s.checkins_count || 0}</td>
+                        <td class="px-3 py-2 text-xs text-muted">${fmtDateTime(s.last_checkin_at)}</td>
+                        <td class="px-3 py-2 text-right whitespace-nowrap">
+                            <button data-staff-qr="${s.id}" class="px-2 py-1 text-xs font-semibold bg-secondary text-white rounded hover:bg-secondary/90">📱 QR</button>
+                            <button data-staff-edit="${s.id}" class="px-2 py-1 text-xs font-semibold border border-border rounded hover:bg-slate-100">✏️ Edit</button>
+                        </td>
+                    </tr>
+                `).join('')}</tbody>
+            </table>`;
+        list.querySelectorAll('[data-staff-qr]').forEach(b => b.addEventListener('click', () => openStaffQr(parseInt(b.dataset.staffQr, 10))));
+        list.querySelectorAll('[data-staff-edit]').forEach(b => b.addEventListener('click', () => openStaffModal(parseInt(b.dataset.staffEdit, 10))));
+    }
+
+    function openStaffModal(id) {
+        editingStaffId = id;
+        const s = id ? staffCache.find(x => x.id === id) : null;
+        $('staff-modal-title').textContent = s ? 'Editează angajat' : 'Adaugă angajat';
+        $('staff-f-first').value = s?.first_name || '';
+        $('staff-f-last').value = s?.last_name || '';
+        $('staff-f-phone').value = s?.phone || '';
+        $('staff-f-position').value = s?.position || '';
+        $('staff-f-notes').value = s?.notes || '';
+        $('staff-f-active').checked = s ? !!s.active : true;
+        $('staff-f-active-wrap').classList.toggle('flex', !!s);
+        $('staff-f-active-wrap').classList.toggle('hidden', !s);
+        $('staff-f-delete').classList.toggle('hidden', !s);
+        $('staff-modal').classList.remove('hidden');
+        $('staff-modal').classList.add('flex');
+    }
+    function closeStaffModal() {
+        $('staff-modal').classList.add('hidden');
+        $('staff-modal').classList.remove('flex');
+        editingStaffId = null;
+    }
+
+    async function saveStaff() {
+        const body = {
+            first_name: $('staff-f-first').value.trim(),
+            last_name: $('staff-f-last').value.trim(),
+            phone: $('staff-f-phone').value.trim() || null,
+            position: $('staff-f-position').value.trim() || null,
+            notes: $('staff-f-notes').value.trim() || null,
+        };
+        if (editingStaffId) body.active = $('staff-f-active').checked;
+        if (!body.first_name || !body.last_name) {
+            alert('Prenume + Nume sunt obligatorii.'); return;
+        }
+        try {
+            if (editingStaffId) {
+                await AmbiletAPI.put(`/organizer/leisure/staff/${editingStaffId}`, body);
+            } else {
+                await AmbiletAPI.post('/organizer/leisure/staff', body);
+            }
+            closeStaffModal();
+            await loadStaff();
+        } catch (e) {
+            alert('Eroare salvare: ' + (e?.message || ''));
+        }
+    }
+    async function deleteStaff() {
+        if (!editingStaffId) return;
+        if (!confirm('Dezactivezi acest angajat? Codul QR nu va mai fi acceptat la check-in (istoricul rămâne pentru raport).')) return;
+        try {
+            await AmbiletAPI.delete(`/organizer/leisure/staff/${editingStaffId}`);
+            closeStaffModal();
+            await loadStaff();
+        } catch (e) {
+            alert('Eroare ștergere: ' + (e?.message || ''));
+        }
+    }
+
+    function openStaffQr(id) {
+        const s = staffCache.find(x => x.id === id);
+        if (!s) return;
+        const url = staffQrUrl(s.qr_code);
+        $('staff-qr-name').textContent = s.full_name;
+        $('staff-qr-position').textContent = s.position || '';
+        $('staff-qr-code').textContent = s.qr_code;
+        $('staff-qr-img').src = url;
+        $('staff-qr-img').alt = 'QR ' + s.full_name;
+        $('staff-qr-download').href = url;
+        $('staff-qr-download').download = 'staff-' + s.qr_code + '.png';
+        $('staff-qr-modal').classList.remove('hidden');
+        $('staff-qr-modal').classList.add('flex');
+    }
+    function closeStaffQr() {
+        $('staff-qr-modal').classList.add('hidden');
+        $('staff-qr-modal').classList.remove('flex');
+    }
+    function printStaffQr() {
+        const name = $('staff-qr-name').textContent;
+        const pos = $('staff-qr-position').textContent;
+        const code = $('staff-qr-code').textContent;
+        const imgSrc = $('staff-qr-img').src;
+        const w = window.open('', '_blank', 'width=480,height=640');
+        w.document.write(`<!doctype html><html><head><title>QR ${escHtml(name)}</title>
+            <style>body{font-family:sans-serif;text-align:center;padding:24px;margin:0}
+            h2{margin:0 0 4px 0;font-size:18px}p{margin:0 0 18px 0;font-size:12px;color:#666}
+            img{width:280px;height:280px;border:1px solid #ddd}.code{font-family:monospace;letter-spacing:0.15em;margin-top:10px;font-size:13px}</style>
+            </head><body><h2>${escHtml(name)}</h2><p>${escHtml(pos)}</p>
+            <img src="${escAttr(imgSrc)}"/><div class="code">${escHtml(code)}</div>
+            <script>setTimeout(()=>{window.print();window.close();},300);<\/script></body></html>`);
+        w.document.close();
+    }
+
+    // ========== STAFF CHECK-INS REPORT ==========
+    async function loadStaffCheckins() {
+        const params = {};
+        if ($('staff-rep-from').value) params.from = $('staff-rep-from').value;
+        if ($('staff-rep-to').value) params.to = $('staff-rep-to').value;
+        const list = $('staff-rep-list');
+        list.innerHTML = '<p class="p-4 text-center text-muted text-sm">Se încarcă...</p>';
+        try {
+            const res = await AmbiletAPI.get('/organizer/leisure/staff-checkins', params);
+            const data = res.data || {};
+            renderStaffSummary(data.per_staff || []);
+            renderStaffCheckinsList(data.checkins || []);
+        } catch (e) {
+            list.innerHTML = '<p class="p-4 text-center text-rose-600 text-sm">Eroare: ' + (e?.message || '') + '</p>';
+        }
+    }
+    function renderStaffSummary(perStaff) {
+        const box = $('staff-rep-summary');
+        if (!perStaff.length) { box.classList.add('hidden'); return; }
+        const total = perStaff.reduce((s, r) => s + r.total, 0);
+        const topStaff = [...perStaff].sort((a, b) => b.total - a.total).slice(0, 1)[0];
+        box.classList.remove('hidden');
+        box.innerHTML = `
+            <div class="p-3 bg-slate-50 rounded-lg">
+                <p class="text-xs text-muted uppercase">Total check-in-uri</p>
+                <p class="text-2xl font-bold text-secondary">${total}</p>
+            </div>
+            <div class="p-3 bg-slate-50 rounded-lg">
+                <p class="text-xs text-muted uppercase">Angajați activi</p>
+                <p class="text-2xl font-bold text-secondary">${perStaff.length}</p>
+            </div>
+            <div class="p-3 bg-slate-50 rounded-lg">
+                <p class="text-xs text-muted uppercase">Cele mai multe</p>
+                <p class="text-sm font-bold text-secondary truncate">${escHtml(topStaff?.staff_name || '—')}</p>
+                <p class="text-xs text-muted">${topStaff?.total || 0} scanări</p>
+            </div>
+        `;
+    }
+    function renderStaffCheckinsList(checkins) {
+        const list = $('staff-rep-list');
+        if (!checkins.length) { list.innerHTML = '<p class="p-6 text-center text-muted text-sm bg-slate-50 rounded-xl">Niciun check-in în perioada selectată.</p>'; return; }
+        list.innerHTML = `
+            <table class="w-full text-sm">
+                <thead class="bg-slate-50 border-b border-border">
+                    <tr class="text-left text-xs text-muted uppercase">
+                        <th class="px-3 py-2">Data și ora</th>
+                        <th class="px-3 py-2">Angajat</th>
+                        <th class="px-3 py-2">Poziție</th>
+                        <th class="px-3 py-2">Punct check-in</th>
+                    </tr>
+                </thead>
+                <tbody>${checkins.map(c => `
+                    <tr class="border-b border-border">
+                        <td class="px-3 py-2 font-mono text-xs text-secondary">${fmtDateTime(c.checked_in_at)}</td>
+                        <td class="px-3 py-2 font-semibold">${escHtml(c.staff_name)}</td>
+                        <td class="px-3 py-2 text-muted">${escHtml(c.position || '—')}</td>
+                        <td class="px-3 py-2 text-muted">${escHtml(c.location || '—')}</td>
+                    </tr>
+                `).join('')}</tbody>
+            </table>`;
+    }
+    function exportStaffCheckins() {
+        const params = new URLSearchParams();
+        if ($('staff-rep-from').value) params.set('from', $('staff-rep-from').value);
+        if ($('staff-rep-to').value) params.set('to', $('staff-rep-to').value);
+        // Endpoint-ul CSV merge prin proxy → atasament direct in browser
+        const action = 'organizer.leisure.staff.export';
+        const url = '/api/proxy.php?action=' + action + (params.toString() ? '&' + params.toString() : '');
+        // Append token in URL header? AmbiletAPI.upload nu merge pt GET stream.
+        // Solutie simpla: window.open cu auth bearer in query string nu functioneaza.
+        // Mai bine fetch + blob download.
+        fetch(url, { headers: { 'Authorization': 'Bearer ' + AmbiletAuth.getToken() } })
+            .then(r => r.blob())
+            .then(blob => {
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = 'staff-checkins-' + new Date().toISOString().slice(0,10) + '.csv';
+                document.body.appendChild(a); a.click(); a.remove();
+            })
+            .catch(e => alert('Export eșuat: ' + e.message));
+    }
+
+    function setupStaffHandlers() {
+        $('staff-add-btn')?.addEventListener('click', () => openStaffModal(null));
+        $('staff-modal-close')?.addEventListener('click', closeStaffModal);
+        $('staff-f-cancel')?.addEventListener('click', closeStaffModal);
+        $('staff-f-save')?.addEventListener('click', saveStaff);
+        $('staff-f-delete')?.addEventListener('click', deleteStaff);
+        $('staff-qr-close')?.addEventListener('click', closeStaffQr);
+        $('staff-qr-print')?.addEventListener('click', printStaffQr);
+        $('staff-rep-refresh')?.addEventListener('click', loadStaffCheckins);
+        $('staff-rep-export')?.addEventListener('click', exportStaffCheckins);
     }
 
     // ========== GATES CRUD ==========
@@ -2777,6 +3148,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         setupTabs();
         setupProductsHandlers();
         setupGatesHandlers();
+        setupStaffHandlers();
 
         // B3 — Toggle accordion + tabs limbi pentru sectiunea traduceri
         const trToggle = $('pr-f-tr-toggle');

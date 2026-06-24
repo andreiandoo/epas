@@ -409,6 +409,12 @@ const AmbiletAPI = {
         if (endpoint.match(/\/organizer\/events\/\d+\/leisure\/boat-rentals\/\d+\/finalize/)) return 'organizer.event.leisure.rentals.finalize';
         if (endpoint === '/organizer/me/active-shift') return 'organizer.me.active-shift';
 
+        // Leisure staff (angajati permanent — Sf. Ana etc.). CRUD + raport + export CSV.
+        if (endpoint === '/organizer/leisure/staff') return 'organizer.leisure.staff.collection';
+        if (endpoint.match(/\/organizer\/leisure\/staff\/\d+$/)) return 'organizer.leisure.staff.item';
+        if (endpoint === '/organizer/leisure/staff-checkins') return 'organizer.leisure.staff.checkins';
+        if (endpoint === '/organizer/leisure/staff-export') return 'organizer.leisure.staff.export';
+
         if (endpoint.match(/\/organizer\/events\/\d+\/analytics/)) return 'organizer.event.analytics';
         if (endpoint.match(/\/organizer\/events\/\d+\/staff-report/)) return 'organizer.event.staff-report';
         if (endpoint.match(/\/organizer\/events\/\d+\/goals\/\d+$/)) return 'organizer.event.goal';

@@ -1162,6 +1162,13 @@ class EventsController extends BaseController
             'ticket_code' => 'required|string',
         ]);
 
+        $rawCode = trim((string) $request->ticket_code);
+        // Staff QR-uri sunt prefixate cu STAFF-{12-hex}. Deviem catre flow-ul
+        // de staff (check-in nelimitat, log separat in leisure_staff_checkins).
+        if (str_starts_with(strtoupper($rawCode), \App\Models\LeisureStaffMember::QR_PREFIX)) {
+            return $this->checkInStaff($request, $rawCode, $organizer);
+        }
+
         $barcode = $this->normalizeTicketCode($request->ticket_code);
 
         // All events owned by this organizer on their marketplace
@@ -1421,6 +1428,69 @@ class EventsController extends BaseController
         ]);
 
         return $this->success(null, 'Check-in undone');
+    }
+
+    /**
+     * Check-in pentru angajat permanent (QR fix prefixat cu STAFF-).
+     * Diferă de check-in bilet:
+     *   - Nu există limită de scanări (angajatul vine pe ture)
+     *   - Logul merge în leisure_staff_checkins (separat de Ticket.checked_in_at)
+     *   - Răspunsul include numele + poziția pentru afișare în scanner UI
+     *
+     * Verificări:
+     *   - QR trebuie să existe în leisure_staff_members
+     *   - Staff-ul trebuie să fie active=true
+     *   - Staff-ul trebuie să aparțină organizer-ului autenticat (scoping)
+     */
+    protected function checkInStaff(Request $request, string $rawCode, $organizer): JsonResponse
+    {
+        $qrCode = strtoupper(trim($rawCode));
+
+        $staff = \App\Models\LeisureStaffMember::where('qr_code', $qrCode)
+            ->where('marketplace_organizer_id', $organizer->id)
+            ->first();
+
+        if (!$staff) {
+            return $this->error('Cod QR de personal necunoscut sau nu aparține organizatorului.', 404);
+        }
+        if (!$staff->active) {
+            return $this->error('Angajat dezactivat: ' . $staff->full_name, 403);
+        }
+
+        // Log check-in. event_id resolved best-effort din parametrul opțional
+        // din request (scanner-ul poate să-l trimită) sau din ultima sesiune
+        // de scanare. Locația = "Poarta X" dacă scanner-ul setează gate_label.
+        $eventId = $request->input('event_id');
+        $location = $request->input('gate_label') ?: $request->input('location');
+
+        $checkin = \App\Models\LeisureStaffCheckin::create([
+            'staff_member_id'    => $staff->id,
+            'event_id'           => $eventId ? (int) $eventId : null,
+            'scanned_by_user_id' => auth()->id(),
+            'location'           => $location ? substr((string) $location, 0, 120) : null,
+            'ip_address'         => $request->ip(),
+            'user_agent'         => substr((string) $request->userAgent(), 0, 255),
+            'checked_in_at'      => now(),
+        ]);
+
+        $todayCount = \App\Models\LeisureStaffCheckin::where('staff_member_id', $staff->id)
+            ->whereDate('checked_in_at', now()->toDateString())
+            ->count();
+
+        return $this->success([
+            'is_staff'       => true,
+            'staff' => [
+                'id'         => $staff->id,
+                'full_name'  => $staff->full_name,
+                'position'   => $staff->position,
+                'phone'      => $staff->phone,
+            ],
+            'checkin' => [
+                'id'             => $checkin->id,
+                'checked_in_at'  => $checkin->checked_in_at->toIso8601String(),
+                'today_count'    => $todayCount,
+            ],
+        ], '✓ Acces personal: ' . $staff->full_name . ($staff->position ? ' (' . $staff->position . ')' : ''));
     }
 
     /**

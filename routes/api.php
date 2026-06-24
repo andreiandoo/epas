@@ -1883,6 +1883,23 @@ Route::prefix('marketplace-client/organizer')->middleware(['throttle:120,1', 'ma
             ->whereNumber('event')->whereNumber('shift')
             ->name('api.marketplace-client.organizer.leisure.shifts.destroy');
 
+        // Leisure staff (angajații permanent — Sf. Ana etc.). CRUD + raport check-in + export CSV.
+        // QR-ul fix STAFF-{12hex} se generează automat la create și nu poate fi schimbat ulterior.
+        Route::get('/leisure/staff', [\App\Http\Controllers\Api\MarketplaceClient\Organizer\Leisure\StaffController::class, 'index'])
+            ->name('api.marketplace-client.organizer.leisure.staff.index');
+        Route::post('/leisure/staff', [\App\Http\Controllers\Api\MarketplaceClient\Organizer\Leisure\StaffController::class, 'store'])
+            ->name('api.marketplace-client.organizer.leisure.staff.store');
+        Route::put('/leisure/staff/{id}', [\App\Http\Controllers\Api\MarketplaceClient\Organizer\Leisure\StaffController::class, 'update'])
+            ->whereNumber('id')
+            ->name('api.marketplace-client.organizer.leisure.staff.update');
+        Route::delete('/leisure/staff/{id}', [\App\Http\Controllers\Api\MarketplaceClient\Organizer\Leisure\StaffController::class, 'destroy'])
+            ->whereNumber('id')
+            ->name('api.marketplace-client.organizer.leisure.staff.destroy');
+        Route::get('/leisure/staff-checkins', [\App\Http\Controllers\Api\MarketplaceClient\Organizer\Leisure\StaffController::class, 'checkins'])
+            ->name('api.marketplace-client.organizer.leisure.staff.checkins');
+        Route::get('/leisure/staff-export', [\App\Http\Controllers\Api\MarketplaceClient\Organizer\Leisure\StaffController::class, 'export'])
+            ->name('api.marketplace-client.organizer.leisure.staff.export');
+
         // Leisure products (TicketType CRUD din panou organizer)
         Route::get('/events/{event}/leisure/products', [OrganizerLeisureController::class, 'productsIndex'])
             ->whereNumber('event')
