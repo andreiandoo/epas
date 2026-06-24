@@ -324,6 +324,11 @@ RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^organizator/leisure-raport/?$ organizer/leisure-raport.php [L]
 
+# Raport activitate angajati permanenti (Sf. Ana etc.)
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^organizator/staff-raport/?$ organizer/staff-raport.php [L]
+
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^organizator/leisure-rentals/?$ organizer/leisure-rentals.php [L]
