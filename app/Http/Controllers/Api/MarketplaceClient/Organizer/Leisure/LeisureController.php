@@ -1269,6 +1269,7 @@ class LeisureController extends BaseController
                     'line_total' => $it['line_total'],
                     'commission_per_ticket' => $it['commission_per_ticket'] ?? 0,
                     'service_category' => $it['ticket_type']->service_category ?? 'access',
+                    'issuing_company' => $it['ticket_type']->effective_issuing_company ?? 'primary',
                     'variant' => $it['variant'],
                     'addons' => $it['addons'] ?? [],
                     'addons_total' => $it['addons_total'] ?? 0,
@@ -2545,5 +2546,183 @@ class LeisureController extends BaseController
             return $title['ro'] ?? $title['en'] ?? (reset($title) ?: '');
         }
         return (string) ($title ?? '');
+    }
+
+    // ========================================================================
+    // SOCIETATI — GET/PUT pentru editarea celor 2 societati emitente
+    // ========================================================================
+
+    /**
+     * GET /marketplace-client/organizer/events/{event}/leisure/issuers
+     * Returneaza datele complete editabile ale celor 2 societati (primary +
+     * secondary, daca activata) ale organizatorului evenimentului.
+     */
+    public function issuersShow(Request $request, int $event): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+        $marketplace = $organizer->marketplaceClient;
+
+        $eventModel = Event::query()
+            ->where('id', $event)
+            ->where('marketplace_client_id', $marketplace->id)
+            ->first();
+        if (!$eventModel) return $this->error('Event not found', 404);
+
+        $eventOrganizer = $eventModel->marketplace_organizer_id
+            ? MarketplaceOrganizer::find($eventModel->marketplace_organizer_id)
+            : $organizer;
+        if (!$eventOrganizer) return $this->error('Organizer not found', 404);
+
+        return $this->success([
+            'organizer_id' => $eventOrganizer->id,
+            'has_secondary_issuer' => (bool) $eventOrganizer->has_secondary_issuer,
+            'primary' => [
+                'name' => $eventOrganizer->company_name,
+                'tax_id' => $eventOrganizer->company_tax_id,
+                'registration' => $eventOrganizer->company_registration,
+                'address' => $eventOrganizer->company_address,
+                'city' => $eventOrganizer->company_city,
+                'county' => $eventOrganizer->company_county,
+                'zip' => $eventOrganizer->company_zip,
+                'bank_name' => $eventOrganizer->bank_name,
+                'iban' => $eventOrganizer->iban,
+                'invoice_series' => $eventOrganizer->primary_invoice_series,
+                'last_invoice_number' => (int) ($eventOrganizer->primary_last_invoice_number ?? 0),
+                'next_invoice_number' => (int) ($eventOrganizer->primary_last_invoice_number ?? 0) + 1,
+                'vat_payer' => $eventOrganizer->primary_vat_payer !== null
+                    ? (bool) $eventOrganizer->primary_vat_payer
+                    : (bool) ($eventOrganizer->vat_payer ?? false),
+                'vat_rate' => $eventOrganizer->primary_vat_rate !== null
+                    ? (float) $eventOrganizer->primary_vat_rate
+                    : (isset($eventOrganizer->tax_settings['vat_rate']) ? (float) $eventOrganizer->tax_settings['vat_rate'] : null),
+            ],
+            'secondary' => [
+                'name' => $eventOrganizer->secondary_company_name,
+                'tax_id' => $eventOrganizer->secondary_company_tax_id,
+                'registration' => $eventOrganizer->secondary_company_registration,
+                'address' => $eventOrganizer->secondary_company_address,
+                'city' => $eventOrganizer->secondary_company_city,
+                'county' => $eventOrganizer->secondary_company_county,
+                'zip' => $eventOrganizer->secondary_company_zip,
+                'bank_name' => $eventOrganizer->secondary_bank_name,
+                'iban' => $eventOrganizer->secondary_iban,
+                'invoice_series' => $eventOrganizer->secondary_invoice_series,
+                'last_invoice_number' => (int) ($eventOrganizer->secondary_last_invoice_number ?? 0),
+                'next_invoice_number' => (int) ($eventOrganizer->secondary_last_invoice_number ?? 0) + 1,
+                'vat_payer' => (bool) ($eventOrganizer->secondary_vat_payer ?? false),
+                'vat_rate' => $eventOrganizer->secondary_vat_rate !== null ? (float) $eventOrganizer->secondary_vat_rate : null,
+            ],
+        ]);
+    }
+
+    /**
+     * PUT /marketplace-client/organizer/events/{event}/leisure/issuers
+     *
+     * Update partial pentru societatea ceruta. Body: { company: 'primary'|'secondary', fields: {...} }
+     * Fields acceptate (toate optionale, doar cele trimise se actualizeaza):
+     *  name, tax_id, registration, address, city, county, zip, bank_name, iban,
+     *  invoice_series, next_invoice_number, vat_payer, vat_rate,
+     *  has_secondary_issuer (DOAR cand company=secondary)
+     *
+     * next_invoice_number: cand e setat, scrie last_invoice_number = next - 1 ca sa pornim
+     * urmatoarea factura emisa de la `next` (atomic reservation in reserveNextInvoiceNumber).
+     */
+    public function issuersUpdate(Request $request, int $event): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+        $marketplace = $organizer->marketplaceClient;
+
+        $eventModel = Event::query()
+            ->where('id', $event)
+            ->where('marketplace_client_id', $marketplace->id)
+            ->first();
+        if (!$eventModel) return $this->error('Event not found', 404);
+
+        $eventOrganizer = $eventModel->marketplace_organizer_id
+            ? MarketplaceOrganizer::find($eventModel->marketplace_organizer_id)
+            : $organizer;
+        if (!$eventOrganizer) return $this->error('Organizer not found', 404);
+
+        $validated = $request->validate([
+            'company' => 'required|in:primary,secondary',
+            'fields' => 'required|array',
+            'fields.name' => 'nullable|string|max:255',
+            'fields.tax_id' => 'nullable|string|max:32',
+            'fields.registration' => 'nullable|string|max:32',
+            'fields.address' => 'nullable|string|max:1024',
+            'fields.city' => 'nullable|string|max:100',
+            'fields.county' => 'nullable|string|max:100',
+            'fields.zip' => 'nullable|string|max:20',
+            'fields.bank_name' => 'nullable|string|max:255',
+            'fields.iban' => 'nullable|string|max:34',
+            'fields.invoice_series' => 'nullable|string|max:16',
+            'fields.next_invoice_number' => 'nullable|integer|min:1|max:9999999',
+            'fields.vat_payer' => 'nullable|boolean',
+            'fields.vat_rate' => 'nullable|numeric|min:0|max:100',
+            'fields.has_secondary_issuer' => 'nullable|boolean',
+        ]);
+
+        $company = $validated['company'];
+        $fields = $validated['fields'] ?? [];
+        $prefix = $company === 'secondary' ? 'secondary_' : '';
+
+        // Mapare camp UI -> coloana DB (per societate)
+        $colMap = $company === 'secondary' ? [
+            'name' => 'secondary_company_name',
+            'tax_id' => 'secondary_company_tax_id',
+            'registration' => 'secondary_company_registration',
+            'address' => 'secondary_company_address',
+            'city' => 'secondary_company_city',
+            'county' => 'secondary_company_county',
+            'zip' => 'secondary_company_zip',
+            'bank_name' => 'secondary_bank_name',
+            'iban' => 'secondary_iban',
+            'invoice_series' => 'secondary_invoice_series',
+            'vat_payer' => 'secondary_vat_payer',
+            'vat_rate' => 'secondary_vat_rate',
+        ] : [
+            'name' => 'company_name',
+            'tax_id' => 'company_tax_id',
+            'registration' => 'company_registration',
+            'address' => 'company_address',
+            'city' => 'company_city',
+            'county' => 'company_county',
+            'zip' => 'company_zip',
+            'bank_name' => 'bank_name',
+            'iban' => 'iban',
+            'invoice_series' => 'primary_invoice_series',
+            'vat_payer' => 'primary_vat_payer',
+            'vat_rate' => 'primary_vat_rate',
+        ];
+
+        foreach ($colMap as $uiField => $dbCol) {
+            if (array_key_exists($uiField, $fields)) {
+                $eventOrganizer->{$dbCol} = $fields[$uiField];
+            }
+        }
+
+        // next_invoice_number -> last_invoice_number = next - 1 (atomic transaction)
+        if (array_key_exists('next_invoice_number', $fields) && $fields['next_invoice_number'] !== null) {
+            $next = (int) $fields['next_invoice_number'];
+            $lastCol = $company === 'secondary' ? 'secondary_last_invoice_number' : 'primary_last_invoice_number';
+            $eventOrganizer->{$lastCol} = max(0, $next - 1);
+        }
+
+        // Mirror primary_vat_payer -> legacy vat_payer ca sa nu rupem TaxReportController / BillingController
+        if ($company === 'primary' && array_key_exists('vat_payer', $fields)) {
+            $eventOrganizer->vat_payer = (bool) $fields['vat_payer'];
+        }
+
+        // Toggle has_secondary_issuer DOAR cand vine din societatea secundara
+        if ($company === 'secondary' && array_key_exists('has_secondary_issuer', $fields)) {
+            $eventOrganizer->has_secondary_issuer = (bool) $fields['has_secondary_issuer'];
+        }
+
+        $eventOrganizer->save();
+
+        return $this->success([
+            'saved' => true,
+            'company' => $company,
+        ]);
     }
 }
