@@ -1879,11 +1879,18 @@ function reservationPage() {
                 return cat === 'access' || cat === 'package';
             });
         },
-        // services = TOATE produsele care nu sunt bilete acces și nu sunt pachete.
+        // services = TOATE produsele care nu sunt bilete acces și nu sunt pachete
+        // ȘI care NU au fost asignate manual de organizator unei categorii
+        // (cele cu ticket_group valid apar in accessTicketsGrouped).
         get services() {
+            const cats = Array.isArray(this.ticketCategoriesRaw) ? this.ticketCategoriesRaw : [];
+            const catIds = new Set(cats.map(c => c.id));
             return this._ticketsWithQty.filter(t => {
                 const cat = t.service_category || 'access';
-                return cat !== 'access' && cat !== 'package';
+                if (cat === 'access' || cat === 'package') return false;
+                // Daca user-ul a clasat manual o activitate intr-o categorie, NU mai apare in Servicii
+                if (t.ticket_group && catIds.has(t.ticket_group)) return false;
+                return true;
             });
         },
         // Pachetele promoționale ca grup virtual de afișare (apar mereu la finalul
@@ -1895,44 +1902,67 @@ function reservationPage() {
         get packageGroupLabel() {
             return t('packages_promo_title') || 'Pachete promoționale';
         },
-        // C2 — Grupare bilete acces pe ticket_categories (definite de organizator
-        // in /organizator/leisure tab Produse → Categorii afișare). Daca nu sunt
-        // categorii configurate sau niciun bilet nu are ticket_group asignat,
-        // returnam un singur grup fara header (backward compat).
-        // Pachetele sunt mereu un grup separat afișat ÎN FINAL.
+        // C2 — Grupare bilete pe ticket_categories (definite de organizator in
+        // /organizator/leisure tab Produse → Categorii afișare).
+        //
+        // Regula: alocarea MANUALA (t.ticket_group) e mereu prioritara — daca un
+        // ticket are ticket_group setat catre o categorie existenta, intra in acea
+        // categorie INDIFERENT de service_category (access/activity/package).
+        // Asta permite organizatorului sa amestece manual pachete + activitati +
+        // bilete acces in aceeasi categorie (ex: "Pachete promoționale").
+        //
+        // Fallback auto pentru tickets fara ticket_group:
+        //  - access (default)  → grup ungrouped sau __all__
+        //  - package           → grup dedicat __packages__ in final
+        //  - activity / orice altceva → ignorat aici (apar in services)
         get accessTicketsGrouped() {
             const cats = Array.isArray(this.ticketCategoriesRaw) ? this.ticketCategoriesRaw : [];
-            // Separam pachetele de restul biletelor de acces — pachetele primesc
-            // mereu propriul header dedicat.
-            const all = this._ticketsWithQty.filter(t => (t.service_category || 'access') === 'access');
-            const packages = this.packageTickets;
+            const catIds = new Set(cats.map(c => c.id));
+
+            // 1) Manual: orice ticket (acces / activity / package) cu ticket_group
+            //    catre o categorie existenta intra in acea categorie.
+            const manuallyGrouped = this._ticketsWithQty.filter(t =>
+                t.ticket_group && catIds.has(t.ticket_group)
+            );
+            const manualIds = new Set(manuallyGrouped.map(t => t.id));
+
+            // 2) Auto pentru cele FARA ticket_group (sau cu ticket_group invalid):
+            //    - access → afla in groups (ungrouped sau __all__)
+            //    - package → grup dedicat __packages__
+            const autoAccess = this._ticketsWithQty.filter(t =>
+                !manualIds.has(t.id) && (t.service_category || 'access') === 'access'
+            );
+            const autoPackages = this._ticketsWithQty.filter(t =>
+                !manualIds.has(t.id) && (t.service_category || '') === 'package'
+            );
 
             const buildGroups = () => {
                 if (!cats.length) {
-                    return all.length ? [{ id: '__all__', name: '', items: all }] : [];
+                    return autoAccess.length ? [{ id: '__all__', name: '', items: autoAccess }] : [];
                 }
                 const byId = {};
-                const ungrouped = [];
-                for (const t of all) {
-                    const gid = t.ticket_group;
-                    const cat = gid ? cats.find(c => c.id === gid) : null;
-                    if (cat) { (byId[cat.id] ||= []).push(t); }
-                    else { ungrouped.push(t); }
+                for (const t of manuallyGrouped) {
+                    (byId[t.ticket_group] ||= []).push(t);
+                }
+                for (const t of autoAccess) {
+                    // Auto-bucket pentru access fara ticket_group → ungrouped
+                    byId['__none__'] ||= [];
+                    byId['__none__'].push(t);
                 }
                 const groups = [];
                 for (const c of cats) {
                     const items = byId[c.id] || [];
                     if (items.length) groups.push({ id: c.id, name: c.name, items });
                 }
-                if (ungrouped.length) {
-                    groups.push({ id: '__none__', name: '', items: ungrouped });
+                if ((byId['__none__'] || []).length) {
+                    groups.push({ id: '__none__', name: '', items: byId['__none__'] });
                 }
                 return groups;
             };
 
             const groups = buildGroups();
-            if (packages.length) {
-                groups.push({ id: '__packages__', name: this.packageGroupLabel, items: packages });
+            if (autoPackages.length) {
+                groups.push({ id: '__packages__', name: this.packageGroupLabel, items: autoPackages });
             }
             return groups;
         },
