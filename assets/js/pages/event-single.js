@@ -1833,7 +1833,10 @@ const EventPage = {
     renderEventExternalLinks(e) {
         var fbUrl = (e && e.facebook_url) ? String(e.facebook_url).trim() : '';
         var siteUrl = (e && e.event_website_url) ? String(e.event_website_url).trim() : '';
-        if (!fbUrl && !siteUrl) return;
+        // Brand follow CTA is always present even when the event itself has
+        // no FB / website URL — that's the whole point of the new "Urmărește-ne"
+        // button: it stays visible across every event page.
+        var brandFbUrl = 'https://facebook.com/ambilet';
 
         var descEl = document.getElementById(this.elements.eventDescription);
         if (!descEl) return;
@@ -1844,10 +1847,12 @@ const EventPage = {
         var fbIcon = '<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>';
         var siteIcon = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"/></svg>';
         var arrowIcon = '<svg class="w-3 h-3 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>';
+        var fbBrandIcon = '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>';
 
-        var links = [];
+        // ── Section 1: event-specific links (info, neutral pills) ─────
+        var infoLinks = [];
         if (fbUrl) {
-            links.push(
+            infoLinks.push(
                 '<a href="' + fbUrl + '" target="_blank" rel="noopener noreferrer" ' +
                 'class="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-border bg-surface hover:bg-[#1877F2]/10 hover:border-[#1877F2] hover:text-[#1877F2] transition-colors text-sm font-medium text-secondary">' +
                 fbIcon +
@@ -1857,7 +1862,7 @@ const EventPage = {
             );
         }
         if (siteUrl) {
-            links.push(
+            infoLinks.push(
                 '<a href="' + siteUrl + '" target="_blank" rel="noopener noreferrer" ' +
                 'class="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-border bg-surface hover:bg-primary/10 hover:border-primary hover:text-primary transition-colors text-sm font-medium text-secondary">' +
                 siteIcon +
@@ -1867,12 +1872,35 @@ const EventPage = {
             );
         }
 
+        // ── Section 2: brand CTA (Follow ambilet on Facebook) ─────────
+        // Distinct visual treatment: Facebook brand blue background + white
+        // text + bigger icon. Reads as a "do this" button, not an info link.
+        var brandCta =
+            '<a href="' + brandFbUrl + '" target="_blank" rel="noopener noreferrer" ' +
+            'class="inline-flex items-center gap-3 px-5 py-3 rounded-xl bg-[#1877F2] hover:bg-[#0d65d9] text-white font-semibold text-sm shadow-sm hover:shadow transition-all">' +
+            fbBrandIcon +
+            '<span>Urmărește-ne pe Facebook</span>' +
+            '<svg class="w-4 h-4 opacity-90" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>' +
+            '</a>';
+
+        // Compose the section. The info subhead only renders when there
+        // are event-specific links to head; when only the CTA is present
+        // we drop the header so the brand button stands on its own.
+        var sectionHtml = '';
+        if (infoLinks.length) {
+            sectionHtml +=
+                '<div class="text-xs uppercase tracking-wide text-muted mb-3 font-semibold">Mai multe despre eveniment</div>' +
+                '<div class="flex flex-wrap gap-2 mb-5">' + infoLinks.join('') + '</div>' +
+                '<div class="border-t border-border mb-4"></div>';
+        }
+        sectionHtml +=
+            '<div class="text-xs uppercase tracking-wide text-muted mb-2 font-semibold">Rămâi la curent</div>' +
+            '<div class="flex flex-wrap gap-2">' + brandCta + '</div>';
+
         var section = document.createElement('div');
         section.id = 'event-external-links';
         section.className = 'pt-5 mt-6 border-t border-border';
-        section.innerHTML =
-            '<div class="text-xs uppercase tracking-wide text-muted mb-3 font-semibold">Mai multe despre eveniment</div>' +
-            '<div class="flex flex-wrap gap-2">' + links.join('') + '</div>';
+        section.innerHTML = sectionHtml;
         descEl.parentNode.insertBefore(section, descEl.nextSibling);
     },
 
