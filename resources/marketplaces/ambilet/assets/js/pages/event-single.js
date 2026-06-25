@@ -1889,13 +1889,13 @@ const EventPage = {
         var sectionHtml = '';
         if (infoLinks.length) {
             sectionHtml +=
-                '<div class="text-xs uppercase tracking-wide text-muted mb-3 font-semibold">Mai multe despre eveniment</div>' +
-                '<div class="flex flex-wrap gap-2 mb-5">' + infoLinks.join('') + '</div>' +
+                '<div class="text-xs uppercase tracking-wide text-muted mb-3 font-semibold text-center">Mai multe despre eveniment</div>' +
+                '<div class="flex flex-wrap gap-2 mb-5 justify-center">' + infoLinks.join('') + '</div>' +
                 '<div class="border-t border-border mb-4"></div>';
         }
         sectionHtml +=
-            '<div class="text-xs uppercase tracking-wide text-muted mb-2 font-semibold">Rămâi la curent</div>' +
-            '<div class="flex flex-wrap gap-2">' + brandCta + '</div>';
+            '<div class="text-xs uppercase tracking-wide text-muted mb-2 font-semibold text-center">Rămâi la curent</div>' +
+            '<div class="flex flex-wrap gap-2 justify-center">' + brandCta + '</div>';
 
         var section = document.createElement('div');
         section.id = 'event-external-links';
