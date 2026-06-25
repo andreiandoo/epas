@@ -812,7 +812,7 @@ require_once __DIR__ . '/includes/head.php';
                     </template>
                 </div>
 
-                <div x-show="selectedDate && !loadingTickets && accessTickets.length === 0" class="bg-white rounded-2xl p-8 text-center">
+                <div x-show="selectedDate && !loadingTickets && !hasDisplayableTickets" class="bg-white rounded-2xl p-8 text-center">
                     <p class="text-forest-700/70">Nu sunt bilete disponibile pentru această dată.</p>
                 </div>
 
@@ -820,7 +820,7 @@ require_once __DIR__ . '/includes/head.php';
                 <!-- Se afiseaza cand:
                      - exista categorii configurate de organizator (>=2 sau pachete + categorii)
                      - utilizatorul nu a ales inca o categorie -->
-                <div x-show="selectedDate && !loadingTickets && accessTickets.length > 0 && showCategoryPicker"
+                <div x-show="selectedDate && !loadingTickets && hasDisplayableTickets && showCategoryPicker"
                      class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     <template x-for="cat in publicCategoryGroups" :key="cat.id">
                         <button type="button" @click="selectedCategoryId = cat.id; $nextTick(() => { document.getElementById('bilete')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); })"
@@ -845,7 +845,7 @@ require_once __DIR__ . '/includes/head.php';
                 <!-- Se afiseaza in 2 cazuri:
                      - utilizatorul a selectat o categorie (selectedCategoryId)
                      - nu sunt categorii definite → fallback la lista flat (showCategoryPicker = false) -->
-                <div x-show="selectedDate && !loadingTickets && accessTickets.length > 0 && !showCategoryPicker" class="space-y-4">
+                <div x-show="selectedDate && !loadingTickets && hasDisplayableTickets && !showCategoryPicker" class="space-y-4">
                     <!-- Breadcrumb back (vizibil doar cand exista picker, adica avem mai multe categorii) -->
                     <div x-show="hasMultipleCategories" class="flex items-center justify-between gap-3 mb-2">
                         <button type="button" @click="selectedCategoryId = null"
@@ -1905,64 +1905,44 @@ function reservationPage() {
         // C2 — Grupare bilete pe ticket_categories (definite de organizator in
         // /organizator/leisure tab Produse → Categorii afișare).
         //
-        // Regula: alocarea MANUALA (t.ticket_group) e mereu prioritara — daca un
-        // ticket are ticket_group setat catre o categorie existenta, intra in acea
-        // categorie INDIFERENT de service_category (access/activity/package).
-        // Asta permite organizatorului sa amestece manual pachete + activitati +
-        // bilete acces in aceeasi categorie (ex: "Pachete promoționale").
+        // Regula UNICA: alocarea MANUALA (t.ticket_group) decide totul. Daca un
+        // ticket are ticket_group setat catre o categorie existenta, intra in
+        // acea categorie INDIFERENT de service_category (access/activity/package).
         //
-        // Fallback auto pentru tickets fara ticket_group:
-        //  - access (default)  → grup ungrouped sau __all__
-        //  - package           → grup dedicat __packages__ in final
-        //  - activity / orice altceva → ignorat aici (apar in services)
+        // Fallback pentru tickets FARA ticket_group: tip 'access' (default) →
+        // grup ungrouped (header gol) DOAR daca nu exista categorii custom; cand
+        // exista categorii, tickets-urile fara categorie ASIGNATA nu apar
+        // (organizatorul decide ce e public). Pachetele NU mai au auto-grup
+        // dedicat — daca nu e clasat manual, nu apare pe pagina publica.
         get accessTicketsGrouped() {
             const cats = Array.isArray(this.ticketCategoriesRaw) ? this.ticketCategoriesRaw : [];
             const catIds = new Set(cats.map(c => c.id));
 
-            // 1) Manual: orice ticket (acces / activity / package) cu ticket_group
-            //    catre o categorie existenta intra in acea categorie.
+            // Manual: orice ticket cu ticket_group valid intra in acea categorie.
             const manuallyGrouped = this._ticketsWithQty.filter(t =>
                 t.ticket_group && catIds.has(t.ticket_group)
             );
             const manualIds = new Set(manuallyGrouped.map(t => t.id));
 
-            // 2) Auto pentru cele FARA ticket_group (sau cu ticket_group invalid):
-            //    - access → afla in groups (ungrouped sau __all__)
-            //    - package → grup dedicat __packages__
-            const autoAccess = this._ticketsWithQty.filter(t =>
-                !manualIds.has(t.id) && (t.service_category || 'access') === 'access'
-            );
-            const autoPackages = this._ticketsWithQty.filter(t =>
-                !manualIds.has(t.id) && (t.service_category || '') === 'package'
-            );
+            // Backward compat: cand NU exista categorii custom, listam toate
+            // biletele de acces intr-un grup flat (fara header). Asa pastram
+            // pagina functionala pe organizatorii care nu folosesc categorii.
+            if (!cats.length) {
+                const autoAccess = this._ticketsWithQty.filter(t =>
+                    (t.service_category || 'access') === 'access'
+                );
+                return autoAccess.length ? [{ id: '__all__', name: '', items: autoAccess }] : [];
+            }
 
-            const buildGroups = () => {
-                if (!cats.length) {
-                    return autoAccess.length ? [{ id: '__all__', name: '', items: autoAccess }] : [];
-                }
-                const byId = {};
-                for (const t of manuallyGrouped) {
-                    (byId[t.ticket_group] ||= []).push(t);
-                }
-                for (const t of autoAccess) {
-                    // Auto-bucket pentru access fara ticket_group → ungrouped
-                    byId['__none__'] ||= [];
-                    byId['__none__'].push(t);
-                }
-                const groups = [];
-                for (const c of cats) {
-                    const items = byId[c.id] || [];
-                    if (items.length) groups.push({ id: c.id, name: c.name, items });
-                }
-                if ((byId['__none__'] || []).length) {
-                    groups.push({ id: '__none__', name: '', items: byId['__none__'] });
-                }
-                return groups;
-            };
-
-            const groups = buildGroups();
-            if (autoPackages.length) {
-                groups.push({ id: '__packages__', name: this.packageGroupLabel, items: autoPackages });
+            // Cu categorii custom: doar ce a clasat organizatorul manual.
+            const byId = {};
+            for (const t of manuallyGrouped) {
+                (byId[t.ticket_group] ||= []).push(t);
+            }
+            const groups = [];
+            for (const c of cats) {
+                const items = byId[c.id] || [];
+                if (items.length) groups.push({ id: c.id, name: c.name, items });
             }
             return groups;
         },
@@ -1984,6 +1964,13 @@ function reservationPage() {
         // True daca avem >=2 grupuri afisabile → flow picker activ.
         get hasMultipleCategories() {
             return this.publicCategoryGroups.length >= 2;
+        },
+        // True cand avem CEL PUTIN 1 produs de aratat in sectiunea bilete (acces sau
+        // manual-categorizat). Foloseste pentru gate-ul x-show al sectiunilor de
+        // picker / mode-B, ca sa nu fie ascunse cand categoria selectata are doar
+        // activitati/pachete (accessTickets.length nu numara activitatile).
+        get hasDisplayableTickets() {
+            return this.publicCategoryGroups.length > 0;
         },
         // True cand picker-ul de categorii e activ (utilizatorul nu a ales nimic INCA).
         get showCategoryPicker() {
