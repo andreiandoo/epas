@@ -552,6 +552,11 @@ const AmbiletAPI = {
         if (leisureMatch) {
             return `event=${encodeURIComponent(leisureMatch[1])}`;
         }
+        // Extract staff id from /organizer/leisure/staff/{id} (PUT/DELETE pe Angajati permanent)
+        const leisureStaffMatch = endpoint.match(/^\/organizer\/leisure\/staff\/(\d+)$/);
+        if (leisureStaffMatch) {
+            return `id=${encodeURIComponent(leisureStaffMatch[1])}`;
+        }
 
         // Extract artist slug from /artist/check-claim/{slug}
         const artistClaimMatch = endpoint.match(/^\/artist\/check-claim\/([a-z0-9-]+)$/);
