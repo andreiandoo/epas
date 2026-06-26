@@ -316,6 +316,9 @@ require_once __DIR__ . '/includes/head.php';
                 'savings' => 'Economisești',
                 'individual_value' => 'Valoare individuală',
                 'continue' => 'Continuă spre coș',
+                'timer_message' => 'Biletele sunt rezervate pentru tine încă',
+                'timer_minutes' => 'minute',
+                'timer_expired' => 'Timpul a expirat. Coșul a fost golit.',
                 'days_short' => ['Lun', 'Mar', 'Mie', 'Joi', 'Vin', 'Sâm', 'Dum'],
                 'months' => ['Ianuarie', 'Februarie', 'Martie', 'Aprilie', 'Mai', 'Iunie', 'Iulie', 'August', 'Septembrie', 'Octombrie', 'Noiembrie', 'Decembrie'],
                 'lang_label' => 'Limbă',
@@ -412,6 +415,9 @@ require_once __DIR__ . '/includes/head.php';
                 'savings' => 'Megtakarítás',
                 'individual_value' => 'Egyedi ár',
                 'continue' => 'Tovább a kosárhoz',
+                'timer_message' => 'A jegyek le vannak foglalva számodra még',
+                'timer_minutes' => 'percig',
+                'timer_expired' => 'Az idő lejárt. A kosár kiürült.',
                 'days_short' => ['Hét', 'Ked', 'Sze', 'Csü', 'Pén', 'Szo', 'Vas'],
                 'months' => ['Január', 'Február', 'Március', 'Április', 'Május', 'Június', 'Július', 'Augusztus', 'Szeptember', 'Október', 'November', 'December'],
                 'lang_label' => 'Nyelv',
@@ -497,6 +503,9 @@ require_once __DIR__ . '/includes/head.php';
                 'savings' => 'You save',
                 'individual_value' => 'Individual value',
                 'continue' => 'Continue to cart',
+                'timer_message' => 'Your tickets are reserved for another',
+                'timer_minutes' => 'minutes',
+                'timer_expired' => 'Time expired. Cart has been emptied.',
                 'days_short' => ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
                 'months' => ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
                 'lang_label' => 'Language',
@@ -661,6 +670,22 @@ require_once __DIR__ . '/includes/head.php';
         </div>
     </div>
 </section>
+
+<!-- ============ RESERVATION TIMER BAR ============
+     Sticky top, vizibil DOAR cand cart-ul are item-uri + cart_end_time e setat
+     in localStorage de AmbiletCart.startReservationTimer(). Re-foloseste id=countdown
+     ca scripts-ul global de timer (din cart.js / cart-page.js) sa sincronizeze
+     daca user-ul are deja tab cu /cos deschis. -->
+<div id="timer-bar" class="hidden sticky top-0 z-30 border-b bg-warning/10 border-warning/20" style="display:none">
+    <div class="px-4 py-2.5 mx-auto max-w-7xl">
+        <div class="flex items-center justify-center gap-2 text-sm">
+            <svg class="w-5 h-5 text-warning" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <span class="text-forest-900" x-text="t('timer_message') || 'Biletele sunt rezervate pentru tine încă'"></span>
+            <span id="countdown" class="font-bold text-warning tabular-nums">15:00</span>
+            <span class="text-forest-900" x-text="t('timer_minutes') || 'minute'"></span>
+        </div>
+    </div>
+</div>
 
 <!-- ============ QUICK STATS BAR (sticky doar pe desktop) ============ -->
 <section class="bg-white border-y border-forest-100 lg:sticky lg:top-0 lg:z-20 backdrop-blur">
@@ -1689,6 +1714,62 @@ function reservationPage() {
             // hidratam qtyById dupa ce ticketsRaw e incarcat. Astfel cosul
             // float ramane plin, nu se reseteaza la 0.
             this.restoreCartState();
+            // Bara de timer rezervare (vizibila cat timp avem item-uri in cart)
+            this.setupCartTimer();
+            // Re-evalueaza timer-ul cand AmbiletCart se schimba (add din alte tab-uri etc.)
+            window.addEventListener('ambilet:cart:update', () => this.setupCartTimer());
+            window.addEventListener('ambilet:cart:clear', () => this.hideCartTimer());
+        },
+
+        // ========== Reservation timer bar ==========
+        _cartTimerInterval: null,
+        setupCartTimer() {
+            try {
+                const bar = document.getElementById('timer-bar');
+                if (!bar) return;
+                const cart = (typeof AmbiletCart !== 'undefined') ? AmbiletCart.getCart() : { items: [] };
+                if (!cart.items || cart.items.length === 0) { this.hideCartTimer(); return; }
+                let endTime = parseInt(localStorage.getItem('cart_end_time') || '0', 10);
+                if (!endTime || endTime <= Date.now()) {
+                    // Pornim un timer nou de 15 minute daca avem cart valid dar fara end_time
+                    // (ex: cart restaurat dintr-o sesiune veche fara timer setat).
+                    endTime = Date.now() + 15 * 60 * 1000;
+                    localStorage.setItem('cart_end_time', String(endTime));
+                }
+                bar.style.display = '';
+                bar.classList.remove('hidden');
+                const tick = () => {
+                    const remaining = Math.max(0, endTime - Date.now());
+                    const mm = Math.floor(remaining / 60000);
+                    const ss = Math.floor((remaining % 60000) / 1000);
+                    const el = document.getElementById('countdown');
+                    if (el) el.textContent = String(mm).padStart(2, '0') + ':' + String(ss).padStart(2, '0');
+                    if (remaining <= 0) {
+                        clearInterval(this._cartTimerInterval);
+                        this._cartTimerInterval = null;
+                        // Goleste cosul (in-tab) + ascunde bara
+                        try { if (typeof AmbiletCart !== 'undefined' && AmbiletCart.clear) AmbiletCart.clear(); } catch (e) {}
+                        Object.keys(this.qtyById).forEach(k => this.qtyById[k] = 0);
+                        this.hideCartTimer();
+                        alert(t('timer_expired', 'Timpul a expirat. Coșul a fost golit.'));
+                        return;
+                    }
+                    // Sub 1 minut: rosu urgent
+                    if (remaining < 60000) {
+                        bar.classList.remove('bg-warning/10', 'border-warning/20');
+                        bar.classList.add('bg-red-50', 'border-red-200');
+                        if (el) { el.classList.remove('text-warning'); el.classList.add('text-red-600'); }
+                    }
+                };
+                tick();
+                if (this._cartTimerInterval) clearInterval(this._cartTimerInterval);
+                this._cartTimerInterval = setInterval(tick, 1000);
+            } catch (e) { console.warn('[timer-bar]', e); }
+        },
+        hideCartTimer() {
+            const bar = document.getElementById('timer-bar');
+            if (bar) { bar.style.display = 'none'; bar.classList.add('hidden'); }
+            if (this._cartTimerInterval) { clearInterval(this._cartTimerInterval); this._cartTimerInterval = null; }
         },
 
         // Re-hidrare a starii coşului din AmbiletCart (localStorage) după ce
@@ -2409,6 +2490,22 @@ function reservationPage() {
                 console.error('AmbiletCart not available');
                 return;
             }
+
+            // Sync cart cu starea coşului din UI: cosul de pe ecran reflecta
+            // qty-ul final pentru ACEST eveniment, indiferent ce era inainte
+            // in cart (restoreCartState a hidratat qtyById din cart la load).
+            // Sterge intai toate item-urile de pe acest event + visit_date din
+            // cart, apoi adauga din nou cu cantitatile actuale.
+            // Asa evitam dublarea cantitatilor la re-checkout (Back -> +qty -> Submit).
+            try {
+                const existing = (AmbiletCart.getItems() || []).filter(i =>
+                    Number(i?.eventId) === Number(EVENT.id) &&
+                    String(i?.meta?.visit_date || '') === String(this.selectedDate)
+                );
+                existing.forEach(i => {
+                    if (i && i.key && AmbiletCart.removeItem) AmbiletCart.removeItem(i.key);
+                });
+            } catch (e) { /* never block checkout on cleanup */ }
 
             // Build plain primitives — Alpine reactive proxies se serializeaza
             // ca [object Object] si toate operatiile aritmetice dau NaN.
