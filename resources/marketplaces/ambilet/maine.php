@@ -1,10 +1,10 @@
 <?php
 /**
- * /azi — today's events grouped by category.
+ * /maine — tomorrow's events grouped by category.
  * Thin entry; the actual page is rendered by includes/when-events-page.php.
  */
 $pageCacheTTL = 300;
 require_once __DIR__ . '/includes/page-cache.php';
 
-$dateMode = 'today';
+$dateMode = 'tomorrow';
 require __DIR__ . '/includes/when-events-page.php';
