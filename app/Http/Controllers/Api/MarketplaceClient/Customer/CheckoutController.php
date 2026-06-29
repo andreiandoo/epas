@@ -2280,9 +2280,27 @@ class CheckoutController extends BaseController
             // Build recipient list: admin alert email + optionally organizer
             $recipients = array_filter([$alertEmail]);
 
-            // Check if organizer should also be notified
+            // Check if organizer should also be notified. EventResource's
+            // CheckboxList saves organizer_notifications as a numerically-
+            // indexed list of selected slugs (['stock_low_alert', ...]) —
+            // the previous check used $orgNotifications['stock_low_alert']
+            // which only matches the associative shape, so the organizer
+            // email was never appended even when the toggle was active.
+            // Normalize both shapes into a slug set before lookup.
             $orgNotifications = $event->organizer_notifications ?? [];
-            if (!empty($orgNotifications['stock_low_alert']) && $organizer?->email) {
+            $notifySlugs = [];
+            if (is_array($orgNotifications)) {
+                foreach ($orgNotifications as $k => $v) {
+                    if (is_int($k) && is_string($v)) {
+                        // Indexed: value is the slug
+                        $notifySlugs[$v] = true;
+                    } elseif (is_string($k) && $v) {
+                        // Associative legacy: key is slug, value truthy = enabled
+                        $notifySlugs[$k] = true;
+                    }
+                }
+            }
+            if (!empty($notifySlugs['stock_low_alert']) && $organizer?->email) {
                 $recipients[] = $organizer->email;
             }
 
