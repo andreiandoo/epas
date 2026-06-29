@@ -117,8 +117,13 @@ class ListPayouts extends ListRecords
                                 $set('fees_amount', number_format($eventExtras, 2, '.', ''));
 
                                 if ($fin['balance'] <= 0) {
-                                    // Distinguish: no sales vs fully paid
-                                    $set('has_balance', false);
+                                    // Operator can still issue a 0-net decont (e.g. an event
+                                    // that sold nothing but needs a formal "no payout" record,
+                                    // or one where every sale was refunded). Keep has_balance
+                                    // true so the rest of the form is reachable; the
+                                    // zero_balance_message placeholder below surfaces the
+                                    // situation as info, not a hard block.
+                                    $set('has_balance', true);
                                     $set('zero_reason', $fin['gross'] > 0 ? 'fully_paid' : 'no_sales');
                                     $set('payout_tickets', []);
                                     $set('gross_amount', '0.00');
@@ -129,6 +134,7 @@ class ListPayouts extends ListRecords
                                     $set('desired_net_amount', null);
                                 } else {
                                     $set('has_balance', true);
+                                    $set('zero_reason', null);
                                     // Populate ticket selector with available (not yet paid) tickets
                                     $this->populatePayoutTicketsFromEvent($set, $event, $fin);
 
@@ -208,24 +214,26 @@ class ListPayouts extends ListRecords
                 Forms\Components\Hidden::make('has_balance')->default(false)->dehydrated(false),
                 Forms\Components\Hidden::make('zero_reason')->default(null)->dehydrated(false),
 
-                // Zero balance message
+                // Zero balance info (not a blocker) — operator can still
+                // proceed with a 0-net decont. Renders only when there's
+                // genuinely nothing to pay out (balance ≤ 0).
                 Forms\Components\Placeholder::make('zero_balance_message')
                     ->hiddenLabel()
                     ->content(function (Get $get) {
                         $reason = $get('zero_reason');
                         if ($reason === 'no_sales') {
                             $icon = '<svg class="w-5 h-5 text-amber-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.072 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>';
-                            $msg = 'Evenimentul încă nu are vânzări înregistrate. Nu se poate face decont.';
+                            $msg = 'Evenimentul nu are vânzări înregistrate. Poți crea un decont cu net 0 pentru documentare.';
                         } else {
                             $icon = '<svg class="w-5 h-5 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>';
-                            $msg = 'Sold eveniment 0. Nu se mai pot face deconturi suplimentare.';
+                            $msg = 'Sold eveniment 0 (toate biletele decontate sau rambursate). Poți crea un decont cu net 0 pentru documentare.';
                         }
                         return new \Illuminate\Support\HtmlString(
-                            '<div class="flex items-center gap-2 p-4 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800">' .
-                            $icon . '<span class="text-gray-600 dark:text-gray-400">' . $msg . '</span></div>'
+                            '<div class="flex items-center gap-2 p-4 rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20">' .
+                            $icon . '<span class="text-amber-700 dark:text-amber-300 text-sm">' . $msg . '</span></div>'
                         );
                     })
-                    ->visible(fn (Get $get) => $get('event_id') !== null && !$get('has_balance')),
+                    ->visible(fn (Get $get) => $get('event_id') !== null && $get('zero_reason') !== null),
 
                 Forms\Components\Placeholder::make('event_details')
                     ->label('')
@@ -1209,11 +1217,10 @@ class ListPayouts extends ListRecords
         $event->loadMissing('ticketTypes');
         $items = $this->buildTicketBreakdownForEvent($event);
 
-        // Refund-only case: an event sold tickets that were entirely
-        // refunded. The breakdown is empty (no valid/used tickets remain)
-        // but the operator still needs a 0-net decont to document the
-        // refund history. Detect that here so the empty-items guard
-        // doesn't reject the request outright.
+        // Count refunds for the admin_notes annotation below. The
+        // operator can now create a 0-net decont even with no items
+        // and no refunds (per user request 2026-06-29) — useful for
+        // documenting events with no sales.
         $refundCount = \DB::table('marketplace_refund_requests as rr')
             ->join('orders as o', 'rr.order_id', '=', 'o.id')
             ->where(function ($q) use ($event) {
@@ -1222,15 +1229,6 @@ class ListPayouts extends ListRecords
             })
             ->whereIn('rr.status', ['refunded', 'partially_refunded'])
             ->count();
-
-        if (empty($items) && $refundCount === 0) {
-            \Filament\Notifications\Notification::make()
-                ->title('Sold insuficient')
-                ->body('Nu există bilete neîncasate pentru acest eveniment.')
-                ->warning()
-                ->send();
-            return;
-        }
 
         // Delegate to the same canonical pipeline the manual create modal
         // uses (PayoutResource\Pages\ListPayouts second action ~line 824).
@@ -1259,14 +1257,10 @@ class ListPayouts extends ListRecords
             $commissionMode = $event->getEffectiveCommissionMode() ?? 'included';
         }
 
-        if ($netAmount <= 0 && $refundCount === 0) {
-            \Filament\Notifications\Notification::make()
-                ->title('Sold insuficient')
-                ->body('Nu există sold disponibil pentru acest eveniment.')
-                ->warning()
-                ->send();
-            return;
-        }
+        // 0-net deconts are allowed (per user request 2026-06-29). Useful
+        // when an event needs a formal "no payout" record — e.g. event
+        // cancelled before sales, or entirely refunded. The downstream
+        // payout creation below handles amount=0 cleanly.
 
         // Get bank account
         $bankAccount = $organizer->bankAccounts()->where('is_primary', true)->first()
@@ -1315,11 +1309,14 @@ class ListPayouts extends ListRecords
             'approved_by' => $marketplaceAdmin->id,
             'approved_at' => now(),
             'payout_method' => $payoutMethod,
-            // Annotate refund-only deconts so anyone looking at the
-            // 0-net record later understands why it exists.
-            'admin_notes' => empty($items) && $refundCount > 0
-                ? "Decont generat din lista evenimente încheiate. Eveniment cu {$refundCount} bilet(e) rambursat(e) integral; net 0."
-                : 'Decont generat din lista evenimente încheiate.',
+            // Annotate 0-net deconts so anyone looking at the record
+            // later understands why it exists (no sales vs all-refunded
+            // vs normal payout).
+            'admin_notes' => match (true) {
+                empty($items) && $refundCount > 0 => "Decont generat din lista evenimente încheiate. Eveniment cu {$refundCount} bilet(e) rambursat(e) integral; net 0.",
+                empty($items) && $refundCount === 0 => 'Decont generat din lista evenimente încheiate. Eveniment fără vânzări; net 0 (documentare).',
+                default => 'Decont generat din lista evenimente încheiate.',
+            },
             'ticket_breakdown' => $ticketBreakdown,
             'commission_mode' => $commissionMode,
             'invoice_recipient_type' => $commissionMode === 'added_on_top' ? 'general_client' : 'organizer',
