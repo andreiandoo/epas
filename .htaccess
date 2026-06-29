@@ -58,6 +58,16 @@ RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^azi/?$ azi.php [L,QSA]
 
+# Handle tomorrow's events landing - /maine
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^maine/?$ maine.php [L,QSA]
+
+# Handle upcoming weekend's events landing - /weekend
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^weekend/?$ weekend.php [L,QSA]
+
 # Handle past events listing - /evenimente-trecute
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
