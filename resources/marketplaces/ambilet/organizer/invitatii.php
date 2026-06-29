@@ -42,7 +42,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             <h3 class="font-semibold text-secondary mb-1">Pasul 1 — Detalii serie</h3>
             <p class="text-sm text-muted mb-4">Dă un nume seriei (opțional, pentru organizare — ex. „Firma X", „Sponsori") și alege numărul de invitații.</p>
 
-            <div class="grid sm:grid-cols-2 gap-4 mb-4">
+            <div class="grid sm:grid-cols-3 gap-4 mb-4">
                 <div>
                     <label for="batch-name-input" class="block text-xs font-semibold text-muted mb-1">Nume serie (opțional)</label>
                     <input type="text" id="batch-name-input" maxlength="120" placeholder="ex. Firma X - presa" class="input w-full" />
@@ -54,7 +54,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 </div>
                 <div>
                     <label for="qty-input" class="block text-xs font-semibold text-muted mb-1">Număr invitații <span class="text-rose-600">*</span></label>
-                    <input type="number" id="qty-input" min="1" max="50" value="1" class="input w-32" />
+                    <input type="number" id="qty-input" min="1" max="50" value="1" class="input w-full" />
                 </div>
             </div>
 
