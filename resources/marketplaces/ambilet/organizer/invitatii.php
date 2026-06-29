@@ -48,6 +48,11 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     <input type="text" id="batch-name-input" maxlength="120" placeholder="ex. Firma X - presa" class="input w-full" />
                 </div>
                 <div>
+                    <label for="ticket-label-input" class="block text-xs font-semibold text-muted mb-1">Nume tip bilet (opțional)</label>
+                    <input type="text" id="ticket-label-input" maxlength="100" placeholder="ex. Invitație VIP" class="input w-full" />
+                    <p class="mt-1 text-[11px] text-muted">Apare pe bilet în loc de „Invitație". Lasă gol pentru valoarea implicită.</p>
+                </div>
+                <div>
                     <label for="qty-input" class="block text-xs font-semibold text-muted mb-1">Număr invitații <span class="text-rose-600">*</span></label>
                     <input type="number" id="qty-input" min="1" max="50" value="1" class="input w-32" />
                 </div>
@@ -1016,6 +1021,10 @@ $scriptsExtra = <<<'JS'
             const batchNameInput = $('batch-name-input');
             if (batchNameInput && batchNameInput.value.trim() !== '') {
                 payload.name = batchNameInput.value.trim();
+            }
+            const ticketLabelInput = $('ticket-label-input');
+            if (ticketLabelInput && ticketLabelInput.value.trim() !== '') {
+                payload.ticket_label = ticketLabelInput.value.trim();
             }
             if (isSeated && seatingData && seatingData.event_seating_id) {
                 payload.event_seating_id = seatingData.event_seating_id;

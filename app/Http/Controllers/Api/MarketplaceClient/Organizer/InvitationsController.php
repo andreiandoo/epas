@@ -71,6 +71,12 @@ class InvitationsController extends BaseController
         $validated = $request->validate([
             'event_id' => 'required|integer',
             'name' => 'nullable|string|max:255',
+            // Optional override for the "Invitație" label printed on the
+            // ticket itself — lets organizers issue e.g. "Invitație VIP",
+            // "Invitație Presă" without spinning up a real ticket_type
+            // record per batch. Kept on the batch (options.ticket_label)
+            // so admin tools can audit it later.
+            'ticket_label' => 'nullable|string|max:100',
             'watermark' => 'nullable|string|max:50',
             // Capped at 50 per batch — PDF generation is synchronous and we
             // already pushed organizer-side latency limits past comfort at
@@ -169,8 +175,13 @@ class InvitationsController extends BaseController
         // transaction (renderBatchPdfs hits the filesystem); a render
         // failure leaves the batch as 'draft' but invite rows already
         // exist and can be re-rendered via the /generate endpoint.
+        $ticketLabel = isset($validated['ticket_label']) ? trim((string) $validated['ticket_label']) : '';
+        if ($ticketLabel === '') {
+            $ticketLabel = null;
+        }
+
         try {
-            $batch = DB::transaction(function () use ($organizer, $event, $batchName, $quantity, $templateId, $watermark, $eventSeatingId, $recipients, $seats) {
+            $batch = DB::transaction(function () use ($organizer, $event, $batchName, $quantity, $templateId, $watermark, $eventSeatingId, $recipients, $seats, $ticketLabel) {
                 $batch = InviteBatch::create([
                     'marketplace_client_id' => $organizer->marketplace_client_id,
                     'marketplace_organizer_id' => $organizer->id,
@@ -183,6 +194,7 @@ class InvitationsController extends BaseController
                         'watermark' => $watermark,
                         'expires_after_event' => true,
                         'event_seating_id' => $eventSeatingId,
+                        'ticket_label' => $ticketLabel,
                     ],
                     'status' => 'draft',
                 ]);
@@ -792,6 +804,13 @@ class InvitationsController extends BaseController
                         'watermark' => $watermark,
                         'qrCode' => $qrCode,
                         'qrData' => $qrData,
+                        // Optional per-batch label override (e.g. "Invitație
+                        // VIP", "Invitație Presă"). Empty falls back to the
+                        // generic INVITAȚIE / Invitație defaults inside
+                        // buildTemplateData.
+                        'ticketLabel' => is_array($batch->options ?? null)
+                            ? ($batch->options['ticket_label'] ?? null)
+                            : null,
                     ]
                 );
 
@@ -1101,7 +1120,14 @@ class InvitationsController extends BaseController
             ],
             'date' => $dateBlock,
             'ticket' => [
-                'type' => 'INVITAȚIE',
+                // Per-batch override (options.ticket_label) lets organizers
+                // print e.g. "Invitație VIP" on the PDF instead of the
+                // generic "INVITAȚIE". The same label fills price_detail
+                // below so any template that surfaces both vars stays in
+                // sync. Empty/missing → keep the historic defaults.
+                'type' => !empty($ctx['ticketLabel'])
+                    ? mb_strtoupper($ctx['ticketLabel'], 'UTF-8')
+                    : 'INVITAȚIE',
                 'price' => 'GRATUIT',
                 'section' => $sectionStr,
                 'row' => $rowStr,
@@ -1113,7 +1139,9 @@ class InvitationsController extends BaseController
                 'is_insured' => 'false',
                 'insurance_badge' => '',
                 'insurance_label' => '',
-                'price_detail' => 'Invitație',
+                'price_detail' => !empty($ctx['ticketLabel'])
+                    ? $ctx['ticketLabel']
+                    : 'Invitație',
                 'fees_text' => '',
                 'verify_url' => url('/verify/' . $invite->invite_code),
                 'description' => '',
