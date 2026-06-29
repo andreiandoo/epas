@@ -137,6 +137,23 @@ if (isset($_GET['clear'])) {
         }
         echo "   Page cache: $cleared files cleared.\n";
     }
+
+    // Clear api_cached blobs (sys_get_temp_dir()/ambilet_cache/*.json).
+    // Without this, server-side fetches cached by api_cached() (e.g.
+    // /azi, /maine, /weekend's "when_events_*" payloads) keep serving
+    // stale data for up to 5 min after a deploy — exactly the symptom
+    // we hit when the date filter switched to Europe/Bucharest.
+    $apiCacheDir = sys_get_temp_dir() . '/ambilet_cache';
+    if (is_dir($apiCacheDir)) {
+        $cleared = 0;
+        foreach (glob($apiCacheDir . '/*.json') as $f) {
+            @unlink($f);
+            $cleared++;
+        }
+        echo "   API cache (api_cached): $cleared files cleared.\n";
+    } else {
+        echo "   API cache (api_cached): directory not present.\n";
+    }
 } else {
     echo "5. Add ?clear to URL to clear ALL caches.\n";
 }
