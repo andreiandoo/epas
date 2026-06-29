@@ -149,7 +149,22 @@ class PayoutsAlignUnitPriceToTickets extends Command
                     $newBd[] = $item;
                 }
 
-                if (!$rowChanged) {
+                // Detect "row already aligned but aggregate stale" — happens
+                // when a previous run of this command (before the gross_amount
+                // refresh was added) wrote correct rows but left payout.gross_amount
+                // pointing at the inflated old total. The Edit modal's
+                // "Stare curentă" card reads gross_amount directly, so a
+                // stale aggregate shows up as mixed brut + new comm.
+                $newGrossTotalAgg = 0.0;
+                foreach ($newBd as $r) {
+                    $newGrossTotalAgg += (float) ($r['gross'] ?? 0);
+                }
+                $storedGross = (float) ($p->gross_amount ?? 0);
+                $storedComm = (float) ($p->commission_amount ?? 0);
+                $aggregateStale = abs($storedGross - $newGrossTotalAgg) > 0.01
+                    || abs($storedComm - $newCommTotal) > 0.01;
+
+                if (!$rowChanged && !$aggregateStale) {
                     $unchanged++;
                     continue;
                 }
