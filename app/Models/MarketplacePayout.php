@@ -945,14 +945,41 @@ class MarketplacePayout extends Model
             $discount = $hasPerRowDiscount
                 ? (float) ($item['discount'] ?? 0)
                 : (float) ($legacyDiscountsByType[$ttId] ?? 0);
+
+            // Tier-derived discount fallback. When the snapshot stored
+            // discount=0 but the row's tiers carry a price below catalog
+            // (presale promos), the gap IS the discount applied — see the
+            // matching logic in MarketplaceTaxTemplate::enrichBreakdownWith-
+            // LiveDiscount. Without this, the UI "Acest decont" cards stay
+            // at catalog overstatement while the PDF (which uses the enrich
+            // pass) shows the corrected net (payout 3114 incident).
+            if ($discount < 0.01 && !empty($item['tiers']) && $qty > 0 && $price > 0) {
+                $tierSum = 0.0;
+                foreach ((array) $item['tiers'] as $tier) {
+                    $tierSum += (float) ($tier['price'] ?? 0) * (int) ($tier['qty'] ?? 0);
+                }
+                $derived = round($price * $qty - $tierSum, 2);
+                if ($derived > 0.01) {
+                    $discount = $derived;
+                }
+            }
+
             $extras = (float) ($item['extras'] ?? 0);
 
             // Prefer the snapshot's stored net when present (post-discount/extras);
             // else compute uniformly. The blade uses the same precedence so
             // "Net final" in the table matches what we add here.
-            $net = isset($item['net'])
-                ? (float) $item['net']
-                : ($gross - $commission - $discount - $extras);
+            // EXCEPT when we just derived a non-zero discount from tiers above
+            // but the stored net was the catalog × qty − commission (zero-disc
+            // formula). In that case the stored net contradicts the tier-derived
+            // discount; recompute so the totals stay coherent.
+            $storedNet = isset($item['net']) ? (float) $item['net'] : null;
+            $computedNet = $gross - $commission - $discount - $extras;
+            if ($storedNet !== null && abs($storedNet - $computedNet) > 0.01 && $discount > 0.01) {
+                $net = $computedNet;
+            } else {
+                $net = $storedNet ?? $computedNet;
+            }
 
             $result[$bucket]['gross'] += $gross;
             $result[$bucket]['commission'] += $commission;

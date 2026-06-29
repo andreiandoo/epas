@@ -21,7 +21,35 @@
         $isOnTop = in_array($itemMode, ['added_on_top', 'on_top'], true);
         $commission = $commPerTicket * $qty;
         $gross = $price * $qty + ($isOnTop ? $commission : 0);
-        $net = isset($item['net']) ? (float) $item['net'] : ($gross - $commission);
+
+        // Tier-derived discount fallback for "Net" column. Mirrors the
+        // logic in MarketplaceTaxTemplate::enrichBreakdownWithLiveDiscount
+        // + MarketplacePayout::getBreakdownTotals — when discount=0 but
+        // tiers say the slice was sold below catalog, derive the gap so
+        // the Net column reflects the real money the organizer earned.
+        $discount = (float) ($item['discount'] ?? 0);
+        if ($discount < 0.01 && !empty($item['tiers']) && $qty > 0 && $price > 0) {
+            $tierSum = 0.0;
+            foreach ((array) $item['tiers'] as $tier) {
+                $tierSum += (float) ($tier['price'] ?? 0) * (int) ($tier['qty'] ?? 0);
+            }
+            $derived = round($price * $qty - $tierSum, 2);
+            if ($derived > 0.01) {
+                $discount = $derived;
+            }
+        }
+
+        // Net rule: stored snapshot net is authoritative UNLESS we just
+        // derived a non-zero discount and the stored net was computed
+        // pre-discount (catalog × qty − commission). In that case recompute
+        // so the column tracks the corrected discount.
+        $storedNet = isset($item['net']) ? (float) $item['net'] : null;
+        $netNoDisc = $gross - $commission;
+        if ($discount > 0.01 && $storedNet !== null && abs($storedNet - ($netNoDisc - $discount)) > 0.01) {
+            $net = $netNoDisc - $discount;
+        } else {
+            $net = $storedNet ?? ($netNoDisc - $discount);
+        }
 
         return [
             'ticket_type_id' => $item['ticket_type_id'] ?? null,
@@ -117,11 +145,41 @@
                     $discounts = $hasPerRowDiscount
                         ? (float) ($item['discount'] ?? 0)
                         : (float) ($discountsByType[$ticketTypeId] ?? 0);
+
+                    // Tier-derived discount fallback (payout 3114 incident).
+                    // When the snapshot stored discount=0 but tiers reveal a
+                    // presale price BELOW catalog, that gap IS the real
+                    // discount — same logic the PDF render uses now via
+                    // MarketplaceTaxTemplate::enrichBreakdownWithLiveDiscount.
+                    // Without this, the table still shows catalog × qty as
+                    // net while the PDF shows the corrected number.
+                    if ($discounts < 0.01 && !empty($item['tiers']) && $qty > 0 && $price > 0) {
+                        $tierSum = 0.0;
+                        foreach ((array) $item['tiers'] as $tier) {
+                            $tierSum += (float) ($tier['price'] ?? 0) * (int) ($tier['qty'] ?? 0);
+                        }
+                        $derivedDiscount = round($price * $qty - $tierSum, 2);
+                        if ($derivedDiscount > 0.01) {
+                            $discounts = $derivedDiscount;
+                        }
+                    }
+
                     // Extras (insurance, cultural-card surcharge) are a deduction on the
                     // organizer's net just like the discount; legacy snapshots don't track them.
                     $extras = (float) ($item['extras'] ?? 0);
                     if ($extras > 0) $hasExtras = true;
-                    $netFinal = (float) ($item['net'] ?? ($netTickets - $discounts - $extras));
+                    // Recompute net when the snapshot's stored net doesn't
+                    // reflect the tier-derived discount (its formula was
+                    // catalog × qty − commission, which ignored the tier
+                    // delta). Skip the recompute when discount is zero — the
+                    // stored net is fine as-is for non-promo rows.
+                    $storedNet = isset($item['net']) ? (float) $item['net'] : null;
+                    $computedNet = $netTickets - $discounts - $extras;
+                    if ($storedNet !== null && $discounts > 0.01 && abs($storedNet - $computedNet) > 0.01) {
+                        $netFinal = $computedNet;
+                    } else {
+                        $netFinal = $storedNet ?? $computedNet;
+                    }
                     // Build the parenthesized rate label from commission_type so
                     // fixed-amount commissions also show their value (was: only %).
                     $commissionType = $item['commission_type'] ?? null;
