@@ -183,6 +183,28 @@ class MarketplacePayout extends Model
             $rowGross = $r['qty'] * $r['unit_price'] + ($isOnTop ? $r['qty'] * $r['commission_per_ticket'] : 0);
             $rowComm = $r['qty'] * $r['commission_per_ticket'];
             $rowDiscount = (float) ($r['discount'] ?? 0);
+
+            // Auto-derive discount from tiers when the explicit discount
+            // field is zero/absent. unit_price is the CATALOG reference;
+            // tiers carry the REAL paid prices per bucket (presale rows
+            // typically have a lower per-ticket price than catalog). The
+            // gap is the real promo/discount applied across the slice —
+            // without this, the snapshot's `net` stays at catalog × qty
+            // and the PDF row 1a drifts away from computeOrganizerNetFromTickets
+            // (the bug surfaced on payout 3114: net showed 16,140 catalog
+            // but the organizer was actually owed 13,840).
+            if ($rowDiscount < 0.01 && !empty($r['tiers']) && (float) $r['unit_price'] > 0 && (int) $r['qty'] > 0) {
+                $tierSum = 0.0;
+                foreach ($r['tiers'] as $tier) {
+                    $tierSum += (float) ($tier['price'] ?? 0) * (int) ($tier['qty'] ?? 0);
+                }
+                $catalogSum = (float) $r['qty'] * (float) $r['unit_price'];
+                $derived = round($catalogSum - $tierSum, 2);
+                if ($derived > 0.01) {
+                    $rowDiscount = $derived;
+                }
+            }
+
             $rowNet = $rowGross - $rowComm - $rowDiscount;
 
             $breakdown[] = [
