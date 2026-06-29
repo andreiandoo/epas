@@ -213,29 +213,71 @@ class MarketplaceEventsController extends BaseController
             // marketplace_clients.timezone (already wired in MarketplaceTz)
             // and pass it through instead of hardcoding Europe/Bucharest.
             $today = \Carbon\Carbon::now('Europe/Bucharest')->startOfDay();
+
+            // Match events of EVERY duration_mode against a target date
+            // window [$from, $to] (both inclusive, Bucharest dates).
+            //   - single_day  → event_date BETWEEN from AND to
+            //   - range       → window overlaps [range_start_date,
+            //                   range_end_date]
+            //   - multi_day   → any slot in multi_slots[*].date falls
+            //                   in the window
+            //   - recurring   → covered by single_day events generated
+            //                   from the recurring parent (no extra logic
+            //                   needed here)
+            // Cancelled / unpublished events are already filtered upstream.
+            $matchDateWindow = function ($q, string $from, string $to) {
+                $q->where(function ($w) use ($from, $to) {
+                    // single_day (or null duration_mode = legacy single-day)
+                    $w->where(function ($sd) use ($from, $to) {
+                        $sd->where(function ($d) { $d->whereNull('duration_mode')->orWhere('duration_mode', 'single_day'); })
+                           ->whereBetween('event_date', [$from, $to]);
+                    })
+                    // range: target window overlaps [range_start_date, range_end_date]
+                    ->orWhere(function ($r) use ($from, $to) {
+                        $r->where('duration_mode', 'range')
+                          ->where('range_start_date', '<=', $to)
+                          ->where('range_end_date', '>=', $from);
+                    })
+                    // multi_day: any slot date inside the window. We can't
+                    // index JSON cheaply across drivers, so use a JSONB ?
+                    // -ish whereRaw on Postgres. The OR with single-day /
+                    // range above means a missing match here just falls
+                    // through, not a hard miss.
+                    ->orWhere(function ($md) use ($from, $to) {
+                        $md->where('duration_mode', 'multi_day')
+                           ->whereRaw(
+                               "EXISTS (SELECT 1 FROM jsonb_array_elements(CASE WHEN jsonb_typeof(multi_slots::jsonb) = 'array' THEN multi_slots::jsonb ELSE '[]'::jsonb END) AS slot WHERE (slot->>'date') BETWEEN ? AND ?)",
+                               [$from, $to]
+                           );
+                    });
+                });
+            };
+
             switch ($dateParam) {
                 case 'today':
-                    $query->whereDate('event_date', $today);
+                    $d = $today->toDateString();
+                    $matchDateWindow($query, $d, $d);
                     break;
                 case 'tomorrow':
-                    $query->whereDate('event_date', $today->copy()->addDay());
+                    $d = $today->copy()->addDay()->toDateString();
+                    $matchDateWindow($query, $d, $d);
                     break;
                 case 'weekend':
                     $saturday = $today->copy()->next(\Carbon\Carbon::SATURDAY);
                     if ($today->isSaturday()) $saturday = $today->copy();
                     if ($today->isSunday()) $saturday = $today->copy()->subDay();
                     $sunday = $saturday->copy()->addDay();
-                    $query->whereBetween('event_date', [$saturday->toDateString(), $sunday->toDateString()]);
+                    $matchDateWindow($query, $saturday->toDateString(), $sunday->toDateString());
                     break;
                 case 'week':
-                    $query->whereBetween('event_date', [$today->toDateString(), $today->copy()->endOfWeek()->toDateString()]);
+                    $matchDateWindow($query, $today->toDateString(), $today->copy()->endOfWeek()->toDateString());
                     break;
                 case 'month':
-                    $query->whereBetween('event_date', [$today->toDateString(), $today->copy()->endOfMonth()->toDateString()]);
+                    $matchDateWindow($query, $today->toDateString(), $today->copy()->endOfMonth()->toDateString());
                     break;
                 case 'next-month':
                     $nextMonth = $today->copy()->addMonth()->startOfMonth();
-                    $query->whereBetween('event_date', [$nextMonth->toDateString(), $nextMonth->copy()->endOfMonth()->toDateString()]);
+                    $matchDateWindow($query, $nextMonth->toDateString(), $nextMonth->copy()->endOfMonth()->toDateString());
                     break;
             }
         }
