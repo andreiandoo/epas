@@ -189,11 +189,24 @@ class PayoutsAlignUnitPriceToTickets extends Command
                     if ($updateAmount) {
                         $payload['amount'] = $newAmount;
                     }
-                    // Always refresh the aggregate commission_amount
-                    // so the payout-list "Comision" column stays in sync
-                    // even when --update-amount is off. discount_amount
-                    // is unchanged here (we don't add fictional discounts).
+                    // Always refresh the aggregates that are pure
+                    // derivations of the breakdown — commission_amount AND
+                    // gross_amount. The "Editează bilete decontate" modal's
+                    // "Stare curentă" card reads gross_amount for Brut,
+                    // commission_amount for Comision; leaving gross_amount
+                    // stale produces a mixed view (new comm + old brut).
+                    // discount_amount is untouched (we don't manufacture
+                    // discounts here — that's a separate code path).
+                    // amount stays controlled by --update-amount because
+                    // it represents the historical paid-out value on
+                    // completed payouts; flipping it silently would
+                    // misrepresent what the organizer was actually paid.
+                    $newGrossTotal = 0.0;
+                    foreach ($newBd as $r) {
+                        $newGrossTotal += (float) ($r['gross'] ?? 0);
+                    }
                     $payload['commission_amount'] = round($newCommTotal, 2);
+                    $payload['gross_amount'] = round($newGrossTotal, 2);
                     $p->update($payload);
                 }
                 $changed++;
