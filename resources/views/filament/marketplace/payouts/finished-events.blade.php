@@ -51,18 +51,21 @@
                                             Vezi decont
                                         </a>
                                     </div>
-                                @elseif($row['balance'] > 0 || ($row['refund_count'] ?? 0) > 0)
+                                @else
+                                    {{-- Button shows for every finished event without an
+                                         existing payout — including sold=0 cases. The
+                                         controller (generateEventDecont) handles 0-net
+                                         deconts with a clear admin_notes annotation. --}}
                                     <button type="button"
                                             wire:click="generateEventDecont({{ $row['event']->id }})"
                                             wire:loading.attr="disabled"
                                             wire:target="generateEventDecont({{ $row['event']->id }})"
-                                            class="inline-flex items-center gap-1 rounded-lg bg-primary-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-primary-500 disabled:opacity-50 whitespace-nowrap">
+                                            class="inline-flex items-center gap-1 rounded-lg {{ $row['balance'] > 0 || ($row['refund_count'] ?? 0) > 0 ? 'bg-primary-600 hover:bg-primary-500 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-700 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-200' }} px-2.5 py-1 text-xs font-medium disabled:opacity-50 whitespace-nowrap"
+                                            title="{{ $row['balance'] > 0 || ($row['refund_count'] ?? 0) > 0 ? '' : 'Eveniment fără sold — decont pentru documentare (net 0)' }}">
                                         <x-heroicon-m-document-plus class="w-3.5 h-3.5 shrink-0" />
                                         <span wire:loading.remove wire:target="generateEventDecont({{ $row['event']->id }})">Generează decont</span>
                                         <span wire:loading wire:target="generateEventDecont({{ $row['event']->id }})">Se generează...</span>
                                     </button>
-                                @else
-                                    <span class="text-xs text-gray-400">Sold 0</span>
                                 @endif
                             </td>
                         </tr>
